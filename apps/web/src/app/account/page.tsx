@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { adminClient, currentUser } from '@/lib/supabase';
 import { DownloadButton } from './download-button';
 import { ResendLicense } from './resend-license';
+import { Devices } from './devices';
 
 export const metadata: Metadata = { title: 'My account' };
 export const dynamic = 'force-dynamic';
@@ -114,6 +115,13 @@ export default async function AccountPage() {
         )}
       </section>
 
+      {activeLicenses.length > 0 ? (
+        <section>
+          <h2>Devices</h2>
+          <Devices />
+        </section>
+      ) : null}
+
       {(orders ?? []).length > 0 ? (
         <section>
           <h2>Purchases</h2>
@@ -140,7 +148,8 @@ export default async function AccountPage() {
         <section>
           <h2>Administration</h2>
           <p className="lede">
-            <Link href="/admin/releases">Manage release builds</Link>
+            <Link href="/admin/releases">Manage release builds</Link> ·{' '}
+            <Link href="/admin/support">Support console</Link>
           </p>
         </section>
       ) : null}

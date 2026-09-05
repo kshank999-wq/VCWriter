@@ -316,6 +316,57 @@ export const requestSceneReview = async (input: {
 };
 
 // ---------------------------------------------------------------------------
+// Licensing (spec §3.3)
+// ---------------------------------------------------------------------------
+
+/** The signed-in session's access token, for the endpoints that need one. */
+export const accessToken = async (): Promise<string> => {
+  const { data, error } = await supabase().auth.getSession();
+  if (error || !data.session) throw new CloudError('Sign in first.');
+  return data.session.access_token;
+};
+
+export interface ActivationResult {
+  activated: boolean;
+  reason?: string;
+  message?: string;
+}
+
+/**
+ * Activate this installation against a license.
+ *
+ * A refusal is an answer, not an error: "you are on two of two machines" is
+ * something the writer can act on, and it comes back as a message rather than
+ * an exception so the interface can say it plainly.
+ */
+export const activateLicense = async (input: {
+  serial: string;
+  deviceFingerprint: string;
+  deviceName: string;
+  platform: 'windows' | 'macos';
+  appVersion: string;
+}): Promise<ActivationResult> => {
+  const token = await accessToken();
+  const response = await fetch(`${SITE_URL}/api/licenses/activate`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify(input),
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | { activated?: boolean; reason?: string; error?: string }
+    | null;
+
+  if (response.status === 409) {
+    return { activated: false, message: payload?.error ?? 'No seat is free on this license.' };
+  }
+  if (!response.ok) {
+    throw new CloudError(payload?.error ?? `Activation failed (${response.status})`);
+  }
+  return { activated: true, ...(payload?.reason ? { reason: payload.reason } : {}) };
+};
+
+// ---------------------------------------------------------------------------
 // Capture queue
 // ---------------------------------------------------------------------------
 

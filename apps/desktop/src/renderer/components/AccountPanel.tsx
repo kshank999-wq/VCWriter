@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LicensePanel } from './LicensePanel';
 import type { AccountStatus } from '../../preload/index';
 
 interface AccountPanelProps {
@@ -36,16 +37,20 @@ export function AccountPanel({ status, onSignedIn, onSignOut }: AccountPanelProp
 
   if (status.signedIn) {
     return (
-      <div className="account">
-        <h2>Signed in</h2>
-        <p className="muted">{status.email}</p>
-        <p className="muted">
-          Notes captured on your phone appear here for review. Nothing is added to a project until you approve it.
-        </p>
-        <button type="button" onClick={onSignOut}>
-          Sign out
-        </button>
-      </div>
+      <>
+        <div className="account">
+          <h2>Signed in</h2>
+          <p className="muted">{status.email}</p>
+          <p className="muted">
+            Notes captured on your phone appear here for review. Nothing is added to a project until you approve
+            it.
+          </p>
+          <button type="button" onClick={onSignOut}>
+            Sign out
+          </button>
+        </div>
+        <LicensePanel />
+      </>
     );
   }
 

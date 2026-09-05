@@ -12,7 +12,9 @@ import {
 } from '@vcwriter/domain';
 import { exportProjectPdf, printProject } from './export-pdf';
 import {
+  accessToken,
   accountStatus,
+  activateLicense,
   listCaptures,
   requestSceneReview,
   requestSignInCode,
@@ -21,8 +23,11 @@ import {
   syncProject,
   verifySignInCode,
   type AccountStatus,
+  type ActivationResult,
   type SyncOutcome,
 } from './cloud';
+import { deviceFingerprint, deviceName, devicePlatform } from './device';
+import { checkForUpdate, downloadUpdate, runInstaller, type DownloadedUpdate, type UpdateStatus } from './updater';
 import {
   PROJECT_EXTENSION,
   listSnapshots,
@@ -296,6 +301,57 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
       }
     },
   );
+
+  // --- licensing and updates -----------------------------------------------
+
+  ipcMain.handle('license:activate', async (_event, serial: string): Promise<DesktopApiResult<ActivationResult>> => {
+    try {
+      const platform = devicePlatform();
+      if (!platform) return fail(new Error('VC Writer is licensed for Windows and macOS.'));
+      return ok(
+        await activateLicense({
+          serial,
+          deviceFingerprint: await deviceFingerprint(),
+          deviceName: deviceName(),
+          platform,
+          appVersion: app.getVersion(),
+        }),
+      );
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('update:check', async (): Promise<DesktopApiResult<UpdateStatus>> => {
+    try {
+      return ok(await checkForUpdate());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle(
+    'update:download',
+    async (
+      _event,
+      input: { expectedSha256: string; version: string },
+    ): Promise<DesktopApiResult<DownloadedUpdate>> => {
+      try {
+        return ok(await downloadUpdate({ ...input, accessToken: await accessToken() }));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  ipcMain.handle('update:install', async (_event, path: string): Promise<DesktopApiResult<true>> => {
+    try {
+      await runInstaller(path);
+      return ok(true);
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
 
   ipcMain.handle('app:version', () => ok({ version: app.getVersion(), platform: process.platform }));
 };

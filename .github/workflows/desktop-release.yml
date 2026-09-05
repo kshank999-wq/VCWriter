@@ -58,6 +58,25 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
+      # The admin release form asks for a checksum, and the updater refuses an
+      # installer that does not match one. Computing it here is the only place
+      # it can be trusted — after this the file is just bytes on a disk.
+      - name: Checksum the installers
+        shell: bash
+        run: |
+          cd apps/desktop/release
+          : > SHA256SUMS.txt
+          for file in *.exe *.dmg *.zip; do
+            [ -e "$file" ] || continue
+            if command -v sha256sum >/dev/null; then
+              sha256sum "$file" >> SHA256SUMS.txt
+            else
+              shasum -a 256 "$file" >> SHA256SUMS.txt
+            fi
+          done
+          echo "--- checksums to paste into /admin/releases ---"
+          cat SHA256SUMS.txt
+
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
@@ -66,6 +85,7 @@ jobs:
             apps/desktop/release/*.exe
             apps/desktop/release/*.dmg
             apps/desktop/release/*.zip
+            apps/desktop/release/SHA256SUMS.txt
           if-no-files-found: error
 
   # Uploading to the private release bucket and flipping `active` on the

@@ -6,6 +6,7 @@ import type {
   ProjectFile,
   ProjectFormat,
   SceneVerdict,
+  UpdateDecision,
 } from '@vcwriter/domain';
 
 /**
@@ -75,6 +76,26 @@ export interface VcWriterApi {
     position?: string;
     format: 'screenplay' | 'prose';
   }): Promise<DesktopApiResult<SceneVerdict>>;
+
+  // Licensing and updates (§3.3).
+  activateLicense(serial: string): Promise<DesktopApiResult<ActivationResult>>;
+  checkForUpdate(): Promise<DesktopApiResult<UpdateStatus>>;
+  downloadUpdate(input: {
+    expectedSha256: string;
+    version: string;
+  }): Promise<DesktopApiResult<{ path: string; version: string; verified: boolean }>>;
+  installUpdate(path: string): Promise<DesktopApiResult<true>>;
+}
+
+export interface ActivationResult {
+  activated: boolean;
+  reason?: string;
+  message?: string;
+}
+
+export interface UpdateStatus {
+  decision: UpdateDecision;
+  currentVersion: string;
 }
 
 export interface AccountStatus {
@@ -109,6 +130,10 @@ const api: VcWriterApi = {
   listCaptures: (projectId) => ipcRenderer.invoke('cloud:captures', projectId),
   resolveCapture: (capture) => ipcRenderer.invoke('cloud:resolveCapture', capture),
   reviewScene: (input) => ipcRenderer.invoke('cloud:reviewScene', input),
+  activateLicense: (serial) => ipcRenderer.invoke('license:activate', serial),
+  checkForUpdate: () => ipcRenderer.invoke('update:check'),
+  downloadUpdate: (input) => ipcRenderer.invoke('update:download', input),
+  installUpdate: (path) => ipcRenderer.invoke('update:install', path),
 };
 
 contextBridge.exposeInMainWorld('vcwriter', api);
