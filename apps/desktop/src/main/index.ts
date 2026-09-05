@@ -1,6 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { registerIpcHandlers } from './ipc';
+import { restoreSession } from './cloud';
 
 /**
  * Electron main process.
@@ -55,6 +56,10 @@ const createWindow = (): void => {
 app.whenReady().then(() => {
   registerIpcHandlers(() => mainWindow);
   createWindow();
+
+  // A stored session is restored in the background: signing in should last
+  // between launches, and failing to restore it must not delay the window.
+  void restoreSession().catch(() => undefined);
 
   app.on('activate', () => {
     // macOS convention: clicking the dock icon reopens a window.

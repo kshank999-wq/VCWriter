@@ -1,5 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { PrintOptions, ProjectFile, ProjectFormat } from '@vcwriter/domain';
+import type {
+  CaptureItem,
+  MergeResult,
+  PrintOptions,
+  ProjectFile,
+  ProjectFormat,
+} from '@vcwriter/domain';
 
 /**
  * The only bridge between the renderer and the operating system.
@@ -53,6 +59,29 @@ export interface VcWriterApi {
   }): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>>;
   print(input: { file: ProjectFile; options?: PrintOptions }): Promise<DesktopApiResult<boolean>>;
   appInfo(): Promise<DesktopApiResult<{ version: string; platform: string }>>;
+
+  // Sync is optional: a writer who never signs in has a fully working desktop
+  // application whose projects live in files.
+  accountStatus(): Promise<DesktopApiResult<AccountStatus>>;
+  requestSignInCode(email: string): Promise<DesktopApiResult<true>>;
+  verifySignInCode(input: { email: string; code: string }): Promise<DesktopApiResult<AccountStatus>>;
+  signOut(): Promise<DesktopApiResult<true>>;
+  syncProject(input: { file: ProjectFile }): Promise<DesktopApiResult<SyncOutcome>>;
+  listCaptures(projectId: string | null): Promise<DesktopApiResult<CaptureItem[]>>;
+  resolveCapture(capture: CaptureItem): Promise<DesktopApiResult<true>>;
+}
+
+export interface AccountStatus {
+  configured: boolean;
+  signedIn: boolean;
+  email: string | null;
+}
+
+export interface SyncOutcome {
+  merged: ProjectFile;
+  conflicts: MergeResult['conflicts'];
+  summary: MergeResult['summary'];
+  syncedAt: string;
 }
 
 const api: VcWriterApi = {
@@ -66,6 +95,13 @@ const api: VcWriterApi = {
   exportPdf: (input) => ipcRenderer.invoke('project:exportPdf', input),
   print: (input) => ipcRenderer.invoke('project:print', input),
   appInfo: () => ipcRenderer.invoke('app:version'),
+  accountStatus: () => ipcRenderer.invoke('cloud:status'),
+  requestSignInCode: (email) => ipcRenderer.invoke('cloud:requestCode', email),
+  verifySignInCode: (input) => ipcRenderer.invoke('cloud:verifyCode', input),
+  signOut: () => ipcRenderer.invoke('cloud:signOut'),
+  syncProject: (input) => ipcRenderer.invoke('cloud:sync', input),
+  listCaptures: (projectId) => ipcRenderer.invoke('cloud:captures', projectId),
+  resolveCapture: (capture) => ipcRenderer.invoke('cloud:resolveCapture', capture),
 };
 
 contextBridge.exposeInMainWorld('vcwriter', api);

@@ -1,3 +1,4 @@
+import { captureItemSchema, type CaptureItem } from './entities/capture.js';
 import { characterSchema } from './entities/character.js';
 import { storyLinkSchema } from './entities/links.js';
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
@@ -350,6 +351,41 @@ export const projectFromRow = (row: Row): Project =>
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });
+
+// ---------------------------------------------------------------------------
+// Captures
+// ---------------------------------------------------------------------------
+
+export const captureFromRow = (row: Row): CaptureItem =>
+  captureItemSchema.parse({
+    id: row['id'],
+    userId: row['user_id'],
+    projectId: nullableText(row['project_id']),
+    source: row['source'],
+    capturedAt: row['captured_at'],
+    rawText: text(row['raw_text']),
+    audioAssetId: nullableText(row['audio_path']),
+    transcriptConfidence: typeof row['transcript_confidence'] === 'number' ? row['transcript_confidence'] : null,
+    inference: row['inference'] ?? null,
+    requestedRouting: row['requested_routing'] ?? null,
+    status: row['status'],
+    reviewedAt: nullableText(row['reviewed_at']),
+    resultRef:
+      typeof row['result_type'] === 'string' && typeof row['result_id'] === 'string'
+        ? { type: row['result_type'], id: row['result_id'] }
+        : null,
+    syncedAt: nullableText(row['synced_at']),
+    createdAt: row['created_at'],
+    updatedAt: row['updated_at'],
+  });
+
+/** The columns a review decision writes back. The raw capture is never touched. */
+export const captureReviewToRow = (capture: CaptureItem): Row => ({
+  status: capture.status,
+  reviewed_at: capture.reviewedAt,
+  result_type: capture.resultRef?.type ?? null,
+  result_id: capture.resultRef?.id ?? null,
+});
 
 export const fromRows = (rows: ProjectRows): ProjectFile =>
   projectFileSchema.parse({

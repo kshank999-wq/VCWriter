@@ -24,6 +24,8 @@ export interface UseProjectResult {
   openProjectAtPath(path: string): Promise<void>;
   /** Apply a domain mutation; the result is queued for autosave. */
   update(mutate: (current: ProjectFile) => ProjectFile): void;
+  /** Adopt a whole project wholesale — the result of a sync merge. */
+  replace(next: ProjectFile): void;
   saveNow(): Promise<void>;
   closeProject(): void;
 }
@@ -152,6 +154,18 @@ export const useProject = (): UseProjectResult => {
     setSaveState('dirty');
   }, []);
 
+  /**
+   * Adopt a merged project after a sync. It is marked dirty so the next flush
+   * writes the merge to disk — the file on this machine and the copy in the
+   * cloud should not disagree once the writer has been told they agree.
+   */
+  const replace = useCallback((next: ProjectFile) => {
+    fileRef.current = next;
+    dirtyRef.current = true;
+    setFile(next);
+    setSaveState('dirty');
+  }, []);
+
   const closeProject = useCallback(() => {
     void flush().then(() => {
       pathRef.current = null;
@@ -173,6 +187,7 @@ export const useProject = (): UseProjectResult => {
     openProject,
     openProjectAtPath,
     update,
+    replace,
     saveNow: flush,
     closeProject,
   };

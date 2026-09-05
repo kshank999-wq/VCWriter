@@ -4,11 +4,23 @@ import { readFile, writeFile } from 'node:fs/promises';
 import {
   createProjectFile,
   parseProjectFile,
+  type CaptureItem,
   type PrintOptions,
   type ProjectFile,
   type ProjectFormat,
 } from '@vcwriter/domain';
 import { exportProjectPdf, printProject } from './export-pdf';
+import {
+  accountStatus,
+  listCaptures,
+  requestSignInCode,
+  resolveCapture,
+  signOut,
+  syncProject,
+  verifySignInCode,
+  type AccountStatus,
+  type SyncOutcome,
+} from './cloud';
 import {
   PROJECT_EXTENSION,
   listSnapshots,
@@ -201,6 +213,73 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
       }
     },
   );
+
+  // --- account, sync and captures ------------------------------------------
+
+  ipcMain.handle('cloud:status', async (): Promise<DesktopApiResult<AccountStatus>> => {
+    try {
+      return ok(await accountStatus());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('cloud:requestCode', async (_event, email: string): Promise<DesktopApiResult<true>> => {
+    try {
+      await requestSignInCode(email);
+      return ok(true);
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle(
+    'cloud:verifyCode',
+    async (_event, input: { email: string; code: string }): Promise<DesktopApiResult<AccountStatus>> => {
+      try {
+        return ok(await verifySignInCode(input.email, input.code));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  ipcMain.handle('cloud:signOut', async (): Promise<DesktopApiResult<true>> => {
+    try {
+      await signOut();
+      return ok(true);
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('cloud:sync', async (_event, input: { file: unknown }): Promise<DesktopApiResult<SyncOutcome>> => {
+    try {
+      return ok(await syncProject(input));
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle(
+    'cloud:captures',
+    async (_event, projectId: string | null): Promise<DesktopApiResult<CaptureItem[]>> => {
+      try {
+        return ok(await listCaptures(projectId));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  ipcMain.handle('cloud:resolveCapture', async (_event, capture: CaptureItem): Promise<DesktopApiResult<true>> => {
+    try {
+      await resolveCapture(capture);
+      return ok(true);
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
 
   ipcMain.handle('app:version', () => ok({ version: app.getVersion(), platform: process.platform }));
 };

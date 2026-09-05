@@ -1108,3 +1108,77 @@ button.item.selected {
   flex: 1;
   min-width: 0;
 }
+
+/* ------------------------------------------------- account and capture queue */
+
+.account,
+.captures {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 24px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.account h2,
+.captures h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.notice.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  border-radius: 0;
+  border-left: none;
+  border-top: none;
+  border-right: none;
+}
+
+.capture-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.capture {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  background: var(--panel);
+  display: grid;
+  gap: 8px;
+}
+
+.capture > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.capture-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.capture-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.capture-actions select {
+  flex: 1;
+  min-width: 200px;
+}

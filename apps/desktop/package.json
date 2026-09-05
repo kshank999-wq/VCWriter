@@ -13,6 +13,7 @@
     "package:mac": "electron-vite build && electron-builder --mac --publish never"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.115.0",
     "@vcwriter/domain": "workspace:*"
   },
   "devDependencies": {
