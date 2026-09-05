@@ -19,14 +19,21 @@ Remaining before Phase 1 closes: code-signing certificates for both platforms,
 the first published release build, and the desktop ↔ Supabase project sync
 (the schema is ready; the client writes to the local file only).
 
-## Phase 2 — Story structure
+## Phase 2 — Story structure ▸ built
 
-Research categories, lanes, scene/chapter containers, beats, drag-reorder,
-links, setups/payoffs, used/unused workflow.
+| Deliverable | Status |
+| --- | --- |
+| Lanes, scene/chapter containers, beats | Done — nested board, collapse/expand, inline rename, cascading removal |
+| Drag-reorder | Done — beats, containers and lanes, with edge drop indicators; keyboard equivalents for beats |
+| Research categories | Done — create, rename, reorder, archive and restore |
+| Used / unused workflow | Done — filter tabs, mark used against the open beat, restore, unconfirmed suggestions flagged |
+| Setups and payoffs | Done — many setups per payoff, place a setup in the open beat, record payoff, reopen, archive |
+| Links | Done — collapsible related-elements panel on the beat workspace; endpoints resolve at render time |
 
-The model, the ordering primitives and the database tables are all in place.
-This phase is the interaction work: drag and drop, the related-elements panel,
-the research browser, the setups/payoffs board and the used bin.
+Remaining before Phase 2 closes: drag-reorder for research notes and
+categories (they move by buttons and a category picker today), a
+related-elements panel on scenes and characters as well as beats, and
+lane-level story-order views such as a timeline across lanes.
 
 ## Phase 3 — Writing
 

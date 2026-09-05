@@ -65,8 +65,29 @@ annotated reference copy includes it only when explicitly requested.
 *Tested:* `render.test.ts` — "never emits the internal beat title".
 
 **2.5 Collapse and expand containers.**
-*Accepts:* collapsed state persists per container.
-*Status:* `collapsed` field exists; the interaction is Phase 2.
+*Accepts:* collapsed state persists per container and per lane, and survives a
+save/load round trip.
+*Tested:* `panels.test.tsx` — "collapses a lane and brings it back".
+
+**2.6 Reorder by drag and by keyboard.**
+As a writer, I reorder beats, scenes and lanes by dragging, or by keyboard when
+dragging is not available to me.
+*Accepts:* a drop lands the item exactly where the indicator showed, including
+the one-place-down case; dropping an item on itself changes nothing; Alt+arrows
+move a beat within its scene and Alt+Shift+arrows move it between scenes.
+*Tested:* `drag.test.ts` — five ordering cases plus the cross-container move.
+
+**2.7 Rename structure in place.**
+*Accepts:* renaming a lane, scene or sequence label updates every panel that
+mentions it, because links resolve names at render time rather than copying
+them.
+*Tested:* `panels.test.tsx` — "renames a lane in place";
+`structure-editing.test.ts` — "reads the current name rather than a copy".
+
+**2.8 Remove structure without leaving dangling references.**
+*Accepts:* removing a lane or scene removes its contents and every link that
+pointed at them; the last lane cannot be removed.
+*Tested:* `structure-editing.test.ts` — removal cascade cases.
 
 ---
 
@@ -75,13 +96,15 @@ annotated reference copy includes it only when explicitly requested.
 **3.1 Default and custom research categories.**
 *Accepts:* Characters, Ideas and Plot Points exist in a new project; categories
 can be created, renamed, reordered and archived.
-*Tested:* `research.test.ts` — "seeds the default categories".
+*Tested:* `research.test.ts` — "seeds the default categories";
+`structure-editing.test.ts` — "creates, renames, reorders and archives
+categories"; `panels.test.tsx` — archived categories leave the working view.
 
 **3.2 Used / unused workflow.**
 *Accepts:* marking material used removes it from the working inventory without
 deleting it; restoring returns it; the record and its history survive both.
 *Tested:* `research.test.ts` — "moves an item to used and back again without
-deleting it".
+deleting it"; `panels.test.tsx` — the same round trip through the interface.
 
 **3.3 Automatic detection proposes, the writer decides.**
 *Accepts:* an inferred usage is stored as unconfirmed and is distinguishable
@@ -93,13 +116,18 @@ from a writer's decision.
 on the active list; resolving then archiving keeps every setup point and link;
 un-archiving restores it to the active list.
 *Tested:* `research.test.ts` — "tracks several setups for one payoff",
-"archives a resolved record reversibly".
+"archives a resolved record reversibly"; `structure-editing.test.ts` —
+"reopens a payoff without losing its setups"; `panels.test.tsx` — the setup,
+payoff and reopen cycle through the interface.
 
 **3.5 Typed links between story elements.**
 *Accepts:* a prop can link to a character, a scene, a setup and a later payoff;
 each beat can list its related elements; the same link is never duplicated.
+*Accepts (panel):* the related-elements panel is collapsible, lists each link
+with its relationship, and marks any endpoint whose target no longer exists.
 *Tested:* `structure.test.ts` — "does not create duplicate links";
-`selectors.ts` — `relatedRefs`.
+`structure-editing.test.ts` — "resolves each link endpoint to a current
+label", "marks a reference whose target is gone".
 
 ---
 
