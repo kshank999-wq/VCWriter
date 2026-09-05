@@ -208,7 +208,45 @@ to the speaking character's voice, action and prose to the narrator voice.
 *Accepts:* raw capture is retained until the writer confirms classification;
 uncertain classifications enter a review queue rather than being written into
 the project.
-*Status:* Phase 4/5. `CaptureItem` models it, `capture_items` stores it.
+*Tested:* `capture.test.ts` — routing, approval, and the raw text surviving
+every outcome.
+
+---
+
+## Epic 9 — Capture and sync (§9, §11, §14)
+
+**9.1 An idea captured offline is not lost.**
+As a writer away from my desk, a note I take with no signal is safe on the
+device and sends itself when there is a connection.
+*Accepts:* the capture is in IndexedDB before any send is attempted; a failed
+send keeps it queued with the error; retrying a send that actually succeeded
+does not create a second copy.
+*Tested:* `capture-queue.test.ts` against a real IndexedDB implementation.
+
+**9.2 The destination I choose outranks a guess.**
+*Accepts:* a routing the writer picked on the capture device is stored
+separately from `inference` and is preferred by the approval queue, which says
+which of the two it is showing.
+*Tested:* `capture.test.ts` — "prefers the destination the writer chose".
+
+**9.3 Nothing becomes project data without me.**
+*Accepts:* approving creates the note, beat or character; Later and Discard
+keep the capture and its raw text; a capture cannot be approved twice.
+*Tested:* `capture.test.ts` — the approval and rejection cases.
+
+**9.4 Editing on two devices does not lose work.**
+*Accepts:* a change on one side is taken; a change on both resolves to the
+newer edit and is reported by name; a record edited on one side and deleted on
+the other survives; a beat never outlives its scene; the project row does not
+conflict merely because both sides edited different beats.
+*Tested:* `sync.test.ts` — the merge cases.
+
+**9.5 Sync is optional.**
+*Accepts:* a build with no Supabase keys has sync switched off and every other
+feature working, with projects as files on disk.
+*Implemented:* `isCloudConfigured`, and the account panel says so plainly.
+*Untested here:* the Supabase round trip and the sign-in flow need real
+hardware and a configured build.
 
 ---
 

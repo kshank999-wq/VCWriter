@@ -101,10 +101,21 @@ exceptions crossing the bridge.
 | `exportPdf({ file, options })` | Render the print document and write a PDF. Returns `null` when the save dialog was cancelled |
 | `print({ file, options })` | Send the same document to the system print dialog |
 | `appInfo()` | Version and platform |
+| `accountStatus()` | Whether sync is configured in this build, and who is signed in |
+| `requestSignInCode(email)` | Ask Supabase to email a six-digit code |
+| `verifySignInCode({ email, code })` | Exchange the code for a session, stored encrypted |
+| `signOut()` | Clear the session locally and on the server |
+| `syncProject({ file })` | Pull, merge, push. Returns the merged project, named conflicts and a summary |
+| `listCaptures(projectId)` | Captures awaiting review for this project, plus unassigned ones |
+| `resolveCapture(capture)` | Write back a review decision. Never touches `raw_text` |
 
 `saveProject` re-validates the document against the project schema before it
 touches disk: the renderer is the least trusted half of the application, and a
 malformed document must never reach the file.
+
+Sync is optional. In a build without Supabase keys, `accountStatus()` reports
+`configured: false` and every other channel above still works — projects are
+files on disk.
 
 `exportPdf` and `print` take the *project*, not HTML. The main process
 re-validates it and generates the print document itself, so the renderer can

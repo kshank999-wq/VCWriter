@@ -52,13 +52,24 @@ credits block beyond title and author, and export formats beyond PDF —
 Final Draft `.fdx` and Fountain are the obvious next two, and both are
 renderers over the same element list.
 
-## Phase 4 — Notes and sync
+## Phase 4 — Notes and sync ▸ built
 
-Mobile companion, typed and dictated capture, categorisation, approval queue,
-project sync, offline-tolerant capture.
+| Deliverable | Status |
+| --- | --- |
+| Mobile companion | Done — VC Writer Notes, an installable web app at `/notes`, works on iOS and Android with no app store |
+| Typed and dictated capture | Done — browser speech API where it exists; the interface says to use the keyboard mic where it does not |
+| Offline-tolerant capture | Done — IndexedDB first, send second; nothing leaves the queue until the server acknowledges it |
+| Categorisation | Done — the writer picks a destination on the phone, stored separately from any classifier guess |
+| Approval queue | Done — desktop review with a suggested destination, Approve / Later / Discard, raw capture always kept |
+| Project sync | Done — pull, merge, push, with per-record rules and named conflicts |
+| Desktop sign-in | Done — six-digit email code, session encrypted with the OS keychain |
 
-`capture_items` and the `CaptureItem` model are ready, including the confidence
-and confirmation fields that keep AI classification a proposal.
+Remaining before Phase 4 closes: no AI classifier is wired up yet, so
+`inference` is always empty and every capture arrives with the writer's own
+choice — the approval queue already handles both. Audio is not uploaded (the
+`captures` bucket exists but dictation is transcribed on the device). The
+sync and sign-in paths need a run on real hardware; the merge logic is tested,
+the Supabase round trip is not.
 
 ## Phase 5 — Editor and voice
 
