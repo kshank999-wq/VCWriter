@@ -87,13 +87,22 @@ approval queue handles its absence), the AI pass has never run against the
 live API from this environment, and read-back has no pause/resume or
 line-level navigation — only play and stop.
 
-## Phase 6 — Commerce
+## Phase 6 — Commerce ▸ built
 
-Vercel store and account, Stripe checkout and webhooks, entitlements and
-licenses, Resend email, Windows/Mac selection, secure downloads.
+| Deliverable | Status |
+| --- | --- |
+| Store and account | Done — price read from Stripe, platform picker, purchase history, downloads, "email me my license again" |
+| Stripe checkout and webhooks | Done — server-chosen price, Stripe Tax, idempotent fulfillment with the money path under test |
+| Entitlements and licenses | Done — revocation on refund, platform entitlement honoured, device slots freed by deactivation |
+| Resend email | Done — templates in their own versioned module, version recorded with each delivery |
+| Windows/Mac selection | Done — recorded on the order without restricting the license |
+| Secure downloads | Done — license re-checked per request, short-lived signed URLs |
+| Release administration | Done — `/admin/releases`, direct-to-storage installer upload, activate/retire per platform and channel |
 
-Built. What remains is configuration: live Stripe keys and price, the webhook
-endpoint registered with Stripe, a verified Resend sending domain.
+Remaining before Phase 6 closes: configuration rather than code — live Stripe
+keys and a price, the webhook endpoint registered with Stripe, Stripe Tax
+switched on in the dashboard, a verified Resend sending domain, and
+`is_admin` set on the first administrator's profile row.
 
 ## Phase 7 — Release operations
 

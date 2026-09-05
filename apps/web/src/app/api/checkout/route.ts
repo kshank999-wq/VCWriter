@@ -43,6 +43,11 @@ export async function POST(request: Request): Promise<Response> {
         supabase_user_id: user?.id ?? '',
       },
       allow_promotion_codes: true,
+      // Software sold internationally attracts VAT and sales tax. Stripe works
+      // out what is owed where, which is not a calculation to reimplement —
+      // enable Stripe Tax in the dashboard and it applies from here.
+      automatic_tax: { enabled: true },
+      billing_address_collection: 'auto',
     });
 
     if (!session.url) {

@@ -289,6 +289,19 @@ is recorded with the order.
 still leaves one order and one license.
 *Enforced:* unique `stripe_checkout_session_id`, unique `licenses.order_id`,
 and an event-id claim table.
+*Tested:* `fulfillment.test.ts` — replay, race, and separate purchases staying
+separate, against a fake that enforces the same constraints.
+
+**7.7 A returning customer is never stranded after paying.**
+*Accepts:* a buyer who already has an account is resolved by email in one
+query, in any letter case, without creating a second account — never by
+scanning a paginated user list that could miss them.
+*Tested:* `fulfillment.test.ts` — the returning-customer and letter-case cases.
+
+**7.8 A customer can retrieve their own license without contacting support.**
+*Accepts:* the account page re-sends the license to the address on the account,
+with no recipient field and a cooldown between sends.
+*Implemented:* `/api/account/resend-license`.
 
 **7.3 Immediate download and confirmation email.**
 *Accepts:* the post-payment page offers the chosen installer; the email carries
@@ -305,8 +318,11 @@ next download attempt fails.
 
 **7.6 Publish platforms independently.**
 *Accepts:* publishing a new Windows build leaves the active macOS build
-untouched.
-*Enforced:* one active build per platform/channel.
+untouched; a build arrives inactive and going live is a separate act; an
+installer too large for a request body still uploads.
+*Enforced:* one active build per platform/channel, activation scoped to both.
+*Implemented:* `/admin/releases` with direct-to-storage signed uploads.
+*Tested:* `commerce.test.ts` — a new build starts inactive.
 
 ---
 
