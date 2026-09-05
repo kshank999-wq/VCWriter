@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { createProjectFile, updateBeat, type ProjectFile } from '@vcwriter/domain';
 import { BeatEditor } from '../components/BeatEditor';
@@ -16,6 +16,15 @@ import { PagePreview } from '../components/PagePreview';
  */
 
 afterEach(cleanup);
+
+// The workspace asks the main process which platform it is on, to name the
+// right system dictation shortcut.
+beforeEach(() => {
+  Object.defineProperty(window, 'vcwriter', {
+    configurable: true,
+    value: { appInfo: vi.fn().mockResolvedValue({ ok: true, data: { version: '0.1.0', platform: 'darwin' } }) },
+  });
+});
 
 function Harness({ initial }: { initial: ProjectFile }) {
   const [file, setFile] = useState(initial);

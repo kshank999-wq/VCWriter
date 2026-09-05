@@ -186,18 +186,45 @@ renderers over the same element list, so no data change is required.
 
 ## Epic 5 — Editors (§8)
 
-**5.1 Daily Editor** — grammar, spelling, punctuation, readability, with
-accept/reject that preserves the writer's voice.
-**5.2 Final Editor** — scene-by-scene structural review: what is true at the
-start, what changes, where the turn is, whether the value moves; surfaces weak,
-repetitive or non-turning scenes and unresolved threads.
-*Accepts:* findings are presented for review; nothing is rewritten silently.
-*Status:* Phase 5. The scene/beat model and the setup/payoff records supply the
-inputs.
+**5.1 Daily Editor.**
+*Accepts:* mechanics findings (doubled words, spacing, unbalanced brackets)
+are marked as errors and offer a one-click fix; readability and habit findings
+are marked as style, can be switched off, and never offer a silent rewrite;
+clean text produces nothing; the pass can be scoped to one scene or beat.
+*Tested:* `editors.test.ts` — the rule cases and the error/style split;
+`editors.test.tsx` — Fix and Dismiss through the interface.
+
+**5.2 Final Editor.**
+*Accepts:* every scene reports its real page count, cast and shape; findings
+name empty scenes, outline-only scenes, scenes that run long or vanish, two
+consecutive scenes in one location, characters who speak once or disappear,
+unresolved setups and unused research; nothing is rewritten.
+*Tested:* `editors.test.ts` — the structural findings.
+
+**5.3 The Final Editor does not guess at what it cannot know.**
+*Accepts:* with no AI pass run, no scene carries a verdict, no "does not turn"
+finding is raised, and the interface says the scene has not been read yet.
+*Tested:* `editors.test.ts` — "does not invent a verdict"; `editors.test.tsx` —
+the interface saying so.
+
+**5.4 The AI read never leaves more than the scene.**
+*Accepts:* `sceneTextForReview` returns that scene's text and nothing else; the
+endpoint accepts only that text, checks an active license before spending, and
+its response shape has no field that could carry replacement prose.
+*Tested:* `editors.test.ts` — "sends only the scene text for review".
+*Untested here:* the live model call has never run from this environment.
 
 ---
 
 ## Epic 6 — Voice (§9, §10)
+
+**6.3 Give a cast voices without assigning a dozen by hand.**
+*Accepts:* system voices are described where they are known and reported as
+unknown where they are not; one action gives every unvoiced character a
+distinct voice; a character already voiced is left alone and their voice is
+not reused; characters with no voice are named rather than quietly narrated.
+*Tested:* `voice.test.ts` — description, suggestion and playback resolution;
+`editors.test.tsx` — the same through the panel.
 
 **6.1 Assign a voice per character.**
 *Accepts:* assignment persists per project and stays editable; dialogue resolves

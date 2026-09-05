@@ -75,6 +75,26 @@ Version metadata for the desktop updater. Deliberately carries no download URL.
 }
 ```
 
+### `POST /api/ai/scene-review`
+
+The Final Editor's structural pass (§8.2). Authenticated by session cookie
+from the website or a bearer token from the desktop application; either way the
+caller must hold an **active license**, because every request costs real money.
+
+```jsonc
+// request — only the scene's own text; nothing else about the project
+{ "sceneText": "SCENE HEADING: INT. LIGHTHOUSE - NIGHT\n…", "position": "Scene 14 of 62", "format": "screenplay" }
+// 200
+{ "verdict": { "opening": "…", "change": "…", "turn": null, "valueShift": "none",
+               "purpose": "…", "concerns": ["…"], "model": "claude-opus-5" } }
+// 401 not signed in · 403 no active license · 502 the read failed
+// 503 AI review is not configured on this deployment
+```
+
+The response shape has no field that could carry replacement prose: the pass
+reads, it does not rewrite. `ANTHROPIC_API_KEY` lives here and never ships in
+an installer.
+
 ### `GET /auth/callback?code=…&next=/account`
 
 Exchanges a magic-link code for a session cookie and redirects. `next` is only
@@ -108,6 +128,7 @@ exceptions crossing the bridge.
 | `syncProject({ file })` | Pull, merge, push. Returns the merged project, named conflicts and a summary |
 | `listCaptures(projectId)` | Captures awaiting review for this project, plus unassigned ones |
 | `resolveCapture(capture)` | Write back a review decision. Never touches `raw_text` |
+| `reviewScene({ sceneText, position, format })` | Ask the Final Editor's AI pass to read one scene |
 
 `saveProject` re-validates the document against the project schema before it
 touches disk: the renderer is the least trusted half of the application, and a

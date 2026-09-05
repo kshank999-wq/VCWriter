@@ -49,7 +49,21 @@ export function BeatEditor({ file, beat, focusMode, onUpdate }: BeatEditorProps)
   const elementTypes = elementTypesFor(format);
 
   const [focusId, setFocusId] = useState<ManuscriptElementId | null>(null);
+  const [dictationShortcut, setDictationShortcut] = useState<string | null>(null);
   const inputs = useRef(new Map<ManuscriptElementId, HTMLTextAreaElement>());
+
+  useEffect(() => {
+    void window.vcwriter.appInfo().then((result) => {
+      if (!result.ok || !result.data) return;
+      setDictationShortcut(
+        result.data.platform === 'darwin'
+          ? 'press Fn twice'
+          : result.data.platform === 'win32'
+            ? 'Windows key + H'
+            : null,
+      );
+    });
+  }, []);
 
   useEffect(() => {
     if (!focusId) return;
@@ -230,6 +244,17 @@ export function BeatEditor({ file, beat, focusMode, onUpdate }: BeatEditorProps)
       <p className="muted shortcut-hint">
         Return for the next element · Tab to change its type · Shift+Return for a line break
         {prose ? '' : ' · Tab from a character cue gives a parenthetical'}
+      </p>
+
+      {/*
+        Dictation (§9). Electron's Chromium ships no working speech-recognition
+        API, so rather than a button that would do nothing, this points at the
+        system dictation that already works in any focused field. VC Writer
+        Notes on a phone uses the browser API, where it is real.
+      */}
+      <p className="muted shortcut-hint">
+        To dictate, put the cursor in an element and use your system dictation
+        {dictationShortcut ? ` (${dictationShortcut})` : ''}.
       </p>
 
       {focusMode ? null : <RelatedPanel file={file} target={ref('beat', beat.id)} onUpdate={onUpdate} />}

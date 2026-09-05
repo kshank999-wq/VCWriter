@@ -71,14 +71,21 @@ choice — the approval queue already handles both. Audio is not uploaded (the
 sync and sign-in paths need a run on real hardware; the merge logic is tested,
 the Supabase round trip is not.
 
-## Phase 5 — Editor and voice
+## Phase 5 — Editor and voice ▸ built
 
-Daily Editor, Final Editor framework, speech-to-text, text-to-speech voices,
-per-character voice assignment and playback.
+| Deliverable | Status |
+| --- | --- |
+| Daily Editor | Done — mechanics, readability and habit checks, deterministic and offline, with per-finding Fix and Dismiss |
+| Final Editor | Done — per-scene page geometry, cast and shape, plus structural findings; the AI pass adds the reading of whether a scene turns |
+| AI structural read | Done — runs on vc-writer.com behind a license check, never in the installed application |
+| Text-to-speech voices | Done — system voices, described where known, unknown where not |
+| Per-character assignment and playback | Done — a scene plays as a conversation, "Suggest a cast" fills an unvoiced cast |
+| Speech-to-text | Partial — real in VC Writer Notes on a phone; on the desktop the workspace points at system dictation, because Electron ships no working speech-recognition API |
 
-`VoiceAssignment` and `speechSegmentsForUnit` already resolve a scene into
-per-character speech segments; the provider adapter and the editors are the
-work.
+Remaining before Phase 5 closes: no capture classifier is wired up yet (the
+approval queue handles its absence), the AI pass has never run against the
+live API from this environment, and read-back has no pause/resume or
+line-level navigation — only play and stop.
 
 ## Phase 6 — Commerce
 
