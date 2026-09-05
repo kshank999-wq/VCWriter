@@ -1,0 +1,13 @@
+{
+  "name": "@vcwriter/brand",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Promotional artboards rendered from the brand tokens in docs/brand.md",
+  "type": "module",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

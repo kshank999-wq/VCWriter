@@ -32,3 +32,6 @@ coverage/
 
 # local supabase
 supabase/.temp/
+
+# Rendered artboards are a build product
+brand/exports/

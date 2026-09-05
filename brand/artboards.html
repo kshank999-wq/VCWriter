@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>VC Writer — promotional artboards</title>
+<style>
+  /* Faces: Josefin Sans for text, Limelight for the monogram. Both OFL; see fonts/LICENSE.md. */
+  @font-face { font-family: 'Josefin'; font-weight: 600; src: url('fonts/JosefinSans-600.ttf') format('truetype'); }
+  @font-face { font-family: 'Josefin'; font-weight: 700; src: url('fonts/JosefinSans-700.ttf') format('truetype'); }
+  @font-face { font-family: 'Limelight'; font-weight: 400; src: url('fonts/Limelight.ttf') format('truetype'); }
+
+  /* Tokens from docs/brand.md. */
+  :root {
+    --ink: #070604;
+    --panel: #100e09;
+    --gold: #c9a45c;
+    --gold-bright: #efd48a;
+    --gold-deep: #8a6f2f;
+    --red: #8b1c1c;
+    --text: #f1e7cf;
+    --muted: #a3946f;
+  }
+
+  html, body { margin: 0; background: #222; }
+  body { display: grid; gap: 80px; padding: 80px; justify-items: start; }
+
+  .board {
+    position: relative;
+    overflow: hidden;
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'Josefin', sans-serif;
+    text-transform: uppercase;
+    flex: 0 0 auto;
+  }
+  .board > svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .board > .fg { position: absolute; inset: 0; display: grid; }
+
+  .gold {
+    background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 48%, var(--gold-deep) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .mono { font-family: 'Limelight', 'Josefin', sans-serif; font-weight: 400; line-height: 0.9; }
+  .rule { height: 1px; background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold) 80%, transparent); }
+  .rule.double { height: 5px; background: none; border-top: 1px solid var(--gold); border-bottom: 1px solid var(--gold-deep); }
+  .tag { color: var(--muted); letter-spacing: 0.34em; font-weight: 600; white-space: nowrap; }
+  /* The footer marquee: a panel the pediment stands on, as on the studio poster. */
+  .marquee-panel {
+    display: grid; gap: 0.5em; justify-items: center; align-content: end;
+    padding: 0.9em 2.2em 0.7em; margin: 0 auto;
+    background: var(--panel); border: 1px solid var(--gold-deep);
+    box-shadow: inset 0 0 0 5px var(--panel), inset 0 0 0 6px var(--gold);
+    color: var(--gold); letter-spacing: 0.3em; font-weight: 600;
+  }
+  .body { color: var(--text); letter-spacing: 0.12em; font-weight: 600; line-height: 1.35; }
+  .headline { color: var(--text); font-weight: 700; letter-spacing: 0.1em; line-height: 1.12; }
+  .headline em { font-style: normal; }
+  .diamond { width: 0; height: 0; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ POSTER 24x36 (2400x3600) -->
+<section class="board" data-name="poster-2400x3600" style="width:2400px;height:3600px">
+  <svg class="bg" viewBox="0 0 2400 3600" data-deco="frame sunburst skyline spotlights grain" data-burst="1200 1120 2600" data-frame="90" data-base="3150"></svg>
+  <div class="fg" style="grid-template-rows: 300px 1fr auto; padding: 200px 220px 240px; text-align: center;">
+    <div style="display:grid; gap: 26px; justify-items: center; align-content: start;">
+      <div class="tag" style="font-size: 38px;">A VC Film Studio companion</div>
+      <div class="rule double" style="width: 220px;"></div>
+    </div>
+
+    <div style="display:grid; align-content: center; justify-items: center; gap: 0;">
+      <div class="mono gold" style="font-size: 980px; letter-spacing: 0.02em; margin-top: -40px;">VC</div>
+      <div style="display:grid; grid-template-columns: 1fr auto 1fr; align-items:center; gap: 40px; width: 1500px; margin-top: 20px;">
+        <div class="rule"></div>
+        <div class="gold" style="font-size: 190px; font-weight: 700; letter-spacing: 0.32em; padding-left: 0.32em;">WRITER</div>
+        <div class="rule"></div>
+      </div>
+      <div class="headline" style="font-size: 70px; max-width: 2000px; margin-top: 160px;">
+        Everything a script or a novel needs,<br /><em class="gold">in one place.</em>
+      </div>
+      <div class="body" style="font-size: 40px; color: var(--muted); margin-top: 70px; letter-spacing: 0.3em;">
+        Research &nbsp;·&nbsp; Outline &nbsp;·&nbsp; Draft &nbsp;·&nbsp; Edit &nbsp;·&nbsp; Read back
+      </div>
+    </div>
+
+    <div class="marquee-panel" style="font-size: 44px;">
+      <div>Windows 10 &nbsp;·&nbsp; Windows 11 &nbsp;·&nbsp; macOS</div>
+      <div class="tag" style="color: var(--gold); font-size: 1em;">vc-writer.com</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ SQUARE 1080 -->
+<section class="board" data-name="social-square-1080" style="width:1080px;height:1080px">
+  <svg class="bg" viewBox="0 0 1080 1080" data-deco="frame sunburst grain" data-burst="540 400 1000" data-frame="44"></svg>
+  <div class="fg" style="place-content: center; justify-items: center; gap: 0; text-align:center; padding: 80px;">
+    <div class="tag" style="font-size: 20px;">A VC Film Studio companion</div>
+    <div class="mono gold" style="font-size: 420px; margin-top: 10px;">VC</div>
+    <div style="display:grid; grid-template-columns: 1fr auto 1fr; align-items:center; gap: 22px; width: 720px; margin-top: 4px;">
+      <div class="rule"></div>
+      <div class="gold" style="font-size: 84px; font-weight: 700; letter-spacing: 0.32em; padding-left: 0.32em;">WRITER</div>
+      <div class="rule"></div>
+    </div>
+    <div class="headline" style="font-size: 34px; max-width: 820px; margin-top: 64px;">
+      Everything a script or a novel needs, <em class="gold">in one place.</em>
+    </div>
+    <div class="tag" style="font-size: 22px; color: var(--gold); margin-top: 60px;">vc-writer.com</div>
+  </div>
+</section>
+
+<!-- ============================================================ SQUARE 1080 — feature card -->
+<section class="board" data-name="social-square-features-1080" style="width:1080px;height:1080px">
+  <svg class="bg" viewBox="0 0 1080 1080" data-deco="frame grain" data-frame="44"></svg>
+  <div class="fg" style="grid-template-rows: auto 1fr auto; padding: 110px 120px; gap: 0;">
+    <div style="display:grid; gap: 18px;">
+      <div class="tag" style="font-size: 20px;">VC Writer</div>
+      <div class="rule double" style="width: 120px; background:none;"></div>
+      <div class="headline" style="font-size: 52px; margin-top: 10px;">Built around how<br />stories are <em class="gold">actually</em><br />developed.</div>
+    </div>
+    <ul class="features" style="list-style:none; margin: 0; padding: 0; align-self: center; display:grid; gap: 26px;">
+      <li>Plot lanes hold scenes; every beat lives in one</li>
+      <li>Research that stays linked to the beats that use it</li>
+      <li>Setups and payoffs tracked until delivered</li>
+      <li>A daily editor and a final editor</li>
+      <li>Hear it read back, a voice per character</li>
+    </ul>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="tag" style="font-size: 20px;">Windows · macOS</div>
+      <div class="tag" style="font-size: 20px; color: var(--gold);">vc-writer.com</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ STORY 1080x1920 -->
+<section class="board" data-name="social-story-1080x1920" style="width:1080px;height:1920px">
+  <svg class="bg" viewBox="0 0 1080 1920" data-deco="frame sunburst skyline spotlights grain" data-burst="540 600 1500" data-frame="48" data-base="1600"></svg>
+  <div class="fg" style="grid-template-rows: auto 1fr auto; padding: 150px 110px 170px; text-align:center; justify-items:center;">
+    <div style="display:grid; gap: 18px; justify-items:center;">
+      <div class="tag" style="font-size: 22px;">A VC Film Studio companion</div>
+      <div class="rule double" style="width: 140px;"></div>
+    </div>
+    <div style="display:grid; align-content:center; justify-items:center;">
+      <div class="mono gold" style="font-size: 520px;">VC</div>
+      <div style="display:grid; grid-template-columns: 1fr auto 1fr; align-items:center; gap: 24px; width: 800px;">
+        <div class="rule"></div>
+        <div class="gold" style="font-size: 100px; font-weight: 700; letter-spacing: 0.32em; padding-left: 0.32em;">WRITER</div>
+        <div class="rule"></div>
+      </div>
+      <div class="headline" style="font-size: 44px; max-width: 820px; margin-top: 110px;">
+        Everything a script or a novel needs, <em class="gold">in one place.</em>
+      </div>
+      <div class="body" style="font-size: 22px; color: var(--muted); margin-top: 44px; letter-spacing: 0.26em; white-space: nowrap;">
+        Research · Outline · Draft · Edit · Read back
+      </div>
+    </div>
+    <div class="marquee-panel" style="font-size: 26px;">
+      <div>Windows 10 · Windows 11 · macOS</div>
+      <div class="tag" style="color: var(--gold); font-size: 1em;">vc-writer.com</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ LANDSCAPE 1200x630 (Open Graph / X / LinkedIn) -->
+<section class="board" data-name="social-landscape-1200x630" style="width:1200px;height:630px">
+  <svg class="bg" viewBox="0 0 1200 630" data-deco="frame sunburst grain" data-burst="300 330 700" data-frame="30"></svg>
+  <div class="fg" style="grid-template-columns: 430px 1fr; align-items:center; padding: 70px 70px; gap: 30px;">
+    <div style="display:grid; justify-items:center; text-align:center;">
+      <div class="mono gold" style="font-size: 300px;">VC</div>
+      <div style="display:grid; grid-template-columns: 1fr auto 1fr; align-items:center; gap: 14px; width: 420px;">
+        <div class="rule"></div>
+        <div class="gold" style="font-size: 54px; font-weight: 700; letter-spacing: 0.32em; padding-left: 0.32em;">WRITER</div>
+        <div class="rule"></div>
+      </div>
+    </div>
+    <div style="display:grid; gap: 20px; border-left: 1px solid var(--gold-deep); padding-left: 40px;">
+      <div class="tag" style="font-size: 15px;">A VC Film Studio companion</div>
+      <div class="headline" style="font-size: 36px;">Everything a script or a novel needs, <em class="gold">in one place.</em></div>
+      <div class="body" style="font-size: 14px; color: var(--muted); letter-spacing: 0.2em; white-space: nowrap;">Research · Outline · Draft · Edit · Read back</div>
+      <div style="display:flex; gap: 36px; margin-top: 12px; white-space: nowrap;">
+        <div class="tag" style="font-size: 16px;">Windows · macOS</div>
+        <div class="tag" style="font-size: 16px; color: var(--gold);">vc-writer.com</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ BANNER 1500x500 (profile header) -->
+<section class="board" data-name="banner-1500x500" style="width:1500px;height:500px">
+  <svg class="bg" viewBox="0 0 1500 500" data-deco="frame sunburst grain" data-burst="330 260 700" data-frame="26"></svg>
+  <div class="fg" style="grid-template-columns: 440px 1fr; align-items:center; padding: 40px 120px; gap: 60px;">
+    <div style="display:grid; justify-items:center; text-align:center;">
+      <div class="mono gold" style="font-size: 250px;">VC</div>
+    </div>
+    <div class="marquee-box" style="display:grid; gap: 18px; justify-items:start;">
+      <div class="gold" style="font-size: 92px; font-weight: 700; letter-spacing: 0.3em;">VC WRITER</div>
+      <div class="rule" style="width: 100%; background: linear-gradient(90deg, var(--gold), transparent);"></div>
+      <div class="body" style="font-size: 19px; color: var(--muted); letter-spacing: 0.24em; white-space: nowrap;">Story development · Screenplays · Novels</div>
+      <div class="tag" style="font-size: 16px;">Windows &amp; macOS &nbsp;·&nbsp; <span style="color: var(--gold);">vc-writer.com</span></div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .features li {
+    font-size: 27px; font-weight: 600; letter-spacing: 0.06em; color: var(--text);
+    padding: 22px 0 22px 44px; border-bottom: 1px solid #3a3018; position: relative; text-transform: none;
+  }
+  .features li::before {
+    content: ''; position: absolute; left: 6px; top: 32px; width: 12px; height: 12px;
+    transform: rotate(45deg); background: var(--red); box-shadow: 0 0 0 1px var(--gold);
+  }
+  .marquee {
+    display: inline-block; padding: 0.55em 1.4em; color: var(--gold); letter-spacing: 0.3em; font-weight: 600;
+    border-top: 1px solid var(--gold); border-bottom: 1px solid var(--gold);
+    box-shadow: 0 -4px 0 -3px var(--gold-deep), 0 4px 0 -3px var(--gold-deep);
+  }
+</style>
+
+<script>
+  // Draws the deco background for each board from data-deco. Everything is
+  // proportional to the board, so the same code serves a poster and a banner.
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (name, attrs = {}) => {
+    const node = document.createElementNS(NS, name);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+    return node;
+  };
+
+  for (const svg of document.querySelectorAll('svg.bg')) {
+    const [, , W, H] = svg.getAttribute('viewBox').split(' ').map(Number);
+    const deco = new Set(svg.dataset.deco.split(' '));
+    const inset = Number(svg.dataset.frame || 40);
+    const id = Math.random().toString(36).slice(2, 8);
+
+    const defs = el('defs');
+    defs.innerHTML = `
+      <linearGradient id="g-${id}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#efd48a"/><stop offset="0.5" stop-color="#c9a45c"/><stop offset="1" stop-color="#8a6f2f"/>
+      </linearGradient>
+      <radialGradient id="b-${id}" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stop-color="#c9a45c" stop-opacity="0.30"/><stop offset="0.55" stop-color="#c9a45c" stop-opacity="0.06"/><stop offset="1" stop-color="#c9a45c" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="beam-${id}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#e8c872" stop-opacity="0"/><stop offset="1" stop-color="#e8c872" stop-opacity="0.16"/>
+      </linearGradient>
+      <filter id="grain-${id}">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/>
+        <feColorMatrix type="saturate" values="0"/>
+        <feComponentTransfer><feFuncA type="table" tableValues="0 0.06"/></feComponentTransfer>
+      </filter>`;
+    svg.appendChild(defs);
+
+    // Warm vignette on the ink.
+    svg.appendChild(el('rect', { width: W, height: H, fill: '#070604' }));
+
+    if (deco.has('sunburst')) {
+      const [cx, cy, r] = svg.dataset.burst.split(' ').map(Number);
+      svg.appendChild(el('circle', { cx, cy, r, fill: `url(#b-${id})` }));
+      const rays = el('g', { stroke: '#c9a45c', 'stroke-opacity': '0.13', 'stroke-width': Math.max(1, W / 1200) });
+      for (let angle = 0; angle < 360; angle += 7.5) {
+        const a = (angle * Math.PI) / 180;
+        rays.appendChild(el('line', { x1: cx, y1: cy, x2: cx + Math.cos(a) * r, y2: cy + Math.sin(a) * r }));
+      }
+      // Wider, dimmer alternate rays give the burst depth.
+      const wide = el('g', { stroke: '#c9a45c', 'stroke-opacity': '0.05', 'stroke-width': Math.max(6, W / 90) });
+      for (let angle = 3.75; angle < 360; angle += 15) {
+        const a = (angle * Math.PI) / 180;
+        wide.appendChild(el('line', { x1: cx, y1: cy, x2: cx + Math.cos(a) * r, y2: cy + Math.sin(a) * r }));
+      }
+      svg.appendChild(wide);
+      svg.appendChild(rays);
+    }
+
+    if (deco.has('spotlights')) {
+      // Two beams from the bottom corners crossing upward, as on a premiere.
+      const beam = (x0, x1top, x2top) =>
+        el('polygon', { points: `${x0},${H} ${x1top},0 ${x2top},0`, fill: `url(#beam-${id})`, transform: `rotate(180 ${W / 2} ${H / 2})` });
+      svg.appendChild(beam(W * 0.12, W * 0.42, W * 0.62));
+      svg.appendChild(beam(W * 0.88, W * 0.38, W * 0.58));
+    }
+
+    if (deco.has('skyline')) {
+      // A stepped deco pediment across the base. `data-base` places its
+      // foot exactly where the footer marquee starts.
+      const base = Number(svg.dataset.base || H - inset * 3.2);
+      const g = el('g', { fill: '#100e09', stroke: '#8a6f2f', 'stroke-width': Math.max(1, W / 1500) });
+      const steps = [
+        [0.08, 0.06], [0.14, 0.11], [0.2, 0.17], [0.26, 0.24], [0.33, 0.32],
+      ];
+      for (const [x, h] of steps) {
+        const hh = H * h * 0.32;
+        g.appendChild(el('rect', { x: W * x, y: base - hh, width: W * 0.062, height: hh }));
+        g.appendChild(el('rect', { x: W * (1 - x) - W * 0.062, y: base - hh, width: W * 0.062, height: hh }));
+      }
+      // Central pavilion with the gold rules.
+      const ch = H * 0.085;
+      g.appendChild(el('rect', { x: W * 0.39, y: base - ch, width: W * 0.22, height: ch }));
+      g.appendChild(el('rect', { x: W * 0.43, y: base - ch - H * 0.02, width: W * 0.14, height: H * 0.02 }));
+      for (let i = 0; i < 5; i += 1) {
+        g.appendChild(el('rect', { x: W * (0.415 + i * 0.036), y: base - ch + H * 0.015, width: W * 0.014, height: ch - H * 0.03, fill: '#4d0f0f', stroke: 'none' }));
+      }
+      svg.appendChild(g);
+      svg.appendChild(el('rect', { x: inset * 1.4, y: base, width: W - inset * 2.8, height: Math.max(2, H / 900), fill: `url(#g-${id})` }));
+      svg.appendChild(el('rect', { x: inset * 1.4, y: base + H / 300, width: W - inset * 2.8, height: Math.max(1, H / 1800), fill: '#8a6f2f' }));
+      // Diamond on the pavilion.
+      const d = W / 60;
+      svg.appendChild(el('path', { d: `M${W / 2} ${base - ch / 2 - d} l${d} ${d} l${-d} ${d} l${-d} ${-d} z`, fill: '#8b1c1c', stroke: `url(#g-${id})` }));
+    }
+
+    if (deco.has('frame')) {
+      const s = inset;              // outer inset
+      const step = s * 0.55;        // corner step
+      const stepped = (i) => {
+        const x0 = i, y0 = i, x1 = W - i, y1 = H - i, k = step;
+        return `M${x0} ${y0 + k} H${x0 + k} V${y0} H${x1 - k} V${y0 + k} H${x1} V${y1 - k} H${x1 - k} V${y1} H${x0 + k} V${y1 - k} H${x0} Z`;
+      };
+      svg.appendChild(el('path', { d: stepped(s), fill: 'none', stroke: '#8a6f2f', 'stroke-width': Math.max(1, W / 1500) }));
+      svg.appendChild(el('path', { d: stepped(s + step * 0.7), fill: 'none', stroke: `url(#g-${id})`, 'stroke-width': Math.max(1.5, W / 900) }));
+    }
+
+    if (deco.has('grain')) {
+      svg.appendChild(el('rect', { width: W, height: H, filter: `url(#grain-${id})` }));
+    }
+  }
+</script>
+</body>
+</html>

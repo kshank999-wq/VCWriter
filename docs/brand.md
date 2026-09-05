@@ -71,3 +71,10 @@ deco diamond in red beneath. It is drawn as inline SVG in both applications so
 it scales and needs no asset. It is deliberately a sibling of the VC Film
 Studio mark, not a copy of it — the two products should look related, not
 identical.
+
+## Promotional material
+
+A poster and a set of social graphics in this style live in
+[`brand/`](../brand/README.md), rendered from the same tokens. They use Josefin
+Sans and Limelight — both OFL — because a baked-in image needs a genuinely deco
+face, whereas the applications must not depend on a font download.
