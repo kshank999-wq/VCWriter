@@ -24,3 +24,6 @@ export * from './render.js';
 export * from './editing.js';
 export * from './pagination.js';
 export * from './print-html.js';
+export * from './sync-mapping.js';
+export * from './sync-merge.js';
+export * from './capture-approval.js';
