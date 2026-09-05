@@ -5,6 +5,8 @@ node_modules/
 # build output
 dist/
 build/
+# ...but electron-builder's resource directory is source, not output
+!apps/desktop/build/
 out/
 release/
 .next/

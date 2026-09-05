@@ -1,0 +1,58 @@
+# Packaging for Windows 10/11 and macOS (spec §3.1, §3.3).
+#
+# Both platforms are built from the same sources; nothing here forks product
+# behaviour. Signing credentials come from CI secrets and are never in the repo.
+appId: com.vcwriter.desktop
+productName: VC Writer
+copyright: Copyright © VC Writer
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/**
+  - package.json
+
+# Installers are uploaded to the private release bucket by CI and handed out as
+# short-lived signed URLs, so electron-builder itself publishes nothing.
+publish: null
+
+fileAssociations:
+  - ext: vcw
+    name: VC Writer project
+    role: Editor
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  # Windows Authenticode signing (§3.3). Supplied by CI.
+  # certificateSubjectName is preferred over shipping a .pfx into the runner.
+  signingHashAlgorithms: [sha256]
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  createDesktopShortcut: true
+
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  # Minimum macOS version stays configurable per §18; 11.0 covers Apple silicon
+  # from the first shipping hardware.
+  minimumSystemVersion: '11.0'
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+# Notarization runs in CI when APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD /
+# APPLE_TEAM_ID are present; without them the build stays unsigned and is
+# marked internal rather than being published as stable.
+afterSign: null
