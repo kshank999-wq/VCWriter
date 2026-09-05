@@ -2,13 +2,21 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { adminClient, currentUser } from '@/lib/supabase';
 import { DownloadButton } from './download-button';
+import { ResendLicense } from './resend-license';
 
 export const metadata: Metadata = { title: 'My account' };
 export const dynamic = 'force-dynamic';
 
+const formatMoney = (cents: number, currency: string): string =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(cents / 100);
+
+const formatDate = (value: string | null): string =>
+  value ? new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+
 /**
  * My Account / Downloads (spec §3.2, §12.4): the customer can come back at any
- * time and retrieve the current authorised build for either platform.
+ * time and retrieve the current authorised build for either platform, see what
+ * they bought, and have their license sent again without contacting support.
  */
 export default async function AccountPage() {
   const user = await currentUser();
@@ -27,7 +35,7 @@ export default async function AccountPage() {
   }
 
   const client = adminClient();
-  const [{ data: licenses }, { data: builds }] = await Promise.all([
+  const [{ data: licenses }, { data: builds }, { data: orders }, { data: profile }] = await Promise.all([
     client
       .from('licenses')
       .select('serial, status, entitled_platforms, max_activations, created_at')
@@ -38,6 +46,13 @@ export default async function AccountPage() {
       .select('platform, version, minimum_os_version, published_at')
       .eq('channel', 'stable')
       .eq('active', true),
+    client
+      .from('orders')
+      .select('id, status, amount_cents, currency, selected_platform, paid_at, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    client.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
   ]);
 
   const activeLicenses = (licenses ?? []).filter((license) => license.status === 'active');
@@ -56,17 +71,22 @@ export default async function AccountPage() {
             No active license yet. <Link href="/download">Buy VC Writer</Link> to get one.
           </p>
         ) : (
-          <div className="grid">
-            {activeLicenses.map((license) => (
-              <article key={license.serial} className="card">
-                <h3>License</h3>
-                <p className="serial">{license.serial}</p>
-                <p style={{ marginTop: 8 }}>
-                  Covers {license.entitled_platforms.join(' and ')} · up to {license.max_activations} devices
-                </p>
-              </article>
-            ))}
-          </div>
+          <>
+            <div className="grid">
+              {activeLicenses.map((license) => (
+                <article key={license.serial} className="card">
+                  <h3>License</h3>
+                  <p className="serial">{license.serial}</p>
+                  <p style={{ marginTop: 8 }}>
+                    Covers {license.entitled_platforms.join(' and ')} · up to {license.max_activations} devices
+                  </p>
+                </article>
+              ))}
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <ResendLicense />
+            </div>
+          </>
         )}
       </section>
 
@@ -93,6 +113,37 @@ export default async function AccountPage() {
           </div>
         )}
       </section>
+
+      {(orders ?? []).length > 0 ? (
+        <section>
+          <h2>Purchases</h2>
+          <ul className="order-list">
+            {(orders ?? []).map((order) => (
+              <li key={order.id} className="card">
+                <div className="build-row">
+                  <div>
+                    <strong>{formatMoney(order.amount_cents, order.currency)}</strong>
+                    <p className="lede">
+                      {formatDate(order.paid_at ?? order.created_at)}
+                      {order.selected_platform ? ` · chose ${order.selected_platform}` : ''}
+                      {order.status !== 'paid' ? ` · ${order.status}` : ''}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {profile?.is_admin ? (
+        <section>
+          <h2>Administration</h2>
+          <p className="lede">
+            <Link href="/admin/releases">Manage release builds</Link>
+          </p>
+        </section>
+      ) : null}
     </>
   );
 }

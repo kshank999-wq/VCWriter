@@ -344,3 +344,55 @@ input[type='email'] {
   color: var(--text);
   font: inherit;
 }
+
+/* ------------------------------------------------------ release management */
+
+.release-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  align-items: start;
+  padding: 20px 0;
+}
+
+.release-form .field.wide {
+  grid-column: 1 / -1;
+}
+
+.release-form button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.release-form input[type='file'] {
+  padding: 10px 0;
+}
+
+.build-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.build-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.build-row p {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+.order-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}

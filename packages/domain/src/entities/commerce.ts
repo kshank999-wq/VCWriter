@@ -21,14 +21,16 @@ export const orderSchema = z.object({
   selectedPlatform: platformSchema.nullable().default(null),
   amountCents: z.number().int().nonnegative(),
   currency: z.string().length(3).default('usd'),
+  /**
+   * The checkout session id *is* the idempotency key (§17: a successful
+   * purchase creates exactly one license even if the webhook is retried). It
+   * is unique in the database, so a replayed webhook updates this order rather
+   * than inserting a second one. There is deliberately no separate key: a
+   * second identifier would be one more thing that could disagree.
+   */
   stripeCheckoutSessionId: z.string().nullable().default(null),
   stripePaymentIntentId: z.string().nullable().default(null),
   stripeCustomerId: z.string().nullable().default(null),
-  /**
-   * Idempotency key for webhook replay (§17: a successful purchase creates
-   * exactly one license even if the webhook is retried).
-   */
-  idempotencyKey: z.string().min(1),
   paidAt: isoDateTime().nullable().default(null),
   ...timestamps,
 });

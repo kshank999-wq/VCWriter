@@ -12,6 +12,9 @@ import { generateSerial } from './license';
  * `orders.stripe_checkout_session_id` is unique and `licenses.order_id` is
  * unique — so concurrent retries collide in Postgres rather than racing in
  * application code.
+ *
+ * Everything here takes its database client as an argument so the money path
+ * can be tested against a fake rather than only in production.
  */
 
 export interface FulfillmentInput {
@@ -36,47 +39,63 @@ export interface FulfillmentResult {
   created: boolean;
 }
 
+export interface FulfillmentDeps {
+  client: SupabaseClient;
+  newSerial: () => string;
+}
+
+const defaultDeps = (): FulfillmentDeps => ({ client: adminClient(), newSerial: generateSerial });
+
 export const parsePlatform = (value: unknown): Platform | null => {
   const result = platformSchema.safeParse(value);
   return result.success ? result.data : null;
 };
 
+const findByEmail = async (client: SupabaseClient, email: string): Promise<string | null> => {
+  const { data } = await client.from('profiles').select('id').ilike('email', email).maybeSingle();
+  return data?.id ?? null;
+};
+
 /**
- * Resolve the buyer to an account. A purchase must never be stranded because
- * the buyer checked out without signing in first, so an account is created for
- * that email if one does not exist; the confirmation email then carries a
- * sign-in link (§12.3).
+ * Resolve the buyer to an account.
+ *
+ * The lookup comes first and the creation second, deliberately. A returning
+ * customer is the common case, and resolving them must not depend on an error
+ * path — nor on the auth admin API's paginated user list, which silently
+ * misses anyone past the first page and would strand a purchase that had
+ * already been paid for.
+ *
+ * A purchase is never stranded because the buyer checked out without signing
+ * in: an account is created for that email, and the confirmation email carries
+ * the sign-in link (§12.3).
  */
 const resolveUserId = async (client: SupabaseClient, input: FulfillmentInput): Promise<string> => {
   if (input.userId) return input.userId;
 
   const email = input.customerEmail.trim().toLowerCase();
+
+  const existing = await findByEmail(client, email);
+  if (existing) return existing;
+
   const { data: created, error } = await client.auth.admin.createUser({
     email,
     email_confirm: true,
     user_metadata: { source: 'stripe_checkout' },
   });
-  if (!error && created.user) return created.user.id;
+  if (created?.user) return created.user.id;
 
-  // Already registered: look the account up instead of failing the purchase.
-  const { data: existing, error: lookupError } = await client
-    .from('profiles')
-    .select('id')
-    .eq('id', created?.user?.id ?? '')
-    .maybeSingle();
-  if (existing?.id) return existing.id;
+  // Lost a race with a concurrent delivery that created the same account.
+  const raced = await findByEmail(client, email);
+  if (raced) return raced;
 
-  const { data: list, error: listError } = await client.auth.admin.listUsers();
-  if (listError) throw new Error(`Could not resolve buyer account: ${listError.message}`);
-  const match = list.users.find((user) => user.email?.toLowerCase() === email);
-  if (!match) {
-    throw new Error(`Could not create or find an account for ${email}: ${error?.message ?? lookupError?.message ?? 'unknown error'}`);
-  }
-  return match.id;
+  throw new Error(`Could not create or find an account for ${email}: ${error?.message ?? 'unknown error'}`);
 };
 
-export const fulfillCheckout = async (input: FulfillmentInput): Promise<FulfillmentResult> => {
-  const client = adminClient();
+export const fulfillCheckout = async (
+  input: FulfillmentInput,
+  deps: FulfillmentDeps = defaultDeps(),
+): Promise<FulfillmentResult> => {
+  const { client, newSerial } = deps;
   const userId = await resolveUserId(client, input);
 
   // Upsert on the unique checkout session id: a replayed webhook updates the
@@ -103,11 +122,7 @@ export const fulfillCheckout = async (input: FulfillmentInput): Promise<Fulfillm
     throw new Error(`Could not record order for session ${input.checkoutSessionId}: ${orderError?.message}`);
   }
 
-  const existing = await client
-    .from('licenses')
-    .select('id, serial')
-    .eq('order_id', order.id)
-    .maybeSingle();
+  const existing = await client.from('licenses').select('id, serial').eq('order_id', order.id).maybeSingle();
   if (existing.data) {
     return {
       userId,
@@ -123,7 +138,7 @@ export const fulfillCheckout = async (input: FulfillmentInput): Promise<Fulfillm
     .insert({
       user_id: userId,
       order_id: order.id,
-      serial: generateSerial(),
+      serial: newSerial(),
       status: 'active',
       // §18 keeps this configurable; today one purchase covers both installers.
       entitled_platforms: ['windows', 'macos'],

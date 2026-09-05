@@ -1,54 +1,34 @@
 import { Resend } from 'resend';
 import type { Platform } from '@vcwriter/domain';
-import { env, SITE_NAME } from './env';
+import { env } from './env';
 import { adminClient } from './supabase';
+import { licenseReminder, purchaseConfirmation, type RenderedEmail } from './email-templates';
 
 /**
  * Transactional email (spec §12.3).
  *
- * Delivery outcomes are logged for support; message bodies are not stored.
- * A send failure must never fail the purchase — the license already exists and
- * the customer can always retrieve it from My Account.
+ * Delivery outcomes are logged for support, with the template and its version,
+ * so "which email did this customer actually get" is answerable. Message
+ * bodies are not stored.
+ *
+ * A send failure must never fail the purchase: the license already exists and
+ * the customer can always retrieve it from My Account, so the failure is
+ * recorded and the caller carries on.
  */
 
-const PLATFORM_LABEL: Record<Platform, string> = {
-  windows: 'Windows 10 / 11',
-  macos: 'macOS',
-};
-
-export interface PurchaseEmailInput {
-  to: string;
-  userId: string;
-  serial: string;
-  platform: Platform | null;
+interface SendResult {
+  sent: boolean;
+  error: string | null;
 }
 
-const purchaseEmailHtml = ({ serial, platform }: Pick<PurchaseEmailInput, 'serial' | 'platform'>): string => {
-  const downloadUrl = `${env.siteUrl}/account`;
-  const platformLine = platform
-    ? `<p>Your download for <strong>${PLATFORM_LABEL[platform]}</strong> is ready.</p>`
-    : '<p>Your downloads for Windows and macOS are ready.</p>';
-  return `
-    <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.6;color:#111">
-      <h1 style="font-size:20px;margin:0 0 16px">Thank you for buying ${SITE_NAME}</h1>
-      ${platformLine}
-      <p style="margin:24px 0;padding:16px;background:#f4f4f5;border-radius:8px">
-        <span style="display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#52525b">Your license</span>
-        <strong style="font-size:18px;letter-spacing:.06em">${serial}</strong>
-      </p>
-      <p><a href="${downloadUrl}" style="display:inline-block;padding:12px 20px;background:#1d4ed8;color:#fff;border-radius:6px;text-decoration:none">Go to your downloads</a></p>
-      <p style="color:#52525b;font-size:14px">
-        You can sign in at any time to re-download the current Windows or macOS build.
-      </p>
-    </div>
-  `;
-};
-
-export const sendPurchaseEmail = async (input: PurchaseEmailInput): Promise<void> => {
-  const client = adminClient();
-  const logRow = {
+const deliver = async (input: {
+  to: string;
+  userId: string | null;
+  email: RenderedEmail;
+}): Promise<SendResult> => {
+  const log = {
     user_id: input.userId,
-    template: 'purchase_confirmation',
+    template: `${input.email.template}@${input.email.version}`,
     status: 'queued' as string,
     provider_message_id: null as string | null,
     error: null as string | null,
@@ -59,16 +39,47 @@ export const sendPurchaseEmail = async (input: PurchaseEmailInput): Promise<void
     const { data, error } = await resend.emails.send({
       from: env.resendFrom,
       to: input.to,
-      subject: `Your ${SITE_NAME} license and download`,
-      html: purchaseEmailHtml(input),
+      subject: input.email.subject,
+      html: input.email.html,
+      text: input.email.text,
     });
     if (error) throw new Error(error.message);
-    logRow.status = 'sent';
-    logRow.provider_message_id = data?.id ?? null;
+    log.status = 'sent';
+    log.provider_message_id = data?.id ?? null;
   } catch (cause) {
-    logRow.status = 'failed';
-    logRow.error = cause instanceof Error ? cause.message : String(cause);
+    log.status = 'failed';
+    log.error = cause instanceof Error ? cause.message : String(cause);
   }
 
-  await client.from('email_events').insert(logRow);
+  await adminClient().from('email_events').insert(log);
+  return { sent: log.status === 'sent', error: log.error };
 };
+
+export interface PurchaseEmailInput {
+  to: string;
+  userId: string;
+  serial: string;
+  platform: Platform | null;
+}
+
+export const sendPurchaseEmail = async (input: PurchaseEmailInput): Promise<SendResult> =>
+  deliver({
+    to: input.to,
+    userId: input.userId,
+    email: purchaseConfirmation({
+      serial: input.serial,
+      platform: input.platform,
+      accountUrl: `${env.siteUrl}/account`,
+    }),
+  });
+
+export const sendLicenseReminder = async (input: {
+  to: string;
+  userId: string;
+  serial: string;
+}): Promise<SendResult> =>
+  deliver({
+    to: input.to,
+    userId: input.userId,
+    email: licenseReminder({ serial: input.serial, accountUrl: `${env.siteUrl}/account` }),
+  });
