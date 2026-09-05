@@ -46,8 +46,23 @@ jobs:
       - name: Build shared packages
         run: pnpm --filter @vcwriter/domain build
 
+      # Notarization is only requested when the Apple credentials are actually
+      # present. Asking for it without them fails the build, and a fork or a
+      # dry run should still be able to produce an unsigned installer.
+      - name: Decide whether to notarize
+        id: notarize
+        if: matrix.platform == 'macos'
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.APPLE_ID }}" ] && [ -n "${{ secrets.APPLE_TEAM_ID }}" ]; then
+            echo "flag=-c.mac.notarize=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=" >> "$GITHUB_OUTPUT"
+            echo "::warning::Apple credentials absent — producing an unsigned, un-notarized build. Do not publish it as stable."
+          fi
+
       - name: Package
-        run: pnpm --filter @vcwriter/desktop ${{ matrix.script }}
+        run: pnpm --filter @vcwriter/desktop ${{ matrix.script }} ${{ steps.notarize.outputs.flag }}
         env:
           # Windows Authenticode (spec §3.3). Absent on a fork or a dry run, in
           # which case the artifact is unsigned and must not ship as stable.

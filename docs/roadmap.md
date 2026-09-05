@@ -104,15 +104,26 @@ keys and a price, the webhook endpoint registered with Stripe, Stripe Tax
 switched on in the dashboard, a verified Resend sending domain, and
 `is_admin` set on the first administrator's profile row.
 
-## Phase 7 — Release operations
+## Phase 7 — Release operations ▸ built, minus the certificates
 
-Signed Windows installer, signed and notarised Mac build, update and release
-metadata, re-download portal, activation management, telemetry and support
-tooling.
+| Deliverable | Status |
+| --- | --- |
+| Update and release metadata | Done — release catalogue, admin publishing, checksums computed in CI |
+| In-app updater | Done — checks, refuses a build the OS cannot run, downloads through the entitlement check, verifies the checksum, discards a mismatch |
+| Re-download portal | Done — My Account, signed URLs per request |
+| Activation management | Done — activate, reclaim a seat, free a seat yourself, all rules tested |
+| Support tooling | Done — `/admin/support`: licenses, devices, orders, email delivery, and the actions for each |
+| Signed Windows installer | Blocked — needs a certificate that must be bought against a verified identity |
+| Signed and notarised Mac build | Blocked — needs an Apple Developer membership and a Developer ID certificate |
 
-The release catalogue, download authorisation and the packaging workflow exist.
-Signing, notarisation, the in-app updater and device activation management are
-outstanding.
+The pipeline expects both sets of credentials, uses them when present, and
+produces a clearly-marked unsigned build when they are absent. The runbook for
+obtaining and wiring them is [docs/code-signing.md](code-signing.md).
+
+Remaining before Phase 7 closes: the certificates themselves, one end-to-end
+run on real hardware (purchase → download → install → activate → update), and
+error reporting, which is not built — §14 asks for structured error reporting
+without logging manuscript content, and nothing sends anything today.
 
 ## Phase 8 — Hardening
 

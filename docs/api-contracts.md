@@ -95,6 +95,39 @@ The response shape has no field that could carry replacement prose: the pass
 reads, it does not rewrite. `ANTHROPIC_API_KEY` lives here and never ships in
 an installer.
 
+### `POST /api/licenses/activate`
+
+Activate an installation against a license (§3.3). Session cookie or desktop
+bearer token; a serial alone is never enough, because activation is scoped to
+licenses on the authenticated account.
+
+```jsonc
+// request
+{ "serial": "VCW-…", "deviceFingerprint": "…", "deviceName": "Kevin's laptop",
+  "platform": "windows", "appVersion": "1.0.0" }
+// 200
+{ "activated": true, "reason": "new_device" | "already_active" | "reactivated" }
+// 409 — well formed, correct caller, no seat free; the message says how to fix it
+{ "error": "This license is on 2 of 2 devices. Free a seat from My Account and try again." }
+```
+
+### `GET` / `DELETE /api/licenses/devices`
+
+The account's devices, and freeing a seat — the lost-device replacement flow.
+Deactivation marks the record rather than deleting it, so the history survives.
+
+### `GET` / `POST /api/admin/support`
+
+Support console (§3.3). Look a customer up by email; act on licenses (resend,
+revoke, restore), devices (free a seat) and see email delivery. Admin only.
+Manuscript content is not reachable from any of it.
+
+### `GET` / `POST` / `PUT /api/admin/releases`, `PATCH /api/admin/releases/[id]`
+
+Release publishing (§3.2). `PUT` mints a signed upload URL so a large installer
+goes straight from the browser to private storage; `POST` records the build
+inactive; `PATCH` activates or retires it, scoped to one platform and channel.
+
 ### `GET /auth/callback?code=…&next=/account`
 
 Exchanges a magic-link code for a session cookie and redirects. `next` is only

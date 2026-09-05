@@ -27,8 +27,9 @@ win:
   target:
     - target: nsis
       arch: [x64]
-  # Windows Authenticode signing (§3.3). Supplied by CI.
-  # certificateSubjectName is preferred over shipping a .pfx into the runner.
+  # Windows Authenticode signing (§3.3). Credentials come from CI environment
+  # variables (CSC_LINK / CSC_KEY_PASSWORD, or an Azure Trusted Signing
+  # configuration) rather than anything committed here.
   signingHashAlgorithms: [sha256]
 
 nsis:
@@ -52,7 +53,7 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
 
-# Notarization runs in CI when APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD /
-# APPLE_TEAM_ID are present; without them the build stays unsigned and is
-# marked internal rather than being published as stable.
-afterSign: null
+# Notarization is switched on from the command line rather than here, because a
+# build machine without Apple credentials must still be able to produce an
+# unsigned build for testing. CI adds `-c.mac.notarize=true` only when the
+# credentials are present; see docs/code-signing.md.
