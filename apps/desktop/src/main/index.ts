@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { registerIpcHandlers } from './ipc';
 import { restoreSession } from './cloud';
+import { installCrashHandlers } from './reporting';
 
 /**
  * Electron main process.
@@ -52,6 +53,10 @@ const createWindow = (): void => {
     void mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
 };
+
+// Installed before anything else runs, so a failure during startup is still
+// reported. It sends nothing unless the writer has opted in (spec §14).
+installCrashHandlers();
 
 app.whenReady().then(() => {
   registerIpcHandlers(() => mainWindow);

@@ -149,7 +149,8 @@ export default async function AccountPage() {
           <h2>Administration</h2>
           <p className="lede">
             <Link href="/admin/releases">Manage release builds</Link> ·{' '}
-            <Link href="/admin/support">Support console</Link>
+            <Link href="/admin/support">Support console</Link> ·{' '}
+            <Link href="/admin/errors">Error reports</Link>
           </p>
         </section>
       ) : null}

@@ -85,6 +85,10 @@ export interface VcWriterApi {
     version: string;
   }): Promise<DesktopApiResult<{ path: string; version: string; verified: boolean }>>;
   installUpdate(path: string): Promise<DesktopApiResult<true>>;
+  /** Whether the writer has opted in to sending error reports. Off by default. */
+  reportingSettings(): Promise<DesktopApiResult<{ enabled: boolean }>>;
+  setReporting(enabled: boolean): Promise<DesktopApiResult<{ enabled: boolean }>>;
+  reportError(input: { name: string; message: string; stack: string }): Promise<DesktopApiResult<boolean>>;
 }
 
 export interface ActivationResult {
@@ -134,6 +138,9 @@ const api: VcWriterApi = {
   checkForUpdate: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: (input) => ipcRenderer.invoke('update:download', input),
   installUpdate: (path) => ipcRenderer.invoke('update:install', path),
+  reportingSettings: () => ipcRenderer.invoke('reporting:get'),
+  setReporting: (enabled) => ipcRenderer.invoke('reporting:set', enabled),
+  reportError: (input) => ipcRenderer.invoke('reporting:report', input),
 };
 
 contextBridge.exposeInMainWorld('vcwriter', api);

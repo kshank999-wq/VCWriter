@@ -28,6 +28,7 @@ import {
 } from './cloud';
 import { deviceFingerprint, deviceName, devicePlatform } from './device';
 import { checkForUpdate, downloadUpdate, runInstaller, type DownloadedUpdate, type UpdateStatus } from './updater';
+import { reportError, reportingSettings, setReportingEnabled } from './reporting';
 import {
   PROJECT_EXTENSION,
   listSnapshots,
@@ -352,6 +353,43 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
       return fail(cause);
     }
   });
+
+  // --- error reporting ------------------------------------------------------
+
+  ipcMain.handle('reporting:get', async (): Promise<DesktopApiResult<{ enabled: boolean }>> => {
+    try {
+      return ok(await reportingSettings());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('reporting:set', async (_event, enabled: boolean): Promise<DesktopApiResult<{ enabled: boolean }>> => {
+    try {
+      return ok(await setReportingEnabled(enabled === true));
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  /**
+   * A crash in the renderer. The message and stack arrive as strings and are
+   * treated as untrusted text: the redactor runs over them in the main process
+   * regardless of what the renderer did or did not do first.
+   */
+  ipcMain.handle(
+    'reporting:report',
+    async (_event, input: { name?: string; message?: string; stack?: string }): Promise<DesktopApiResult<boolean>> => {
+      try {
+        const error = new Error(String(input?.message ?? ''));
+        error.name = String(input?.name ?? 'Error');
+        error.stack = typeof input?.stack === 'string' ? input.stack : '';
+        return ok(await reportError(error, 'renderer'));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
 
   ipcMain.handle('app:version', () => ok({ version: app.getVersion(), platform: process.platform }));
 };

@@ -29,6 +29,7 @@ export * from './sync-merge.js';
 export * from './capture-approval.js';
 export * from './release.js';
 export * from './activation.js';
+export * from './error-report.js';
 export * from './editor-daily.js';
 export * from './editor-final.js';
 export * from './voice.js';

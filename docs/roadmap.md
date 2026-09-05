@@ -113,6 +113,7 @@ switched on in the dashboard, a verified Resend sending domain, and
 | Re-download portal | Done — My Account, signed URLs per request |
 | Activation management | Done — activate, reclaim a seat, free a seat yourself, all rules tested |
 | Support tooling | Done — `/admin/support`: licenses, devices, orders, email delivery, and the actions for each |
+| Error reporting | Done — opt-in, off by default; paths and addresses redacted on both sides; grouped triage at `/admin/errors` |
 | Signed Windows installer | Blocked — needs a certificate that must be bought against a verified identity |
 | Signed and notarised Mac build | Blocked — needs an Apple Developer membership and a Developer ID certificate |
 
@@ -120,10 +121,19 @@ The pipeline expects both sets of credentials, uses them when present, and
 produces a clearly-marked unsigned build when they are absent. The runbook for
 obtaining and wiring them is [docs/code-signing.md](code-signing.md).
 
-Remaining before Phase 7 closes: the certificates themselves, one end-to-end
-run on real hardware (purchase → download → install → activate → update), and
-error reporting, which is not built — §14 asks for structured error reporting
-without logging manuscript content, and nothing sends anything today.
+Error reporting (§14) is built as a privacy decision before a diagnostics one.
+It is off until the writer turns it on, the report has no field for manuscript
+content and the table has no column for one, and file paths, URLs and email
+addresses are stripped from the message and the stack — by the desktop before
+sending and by the route again on arrival, because an older build with a weaker
+redactor should not be able to write a path into the database. Stack frames
+survive redaction, so triage still gets function names and line numbers.
+`/admin/errors` groups reports by failure rather than listing them, since the
+useful question is what is breaking and for how many people.
+
+Remaining before Phase 7 closes: the certificates themselves, and one
+end-to-end run on real hardware (purchase → download → install → activate →
+update).
 
 ## Phase 8 — Hardening
 

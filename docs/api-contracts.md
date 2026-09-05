@@ -116,6 +116,36 @@ licenses on the authenticated account.
 The account's devices, and freeing a seat — the lost-device replacement flow.
 Deactivation marks the record rather than deleting it, so the history survives.
 
+### `POST /api/telemetry`
+
+An error report from the desktop application or the website (§14). Accepted
+signed in or not — a crash before sign-in is still worth knowing about — and
+always answered `202`, including when the insert fails: a retry loop on a crash
+path is worse than a lost report.
+
+```jsonc
+// request — this is the whole schema; there is no field for project content
+{ "appVersion": "1.0.0", "platform": "windows", "osVersion": "10.0.19045",
+  "errorName": "TypeError", "errorMessage": "x is not a function",
+  "stack": "…    at saveProject (<path>:412:19)", "surface": "main" }
+// 202
+{ "received": true }
+// 400 — not a report
+```
+
+Every text field is redacted again here — paths, URLs and email addresses —
+even though the desktop redacted before sending. The sender is the least
+trusted half, and an older build with a weaker redactor must not be able to
+write a file path into the database. The table has no column for manuscript
+content, so a field that arrived anyway would have nowhere to land.
+
+Reporting is opt-in in the desktop application and off until the writer turns
+it on.
+
+### `GET /admin/errors`
+
+Triage, grouped by failure rather than listed chronologically. Admin only.
+
 ### `GET` / `POST /api/admin/support`
 
 Support console (§3.3). Look a customer up by email; act on licenses (resend,
@@ -162,6 +192,9 @@ exceptions crossing the bridge.
 | `listCaptures(projectId)` | Captures awaiting review for this project, plus unassigned ones |
 | `resolveCapture(capture)` | Write back a review decision. Never touches `raw_text` |
 | `reviewScene({ sceneText, position, format })` | Ask the Final Editor's AI pass to read one scene |
+| `reportingSettings()` | Whether error reporting is on for this installation. Off until switched on |
+| `setReporting(enabled)` | Store the choice. Returns what is actually stored, not what was clicked |
+| `reportError({ name, message, stack })` | A renderer crash. The main process redacts it and decides whether to send |
 
 `saveProject` re-validates the document against the project schema before it
 touches disk: the renderer is the least trusted half of the application, and a
