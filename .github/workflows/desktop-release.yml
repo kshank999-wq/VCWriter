@@ -1,0 +1,91 @@
+name: Desktop release
+
+# Publishing a Windows build must never replace the Mac artifact and vice
+# versa (spec §17), so each platform is packaged in its own matrix leg and
+# uploaded independently.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release channel
+        type: choice
+        options: [internal, beta, stable]
+        default: internal
+
+jobs:
+  package:
+    name: Package for ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            script: package:win
+          - os: macos-latest
+            platform: macos
+            script: package:mac
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm --filter @vcwriter/domain build
+
+      - name: Package
+        run: pnpm --filter @vcwriter/desktop ${{ matrix.script }}
+        env:
+          # Windows Authenticode (spec §3.3). Absent on a fork or a dry run, in
+          # which case the artifact is unsigned and must not ship as stable.
+          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          # Apple signing and notarization.
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcwriter-${{ matrix.platform }}
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+          if-no-files-found: error
+
+  # Uploading to the private release bucket and flipping `active` on the
+  # release_builds row is a deliberate, separate step: an artifact exists as
+  # soon as it is packaged, but customers only ever receive a build an operator
+  # has published.
+  publish:
+    name: Publish to the release catalogue
+    needs: package
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Upload to the private releases bucket
+        run: |
+          echo "Publish step is intentionally manual until signing credentials are in place."
+          echo "It uploads each artifact to the 'releases' bucket and inserts a release_builds"
+          echo "row per platform, then activates it. Downloads are always signed URLs."
+          ls -R artifacts
