@@ -5,6 +5,7 @@ import type {
   PrintOptions,
   ProjectFile,
   ProjectFormat,
+  SceneVerdict,
 } from '@vcwriter/domain';
 
 /**
@@ -69,6 +70,11 @@ export interface VcWriterApi {
   syncProject(input: { file: ProjectFile }): Promise<DesktopApiResult<SyncOutcome>>;
   listCaptures(projectId: string | null): Promise<DesktopApiResult<CaptureItem[]>>;
   resolveCapture(capture: CaptureItem): Promise<DesktopApiResult<true>>;
+  reviewScene(input: {
+    sceneText: string;
+    position?: string;
+    format: 'screenplay' | 'prose';
+  }): Promise<DesktopApiResult<SceneVerdict>>;
 }
 
 export interface AccountStatus {
@@ -102,6 +108,7 @@ const api: VcWriterApi = {
   syncProject: (input) => ipcRenderer.invoke('cloud:sync', input),
   listCaptures: (projectId) => ipcRenderer.invoke('cloud:captures', projectId),
   resolveCapture: (capture) => ipcRenderer.invoke('cloud:resolveCapture', capture),
+  reviewScene: (input) => ipcRenderer.invoke('cloud:reviewScene', input),
 };
 
 contextBridge.exposeInMainWorld('vcwriter', api);

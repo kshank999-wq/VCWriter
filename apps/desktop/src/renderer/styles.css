@@ -1182,3 +1182,151 @@ button.item.selected {
   flex: 1;
   min-width: 200px;
 }
+
+/* --------------------------------------------------------- editors & voice */
+
+.editor-panel,
+.readback {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+.editor-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.findings,
+.final-review,
+.readback > *:not(.panel-header) {
+  overflow-y: auto;
+  padding: 0 20px;
+}
+
+.findings ul,
+.findings-list,
+.scene-list,
+.voice-list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.finding {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--panel);
+}
+
+.finding.error {
+  border-left: 3px solid var(--danger);
+}
+
+.finding.blocking {
+  border-left: 3px solid var(--danger);
+}
+
+.finding-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.finding-message {
+  margin: 0;
+}
+
+.finding-excerpt {
+  margin: 4px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.finding-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.final-review h3,
+.readback h3 {
+  margin: 20px 0 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.scene-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--panel);
+}
+
+.scene-row > header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.scene-row > header strong {
+  margin-right: auto;
+}
+
+.verdict {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 4px 12px;
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.verdict dt {
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  padding-top: 2px;
+}
+
+.verdict dd {
+  margin: 0;
+}
+
+.verdict dd ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.voice-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--panel);
+}
+
+.voice-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-list select {
+  min-width: 260px;
+}

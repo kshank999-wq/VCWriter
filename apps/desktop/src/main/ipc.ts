@@ -6,6 +6,7 @@ import {
   parseProjectFile,
   type CaptureItem,
   type PrintOptions,
+  type SceneVerdict,
   type ProjectFile,
   type ProjectFormat,
 } from '@vcwriter/domain';
@@ -13,6 +14,7 @@ import { exportProjectPdf, printProject } from './export-pdf';
 import {
   accountStatus,
   listCaptures,
+  requestSceneReview,
   requestSignInCode,
   resolveCapture,
   signOut,
@@ -280,6 +282,20 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
       return fail(cause);
     }
   });
+
+  ipcMain.handle(
+    'cloud:reviewScene',
+    async (
+      _event,
+      input: { sceneText: string; position?: string; format: 'screenplay' | 'prose' },
+    ): Promise<DesktopApiResult<SceneVerdict>> => {
+      try {
+        return ok(await requestSceneReview(input));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
 
   ipcMain.handle('app:version', () => ok({ version: app.getVersion(), platform: process.platform }));
 };

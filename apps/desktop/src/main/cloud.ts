@@ -15,6 +15,7 @@ import {
   type MergeResult,
   type ProjectFile,
   type Row,
+  type SceneVerdict,
 } from '@vcwriter/domain';
 
 /**
@@ -270,6 +271,48 @@ export const syncProject = async (input: { file: unknown }): Promise<SyncOutcome
   await writeSyncState(owned.project.id, syncedAt);
 
   return { merged: result.merged, conflicts: result.conflicts, summary: result.summary, syncedAt };
+};
+
+// ---------------------------------------------------------------------------
+// AI structural read (spec §8.2)
+// ---------------------------------------------------------------------------
+
+const SITE_URL = process.env['MAIN_VITE_SITE_URL'] ?? 'https://vc-writer.com';
+
+/**
+ * Ask the Final Editor's AI pass to read one scene.
+ *
+ * The request goes to vc-writer.com, not to a model vendor: the API key lives
+ * on the server, where it can be rotated and metered, instead of inside every
+ * installed copy of the application. The desktop sends the writer's session
+ * token and the scene text — nothing else about the project leaves the
+ * machine.
+ */
+export const requestSceneReview = async (input: {
+  sceneText: string;
+  position?: string;
+  format: 'screenplay' | 'prose';
+}): Promise<SceneVerdict> => {
+  const { data, error } = await supabase().auth.getSession();
+  if (error || !data.session) throw new CloudError('Sign in to use the Final Editor.');
+
+  const response = await fetch(`${SITE_URL}/api/ai/scene-review`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${data.session.access_token}`,
+    },
+    body: JSON.stringify(input),
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | { verdict?: Omit<SceneVerdict, 'model'> & { model: string }; error?: string }
+    | null;
+
+  if (!response.ok || !payload?.verdict) {
+    throw new CloudError(payload?.error ?? `The structural read failed (${response.status})`);
+  }
+  return payload.verdict;
 };
 
 // ---------------------------------------------------------------------------

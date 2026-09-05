@@ -9,6 +9,8 @@ import { ResearchPanel } from './components/ResearchPanel';
 import { SetupsPanel } from './components/SetupsPanel';
 import { AccountPanel } from './components/AccountPanel';
 import { CapturesPanel } from './components/CapturesPanel';
+import { EditorPanel } from './components/EditorPanel';
+import { ReadBackPanel } from './components/ReadBackPanel';
 import type { AccountStatus } from '../preload/index';
 
 const SAVE_LABEL: Record<string, string> = {
@@ -19,11 +21,13 @@ const SAVE_LABEL: Record<string, string> = {
   error: 'Save failed',
 };
 
-type View = 'write' | 'preview' | 'research' | 'setups' | 'captures';
+type View = 'write' | 'preview' | 'editor' | 'readback' | 'research' | 'setups' | 'captures';
 
 const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
   { id: 'write', label: 'Write' },
   { id: 'preview', label: 'Preview' },
+  { id: 'editor', label: 'Editors' },
+  { id: 'readback', label: 'Read back' },
   { id: 'research', label: 'Research' },
   { id: 'setups', label: 'Setups & payoffs' },
   { id: 'captures', label: 'Captures' },
@@ -249,6 +253,19 @@ export default function App() {
               onPrint={() => void print()}
               busy={exporting}
               message={exportMessage}
+            />
+          ) : view === 'editor' ? (
+            <EditorPanel
+              file={file}
+              currentUnitId={selectedBeat?.unitId ?? null}
+              signedIn={account.signedIn}
+              onUpdate={project.update}
+            />
+          ) : view === 'readback' ? (
+            <ReadBackPanel
+              file={file}
+              currentUnitId={selectedBeat?.unitId ?? null}
+              onUpdate={project.update}
             />
           ) : view === 'research' ? (
             <ResearchPanel file={file} currentBeatId={selectedBeat?.id ?? null} onUpdate={project.update} />
