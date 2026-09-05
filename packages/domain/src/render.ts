@@ -1,4 +1,4 @@
-import { beatsForUnit, beatsInStoryOrder, findUnit, unitsInStoryOrder } from './selectors.js';
+import { beatsForUnit, findUnit, unitsInStoryOrder } from './selectors.js';
 import type { ManuscriptElement, ManuscriptSegment } from './entities/manuscript.js';
 import type { VoiceAssignment } from './entities/project.js';
 import type { Beat } from './entities/structure.js';
@@ -131,11 +131,5 @@ export const speechSegmentsForUnit = (file: ProjectFile, unitId: StructuralUnitI
 export const speechSegmentsForProject = (file: ProjectFile): SpeechSegment[] =>
   unitsInStoryOrder(file).flatMap((unit) => speechSegmentsForUnit(file, unit.id));
 
-/** Rough page count for screenplays: the industry convention of ~55 lines per page. */
-export const estimatedPageCount = (file: ProjectFile): number => {
-  const lines = beatsInStoryOrder(file).reduce(
-    (total, beat) => total + renderBeat(beat).split('\n').length + 1,
-    0,
-  );
-  return Math.max(0, Math.round((lines / 55) * 10) / 10);
-};
+// Page counts come from `pagination.ts`, which lays the manuscript out at the
+// real geometry rather than estimating from line counts.

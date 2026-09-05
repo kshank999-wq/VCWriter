@@ -21,3 +21,6 @@ export * from './project-file.js';
 export * from './selectors.js';
 export * from './mutations.js';
 export * from './render.js';
+export * from './editing.js';
+export * from './pagination.js';
+export * from './print-html.js';
