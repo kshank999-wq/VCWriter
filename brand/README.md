@@ -19,8 +19,9 @@ pnpm --filter @vcwriter/brand render poster     # just the ones matching "poster
 | `social-landscape-1200x630` | 1200 × 630 | Open Graph preview, X, LinkedIn |
 | `banner-1500x500` | 1500 × 500 | X / profile header |
 
-`exports/` is not committed — it is a build product, and a poster PNG is ten
-megabytes. To change a board, edit `artboards.html` and re-render.
+`exports/` is committed so the finished files are downloadable from GitHub
+without a checkout. To change a board, edit `artboards.html`, re-render, and
+commit the new PNGs with it.
 
 The fonts in `fonts/` are used only here (see `fonts/LICENSE.md`). The
 applications use the system geometric stack instead, so nothing here changes
