@@ -37,6 +37,11 @@ Two linter findings are intentional and expected to stay:
 
 ## Vercel
 
+A project named **`vc-writer`** already exists in the account but is not
+connected to a Git repository, so it does not deploy on push yet. Connect it in
+the dashboard — Project → Settings → Git → Connect Git Repository →
+`kshank999-wq/VCWriter`, production branch `main`.
+
 Root directory: **`apps/web`**. Framework preset: Next.js. Leave "include files
 outside the root directory" enabled — the build needs the workspace root so
 `pnpm install` can link and build `@vcwriter/domain` (its `prepare` script
