@@ -35,17 +35,46 @@ Two linter findings are intentional and expected to stay:
   It answers only "does the caller own this project id"; `anon` and `public`
   have been revoked.
 
-## Vercel
+## Vercel — needs a hand in the dashboard
 
-A project named **`vc-writer`** already exists in the account but is not
-connected to a Git repository, so it does not deploy on push yet. Connect it in
-the dashboard — Project → Settings → Git → Connect Git Repository →
-`kshank999-wq/VCWriter`, production branch `main`.
+**The site has never deployed.** Nothing built in this repository is live at
+vc-writer.com until the steps below are done. This section records what was
+actually found, because it is not what an earlier version of this document
+said.
 
-Root directory: **`apps/web`**. Framework preset: Next.js. Leave "include files
-outside the root directory" enabled — the build needs the workspace root so
-`pnpm install` can link and build `@vcwriter/domain` (its `prepare` script
-compiles it).
+The Vercel API, through the connector available to the build session, gave
+contradictory answers on 5 September 2026:
+
+- Listing the team's projects returned four, none of them for this repository.
+- Creating a project named `vc-writer` was refused: *"Project already exists."*
+- Reading `vc-writer` returned *Not Found*.
+- Creating a project named `vcwriter` succeeded (`prj_z0vZdzTLvCSKneSNuhT17KnOC8Cq`),
+  but reading it back — even by id — also returned *Not Found*, and its Git
+  link could not be verified.
+
+The likeliest explanation is that the connector's token can create but not
+read, or is scoped to a different team than the one that owns `vc-writer`.
+Either way it cannot be resolved from a build session, and nothing further
+was created to avoid a third project.
+
+**What to do, once, in the dashboard (https://vercel.com):**
+
+1. Look at the team's projects. There should be `vc-writer` and possibly a
+   new, empty `vcwriter`. **Keep one and delete the other.** `vc-writer` is
+   the better name; if it is the one that stays, delete `vcwriter`.
+2. In the survivor: Settings → Git → Connect Git Repository →
+   `kshank999-wq/VCWriter`, production branch `main`.
+3. Settings → General → Root Directory: **`apps/web`**. Framework preset:
+   Next.js. Leave "include files outside the root directory" enabled — the
+   build needs the workspace root so `pnpm install` can link and build
+   `@vcwriter/domain` (its `prepare` script compiles it).
+4. Add the environment variables below, then Deployments → Redeploy.
+5. Settings → Domains → add `vc-writer.com` and `www.vc-writer.com` (see the
+   Domain section).
+
+After that, every push to `main` deploys. CI (`.github/workflows/ci.yml`)
+runs the full suite on the same push; Vercel does not wait for it, so a red
+CI run is the signal to look at, not a failed deploy.
 
 Environment variables, all environments unless noted:
 
