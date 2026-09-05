@@ -4,6 +4,7 @@ import { platformSchema } from '@vcwriter/domain';
 import { env } from '@/lib/env';
 import { stripe } from '@/lib/stripe';
 import { currentUser } from '@/lib/supabase';
+import { RULES, rateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,9 @@ const bodySchema = z.object({
  * the webhook once Stripe confirms payment (§12.2).
  */
 export async function POST(request: Request): Promise<Response> {
+  const limited = await rateLimit(request, RULES.checkout);
+  if (limited) return limited;
+
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: 'A platform of "windows" or "macos" is required' }, { status: 400 });

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { platformSchema } from '@vcwriter/domain';
 import { activateDevice } from '@/lib/activation-service';
 import { adminClient, currentUser } from '@/lib/supabase';
+import { RULES, rateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -24,6 +25,9 @@ const bodySchema = z.object({
  * consume someone else's seats.
  */
 export async function POST(request: Request): Promise<Response> {
+  const limited = await rateLimit(request, RULES.activate);
+  if (limited) return limited;
+
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: 'A serial and device are required' }, { status: 400 });

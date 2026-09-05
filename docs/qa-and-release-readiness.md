@@ -102,8 +102,8 @@ Ordered, because some of these block others.
 3. [ ] Tag a release; confirm both platforms package and that `spctl` and
        `Get-AuthenticodeSignature` come back clean.
 4. [ ] Work the manual matrix above on each target.
-5. [ ] Add rate limiting to the unauthenticated routes
-       ([security-review.md](security-review.md) lists which).
+5. [x] Rate limiting on the unauthenticated routes
+       ([security-review.md](security-review.md) lists the allowances).
 6. [ ] Upload the installers at `/admin/releases`, verify the checksums, then
        activate them.
 7. [ ] One live purchase → download → install → activate → update, on real

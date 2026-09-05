@@ -114,6 +114,33 @@ Every table has RLS enabled. Four advisor findings stand, all reviewed:
 | `is_admin()` is `SECURITY DEFINER` and callable by signed-in users | Needed by the policies that call it. It discloses only whether the caller is an admin, which they can already read from their own profile row. |
 | `owns_project(uuid)` is `SECURITY DEFINER` and callable | Needed by the project policies. It answers only about the caller's own access. |
 
+### Rate limiting
+
+The routes anyone can call — `/api/telemetry`, `/api/checkout` and
+`/api/licenses/activate` — are limited per client address, in Postgres, by
+`consume_rate_limit()` (migration 0010). One atomic upsert is the whole
+decision, so two requests racing for the last slot cannot both be told yes.
+Sign-in is throttled by Supabase; the license reminder already has a
+per-account cooldown; the AI route is behind a license check.
+
+| Route | Allowance |
+| --- | --- |
+| `/api/telemetry` | 60 per hour |
+| `/api/checkout` | 10 per 10 minutes |
+| `/api/licenses/activate` | 30 per hour |
+
+Two decisions worth knowing. It **fails open**: if the database call errors,
+the request proceeds and a warning is logged, because the limiter guards
+against noise and cost, and a limiter that could stop a customer paying when
+it broke would be the worse risk. And addresses are stored as a keyed hash
+(`RATE_LIMIT_SALT`, with a fixed fallback) in rows that live for two windows
+at most — pseudonymised, not anonymised, which is proportionate for a table
+whose contents are gone within the hour.
+
+Postgres rather than a dedicated store because the traffic is small and it
+adds nothing to run. If the site ever has to absorb a real flood this is the
+piece to replace, and by then there will be the traffic to justify it.
+
 ## Privacy
 
 Error reports carry no manuscript content, no project titles and no file paths;
@@ -130,11 +157,6 @@ elsewhere.
 
 ## Known gaps
 
-- **No rate limiting** on `/api/telemetry`, `/api/licenses/activate` or the
-  sign-in routes. Supabase throttles auth email, and the AI route is behind a
-  license check, so the exposure is noise and cost rather than compromise —
-  but a burst of telemetry from one address would land in the table
-  unthrottled. Worth adding before launch traffic.
 - **The sandbox change is unverified at runtime** (above).
 - **No dependency scanning in CI.** `pnpm audit` is not run on a schedule.
 - **Signing credentials are absent**, so no build is currently signed. See

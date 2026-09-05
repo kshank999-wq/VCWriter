@@ -5,6 +5,10 @@
 All routes run on Node, are dynamic, and hold their authority server-side.
 Nothing about entitlement is decided by the client.
 
+The routes anyone can call — checkout, telemetry, activation — answer `429`
+with a `Retry-After` header when one address exceeds its allowance (see
+[security-review.md](security-review.md) for the numbers).
+
 ### `POST /api/checkout`
 
 Starts a Stripe Checkout session.

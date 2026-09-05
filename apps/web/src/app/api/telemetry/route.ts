@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { sanitiseErrorReport, type ErrorReport } from '@vcwriter/domain';
 import { adminClient, currentUser } from '@/lib/supabase';
+import { RULES, rateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,6 +29,10 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request): Promise<Response> {
+  // Unauthenticated by design, so this is the one guard against a flood.
+  const limited = await rateLimit(request, RULES.telemetry);
+  if (limited) return limited;
+
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: 'A report is required' }, { status: 400 });
