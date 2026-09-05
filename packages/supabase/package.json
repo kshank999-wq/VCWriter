@@ -1,0 +1,14 @@
+{
+  "name": "@vcwriter/supabase",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VC Writer Supabase schema, row level security policies and seed data",
+  "scripts": {
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:push": "supabase db push",
+    "db:diff": "supabase db diff -f",
+    "typecheck": "echo \"no typescript in @vcwriter/supabase\"",
+    "test": "echo \"no unit tests in @vcwriter/supabase\""
+  }
+}
