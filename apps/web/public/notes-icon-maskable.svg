@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="VC Writer Notes">
+  <!-- Maskable: the mark sits inside the 80% safe area so platform masks
+       (circle, squircle, rounded square) never clip it. -->
+  <rect width="512" height="512" fill="#0b0b0d" />
+  <g fill="none" stroke="#5b8cff" stroke-width="24" stroke-linecap="round">
+    <path d="M176 192h108" />
+    <path d="M176 248h160" />
+    <path d="M176 304h160" />
+    <path d="M176 360h96" />
+  </g>
+  <circle cx="326" cy="192" r="26" fill="#5b8cff" />
+</svg>

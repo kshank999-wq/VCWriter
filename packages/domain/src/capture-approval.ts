@@ -48,6 +48,31 @@ export const suggestRouting = (file: ProjectFile, capture: CaptureItem): Routing
   const inference = capture.inference;
   const categories = researchCategoriesInOrder(file);
 
+  // A destination the writer chose on the capture device is a decision, not a
+  // guess. It outranks whatever the classifier proposed.
+  const requested = capture.requestedRouting;
+  if (requested) {
+    if (requested.kind === 'character') {
+      return {
+        decision: { kind: 'character', name: inference?.entityName ?? captureTitle(capture) },
+        confidence: 1,
+        reason: 'You chose Characters when you captured this',
+      };
+    }
+    if (requested.kind === 'research') {
+      const category = requested.categoryKey
+        ? categories.find((candidate) => candidate.systemKey === requested.categoryKey)
+        : undefined;
+      if (category) {
+        return {
+          decision: { kind: 'research', categoryId: category.id },
+          confidence: 1,
+          reason: `You chose ${category.name} when you captured this`,
+        };
+      }
+    }
+  }
+
   if (inference?.categoryKey === 'characters') {
     return {
       decision: { kind: 'character', name: inference.entityName ?? captureTitle(capture) },

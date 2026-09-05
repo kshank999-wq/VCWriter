@@ -59,6 +59,22 @@ describe('routing a capture', () => {
     expect(suggestion.confidence).toBe(0);
   });
 
+  it('prefers the destination the writer chose over the classifier guess', () => {
+    const file = project();
+    const characters = file.researchCategories.find((category) => category.systemKey === 'characters')!;
+    const suggestion = suggestRouting(
+      file,
+      capture({
+        requestedRouting: { kind: 'research', categoryKey: 'characters' },
+        inference: { categoryKey: 'ideas', entityName: null, targetRef: null, confidence: 0.9, model: 'test' },
+      }),
+    );
+
+    expect(suggestion.decision).toMatchObject({ kind: 'research', categoryId: characters.id });
+    expect(suggestion.confidence).toBe(1);
+    expect(suggestion.reason).toContain('You chose');
+  });
+
   it('sends anything the classifier was unsure about to review', () => {
     const unsure = capture({
       inference: { categoryKey: 'ideas', entityName: null, targetRef: null, confidence: 0.3, model: 'test' },

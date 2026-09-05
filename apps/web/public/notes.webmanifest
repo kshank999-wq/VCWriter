@@ -1,0 +1,25 @@
+{
+  "name": "VC Writer Notes",
+  "short_name": "VC Notes",
+  "description": "Capture ideas and scenes for VC Writer, online or off.",
+  "start_url": "/notes",
+  "scope": "/notes",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0b0d",
+  "theme_color": "#0b0b0d",
+  "icons": [
+    {
+      "src": "/notes-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/notes-icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

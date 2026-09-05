@@ -28,6 +28,17 @@ export const captureInferenceSchema = z.object({
 });
 export type CaptureInference = z.infer<typeof captureInferenceSchema>;
 
+/**
+ * What the writer asked for on the capture device, as opposed to what a
+ * classifier guessed. A person choosing "Characters" on their phone is not an
+ * inference, and the approval queue should not treat it as one.
+ */
+export const requestedRoutingSchema = z.object({
+  kind: z.enum(['research', 'beat', 'character']),
+  categoryKey: systemCategoryKeySchema.nullable().default(null),
+});
+export type RequestedRouting = z.infer<typeof requestedRoutingSchema>;
+
 export const captureItemSchema = z.object({
   id: id<CaptureItemId>(),
   userId: id<UserId>(),
@@ -40,6 +51,8 @@ export const captureItemSchema = z.object({
   audioAssetId: id<AssetId>().nullable().default(null),
   transcriptConfidence: z.number().min(0).max(1).nullable().default(null),
   inference: captureInferenceSchema.nullable().default(null),
+  /** The destination the writer chose when capturing; outranks `inference`. */
+  requestedRouting: requestedRoutingSchema.nullable().default(null),
   status: captureStatusSchema.default('pending'),
   reviewedAt: isoDateTime().nullable().default(null),
   /** What the approved capture became, once the writer confirmed it. */

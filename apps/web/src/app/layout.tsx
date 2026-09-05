@@ -32,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
               <Link href="/#features">Features</Link>
               <Link href="/download">Buy &amp; download</Link>
+              <Link href="/notes">Notes</Link>
               <Link href="/account">My account</Link>
             </nav>
           </div>
