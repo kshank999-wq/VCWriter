@@ -134,11 +134,38 @@ label", "marks a reference whose target is gone".
 ## Epic 4 — Writing workspace (§6)
 
 **4.1 Write in the correct professional format.**
-*Accepts:* screenplay elements render with industry layout — headings and
-character cues uppercase, dialogue indented; prose formats render as
-manuscript paragraphs.
+*Accepts:* screenplay elements lay out at the real geometry — a 60-character
+column, dialogue indented 10 and capped at 35, character cues at 22, headings
+and cues uppercase; prose formats lay out as double-spaced manuscript
+paragraphs.
 *Tested:* `render.test.ts` — "uppercases screenplay headings and indents
-dialogue".
+dialogue"; `pagination.test.ts` — "lays action out at the full 60-character
+column and dialogue at 35".
+
+**4.4 The element flow follows the writer.**
+As a screenwriter, Return gives me the element that conventionally comes next,
+and Tab re-types the current one when the guess was wrong.
+*Accepts:* Return after a character cue gives dialogue, after dialogue gives
+action, after a transition gives a scene heading; Tab walks the element ring in
+both directions; Backspace at the start of an empty element removes it.
+*Tested:* `writing.test.ts` — the Return and Tab tables; `editor.test.tsx` —
+the same through the component, including focus and removal.
+
+**4.5 Pages break where a script's pages break.**
+*Accepts:* no page exceeds 55 lines; dialogue too long to finish is split with
+`(MORE)` and resumed under `NAME (CONT'D)` with at least two lines each side; a
+scene heading or character cue never ends a page; a block longer than a page
+flows across pages instead of overflowing one.
+*Tested:* `pagination.test.ts` — the page-break rule cases.
+
+**4.6 Preview and export agree.**
+*Accepts:* the preview renders the paginated pages themselves, so preview,
+print and PDF break in the same places; manuscript text is escaped rather than
+interpreted as markup; the export carries a title page unless it is turned off.
+*Tested:* `writing.test.ts` — title page, escaping, watermark, file naming;
+`editor.test.tsx` — the preview's page rendering and controls.
+*Untested here:* the Electron print path itself needs a run on real hardware —
+a headless container cannot execute it.
 
 **4.2 Autosave and recovery.**
 *Accepts:* an edit is on disk within the configured interval; a crash mid-save
@@ -148,8 +175,12 @@ can be restored; restoring is itself reversible.
 "refuses a corrupt file".
 
 **4.3 Focus mode, print preview, PDF export.**
-*Status:* Phase 3. Export is a renderer over the manuscript element list, so no
-data change is required.
+*Accepts:* focus mode drops the structure board and related panel and is
+reachable by keyboard; preview shows page counts and offers print and export;
+export runs from a re-validated project in the main process rather than from
+renderer-supplied HTML.
+*Implemented:* `PagePreview`, `export-pdf.ts`. Further export formats are
+renderers over the same element list, so no data change is required.
 
 ---
 

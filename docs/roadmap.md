@@ -35,13 +35,22 @@ categories (they move by buttons and a category picker today), a
 related-elements panel on scenes and characters as well as beats, and
 lane-level story-order views such as a timeline across lanes.
 
-## Phase 3 — Writing
+## Phase 3 — Writing ▸ built
 
-Screenplay and novel writing workspaces, beat-to-manuscript mapping, focus
-mode, print preview, PDF export.
+| Deliverable | Status |
+| --- | --- |
+| Screenplay and novel workspaces | Done — elements laid out at the real page geometry, Return/Tab element flow, character-cue completion |
+| Beat-to-manuscript mapping | Done — a beat owns its elements; the internal title stays out of the manuscript |
+| Focus mode | Done — Ctrl/Cmd+Shift+F, Escape to leave |
+| Print preview | Done — renders the paginated pages themselves, so preview and export break pages identically |
+| PDF export | Done — Chromium print-to-PDF in the main process from a re-validated project |
+| Page layout engine | Done — 55-line screenplay pages at 60 characters, (MORE)/(CONT'D) dialogue splits, no stranded scene headings; 25-line double-spaced prose |
 
-The manuscript element list and the renderer exist; the screenplay pagination
-engine, element cycling on Tab/Enter and the PDF exporter do not.
+Remaining before Phase 3 closes: the export path needs a run on real hardware
+(it cannot execute in a headless container), a title-page editor for the
+credits block beyond title and author, and export formats beyond PDF —
+Final Draft `.fdx` and Fountain are the obvious next two, and both are
+renderers over the same element list.
 
 ## Phase 4 — Notes and sync
 

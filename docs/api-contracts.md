@@ -98,11 +98,20 @@ exceptions crossing the bridge.
 | `recentProjects()` | Up to ten recent project paths |
 | `listSnapshots(path)` | Recovery points for a project, newest first |
 | `restoreSnapshot({ path, snapshotId })` | Snapshot the current file, then restore |
+| `exportPdf({ file, options })` | Render the print document and write a PDF. Returns `null` when the save dialog was cancelled |
+| `print({ file, options })` | Send the same document to the system print dialog |
 | `appInfo()` | Version and platform |
 
 `saveProject` re-validates the document against the project schema before it
 touches disk: the renderer is the least trusted half of the application, and a
 malformed document must never reach the file.
+
+`exportPdf` and `print` take the *project*, not HTML. The main process
+re-validates it and generates the print document itself, so the renderer can
+never hand arbitrary markup to a window that will be rendered; that window runs
+sandboxed with scripting disabled. `options` is `PrintOptions` —
+`includeTitlePage` (default true), `includeBeatTitles` (default false, and the
+only way a beat's internal title reaches a page), and `watermark`.
 
 ---
 
