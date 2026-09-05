@@ -2,13 +2,21 @@ import { newId } from './ids.js';
 import { orderKeyForIndex } from './ordering.js';
 import { nowIso } from './entities/common.js';
 import { beatSchema, laneSchema, structuralUnitSchema } from './entities/structure.js';
-import { researchItemSchema } from './entities/research.js';
+import { researchCategorySchema, researchItemSchema } from './entities/research.js';
 import { setupPayoffSchema, setupPointSchema } from './entities/setups.js';
 import { characterSchema } from './entities/character.js';
-import { storyLinkSchema, refEquals, type StoryEntityRef, type StoryLinkType } from './entities/links.js';
-import { beatsForUnit, lanesInOrder, unitsForLane } from './selectors.js';
+import {
+  storyLinkSchema,
+  refEquals,
+  type StoryEntityRef,
+  type StoryLink,
+  type StoryLinkType,
+} from './entities/links.js';
+import { beatsForUnit, lanesInOrder, researchCategoriesInOrder, unitsForLane } from './selectors.js';
 import type { ManuscriptSegment } from './entities/manuscript.js';
 import type { VoiceAssignment } from './entities/project.js';
+import type { ResearchCategory, ResearchItem } from './entities/research.js';
+import type { SetupPayoff, SetupPoint } from './entities/setups.js';
 import type { Beat, Lane, LaneKind, StructuralUnit, StructuralUnitKind } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
 import type {
@@ -382,5 +390,307 @@ export const assignCharacterVoice = (
     characters: file.characters.map((character) =>
       character.id === characterId ? touch({ ...character, voice }) : character,
     ),
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Editing and removing structure
+// ---------------------------------------------------------------------------
+
+/**
+ * Drop every link that points at an entity that no longer exists.
+ *
+ * Links are typed records between ids (§7.4), so removing a scene has to take
+ * its links with it — a dangling reference would show up in the
+ * related-elements panel as an entry nothing can resolve.
+ */
+const withoutLinksTouching = (file: ProjectFile, removedIds: ReadonlySet<string>): StoryLink[] =>
+  file.links.filter((link) => !removedIds.has(link.from.id) && !removedIds.has(link.to.id));
+
+export const updateLane = (
+  file: ProjectFile,
+  laneId: LaneId,
+  patch: Partial<Pick<Lane, 'name' | 'kind' | 'color' | 'description' | 'collapsed'>>,
+): ProjectFile => {
+  if (!file.lanes.some((lane) => lane.id === laneId)) throw new DomainError(`Lane ${laneId} does not exist`);
+  return touchProject({
+    ...file,
+    lanes: file.lanes.map((lane) => (lane.id === laneId ? touch({ ...lane, ...patch }) : lane)),
+  });
+};
+
+export const moveLane = (file: ProjectFile, laneId: LaneId, index: number): ProjectFile => {
+  const lane = file.lanes.find((candidate) => candidate.id === laneId);
+  if (!lane) throw new DomainError(`Lane ${laneId} does not exist`);
+  const siblings = lanesInOrder(file).filter((candidate) => candidate.id !== laneId);
+  const moved = touch({ ...lane, orderKey: orderKeyForIndex(siblings, index) });
+  return touchProject({
+    ...file,
+    lanes: file.lanes.map((candidate) => (candidate.id === laneId ? moved : candidate)),
+  });
+};
+
+/**
+ * Remove a lane and everything inside it. The last lane cannot be removed:
+ * scenes and chapters have nowhere to live without one.
+ */
+export const removeLane = (file: ProjectFile, laneId: LaneId): ProjectFile => {
+  if (!file.lanes.some((lane) => lane.id === laneId)) throw new DomainError(`Lane ${laneId} does not exist`);
+  if (file.lanes.length === 1) throw new DomainError('A project needs at least one plot lane');
+
+  const removedUnitIds = new Set(file.units.filter((unit) => unit.laneId === laneId).map((unit) => unit.id as string));
+  const removedBeatIds = new Set(
+    file.beats.filter((beat) => removedUnitIds.has(beat.unitId)).map((beat) => beat.id as string),
+  );
+  const removed = new Set<string>([laneId, ...removedUnitIds, ...removedBeatIds]);
+
+  return touchProject({
+    ...file,
+    lanes: file.lanes.filter((lane) => lane.id !== laneId),
+    units: file.units.filter((unit) => !removedUnitIds.has(unit.id)),
+    beats: file.beats.filter((beat) => !removedBeatIds.has(beat.id)),
+    links: withoutLinksTouching(file, removed),
+  });
+};
+
+export const updateUnit = (
+  file: ProjectFile,
+  unitId: StructuralUnitId,
+  patch: Partial<Pick<StructuralUnit, 'title' | 'sequenceLabel' | 'summary' | 'notes' | 'status' | 'collapsed'>>,
+): ProjectFile => {
+  if (!file.units.some((unit) => unit.id === unitId)) {
+    throw new DomainError(`Scene/chapter ${unitId} does not exist`);
+  }
+  return touchProject({
+    ...file,
+    units: file.units.map((unit) => (unit.id === unitId ? touch({ ...unit, ...patch }) : unit)),
+  });
+};
+
+/** Remove a scene/chapter and the beats inside it. */
+export const removeUnit = (file: ProjectFile, unitId: StructuralUnitId): ProjectFile => {
+  if (!file.units.some((unit) => unit.id === unitId)) {
+    throw new DomainError(`Scene/chapter ${unitId} does not exist`);
+  }
+  const removedBeatIds = new Set(
+    file.beats.filter((beat) => beat.unitId === unitId).map((beat) => beat.id as string),
+  );
+  const removed = new Set<string>([unitId, ...removedBeatIds]);
+
+  return touchProject({
+    ...file,
+    units: file.units.filter((unit) => unit.id !== unitId),
+    beats: file.beats.filter((beat) => !removedBeatIds.has(beat.id)),
+    links: withoutLinksTouching(file, removed),
+  });
+};
+
+export const removeBeat = (file: ProjectFile, beatId: BeatId): ProjectFile => {
+  if (!file.beats.some((beat) => beat.id === beatId)) throw new DomainError(`Beat ${beatId} does not exist`);
+  return touchProject({
+    ...file,
+    beats: file.beats.filter((beat) => beat.id !== beatId),
+    links: withoutLinksTouching(file, new Set<string>([beatId])),
+    // Research that was marked used in this beat keeps its used state; only the
+    // now-meaningless back-reference goes.
+    researchItems: file.researchItems.map((item) =>
+      item.usedInBeatIds.includes(beatId)
+        ? touch({ ...item, usedInBeatIds: item.usedInBeatIds.filter((candidate) => candidate !== beatId) })
+        : item,
+    ),
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Research categories (§7.1: create, rename, reorder, archive)
+// ---------------------------------------------------------------------------
+
+export const addResearchCategory = (
+  file: ProjectFile,
+  input: { name: string; description?: string; index?: number },
+): { file: ProjectFile; category: ResearchCategory } => {
+  const timestamp = nowIso();
+  const siblings = researchCategoriesInOrder(file);
+  const category = researchCategorySchema.parse({
+    id: newId<ResearchCategoryId>(),
+    projectId: file.project.id,
+    name: input.name,
+    description: input.description ?? '',
+    orderKey: orderKeyForIndex(siblings, input.index ?? siblings.length),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  });
+  return {
+    file: touchProject({ ...file, researchCategories: [...file.researchCategories, category] }),
+    category,
+  };
+};
+
+export const updateResearchCategory = (
+  file: ProjectFile,
+  categoryId: ResearchCategoryId,
+  patch: Partial<Pick<ResearchCategory, 'name' | 'description'>>,
+): ProjectFile => {
+  if (!file.researchCategories.some((category) => category.id === categoryId)) {
+    throw new DomainError(`Research category ${categoryId} does not exist`);
+  }
+  return touchProject({
+    ...file,
+    researchCategories: file.researchCategories.map((category) =>
+      category.id === categoryId ? touch({ ...category, ...patch }) : category,
+    ),
+  });
+};
+
+export const moveResearchCategory = (
+  file: ProjectFile,
+  categoryId: ResearchCategoryId,
+  index: number,
+): ProjectFile => {
+  const category = file.researchCategories.find((candidate) => candidate.id === categoryId);
+  if (!category) throw new DomainError(`Research category ${categoryId} does not exist`);
+  const siblings = researchCategoriesInOrder(file).filter((candidate) => candidate.id !== categoryId);
+  const moved = touch({ ...category, orderKey: orderKeyForIndex(siblings, index) });
+  return touchProject({
+    ...file,
+    researchCategories: file.researchCategories.map((candidate) =>
+      candidate.id === categoryId ? moved : candidate,
+    ),
+  });
+};
+
+/** Archiving a category hides it and its items from the working view, reversibly. */
+export const setResearchCategoryArchived = (
+  file: ProjectFile,
+  categoryId: ResearchCategoryId,
+  archived: boolean,
+): ProjectFile => {
+  if (!file.researchCategories.some((category) => category.id === categoryId)) {
+    throw new DomainError(`Research category ${categoryId} does not exist`);
+  }
+  return touchProject({
+    ...file,
+    researchCategories: file.researchCategories.map((category) =>
+      category.id === categoryId ? touch({ ...category, archived }) : category,
+    ),
+  });
+};
+
+export const updateResearchItem = (
+  file: ProjectFile,
+  itemId: ResearchItemId,
+  patch: Partial<Pick<ResearchItem, 'title' | 'body' | 'tags'>>,
+): ProjectFile => {
+  if (!file.researchItems.some((item) => item.id === itemId)) {
+    throw new DomainError(`Research item ${itemId} does not exist`);
+  }
+  return touchProject({
+    ...file,
+    researchItems: file.researchItems.map((item) => (item.id === itemId ? touch({ ...item, ...patch }) : item)),
+  });
+};
+
+export const moveResearchItem = (
+  file: ProjectFile,
+  input: { itemId: ResearchItemId; toCategoryId: ResearchCategoryId; index: number },
+): ProjectFile => {
+  const item = file.researchItems.find((candidate) => candidate.id === input.itemId);
+  if (!item) throw new DomainError(`Research item ${input.itemId} does not exist`);
+  if (!file.researchCategories.some((category) => category.id === input.toCategoryId)) {
+    throw new DomainError(`Research category ${input.toCategoryId} does not exist`);
+  }
+  const siblings = file.researchItems
+    .filter((candidate) => candidate.categoryId === input.toCategoryId && candidate.id !== item.id)
+    .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1));
+  const moved = touch({
+    ...item,
+    categoryId: input.toCategoryId,
+    orderKey: orderKeyForIndex(siblings, input.index),
+  });
+  return touchProject({
+    ...file,
+    researchItems: file.researchItems.map((candidate) => (candidate.id === item.id ? moved : candidate)),
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Setups and payoffs (§7.3)
+// ---------------------------------------------------------------------------
+
+export const updateSetupPayoff = (
+  file: ProjectFile,
+  setupPayoffId: SetupPayoffId,
+  patch: Partial<Pick<SetupPayoff, 'title' | 'description' | 'status'>>,
+): ProjectFile => {
+  if (!file.setupsPayoffs.some((record) => record.id === setupPayoffId)) {
+    throw new DomainError(`Setup/payoff ${setupPayoffId} does not exist`);
+  }
+  return touchProject({
+    ...file,
+    setupsPayoffs: file.setupsPayoffs.map((record) =>
+      record.id === setupPayoffId ? touch({ ...record, ...patch }) : record,
+    ),
+  });
+};
+
+export const updateSetupPoint = (
+  file: ProjectFile,
+  input: {
+    setupPayoffId: SetupPayoffId;
+    setupPointId: SetupPointId;
+    patch: Partial<Pick<SetupPoint, 'description' | 'strength' | 'location'>>;
+  },
+): ProjectFile => {
+  const record = file.setupsPayoffs.find((candidate) => candidate.id === input.setupPayoffId);
+  if (!record) throw new DomainError(`Setup/payoff ${input.setupPayoffId} does not exist`);
+  if (!record.setups.some((point) => point.id === input.setupPointId)) {
+    throw new DomainError(`Setup point ${input.setupPointId} does not exist`);
+  }
+  const updated = touch({
+    ...record,
+    setups: record.setups.map((point) =>
+      point.id === input.setupPointId ? { ...point, ...input.patch } : point,
+    ),
+  });
+  return touchProject({
+    ...file,
+    setupsPayoffs: file.setupsPayoffs.map((candidate) => (candidate.id === record.id ? updated : candidate)),
+  });
+};
+
+export const removeSetupPoint = (
+  file: ProjectFile,
+  input: { setupPayoffId: SetupPayoffId; setupPointId: SetupPointId },
+): ProjectFile => {
+  const record = file.setupsPayoffs.find((candidate) => candidate.id === input.setupPayoffId);
+  if (!record) throw new DomainError(`Setup/payoff ${input.setupPayoffId} does not exist`);
+  const updated = touch({
+    ...record,
+    setups: record.setups.filter((point) => point.id !== input.setupPointId),
+  });
+  return touchProject({
+    ...file,
+    setupsPayoffs: file.setupsPayoffs.map((candidate) => (candidate.id === record.id ? updated : candidate)),
+  });
+};
+
+/**
+ * Reverse of `recordPayoff`: the obligation returns to the active list with its
+ * setup points intact, because deciding a payoff is not written yet is an
+ * ordinary revision, not a mistake to be punished with lost history.
+ */
+export const reopenPayoff = (file: ProjectFile, setupPayoffId: SetupPayoffId): ProjectFile => {
+  const record = file.setupsPayoffs.find((candidate) => candidate.id === setupPayoffId);
+  if (!record) throw new DomainError(`Setup/payoff ${setupPayoffId} does not exist`);
+  const updated = touch({
+    ...record,
+    payoff: null,
+    status: record.setups.some((point) => point.strength === 'written')
+      ? ('established' as const)
+      : ('open' as const),
+  });
+  return touchProject({
+    ...file,
+    setupsPayoffs: file.setupsPayoffs.map((candidate) => (candidate.id === record.id ? updated : candidate)),
   });
 };

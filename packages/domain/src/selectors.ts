@@ -3,10 +3,10 @@ import { isUnresolved } from './entities/setups.js';
 import { countWords } from './entities/manuscript.js';
 import { refEquals, type StoryEntityRef, type StoryLink } from './entities/links.js';
 import type { Beat, Lane, StructuralUnit } from './entities/structure.js';
-import type { ResearchItem } from './entities/research.js';
+import type { ResearchCategory, ResearchItem } from './entities/research.js';
 import type { SetupPayoff } from './entities/setups.js';
 import type { ProjectFile } from './project-file.js';
-import type { BeatId, LaneId, StructuralUnitId } from './ids.js';
+import type { BeatId, LaneId, ResearchCategoryId, StructuralUnitId } from './ids.js';
 
 /** Read-only views over a project document. All results are ordered. */
 
@@ -34,6 +34,25 @@ export const findUnit = (file: ProjectFile, unitId: StructuralUnitId): Structura
 
 export const findLane = (file: ProjectFile, laneId: LaneId): Lane | undefined =>
   file.lanes.find((lane) => lane.id === laneId);
+
+/** Categories the writer sees, in their chosen order; archived ones are hidden (§7.1). */
+export const researchCategoriesInOrder = (file: ProjectFile, includeArchived = false): ResearchCategory[] =>
+  sortByOrderKey(file.researchCategories.filter((category) => includeArchived || !category.archived));
+
+/** Items in one category, newest ordering first honoured. */
+export const researchItemsForCategory = (
+  file: ProjectFile,
+  categoryId: ResearchCategoryId,
+  options: { usage?: 'used' | 'unused'; includeArchived?: boolean } = {},
+): ResearchItem[] =>
+  sortByOrderKey(
+    file.researchItems.filter(
+      (item) =>
+        item.categoryId === categoryId &&
+        (options.includeArchived || !item.archived) &&
+        (options.usage === undefined || item.usage === options.usage),
+    ),
+  );
 
 /** Working inventory of material not yet incorporated into the story (§7.2). */
 export const unusedResearch = (file: ProjectFile): ResearchItem[] =>
@@ -64,6 +83,75 @@ export interface ProjectStats {
   unresolvedSetupCount: number;
   pendingCaptureCount: number;
 }
+
+export interface ResolvedEntity {
+  ref: StoryEntityRef;
+  label: string;
+  detail: string;
+  /** False when the link points at something that is no longer in the project. */
+  exists: boolean;
+}
+
+/**
+ * Turn a link endpoint into something displayable.
+ *
+ * Links store `(type, id)` rather than a copied-out name (§7.4), so every
+ * display of a relationship has to look the entity up — which is exactly what
+ * makes a rename propagate everywhere it appears.
+ */
+export const resolveRef = (file: ProjectFile, target: StoryEntityRef): ResolvedEntity => {
+  const found = (label: string, detail = ''): ResolvedEntity => ({ ref: target, label, detail, exists: true });
+  const missing = (): ResolvedEntity => ({ ref: target, label: 'Missing element', detail: target.type, exists: false });
+
+  switch (target.type) {
+    case 'project':
+      return file.project.id === target.id ? found(file.project.title, 'project') : missing();
+    case 'lane': {
+      const lane = file.lanes.find((candidate) => candidate.id === target.id);
+      return lane ? found(lane.name, 'lane') : missing();
+    }
+    case 'unit': {
+      const unit = file.units.find((candidate) => candidate.id === target.id);
+      return unit ? found(unit.title || 'Untitled', unit.sequenceLabel || unit.kind) : missing();
+    }
+    case 'beat': {
+      const beat = file.beats.find((candidate) => candidate.id === target.id);
+      if (!beat) return missing();
+      const parent = file.units.find((candidate) => candidate.id === beat.unitId);
+      return found(beat.title || 'Untitled beat', parent ? parent.title || parent.kind : 'beat');
+    }
+    case 'research_item': {
+      const item = file.researchItems.find((candidate) => candidate.id === target.id);
+      if (!item) return missing();
+      const category = file.researchCategories.find((candidate) => candidate.id === item.categoryId);
+      return found(item.title, category?.name ?? 'research');
+    }
+    case 'character': {
+      const character = file.characters.find((candidate) => candidate.id === target.id);
+      return character ? found(character.name, 'character') : missing();
+    }
+    case 'setup_payoff': {
+      const record = file.setupsPayoffs.find((candidate) => candidate.id === target.id);
+      return record ? found(record.title, `setup/payoff · ${record.status}`) : missing();
+    }
+    default:
+      return missing();
+  }
+};
+
+export interface RelatedEntity {
+  link: StoryLink;
+  other: ResolvedEntity;
+  /** True when `target` is the `from` side, which decides how to read the verb. */
+  outgoing: boolean;
+}
+
+/** Everything linked to `target`, ready for the related-elements panel (§7.4). */
+export const relatedEntities = (file: ProjectFile, target: StoryEntityRef): RelatedEntity[] =>
+  linksFor(file, target).map((link) => {
+    const outgoing = refEquals(link.from, target);
+    return { link, outgoing, other: resolveRef(file, outgoing ? link.to : link.from) };
+  });
 
 /** Numbers behind the project dashboard (§4). */
 export const projectStats = (file: ProjectFile): ProjectStats => ({
