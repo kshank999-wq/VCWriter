@@ -4,9 +4,11 @@ import { readFile, writeFile } from 'node:fs/promises';
 import {
   createProjectFile,
   parseProjectFile,
+  type PrintOptions,
   type ProjectFile,
   type ProjectFormat,
 } from '@vcwriter/domain';
+import { exportProjectPdf, printProject } from './export-pdf';
 import {
   PROJECT_EXTENSION,
   listSnapshots,
@@ -169,6 +171,31 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
     async (_event, input: { path: string; snapshotId: string }): Promise<DesktopApiResult<OpenResult>> => {
       try {
         return ok(toOpenResult(await restoreSnapshot(input.path, input.snapshotId)));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    'project:exportPdf',
+    async (
+      _event,
+      input: { file: unknown; options?: PrintOptions },
+    ): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>> => {
+      try {
+        return ok(await exportProjectPdf(input, getWindow()));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    'project:print',
+    async (_event, input: { file: unknown; options?: PrintOptions }): Promise<DesktopApiResult<boolean>> => {
+      try {
+        return ok(await printProject(input));
       } catch (cause) {
         return fail(cause);
       }

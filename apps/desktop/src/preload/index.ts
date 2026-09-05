@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ProjectFile, ProjectFormat } from '@vcwriter/domain';
+import type { PrintOptions, ProjectFile, ProjectFormat } from '@vcwriter/domain';
 
 /**
  * The only bridge between the renderer and the operating system.
@@ -46,6 +46,12 @@ export interface VcWriterApi {
   recentProjects(): Promise<DesktopApiResult<string[]>>;
   listSnapshots(path: string): Promise<DesktopApiResult<SnapshotSummary[]>>;
   restoreSnapshot(input: { path: string; snapshotId: string }): Promise<DesktopApiResult<OpenResult>>;
+  /** Returns null when the writer cancelled the save dialog. */
+  exportPdf(input: {
+    file: ProjectFile;
+    options?: PrintOptions;
+  }): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>>;
+  print(input: { file: ProjectFile; options?: PrintOptions }): Promise<DesktopApiResult<boolean>>;
   appInfo(): Promise<DesktopApiResult<{ version: string; platform: string }>>;
 }
 
@@ -57,6 +63,8 @@ const api: VcWriterApi = {
   recentProjects: () => ipcRenderer.invoke('project:recents'),
   listSnapshots: (path) => ipcRenderer.invoke('project:snapshots', path),
   restoreSnapshot: (input) => ipcRenderer.invoke('project:restoreSnapshot', input),
+  exportPdf: (input) => ipcRenderer.invoke('project:exportPdf', input),
+  print: (input) => ipcRenderer.invoke('project:print', input),
   appInfo: () => ipcRenderer.invoke('app:version'),
 };
 
