@@ -64,5 +64,6 @@ database, or both — not left to convention:
 | [Roadmap](docs/roadmap.md) | The eight delivery phases and what is built so far |
 | [Epics and user stories](docs/epics-and-user-stories.md) | The specification as deliverable work with acceptance criteria |
 | [API contracts](docs/api-contracts.md) | HTTP endpoints and desktop IPC channels |
+| [Deployment](docs/deployment.md) | Live services, environment variables, domain, Stripe and release wiring |
 | [Decisions](docs/decisions) | Architecture decision records |
 | [Master specification](docs/spec/vc-writer-master-development-spec.md) | The source document |
