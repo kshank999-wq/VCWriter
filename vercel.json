@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "echo '' && echo '==================================================================' && echo '  VC Writer: this Vercel project is building from the REPOSITORY ROOT.' && echo '  The website lives in apps/web, so the build has nothing to serve.' && echo '' && echo '  Fix (once, in the Vercel dashboard):' && echo '    Settings -> General -> Root Directory  =  apps/web' && echo '    Settings -> Git     -> Production Branch =  main' && echo '  then Deployments -> Redeploy.' && echo '' && echo '  See docs/deployment.md. This file is only read when Root Directory' && echo '  is unset; once it is apps/web, apps/web/vercel.json applies instead.' && echo '==================================================================' && echo '' && exit 1"
+}
