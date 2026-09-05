@@ -59,6 +59,7 @@ Environment variables, all environments unless noted:
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe → API keys | Public |
 | `STRIPE_PRICE_ID_DESKTOP` | Stripe → Products → VC Writer Desktop | The server-chosen price |
 | `RESEND_API_KEY` | Resend → API keys | **Secret** |
+| `ANTHROPIC_API_KEY` | Anthropic Console | **Secret.** Absent means the Final Editor's AI read returns 503 and its deterministic pass still works |
 | `RESEND_FROM_ADDRESS` | `VC Writer <noreply@vc-writer.com>` | Needs a verified domain |
 | `RELEASE_BUCKET` | `releases` | |
 | `RELEASE_DOWNLOAD_TTL_SECONDS` | `900` | Signed installer URL lifetime |
@@ -88,6 +89,10 @@ vercel env add SUPABASE_SERVICE_ROLE_KEY production
    `charge.dispute.created`.
 3. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
 
+Also switch on **Stripe Tax** in the dashboard: checkout already sends
+`automatic_tax`, but it only applies once the account has tax registrations
+configured.
+
 Locally: `stripe listen --forward-to localhost:3000/api/stripe/webhook`.
 
 The endpoint is safe to retry — it verifies the signature, claims the event id
@@ -108,6 +113,21 @@ Supabase → Authentication → URL configuration:
 - Site URL: `https://vc-writer.com`
 - Redirect allow list: `https://vc-writer.com/auth/callback`,
   `http://localhost:3000/auth/callback`, and the Vercel preview pattern.
+
+## Making yourself an administrator
+
+Release management at `/admin/releases` is gated on a flag that signup never
+grants. After signing in once so the account exists, set it in the Supabase SQL
+editor:
+
+```sql
+update public.profiles
+set is_admin = true
+where lower(email) = lower('you@example.com');
+```
+
+Revoking it is the same statement with `false`, and takes effect on the next
+request — the flag is checked per request rather than carried in a token.
 
 ## Release artifacts
 
