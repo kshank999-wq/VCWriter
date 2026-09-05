@@ -254,19 +254,21 @@ export function StructureBoard({ file, selectedBeatId, onSelectBeat, onUpdate }:
                   return (
                     <article
                       key={unit.id}
-                      className={`unit${dropClass(drag.dropTarget, unit.id)}`}
+                      className={`unit horizontal${dropClass(drag.dropTarget, unit.id)}`}
                       onDragOver={(event) => {
                         if (drag.payload?.kind !== 'unit') return;
                         event.preventDefault();
                         event.stopPropagation();
-                        drag.hover(unit.id, edgeFor(event));
+                        // Scene groups sit side by side in their lane, so the
+                        // edge a drop lands against is left or right.
+                        drag.hover(unit.id, edgeFor(event, 'horizontal'));
                       }}
                       onDragLeave={() => drag.clearHover(unit.id)}
                       onDrop={(event) => {
                         if (drag.payload?.kind !== 'unit') return;
                         event.preventDefault();
                         event.stopPropagation();
-                        dropUnit(lane.id, indexForDrop(unitIndex, edgeFor(event)));
+                        dropUnit(lane.id, indexForDrop(unitIndex, edgeFor(event, 'horizontal')));
                       }}
                     >
                       <header

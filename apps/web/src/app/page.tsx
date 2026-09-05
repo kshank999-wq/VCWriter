@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Emblem } from './wordmark';
 
 const FEATURES = [
   {
@@ -38,16 +39,21 @@ const FEATURES = [
 export default function HomePage() {
   return (
     <>
-      <div className="hero">
-        <h1>Everything a script or a novel needs, in one place.</h1>
-        <p>
-          Research, outline, draft, edit and hear it read back without moving between five applications.
-          VC Writer keeps characters, ideas, setups, payoffs, scenes and beats connected from first idea to
-          final export.
-        </p>
-        <Link href="/download" className="button">
-          Buy &amp; download
-        </Link>
+      <div className="hero hero-split">
+        <div>
+          <h1>
+            Everything a script or a novel needs, <em>in one place.</em>
+          </h1>
+          <p>
+            Research, outline, draft, edit and hear it read back without moving between five applications.
+            VC Writer keeps characters, ideas, setups, payoffs, scenes and beats connected from first idea to
+            final export.
+          </p>
+          <Link href="/download" className="button">
+            Buy &amp; download
+          </Link>
+        </div>
+        <Emblem />
       </div>
 
       <section id="features">

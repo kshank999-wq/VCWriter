@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { env, SITE_NAME } from '@/lib/env';
 import './globals.css';
+import { Wordmark } from './wordmark';
 
 export const metadata: Metadata = {
   metadataBase: new URL(env.siteUrl),
@@ -38,8 +39,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="site-header">
           <div className="shell">
             <nav>
-              <Link href="/" className="wordmark">
-                VC Writer
+              <Link href="/" className="wordmark" aria-label="VC Writer home">
+                <Wordmark />
               </Link>
               <Link href="/#features">Features</Link>
               <Link href="/download">Buy &amp; download</Link>

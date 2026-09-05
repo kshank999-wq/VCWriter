@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ProjectFormat } from '@vcwriter/domain';
+import { Wordmark } from './Brand';
 
 interface WelcomeProps {
   onCreate(input: { title: string; format: ProjectFormat; author?: string }): void;
@@ -29,8 +30,8 @@ export function Welcome({ onCreate, onOpen, onOpenPath, error }: WelcomeProps) {
 
   return (
     <div className="welcome">
-      <header>
-        <h1>VC Writer</h1>
+      <header className="welcome-header">
+        <Wordmark />
         <p>Start a project, or pick up where you left off.</p>
       </header>
 

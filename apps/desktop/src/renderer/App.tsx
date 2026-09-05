@@ -19,6 +19,8 @@ import { CapturesPanel } from './components/CapturesPanel';
 import { EditorPanel } from './components/EditorPanel';
 import { ReadBackPanel } from './components/ReadBackPanel';
 import { RecoveryPanel } from './components/RecoveryPanel';
+import { Timeline } from './components/Timeline';
+import { Wordmark } from './components/Brand';
 import type { AccountStatus } from '../preload/index';
 
 const SAVE_LABEL: Record<string, string> = {
@@ -170,8 +172,10 @@ export default function App() {
     <div className={focusMode && writing ? 'workspace focus-mode' : 'workspace'}>
       <header className="titlebar">
         <div className="titlebar-left">
-          <strong>{file.project.title}</strong>
-          <span className="muted"> · {file.project.format.replace(/_/g, ' ')}</span>
+          <Wordmark compact />
+          <strong className="project-title" title={`${file.project.title} · ${file.project.format.replace(/_/g, ' ')}`}>
+            {file.project.title}
+          </strong>
           <nav className="views" aria-label="Workspace">
             {VIEWS.map((option) => (
               <button
@@ -248,14 +252,9 @@ export default function App() {
 
       {writing ? (
         <div className="workspace-body">
-          {focusMode ? null : (
-            <StructureBoard
-              file={file}
-              selectedBeatId={selectedBeat?.id ?? null}
-              onSelectBeat={setSelectedBeatId}
-              onUpdate={project.update}
-            />
-          )}
+          {/* Manuscript on the left, structure on the right (docs/brand.md,
+              layout): the page is what the writer is looking at, and the
+              board is where they are in the story. */}
           <main>
             {selectedBeat ? (
               <BeatEditor file={file} beat={selectedBeat} focusMode={focusMode} onUpdate={project.update} />
@@ -263,6 +262,17 @@ export default function App() {
               <p className="muted empty-state">Add a beat to a scene or chapter to start writing.</p>
             )}
           </main>
+          {focusMode ? null : (
+            <div className="structure-pane">
+              <Timeline file={file} selectedBeatId={selectedBeat?.id ?? null} onSelectBeat={setSelectedBeatId} />
+              <StructureBoard
+                file={file}
+                selectedBeatId={selectedBeat?.id ?? null}
+                onSelectBeat={setSelectedBeatId}
+                onUpdate={project.update}
+              />
+            </div>
+          )}
         </div>
       ) : (
         <main className="full">
