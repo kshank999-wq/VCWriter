@@ -63,12 +63,22 @@ was created to avoid a third project.
    new, empty `vcwriter`. **Keep one and delete the other.** `vc-writer` is
    the better name; if it is the one that stays, delete `vcwriter`.
 2. In the survivor: Settings → Git → Connect Git Repository →
-   `kshank999-wq/VCWriter`, production branch `main`.
-3. Settings → General → Root Directory: **`apps/web`**. Framework preset:
-   Next.js. Leave "include files outside the root directory" enabled — the
-   build needs the workspace root so `pnpm install` can link and build
-   `@vcwriter/domain` (its `prepare` script compiles it).
+   `kshank999-wq/VCWriter`. Then **Production Branch: `main`**. The first
+   connection defaulted to `claude/vc-writer-dev-spec-ymc7zy`; both branches
+   carry the same commits today, but `main` is the one that is meant to be
+   deployable.
+3. Settings → General → **Root Directory: `apps/web`**. This is the setting
+   that matters most, and the first deployment failed for want of it: with no
+   root directory, Vercel ran the repository's `pnpm -r build`, which builds
+   the *Electron* app, and then looked for a `dist` folder that a Next.js
+   site does not produce. `apps/web/vercel.json` pins the framework to
+   Next.js so the preset cannot be misdetected once the directory is right.
+   Leave "include files outside the root directory" enabled — the build needs
+   the workspace root so `pnpm install` can link and build `@vcwriter/domain`
+   (its `prepare` script compiles it; the failed log shows that part working).
 4. Add the environment variables below, then Deployments → Redeploy.
+   Optional: also add `ELECTRON_SKIP_BINARY_DOWNLOAD=1` — the workspace
+   install pulls the Electron binary otherwise, which the site never uses.
 5. Settings → Domains → add `vc-writer.com` and `www.vc-writer.com` (see the
    Domain section).
 
