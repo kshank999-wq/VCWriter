@@ -1,10 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="VC Writer Notes">
-  <rect width="512" height="512" rx="96" fill="#0b0b0d" />
-  <g fill="none" stroke="#5b8cff" stroke-width="26" stroke-linecap="round">
-    <path d="M150 150h150" />
-    <path d="M150 214h212" />
-    <path d="M150 278h212" />
-    <path d="M150 342h120" />
+  <!-- The Notes companion: the VC Writer tile, with lines of a note in place
+       of the monogram so the two icons read as a pair, not a duplicate. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#efd48a" />
+      <stop offset="0.5" stop-color="#c9a45c" />
+      <stop offset="1" stop-color="#8a6f2f" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="#070604" />
+  <path d="M48 76 H76 V48 H436 V76 H464 V436 H436 V464 H76 V436 H48 Z" fill="none" stroke="url(#g)" stroke-width="7" />
+  <g stroke="#c9a45c" stroke-width="22" stroke-linecap="square">
+    <path d="M150 190h150" />
+    <path d="M150 256h212" />
+    <path d="M150 322h212" />
+    <path d="M150 388h120" />
   </g>
-  <circle cx="352" cy="150" r="30" fill="#5b8cff" />
+  <path d="M352 168 L378 194 L352 220 L326 194 Z" fill="#8b1c1c" stroke="url(#g)" stroke-width="5" />
 </svg>

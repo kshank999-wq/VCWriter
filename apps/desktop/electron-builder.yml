@@ -10,6 +10,11 @@ directories:
   output: release
   buildResources: build
 
+# One 1024px PNG, rendered from brand/icon.html; electron-builder derives the
+# .icns and .ico from it at package time. Regenerate with
+# `BOARDS=icon.html pnpm --filter @vcwriter/brand render app-icon`.
+icon: build/icon.png
+
 files:
   - out/**
   - package.json

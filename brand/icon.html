@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>VC Writer — application icons</title>
+<style>
+  @font-face { font-family: 'Limelight'; src: url('fonts/Limelight.ttf') format('truetype'); }
+  @font-face { font-family: 'Josefin'; font-weight: 700; src: url('fonts/JosefinSans-700.ttf') format('truetype'); }
+
+  :root { --ink: #070604; --gold: #c9a45c; --gold-bright: #efd48a; --gold-deep: #8a6f2f; --red: #8b1c1c; }
+  html, body { margin: 0; background: #555; }
+  body { display: flex; flex-wrap: wrap; gap: 60px; padding: 60px; align-items: flex-start; }
+
+  /*
+   * The icon is a tile, not a poster: at 16px all that survives is a dark
+   * square, a gold edge and two letters. So the frame is one stepped hairline,
+   * the monogram is large, and the diamond is the only other element.
+   */
+  .board { position: relative; flex: 0 0 auto; }
+  .board > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .board .mono {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-family: 'Limelight', serif; line-height: 1;
+    background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold-deep) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+</style>
+</head>
+<body>
+
+<!-- Desktop application icon. Transparent outside the rounded tile, with a
+     margin, as macOS expects; Windows and Linux use the same file. -->
+<section class="board" data-name="app-icon-1024" data-transparent style="width:1024px;height:1024px">
+  <svg viewBox="0 0 1024 1024">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#efd48a"/><stop offset="0.5" stop-color="#c9a45c"/><stop offset="1" stop-color="#8a6f2f"/>
+      </linearGradient>
+      <radialGradient id="glow" cx="0.5" cy="0.32" r="0.6">
+        <stop offset="0" stop-color="#c9a45c" stop-opacity="0.30"/><stop offset="1" stop-color="#c9a45c" stop-opacity="0"/>
+      </radialGradient>
+      <clipPath id="tile"><rect x="84" y="84" width="856" height="856" rx="190"/></clipPath>
+    </defs>
+    <rect x="84" y="84" width="856" height="856" rx="190" fill="#070604"/>
+    <g clip-path="url(#tile)">
+      <rect x="84" y="84" width="856" height="856" fill="url(#glow)"/>
+      <g stroke="#c9a45c" stroke-opacity="0.12" stroke-width="3">
+        <line x1="512" y1="400" x2="512" y2="-200"/><line x1="512" y1="400" x2="1100" y2="-100"/><line x1="512" y1="400" x2="-76" y2="-100"/>
+        <line x1="512" y1="400" x2="1200" y2="250"/><line x1="512" y1="400" x2="-176" y2="250"/>
+        <line x1="512" y1="400" x2="1200" y2="700"/><line x1="512" y1="400" x2="-176" y2="700"/>
+      </g>
+    </g>
+    <!-- Stepped frame, inset from the tile edge. -->
+    <path d="M168 214 H214 V168 H810 V214 H856 V810 H810 V856 H214 V810 H168 Z" fill="none" stroke="url(#g)" stroke-width="10"/>
+    <path d="M196 240 H240 V196 H784 V240 H828 V784 H784 V828 H240 V784 H196 Z" fill="none" stroke="#8a6f2f" stroke-width="3"/>
+    <!-- Diamond. -->
+    <path d="M512 728 L546 764 L512 800 L478 764 Z" fill="#8b1c1c" stroke="url(#g)" stroke-width="6"/>
+  </svg>
+  <div class="mono" style="font-size: 500px; padding-bottom: 130px;">VC</div>
+</section>
+
+<!-- Website favicon and PWA icon: full-bleed, no margin, because browsers
+     draw it small and a margin would just shrink it further. -->
+<section class="board" data-name="web-icon-512" style="width:512px;height:512px">
+  <svg viewBox="0 0 512 512">
+    <defs>
+      <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#efd48a"/><stop offset="0.5" stop-color="#c9a45c"/><stop offset="1" stop-color="#8a6f2f"/>
+      </linearGradient>
+      <radialGradient id="glow2" cx="0.5" cy="0.32" r="0.6">
+        <stop offset="0" stop-color="#c9a45c" stop-opacity="0.30"/><stop offset="1" stop-color="#c9a45c" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="512" height="512" fill="#070604"/>
+    <rect width="512" height="512" fill="url(#glow2)"/>
+    <path d="M48 76 H76 V48 H436 V76 H464 V436 H436 V464 H76 V436 H48 Z" fill="none" stroke="url(#g2)" stroke-width="7"/>
+    <path d="M256 388 L278 412 L256 436 L234 412 Z" fill="#8b1c1c" stroke="url(#g2)" stroke-width="4"/>
+  </svg>
+  <div class="mono" style="font-size: 296px; padding-bottom: 76px;">VC</div>
+</section>
+
+<!-- Apple touch icon: iOS rounds it itself, so it is square and opaque. -->
+<section class="board" data-name="apple-icon-180" style="width:180px;height:180px">
+  <svg viewBox="0 0 512 512">
+    <defs>
+      <linearGradient id="g3" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#efd48a"/><stop offset="0.5" stop-color="#c9a45c"/><stop offset="1" stop-color="#8a6f2f"/>
+      </linearGradient>
+    </defs>
+    <rect width="512" height="512" fill="#070604"/>
+    <path d="M48 76 H76 V48 H436 V76 H464 V436 H436 V464 H76 V436 H48 Z" fill="none" stroke="url(#g3)" stroke-width="8"/>
+    <path d="M256 388 L278 412 L256 436 L234 412 Z" fill="#8b1c1c" stroke="url(#g3)" stroke-width="4"/>
+  </svg>
+  <div class="mono" style="font-size: 104px; padding-bottom: 27px;">VC</div>
+</section>
+
+</body>
+</html>

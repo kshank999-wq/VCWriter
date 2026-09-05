@@ -1,12 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="VC Writer Notes">
   <!-- Maskable: the mark sits inside the 80% safe area so platform masks
        (circle, squircle, rounded square) never clip it. -->
-  <rect width="512" height="512" fill="#0b0b0d" />
-  <g fill="none" stroke="#5b8cff" stroke-width="24" stroke-linecap="round">
-    <path d="M176 192h108" />
-    <path d="M176 248h160" />
-    <path d="M176 304h160" />
-    <path d="M176 360h96" />
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#efd48a" />
+      <stop offset="0.5" stop-color="#c9a45c" />
+      <stop offset="1" stop-color="#8a6f2f" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="#070604" />
+  <path d="M124 146 H146 V124 H366 V146 H388 V366 H366 V388 H146 V366 H124 Z" fill="none" stroke="url(#g)" stroke-width="6" />
+  <g stroke="#c9a45c" stroke-width="20" stroke-linecap="square">
+    <path d="M186 214h96" />
+    <path d="M186 262h140" />
+    <path d="M186 310h140" />
+    <path d="M186 358h84" />
   </g>
-  <circle cx="326" cy="192" r="26" fill="#5b8cff" />
+  <path d="M322 194 L344 216 L322 238 L300 216 Z" fill="#8b1c1c" stroke="url(#g)" stroke-width="4" />
 </svg>

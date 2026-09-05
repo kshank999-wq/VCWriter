@@ -9,8 +9,12 @@ import { chromium } from 'playwright';
  * Renders every artboard in artboards.html to brand/exports/<name>.png at its
  * exact pixel size.
  *
- *   node brand/render.mjs            # all boards
+ *   node brand/render.mjs            # all boards in artboards.html
  *   node brand/render.mjs poster     # boards whose name contains "poster"
+ *   BOARDS=icon.html node brand/render.mjs   # another source file
+ *
+ * A board with `data-transparent` is captured without a background, for icons
+ * whose corners must be see-through.
  *
  * Served over a local HTTP port rather than file:// so the @font-face files
  * load. Set CHROMIUM_PATH to use a specific browser binary.
@@ -18,6 +22,7 @@ import { chromium } from 'playwright';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 const filter = process.argv[2] ?? '';
+const source = process.env['BOARDS'] ?? 'artboards.html';
 const TYPES = { '.html': 'text/html', '.ttf': 'font/ttf', '.png': 'image/png' };
 
 const server = createServer(async (request, response) => {
@@ -39,14 +44,15 @@ const browser = await chromium.launch(
   process.env['CHROMIUM_PATH'] ? { executablePath: process.env['CHROMIUM_PATH'] } : {},
 );
 const page = await browser.newPage({ viewport: { width: 2600, height: 1200 }, deviceScaleFactor: 1 });
-await page.goto(`http://127.0.0.1:${port}/artboards.html`, { waitUntil: 'networkidle' });
+await page.goto(`http://127.0.0.1:${port}/${source}`, { waitUntil: 'networkidle' });
 await page.evaluate(() => document.fonts.ready);
 
 const boards = await page.$$('.board');
 for (const board of boards) {
   const name = await board.getAttribute('data-name');
   if (!name.includes(filter)) continue;
-  await board.screenshot({ path: join(root, 'exports', `${name}.png`) });
+  const transparent = (await board.getAttribute('data-transparent')) !== null;
+  await board.screenshot({ path: join(root, 'exports', `${name}.png`), omitBackground: transparent });
   console.log(`✓ exports/${name}.png`);
 }
 
