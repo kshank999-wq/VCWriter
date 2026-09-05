@@ -79,15 +79,28 @@ try {
     await page.goto(`http://127.0.0.1:${PORT}${path}`, { waitUntil: 'networkidle' });
 
     // A page whose scripts were blocked still renders its server HTML, so the
-    // real test is whether React attached to it.
-    const hydrated = await page.evaluate(() =>
-      Object.keys(document.querySelector('body > *') ?? {}).some((key) => key.startsWith('__react')),
-    );
+    // real test is whether React attached to it. Waited for, not snapshotted:
+    // a page that mounts client-only (/notes) hydrates a beat after network
+    // idle, and on a slow runner that beat is enough to miss.
+    const hydrated = await page
+      .waitForFunction(
+        () =>
+          Array.from(document.querySelectorAll('body *')).some((element) =>
+            Object.keys(element).some((key) => key.startsWith('__react')),
+          ),
+        undefined,
+        { timeout: 8000 },
+      )
+      .then(() => true)
+      .catch(() => false);
 
-    if (blocked.length > 0 || !hydrated) {
+    if (blocked.length > 0) {
       failures += 1;
-      console.error(`✗ ${path} — ${blocked.length} blocked, hydrated=${hydrated}`);
+      console.error(`✗ ${path} — ${blocked.length} script(s) blocked by the policy`);
       for (const entry of blocked.slice(0, 3)) console.error(`    ${entry.slice(0, 200)}`);
+    } else if (!hydrated) {
+      failures += 1;
+      console.error(`✗ ${path} — nothing blocked, but React never attached within 8s`);
     } else {
       console.log(`✓ ${path}`);
     }
@@ -101,8 +114,8 @@ try {
 }
 
 if (failures > 0) {
-  console.error(`\n${failures} page(s) blocked by the content security policy.`);
-  console.error('See docs/security-review.md — a prerendered page cannot carry a per-request nonce.');
+  console.error(`\n${failures} page(s) failed.`);
+  console.error('A blocked script usually means a prerendered page without the nonce — see docs/security-review.md.');
   process.exit(1);
 }
 
