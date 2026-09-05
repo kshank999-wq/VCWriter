@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createProjectFile, projectFileSchema, type ProjectFile } from '../project-file.js';
 import { fromRows, toRows } from '../sync-mapping.js';
-import { describeMerge, mergeProjects } from '../sync-merge.js';
+import { describeMerge, discardedText, mergeProjects } from '../sync-merge.js';
+import { canRestore, restoreDiscardedVersion } from '../sync-recovery.js';
 import { addBeat, addLane, addResearchItem, addUnit, linkEntities, updateBeat, updateUnit } from '../mutations.js';
 import { beatsForUnit } from '../selectors.js';
 import { ref } from '../entities/links.js';
+import { newId, type ManuscriptElementId } from '../ids.js';
 
 const project = () => createProjectFile({ title: 'Lighthouse', format: 'screenplay', author: 'K. Shank' });
 
@@ -227,5 +229,104 @@ describe('merging local and remote copies', () => {
     const remote = stamp(base, LATER, (draft) => updateUnit(draft, draft.units[0]!.id, { title: 'Renamed' }));
     const result = mergeProjects(base, remote, { lastSyncedAt: SYNCED });
     expect(result.merged.snapshots).toEqual(base.snapshots);
+  });
+});
+
+describe('recovering a version a merge discarded', () => {
+  /**
+   * §15 asks for no manuscript data loss on a sync conflict. A merge has to
+   * pick one version to be the project's current state, so the only way to
+   * honour that is for the losing version to survive the merge and be
+   * restorable. These tests are that guarantee.
+   */
+
+  const conflictOverProse = () => {
+    const base = settled();
+    const elementId = newId<ManuscriptElementId>();
+    const local = stamp(base, LATER, (draft) =>
+      updateBeat(draft, draft.beats[0]!.id, {
+        manuscript: { elements: [{ id: elementId, type: 'action', text: 'The lamp goes out at the desk.', characterId: null, attributes: {} }] },
+      }),
+    );
+    const remote = stamp(base, LATEST, (draft) =>
+      updateBeat(draft, draft.beats[0]!.id, {
+        manuscript: { elements: [{ id: elementId, type: 'action', text: 'The lamp goes out on the phone.', characterId: null, attributes: {} }] },
+      }),
+    );
+    return { base, local, remote, result: mergeProjects(local, remote, { lastSyncedAt: SYNCED }) };
+  };
+
+  it('carries the losing version out of the merge', () => {
+    // Without this the writing on the losing side is gone the moment the merge
+    // returns, however carefully the conflict count is reported.
+    const { result } = conflictOverProse();
+
+    expect(result.conflicts).toHaveLength(1);
+    expect(discardedText(result.conflicts[0]!)).toBe('The lamp goes out at the desk.');
+  });
+
+  it('puts the discarded version back', () => {
+    const { result } = conflictOverProse();
+    const restored = restoreDiscardedVersion(result.merged, result.conflicts[0]!, LATEST);
+
+    expect(restored.beats[0]?.manuscript.elements[0]?.text).toBe('The lamp goes out at the desk.');
+  });
+
+  it('stamps the restore as a new edit so the next sync carries it', () => {
+    // Restoring with the old timestamp would look stale to the next merge,
+    // which would overwrite it again with the version the writer just rejected.
+    const { result } = conflictOverProse();
+    const restored = restoreDiscardedVersion(result.merged, result.conflicts[0]!, '2026-09-01T00:00:00.000Z');
+
+    expect(restored.beats[0]?.updatedAt).toBe('2026-09-01T00:00:00.000Z');
+    expect(restored.beats[0]!.updatedAt > LATEST).toBe(true);
+  });
+
+  it('is reversible: restoring the other version undoes it', () => {
+    const { result } = conflictOverProse();
+    // Restoring happens after the merge, so it is a later edit — which is what
+    // makes the next sync carry it rather than overwrite it.
+    const first = restoreDiscardedVersion(result.merged, result.conflicts[0]!, '2026-09-01T00:00:00.000Z');
+
+    // The other machine still holds the version that won. Syncing again is a
+    // real conflict, and restoring from it puts the writer back where they were.
+    const back = mergeProjects(result.merged, first, { lastSyncedAt: SYNCED });
+    expect(back.conflicts.length).toBeGreaterThan(0);
+    const undone = restoreDiscardedVersion(first, back.conflicts[0]!, '2026-09-02T00:00:00.000Z');
+    expect(undone.beats[0]?.manuscript.elements[0]?.text).toBe('The lamp goes out on the phone.');
+  });
+
+  it('restores a record that has since been deleted', () => {
+    const { result } = conflictOverProse();
+    const withoutBeat = projectFileSchema.parse({ ...result.merged, beats: [] });
+
+    const restored = restoreDiscardedVersion(withoutBeat, result.conflicts[0]!, LATEST);
+    expect(restored.beats).toHaveLength(1);
+  });
+
+  it('refuses to restore a beat whose scene is gone', () => {
+    // §19 forbids a free-floating beat, and the merge's orphan pruning would
+    // drop it again on the next sync. Saying so beats losing it twice.
+    const { result } = conflictOverProse();
+    const orphaned = projectFileSchema.parse({ ...result.merged, units: [], beats: [] });
+
+    expect(canRestore(orphaned, result.conflicts[0]!)).toBe(false);
+    expect(canRestore(result.merged, result.conflicts[0]!)).toBe(true);
+  });
+
+  it('carries the losing project record too', () => {
+    const base = settled();
+    const local = stamp(base, LATER, (draft) =>
+      projectFileSchema.parse({ ...draft, project: { ...draft.project, logline: 'Desk logline' } }),
+    );
+    const remote = stamp(base, LATEST, (draft) =>
+      projectFileSchema.parse({ ...draft, project: { ...draft.project, logline: 'Phone logline' } }),
+    );
+
+    const result = mergeProjects(local, remote, { lastSyncedAt: SYNCED });
+    const conflict = result.conflicts.find((candidate) => candidate.collection === 'project')!;
+    const restored = restoreDiscardedVersion(result.merged, conflict, '2026-09-01T00:00:00.000Z');
+
+    expect(restored.project.logline).toBe('Desk logline');
   });
 });

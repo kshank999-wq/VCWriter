@@ -20,6 +20,17 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Every page renders per request.
+ *
+ * The content security policy carries a fresh nonce for each response
+ * (see `middleware.ts`), and a statically prerendered page is HTML built
+ * before that nonce existed — the browser then refuses every script on it,
+ * because `strict-dynamic` makes `'self'` inert. Rendering per request is what
+ * keeps the nonce in the HTML and the nonce in the header the same one.
+ */
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">

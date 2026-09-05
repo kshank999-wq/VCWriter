@@ -179,7 +179,7 @@ exceptions crossing the bridge.
 | `openProjectAtPath(path)` | Load a recent project |
 | `saveProject({ path, file, previousHash?, snapshot? })` | Validate, atomically replace, optionally snapshot. Returns `{ contentHash, written }`; `written: false` means the content was unchanged |
 | `recentProjects()` | Up to ten recent project paths |
-| `listSnapshots(path)` | Recovery points for a project, newest first |
+| `listSnapshots(path)` | Recovery points for a project, newest first, each with the reason it was taken (`autosave`, `manual`, `pre_migration`, `pre_sync`) |
 | `restoreSnapshot({ path, snapshotId })` | Snapshot the current file, then restore |
 | `exportPdf({ file, options })` | Render the print document and write a PDF. Returns `null` when the save dialog was cancelled |
 | `print({ file, options })` | Send the same document to the system print dialog |
@@ -188,13 +188,14 @@ exceptions crossing the bridge.
 | `requestSignInCode(email)` | Ask Supabase to email a six-digit code |
 | `verifySignInCode({ email, code })` | Exchange the code for a session, stored encrypted |
 | `signOut()` | Clear the session locally and on the server |
-| `syncProject({ file })` | Pull, merge, push. Returns the merged project, named conflicts and a summary |
+| `syncProject({ file, path? })` | Pull, merge, push. Returns the merged project, named conflicts and a summary. Each conflict carries the version the merge discarded, so nothing is lost by resolving one. With `path`, a `pre_sync` snapshot is written before a conflicted merge lands |
 | `listCaptures(projectId)` | Captures awaiting review for this project, plus unassigned ones |
 | `resolveCapture(capture)` | Write back a review decision. Never touches `raw_text` |
 | `reviewScene({ sceneText, position, format })` | Ask the Final Editor's AI pass to read one scene |
 | `reportingSettings()` | Whether error reporting is on for this installation. Off until switched on |
 | `setReporting(enabled)` | Store the choice. Returns what is actually stored, not what was clicked |
 | `reportError({ name, message, stack })` | A renderer crash. The main process redacts it and decides whether to send |
+| `restoreSnapshot({ path, snapshotId })` | Snapshot the current file, then restore |
 
 `saveProject` re-validates the document against the project schema before it
 touches disk: the renderer is the least trusted half of the application, and a

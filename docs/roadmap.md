@@ -135,7 +135,43 @@ Remaining before Phase 7 closes: the certificates themselves, and one
 end-to-end run on real hardware (purchase → download → install → activate →
 update).
 
-## Phase 8 — Hardening
+## Phase 8 — Hardening ▸ built, minus what needs real hardware
 
-Cross-platform QA, performance, sync conflicts, backup and recovery, security
-review, accessibility, release readiness.
+| Deliverable | Status |
+| --- | --- |
+| Sync conflicts | Done — the losing version survives the merge, is shown, and can be put back; a `pre_sync` snapshot is taken before a conflicted merge lands |
+| Backup and recovery | Done — a Recovery view that lists snapshots by reason and restores them; restoring snapshots the current file first |
+| Accessibility | Done — lanes and scenes are keyboard-reorderable, the rename control has an accessible name, focus is visible on the handles |
+| Performance | Done — floors on a 601-beat project, so a quadratic regression fails CI |
+| Security review | Done — [security-review.md](security-review.md); nonce-based CSP, renderer sandbox on, gaps named |
+| Cross-platform QA | Partly — CI runs the suites on all three systems; the manual matrix needs hardware |
+| Release readiness | Documented — [qa-and-release-readiness.md](qa-and-release-readiness.md) |
+
+Three things in this phase were real defects rather than polish.
+
+**A merge that named the loser and discarded it.** §15 asks for no manuscript
+data loss on a sync conflict, and the merge reported conflicts carefully while
+throwing the losing version away. Counting what you destroyed is not the same
+as not destroying it. Conflicts now carry the whole losing record, the desktop
+snapshots the pre-merge document before a conflicted merge lands, and Recovery
+shows the overwritten text and puts it back as a fresh edit — so the next sync
+carries the restore out rather than overwriting it again.
+
+**A structure board that could only be reordered by dragging.** Reordering is
+the board's central gesture, and beats had keyboard moves while lanes and
+scenes did not — which meant that for a keyboard or screen-reader user the
+board could be read and not organised. The file's own comment claimed
+otherwise. Both now have a focusable handle with Alt+↑/↓, and Alt+Shift+↑/↓
+moves a scene between lanes.
+
+**A content security policy that killed the landing page.** The first strict
+CSP used a per-request nonce, which is right, but `/` and `/signin` were
+statically prerendered — so their HTML carried no nonce and, because
+`strict-dynamic` makes `'self'` inert, the browser refused every script on
+them. The build passed, typecheck passed, all 252 tests passed, and the two
+most important pages on the site were dead. It was caught by opening the site
+in a real browser, and the guard against it recurring is a CI job that does the
+same thing.
+
+Remaining: the manual matrix on Windows and macOS hardware, rate limiting on
+the unauthenticated routes, and the Phase 7 certificates.

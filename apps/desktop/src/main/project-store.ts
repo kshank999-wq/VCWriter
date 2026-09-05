@@ -30,6 +30,7 @@ export const PROJECT_EXTENSION = 'vcw';
 
 const SNAPSHOT_DIR = '.vcwriter-snapshots';
 const MAX_SNAPSHOTS = 30;
+const MAX_PRE_SYNC_SNAPSHOTS = 10;
 
 export interface LoadedProject {
   path: string;
@@ -38,12 +39,24 @@ export interface LoadedProject {
   contentHash: string;
 }
 
+export type SnapshotReason = 'autosave' | 'manual' | 'pre_migration' | 'pre_sync';
+
 export interface SnapshotSummary {
   id: string;
   path: string;
   createdAt: string;
   sizeBytes: number;
+  /** Why this recovery point exists, so the writer can find the right one. */
+  reason: SnapshotReason;
 }
+
+const REASONS: SnapshotReason[] = ['autosave', 'manual', 'pre_migration', 'pre_sync'];
+
+/** Snapshots that are the only copy of something, and are never pruned away. */
+const IRREPLACEABLE: SnapshotReason[] = ['pre_migration', 'pre_sync'];
+
+const reasonOf = (name: string): SnapshotReason =>
+  REASONS.find((reason) => name.includes(`.${reason}.`)) ?? 'manual';
 
 const hash = (contents: string): string => createHash('sha256').update(contents).digest('hex');
 
@@ -104,7 +117,7 @@ export const saveProject = async (
 export const writeSnapshot = async (
   projectPath: string,
   contents: string,
-  reason: 'autosave' | 'manual' | 'pre_migration',
+  reason: SnapshotReason,
 ): Promise<string> => {
   const directory = snapshotDirFor(projectPath);
   await mkdir(directory, { recursive: true });
@@ -117,12 +130,22 @@ export const writeSnapshot = async (
 
 const pruneSnapshots = async (directory: string): Promise<void> => {
   const entries = (await readdir(directory)).filter((name) => name.endsWith(`.${PROJECT_EXTENSION}`)).sort();
-  // Keep pre_migration snapshots: they are the only copy of the pre-upgrade
-  // document, and they are rare.
-  const disposable = entries.filter((name) => !name.includes('.pre_migration.'));
+
+  // Pre-migration and pre-sync snapshots are the only copy of a document that
+  // no longer exists anywhere — the pre-upgrade file, and the local state a
+  // merge overwrote. Rolling autosaves must never push one of those out.
+  const disposable = entries.filter((name) => !IRREPLACEABLE.includes(reasonOf(name)));
   const excess = disposable.length - MAX_SNAPSHOTS;
   for (let i = 0; i < excess; i += 1) {
     const name = disposable[i];
+    if (name) await unlink(join(directory, name)).catch(() => undefined);
+  }
+
+  // They are not unbounded either: a writer who syncs a conflicted project
+  // daily should not accumulate a year of them.
+  const preSync = entries.filter((name) => reasonOf(name) === 'pre_sync');
+  for (let i = 0; i < preSync.length - MAX_PRE_SYNC_SNAPSHOTS; i += 1) {
+    const name = preSync[i];
     if (name) await unlink(join(directory, name)).catch(() => undefined);
   }
 };
@@ -147,6 +170,7 @@ export const listSnapshots = async (projectPath: string): Promise<SnapshotSummar
           path,
           createdAt: info.mtime.toISOString(),
           sizeBytes: info.size,
+          reason: reasonOf(name),
         };
       }),
   );

@@ -40,7 +40,46 @@ export interface SyncConflict {
   kept: 'local' | 'remote';
   localUpdatedAt: string;
   remoteUpdatedAt: string;
+  /**
+   * The version the merge did not keep, whole.
+   *
+   * §15 asks for no manuscript data loss on a sync conflict, and a merge that
+   * picks a winner and forgets the loser cannot honour that however carefully
+   * it reports the count. So the losing record travels with the conflict: the
+   * desktop shows what was overwritten and can put it back.
+   *
+   * Typed loosely because one conflict list spans every collection. Read it
+   * through `discardedText`, which knows where the prose is in each.
+   */
+  discarded: Record<string, unknown>;
 }
+
+/**
+ * The writer-visible text of a version that lost, or null when there is none.
+ *
+ * A beat's prose lives in its manuscript elements, a research item's in its
+ * body, a character's in their notes. This is what goes in front of someone
+ * deciding whether they have just lost something they wanted.
+ */
+export const discardedText = (conflict: SyncConflict): string | null => {
+  const record = conflict.discarded;
+
+  const manuscript = record['manuscript'];
+  if (manuscript && typeof manuscript === 'object' && Array.isArray((manuscript as { elements?: unknown }).elements)) {
+    const text = ((manuscript as { elements: Array<{ text?: unknown }> }).elements ?? [])
+      .map((element) => (typeof element.text === 'string' ? element.text : ''))
+      .filter((line) => line.trim().length > 0)
+      .join('\n');
+    if (text.trim().length > 0) return text;
+  }
+
+  for (const field of ['body', 'summary', 'notes', 'arcNotes', 'description'] as const) {
+    const value = record[field];
+    if (typeof value === 'string' && value.trim().length > 0) return value;
+  }
+
+  return null;
+};
 
 export interface MergeResult {
   merged: ProjectFile;
@@ -132,6 +171,7 @@ const mergeCollection = <T extends Timestamped>(
         kept: keepLocal ? 'local' : 'remote',
         localUpdatedAt: localRecord.updatedAt,
         remoteUpdatedAt: remoteRecord.updatedAt,
+        discarded: (keepLocal ? remoteRecord : localRecord) as unknown as Record<string, unknown>,
       });
       continue;
     }
@@ -265,6 +305,7 @@ export const mergeProjects = (
         kept: 'remote',
         localUpdatedAt: local.project.updatedAt,
         remoteUpdatedAt: remote.project.updatedAt,
+        discarded: { ...local.project, settings: local.settings } as unknown as Record<string, unknown>,
       });
     }
   } else if (localChanged && remoteChanged) {
@@ -275,6 +316,7 @@ export const mergeProjects = (
       kept: 'local',
       localUpdatedAt: local.project.updatedAt,
       remoteUpdatedAt: remote.project.updatedAt,
+      discarded: { ...remote.project, settings: remote.settings } as unknown as Record<string, unknown>,
     });
   }
 

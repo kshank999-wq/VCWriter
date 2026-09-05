@@ -1112,7 +1112,8 @@ button.item.selected {
 /* ------------------------------------------------- account and capture queue */
 
 .account,
-.captures {
+.captures,
+.recovery {
   max-width: 720px;
   margin: 0 auto;
   padding: 28px 24px;
@@ -1124,7 +1125,8 @@ button.item.selected {
 }
 
 .account h2,
-.captures h2 {
+.captures h2,
+.recovery h2 {
   margin: 0;
   font-size: 16px;
 }
@@ -1329,4 +1331,70 @@ button.item.selected {
 
 .voice-list select {
   min-width: 260px;
+}
+
+/* Recovery: conflicts a sync overwrote, and snapshots. */
+.recovery section {
+  display: grid;
+  gap: 10px;
+}
+
+.recovery-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.recovery-list li {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.recovery-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.recovery-row p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.recovery-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* The overwritten text itself: readable, and scrolled rather than clipped —
+   this is the thing the writer is trying to get back. */
+.recovery-text {
+  margin: 12px 0 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 13px;
+  line-height: 1.55;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+/* The reorder handle. Dim until focused or hovered, so it stays out of the
+   way visually without ever being unreachable from the keyboard. */
+.grip {
+  opacity: 0.45;
+  cursor: grab;
+  padding: 0 4px;
+}
+
+.grip:hover,
+.grip:focus-visible {
+  opacity: 1;
 }

@@ -86,6 +86,44 @@ export function StructureBoard({ file, selectedBeatId, onSelectBeat, onUpdate }:
     drag.end();
   };
 
+  /**
+   * Alt+↑/↓ reorders a lane.
+   *
+   * Reordering is the board's core gesture, and until this existed it could
+   * only be done by dragging — which §15's keyboard-centric requirement rules
+   * out, and which anyone using a keyboard, a screen reader or a trackball
+   * simply could not do at all.
+   */
+  const moveLaneByKeyboard = (laneId: LaneId, direction: -1 | 1) => {
+    const position = lanes.findIndex((candidate) => candidate.id === laneId);
+    const next = position + direction;
+    if (position < 0 || next < 0 || next >= lanes.length) return;
+    onUpdate((current) => moveLane(current, laneId, next));
+  };
+
+  /** Alt+↑/↓ moves a scene within its lane; adding Shift moves it to the next lane. */
+  const moveUnitByKeyboard = (
+    unitId: StructuralUnitId,
+    fromLaneId: LaneId,
+    direction: -1 | 1,
+    crossLane: boolean,
+  ) => {
+    if (crossLane) {
+      const laneIndex = lanes.findIndex((candidate) => candidate.id === fromLaneId);
+      const target = lanes[laneIndex + direction];
+      if (!target) return;
+      const index = direction === 1 ? 0 : unitsForLane(file, target.id).length;
+      onUpdate((current) => moveUnit(current, { unitId, toLaneId: target.id, index }));
+      return;
+    }
+
+    const siblings = unitsForLane(file, fromLaneId);
+    const position = siblings.findIndex((candidate) => candidate.id === unitId);
+    const next = position + direction;
+    if (position < 0 || next < 0 || next >= siblings.length) return;
+    onUpdate((current) => moveUnit(current, { unitId, toLaneId: fromLaneId, index: next }));
+  };
+
   /** Alt+↑/↓ moves a beat within its scene; adding Shift moves it to the next scene. */
   const moveBeatByKeyboard = (beat: Beat, direction: -1 | 1, crossContainer: boolean) => {
     const allUnits = lanes.flatMap((lane) => unitsForLane(file, lane.id));
@@ -143,6 +181,23 @@ export function StructureBoard({ file, selectedBeatId, onSelectBeat, onUpdate }:
                 dropLane(indexForDrop(laneIndex, edge));
               }}
             >
+              {/* A focusable handle, so reordering has a keyboard route and a
+                  name a screen reader can announce. Dragging the header still
+                  works for anyone who prefers it. */}
+              <button
+                type="button"
+                className="ghost grip"
+                aria-label={`Reorder lane ${lane.name}. Alt with up or down arrow.`}
+                title="Alt+↑/↓ to reorder this lane"
+                onKeyDown={(event) => {
+                  if (!event.altKey) return;
+                  if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+                  event.preventDefault();
+                  moveLaneByKeyboard(lane.id, event.key === 'ArrowUp' ? -1 : 1);
+                }}
+              >
+                ⠿
+              </button>
               <button
                 type="button"
                 className="ghost twisty"
@@ -222,6 +277,25 @@ export function StructureBoard({ file, selectedBeatId, onSelectBeat, onUpdate }:
                         }}
                         onDragEnd={drag.end}
                       >
+                        <button
+                          type="button"
+                          className="ghost grip"
+                          aria-label={`Reorder ${unit.title || `untitled ${unit.kind}`}. Alt with up or down arrow; add shift to move between lanes.`}
+                          title={`Alt+↑/↓ to reorder · Alt+Shift+↑/↓ to move between lanes`}
+                          onKeyDown={(event) => {
+                            if (!event.altKey) return;
+                            if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+                            event.preventDefault();
+                            moveUnitByKeyboard(
+                              unit.id,
+                              lane.id,
+                              event.key === 'ArrowUp' ? -1 : 1,
+                              event.shiftKey,
+                            );
+                          }}
+                        >
+                          ⠿
+                        </button>
                         <button
                           type="button"
                           className="ghost twisty"

@@ -26,6 +26,7 @@ export * from './pagination.js';
 export * from './print-html.js';
 export * from './sync-mapping.js';
 export * from './sync-merge.js';
+export * from './sync-recovery.js';
 export * from './capture-approval.js';
 export * from './release.js';
 export * from './activation.js';

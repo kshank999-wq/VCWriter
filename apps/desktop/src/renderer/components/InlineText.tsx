@@ -30,6 +30,9 @@ export function InlineText({ value, placeholder, className, ariaLabel, onCommit 
         type="button"
         className={`inline-text ${className ?? ''}`}
         title="Click to rename"
+        // Without this a screen reader announces "Main Plot, button" and never
+        // says what Main Plot is, or that the button renames it (§15).
+        aria-label={`${ariaLabel}: ${value.length > 0 ? value : (placeholder ?? 'Untitled')}`}
         onClick={() => {
           setDraft(value);
           setEditing(true);

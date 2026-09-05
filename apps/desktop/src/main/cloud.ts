@@ -2,6 +2,7 @@ import { app, safeStorage } from 'electron';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createClient, type SupabaseClient, type Session } from '@supabase/supabase-js';
+import { writeSnapshot } from './project-store';
 import {
   SYNC_TABLES,
   captureFromRow,
@@ -10,6 +11,7 @@ import {
   mergeProjects,
   parseProjectFile,
   projectToRow,
+  serializeProjectFile,
   toRows,
   type CaptureItem,
   type MergeResult,
@@ -248,7 +250,7 @@ export interface SyncOutcome {
  * result. The merge rules — including that an edit beats a delete — live in the
  * domain and are tested there.
  */
-export const syncProject = async (input: { file: unknown }): Promise<SyncOutcome> => {
+export const syncProject = async (input: { file: unknown; path?: string }): Promise<SyncOutcome> => {
   const local = parseProjectFile(input.file);
   const userId = await requireUserId();
 
@@ -264,6 +266,14 @@ export const syncProject = async (input: { file: unknown }): Promise<SyncOutcome
   const result: MergeResult = remote
     ? mergeProjects(owned, remote, { lastSyncedAt })
     : { merged: owned, conflicts: [], summary: { pulled: 0, pushed: 0, deletedLocally: 0, revivedByEdit: 0 } };
+
+  // §15: no manuscript data loss on a sync conflict. The merge reports what it
+  // overwrote and carries the losing versions, but the surest recovery is the
+  // whole pre-merge document, kept before the merge is allowed to land. Written
+  // first, so a failure here stops the sync rather than losing the copy.
+  if (result.conflicts.length > 0 && input.path) {
+    await writeSnapshot(input.path, serializeProjectFile(owned), 'pre_sync');
+  }
 
   await pushRows(result.merged, remote);
 

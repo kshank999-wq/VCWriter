@@ -28,10 +28,13 @@ const createWindow = (): void => {
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      // The renderer is untrusted: no Node, no remote module, isolated context.
+      // The renderer is untrusted: no Node, no remote module, isolated
+      // context, and the OS-level sandbox on. The preload needs nothing but
+      // `contextBridge` and `ipcRenderer` — the built bundle requires only
+      // `electron` — so there is no reason to run the renderer unsandboxed.
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
   });
 

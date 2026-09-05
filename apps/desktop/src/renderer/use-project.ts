@@ -26,6 +26,12 @@ export interface UseProjectResult {
   update(mutate: (current: ProjectFile) => ProjectFile): void;
   /** Adopt a whole project wholesale — the result of a sync merge. */
   replace(next: ProjectFile): void;
+  /**
+   * Adopt a document the main process just wrote to disk — a restored
+   * snapshot. Unlike `replace` this is already saved, so it must not be marked
+   * dirty: writing it back would only make a second identical snapshot.
+   */
+  adoptLoaded(loaded: { path: string; file: ProjectFile; contentHash: string }): void;
   saveNow(): Promise<void>;
   closeProject(): void;
 }
@@ -166,6 +172,13 @@ export const useProject = (): UseProjectResult => {
     setSaveState('dirty');
   }, []);
 
+  const adoptLoaded = useCallback(
+    (loaded: { path: string; file: ProjectFile; contentHash: string }) => {
+      adopt(loaded);
+    },
+    [adopt],
+  );
+
   const closeProject = useCallback(() => {
     void flush().then(() => {
       pathRef.current = null;
@@ -188,6 +201,7 @@ export const useProject = (): UseProjectResult => {
     openProjectAtPath,
     update,
     replace,
+    adoptLoaded,
     saveNow: flush,
     closeProject,
   };

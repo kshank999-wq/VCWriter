@@ -9,7 +9,14 @@ import {
   createProjectFile,
   serializeProjectFile,
 } from '@vcwriter/domain';
-import { PROJECT_EXTENSION, listSnapshots, loadProject, restoreSnapshot, saveProject } from '../project-store';
+import {
+  PROJECT_EXTENSION,
+  listSnapshots,
+  loadProject,
+  restoreSnapshot,
+  saveProject,
+  writeSnapshot,
+} from '../project-store';
 
 let workspace: string;
 
@@ -100,5 +107,57 @@ describe('project store', () => {
     const snapshots = await listSnapshots(path);
     expect(snapshots.some((snapshot) => snapshot.id.includes('pre_migration'))).toBe(true);
     expect(await readFile(path, 'utf8')).toContain('"formatVersion"');
+  });
+});
+
+describe('snapshot retention', () => {
+  /**
+   * Autosave snapshots roll. Two kinds must not: the pre-migration copy is the
+   * only remaining copy of the pre-upgrade document, and the pre-sync copy is
+   * the only remaining copy of what a conflicted merge overwrote. Rolling
+   * either one away would quietly undo §15's promise about data loss.
+   */
+  it('never lets rolling autosaves push out the only copy of overwritten work', async () => {
+    const path = await newWorkspace();
+    const file = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
+    await saveProject(path, file);
+
+    await writeSnapshot(path, serializeProjectFile(file), 'pre_sync');
+    await writeSnapshot(path, serializeProjectFile(file), 'pre_migration');
+
+    // Well past MAX_SNAPSHOTS, so the disposable ones are certainly rolling.
+    for (let index = 0; index < 40; index += 1) {
+      await writeSnapshot(path, serializeProjectFile(file), 'autosave');
+    }
+
+    const snapshots = await listSnapshots(path);
+    expect(snapshots.some((snapshot) => snapshot.reason === 'pre_sync')).toBe(true);
+    expect(snapshots.some((snapshot) => snapshot.reason === 'pre_migration')).toBe(true);
+    expect(snapshots.filter((snapshot) => snapshot.reason === 'autosave').length).toBeLessThanOrEqual(30);
+  });
+
+  it('caps pre-sync snapshots so a daily conflict does not accumulate a year of them', async () => {
+    const path = await newWorkspace();
+    const file = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
+    await saveProject(path, file);
+
+    for (let index = 0; index < 15; index += 1) {
+      await writeSnapshot(path, serializeProjectFile(file), 'pre_sync');
+    }
+
+    const kept = (await listSnapshots(path)).filter((snapshot) => snapshot.reason === 'pre_sync').length;
+    // Capped, but not to nothing — the cap must prune the oldest, not the lot.
+    expect(kept).toBeLessThanOrEqual(10);
+    expect(kept).toBeGreaterThan(0);
+  });
+
+  it('reports why each snapshot exists', async () => {
+    const path = await newWorkspace();
+    const file = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
+    await saveProject(path, file);
+    await writeSnapshot(path, serializeProjectFile(file), 'manual');
+
+    const snapshots = await listSnapshots(path);
+    expect(snapshots[0]?.reason).toBe('manual');
   });
 });

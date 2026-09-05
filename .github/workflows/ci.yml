@@ -41,6 +41,41 @@ jobs:
       - name: Build
         run: pnpm -r build
 
+  # The content security policy carries a per-request nonce, and a page that is
+  # prerendered ships HTML without one — which makes the browser refuse every
+  # script on it. Nothing in the build or the unit suite can see that, so the
+  # only guard is opening the built site in a browser (see docs/security-review.md).
+  csp:
+    name: Content security policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+
+      - name: Install Chromium
+        run: pnpm --filter @vcwriter/web exec playwright install --with-deps chromium
+
+      - name: Build
+        run: |
+          pnpm --filter @vcwriter/domain build
+          pnpm --filter @vcwriter/web build
+
+      - name: Load every page and check for blocked scripts
+        run: pnpm --filter @vcwriter/web check:csp
+
   # A project written on Windows must open on macOS and vice versa (spec §3.1).
   # The project format is platform-neutral, so this runs the same suite on all
   # three runners to catch anything that quietly depends on the host.

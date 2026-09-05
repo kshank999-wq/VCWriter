@@ -34,6 +34,8 @@ export interface SnapshotSummary {
   path: string;
   createdAt: string;
   sizeBytes: number;
+  /** Why the recovery point exists, so the writer can find the right one. */
+  reason: 'autosave' | 'manual' | 'pre_migration' | 'pre_sync';
 }
 
 export interface VcWriterApi {
@@ -68,7 +70,7 @@ export interface VcWriterApi {
   requestSignInCode(email: string): Promise<DesktopApiResult<true>>;
   verifySignInCode(input: { email: string; code: string }): Promise<DesktopApiResult<AccountStatus>>;
   signOut(): Promise<DesktopApiResult<true>>;
-  syncProject(input: { file: ProjectFile }): Promise<DesktopApiResult<SyncOutcome>>;
+  syncProject(input: { file: ProjectFile; path?: string }): Promise<DesktopApiResult<SyncOutcome>>;
   listCaptures(projectId: string | null): Promise<DesktopApiResult<CaptureItem[]>>;
   resolveCapture(capture: CaptureItem): Promise<DesktopApiResult<true>>;
   reviewScene(input: {

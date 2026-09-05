@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { beatsInStoryOrder, pageCount, projectStats, type BeatId } from '@vcwriter/domain';
+import {
+  beatsInStoryOrder,
+  pageCount,
+  projectStats,
+  type BeatId,
+  type ProjectFile,
+  type SyncConflict,
+} from '@vcwriter/domain';
 import { useProject } from './use-project';
 import { Welcome } from './components/Welcome';
 import { StructureBoard } from './components/StructureBoard';
@@ -11,6 +18,7 @@ import { AccountPanel } from './components/AccountPanel';
 import { CapturesPanel } from './components/CapturesPanel';
 import { EditorPanel } from './components/EditorPanel';
 import { ReadBackPanel } from './components/ReadBackPanel';
+import { RecoveryPanel } from './components/RecoveryPanel';
 import type { AccountStatus } from '../preload/index';
 
 const SAVE_LABEL: Record<string, string> = {
@@ -21,7 +29,7 @@ const SAVE_LABEL: Record<string, string> = {
   error: 'Save failed',
 };
 
-type View = 'write' | 'preview' | 'editor' | 'readback' | 'research' | 'setups' | 'captures';
+type View = 'write' | 'preview' | 'editor' | 'readback' | 'research' | 'setups' | 'captures' | 'recovery';
 
 const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
   { id: 'write', label: 'Write' },
@@ -31,6 +39,7 @@ const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
   { id: 'research', label: 'Research' },
   { id: 'setups', label: 'Setups & payoffs' },
   { id: 'captures', label: 'Captures' },
+  { id: 'recovery', label: 'Recovery' },
 ];
 
 export default function App() {
@@ -44,6 +53,10 @@ export default function App() {
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  // Conflicts persist until the writer has dealt with them. A sync that
+  // overwrote a scene is not resolved by the writer clicking past a status
+  // line, and the losing versions live here until they say otherwise.
+  const [conflicts, setConflicts] = useState<SyncConflict[]>([]);
 
   const file = project.file;
   const beats = useMemo(() => (file ? beatsInStoryOrder(file) : []), [file]);
@@ -77,14 +90,17 @@ export default function App() {
     // Flush first so the merge sees what is actually on disk.
     await project.saveNow();
 
-    const result = await window.vcwriter.syncProject({ file });
+    const result = await window.vcwriter.syncProject({
+      file,
+      ...(project.path ? { path: project.path } : {}),
+    });
     setSyncing(false);
     if (!result.ok || !result.data) {
       setSyncMessage(result.error ?? 'Sync failed');
       return;
     }
 
-    const { merged, conflicts, summary } = result.data;
+    const { merged, conflicts: fresh, summary } = result.data;
     project.replace(merged);
 
     const parts: string[] = [];
@@ -92,14 +108,20 @@ export default function App() {
     if (summary.pushed > 0) parts.push(`${summary.pushed} out`);
     if (summary.deletedLocally > 0) parts.push(`${summary.deletedLocally} removed`);
     if (summary.revivedByEdit > 0) parts.push(`${summary.revivedByEdit} kept after an edit elsewhere`);
-    if (conflicts.length > 0) {
-      // Name what was overwritten rather than reporting a number: the writer
-      // needs to know which piece of work lost.
+    if (fresh.length > 0) {
+      // Name what was overwritten rather than reporting a number, and say
+      // where the overwritten version went: it still exists, and telling
+      // someone their work was replaced without telling them how to get it
+      // back is the half of this that would actually hurt.
+      setConflicts((current) => [
+        ...fresh,
+        ...current.filter((existing) => !fresh.some((candidate) => candidate.id === existing.id)),
+      ]);
       parts.push(
-        `${conflicts.length} ${conflicts.length === 1 ? 'conflict' : 'conflicts'} — kept the newer edit of ${conflicts
+        `${fresh.length} ${fresh.length === 1 ? 'conflict' : 'conflicts'} — kept the newer edit of ${fresh
           .slice(0, 3)
           .map((conflict) => conflict.label)
-          .join(', ')}`,
+          .join(', ')}. The other versions are under Recovery.`,
       );
     }
     setSyncMessage(parts.length === 0 ? 'Already up to date' : parts.join(' · '));
@@ -166,6 +188,7 @@ export default function App() {
                 {option.id === 'setups' && stats && stats.unresolvedSetupCount > 0
                   ? ` (${stats.unresolvedSetupCount})`
                   : ''}
+                {option.id === 'recovery' && conflicts.length > 0 ? ` (${conflicts.length})` : ''}
               </button>
             ))}
           </nav>
@@ -271,6 +294,21 @@ export default function App() {
             <ResearchPanel file={file} currentBeatId={selectedBeat?.id ?? null} onUpdate={project.update} />
           ) : view === 'setups' ? (
             <SetupsPanel file={file} currentBeatId={selectedBeat?.id ?? null} onUpdate={project.update} />
+          ) : view === 'recovery' ? (
+            project.path ? (
+              <RecoveryPanel
+                file={file}
+                path={project.path}
+                conflicts={conflicts}
+                onRestoreVersion={(next: ProjectFile) => project.replace(next)}
+                onRestoreSnapshot={project.adoptLoaded}
+                onConflictResolved={(id: string) =>
+                  setConflicts((current) => current.filter((conflict) => conflict.id !== id))
+                }
+              />
+            ) : (
+              <p className="muted empty-state">Save the project to a file to keep recovery points.</p>
+            )
           ) : account.signedIn ? (
             <CapturesPanel file={file} onUpdate={project.update} />
           ) : (

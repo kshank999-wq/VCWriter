@@ -261,13 +261,16 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void
     }
   });
 
-  ipcMain.handle('cloud:sync', async (_event, input: { file: unknown }): Promise<DesktopApiResult<SyncOutcome>> => {
-    try {
-      return ok(await syncProject(input));
-    } catch (cause) {
-      return fail(cause);
-    }
-  });
+  ipcMain.handle(
+    'cloud:sync',
+    async (_event, input: { file: unknown; path?: string }): Promise<DesktopApiResult<SyncOutcome>> => {
+      try {
+        return ok(await syncProject(input));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
 
   ipcMain.handle(
     'cloud:captures',
