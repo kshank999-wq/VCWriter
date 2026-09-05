@@ -2,6 +2,7 @@ import {
   countWords,
   findUnit,
   newId,
+  ref,
   screenplayElementTypeSchema,
   proseElementTypeSchema,
   updateBeat,
@@ -11,6 +12,7 @@ import {
   type ManuscriptElementType,
   type ProjectFile,
 } from '@vcwriter/domain';
+import { RelatedPanel } from './RelatedPanel';
 
 interface BeatEditorProps {
   file: ProjectFile;
@@ -128,6 +130,8 @@ export function BeatEditor({ file, beat, onUpdate }: BeatEditorProps) {
       <button type="button" className="ghost add-element" onClick={addElement}>
         + Add {isProse ? 'paragraph' : 'element'}
       </button>
+
+      <RelatedPanel file={file} target={ref('beat', beat.id)} onUpdate={onUpdate} />
     </div>
   );
 }

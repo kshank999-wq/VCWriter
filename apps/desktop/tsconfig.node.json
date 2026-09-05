@@ -7,10 +7,7 @@
     "declaration": false,
     "declarationMap": false
   },
-  "include": [
-    "electron.vite.config.ts",
-    "src/main/**/*.ts",
-    "src/preload/**/*.ts",
-    "src/**/__tests__/**/*.ts"
-  ]
+  // Main and preload only. Renderer sources — including their tests — are
+  // typechecked by tsconfig.web.json, which has the DOM lib they need.
+  "include": ["electron.vite.config.ts", "src/main/**/*.ts", "src/preload/**/*.ts"]
 }

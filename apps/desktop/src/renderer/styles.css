@@ -450,3 +450,530 @@ main {
   padding: 48px 24px;
   text-align: center;
 }
+
+/* ------------------------------------------------------- views and chrome */
+
+.titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.views {
+  display: flex;
+  gap: 2px;
+  margin-left: 8px;
+}
+
+button.view {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  padding: 5px 10px;
+}
+
+button.view.selected {
+  background: var(--panel-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+main.full {
+  overflow: hidden;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+}
+
+button.ghost.danger:hover {
+  color: var(--danger);
+}
+
+button.twisty {
+  width: 22px;
+  padding: 2px 4px;
+  text-align: center;
+}
+
+.count {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------- inline rename */
+
+.inline-text {
+  background: none;
+  border: 1px solid transparent;
+  padding: 2px 4px;
+  text-align: left;
+  border-radius: 4px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inline-text:hover {
+  border-color: var(--border);
+}
+
+.inline-input {
+  padding: 2px 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.lane-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.category-name {
+  flex: 1;
+}
+
+/* --------------------------------------------------- structure board extras */
+
+.lane-header {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-left: 3px solid var(--accent);
+  padding-left: 6px;
+}
+
+.lane-body {
+  min-height: 8px;
+}
+
+.unit > header {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.unit-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  flex: 0 0 auto;
+  max-width: 84px;
+}
+
+.unit-title {
+  flex: 1;
+  font-weight: 600;
+}
+
+.unit ul li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.unit ul li .beat {
+  flex: 1;
+}
+
+.beat-remove {
+  opacity: 0;
+}
+
+.unit ul li:hover .beat-remove,
+.beat-remove:focus-visible {
+  opacity: 1;
+}
+
+/* Drop indicators: a line on the edge the item would land against. */
+.drop-before,
+.drop-after {
+  position: relative;
+}
+
+.drop-before::before,
+.drop-after::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.drop-before::before {
+  top: -1px;
+}
+
+.drop-after::after {
+  bottom: -1px;
+}
+
+[draggable='true'] {
+  cursor: grab;
+}
+
+/* ------------------------------------------------------- shared panel bits */
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+}
+
+button.tab {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+button.tab.selected {
+  background: var(--panel-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.item-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+button.item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border-color: transparent;
+  text-align: left;
+  padding: 7px 9px;
+}
+
+button.item:hover {
+  background: var(--bg);
+}
+
+button.item.selected {
+  background: var(--bg);
+  border-color: var(--accent);
+}
+
+.item-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.chip.used {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chip.suggested {
+  border-style: dashed;
+}
+
+.chip.status-resolved {
+  border-color: #3f9c6b;
+  color: #3f9c6b;
+}
+
+.chip.status-open {
+  border-color: #c98a2b;
+  color: #c98a2b;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.detail-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.detail-body {
+  font-family: inherit;
+}
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.notice {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.inline-form {
+  display: flex;
+  gap: 8px;
+}
+
+.inline-form input {
+  flex: 1;
+}
+
+/* ---------------------------------------------------------------- research */
+
+.research {
+  display: grid;
+  grid-template-columns: minmax(200px, 240px) minmax(220px, 320px) 1fr;
+  flex: 1;
+  min-height: 0;
+}
+
+.research-categories,
+.research-items {
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.research-categories ul {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  display: grid;
+  gap: 2px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.research-categories li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.research-categories li.selected {
+  background: var(--bg);
+  border-color: var(--accent);
+}
+
+.row-actions {
+  display: flex;
+  gap: 0;
+  opacity: 0;
+}
+
+.research-categories li:hover .row-actions,
+.research-categories li.selected .row-actions {
+  opacity: 1;
+}
+
+.research-detail {
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  overflow-y: auto;
+}
+
+/* -------------------------------------------------------- setups & payoffs */
+
+.setups {
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) 1fr;
+  flex: 1;
+  min-height: 0;
+}
+
+.setups-list {
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.setups-detail {
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  overflow-y: auto;
+}
+
+.setups-detail h3 {
+  margin: 8px 0 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.setup-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.setup-points li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.setup-points li input {
+  flex: 1;
+}
+
+.where {
+  font-size: 12px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.payoff-recorded {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+}
+
+.payoff-recorded p {
+  margin: 0;
+}
+
+/* -------------------------------------------------- related elements panel */
+
+.related {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.related header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.related h3 {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.related ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.related li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--panel-2);
+}
+
+.related li.missing .link-label {
+  color: var(--danger);
+}
+
+.link-verb {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  min-width: 90px;
+}
+
+.link-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-detail {
+  font-size: 11px;
+}
+
+.link-form {
+  display: flex;
+  gap: 6px;
+}
+
+.link-form select {
+  flex: 1;
+  min-width: 0;
+}
