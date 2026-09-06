@@ -86,13 +86,18 @@ After that, every push to `main` deploys. CI (`.github/workflows/ci.yml`)
 runs the full suite on the same push; Vercel does not wait for it, so a red
 CI run is the signal to look at, not a failed deploy.
 
-Environment variables, all environments unless noted:
+Environment variables, all environments unless noted. **On key names:** the
+Supabase dashboard now issues `sb_publishable_…` and `sb_secret_…` keys in
+place of the old `anon` and `service_role` JWTs. They are the same two roles
+under new names and supabase-js accepts them unchanged, so they go into the
+same two variables below. (The old JWT keys still exist under API Keys →
+"Legacy API keys" and also work; prefer the new ones.)
 
 | Variable | Value / source | Notes |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://kpviyoqhmzignjyvixws.supabase.co` | Public |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API → anon/publishable | Public; bound by RLS |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → service role | **Secret.** Bypasses RLS. Server only |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API Keys → the `sb_publishable_…` key | Public; bound by RLS. Supabase renamed "anon" to "publishable"; same role, same variable |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API Keys → the `sb_secret_…` key (eye icon to reveal) | **Secret.** Bypasses RLS. Server only. Supabase renamed "service_role" to "secret"; same role, same variable |
 | `STRIPE_SECRET_KEY` | Stripe → Developers → API keys | **Secret** |
 | `STRIPE_WEBHOOK_SECRET` | Stripe → Webhooks → the vc-writer.com endpoint | **Secret**. Different per environment |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe → API keys | Public |
