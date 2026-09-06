@@ -64,13 +64,29 @@ story order above the lanes, where each lane is a horizontal row of scene
 groups and each group is a column of stacked beats. Selecting a beat anywhere
 opens it on the left.
 
-## The wordmark
+## The logo
 
-"VC WRITER" set in the display stack inside a stepped gold frame, with the
-deco diamond in red beneath. It is drawn as inline SVG in both applications so
-it scales and needs no asset. It is deliberately a sibling of the VC Film
-Studio mark, not a copy of it — the two products should look related, not
-identical.
+Two illustrated lockups, in [`brand/logo/`](../brand/logo/README.md):
+
+- **Stacked** — the deco graphic with `VC WRITER` on its plaque beneath, on a
+  transparent ground. This is *the* logo: the landing hero, the application
+  splash, store listings, and the source the app icon is cut from.
+- **Horizontal** — the same graphic with the plaque set to its right, for
+  headers and any other wide strip.
+
+Both are raster artwork — a gold art deco `VC` monogram against a fluted
+sunburst, a period typewriter with a page in the platen, a stack of pages, and
+a pair of stage lights throwing beams from the stepped plinth. Reach for the
+stacked one unless the space is genuinely wider than it is tall.
+
+### The drawn wordmark
+
+Before those files existed both applications drew "VC WRITER" as inline SVG —
+the display stack inside a stepped gold frame with the red deco diamond
+beneath. That mark survives where an image would be wrong: anywhere a
+downloaded asset cannot be relied on, and at sizes too small for the
+illustration to read. It is deliberately a sibling of the VC Film Studio mark
+rather than a copy — the two products should look related, not identical.
 
 ## Promotional material
 
