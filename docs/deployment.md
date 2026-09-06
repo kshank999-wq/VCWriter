@@ -42,44 +42,79 @@ vc-writer.com until the steps below are done. This section records what was
 actually found, because it is not what an earlier version of this document
 said.
 
-The Vercel API, through the connector available to the build session, gave
-contradictory answers on 5 September 2026:
+### Three projects point at this repository
 
-- Listing the team's projects returned four, none of them for this repository.
-- Creating a project named `vc-writer` was refused: *"Project already exists."*
-- Reading `vc-writer` returned *Not Found*.
-- Creating a project named `vcwriter` succeeded (`prj_z0vZdzTLvCSKneSNuhT17KnOC8Cq`),
-  but reading it back — even by id — also returned *Not Found*, and its Git
-  link could not be verified.
+Read on 6 September 2026, in team `kshank999-5979` (`team_u7MT4rqOzxUsxMI5gdYsbVN0`):
 
-The likeliest explanation is that the connector's token can create but not
-read, or is scoped to a different team than the one that owns `vc-writer`.
-Either way it cannot be resolved from a build session, and nothing further
-was created to avoid a third project.
+| Project | Id | Framework | Latest production deploy |
+| --- | --- | --- | --- |
+| `vcwriter` | `prj_z0vZdzTLvCSKneSNuhT17KnOC8Cq` | Next.js, root `apps/web` | ERROR |
+| `vc-writer` | `prj_43SNHcINsBwiCthZ83DclRNEVJDG` | none detected | ERROR, no logs retained |
+| `desktop` | `prj_hzQ7i8zM1KdWOLJyGF8n1TVdT7FR` | Vite, aimed at the Electron app | ERROR |
+
+**Keep `vcwriter`. Delete the other two.** `desktop` is the source of the
+"No Output Directory named `dist`" error that started this: `dist` is Vite's
+default output, and `apps/desktop` is an Electron application that must never
+be deployed to a web host. `vc-writer` has no framework detected and no build
+that got far enough to log anything.
+
+An earlier version of this section reported that the connector could create
+projects but not read them back. That was wrong, and the cause was a query
+mistake rather than a permissions one: passing the **team id** to the
+project-listing endpoint returned a partial list (four of ten projects, none
+of them this repository's), while passing the **team slug** `kshank999-5979`
+returned all ten. Use the slug.
+
+### Why the `vcwriter` build failed
+
+Not a settings problem. That project's Root Directory is already `apps/web`,
+the workspace install linked and compiled `@vcwriter/domain` through its
+`prepare` script, Next.js 14.2.35 was detected, and `next build` compiled
+successfully. It then died collecting page data:
+
+```
+TypeError: Invalid URL
+  code: 'ERR_INVALID_URL',
+  input: 'NEXT_PUBLIC_SITE_URL'
+> Build error occurred
+Error: Failed to collect page data for /_not-found
+```
+
+`NEXT_PUBLIC_SITE_URL` had been given the variable's own *name* as its value.
+`app/layout.tsx` builds `metadataBase: new URL(env.siteUrl)` at module scope,
+so one malformed value took down every page in the build.
+
+`env.siteUrl` no longer permits that: a value that is not an absolute http(s)
+URL is refused, warned about by name, and replaced with `https://vc-writer.com`
+(`apps/web/src/lib/env.ts`, covered by `src/lib/__tests__/env.test.ts`). It
+also strips a trailing slash, which would otherwise double in every emailed
+link and Stripe redirect. A typo in a dashboard can no longer fail a build —
+but it is still a typo, so fix the value too.
+
+Note the shape of this mistake rather than just the instance. Pasting a
+variable's name into its value field fails differently for each variable, and
+only this one failed loudly at build time: `STRIPE_SECRET_KEY` or
+`RESEND_API_KEY` filled in the same way would deploy green and fail at the
+first purchase.
 
 **What to do, once, in the dashboard (https://vercel.com):**
 
-1. Look at the team's projects. There should be `vc-writer` and possibly a
-   new, empty `vcwriter`. **Keep one and delete the other.** `vc-writer` is
-   the better name; if it is the one that stays, delete `vcwriter`.
-2. In the survivor: Settings → Git → Connect Git Repository →
-   `kshank999-wq/VCWriter`. Then **Production Branch: `main`**. The first
-   connection defaulted to `claude/vc-writer-dev-spec-ymc7zy`; both branches
-   carry the same commits today, but `main` is the one that is meant to be
-   deployable.
-3. Settings → General → **Root Directory: `apps/web`**. This is the setting
-   that matters most, and the first deployment failed for want of it: with no
-   root directory, Vercel ran the repository's `pnpm -r build`, which builds
-   the *Electron* app, and then looked for a `dist` folder that a Next.js
-   site does not produce. `apps/web/vercel.json` pins the framework to
-   Next.js so the preset cannot be misdetected once the directory is right.
-   Leave "include files outside the root directory" enabled — the build needs
-   the workspace root so `pnpm install` can link and build `@vcwriter/domain`
-   (its `prepare` script compiles it; the failed log shows that part working).
-4. Add the environment variables below, then Deployments → Redeploy.
-   Optional: also add `ELECTRON_SKIP_BINARY_DOWNLOAD=1` — the workspace
-   install pulls the Electron binary otherwise, which the site never uses.
-5. Settings → Domains → add `vc-writer.com` and `www.vc-writer.com` (see the
+1. Delete the `vc-writer` and `desktop` projects. Keep `vcwriter`.
+2. In `vcwriter`: Settings → Environment Variables → set
+   `NEXT_PUBLIC_SITE_URL` to `https://vc-writer.com`, and check every other
+   variable's *value* is the secret and not a repeat of its name.
+3. Settings → Git → **Production Branch: `main`**. The first connection
+   defaulted to `claude/vc-writer-dev-spec-ymc7zy`; both branches carry the
+   same commits today, but `main` is the one meant to be deployable.
+4. Confirm Settings → General → **Root Directory: `apps/web`**, with "include
+   files outside the root directory" left enabled — the build needs the
+   workspace root so `pnpm install` can link and build `@vcwriter/domain`.
+   `apps/web/vercel.json` pins the framework to Next.js so the preset cannot
+   be misdetected.
+5. Deployments → Redeploy. Optionally add `ELECTRON_SKIP_BINARY_DOWNLOAD=1`
+   first — the workspace install pulls the Electron binary otherwise, which
+   the site never uses.
+6. Settings → Domains → add `vc-writer.com` and `www.vc-writer.com` (see the
    Domain section).
 
 After that, every push to `main` deploys. CI (`.github/workflows/ci.yml`)
@@ -107,7 +142,7 @@ same two variables below. (The old JWT keys still exist under API Keys →
 | `RESEND_FROM_ADDRESS` | `VC Writer <noreply@vc-writer.com>` | Needs a verified domain |
 | `RELEASE_BUCKET` | `releases` | |
 | `RELEASE_DOWNLOAD_TTL_SECONDS` | `900` | Signed installer URL lifetime |
-| `NEXT_PUBLIC_SITE_URL` | `https://vc-writer.com` (preview: the preview URL) | Used for Stripe return URLs and auth redirects |
+| `NEXT_PUBLIC_SITE_URL` | `https://vc-writer.com` (preview: the preview URL) | Used for Stripe return URLs and auth redirects. Must include the scheme; a value that is not an absolute http(s) URL is warned about and ignored |
 
 With the Vercel CLI instead of the dashboard:
 
