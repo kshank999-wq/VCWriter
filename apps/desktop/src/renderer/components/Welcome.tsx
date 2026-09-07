@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { ProjectFormat } from '@vcwriter/domain';
-import { Wordmark } from './Brand';
+// The stacked lockup (docs/brand.md), cut for this screen by
+// brand/logo/derive.mjs. Bundled by Vite, so it ships inside the app and the
+// renderer's `img-src 'self'` policy covers it.
+import logo from '../assets/logo-stacked.webp';
 
 interface WelcomeProps {
   onCreate(input: { title: string; format: ProjectFormat; author?: string }): void;
@@ -31,7 +34,7 @@ export function Welcome({ onCreate, onOpen, onOpenPath, error }: WelcomeProps) {
   return (
     <div className="welcome">
       <header className="welcome-header">
-        <Wordmark />
+        <img src={logo} alt="VC Writer" className="welcome-logo" width={720} height={563} />
         <p>Start a project, or pick up where you left off.</p>
       </header>
 

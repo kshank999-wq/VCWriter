@@ -89,14 +89,24 @@ The illustration does not survive being shrunk indefinitely. Below roughly
 the whole thing is a gold smudge. Anywhere smaller than that wants the drawn
 mark below, or a simplified one — not this artwork scaled down.
 
+Where each one is used today:
+
+| Place | Lockup | Form |
+| --- | --- | --- |
+| Website header | horizontal | WebP, `apps/web/public/logo-horizontal.webp` |
+| Website landing hero | stacked | WebP, `apps/web/public/logo-stacked.webp` |
+| Desktop welcome screen | stacked | WebP bundled by Vite, `apps/desktop/src/renderer/assets/` |
+| Email header | horizontal | PNG hosted at `vc-writer.com/email-logo.png` — Outlook cannot decode WebP, and a client with images off shows the alt text in the wordmark's own gold |
+
 ### The drawn wordmark
 
 Before those files existed both applications drew "VC WRITER" as inline SVG —
 the display stack inside a stepped gold frame with the red deco diamond
-beneath. That mark survives where an image would be wrong: anywhere a
-downloaded asset cannot be relied on, and at sizes too small for the
-illustration to read. It is deliberately a sibling of the VC Film Studio mark
-rather than a copy — the two products should look related, not identical.
+beneath. That mark survives where an image would be wrong: the desktop
+application's title bar, at a size the illustration cannot read at, and
+anywhere a downloaded asset cannot be relied on. It is deliberately a sibling
+of the VC Film Studio mark rather than a copy — the two products should look
+related, not identical.
 
 ## Promotional material
 

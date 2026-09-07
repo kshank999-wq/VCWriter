@@ -37,8 +37,9 @@ describe('email templates', () => {
 
   it('carry the version the branded templates were introduced at', () => {
     // Bumped with the redesign so email_events can tell old sends from new.
-    expect(purchaseConfirmation({ ...inputs, platform: null }).version).toBe(3);
-    expect(licenseReminder(inputs).version).toBe(2);
+    // 4 and 3: the illustrated logo replaced the text wordmark in the header.
+    expect(purchaseConfirmation({ ...inputs, platform: null }).version).toBe(4);
+    expect(licenseReminder(inputs).version).toBe(3);
   });
 
   it('use only inline styles, because email clients strip everything else', () => {

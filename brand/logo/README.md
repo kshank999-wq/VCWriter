@@ -8,8 +8,8 @@ until these existed.
 
 | File | Canvas | Artwork | Used for |
 | --- | --- | --- | --- |
-| `VC-Writer-Horizontal-Transparent.png` | 1983 × 793 | 1841 × 571 at (72, 72) | site header |
-| `VC-Writer-Stacked-Transparent.png` | 1254 × 1254 | 1235 × 966 at (10, 118) | **the main logo**: landing hero |
+| `VC-Writer-Horizontal-Transparent.png` | 1983 × 793 | 1841 × 571 at (72, 72) | site header, email header |
+| `VC-Writer-Stacked-Transparent.png` | 1254 × 1254 | 1235 × 966 at (10, 118) | **the main logo**: landing hero, desktop welcome screen |
 
 Both are RGBA with genuine transparency — all four corners measure alpha 0,
 and a little over half of each canvas is fully transparent.

@@ -142,6 +142,16 @@ textarea {
   height: auto;
 }
 
+/* The illustrated lockup. Sized by width; the height attribute on the image
+   keeps the layout from jumping while it decodes. */
+.welcome-header .welcome-logo {
+  display: block;
+  width: 360px;
+  max-width: 100%;
+  height: auto;
+  margin-bottom: 4px;
+}
+
 .welcome header p {
   margin: 4px 0 0;
   color: var(--muted);

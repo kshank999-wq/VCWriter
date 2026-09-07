@@ -76,7 +76,10 @@ const shell = (title: string, body: string): string => `<!doctype html>
       <td align="center" style="padding:32px 16px">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="max-width:560px;width:100%">
 
-          <!-- Wordmark -->
+          <!-- Logo. Hosted, because email cannot carry a 100kB image inline
+               without tripping spam filters. When a client blocks images the
+               alt text renders in the wordmark's own style, so the header
+               still says VC Writer in gold rather than showing a broken box. -->
           <tr>
             <td align="center" style="padding:8px 0 20px">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">
@@ -84,7 +87,7 @@ const shell = (title: string, body: string): string => `<!doctype html>
                   <!-- The hairline is a div, not a cell background: a cell
                        stretches to the row's height and the line would too. -->
                   <td style="width:28px;vertical-align:middle"><div style="height:1px;background:${GOLD};font-size:1px;line-height:1px">&nbsp;</div></td>
-                  <td style="padding:0 14px;white-space:nowrap">${caps('VC Writer', 15)}</td>
+                  <td style="padding:0 14px"><img src="${SITE}/email-logo.png" width="240" height="74" alt="VC WRITER" style="display:block;border:0;outline:none;text-decoration:none;width:240px;height:auto;font-family:${DISPLAY};font-size:15px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;line-height:74px;color:${GOLD}"></td>
                   <td style="width:28px;vertical-align:middle"><div style="height:1px;background:${GOLD};font-size:1px;line-height:1px">&nbsp;</div></td>
                 </tr>
               </table>
@@ -165,7 +168,7 @@ export const purchaseConfirmation = (input: PurchaseEmailInput): RenderedEmail =
 
   return {
     template: 'purchase_confirmation',
-    version: 3,
+    version: 4,
     subject: 'Your VC Writer license and download',
     html: shell(
       'Thank you for buying VC Writer',
@@ -202,7 +205,7 @@ export interface LicenseReminderInput {
 /** Sent when a customer asks for their license again from My Account. */
 export const licenseReminder = (input: LicenseReminderInput): RenderedEmail => ({
   template: 'license_reminder',
-  version: 2,
+  version: 3,
   subject: 'Your VC Writer license',
   html: shell(
     'Here is your VC Writer license',

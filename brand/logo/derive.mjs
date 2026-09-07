@@ -62,6 +62,23 @@ const OUTPUTS = [
     width: 800,
     note: 'landing hero, drawn at up to 360px wide',
   },
+  {
+    source: STACKED,
+    crop: CROP.stacked,
+    out: 'apps/desktop/src/renderer/assets/logo-stacked.webp',
+    width: 720,
+    note: 'desktop welcome screen, drawn at 360px — bundled by Vite',
+  },
+  {
+    // PNG, not WebP: this one goes into email, and Outlook on Windows still
+    // cannot decode WebP. Wide enough for a 240px slot on a 2x display.
+    source: HORIZONTAL,
+    crop: CROP.horizontal,
+    out: 'apps/web/public/email-logo.png',
+    width: 480,
+    format: 'image/png',
+    note: 'email header, hosted; drawn at 240px',
+  },
 ];
 
 const QUALITY = 0.92;
@@ -76,9 +93,9 @@ const dataUrl = async (path) => `data:image/png;base64,${(await readFile(path)).
  * Draw in the page: crop, halve down to within 2x of the target, then the
  * final draw. `fit` letterboxes into a square instead of filling the width.
  */
-const render = async (source, crop, target, fit, quality) =>
+const render = async (source, crop, target, fit, quality, format = 'image/webp') =>
   page.evaluate(
-    async ({ src, crop, target, fit, quality }) => {
+    async ({ src, crop, target, fit, quality, format }) => {
       const image = new Image();
       image.src = src;
       await image.decode();
@@ -119,9 +136,9 @@ const render = async (source, crop, target, fit, quality) =>
         finalWidth,
         finalHeight,
       );
-      return out.canvas.toDataURL('image/webp', quality);
+      return out.canvas.toDataURL(format, quality);
     },
-    { src: source, crop, target, fit, quality },
+    { src: source, crop, target, fit, quality, format },
   );
 
 const save = async (target, base64) => {
@@ -136,7 +153,7 @@ await page.setContent('<!doctype html><body>');
 for (const entry of OUTPUTS) {
   const src = await dataUrl(entry.source);
   const height = Math.round((entry.crop.height / entry.crop.width) * entry.width);
-  const image = await render(src, entry.crop, { width: entry.width, height }, false, QUALITY);
+  const image = await render(src, entry.crop, { width: entry.width, height }, false, QUALITY, entry.format);
   const size = await save(entry.out, image);
   console.log(`${entry.out.padEnd(40)} ${entry.width}x${height}  ${(size / 1024).toFixed(0)} kB   (${entry.note})`);
 }
