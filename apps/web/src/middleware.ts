@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { strayAuthRedirect } from '@/lib/auth-redirect';
 
 /**
  * Refreshes the Supabase session cookie on navigation so a signed-in customer
@@ -42,6 +43,12 @@ const contentSecurityPolicy = (nonce: string): string => {
 };
 
 export async function middleware(request: NextRequest) {
+  // A sign-in code that landed on the wrong page (see auth-redirect.ts).
+  // Decided before anything else: a redirect renders nothing, so it needs no
+  // policy and no session refresh.
+  const stray = strayAuthRedirect(request.nextUrl);
+  if (stray) return NextResponse.redirect(stray);
+
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const policy = contentSecurityPolicy(nonce);
 
