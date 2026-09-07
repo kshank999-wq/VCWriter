@@ -59,6 +59,50 @@ jobs:
             echo "::warning::Apple credentials absent — producing an unsigned, un-notarized build. Do not publish it as stable."
           fi
 
+      # electron-builder reports every problem with the Apple certificate as
+      # "MAC verification failed during PKCS12 import (wrong password?)", which
+      # is also what a bundle in a format macOS cannot read looks like. Open the
+      # bundle two ways first, so the log says which of the two it is. Nothing
+      # printed is secret: OpenSSL's -info -noout gives only the algorithms.
+      - name: Check the macOS signing certificate
+        if: matrix.platform == 'macos'
+        shell: bash
+        env:
+          MAC_CERTIFICATE: ${{ secrets.CSC_LINK }}
+          MAC_CERTIFICATE_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          if [ -z "$MAC_CERTIFICATE" ]; then
+            echo "No CSC_LINK secret; nothing to check."
+            exit 0
+          fi
+          bundle=$(mktemp)
+          printf '%s' "$MAC_CERTIFICATE" | tr -d '\r\n ' | openssl base64 -d -A > "$bundle" || true
+          if [ ! -s "$bundle" ]; then
+            echo "::error::CSC_LINK does not decode as base64. Recreate it from the .p12 with [Convert]::ToBase64String."
+            exit 1
+          fi
+          echo "Certificate bundle: $(wc -c < "$bundle" | tr -d ' ') bytes"
+          if [ -z "$MAC_CERTIFICATE_PASSWORD" ]; then
+            echo "::error::CSC_KEY_PASSWORD is empty."
+            exit 1
+          fi
+          if ! openssl pkcs12 -in "$bundle" -info -noout -passin env:MAC_CERTIFICATE_PASSWORD 2>&1 | sed 's/^/  /'; then
+            echo "::error::OpenSSL cannot open the CSC_LINK bundle with CSC_KEY_PASSWORD (its output is above). Either the password secret differs from the export password, or the bundle uses an encryption this runner's OpenSSL does not know; see docs/code-signing.md."
+            exit 1
+          fi
+          echo "OpenSSL opens the bundle with CSC_KEY_PASSWORD."
+          keychain="$(mktemp -u).keychain-db"
+          security create-keychain -p "" "$keychain"
+          if security import "$bundle" -k "$keychain" -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign >/dev/null; then
+            echo "macOS imports the bundle. Identities:"
+            security find-identity -v -p codesigning "$keychain" | sed 's/^/  /'
+          else
+            echo "::error::OpenSSL opens the bundle but macOS cannot import it: re-export the .p12 with 'openssl pkcs12 -export -legacy' as docs/code-signing.md describes, and update CSC_LINK."
+            exit 1
+          fi
+          security delete-keychain "$keychain"
+          rm -f "$bundle"
+
       # Signing material per platform (spec §3.3, docs/code-signing.md):
       # Windows Authenticode from WINDOWS_CERTIFICATE, the Apple Developer ID
       # from CSC_LINK. Absent on a fork or a dry run, in which case the

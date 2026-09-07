@@ -72,6 +72,30 @@ Repository secrets, all already read by the release workflow:
 | `CSC_LINK` | The Developer ID `.p12`, base64 encoded |
 | `CSC_KEY_PASSWORD` | Its export password |
 
+### Making the `.p12` without a Mac
+
+Apple's portal wants a certificate signing request and hands back a bare
+certificate; the private key never leaves the machine that made the request.
+Neither step needs macOS. With Git for Windows installed, in PowerShell:
+
+```powershell
+mkdir $HOME\vcwriter-signing; cd $HOME\vcwriter-signing
+$openssl = "C:\Program Files\Git\usr\bin\openssl.exe"
+& $openssl req -new -newkey rsa:2048 -nodes -keyout vcwriter-mac.key -out vcwriter-mac.csr -subj "/CN=VC Writer/emailAddress=<apple id email>"
+# Upload vcwriter-mac.csr at developer.apple.com → Certificates → Developer ID
+# Application (G2 Sub-CA); download developerID_application.cer here, then:
+& $openssl x509 -in developerID_application.cer -inform DER -out vcwriter-mac.pem
+& $openssl pkcs12 -export -legacy -inkey vcwriter-mac.key -in vcwriter-mac.pem -out vcwriter-mac.p12
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\vcwriter-signing\vcwriter-mac.p12")) | Set-Clipboard
+```
+
+`-legacy` matters: OpenSSL 3 otherwise writes a bundle that macOS's `security
+import` rejects with "MAC verification failed (wrong password?)", the same
+message a genuinely wrong password produces. The workflow's "Check the macOS
+signing certificate" step opens the bundle with OpenSSL and then with
+`security` and says which of the two went wrong. The `.key` file is the only
+copy of the private key: keep it, and keep it out of the repository.
+
 The workflow only asks electron-builder to notarise when `APPLE_ID` and
 `APPLE_TEAM_ID` are both present — requesting notarisation without credentials
 fails the build, and a fork or a dry run should still produce something
