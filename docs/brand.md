@@ -79,6 +79,16 @@ sunburst, a period typewriter with a page in the platen, a stack of pages, and
 a pair of stage lights throwing beams from the stepped plinth. Reach for the
 stacked one unless the space is genuinely wider than it is tall.
 
+The masters are PNG; what the site loads is WebP, cut by
+`brand/logo/derive.mjs`. That is not a preference — this is gradient-heavy
+illustration, the case PNG handles worst. The header lockup is 267 kB as PNG
+against 50 kB as WebP, and the hero 693 kB against 101 kB.
+
+The illustration does not survive being shrunk indefinitely. Below roughly
+52px of height the type on the plaque stops resolving, and by favicon sizes
+the whole thing is a gold smudge. Anywhere smaller than that wants the drawn
+mark below, or a simplified one — not this artwork scaled down.
+
 ### The drawn wordmark
 
 Before those files existed both applications drew "VC WRITER" as inline SVG —

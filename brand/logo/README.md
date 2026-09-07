@@ -6,49 +6,33 @@ comes after. The drawn SVG marks in `apps/web/src/app/wordmark.tsx` and
 `apps/desktop/src/renderer/components/Brand.tsx` were placeholders standing in
 until these existed.
 
-Drop the files in this directory under exactly these names. The build copies
-them into `apps/web/public/`; nothing reads them from here at runtime.
+| File | Canvas | Artwork | Used for |
+| --- | --- | --- | --- |
+| `VC-Writer-Horizontal-Transparent.png` | 1983 × 793 | 1841 × 571 at (72, 72) | site header |
+| `VC-Writer-Stacked-Transparent.png` | 1254 × 1254 | 1235 × 966 at (10, 118) | **the main logo**: landing hero |
 
-| File | Shape | Where it is used |
-| --- | --- | --- |
-| `vc-writer-horizontal.png` | wide, roughly 2.4 : 1 — the deco graphic on the left, `VC WRITER` on its plaque to the right | site header, email headers, anywhere with a wide strip |
-| `vc-writer-stacked.png` | roughly square — the graphic above, `VC WRITER` on its plaque beneath | **the main logo**: landing hero, application splash, store listings, app icon source |
+Both are RGBA with genuine transparency — all four corners measure alpha 0,
+and a little over half of each canvas is fully transparent.
 
-## Requirements
+Nothing serves these directly: at 2.2 MB and 1.4 MB they are the masters.
+`node brand/logo/derive.mjs` cuts what the site loads into
+`apps/web/public/`, and that script carries the reasoning for the crop
+boxes and the format. Re-run it after replacing a master; do not hand-edit
+its outputs.
 
-**A real alpha channel, not a matte.** This is the one that goes wrong. A PNG
-exported over a white or black background still has fully opaque pixels; it
-just happens to be the same colour as whatever it was exported against. Dropped
-onto the site's near-black `--ink`, a white-matted logo renders as a bright
-white rectangle around the artwork.
+## If you replace a master
 
-To check, on any machine with ImageMagick:
+**A real alpha channel, not a matte.** A PNG exported over white still has
+fully opaque pixels; it just happens to be white. On this site's near-black
+ground that renders as a bright rectangle around the artwork. Check with:
 
 ```sh
-magick identify -format '%[channels]\n' vc-writer-stacked.png   # wants "srgba", not "srgb"
+magick identify -format '%[channels]\n' VC-Writer-Stacked-Transparent.png   # wants "srgba"
 ```
 
-Or open it in a viewer that shows a checkerboard behind transparency. If the
-area around the artwork is checkerboard, it is right; if it is solid white or
-solid black, it needs re-exporting with transparency.
+**Re-measure the crop boxes.** `derive.mjs` hard-codes the alpha bounding
+boxes above. New artwork almost certainly sits differently on its canvas, and
+a stale box will clip an edge or leave dead margin.
 
-**Size.** At least 2000 px on the long edge for the horizontal lockup and at
-least 1600 px square for the stacked one. They are downscaled for every use, so
-larger is safe; smaller cannot be recovered.
-
-**Nothing baked in.** No drop shadow onto a background colour, no outer glow
-that assumes a dark backdrop, no padding beyond the artwork's own bounds. The
-spotlights and stepped plinth that are part of the illustration are fine — they
-are part of the drawing.
-
-## Adding them
-
-The quickest route, no tools needed:
-
-1. Open <https://github.com/kshank999-wq/VCWriter> and switch to the branch
-   `claude/vc-writer-dev-spec-ymc7zy`.
-2. Navigate into `brand/logo/`.
-3. **Add file → Upload files**, drag both PNGs in, commit to that branch.
-
-Renaming them to the two names above before uploading saves a step, but it is
-not essential — they can be renamed in place afterwards.
+**At least 2000 px on the long edge.** Everything is downscaled from these, so
+larger is safe and smaller cannot be recovered.
