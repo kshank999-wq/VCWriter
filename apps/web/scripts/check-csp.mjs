@@ -17,7 +17,7 @@ import { chromium } from 'playwright';
  */
 
 const PORT = Number(process.env['CSP_CHECK_PORT'] ?? 3210);
-const PAGES = ['/', '/signin', '/download', '/notes', '/account', '/purchase/complete'];
+const PAGES = ['/', '/signin', '/download', '/notes', '/account', '/purchase/complete', '/admin'];
 
 const server = spawn(
   process.execPath,

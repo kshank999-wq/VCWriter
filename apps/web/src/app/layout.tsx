@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { currentAdmin } from '@/lib/admin';
 import { env, SITE_NAME } from '@/lib/env';
 import './globals.css';
 import { Wordmark } from './wordmark';
@@ -32,7 +33,23 @@ export const metadata: Metadata = {
  */
 export const dynamic = 'force-dynamic';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/**
+ * Whether the visitor is an administrator, for the one nav link that only
+ * they should see. The pages behind it check for themselves, so this decides
+ * nothing about access — only whether to show the door. Never allowed to
+ * fail the layout: a Supabase hiccup costs an admin a link, not the site.
+ */
+const isAdminVisitor = async (): Promise<boolean> => {
+  try {
+    return (await currentAdmin()) !== null;
+  } catch {
+    return false;
+  }
+};
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const admin = await isAdminVisitor();
+
   return (
     <html lang="en">
       <body>
@@ -46,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/download">Buy &amp; download</Link>
               <Link href="/notes">Notes</Link>
               <Link href="/account">My account</Link>
+              {admin ? <Link href="/admin">Admin</Link> : null}
             </nav>
           </div>
         </header>
