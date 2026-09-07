@@ -1,43 +1,30 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { currentAdmin } from '@/lib/admin';
+import { AdminGate } from '../_components/gate';
 import { SupportConsole } from './support-console';
 
-export const metadata: Metadata = { title: 'Support' };
+export const metadata: Metadata = { title: 'Customer record' };
 export const dynamic = 'force-dynamic';
 
 /**
- * Support console (spec §3.3).
+ * One customer (spec §3.3; addendum §6 and §9): what they bought, which
+ * machines hold their seats, whether their emails arrived — and the actions
+ * on all three, so nobody opens the database to answer a ticket.
  *
- * The point of this page is that nobody has to open the database to answer a
- * ticket. It shows what a customer bought, which machines hold their seats,
- * and whether their emails actually arrived — and lets support act on all
- * three.
+ * Reached from the customers list with the email in the query, or directly
+ * with the search box.
  */
-export default async function SupportPage() {
+export default async function SupportPage({ searchParams }: { searchParams: { email?: string } }) {
   const admin = await currentAdmin();
-
-  if (!admin) {
-    return (
-      <>
-        <div className="hero">
-          <h1>Support</h1>
-          <p>This area is for release administrators.</p>
-        </div>
-        <Link href="/signin?next=/admin/support" className="button">
-          Sign in
-        </Link>
-      </>
-    );
-  }
+  if (!admin) return <AdminGate title="Customer record" next="/admin/support" />;
 
   return (
     <>
       <div className="hero">
-        <h1>Support</h1>
+        <h1>Customer record</h1>
         <p>Look up a customer by the email address on their account.</p>
       </div>
-      <SupportConsole />
+      <SupportConsole initialEmail={searchParams.email ?? ''} />
     </>
   );
 }

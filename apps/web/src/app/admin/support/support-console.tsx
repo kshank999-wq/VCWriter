@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface LicenseRow {
   id: string;
@@ -48,8 +48,12 @@ interface Lookup {
 const formatDate = (value: string | null): string =>
   value ? new Date(value).toLocaleString() : '—';
 
-export function SupportConsole() {
-  const [email, setEmail] = useState('');
+/**
+ * `initialEmail` comes from the customers list, so a row there opens the
+ * record without a second search (addendum §6).
+ */
+export function SupportConsole({ initialEmail = '' }: { initialEmail?: string }) {
+  const [email, setEmail] = useState(initialEmail);
   const [result, setResult] = useState<Lookup | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +73,13 @@ export function SupportConsole() {
     }
     setResult((await response.json()) as Lookup);
   };
+
+  // Arriving with an address means "show me this customer", not "here is a
+  // form". Once, on mount; typing afterwards is the user's business.
+  useEffect(() => {
+    if (initialEmail.trim()) void lookup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const act = async (body: Record<string, unknown>, done: string) => {
     setBusy(true);

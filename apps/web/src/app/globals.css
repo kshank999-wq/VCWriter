@@ -547,3 +547,231 @@ input[type='email'] {
   overflow-x: auto;
   white-space: pre;
 }
+
+/* ---------------------------------------------------------------------------
+   Administration console (docs/spec/addendum-01-admin-console.md)
+   --------------------------------------------------------------------------- */
+
+.subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 24px 0 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+}
+
+.subnav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 6px 0;
+}
+
+.subnav a:hover {
+  color: var(--gold);
+}
+
+.subnav a[aria-current='page'] {
+  color: var(--gold-bright);
+  border-bottom: 1px solid var(--gold);
+}
+
+/* Stat tiles. The number is the chart: a large figure in the body face, a
+   small label above it. Exactly one tile per view is the hero. A tile that
+   needs attention says so in words and a glyph — never colour alone. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 24px 0 40px;
+}
+
+.stat {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  padding: 18px 20px 16px;
+  position: relative;
+}
+
+.stat .label {
+  display: block;
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.stat .value {
+  display: block;
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.stat.hero {
+  grid-column: span 2;
+  border-color: var(--gold-deep);
+}
+
+.stat.hero .value {
+  font-size: 48px;
+}
+
+.stat .detail {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.stat.marked {
+  border-color: var(--red);
+}
+
+.stat.marked .attention {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.stat.marked .attention::before {
+  content: '▲ ';
+  color: var(--red);
+}
+
+@media (max-width: 520px) {
+  .stat.hero {
+    grid-column: span 1;
+  }
+}
+
+/* Tables: scroll inside their own box, never the page. */
+.data-table {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  margin: 16px 0 32px;
+}
+
+.data-table table {
+  /* At least the box, wider if the columns need it — the box scrolls. Without
+     this, the one wrapping column is squeezed to nothing by its no-wrap
+     siblings and a long error message wraps a word per line. */
+  min-width: 100%;
+  width: max-content;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.data-table th {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table td.wrap {
+  white-space: normal;
+  min-width: 280px;
+  max-width: 420px;
+}
+
+.data-table a {
+  color: var(--gold);
+}
+
+.data-table .empty {
+  padding: 24px 14px;
+  color: var(--text-muted);
+}
+
+/* Status pills: a glyph and a word, so the state is legible without colour. */
+.pill {
+  display: inline-block;
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.pill.ok {
+  border-color: var(--gold-deep);
+  color: var(--gold-bright);
+}
+
+.pill.ok::before {
+  content: '● ';
+}
+
+.pill.warn {
+  border-color: var(--gold);
+  color: var(--text);
+}
+
+.pill.warn::before {
+  content: '◐ ';
+}
+
+.pill.bad {
+  border-color: var(--red);
+  color: var(--text);
+}
+
+.pill.bad::before {
+  content: '✕ ';
+  color: var(--red);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 8px 0 0;
+}
+
+.filters input[type='search'] {
+  min-width: 260px;
+}
+
+/* Under the sub-navigation the page title needs less runway than the
+   marketing pages give it. */
+.subnav + .hero {
+  padding-top: 36px;
+  padding-bottom: 24px;
+}
+
+.subnav ~ section {
+  padding: 24px 0;
+}
