@@ -59,17 +59,43 @@ jobs:
             echo "::warning::Apple credentials absent — producing an unsigned, un-notarized build. Do not publish it as stable."
           fi
 
+      # Signing material per platform (spec §3.3, docs/code-signing.md):
+      # Windows Authenticode from WINDOWS_CERTIFICATE, the Apple Developer ID
+      # from CSC_LINK. Absent on a fork or a dry run, in which case the
+      # artifact is unsigned and must not ship as stable.
+      #
+      # The variables are exported inside the script rather than declared in
+      # `env:` because a secret that is not set arrives as an empty string, and
+      # electron-builder treats a present-but-empty CSC_LINK as a certificate
+      # *path* — the macOS packager tried to open "" and failed with
+      # "<appDir> not a file" before the unsigned fallback could apply.
       - name: Package
-        run: pnpm --filter @vcwriter/desktop ${{ matrix.script }} ${{ steps.notarize.outputs.flag }}
+        shell: bash
         env:
-          # Windows Authenticode (spec §3.3). Absent on a fork or a dry run, in
-          # which case the artifact is unsigned and must not ship as stable.
-          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
-          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-          # Apple signing and notarization.
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          MAC_CERTIFICATE: ${{ secrets.CSC_LINK }}
+          MAC_CERTIFICATE_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          # Apple notarization; read only when the notarize flag is passed.
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            certificate="$WINDOWS_CERTIFICATE"; password="$WINDOWS_CERTIFICATE_PASSWORD"
+          else
+            certificate="$MAC_CERTIFICATE"; password="$MAC_CERTIFICATE_PASSWORD"
+          fi
+          if [ -n "$certificate" ]; then
+            export CSC_LINK="$certificate"
+            export CSC_KEY_PASSWORD="$password"
+          else
+            # Nothing to sign with: say so, rather than letting electron-builder
+            # go looking for an identity in the runner's keychain.
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            echo "::warning::No ${{ matrix.platform }} signing certificate — building unsigned."
+          fi
+          pnpm --filter @vcwriter/desktop ${{ matrix.script }} ${{ steps.notarize.outputs.flag }}
 
       # The admin release form asks for a checksum, and the updater refuses an
       # installer that does not match one. Computing it here is the only place
