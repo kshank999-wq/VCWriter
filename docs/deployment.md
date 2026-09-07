@@ -35,91 +35,79 @@ Two linter findings are intentional and expected to stay:
   It answers only "does the caller own this project id"; `anon` and `public`
   have been revoked.
 
-## Vercel — needs a hand in the dashboard
+## Vercel
 
-**The site has never deployed.** Nothing built in this repository is live at
-vc-writer.com until the steps below are done. This section records what was
-actually found, because it is not what an earlier version of this document
-said.
+**Live at https://vc-writer.com** since 7 September 2026, from `main`.
 
-### Three projects point at this repository
+One project, in team `kshank999-5979` (`team_u7MT4rqOzxUsxMI5gdYsbVN0`):
 
-Read on 6 September 2026, in team `kshank999-5979` (`team_u7MT4rqOzxUsxMI5gdYsbVN0`):
+| | |
+| --- | --- |
+| Project | `vcwriter` — `prj_z0vZdzTLvCSKneSNuhT17KnOC8Cq` |
+| Framework | Next.js, Root Directory `apps/web` |
+| Production branch | `main` |
+| Domains | `vc-writer.com`, `www.vc-writer.com` (registered and DNS-managed in Vercel), plus `vcwriter.vercel.app` |
 
-| Project | Id | Framework | Latest production deploy |
-| --- | --- | --- | --- |
-| `vcwriter` | `prj_z0vZdzTLvCSKneSNuhT17KnOC8Cq` | Next.js, root `apps/web` | ERROR |
-| `vc-writer` | `prj_43SNHcINsBwiCthZ83DclRNEVJDG` | none detected | ERROR, no logs retained |
-| `desktop` | `prj_hzQ7i8zM1KdWOLJyGF8n1TVdT7FR` | Vite, aimed at the Electron app | ERROR |
+Every push to `main` deploys. CI (`.github/workflows/ci.yml`) runs the full
+suite on the same push; Vercel does not wait for it, so a red CI run is the
+signal to look at, not a failed deploy. Pushes to other branches get preview
+deployments at `vcwriter-git-<branch>-kshank999-5979s-projects.vercel.app`.
 
-**Keep `vcwriter`. Delete the other two.** `desktop` is the source of the
-"No Output Directory named `dist`" error that started this: `dist` is Vite's
-default output, and `apps/desktop` is an Electron application that must never
-be deployed to a web host. `vc-writer` has no framework detected and no build
-that got far enough to log anything.
+### How it got here — the two things that went wrong
 
-An earlier version of this section reported that the connector could create
-projects but not read them back. That was wrong, and the cause was a query
-mistake rather than a permissions one: passing the **team id** to the
-project-listing endpoint returned a partial list (four of ten projects, none
-of them this repository's), while passing the **team slug** `kshank999-5979`
-returned all ten. Use the slug.
+Recorded because both are the kind of mistake that recurs.
 
-### Why the `vcwriter` build failed
+**Three projects were wired to one repository.** Connecting the repo from
+the Vercel dashboard created extra projects along the way: `desktop`, set to
+the Vite preset and aimed at `apps/desktop`, and `vc-writer`, with no
+framework detected. `desktop` was the source of the very first failure —
+"No Output Directory named `dist`" — because `dist` is Vite's default output
+and `apps/desktop` is an Electron application, which cannot be a website at
+all. Neither project contained any code; a Vercel project is a set of build
+settings pointing at a repository. Both were deleted on 7 September. If a
+future push fires more than one build, this has happened again.
 
-Not a settings problem. That project's Root Directory is already `apps/web`,
-the workspace install linked and compiled `@vcwriter/domain` through its
-`prepare` script, Next.js 14.2.35 was detected, and `next build` compiled
-successfully. It then died collecting page data:
+**A variable's name was pasted in as its value.** With Root Directory
+correct and the workspace install working, `next build` compiled cleanly and
+then died collecting page data:
 
 ```
 TypeError: Invalid URL
   code: 'ERR_INVALID_URL',
   input: 'NEXT_PUBLIC_SITE_URL'
-> Build error occurred
-Error: Failed to collect page data for /_not-found
 ```
 
-`NEXT_PUBLIC_SITE_URL` had been given the variable's own *name* as its value.
-`app/layout.tsx` builds `metadataBase: new URL(env.siteUrl)` at module scope,
-so one malformed value took down every page in the build.
+`app/layout.tsx` builds `metadataBase: new URL(env.siteUrl)` at module
+scope, so that one value took down every page. `env.siteUrl` now refuses
+anything that is not an absolute http(s) URL, warns naming the variable,
+and falls back to `https://vc-writer.com` (`apps/web/src/lib/env.ts`,
+tested in `src/lib/__tests__/env.test.ts`). A typo in a dashboard can no
+longer fail a build.
 
-`env.siteUrl` no longer permits that: a value that is not an absolute http(s)
-URL is refused, warned about by name, and replaced with `https://vc-writer.com`
-(`apps/web/src/lib/env.ts`, covered by `src/lib/__tests__/env.test.ts`). It
-also strips a trailing slash, which would otherwise double in every emailed
-link and Stripe redirect. A typo in a dashboard can no longer fail a build —
-but it is still a typo, so fix the value too.
+The shape matters more than the instance: only this variable fails loudly
+at build time. `STRIPE_SECRET_KEY` or `RESEND_API_KEY` filled in the same
+way would deploy green and fail at the first purchase. When something works
+in the build and fails in use, check the *values*.
 
-Note the shape of this mistake rather than just the instance. Pasting a
-variable's name into its value field fails differently for each variable, and
-only this one failed loudly at build time: `STRIPE_SECRET_KEY` or
-`RESEND_API_KEY` filled in the same way would deploy green and fail at the
-first purchase.
+### On reading the project from the connector
 
-**What to do, once, in the dashboard (https://vercel.com):**
+Pass the **team slug** (`kshank999-5979`) to the Vercel connector's
+project-listing endpoint, not the team id. The id returned a partial list
+that omitted this repository's projects entirely, which looked like a
+permissions problem and was not.
 
-1. Delete the `vc-writer` and `desktop` projects. Keep `vcwriter`.
-2. In `vcwriter`: Settings → Environment Variables → set
-   `NEXT_PUBLIC_SITE_URL` to `https://vc-writer.com`, and check every other
-   variable's *value* is the secret and not a repeat of its name.
-3. Settings → Git → **Production Branch: `main`**. The first connection
-   defaulted to `claude/vc-writer-dev-spec-ymc7zy`; both branches carry the
-   same commits today, but `main` is the one meant to be deployable.
-4. Confirm Settings → General → **Root Directory: `apps/web`**, with "include
-   files outside the root directory" left enabled — the build needs the
-   workspace root so `pnpm install` can link and build `@vcwriter/domain`.
-   `apps/web/vercel.json` pins the framework to Next.js so the preset cannot
-   be misdetected.
-5. Deployments → Redeploy. Optionally add `ELECTRON_SKIP_BINARY_DOWNLOAD=1`
-   first — the workspace install pulls the Electron binary otherwise, which
-   the site never uses.
-6. Settings → Domains → add `vc-writer.com` and `www.vc-writer.com` (see the
-   Domain section).
+### Settings that must stay as they are
 
-After that, every push to `main` deploys. CI (`.github/workflows/ci.yml`)
-runs the full suite on the same push; Vercel does not wait for it, so a red
-CI run is the signal to look at, not a failed deploy.
+- Root Directory `apps/web`, with "include files outside the root
+  directory" enabled — the build needs the workspace root so `pnpm install`
+  can link and compile `@vcwriter/domain`. `apps/web/vercel.json` pins the
+  framework to Next.js so the preset cannot be misdetected.
+- The repository-root `vercel.json` deliberately fails any build that runs
+  from the root, printing what to fix. It is only read when Root Directory
+  is unset, so a healthy project never sees it.
+- Optional: `ELECTRON_SKIP_BINARY_DOWNLOAD=1` in the environment — the
+  workspace install pulls the Electron binary otherwise, which the site
+  never uses.
 
 Environment variables, all environments unless noted. **On key names:** the
 Supabase dashboard now issues `sb_publishable_…` and `sb_secret_…` keys in
@@ -152,13 +140,16 @@ vercel env add SUPABASE_SERVICE_ROLE_KEY production
 # …one per variable, per environment
 ```
 
-## Domain — vc-writer.com
+## Domain — vc-writer.com — done
 
-1. Vercel → the project → Settings → Domains → add `vc-writer.com` and
-   `www.vc-writer.com`, redirecting `www` to the apex.
-2. Point DNS at Vercel (an `A` record for the apex, `CNAME` for `www`, per the
-   values Vercel shows).
-3. Set `NEXT_PUBLIC_SITE_URL=https://vc-writer.com` in Production.
+Attached to `vcwriter` on 7 September 2026. The domain is registered in
+Vercel and Vercel manages its DNS, so there were no records to add by hand;
+both `vc-writer.com` and `www.vc-writer.com` resolve to Vercel's edge and
+`www` redirects to the apex. `NEXT_PUBLIC_SITE_URL` is
+`https://vc-writer.com` in Production.
+
+If the domain ever needs re-attaching: the project → Settings → Domains →
+Add. Nothing else.
 
 ## Stripe
 
@@ -185,13 +176,20 @@ records), then set `RESEND_API_KEY` and `RESEND_FROM_ADDRESS`. Purchase mail
 failing is logged to `email_events` and never fails the purchase, so a
 misconfigured sending domain shows up there rather than as a broken checkout.
 
-## Supabase auth redirect URLs
+## Supabase auth redirect URLs — done
 
-Supabase → Authentication → URL configuration:
+Set on 7 September 2026 under Supabase → Authentication → URL configuration:
 
 - Site URL: `https://vc-writer.com`
-- Redirect allow list: `https://vc-writer.com/auth/callback`,
-  `http://localhost:3000/auth/callback`, and the Vercel preview pattern.
+- Redirect allow list: `https://vc-writer.com/auth/callback`
+
+These are the address of a page on *this* site, told to Supabase so a
+sign-in link is permitted to send the user back there. They are typed into
+that form; they are not pages on supabase.com. Worth adding when local
+development starts: `http://localhost:3000/auth/callback`. This setting is
+not readable through the Supabase connector, so a future session cannot
+confirm it — a sign-in email that lands on `localhost` is the symptom of it
+having been lost.
 
 ## Making yourself an administrator
 
