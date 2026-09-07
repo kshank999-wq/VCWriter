@@ -10,9 +10,12 @@ directories:
   output: release
   buildResources: build
 
-# One 1024px PNG, rendered from brand/icon.html; electron-builder derives the
-# .icns and .ico from it at package time. Regenerate with
-# `BOARDS=icon.html pnpm --filter @vcwriter/brand render app-icon`.
+# Two 1024px PNGs cut from the icon artwork by brand/logo/icons.mjs;
+# electron-builder derives the .ico and .icns from them at package time. They
+# differ because the platforms do: Windows draws icons square, and the macOS
+# Dock draws rounded tiles with transparent corners, so the Mac one sits the
+# artwork inside a black rounded tile rather than letting a mask clip the
+# frame. Regenerate with `node brand/logo/icons.mjs`.
 icon: build/icon.png
 
 files:
@@ -44,6 +47,7 @@ nsis:
   createDesktopShortcut: true
 
 mac:
+  icon: build/icon-mac.png
   category: public.app-category.productivity
   target:
     - target: dmg

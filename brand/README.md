@@ -21,28 +21,16 @@ pnpm --filter @vcwriter/brand render poster     # just the ones matching "poster
 
 ## Application icons
 
-`icon.html` holds the icons, rendered the same way:
+Cut from the square icon artwork in [`logo/`](logo/README.md) by
+`node brand/logo/icons.mjs`; the script writes them straight into the
+applications and, with `PREVIEW_DIR` set, a strip showing each one at the
+size it is actually seen at.
 
-```bash
-BOARDS=icon.html pnpm --filter @vcwriter/brand render
-```
-
-| Board | Goes to | Notes |
+| Output | Size | Notes |
 | --- | --- | --- |
-| `app-icon-1024` | `apps/desktop/build/icon.png` | Rounded tile with a margin, transparent corners; electron-builder derives `.icns` and `.ico` |
-| `web-icon-512` | `apps/web/src/app/icon.png` | Favicon and PWA icon, full-bleed |
-| `apple-icon-180` | `apps/web/src/app/apple-icon.png` | iOS rounds it itself |
-
-The VC Writer Notes icons are hand-written SVG in `apps/web/public/`: the same
-tile with the lines of a note in place of the monogram, so the two read as a
-pair. One trap worth knowing: a gradient stroke on a perfectly horizontal path
-renders as nothing, because the path has no height for the gradient to map
-onto — the rules are solid gold for that reason.
-
-`exports/` is committed so the finished files are downloadable from GitHub
-without a checkout. To change a board, edit `artboards.html`, re-render, and
-commit the new PNGs with it.
-
-The fonts in `fonts/` are used only here (see `fonts/LICENSE.md`). The
-applications use the system geometric stack instead, so nothing here changes
-how the product looks.
+| `apps/desktop/build/icon.png` | 1024 | Windows: full-bleed square; electron-builder derives the `.ico` |
+| `apps/desktop/build/icon-mac.png` | 1024 | macOS: the art inside a black rounded tile with transparent corners, on Apple's grid; electron-builder derives the `.icns` |
+| `apps/web/src/app/icon.png` | 192 | Favicon, full-bleed |
+| `apps/web/src/app/apple-icon.png` | 180 | iOS home screen; iOS rounds it itself |
+| `apps/web/public/notes-icon-512.png` | 512 | VC Writer Notes install icon |
+| `apps/web/public/notes-icon-maskable-512.png` | 512 | Same, with the art inside the 80% safe circle for Android's masks |

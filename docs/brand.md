@@ -97,6 +97,7 @@ Where each one is used today:
 | Website landing hero | stacked | WebP, `apps/web/public/logo-stacked.webp` |
 | Desktop welcome screen | stacked | WebP bundled by Vite, `apps/desktop/src/renderer/assets/` |
 | Email header | horizontal | PNG hosted at `vc-writer.com/email-logo.png` — Outlook cannot decode WebP, and a client with images off shows the alt text in the wordmark's own gold |
+| Favicon, app icons, Notes icons | square icon artwork | Cut by `brand/logo/icons.mjs` from `VC-Writer-Google-App-Logo-1024x1024.png`: a bolder monogram on a black tile, drawn to survive 16px in a way the lockups cannot. The macOS Dock icon sits the art inside a rounded tile; everything else is full-bleed square |
 
 ### The drawn wordmark
 
