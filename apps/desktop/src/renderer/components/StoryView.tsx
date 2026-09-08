@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   beatsForUnit,
   findLane,
@@ -9,12 +9,15 @@ import {
   type Beat,
   type BeatId,
   type ProjectFile,
+  type StoryLayout,
 } from '@vcwriter/domain';
 import { BeatBody } from './BeatBody';
 import { STATUS_GLYPH } from './status';
 
 interface StoryViewProps {
   file: ProjectFile;
+  /** Precomputed by the workspace; computed here only when absent (tests). */
+  layout?: StoryLayout;
   selectedBeatId: BeatId | null;
   onSelectBeat(beatId: BeatId): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
@@ -39,6 +42,7 @@ interface StoryViewProps {
  */
 export function StoryView({
   file,
+  layout: givenLayout,
   selectedBeatId,
   onSelectBeat,
   onUpdate,
@@ -47,7 +51,7 @@ export function StoryView({
   onTitleFocused,
   dictationShortcut,
 }: StoryViewProps) {
-  const layout = storyLayout(file);
+  const layout = useMemo(() => givenLayout ?? storyLayout(file), [givenLayout, file]);
   const prose = isProseFormat(file.project.format);
   const [collapsedBeats, setCollapsedBeats] = useState<ReadonlySet<string>>(() => new Set());
   const blocks = useRef(new Map<string, HTMLElement>());

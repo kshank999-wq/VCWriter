@@ -12,6 +12,7 @@ import {
   pagesForUnit,
   ref,
   removeMarker,
+  speakersIn,
   storyMarkerKindSchema,
   structuralUnitStatusSchema,
   updateBeat,
@@ -86,13 +87,8 @@ function BeatSection({
   beat: Beat;
   onUpdate: InspectorProps['onUpdate'];
 }) {
-  const speakers = Array.from(
-    new Set(
-      beat.manuscript.elements
-        .filter((element) => element.type === 'character' && element.text.trim().length > 0)
-        .map((element) => element.text.trim().toUpperCase()),
-    ),
-  );
+  // The same reading of the cues the Threads view and the cast dots use.
+  const speakers = speakersIn(beat);
   return (
     <Section title="Beat">
       <label className="field">

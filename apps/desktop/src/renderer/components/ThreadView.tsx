@@ -9,10 +9,12 @@ import {
   type BeatId,
   type ProjectFile,
   type StoryLink,
+  type ThreadLayout,
 } from '@vcwriter/domain';
 
 interface ThreadViewProps {
   file: ProjectFile;
+  threads?: ThreadLayout;
   selectedBeatId: BeatId | null;
   onSelectBeat(beatId: BeatId): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
@@ -40,8 +42,8 @@ const BEAT_GAP = 4;
  * it. Everything else is derived from the manuscript and the structure, so
  * the diagram cannot drift from the script.
  */
-export function ThreadView({ file, selectedBeatId, onSelectBeat, onUpdate }: ThreadViewProps) {
-  const layout = useMemo(() => threadLayout(file), [file]);
+export function ThreadView({ file, threads, selectedBeatId, onSelectBeat, onUpdate }: ThreadViewProps) {
+  const layout = useMemo(() => threads ?? threadLayout(file), [threads, file]);
   const [layers, setLayers] = useState<Record<Layer, boolean>>({ lanes: true, setups: true, characters: true, links: true });
   const [dragFrom, setDragFrom] = useState<{ beatId: BeatId; x: number; y: number } | null>(null);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);

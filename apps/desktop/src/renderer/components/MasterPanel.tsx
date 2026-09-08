@@ -9,6 +9,7 @@ import {
   type BeatId,
   type ProjectFile,
   type ResearchCategoryId,
+  type StoryLayout,
 } from '@vcwriter/domain';
 import { StoryView } from './StoryView';
 import { ResearchPanel } from './ResearchPanel';
@@ -17,6 +18,7 @@ import { InlineText } from './InlineText';
 
 interface MasterPanelProps {
   file: ProjectFile;
+  layout?: StoryLayout;
   selectedBeatId: BeatId | null;
   onSelectBeat(beatId: BeatId): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
@@ -58,7 +60,11 @@ export function MasterPanel(props: MasterPanelProps) {
       count: file.setupsPayoffs.filter((record) => !record.archived && record.status !== 'resolved').length,
     },
   ];
-  const activeResearch = researchTab ?? researchTabs[0]?.tab ?? { kind: 'plots' };
+  // A remembered category tab whose category has gone (removed here, or by a
+  // sync) must not leave the strip with nothing highlighted.
+  const stillThere = researchTab && researchTabs.some((entry) => sameTab(entry.tab, researchTab));
+  const activeResearch: ResearchTab = stillThere && researchTab ? researchTab : (researchTabs[0]?.tab ?? { kind: 'plots' });
+  const tabKey = (tab: ResearchTab) => (tab.kind === 'category' ? `category:${tab.id}` : tab.kind);
 
   if (focusMode) {
     return (
@@ -94,7 +100,7 @@ export function MasterPanel(props: MasterPanelProps) {
               const selected = sameTab(entry.tab, activeResearch);
               return (
                 <button
-                  key={entry.label}
+                  key={tabKey(entry.tab)}
                   type="button"
                   role="tab"
                   aria-selected={selected}

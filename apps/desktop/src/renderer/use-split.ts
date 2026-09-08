@@ -52,7 +52,11 @@ interface SplitOptions {
  * The divider element's parent is the container the size is measured in.
  */
 export const useSplit = ({ key, initial, min, reserve, axis = 'x' }: SplitOptions) => {
-  const [size, setSize] = usePreference<number | null>(key, null);
+  const [stored, setStored] = usePreference<number | null>(key, null);
+  // The live size during a drag is state; storage is written once, on release.
+  const [live, setLive] = useState<number | null>(null);
+  const size = live ?? stored;
+  const setSize = setStored;
   const container = useRef<HTMLElement | null>(null);
   const dragging = useRef(false);
   const extent = () => {
@@ -75,14 +79,18 @@ export const useSplit = ({ key, initial, min, reserve, axis = 'x' }: SplitOption
       const box = container.current.getBoundingClientRect();
       const along = axis === 'x' ? event.clientX - box.left : event.clientY - box.top;
       const total = axis === 'x' ? box.width : box.height;
-      setSize(Math.round(Math.min(Math.max(along, min), total - reserve)));
+      setLive(Math.round(Math.min(Math.max(along, min), total - reserve)));
     },
-    [axis, min, reserve, setSize],
+    [axis, min, reserve],
   );
 
   const onPointerUp = useCallback(() => {
     dragging.current = false;
-  }, []);
+    setLive((current) => {
+      if (current !== null) setStored(current);
+      return null;
+    });
+  }, [setStored]);
 
   // The window can shrink under a remembered size; keep the other side alive.
   useEffect(() => {

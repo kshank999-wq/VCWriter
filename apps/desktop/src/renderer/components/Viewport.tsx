@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { beatsInStoryOrder, findUnit, paginateUnit, storyLayout, type BeatId, type ProjectFile } from '@vcwriter/domain';
+import {
+  beatsInStoryOrder,
+  findUnit,
+  paginateUnit,
+  storyLayout,
+  type BeatId,
+  type ProjectFile,
+  type StoryLayout,
+  type ThreadLayout,
+} from '@vcwriter/domain';
 import { Paper } from './Paper';
 import { ThreadView } from './ThreadView';
 
@@ -7,6 +16,8 @@ export type ViewportView = 'page' | 'threads';
 
 interface ViewportProps {
   file: ProjectFile;
+  layout?: StoryLayout;
+  threads?: ThreadLayout;
   selectedBeatId: BeatId | null;
   onSelectBeat(beatId: BeatId): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
@@ -21,13 +32,13 @@ interface ViewportProps {
  * the scene and counts pages the way a viewer shows a clip and a timecode;
  * the transport row under it steps through beats in story order.
  */
-export function Viewport({ file, selectedBeatId, onSelectBeat, onUpdate, view, onView }: ViewportProps) {
+export function Viewport({ file, layout: givenLayout, threads, selectedBeatId, onSelectBeat, onUpdate, view, onView }: ViewportProps) {
   const beats = useMemo(() => beatsInStoryOrder(file), [file]);
   const position = beats.findIndex((beat) => beat.id === selectedBeatId);
   const beat = beats[position];
   const unit = beat ? findUnit(file, beat.unitId) : undefined;
   const pages = useMemo(() => (unit ? paginateUnit(file, unit.id) : []), [file, unit]);
-  const layout = useMemo(() => storyLayout(file), [file]);
+  const layout = useMemo(() => givenLayout ?? storyLayout(file), [givenLayout, file]);
   const span = unit ? layout.spans.find((candidate) => candidate.unit.id === unit.id) : undefined;
   const total = Math.max(1, Math.ceil(layout.totalPages));
 
@@ -91,7 +102,7 @@ export function Viewport({ file, selectedBeatId, onSelectBeat, onUpdate, view, o
         {view === 'page' ? (
           <Paper pages={pages} empty={unit ? 'Nothing written in this scene yet.' : 'Select a scene to see its pages.'} />
         ) : (
-          <ThreadView file={file} selectedBeatId={selectedBeatId} onSelectBeat={onSelectBeat} onUpdate={onUpdate} />
+          <ThreadView file={file} threads={threads} selectedBeatId={selectedBeatId} onSelectBeat={onSelectBeat} onUpdate={onUpdate} />
         )}
       </div>
 

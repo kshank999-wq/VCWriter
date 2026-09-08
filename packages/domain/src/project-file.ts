@@ -105,11 +105,15 @@ const migrateToGlobalStoryOrder = (doc: Record<string, unknown>): Record<string,
 
   const keys = initialOrderKeys(printed.length);
   const keyFor = new Map(printed.map((unit, index) => [unit, keys[index]]));
+  // The re-key is an edit as far as sync is concerned: stamped now, so the
+  // next merge pushes the global keys to the cloud rather than letting a
+  // copy that still carries per-lane keys win and interleave the two.
+  const stamp = nowIso();
 
   return {
     ...doc,
     formatVersion: 2,
-    units: units.map((unit) => ({ ...unit, orderKey: keyFor.get(unit) ?? unit.orderKey })),
+    units: units.map((unit) => ({ ...unit, orderKey: keyFor.get(unit) ?? unit.orderKey, updatedAt: stamp })),
     markers: Array.isArray(doc['markers']) ? doc['markers'] : [],
   };
 };

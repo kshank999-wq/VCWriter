@@ -22,8 +22,10 @@ import {
   type Lane,
   type LaneId,
   type ProjectFile,
+  type StoryLayout,
   type StorySpan,
   type StructuralUnitId,
+  type ThreadLayout,
   type TimelineArc,
 } from '@vcwriter/domain';
 import { InlineText } from './InlineText';
@@ -32,6 +34,10 @@ import { adjustForSameList, dropClass, edgeFor, indexForDrop, useDragDrop, type 
 
 interface MasterTimelineProps {
   file: ProjectFile;
+  /** Precomputed by the workspace so a keystroke paginates the story once, not per pane. */
+  layout?: StoryLayout;
+  arcs?: TimelineArc[];
+  threads?: ThreadLayout;
   selectedBeatId: BeatId | null;
   onSelectBeat(beatId: BeatId): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
@@ -64,6 +70,9 @@ const LINKS_HEIGHT = 44;
  */
 export function MasterTimeline({
   file,
+  layout: givenLayout,
+  arcs: givenArcs,
+  threads: givenThreads,
   selectedBeatId,
   onSelectBeat,
   onUpdate,
@@ -78,9 +87,9 @@ export function MasterTimeline({
   onOpenLane,
 }: MasterTimelineProps) {
   const drag = useDragDrop();
-  const layout = useMemo(() => storyLayout(file), [file]);
-  const arcs = useMemo(() => timelineArcs(file), [file]);
-  const threads = useMemo(() => threadLayout(file), [file]);
+  const layout = useMemo(() => givenLayout ?? storyLayout(file), [givenLayout, file]);
+  const arcs = useMemo(() => givenArcs ?? timelineArcs(file), [givenArcs, file]);
+  const threads = useMemo(() => givenThreads ?? threadLayout(file, { layout, arcs }), [givenThreads, file, layout, arcs]);
   const { spans, lanes } = layout;
   const noun = file.project.format === 'novel' || file.project.format === 'short_story' ? 'chapter' : 'scene';
 
@@ -276,7 +285,7 @@ export function MasterTimeline({
           type="button"
           className={inspectorOpen ? 'tool active' : 'tool'}
           aria-pressed={inspectorOpen}
-          title="Inspector (Ctrl/Cmd+Shift+I)"
+          title="Inspector (Ctrl/Cmd+Shift+P)"
           onClick={onToggleInspector}
         >
           Inspector

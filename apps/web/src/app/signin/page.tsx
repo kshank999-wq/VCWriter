@@ -1,13 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { browserClient } from '@/lib/supabase-browser';
+import { safeNextPath } from '@/lib/auth-redirect';
 
 /**
  * Email sign-in. A magic link keeps passwords out of the product entirely and
  * doubles as the verification step the account flow needs (spec §12.3).
  */
 export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInForm />
+    </Suspense>
+  );
+}
+
+function SignInForm() {
+  // Where to land after the link: the page that sent the customer here (the
+  // admin console, the browser preview), or the account page.
+  const next = safeNextPath(useSearchParams().get('next'));
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +31,7 @@ export default function SignInPage() {
     setError(null);
     const { error: signInError } = await browserClient().auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/account` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
     });
     if (signInError) {
       setError(signInError.message);

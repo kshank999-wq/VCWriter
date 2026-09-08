@@ -124,6 +124,9 @@ describe('format 1 migration', () => {
     const file = parseProjectFile(legacy);
     // Format 1 printed lane A (Main 1, Main 2) then lane B (Sub 1).
     expect(titles(file)).toEqual(['Main 1', 'Main 2', 'Sub 1']);
+    // Re-keyed scenes count as edited, so the next sync pushes the global
+    // keys instead of a stale per-lane copy winning the merge.
+    for (const unit of file.units) expect(unit.updatedAt >= base.units[0]!.updatedAt).toBe(true);
   });
 
   it('opens a current file without touching it', () => {
@@ -206,6 +209,23 @@ describe('act markers', () => {
     const remote = { ...file, units: file.units.filter((unit) => unit.id !== second.unit.id) };
     const merged = mergeProjects(remote, remote, { lastSyncedAt: null }).merged;
     expect(merged.markers.map((m) => m.title)).toEqual(['Act I']);
+  });
+
+  it('keeps one marker per scene when two devices marked the same scene', () => {
+    const { file } = twoLanes();
+    const unitId = file.units[0]!.id;
+    const mine = addMarker(file, { unitId, title: 'Act I' }).file;
+    const theirs = addMarker(
+      { ...file, markers: [] },
+      { unitId, title: 'ACT ONE' },
+    ).file;
+    const later = {
+      ...theirs,
+      markers: theirs.markers.map((marker) => ({ ...marker, updatedAt: '2099-01-01T00:00:00.000Z' })),
+    };
+    const merged = mergeProjects(mine, later, { lastSyncedAt: null }).merged;
+    expect(merged.markers).toHaveLength(1);
+    expect(merged.markers[0]?.title).toBe('ACT ONE');
   });
 });
 

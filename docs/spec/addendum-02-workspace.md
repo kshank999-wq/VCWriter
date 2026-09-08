@@ -85,7 +85,7 @@ for the viewport above the lanes.
   between the viewport and the timeline. Both positions are remembered per
   machine (a preference, not project data).
 - The inspector is 300px and can be hidden from the timeline toolbar or with
-  `Ctrl/Cmd+Shift+I`; hidden is remembered too.
+  `Ctrl/Cmd+Shift+P`; hidden is remembered too.
 - The timeline can be hidden with `Ctrl/Cmd+Shift+L` to give the viewport
   the height, and shown again the same way.
 - Focus mode (`Ctrl/Cmd+Shift+F`, `Escape` to leave) keeps only the Script,
@@ -312,7 +312,7 @@ In addition to §5's reordering keys and §6's writing keys:
 | Key | Action |
 | --- | --- |
 | `Ctrl/Cmd+Shift+F` | Focus mode |
-| `Ctrl/Cmd+Shift+I` | Show/hide the inspector |
+| `Ctrl/Cmd+Shift+P` | Show/hide the inspector (P for properties; `Shift+I` is Chromium's developer tools on Windows and Linux) |
 | `Ctrl/Cmd+Shift+L` | Show/hide the master timeline |
 | `Alt+PageUp` / `Alt+PageDown` | Select the previous/next beat in story order |
 

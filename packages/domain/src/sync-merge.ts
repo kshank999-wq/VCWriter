@@ -214,6 +214,15 @@ const mergeCollection = <T extends Timestamped>(
  * Drop records whose parent did not survive the merge, so a revived beat never
  * ends up without the scene it belongs to (§19: no free-floating beats).
  */
+const oneMarkerPerUnit = (markers: ProjectFile['markers']): ProjectFile['markers'] => {
+  const byUnit = new Map<string, ProjectFile['markers'][number]>();
+  for (const marker of markers) {
+    const existing = byUnit.get(marker.unitId);
+    if (!existing || marker.updatedAt > existing.updatedAt) byUnit.set(marker.unitId, marker);
+  }
+  return markers.filter((marker) => byUnit.get(marker.unitId) === marker);
+};
+
 const pruneOrphans = (file: ProjectFile): ProjectFile => {
   const laneIds = new Set(file.lanes.map((lane) => lane.id as string));
   const units = file.units.filter((unit) => laneIds.has(unit.laneId));
@@ -237,8 +246,10 @@ const pruneOrphans = (file: ProjectFile): ProjectFile => {
     ...file,
     units,
     beats,
-    // A marker whose scene did not survive the merge has nothing to start.
-    markers: file.markers.filter((marker) => unitIds.has(marker.unitId)),
+    // A marker whose scene did not survive the merge has nothing to start,
+    // and a scene starts at most one marker (story_markers.unique(unit_id)):
+    // two devices that each marked the same scene keep the newer one.
+    markers: oneMarkerPerUnit(file.markers.filter((marker) => unitIds.has(marker.unitId))),
     researchItems,
     links: file.links.filter((link) => survivingIds.has(link.from.id) && survivingIds.has(link.to.id)),
   };

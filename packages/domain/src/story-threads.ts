@@ -1,5 +1,5 @@
 import { beatsForUnit } from './selectors.js';
-import { storyLayout, timelineArcs, type StorySpan, type TimelineArc } from './story-layout.js';
+import { storyLayout, timelineArcs, type StoryLayout, type StorySpan, type TimelineArc } from './story-layout.js';
 import type { Beat, Lane } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
 import type { BeatId } from './ids.js';
@@ -69,8 +69,16 @@ export interface ThreadLayout {
   colours: Map<string, string>;
 }
 
-export const threadLayout = (file: ProjectFile): ThreadLayout => {
-  const layout = storyLayout(file);
+/**
+ * `base` lets a caller that already computed the story layout and the arcs
+ * — the workspace computes each once per document — hand them in instead
+ * of paginating the whole manuscript a second and third time.
+ */
+export const threadLayout = (
+  file: ProjectFile,
+  base: { layout?: StoryLayout; arcs?: TimelineArc[] } = {},
+): ThreadLayout => {
+  const layout = base.layout ?? storyLayout(file);
   const speakers = new Map<BeatId, string[]>();
   const order: string[] = [];
   const appearances = new Map<string, CharacterAppearance[]>();
@@ -103,5 +111,5 @@ export const threadLayout = (file: ProjectFile): ThreadLayout => {
     .filter((name) => (appearances.get(name) ?? []).length > 0)
     .map((name) => ({ name, color: colours.get(name) as string, appearances: appearances.get(name) ?? [] }));
 
-  return { spans: layout.spans, lanes: layout.lanes, characters, arcs: timelineArcs(file), speakers, colours };
+  return { spans: layout.spans, lanes: layout.lanes, characters, arcs: base.arcs ?? timelineArcs(file), speakers, colours };
 };

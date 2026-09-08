@@ -43,3 +43,15 @@ describe('strayAuthRedirect', () => {
     expect(strayAuthRedirect(at('/purchase/complete?session_id=cs_123'))).toBeNull();
   });
 });
+
+describe('the place to continue to after sign-in', () => {
+  it('keeps a path on this site and refuses anything that would leave it', async () => {
+    const { safeNextPath } = await import('../auth-redirect');
+    expect(safeNextPath('/preview')).toBe('/preview');
+    expect(safeNextPath('/admin/orders?status=paid')).toBe('/admin/orders?status=paid');
+    expect(safeNextPath(null)).toBe('/account');
+    expect(safeNextPath('https://evil.example/')).toBe('/account');
+    expect(safeNextPath('//evil.example')).toBe('/account');
+    expect(safeNextPath('account')).toBe('/account');
+  });
+});

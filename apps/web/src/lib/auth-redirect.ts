@@ -47,3 +47,12 @@ export const strayAuthRedirect = (url: URL): URL | null => {
 
   return null;
 };
+
+/**
+ * A `next` parameter is a place on this site to continue to after sign-in,
+ * and nothing else: an absolute URL or a protocol-relative one would send
+ * the customer off-site with a fresh session. Anything doubtful becomes the
+ * account page.
+ */
+export const safeNextPath = (value: string | null | undefined, fallback = '/account'): string =>
+  value && value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : fallback;

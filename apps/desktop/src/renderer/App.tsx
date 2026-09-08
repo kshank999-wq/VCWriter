@@ -7,8 +7,10 @@ import {
   beatsForUnit,
   beatsInStoryOrder,
   findUnit,
-  pageCount,
   projectStats,
+  storyLayout,
+  threadLayout,
+  timelineArcs,
   unitsInStoryOrder,
   type BeatId,
   type LaneId,
@@ -80,7 +82,15 @@ export default function App() {
   const beats = useMemo(() => (file ? beatsInStoryOrder(file) : []), [file]);
   const selectedBeat = beats.find((beat) => beat.id === selectedBeatId) ?? beats[0] ?? null;
   const stats = file ? projectStats(file) : null;
-  const pages = useMemo(() => (file ? pageCount(file) : 0), [file]);
+  // The story's geometry, paginated once per document rather than once per
+  // pane: the timeline, the viewport and the script all draw from these.
+  const layout = useMemo(() => (file ? storyLayout(file) : null), [file]);
+  const arcs = useMemo(() => (file ? timelineArcs(file) : null), [file]);
+  const threads = useMemo(
+    () => (file && layout && arcs ? threadLayout(file, { layout, arcs }) : null),
+    [file, layout, arcs],
+  );
+  const pages = layout ? Math.ceil(layout.totalPages) : 0;
 
   const clearTitleFocus = useCallback(() => setFocusTitleBeatId(null), []);
 
@@ -91,7 +101,7 @@ export default function App() {
       if (chord && event.key.toLowerCase() === 'f') {
         event.preventDefault();
         setFocusMode((current) => !current);
-      } else if (chord && event.key.toLowerCase() === 'i') {
+      } else if (chord && event.key.toLowerCase() === 'p') {
         event.preventDefault();
         setInspectorOpen(!inspectorOpen);
       } else if (chord && event.key.toLowerCase() === 'l') {
@@ -344,6 +354,7 @@ export default function App() {
           {/* The left column, full height: the Script and the Research tabs. */}
           <MasterPanel
             file={file}
+            layout={layout ?? undefined}
             selectedBeatId={selectedBeat?.id ?? null}
             onSelectBeat={setSelectedBeatId}
             onUpdate={project.update}
@@ -366,6 +377,8 @@ export default function App() {
                 <div className="stage-top">
                   <Viewport
                     file={file}
+                    layout={layout ?? undefined}
+                    threads={threads ?? undefined}
                     selectedBeatId={selectedBeat?.id ?? null}
                     onSelectBeat={setSelectedBeatId}
                     onUpdate={project.update}
@@ -387,6 +400,9 @@ export default function App() {
                     />
                     <MasterTimeline
                       file={file}
+                      layout={layout ?? undefined}
+                      arcs={arcs ?? undefined}
+                      threads={threads ?? undefined}
                       selectedBeatId={selectedBeat?.id ?? null}
                       onSelectBeat={setSelectedBeatId}
                       onUpdate={project.update}
