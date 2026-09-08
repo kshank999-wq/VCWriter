@@ -48,6 +48,7 @@ import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
 import { DEFAULT_PRINT_SETUP, PageSetup, type PrintSetup } from './components/PageSetup';
 import { Reports, type ReportTab } from './components/Reports';
 import { EpisodeRail } from './components/EpisodeRail';
+import { ImportDialog } from './components/ImportDialog';
 import { NewEpisodeDialog } from './components/NewEpisodeDialog';
 import { useWritingClock } from './use-writing-clock';
 import { FindPanel } from './components/FindPanel';
@@ -75,6 +76,7 @@ export default function App() {
   const [reportOpen, setReportOpen] = useState<ReportTab | null>(null);
   const [episodeRailOpen, setEpisodeRailOpen] = useState(false);
   const [newEpisodeOpen, setNewEpisodeOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
@@ -377,6 +379,8 @@ export default function App() {
           return newProject('short_form');
         case 'file.open':
           return void project.openProject();
+        case 'file.import':
+          return setImportOpen(true);
         case 'file.save':
           return void project.saveNow();
         case 'file.saveAs':
@@ -480,12 +484,21 @@ export default function App() {
 
   if (!file) {
     return (
-      <Welcome
-        onCreate={(input) => void project.createProject(input)}
-        onOpen={() => void project.openProject()}
-        onOpenPath={(path) => void project.openProjectAtPath(path)}
-        error={project.error}
-      />
+      <>
+        <Welcome
+          onCreate={(input) => void project.createProject(input)}
+          onOpen={() => void project.openProject()}
+          onImport={() => setImportOpen(true)}
+          onOpenPath={(path) => void project.openProjectAtPath(path)}
+          error={project.error}
+        />
+        {/* Importing is most useful from here: it is how a script arrives. */}
+        <ImportDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onImported={(imported) => project.replace(imported)}
+        />
+      </>
     );
   }
 
@@ -837,6 +850,12 @@ export default function App() {
           if (first) setSelectedBeatId(first.id);
           setEpisodeRailOpen(true);
         }}
+      />
+
+      <ImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={(imported) => project.replace(imported)}
       />
 
       <Reports

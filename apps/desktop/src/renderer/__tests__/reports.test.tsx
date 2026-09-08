@@ -144,6 +144,7 @@ describe('the opening screen', () => {
       <Welcome
         onCreate={(input) => created.push(input.format)}
         onOpen={() => {}}
+        onImport={() => {}}
         onOpenPath={() => {}}
         error={null}
       />,

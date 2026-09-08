@@ -8,6 +8,8 @@ import logo from '../assets/logo-stacked.webp';
 interface WelcomeProps {
   onCreate(input: { title: string; format: ProjectFormat; author?: string }): void;
   onOpen(): void;
+  /** Somebody else's script: Final Draft or a PDF (addendum 02 §18). */
+  onImport(): void;
   onOpenPath(path: string): void;
   error: string | null;
 }
@@ -21,7 +23,7 @@ const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string; detail: stri
   { value: 'short_form', label: 'Short form', detail: 'Commercials, web video, social' },
 ];
 
-export function Welcome({ onCreate, onOpen, onOpenPath, error }: WelcomeProps) {
+export function Welcome({ onCreate, onOpen, onImport, onOpenPath, error }: WelcomeProps) {
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [format, setFormat] = useState<ProjectFormat>('screenplay');
@@ -81,6 +83,9 @@ export function Welcome({ onCreate, onOpen, onOpenPath, error }: WelcomeProps) {
         <h2>Open</h2>
         <button type="button" onClick={onOpen}>
           Open a project file…
+        </button>
+        <button type="button" onClick={onImport}>
+          Import a script — Final Draft or PDF…
         </button>
         {recents.length > 0 ? (
           <ul className="recents">

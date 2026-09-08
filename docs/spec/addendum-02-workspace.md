@@ -754,7 +754,7 @@ does lives in the workspace, which is the only place that knows what is open.
 
 | Menu | What is in it |
 | --- | --- |
-| **File** | New screenplay / series / novel / short story / short-form piece, **New episode**, Open, Save, Save a copy, **Page setup**, Print, Export PDF, Preferences, Close project |
+| **File** | New screenplay / series / novel / short story / short-form piece, **New episode**, Open, **Import a script**, Save, Save a copy, **Page setup**, Print, Export PDF, Preferences, Close project |
 | **Editor** | Find, Find next, Find and replace, Reformat pasted text, and the two editors of spec §8 — Daily and Final — plus Read back |
 | **Reports** | Writing log, Story statistics (§15) |
 | **Window** | The episode rail; each section, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
@@ -928,7 +928,81 @@ top of the list while a cue is being typed (§16).
 slate: its own scene, one empty beat, and nothing in it. That is the point of
 a new episode.
 
-## 18. Keyboard
+## 18. Importing somebody else's script
+
+Two readers, one builder. **File → Import a script** takes a Final Draft
+document or a PDF, and the point is not to hold the pages — it is to arrive
+with the thing **already broken up**: a scene per slugline, a beat to write
+in, the cast filed under its headings, and every location on the research
+shelf. A script that imports as one long block of text has not been
+imported, it has been pasted.
+
+### Final Draft
+
+An `.fdx` is XML and it *says* what every line is, so nothing is guessed.
+Scene headings, action, cues, parentheticals, dialogue, transitions and
+shots come across as themselves; Final Draft's own styling comes across as
+the marks the editor uses (§7.2); a dual pair keeps its pairing, with the
+mark on the second speech, because here the mark means "beside the one
+above". A paragraph type with no equivalent is named in the warnings and
+brought in as action — never dropped in silence.
+
+The parser is written rather than pulled in. `DOMParser` is a browser global
+the main process does not have, an XML library is a dependency in the path
+of opening a file, and FDX is a small, regular document.
+
+### PDF
+
+A PDF does not say what a line is. It says **where the line sits** — and in
+a screenplay that is very nearly the same thing, because the format *is* the
+indentation: a cue is 3.7in from the left edge, a speech 2.5in, a
+parenthetical 3in, action and sluglines at the margin.
+
+So the reader works from the left edge, and it **measures rather than
+assumes**: the margin is taken to be the commonest left edge in the
+document, since action and sluglines are the bulk of any screenplay, and
+every other indent is read relative to it. A script typed at 1.2in reads
+exactly as one typed at 1.5in.
+
+Three things it does besides classify:
+
+- **Rejoins wrapped lines.** A speech that arrived as four lines is one
+  speech. Two lines join when they are the same kind, at the same indent,
+  and follow one another down the page.
+- **Drops the furniture.** Page numbers, `(MORE)`, `(CONTINUED)` — printed,
+  but nobody wrote them.
+- **Takes the title page off the front.** It is page one, a handful of
+  centred lines with no slugline among them. Left in, every one of those
+  lines lands in the cue band, and the title and the author would come in as
+  characters who speak once. The title and by-line are read from it instead.
+
+Where the geometry is ambiguous the words are asked as a second opinion, and
+anything decided that way is **marked**, counted, and reported — so the
+writer is told what to check rather than finding it mid-draft.
+
+### What is made
+
+| Read | Becomes |
+| --- | --- |
+| Each slugline | A scene, titled with the slugline, with one beat holding the text |
+| Each character cue | A character, filed by how much they speak, bound to their speeches so read-back can voice them |
+| Each slugline's place | A note under Research → Locations, with how many scenes and whether it is interior or exterior |
+| The title page | The project's title and author |
+
+Who is a main character is decided by **speeches**, because that is the only
+evidence a script offers: at least a dozen, or two-fifths of what the
+busiest part speaks. It is a proposal, and refiling anyone is one click
+(§16).
+
+Before anything is made, the dialog **shows what was found** — scenes,
+cast with their speech counts, locations, and every warning. An importer
+that goes straight to a finished project asks the writer to audit a hundred
+pages to find out whether it worked.
+
+The imported project arrives **unsaved**: it is a document that has just
+turned up, and where it lives is the writer's to say.
+
+## 19. Keyboard
 
 In addition to §5's reordering keys and §6's writing keys:
 
@@ -942,7 +1016,7 @@ In addition to §5's reordering keys and §6's writing keys:
 Every control on the timeline is a focusable element with an accessible
 name; the reorder keys work from the same elements that drag (§16).
 
-## 19. Preferences
+## 20. Preferences
 
 A gear on the title bar opens Preferences. These are kept on the machine,
 not in the project file — a collaborator opening the file must not inherit
@@ -958,7 +1032,7 @@ anyone's colours — alongside the layout preferences of §3.
   and a dark page is a strain over a long day. Off, the Script follows the
   scheme.
 
-## 20. Later
+## 21. Later
 
 Named so that nobody mistakes their absence for an oversight:
 
@@ -970,7 +1044,7 @@ Named so that nobody mistakes their absence for an oversight:
   character; a lane per character among the plot lanes is a later addendum.
 - Timing in minutes. Pages are the industry's unit and the ruler uses them.
 
-## 21. Acceptance
+## 22. Acceptance
 
 - The Script shows every beat of the fixture project in print order, and
   typing in the third beat changes the third beat and nothing else.
@@ -1039,5 +1113,14 @@ Named so that nobody mistakes their absence for an oversight:
   the one being written in, and gives up its room to the inspector when shut.
 - The names offered while a character cue is typed lead with this episode's
   cast, in heading order.
+- A Final Draft document imports with every line the type Final Draft gave
+  it, its italics intact, and its dual pairs still paired.
+- A screenplay printed to PDF by VC Writer and imported back comes in with
+  the same scenes in the same order, the same cast with the same speech
+  counts, and no warnings — the title page read as a title page, not as
+  three characters who speak once.
+- The import dialog shows the scenes, the cast, the locations and every
+  warning before it makes anything, and the project it makes arrives
+  unsaved.
 - Renderer and domain tests cover the above; a screenshot of the fixture at
   1440×900 and at 1100×700 is reviewed before the change ships.

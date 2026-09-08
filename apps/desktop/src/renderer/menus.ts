@@ -22,6 +22,7 @@ export type CommandId =
   | 'file.new.shortForm'
   | 'file.new.episode'
   | 'file.open'
+  | 'file.import'
   | 'file.save'
   | 'file.saveAs'
   | 'file.pageSetup'
@@ -84,6 +85,7 @@ export const MENUS: readonly Menu[] = [
       { command: 'file.new.episode', label: 'New episode…' },
       null,
       { command: 'file.open', label: 'Open…', accelerator: 'CmdOrCtrl+O' },
+      { command: 'file.import', label: 'Import a script…' },
       null,
       { command: 'file.save', label: 'Save', accelerator: 'CmdOrCtrl+S' },
       { command: 'file.saveAs', label: 'Save a copy…', accelerator: 'CmdOrCtrl+Shift+S' },

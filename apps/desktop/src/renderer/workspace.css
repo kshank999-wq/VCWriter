@@ -4152,3 +4152,54 @@ dialog.new-episode {
 .cast-add-heading input {
   flex: 1;
 }
+
+/* ---------------------------------------------------------------- import
+   Addendum 02 §18. What the reader found, shown before anything is made
+   from it: an importer that goes straight to a finished project asks the
+   writer to audit a hundred pages to find out whether it worked. */
+
+dialog.import-dialog {
+  width: min(560px, calc(100vw - 40px));
+}
+
+.import-picker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.import-found {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.import-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 168px;
+  overflow-y: auto;
+}
+
+.import-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11.5px;
+}
+
+.import-warnings {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--danger, #d38b8b);
+}
