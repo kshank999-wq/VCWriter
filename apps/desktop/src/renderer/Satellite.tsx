@@ -17,7 +17,7 @@ import { usePreference } from './use-split';
 import { addBeatAfter, addSceneAfter } from './structure';
 import { beatIdOf, paneTitle, type PaneKey } from './panes';
 import { applyScheme, DEFAULT_SCHEME, type SchemeId } from './themes';
-import { StoryView, DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay } from './components/StoryView';
+import { StoryView, DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay, type ScriptLayout } from './components/StoryView';
 import { ResearchBody } from './components/ResearchWindow';
 import { TimelineViewer } from './components/TimelineViewer';
 import { MasterTimeline } from './components/MasterTimeline';
@@ -88,6 +88,10 @@ function Section({
   const [openUnitId, setOpenUnitId] = useState<StructuralUnitId | null>(null);
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
   const [scriptDisplay, setScriptDisplay] = usePreference<ScriptDisplay>('scriptDisplay', DEFAULT_SCRIPT_DISPLAY);
+  const [scriptLayout, setScriptLayout] = usePreference<ScriptLayout>('scriptLayout', 'flow');
+  // Zero is 'fit the width there is' — a page is 8½ inches and the
+  // Script's column is not (§6.1).
+  const [scriptZoom, setScriptZoom] = usePreference('scriptZoom', 0);
   const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
   const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', 180);
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
@@ -177,6 +181,10 @@ function Section({
           dictationShortcut={null}
           display={{ ...DEFAULT_SCRIPT_DISPLAY, ...scriptDisplay }}
           onDisplay={setScriptDisplay}
+          scriptLayout={scriptLayout}
+          onScriptLayout={setScriptLayout}
+          pageZoom={scriptZoom}
+          onPageZoom={setScriptZoom}
           onOpenUnit={setOpenUnitId}
           onOpenBeat={openBeatWindow}
         />

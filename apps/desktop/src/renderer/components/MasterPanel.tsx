@@ -1,5 +1,5 @@
 import { type BeatId, type ProjectFile, type StoryLayout, type StructuralUnitId } from '@vcwriter/domain';
-import { StoryView, type ScriptDisplay } from './StoryView';
+import { StoryView, type ScriptDisplay, type ScriptLayout } from './StoryView';
 
 interface MasterPanelProps {
   file: ProjectFile;
@@ -18,6 +18,11 @@ interface MasterPanelProps {
   /** What the Script shows besides the manuscript; held by the workspace. */
   display?: ScriptDisplay;
   onDisplay?(next: ScriptDisplay): void;
+  /** One continuous page or a stack of sheets, and how big they are (§6.1). */
+  scriptLayout?: ScriptLayout;
+  onScriptLayout?(next: ScriptLayout): void;
+  pageZoom?: number;
+  onPageZoom?(next: number): void;
 }
 
 /**

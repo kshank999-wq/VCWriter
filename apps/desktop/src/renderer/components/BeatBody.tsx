@@ -47,6 +47,16 @@ interface BeatBodyProps {
    * wants: a beat with no words is a blank on the page, not a button.
    */
   emptyLabel?: string | null;
+  /**
+   * Which of the beat's elements to draw, by index. Null draws all of them.
+   *
+   * The page view needs this: a printed page break falls wherever the
+   * paginator puts it, which is routinely in the middle of a beat, so the
+   * beat's first half is drawn on one sheet and the rest on the next. The
+   * keyboard, the cue list and the element ids all still work from the whole
+   * beat — only the drawing is divided.
+   */
+  only?: ReadonlySet<number> | null;
 }
 
 const MARK_KEYS: Record<string, InlineMark> = { b: 'bold', i: 'italic', u: 'underline' };
@@ -83,6 +93,7 @@ export function BeatBody({
   breaks = null,
   detectShots = false,
   emptyLabel = 'Start writing this beat',
+  only = null,
 }: BeatBodyProps) {
   const format = file.project.format;
   const layout = layoutFor(format);
@@ -375,6 +386,12 @@ export function BeatBody({
       </datalist>
 
       {items.map((item) => {
+        // A page's worth of the beat, when the page view has divided it. Two
+        // speeches printed side by side stay together, on the page their
+        // first line falls on.
+        const first = item.kind === 'element' ? item.index : (item.indexes[0] as number);
+        if (only && !only.has(first)) return null;
+
         if (item.kind === 'element') return row(item.element, item.index, false);
         // Two speeches at once: side by side here, as they will be on the page.
         const split = item.indexes.slice(0, item.left.length);

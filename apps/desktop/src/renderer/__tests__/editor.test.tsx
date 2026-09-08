@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { addBeat, createProjectFile, updateBeat, type BeatId, type ProjectFile } from '@vcwriter/domain';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { addBeat, createProjectFile, pageCount, updateBeat, type BeatId, type ProjectFile } from '@vcwriter/domain';
 import { StoryView } from '../components/StoryView';
 import { PagePreview } from '../components/PagePreview';
 
@@ -48,6 +48,31 @@ const screenplayWithAction = () => {
           characterId: null,
           attributes: {},
         },
+      ],
+    },
+  });
+};
+
+/** One beat with enough action in it to run over more than one printed page. */
+const longScript = (): ProjectFile => {
+  const file = screenplayWithAction();
+  return updateBeat(file, file.beats[0]!.id, {
+    manuscript: {
+      elements: [
+        {
+          id: 'c0000000-0000-4000-8000-000000000000' as never,
+          type: 'scene_heading',
+          text: 'INT. LIGHTHOUSE - NIGHT',
+          characterId: null,
+          attributes: {},
+        },
+        ...Array.from({ length: 40 }, (_, index) => ({
+          id: `c${String(index).padStart(7, '0')}-3333-4333-8333-333333333333` as never,
+          type: 'action' as const,
+          text: `Beat ${index}. ${'The lamp turns and the sea answers. '.repeat(2)}`,
+          characterId: null,
+          attributes: {},
+        })),
       ],
     },
   });
@@ -297,6 +322,47 @@ describe('the finished script', () => {
 
     fireEvent.click(screen.getByLabelText('Page breaks'));
     expect(container.querySelectorAll('.page-break')).toHaveLength(0);
+  });
+
+  it('deals the script out onto sheets of paper, and carries a beat over the leaf', () => {
+    const long = longScript();
+    const { container } = render(<Harness initial={long} />);
+    const pages = pageCount(long);
+    expect(pages).toBeGreaterThan(1);
+
+    fireEvent.change(screen.getByLabelText('Script layout'), { target: { value: 'pages' } });
+
+    // One sheet per printed page — the paginator's pages, not a guess.
+    expect(container.querySelectorAll('.page-sheet')).toHaveLength(pages);
+    expect(screen.getByLabelText('Page 2')).toBeDefined();
+    // The rules are gone: a sheet's edge is where the page ends now.
+    expect(container.querySelectorAll('.page-break')).toHaveLength(0);
+
+    // The one beat runs over the leaf, so it is drawn in a run on each sheet
+    // it reaches — and every one of its elements is still on the page
+    // somewhere, exactly once.
+    const first = within(screen.getByLabelText('Page 1')).getAllByRole('textbox');
+    const second = within(screen.getByLabelText('Page 2')).getAllByRole('textbox');
+    expect(first.length).toBeGreaterThan(0);
+    expect(second.length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.page-sheet textarea')).toHaveLength(
+      long.beats[0]!.manuscript.elements.length,
+    );
+
+    // And it is still written in: the sheets are the manuscript, not a print.
+    fireEvent.change(second[0] as HTMLElement, { target: { value: 'Over the leaf.' } });
+    expect(screen.getByDisplayValue('Over the leaf.')).toBeDefined();
+  });
+
+  it('goes back to one continuous page, with the rules again', () => {
+    const { container } = render(<Harness initial={longScript()} />);
+    fireEvent.change(screen.getByLabelText('Script layout'), { target: { value: 'pages' } });
+    expect(container.querySelectorAll('.page-sheet').length).toBeGreaterThan(1);
+
+    fireEvent.change(screen.getByLabelText('Script layout'), { target: { value: 'flow' } });
+    expect(container.querySelectorAll('.page-sheet')).toHaveLength(0);
+    expect(container.querySelector('.script-sheet')).toBeDefined();
+    expect(container.querySelectorAll('.page-break').length).toBeGreaterThan(0);
   });
 
   it('leaves a beat that is not in the script out of the page', () => {

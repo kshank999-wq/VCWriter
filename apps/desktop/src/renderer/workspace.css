@@ -2253,14 +2253,158 @@ input[type='color'].swatch {
 /* On the page, the column is centred and the type gutter overlays the
    left margin, where there is nothing to hide. */
 .script-sheet .page-column,
-.writer-sheet .page-column {
+.writer-sheet .page-column,
+.page-sheet .page-column {
   margin: 0 auto;
   width: fit-content;
 }
 
 .script-sheet .element-type,
-.writer-sheet .element-type {
+.writer-sheet .element-type,
+.page-sheet .element-type {
   left: -128px;
+}
+
+/* ------------------------------------------------------------- page view */
+
+/* The script as sheets of paper, one after another (addendum 02 §6.1).
+   Everything here is the printed geometry rather than a comfortable
+   approximation of it: the sheet is 8½ by 11, the margins are the inch and a
+   half at the left and the inch elsewhere that a script is bound at, and the
+   type is 12pt Courier on 12pt — six lines to the inch — which is what makes
+   fifty-five lines fill the nine inches between the margins. The line that
+   turns on screen is the line that turns on paper.
+
+   The page size is a *transform* on the whole stack rather than a multiplier
+   on each of these lengths. Scaling the lengths would re-round the type at
+   every step — at half size 12pt becomes 8px, whose characters are not half
+   as wide as 12pt's — and the page would stop being the page. Scaling the
+   finished stack leaves the geometry alone and only draws it smaller. */
+.script-pages {
+  --page-zoom: 1;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 20px;
+  background: var(--ink);
+}
+
+/* The room the scaled stack takes up, which is not the room it lays out in. */
+.page-frame {
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.page-stack {
+  width: 8.5in;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  transform: scale(var(--page-zoom));
+  transform-origin: top left;
+}
+
+.page-sheet {
+  position: relative;
+  width: 8.5in;
+  /* A minimum, not a height: if a sheet's content runs a line long the paper
+     grows rather than the words being cut off. */
+  min-height: 11in;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  padding: 1in 1in 1in 1.5in;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 16px color-mix(in srgb, #000 45%, transparent);
+}
+
+/* The page number sits where a script prints it: top right, inside the
+   half-inch margin. */
+.page-sheet-number {
+  position: absolute;
+  top: 0.5in;
+  right: 1in;
+  font-family: 'Courier New', Courier, ui-monospace, monospace;
+  font-size: 12pt;
+  color: var(--muted);
+}
+
+.page-sheet:first-child .page-sheet-number {
+  /* A script's first page carries no number. */
+  display: none;
+}
+
+.script-pages .page-column {
+  font-size: 12pt;
+  /* Six lines to the inch, exactly, and no gap between elements: the blank
+     line between them is a real blank line, put there below. */
+  line-height: 1;
+  gap: 0;
+}
+
+/* One blank line between blocks, as the paginator counts it — between two
+   elements of a beat, and equally between two beats, which are two blocks on
+   the page whatever they are in the structure. */
+.script-pages .element + .element,
+.script-pages .dual-row,
+.script-pages .element + .dual-row,
+.script-pages .dual-row + .element,
+.script-pages .beat-block + .beat-block,
+.script-pages .beat-block + .beat-name,
+.script-pages .beat-name + .beat-block,
+.script-pages .beat-block + .scene-name,
+.script-pages .beat-block + .act-bar {
+  margin-top: 12pt;
+}
+
+/* Nothing may add height that the printed page does not have, so the box the
+   writer types in carries no padding and no border; the focus ring is an
+   outline, which takes no room. */
+.script-pages .element .ink,
+.script-pages .element textarea {
+  padding: 0;
+  border: 0;
+}
+
+.script-pages .element textarea:focus {
+  outline: 1px solid var(--gold-deep);
+  outline-offset: 0;
+}
+
+.script-pages .beat-block {
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+/* The scaffolding — act bars, scene names, beat names — prints nothing, so
+   it is kept to a single line's worth of room and never pushes a line onto
+   another sheet. */
+.script-pages .beat-name,
+.script-pages .scene-name,
+.script-pages .act-bar {
+  margin-bottom: 12pt;
+}
+
+.script-pages .script-title-block {
+  margin-bottom: 24pt;
+}
+
+.script-layout select,
+.script-zoom select {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text);
+  font-size: 10px;
+  padding: 1px 3px;
+}
+
+.script-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 /* ---------------------------------------------------------------- inspector */
@@ -2606,6 +2750,7 @@ dialog.writer-dialog::backdrop {
    already is. It applies to the two places the manuscript itself is shown:
    the Script's page and the writing screen's sheet. */
 .workspace.script-paper .script-sheet,
+.workspace.script-paper .page-sheet,
 .workspace.script-paper .writer-sheet {
   --paper: #ffffff;
   --paper-ink: #111111;
@@ -2618,103 +2763,133 @@ dialog.writer-dialog::backdrop {
 }
 
 .workspace.script-paper .script-sheet .scene-name input,
-.workspace.script-paper .script-sheet .beat-name input {
+.workspace.script-paper .page-sheet .scene-name input,
+.workspace.script-paper .script-sheet .beat-name input ,
+.workspace.script-paper .page-sheet .beat-name input  {
   color: var(--paper-ink);
 }
 
-.workspace.script-paper .script-sheet .beat-name input {
+.workspace.script-paper .script-sheet .beat-name input ,
+.workspace.script-paper .page-sheet .beat-name input  {
   color: var(--paper-muted);
 }
 
 .workspace.script-paper .script-sheet .scene-name input:hover,
-.workspace.script-paper .script-sheet .beat-name input:hover {
+.workspace.script-paper .page-sheet .scene-name input:hover,
+.workspace.script-paper .script-sheet .beat-name input:hover ,
+.workspace.script-paper .page-sheet .beat-name input:hover  {
   border-color: var(--paper-line);
 }
 
 .workspace.script-paper .script-sheet .scene-name input:focus,
-.workspace.script-paper .script-sheet .beat-name input:focus {
+.workspace.script-paper .page-sheet .scene-name input:focus,
+.workspace.script-paper .script-sheet .beat-name input:focus ,
+.workspace.script-paper .page-sheet .beat-name input:focus  {
   border-color: var(--gold-deep);
   background: var(--paper);
 }
 
 .workspace.script-paper .script-sheet .scene-name,
-.workspace.script-paper .script-sheet .beat-name {
+.workspace.script-paper .page-sheet .scene-name,
+.workspace.script-paper .script-sheet .beat-name ,
+.workspace.script-paper .page-sheet .beat-name  {
   border-bottom-color: var(--paper-line);
 }
 
 .workspace.script-paper .script-sheet .bar-label,
+.workspace.script-paper .page-sheet .bar-label,
 .workspace.script-paper .script-sheet .collapsed-note,
+.workspace.script-paper .page-sheet .collapsed-note,
 .workspace.script-paper .script-sheet .empty-state,
+.workspace.script-paper .page-sheet .empty-state,
 .workspace.script-paper .script-sheet .revision-chip,
+.workspace.script-paper .page-sheet .revision-chip,
 .workspace.script-paper .script-sheet .script-title-block p,
+.workspace.script-paper .page-sheet .script-title-block p,
 .workspace.script-paper .script-sheet .page-break,
-.workspace.script-paper .script-sheet .bar-title::placeholder {
+.workspace.script-paper .page-sheet .page-break,
+.workspace.script-paper .script-sheet .bar-title::placeholder ,
+.workspace.script-paper .page-sheet .bar-title::placeholder  {
   color: var(--paper-muted);
 }
 
 .workspace.script-paper .script-sheet .page-break,
-.workspace.script-paper .script-sheet .revision-chip {
+.workspace.script-paper .page-sheet .page-break,
+.workspace.script-paper .script-sheet .revision-chip ,
+.workspace.script-paper .page-sheet .revision-chip  {
   border-color: var(--paper-line);
 }
 
-.workspace.script-paper .script-sheet .act-bar {
+.workspace.script-paper .script-sheet .act-bar ,
+.workspace.script-paper .page-sheet .act-bar  {
   color: var(--gold-deep);
   border-bottom-color: var(--gold-deep);
 }
 
 .workspace.script-paper .script-sheet .page-column,
+.workspace.script-paper .page-sheet .page-column,
 .workspace.script-paper .writer-sheet .page-column {
   color: var(--paper-ink);
 }
 
 .workspace.script-paper .script-sheet .element .ink,
+.workspace.script-paper .page-sheet .element .ink,
 .workspace.script-paper .writer-sheet .element .ink {
   color: var(--paper-ink);
 }
 
 .workspace.script-paper .script-sheet .element textarea,
+.workspace.script-paper .page-sheet .element textarea,
 .workspace.script-paper .writer-sheet .element textarea {
   background: transparent;
   caret-color: #111111;
 }
 
 .workspace.script-paper .script-sheet .element textarea::placeholder,
+.workspace.script-paper .page-sheet .element textarea::placeholder,
 .workspace.script-paper .writer-sheet .element textarea::placeholder {
   color: #b5b0a4;
 }
 
 .workspace.script-paper .script-sheet .element textarea:hover,
+.workspace.script-paper .page-sheet .element textarea:hover,
 .workspace.script-paper .writer-sheet .element textarea:hover {
   border-color: var(--paper-line);
 }
 
 .workspace.script-paper .script-sheet .element textarea:focus,
+.workspace.script-paper .page-sheet .element textarea:focus,
 .workspace.script-paper .writer-sheet .element textarea:focus {
   border-color: var(--gold-deep);
 }
 
 .workspace.script-paper .script-sheet .element:focus-within .ink,
+.workspace.script-paper .page-sheet .element:focus-within .ink,
 .workspace.script-paper .writer-sheet .element:focus-within .ink {
   background: var(--paper-bar-2);
 }
 
 .workspace.script-paper .script-sheet .element-type,
+.workspace.script-paper .page-sheet .element-type,
 .workspace.script-paper .writer-sheet .element-type {
   color: var(--paper-muted);
   background: var(--paper);
 }
 
 .workspace.script-paper .script-sheet .element-general .ink,
+.workspace.script-paper .page-sheet .element-general .ink,
 .workspace.script-paper .writer-sheet .element-general .ink {
   color: var(--paper-muted);
 }
 
 .workspace.script-paper .script-sheet .add-element,
+.workspace.script-paper .page-sheet .add-element,
 .workspace.script-paper .writer-sheet .add-element {
   color: var(--gold-deep);
 }
 
 .workspace.script-paper .script-sheet ::selection,
+.workspace.script-paper .page-sheet ::selection,
 .workspace.script-paper .writer-sheet ::selection {
   background: color-mix(in srgb, var(--gold) 45%, transparent);
 }
@@ -3064,4 +3239,9 @@ dialog.research-window::backdrop {
 
 .research-detail .related li {
   flex-wrap: wrap;
+}
+
+/* The page number is printed matter too, so it takes the paper's ink. */
+.workspace.script-paper .page-sheet-number {
+  color: var(--paper-muted);
 }

@@ -426,6 +426,46 @@ The Script also opens in **a window of its own** (§8), which is what makes
 the second monitor worth having: the finished script on one screen, the beat
 being written on the other.
 
+### 6.1 Continuous, or pages
+
+The first control in the Display bar is the one that decides what the page
+*is*:
+
+| Layout | What it draws |
+| --- | --- |
+| **Continuous** | One column, scrolled, with a numbered rule where each printed page breaks. The default. |
+| **Pages** | The script as sheets of paper — 8½ by 11 — one after another, scrolled through. |
+
+The sheets are the paginator's, not a guess at them. `pageBreaks` says which
+element opens each printed page, and a beat whose elements straddle one is
+drawn in two runs, on the sheet each run belongs to; the beat's keyboard, its
+cue list and its element ids are unaffected, because only the *drawing* is
+divided. Act bars, scene names and beat names print nothing and take no
+printed lines, so each is held until the first manuscript run after it and
+goes onto whichever sheet that lands on — otherwise a scene name could sit
+alone at the foot of a page while its first line is over the leaf.
+
+The page is the printed page: 8½ by 11, an inch and a half at the left where
+the brads go and an inch on the other three sides, 12pt Courier on 12pt —
+six lines to the inch — which is what makes fifty-five lines fill the nine
+inches between the margins, and a blank line between every block, which is
+what the paginator counts. The line that turns on screen is the line that
+turns on paper. The sheet's height is a *minimum*: if a page's content ever
+runs a line long the paper grows rather than the words being cut off.
+
+**Page** sets the size, from *Fit width* — the default, because a page is 8½
+inches and the Script's own column is not — up to 135%. The size is a
+transform on the finished stack, not a multiplier on each of those lengths:
+scaling the lengths would re-round the type at every step (at half size 12pt
+becomes 8px, whose characters are not half as wide as 12pt's) and the page
+would quietly stop being the page. Scaled this way the geometry is identical
+at every size, and a sheet in a quarter-width column is laid out at 816 by
+1056 and merely drawn at 359 by 465.
+
+Pages are written in exactly as the continuous view is. It is the same
+manuscript, the same mutations and the same two keys; what changes is where
+the paper ends.
+
 Large projects: the view renders every beat, and the performance test in the
 domain package is the gate; when it fails, the loader lazy-reads beats, not
 the view (ADR 0002).
@@ -687,5 +727,9 @@ Named so that nobody mistakes their absence for an oversight:
   both edits.
 - The writing screen's page measures 8½ by 11 inches at 100%, with an inch
   and a half at the left, and its column wraps where the paginator wraps.
+- The Script in **Pages** draws one sheet per printed page, each laid out at
+  8½ by 11 whatever size it is shown at, and a beat that runs over the leaf
+  appears on both sheets with every one of its elements on the page exactly
+  once — and still typed into.
 - Renderer and domain tests cover the above; a screenshot of the fixture at
   1440×900 and at 1100×700 is reviewed before the change ships.

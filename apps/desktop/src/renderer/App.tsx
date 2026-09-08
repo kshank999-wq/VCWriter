@@ -32,7 +32,7 @@ import { MasterTimeline } from './components/MasterTimeline';
 import { MasterPanel } from './components/MasterPanel';
 import { Inspector } from './components/Inspector';
 import { TimelineViewer } from './components/TimelineViewer';
-import { DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay } from './components/StoryView';
+import { DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay, type ScriptLayout } from './components/StoryView';
 import { LaneDialog } from './components/LaneDialog';
 import { SceneDialog } from './components/SceneDialog';
 import { ResearchWindow } from './components/ResearchWindow';
@@ -88,6 +88,11 @@ export default function App() {
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
   // What the Script shows besides the manuscript (addendum 02 §6).
   const [scriptDisplay, setScriptDisplay] = usePreference<ScriptDisplay>('scriptDisplay', DEFAULT_SCRIPT_DISPLAY);
+  // One continuous page, or the script dealt out onto sheets (§6.1).
+  const [scriptLayout, setScriptLayout] = usePreference<ScriptLayout>('scriptLayout', 'flow');
+  // Zero is 'fit the width there is' — a page is 8½ inches and the
+  // Script's column is not (§6.1).
+  const [scriptZoom, setScriptZoom] = usePreference('scriptZoom', 0);
   const [openLaneId, setOpenLaneId] = useState<LaneId | null>(null);
   const [openUnitId, setOpenUnitId] = useState<StructuralUnitId | null>(null);
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
@@ -344,6 +349,10 @@ export default function App() {
         dictationShortcut={dictationShortcut}
         display={display}
         onDisplay={setScriptDisplay}
+        scriptLayout={scriptLayout}
+        onScriptLayout={setScriptLayout}
+        pageZoom={scriptZoom}
+        onPageZoom={setScriptZoom}
         onOpenUnit={setOpenUnitId}
         onOpenBeat={setOpenBeatId}
         onOpenResearch={() => (away.has('research') ? openPane('research') : setResearchOpen(true))}
