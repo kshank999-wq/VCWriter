@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { newId } from './ids.js';
 import { initialOrderKeys, orderKeyBetween } from './ordering.js';
 import { nowIso } from './entities/common.js';
-import { characterSchema } from './entities/character.js';
+import { characterCategorySchema, characterSchema } from './entities/character.js';
+import { defaultCharacterCategories } from './characters.js';
 import { storyLinkSchema } from './entities/links.js';
 import {
   DEFAULT_RESEARCH_CATEGORIES,
@@ -18,7 +19,7 @@ import {
   type ProjectFormat,
 } from './entities/project.js';
 import { LANE_COLOURS, beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
-import type { LaneId, ProjectId, ResearchCategoryId, StructuralUnitId, UserId } from './ids.js';
+import type { CharacterCategoryId, LaneId, ProjectId, ResearchCategoryId, StructuralUnitId, UserId } from './ids.js';
 
 /**
  * The VC Writer project document.
@@ -52,6 +53,8 @@ export const projectFileSchema = z.object({
   researchCategories: z.array(researchCategorySchema).default([]),
   researchItems: z.array(researchItemSchema).default([]),
   characters: z.array(characterSchema).default([]),
+  /** The headings the cast is filed under (addendum 02 §16). */
+  characterCategories: z.array(characterCategorySchema).default([]),
   links: z.array(storyLinkSchema).default([]),
   setupsPayoffs: z.array(setupPayoffSchema).default([]),
   snapshots: z.array(snapshotSchema).default([]),
@@ -194,6 +197,21 @@ export const createProjectFile = (options: CreateProjectOptions): ProjectFile =>
   const unitId = newId<StructuralUnitId>();
   const unitKind = defaultUnitKind(options.format);
 
+  // The headings the cast is filed under. A series makes one more
+  // distinction than the rest — recurring, between main and minor (§16).
+  const castNames = defaultCharacterCategories(options.format);
+  const castKeys = initialOrderKeys(castNames.length);
+  const characterCategories = castNames.map((name, index) =>
+    characterCategorySchema.parse({
+      id: newId<CharacterCategoryId>(),
+      projectId,
+      name,
+      orderKey: castKeys[index],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }),
+  );
+
   const categoryKeys = initialOrderKeys(DEFAULT_RESEARCH_CATEGORIES.length);
   const researchCategories = DEFAULT_RESEARCH_CATEGORIES.map((category, index) =>
     researchCategorySchema.parse({
@@ -259,5 +277,6 @@ export const createProjectFile = (options: CreateProjectOptions): ProjectFile =>
       },
     ],
     researchCategories,
+    characterCategories,
   });
 };

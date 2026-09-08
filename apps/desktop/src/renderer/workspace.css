@@ -3955,3 +3955,200 @@ dialog.reports {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+
+/* -------------------------------------------------------- the episode rail
+   Addendum 02 §17. Down the right-hand edge, because it is a list of what
+   the series is made of and should be reachable from anywhere without
+   costing room while it is shut. Only a series draws it. */
+
+.episode-rail {
+  position: fixed;
+  top: 34px;
+  right: 0;
+  bottom: 26px;
+  z-index: 40;
+  display: flex;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.episode-tab {
+  pointer-events: auto;
+  align-self: flex-start;
+  margin-top: 40px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px;
+  writing-mode: vertical-rl;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+}
+
+.episode-rail.open .episode-tab {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+.episode-tab .count {
+  writing-mode: horizontal-tb;
+  font-size: 9px;
+}
+
+.episode-rail-body {
+  pointer-events: auto;
+  width: 258px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+.episode-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.episode-row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 8px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+}
+
+.episode-row.current {
+  border-color: var(--gold);
+  background: rgba(201, 164, 92, 0.08);
+}
+
+.episode-label {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+.episode-title {
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.episode-figures,
+.episode-cast {
+  font-size: 10px;
+}
+
+.episode-cast {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.episode-new {
+  flex: 0 0 auto;
+}
+
+/* The rail takes its room from the workspace rather than covering what is
+   beside it: a list that hides the inspector is not worth having. Shut, that
+   is the width of the tab; open, the tab and the list together. */
+.workspace.with-episode-tab .workspace-body,
+.workspace.with-episode-tab .title-bar,
+.workspace.with-episode-tab .page-bar {
+  padding-right: 30px;
+}
+
+.workspace.with-episodes .workspace-body,
+.workspace.with-episodes .title-bar,
+.workspace.with-episodes .page-bar {
+  padding-right: 288px;
+}
+
+dialog.new-episode {
+  width: min(460px, calc(100vw - 40px));
+}
+
+/* ------------------------------------------------------------- the cast
+   Addendum 02 §16. The people, under the headings the writer keeps. The
+   order here is the order names are offered while a cue is typed, which is
+   why this is a working screen and not a list of labels. */
+
+.cast-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cast-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cast-group-name {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  flex: 1;
+}
+
+.cast-list {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cast-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) auto minmax(120px, 2fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.cast-name {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.cast-note,
+.cast-add input,
+.cast-add-heading input {
+  font-size: 11.5px;
+}
+
+.cast-add-heading {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.cast-add-heading input {
+  flex: 1;
+}

@@ -1,7 +1,15 @@
 import { z } from 'zod';
 import { id, orderKey, timestamps } from './common.js';
 import { manuscriptSegmentSchema } from './manuscript.js';
-import type { BeatId, BeatRevisionId, LaneId, ProjectId, StoryMarkerId, StructuralUnitId } from '../ids.js';
+import type {
+  BeatId,
+  BeatRevisionId,
+  CharacterId,
+  LaneId,
+  ProjectId,
+  StoryMarkerId,
+  StructuralUnitId,
+} from '../ids.js';
 
 /**
  * Story structure: lanes -> scene/chapter containers -> beats (spec §5).
@@ -184,6 +192,13 @@ export const storyMarkerSchema = z.object({
   notes: z.string().default(''),
   /** Ignored by a screenplay, which has no chapter pages to print. */
   page: chapterPageSchema.default({}),
+  /**
+   * Who is in this one. Used by episode markers and ignored by the rest: an
+   * episode has a cast, an act does not. It is what the carry-over writes
+   * when a new episode starts, and what orders the names offered while a
+   * character cue is typed inside it (addendum 02 §17).
+   */
+  cast: z.array(id<CharacterId>()).default([]),
   ...timestamps,
 });
 export type StoryMarker = z.infer<typeof storyMarkerSchema>;

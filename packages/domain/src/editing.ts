@@ -244,9 +244,12 @@ export const cueSuggestions = (
   }
   // The one who just spoke is the least likely to speak next.
   const justSpoke = recent.shift();
-  const rest = [...new Set(everyone.map((name) => name.toUpperCase()))]
-    .filter((name) => !recent.includes(name) && name !== justSpoke)
-    .sort();
+  // The order `everyone` arrives in is the caller's answer to "who is most
+  // likely next" — the cast under its headings, this episode's people first
+  // (addendum 02 §16) — so it is kept rather than alphabetised over.
+  const rest = [...new Set(everyone.map((name) => name.toUpperCase()))].filter(
+    (name) => !recent.includes(name) && name !== justSpoke,
+  );
   return [...recent, ...rest, ...(justSpoke ? [justSpoke] : [])];
 };
 

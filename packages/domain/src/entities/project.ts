@@ -60,6 +60,13 @@ export const projectSettingsSchema = z.object({
   markerSymbol: z.string().default('❦'),
   /** Whether a printing carries the chapter pages. */
   includeChapterPagesInExport: z.boolean().default(true),
+  /**
+   * What a new episode carries over from the ones before it (addendum 02
+   * §17). Remembered rather than asked afresh every week; an empty object
+   * means the format's own answer. Kept loose here so the shape lives with
+   * the episodes rather than with the settings.
+   */
+  episodeCarry: z.record(z.unknown()).default({}),
 });
 export type ProjectSettings = z.infer<typeof projectSettingsSchema>;
 

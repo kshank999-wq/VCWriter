@@ -47,6 +47,8 @@ import { PagePreview } from './components/PagePreview';
 import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
 import { DEFAULT_PRINT_SETUP, PageSetup, type PrintSetup } from './components/PageSetup';
 import { Reports, type ReportTab } from './components/Reports';
+import { EpisodeRail } from './components/EpisodeRail';
+import { NewEpisodeDialog } from './components/NewEpisodeDialog';
 import { useWritingClock } from './use-writing-clock';
 import { FindPanel } from './components/FindPanel';
 import { MenuBar } from './components/MenuBar';
@@ -71,6 +73,8 @@ export default function App() {
   const [printSetup, setPrintSetup] = usePreference<PrintSetup>('printSetup', DEFAULT_PRINT_SETUP);
   const [pageSetupOpen, setPageSetupOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState<ReportTab | null>(null);
+  const [episodeRailOpen, setEpisodeRailOpen] = useState(false);
+  const [newEpisodeOpen, setNewEpisodeOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
@@ -407,6 +411,14 @@ export default function App() {
         case 'editor.readBack':
           return setView('readback');
 
+        case 'file.new.episode':
+          // Only a series has episodes; elsewhere the item does nothing but
+          // say so, which is better than a menu that lies about what it does.
+          if (file?.project.format !== 'series') return undefined;
+          return setNewEpisodeOpen(true);
+        case 'window.episodes':
+          return setEpisodeRailOpen((current) => !current);
+
         case 'reports.writing':
           return setReportOpen('writing');
         case 'reports.story':
@@ -446,8 +458,9 @@ export default function App() {
       on.add(`window.${pane}` as CommandId);
     }
     if (focusMode) on.add('window.focus');
+    if (episodeRailOpen) on.add('window.episodes');
     return on;
-  }, [detached, focusMode]);
+  }, [detached, focusMode, episodeRailOpen]);
 
   /**
    * The native menu, rebuilt whenever a tick changes. On a Mac this is the
@@ -587,6 +600,8 @@ export default function App() {
         here('left') ? '' : 'without-left',
         here('top') ? '' : 'without-top',
         here('bottom') ? '' : 'without-bottom',
+        file.project.format === 'series' && !focused ? 'with-episode-tab' : '',
+        episodeRailOpen && file.project.format === 'series' && !focused ? 'with-episodes' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -797,6 +812,32 @@ export default function App() {
           )}
         </main>
       )}
+
+      {file.project.format === 'series' && !focused ? (
+        <EpisodeRail
+          file={file}
+          open={episodeRailOpen}
+          onOpen={setEpisodeRailOpen}
+          currentUnitId={selectedBeat?.unitId ?? null}
+          onGo={(episode) => {
+            const first = episode.beats[0];
+            if (first) setSelectedBeatId(first.id);
+          }}
+          onNew={() => setNewEpisodeOpen(true)}
+        />
+      ) : null}
+
+      <NewEpisodeDialog
+        file={file}
+        open={newEpisodeOpen}
+        onClose={() => setNewEpisodeOpen(false)}
+        onCreate={project.update}
+        onGo={(episode) => {
+          const first = episode.beats[0];
+          if (first) setSelectedBeatId(first.id);
+          setEpisodeRailOpen(true);
+        }}
+      />
 
       <Reports
         file={file}

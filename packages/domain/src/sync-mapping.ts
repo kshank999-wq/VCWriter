@@ -1,5 +1,5 @@
 import { captureItemSchema, type CaptureItem } from './entities/capture.js';
-import { characterSchema } from './entities/character.js';
+import { characterCategorySchema, characterSchema } from './entities/character.js';
 import { storyLinkSchema } from './entities/links.js';
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
 import { setupPayoffSchema } from './entities/setups.js';
@@ -9,7 +9,7 @@ import { countWords } from './entities/manuscript.js';
 import { writingSessionSchema, type WritingSession } from './sessions.js';
 import { PROJECT_FORMAT_VERSION, projectFileSchema, type ProjectFile } from './project-file.js';
 import type { Beat, Lane, StoryMarker, StructuralUnit } from './entities/structure.js';
-import type { Character } from './entities/character.js';
+import type { Character, CharacterCategory } from './entities/character.js';
 import type { StoryLink } from './entities/links.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
 import type { SetupPayoff } from './entities/setups.js';
@@ -37,6 +37,7 @@ export interface ProjectRows {
   researchCategories: Row[];
   researchItems: Row[];
   characters: Row[];
+  characterCategories: Row[];
   links: Row[];
   setupsPayoffs: Row[];
 }
@@ -51,6 +52,7 @@ export const SYNC_TABLES = {
   researchCategories: 'research_categories',
   researchItems: 'research_items',
   characters: 'characters',
+  characterCategories: 'character_categories',
   links: 'story_links',
   setupsPayoffs: 'setups_payoffs',
 } as const;
@@ -148,6 +150,9 @@ const markerToRow = (marker: StoryMarker): Row => ({
   // The designed leaf travels as one JSON column: it is a handful of
   // switches and a data URL, and nothing queries inside it.
   page: marker.page,
+  // An episode's cast: a list of ids, read and written whole with the marker.
+  // `cast` is a reserved word in Postgres, hence the column's own name.
+  cast_ids: marker.cast,
   created_at: marker.createdAt,
   updated_at: marker.updatedAt,
 });
@@ -207,10 +212,20 @@ const characterToRow = (character: Character): Row => ({
   description: character.description,
   arc_notes: character.arcNotes,
   research_item_id: character.researchItemId,
+  category_id: character.categoryId,
   voice: character.voice,
   archived: character.archived,
   created_at: character.createdAt,
   updated_at: character.updatedAt,
+});
+
+const characterCategoryToRow = (category: CharacterCategory): Row => ({
+  id: category.id,
+  project_id: category.projectId,
+  name: category.name,
+  order_key: category.orderKey,
+  created_at: category.createdAt,
+  updated_at: category.updatedAt,
 });
 
 const linkToRow = (link: StoryLink): Row => ({
@@ -250,6 +265,7 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
   researchCategories: file.researchCategories.map(researchCategoryToRow),
   researchItems: file.researchItems.map(researchItemToRow),
   characters: file.characters.map(characterToRow),
+  characterCategories: (file.characterCategories ?? []).map(characterCategoryToRow),
   links: file.links.map(linkToRow),
   setupsPayoffs: file.setupsPayoffs.map(setupPayoffToRow),
 });
@@ -320,6 +336,7 @@ const markerFromRow = (row: Row): StoryMarker =>
     // Absent in a row written before chapter pages existed; the schema's
     // own defaults fill it in.
     page: row['page'] ?? undefined,
+    cast: Array.isArray(row['cast_ids']) ? row['cast_ids'] : [],
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });
@@ -378,8 +395,19 @@ const characterFromRow = (row: Row): Character =>
     description: text(row['description']),
     arcNotes: text(row['arc_notes']),
     researchItemId: nullableText(row['research_item_id']),
+    categoryId: nullableText(row['category_id']),
     voice: row['voice'] ?? null,
     archived: flag(row['archived']),
+    createdAt: row['created_at'],
+    updatedAt: row['updated_at'],
+  });
+
+const characterCategoryFromRow = (row: Row): CharacterCategory =>
+  characterCategorySchema.parse({
+    id: row['id'],
+    projectId: row['project_id'],
+    name: text(row['name'], 'Characters'),
+    orderKey: row['order_key'],
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });
@@ -480,6 +508,7 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     researchCategories: rows.researchCategories.map(researchCategoryFromRow),
     researchItems: rows.researchItems.map(researchItemFromRow),
     characters: rows.characters.map(characterFromRow),
+    characterCategories: rows.characterCategories.map(characterCategoryFromRow),
     links: rows.links.map(linkFromRow),
     setupsPayoffs: rows.setupsPayoffs.map(setupPayoffFromRow),
     // Snapshots are local recovery points, not shared state; they stay on disk.

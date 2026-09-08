@@ -20,6 +20,7 @@ export type BeatRevisionId = Id<'BeatRevision'>;
 export type ResearchCategoryId = Id<'ResearchCategory'>;
 export type ResearchItemId = Id<'ResearchItem'>;
 export type CharacterId = Id<'Character'>;
+export type CharacterCategoryId = Id<'CharacterCategory'>;
 export type StoryLinkId = Id<'StoryLink'>;
 export type SetupPayoffId = Id<'SetupPayoff'>;
 export type SetupPointId = Id<'SetupPoint'>;

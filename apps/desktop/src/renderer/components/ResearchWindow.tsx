@@ -27,6 +27,7 @@ import {
 import { InlineText } from './InlineText';
 import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
+import { CastPanel } from './CastPanel';
 import { useModal } from '../use-modal';
 
 interface ResearchWindowProps {
@@ -159,6 +160,13 @@ export function ResearchBody({
     setDragging(null);
   };
 
+  // The system Characters folder: the one the cast is shown in.
+  const isCastFolder =
+    selection.kind === 'folder' &&
+    file.researchCategories.some(
+      (category) => category.id === selection.id && category.systemKey === 'characters',
+    );
+
   const title =
     selection.kind === 'view'
       ? (VIEWS.find((entry) => entry.view === selection.view)?.label ?? 'Research')
@@ -285,6 +293,16 @@ export function ResearchBody({
             )}
           </header>
 
+          {/* The Characters folder opens with the cast itself — the people,
+              under the headings they are filed under (addendum 02 §16) —
+              and the notes about them below it. Two views of the same
+              folder rather than two folders both called Characters. */}
+          {isCastFolder ? (
+            <div className="research-embedded">
+              <CastPanel file={file} onUpdate={onUpdate} />
+            </div>
+          ) : null}
+
           {selection.kind === 'plots' ? (
             <Plots file={file} onUpdate={onUpdate} />
           ) : selection.kind === 'setups' ? (
@@ -293,7 +311,11 @@ export function ResearchBody({
             </div>
           ) : items.length === 0 ? (
             <p className="muted empty-state">
-              {query.length > 0 ? 'Nothing here matches that.' : 'Nothing filed here yet. + Note puts something in it.'}
+              {query.length > 0
+                ? 'Nothing here matches that.'
+                : isCastFolder
+                  ? 'No notes on anyone yet. + Note writes one up; the cast above is who is in it.'
+                  : 'Nothing filed here yet. + Note puts something in it.'}
             </p>
           ) : (
             <ul className="research-cards" aria-label="Notes">

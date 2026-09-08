@@ -88,7 +88,9 @@ describe('element flow while writing', () => {
   it('offers the cue that is most likely to speak next', () => {
     // Mike just spoke, so Celeste is offered first and Mike last.
     expect(cueSuggestions(['Mike', 'Celeste', 'Ruth'], ['CELESTE', 'MIKE'])).toEqual(['CELESTE', 'RUTH', 'MIKE']);
-    expect(cueSuggestions(['Mike', 'Celeste'], [])).toEqual(['CELESTE', 'MIKE']);
+    // With nobody having spoken yet, the order the cast was handed over in
+    // stands: the headings decide it, not the alphabet.
+    expect(cueSuggestions(['Mike', 'Celeste'], [])).toEqual(['MIKE', 'CELESTE']);
   });
 
   it('binds the paragraph styles to the number keys', () => {

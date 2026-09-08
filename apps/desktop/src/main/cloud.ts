@@ -205,6 +205,7 @@ const pullRows = async (projectId: string): Promise<ProjectFile | null> => {
     researchCategories: rows['researchCategories'] ?? [],
     researchItems: rows['researchItems'] ?? [],
     characters: rows['characters'] ?? [],
+    characterCategories: rows['characterCategories'] ?? [],
     links: rows['links'] ?? [],
     setupsPayoffs: rows['setupsPayoffs'] ?? [],
   });

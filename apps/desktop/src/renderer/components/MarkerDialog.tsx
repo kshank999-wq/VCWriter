@@ -88,7 +88,7 @@ function Body({
     const picked = fileList?.[0];
     if (!picked) return;
     if (picked.size > MAX_CHAPTER_IMAGE_BYTES) {
-      setImageError(`That is ${Math.round(picked.size / 1024)}KB. A chapter page holds up to 2MB.`);
+      setImageError(`That is ${(picked.size / (1024 * 1024)).toFixed(1)}MB. A chapter page holds up to 5MB.`);
       return;
     }
     const reader = new FileReader();

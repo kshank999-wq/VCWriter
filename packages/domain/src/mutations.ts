@@ -11,7 +11,8 @@ import {
 } from './entities/structure.js';
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
 import { setupPayoffSchema, setupPointSchema } from './entities/setups.js';
-import { characterSchema } from './entities/character.js';
+import { characterCategorySchema, characterSchema } from './entities/character.js';
+import { characterCategoriesInOrder } from './characters.js';
 import {
   storyLinkSchema,
   refEquals,
@@ -28,6 +29,7 @@ import {
 } from './selectors.js';
 import type { ManuscriptSegment } from './entities/manuscript.js';
 import type { VoiceAssignment } from './entities/project.js';
+import type { Character, CharacterCategory } from './entities/character.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
 import type { SetupPayoff, SetupPoint } from './entities/setups.js';
 import type {
@@ -44,6 +46,7 @@ import type { ProjectFile } from './project-file.js';
 import type {
   BeatId,
   BeatRevisionId,
+  CharacterCategoryId,
   CharacterId,
   LaneId,
   ManuscriptElementId,
@@ -594,7 +597,12 @@ export const setSetupPayoffArchived = (
 
 export const addCharacter = (
   file: ProjectFile,
-  input: { name: string; description?: string; voice?: VoiceAssignment | null },
+  input: {
+    name: string;
+    description?: string;
+    voice?: VoiceAssignment | null;
+    categoryId?: CharacterCategoryId | null;
+  },
 ): ProjectFile => {
   const timestamp = nowIso();
   const character = characterSchema.parse({
@@ -603,11 +611,113 @@ export const addCharacter = (
     name: input.name,
     description: input.description ?? '',
     voice: input.voice ?? null,
+    // Unfiled unless the writer said where. A name typed into the script is
+    // a character before anyone has decided how important they are.
+    categoryId: input.categoryId ?? null,
     createdAt: timestamp,
     updatedAt: timestamp,
   });
   return touchProject({ ...file, characters: [...file.characters, character] });
 };
+
+export const updateCharacter = (
+  file: ProjectFile,
+  characterId: CharacterId,
+  patch: Partial<Pick<Character, 'name' | 'description' | 'arcNotes' | 'aliases' | 'categoryId' | 'archived'>>,
+): ProjectFile => {
+  if (!file.characters.some((character) => character.id === characterId)) {
+    throw new DomainError(`Character ${characterId} does not exist`);
+  }
+  if (patch.categoryId != null && !(file.characterCategories ?? []).some((c) => c.id === patch.categoryId)) {
+    throw new DomainError(`Character category ${patch.categoryId} does not exist`);
+  }
+  return touchProject({
+    ...file,
+    characters: file.characters.map((character) =>
+      character.id === characterId ? touch({ ...character, ...patch }) : character,
+    ),
+  });
+};
+
+export const removeCharacter = (file: ProjectFile, characterId: CharacterId): ProjectFile => {
+  const removed = new Set<string>([characterId]);
+  return touchProject({
+    ...file,
+    characters: file.characters.filter((character) => character.id !== characterId),
+    links: withoutLinksTouching(file, removed),
+  });
+};
+
+// ------------------------------------------------- the headings the cast sits under
+
+/**
+ * A heading of the writer's own (addendum 02 §16). New ones go at the end,
+ * because a category added later is rarely the most important one.
+ */
+export const addCharacterCategory = (
+  file: ProjectFile,
+  input: { name: string; index?: number },
+): { file: ProjectFile; category: CharacterCategory } => {
+  const timestamp = nowIso();
+  const siblings = characterCategoriesInOrder(file);
+  const category = characterCategorySchema.parse({
+    id: newId<CharacterCategoryId>(),
+    projectId: file.project.id,
+    name: input.name,
+    orderKey: orderKeyForIndex(siblings, input.index ?? siblings.length),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  });
+  return {
+    file: touchProject({ ...file, characterCategories: [...(file.characterCategories ?? []), category] }),
+    category,
+  };
+};
+
+export const renameCharacterCategory = (
+  file: ProjectFile,
+  categoryId: CharacterCategoryId,
+  name: string,
+): ProjectFile => {
+  if (!(file.characterCategories ?? []).some((category) => category.id === categoryId)) {
+    throw new DomainError(`Character category ${categoryId} does not exist`);
+  }
+  return touchProject({
+    ...file,
+    characterCategories: (file.characterCategories ?? []).map((category) =>
+      category.id === categoryId ? touch({ ...category, name }) : category,
+    ),
+  });
+};
+
+export const moveCharacterCategory = (
+  file: ProjectFile,
+  categoryId: CharacterCategoryId,
+  index: number,
+): ProjectFile => {
+  const siblings = characterCategoriesInOrder(file).filter((category) => category.id !== categoryId);
+  const moving = (file.characterCategories ?? []).find((category) => category.id === categoryId);
+  if (!moving) throw new DomainError(`Character category ${categoryId} does not exist`);
+  return touchProject({
+    ...file,
+    characterCategories: (file.characterCategories ?? []).map((category) =>
+      category.id === categoryId ? touch({ ...category, orderKey: orderKeyForIndex(siblings, index) }) : category,
+    ),
+  });
+};
+
+/**
+ * Remove a heading. The people under it are **unfiled, not deleted** — losing
+ * a character because a heading was tidied away would be indefensible.
+ */
+export const removeCharacterCategory = (file: ProjectFile, categoryId: CharacterCategoryId): ProjectFile =>
+  touchProject({
+    ...file,
+    characterCategories: (file.characterCategories ?? []).filter((category) => category.id !== categoryId),
+    characters: file.characters.map((character) =>
+      character.categoryId === categoryId ? touch({ ...character, categoryId: null }) : character,
+    ),
+  });
 
 /** Voice assignment persists per project/character and stays editable (§10). */
 export const assignCharacterVoice = (

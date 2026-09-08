@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   autoType,
   CHARACTER_EXTENSIONS,
+  castNamesForBeat,
   cueSuggestions,
   cuesInOrder,
   defaultElementType,
@@ -134,8 +135,11 @@ export function BeatBody({
    * cast. Each of the likeliest few is offered with its extensions too.
    */
   const cues = useMemo(() => {
+    // The cast in the order the headings put them — and in a series, this
+    // episode's own cast first (addendum 02 §16, §17) — then every name that
+    // has actually been typed anywhere in the project.
     const everyone = [
-      ...file.characters.map((character) => character.name),
+      ...castNamesForBeat(file, beat.id),
       ...file.beats.flatMap((candidate) => cuesInOrder(candidate.manuscript)),
     ];
     const suggestions = cueSuggestions(everyone, cuesInOrder(beat.manuscript));
@@ -143,7 +147,7 @@ export function BeatBody({
       ...suggestions,
       ...suggestions.slice(0, 3).flatMap((name) => CHARACTER_EXTENSIONS.map((extension) => `${name} ${extension}`)),
     ];
-  }, [file.characters, file.beats, beat.manuscript]);
+  }, [file, beat.id, beat.manuscript]);
 
   const setElements = (next: ManuscriptElement[]) => {
     onUpdate((current) => updateBeat(current, beat.id, { manuscript: { elements: next } }));

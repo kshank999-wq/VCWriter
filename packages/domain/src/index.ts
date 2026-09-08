@@ -22,6 +22,8 @@ export * from './project-file.js';
 export * from './selectors.js';
 export * from './find.js';
 export * from './sessions.js';
+export * from './characters.js';
+export * from './episodes.js';
 export * from './markers.js';
 export * from './mutations.js';
 export * from './render.js';

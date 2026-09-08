@@ -20,6 +20,7 @@ export type CommandId =
   | 'file.new.shortStory'
   | 'file.new.series'
   | 'file.new.shortForm'
+  | 'file.new.episode'
   | 'file.open'
   | 'file.save'
   | 'file.saveAs'
@@ -45,6 +46,7 @@ export type CommandId =
   | 'window.lanes'
   | 'window.inspector'
   | 'window.research'
+  | 'window.episodes'
   | 'window.beat'
   | 'window.focus'
   | 'window.bringAllBack'
@@ -79,6 +81,7 @@ export const MENUS: readonly Menu[] = [
       { command: 'file.new.shortStory', label: 'New short story…' },
       { command: 'file.new.series', label: 'New series or episode…' },
       { command: 'file.new.shortForm', label: 'New short-form piece…' },
+      { command: 'file.new.episode', label: 'New episode…' },
       null,
       { command: 'file.open', label: 'Open…', accelerator: 'CmdOrCtrl+O' },
       null,
@@ -129,6 +132,7 @@ export const MENUS: readonly Menu[] = [
       { command: 'window.lanes', label: 'Plot lanes in its own window', checkable: true },
       { command: 'window.inspector', label: 'Inspector in its own window', checkable: true },
       { command: 'window.research', label: 'Research in its own window', checkable: true },
+      { command: 'window.episodes', label: 'Episodes', checkable: true },
       { command: 'window.beat', label: 'This beat in its own window' },
       null,
       { command: 'window.bringAllBack', label: 'Bring everything back' },

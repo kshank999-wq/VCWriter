@@ -268,4 +268,4 @@ export const chapterPagesFor = (
 };
 
 /** A cap on what can be pasted onto a chapter page: the project is a text file. */
-export const MAX_CHAPTER_IMAGE_BYTES = 2 * 1024 * 1024;
+export const MAX_CHAPTER_IMAGE_BYTES = 5 * 1024 * 1024;

@@ -720,7 +720,7 @@ That is not a compromise: a chapter starts on a fresh page in every book ever
 printed, so the story is paginated in runs between the leaves and the pages
 are numbered straight through.
 
-The graphic is held in the document as a data URL and capped at 2MB. The
+The graphic is held in the document as a data URL and capped at 5MB. The
 project is a text file that syncs; a full-bleed photograph in it would make
 every save enormous, and a printer's ornament is what this is for.
 
@@ -754,10 +754,10 @@ does lives in the workspace, which is the only place that knows what is open.
 
 | Menu | What is in it |
 | --- | --- |
-| **File** | New screenplay / series / novel / short story / short-form piece, Open, Save, Save a copy, **Page setup**, Print, Export PDF, Preferences, Close project |
+| **File** | New screenplay / series / novel / short story / short-form piece, **New episode**, Open, Save, Save a copy, **Page setup**, Print, Export PDF, Preferences, Close project |
 | **Editor** | Find, Find next, Find and replace, Reformat pasted text, and the two editors of spec §8 — Daily and Final — plus Read back |
 | **Reports** | Writing log, Story statistics (§15) |
-| **Window** | Each section, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
+| **Window** | The episode rail; each section, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
 | **Help** | What this build does, About |
 
 It is called **Editor**, not Edit, because the clipboard is not what it is
@@ -855,7 +855,80 @@ reading. A day spent cutting is honestly **negative**, and shows as a loss.
 Both are read-only. A report that could be edited would be a claim rather
 than a record.
 
-## 16. Keyboard
+## 16. The cast, and the headings it is filed under
+
+Every project keeps its people under headings. **Main characters** and
+**minor characters** in every format; a series has **recurring characters**
+between them, because that is the distinction a series actually makes and the
+one that decides who carries over into next week.
+
+The headings are **data, not an enum**. Rename them, reorder them, add "The
+family" or "The precinct" if that is how this story thinks. A character filed
+under none is not lost — they are unfiled, and shown last.
+
+They live in Research, under **Characters**: the cast at the top of that
+folder, the notes about them below it. Not a second folder also called
+Characters — one folder, the people and what is written about them.
+
+What the headings are *for* is not tidiness. **The order here is the order
+names are offered while a character cue is being typed.** Main characters
+first, because they are who you are usually about to type. That is why filing
+someone under "Main" is a working decision rather than a label, and why
+`cueSuggestions` keeps the order it is handed instead of alphabetising over
+it.
+
+Removing a heading **unfiles** the people under it. It never deletes them.
+Losing a character because a heading was tidied away would be indefensible.
+
+## 17. Episodes
+
+A series is one project divided into episodes, and **an episode is a run of
+the story order** — it starts at the scene its marker is on and runs to the
+scene before the next episode's. Nothing new holds it: no episode container,
+no episode field on a scene. A container would cut across the lanes, and the
+hierarchy is lanes → scenes → beats (spec §19); a field on the scene would be
+a second source of truth for something the story order already says.
+
+The consequence worth having: everything that already works on a run of
+scenes — the timeline, the pagination, find, the reports — works on an
+episode without knowing episodes exist.
+
+### The rail
+
+Down the right-hand edge, and only in a series. Shut, it is a tab; open, it
+is every episode in order with its number, its name, how many scenes and
+words are in it, and who is in it. Choosing one goes to it. Open, the rail
+takes its room from the workspace rather than covering the inspector — a list
+that hides the panel beside it is not worth having.
+
+### Starting one
+
+From the rail's **+ New episode** or **File → New episode**. Two questions,
+and the second is the one that matters:
+
+1. What is it called. Just a name; the **number is its position**, so
+   episodes cannot disagree about what they are called.
+2. **What comes over.** A list of switches, not a guess — and the answer is
+   remembered, because next week the answer is almost always the same.
+
+| Carries over | What it means |
+| --- | --- |
+| A character heading | Everyone under it joins the new episode's cast |
+| Whoever spoke last episode | The people who actually had lines, whatever heading they are under |
+| The setups still unpaid | Noted on the episode, where it will be read while writing |
+| Plot lanes | The series' own lanes, or a fresh one for this episode |
+
+Everything in a project is available to every episode already — one document,
+one cast, one research shelf. So carrying over is not copying; it is
+**deciding what the episode starts with in hand**. The cast it settles on
+lives on the episode's marker, and is what puts this episode's people at the
+top of the list while a cue is being typed (§16).
+
+**What does not come over is any of the writing.** A new episode is a clear
+slate: its own scene, one empty beat, and nothing in it. That is the point of
+a new episode.
+
+## 18. Keyboard
 
 In addition to §5's reordering keys and §6's writing keys:
 
@@ -869,7 +942,7 @@ In addition to §5's reordering keys and §6's writing keys:
 Every control on the timeline is a focusable element with an accessible
 name; the reorder keys work from the same elements that drag (§16).
 
-## 17. Preferences
+## 19. Preferences
 
 A gear on the title bar opens Preferences. These are kept on the machine,
 not in the project file — a collaborator opening the file must not inherit
@@ -885,7 +958,7 @@ anyone's colours — alongside the layout preferences of §3.
   and a dark page is a strain over a long day. Off, the Script follows the
   scheme.
 
-## 18. Later
+## 20. Later
 
 Named so that nobody mistakes their absence for an oversight:
 
@@ -897,7 +970,7 @@ Named so that nobody mistakes their absence for an oversight:
   character; a lane per character among the plot lanes is a later addendum.
 - Timing in minutes. Pages are the industry's unit and the ruler uses them.
 
-## 19. Acceptance
+## 21. Acceptance
 
 - The Script shows every beat of the fixture project in print order, and
   typing in the third beat changes the third beat and nothing else.
@@ -956,5 +1029,15 @@ Named so that nobody mistakes their absence for an oversight:
 - The writing log shows a row for each day worked, opening to the sittings
   inside it with the hours each ran, and a day that lost words shows the
   loss.
+- A series' Research → Characters shows main, recurring and minor headings;
+  a screenplay's shows main and minor. Removing a heading leaves the people
+  under it in the project, unfiled.
+- Starting an episode adds one scene with one empty beat at the end of the
+  story, numbers itself by its position, carries the cast that was ticked and
+  none of the previous episode's text, and the workspace goes to it.
+- The rail lists every episode with its number, name, size and cast, marks
+  the one being written in, and gives up its room to the inspector when shut.
+- The names offered while a character cue is typed lead with this episode's
+  cast, in heading order.
 - Renderer and domain tests cover the above; a screenshot of the fixture at
   1440×900 and at 1100×700 is reviewed before the change ships.
