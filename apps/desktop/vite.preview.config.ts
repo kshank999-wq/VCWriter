@@ -24,7 +24,9 @@ const buildLabel = (): string => {
 
 export default defineConfig({
   root: resolve(__dirname, 'src/renderer'),
-  base: './',
+  // Served at vc-writer.com/preview; absolute asset paths so the page works
+  // at the bare path, which is the one Next serves (it strips a trailing slash).
+  base: '/preview/',
   plugins: [react()],
   resolve: { alias: { '@renderer': resolve(__dirname, 'src/renderer') } },
   define: { __PREVIEW_BUILD__: JSON.stringify(buildLabel()) },

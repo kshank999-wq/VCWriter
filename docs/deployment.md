@@ -99,7 +99,7 @@ permissions problem and was not.
 ### Browser preview
 
 The desktop application's interface is also served at
-**https://vc-writer.com/preview/**, for administrators only, so a change
+**https://vc-writer.com/preview**, for administrators only, so a change
 pushed to `main` can be tried at the next refresh instead of after a
 download and an install. It is the same renderer the desktop runs, built by
 plain Vite (`apps/desktop/vite.preview.config.ts`) with a bridge that keeps

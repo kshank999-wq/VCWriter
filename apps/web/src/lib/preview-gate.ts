@@ -6,24 +6,25 @@
  * policy that suits a Vite bundle rather than the site's nonce one.
  */
 
-export type PreviewRoute =
-  | { kind: 'redirect'; to: string }
-  | { kind: 'rewrite'; to: string }
-  | { kind: 'asset' }
-  | null;
+export type PreviewRoute = { kind: 'rewrite'; to: string } | { kind: 'asset' } | null;
 
-/** What the middleware should do with a path, before any question of who is asking. */
+/**
+ * What the middleware should do with a path, before any question of who is
+ * asking. The page is served at the bare `/preview`: Next strips a trailing
+ * slash before the middleware runs, so a redirect *to* the slash form would
+ * loop. The bundle's asset paths are absolute (`/preview/assets/…`, Vite's
+ * `base`), so the page does not care which form it was reached by.
+ */
 export const previewRoute = (pathname: string): PreviewRoute => {
-  if (pathname === '/preview') return { kind: 'redirect', to: '/preview/' };
-  // Relative asset paths in the built page resolve against the directory,
-  // which is why the bare path above redirects to the slash form.
-  if (pathname === '/preview/' || pathname === '/preview/index.html') return { kind: 'rewrite', to: '/preview/index.html' };
+  if (pathname === '/preview' || pathname === '/preview/' || pathname === '/preview/index.html') {
+    return { kind: 'rewrite', to: '/preview/index.html' };
+  }
   if (pathname.startsWith('/preview/')) return { kind: 'asset' };
   return null;
 };
 
 /** Where an anonymous or non-admin visitor is sent instead. */
-export const previewSignIn = '/signin?next=%2Fpreview%2F';
+export const previewSignIn = '/signin?next=%2Fpreview';
 
 /**
  * The bundle loads its own script and stylesheet from /preview/assets and

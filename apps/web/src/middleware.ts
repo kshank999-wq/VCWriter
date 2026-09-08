@@ -89,8 +89,6 @@ const previewResponse = async (
   request: NextRequest,
   route: NonNullable<ReturnType<typeof previewRoute>>,
 ): Promise<NextResponse> => {
-  if (route.kind === 'redirect') return NextResponse.redirect(new URL(route.to, request.url));
-
   // Who is asking. The profile row is readable by its owner under RLS, so the
   // session client is enough; no service key runs at the edge.
   const supabase = createServerClient(

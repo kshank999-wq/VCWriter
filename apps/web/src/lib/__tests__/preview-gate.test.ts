@@ -2,11 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { previewContentSecurityPolicy, previewRoute, previewSignIn } from '../preview-gate';
 
 describe('the browser preview route', () => {
-  it('sends the bare path to the slash form so relative assets resolve', () => {
-    expect(previewRoute('/preview')).toEqual({ kind: 'redirect', to: '/preview/' });
-  });
-
-  it('serves the directory as its index page', () => {
+  it('serves the page at the bare path and never redirects to the slash form', () => {
+    // Next strips a trailing slash before the middleware runs; a redirect to
+    // the slash form looped on the first deployment.
+    expect(previewRoute('/preview')).toEqual({ kind: 'rewrite', to: '/preview/index.html' });
     expect(previewRoute('/preview/')).toEqual({ kind: 'rewrite', to: '/preview/index.html' });
     expect(previewRoute('/preview/index.html')).toEqual({ kind: 'rewrite', to: '/preview/index.html' });
   });
@@ -19,7 +18,7 @@ describe('the browser preview route', () => {
   });
 
   it('sends outsiders to sign in and back', () => {
-    expect(previewSignIn).toBe('/signin?next=%2Fpreview%2F');
+    expect(previewSignIn).toBe('/signin?next=%2Fpreview');
   });
 
   it('gives the bundle a self-only policy with no inline script', () => {

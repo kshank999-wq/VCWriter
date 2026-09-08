@@ -1,6 +1,6 @@
 /**
  * Build the desktop renderer for the browser and put it under public/preview,
- * so the site serves it at /preview/ (docs/deployment.md, "Browser preview").
+ * so the site serves it at /preview (docs/deployment.md, "Browser preview").
  *
  * Runs before `next build` (package.json "prebuild"). It is deliberately a
  * separate step that can fail loudly: a site without the preview is still a
