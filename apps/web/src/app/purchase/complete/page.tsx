@@ -33,7 +33,23 @@ export default async function PurchaseCompletePage({
     );
   }
 
-  const session = await stripe().checkout.sessions.retrieve(sessionId);
+  // The session id comes from the URL, which anyone can type. A wrong or
+  // expired one is not an error page: it is a customer who has already paid
+  // and wants their downloads, which are in their account regardless.
+  const session = await stripe()
+    .checkout.sessions.retrieve(sessionId)
+    .catch(() => null);
+  if (!session) {
+    return (
+      <div className="hero">
+        <h1>Purchase complete</h1>
+        <p>
+          We could not find that checkout, but if your payment went through your license is in your account.{' '}
+          <Link href="/account">Go to downloads</Link>.
+        </p>
+      </div>
+    );
+  }
   const platform = parsePlatform(session.metadata?.platform);
 
   const { data: order } = await adminClient()
