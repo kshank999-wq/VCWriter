@@ -770,12 +770,48 @@ More menus go here as they are earned; the list is one array.
 ### Page setup
 
 What a printing carries, in one dialog instead of scattered across the
-Preview page: the **title page**, the **chapter pages** (§12, and only for a
-format that has them), the **beat titles** — which are authoring metadata
-(§5.3), so the switch says it makes a reference copy and not a delivered
-draft — and a **watermark** for a draft going out for notes. The Preview, the
-print and the PDF export read the same answer, which is the only thing a page
-setup is for.
+Preview page. The Preview, the print and the PDF export read the same
+answer, which is the only thing a page setup is for.
+
+It is in two groups, and the division is the point.
+
+**The document** — the things that are part of a manuscript:
+
+| Switch | Default | |
+| --- | --- | --- |
+| Title page | on | |
+| Chapter pages | on | §12, and only for a format that has them |
+| Scene headings | on | Off gives a read-through with no sluglines |
+| Page numbers | on | Top right, from page two |
+| Scene numbers | **off** | In the margins at both edges, as a shooting script sets them. A draft is not numbered; numbering one misrepresents it |
+
+**Notes to yourself** — a reference copy, not the delivered draft. None of it
+is the writing, so none of it prints by accident:
+
+| Switch | |
+| --- | --- |
+| Beat titles | Authoring metadata (§5.3, §19) |
+| Each scene's summary | |
+| What each scene is linked to | Setups, payoffs, research, characters |
+| The day and time it was printed | |
+
+Annotations print **under the slugline, never above it**: a note above the
+heading reads as belonging to the scene before. The scene's own notes come
+first, then the beat's, because the scene holds the beat.
+
+A scene number is set in the margins rather than in the column, so it takes
+no room from the sixty characters the text is set in — the paginated text is
+byte-for-byte what it is without numbering.
+
+### Nothing but the document on the page
+
+`@page` has a **zero margin**, deliberately, and the manuscript's real
+margins are the page element's own padding. The `@page` margin band is the
+only place a browser can draw its own furniture — the date, the time, the
+file's name, its own page numbers, the URL — so with no band there is
+nothing to draw in, and what prints is the document. The date and time are
+available as a switch above, off by default, drawn by us on every page
+(pages get separated) rather than once at the end.
 
 ### Find and replace
 
@@ -1122,5 +1158,10 @@ Named so that nobody mistakes their absence for an oversight:
 - The import dialog shows the scenes, the cast, the locations and every
   warning before it makes anything, and the project it makes arrives
   unsaved.
+- A printed page carries the manuscript and nothing else: no date, no time,
+  no file name, no browser page numbers in any corner.
+- Scene numbers appear in both margins and change not one character of the
+  paginated text; the summary and the beat label print under the slugline,
+  in that order, and only when asked for.
 - Renderer and domain tests cover the above; a screenshot of the fixture at
   1440×900 and at 1100×700 is reviewed before the change ships.

@@ -1,4 +1,4 @@
-import { beatsInScript, unitsInStoryOrder } from './selectors.js';
+import { beatsInScript, relatedEntities, unitsInStoryOrder } from './selectors.js';
 import { chapterPageContent, chapterPagesFor, type ChapterPageContent } from './markers.js';
 import { groupManuscript } from './editing.js';
 import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
@@ -108,6 +108,12 @@ export interface PageLine {
    * cannot use `text` and loses nothing but the styling.
    */
   spans: InlineSpan[];
+  /**
+   * Set in the margins beside this line rather than in the column: a scene
+   * number, which a shooting script prints at both edges and which must not
+   * take room from the 60 characters the text is set in.
+   */
+  mark?: string;
 }
 
 export interface Page {
@@ -175,6 +181,8 @@ interface Block {
   keepWithNext: boolean;
   /** Dialogue may be split across pages with (MORE) / (CONT'D). */
   splittable: boolean;
+  /** Printed in the margins beside the block's first line: a scene number. */
+  mark?: string;
   /** The speaker, so a continuation can be labelled. */
   speaker: string | null;
 }
@@ -238,6 +246,7 @@ const toBlock = (element: ManuscriptElement, layout: PageLayoutSpec, speaker: st
     keepWithNext: element.type === 'scene_heading' || element.type === 'character' || element.type === 'parenthetical',
     splittable: element.type === 'dialogue',
     speaker,
+    mark: typeof element.attributes['sceneNumber'] === 'string' ? element.attributes['sceneNumber'] : undefined,
   };
 };
 
@@ -375,10 +384,16 @@ export const paginateElements = (
    * paragraph, a monologue — flows across pages instead of overflowing one.
    * A blank spacing line is never carried to the top of the next page.
    */
-  const pushContent = (text: string, type: PageLine['type'], indent: number, spans: InlineSpan[]) => {
+  const pushContent = (
+    text: string,
+    type: PageLine['type'],
+    indent: number,
+    spans: InlineSpan[],
+    mark?: string,
+  ) => {
     if (lines.length >= layout.linesPerPage) startNewPage();
     if (pageStart === null) pageStart = currentId;
-    lines.push({ text, type, indent, spans });
+    lines.push({ text, type, indent, spans, ...(mark ? { mark } : {}) });
     if (layout.doubleSpaced && lines.length < layout.linesPerPage) {
       lines.push({ text: '', type: 'blank', indent: 0, spans: [] });
     }
@@ -386,7 +401,9 @@ export const paginateElements = (
 
   const pushBlockLines = (block: Block, from = 0, to = Number.POSITIVE_INFINITY) => {
     block.lines.slice(from, to).forEach((text, offset) => {
-      pushContent(text, block.type, block.indent, block.spans[from + offset] ?? [{ text }]);
+      // The mark belongs beside the first line of the block, not every one.
+      const mark = from + offset === 0 ? block.mark : undefined;
+      pushContent(text, block.type, block.indent, block.spans[from + offset] ?? [{ text }], mark);
     });
   };
 
@@ -442,6 +459,15 @@ export const paginateElements = (
   return pages;
 };
 
+/**
+ * What a printing carries (addendum 02 §13).
+ *
+ * Everything here is off unless it is part of the delivered manuscript. A
+ * script sent out is scene headings, action and dialogue; a **reference
+ * copy** — the one a writer prints for themselves — can carry the beat
+ * labels, the scene summaries, the links, the scene numbers. Nothing in the
+ * second list is the writing, so nothing in it prints by accident.
+ */
 export interface ManuscriptOptions {
   /**
    * Emit each beat's internal title as an annotation. Off by default and named
@@ -454,6 +480,22 @@ export interface ManuscriptOptions {
    * project's own setting; a format with no chapter pages ignores it.
    */
   includeChapterPages?: boolean;
+  /**
+   * The sluglines themselves. On unless asked otherwise — a script without
+   * them is a rehearsal script or a prose read-through, which is a real
+   * thing to want and never the default.
+   */
+  includeSceneHeadings?: boolean;
+  /**
+   * Number the scenes, in the margins at both edges, the way a shooting
+   * script does. Off: a script is not numbered until it is going into
+   * production, and numbering a draft misrepresents it.
+   */
+  includeSceneNumbers?: boolean;
+  /** Each scene's summary, as an annotation under its heading. */
+  includeSceneSummary?: boolean;
+  /** What each scene is linked to: setups, payoffs, research, characters. */
+  includeSceneLinks?: boolean;
 }
 
 /** Every manuscript element in the project, in reading order. */
@@ -461,7 +503,9 @@ export const manuscriptElements = (file: ProjectFile, options: ManuscriptOptions
   unitsInStoryOrder(file)
     // A scene switched off stays in the structure and leaves the manuscript.
     .filter((unit) => unit.inScript)
-    .flatMap((unit) => unitElements(file, unit.id, options));
+    // Scene numbers count the scenes that are in the script, in story order:
+    // a scene switched off is not scene 4 and never was.
+    .flatMap((unit, index) => unitElements(file, unit.id, options, String(index + 1)));
 
 /**
  * The whole project, paginated — with the leaves a book puts between its
@@ -489,6 +533,9 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   const opensAt = new Map(leaves.map((placed) => [placed.marker.unitId as string, placed]));
   const units = unitsInStoryOrder(file).filter((unit) => unit.inScript);
 
+  // The same numbering as the flat run above, worked out once.
+  const numbered = new Map(units.map((unit, index) => [unit.id as string, index + 1]));
+
   const pages: Page[] = [];
   let run: ManuscriptElement[] = [];
   const flush = () => {
@@ -503,7 +550,7 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
       flush();
       pages.push({ number: 0, lines: [], startsWith: null, chapter: chapterPageContent(leaf) });
     }
-    run.push(...unitElements(file, unit.id, options));
+    run.push(...unitElements(file, unit.id, options, String(numbered.get(unit.id as string) ?? 0)));
   }
   flush();
 
@@ -511,20 +558,73 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   return pages.map((page, index) => ({ ...page, number: index + 1 }));
 };
 
-/** One unit's manuscript, with the beat annotations if they were asked for. */
-const unitElements = (file: ProjectFile, unitId: StructuralUnitId, options: ManuscriptOptions): ManuscriptElement[] =>
-  beatsInScript(file, unitId).flatMap((beat) => {
-    const body = beat.manuscript.elements;
-    if (!options.includeBeatTitles || beat.title.length === 0) return body;
-    const annotation: ManuscriptElement = {
-      id: `${beat.id}-title` as ManuscriptElement['id'],
-      type: 'general',
-      text: `[${beat.title}]`,
-      characterId: null,
-      attributes: { annotation: true },
-    };
-    return [annotation, ...body];
+/** An annotation: the writer's own note about the text, not the text. */
+const annotation = (id: string, text: string): ManuscriptElement => ({
+  id: id as ManuscriptElement['id'],
+  type: 'general',
+  text,
+  characterId: null,
+  attributes: { annotation: true },
+});
+
+/**
+ * One unit's manuscript, and whatever annotations this printing asked for.
+ *
+ * The scene's own things — its number, its summary, what it is linked to —
+ * are attached at the scene, ahead of its first beat. The beat labels sit
+ * with their beats. All of it is optional and all of it is off by default.
+ */
+const unitElements = (
+  file: ProjectFile,
+  unitId: StructuralUnitId,
+  options: ManuscriptOptions,
+  sceneNumber?: string,
+): ManuscriptElement[] => {
+  const unit = file.units.find((candidate) => candidate.id === unitId);
+  const body = beatsInScript(file, unitId).flatMap((beat) => {
+    const elements =
+      options.includeSceneHeadings === false
+        ? beat.manuscript.elements.filter((element) => element.type !== 'scene_heading')
+        : beat.manuscript.elements;
+    if (!options.includeBeatTitles || beat.title.length === 0) return elements;
+    const note = annotation(`${beat.id}-title`, `[${beat.title}]`);
+    // Under the slugline, never above it: a note above the heading reads as
+    // belonging to the scene before.
+    return elements[0]?.type === 'scene_heading'
+      ? [elements[0], note, ...elements.slice(1)]
+      : [note, ...elements];
   });
+
+  // The number rides on the heading itself, so it stays with the scene
+  // wherever the page break falls, and prints in the margins rather than
+  // taking room from the 60 characters the text is set in.
+  const numbered =
+    sceneNumber && options.includeSceneNumbers
+      ? body.map((element, index) =>
+          index === body.findIndex((candidate) => candidate.type === 'scene_heading')
+            ? { ...element, attributes: { ...element.attributes, sceneNumber } }
+            : element,
+        )
+      : body;
+
+  const before: ManuscriptElement[] = [];
+  if (options.includeSceneSummary && unit && unit.summary.trim().length > 0) {
+    before.push(annotation(`${unitId}-summary`, `[${unit.summary.trim()}]`));
+  }
+  if (options.includeSceneLinks && unit) {
+    const related = relatedEntities(file, { type: 'unit', id: unitId })
+      .map((entry) => `${entry.link.type.replace(/_/g, ' ')}: ${entry.other.label}`)
+      .filter((line) => line.trim().length > 0);
+    if (related.length > 0) before.push(annotation(`${unitId}-links`, `[${related.join(' · ')}]`));
+  }
+
+  // The annotations follow the heading rather than preceding it: a note
+  // above the slugline would read as belonging to the scene before.
+  if (before.length === 0) return numbered;
+  const headingAt = numbered.findIndex((element) => element.type === 'scene_heading');
+  if (headingAt === -1) return [...before, ...numbered];
+  return [...numbered.slice(0, headingAt + 1), ...before, ...numbered.slice(headingAt + 1)];
+};
 
 export const paginateUnit = (file: ProjectFile, unitId: StructuralUnitId): Page[] =>
   paginateElements(

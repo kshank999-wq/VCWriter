@@ -142,14 +142,24 @@ export default function App() {
   );
   const pages = layout ? Math.ceil(layout.totalPages) : 0;
 
+  // A preference stored before an option existed has no answer for it, so
+  // the defaults fill in underneath rather than leaving it undefined.
+  const setup = useMemo(() => ({ ...DEFAULT_PRINT_SETUP, ...printSetup }), [printSetup]);
+
   const printOptions = useMemo(
     () => ({
-      includeBeatTitles: printSetup.includeBeatTitles,
-      includeChapterPages: printSetup.includeChapterPages,
-      includeTitlePage: printSetup.includeTitlePage,
-      ...(printSetup.watermark ? { watermark: printSetup.watermark } : {}),
+      includeBeatTitles: setup.includeBeatTitles,
+      includeChapterPages: setup.includeChapterPages,
+      includeTitlePage: setup.includeTitlePage,
+      includeSceneHeadings: setup.includeSceneHeadings,
+      includeSceneNumbers: setup.includeSceneNumbers,
+      includePageNumbers: setup.includePageNumbers,
+      includeSceneSummary: setup.includeSceneSummary,
+      includeSceneLinks: setup.includeSceneLinks,
+      includePrintedAt: setup.includePrintedAt,
+      ...(setup.watermark ? { watermark: setup.watermark } : {}),
     }),
-    [printSetup],
+    [setup],
   );
 
   const clearTitleFocus = useCallback(() => setFocusTitleBeatId(null), []);
@@ -777,7 +787,7 @@ export default function App() {
             <PagePreview
               file={file}
               unitId={selectedBeat?.unitId ?? null}
-              includeBeatTitles={printSetup.includeBeatTitles}
+              includeBeatTitles={setup.includeBeatTitles}
               onToggleBeatTitles={(next) => setPrintSetup({ ...printSetup, includeBeatTitles: next })}
               includeChapterPages={printSetup.includeChapterPages}
               onToggleChapterPages={(next) => setPrintSetup({ ...printSetup, includeChapterPages: next })}
@@ -870,7 +880,7 @@ export default function App() {
         file={file}
         open={pageSetupOpen}
         onClose={() => setPageSetupOpen(false)}
-        setup={{ ...DEFAULT_PRINT_SETUP, ...printSetup }}
+        setup={setup}
         onSetup={setPrintSetup}
         pages={pages}
         onPrint={() => void print()}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { hasChapterPages, type ProjectFile } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 
@@ -14,16 +15,39 @@ import { useModal } from '../use-modal';
 export interface PrintSetup {
   includeTitlePage: boolean;
   includeChapterPages: boolean;
+  /** The sluglines. On: a script without them is a read-through, not a draft. */
+  includeSceneHeadings: boolean;
+  /** Numbered in the margins, as a shooting script is. Off until production. */
+  includeSceneNumbers: boolean;
+  /** The page number, top right from page two. */
+  includePageNumbers: boolean;
   /** An annotated reference copy: the beats' internal labels, printed (§5.3). */
   includeBeatTitles: boolean;
+  /** Each scene's summary, under its heading. */
+  includeSceneSummary: boolean;
+  /** What each scene is linked to: setups, payoffs, research, characters. */
+  includeSceneLinks: boolean;
+  /** The day and time it was printed. Off: it is not part of the document. */
+  includePrintedAt: boolean;
   /** Diagonal marking for a draft sent out for notes. Empty for none. */
   watermark: string;
 }
 
+/**
+ * What a printing carries before anyone changes it: the manuscript, its
+ * title page, its page numbers, and nothing else. Everything that is a note
+ * about the writing rather than the writing is off.
+ */
 export const DEFAULT_PRINT_SETUP: PrintSetup = {
   includeTitlePage: true,
   includeChapterPages: true,
+  includeSceneHeadings: true,
+  includeSceneNumbers: false,
+  includePageNumbers: true,
   includeBeatTitles: false,
+  includeSceneSummary: false,
+  includeSceneLinks: false,
+  includePrintedAt: false,
   watermark: '',
 };
 
@@ -42,6 +66,7 @@ interface PageSetupProps {
 export function PageSetup({ file, open, onClose, setup, onSetup, pages, onPrint, onExportPdf, busy }: PageSetupProps) {
   const dialog = useModal(open);
   const leaves = hasChapterPages(file.project.format);
+  const prose = file.project.format === 'novel' || file.project.format === 'short_story';
   const set = (patch: Partial<PrintSetup>) => onSetup({ ...setup, ...patch });
 
   return (
@@ -56,42 +81,92 @@ export function PageSetup({ file, open, onClose, setup, onSetup, pages, onPrint,
           </header>
 
           <div className="page-setup-body">
-            <h4>What prints</h4>
-            <label className="check">
-              <input
-                type="checkbox"
-                aria-label="Title page"
-                checked={setup.includeTitlePage}
-                onChange={(event) => set({ includeTitlePage: event.target.checked })}
-              />
-              <span>Title page</span>
-            </label>
+            <h4>The document</h4>
+            <Check
+              label="Title page"
+              on={setup.includeTitlePage}
+              onChange={(includeTitlePage) => set({ includeTitlePage })}
+            >
+              Title page
+            </Check>
 
             {leaves ? (
-              <label className="check">
-                <input
-                  type="checkbox"
-                  aria-label="Chapter pages"
-                  checked={setup.includeChapterPages}
-                  onChange={(event) => set({ includeChapterPages: event.target.checked })}
-                />
-                <span>The page each chapter opens with</span>
-              </label>
+              <Check
+                label="Chapter pages"
+                on={setup.includeChapterPages}
+                onChange={(includeChapterPages) => set({ includeChapterPages })}
+              >
+                The page each chapter opens with
+              </Check>
             ) : null}
 
-            {/* §5.3: a beat's internal title is authoring metadata. Printing
-                it is a deliberate choice for a reference copy, never the
-                delivered manuscript, so it says so. */}
-            <label className="check">
-              <input
-                type="checkbox"
-                aria-label="Beat titles"
-                checked={setup.includeBeatTitles}
-                onChange={(event) => set({ includeBeatTitles: event.target.checked })}
-              />
-              <span>Beat titles — an annotated reference copy, not the delivered draft</span>
-            </label>
+            <Check
+              label="Scene headings"
+              on={setup.includeSceneHeadings}
+              onChange={(includeSceneHeadings) => set({ includeSceneHeadings })}
+            >
+              {prose ? 'Chapter headings' : 'Scene headings'}
+            </Check>
 
+            <Check
+              label="Page numbers"
+              on={setup.includePageNumbers}
+              onChange={(includePageNumbers) => set({ includePageNumbers })}
+            >
+              Page numbers, from page two
+            </Check>
+
+            {prose ? null : (
+              <Check
+                label="Scene numbers"
+                on={setup.includeSceneNumbers}
+                onChange={(includeSceneNumbers) => set({ includeSceneNumbers })}
+              >
+                Scene numbers, in the margins — a shooting script, not a draft
+              </Check>
+            )}
+
+            {/* §5.3, §19: none of this is the writing. It is what the writer
+                keeps beside it, and it prints only for a copy they are
+                reading themselves. */}
+            <h4>Notes to yourself</h4>
+            <p className="muted small">
+              A reference copy, not the delivered draft. None of this is the manuscript.
+            </p>
+
+            <Check
+              label="Beat titles"
+              on={setup.includeBeatTitles}
+              onChange={(includeBeatTitles) => set({ includeBeatTitles })}
+            >
+              Beat titles
+            </Check>
+
+            <Check
+              label="Scene summary"
+              on={setup.includeSceneSummary}
+              onChange={(includeSceneSummary) => set({ includeSceneSummary })}
+            >
+              {prose ? 'Each chapter’s summary' : 'Each scene’s summary'}
+            </Check>
+
+            <Check
+              label="Links in the scene"
+              on={setup.includeSceneLinks}
+              onChange={(includeSceneLinks) => set({ includeSceneLinks })}
+            >
+              What each {prose ? 'chapter' : 'scene'} is linked to
+            </Check>
+
+            <Check
+              label="Date and time"
+              on={setup.includePrintedAt}
+              onChange={(includePrintedAt) => set({ includePrintedAt })}
+            >
+              The day and time it was printed
+            </Check>
+
+            <h4>Marking</h4>
             <label className="field">
               Watermark
               <input
@@ -122,5 +197,25 @@ export function PageSetup({ file, open, onClose, setup, onSetup, pages, onPrint,
         </>
       ) : null}
     </dialog>
+  );
+}
+
+/** One switch. The label is what a screen reader hears; the child is what prints. */
+function Check({
+  label,
+  on,
+  onChange,
+  children,
+}: {
+  label: string;
+  on: boolean;
+  onChange(next: boolean): void;
+  children: ReactNode;
+}) {
+  return (
+    <label className="check">
+      <input type="checkbox" aria-label={label} checked={on} onChange={(event) => onChange(event.target.checked)} />
+      <span>{children}</span>
+    </label>
   );
 }

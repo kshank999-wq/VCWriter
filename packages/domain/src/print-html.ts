@@ -23,6 +23,18 @@ export interface PrintOptions extends ManuscriptOptions {
   // whether the leaves are there at all, and this renderer draws what it gets.
   /** Diagonal marking for drafts sent out for notes. */
   watermark?: string;
+  /**
+   * The page number, top right from page two. On unless asked otherwise: a
+   * script without page numbers is unusable in a room, and the only reason
+   * to turn them off is a document that is not going to be read as pages.
+   */
+  includePageNumbers?: boolean;
+  /**
+   * The day and time this was printed, in the corner. **Off.** It is not
+   * part of the document; it dates a draft that may be circulated for weeks,
+   * and a writer who wants it can ask for it.
+   */
+  includePrintedAt?: boolean;
 }
 
 const escapeHtml = (value: string): string =>
@@ -51,20 +63,39 @@ const renderSpans = (line: PageLine): string => {
     .join('');
 };
 
-const renderPage = (page: Page, isProse: boolean): string => {
+const renderPage = (page: Page, isProse: boolean, options: PrintOptions): string => {
   // A leaf between chapters is a page of the book, not of the manuscript.
-  if (page.chapter) return renderChapterPage(page, isProse);
+  if (page.chapter) return renderChapterPage(page, isProse, options);
   const lines = page.lines
-    .map((line) =>
-      line.text.length === 0
-        ? '<div class="line"> </div>'
-        : `<div class="line ${line.type}" style="padding-left:${line.indent}ch">${renderSpans(line)}</div>`,
-    )
+    .map((line) => {
+      if (line.text.length === 0) return '<div class="line"> </div>';
+      // A scene number is set in the margins at both edges — where a
+      // shooting script puts it — so it never takes room from the sixty
+      // characters the text itself is set in.
+      const mark = line.mark
+        ? `<span class="scene-number left">${escapeHtml(line.mark)}</span>` +
+          `<span class="scene-number right">${escapeHtml(line.mark)}</span>`
+        : '';
+      return `<div class="line ${line.type}" style="padding-left:${line.indent}ch">${mark}${renderSpans(line)}</div>`;
+    })
     .join('\n');
-  // Page numbers sit top right from page two, as scripts and manuscripts do.
-  const number = page.number > 1 ? `<div class="page-number">${page.number}.</div>` : '';
-  return `<section class="page${isProse ? ' prose' : ''}">${number}\n${lines}\n</section>`;
+  return `<section class="page${isProse ? ' prose' : ''}">${pageNumber(page, options)}${printedAt(options)}\n${lines}\n</section>`;
 };
+
+/** Page numbers sit top right from page two, as scripts and manuscripts do. */
+const pageNumber = (page: Page, options: PrintOptions): string =>
+  options.includePageNumbers !== false && page.number > 1
+    ? `<div class="page-number">${page.number}.</div>`
+    : '';
+
+/**
+ * When the printing was made, on every page rather than once at the end —
+ * pages get separated. Off unless asked for: the date is not part of the
+ * document, and a draft circulated for a fortnight should not argue about
+ * when it was printed.
+ */
+const printedAt = (options: PrintOptions): string =>
+  options.includePrintedAt ? `<div class="printed-at">${escapeHtml(new Date().toLocaleString())}</div>` : '';
 
 /**
  * The leaf a chapter opens with (addendum 02 §11): its number, its name, an
@@ -72,7 +103,7 @@ const renderPage = (page: Page, isProse: boolean): string => {
  * on. A page with none of them switched on is a blank leaf, which is also a
  * thing books do.
  */
-const renderChapterPage = (page: Page, isProse: boolean): string => {
+const renderChapterPage = (page: Page, isProse: boolean, options: PrintOptions): string => {
   const chapter = page.chapter as NonNullable<Page['chapter']>;
   const parts: string[] = [];
   if (chapter.label.length > 0) parts.push(`<h2 class="chapter-label">${escapeHtml(chapter.label)}</h2>`);
@@ -88,8 +119,7 @@ const renderChapterPage = (page: Page, isProse: boolean): string => {
   if (chapter.epigraph.trim().length > 0) {
     parts.push(`<p class="chapter-epigraph">${escapeHtml(chapter.epigraph)}</p>`);
   }
-  const number = page.number > 1 ? `<div class="page-number">${page.number}.</div>` : '';
-  return `<section class="page chapter-page${isProse ? ' prose' : ''}" style="text-align:${chapter.align}">${number}
+  return `<section class="page chapter-page${isProse ? ' prose' : ''}" style="text-align:${chapter.align}">${pageNumber(page, options)}
   <div class="chapter-block">${parts.join('\n')}</div>
 </section>`;
 };
@@ -106,7 +136,12 @@ const renderTitlePage = (file: ProjectFile): string => {
 };
 
 const STYLES = `
-  @page { size: letter; margin: 1in 1in 1in 1.5in; }
+  /* Zero, deliberately. The page's own padding is the manuscript's margin,
+     and the @page margin is the only place a browser can draw its own
+     furniture — the date, the time, the file's name, its own page numbers.
+     With no band to draw in, none of it appears, and what prints is the
+     document. */
+  @page { size: letter; margin: 0; }
   * { box-sizing: border-box; }
   body {
     margin: 0;
@@ -128,6 +163,11 @@ const STYLES = `
   }
   .line { min-height: 12pt; }
   .page-number { position: absolute; top: 0.5in; right: 1in; }
+  /* In the margins at both edges, out of the text's sixty characters. */
+  .scene-number { position: absolute; }
+  .scene-number.left { left: 0.75in; }
+  .scene-number.right { right: 0.75in; }
+  .printed-at { position: absolute; bottom: 0.5in; left: 1.5in; font-size: 9pt; color: #555; }
   .title-page { display: flex; align-items: center; justify-content: center; text-align: center; }
   .title-block h1 { font-size: 12pt; font-weight: normal; text-transform: uppercase; margin: 0 0 4em; }
   .byline { margin: 0 0 1em; }
@@ -156,12 +196,17 @@ const STYLES = `
   @media print {
     body { background: #fff; }
     .page {
-      width: auto;
+      /* The padding stays: with @page at zero it *is* the margin now, and
+         zeroing it here would print the manuscript against the paper's edge.
+         Only the screen's furniture — the drop shadow, the gap between
+         sheets — comes off. */
+      width: 8.5in;
       min-height: 0;
+      height: 11in;
       margin: 0;
-      padding: 0;
       box-shadow: none;
       break-after: page;
+      overflow: hidden;
     }
     .page:last-child { break-after: auto; }
   }
@@ -172,7 +217,7 @@ export const renderPrintDocumentHtml = (file: ProjectFile, options: PrintOptions
   const isProse = isProseFormat(file.project.format);
   const body = [
     options.includeTitlePage === false ? '' : renderTitlePage(file),
-    ...pages.map((page) => renderPage(page, isProse)),
+    ...pages.map((page) => renderPage(page, isProse, options)),
   ]
     .filter((section) => section.length > 0)
     .join('\n');

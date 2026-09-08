@@ -200,6 +200,56 @@ describe('page setup', () => {
     expect(setup.watermark).toBe('DRAFT');
   });
 
+  it('offers every switch the writer asked for, in two groups', () => {
+    render(<Setup />);
+    for (const label of [
+      'Title page',
+      'Scene headings',
+      'Page numbers',
+      'Scene numbers',
+      'Beat titles',
+      'Scene summary',
+      'Links in the scene',
+      'Date and time',
+    ]) {
+      expect(screen.getByLabelText(label)).toBeTruthy();
+    }
+  });
+
+  it('starts as the delivered manuscript: no notes, no date, no scene numbers', () => {
+    render(<Setup />);
+    const off = (label: string) => (screen.getByLabelText(label) as HTMLInputElement).checked;
+    expect(off('Title page')).toBe(true);
+    expect(off('Scene headings')).toBe(true);
+    expect(off('Page numbers')).toBe(true);
+    // None of these is the writing, so none of them prints by accident.
+    expect(off('Scene numbers')).toBe(false);
+    expect(off('Beat titles')).toBe(false);
+    expect(off('Scene summary')).toBe(false);
+    expect(off('Links in the scene')).toBe(false);
+    expect(off('Date and time')).toBe(false);
+  });
+
+  it('records each switch as it is thrown', () => {
+    render(<Setup />);
+    fireEvent.click(screen.getByLabelText('Scene numbers'));
+    fireEvent.click(screen.getByLabelText('Scene summary'));
+    fireEvent.click(screen.getByLabelText('Links in the scene'));
+    fireEvent.click(screen.getByLabelText('Page numbers'));
+
+    const setup = JSON.parse(screen.getByTestId('setup').textContent as string) as PrintSetup;
+    expect(setup.includeSceneNumbers).toBe(true);
+    expect(setup.includeSceneSummary).toBe(true);
+    expect(setup.includeSceneLinks).toBe(true);
+    expect(setup.includePageNumbers).toBe(false);
+  });
+
+  it('does not offer scene numbers to a book, which has no scenes to number', () => {
+    render(<Setup format="novel" />);
+    expect(screen.queryByLabelText('Scene numbers')).toBeNull();
+    expect(screen.getByLabelText('Scene headings')).toBeTruthy();
+  });
+
   it('does not offer chapter pages to a format that has none', () => {
     render(<Setup format="screenplay" />);
     expect(screen.queryByLabelText('Chapter pages')).toBeNull();
