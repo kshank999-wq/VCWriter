@@ -214,8 +214,7 @@ describe('inspector', () => {
 });
 
 describe('master panel', () => {
-  it('is the Script, with Research opening over the whole workspace', () => {
-    const opened = vi.fn();
+  it('is the Script and nothing around it', () => {
     render(
       <Harness initial={twoLanes()}>
         {(file, update, selected, select) => (
@@ -228,7 +227,6 @@ describe('master panel', () => {
             focusTitleBeatId={null}
             onTitleFocused={() => undefined}
             dictationShortcut={null}
-            onOpenResearch={opened}
           />
         )}
       </Harness>,
@@ -239,9 +237,9 @@ describe('master panel', () => {
     fireEvent.click(screen.getByLabelText('Beat names'));
     expect(screen.getByLabelText('Beat title (not printed)')).toBeDefined();
 
-    // Research is no longer a tab with a strip of categories under it.
-    fireEvent.click(screen.getByText('Research'));
-    expect(opened).toHaveBeenCalled();
+    // Research is not a tab beside the Script any more: it is in the title
+    // bar, so taking the Script to another monitor does not take it too.
+    expect(screen.queryByText('Research')).toBeNull();
     expect(screen.queryByRole('tab', { name: /^Characters/ })).toBeNull();
   });
 });

@@ -13,6 +13,7 @@ import {
 } from '../panes';
 import { createHub, type LinkMessage, type LinkTransport } from '../link';
 import { PaneFrame } from '../components/PaneFrame';
+import { TitleBar } from '../components/TitleBar';
 import Satellite from '../Satellite';
 
 /**
@@ -52,14 +53,12 @@ describe('where the sections sit', () => {
 function Frames({ onDetach = () => undefined }: { onDetach?(pane: PaneId): void }) {
   const [arrangement, setArrangement] = useState<Arrangement>(DEFAULT_ARRANGEMENT);
   const [dragging, setDragging] = useState<PaneId | null>(null);
-  const frame = (pane: PaneId, detached = false) => (
+  const frame = (pane: PaneId) => (
     <PaneFrame
       pane={pane}
       arrangement={arrangement}
       onMove={(moved, to) => setArrangement(movePane(arrangement, moved, to))}
-      detached={detached}
       onDetach={() => onDetach(pane)}
-      onAttach={() => undefined}
       dragging={dragging}
       onDragStart={setDragging}
       onDragEnd={() => setDragging(null)}
@@ -76,7 +75,6 @@ function Frames({ onDetach = () => undefined }: { onDetach?(pane: PaneId): void 
       <p data-testid="where">{`${arrangement.left}/${arrangement.top}/${arrangement.bottom}/${arrangement.right}`}</p>
       {frame('script')}
       {frame('lanes')}
-      {frame('inspector', true)}
     </>
   );
 }
@@ -97,19 +95,61 @@ describe('the strip on a section', () => {
     expect(screen.getByTestId('where').textContent).toBe('lanes/viewer/script/inspector');
   });
 
-  it('takes a section out to its own window, and holds its place while it is gone', () => {
+  it('takes a section out to its own window', () => {
     const onDetach = vi.fn();
     render(<Frames onDetach={onDetach} />);
-
     fireEvent.click(screen.getByLabelText('Open Script in its own window'));
     expect(onDetach).toHaveBeenCalledWith('script');
+  });
+});
 
-    // The inspector is already out: its place shows what became of it rather
-    // than pretending the section was never there.
-    const inspector = within(screen.getByLabelText('Inspector'));
-    expect(inspector.getByText('Inspector is in a window of its own.')).toBeDefined();
-    expect(inspector.queryByText('inspector contents')).toBeNull();
-    expect(inspector.getByRole('button', { name: 'Bring it back' })).toBeDefined();
+describe('the title bar', () => {
+  const bar = (away: string[], extra: Partial<React.ComponentProps<typeof TitleBar>> = {}) =>
+    render(
+      <TitleBar
+        file={project()}
+        pages={1}
+        beatCount={1}
+        wordCount={3}
+        writing
+        focusMode={false}
+        onFocus={() => undefined}
+        onOpenResearch={() => undefined}
+        away={away}
+        onBringBack={() => undefined}
+        account={{ configured: false, signedIn: false, email: null }}
+        syncing={false}
+        onSync={() => undefined}
+        saveState="saved"
+        onSaveNow={() => undefined}
+        onCloseProject={() => undefined}
+        onPreferences={() => undefined}
+        {...extra}
+      />,
+    );
+
+  it('keeps Research reachable whatever section has left the workspace', () => {
+    const onOpenResearch = vi.fn();
+    bar(['script', 'lanes'], { onOpenResearch });
+    fireEvent.click(screen.getByText('Research'));
+    expect(onOpenResearch).toHaveBeenCalled();
+  });
+
+  it('offers a way back for each section that is out, and none when they are all here', () => {
+    const onBringBack = vi.fn();
+    bar(['script'], { onBringBack });
+    fireEvent.click(screen.getByLabelText('Bring Script back'));
+    expect(onBringBack).toHaveBeenCalledWith('script');
+
+    cleanup();
+    bar([]);
+    expect(screen.queryByLabelText(/^Bring /)).toBeNull();
+  });
+
+  it('does not offer a chip per beat window, which would be endless', () => {
+    bar(['research', 'beat:1234']);
+    expect(screen.getByLabelText('Bring Research back')).toBeDefined();
+    expect(screen.queryByLabelText(/^Bring beat/)).toBeNull();
   });
 });
 

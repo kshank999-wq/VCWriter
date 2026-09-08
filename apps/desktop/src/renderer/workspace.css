@@ -172,18 +172,25 @@ main {
 /* Four places, and whichever section the writer has put in each of them
    (addendum 02 §8). The geometry belongs to the place, not to the section:
    that is what lets the Script and the lanes trade sides without either of
-   them knowing it happened. */
-.slot {
+   them knowing it happened. (`place`, not `slot`: the lanes already have
+   slots, and they are a different thing entirely.) */
+.place {
   display: flex;
   min-height: 0;
   min-width: 0;
 }
 
-.slot-right {
+.place-right {
   width: var(--right-width, 300px);
 }
 
-.slot > .pane {
+/* The lanes fill what is left under the viewport, and all of the stage when
+   the viewport is not there. */
+.place-bottom {
+  flex: 1;
+}
+
+.place > .pane {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -275,23 +282,22 @@ main {
   pointer-events: none;
 }
 
-/* The place a section left behind when it went to its own window. */
-.pane-away {
+/* A section that has gone to its own window leaves no gap: the workspace
+   closes over it and the sections that remain take the room (§8). The way
+   back is the chip in the title bar, which is always in the same place
+   whatever is out. */
+.workspace.without-left .workspace-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.workspace.without-top .stage-top {
+  display: none;
+}
+
+.workspace:not(.with-timeline) .stage-top,
+.workspace.without-bottom .stage-top {
+  height: auto;
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 24px;
-  text-align: center;
-  background: repeating-linear-gradient(
-    -45deg,
-    transparent,
-    transparent 7px,
-    color-mix(in srgb, var(--border) 45%, transparent) 7px,
-    color-mix(in srgb, var(--border) 45%, transparent) 8px
-  );
 }
 
 .visually-hidden {
@@ -2753,7 +2759,9 @@ dialog.writer-dialog::backdrop {
 .workspace.script-paper .page-sheet,
 .workspace.script-paper .writer-sheet {
   --paper: #ffffff;
-  --paper-ink: #111111;
+  /* True black: a script is printed in ink, and 12pt Courier is a light
+     enough face that anything short of black reads as grey on the page. */
+  --paper-ink: #000000;
   --paper-muted: #6b665c;
   --paper-line: #d8d3c6;
   --paper-bar-2: #f8f6f1;
@@ -2842,7 +2850,7 @@ dialog.writer-dialog::backdrop {
 .workspace.script-paper .page-sheet .element textarea,
 .workspace.script-paper .writer-sheet .element textarea {
   background: transparent;
-  caret-color: #111111;
+  caret-color: #000000;
 }
 
 .workspace.script-paper .script-sheet .element textarea::placeholder,

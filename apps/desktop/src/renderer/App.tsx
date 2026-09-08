@@ -27,6 +27,7 @@ import {
   type SlotId,
 } from './panes';
 import { PaneFrame } from './components/PaneFrame';
+import { TitleBar } from './components/TitleBar';
 import { Welcome } from './components/Welcome';
 import { MasterTimeline } from './components/MasterTimeline';
 import { MasterPanel } from './components/MasterPanel';
@@ -44,18 +45,9 @@ import { CapturesPanel } from './components/CapturesPanel';
 import { EditorPanel } from './components/EditorPanel';
 import { ReadBackPanel } from './components/ReadBackPanel';
 import { RecoveryPanel } from './components/RecoveryPanel';
-import { Wordmark } from './components/Brand';
 import { Preferences } from './components/Preferences';
 import { applyScheme, DEFAULT_SCHEME, type SchemeId } from './themes';
 import type { AccountStatus } from '../preload/index';
-
-const SAVE_LABEL: Record<string, string> = {
-  idle: '',
-  dirty: 'Unsaved changes',
-  saving: 'Saving…',
-  saved: 'Saved',
-  error: 'Save failed',
-};
 
 export default function App() {
   const project = useProject();
@@ -332,6 +324,9 @@ export default function App() {
   const showBottom = writing && timelineOpen && !focused;
   const showRight = writing && inspectorOpen && !focused;
   const away = new Set(detached);
+  // A section in a window of its own leaves no gap here: its place is not
+  // drawn and the rest of the workspace takes the room (§8).
+  const here = (slot: SlotId) => !away.has(arrangement[slot]);
   const display = { ...DEFAULT_SCRIPT_DISPLAY, ...scriptDisplay };
 
   /** Each section, drawn once, ready to be placed wherever it has been put. */
@@ -355,7 +350,6 @@ export default function App() {
         onPageZoom={setScriptZoom}
         onOpenUnit={setOpenUnitId}
         onOpenBeat={setOpenBeatId}
-        onOpenResearch={() => (away.has('research') ? openPane('research') : setResearchOpen(true))}
       />
     ),
     viewer: (
@@ -408,9 +402,7 @@ export default function App() {
         pane={pane}
         arrangement={arrangement}
         onMove={(moved, to) => setArrangement(movePane(arrangement, moved, to))}
-        detached={away.has(pane)}
         onDetach={() => openPane(pane)}
-        onAttach={() => closePane(pane)}
         dragging={dragging}
         onDragStart={setDragging}
         onDragEnd={() => setDragging(null)}
@@ -430,67 +422,35 @@ export default function App() {
         'workspace',
         focused ? 'focus-mode' : '',
         paper ? 'script-paper' : '',
-        showBottom ? 'with-timeline' : '',
-        showRight ? 'with-inspector' : '',
+        showBottom && here('bottom') ? 'with-timeline' : '',
+        showRight && here('right') ? 'with-inspector' : '',
+        here('left') ? '' : 'without-left',
+        here('top') ? '' : 'without-top',
+        here('bottom') ? '' : 'without-bottom',
       ]
         .filter(Boolean)
         .join(' ')}
       style={{ '--left-width': `${columns.size}px`, '--viewport-height': `${rows.size}px` } as React.CSSProperties}
     >
-      <header className="titlebar">
-        <div className="titlebar-left">
-          <Wordmark compact />
-          <strong className="project-title" title={`${file.project.title} · ${file.project.format.replace(/_/g, ' ')}`}>
-            {file.project.title}
-          </strong>
-        </div>
-        <div className="titlebar-right">
-          {stats ? (
-            <span className="muted">
-              {pages} {pages === 1 ? 'page' : 'pages'} · {stats.beatCount} beats · {stats.wordCount} words
-            </span>
-          ) : null}
-          {writing ? (
-            <button
-              type="button"
-              className={focusMode ? 'ghost active' : 'ghost'}
-              title="Focus mode (Ctrl/Cmd+Shift+F)"
-              aria-pressed={focusMode}
-              onClick={() => setFocusMode(!focusMode)}
-            >
-              Focus
-            </button>
-          ) : null}
-          {account.configured ? (
-            <button
-              type="button"
-              className="ghost"
-              disabled={syncing}
-              title={account.signedIn ? 'Sync this project' : 'Sign in to sync'}
-              onClick={() => (account.signedIn ? void sync() : setView('captures'))}
-            >
-              {syncing ? 'Syncing…' : account.signedIn ? 'Sync' : 'Sign in'}
-            </button>
-          ) : null}
-          <span className={`save-state ${project.saveState}`}>{SAVE_LABEL[project.saveState]}</span>
-          <button type="button" className="ghost" onClick={() => void project.saveNow()}>
-            Save now
-          </button>
-          <button type="button" className="ghost" onClick={project.closeProject}>
-            Close
-          </button>
-          <button
-            type="button"
-            className="ghost"
-            title="Preferences"
-            aria-label="Preferences"
-            aria-haspopup="dialog"
-            onClick={() => setPreferencesOpen(true)}
-          >
-            ⚙
-          </button>
-        </div>
-      </header>
+      <TitleBar
+        file={file}
+        pages={pages}
+        beatCount={stats?.beatCount ?? 0}
+        wordCount={stats?.wordCount ?? 0}
+        writing={writing}
+        focusMode={focusMode}
+        onFocus={() => setFocusMode(!focusMode)}
+        onOpenResearch={() => (away.has('research') ? openPane('research') : setResearchOpen(true))}
+        away={detached}
+        onBringBack={closePane}
+        account={account}
+        syncing={syncing}
+        onSync={() => (account.signedIn ? void sync() : setView('captures'))}
+        saveState={project.saveState}
+        onSaveNow={() => void project.saveNow()}
+        onCloseProject={project.closeProject}
+        onPreferences={() => setPreferencesOpen(true)}
+      />
 
       <Preferences
         open={preferencesOpen}
@@ -537,29 +497,37 @@ export default function App() {
             <>
               {/* The tall column down the side. Which section is in it is the
                   writer's arrangement, not ours (addendum 02 §8). */}
-              <div className="slot slot-left">{inSlot('left')}</div>
-              <div
-                className="divider vertical"
-                role="separator"
-                aria-orientation="vertical"
-                aria-label="Resize the script column"
-                {...columns.dividerProps}
-              />
+              {here('left') ? (
+                <>
+                  <div className="place place-left">{inSlot('left')}</div>
+                  <div
+                    className="divider vertical"
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label="Resize the script column"
+                    {...columns.dividerProps}
+                  />
+                </>
+              ) : null}
               <div className="stage">
-                <div className="stage-top">
-                  <div className="slot slot-top">{inSlot('top')}</div>
-                  {showRight ? <div className="slot slot-right">{inSlot('right')}</div> : null}
-                </div>
-                {showBottom ? (
+                {here('top') ? (
+                  <div className="stage-top">
+                    <div className="place place-top">{inSlot('top')}</div>
+                    {showRight && here('right') ? <div className="place place-right">{inSlot('right')}</div> : null}
+                  </div>
+                ) : null}
+                {showBottom && here('bottom') ? (
                   <>
-                    <div
-                      className="divider"
-                      role="separator"
-                      aria-orientation="horizontal"
-                      aria-label="Resize the viewport"
-                      {...rows.dividerProps}
-                    />
-                    <div className="slot slot-bottom">{inSlot('bottom')}</div>
+                    {here('top') ? (
+                      <div
+                        className="divider"
+                        role="separator"
+                        aria-orientation="horizontal"
+                        aria-label="Resize the viewport"
+                        {...rows.dividerProps}
+                      />
+                    ) : null}
+                    <div className="place place-bottom">{inSlot('bottom')}</div>
                   </>
                 ) : null}
               </div>

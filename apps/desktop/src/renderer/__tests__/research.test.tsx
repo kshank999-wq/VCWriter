@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { addResearchCategory, addResearchItem, createProjectFile, type ProjectFile } from '@vcwriter/domain';
 import { ResearchWindow } from '../components/ResearchWindow';
-import { MasterPanel } from '../components/MasterPanel';
+import { TitleBar } from '../components/TitleBar';
 
 /**
  * The research window (addendum 02 §7): folders down the side, what is in
@@ -38,24 +38,33 @@ const withNotes = () => {
 };
 
 describe('the research window', () => {
-  it('opens over the whole workspace from the master panel', () => {
+  it('is opened from the title bar, so it survives the Script leaving', () => {
     const onOpenResearch = vi.fn();
     render(
-      <MasterPanel
+      <TitleBar
         file={createProjectFile({ title: 'T', format: 'screenplay' })}
-        selectedBeatId={null}
-        onSelectBeat={() => undefined}
-        onUpdate={() => undefined}
+        pages={1}
+        beatCount={1}
+        wordCount={0}
+        writing
         focusMode={false}
-        focusTitleBeatId={null}
-        onTitleFocused={() => undefined}
-        dictationShortcut={null}
+        onFocus={() => undefined}
         onOpenResearch={onOpenResearch}
+        away={['script']}
+        onBringBack={() => undefined}
+        account={{ configured: false, signedIn: false, email: null }}
+        syncing={false}
+        onSync={() => undefined}
+        saveState="saved"
+        onSaveNow={() => undefined}
+        onCloseProject={() => undefined}
+        onPreferences={() => undefined}
       />,
     );
+    // The Script is in a window of its own, and Research is still right here.
     fireEvent.click(screen.getByText('Research'));
     expect(onOpenResearch).toHaveBeenCalled();
-    // The categories are no longer a strip of tabs across the top.
+    // The categories are not a strip of tabs anywhere.
     expect(screen.queryByRole('tab', { name: /^Ideas/ })).toBeNull();
   });
 

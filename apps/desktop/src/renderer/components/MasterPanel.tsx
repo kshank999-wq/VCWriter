@@ -13,8 +13,6 @@ interface MasterPanelProps {
   dictationShortcut: string | null;
   onOpenUnit?(unitId: StructuralUnitId): void;
   onOpenBeat?(beatId: BeatId): void;
-  /** The Research tab opens the research window over the workspace (§7). */
-  onOpenResearch?(): void;
   /** What the Script shows besides the manuscript; held by the workspace. */
   display?: ScriptDisplay;
   onDisplay?(next: ScriptDisplay): void;
@@ -26,13 +24,14 @@ interface MasterPanelProps {
 }
 
 /**
- * The left editor window (addendum 02 §6): the Script, which is what this
- * quarter of the screen is for. Beside its tab is **Research**, which is
- * not a quarter of anything — it opens over the whole window with its
- * folders down the side (§7).
+ * The Script, and nothing around it (addendum 02 §6).
+ *
+ * Research used to be a tab beside it, which meant that taking the Script
+ * out to another monitor took research with it. It lives in the title bar
+ * now (§3), where it does not depend on any section being here.
  */
 export function MasterPanel(props: MasterPanelProps) {
-  const { focusMode, onOpenResearch } = props;
+  const { focusMode } = props;
 
   if (focusMode) {
     return (
@@ -44,16 +43,6 @@ export function MasterPanel(props: MasterPanelProps) {
 
   return (
     <section className="master" aria-label="Master panel">
-      {/* The section is named by the strip above it (§8), so this row is not a
-          set of tabs any more — only the one door out of the Script.
-          Research is not a quarter of the screen: it opens over the whole of
-          it, with its folders down the side (addendum 02 §7). */}
-      <div className="master-tabs">
-        <button type="button" className="tab" title="Open the research window" onClick={onOpenResearch}>
-          Research
-        </button>
-      </div>
-
       <StoryView {...props} />
     </section>
   );

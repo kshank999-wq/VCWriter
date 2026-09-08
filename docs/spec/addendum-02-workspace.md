@@ -83,9 +83,18 @@ for the viewport above the lanes.
 
 This is the **default** arrangement, not a fixed one. Each section sits in
 one of four places and can be moved to any other, or taken out into a window
-of its own; §8 has the rules. The strip along the top of each section — its
-name, the menu of places, and the control that takes it out — is 18px and
-carries nothing else, because a section's own controls belong inside it.
+of its own; §8 has the rules.
+
+The title bar carries the two controls that must not depend on any
+particular section being in the workspace: **Research**, which opens the
+research window (§7), and a chip for each section that is currently in a
+window of its own, which brings it back. Research used to be a tab beside
+the Script, which meant that taking the Script to another monitor took
+research with it; that was wrong, and it lives here now.
+
+The strip along the top of each section — its name, the menu of places, and
+the control that takes it out — is 18px and carries nothing else, because a
+section's own controls belong inside it.
 
 - The divider between the master panel and the stage drags, as does the one
   between the viewport and the timeline. Both positions are remembered per
@@ -559,9 +568,12 @@ same renderer with `?pane=` naming what it holds: `script`, `viewer`,
 so two beats can be open side by side. Asking twice for the same section
 raises the window that already exists rather than making a second one.
 
-The workspace holds the section's place while it is gone, saying where it
-went and offering to bring it back, rather than closing up as though the
-section had never been there.
+**The workspace closes over the place a section left.** The Script taken to
+another monitor does not leave a striped rectangle where it was: the column
+disappears and the Timeline & Viewer and the plot lanes take the width. The
+way back is the chip in the title bar (§3), which is in the same place
+whatever is out — better than a hole in the layout, which costs the room the
+writer moved the section to gain.
 
 Closing the workspace closes them: the workspace holds the document, and a
 window with nothing to edit and nothing to save it is worse than no window.
@@ -720,6 +732,9 @@ Named so that nobody mistakes their absence for an oversight:
   place, and the same move is available from the strip's menu without a
   mouse. A remembered arrangement that is not a permutation of the four
   sections falls back to the default rather than losing one.
+- Taking the Script out of the workspace closes its column: the stage grows
+  from 1193 to the full 1600 of a 1600-wide window, and Research is still in
+  the title bar. The chip there puts the Script back where it was.
 - A beat opened in a window of its own shows the workspace's beat; typing in
   it changes the workspace's project, and renaming the beat in the workspace
   changes what the window shows. Neither window holds a copy.

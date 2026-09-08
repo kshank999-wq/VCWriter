@@ -4,10 +4,7 @@ interface PaneFrameProps {
   pane: PaneId;
   arrangement: Arrangement;
   onMove(pane: PaneId, to: SlotId): void;
-  /** The section is in a window of its own; the workspace holds its place. */
-  detached: boolean;
   onDetach(): void;
-  onAttach(): void;
   /** Which section is being dragged, so a target can show it will take it. */
   dragging: PaneId | null;
   onDragStart(pane: PaneId): void;
@@ -22,21 +19,23 @@ interface PaneFrameProps {
  *
  * It is deliberately thin — a section's own controls are inside it, and this
  * is only about *where the section is*. Three things live here: its name,
- * which doubles as the grip you drag it by; a menu of the four places, so the
+ * which doubles as the grip you drag it by; a menu of the places, so the
  * arrangement can be changed without a mouse; and the control that takes the
  * section out into a window of its own.
  *
  * Dragging one section onto another swaps them. There is no notion of an
- * empty place or a section pushed off the edge: four sections, four places,
- * and every rearrangement is a permutation of them.
+ * empty place or a section pushed off the edge: every rearrangement is a
+ * permutation of the sections that are here.
+ *
+ * A section that has gone to its own window is not drawn here at all — the
+ * workspace closes over its place and the rest take the room — so this
+ * component never has to represent an absence.
  */
 export function PaneFrame({
   pane,
   arrangement,
   onMove,
-  detached,
   onDetach,
-  onAttach,
   dragging,
   onDragStart,
   onDragEnd,
@@ -48,7 +47,7 @@ export function PaneFrame({
 
   return (
     <section
-      className={`pane pane-${pane}${target ? ' drop-target' : ''}${detached ? ' detached' : ''}`}
+      className={`pane pane-${pane}${target ? ' drop-target' : ''}`}
       aria-label={name}
       onDragOver={(event) => {
         if (target) event.preventDefault();
@@ -88,24 +87,15 @@ export function PaneFrame({
         <button
           type="button"
           className="pane-out"
-          aria-label={detached ? `Bring ${name} back` : `Open ${name} in its own window`}
-          title={detached ? `Bring ${name} back into the workspace` : `Open ${name} in its own window`}
-          onClick={detached ? onAttach : onDetach}
+          aria-label={`Open ${name} in its own window`}
+          title={`Open ${name} in its own window — put it on another monitor`}
+          onClick={onDetach}
         >
-          {detached ? '⇤' : '⧉'}
+          ⧉
         </button>
       </header>
 
-      {detached ? (
-        <div className="pane-away">
-          <p className="muted">{name} is in a window of its own.</p>
-          <button type="button" className="ghost" onClick={onAttach}>
-            Bring it back
-          </button>
-        </div>
-      ) : (
-        children
-      )}
+      {children}
     </section>
   );
 }
