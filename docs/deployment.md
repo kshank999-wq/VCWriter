@@ -96,6 +96,29 @@ project-listing endpoint, not the team id. The id returned a partial list
 that omitted this repository's projects entirely, which looked like a
 permissions problem and was not.
 
+### Browser preview
+
+The desktop application's interface is also served at
+**https://vc-writer.com/preview/**, for administrators only, so a change
+pushed to `main` can be tried at the next refresh instead of after a
+download and an install. It is the same renderer the desktop runs, built by
+plain Vite (`apps/desktop/vite.preview.config.ts`) with a bridge that keeps
+projects in the browser's IndexedDB (`src/renderer/browser-bridge.ts`)
+instead of on disk. The site's `prebuild` script (`scripts/build-preview.mjs`)
+builds it and copies it under `public/preview/`, which is git-ignored.
+
+What it is for: seeing and using the interface. What it is not: the product.
+There is no cloud, no licence, no updater, and PDF export is the browser's
+print dialog. **Download .vcw** on the strip at the bottom left saves the
+open project as a file the desktop application opens; **Open a project
+file…** on the welcome screen imports one.
+
+Access is decided in `src/middleware.ts` from the signed-in user's
+`profiles.is_admin`, the same flag the admin console uses; anyone else is
+sent to sign in. The page carries its own content security policy (a Vite
+bundle has no nonce to carry) and `Cache-Control: no-store`, so a refresh is
+always the newest deployment.
+
 ### Settings that must stay as they are
 
 - Root Directory `apps/web`, with "include files outside the root

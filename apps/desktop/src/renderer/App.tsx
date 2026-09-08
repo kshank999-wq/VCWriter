@@ -28,6 +28,8 @@ import { EditorPanel } from './components/EditorPanel';
 import { ReadBackPanel } from './components/ReadBackPanel';
 import { RecoveryPanel } from './components/RecoveryPanel';
 import { Wordmark } from './components/Brand';
+import { Preferences } from './components/Preferences';
+import { applyScheme, DEFAULT_SCHEME, type SchemeId } from './themes';
 import type { AccountStatus } from '../preload/index';
 
 const SAVE_LABEL: Record<string, string> = {
@@ -58,6 +60,10 @@ export default function App() {
 
   // Per-machine layout preferences (addendum 02 §3), not project data.
   const [inspectorOpen, setInspectorOpen] = usePreference('inspector', true);
+  const [scheme, setScheme] = usePreference<SchemeId>('scheme', DEFAULT_SCHEME);
+  const [paper, setPaper] = usePreference('paper', true);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+  useEffect(() => applyScheme(scheme), [scheme]);
   const [timelineOpen, setTimelineOpen] = usePreference('timeline', true);
   const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
   const split = useSplit({ key: 'timelineHeight', initial: 300, min: 140, reserve: 220 });
@@ -238,6 +244,7 @@ export default function App() {
       className={[
         'workspace',
         focused ? 'focus-mode' : '',
+        paper ? 'script-paper' : '',
         showTimeline ? 'with-timeline' : '',
         showInspector ? 'with-inspector' : '',
       ]
@@ -287,8 +294,27 @@ export default function App() {
           <button type="button" className="ghost" onClick={project.closeProject}>
             Close
           </button>
+          <button
+            type="button"
+            className="ghost"
+            title="Preferences"
+            aria-label="Preferences"
+            aria-haspopup="dialog"
+            onClick={() => setPreferencesOpen(true)}
+          >
+            ⚙
+          </button>
         </div>
       </header>
+
+      <Preferences
+        open={preferencesOpen}
+        onClose={() => setPreferencesOpen(false)}
+        scheme={scheme}
+        onScheme={setScheme}
+        paper={paper}
+        onPaper={setPaper}
+      />
 
       {project.error ? (
         <p className="error banner" role="alert">

@@ -10,6 +10,8 @@ build/
 out/
 release/
 .next/
+# the browser preview is built into the site at deploy time
+apps/web/public/preview/
 *.tsbuildinfo
 
 # environment / secrets

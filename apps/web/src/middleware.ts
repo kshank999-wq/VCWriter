@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { strayAuthRedirect } from '@/lib/auth-redirect';
+import { previewContentSecurityPolicy, previewRoute, previewSignIn } from '@/lib/preview-gate';
 
 /**
  * Refreshes the Supabase session cookie on navigation so a signed-in customer
@@ -49,6 +50,10 @@ export async function middleware(request: NextRequest) {
   const stray = strayAuthRedirect(request.nextUrl);
   if (stray) return NextResponse.redirect(stray);
 
+  // The browser preview: administrators only, with the bundle's own policy.
+  const preview = previewRoute(request.nextUrl.pathname);
+  if (preview) return previewResponse(request, preview);
+
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const policy = contentSecurityPolicy(nonce);
 
@@ -79,6 +84,41 @@ export async function middleware(request: NextRequest) {
   await supabase.auth.getUser();
   return response;
 }
+
+const previewResponse = async (
+  request: NextRequest,
+  route: NonNullable<ReturnType<typeof previewRoute>>,
+): Promise<NextResponse> => {
+  if (route.kind === 'redirect') return NextResponse.redirect(new URL(route.to, request.url));
+
+  // Who is asking. The profile row is readable by its owner under RLS, so the
+  // session client is enough; no service key runs at the edge.
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    {
+      cookies: {
+        get: (name: string) => request.cookies.get(name)?.value,
+        set: () => undefined,
+        remove: () => undefined,
+      },
+    },
+  );
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
+    : { data: null };
+  if (!profile?.is_admin) return NextResponse.redirect(new URL(previewSignIn, request.url));
+
+  const response =
+    route.kind === 'rewrite' ? NextResponse.rewrite(new URL(route.to, request.url)) : NextResponse.next();
+  response.headers.set('content-security-policy', previewContentSecurityPolicy);
+  // Always the newest build: the point of the page is that a refresh is enough.
+  response.headers.set('cache-control', 'no-store');
+  return response;
+};
 
 export const config = {
   // Everything except static assets and the Stripe webhook, which authenticates

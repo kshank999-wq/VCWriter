@@ -240,7 +240,7 @@ main {
   align-items: center;
   gap: 2px;
   padding: 0 4px;
-  background: rgba(138, 111, 47, 0.18);
+  background: color-mix(in srgb, var(--gold) 18%, transparent);
   border-left: 2px solid var(--gold);
   color: var(--gold);
   font-family: var(--display);
@@ -360,7 +360,7 @@ main {
 .slot {
   min-height: 44px;
   border-bottom: 1px solid var(--border);
-  border-left: 1px solid rgba(58, 48, 24, 0.55);
+  border-left: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
 }
 
 .slot.tail {
@@ -398,7 +398,7 @@ main {
 
 .block.playhead {
   border-color: var(--gold-deep);
-  box-shadow: inset 2px 0 0 var(--gold), 0 0 0 1px rgba(201, 164, 92, 0.25);
+  box-shadow: inset 2px 0 0 var(--gold), 0 0 0 1px color-mix(in srgb, var(--gold) 25%, transparent);
 }
 
 .block.collapsed {
@@ -1214,4 +1214,231 @@ button.page.selected {
 
 .workspace.focus-mode .titlebar:hover {
   opacity: 1;
+}
+
+/* ------------------------------------------------------------------- paper */
+
+/* With the paper preference on (the default), the Script is a sheet of paper: white, black text, the thing writers have
+   looked at for a century. The chrome around it stays dark; the page is a
+   representation of paper and is exempt from the palette (docs/brand.md),
+   exactly as the print preview already is. Structure bars sit on the sheet
+   in light greys so they read as marks on the page, not as chrome. */
+.workspace.script-paper .story {
+  --paper: #ffffff;
+  --paper-ink: #111111;
+  --paper-muted: #6b665c;
+  --paper-line: #d8d3c6;
+  --paper-bar: #f1eee6;
+  --paper-bar-2: #f8f6f1;
+  background: var(--paper);
+  color: var(--paper-ink);
+  color-scheme: light;
+}
+
+.workspace.script-paper .story .scene-bar {
+  background: var(--paper-bar);
+  border-color: var(--paper-line);
+  color: var(--paper-ink);
+}
+
+.workspace.script-paper .story .scene-bar input,
+.workspace.script-paper .story .beat-bar input {
+  color: var(--paper-ink);
+}
+
+.workspace.script-paper .story .scene-bar input:hover,
+.workspace.script-paper .story .beat-bar input:hover {
+  border-color: var(--paper-line);
+}
+
+.workspace.script-paper .story .scene-bar input:focus,
+.workspace.script-paper .story .beat-bar input:focus {
+  border-color: var(--gold-deep);
+  background: var(--paper);
+}
+
+.workspace.script-paper .story .bar-label,
+.workspace.script-paper .story .bar-meta .muted,
+.workspace.script-paper .story .status-pill,
+.workspace.script-paper .story .collapsed-note,
+.workspace.script-paper .story .story-hints,
+.workspace.script-paper .story .empty-state,
+.workspace.script-paper .story .bar-title::placeholder {
+  color: var(--paper-muted);
+}
+
+.workspace.script-paper .story .status-pill.status-drafting,
+.workspace.script-paper .story .status-pill.status-written {
+  color: var(--gold-deep);
+}
+
+.workspace.script-paper .story .status-pill.status-cut {
+  color: var(--red);
+}
+
+.workspace.script-paper .story .beat-bar {
+  border-bottom-color: var(--paper-line);
+}
+
+.workspace.script-paper .story .beat-block.selected {
+  border-left-color: var(--gold);
+}
+
+.workspace.script-paper .story .act-bar {
+  color: var(--gold-deep);
+  border-bottom-color: var(--gold-deep);
+}
+
+.workspace.script-paper .story .page-column {
+  color: var(--paper-ink);
+}
+
+.workspace.script-paper .story .element textarea {
+  color: var(--paper-ink);
+  background: transparent;
+}
+
+.workspace.script-paper .story .element textarea::placeholder {
+  color: #b5b0a4;
+}
+
+.workspace.script-paper .story .element textarea:hover {
+  border-color: var(--paper-line);
+}
+
+.workspace.script-paper .story .element textarea:focus {
+  border-color: var(--gold-deep);
+  background: var(--paper-bar-2);
+}
+
+.workspace.script-paper .story .element-type {
+  color: var(--paper-muted);
+  background: var(--paper);
+}
+
+.workspace.script-paper .story .element-general textarea {
+  color: var(--paper-muted);
+}
+
+.workspace.script-paper .story .twisty {
+  color: var(--paper-muted);
+}
+
+.workspace.script-paper .story .twisty:hover {
+  color: var(--paper-ink);
+  background: var(--paper-bar-2);
+}
+
+.workspace.script-paper .story .add-element {
+  color: var(--gold-deep);
+}
+
+.workspace.script-paper .story .story-hints {
+  border-top-color: var(--paper-line);
+}
+
+.workspace.script-paper .story ::selection {
+  background: color-mix(in srgb, var(--gold) 45%, transparent);
+}
+
+/* -------------------------------------------------------------- preferences */
+
+dialog.preferences {
+  width: min(560px, calc(100vw - 48px));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+dialog.preferences::backdrop {
+  background: color-mix(in srgb, var(--ink) 70%, transparent);
+}
+
+dialog.preferences > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10px 10px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+dialog.preferences h2 {
+  margin: 0;
+  font-size: 12px;
+}
+
+dialog.preferences section {
+  padding: 14px 18px 4px;
+  display: grid;
+  gap: 10px;
+}
+
+dialog.preferences h3 {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+dialog.preferences > footer {
+  padding: 10px 18px 14px;
+  font-size: 11px;
+}
+
+dialog.preferences .toggle {
+  padding: 0;
+}
+
+.scheme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+button.scheme {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  text-align: left;
+  padding: 8px 10px;
+  background: var(--ink);
+  border: 1px solid var(--border);
+}
+
+button.scheme.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+.scheme-swatch {
+  grid-row: 1 / span 2;
+  width: 44px;
+  height: 32px;
+  border: 1px solid;
+  border-radius: 2px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 3px;
+  padding: 4px;
+}
+
+.scheme-swatch span {
+  border-radius: 1px;
+}
+
+.scheme-name {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  color: var(--text);
+}
+
+.scheme-description {
+  font-size: 11px;
+  color: var(--muted);
 }

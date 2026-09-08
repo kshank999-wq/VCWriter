@@ -26,8 +26,13 @@ names a colour directly.
 | `--text` | `#f1e7cf` | Body text: cream, not white |
 | `--muted` | `#a3946f` | Secondary text, labels, counts |
 
-The manuscript page in print preview stays white with black text. It is a
-representation of paper and is exempt from the palette.
+The manuscript page — in print preview, and the Script in the workspace
+unless the writer turns the paper preference off — stays white with black
+text. It is a representation of paper and is exempt from the palette.
+
+The palette above is the *Gold* scheme, the default. Preferences offer three
+others (Graphite, Slate, Parchment) that swap the token values and nothing
+else; see `docs/spec/addendum-02-workspace.md` §12.
 
 ## Type
 

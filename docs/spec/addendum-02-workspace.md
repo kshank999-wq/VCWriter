@@ -268,7 +268,23 @@ In addition to §5's reordering keys and §6's writing keys:
 Every control on the timeline is a focusable element with an accessible
 name; the reorder keys work from the same elements that drag (§15).
 
-## 12. Later
+## 12. Preferences
+
+A gear on the title bar opens Preferences. These are kept on the machine,
+not in the project file — a collaborator opening the file must not inherit
+anyone's colours — alongside the layout preferences of §3.
+
+- **Colour scheme.** Four: *Gold*, the brand as `docs/brand.md` defines it
+  and the default; *Graphite*, editing-room greys with a warm accent;
+  *Slate*, cool blue-grey with a sky accent; *Parchment*, a light interface.
+  A scheme is a set of values for the stylesheet's tokens and nothing more:
+  geometry, type and behaviour do not change between them.
+- **Script on paper.** On by default: the Script is drawn as a white sheet
+  with black text under any scheme, because a page is what writers look at
+  and a dark page is a strain over a long day. Off, the Script follows the
+  scheme.
+
+## 13. Later
 
 Named so that nobody mistakes their absence for an oversight:
 
@@ -284,7 +300,7 @@ Named so that nobody mistakes their absence for an oversight:
   in the inspector; a lane per character is a later addendum.
 - Timing in minutes. Pages are the industry's unit and the ruler uses them.
 
-## 13. Acceptance
+## 14. Acceptance
 
 - The Script shows every beat of the fixture project in print order, and
   typing in the third beat changes the third beat and nothing else.

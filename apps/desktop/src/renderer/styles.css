@@ -1,5 +1,6 @@
 /* Palette and type from docs/brand.md: the VC Film Studio materials — black,
-   gold, a deep red — without its ornament. One scheme: the brand is dark. */
+   gold, a deep red — without its ornament. These are the Gold scheme's values,
+   the default; Preferences can replace them with another scheme's (themes.ts). */
 :root {
   --ink: #070604;
   --bg: var(--ink);

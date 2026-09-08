@@ -5,6 +5,7 @@
   "description": "vc-writer.com \u2014 marketing site, accounts, Stripe checkout, license delivery and installer downloads",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/build-preview.mjs",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
