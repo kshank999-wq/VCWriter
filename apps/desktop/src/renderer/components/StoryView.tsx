@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   beatsForUnit,
-  findLane,
   isProseFormat,
+  pageBreaks,
   storyLayout,
   updateBeat,
   updateUnit,
@@ -13,7 +13,29 @@ import {
   type StructuralUnitId,
 } from '@vcwriter/domain';
 import { BeatBody } from './BeatBody';
-import { STATUS_GLYPH } from './status';
+import { ManuscriptDataLists } from './ManuscriptDataLists';
+
+/** What the Script shows besides the manuscript itself (addendum 02 §6). */
+export interface ScriptDisplay {
+  /** Scene headings — the sluglines. A script has them; a novel has none. */
+  headings: boolean;
+  /** The scene's own name and number: structure, not manuscript. */
+  sceneNames: boolean;
+  /** The beat names: authoring labels, never printed. */
+  beatNames: boolean;
+  /** Act breaks where a marker starts. */
+  acts: boolean;
+  /** Rules where the printed pages break, numbered. */
+  pages: boolean;
+}
+
+export const DEFAULT_SCRIPT_DISPLAY: ScriptDisplay = {
+  headings: true,
+  sceneNames: false,
+  beatNames: false,
+  acts: true,
+  pages: true,
+};
 
 interface StoryViewProps {
   file: ProjectFile;
@@ -27,23 +49,28 @@ interface StoryViewProps {
   focusTitleBeatId: BeatId | null;
   onTitleFocused(): void;
   dictationShortcut: string | null;
-  /** A scene bar was double-clicked: open the scene pop-up. */
+  /** Held by the workspace so the choice survives a restart; local if absent. */
+  display?: ScriptDisplay;
+  onDisplay?(next: ScriptDisplay): void;
+  /** A scene name was double-clicked: open the scene pop-up. */
   onOpenUnit?(unitId: StructuralUnitId): void;
-  /** A beat bar was double-clicked: open the beat pop-up. */
+  /** A beat name was double-clicked: open the beat in the writing screen. */
   onOpenBeat?(beatId: BeatId): void;
 }
 
 /**
- * The whole manuscript in the order it prints (addendum 02 §4).
+ * The Script: the manuscript as it will be delivered (addendum 02 §6).
  *
- * Structure appears as bars in the flow of the text: a scene bar in the
- * lane's colour at the start of each scene, a lighter beat bar at the start
- * of each beat, and under each beat bar the beat's manuscript. The beat title
- * is a bar and not a line of script, which is what keeps §5.3's rule visible:
- * the writer can see it is not part of the page.
+ * This is the view where the work comes together, so it is the finished
+ * thing — the page geometry, the indents and the capitals of a shooting
+ * script or a manuscript, on paper, with the page breaks ruled where the
+ * printed pages actually break. What is *about* the story rather than in
+ * it — scene names, beat names, act breaks — is off by default and comes
+ * back one toggle at a time, because a writer reading for flow and a
+ * writer working on structure want different amounts of scaffolding.
  *
- * Putting the cursor in a beat selects it; selecting a beat anywhere else
- * scrolls here. Nothing else in this file knows about the lanes.
+ * It stays editable: putting the cursor in a line and typing is the same
+ * edit the beat's writing screen makes, through the same mutation.
  */
 export function StoryView({
   file,
@@ -55,14 +82,21 @@ export function StoryView({
   focusTitleBeatId,
   onTitleFocused,
   dictationShortcut,
+  display: givenDisplay,
+  onDisplay,
   onOpenUnit,
   onOpenBeat,
 }: StoryViewProps) {
   const layout = useMemo(() => givenLayout ?? storyLayout(file), [givenLayout, file]);
   const prose = isProseFormat(file.project.format);
-  const [collapsedBeats, setCollapsedBeats] = useState<ReadonlySet<string>>(() => new Set());
+  const [ownDisplay, setOwnDisplay] = useState<ScriptDisplay>(DEFAULT_SCRIPT_DISPLAY);
+  const display = givenDisplay ?? ownDisplay;
+  const setDisplay = onDisplay ?? setOwnDisplay;
   const blocks = useRef(new Map<string, HTMLElement>());
   const titles = useRef(new Map<string, HTMLInputElement>());
+
+  // Where the printed pages break, from the one paginator the exports use.
+  const breaks = useMemo(() => (display.pages ? pageBreaks(file) : null), [file, display.pages]);
 
   // A selection made in the lanes or the inspector brings the beat into view.
   // One made here — the cursor is already in it — must not yank the page.
@@ -80,145 +114,118 @@ export function StoryView({
     input.focus();
     input.select();
     onTitleFocused();
-  }, [focusTitleBeatId, onTitleFocused]);
+  }, [focusTitleBeatId, onTitleFocused, display.beatNames]);
 
-  const toggleBeat = (beatId: string) =>
-    setCollapsedBeats((current) => {
-      const next = new Set(current);
-      if (next.has(beatId)) next.delete(beatId);
-      else next.add(beatId);
-      return next;
-    });
-
-  const characterNames = file.characters.map((character) => character.name);
+  const noun = prose ? 'Chapter' : 'Scene';
+  const toggle = (key: keyof ScriptDisplay) => setDisplay({ ...display, [key]: !display[key] });
 
   return (
-    <div className={focusMode ? 'story focus' : 'story'}>
-      <datalist id="vcwriter-characters">
-        {characterNames.map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
+    <div className={focusMode ? 'story script-view focus' : 'story script-view'}>
+      <ManuscriptDataLists file={file} />
 
-      {layout.spans.map((span) => {
-        const unit = span.unit;
-        // A scene switched off leaves the script (addendum 02 §4); it is
-        // still on the timeline, dimmed, and opens from there.
-        if (!unit.inScript) return null;
-        const lane = findLane(file, unit.laneId);
-        const beats = beatsForUnit(file, unit.id);
-        const noun = unit.kind;
-        return (
-          <section key={unit.id} className="scene" aria-label={`${noun} ${unit.title || 'untitled'}`}>
-            {span.marker ? (
-              <div className="act-bar">
-                <span>{span.marker.title || span.marker.kind}</span>
-              </div>
-            ) : null}
-            <header
-              className={unit.collapsed ? 'scene-bar collapsed' : 'scene-bar'}
-              style={{ borderLeftColor: lane?.color }}
-              title={onOpenUnit ? `Double-click to open this ${noun}` : undefined}
-              onClick={() => {
-                const first = beats[0];
-                if (first) onSelectBeat(first.id);
-              }}
-              onDoubleClick={() => onOpenUnit?.(unit.id)}
-            >
-              <button
-                type="button"
-                className="ghost twisty"
-                aria-expanded={!unit.collapsed}
-                aria-label={unit.collapsed ? `Expand ${noun}` : `Collapse ${noun}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onUpdate((current) => updateUnit(current, unit.id, { collapsed: !unit.collapsed }));
-                }}
-              >
-                {unit.collapsed ? '▸' : '▾'}
-              </button>
-              <input
-                className="bar-label"
-                aria-label="Sequence label"
-                placeholder={noun === 'chapter' ? 'Ch.' : 'Sc.'}
-                value={unit.sequenceLabel}
-                onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { sequenceLabel: event.target.value }))}
-                onClick={(event) => event.stopPropagation()}
-              />
-              <input
-                className="bar-title"
-                aria-label={`${noun} title`}
-                placeholder={`Untitled ${noun}`}
-                value={unit.title}
-                onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { title: event.target.value }))}
-                onClick={(event) => event.stopPropagation()}
-              />
-              <span className="bar-meta">
-                {lane ? (
-                  <span className="lane-chip" style={{ color: lane.color }}>
-                    {lane.name}
-                  </span>
-                ) : null}
-                <span className="muted">p. {Math.floor(span.startPage) + 1}</span>
-              </span>
-            </header>
+      {focusMode ? null : (
+        <div className="script-options" role="group" aria-label="Script display">
+          <span className="muted">Display</span>
+          {prose ? null : <Chip label="Scene headings" on={display.headings} onClick={() => toggle('headings')} />}
+          <Chip label={`${noun} names`} on={display.sceneNames} onClick={() => toggle('sceneNames')} />
+          <Chip label="Beat names" on={display.beatNames} onClick={() => toggle('beatNames')} />
+          <Chip label="Acts" on={display.acts} onClick={() => toggle('acts')} />
+          <Chip label="Page breaks" on={display.pages} onClick={() => toggle('pages')} />
+        </div>
+      )}
 
-            {unit.collapsed ? (
-              <p className="muted collapsed-note">
-                {beats.length} {beats.length === 1 ? 'beat' : 'beats'}
-              </p>
-            ) : (
-              <>
-                {beats.map((beat) => (
-                  <BeatBlock
-                    key={beat.id}
-                    file={file}
-                    beat={beat}
-                    selected={beat.id === selectedBeatId}
-                    collapsed={collapsedBeats.has(beat.id)}
-                    onToggle={() => toggleBeat(beat.id)}
-                    onSelect={() => onSelectBeat(beat.id)}
-                    onOpen={onOpenBeat ? () => onOpenBeat(beat.id) : undefined}
-                    onUpdate={onUpdate}
-                    registerBlock={(node) => {
-                      if (node) blocks.current.set(beat.id, node);
-                      else blocks.current.delete(beat.id);
-                    }}
-                    registerTitle={(node) => {
-                      if (node) titles.current.set(beat.id, node);
-                      else titles.current.delete(beat.id);
-                    }}
+      <div className={display.headings ? 'script-sheet' : 'script-sheet no-headings'}>
+        <header className="script-title-block">
+          <h1>{file.project.title}</h1>
+          {file.project.author ? <p>by {file.project.author}</p> : null}
+        </header>
+
+        {layout.spans.map((span) => {
+          const unit = span.unit;
+          // A scene switched off leaves the script and stays on the timeline.
+          if (!unit.inScript) return null;
+          const beats = beatsForUnit(file, unit.id).filter((beat) => beat.inScript);
+          return (
+            <section key={unit.id} className="scene" aria-label={`${unit.kind} ${unit.title || 'untitled'}`}>
+              {display.acts && span.marker ? (
+                <div className="act-bar">
+                  <span>{span.marker.title || span.marker.kind}</span>
+                </div>
+              ) : null}
+
+              {display.sceneNames ? (
+                <header
+                  className="scene-name"
+                  title={onOpenUnit ? `Double-click to open this ${unit.kind}` : undefined}
+                  onDoubleClick={() => onOpenUnit?.(unit.id)}
+                >
+                  <input
+                    className="bar-label"
+                    aria-label="Sequence label"
+                    placeholder={prose ? 'Ch.' : 'Sc.'}
+                    value={unit.sequenceLabel}
+                    onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { sequenceLabel: event.target.value }))}
                   />
-                ))}
-                {beats.length === 0 ? (
-                  <p className="muted collapsed-note">No beats in this {noun} yet. Use + Beat on the lanes toolbar.</p>
-                ) : null}
-              </>
-            )}
-          </section>
-        );
-      })}
+                  <input
+                    className="bar-title"
+                    aria-label={`${unit.kind} title`}
+                    placeholder={`Untitled ${unit.kind}`}
+                    value={unit.title}
+                    onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { title: event.target.value }))}
+                  />
+                </header>
+              ) : null}
 
-      {layout.spans.length === 0 ? (
-        <p className="muted empty-state">Add a scene from the lanes toolbar to start writing.</p>
-      ) : null}
+              {beats.map((beat) => (
+                <BeatBlock
+                  key={beat.id}
+                  file={file}
+                  beat={beat}
+                  selected={beat.id === selectedBeatId}
+                  showName={display.beatNames}
+                  breaks={breaks}
+                  onSelect={() => onSelectBeat(beat.id)}
+                  onOpen={onOpenBeat ? () => onOpenBeat(beat.id) : undefined}
+                  onUpdate={onUpdate}
+                  registerBlock={(node) => {
+                    if (node) blocks.current.set(beat.id, node);
+                    else blocks.current.delete(beat.id);
+                  }}
+                  registerTitle={(node) => {
+                    if (node) titles.current.set(beat.id, node);
+                    else titles.current.delete(beat.id);
+                  }}
+                />
+              ))}
 
-      <footer className="story-hints muted">
-        <p>
-          Return for the next element · Tab to change its type · Shift+Return for a line break
-          {prose ? '' : ' · Tab from a character cue gives a parenthetical'}
-        </p>
-        {/*
-          Dictation (§9). Electron's Chromium ships no working speech-recognition
-          API, so this points at the system dictation that already works in any
-          focused field. VC Writer Notes on a phone uses the browser API.
-        */}
-        <p>
-          To dictate, put the cursor in an element and use your system dictation
-          {dictationShortcut ? ` (${dictationShortcut})` : ''}.
-        </p>
-      </footer>
+              {beats.length === 0 ? (
+                <p className="muted collapsed-note">Nothing in this {unit.kind} is in the script.</p>
+              ) : null}
+            </section>
+          );
+        })}
+
+        {layout.spans.length === 0 ? (
+          <p className="muted empty-state">Add a scene from the lanes toolbar to start writing.</p>
+        ) : null}
+      </div>
+
+      {focusMode ? null : (
+        <footer className="script-foot muted">
+          The whole {prose ? 'manuscript' : 'script'} in story order · double-click a beat to write in it · Return for the next
+          element, Tab to change its type
+          {dictationShortcut ? ` · to dictate, ${dictationShortcut}` : ''}
+        </footer>
+      )}
     </div>
+  );
+}
+
+function Chip({ label, on, onClick }: { label: string; on: boolean; onClick(): void }) {
+  return (
+    <button type="button" className={on ? 'chip on' : 'chip'} aria-pressed={on} aria-label={label} onClick={onClick}>
+      {label}
+    </button>
   );
 }
 
@@ -226,8 +233,8 @@ interface BeatBlockProps {
   file: ProjectFile;
   beat: Beat;
   selected: boolean;
-  collapsed: boolean;
-  onToggle(): void;
+  showName: boolean;
+  breaks: Map<string, number> | null;
   onSelect(): void;
   onOpen?(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
@@ -235,7 +242,18 @@ interface BeatBlockProps {
   registerTitle(node: HTMLInputElement | null): void;
 }
 
-function BeatBlock({ file, beat, selected, collapsed, onToggle, onSelect, onOpen, onUpdate, registerBlock, registerTitle }: BeatBlockProps) {
+function BeatBlock({
+  file,
+  beat,
+  selected,
+  showName,
+  breaks,
+  onSelect,
+  onOpen,
+  onUpdate,
+  registerBlock,
+  registerTitle,
+}: BeatBlockProps) {
   return (
     <article
       ref={registerBlock}
@@ -243,45 +261,35 @@ function BeatBlock({ file, beat, selected, collapsed, onToggle, onSelect, onOpen
       style={beat.color ? ({ '--beat-colour': beat.color } as React.CSSProperties) : undefined}
       aria-current={selected ? 'true' : undefined}
     >
-      <header
-        className="beat-bar"
-        title={onOpen ? 'Double-click to open this beat' : undefined}
-        onClick={onSelect}
-        onDoubleClick={onOpen}
-      >
-        <button
-          type="button"
-          className="ghost twisty"
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? 'Expand beat' : 'Collapse beat'}
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggle();
-          }}
-        >
-          {collapsed ? '▸' : '▾'}
+      {/* The beat's name is authoring metadata, never manuscript (§5.3, §19),
+          so it is shown only when the writer asks for it. */}
+      {/* The writing is done in the beat's own screen; this is how you get
+          there from the page, without taking double-click away from the text. */}
+      {onOpen ? (
+        <button type="button" className="beat-open" aria-label="Write in this beat" title="Write in this beat" onClick={onOpen}>
+          ✎
         </button>
-        {/* The internal beat title: authoring metadata, never manuscript (§5.3, §19). */}
-        <input
-          ref={registerTitle}
-          className="bar-title beat"
-          aria-label="Beat title (not printed)"
-          placeholder="What happens in this beat"
-          value={beat.title}
-          onFocus={onSelect}
-          onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { title: event.target.value }))}
-          onClick={(event) => event.stopPropagation()}
-        />
-        {beat.revisions.length > 0 ? (
-          <span className="revision-chip muted" title={`${beat.revisions.length} other ${beat.revisions.length === 1 ? 'revision' : 'revisions'} kept`}>
-            {beat.revisionName}
-          </span>
-        ) : null}
-        <span className={`status-pill status-${beat.status}`} title={beat.status}>
-          <span aria-hidden="true">{STATUS_GLYPH[beat.status]}</span> {beat.status}
-        </span>
-      </header>
-      {collapsed ? null : <BeatBody file={file} beat={beat} onUpdate={onUpdate} onActivate={onSelect} />}
+      ) : null}
+      {showName ? (
+        <header
+          className="beat-name"
+          title={onOpen ? 'Double-click to open this beat' : undefined}
+          onClick={onSelect}
+          onDoubleClick={onOpen}
+        >
+          <input
+            ref={registerTitle}
+            aria-label="Beat title (not printed)"
+            placeholder="What happens in this beat"
+            value={beat.title}
+            onFocus={onSelect}
+            onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { title: event.target.value }))}
+            onClick={(event) => event.stopPropagation()}
+          />
+          {beat.revisions.length > 0 ? <span className="revision-chip muted">{beat.revisionName}</span> : null}
+        </header>
+      ) : null}
+      <BeatBody file={file} beat={beat} breaks={breaks} emptyLabel={null} onUpdate={onUpdate} onActivate={onSelect} />
     </article>
   );
 }

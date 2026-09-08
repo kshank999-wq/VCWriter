@@ -102,11 +102,11 @@ describe('scene pop-up', () => {
   });
 });
 
-describe('beat pop-up', () => {
-  it('starts a revision as a copy, switches back, colours the beat, and lists what the beat holds', () => {
+describe('the writing screen', () => {
+  it('is the beat: its name, its version, whether it is in the script, and the page', () => {
     let latest = scene();
     const beatId = latest.beats[0]!.id;
-    render(
+    const { container } = render(
       <Harness initial={latest}>
         {(file, update) => {
           latest = file;
@@ -115,35 +115,45 @@ describe('beat pop-up', () => {
       </Harness>,
     );
 
+    // The bar: the name centred, a version, a checkbox. No sidebar.
     expect((screen.getByLabelText('Beat name') as HTMLInputElement).value).toBe('Home life');
+    expect(screen.queryByLabelText('In this beat')).toBeNull();
     expect(screen.queryByLabelText('Location')).toBeNull();
-    const side = within(screen.getByLabelText('In this beat'));
-    expect(side.getByText('MIKE')).toBeDefined();
-    expect(side.getByText('The envelope')).toBeDefined();
+    // The page: the manuscript at the script's own geometry, editable.
+    expect(container.querySelector('.writer-sheet .page-column')).toBeDefined();
+    expect(screen.getByDisplayValue('Morning.')).toBeDefined();
 
-    // New revision…: named inline, then started as a copy of the working text.
-    fireEvent.change(screen.getByLabelText('Revision'), { target: { value: '__new__' } });
-    fireEvent.change(screen.getByLabelText('New revision name'), { target: { value: 'Tighter' } });
+    // Writing here is writing in the script.
+    fireEvent.change(screen.getByDisplayValue('Morning.'), { target: { value: 'Morning, love.' } });
+    expect(latest.beats[0]!.manuscript.elements[2]!.text).toBe('Morning, love.');
+
+    // A new version starts as a copy: the text carries over, the old version
+    // is kept under its name, and what is typed now belongs to the new one.
+    fireEvent.change(screen.getByLabelText('Version'), { target: { value: '__new__' } });
+    fireEvent.change(screen.getByLabelText('New version name'), { target: { value: 'Tighter' } });
     fireEvent.click(screen.getByText('Start'));
     expect(latest.beats[0]!.revisionName).toBe('Tighter');
     expect(latest.beats[0]!.revisions.map((revision) => revision.name)).toEqual(['Draft 1']);
-    expect(latest.beats[0]!.manuscript.elements).toHaveLength(3);
+    expect(screen.getByDisplayValue('Morning, love.')).toBeDefined();
+    fireEvent.change(screen.getByDisplayValue('Morning, love.'), { target: { value: 'Morning.' } });
 
-    const options = Array.from((screen.getByLabelText('Revision') as HTMLSelectElement).options).map((option) => option.text);
-    expect(options).toEqual(['Tighter (current)', 'Draft 1', 'New revision…']);
+    const versions = Array.from((screen.getByLabelText('Version') as HTMLSelectElement).options).map((option) => option.text);
+    expect(versions).toEqual(['Tighter', 'Draft 1', 'New version…']);
 
-    // Choosing the kept revision makes it the working one.
-    fireEvent.change(screen.getByLabelText('Revision'), { target: { value: latest.beats[0]!.revisions[0]!.id } });
+    // Switching back brings that version's text into the script, and the
+    // version left behind keeps what was written in it.
+    fireEvent.change(screen.getByLabelText('Version'), { target: { value: latest.beats[0]!.revisions[0]!.id } });
     expect(latest.beats[0]!.revisionName).toBe('Draft 1');
-    expect(latest.beats[0]!.revisions.map((revision) => revision.name)).toEqual(['Tighter']);
+    expect(screen.getByDisplayValue('Morning, love.')).toBeDefined();
+    expect(latest.beats[0]!.revisions.map((revision) => [revision.name, revision.manuscript.elements[2]?.text])).toEqual([
+      ['Tighter', 'Morning.'],
+    ]);
 
-    fireEvent.click(screen.getByLabelText('Colour #8b1c1c'));
-    expect(latest.beats[0]!.color).toBe('#8b1c1c');
-    fireEvent.click(screen.getByLabelText('No colour'));
-    expect(latest.beats[0]!.color).toBeNull();
-
-    fireEvent.click(screen.getByLabelText('Remove revision Tighter'));
-    expect(latest.beats[0]!.revisions).toHaveLength(0);
+    // The checkbox takes the beat out of the script; the text stays.
+    fireEvent.click(screen.getByLabelText('In script'));
+    expect(latest.beats[0]!.inScript).toBe(false);
+    expect(manuscriptElements(latest)).toHaveLength(0);
+    expect(latest.beats[0]!.manuscript.elements).toHaveLength(3);
   });
 });
 

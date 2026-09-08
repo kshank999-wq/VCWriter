@@ -85,3 +85,185 @@ export const cycleType = (
  */
 export const isDialogueElement = (type: ManuscriptElementType): boolean =>
   type === 'character' || type === 'parenthetical' || type === 'dialogue';
+
+// ---------------------------------------------------------------------------
+// The Tab/Enter system (addendum 02 §7)
+// ---------------------------------------------------------------------------
+
+/**
+ * What a keystroke does to the line being written: which style it becomes,
+ * and whether that style starts a new line or re-types the one in hand.
+ */
+export interface Typing {
+  type: ManuscriptElementType;
+  /** True: start a new element. False: re-type the current element in place. */
+  newLine: boolean;
+}
+
+const line = (type: ManuscriptElementType): Typing => ({ type, newLine: true });
+const here = (type: ManuscriptElementType): Typing => ({ type, newLine: false });
+
+/**
+ * The two keys a screenplay is written with, as Final Draft defines them:
+ * **Tab changes the line you are on** into the style that comes next when
+ * you are changing mode — action to a character cue, a cue to a
+ * parenthetical, dialogue back to a cue — and **Return** starts a new line
+ * in the style that continues what you are doing. Shift+Tab walks back
+ * through the styles.
+ *
+ * (Causality's variant of this table starts a new line on Tab and sends a
+ * cue to dialogue; Final Draft's is the one writers' hands know, and it is
+ * the one implemented here.)
+ *
+ * Prose has no such convention: Return continues the paragraph, and Tab
+ * walks the small ring of prose styles in place.
+ */
+export const onTab = (
+  format: ProjectFormat,
+  current: ManuscriptElementType,
+  _isEmpty = false,
+  direction: 1 | -1 = 1,
+): Typing => {
+  if (isProseFormat(format) || direction === -1) return here(cycleType(format, current, direction));
+  switch (current) {
+    case 'scene_heading':
+      return here('action');
+    case 'action':
+      return here('character');
+    case 'character':
+      return here('parenthetical');
+    case 'parenthetical':
+      return here('dialogue');
+    case 'dialogue':
+      return here('character');
+    case 'transition':
+      return here('scene_heading');
+    default:
+      return here('action');
+  }
+};
+
+export const onEnter = (format: ProjectFormat, current: ManuscriptElementType, isEmpty: boolean): Typing => {
+  if (isProseFormat(format)) return line(typeOnEnter(format, current));
+  switch (current) {
+    case 'parenthetical':
+      // A parenthetical is opened and closed on its own line; Return leaves it
+      // for the speech it qualifies, in place if nothing was typed in it.
+      return isEmpty ? here('dialogue') : line('dialogue');
+    default:
+      return line(typeOnEnter(format, current));
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Auto-type: the style a line turns out to be, from what was typed
+// ---------------------------------------------------------------------------
+
+/** A line of action that starts this way is a scene heading. */
+const SCENE_PREFIX = /^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|INT\.?|EXT\.?|I\/E\.?)\s/i;
+
+/** Lines that are transitions when they are the whole line. */
+export const TRANSITION_WORDS = [
+  'CUT TO:',
+  'SMASH CUT TO:',
+  'MATCH CUT TO:',
+  'JUMP CUT TO:',
+  'DISSOLVE TO:',
+  'FADE TO:',
+  'WIPE TO:',
+  'FADE IN:',
+  'FADE OUT.',
+  'CUT TO BLACK.',
+  'THE END',
+] as const;
+
+/** Lines that are shot descriptions when a line starts with one. */
+export const SHOT_WORDS = [
+  'ANGLE ON',
+  'CLOSE ON',
+  'CLOSER ON',
+  'WIDE ON',
+  'BACK TO SCENE',
+  'INSERT',
+  'POV',
+  'PAN TO',
+  'PUSH IN',
+  'PULL BACK',
+  'TRACKING SHOT',
+  'AERIAL SHOT',
+  'REVERSE ANGLE',
+] as const;
+
+/** Extensions offered after a character cue. */
+export const CHARACTER_EXTENSIONS = ["(CONT'D)", '(O.S.)', '(O.C.)', '(V.O.)', '(ON VIDEO)', '(ON PHONE)', '(PRELAP)'] as const;
+
+export interface AutoTypeOptions {
+  /** Shot detection is off by default: "INSERT" is a word writers use in action. */
+  detectShots?: boolean;
+}
+
+/**
+ * The style a line of action turns out to be from what has been typed into
+ * it: a slugline when it opens with INT./EXT., a transition when the whole
+ * line is one, a shot when shot detection is on. Returns null when the line
+ * is what it says it is. Only ever re-types plain action, never a line the
+ * writer has deliberately styled.
+ */
+export const autoType = (
+  format: ProjectFormat,
+  current: ManuscriptElementType,
+  text: string,
+  options: AutoTypeOptions = {},
+): ManuscriptElementType | null => {
+  if (isProseFormat(format)) return null;
+  if (current !== 'action' && current !== 'general') return null;
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return null;
+  const upper = trimmed.toUpperCase();
+
+  if (SCENE_PREFIX.test(trimmed)) return 'scene_heading';
+  if (TRANSITION_WORDS.some((word) => upper === word)) return 'transition';
+  if (options.detectShots && SHOT_WORDS.some((word) => upper.startsWith(word))) return 'shot';
+  return null;
+};
+
+/**
+ * Character cues to offer while typing one, best first: whoever spoke in this
+ * beat most recently comes first — but not the speaker of the line just
+ * above, because two speeches in a row from the same character are rare and
+ * dialogue alternates. Everyone else in the project follows, alphabetically.
+ */
+export const cueSuggestions = (
+  everyone: readonly string[],
+  spokenInOrder: readonly string[],
+): string[] => {
+  const recent: string[] = [];
+  for (let index = spokenInOrder.length - 1; index >= 0; index -= 1) {
+    const name = (spokenInOrder[index] as string).toUpperCase();
+    if (!recent.includes(name)) recent.push(name);
+  }
+  // The one who just spoke is the least likely to speak next.
+  const justSpoke = recent.shift();
+  const rest = [...new Set(everyone.map((name) => name.toUpperCase()))]
+    .filter((name) => !recent.includes(name) && name !== justSpoke)
+    .sort();
+  return [...recent, ...rest, ...(justSpoke ? [justSpoke] : [])];
+};
+
+/**
+ * The paragraph styles bound to Ctrl/Cmd+1…9, the way a screenwriting
+ * program numbers them.
+ */
+export const styleShortcuts = (format: ProjectFormat): Record<string, ManuscriptElementType> =>
+  isProseFormat(format)
+    ? { '1': 'heading', '2': 'paragraph', '3': 'blockquote', '4': 'scene_break' }
+    : {
+        '1': 'scene_heading',
+        '2': 'action',
+        '3': 'character',
+        '4': 'parenthetical',
+        '5': 'dialogue',
+        '6': 'transition',
+        '7': 'shot',
+        '9': 'general',
+      };

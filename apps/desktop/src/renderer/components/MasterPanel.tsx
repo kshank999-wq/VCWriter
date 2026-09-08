@@ -12,7 +12,7 @@ import {
   type StoryLayout,
   type StructuralUnitId,
 } from '@vcwriter/domain';
-import { StoryView } from './StoryView';
+import { StoryView, type ScriptDisplay } from './StoryView';
 import { ResearchPanel } from './ResearchPanel';
 import { SetupsPanel } from './SetupsPanel';
 import { InlineText } from './InlineText';
@@ -29,6 +29,9 @@ interface MasterPanelProps {
   dictationShortcut: string | null;
   onOpenUnit?(unitId: StructuralUnitId): void;
   onOpenBeat?(beatId: BeatId): void;
+  /** What the Script shows besides the manuscript; held by the workspace. */
+  display?: ScriptDisplay;
+  onDisplay?(next: ScriptDisplay): void;
 }
 
 type MasterTab = 'script' | 'research';

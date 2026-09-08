@@ -45,6 +45,13 @@ export type ManuscriptSegment = z.infer<typeof manuscriptSegmentSchema>;
 
 export const emptyManuscript = (): ManuscriptSegment => ({ elements: [] });
 
+/** The character cues in a segment, in the order they speak. */
+export const cuesInOrder = (segment: ManuscriptSegment): string[] =>
+  segment.elements
+    .filter((element) => element.type === 'character' && element.text.trim().length > 0)
+    // A cue may carry an extension — "MIKE (O.S.)" — which is not the name.
+    .map((element) => element.text.trim().toUpperCase().replace(/\s*\(.*$/, ''));
+
 const WORD_PATTERN = /[^\s]+/g;
 
 export const countWords = (segment: ManuscriptSegment): number =>

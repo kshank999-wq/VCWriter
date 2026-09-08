@@ -232,6 +232,9 @@ describe('master panel', () => {
       </Harness>,
     );
 
+    // The Script opens as the finished script: the page, not the scaffolding.
+    expect(screen.queryByLabelText('Beat title (not printed)')).toBeNull();
+    fireEvent.click(screen.getByLabelText('Beat names'));
     expect(screen.getByLabelText('Beat title (not printed)')).toBeDefined();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Research' }));

@@ -15,12 +15,14 @@ import {
   speakersIn,
   storyMarkerKindSchema,
   structuralUnitStatusSchema,
+  switchRevision,
   updateBeat,
   updateLane,
   updateMarker,
   updateUnit,
   type Beat,
   type BeatId,
+  type BeatRevisionId,
   type Lane,
   type ProjectFile,
   type StructuralUnit,
@@ -112,6 +114,42 @@ function BeatSection({
           ))}
         </select>
       </label>
+      <div className="field-row">
+        <label className="field swatch-field">
+          Colour
+          <input
+            type="color"
+            aria-label="Beat colour"
+            value={beat.color ?? '#c9a45c'}
+            onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { color: event.target.value }))}
+          />
+        </label>
+        <button
+          type="button"
+          className="ghost"
+          disabled={beat.color === null}
+          onClick={() => onUpdate((current) => updateBeat(current, beat.id, { color: null }))}
+        >
+          No colour
+        </button>
+      </div>
+      {beat.revisions.length > 0 ? (
+        <label className="field">
+          Version
+          <select
+            aria-label="Beat version"
+            value="__working__"
+            onChange={(event) => onUpdate((current) => switchRevision(current, beat.id, event.target.value as BeatRevisionId))}
+          >
+            <option value="__working__">{beat.revisionName}</option>
+            {beat.revisions.map((revision) => (
+              <option key={revision.id} value={revision.id}>
+                {revision.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <label className="field">
         Summary
         <textarea

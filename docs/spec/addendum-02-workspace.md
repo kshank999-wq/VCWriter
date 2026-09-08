@@ -172,33 +172,80 @@ every export and the page count, and stays on the timeline, dimmed, where
 it opens and switches back on. It is a way to hold a scene in reserve
 while trying the story without it. The field syncs with the scene.
 
-### The beat pop-up
+### The beat's screen: where the writing happens
 
-Opened by double-clicking a beat row on the timeline or a beat bar in the
-Script. The same shape as the scene pop-up with no slugline — a beat has no
-heading of its own — and, beside the beat's name, **Revision**.
+Double-clicking a beat — on the timeline, on its name in the Script, or on
+the **✎** in the Script's margin — opens **the writing screen**: that one
+beat, most of the window, the page on a desk. This is the main writing
+place. It has no sidebar: what is not the page is one bar across the top,
+carrying the three things that belong to the beat as a whole.
 
-- **Revision** is a list: the working revision, marked *(current)*, every
-  kept revision by name, and *New revision…*. Choosing *New revision…*
-  asks for a name inline and starts the new revision as a copy of the
-  working text, which is kept under its old name; the writer then changes
-  the text in the Script. Choosing a kept revision puts its text in the
-  Script and keeps the text that was there in its place. A beat can hold
-  as many revisions as the writer wants, each in full; the left column
-  lists the kept ones with their word counts, to open or remove. The
-  Script marks a beat with kept revisions with the working revision's name
-  on its bar.
-- The **left column**: the characters who speak in the beat and the setups
-  and payoffs placed in or landing in it.
-- **Colour**: swatches in the lane palette, a *no colour* swatch, and a
-  picker for any other. The colour is the beat's own, kept with it and
-  synced; the timeline row, the Script's beat bar and the Threads chip
-  show it.
-- **Links**: the related-elements panel (§7.4), the same one the inspector
-  shows, so a link that moves the story forward is made or read here.
-- Status and summary.
+- The beat's **name**, centred, captioned *Beat name*.
+- **Version**: the version being written, every kept version by name, and
+  *New version…*. A new version asks for a name inline and starts as a copy
+  of the working text, which is kept under its old name; what is typed from
+  then on belongs to the new one. Choosing a kept version brings its text
+  back and keeps the text that was there in its place. A beat holds as many
+  versions as the writer wants, each in full. The Script shows the working
+  version's name beside a beat that has more than one.
+- **In script**: a checkbox. Off, the beat keeps its text and leaves the
+  script, the page count and every export — the same switch a scene has
+  (§4) — and its row on the timeline is struck through.
 
-Both pop-ups write through the same domain mutations as everything else,
+Below the bar is the page, and nothing else: the beat's manuscript at the
+format's real geometry, with the writing rules of §7.1. The status line
+under it names the scene and lane the beat is in, its word count, and the
+two keys.
+
+Colour, status, summary, links and what the beat sets up or pays off are
+the **inspector's** business (§8) rather than the page's, so that the
+writing screen is the page.
+
+### 7.1 The two keys
+
+The manuscript is written the way Final Draft taught a generation to write
+one, and the rules live in the domain (`editing.ts`) so they are pinned by
+tests rather than by a keydown handler:
+
+| Style | Return gives | Tab makes this line | Shortcut |
+| --- | --- | --- | --- |
+| Scene heading | Action | Action | Ctrl/Cmd+1 |
+| Action | Action | Character | Ctrl/Cmd+2 |
+| Character | Dialogue | Parenthetical | Ctrl/Cmd+3 |
+| Parenthetical | Dialogue | Dialogue | Ctrl/Cmd+4 |
+| Dialogue | Action | Character | Ctrl/Cmd+5 |
+| Transition | Scene heading | Scene heading | Ctrl/Cmd+6 |
+
+**Return** starts the next line in the style that continues the work;
+**Tab** re-types the line you are on; **Shift+Tab** walks back. (Causality's
+variant starts a new line on Tab and sends a cue to dialogue; Final Draft's
+is the table above, and it is the one implemented.) Return on an empty
+parenthetical drops it and returns to the speech. Shot is Ctrl/Cmd+7 and a
+note is Ctrl/Cmd+9; prose has heading, paragraph, blockquote and scene break
+on 1–4, and Tab there walks the ring in place.
+
+**A line becomes what it plainly is.** Type `INT.` or `EXT.` at the head of
+an action line and it is a scene heading; type `CUT TO:` on its own and it
+is a transition. Shot detection (`ANGLE ON`, `INSERT`, `POV`) is off by
+default, because those are words writers use in action.
+
+**SmartType.** A character cue completes from the cast and from every cue in
+the script, offering whoever is most likely to speak next — the beat's own
+speakers first, and the one who just spoke last, because dialogue
+alternates — with the extensions `(CONT'D)`, `(O.S.)`, `(O.C.)`, `(V.O.)`
+offered on the likeliest few. A slugline completes from the headings the
+script already has, plus every location it knows crossed with INT./EXT. and
+the times of day, so the second scene in a location is a few keystrokes.
+
+**(MORE)** and **(CONT'D)** are the paginator's, and have been since §6 of
+the main spec: a speech split across a page break is marked at the foot and
+resumed under `NAME (CONT'D)`, and a scene heading or a cue never ends a
+page.
+
+Not yet: dual dialogue, inline bold/italic, and a reformat tool for pasted
+text (§14).
+
+Every pop-up writes through the same domain mutations as everything else,
 as the fields are typed; Close returns to the workspace with nothing else
 changed.
 
@@ -262,33 +309,44 @@ the lane palette; a character is not a lane.
 
 ## 6. Master panel: Script
 
-The manuscript, all of it, in the order it will print (§5, §13): every scene
-in story order, every beat in its scene, every element in its beat. It reads
-like the script because it is the script.
+**The Script is the finished thing.** All of the manuscript, in the order it
+will print (§5, §13) — every scene in story order, every beat in its scene,
+every element in its beat — set as it will be delivered: the format's real
+page geometry, its indents, its capitals, on paper, with the page breaks
+ruled exactly where the printed pages break. This is where the work comes
+together and is read; the writing itself is done in a beat's own screen
+(§7). Moving a beat or a scene moves its text here, because the page is the
+structure rendered, not a second copy of it.
 
-Structure is shown as bars in the flow of text, not as a separate list:
+What is *about* the story rather than in it is off by default and comes back
+one **Display** toggle at a time, in a thin bar above the page:
 
-- An **act bar** where an act marker starts.
-- A **scene bar** at the start of each scene: the lane's colour as a 3px
-  left edge, the sequence label and title (both editable in place), the
-  lane's name, the page it starts on, and a collapse control. Collapsed,
-  the scene shows only its bar and a count of beats.
-- A **beat bar** at the start of each beat: lighter than the scene bar, the
-  beat's internal title editable in place, its status, and a collapse
-  control. The title is the writer's reference and never enters the
-  manuscript (§5.3, §19); it is visibly a bar, not a line of script.
-- The **manuscript** of the beat under its bar, at the format's real page
-  geometry as before: element type in the gutter, Return for the
-  conventional next element, Tab to retype, the character list for cues.
+| Toggle | Shows | Default |
+| --- | --- | --- |
+| **Scene headings** | The sluglines. A screenplay only — prose has none | On |
+| **Scene names** / **Chapter names** | The scene's number and name, editable in place: structure, not manuscript | Off |
+| **Beat names** | The beats' internal titles, which never enter the manuscript (§5.3, §19), each with its version when it has more than one | Off |
+| **Acts** | An act bar where a marker starts | On |
+| **Page breaks** | A rule and page number where the printed page breaks | On |
 
-Putting the cursor in a beat's text, or clicking its bar, selects that beat.
-Selecting a beat anywhere else scrolls the Script to it. The selected beat
-carries a gold rule down its left edge so the eye can find it when the
-selection was made on the timeline.
+A writer reading for flow and a writer working on structure want different
+amounts of scaffolding, and this is the one control that decides it. The
+choice is per machine, not project data (§13).
 
-Large projects: a collapsed beat renders only its bar. Beyond that the view
-renders every beat, and the performance test in the domain package is the
-gate; when it fails, the loader lazy-reads beats, not the view (ADR 0002).
+The page opens with the title and the author, the way a script does. Putting
+the cursor in a beat's text selects that beat, and selecting a beat anywhere
+else scrolls the Script to it; the selected beat is marked by a gold rule in
+the page's left margin, and a beat given a colour by a rule in its own. A
+beat or scene switched off (§4, §7) is not on the page at all.
+
+The Script stays editable — the same mutations the writing screen makes —
+but it does not compete with it: hovering a beat offers a **✎** in the left
+margin that opens that beat's screen, which is the way in that does not take
+double-click away from selecting a word.
+
+Large projects: the view renders every beat, and the performance test in the
+domain package is the gate; when it fails, the loader lazy-reads beats, not
+the view (ADR 0002).
 
 ## 7. Master panel: Research
 

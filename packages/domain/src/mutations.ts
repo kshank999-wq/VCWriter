@@ -284,7 +284,7 @@ const reanchorMarkers = (file: ProjectFile, removedUnitIds: ReadonlySet<string>)
 export const updateBeat = (
   file: ProjectFile,
   beatId: BeatId,
-  patch: Partial<Pick<Beat, 'title' | 'summary' | 'status' | 'color' | 'revisionName'>> & { manuscript?: ManuscriptSegment },
+  patch: Partial<Pick<Beat, 'title' | 'summary' | 'status' | 'color' | 'revisionName' | 'inScript'>> & { manuscript?: ManuscriptSegment },
 ): ProjectFile => {
   if (!file.beats.some((beat) => beat.id === beatId)) throw new DomainError(`Beat ${beatId} does not exist`);
   return touchProject({

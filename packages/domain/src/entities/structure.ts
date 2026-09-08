@@ -114,6 +114,12 @@ export const beatSchema = z.object({
   summary: z.string().default(''),
   status: beatStatusSchema.default('planned'),
   orderKey: orderKey(),
+  /**
+   * Off: the beat keeps its text and leaves the script, the way a scene
+   * does (addendum 02 §4). A draft of a beat can be held back without
+   * losing it.
+   */
+  inScript: z.boolean().default(true),
   /** The working text: the revision named by `revisionName`. */
   manuscript: manuscriptSegmentSchema.default({ elements: [] }),
   /** The name of the working revision; the others are in `revisions`. */

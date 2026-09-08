@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { cycleType, defaultElementType, elementTypesFor, typeOnEnter } from '../editing.js';
+import {
+  autoType,
+  cueSuggestions,
+  cycleType,
+  defaultElementType,
+  elementTypesFor,
+  onEnter,
+  onTab,
+  styleShortcuts,
+  typeOnEnter,
+} from '../editing.js';
 import { renderPrintDocumentHtml, printedPageCount, suggestedExportFileName } from '../print-html.js';
 import { createProjectFile } from '../project-file.js';
 import { updateBeat } from '../mutations.js';
@@ -38,6 +48,53 @@ describe('element flow while writing', () => {
     // The ring is closed in both directions.
     expect(cycleType('screenplay', 'shot')).toBe('scene_heading');
     expect(cycleType('screenplay', 'scene_heading', -1)).toBe('shot');
+  });
+
+  it('moves between styles on Tab and Return the way Final Draft does', () => {
+    // Tab re-types the line you are on, following Final Draft's table.
+    expect(onTab('screenplay', 'scene_heading')).toEqual({ type: 'action', newLine: false });
+    expect(onTab('screenplay', 'action')).toEqual({ type: 'character', newLine: false });
+    expect(onTab('screenplay', 'character')).toEqual({ type: 'parenthetical', newLine: false });
+    expect(onTab('screenplay', 'parenthetical')).toEqual({ type: 'dialogue', newLine: false });
+    expect(onTab('screenplay', 'dialogue')).toEqual({ type: 'character', newLine: false });
+    expect(onTab('screenplay', 'transition')).toEqual({ type: 'scene_heading', newLine: false });
+    // Shift+Tab walks back through the styles.
+    expect(onTab('screenplay', 'character', false, -1)).toEqual({ type: 'action', newLine: false });
+
+    // Return starts the next line in the style that continues the work.
+    expect(onEnter('screenplay', 'character', false)).toEqual({ type: 'dialogue', newLine: true });
+    expect(onEnter('screenplay', 'dialogue', false)).toEqual({ type: 'action', newLine: true });
+    expect(onEnter('screenplay', 'parenthetical', true)).toEqual({ type: 'dialogue', newLine: false });
+    expect(onEnter('screenplay', 'transition', false)).toEqual({ type: 'scene_heading', newLine: true });
+
+    // Prose keeps Return in the paragraph and walks its styles on Tab.
+    expect(onEnter('novel', 'paragraph', false)).toEqual({ type: 'paragraph', newLine: true });
+    expect(onTab('novel', 'paragraph')).toEqual({ type: 'heading', newLine: false });
+  });
+
+  it('types a line as what it turns out to be', () => {
+    expect(autoType('screenplay', 'action', 'INT. OFFICE - DAY')).toBe('scene_heading');
+    expect(autoType('screenplay', 'action', 'ext kitchen')).toBe('scene_heading');
+    expect(autoType('screenplay', 'action', 'CUT TO:')).toBe('transition');
+    // Only a whole line is a transition, and only action is ever re-typed.
+    expect(autoType('screenplay', 'action', 'He cuts to the chase.')).toBeNull();
+    expect(autoType('screenplay', 'dialogue', 'INT. OFFICE - DAY')).toBeNull();
+    // Shot detection is off by default: writers use these words in action.
+    expect(autoType('screenplay', 'action', 'ANGLE ON the door')).toBeNull();
+    expect(autoType('screenplay', 'action', 'ANGLE ON the door', { detectShots: true })).toBe('shot');
+    expect(autoType('novel', 'paragraph', 'INT. OFFICE - DAY')).toBeNull();
+  });
+
+  it('offers the cue that is most likely to speak next', () => {
+    // Mike just spoke, so Celeste is offered first and Mike last.
+    expect(cueSuggestions(['Mike', 'Celeste', 'Ruth'], ['CELESTE', 'MIKE'])).toEqual(['CELESTE', 'RUTH', 'MIKE']);
+    expect(cueSuggestions(['Mike', 'Celeste'], [])).toEqual(['CELESTE', 'MIKE']);
+  });
+
+  it('binds the paragraph styles to the number keys', () => {
+    expect(styleShortcuts('screenplay')['3']).toBe('character');
+    expect(styleShortcuts('screenplay')['5']).toBe('dialogue');
+    expect(styleShortcuts('novel')['1']).toBe('heading');
   });
 
   it('offers the element set that belongs to the format', () => {

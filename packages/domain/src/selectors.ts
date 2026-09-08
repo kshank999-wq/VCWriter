@@ -20,6 +20,14 @@ export const beatsForUnit = (file: ProjectFile, unitId: StructuralUnitId): Beat[
   sortByOrderKey(file.beats.filter((beat) => beat.unitId === unitId));
 
 /**
+ * The beats of a scene that are in the script: what the manuscript, the
+ * page count and every export are made of. A beat switched off keeps its
+ * text and is skipped here (addendum 02 §4).
+ */
+export const beatsInScript = (file: ProjectFile, unitId: StructuralUnitId): Beat[] =>
+  beatsForUnit(file, unitId).filter((beat) => beat.inScript);
+
+/**
  * Every scene in the order the story tells them, whatever lane each is in
  * (addendum 02 §8). This is the print order.
  */

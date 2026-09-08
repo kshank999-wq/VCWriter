@@ -1,4 +1,4 @@
-import { beatsForUnit, findUnit, unitsInStoryOrder } from './selectors.js';
+import { beatsInScript, findUnit, unitsInStoryOrder } from './selectors.js';
 import type { ManuscriptElement, ManuscriptSegment } from './entities/manuscript.js';
 import type { VoiceAssignment } from './entities/project.js';
 import type { Beat } from './entities/structure.js';
@@ -59,7 +59,7 @@ export const renderUnit = (file: ProjectFile, unitId: StructuralUnitId, options:
   const unit = findUnit(file, unitId);
   if (!unit) return '';
   const heading = unit.title.length > 0 ? `${unit.sequenceLabel} ${unit.title}`.trim() : unit.sequenceLabel;
-  const body = beatsForUnit(file, unitId)
+  const body = beatsInScript(file, unitId)
     .map((beat) => renderBeat(beat, options))
     .filter((text) => text.length > 0)
     .join('\n\n');
@@ -98,7 +98,7 @@ export const speechSegmentsForUnit = (file: ProjectFile, unitId: StructuralUnitI
   const segments: SpeechSegment[] = [];
   let pendingCharacterId: CharacterId | null = null;
 
-  for (const beat of beatsForUnit(file, unitId)) {
+  for (const beat of beatsInScript(file, unitId)) {
     for (const element of beat.manuscript.elements) {
       if (element.type === 'character') {
         // A character cue names the speaker for the dialogue that follows.

@@ -5,6 +5,8 @@ import {
   addSetupPayoff,
   addSetupPoint,
   addUnit,
+  moveBeat,
+  moveUnit,
   recordPayoff,
   removeRevision,
   startRevision,
@@ -73,6 +75,32 @@ describe('a scene switched off', () => {
     expect(layout.spans.map((span) => span.unit.title)).toEqual(['Opening Scene', 'Two']);
     expect(layout.spans[0]!.pages).toBe(0);
     expect(fromRows(toRows(file)).units[0]?.inScript).toBe(false);
+  });
+});
+
+describe('the script follows the structure', () => {
+  it('moves a beat’s text with the beat, and a scene’s text with the scene', () => {
+    let file = createProjectFile({ title: 'T', format: 'screenplay' });
+    const unitId = file.units[0]!.id;
+    file = updateBeat(file, file.beats[0]!.id, { manuscript: { elements: [el('action', 'FIRST')] } });
+    const second = addBeat(file, { unitId });
+    file = updateBeat(second.file, second.beat.id, { manuscript: { elements: [el('action', 'SECOND')] } });
+    const text = (current: typeof file) => manuscriptElements(current).map((element) => element.text);
+    expect(text(file)).toEqual(['FIRST', 'SECOND']);
+
+    // Move the second beat above the first: the script reads in the new order.
+    file = moveBeat(file, { beatId: second.beat.id, toUnitId: unitId, index: 0 });
+    expect(text(file)).toEqual(['SECOND', 'FIRST']);
+
+    // The same for a whole scene moved along the story.
+    const added = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Two' });
+    file = added.file;
+    const third = addBeat(file, { unitId: added.unit.id });
+    file = updateBeat(third.file, third.beat.id, { manuscript: { elements: [el('action', 'THIRD')] } });
+    expect(text(file)).toEqual(['SECOND', 'FIRST', 'THIRD']);
+
+    file = moveUnit(file, { unitId: added.unit.id, toLaneId: file.lanes[0]!.id, index: 0 });
+    expect(text(file)).toEqual(['THIRD', 'SECOND', 'FIRST']);
   });
 });
 

@@ -25,6 +25,7 @@ import { MasterTimeline } from './components/MasterTimeline';
 import { MasterPanel } from './components/MasterPanel';
 import { Inspector } from './components/Inspector';
 import { Viewport, type ViewportView } from './components/Viewport';
+import { DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay } from './components/StoryView';
 import { LaneDialog } from './components/LaneDialog';
 import { SceneDialog } from './components/SceneDialog';
 import { BeatDialog } from './components/BeatDialog';
@@ -75,6 +76,8 @@ export default function App() {
   const [timelineOpen, setTimelineOpen] = usePreference('timeline', true);
   const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
   const [viewportView, setViewportView] = usePreference<ViewportView>('viewport', 'page');
+  // What the Script shows besides the manuscript (addendum 02 §6).
+  const [scriptDisplay, setScriptDisplay] = usePreference<ScriptDisplay>('scriptDisplay', DEFAULT_SCRIPT_DISPLAY);
   const [openLaneId, setOpenLaneId] = useState<LaneId | null>(null);
   const [openUnitId, setOpenUnitId] = useState<StructuralUnitId | null>(null);
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
@@ -367,6 +370,8 @@ export default function App() {
             focusTitleBeatId={focusTitleBeatId}
             onTitleFocused={clearTitleFocus}
             dictationShortcut={dictationShortcut}
+            display={{ ...DEFAULT_SCRIPT_DISPLAY, ...scriptDisplay }}
+            onDisplay={setScriptDisplay}
             onOpenUnit={setOpenUnitId}
             onOpenBeat={setOpenBeatId}
           />
@@ -432,7 +437,13 @@ export default function App() {
           )}
           <LaneDialog file={file} laneId={openLaneId} onClose={() => setOpenLaneId(null)} onUpdate={project.update} />
           <SceneDialog file={file} unitId={openUnitId} onClose={() => setOpenUnitId(null)} onUpdate={project.update} />
-          <BeatDialog file={file} beatId={openBeatId} onClose={() => setOpenBeatId(null)} onUpdate={project.update} />
+          <BeatDialog
+            file={file}
+            beatId={openBeatId}
+            onClose={() => setOpenBeatId(null)}
+            onUpdate={project.update}
+            onSelect={setSelectedBeatId}
+          />
         </div>
       ) : (
         <main className="full">

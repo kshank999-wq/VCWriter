@@ -888,6 +888,13 @@ dialog.scene-dialog > header.off {
   box-shadow: inset 2px 0 0 var(--beat-colour);
 }
 
+/* A beat switched off: still in its scene on the timeline, dimmed. */
+.beat-row.off .beat-row-title {
+  opacity: 0.5;
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
+}
+
 /* A scene switched off: still on the timeline, dimmed. */
 .block.off {
   opacity: 0.45;
@@ -1548,22 +1555,114 @@ input[type='color'].swatch {
 
 /* ------------------------------------------------------------------ script */
 
+/* The Script is the finished manuscript: a thin options bar, then the page. */
 .story {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  padding: 10px 28px 48px 20px;
-  scroll-padding-top: 40px;
+  display: flex;
+  flex-direction: column;
 }
 
 .master.focus {
   border-right: none;
 }
 
-.story.focus {
+.script-options {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 5px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  flex: 0 0 auto;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  padding: 2px 9px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.chip:hover {
+  color: var(--text);
+}
+
+.chip.on {
+  border-color: var(--gold-deep);
+  color: var(--gold);
+}
+
+/* The page itself: the one thing that scrolls. */
+.script-sheet {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 26px 20px 64px;
+  scroll-padding-top: 40px;
+}
+
+.script-view.focus .script-sheet {
   padding-top: 8vh;
-  padding-left: max(20px, calc(50% - 420px));
-  padding-right: max(28px, calc(50% - 420px));
+}
+
+.script-title-block {
+  text-align: center;
+  margin: 0 auto 34px;
+  max-width: 62ch;
+}
+
+.script-title-block h1 {
+  margin: 0;
+  font-family: 'Courier New', Courier, ui-monospace, monospace;
+  font-size: 15px;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.script-title-block p {
+  margin: 8px 0 0;
+  font-family: 'Courier New', Courier, ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* A page break where the printed page breaks, numbered as a script numbers
+   its pages: at the right, above the line. */
+.page-break {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 18px 0 14px;
+  border-top: 1px dashed var(--border);
+  padding-top: 3px;
+  font-family: 'Courier New', Courier, ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.script-foot {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 11px;
+}
+
+/* Sluglines hidden: the writer is reading for flow, not for locations. */
+.script-sheet.no-headings .element-scene_heading {
+  display: none;
 }
 
 .scene {
@@ -1581,38 +1680,59 @@ input[type='color'].swatch {
   color: var(--gold);
 }
 
-.scene-bar {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+/* The scene's name and the beat's name are not manuscript, so when they are
+   shown they are marks in the margin rather than lines of the script. */
+.scene-name,
+.beat-name {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px 3px 2px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--gold-deep);
-  border-radius: 2px;
+  max-width: 62ch;
+  margin: 0 auto;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
 }
 
-.scene-bar input,
-.beat-bar input {
+.scene-name {
+  margin-bottom: 10px;
+  border-bottom-color: var(--gold-deep);
+}
+
+.beat-name {
+  margin-bottom: 6px;
+  opacity: 0.75;
+}
+
+.beat-name:hover,
+.beat-name:focus-within {
+  opacity: 1;
+}
+
+.scene-name input,
+.beat-name input {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 2px;
   padding: 2px 6px;
   font-size: 12px;
   min-width: 0;
+  flex: 1;
+  color: inherit;
 }
 
-.scene-bar input:hover,
-.beat-bar input:hover {
+.beat-name input {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.scene-name input:hover,
+.beat-name input:hover {
   border-color: var(--border);
 }
 
-.scene-bar input:focus,
-.beat-bar input:focus {
+.scene-name input:focus,
+.beat-name input:focus {
   border-color: var(--gold-deep);
   background: var(--panel-2);
 }
@@ -1648,68 +1768,53 @@ input[type='color'].swatch {
   opacity: 0.8;
 }
 
-.bar-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 10.5px;
-  flex: 0 0 auto;
-}
-
-.lane-chip {
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 10px;
-}
-
 .collapsed-note {
-  margin: 6px 0 0 14px;
+  margin: 6px auto;
+  max-width: 62ch;
   font-size: 12px;
 }
 
+/* The selected beat is marked in the page's left margin, not around it. */
 .beat-block {
-  margin: 8px 0 14px 10px;
-  padding-left: 12px;
-  border-left: 2px solid transparent;
+  position: relative;
 }
 
-.beat-block.selected {
-  border-left-color: var(--gold);
-}
-
-.beat-bar {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 4px 3px 0;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 8px;
+/* The way into the beat's writing screen, in the page's left margin. */
+.beat-open {
+  position: absolute;
+  top: 0;
+  left: max(0px, calc(50% - 46ch));
+  z-index: 1;
+  width: 22px;
+  padding: 2px 0;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0;
   cursor: pointer;
 }
 
-.status-pill {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-  flex: 0 0 auto;
-  padding: 0 4px;
-}
-
-.status-pill.status-drafting {
-  color: var(--gold-deep);
-}
-
-.status-pill.status-written {
+.beat-block:hover .beat-open,
+.beat-open:focus-visible {
+  opacity: 1;
+  border-color: var(--border);
   color: var(--gold);
 }
 
-.status-pill.status-revised {
-  color: var(--gold-bright);
+.beat-block.selected::before,
+.beat-block.coloured::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 6px;
+  left: max(8px, calc(50% - 42ch));
+  width: 2px;
+  background: var(--beat-colour, transparent);
 }
 
-.status-pill.status-cut {
-  color: var(--red);
+.beat-block.selected::before {
+  background: var(--gold);
 }
 
 /* The manuscript is laid out at the real page geometry: a monospace column of
@@ -1719,6 +1824,9 @@ input[type='color'].swatch {
   font-size: 14px;
   line-height: 1.5;
   display: grid;
+  /* The track is capped so a column wider than the pane wraps its lines
+     instead of running off the edge of it. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 2px;
   margin: 0 0 0 132px;
   max-width: 100%;
@@ -1726,6 +1834,7 @@ input[type='color'].swatch {
 
 .element {
   position: relative;
+  min-width: 0;
 }
 
 .element textarea {
@@ -1787,15 +1896,17 @@ input[type='color'].swatch {
   color: var(--gold-deep);
 }
 
-.story-hints {
-  margin-top: 24px;
-  font-size: 11.5px;
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
+/* On the page, the column is centred and the type gutter overlays the
+   left margin, where there is nothing to hide. */
+.script-sheet .page-column,
+.writer-sheet .page-column {
+  margin: 0 auto;
+  width: fit-content;
 }
 
-.story-hints p {
-  margin: 4px 0;
+.script-sheet .element-type,
+.writer-sheet .element-type {
+  left: -128px;
 }
 
 /* ---------------------------------------------------------------- inspector */
@@ -1953,135 +2064,14 @@ button.page.selected {
   opacity: 1;
 }
 
-/* ------------------------------------------------------------------- paper */
+/* ------------------------------------------------------------------ writing */
 
-/* With the paper preference on (the default), the Script is a sheet of paper: white, black text, the thing writers have
-   looked at for a century. The chrome around it stays dark; the page is a
-   representation of paper and is exempt from the palette (docs/brand.md),
-   exactly as the print preview already is. Structure bars sit on the sheet
-   in light greys so they read as marks on the page, not as chrome. */
-.workspace.script-paper .story {
-  --paper: #ffffff;
-  --paper-ink: #111111;
-  --paper-muted: #6b665c;
-  --paper-line: #d8d3c6;
-  --paper-bar: #f1eee6;
-  --paper-bar-2: #f8f6f1;
-  background: var(--paper);
-  color: var(--paper-ink);
-  color-scheme: light;
-}
-
-.workspace.script-paper .story .scene-bar {
-  background: var(--paper-bar);
-  border-color: var(--paper-line);
-  color: var(--paper-ink);
-}
-
-.workspace.script-paper .story .scene-bar input,
-.workspace.script-paper .story .beat-bar input {
-  color: var(--paper-ink);
-}
-
-.workspace.script-paper .story .scene-bar input:hover,
-.workspace.script-paper .story .beat-bar input:hover {
-  border-color: var(--paper-line);
-}
-
-.workspace.script-paper .story .scene-bar input:focus,
-.workspace.script-paper .story .beat-bar input:focus {
-  border-color: var(--gold-deep);
-  background: var(--paper);
-}
-
-.workspace.script-paper .story .bar-label,
-.workspace.script-paper .story .bar-meta .muted,
-.workspace.script-paper .story .status-pill,
-.workspace.script-paper .story .collapsed-note,
-.workspace.script-paper .story .story-hints,
-.workspace.script-paper .story .empty-state,
-.workspace.script-paper .story .bar-title::placeholder {
-  color: var(--paper-muted);
-}
-
-.workspace.script-paper .story .status-pill.status-drafting,
-.workspace.script-paper .story .status-pill.status-written {
-  color: var(--gold-deep);
-}
-
-.workspace.script-paper .story .status-pill.status-cut {
-  color: var(--red);
-}
-
-.workspace.script-paper .story .beat-bar {
-  border-bottom-color: var(--paper-line);
-}
-
-.workspace.script-paper .story .beat-block.selected {
-  border-left-color: var(--gold);
-}
-
-.workspace.script-paper .story .act-bar {
-  color: var(--gold-deep);
-  border-bottom-color: var(--gold-deep);
-}
-
-.workspace.script-paper .story .page-column {
-  color: var(--paper-ink);
-}
-
-.workspace.script-paper .story .element textarea {
-  color: var(--paper-ink);
-  background: transparent;
-}
-
-.workspace.script-paper .story .element textarea::placeholder {
-  color: #b5b0a4;
-}
-
-.workspace.script-paper .story .element textarea:hover {
-  border-color: var(--paper-line);
-}
-
-.workspace.script-paper .story .element textarea:focus {
-  border-color: var(--gold-deep);
-  background: var(--paper-bar-2);
-}
-
-.workspace.script-paper .story .element-type {
-  color: var(--paper-muted);
-  background: var(--paper);
-}
-
-.workspace.script-paper .story .element-general textarea {
-  color: var(--paper-muted);
-}
-
-.workspace.script-paper .story .twisty {
-  color: var(--paper-muted);
-}
-
-.workspace.script-paper .story .twisty:hover {
-  color: var(--paper-ink);
-  background: var(--paper-bar-2);
-}
-
-.workspace.script-paper .story .add-element {
-  color: var(--gold-deep);
-}
-
-.workspace.script-paper .story .story-hints {
-  border-top-color: var(--paper-line);
-}
-
-.workspace.script-paper .story ::selection {
-  background: color-mix(in srgb, var(--gold) 45%, transparent);
-}
-
-/* -------------------------------------------------------------- preferences */
-
-dialog.preferences {
-  width: min(560px, calc(100vw - 48px));
+/* The writing screen: one beat, the full window, the page on a desk. */
+dialog.writer-dialog {
+  width: min(1180px, calc(100vw - 40px));
+  height: min(880px, calc(100vh - 40px));
+  max-width: none;
+  max-height: none;
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 2px;
@@ -2090,145 +2080,216 @@ dialog.preferences {
   font-size: 12.5px;
 }
 
-dialog.preferences::backdrop {
-  background: color-mix(in srgb, var(--ink) 70%, transparent);
+dialog.writer-dialog[open] {
+  display: flex;
+  flex-direction: column;
 }
 
-dialog.preferences > header {
+dialog.writer-dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 80%, transparent);
+}
+
+.writer-bar {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) minmax(0, 2fr) minmax(90px, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  border-left: 4px solid var(--gold-deep);
+}
+
+.writer-caption {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* The beat's name, centred: the only thing in the bar that is the beat. */
+.writer-name {
+  text-align: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: 5px 10px;
+  font-size: 15px;
+  color: var(--text);
+  min-width: 0;
+}
+
+.writer-name:hover,
+.writer-name:focus {
+  border-color: var(--border);
+}
+
+.writer-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.check input:checked + span {
+  color: var(--gold);
+}
+
+.writer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--ink);
+  padding: 20px 16px 56px;
+}
+
+.writer-sheet {
+  width: min(100%, 880px);
+  min-height: calc(100% - 4px);
+  margin: 0 auto;
+  padding: 44px 40px 64px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  box-shadow: 0 2px 16px color-mix(in srgb, #000 45%, transparent);
+}
+
+.writer-sheet .page-column {
+  font-size: 15px;
+}
+
+.writer-status {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 10px 10px 18px;
-  border-bottom: 1px solid var(--border);
-}
-
-dialog.preferences h2 {
-  margin: 0;
-  font-size: 12px;
-}
-
-dialog.preferences section {
-  padding: 14px 18px 4px;
-  display: grid;
-  gap: 10px;
-}
-
-dialog.preferences h3 {
-  margin: 0;
-  font-size: 10.5px;
-  color: var(--muted);
-}
-
-dialog.preferences > footer {
-  padding: 10px 18px 14px;
+  gap: 16px;
+  padding: 5px 12px;
+  border-top: 1px solid var(--border);
   font-size: 11px;
 }
 
-dialog.preferences .toggle {
-  padding: 0;
+/* ------------------------------------------------------------------- paper */
+
+/* With the paper preference on (the default), the manuscript is a sheet of
+   paper: white, black text, the thing writers have looked at for a century.
+   The chrome around it stays dark; the page is a representation of paper and
+   is exempt from the palette (docs/brand.md), exactly as the print preview
+   already is. It applies to the two places the manuscript itself is shown:
+   the Script's page and the writing screen's sheet. */
+.workspace.script-paper .script-sheet,
+.workspace.script-paper .writer-sheet {
+  --paper: #ffffff;
+  --paper-ink: #111111;
+  --paper-muted: #6b665c;
+  --paper-line: #d8d3c6;
+  --paper-bar-2: #f8f6f1;
+  background: var(--paper);
+  color: var(--paper-ink);
+  color-scheme: light;
 }
 
-.scheme-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+.workspace.script-paper .script-sheet .scene-name input,
+.workspace.script-paper .script-sheet .beat-name input {
+  color: var(--paper-ink);
 }
 
-button.scheme {
-  display: grid;
-  grid-template-columns: 44px 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 10px;
-  align-items: center;
-  text-align: left;
-  padding: 8px 10px;
-  background: var(--ink);
-  border: 1px solid var(--border);
+.workspace.script-paper .script-sheet .beat-name input {
+  color: var(--paper-muted);
 }
 
-button.scheme.selected {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 1px var(--gold);
+.workspace.script-paper .script-sheet .scene-name input:hover,
+.workspace.script-paper .script-sheet .beat-name input:hover {
+  border-color: var(--paper-line);
 }
 
-.scheme-swatch {
-  grid-row: 1 / span 2;
-  width: 44px;
-  height: 32px;
-  border: 1px solid;
-  border-radius: 2px;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 3px;
-  padding: 4px;
+.workspace.script-paper .script-sheet .scene-name input:focus,
+.workspace.script-paper .script-sheet .beat-name input:focus {
+  border-color: var(--gold-deep);
+  background: var(--paper);
 }
 
-.scheme-swatch span {
-  border-radius: 1px;
+.workspace.script-paper .script-sheet .scene-name,
+.workspace.script-paper .script-sheet .beat-name {
+  border-bottom-color: var(--paper-line);
 }
 
-.scheme-name {
-  font-family: var(--display);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 11px;
-  color: var(--text);
+.workspace.script-paper .script-sheet .bar-label,
+.workspace.script-paper .script-sheet .collapsed-note,
+.workspace.script-paper .script-sheet .empty-state,
+.workspace.script-paper .script-sheet .revision-chip,
+.workspace.script-paper .script-sheet .script-title-block p,
+.workspace.script-paper .script-sheet .page-break,
+.workspace.script-paper .script-sheet .bar-title::placeholder {
+  color: var(--paper-muted);
 }
 
-.scheme-description {
-  font-size: 11px;
-  color: var(--muted);
+.workspace.script-paper .script-sheet .page-break,
+.workspace.script-paper .script-sheet .revision-chip {
+  border-color: var(--paper-line);
 }
 
-/* ------------------------------------------------------ narrow script column */
-
-/* At a quarter of the window the Script cannot show a 60-column page with a
-   gutter beside it. Below 640px the gutter goes, the element type moves to
-   the top right of its element and appears on hover, the type steps down a
-   size, and the lane chip leaves the scene bar. The text still wraps at the
-   page's column width, so what is written is what will print. */
-.story {
-  container-type: inline-size;
+.workspace.script-paper .script-sheet .act-bar {
+  color: var(--gold-deep);
+  border-bottom-color: var(--gold-deep);
 }
 
-@container (max-width: 640px) {
-  .page-column {
-    margin-left: 6px;
-    font-size: 12.5px;
-    width: auto !important;
-    max-width: 100%;
-  }
-
-  .element textarea {
-    width: min(var(--width, 100%), calc(100% - var(--indent, 0ch))) !important;
-  }
-
-  .element-type {
-    left: auto;
-    right: 0;
-    top: -14px;
-    width: auto;
-    font-size: 10px;
-    text-align: right;
-    z-index: 1;
-  }
-
-  .scene-bar .lane-chip {
-    display: none;
-  }
-
-  .beat-block {
-    margin-left: 4px;
-    padding-left: 8px;
-  }
-
-  .story {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
+.workspace.script-paper .script-sheet .page-column,
+.workspace.script-paper .writer-sheet .page-column {
+  color: var(--paper-ink);
 }
 
-/* The viewport's page scales to fit its width (set from a ResizeObserver). */
-.viewport-body.page-view .paper {
-  zoom: var(--page-scale, 1);
+.workspace.script-paper .script-sheet .element textarea,
+.workspace.script-paper .writer-sheet .element textarea {
+  color: var(--paper-ink);
+  background: transparent;
+}
+
+.workspace.script-paper .script-sheet .element textarea::placeholder,
+.workspace.script-paper .writer-sheet .element textarea::placeholder {
+  color: #b5b0a4;
+}
+
+.workspace.script-paper .script-sheet .element textarea:hover,
+.workspace.script-paper .writer-sheet .element textarea:hover {
+  border-color: var(--paper-line);
+}
+
+.workspace.script-paper .script-sheet .element textarea:focus,
+.workspace.script-paper .writer-sheet .element textarea:focus {
+  border-color: var(--gold-deep);
+  background: var(--paper-bar-2);
+}
+
+.workspace.script-paper .script-sheet .element-type,
+.workspace.script-paper .writer-sheet .element-type {
+  color: var(--paper-muted);
+  background: var(--paper);
+}
+
+.workspace.script-paper .script-sheet .element-general textarea,
+.workspace.script-paper .writer-sheet .element-general textarea {
+  color: var(--paper-muted);
+}
+
+.workspace.script-paper .script-sheet .add-element,
+.workspace.script-paper .writer-sheet .add-element {
+  color: var(--gold-deep);
+}
+
+.workspace.script-paper .script-sheet ::selection,
+.workspace.script-paper .writer-sheet ::selection {
+  background: color-mix(in srgb, var(--gold) 45%, transparent);
 }

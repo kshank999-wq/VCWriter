@@ -1,5 +1,5 @@
 import { layoutFor, paginateElements } from './pagination.js';
-import { beatsForUnit, lanesInOrder, markersInStoryOrder, unitsInStoryOrder } from './selectors.js';
+import { beatsForUnit, beatsInScript, lanesInOrder, markersInStoryOrder, unitsInStoryOrder } from './selectors.js';
 import type { Lane, StoryMarker, StructuralUnit } from './entities/structure.js';
 import type { StoryEntityRef } from './entities/links.js';
 import type { ProjectFile } from './project-file.js';
@@ -50,7 +50,7 @@ export interface StoryLayout {
 /** Fractional pages a unit's manuscript takes on its own. */
 export const pagesForUnit = (file: ProjectFile, unitId: StructuralUnitId): number => {
   const layout = layoutFor(file.project.format);
-  const elements = beatsForUnit(file, unitId).flatMap((beat) => beat.manuscript.elements);
+  const elements = beatsInScript(file, unitId).flatMap((beat) => beat.manuscript.elements);
   const pages = paginateElements(elements, layout);
   if (pages.length === 0) return 0;
   const last = pages[pages.length - 1];

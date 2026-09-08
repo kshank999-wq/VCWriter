@@ -1,4 +1,4 @@
-import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
+import { beatsInScript, unitsInStoryOrder } from './selectors.js';
 import type { ManuscriptElement, ManuscriptElementType } from './entities/manuscript.js';
 import type { ProjectFormat } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
@@ -80,6 +80,12 @@ export interface PageLine {
 export interface Page {
   number: number;
   lines: PageLine[];
+  /**
+   * The manuscript element the page opens with, so an editor showing the
+   * text as a flow can draw the page breaks where the printed page puts
+   * them. Null when nothing was laid out.
+   */
+  startsWith: string | null;
 }
 
 /** Greedy wrap at `width`, breaking on spaces and never mid-word when avoidable. */
@@ -116,6 +122,8 @@ export const wrapText = (text: string, width: number): string[] => {
 };
 
 interface Block {
+  /** The element this block came from, so a page can name where it starts. */
+  id: string;
   type: ManuscriptElementType;
   lines: string[];
   indent: number;
@@ -137,6 +145,7 @@ const toBlock = (element: ManuscriptElement, layout: PageLayoutSpec, speaker: st
   const indent = layout.indent[element.type] ?? 0;
   const text = layout.uppercase.has(element.type) ? element.text.toUpperCase() : element.text;
   return {
+    id: element.id,
     type: element.type,
     lines: wrapText(text, width),
     indent,
@@ -176,11 +185,15 @@ export const paginateElements = (
   const pages: Page[] = [];
   let lines: PageLine[] = [];
   const spacing = layout.doubleSpaced ? 2 : 1;
+  // The element being laid out, and the one that opened the page in hand.
+  let currentId: string | null = null;
+  let pageStart: string | null = null;
 
   const remaining = () => layout.linesPerPage - lines.length;
   const startNewPage = () => {
-    if (lines.length > 0) pages.push({ number: pages.length + 1, lines });
+    if (lines.length > 0) pages.push({ number: pages.length + 1, lines, startsWith: pageStart });
     lines = [];
+    pageStart = null;
   };
   const pushBlank = () => {
     if (lines.length === 0) return;
@@ -195,6 +208,7 @@ export const paginateElements = (
    */
   const pushContent = (text: string, type: PageLine['type'], indent: number) => {
     if (lines.length >= layout.linesPerPage) startNewPage();
+    if (pageStart === null) pageStart = currentId;
     lines.push({ text, type, indent });
     if (layout.doubleSpaced && lines.length < layout.linesPerPage) {
       lines.push({ text: '', type: 'blank', indent: 0 });
@@ -207,6 +221,7 @@ export const paginateElements = (
 
   for (let index = 0; index < blocks.length; index += 1) {
     const block = blocks[index] as Block;
+    currentId = block.id;
     const separator = lines.length === 0 ? 0 : spacing;
     const needed = block.lines.length * spacing + separator;
 
@@ -250,7 +265,7 @@ export const paginateElements = (
     pushBlockLines(block);
   }
 
-  if (lines.length > 0) pages.push({ number: pages.length + 1, lines });
+  if (lines.length > 0) pages.push({ number: pages.length + 1, lines, startsWith: pageStart });
   return pages;
 };
 
@@ -272,7 +287,7 @@ export const manuscriptElements = (
     // A scene switched off stays in the structure and leaves the manuscript.
     .filter((unit) => unit.inScript)
     .flatMap((unit) =>
-    beatsForUnit(file, unit.id).flatMap((beat) => {
+    beatsInScript(file, unit.id).flatMap((beat) => {
       const body = beat.manuscript.elements;
       if (!options.includeBeatTitles || beat.title.length === 0) return body;
       const annotation: ManuscriptElement = {
@@ -294,9 +309,23 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
 
 export const paginateUnit = (file: ProjectFile, unitId: StructuralUnitId): Page[] =>
   paginateElements(
-    beatsForUnit(file, unitId).flatMap((beat) => beat.manuscript.elements),
+    beatsInScript(file, unitId).flatMap((beat) => beat.manuscript.elements),
     layoutFor(file.project.format),
   );
 
 /** Page count in the sense the industry means it. */
 export const pageCount = (file: ProjectFile): number => paginateProject(file).length;
+
+/**
+ * Where the printed pages begin, as element id -> page number, for every
+ * page after the first. The Script draws the manuscript as one flow and
+ * uses this to rule the page breaks exactly where the printed page has
+ * them, without pagination and editing having to be the same thing.
+ */
+export const pageBreaks = (file: ProjectFile, options: ManuscriptOptions = {}): Map<string, number> => {
+  const breaks = new Map<string, number>();
+  for (const page of paginateProject(file, options)) {
+    if (page.number > 1 && page.startsWith) breaks.set(page.startsWith, page.number);
+  }
+  return breaks;
+};
