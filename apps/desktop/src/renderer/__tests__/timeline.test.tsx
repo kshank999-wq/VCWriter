@@ -83,7 +83,7 @@ describe('master timeline', () => {
     expect(laneNames()).toEqual(['Main Plot', 'Subplot']);
     expect(screen.getByText('Opening Scene')).toBeDefined();
     expect(screen.getByText('Opening beat')).toBeDefined();
-    expect(screen.getByText('Pages')).toBeDefined();
+    expect(screen.getByText('Pages · time')).toBeDefined();
     expect(screen.getByText('Links')).toBeDefined();
 
     fireEvent.click(screen.getByTitle('Add beat'));

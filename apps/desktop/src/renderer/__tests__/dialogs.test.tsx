@@ -3,11 +3,14 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import {
+  addBeat,
   addSetupPayoff,
   addSetupPoint,
+  beatsForUnit,
   createProjectFile,
   manuscriptElements,
   ref,
+  unitsInStoryOrder,
   updateBeat,
   type BeatId,
   type ProjectFile,
@@ -154,6 +157,44 @@ describe('the writing screen', () => {
     expect(latest.beats[0]!.inScript).toBe(false);
     expect(manuscriptElements(latest)).toHaveLength(0);
     expect(latest.beats[0]!.manuscript.elements).toHaveLength(3);
+  });
+});
+
+describe('cutting a scene in two', () => {
+  it('splits at the selected beat, and the rest becomes the next scene', () => {
+    let latest = scene();
+    const unitId = latest.units[0]!.id;
+    const second = addBeat(latest, { unitId, title: 'On the corner' });
+    latest = second.file;
+    const third = addBeat(latest, { unitId, title: 'Back at home' });
+    latest = third.file;
+
+    render(
+      <Harness initial={latest}>
+        {(file, update) => {
+          latest = file;
+          return <SceneDialog file={file} unitId={unitId} onClose={() => undefined} onUpdate={update} />;
+        }}
+      </Harness>,
+    );
+
+    const beats = within(screen.getByLabelText('Beats'));
+    // Nothing selected, and the first beat, are both refused: a cut there
+    // would leave an empty scene behind.
+    expect((screen.getByText('Split at this beat') as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(beats.getByText('Home life'));
+    expect((screen.getByText('Split at this beat') as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(beats.getByText('On the corner'));
+    fireEvent.click(screen.getByText('Split at this beat'));
+
+    expect(latest.units).toHaveLength(2);
+    const [first, made] = unitsInStoryOrder(latest);
+    expect(beatsForUnit(latest, first!.id).map((beat) => beat.title)).toEqual(['Home life']);
+    expect(beatsForUnit(latest, made!.id).map((beat) => beat.title)).toEqual(['On the corner', 'Back at home']);
+    // The new scene comes after, untitled, in the same lane.
+    expect(made!.title).toBe('');
+    expect(made!.laneId).toBe(first!.laneId);
   });
 });
 

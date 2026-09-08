@@ -24,7 +24,7 @@ import { Welcome } from './components/Welcome';
 import { MasterTimeline } from './components/MasterTimeline';
 import { MasterPanel } from './components/MasterPanel';
 import { Inspector } from './components/Inspector';
-import { Viewport, type ViewportView } from './components/Viewport';
+import { TimelineViewer } from './components/TimelineViewer';
 import { DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay } from './components/StoryView';
 import { LaneDialog } from './components/LaneDialog';
 import { SceneDialog } from './components/SceneDialog';
@@ -75,7 +75,9 @@ export default function App() {
   useEffect(() => applyScheme(scheme), [scheme]);
   const [timelineOpen, setTimelineOpen] = usePreference('timeline', true);
   const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
-  const [viewportView, setViewportView] = usePreference<ViewportView>('viewport', 'page');
+  // The Timeline & Viewer screen: its own zoom, and whose thread is isolated.
+  const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', 180);
+  const [isolatedCharacter, setIsolatedCharacter] = useState('');
   // What the Script shows besides the manuscript (addendum 02 §6).
   const [scriptDisplay, setScriptDisplay] = usePreference<ScriptDisplay>('scriptDisplay', DEFAULT_SCRIPT_DISPLAY);
   const [openLaneId, setOpenLaneId] = useState<LaneId | null>(null);
@@ -387,15 +389,16 @@ export default function App() {
               {/* The stage: viewport and inspector above, the lanes below. */}
               <div className="stage">
                 <div className="stage-top">
-                  <Viewport
+                  <TimelineViewer
                     file={file}
-                    layout={layout ?? undefined}
                     threads={threads ?? undefined}
                     selectedBeatId={selectedBeat?.id ?? null}
                     onSelectBeat={setSelectedBeatId}
                     onUpdate={project.update}
-                    view={viewportView}
-                    onView={setViewportView}
+                    zoom={viewerZoom}
+                    onZoom={setViewerZoom}
+                    isolated={isolatedCharacter}
+                    onIsolate={setIsolatedCharacter}
                   />
                   {showInspector ? (
                     <Inspector file={file} selectedBeatId={selectedBeat?.id ?? null} onUpdate={project.update} />
@@ -436,7 +439,14 @@ export default function App() {
             </>
           )}
           <LaneDialog file={file} laneId={openLaneId} onClose={() => setOpenLaneId(null)} onUpdate={project.update} />
-          <SceneDialog file={file} unitId={openUnitId} onClose={() => setOpenUnitId(null)} onUpdate={project.update} />
+          <SceneDialog
+            file={file}
+            unitId={openUnitId}
+            onClose={() => setOpenUnitId(null)}
+            onUpdate={project.update}
+            onOpenBeat={setOpenBeatId}
+            onSelectBeat={setSelectedBeatId}
+          />
           <BeatDialog
             file={file}
             beatId={openBeatId}

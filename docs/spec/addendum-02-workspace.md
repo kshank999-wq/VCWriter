@@ -39,7 +39,7 @@ parentheses are retired.
 | Name | What it is |
 | --- | --- |
 | **Master timeline** (was: structure board, timeline strip) | The story in order, below the viewport: ruler, acts, links, then one track per plot lane |
-| **Viewport** | Above the timeline, where the viewer would be: the **Page** view and the **Threads** view |
+| **Timeline & Viewer** (was: viewport) | Above the lanes, where the viewer would be: the scenes in time, and the characters, themes and links that run through them |
 | **Plot pop-up** | The plot's summary and arc, opened from a lane's track header |
 | **Plot lane** | A track on the master timeline; a story thread (§5.1) |
 | **Scene block** (was: unit column, scene group) | A scene or chapter as it appears in a lane, with its beats inside |
@@ -97,18 +97,23 @@ between the title bar and the page bar.
 
 ## 4. Master timeline
 
-The horizontal axis is **story order measured in pages**: each scene block
-is as wide as the pages it takes, with a floor so an empty scene is still a
-block you can read and drop on. A long scene is a wide block, and a glance
-at a lane says where the story's weight is. That is §5.1's "lane dimensions
-adapt to contained material" made literal.
+The horizontal axis is **story order measured in pages**, and therefore in
+time: a page is a minute (§5), so the ruler carries both and the toolbar's
+zoom is the scale of a sequencer. Each scene block is as wide as the pages
+it takes. The floor under an empty scene is a *fraction of a page* rather
+than a fixed number of pixels, so every block answers the zoom — a timeline
+whose short clips stop responding to the zoom is not a timeline. A long
+scene is a wide block, and a glance at a lane says where the story's weight
+is. That is §5.1's "lane dimensions adapt to contained material" made
+literal.
 
 Tracks, top to bottom, each with a header on the left the way an editor
 names its tracks:
 
-1. **Pages.** The ruler: the page each scene starts on, at the block's left
-   edge. A zoom slider on the toolbar sets pixels per page; ruler and
-   blocks share the scale.
+1. **Pages · time.** The ruler: the page each scene starts on and the minute
+   it starts at, at the block's left edge; the tail carries the total of
+   both. A zoom slider on the toolbar sets pixels per page; ruler and blocks
+   share the scale.
 2. **Acts.** Act markers as labelled bands from one marker to the next. A
    project without markers shows an empty track; `+ Act` on the toolbar
    starts one at the selected scene. The band is the only place the display
@@ -164,7 +169,16 @@ the plot pop-up:
   who speak in the scene, in order of first line, and the **setups and
   payoffs** placed in or landing in the scene (§7.3), each marked *setup*
   or *payoff*.
-- The rest: status, label, summary, notes, and the beat and page count.
+- A **right column** listing the scene's **beats** in order. Selecting one
+  and pressing **Split at this beat** cuts the scene there: that beat and
+  everything after it become the next scene along — same lane, untitled,
+  taking the story position immediately after this one, with everything
+  after it scooting along as an editing timeline does. Nothing about the
+  manuscript changes; the script reads exactly as it did before the cut. A
+  cut at the first beat would leave an empty scene behind and is refused.
+  Double-clicking a beat in the list opens it in the writing screen (§7).
+- The rest: status, label, summary, notes, the beat and page count, and how
+  long the scene plays.
 
 The **in-script switch** takes the scene out of the script without
 deleting it: off, the scene leaves the Script, the page view, the preview,
@@ -305,46 +319,49 @@ Everything reorders by drag and by keyboard, as today:
   earlier/later in the story, or a lane up/down; `Alt+Shift+↑/↓` moves a
   beat to the previous/next scene, or a scene to the previous/next lane.
 
-## 5. Viewport
+## 5. Timeline & Viewer
 
-Where an editor shows the picture, this shows the story. A header names
-the selected scene in the centre and counts pages at the right the way a
-viewer shows a clip name and a timecode; a transport row underneath steps
-to the first, previous, next and last beat in story order. Two views, as
-tabs at the left of the header:
+Where an editing bay shows the picture, this shows the story — and it shows
+it **in time**. A page of script is a minute of screen time, which is the
+rule the industry budgets and schedules by, so the axis across this screen
+is a running time and the length of a scene is how long it plays. The
+header carries the whole thing's **runtime** on the right, the way a viewer
+shows a timecode.
 
-**Page.** The selected scene as it prints: the same paginated pages the
-Preview page and the PDF produce, white on black. Selecting a beat anywhere
-turns the viewport to its scene.
+Two rows stay put at the top while everything else scrolls:
 
-**Threads.** The whole story as a connected diagram: one column per scene
-in story order, and across the columns the threads that run through them.
+- **Time.** The minute each scene starts at.
+- **Scenes.** The scene as a block, its number and its title, as wide as it
+  plays. Clicking one selects it; the selected scene keeps the gold
+  playhead edge it has on the lanes below. A scene switched off (§4) is
+  drawn dimmed.
 
-- *Scenes*: each scene as a node coloured by its lane, with a line per lane
-  joining that lane's scenes, so a subplot reads as its own thread weaving
-  through the main plot.
-- *Promises*: every setup drawn as a curve to the scene where it pays off,
-  an unpaid one as a dashed curve into the air, and every scene-level story
-  link as a thin curve — the links track of the timeline, in the same
-  colours, at a size that can be read.
-- *Characters*: a row per character, coloured, with a dot in each scene the
-  character speaks in and a line joining them. A character "speaks in" a
-  beat when a character cue names them, so the row is derived from the
-  script and never falls out of date with it.
-- *Beats*: each scene's beats as chips, each carrying a dot per character in
-  it in that character's colour, and the links the writer has drawn between
-  beats as dashed curves.
+Under them, the threads that run through the story — and only threads,
+because this screen answers "who and what is where", not "what does it
+say":
 
-Dragging from one beat chip to another draws a link between them (a §7.4
-`relates_to` link); clicking a link removes it. Each thread is a layer with
-a toggle, so the diagram can be reduced to the one question being asked:
-where does this character go quiet, which promise is still open, where do
-the two plots touch.
+- A row per **character**, filled in every scene they speak in. The cast
+  keeps itself: a character joins the list the first time a cue names them,
+  the way a screenwriting program's character list does.
+- A row per **theme**, filled in every scene it is linked to (§7.4).
+  A theme leaves no trace in the text, so this is the one thread the writer
+  draws by hand.
+- The **links between objects** (§7.4), as curves from the scene one end
+  falls in to the scene the other does. Clicking one removes it.
 
-Character colours are assigned in order of first line and used everywhere a
-cast is drawn: the chips here, the dots on the timeline's beat rows. They
-are chosen to read on the dark and the light schemes and to stay apart from
-the lane palette; a character is not a lane.
+**Isolating a character** — the dropdown in the header — leaves their row
+alone and dims every scene they are not in, which is how you see at a
+glance where someone is in the script and where the gaps in their arc are.
+
+**Zoom** sets pixels per page, the same unit the lanes below use, and it
+changes the width of *every* block: the floor a short scene is given is a
+fraction of a page rather than a fixed number of pixels, so an empty scene
+still grows and shrinks with the zoom instead of sitting at one width.
+Both this screen and the lanes have their own zoom, each remembered.
+
+The page itself is not here — the Script (§6) is the manuscript, and the
+Preview page prints it — and neither are the promises or the beats, which
+belong to the lanes and the scene's own screen.
 
 ## 6. Master panel: Script
 

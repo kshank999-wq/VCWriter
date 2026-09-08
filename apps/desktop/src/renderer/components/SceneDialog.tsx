@@ -10,9 +10,13 @@ import {
   sceneHeadingOf,
   setSceneHeading,
   SETTINGS,
+  splitUnit,
   structuralUnitStatusSchema,
+  timecode,
   TIMES,
   updateUnit,
+  type Beat,
+  type BeatId,
   type ProjectFile,
   type SceneHeading,
   type StructuralUnit,
@@ -25,6 +29,10 @@ interface SceneDialogProps {
   unitId: StructuralUnitId | null;
   onClose(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  /** A beat in the list was double-clicked: open it in the writing screen. */
+  onOpenBeat?(beatId: BeatId): void;
+  /** A beat became the selection, so the rest of the workspace follows. */
+  onSelectBeat?(beatId: BeatId): void;
 }
 
 /**
@@ -36,14 +44,24 @@ interface SceneDialogProps {
  * itself from the text — who speaks, which promises are made or kept
  * here — and the rest is the scene's summary and notes.
  */
-export function SceneDialog({ file, unitId, onClose, onUpdate }: SceneDialogProps) {
+export function SceneDialog({ file, unitId, onClose, onUpdate, onOpenBeat, onSelectBeat }: SceneDialogProps) {
   const unit = unitId ? findUnit(file, unitId) : undefined;
   const dialog = useModal(Boolean(unit));
   const noun = unit?.kind === 'chapter' ? 'Chapter' : unit?.kind === 'section' ? 'Section' : 'Scene';
 
   return (
     <dialog ref={dialog} className="lane-dialog scene-dialog" aria-label={noun} onClose={onClose}>
-      {unit ? <SceneDialogBody file={file} unit={unit} noun={noun} onClose={onClose} onUpdate={onUpdate} /> : null}
+      {unit ? (
+        <SceneDialogBody
+          file={file}
+          unit={unit}
+          noun={noun}
+          onClose={onClose}
+          onUpdate={onUpdate}
+          onOpenBeat={onOpenBeat}
+          onSelectBeat={onSelectBeat}
+        />
+      ) : null}
     </dialog>
   );
 }
@@ -54,12 +72,16 @@ function SceneDialogBody({
   noun,
   onClose,
   onUpdate,
+  onOpenBeat,
+  onSelectBeat,
 }: {
   file: ProjectFile;
   unit: StructuralUnit;
   noun: string;
   onClose(): void;
   onUpdate: SceneDialogProps['onUpdate'];
+  onOpenBeat: SceneDialogProps['onOpenBeat'];
+  onSelectBeat: SceneDialogProps['onSelectBeat'];
 }) {
   const lane = findLane(file, unit.laneId);
   const prose = isProseFormat(file.project.format);
@@ -67,6 +89,15 @@ function SceneDialogBody({
   const promises = promisesIn(file, { unitId: unit.id });
   const beats = beatsForUnit(file, unit.id);
   const pages = pagesForUnit(file, unit.id);
+  const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
+
+  /** Cut the scene at the selected beat; the rest becomes the next scene. */
+  const split = () => {
+    const at = beats.findIndex((beat) => beat.id === selectedBeatId);
+    if (at < 1 || !selectedBeatId) return;
+    onUpdate((current) => splitUnit(current, unit.id, selectedBeatId).file);
+    setSelectedBeatId(null);
+  };
 
   return (
     <>
@@ -127,7 +158,7 @@ function SceneDialogBody({
           )}
         </aside>
 
-        <div className="scene-dialog-main">
+        <div className="scene-dialog-main scene-dialog-middle">
           <div className="field-row">
             <label className="field">
               Status
@@ -172,13 +203,90 @@ function SceneDialogBody({
             />
           </label>
           <p className="muted">
-            {beats.length} {beats.length === 1 ? 'beat' : 'beats'} · {pages < 0.05 ? '0' : pages.toFixed(1)} pages.
+            {beats.length} {beats.length === 1 ? 'beat' : 'beats'} · {pages < 0.05 ? '0' : pages.toFixed(1)} pages ·{' '}
+            {timecode(pages)}.
             {unit.inScript ? '' : ` Switched off: this ${noun.toLowerCase()} is not in the script, the preview or the exports.`}{' '}
             Changes are kept as you type.
           </p>
         </div>
+
+        <BeatList
+          beats={beats}
+          noun={noun}
+          selected={selectedBeatId}
+          onSelect={(beatId) => {
+            setSelectedBeatId(beatId);
+            onSelectBeat?.(beatId);
+          }}
+          onOpen={onOpenBeat}
+          onSplit={split}
+        />
       </div>
     </>
+  );
+}
+
+/**
+ * The beats of the scene, down the right (addendum 02 §5). Selecting one and
+ * cutting there splits the scene: this beat and everything after it become
+ * the next scene along, the way a cut in an editing timeline leaves the
+ * second half of a clip to be named.
+ */
+function BeatList({
+  beats,
+  noun,
+  selected,
+  onSelect,
+  onOpen,
+  onSplit,
+}: {
+  beats: Beat[];
+  noun: string;
+  selected: BeatId | null;
+  onSelect(beatId: BeatId): void;
+  onOpen?: (beatId: BeatId) => void;
+  onSplit(): void;
+}) {
+  const at = beats.findIndex((beat) => beat.id === selected);
+  return (
+    <aside className="scene-dialog-beats" aria-label="Beats">
+      <h4>Beats</h4>
+      {beats.length > 0 ? (
+        <ul>
+          {beats.map((beat, position) => (
+            <li key={beat.id}>
+              <button
+                type="button"
+                className={beat.id === selected ? 'beat-entry selected' : 'beat-entry'}
+                aria-current={beat.id === selected ? 'true' : undefined}
+                title={onOpen ? 'Click to select · double-click to write in it' : undefined}
+                onClick={() => onSelect(beat.id)}
+                onDoubleClick={() => onOpen?.(beat.id)}
+              >
+                <span className="muted">{position + 1}</span>
+                <span className="beat-entry-title">{beat.title || 'Untitled beat'}</span>
+                {beat.color ? <span className="beat-entry-dot" style={{ background: beat.color }} aria-hidden="true" /> : null}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">No beats yet.</p>
+      )}
+      <button
+        type="button"
+        className="split"
+        disabled={at < 1}
+        title={
+          at < 1
+            ? `Select a beat after the first to cut this ${noun.toLowerCase()} there`
+            : `Cut here: this beat and the ones after it become the next ${noun.toLowerCase()}`
+        }
+        onClick={onSplit}
+      >
+        Split at this beat
+      </button>
+    </aside>
   );
 }
 

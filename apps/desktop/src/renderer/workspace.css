@@ -188,9 +188,12 @@ main {
   height: auto;
 }
 
-/* ---------------------------------------------------------------- viewport */
+/* ------------------------------------------------- timeline & viewer screen */
 
-.viewport {
+/* The story along the top as a strip of scenes measured in time, and the
+   threads that run through it below. The same column-per-scene grid as the
+   lanes underneath, so the two read as one sequencer. */
+.viewer {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -198,139 +201,227 @@ main {
   background: var(--ink);
 }
 
-.viewport-head {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+.viewer-head {
+  display: flex;
   align-items: center;
-  height: 30px;
-  padding: 0 8px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-  font-size: var(--ui);
-}
-
-.viewport-head .tabs .tab {
-  font-family: var(--display);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 10.5px;
-  padding: 3px 10px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-}
-
-.viewport-head .tabs .tab.selected {
-  background: transparent;
-  color: var(--gold);
-  border-bottom-color: var(--gold);
-}
-
-.viewport-title {
-  text-align: center;
-  font-family: var(--display);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 11px;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.viewport-counter {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-size: 12px;
-  color: var(--gold);
-}
-
-.viewport-body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-}
-
-.viewport-body.page-view {
-  padding: 14px 0;
-}
-
-.viewport-body.page-view .pages {
-  padding: 0;
   gap: 14px;
-}
-
-.viewport-body.page-view .paper {
-  transform-origin: top center;
-  box-shadow: 0 2px 12px color-mix(in srgb, #000 40%, transparent);
-}
-
-.transport {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  height: 32px;
+  height: 30px;
   padding: 0 10px;
   background: var(--panel);
-  border-top: 1px solid var(--border);
-  font-size: var(--ui);
-}
-
-.transport-buttons {
-  display: flex;
-  gap: 2px;
-}
-
-.transport-buttons .tool {
-  padding: 2px 9px;
-  font-size: 11px;
-}
-
-.transport-beat {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ----------------------------------------------------------------- threads */
-
-.threads {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-
-.threads-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
   border-bottom: 1px solid var(--border);
-  font-size: 10.5px;
+  font-size: var(--ui);
   flex: 0 0 auto;
 }
 
-.threads-toolbar .toggle {
-  padding: 4px 6px;
+.viewer-name {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
   font-size: 10.5px;
+  color: var(--gold);
+  white-space: nowrap;
 }
 
-.threads-hint {
+.viewer-isolate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
-.threads-scroll {
+.viewer-isolate select {
+  font-size: 11px;
+  padding: 2px 6px;
+  max-width: 180px;
+}
+
+/* The running time of the whole thing, where a viewer shows its timecode. */
+.viewer-runtime {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+
+.viewer-scroll {
   flex: 1;
   min-height: 0;
   overflow: auto;
 }
 
-.threads-canvas {
-  display: block;
-  font-size: 11px;
+.viewer-grid {
+  display: grid;
+  align-items: stretch;
+  min-width: max-content;
 }
+
+/* The time and the scenes stay put while the threads scroll under them. */
+.viewer-sticky {
+  position: sticky;
+  z-index: 2;
+  background: var(--ink);
+}
+
+.viewer-grid .track-head {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: var(--panel);
+}
+
+.viewer-time {
+  top: 0;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  overflow: hidden;
+}
+
+.viewer-grid .track-head.time {
+  top: 0;
+  height: 20px;
+  z-index: 4;
+}
+
+.viewer-grid .track-head.scenes {
+  top: 20px;
+  z-index: 4;
+}
+
+.viewer-scene {
+  top: 20px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 2px 6px;
+  margin-right: 2px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--gold-deep);
+  border-radius: 2px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.viewer-scene.playhead {
+  border-color: var(--gold-deep);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+
+.viewer-scene.dim {
+  opacity: 0.3;
+}
+
+.viewer-scene.off {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+.viewer-scene.tail,
+.viewer-time.tail,
+.viewer-cell.tail,
+.viewer-links.tail {
+  border-color: transparent;
+  background: transparent;
+  cursor: default;
+}
+
+.viewer-scene-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.viewer-scene-title {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* One row per character, one per theme. */
+.viewer-thread-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  height: 22px;
+  border-left: 3px solid var(--border);
+  font-size: 10.5px;
+  overflow: hidden;
+}
+
+.viewer-thread-head .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.viewer-thread-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viewer-thread-head.theme .viewer-thread-name {
+  font-style: italic;
+}
+
+.viewer-cell {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  padding: 0 2px;
+  border-left: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+.viewer-bar {
+  width: 100%;
+  height: 10px;
+  border: none;
+  border-radius: 2px;
+  opacity: 0.85;
+  cursor: pointer;
+  padding: 0;
+}
+
+.viewer-bar:hover {
+  opacity: 1;
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+.viewer-empty {
+  padding: 10px 8px;
+  font-size: 11.5px;
+}
+
+.viewer-links {
+  min-height: 52px;
+}
+
+.viewer-links svg {
+  display: block;
+}
+
+/* ------------------------------------------------------------ link curves */
 
 .thread-label {
   fill: var(--muted);
@@ -338,94 +429,6 @@ main {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-size: 9.5px;
-}
-
-.thread-row-label {
-  fill: var(--muted);
-  font-family: var(--display);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 9.5px;
-}
-
-.thread-column-rule {
-  stroke: var(--border);
-  stroke-width: 1;
-}
-
-.thread-lane {
-  fill: none;
-  stroke-width: 2;
-  opacity: 0.6;
-}
-
-.thread-scene rect:first-of-type {
-  fill: var(--panel-2);
-  stroke-width: 1;
-  cursor: pointer;
-}
-
-.thread-scene.selected rect:first-of-type {
-  fill: var(--panel);
-  stroke-width: 2;
-  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--gold) 50%, transparent));
-}
-
-.thread-scene-title {
-  fill: var(--text);
-  font-family: var(--display);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 10.5px;
-  pointer-events: none;
-}
-
-.thread-scene-meta {
-  fill: var(--muted);
-  font-size: 10px;
-  pointer-events: none;
-}
-
-.thread-character polyline {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  opacity: 0.8;
-}
-
-.thread-character circle {
-  fill: currentColor;
-  cursor: pointer;
-}
-
-.thread-character-name {
-  font-size: 10px;
-  font-family: var(--display);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.thread-beat rect {
-  fill: var(--panel-2);
-  stroke: var(--border);
-  stroke-width: 1;
-  cursor: grab;
-}
-
-.thread-beat:hover rect {
-  stroke: var(--gold-deep);
-}
-
-.thread-beat.selected rect {
-  stroke: var(--gold);
-  stroke-width: 1.5;
-  fill: var(--panel);
-}
-
-.thread-beat-title {
-  fill: var(--text);
-  font-size: 10.5px;
-  pointer-events: none;
 }
 
 .beat-link path {
@@ -441,12 +444,6 @@ main {
   stroke-width: 2;
 }
 
-.thread-drag {
-  stroke: var(--gold);
-  stroke-width: 1.5;
-  stroke-dasharray: 3 3;
-  pointer-events: none;
-}
 
 /* ------------------------------------------------------------- lane dialog */
 
@@ -679,9 +676,92 @@ dialog.scene-dialog > header.off {
 
 .scene-dialog-body {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 190px minmax(0, 1fr) 210px;
   gap: 0;
   min-height: 300px;
+}
+
+/* The beats of the scene, down the right, and the cut. */
+.scene-dialog-beats {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  padding: 12px 14px;
+  font-size: 12px;
+  background: color-mix(in srgb, var(--ink) 40%, var(--panel));
+}
+
+.scene-dialog-beats h4 {
+  margin: 0 0 6px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-weight: normal;
+}
+
+.scene-dialog-beats ul {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.beat-entry {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.beat-entry:hover {
+  border-color: var(--border);
+  background: var(--ink);
+}
+
+.beat-entry.selected {
+  border-color: var(--gold-deep);
+  background: var(--ink);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+
+.beat-entry-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.beat-entry-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.scene-dialog-beats .split {
+  flex: 0 0 auto;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 5px 8px;
+}
+
+.scene-dialog-beats .split:disabled {
+  opacity: 0.4;
 }
 
 .scene-dialog-side {
@@ -961,6 +1041,9 @@ dialog.scene-dialog > header.off {
   top: 0;
   z-index: 1;
   height: 22px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   border-left: 1px solid var(--border);
@@ -968,6 +1051,13 @@ dialog.scene-dialog > header.off {
   font-size: 10.5px;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
+  overflow: hidden;
+}
+
+/* The page a scene starts on, and the minute it starts at. */
+.ruler-time {
+  font-size: 9.5px;
+  white-space: nowrap;
 }
 
 .ruler-cell span::before {

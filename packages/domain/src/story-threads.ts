@@ -58,16 +58,32 @@ export interface CharacterThread {
   appearances: CharacterAppearance[];
 }
 
+/**
+ * A theme, and where it is at work. Unlike a character, a theme leaves no
+ * trace in the text, so this is the one thread the writer draws themselves:
+ * it runs through the scenes and beats the theme is linked to (§7.4).
+ */
+export interface ThemeThread {
+  id: string;
+  name: string;
+  color: string;
+  appearances: CharacterAppearance[];
+}
+
 export interface ThreadLayout {
   spans: StorySpan[];
   lanes: Lane[];
   characters: CharacterThread[];
+  themes: ThemeThread[];
   arcs: TimelineArc[];
   /** Who speaks in each beat, so a beat can be coloured by its cast. */
   speakers: Map<BeatId, string[]>;
   /** Colour by character name, for anything that draws a cast. */
   colours: Map<string, string>;
 }
+
+/** Themes are drawn in the lane palette; they are of the story, not of a cast. */
+const THEME_COLOURS = ['#c9a45c', '#8b1c1c', '#5b7fa6', '#7a9e7e', '#8a6f9e', '#a67c52', '#6f8f9e'] as const;
 
 /**
  * `base` lets a caller that already computed the story layout and the arcs
@@ -111,5 +127,57 @@ export const threadLayout = (
     .filter((name) => (appearances.get(name) ?? []).length > 0)
     .map((name) => ({ name, color: colours.get(name) as string, appearances: appearances.get(name) ?? [] }));
 
-  return { spans: layout.spans, lanes: layout.lanes, characters, arcs: base.arcs ?? timelineArcs(file), speakers, colours };
+  return {
+    spans: layout.spans,
+    lanes: layout.lanes,
+    characters,
+    themes: themeThreads(file, layout),
+    arcs: base.arcs ?? timelineArcs(file),
+    speakers,
+    colours,
+  };
+};
+
+/**
+ * The themes the writer keeps in research, and the scenes they are linked
+ * to — directly, or through a beat in the scene.
+ */
+const themeThreads = (file: ProjectFile, layout: StoryLayout): ThemeThread[] => {
+  const themeCategories = new Set(
+    file.researchCategories.filter((category) => category.systemKey === 'themes').map((category) => category.id as string),
+  );
+  if (themeCategories.size === 0) return [];
+
+  const sceneOfBeat = new Map<string, number>();
+  const sceneOfUnit = new Map<string, number>();
+  for (const span of layout.spans) {
+    sceneOfUnit.set(span.unit.id, span.index);
+    for (const beat of beatsForUnit(file, span.unit.id)) sceneOfBeat.set(beat.id, span.index);
+  }
+
+  const threads: ThemeThread[] = [];
+  const items = file.researchItems.filter((item) => !item.archived && themeCategories.has(item.categoryId));
+
+  items.forEach((item, position) => {
+    const indexes = new Set<number>();
+    for (const link of file.links) {
+      for (const [side, other] of [
+        [link.from, link.to],
+        [link.to, link.from],
+      ] as const) {
+        if (side.type !== 'research_item' || side.id !== item.id) continue;
+        const index = other.type === 'unit' ? sceneOfUnit.get(other.id) : other.type === 'beat' ? sceneOfBeat.get(other.id) : undefined;
+        if (index !== undefined) indexes.add(index);
+      }
+    }
+    if (indexes.size === 0) return;
+    threads.push({
+      id: item.id,
+      name: item.title,
+      color: THEME_COLOURS[position % THEME_COLOURS.length] as string,
+      appearances: [...indexes].sort((a, b) => a - b).map((index) => ({ index, beatIds: [] })),
+    });
+  });
+
+  return threads;
 };

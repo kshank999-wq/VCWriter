@@ -154,9 +154,45 @@ export const timelineArcs = (file: ProjectFile): TimelineArc[] => {
 };
 
 /**
- * Pixel width of a span at a zoom level. The floor keeps an empty scene a
- * block you can read and drop on; without it a scene with no words would be
- * zero pixels wide and impossible to find.
+ * The least of the axis a scene occupies however little is written in it, in
+ * pages. It is expressed in pages rather than pixels so that zooming changes
+ * every block — an editing timeline where the short clips stop responding to
+ * the zoom is not a timeline.
  */
-export const spanWidth = (span: StorySpan, pixelsPerPage: number, minimum = 150): number =>
-  Math.max(minimum, Math.round(span.pages * pixelsPerPage));
+export const MIN_SPAN_PAGES = 0.5;
+
+/**
+ * Pixel width of a span at a zoom level. The floor is a fraction of a page,
+ * so an empty scene is still a block you can read and drop on and still
+ * grows and shrinks with the zoom; the pixel floor under it only keeps a
+ * scene from vanishing at the far end of the slider.
+ */
+export const spanWidth = (span: StorySpan, pixelsPerPage: number, minimum = 40): number =>
+  Math.max(minimum, Math.round(Math.max(span.pages, MIN_SPAN_PAGES) * pixelsPerPage));
+
+// ---------------------------------------------------------------------------
+// Screen time (addendum 02 §5)
+// ---------------------------------------------------------------------------
+
+/**
+ * A page of script is a minute of screen time. It is a rule of thumb, and it
+ * is the one the industry budgets and schedules by, which is what makes a
+ * page count worth having: the timeline can be read as a running time and a
+ * writer can see how long the thing is.
+ */
+export const SECONDS_PER_PAGE = 60;
+
+export const secondsForPages = (pages: number): number => Math.round(pages * SECONDS_PER_PAGE);
+
+/** Pages as a running time: `4:30`, and `1:04:30` once it runs past an hour. */
+export const timecode = (pages: number): string => {
+  const total = Math.max(0, secondsForPages(pages));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
+};
+
+/** How long the whole thing runs, at a page a minute. */
+export const runtimeOf = (file: ProjectFile): string => timecode(storyLayout(file).totalPages);

@@ -667,6 +667,51 @@ export const updateUnit = (
   });
 };
 
+/**
+ * Split a scene in two at one of its beats (addendum 02 §5).
+ *
+ * The beat chosen, and everything after it, moves into a new scene that
+ * takes the story position immediately after this one — in the same lane,
+ * untitled, the way a cut in an editing timeline leaves the second half to
+ * be named. Nothing about the manuscript changes: the beats keep their
+ * order, so the script reads exactly as it did before the cut. Splitting
+ * at the first beat would leave an empty scene behind and is refused.
+ */
+export const splitUnit = (
+  file: ProjectFile,
+  unitId: StructuralUnitId,
+  atBeatId: BeatId,
+): { file: ProjectFile; unit: StructuralUnit } => {
+  const unit = file.units.find((candidate) => candidate.id === unitId);
+  if (!unit) throw new DomainError(`Scene/chapter ${unitId} does not exist`);
+
+  const beats = beatsForUnit(file, unitId);
+  const at = beats.findIndex((beat) => beat.id === atBeatId);
+  if (at === -1) throw new DomainError(`Beat ${atBeatId} is not in ${unitId}`);
+  if (at === 0) throw new DomainError('A scene cannot be split at its first beat');
+
+  const order = unitsInStoryOrder(file);
+  const position = order.findIndex((candidate) => candidate.id === unitId);
+  const created = addUnit(file, {
+    laneId: unit.laneId,
+    kind: unit.kind,
+    // Straight after this scene in the story, which is where a cut leaves it.
+    index: position + 1,
+  });
+
+  const moving = new Set(beats.slice(at).map((beat) => beat.id as string));
+  const timestamp = nowIso();
+  return {
+    file: touchProject({
+      ...created.file,
+      beats: created.file.beats.map((beat) =>
+        moving.has(beat.id) ? { ...beat, unitId: created.unit.id, updatedAt: timestamp } : beat,
+      ),
+    }),
+    unit: created.unit,
+  };
+};
+
 /** Remove a scene/chapter and the beats inside it. */
 export const removeUnit = (file: ProjectFile, unitId: StructuralUnitId): ProjectFile => {
   if (!file.units.some((unit) => unit.id === unitId)) {

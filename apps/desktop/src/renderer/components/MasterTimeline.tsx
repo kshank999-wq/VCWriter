@@ -12,6 +12,7 @@ import {
   spanWidth,
   storyLayout,
   threadLayout,
+  timecode,
   timelineArcs,
   unitsForLane,
   updateLane,
@@ -201,15 +202,18 @@ export function MasterTimeline({
     <section className="timeline" aria-label="Master timeline">
       <div className="timeline-scroll">
         <div className="timeline-grid" style={{ gridTemplateColumns: columns }}>
-          {/* Pages */}
-          <div className="track-head ruler-head">Pages</div>
+          {/* Pages, and the time they play for: a page is a minute (§5). */}
+          <div className="track-head ruler-head">Pages · time</div>
           {spans.map((span) => (
             <div key={span.unit.id} className={`ruler-cell${playhead(span.unit.id)}`}>
               <span>{Math.floor(span.startPage) + 1}</span>
+              <span className="ruler-time muted">{timecode(span.startPage)}</span>
             </div>
           ))}
           <div className="ruler-cell tail">
-            <span className="muted">{layout.totalPages < 0.05 ? '' : `${Math.ceil(layout.totalPages)} pp.`}</span>
+            <span className="muted">
+              {layout.totalPages < 0.05 ? '' : `${Math.ceil(layout.totalPages)} pp. · ${timecode(layout.totalPages)}`}
+            </span>
           </div>
 
           {/* Acts */}
@@ -280,8 +284,8 @@ export function MasterTimeline({
           <span className="muted">Zoom</span>
           <input
             type="range"
-            min={60}
-            max={400}
+            min={40}
+            max={600}
             step={10}
             value={pixelsPerPage}
             aria-label="Timeline zoom, pixels per page"

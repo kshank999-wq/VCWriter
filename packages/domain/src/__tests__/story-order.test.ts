@@ -288,7 +288,9 @@ describe('story layout', () => {
     const { file } = twoLanes();
     const span = storyLayout(file).spans[0]!;
     expect(span.pages).toBe(0);
-    expect(spanWidth(span, 120)).toBe(150);
+    // A short scene keeps a readable minimum — and still answers the zoom.
+    expect(spanWidth(span, 120)).toBe(60);
+    expect(spanWidth(span, 400)).toBe(200);
     expect(spanWidth({ ...span, pages: 2.5 }, 120)).toBe(300);
   });
 });
