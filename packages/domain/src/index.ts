@@ -8,6 +8,7 @@ export * from './ids.js';
 export * from './ordering.js';
 export * from './entities/common.js';
 export * from './entities/manuscript.js';
+export * from './entities/inline.js';
 export * from './entities/project.js';
 export * from './entities/structure.js';
 export * from './entities/research.js';

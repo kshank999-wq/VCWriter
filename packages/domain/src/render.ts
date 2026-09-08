@@ -1,4 +1,5 @@
 import { beatsInScript, findUnit, unitsInStoryOrder } from './selectors.js';
+import { plainInline } from './entities/inline.js';
 import type { ManuscriptElement, ManuscriptSegment } from './entities/manuscript.js';
 import type { VoiceAssignment } from './entities/project.js';
 import type { Beat } from './entities/structure.js';
@@ -35,7 +36,9 @@ const INDENT: Record<string, number> = {
 const UPPERCASE_TYPES = new Set(['scene_heading', 'character', 'transition', 'shot']);
 
 const renderElement = (element: ManuscriptElement, screenplayLayout: boolean): string => {
-  const text = UPPERCASE_TYPES.has(element.type) ? element.text.toUpperCase() : element.text;
+  // Plain text is plain: the emphasis marks are not part of what is said.
+  const written = plainInline(element.text);
+  const text = UPPERCASE_TYPES.has(element.type) ? written.toUpperCase() : written;
   if (!screenplayLayout) return text;
   const indent = ' '.repeat(INDENT[element.type] ?? 0);
   return text
@@ -109,7 +112,7 @@ export const speechSegmentsForUnit = (file: ProjectFile, unitId: StructuralUnitI
         const characterId = element.characterId ?? pendingCharacterId;
         segments.push({
           kind: 'dialogue',
-          text: element.text,
+          text: plainInline(element.text),
           characterId,
           voice: voiceFor(characterId),
         });
@@ -119,7 +122,7 @@ export const speechSegmentsForUnit = (file: ProjectFile, unitId: StructuralUnitI
         pendingCharacterId = null;
         segments.push({
           kind: 'narration',
-          text: element.text,
+          text: plainInline(element.text),
           characterId: null,
           voice: file.settings.narratorVoice,
         });

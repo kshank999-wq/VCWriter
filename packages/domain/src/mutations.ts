@@ -32,6 +32,7 @@ import type {
   BeatRevisionId,
   CharacterId,
   LaneId,
+  ManuscriptElementId,
   ResearchCategoryId,
   ResearchItemId,
   SetupPayoffId,
@@ -291,6 +292,33 @@ export const updateBeat = (
     ...file,
     beats: file.beats.map((beat) => (beat.id === beatId ? touch({ ...beat, ...patch }) : beat)),
   });
+};
+
+/**
+ * Print a speech beside the one before it, or stop doing so (addendum 02
+ * §7.1). The mark goes on the character cue; a cue with nothing to sit
+ * beside simply prints as an ordinary speech until there is.
+ */
+export const setDualDialogue = (
+  file: ProjectFile,
+  beatId: BeatId,
+  elementId: ManuscriptElementId,
+  dual: boolean,
+): ProjectFile => {
+  const beat = file.beats.find((candidate) => candidate.id === beatId);
+  if (!beat) throw new DomainError(`Beat ${beatId} does not exist`);
+  const element = beat.manuscript.elements.find((candidate) => candidate.id === elementId);
+  if (!element) throw new DomainError(`Element ${elementId} is not in beat ${beatId}`);
+  if (element.type !== 'character') throw new DomainError('Only a character cue can be marked dual');
+
+  const elements = beat.manuscript.elements.map((candidate) => {
+    if (candidate.id !== elementId) return candidate;
+    const attributes = { ...candidate.attributes };
+    if (dual) attributes['dual'] = true;
+    else delete attributes['dual'];
+    return { ...candidate, attributes };
+  });
+  return updateBeat(file, beatId, { manuscript: { elements } });
 };
 
 // ---------------------------------------------------------------------------

@@ -1837,15 +1837,55 @@ input[type='color'].swatch {
   min-width: 0;
 }
 
+/* A line is two layers in one cell: the styled text, and the box the writer
+   types in over it. Both are laid out identically — same font, same box, same
+   wrapping — so the characters sit exactly on top of each other; the box
+   contributes the caret and the selection, the layer under it the emphasis.
+   The layer also sizes the cell, which is what makes the box grow with the
+   text instead of guessing at a row count. */
+.element .field {
+  display: grid;
+  margin-left: var(--indent);
+  width: var(--width);
+  max-width: 100%;
+}
+
+.element .ink,
 .element textarea {
+  grid-area: 1 / 1 / 2 / 2;
   font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
   border: 1px solid transparent;
-  background: transparent;
   border-radius: 2px;
   padding: 1px 4px;
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-align: inherit;
+}
+
+.element .ink {
+  pointer-events: none;
+  border-color: transparent;
+  color: var(--text);
+}
+
+.element textarea {
+  background: transparent;
+  /* The text is drawn by the layer beneath; this box keeps the caret. */
+  color: transparent;
+  caret-color: var(--gold);
   overflow: hidden;
-  max-width: 100%;
   resize: none;
+}
+
+.element textarea::selection {
+  background: color-mix(in srgb, var(--gold) 40%, transparent);
 }
 
 .element textarea:hover {
@@ -1855,7 +1895,57 @@ input[type='color'].swatch {
 .element textarea:focus {
   border-color: var(--gold-deep);
   outline: none;
+}
+
+.element:focus-within .ink {
   background: var(--panel-2);
+}
+
+/* The emphasis marks themselves: present, and out of the way. */
+.element .ink .mark {
+  opacity: 0.35;
+}
+
+/* Two speeches at once, side by side, as they will be on the page. */
+.dual-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, var(--dual-width, 27ch)));
+  gap: var(--dual-gap, 6ch);
+  justify-content: start;
+}
+
+.dual-column {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  min-width: 0;
+}
+
+.dual-toggle {
+  position: absolute;
+  left: -22px;
+  top: 0;
+  width: 18px;
+  padding: 1px 0;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--muted);
+  opacity: 0;
+  cursor: pointer;
+}
+
+.element:hover .dual-toggle,
+.element:focus-within .dual-toggle,
+.dual-toggle.on,
+.dual-toggle:focus-visible {
+  opacity: 1;
+}
+
+.dual-toggle.on {
+  color: var(--gold);
+  border-color: var(--gold-deep);
 }
 
 /* The element type sits in the gutter, out of the writer's way until wanted. */
@@ -1877,15 +1967,17 @@ input[type='color'].swatch {
   opacity: 1;
 }
 
-.element-scene_heading textarea,
-.element-character textarea,
-.element-transition textarea,
-.element-shot textarea,
-.element-heading textarea {
+/* The capitals belong to the line, so both of its layers wear them — and the
+   type in the gutter does not. */
+.element-scene_heading .field,
+.element-character .field,
+.element-transition .field,
+.element-shot .field,
+.element-heading .field {
   text-transform: uppercase;
 }
 
-.element-general textarea {
+.element-general .ink {
   color: var(--muted);
 }
 
@@ -2251,10 +2343,15 @@ dialog.writer-dialog::backdrop {
   color: var(--paper-ink);
 }
 
+.workspace.script-paper .script-sheet .element .ink,
+.workspace.script-paper .writer-sheet .element .ink {
+  color: var(--paper-ink);
+}
+
 .workspace.script-paper .script-sheet .element textarea,
 .workspace.script-paper .writer-sheet .element textarea {
-  color: var(--paper-ink);
   background: transparent;
+  caret-color: #111111;
 }
 
 .workspace.script-paper .script-sheet .element textarea::placeholder,
@@ -2270,6 +2367,10 @@ dialog.writer-dialog::backdrop {
 .workspace.script-paper .script-sheet .element textarea:focus,
 .workspace.script-paper .writer-sheet .element textarea:focus {
   border-color: var(--gold-deep);
+}
+
+.workspace.script-paper .script-sheet .element:focus-within .ink,
+.workspace.script-paper .writer-sheet .element:focus-within .ink {
   background: var(--paper-bar-2);
 }
 
@@ -2279,8 +2380,8 @@ dialog.writer-dialog::backdrop {
   background: var(--paper);
 }
 
-.workspace.script-paper .script-sheet .element-general textarea,
-.workspace.script-paper .writer-sheet .element-general textarea {
+.workspace.script-paper .script-sheet .element-general .ink,
+.workspace.script-paper .writer-sheet .element-general .ink {
   color: var(--paper-muted);
 }
 

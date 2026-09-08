@@ -1,4 +1,4 @@
-import type { Page } from '@vcwriter/domain';
+import type { InlineSpan, Page } from '@vcwriter/domain';
 
 /**
  * Paginated manuscript pages drawn as paper. Shared by the Preview page and
@@ -18,7 +18,7 @@ export function Paper({ pages, empty = 'Nothing written yet.' }: { pages: Page[]
               className={`paper-line ${line.type}`}
               style={{ paddingLeft: `${line.indent}ch` }}
             >
-              {line.text.length > 0 ? line.text : ' '}
+              {line.spans.length > 0 ? line.spans.map((span, at) => <Emphasis key={at} span={span} />) : line.text.length > 0 ? line.text : ' '}
             </div>
           ))}
         </section>
@@ -26,4 +26,13 @@ export function Paper({ pages, empty = 'Nothing written yet.' }: { pages: Page[]
       {pages.length === 0 ? <p className="muted empty">{empty}</p> : null}
     </div>
   );
+}
+
+/** A run of the line in the emphasis it was written with (spec §6). */
+function Emphasis({ span }: { span: InlineSpan }) {
+  let node: React.ReactNode = span.text;
+  if (span.underline) node = <u>{node}</u>;
+  if (span.italic) node = <i>{node}</i>;
+  if (span.bold) node = <b>{node}</b>;
+  return <>{node}</>;
 }

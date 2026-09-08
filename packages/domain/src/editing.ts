@@ -1,5 +1,5 @@
 import { screenplayElementTypeSchema, proseElementTypeSchema } from './entities/manuscript.js';
-import type { ManuscriptElementType } from './entities/manuscript.js';
+import type { ManuscriptElement, ManuscriptElementType } from './entities/manuscript.js';
 import type { ProjectFormat } from './entities/project.js';
 
 /**
@@ -248,6 +248,98 @@ export const cueSuggestions = (
     .filter((name) => !recent.includes(name) && name !== justSpoke)
     .sort();
   return [...recent, ...rest, ...(justSpoke ? [justSpoke] : [])];
+};
+
+// ---------------------------------------------------------------------------
+// Dual dialogue (addendum 02 §7.1)
+// ---------------------------------------------------------------------------
+
+/**
+ * A speech marked dual is printed beside the speech before it, which is how
+ * two characters are shown talking at once. The mark sits on the character
+ * cue and means "alongside the one above", so the pair is discovered from
+ * the element list rather than kept as a separate structure — a beat's text
+ * stays one flat list of elements (§14).
+ */
+export const isDual = (element: ManuscriptElement): boolean => element.attributes['dual'] === true;
+
+/** A character cue and the parentheticals and dialogue that belong to it. */
+export interface SpeechItem {
+  kind: 'dual';
+  left: ManuscriptElement[];
+  right: ManuscriptElement[];
+  /** Positions in the original element list, left then right. */
+  indexes: number[];
+}
+
+export type ManuscriptItem =
+  | { kind: 'element'; element: ManuscriptElement; index: number }
+  | SpeechItem;
+
+const isSpeechBody = (type: ManuscriptElementType): boolean => type === 'dialogue' || type === 'parenthetical';
+
+/**
+ * The element list as it is laid out: single elements, and dual speeches as
+ * pairs. The paginator and the editor both read this, so what is printed
+ * side by side is what is edited side by side.
+ */
+export const groupManuscript = (elements: readonly ManuscriptElement[]): ManuscriptItem[] => {
+  const items: ManuscriptItem[] = [];
+
+  /** Pull the speech that has just been emitted back off the list, if any. */
+  const takePreviousSpeech = (): { elements: ManuscriptElement[]; indexes: number[] } | null => {
+    let start = items.length;
+    while (start > 0) {
+      const item = items[start - 1];
+      if (!item || item.kind !== 'element') return null;
+      if (isSpeechBody(item.element.type)) {
+        start -= 1;
+        continue;
+      }
+      if (item.element.type === 'character') {
+        start -= 1;
+        break;
+      }
+      return null;
+    }
+    const taken = items.slice(start);
+    if (taken.length === 0) return null;
+    const first = taken[0];
+    if (!first || first.kind !== 'element' || first.element.type !== 'character') return null;
+    items.length = start;
+    return {
+      elements: taken.map((item) => (item as { element: ManuscriptElement }).element),
+      indexes: taken.map((item) => (item as { index: number }).index),
+    };
+  };
+
+  let index = 0;
+  while (index < elements.length) {
+    const element = elements[index] as ManuscriptElement;
+    if (element.type === 'character' && isDual(element)) {
+      const right: ManuscriptElement[] = [element];
+      const rightIndexes = [index];
+      let next = index + 1;
+      while (next < elements.length && isSpeechBody((elements[next] as ManuscriptElement).type)) {
+        right.push(elements[next] as ManuscriptElement);
+        rightIndexes.push(next);
+        next += 1;
+      }
+      const previous = takePreviousSpeech();
+      if (previous) {
+        items.push({ kind: 'dual', left: previous.elements, right, indexes: [...previous.indexes, ...rightIndexes] });
+      } else {
+        // Nothing to sit beside: it is an ordinary speech until there is.
+        right.forEach((member, position) => items.push({ kind: 'element', element: member, index: rightIndexes[position] as number }));
+      }
+      index = next;
+      continue;
+    }
+    items.push({ kind: 'element', element, index });
+    index += 1;
+  }
+
+  return items;
 };
 
 /**

@@ -164,6 +164,61 @@ describe('the whole script in story order', () => {
   });
 });
 
+describe('emphasis and dual dialogue while writing', () => {
+  it('puts emphasis on the selection and draws it under the cursor', () => {
+    const { container } = render(<Harness initial={screenplayWithAction()} />);
+    const action = screen.getByDisplayValue('Rain hammers the glass.') as HTMLTextAreaElement;
+
+    action.setSelectionRange(5, 12);
+    fireEvent.keyDown(action, { key: 'b', ctrlKey: true });
+    expect(screen.getByDisplayValue('Rain **hammers** the glass.')).toBeDefined();
+
+    // The layer under the cursor carries the same characters, styled.
+    const ink = container.querySelector('.element .ink') as HTMLElement;
+    expect(ink.textContent).toContain('Rain **hammers** the glass.');
+    expect(ink.querySelector('b')?.textContent).toBe('hammers');
+    expect(Array.from(ink.querySelectorAll('.mark')).map((node) => node.textContent)).toEqual(['**', '**']);
+
+    // And again takes it off.
+    const bolded = screen.getByDisplayValue('Rain **hammers** the glass.') as HTMLTextAreaElement;
+    bolded.setSelectionRange(7, 14);
+    fireEvent.keyDown(bolded, { key: 'b', ctrlKey: true });
+    expect(screen.getByDisplayValue('Rain hammers the glass.')).toBeDefined();
+  });
+
+  it('prints a speech beside the one above it when asked, and side by side while writing', () => {
+    let file = screenplayWithAction();
+    const beatId = file.beats[0]!.id;
+    file = updateBeat(file, beatId, {
+      manuscript: {
+        elements: [
+          { id: 'c1111111-1111-4111-8111-111111111111' as never, type: 'character', text: 'MIKE', characterId: null, attributes: {} },
+          { id: 'c2222222-2222-4222-8222-222222222222' as never, type: 'dialogue', text: 'Now don’t.', characterId: null, attributes: {} },
+          { id: 'c3333333-3333-4333-8333-333333333333' as never, type: 'character', text: 'CELESTE', characterId: null, attributes: {} },
+          { id: 'c4444444-4444-4444-8444-444444444444' as never, type: 'dialogue', text: 'No way!', characterId: null, attributes: {} },
+        ],
+      },
+    });
+    const { container } = render(<Harness initial={file} />);
+
+    expect(container.querySelectorAll('.dual-row')).toHaveLength(0);
+    const toggles = screen.getAllByLabelText('Print beside the speech above');
+    // The second cue is the one that can sit beside the first.
+    fireEvent.click(toggles[1]!);
+
+    const row = container.querySelector('.dual-row')!;
+    expect(row).toBeDefined();
+    const columns = row.querySelectorAll('.dual-column');
+    expect(columns).toHaveLength(2);
+    expect(columns[0]!.textContent).toContain('MIKE');
+    expect(columns[1]!.textContent).toContain('CELESTE');
+
+    // Off again, and the two speeches are back in sequence.
+    fireEvent.click(screen.getAllByLabelText('Print beside the speech above')[1]!);
+    expect(container.querySelectorAll('.dual-row')).toHaveLength(0);
+  });
+});
+
 describe('the finished script', () => {
   it('shows the manuscript, hides the sluglines on request, and rules the printed page breaks', () => {
     let file = screenplayWithAction();

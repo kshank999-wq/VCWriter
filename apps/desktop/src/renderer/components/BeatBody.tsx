@@ -6,16 +6,24 @@ import {
   cuesInOrder,
   defaultElementType,
   elementTypesFor,
+  groupManuscript,
+  isDual,
   layoutFor,
   newId,
   onEnter,
   onTab,
+  parseInlineMarks,
+  setDualDialogue,
   styleShortcuts,
+  toggleInline,
   updateBeat,
   type Beat,
+  type InlineMark,
+  type InlineSpan,
   type ManuscriptElement,
   type ManuscriptElementId,
   type ManuscriptElementType,
+  type PageLayoutSpec,
   type ProjectFile,
   type Typing,
 } from '@vcwriter/domain';
@@ -40,6 +48,8 @@ interface BeatBodyProps {
   emptyLabel?: string | null;
 }
 
+const MARK_KEYS: Record<string, InlineMark> = { b: 'bold', i: 'italic', u: 'underline' };
+
 /**
  * The manuscript of one beat, editable, at the real page geometry (spec §6).
  *
@@ -47,20 +57,22 @@ interface BeatBodyProps {
  * writers, and the rules live in the domain (`editing.ts`) rather than in
  * this keydown handler:
  *
- *  - **Tab** reaches for the next mode — action to a character cue, dialogue
- *    to a parenthetical — starting a new line, or re-typing the line in hand
- *    when it is still empty.
- *  - **Return** continues what you are doing: a cue gives dialogue, dialogue
- *    gives action, a transition gives the next slugline.
- *  - **Ctrl/Cmd+1…9** sets the style outright.
+ *  - **Tab** re-types the line you are on — action to a character cue, a cue
+ *    to a parenthetical — and **Shift+Tab** walks back.
+ *  - **Return** starts the next line in the style that continues the work.
+ *  - **Ctrl/Cmd+1…9** sets the style outright; **Ctrl/Cmd+B/I/U** puts
+ *    emphasis on the selection; **Ctrl/Cmd+Alt+D** prints a speech beside
+ *    the one above it.
  *  - A line of action that opens with `INT.`/`EXT.`, or that reads `CUT TO:`,
  *    becomes what it plainly is.
  *  - Cues complete from the cast, offering whoever is most likely to speak
  *    next, and sluglines from the locations the script already uses.
  *
- * The Script stacks one of these per beat and the writing screen shows one at
- * a time; neither knows about the other. Return at the end of a beat stays in
- * the beat — crossing into the next one is a click or an arrow past the edge.
+ * Emphasis is written into the text as `**bold**`, `*italic*` and
+ * `_underline_` (spec §6) and drawn over the very characters being typed:
+ * behind each line sits the same text with its styling applied, so what is
+ * on screen is what will print without the editor having to become a rich
+ * text engine.
  */
 export function BeatBody({
   file,
@@ -77,6 +89,7 @@ export function BeatBody({
   const shortcuts = useMemo(() => styleShortcuts(format), [format]);
 
   const [focusId, setFocusId] = useState<ManuscriptElementId | null>(null);
+  const [selection, setSelection] = useState<{ id: ManuscriptElementId; start: number; end: number } | null>(null);
   const inputs = useRef(new Map<ManuscriptElementId, HTMLTextAreaElement>());
 
   useEffect(() => {
@@ -89,7 +102,19 @@ export function BeatBody({
     setFocusId(null);
   }, [focusId, beat.manuscript.elements.length]);
 
+  // A selection put back after an edit that moved it — emphasis, mainly.
+  useEffect(() => {
+    if (!selection) return;
+    const input = inputs.current.get(selection.id);
+    if (input) {
+      input.focus();
+      input.setSelectionRange(selection.start, selection.end);
+    }
+    setSelection(null);
+  }, [selection]);
+
   const elements = beat.manuscript.elements;
+  const items = useMemo(() => groupManuscript(elements), [elements]);
 
   /**
    * Who to offer while a cue is being typed: the beat's own speakers first,
@@ -150,12 +175,46 @@ export function BeatBody({
     updateElement(element.id, become ? { text, type: become } : { text });
   };
 
+  /** The character cue the given element speaks under, if it is in a speech. */
+  const cueFor = (index: number): ManuscriptElement | null => {
+    for (let position = index; position >= 0; position -= 1) {
+      const candidate = elements[position] as ManuscriptElement;
+      if (candidate.type === 'character') return candidate;
+      if (candidate.type !== 'dialogue' && candidate.type !== 'parenthetical') return null;
+    }
+    return null;
+  };
+
+  const toggleDual = (index: number) => {
+    const cue = cueFor(index);
+    if (!cue) return;
+    onUpdate((current) => setDualDialogue(current, beat.id, cue.id, !isDual(cue)));
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>, element: ManuscriptElement, index: number) => {
     const input = event.currentTarget;
     const empty = element.text.trim().length === 0;
+    const chord = event.metaKey || event.ctrlKey;
+
+    // Ctrl/Cmd+Alt+D prints this speech beside the one above it.
+    if (chord && event.altKey && event.key.toLowerCase() === 'd') {
+      event.preventDefault();
+      toggleDual(index);
+      return;
+    }
+
+    // Ctrl/Cmd+B, I, U put emphasis on the selection.
+    if (chord && !event.altKey && MARK_KEYS[event.key.toLowerCase()]) {
+      event.preventDefault();
+      const mark = MARK_KEYS[event.key.toLowerCase()] as InlineMark;
+      const edit = toggleInline(element.text, input.selectionStart, input.selectionEnd, mark);
+      updateElement(element.id, { text: edit.text });
+      setSelection({ id: element.id, start: edit.selectionStart, end: edit.selectionEnd });
+      return;
+    }
 
     // Ctrl/Cmd+1…9 sets the paragraph style outright.
-    if ((event.metaKey || event.ctrlKey) && !event.altKey && shortcuts[event.key]) {
+    if (chord && !event.altKey && shortcuts[event.key]) {
       event.preventDefault();
       updateElement(element.id, { type: shortcuts[event.key] as ManuscriptElementType });
       return;
@@ -202,6 +261,77 @@ export function BeatBody({
     }
   };
 
+  const row = (element: ManuscriptElement, index: number, dual: boolean) => {
+    const geometry = dual && layout.dual ? layout.dual : layout;
+    const indent = geometry.indent[element.type] ?? 0;
+    const width = dual && layout.dual ? layout.dual.width - indent : layout.width[element.type] ?? layout.columns;
+    const page = breaks?.get(element.id);
+    return (
+      <Fragment key={element.id}>
+        {page ? (
+          <div className="page-break" aria-label={`Page ${page} starts here`}>
+            <span>{page}.</span>
+          </div>
+        ) : null}
+        <div
+          className={`element element-${element.type}`}
+          // The page geometry as variables, so a narrow column can trade the
+          // fixed width for the room it has without losing the indent.
+          style={{ '--indent': `${indent}ch`, '--width': `${width}ch` } as React.CSSProperties}
+        >
+          <select
+            className="element-type"
+            value={element.type}
+            aria-label="Element type"
+            onChange={(event) => updateElement(element.id, { type: event.target.value as ManuscriptElementType })}
+          >
+            {elementTypes.map((type) => (
+              <option key={type} value={type}>
+                {type.replace(/_/g, ' ')}
+              </option>
+            ))}
+          </select>
+          {element.type === 'character' && layout.dual ? (
+            <button
+              type="button"
+              className={isDual(element) ? 'dual-toggle on' : 'dual-toggle'}
+              aria-pressed={isDual(element)}
+              aria-label="Print beside the speech above"
+              title="Print beside the speech above (Ctrl/Cmd+Alt+D)"
+              onClick={() => toggleDual(index)}
+            >
+              ⇹
+            </button>
+          ) : null}
+          <div className="field">
+            {/* The same characters as the box above it, styled: what is typed
+                is what will print, marks and all, in place. */}
+            <div className="ink" aria-hidden="true">
+              <Marked text={element.text} />
+            </div>
+            <textarea
+              ref={(node) => {
+                if (node) inputs.current.set(element.id, node);
+                else inputs.current.delete(element.id);
+              }}
+              rows={1}
+              placeholder={element.type.replace(/_/g, ' ')}
+              value={element.text}
+              {...(element.type === 'character'
+                ? { list: `cues-${beat.id}` }
+                : element.type === 'scene_heading'
+                  ? { list: 'vcwriter-slugs' }
+                  : {})}
+              onFocus={onActivate}
+              onChange={(event) => writeText(element, event.target.value)}
+              onKeyDown={(event) => handleKeyDown(event, element, index)}
+            />
+          </div>
+        </div>
+      </Fragment>
+    );
+  };
+
   return (
     <div className="page-column" style={{ width: `${layout.columns}ch` }}>
       {/* The cue list is the beat's own: it is ordered for this beat. */}
@@ -211,55 +341,16 @@ export function BeatBody({
         ))}
       </datalist>
 
-      {elements.map((element, index) => {
-        const indent = layout.indent[element.type] ?? 0;
-        const width = layout.width[element.type] ?? layout.columns;
-        const page = breaks?.get(element.id);
+      {items.map((item) => {
+        if (item.kind === 'element') return row(item.element, item.index, false);
+        // Two speeches at once: side by side here, as they will be on the page.
+        const split = item.indexes.slice(0, item.left.length);
+        const rest = item.indexes.slice(item.left.length);
         return (
-          <Fragment key={element.id}>
-            {page ? (
-              <div className="page-break" aria-label={`Page ${page} starts here`}>
-                <span>{page}.</span>
-              </div>
-            ) : null}
-            <div
-              className={`element element-${element.type}`}
-              // The page geometry as variables, so a narrow column can trade the
-              // fixed width for the room it has without losing the indent.
-              style={{ '--indent': `${indent}ch`, '--width': `${width}ch` } as React.CSSProperties}
-            >
-              <select
-                className="element-type"
-                value={element.type}
-                aria-label="Element type"
-                onChange={(event) => updateElement(element.id, { type: event.target.value as ManuscriptElementType })}
-              >
-                {elementTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type.replace(/_/g, ' ')}
-                  </option>
-                ))}
-              </select>
-              <textarea
-                ref={(node) => {
-                  if (node) inputs.current.set(element.id, node);
-                  else inputs.current.delete(element.id);
-                }}
-                style={{ marginLeft: 'var(--indent)', width: 'var(--width)' }}
-                rows={Math.max(1, Math.ceil((element.text.length || 1) / width) + element.text.split('\n').length - 1)}
-                placeholder={element.type.replace(/_/g, ' ')}
-                value={element.text}
-                {...(element.type === 'character'
-                  ? { list: `cues-${beat.id}` }
-                  : element.type === 'scene_heading'
-                    ? { list: 'vcwriter-slugs' }
-                    : {})}
-                onFocus={onActivate}
-                onChange={(event) => writeText(element, event.target.value)}
-                onKeyDown={(event) => handleKeyDown(event, element, index)}
-              />
-            </div>
-          </Fragment>
+          <div className="dual-row" key={`dual-${item.left[0]?.id ?? rest[0]}`} style={dualStyle(layout)}>
+            <div className="dual-column">{item.left.map((element, position) => row(element, split[position] as number, true))}</div>
+            <div className="dual-column">{item.right.map((element, position) => row(element, rest[position] as number, true))}</div>
+          </div>
         );
       })}
 
@@ -277,4 +368,35 @@ export function BeatBody({
       ) : null}
     </div>
   );
+}
+
+const dualStyle = (layout: PageLayoutSpec): React.CSSProperties =>
+  layout.dual
+    ? ({ '--dual-width': `${layout.dual.width}ch`, '--dual-gap': `${layout.dual.gap}ch` } as React.CSSProperties)
+    : {};
+
+/**
+ * The line's own characters, marks included, wearing their emphasis. The
+ * capitals a cue or a slugline is printed in come from the stylesheet, which
+ * dresses this and the box above it alike, so the two never drift apart.
+ */
+function Marked({ text }: { text: string }) {
+  const spans = useMemo(() => parseInlineMarks(text), [text]);
+  return (
+    <>
+      {spans.map((span, position) => (
+        <Emphasis key={position} span={span} />
+      ))}
+      {/* A zero-width space keeps an empty line the height of a full one. */}
+      {'​'}
+    </>
+  );
+}
+
+function Emphasis({ span }: { span: InlineSpan }) {
+  let node: React.ReactNode = span.marker ? <span className="mark">{span.text}</span> : span.text;
+  if (span.underline) node = <u>{node}</u>;
+  if (span.italic) node = <i>{node}</i>;
+  if (span.bold) node = <b>{node}</b>;
+  return <>{node}</>;
 }

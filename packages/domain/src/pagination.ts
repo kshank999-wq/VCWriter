@@ -1,4 +1,6 @@
 import { beatsInScript, unitsInStoryOrder } from './selectors.js';
+import { groupManuscript } from './editing.js';
+import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
 import type { ManuscriptElement, ManuscriptElementType } from './entities/manuscript.js';
 import type { ProjectFormat } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
@@ -29,6 +31,18 @@ export interface PageLayoutSpec {
   /** Prose is double spaced; screenplays are not. */
   doubleSpaced: boolean;
   columns: number;
+  /**
+   * Two speeches printed side by side. Absent in a format that has no
+   * dialogue to speak of.
+   */
+  dual?: {
+    /** Characters in each of the two columns. */
+    width: number;
+    /** Characters between them. */
+    gap: number;
+    /** Indent of each element within its column. */
+    indent: Record<string, number>;
+  };
 }
 
 export const SCREENPLAY_LAYOUT: PageLayoutSpec = {
@@ -56,6 +70,13 @@ export const SCREENPLAY_LAYOUT: PageLayoutSpec = {
     transition: 15,
   },
   uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
+  // Two 27-character columns with 6 between them: the 60-character body,
+  // halved, with each speech's cue sitting over its own column.
+  dual: {
+    width: 27,
+    gap: 6,
+    indent: { character: 8, parenthetical: 3, dialogue: 0 },
+  },
 };
 
 export const PROSE_LAYOUT: PageLayoutSpec = {
@@ -75,6 +96,12 @@ export interface PageLine {
   text: string;
   type: ManuscriptElementType | 'blank' | 'more' | 'continued';
   indent: number;
+  /**
+   * The same characters as `text`, carrying the emphasis they were written
+   * with. Renderers that can show bold and italic draw these; anything that
+   * cannot use `text` and loses nothing but the styling.
+   */
+  spans: InlineSpan[];
 }
 
 export interface Page {
@@ -126,6 +153,8 @@ interface Block {
   id: string;
   type: ManuscriptElementType;
   lines: string[];
+  /** The emphasis on each of those lines, character for character. */
+  spans: InlineSpan[][];
   indent: number;
   /**
    * A scene heading or character cue must not be the last thing on a page —
@@ -140,18 +169,127 @@ interface Block {
 
 const MIN_SPLIT_LINES = 2;
 
+const sameStyle = (a: InlineStyle, b: InlineStyle): boolean =>
+  Boolean(a.bold) === Boolean(b.bold) &&
+  Boolean(a.italic) === Boolean(b.italic) &&
+  Boolean(a.underline) === Boolean(b.underline);
+
+/**
+ * Wrap a written line to the column and keep its emphasis on the characters
+ * it belongs to. Wrapping is done on the printed text — the marks take no
+ * room on the page — and the styles are carried across by walking the two
+ * strings together, which works because wrapping only ever changes spaces.
+ */
+const layoutText = (
+  raw: string,
+  width: number,
+  uppercase: boolean,
+): { lines: string[]; spans: InlineSpan[][] } => {
+  const styles: InlineStyle[] = [];
+  let plain = '';
+  for (const span of parseInline(raw)) {
+    const text = uppercase ? span.text.toUpperCase() : span.text;
+    plain += text;
+    for (let index = 0; index < text.length; index += 1) {
+      styles.push({ bold: span.bold, italic: span.italic, underline: span.underline });
+    }
+  }
+
+  const lines = wrapText(plain, width);
+  const spans: InlineSpan[][] = [];
+  let cursor = 0;
+  for (const line of lines) {
+    const row: InlineSpan[] = [];
+    for (const character of line) {
+      while (cursor < plain.length && plain[cursor] !== character) cursor += 1;
+      const style = styles[cursor] ?? {};
+      const last = row[row.length - 1];
+      if (last && sameStyle(last, style)) last.text += character;
+      else row.push({ text: character, ...style });
+      cursor += 1;
+    }
+    spans.push(row);
+  }
+  return { lines, spans };
+};
+
 const toBlock = (element: ManuscriptElement, layout: PageLayoutSpec, speaker: string | null): Block => {
   const width = layout.width[element.type] ?? layout.columns;
   const indent = layout.indent[element.type] ?? 0;
-  const text = layout.uppercase.has(element.type) ? element.text.toUpperCase() : element.text;
+  const { lines, spans } = layoutText(element.text, width, layout.uppercase.has(element.type));
   return {
     id: element.id,
     type: element.type,
-    lines: wrapText(text, width),
+    lines,
+    spans,
     indent,
     keepWithNext: element.type === 'scene_heading' || element.type === 'character' || element.type === 'parenthetical',
     splittable: element.type === 'dialogue',
     speaker,
+  };
+};
+
+/**
+ * Two speeches printed side by side (addendum 02 §7.1). Each column is laid
+ * out on its own and the two are set into one block of lines, so the page
+ * flow below needs to know nothing about it: to the paginator a dual speech
+ * is one wide block that does not split.
+ */
+const toDualBlock = (
+  left: readonly ManuscriptElement[],
+  right: readonly ManuscriptElement[],
+  layout: PageLayoutSpec,
+): Block => {
+  const dual = layout.dual as NonNullable<PageLayoutSpec['dual']>;
+  const column = (elements: readonly ManuscriptElement[]) => {
+    const rows: { text: string; spans: InlineSpan[]; indent: number }[] = [];
+    for (const element of elements) {
+      if (element.text.trim().length === 0) continue;
+      const indent = dual.indent[element.type] ?? 0;
+      const { lines, spans } = layoutText(element.text, dual.width - indent, layout.uppercase.has(element.type));
+      lines.forEach((text, position) => rows.push({ text, spans: spans[position] ?? [], indent }));
+    }
+    return rows;
+  };
+
+  const leftRows = column(left);
+  const rightRows = column(right);
+  const lines: string[] = [];
+  const spans: InlineSpan[][] = [];
+  const columnWidth = dual.width + dual.gap;
+
+  for (let index = 0; index < Math.max(leftRows.length, rightRows.length); index += 1) {
+    const leftRow = leftRows[index];
+    const rightRow = rightRows[index];
+    const leftText = leftRow ? ' '.repeat(leftRow.indent) + leftRow.text : '';
+    const rightText = rightRow ? ' '.repeat(rightRow.indent) + rightRow.text : '';
+    lines.push(rightText.length > 0 ? leftText.padEnd(columnWidth) + rightText : leftText);
+
+    const row: InlineSpan[] = [];
+    if (leftRow) {
+      if (leftRow.indent > 0) row.push({ text: ' '.repeat(leftRow.indent) });
+      row.push(...leftRow.spans);
+    }
+    if (rightText.length > 0) {
+      const gap = columnWidth - leftText.length;
+      if (gap > 0) row.push({ text: ' '.repeat(gap) });
+      if (rightRow && rightRow.indent > 0) row.push({ text: ' '.repeat(rightRow.indent) });
+      if (rightRow) row.push(...rightRow.spans);
+    }
+    spans.push(row);
+  }
+
+  const first = left[0] ?? right[0];
+  return {
+    id: first ? first.id : '',
+    type: 'dialogue',
+    lines,
+    spans,
+    indent: 0,
+    keepWithNext: false,
+    // Two columns cannot be resumed under one (MORE); the pair moves together.
+    splittable: false,
+    speaker: null,
   };
 };
 
@@ -175,7 +313,26 @@ export const paginateElements = (
   const blocks: Block[] = [];
   let currentSpeaker: string | null = null;
 
-  for (const element of elements) {
+  // Dual speeches are laid out as one two-column block; everything else is
+  // an element on its own.
+  for (const item of groupManuscript(elements)) {
+    if (item.kind === 'dual') {
+      if (layout.dual) {
+        blocks.push(toDualBlock(item.left, item.right, layout));
+        const last = item.right[item.right.length - 1];
+        currentSpeaker = last ? (item.right[0] as ManuscriptElement).text.toUpperCase() : currentSpeaker;
+        continue;
+      }
+      // A format without dual columns prints the two speeches in sequence.
+      for (const element of [...item.left, ...item.right]) {
+        if (element.text.trim().length === 0) continue;
+        if (element.type === 'character') currentSpeaker = element.text.toUpperCase();
+        blocks.push(toBlock(element, layout, element.type === 'dialogue' ? (speakerFor(element) ?? currentSpeaker) : null));
+      }
+      continue;
+    }
+
+    const element = item.element;
     if (element.text.trim().length === 0 && element.type !== 'scene_break') continue;
     if (element.type === 'character') currentSpeaker = element.text.toUpperCase();
     const speaker = speakerFor(element) ?? currentSpeaker;
@@ -197,7 +354,7 @@ export const paginateElements = (
   };
   const pushBlank = () => {
     if (lines.length === 0) return;
-    for (let i = 0; i < spacing; i += 1) lines.push({ text: '', type: 'blank', indent: 0 });
+    for (let i = 0; i < spacing; i += 1) lines.push({ text: '', type: 'blank', indent: 0, spans: [] });
   };
 
   /**
@@ -206,17 +363,19 @@ export const paginateElements = (
    * paragraph, a monologue — flows across pages instead of overflowing one.
    * A blank spacing line is never carried to the top of the next page.
    */
-  const pushContent = (text: string, type: PageLine['type'], indent: number) => {
+  const pushContent = (text: string, type: PageLine['type'], indent: number, spans: InlineSpan[]) => {
     if (lines.length >= layout.linesPerPage) startNewPage();
     if (pageStart === null) pageStart = currentId;
-    lines.push({ text, type, indent });
+    lines.push({ text, type, indent, spans });
     if (layout.doubleSpaced && lines.length < layout.linesPerPage) {
-      lines.push({ text: '', type: 'blank', indent: 0 });
+      lines.push({ text: '', type: 'blank', indent: 0, spans: [] });
     }
   };
 
   const pushBlockLines = (block: Block, from = 0, to = Number.POSITIVE_INFINITY) => {
-    for (const text of block.lines.slice(from, to)) pushContent(text, block.type, block.indent);
+    block.lines.slice(from, to).forEach((text, offset) => {
+      pushContent(text, block.type, block.indent, block.spans[from + offset] ?? [{ text }]);
+    });
   };
 
   for (let index = 0; index < blocks.length; index += 1) {
@@ -246,13 +405,15 @@ export const paginateElements = (
     ) {
       pushBlank();
       pushBlockLines(block, 0, fittable);
-      lines.push({ text: '(MORE)', type: 'more', indent: layout.indent['parenthetical'] ?? 16 });
+      lines.push({ text: '(MORE)', type: 'more', indent: layout.indent['parenthetical'] ?? 16, spans: [{ text: '(MORE)' }] });
       startNewPage();
       if (block.speaker) {
+        const continued = `${block.speaker} (CONT'D)`;
         lines.push({
-          text: `${block.speaker} (CONT'D)`,
+          text: continued,
           type: 'continued',
           indent: layout.indent['character'] ?? 22,
+          spans: [{ text: continued }],
         });
       }
       pushBlockLines(block, fittable);

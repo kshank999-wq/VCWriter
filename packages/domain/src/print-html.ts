@@ -1,4 +1,4 @@
-import { layoutFor, paginateProject, type ManuscriptOptions, type Page } from './pagination.js';
+import { layoutFor, paginateProject, type ManuscriptOptions, type Page, type PageLine } from './pagination.js';
 import { isProseFormat } from './editing.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -31,12 +31,30 @@ const escapeHtml = (value: string): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+/**
+ * A line's text with its emphasis. Spaces are preserved by the stylesheet's
+ * `white-space: pre`, and each span is escaped on its own, so styling can
+ * never introduce markup.
+ */
+const renderSpans = (line: PageLine): string => {
+  if (line.spans.length === 0) return escapeHtml(line.text);
+  return line.spans
+    .map((span) => {
+      const text = escapeHtml(span.text);
+      if (!span.bold && !span.italic && !span.underline) return text;
+      const open = `${span.bold ? '<b>' : ''}${span.italic ? '<i>' : ''}${span.underline ? '<u>' : ''}`;
+      const close = `${span.underline ? '</u>' : ''}${span.italic ? '</i>' : ''}${span.bold ? '</b>' : ''}`;
+      return `${open}${text}${close}`;
+    })
+    .join('');
+};
+
 const renderPage = (page: Page, isProse: boolean): string => {
   const lines = page.lines
     .map((line) =>
       line.text.length === 0
         ? '<div class="line"> </div>'
-        : `<div class="line ${line.type}" style="padding-left:${line.indent}ch">${escapeHtml(line.text)}</div>`,
+        : `<div class="line ${line.type}" style="padding-left:${line.indent}ch">${renderSpans(line)}</div>`,
     )
     .join('\n');
   // Page numbers sit top right from page two, as scripts and manuscripts do.

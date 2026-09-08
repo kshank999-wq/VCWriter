@@ -242,8 +242,31 @@ the main spec: a speech split across a page break is marked at the foot and
 resumed under `NAME (CONT'D)`, and a scene heading or a cue never ends a
 page.
 
-Not yet: dual dialogue, inline bold/italic, and a reformat tool for pasted
-text (§14).
+**Emphasis.** `Ctrl/Cmd+B`, `I` and `U` put bold, italic and underline on
+the selection, and take it off again. It is written into the text with the
+marks the screenplay world already uses — `**bold**`, `*italic*`,
+`_underline_`, `\*` for a literal star — so a project file stays plain text
+(§14) and a script exported to Fountain keeps its emphasis. A mark counts
+only when it is closed, so `5 * 3` and `a_b` are what they look like.
+
+While writing, the styling is drawn *under the cursor*: behind each line
+sits the same characters wearing their emphasis, marks and all, dimmed. The
+editor does not become a rich text engine and nothing shifts as it is
+typed. On the page — the viewport, the preview, the PDF, the printed
+document — the marks are gone and only the emphasis is left, and the
+paginator wraps on the printed text, so a bold line takes the width it will
+actually take.
+
+**Dual dialogue.** `Ctrl/Cmd+Alt+D`, or the **⇹** beside a character cue,
+prints that speech beside the one above it, which is how two characters are
+shown talking at once. The mark sits on the cue and means "alongside the
+one above", so a beat's text stays one flat list of elements: a speech with
+nothing to sit beside is an ordinary speech until there is. The pair is
+edited side by side in two columns exactly as it is printed — two
+27-character columns with 6 between them, in the 60-character body — and it
+moves to the next page as one, never split under a `(MORE)`.
+
+Not yet: a reformat tool for pasted text (§14).
 
 Every pop-up writes through the same domain mutations as everything else,
 as the fields are typed; Close returns to the workspace with nothing else
