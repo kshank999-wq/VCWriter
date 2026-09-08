@@ -11,6 +11,7 @@ import {
   type BeatId,
   type LaneId,
   type ProjectFile,
+  type ProjectFormat,
   type StoryMarkerId,
   type StructuralUnitId,
   type SyncConflict,
@@ -45,6 +46,8 @@ import { PageBar, type View } from './components/PageBar';
 import { PagePreview } from './components/PagePreview';
 import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
 import { DEFAULT_PRINT_SETUP, PageSetup, type PrintSetup } from './components/PageSetup';
+import { Reports, type ReportTab } from './components/Reports';
+import { useWritingClock } from './use-writing-clock';
 import { FindPanel } from './components/FindPanel';
 import { MenuBar } from './components/MenuBar';
 import { MENUS, type CommandId } from './menus';
@@ -67,6 +70,7 @@ export default function App() {
   // and the export alike (§13).
   const [printSetup, setPrintSetup] = usePreference<PrintSetup>('printSetup', DEFAULT_PRINT_SETUP);
   const [pageSetupOpen, setPageSetupOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState<ReportTab | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
@@ -343,6 +347,10 @@ export default function App() {
 
   // ------------------------------------------------------------ the menus
 
+  // The writing log's clock: it runs whenever a project is open, and counts
+  // the time actually spent typing rather than the time the app is up (§15).
+  useWritingClock(file !== null, project.update);
+
   /**
    * What every menu item does (addendum 02 §13). The menus themselves know
    * only a command's name and label; this is the one place that knows what
@@ -350,8 +358,7 @@ export default function App() {
    */
   const runCommand = useCallback(
     (command: CommandId) => {
-      const newProject = (format: 'screenplay' | 'novel' | 'short_story') =>
-        void project.createProject({ title: 'Untitled', format });
+      const newProject = (format: ProjectFormat) => void project.createProject({ title: 'Untitled', format });
 
       switch (command) {
         case 'file.new.screenplay':
@@ -360,6 +367,10 @@ export default function App() {
           return newProject('novel');
         case 'file.new.shortStory':
           return newProject('short_story');
+        case 'file.new.series':
+          return newProject('series');
+        case 'file.new.shortForm':
+          return newProject('short_form');
         case 'file.open':
           return void project.openProject();
         case 'file.save':
@@ -395,6 +406,11 @@ export default function App() {
           return setView('editor');
         case 'editor.readBack':
           return setView('readback');
+
+        case 'reports.writing':
+          return setReportOpen('writing');
+        case 'reports.story':
+          return setReportOpen('story');
 
         case 'window.script':
         case 'window.viewer':
@@ -781,6 +797,14 @@ export default function App() {
           )}
         </main>
       )}
+
+      <Reports
+        file={file}
+        open={reportOpen}
+        onClose={() => setReportOpen(null)}
+        onTab={setReportOpen}
+        printOptions={printOptions}
+      />
 
       <PageSetup
         file={file}

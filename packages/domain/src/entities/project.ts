@@ -3,7 +3,24 @@ import { id, isoDateTime, timestamps } from './common.js';
 import type { AssetId, ProjectId, UserId } from '../ids.js';
 
 /** Spec §4: a project is created as a screenplay, a novel, or another format. */
-export const projectFormatSchema = z.enum(['screenplay', 'novel', 'stage_play', 'short_story', 'other']);
+/**
+ * Spec §4, addendum 02 §14: what a project is.
+ *
+ * `series` is a season or a run of episodes in one document, so the
+ * characters, the research and the setups are shared across the whole thing
+ * rather than copied between files — which is the reason to have it at all.
+ * `short_form` is a commercial, a web video, a spot: the same structure, its
+ * own module later.
+ */
+export const projectFormatSchema = z.enum([
+  'screenplay',
+  'series',
+  'novel',
+  'stage_play',
+  'short_story',
+  'short_form',
+  'other',
+]);
 export type ProjectFormat = z.infer<typeof projectFormatSchema>;
 
 export const projectStatusSchema = z.enum(['development', 'drafting', 'revising', 'complete', 'archived']);

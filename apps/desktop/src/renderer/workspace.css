@@ -3831,3 +3831,127 @@ dialog.page-setup {
   padding: 10px 14px;
   border-top: 1px solid var(--border);
 }
+
+/* --------------------------------------------------------------- reports
+   Addendum 02 §15. Two read-only pages behind the Reports menu: the log the
+   writing clock keeps, and what the document says about itself. Figures
+   first, because a figure is what anyone opens a report for; the day-by-day
+   table under them, one row per day, opening to the sittings inside it. */
+
+dialog.reports {
+  width: min(640px, calc(100vw - 40px));
+}
+
+.report-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px 0;
+}
+
+.report-tab {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.report-tab[aria-pressed='true'] {
+  color: var(--ink-on-gold, #1a1408);
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.report-body {
+  padding: 12px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+}
+
+.report-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 8px;
+}
+
+.report-figure {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-2, rgba(255, 255, 255, 0.02));
+}
+
+.report-figure-value {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.report-figure-label {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.report-table th,
+.report-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-table thead th {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.report-day {
+  padding: 0;
+  font-size: 12px;
+  color: var(--text);
+}
+
+/* A day that lost words says so in the colour a loss is written in. */
+.report-loss {
+  color: var(--danger, #d38b8b);
+}
+
+.report-sittings td {
+  padding: 0 8px 8px 24px;
+}
+
+.report-sittings ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.report-sittings li {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}

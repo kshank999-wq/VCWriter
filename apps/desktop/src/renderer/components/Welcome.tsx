@@ -14,9 +14,11 @@ interface WelcomeProps {
 
 const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string; detail: string }> = [
   { value: 'screenplay', label: 'Screenplay', detail: 'Scenes and beats, industry formatting' },
+  { value: 'series', label: 'Series or episodic', detail: 'Episodes across a series, script formatting' },
   { value: 'novel', label: 'Novel', detail: 'Chapters and beats, manuscript formatting' },
   { value: 'stage_play', label: 'Stage play', detail: 'Scenes and beats' },
   { value: 'short_story', label: 'Short story', detail: 'Sections and beats' },
+  { value: 'short_form', label: 'Short form', detail: 'Commercials, web video, social' },
 ];
 
 export function Welcome({ onCreate, onOpen, onOpenPath, error }: WelcomeProps) {

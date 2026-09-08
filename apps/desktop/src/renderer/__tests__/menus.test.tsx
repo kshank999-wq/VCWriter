@@ -16,7 +16,7 @@ afterEach(cleanup);
 
 describe('the menu list', () => {
   it('has the three menus the workspace is driven from, and no command twice', () => {
-    expect(MENUS.map((menu) => menu.label)).toEqual(['File', 'Editor', 'Window', 'Help']);
+    expect(MENUS.map((menu) => menu.label)).toEqual(['File', 'Editor', 'Reports', 'Window', 'Help']);
     const commands = MENUS.flatMap((menu) => menu.items.filter(Boolean).map((item) => item!.command));
     expect(new Set(commands).size).toBe(commands.length);
   });

@@ -90,6 +90,11 @@ export const PROSE_LAYOUT: PageLayoutSpec = {
   uppercase: new Set(['heading']),
 };
 
+/**
+ * A series and a short-form piece are both written in script format: the
+ * same geometry, the same elements, the same two keys. What differs is how
+ * they are divided (§14), not how a page is set.
+ */
 export const layoutFor = (format: ProjectFormat): PageLayoutSpec =>
   format === 'novel' || format === 'short_story' ? PROSE_LAYOUT : SCREENPLAY_LAYOUT;
 

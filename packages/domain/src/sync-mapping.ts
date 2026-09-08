@@ -6,6 +6,7 @@ import { setupPayoffSchema } from './entities/setups.js';
 import { projectSchema, projectSettingsSchema } from './entities/project.js';
 import { beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
 import { countWords } from './entities/manuscript.js';
+import { writingSessionSchema, type WritingSession } from './sessions.js';
 import { PROJECT_FORMAT_VERSION, projectFileSchema, type ProjectFile } from './project-file.js';
 import type { Beat, Lane, StoryMarker, StructuralUnit } from './entities/structure.js';
 import type { Character } from './entities/character.js';
@@ -32,6 +33,7 @@ export interface ProjectRows {
   units: Row[];
   beats: Row[];
   markers: Row[];
+  sessions: Row[];
   researchCategories: Row[];
   researchItems: Row[];
   characters: Row[];
@@ -45,6 +47,7 @@ export const SYNC_TABLES = {
   units: 'structural_units',
   beats: 'beats',
   markers: 'story_markers',
+  sessions: 'writing_sessions',
   researchCategories: 'research_categories',
   researchItems: 'research_items',
   characters: 'characters',
@@ -149,6 +152,21 @@ const markerToRow = (marker: StoryMarker): Row => ({
   updated_at: marker.updatedAt,
 });
 
+/**
+ * A sitting. The word counts at each end travel rather than the difference:
+ * the counts are the fact, and every reading of them — a day's total, a rate,
+ * a loss — is worked out from those.
+ */
+const sessionToRow = (session: WritingSession): Row => ({
+  id: session.id,
+  project_id: session.projectId,
+  started_at: session.startedAt,
+  ended_at: session.endedAt,
+  words_at_start: session.wordsAtStart,
+  words_at_end: session.wordsAtEnd,
+  device: session.device,
+});
+
 const researchCategoryToRow = (category: ResearchCategory): Row => ({
   id: category.id,
   project_id: category.projectId,
@@ -228,6 +246,7 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
   units: file.units.map(unitToRow),
   beats: file.beats.map(beatToRow),
   markers: file.markers.map(markerToRow),
+  sessions: file.sessions.map(sessionToRow),
   researchCategories: file.researchCategories.map(researchCategoryToRow),
   researchItems: file.researchItems.map(researchItemToRow),
   characters: file.characters.map(characterToRow),
@@ -303,6 +322,17 @@ const markerFromRow = (row: Row): StoryMarker =>
     page: row['page'] ?? undefined,
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
+  });
+
+const sessionFromRow = (row: Row): WritingSession =>
+  writingSessionSchema.parse({
+    id: row['id'],
+    projectId: row['project_id'],
+    startedAt: row['started_at'],
+    endedAt: row['ended_at'],
+    wordsAtStart: row['words_at_start'],
+    wordsAtEnd: row['words_at_end'],
+    device: text(row['device']),
   });
 
 const researchCategoryFromRow = (row: Row): ResearchCategory =>
@@ -446,6 +476,7 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     units: rows.units.map(unitFromRow),
     beats: rows.beats.map(beatFromRow),
     markers: rows.markers.map(markerFromRow),
+    sessions: rows.sessions.map(sessionFromRow),
     researchCategories: rows.researchCategories.map(researchCategoryFromRow),
     researchItems: rows.researchItems.map(researchItemFromRow),
     characters: rows.characters.map(characterFromRow),

@@ -754,8 +754,9 @@ does lives in the workspace, which is the only place that knows what is open.
 
 | Menu | What is in it |
 | --- | --- |
-| **File** | New screenplay / novel / short story, Open, Save, Save a copy, **Page setup**, Print, Export PDF, Preferences, Close project |
+| **File** | New screenplay / series / novel / short story / short-form piece, Open, Save, Save a copy, **Page setup**, Print, Export PDF, Preferences, Close project |
 | **Editor** | Find, Find next, Find and replace, Reformat pasted text, and the two editors of spec §8 — Daily and Final — plus Read back |
+| **Reports** | Writing log, Story statistics (§15) |
 | **Window** | Each section, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
 | **Help** | What this build does, About |
 
@@ -790,7 +791,71 @@ and leaves the rest; **Replace all** says how many it changed. A replacement
 rebuilds one element's text and leaves its id, its type and everything hanging
 off it alone, and a beat with no match in it is not touched at all.
 
-## 14. Keyboard
+## 14. What a project can be
+
+Six formats, and two of them are new.
+
+| Format | Written as | Divided into | Opens each division with |
+| --- | --- | --- | --- |
+| Screenplay | Script | Acts | A note, not a page |
+| **Series or episodic** | Script | **Episodes** | A title card |
+| Novel | Prose | Chapters | A chapter page |
+| Stage play | Script | Acts | A note |
+| Short story | Prose | Chapters, in Roman numerals | A chapter page |
+| **Short form** | Script | Acts | A note |
+
+**Series or episodic** is a screenplay divided into episodes and holding the
+elements of a series together across them. An episode is a **marker** (§12),
+not a new kind of container: it is the same point in the story order that a
+book calls a chapter and a feature calls an act, so everything markers
+already do — the track on the timeline, the numbering, the page that opens
+one — works for episodes without a line of new machinery. Episodes are
+numbered `1, 2, 3` by default, because nobody writes *Episode IV* on a call
+sheet, and their labels shout: `EPISODE 2`, the way `ACT TWO` does.
+
+**Short form** is for commercials, web video, and the short pieces made for
+social. The framework is here — the format exists, a project can be created
+in it, and it is written in script format — and the module that makes
+something of it, with the timings and the shapes that kind of work needs, is
+a later piece of work.
+
+## 15. The writing log
+
+The application knows when writing is happening, so it may as well keep the
+record. A **sitting** is one stretch of work: the day it was, the hour it
+started, the hour it ended, and the word count of the manuscript at each end.
+
+The clock starts at the first keystroke into something you can type into,
+and is held open by a tick a minute while the typing continues. When the
+typing stops the ticks stop, and a gap of five minutes closes the sitting.
+So the log measures **time spent writing**, not time spent with the
+application open, which is the only figure worth having. Clicking around the
+timeline for an evening is not writing and does not read as it.
+
+Nothing about *what* was written is kept — no keystroke log, no text. The
+sittings live in the project file, so the record follows the work to another
+machine and into the sync, and a writer who never signs in still has their
+own history.
+
+The difference between the two counts is left to be worked out rather than
+stored: the count at each end is the fact, and every reading of it is a
+reading. A day spent cutting is honestly **negative**, and shows as a loss.
+
+**Reports**, on the menu bar, opens two:
+
+- **Writing log** — days written, time at it, words, words an hour, the
+  current streak and the longest one; then a row per day, which opens to the
+  sittings inside it with the hours each ran. A streak counts only while it
+  is still alive: one that reaches today or yesterday. One that ended a week
+  ago is history, not a streak.
+- **Story statistics** — what the document says about itself: words, pages,
+  scenes, beats, how many are written, markers, lanes, research not yet used,
+  setups not yet paid.
+
+Both are read-only. A report that could be edited would be a claim rather
+than a record.
+
+## 16. Keyboard
 
 In addition to §5's reordering keys and §6's writing keys:
 
@@ -804,7 +869,7 @@ In addition to §5's reordering keys and §6's writing keys:
 Every control on the timeline is a focusable element with an accessible
 name; the reorder keys work from the same elements that drag (§16).
 
-## 15. Preferences
+## 17. Preferences
 
 A gear on the title bar opens Preferences. These are kept on the machine,
 not in the project file — a collaborator opening the file must not inherit
@@ -820,7 +885,7 @@ anyone's colours — alongside the layout preferences of §3.
   and a dark page is a strain over a long day. Off, the Script follows the
   scheme.
 
-## 16. Later
+## 18. Later
 
 Named so that nobody mistakes their absence for an oversight:
 
@@ -832,7 +897,7 @@ Named so that nobody mistakes their absence for an oversight:
   character; a lane per character among the plot lanes is a later addendum.
 - Timing in minutes. Pages are the industry's unit and the ruler uses them.
 
-## 17. Acceptance
+## 19. Acceptance
 
 - The Script shows every beat of the fixture project in print order, and
   typing in the third beat changes the third beat and nothing else.
@@ -872,7 +937,7 @@ Named so that nobody mistakes their absence for an oversight:
 - The Script's gear carries the paper, the ink, the typeface and the display
   switches, and the page takes the writer's colours without the paper
   preference overriding them.
-- The menu bar names File, Editor and Window; choosing an item runs it, a
+- The menu bar names File, Editor, Reports and Window; choosing an item runs it, a
   ticked Window item is a section that is out, and an accelerator works with
   the cursor anywhere — except where a native menu owns it, where the bar
   stands down rather than handling the keystroke twice.
@@ -883,5 +948,13 @@ Named so that nobody mistakes their absence for an oversight:
   8½ by 11 whatever size it is shown at, and a beat that runs over the leaf
   appears on both sheets with every one of its elements on the page exactly
   once — and still typed into.
+- The opening screen offers a series and a short-form piece beside the other
+  four, and a series project's markers are episodes numbered `1, 2, 3`.
+- The first keystroke into the manuscript opens a sitting; a keystroke that
+  lands on the page rather than in a field does not. A minute of continued
+  typing moves that sitting forward rather than starting a second one.
+- The writing log shows a row for each day worked, opening to the sittings
+  inside it with the hours each ran, and a day that lost words shows the
+  loss.
 - Renderer and domain tests cover the above; a screenshot of the fixture at
   1440×900 and at 1100×700 is reviewed before the change ships.

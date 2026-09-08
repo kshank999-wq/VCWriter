@@ -138,11 +138,11 @@ export type Beat = z.infer<typeof beatSchema>;
  * that owned scenes would cut across lanes and the hierarchy is lanes →
  * scenes → beats (§19). A marker is anchored to the unit that starts it.
  */
-export const storyMarkerKindSchema = z.enum(['act', 'sequence', 'chapter', 'part', 'note']);
+export const storyMarkerKindSchema = z.enum(['act', 'episode', 'sequence', 'chapter', 'part', 'note']);
 export type StoryMarkerKind = z.infer<typeof storyMarkerKindSchema>;
 
 /**
- * The page a chapter opens with (addendum 02 §11).
+ * The page a chapter — or an episode — opens with (addendum 02 §12, §14).
  *
  * A novel puts a leaf between chapters: the chapter's number, its name if it
  * has one, sometimes an epigraph, sometimes a device or an illustration. It

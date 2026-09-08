@@ -11,6 +11,7 @@ import {
 } from './entities/research.js';
 import { setupPayoffSchema } from './entities/setups.js';
 import { snapshotSchema } from './entities/revision.js';
+import { writingSessionSchema } from './sessions.js';
 import {
   projectSchema,
   projectSettingsSchema,
@@ -54,6 +55,11 @@ export const projectFileSchema = z.object({
   links: z.array(storyLinkSchema).default([]),
   setupsPayoffs: z.array(setupPayoffSchema).default([]),
   snapshots: z.array(snapshotSchema).default([]),
+  /**
+   * What the writing cost, sitting by sitting (addendum 02 §15). In the
+   * document so the record follows the work to another machine.
+   */
+  sessions: z.array(writingSessionSchema).default([]),
 });
 export type ProjectFile = z.infer<typeof projectFileSchema>;
 

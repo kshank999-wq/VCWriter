@@ -18,6 +18,8 @@ export type CommandId =
   | 'file.new.screenplay'
   | 'file.new.novel'
   | 'file.new.shortStory'
+  | 'file.new.series'
+  | 'file.new.shortForm'
   | 'file.open'
   | 'file.save'
   | 'file.saveAs'
@@ -34,6 +36,9 @@ export type CommandId =
   | 'editor.final'
   | 'editor.readBack'
   | 'editor.reformat'
+  // Reports
+  | 'reports.writing'
+  | 'reports.story'
   // Window
   | 'window.script'
   | 'window.viewer'
@@ -72,6 +77,8 @@ export const MENUS: readonly Menu[] = [
       { command: 'file.new.screenplay', label: 'New screenplay…' },
       { command: 'file.new.novel', label: 'New novel…' },
       { command: 'file.new.shortStory', label: 'New short story…' },
+      { command: 'file.new.series', label: 'New series or episode…' },
+      { command: 'file.new.shortForm', label: 'New short-form piece…' },
       null,
       { command: 'file.open', label: 'Open…', accelerator: 'CmdOrCtrl+O' },
       null,
@@ -101,6 +108,14 @@ export const MENUS: readonly Menu[] = [
       { command: 'editor.daily', label: 'Daily editor' },
       { command: 'editor.final', label: 'Final editor' },
       { command: 'editor.readBack', label: 'Read back' },
+    ],
+  },
+  {
+    id: 'reports',
+    label: 'Reports',
+    items: [
+      { command: 'reports.writing', label: 'Writing log…' },
+      { command: 'reports.story', label: 'Story statistics…' },
     ],
   },
   {

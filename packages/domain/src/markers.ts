@@ -34,17 +34,23 @@ export const MARKER_NUMBERINGS: ReadonlyArray<{ value: MarkerNumbering; label: s
 
 /** What a format calls its markers, and how they are numbered, before the writer says otherwise. */
 export const defaultMarkerKind = (format: ProjectFormat): StoryMarkerKind =>
-  format === 'novel' || format === 'short_story' ? 'chapter' : 'act';
+  format === 'series' ? 'episode' : format === 'novel' || format === 'short_story' ? 'chapter' : 'act';
 
 export const defaultMarkerNumbering = (format: ProjectFormat): MarkerNumbering => {
   // A short story's sections are numbered I, II, III by long convention; a
-  // screenplay's acts likewise. A novel counts its chapters.
-  if (format === 'novel') return 'numeric';
+  // screenplay's acts likewise. A novel counts its chapters, and so does a
+  // series count its episodes — nobody writes "Episode IV" on a call sheet.
+  if (format === 'novel' || format === 'series') return 'numeric';
   return 'roman';
 };
 
-/** Whether this format prints a leaf between chapters at all. */
-export const hasChapterPages = (format: ProjectFormat): boolean => format === 'novel' || format === 'short_story';
+/**
+ * Whether this format prints a leaf ahead of each division. A book puts one
+ * between chapters and an episodic script puts a title card in front of each
+ * episode; a feature has nothing of the kind between its acts.
+ */
+export const hasChapterPages = (format: ProjectFormat): boolean =>
+  format === 'novel' || format === 'short_story' || format === 'series';
 
 const ROMAN: ReadonlyArray<readonly [number, string]> = [
   [1000, 'M'],
@@ -147,7 +153,17 @@ export const markerNumber = (position: number, numbering: MarkerNumbering, symbo
 
 /** What a marker of this kind is called before its number: "Chapter 4". */
 export const markerNoun = (kind: StoryMarkerKind): string =>
-  kind === 'chapter' ? 'Chapter' : kind === 'part' ? 'Part' : kind === 'sequence' ? 'Sequence' : kind === 'note' ? '' : 'Act';
+  kind === 'chapter'
+    ? 'Chapter'
+    : kind === 'episode'
+      ? 'Episode'
+      : kind === 'part'
+        ? 'Part'
+        : kind === 'sequence'
+          ? 'Sequence'
+          : kind === 'note'
+            ? ''
+            : 'Act';
 
 export interface MarkerNumbers {
   numbering: MarkerNumbering;
@@ -196,7 +212,10 @@ export const placedMarkers = (file: ProjectFile): PlacedMarker[] => {
     const number = markerNumber(position, numbering, symbol);
     const noun = markerNoun(marker.kind);
     // A screenplay prints ACT TWO in capitals; a book prints Chapter Two.
-    const head = marker.kind === 'act' ? `${noun} ${number}`.trim().toUpperCase() : `${noun} ${number}`.trim();
+    // A script prints ACT TWO and EPISODE 2 in capitals; a book prints
+    // Chapter Two.
+    const shouts = marker.kind === 'act' || marker.kind === 'episode';
+    const head = shouts ? `${noun} ${number}`.trim().toUpperCase() : `${noun} ${number}`.trim();
     return {
       marker,
       position,
