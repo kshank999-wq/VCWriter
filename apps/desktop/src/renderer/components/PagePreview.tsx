@@ -17,6 +17,8 @@ interface PagePreviewProps {
   /** Whether a printing carries the leaves between chapters (§11). */
   includeChapterPages: boolean;
   onToggleChapterPages(next: boolean): void;
+  /** The rest of what a printing carries lives in Page setup (§13). */
+  onPageSetup?(): void;
   onExportPdf(): void;
   onPrint(): void;
   busy: boolean;
@@ -39,6 +41,7 @@ export function PagePreview({
   onToggleBeatTitles,
   includeChapterPages,
   onToggleChapterPages,
+  onPageSetup,
   onExportPdf,
   onPrint,
   busy,
@@ -111,6 +114,11 @@ export function PagePreview({
         ) : null}
 
         <div className="preview-actions">
+          {onPageSetup ? (
+            <button type="button" className="ghost" onClick={onPageSetup}>
+              Page setup…
+            </button>
+          ) : null}
           <button type="button" onClick={onPrint} disabled={busy}>
             Print…
           </button>

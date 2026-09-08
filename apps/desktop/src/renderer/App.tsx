@@ -44,6 +44,10 @@ import { MarkerDialog } from './components/MarkerDialog';
 import { PageBar, type View } from './components/PageBar';
 import { PagePreview } from './components/PagePreview';
 import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
+import { DEFAULT_PRINT_SETUP, PageSetup, type PrintSetup } from './components/PageSetup';
+import { FindPanel } from './components/FindPanel';
+import { MenuBar } from './components/MenuBar';
+import { MENUS, type CommandId } from './menus';
 import { AccountPanel } from './components/AccountPanel';
 import { CapturesPanel } from './components/CapturesPanel';
 import { EditorPanel } from './components/EditorPanel';
@@ -59,9 +63,10 @@ export default function App() {
   const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
   const [focusTitleBeatId, setFocusTitleBeatId] = useState<BeatId | null>(null);
   const [focusMode, setFocusMode] = useState(false);
-  const [includeBeatTitles, setIncludeBeatTitles] = useState(false);
-  // A book's leaves between chapters, in a printing or not (§11).
-  const [includeChapterPages, setIncludeChapterPages] = useState(true);
+  // What a printing carries, in one place, read by the Preview, the print
+  // and the export alike (§13).
+  const [printSetup, setPrintSetup] = usePreference<PrintSetup>('printSetup', DEFAULT_PRINT_SETUP);
+  const [pageSetupOpen, setPageSetupOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
@@ -104,6 +109,10 @@ export default function App() {
   const arrangement = useMemo(() => normaliseArrangement(storedArrangement), [storedArrangement]);
   const [detached, setDetached] = useState<string[]>([]);
   const [dragging, setDragging] = useState<PaneId | null>(null);
+  // Find and replace, opened from the Editor menu (§13).
+  const [finding, setFinding] = useState<'off' | 'find' | 'replace'>('off');
+  const [findStep, setFindStep] = useState(0);
+  const [platform, setPlatform] = useState('');
   // The Edit-page proportions (addendum 02 §3): a quarter for the script,
   // and of the rest, just under half for the viewport above the lanes.
   const columns = useSplit({ key: 'leftWidth', initial: 0.25, min: 300, reserve: 640, axis: 'x' });
@@ -122,6 +131,16 @@ export default function App() {
     [file, layout, arcs],
   );
   const pages = layout ? Math.ceil(layout.totalPages) : 0;
+
+  const printOptions = useMemo(
+    () => ({
+      includeBeatTitles: printSetup.includeBeatTitles,
+      includeChapterPages: printSetup.includeChapterPages,
+      includeTitlePage: printSetup.includeTitlePage,
+      ...(printSetup.watermark ? { watermark: printSetup.watermark } : {}),
+    }),
+    [printSetup],
+  );
 
   const clearTitleFocus = useCallback(() => setFocusTitleBeatId(null), []);
 
@@ -208,6 +227,7 @@ export default function App() {
     });
     void window.vcwriter.appInfo().then((result) => {
       if (!result.ok || !result.data) return;
+      setPlatform(result.data.platform);
       setDictationShortcut(
         result.data.platform === 'darwin' ? 'press Fn twice' : result.data.platform === 'win32' ? 'Windows key + H' : null,
       );
@@ -302,24 +322,132 @@ export default function App() {
     // Flush first: the export reads the project it is handed, and a writer who
     // just typed a line expects it in the PDF.
     await project.saveNow();
-    const result = await window.vcwriter.exportPdf({ file, options: { includeBeatTitles, includeChapterPages } });
+    const result = await window.vcwriter.exportPdf({ file, options: printOptions });
     setExporting(false);
     if (!result.ok) {
       setExportMessage(result.error ?? 'The PDF could not be created');
       return;
     }
     setExportMessage(result.data ? `Exported ${result.data.pageCount} pages to ${result.data.path}` : null);
-  }, [file, includeBeatTitles, includeChapterPages, project]);
+  }, [file, printOptions, project]);
 
   const print = useCallback(async () => {
     if (!file) return;
     setExporting(true);
     setExportMessage(null);
     await project.saveNow();
-    const result = await window.vcwriter.print({ file, options: { includeBeatTitles, includeChapterPages } });
+    const result = await window.vcwriter.print({ file, options: printOptions });
     setExporting(false);
     if (!result.ok) setExportMessage(result.error ?? 'The document could not be printed');
-  }, [file, includeBeatTitles, includeChapterPages, project]);
+  }, [file, printOptions, project]);
+
+  // ------------------------------------------------------------ the menus
+
+  /**
+   * What every menu item does (addendum 02 §13). The menus themselves know
+   * only a command's name and label; this is the one place that knows what
+   * is open and can act on it, which is why it lives here and not there.
+   */
+  const runCommand = useCallback(
+    (command: CommandId) => {
+      const newProject = (format: 'screenplay' | 'novel' | 'short_story') =>
+        void project.createProject({ title: 'Untitled', format });
+
+      switch (command) {
+        case 'file.new.screenplay':
+          return newProject('screenplay');
+        case 'file.new.novel':
+          return newProject('novel');
+        case 'file.new.shortStory':
+          return newProject('short_story');
+        case 'file.open':
+          return void project.openProject();
+        case 'file.save':
+          return void project.saveNow();
+        case 'file.saveAs':
+          // The desktop writes through the same channel a save does; the
+          // browser preview hands back a file to keep.
+          return void project.saveNow();
+        case 'file.pageSetup':
+          return setPageSetupOpen(true);
+        case 'file.print':
+          return void print();
+        case 'file.exportPdf':
+          return void exportPdf();
+        case 'file.preferences':
+          return setPreferencesOpen(true);
+        case 'file.close':
+          return project.closeProject();
+
+        case 'editor.find':
+          return setFinding('find');
+        case 'editor.replace':
+          return setFinding('replace');
+        case 'editor.findNext':
+          // The panel does the stepping; this only nudges it, so the
+          // keystroke works with the cursor anywhere.
+          setFinding((current) => (current === 'off' ? 'find' : current));
+          return setFindStep((step) => step + 1);
+        case 'editor.reformat':
+          return setOpenBeatId(selectedBeat?.id ?? null);
+        case 'editor.daily':
+        case 'editor.final':
+          return setView('editor');
+        case 'editor.readBack':
+          return setView('readback');
+
+        case 'window.script':
+        case 'window.viewer':
+        case 'window.lanes':
+        case 'window.inspector':
+        case 'window.research': {
+          // Ticked means it is out; choosing it again brings it back.
+          const pane = command.slice('window.'.length);
+          return detached.includes(pane) ? closePane(pane) : openPane(pane);
+        }
+        case 'window.beat':
+          return selectedBeat ? openPane(`beat:${selectedBeat.id}`) : undefined;
+        case 'window.bringAllBack':
+          return detached.forEach((pane) => closePane(pane));
+        case 'window.focus':
+          return setFocusMode((current) => !current);
+        case 'window.preferences':
+          return setPreferencesOpen(true);
+
+        case 'help.spec':
+        case 'help.about':
+          return setPreferencesOpen(true);
+      }
+    },
+    [project, print, exportPdf, selectedBeat, detached, openPane, closePane],
+  );
+
+  /** The items with a tick beside them right now. */
+  const checkedCommands = useMemo(() => {
+    const on = new Set<CommandId>();
+    for (const pane of detached) {
+      if (pane.startsWith('beat:')) continue;
+      on.add(`window.${pane}` as CommandId);
+    }
+    if (focusMode) on.add('window.focus');
+    return on;
+  }, [detached, focusMode]);
+
+  /**
+   * The native menu, rebuilt whenever a tick changes. On a Mac this is the
+   * menu; everywhere else it is absent and the bar in the window is.
+   */
+  useEffect(() => {
+    const menu = window.vcwriter?.menu;
+    if (!menu?.native()) return;
+    void menu.install({ menus: MENUS, checked: [...checkedCommands] });
+  }, [checkedCommands]);
+
+  useEffect(() => {
+    const menu = window.vcwriter?.menu;
+    if (!menu) return;
+    return menu.onCommand((command) => runCommand(command as CommandId));
+  }, [runCommand]);
 
   if (!file) {
     return (
@@ -449,6 +577,14 @@ export default function App() {
       style={{ '--left-width': `${columns.size}px`, '--viewport-height': `${rows.size}px` } as React.CSSProperties}
     >
       <TitleBar
+        menu={
+          <MenuBar
+            onCommand={runCommand}
+            checked={checkedCommands}
+            mac={platform === 'darwin'}
+            native={window.vcwriter?.menu?.native() ?? false}
+          />
+        }
         file={file}
         pages={pages}
         beatCount={stats?.beatCount ?? 0}
@@ -569,6 +705,15 @@ export default function App() {
               openPane(`beat:${beatId}`);
             }}
           />
+          <FindPanel
+            file={file}
+            open={finding !== 'off'}
+            replacing={finding === 'replace'}
+            onClose={() => setFinding('off')}
+            onUpdate={project.update}
+            onGoTo={setSelectedBeatId}
+            step={findStep}
+          />
           <MarkerDialog file={file} markerId={openMarkerId} onClose={() => setOpenMarkerId(null)} onUpdate={project.update} />
           <ResearchWindow
             file={file}
@@ -588,10 +733,11 @@ export default function App() {
             <PagePreview
               file={file}
               unitId={selectedBeat?.unitId ?? null}
-              includeBeatTitles={includeBeatTitles}
-              onToggleBeatTitles={setIncludeBeatTitles}
-              includeChapterPages={includeChapterPages}
-              onToggleChapterPages={setIncludeChapterPages}
+              includeBeatTitles={printSetup.includeBeatTitles}
+              onToggleBeatTitles={(next) => setPrintSetup({ ...printSetup, includeBeatTitles: next })}
+              includeChapterPages={printSetup.includeChapterPages}
+              onToggleChapterPages={(next) => setPrintSetup({ ...printSetup, includeChapterPages: next })}
+              onPageSetup={() => setPageSetupOpen(true)}
               onExportPdf={() => void exportPdf()}
               onPrint={() => void print()}
               busy={exporting}
@@ -635,6 +781,18 @@ export default function App() {
           )}
         </main>
       )}
+
+      <PageSetup
+        file={file}
+        open={pageSetupOpen}
+        onClose={() => setPageSetupOpen(false)}
+        setup={{ ...DEFAULT_PRINT_SETUP, ...printSetup }}
+        onSetup={setPrintSetup}
+        pages={pages}
+        onPrint={() => void print()}
+        onExportPdf={() => void exportPdf()}
+        busy={exporting}
+      />
 
       {focused ? null : <PageBar view={view} onSelect={setView} counts={{ recovery: conflicts.length }} />}
     </div>

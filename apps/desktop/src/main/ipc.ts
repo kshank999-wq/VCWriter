@@ -11,6 +11,7 @@ import {
   type ProjectFormat,
 } from '@vcwriter/domain';
 import { exportProjectPdf, printProject } from './export-pdf';
+import { applyApplicationMenu, commandSender, type MenuSpec } from './menu';
 import {
   accessToken,
   accountStatus,
@@ -101,6 +102,23 @@ export interface PaneWindows {
 }
 
 export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes?: PaneWindows): void => {
+  /**
+   * The renderer hands over its menu description and which items are ticked;
+   * this builds the real menu from it (addendum 02 §13). It is re-installed
+   * whenever a tick changes, which is cheap and keeps the two in step.
+   */
+  ipcMain.handle(
+    'menu:install',
+    (_event, input: { menus: MenuSpec[]; checked: string[] }): DesktopApiResult<true> => {
+      try {
+        applyApplicationMenu(input.menus ?? [], input.checked ?? [], commandSender(getWindow));
+        return ok(true as const);
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
   // --- sections in windows of their own, and the link between them ---------
 
   if (panes) {

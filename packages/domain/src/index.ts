@@ -20,6 +20,7 @@ export * from './entities/revision.js';
 export * from './entities/commerce.js';
 export * from './project-file.js';
 export * from './selectors.js';
+export * from './find.js';
 export * from './markers.js';
 export * from './mutations.js';
 export * from './render.js';

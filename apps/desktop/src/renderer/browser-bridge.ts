@@ -210,6 +210,13 @@ export const createBrowserBridge = (): BrowserBridge => {
   return {
     panes: createPaneWindows(),
     link: createLink(),
+    // A browser has no application menu, so the bar in the window is the
+    // only one there is and nothing needs installing.
+    menu: {
+      install: async () => ok(true as const),
+      onCommand: () => () => undefined,
+      native: () => false,
+    },
 
     async createProject(input) {
       try {

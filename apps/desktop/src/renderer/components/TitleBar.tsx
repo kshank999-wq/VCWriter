@@ -12,6 +12,8 @@ const SAVE_LABEL: Record<string, string> = {
 };
 
 interface TitleBarProps {
+  /** The menu bar, drawn here so it sits with the project it acts on (§13). */
+  menu?: React.ReactNode;
   file: ProjectFile;
   pages: number;
   beatCount: number;
@@ -44,6 +46,7 @@ interface TitleBarProps {
  * section that has gone to a window of its own.
  */
 export function TitleBar({
+  menu,
   file,
   pages,
   beatCount,
@@ -70,6 +73,7 @@ export function TitleBar({
     <header className="titlebar">
       <div className="titlebar-left">
         <Wordmark compact />
+        {menu}
         <strong className="project-title" title={`${file.project.title} · ${file.project.format.replace(/_/g, ' ')}`}>
           {file.project.title}
         </strong>

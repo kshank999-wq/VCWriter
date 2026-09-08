@@ -739,7 +739,58 @@ scene in story order, or goes with the last scene if there is none.
 Markers are stored in the project file (`markers[]`) and synced like any
 other structural record (`story_markers`).
 
-## 13. Keyboard
+## 13. The menu bar
+
+A desktop application has menus. The workspace has grown enough controls that
+hunting for them in the chrome is no longer reasonable, so there is a menu
+bar across the top, and it is the same list twice: the bar drawn in the
+window — which is what Windows shows and what the **browser preview** has —
+and the native application menu the main process builds from that same list,
+so a Mac gets its menus where a Mac keeps them and no accelerator can mean
+two different things.
+
+A menu item is **a command name and a label, nothing else**. What a command
+does lives in the workspace, which is the only place that knows what is open.
+
+| Menu | What is in it |
+| --- | --- |
+| **File** | New screenplay / novel / short story, Open, Save, Save a copy, **Page setup**, Print, Export PDF, Preferences, Close project |
+| **Editor** | Find, Find next, Find and replace, Reformat pasted text, and the two editors of spec §8 — Daily and Final — plus Read back |
+| **Window** | Each section, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
+| **Help** | What this build does, About |
+
+It is called **Editor**, not Edit, because the clipboard is not what it is
+for. On macOS the clipboard roles are added to the native menu regardless —
+an Electron application with no menu loses ⌘C, ⌘V and ⌘A entirely, because
+on a Mac those live on the menu and nowhere else.
+
+More menus go here as they are earned; the list is one array.
+
+### Page setup
+
+What a printing carries, in one dialog instead of scattered across the
+Preview page: the **title page**, the **chapter pages** (§12, and only for a
+format that has them), the **beat titles** — which are authoring metadata
+(§5.3), so the switch says it makes a reference copy and not a delivered
+draft — and a **watermark** for a draft going out for notes. The Preview, the
+print and the PDF export read the same answer, which is the only thing a page
+setup is for.
+
+### Find and replace
+
+It searches the manuscript, not the screen: every beat in story order,
+whatever is scrolled into view. Case and whole-word are switches; a match
+list shows the line each hit is on, so the writer picks the right one instead
+of stepping through forty; and stepping to a match **selects its beat**, so
+the Script scrolls to it and the timeline and inspector follow — which is what
+makes it useful in a document that is several windows wide.
+
+Replacing is two buttons and never one. **Replace** takes the match in hand
+and leaves the rest; **Replace all** says how many it changed. A replacement
+rebuilds one element's text and leaves its id, its type and everything hanging
+off it alone, and a beat with no match in it is not touched at all.
+
+## 14. Keyboard
 
 In addition to §5's reordering keys and §6's writing keys:
 
@@ -753,7 +804,7 @@ In addition to §5's reordering keys and §6's writing keys:
 Every control on the timeline is a focusable element with an accessible
 name; the reorder keys work from the same elements that drag (§16).
 
-## 14. Preferences
+## 15. Preferences
 
 A gear on the title bar opens Preferences. These are kept on the machine,
 not in the project file — a collaborator opening the file must not inherit
@@ -769,7 +820,7 @@ anyone's colours — alongside the layout preferences of §3.
   and a dark page is a strain over a long day. Off, the Script follows the
   scheme.
 
-## 15. Later
+## 16. Later
 
 Named so that nobody mistakes their absence for an oversight:
 
@@ -781,7 +832,7 @@ Named so that nobody mistakes their absence for an oversight:
   character; a lane per character among the plot lanes is a later addendum.
 - Timing in minutes. Pages are the industry's unit and the ruler uses them.
 
-## 16. Acceptance
+## 17. Acceptance
 
 - The Script shows every beat of the fixture project in print order, and
   typing in the third beat changes the third beat and nothing else.
@@ -821,6 +872,13 @@ Named so that nobody mistakes their absence for an oversight:
 - The Script's gear carries the paper, the ink, the typeface and the display
   switches, and the page takes the writer's colours without the paper
   preference overriding them.
+- The menu bar names File, Editor and Window; choosing an item runs it, a
+  ticked Window item is a section that is out, and an accelerator works with
+  the cursor anywhere — except where a native menu owns it, where the bar
+  stands down rather than handling the keystroke twice.
+- A search for a word that appears in two beats finds both, in reading order;
+  stepping to the second selects its beat; Replace changes the one in hand
+  and Replace all says how many it changed.
 - The Script in **Pages** draws one sheet per printed page, each laid out at
   8½ by 11 whatever size it is shown at, and a beat that runs over the leaf
   appears on both sheets with every one of its elements on the page exactly

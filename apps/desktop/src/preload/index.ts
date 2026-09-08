@@ -95,6 +95,20 @@ export interface VcWriterApi {
   /** Sections in windows of their own, and the link between them (§8). */
   panes: PaneApi;
   link: LinkApi;
+  /** The native application menu (§13). */
+  menu: MenuApi;
+}
+
+/**
+ * The menus are described in the renderer and built natively here, so the
+ * two can never say different things. `install` hands over that description
+ * and which items are ticked; `onCommand` is how the choice comes back.
+ */
+export interface MenuApi {
+  install(input: { menus: unknown; checked: string[] }): Promise<DesktopApiResult<true>>;
+  onCommand(handler: (command: string) => void): () => void;
+  /** True when the main process is drawing the real menu, so the in-app bar stands down. */
+  native(): boolean;
 }
 
 /**
@@ -188,6 +202,18 @@ const api: VcWriterApi = {
       const search = (globalThis as { location?: { search?: string } }).location?.search ?? '';
       return new URLSearchParams(search).get('pane');
     },
+  },
+
+  menu: {
+    install: (input) => ipcRenderer.invoke('menu:install', input),
+    onCommand(handler) {
+      const listener = (_event: unknown, command: string) => handler(command);
+      ipcRenderer.on('menu:command', listener);
+      return () => ipcRenderer.off('menu:command', listener);
+    },
+    // Only a Mac keeps its menus outside the window; everywhere else the bar
+    // in the window is the one the writer uses.
+    native: () => process.platform === 'darwin',
   },
 
   link: {
