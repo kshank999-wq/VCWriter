@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { id, orderKey, timestamps } from './common.js';
 import { manuscriptSegmentSchema } from './manuscript.js';
-import type { BeatId, LaneId, ProjectId, StructuralUnitId } from '../ids.js';
+import type { BeatId, LaneId, ProjectId, StoryMarkerId, StructuralUnitId } from '../ids.js';
 
 /**
  * Story structure: lanes -> scene/chapter containers -> beats (spec §5).
@@ -9,6 +9,11 @@ import type { BeatId, LaneId, ProjectId, StructuralUnitId } from '../ids.js';
  * Hierarchy rule (§19, non-negotiable): a beat belongs to a scene or chapter
  * container. Beats are never free-floating lane cards. `Beat.unitId` is
  * therefore required, not nullable.
+ *
+ * Story order (addendum 02 §8): a unit's `orderKey` is its position on one
+ * axis shared by the whole project. Its lane is the row it is drawn in and
+ * nothing more, so a subplot scene can sit between two main-plot scenes,
+ * which is where subplot scenes go.
  */
 
 export const laneKindSchema = z.enum([
@@ -22,13 +27,21 @@ export const laneKindSchema = z.enum([
 ]);
 export type LaneKind = z.infer<typeof laneKindSchema>;
 
+/**
+ * Default lane colours, in the order lanes are usually added. They are the
+ * brand's gold and red first, then hues chosen to sit on the near-black
+ * ground without shouting; a lane's colour is data and the writer can pick
+ * any other.
+ */
+export const LANE_COLOURS = ['#c9a45c', '#8b1c1c', '#5b7fa6', '#7a9e7e', '#8a6f9e', '#a67c52', '#6f8f9e'] as const;
+
 export const laneSchema = z.object({
   id: id<LaneId>(),
   projectId: id<ProjectId>(),
   name: z.string().min(1),
   kind: laneKindSchema.default('custom'),
-  /** Hex colour used by the structure board. */
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#6b7280'),
+  /** Hex colour the timeline draws the lane's track and blocks in. */
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#5b7fa6'),
   description: z.string().default(''),
   orderKey: orderKey(),
   collapsed: z.boolean().default(false),
@@ -60,6 +73,7 @@ export const structuralUnitSchema = z.object({
   summary: z.string().default(''),
   notes: z.string().default(''),
   status: structuralUnitStatusSchema.default('outline'),
+  /** Position in the story, across every lane (addendum 02 §8). */
   orderKey: orderKey(),
   collapsed: z.boolean().default(false),
   ...timestamps,
@@ -86,3 +100,22 @@ export const beatSchema = z.object({
   ...timestamps,
 });
 export type Beat = z.infer<typeof beatSchema>;
+
+/**
+ * A labelled point in the story order: "this scene starts Act II" (addendum
+ * 02 §9). Not a container — scenes do not belong to acts, because an act
+ * that owned scenes would cut across lanes and the hierarchy is lanes →
+ * scenes → beats (§19). A marker is anchored to the unit that starts it.
+ */
+export const storyMarkerKindSchema = z.enum(['act', 'sequence', 'note']);
+export type StoryMarkerKind = z.infer<typeof storyMarkerKindSchema>;
+
+export const storyMarkerSchema = z.object({
+  id: id<StoryMarkerId>(),
+  projectId: id<ProjectId>(),
+  unitId: id<StructuralUnitId>(),
+  kind: storyMarkerKindSchema.default('act'),
+  title: z.string().default(''),
+  ...timestamps,
+});
+export type StoryMarker = z.infer<typeof storyMarkerSchema>;

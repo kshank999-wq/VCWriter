@@ -1,40 +1,36 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { createProjectFile, updateBeat, type ProjectFile } from '@vcwriter/domain';
-import { BeatEditor } from '../components/BeatEditor';
+import { addBeat, createProjectFile, updateBeat, type BeatId, type ProjectFile } from '@vcwriter/domain';
+import { StoryView } from '../components/StoryView';
 import { PagePreview } from '../components/PagePreview';
 
 /**
- * The writing workspace's keyboard behaviour, exercised through the component.
+ * The Script's keyboard behaviour, exercised through the component.
  *
  * The flow tables themselves are tested in the domain; what these cover is the
  * wiring — that Return really does create the next element and focus it, that
- * Tab re-types instead of moving focus, and that the beat's internal title
- * never appears among the manuscript elements.
+ * Tab re-types instead of moving focus, that typing lands in the beat it was
+ * typed in, and that the beat's internal title never appears among the
+ * manuscript elements.
  */
 
 afterEach(cleanup);
 
-// The workspace asks the main process which platform it is on, to name the
-// right system dictation shortcut.
-beforeEach(() => {
-  Object.defineProperty(window, 'vcwriter', {
-    configurable: true,
-    value: { appInfo: vi.fn().mockResolvedValue({ ok: true, data: { version: '0.1.0', platform: 'darwin' } }) },
-  });
-});
-
 function Harness({ initial }: { initial: ProjectFile }) {
   const [file, setFile] = useState(initial);
-  const beat = file.beats[0]!;
+  const [selected, setSelected] = useState<BeatId | null>(file.beats[0]?.id ?? null);
   return (
-    <BeatEditor
+    <StoryView
       file={file}
-      beat={beat}
-      focusMode={false}
+      selectedBeatId={selected}
+      onSelectBeat={setSelected}
       onUpdate={(mutate) => setFile((current) => mutate(current))}
+      focusMode={false}
+      focusTitleBeatId={null}
+      onTitleFocused={() => undefined}
+      dictationShortcut={null}
     />
   );
 }
@@ -71,7 +67,7 @@ describe('writing keyboard flow', () => {
     // Retype the new element as a character cue; Return then gives dialogue.
     const selects = screen.getAllByLabelText('Element type');
     fireEvent.change(selects[1]!, { target: { value: 'character' } });
-    const cue = screen.getAllByRole('textbox')[2] as HTMLTextAreaElement;
+    const cue = screen.getAllByPlaceholderText('character')[0] as HTMLTextAreaElement;
     fireEvent.keyDown(cue, { key: 'Enter' });
 
     expect(elementTypes()).toEqual(['action', 'character', 'dialogue']);
@@ -93,7 +89,7 @@ describe('writing keyboard flow', () => {
     fireEvent.keyDown(screen.getByDisplayValue('Rain hammers the glass.'), { key: 'Enter' });
     expect(elementTypes()).toHaveLength(2);
 
-    const added = screen.getAllByRole('textbox')[2] as HTMLTextAreaElement;
+    const added = screen.getAllByPlaceholderText('action')[1] as HTMLTextAreaElement;
     added.setSelectionRange(0, 0);
     fireEvent.keyDown(added, { key: 'Backspace' });
 
@@ -103,13 +99,49 @@ describe('writing keyboard flow', () => {
   it('keeps the beat title out of the manuscript column', () => {
     const { container } = render(<Harness initial={screenplayWithAction()} />);
 
-    // The title is present as a labelled reference field…
-    expect((screen.getByPlaceholderText('What happens in this beat') as HTMLInputElement).value).toBe(
-      'She confronts him',
-    );
+    // The title is present as a labelled bar…
+    expect((screen.getByLabelText('Beat title (not printed)') as HTMLInputElement).value).toBe('She confronts him');
     // …and nowhere among the manuscript elements.
     const column = container.querySelector('.page-column')!;
     expect(column.textContent).not.toContain('She confronts him');
+  });
+});
+
+describe('the whole script in story order', () => {
+  it('shows every beat, and typing in one changes only that one', () => {
+    let file = screenplayWithAction();
+    const unitId = file.units[0]!.id;
+    file = addBeat(file, { unitId, title: 'Second' }).file;
+    const third = addBeat(file, { unitId, title: 'Third' });
+    file = updateBeat(third.file, third.beat.id, {
+      manuscript: {
+        elements: [{ id: 'a2222222-2222-4222-8222-222222222222' as never, type: 'action', text: 'Later.', characterId: null, attributes: {} }],
+      },
+    });
+
+    render(<Harness initial={file} />);
+    const titles = screen.getAllByLabelText('Beat title (not printed)').map((node) => (node as HTMLInputElement).value);
+    expect(titles).toEqual(['She confronts him', 'Second', 'Third']);
+
+    fireEvent.change(screen.getByDisplayValue('Later.'), { target: { value: 'Much later.' } });
+    expect(screen.getByDisplayValue('Much later.')).toBeDefined();
+    expect(screen.getByDisplayValue('Rain hammers the glass.')).toBeDefined();
+  });
+
+  it('selects the beat the cursor lands in', () => {
+    let file = screenplayWithAction();
+    const second = addBeat(file, { unitId: file.units[0]!.id, title: 'Second' });
+    file = updateBeat(second.file, second.beat.id, {
+      manuscript: {
+        elements: [{ id: 'a3333333-3333-4333-8333-333333333333' as never, type: 'action', text: 'Then.', characterId: null, attributes: {} }],
+      },
+    });
+    const { container } = render(<Harness initial={file} />);
+
+    expect(container.querySelectorAll('.beat-block.selected')).toHaveLength(1);
+    fireEvent.focus(screen.getByDisplayValue('Then.'));
+    const selected = container.querySelector('.beat-block.selected')!;
+    expect(selected.textContent).toContain('Then.');
   });
 });
 

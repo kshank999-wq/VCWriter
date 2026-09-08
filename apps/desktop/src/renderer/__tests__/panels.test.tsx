@@ -5,16 +5,14 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import {
   addResearchItem,
   addSetupPayoff,
-  beatsInStoryOrder,
   createProjectFile,
   type ProjectFile,
 } from '@vcwriter/domain';
-import { StructureBoard } from '../components/StructureBoard';
 import { ResearchPanel } from '../components/ResearchPanel';
 import { SetupsPanel } from '../components/SetupsPanel';
 
 /**
- * Rendering smoke tests for the Phase 2 panels.
+ * Rendering smoke tests for the research and setups panels.
  *
  * These exercise the wiring a reviewer cannot check by reading — that each
  * panel mounts, that the buttons reach the domain mutations, and that the
@@ -35,65 +33,6 @@ function Harness({
   const [file, setFile] = useState(initial);
   return <>{children(file, (mutate) => setFile((current) => mutate(current)))}</>;
 }
-
-describe('structure board', () => {
-  const project = () => createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
-
-  it('draws lanes, scenes and beats, and adds a beat inside its scene', () => {
-    render(
-      <Harness initial={project()}>
-        {(file, update) => (
-          <StructureBoard
-            file={file}
-            selectedBeatId={beatsInStoryOrder(file)[0]?.id ?? null}
-            onSelectBeat={() => undefined}
-            onUpdate={update}
-          />
-        )}
-      </Harness>,
-    );
-
-    expect(screen.getByText('Main Plot')).toBeDefined();
-    expect(screen.getByText('Opening beat')).toBeDefined();
-
-    fireEvent.click(screen.getByTitle('Add beat'));
-    expect(screen.getAllByText(/beat/i).length).toBeGreaterThan(1);
-    expect(screen.getByText('New beat')).toBeDefined();
-  });
-
-  it('collapses a lane and brings it back', () => {
-    render(
-      <Harness initial={project()}>
-        {(file, update) => (
-          <StructureBoard file={file} selectedBeatId={null} onSelectBeat={() => undefined} onUpdate={update} />
-        )}
-      </Harness>,
-    );
-
-    fireEvent.click(screen.getByLabelText('Collapse Main Plot'));
-    expect(screen.queryByText('Opening beat')).toBeNull();
-
-    fireEvent.click(screen.getByLabelText('Expand Main Plot'));
-    expect(screen.getByText('Opening beat')).toBeDefined();
-  });
-
-  it('renames a lane in place', () => {
-    render(
-      <Harness initial={project()}>
-        {(file, update) => (
-          <StructureBoard file={file} selectedBeatId={null} onSelectBeat={() => undefined} onUpdate={update} />
-        )}
-      </Harness>,
-    );
-
-    fireEvent.click(screen.getByText('Main Plot'));
-    const input = screen.getByLabelText('Lane name');
-    fireEvent.change(input, { target: { value: 'A story' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-
-    expect(screen.getByText('A story')).toBeDefined();
-  });
-});
 
 describe('research panel', () => {
   const projectWithNote = () => {

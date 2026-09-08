@@ -1,25 +1,32 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  addBeat,
+  addLane,
+  addMarker,
+  addUnit,
+  beatsForUnit,
   beatsInStoryOrder,
+  findUnit,
   pageCount,
   projectStats,
+  unitsInStoryOrder,
   type BeatId,
   type ProjectFile,
   type SyncConflict,
 } from '@vcwriter/domain';
 import { useProject } from './use-project';
+import { usePreference, useSplit } from './use-split';
 import { Welcome } from './components/Welcome';
-import { StructureBoard } from './components/StructureBoard';
-import { BeatEditor } from './components/BeatEditor';
+import { MasterTimeline } from './components/MasterTimeline';
+import { MasterPanel } from './components/MasterPanel';
+import { Inspector } from './components/Inspector';
+import { PageBar, type View } from './components/PageBar';
 import { PagePreview } from './components/PagePreview';
-import { ResearchPanel } from './components/ResearchPanel';
-import { SetupsPanel } from './components/SetupsPanel';
 import { AccountPanel } from './components/AccountPanel';
 import { CapturesPanel } from './components/CapturesPanel';
 import { EditorPanel } from './components/EditorPanel';
 import { ReadBackPanel } from './components/ReadBackPanel';
 import { RecoveryPanel } from './components/RecoveryPanel';
-import { Timeline } from './components/Timeline';
 import { Wordmark } from './components/Brand';
 import type { AccountStatus } from '../preload/index';
 
@@ -31,23 +38,11 @@ const SAVE_LABEL: Record<string, string> = {
   error: 'Save failed',
 };
 
-type View = 'write' | 'preview' | 'editor' | 'readback' | 'research' | 'setups' | 'captures' | 'recovery';
-
-const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
-  { id: 'write', label: 'Write' },
-  { id: 'preview', label: 'Preview' },
-  { id: 'editor', label: 'Editors' },
-  { id: 'readback', label: 'Read back' },
-  { id: 'research', label: 'Research' },
-  { id: 'setups', label: 'Setups & payoffs' },
-  { id: 'captures', label: 'Captures' },
-  { id: 'recovery', label: 'Recovery' },
-];
-
 export default function App() {
   const project = useProject();
   const [view, setView] = useState<View>('write');
   const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
+  const [focusTitleBeatId, setFocusTitleBeatId] = useState<BeatId | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [includeBeatTitles, setIncludeBeatTitles] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -55,10 +50,17 @@ export default function App() {
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [dictationShortcut, setDictationShortcut] = useState<string | null>(null);
   // Conflicts persist until the writer has dealt with them. A sync that
   // overwrote a scene is not resolved by the writer clicking past a status
   // line, and the losing versions live here until they say otherwise.
   const [conflicts, setConflicts] = useState<SyncConflict[]>([]);
+
+  // Per-machine layout preferences (addendum 02 §3), not project data.
+  const [inspectorOpen, setInspectorOpen] = usePreference('inspector', true);
+  const [timelineOpen, setTimelineOpen] = usePreference('timeline', true);
+  const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
+  const split = useSplit({ key: 'timelineHeight', initial: 300, min: 140, reserve: 220 });
 
   const file = project.file;
   const beats = useMemo(() => (file ? beatsInStoryOrder(file) : []), [file]);
@@ -66,24 +68,84 @@ export default function App() {
   const stats = file ? projectStats(file) : null;
   const pages = useMemo(() => (file ? pageCount(file) : 0), [file]);
 
-  // Focus mode hides everything but the page being written (§6).
+  const clearTitleFocus = useCallback(() => setFocusTitleBeatId(null), []);
+
+  // Keyboard: focus mode, the panes, and stepping through beats (addendum 02 §11).
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'f') {
+      const chord = (event.metaKey || event.ctrlKey) && event.shiftKey;
+      if (chord && event.key.toLowerCase() === 'f') {
         event.preventDefault();
         setFocusMode((current) => !current);
+      } else if (chord && event.key.toLowerCase() === 'i') {
+        event.preventDefault();
+        setInspectorOpen(!inspectorOpen);
+      } else if (chord && event.key.toLowerCase() === 'l') {
+        event.preventDefault();
+        setTimelineOpen(!timelineOpen);
+      } else if (event.altKey && (event.key === 'PageUp' || event.key === 'PageDown')) {
+        event.preventDefault();
+        const position = beats.findIndex((beat) => beat.id === selectedBeat?.id);
+        const next = beats[position + (event.key === 'PageDown' ? 1 : -1)];
+        if (next) setSelectedBeatId(next.id);
+      } else if (event.key === 'Escape') {
+        setFocusMode(false);
       }
-      if (event.key === 'Escape') setFocusMode(false);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [beats, selectedBeat, inspectorOpen, timelineOpen, setInspectorOpen, setTimelineOpen]);
 
   useEffect(() => {
     void window.vcwriter.accountStatus().then((result) => {
       if (result.ok && result.data) setAccount(result.data);
     });
+    void window.vcwriter.appInfo().then((result) => {
+      if (!result.ok || !result.data) return;
+      setDictationShortcut(
+        result.data.platform === 'darwin' ? 'press Fn twice' : result.data.platform === 'win32' ? 'Windows key + H' : null,
+      );
+    });
   }, []);
+
+  // ------------------------------------------------------- adding structure
+  // Each adds after the selection and selects what it made (§4 of the
+  // addendum), computed from the current document so the new id is known.
+
+  const addSceneAfterSelection = useCallback(() => {
+    if (!file) return;
+    const unit = selectedBeat ? findUnit(file, selectedBeat.unitId) : undefined;
+    const order = unitsInStoryOrder(file);
+    const position = unit ? order.findIndex((candidate) => candidate.id === unit.id) : order.length - 1;
+    const laneId = unit?.laneId ?? file.lanes[0]?.id;
+    if (!laneId) return;
+    const created = addUnit(file, { laneId, index: position + 1 });
+    const withBeat = addBeat(created.file, { unitId: created.unit.id });
+    project.update(() => withBeat.file);
+    setSelectedBeatId(withBeat.beat.id);
+    setFocusTitleBeatId(withBeat.beat.id);
+  }, [file, selectedBeat, project]);
+
+  const addBeatAfterSelection = useCallback(() => {
+    if (!file || !selectedBeat) return;
+    const siblings = beatsForUnit(file, selectedBeat.unitId);
+    const position = siblings.findIndex((beat) => beat.id === selectedBeat.id);
+    const created = addBeat(file, { unitId: selectedBeat.unitId, index: position + 1 });
+    project.update(() => created.file);
+    setSelectedBeatId(created.beat.id);
+    setFocusTitleBeatId(created.beat.id);
+  }, [file, selectedBeat, project]);
+
+  const addLaneToProject = useCallback(() => {
+    project.update((current) => addLane(current, { name: 'New lane' }).file);
+  }, [project]);
+
+  const addActAtSelection = useCallback(() => {
+    if (!selectedBeat) return;
+    project.update((current) => addMarker(current, { unitId: selectedBeat.unitId, title: 'New act' }).file);
+  }, [selectedBeat, project]);
+
+  // ------------------------------------------------------------- sync, export
 
   const sync = useCallback(async () => {
     if (!file) return;
@@ -167,35 +229,28 @@ export default function App() {
   }
 
   const writing = view === 'write';
+  const focused = focusMode && writing;
+  const showTimeline = writing && timelineOpen && !focused;
+  const showInspector = writing && inspectorOpen && !focused;
 
   return (
-    <div className={focusMode && writing ? 'workspace focus-mode' : 'workspace'}>
+    <div
+      className={[
+        'workspace',
+        focused ? 'focus-mode' : '',
+        showTimeline ? 'with-timeline' : '',
+        showInspector ? 'with-inspector' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      style={{ '--timeline-height': `${split.width}px` } as React.CSSProperties}
+    >
       <header className="titlebar">
         <div className="titlebar-left">
           <Wordmark compact />
           <strong className="project-title" title={`${file.project.title} · ${file.project.format.replace(/_/g, ' ')}`}>
             {file.project.title}
           </strong>
-          <nav className="views" aria-label="Workspace">
-            {VIEWS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={view === option.id ? 'view selected' : 'view'}
-                aria-current={view === option.id}
-                onClick={() => setView(option.id)}
-              >
-                {option.label}
-                {option.id === 'research' && stats && stats.unusedResearchCount > 0
-                  ? ` (${stats.unusedResearchCount})`
-                  : ''}
-                {option.id === 'setups' && stats && stats.unresolvedSetupCount > 0
-                  ? ` (${stats.unresolvedSetupCount})`
-                  : ''}
-                {option.id === 'recovery' && conflicts.length > 0 ? ` (${conflicts.length})` : ''}
-              </button>
-            ))}
-          </nav>
         </div>
         <div className="titlebar-right">
           {stats ? (
@@ -252,27 +307,46 @@ export default function App() {
 
       {writing ? (
         <div className="workspace-body">
-          {/* Manuscript on the left, structure on the right (docs/brand.md,
-              layout): the page is what the writer is looking at, and the
-              board is where they are in the story. */}
-          <main>
-            {selectedBeat ? (
-              <BeatEditor file={file} beat={selectedBeat} focusMode={focusMode} onUpdate={project.update} />
-            ) : (
-              <p className="muted empty-state">Add a beat to a scene or chapter to start writing.</p>
-            )}
-          </main>
-          {focusMode ? null : (
-            <div className="structure-pane">
-              <Timeline file={file} selectedBeatId={selectedBeat?.id ?? null} onSelectBeat={setSelectedBeatId} />
-              <StructureBoard
+          {showTimeline ? (
+            <>
+              <MasterTimeline
                 file={file}
                 selectedBeatId={selectedBeat?.id ?? null}
                 onSelectBeat={setSelectedBeatId}
                 onUpdate={project.update}
+                pixelsPerPage={pixelsPerPage}
+                onZoom={setPixelsPerPage}
+                inspectorOpen={inspectorOpen}
+                onToggleInspector={() => setInspectorOpen(!inspectorOpen)}
+                onAddScene={addSceneAfterSelection}
+                onAddBeat={addBeatAfterSelection}
+                onAddLane={addLaneToProject}
+                onAddAct={addActAtSelection}
               />
-            </div>
-          )}
+              <div
+                className="divider"
+                role="separator"
+                aria-orientation="horizontal"
+                aria-label="Resize the timeline"
+                {...split.dividerProps}
+              />
+            </>
+          ) : null}
+          <div className="editor-windows">
+            <MasterPanel
+              file={file}
+              selectedBeatId={selectedBeat?.id ?? null}
+              onSelectBeat={setSelectedBeatId}
+              onUpdate={project.update}
+              focusMode={focused}
+              focusTitleBeatId={focusTitleBeatId}
+              onTitleFocused={clearTitleFocus}
+              dictationShortcut={dictationShortcut}
+            />
+            {showInspector ? (
+              <Inspector file={file} selectedBeatId={selectedBeat?.id ?? null} onUpdate={project.update} />
+            ) : null}
+          </div>
         </div>
       ) : (
         <main className="full">
@@ -295,15 +369,7 @@ export default function App() {
               onUpdate={project.update}
             />
           ) : view === 'readback' ? (
-            <ReadBackPanel
-              file={file}
-              currentUnitId={selectedBeat?.unitId ?? null}
-              onUpdate={project.update}
-            />
-          ) : view === 'research' ? (
-            <ResearchPanel file={file} currentBeatId={selectedBeat?.id ?? null} onUpdate={project.update} />
-          ) : view === 'setups' ? (
-            <SetupsPanel file={file} currentBeatId={selectedBeat?.id ?? null} onUpdate={project.update} />
+            <ReadBackPanel file={file} currentUnitId={selectedBeat?.unitId ?? null} onUpdate={project.update} />
           ) : view === 'recovery' ? (
             project.path ? (
               <RecoveryPanel
@@ -333,6 +399,8 @@ export default function App() {
           )}
         </main>
       )}
+
+      {focused ? null : <PageBar view={view} onSelect={setView} counts={{ recovery: conflicts.length }} />}
     </div>
   );
 }

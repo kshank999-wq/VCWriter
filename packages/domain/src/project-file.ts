@@ -16,7 +16,7 @@ import {
   projectSettingsSchema,
   type ProjectFormat,
 } from './entities/project.js';
-import { beatSchema, laneSchema, structuralUnitSchema } from './entities/structure.js';
+import { LANE_COLOURS, beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
 import type { LaneId, ProjectId, ResearchCategoryId, StructuralUnitId, UserId } from './ids.js';
 
 /**
@@ -29,8 +29,13 @@ import type { LaneId, ProjectId, ResearchCategoryId, StructuralUnitId, UserId } 
  *
  * Bump `PROJECT_FORMAT_VERSION` whenever the shape changes and add a migration
  * to `MIGRATIONS`. Callers take a `pre_migration` snapshot first (§14).
+ *
+ * Versions:
+ *  1 — initial release.
+ *  2 — scene order is global rather than per lane, and `markers[]` exists
+ *      (addendum 02 §8, §9).
  */
-export const PROJECT_FORMAT_VERSION = 1;
+export const PROJECT_FORMAT_VERSION = 2;
 
 export const projectFileSchema = z.object({
   formatVersion: z.number().int().positive(),
@@ -42,6 +47,7 @@ export const projectFileSchema = z.object({
   lanes: z.array(laneSchema).default([]),
   units: z.array(structuralUnitSchema).default([]),
   beats: z.array(beatSchema).default([]),
+  markers: z.array(storyMarkerSchema).default([]),
   researchCategories: z.array(researchCategorySchema).default([]),
   researchItems: z.array(researchItemSchema).default([]),
   characters: z.array(characterSchema).default([]),
@@ -67,11 +73,49 @@ interface Migration {
   readonly migrate: (input: Record<string, unknown>) => Record<string, unknown>;
 }
 
+interface OrderedRow {
+  id?: unknown;
+  orderKey?: unknown;
+  laneId?: unknown;
+}
+
+const byOrderKey = (a: OrderedRow, b: OrderedRow): number => {
+  const left = typeof a.orderKey === 'string' ? a.orderKey : '';
+  const right = typeof b.orderKey === 'string' ? b.orderKey : '';
+  if (left === right) return String(a.id).localeCompare(String(b.id));
+  return left < right ? -1 : 1;
+};
+
+/**
+ * Format 1 ordered scenes within their lane and printed lane by lane. Format
+ * 2 orders scenes across the project. Re-key every scene in the order it
+ * printed before — lane order, then scene order — so the manuscript reads
+ * exactly as it did until the writer moves something.
+ */
+const migrateToGlobalStoryOrder = (doc: Record<string, unknown>): Record<string, unknown> => {
+  const lanes = Array.isArray(doc['lanes']) ? ([...doc['lanes']] as OrderedRow[]).sort(byOrderKey) : [];
+  const units = Array.isArray(doc['units']) ? ([...doc['units']] as OrderedRow[]) : [];
+
+  const printed: OrderedRow[] = [];
+  for (const lane of lanes) {
+    printed.push(...units.filter((unit) => unit.laneId === lane.id).sort(byOrderKey));
+  }
+  // A scene whose lane is missing still has to land somewhere: after everything.
+  printed.push(...units.filter((unit) => !lanes.some((lane) => lane.id === unit.laneId)).sort(byOrderKey));
+
+  const keys = initialOrderKeys(printed.length);
+  const keyFor = new Map(printed.map((unit, index) => [unit, keys[index]]));
+
+  return {
+    ...doc,
+    formatVersion: 2,
+    units: units.map((unit) => ({ ...unit, orderKey: keyFor.get(unit) ?? unit.orderKey })),
+    markers: Array.isArray(doc['markers']) ? doc['markers'] : [],
+  };
+};
+
 /** Ordered, contiguous migrations from an older format version to the current one. */
-const MIGRATIONS: readonly Migration[] = [
-  // v1 is the initial released format. Example of the shape future entries take:
-  // { from: 1, to: 2, migrate: (doc) => ({ ...doc, formatVersion: 2, /* ... */ }) },
-];
+const MIGRATIONS: readonly Migration[] = [{ from: 1, to: 2, migrate: migrateToGlobalStoryOrder }];
 
 /** Apply every migration needed to bring a raw document up to the current version. */
 export const migrateProjectFile = (raw: unknown): Record<string, unknown> => {
@@ -174,7 +218,7 @@ export const createProjectFile = (options: CreateProjectOptions): ProjectFile =>
         projectId,
         name: 'Main Plot',
         kind: 'main_plot',
-        color: '#2563eb',
+        color: LANE_COLOURS[0],
         orderKey: orderKeyBetween(null, null),
         createdAt: timestamp,
         updatedAt: timestamp,

@@ -1,7 +1,7 @@
 import { newId } from './ids.js';
 import { orderKeyForIndex } from './ordering.js';
 import { nowIso } from './entities/common.js';
-import { beatSchema, laneSchema, structuralUnitSchema } from './entities/structure.js';
+import { LANE_COLOURS, beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
 import { setupPayoffSchema, setupPointSchema } from './entities/setups.js';
 import { characterSchema } from './entities/character.js';
@@ -12,12 +12,20 @@ import {
   type StoryLink,
   type StoryLinkType,
 } from './entities/links.js';
-import { beatsForUnit, lanesInOrder, researchCategoriesInOrder, unitsForLane } from './selectors.js';
+import { beatsForUnit, lanesInOrder, researchCategoriesInOrder, unitsInStoryOrder } from './selectors.js';
 import type { ManuscriptSegment } from './entities/manuscript.js';
 import type { VoiceAssignment } from './entities/project.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
 import type { SetupPayoff, SetupPoint } from './entities/setups.js';
-import type { Beat, Lane, LaneKind, StructuralUnit, StructuralUnitKind } from './entities/structure.js';
+import type {
+  Beat,
+  Lane,
+  LaneKind,
+  StoryMarker,
+  StoryMarkerKind,
+  StructuralUnit,
+  StructuralUnitKind,
+} from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
 import type {
   BeatId,
@@ -28,6 +36,7 @@ import type {
   SetupPayoffId,
   SetupPointId,
   StoryLinkId,
+  StoryMarkerId,
   StructuralUnitId,
 } from './ids.js';
 
@@ -58,12 +67,16 @@ export const addLane = (
   input: { name: string; kind?: LaneKind; color?: string; index?: number },
 ): { file: ProjectFile; lane: Lane } => {
   const timestamp = nowIso();
+  // The next colour in the sequence the project has not used yet, so three
+  // lanes added in a row come out gold, red, blue rather than all one grey.
+  const used = new Set(file.lanes.map((lane) => lane.color));
+  const nextColour = LANE_COLOURS.find((colour) => !used.has(colour)) ?? LANE_COLOURS[file.lanes.length % LANE_COLOURS.length];
   const lane = laneSchema.parse({
     id: newId<LaneId>(),
     projectId: file.project.id,
     name: input.name,
     kind: input.kind ?? 'custom',
-    ...(input.color ? { color: input.color } : {}),
+    color: input.color ?? nextColour,
     orderKey: orderKeyForIndex(lanesInOrder(file), input.index ?? file.lanes.length),
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -71,6 +84,14 @@ export const addLane = (
   return { file: touchProject({ ...file, lanes: [...file.lanes, lane] }), lane };
 };
 
+/**
+ * Add a scene/chapter to a lane at a position in the story.
+ *
+ * `index` is a position among *every* scene in the project, not among the
+ * lane's own (addendum 02 §8): a subplot scene added "after scene 3" lands
+ * after scene 3 whatever lane scene 3 is in. Omitted, the scene goes at the
+ * end of the story.
+ */
 export const addUnit = (
   file: ProjectFile,
   input: { laneId: LaneId; kind?: StructuralUnitKind; title?: string; sequenceLabel?: string; index?: number },
@@ -79,7 +100,7 @@ export const addUnit = (
     throw new DomainError(`Lane ${input.laneId} does not exist in this project`);
   }
   const timestamp = nowIso();
-  const siblings = unitsForLane(file, input.laneId);
+  const siblings = unitsInStoryOrder(file);
   const unit = structuralUnitSchema.parse({
     id: newId<StructuralUnitId>(),
     projectId: file.project.id,
@@ -142,21 +163,121 @@ export const moveBeat = (
   });
 };
 
+/**
+ * Move a scene/chapter to a lane and a position in the story.
+ *
+ * `index` counts every scene in the project except the one moving, in story
+ * order (addendum 02 §8). Pass `keepPosition: true` to change only the lane:
+ * the scene stays where it is in the story and simply draws in another row.
+ */
 export const moveUnit = (
   file: ProjectFile,
-  input: { unitId: StructuralUnitId; toLaneId: LaneId; index: number },
+  input: { unitId: StructuralUnitId; toLaneId: LaneId; index?: number; keepPosition?: boolean },
 ): ProjectFile => {
   const unit = file.units.find((candidate) => candidate.id === input.unitId);
   if (!unit) throw new DomainError(`Scene/chapter ${input.unitId} does not exist`);
   if (!file.lanes.some((lane) => lane.id === input.toLaneId)) {
     throw new DomainError(`Lane ${input.toLaneId} does not exist`);
   }
-  const siblings = unitsForLane(file, input.toLaneId).filter((candidate) => candidate.id !== unit.id);
+  if (input.keepPosition || input.index === undefined) {
+    if (unit.laneId === input.toLaneId) return file;
+    const relaned = touch({ ...unit, laneId: input.toLaneId });
+    return touchProject({
+      ...file,
+      units: file.units.map((candidate) => (candidate.id === unit.id ? relaned : candidate)),
+    });
+  }
+  const siblings = unitsInStoryOrder(file).filter((candidate) => candidate.id !== unit.id);
   const moved = touch({ ...unit, laneId: input.toLaneId, orderKey: orderKeyForIndex(siblings, input.index) });
   return touchProject({
     ...file,
     units: file.units.map((candidate) => (candidate.id === unit.id ? moved : candidate)),
   });
+};
+
+// ---------------------------------------------------------------------------
+// Act markers (addendum 02 §9)
+// ---------------------------------------------------------------------------
+
+/** A scene starts at most one marker; adding another replaces its label. */
+export const addMarker = (
+  file: ProjectFile,
+  input: { unitId: StructuralUnitId; title: string; kind?: StoryMarkerKind },
+): { file: ProjectFile; marker: StoryMarker } => {
+  if (!file.units.some((unit) => unit.id === input.unitId)) {
+    throw new DomainError(`Scene/chapter ${input.unitId} does not exist`);
+  }
+  const existing = file.markers.find((marker) => marker.unitId === input.unitId);
+  if (existing) {
+    const updated = touch({ ...existing, title: input.title, kind: input.kind ?? existing.kind });
+    return {
+      file: touchProject({
+        ...file,
+        markers: file.markers.map((marker) => (marker.id === existing.id ? updated : marker)),
+      }),
+      marker: updated,
+    };
+  }
+  const timestamp = nowIso();
+  const marker = storyMarkerSchema.parse({
+    id: newId<StoryMarkerId>(),
+    projectId: file.project.id,
+    unitId: input.unitId,
+    kind: input.kind ?? 'act',
+    title: input.title,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  });
+  return { file: touchProject({ ...file, markers: [...file.markers, marker] }), marker };
+};
+
+export const updateMarker = (
+  file: ProjectFile,
+  markerId: StoryMarkerId,
+  patch: Partial<Pick<StoryMarker, 'title' | 'kind' | 'unitId'>>,
+): ProjectFile => {
+  if (!file.markers.some((marker) => marker.id === markerId)) {
+    throw new DomainError(`Marker ${markerId} does not exist`);
+  }
+  if (patch.unitId !== undefined && !file.units.some((unit) => unit.id === patch.unitId)) {
+    throw new DomainError(`Scene/chapter ${patch.unitId} does not exist`);
+  }
+  return touchProject({
+    ...file,
+    markers: file.markers.map((marker) => (marker.id === markerId ? touch({ ...marker, ...patch }) : marker)),
+  });
+};
+
+export const removeMarker = (file: ProjectFile, markerId: StoryMarkerId): ProjectFile =>
+  touchProject({ ...file, markers: file.markers.filter((marker) => marker.id !== markerId) });
+
+/**
+ * When scenes go, a marker anchored to one of them moves to the next
+ * surviving scene in story order, or to the last surviving scene when there
+ * is no next; with no scenes left it goes too. A scene that already starts a
+ * marker keeps its own, and the displaced marker is dropped rather than
+ * stacked — two acts cannot start at one scene.
+ */
+const reanchorMarkers = (file: ProjectFile, removedUnitIds: ReadonlySet<string>): StoryMarker[] => {
+  const before = unitsInStoryOrder(file);
+  const surviving = before.filter((unit) => !removedUnitIds.has(unit.id));
+  if (surviving.length === 0) return [];
+  const kept: StoryMarker[] = [];
+  const taken = new Set(file.markers.filter((marker) => !removedUnitIds.has(marker.unitId)).map((m) => m.unitId as string));
+
+  for (const marker of file.markers) {
+    if (!removedUnitIds.has(marker.unitId)) {
+      kept.push(marker);
+      continue;
+    }
+    const position = before.findIndex((unit) => unit.id === marker.unitId);
+    const next = before.slice(position + 1).find((unit) => !removedUnitIds.has(unit.id));
+    const target = next ?? surviving[surviving.length - 1];
+    if (!target || taken.has(target.id)) continue;
+    taken.add(target.id);
+    kept.push(touch({ ...marker, unitId: target.id }));
+  }
+  return kept;
 };
 
 export const updateBeat = (
@@ -449,6 +570,7 @@ export const removeLane = (file: ProjectFile, laneId: LaneId): ProjectFile => {
     lanes: file.lanes.filter((lane) => lane.id !== laneId),
     units: file.units.filter((unit) => !removedUnitIds.has(unit.id)),
     beats: file.beats.filter((beat) => !removedBeatIds.has(beat.id)),
+    markers: reanchorMarkers(file, removedUnitIds),
     links: withoutLinksTouching(file, removed),
   });
 };
@@ -481,6 +603,7 @@ export const removeUnit = (file: ProjectFile, unitId: StructuralUnitId): Project
     ...file,
     units: file.units.filter((unit) => unit.id !== unitId),
     beats: file.beats.filter((beat) => !removedBeatIds.has(beat.id)),
+    markers: reanchorMarkers(file, new Set<string>([unitId])),
     links: withoutLinksTouching(file, removed),
   });
 };

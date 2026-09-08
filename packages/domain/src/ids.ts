@@ -14,6 +14,7 @@ export type ProjectId = Id<'Project'>;
 export type LaneId = Id<'Lane'>;
 export type StructuralUnitId = Id<'StructuralUnit'>;
 export type BeatId = Id<'Beat'>;
+export type StoryMarkerId = Id<'StoryMarker'>;
 export type ResearchCategoryId = Id<'ResearchCategory'>;
 export type ResearchItemId = Id<'ResearchItem'>;
 export type CharacterId = Id<'Character'>;

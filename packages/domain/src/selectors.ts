@@ -2,7 +2,7 @@ import { sortByOrderKey } from './ordering.js';
 import { isUnresolved } from './entities/setups.js';
 import { countWords } from './entities/manuscript.js';
 import { refEquals, type StoryEntityRef, type StoryLink } from './entities/links.js';
-import type { Beat, Lane, StructuralUnit } from './entities/structure.js';
+import type { Beat, Lane, StoryMarker, StructuralUnit } from './entities/structure.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
 import type { SetupPayoff } from './entities/setups.js';
 import type { ProjectFile } from './project-file.js';
@@ -12,19 +12,33 @@ import type { BeatId, LaneId, ResearchCategoryId, StructuralUnitId } from './ids
 
 export const lanesInOrder = (file: ProjectFile): Lane[] => sortByOrderKey(file.lanes);
 
+/** The scenes drawn in one lane, in story order. */
 export const unitsForLane = (file: ProjectFile, laneId: LaneId): StructuralUnit[] =>
   sortByOrderKey(file.units.filter((unit) => unit.laneId === laneId));
 
 export const beatsForUnit = (file: ProjectFile, unitId: StructuralUnitId): Beat[] =>
   sortByOrderKey(file.beats.filter((beat) => beat.unitId === unitId));
 
-/** Every unit across every lane, in lane order then unit order. */
-export const unitsInStoryOrder = (file: ProjectFile): StructuralUnit[] =>
-  lanesInOrder(file).flatMap((lane) => unitsForLane(file, lane.id));
+/**
+ * Every scene in the order the story tells them, whatever lane each is in
+ * (addendum 02 §8). This is the print order.
+ */
+export const unitsInStoryOrder = (file: ProjectFile): StructuralUnit[] => sortByOrderKey(file.units);
 
-/** Every beat in reading order: lane, then unit, then beat. */
+/** Every beat in reading order: scene, then beat. */
 export const beatsInStoryOrder = (file: ProjectFile): Beat[] =>
   unitsInStoryOrder(file).flatMap((unit) => beatsForUnit(file, unit.id));
+
+/** Markers in the order of the scenes they start; one starting a missing scene is left out. */
+export const markersInStoryOrder = (file: ProjectFile): StoryMarker[] => {
+  const position = new Map(unitsInStoryOrder(file).map((unit, index) => [unit.id as string, index]));
+  return file.markers
+    .filter((marker) => position.has(marker.unitId))
+    .sort((a, b) => (position.get(a.unitId) as number) - (position.get(b.unitId) as number) || a.id.localeCompare(b.id));
+};
+
+export const markerForUnit = (file: ProjectFile, unitId: StructuralUnitId): StoryMarker | undefined =>
+  file.markers.find((marker) => marker.unitId === unitId);
 
 export const findBeat = (file: ProjectFile, beatId: BeatId): Beat | undefined =>
   file.beats.find((beat) => beat.id === beatId);

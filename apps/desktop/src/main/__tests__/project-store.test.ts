@@ -101,12 +101,25 @@ describe('project store', () => {
     const older = { ...JSON.parse(serializeProjectFile(file)), formatVersion: PROJECT_FORMAT_VERSION - 1 };
     await writeFile(path, JSON.stringify(older), 'utf8');
 
-    // Format 0 has no migration path, so the open fails — but the pre-migration
-    // recovery point must already exist by then.
-    await expect(loadProject(path)).rejects.toBeInstanceOf(ProjectFormatError);
+    // The previous format migrates, and the document comes back current — but
+    // the pre-migration recovery point must exist regardless, because it is
+    // the only copy of the pre-upgrade document.
+    const loaded = await loadProject(path);
+    expect(loaded.file.formatVersion).toBe(PROJECT_FORMAT_VERSION);
     const snapshots = await listSnapshots(path);
     expect(snapshots.some((snapshot) => snapshot.id.includes('pre_migration'))).toBe(true);
     expect(await readFile(path, 'utf8')).toContain('"formatVersion"');
+  });
+
+  it('refuses a format with no migration path, after taking the recovery point', async () => {
+    const path = await newWorkspace();
+    const file = createProjectFile({ title: 'Older', format: 'screenplay' });
+    const ancient = { ...JSON.parse(serializeProjectFile(file)), formatVersion: 0 };
+    await writeFile(path, JSON.stringify(ancient), 'utf8');
+
+    await expect(loadProject(path)).rejects.toBeInstanceOf(ProjectFormatError);
+    const snapshots = await listSnapshots(path);
+    expect(snapshots.some((snapshot) => snapshot.id.includes('pre_migration'))).toBe(true);
   });
 });
 

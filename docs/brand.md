@@ -58,11 +58,16 @@ labels the same at 11–12px in `--muted`.
 
 ## Layout
 
-The desktop workspace follows the layout of a beat-based screenwriting board:
-the manuscript on the left, and on the right a timeline strip of every beat in
-story order above the lanes, where each lane is a horizontal row of scene
-groups and each group is a column of stacked beats. Selecting a beat anywhere
-opens it on the left.
+The desktop workspace is laid out like a non-linear video editor
+(`docs/spec/addendum-02-workspace.md`): across the top, the master timeline —
+the story in order, one track per plot lane, scenes as blocks sized to their
+pages, beats inside the blocks, and setups, payoffs and links drawn as curves
+on their own track; below it, the editor windows — the script on the left
+with research under tabs, the inspector on the right; and the pages along the
+bottom. The finish is an editing application's: flat surfaces stepped by one
+shade, hairlines, small uniform controls, a playhead, and the gold spent on
+selection and the working accent rather than on ornament. Selecting a beat
+anywhere selects it everywhere.
 
 ## The logo
 

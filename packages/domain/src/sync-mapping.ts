@@ -4,10 +4,10 @@ import { storyLinkSchema } from './entities/links.js';
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
 import { setupPayoffSchema } from './entities/setups.js';
 import { projectSchema, projectSettingsSchema } from './entities/project.js';
-import { beatSchema, laneSchema, structuralUnitSchema } from './entities/structure.js';
+import { beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
 import { countWords } from './entities/manuscript.js';
 import { PROJECT_FORMAT_VERSION, projectFileSchema, type ProjectFile } from './project-file.js';
-import type { Beat, Lane, StructuralUnit } from './entities/structure.js';
+import type { Beat, Lane, StoryMarker, StructuralUnit } from './entities/structure.js';
 import type { Character } from './entities/character.js';
 import type { StoryLink } from './entities/links.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
@@ -31,6 +31,7 @@ export interface ProjectRows {
   lanes: Row[];
   units: Row[];
   beats: Row[];
+  markers: Row[];
   researchCategories: Row[];
   researchItems: Row[];
   characters: Row[];
@@ -43,6 +44,7 @@ export const SYNC_TABLES = {
   lanes: 'lanes',
   units: 'structural_units',
   beats: 'beats',
+  markers: 'story_markers',
   researchCategories: 'research_categories',
   researchItems: 'research_items',
   characters: 'characters',
@@ -127,6 +129,16 @@ const beatToRow = (beat: Beat): Row => ({
   updated_at: beat.updatedAt,
 });
 
+const markerToRow = (marker: StoryMarker): Row => ({
+  id: marker.id,
+  project_id: marker.projectId,
+  unit_id: marker.unitId,
+  kind: marker.kind,
+  title: marker.title,
+  created_at: marker.createdAt,
+  updated_at: marker.updatedAt,
+});
+
 const researchCategoryToRow = (category: ResearchCategory): Row => ({
   id: category.id,
   project_id: category.projectId,
@@ -203,6 +215,7 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
   lanes: file.lanes.map(laneToRow),
   units: file.units.map(unitToRow),
   beats: file.beats.map(beatToRow),
+  markers: file.markers.map(markerToRow),
   researchCategories: file.researchCategories.map(researchCategoryToRow),
   researchItems: file.researchItems.map(researchItemToRow),
   characters: file.characters.map(characterToRow),
@@ -255,6 +268,17 @@ const beatFromRow = (row: Row): Beat =>
     status: row['status'],
     orderKey: row['order_key'],
     manuscript: row['manuscript'] ?? { elements: [] },
+    createdAt: row['created_at'],
+    updatedAt: row['updated_at'],
+  });
+
+const markerFromRow = (row: Row): StoryMarker =>
+  storyMarkerSchema.parse({
+    id: row['id'],
+    projectId: row['project_id'],
+    unitId: row['unit_id'],
+    kind: row['kind'],
+    title: text(row['title']),
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });
@@ -397,6 +421,7 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     lanes: rows.lanes.map(laneFromRow),
     units: rows.units.map(unitFromRow),
     beats: rows.beats.map(beatFromRow),
+    markers: rows.markers.map(markerFromRow),
     researchCategories: rows.researchCategories.map(researchCategoryFromRow),
     researchItems: rows.researchItems.map(researchItemFromRow),
     characters: rows.characters.map(characterFromRow),

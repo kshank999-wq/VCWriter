@@ -237,6 +237,8 @@ const pruneOrphans = (file: ProjectFile): ProjectFile => {
     ...file,
     units,
     beats,
+    // A marker whose scene did not survive the merge has nothing to start.
+    markers: file.markers.filter((marker) => unitIds.has(marker.unitId)),
     researchItems,
     links: file.links.filter((link) => survivingIds.has(link.from.id) && survivingIds.has(link.to.id)),
   };

@@ -26,6 +26,12 @@ interface ResearchPanelProps {
   /** The beat open in the writing workspace, so material can be linked or marked used there. */
   currentBeatId: BeatId | null;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  /**
+   * Show one category only, without the category list. The master panel's
+   * Research tabs (addendum 02 §6) give each category its own tab, so the
+   * list would repeat the tab strip.
+   */
+  categoryId?: ResearchCategoryId;
 }
 
 type UsageFilter = 'unused' | 'used' | 'all';
@@ -38,15 +44,15 @@ type UsageFilter = 'unused' | 'used' | 'all';
  * junk drawer; and moving something to Used never destroys it — the Used tab
  * and the Restore button are always one click apart.
  */
-export function ResearchPanel({ file, currentBeatId, onUpdate }: ResearchPanelProps) {
+export function ResearchPanel({ file, currentBeatId, onUpdate, categoryId }: ResearchPanelProps) {
   const [showArchivedCategories, setShowArchivedCategories] = useState(false);
   const [filter, setFilter] = useState<UsageFilter>('unused');
   const [selectedCategoryId, setSelectedCategoryId] = useState<ResearchCategoryId | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<ResearchItemId | null>(null);
 
-  const categories = researchCategoriesInOrder(file, showArchivedCategories);
+  const categories = researchCategoriesInOrder(file, showArchivedCategories || categoryId !== undefined);
   const activeCategory =
-    categories.find((category) => category.id === selectedCategoryId) ?? categories[0] ?? null;
+    categories.find((category) => category.id === (categoryId ?? selectedCategoryId)) ?? categories[0] ?? null;
 
   const items = activeCategory
     ? researchItemsForCategory(file, activeCategory.id, {
@@ -64,7 +70,8 @@ export function ResearchPanel({ file, currentBeatId, onUpdate }: ResearchPanelPr
     : { unused: 0, used: 0 };
 
   return (
-    <div className="research">
+    <div className={categoryId ? 'research single-category' : 'research'}>
+      {categoryId ? null : (
       <aside className="research-categories">
         <div className="panel-header">
           <h2>Categories</h2>
@@ -141,6 +148,7 @@ export function ResearchPanel({ file, currentBeatId, onUpdate }: ResearchPanelPr
           Show archived
         </label>
       </aside>
+      )}
 
       <section className="research-items">
         <div className="panel-header">

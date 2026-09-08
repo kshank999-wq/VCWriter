@@ -3,24 +3,19 @@ import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import {
-  addLane,
-  addUnit,
   createProjectFile,
-  lanesInOrder,
   mergeProjects,
   projectFileSchema,
-  unitsForLane,
   updateBeat,
   type ProjectFile,
   type SyncConflict,
 } from '@vcwriter/domain';
-import { StructureBoard } from '../components/StructureBoard';
 import { RecoveryPanel } from '../components/RecoveryPanel';
 
 /**
- * Phase 8 hardening: the two promises in §15 that a reviewer cannot check by
- * reading the code — that a keyboard alone can reorder the board, and that
- * work a sync overwrote can be got back.
+ * Phase 8 hardening: the promise in §15 that a reviewer cannot check by
+ * reading the code — that work a sync overwrote can be got back. (Keyboard
+ * reordering of the timeline is covered in timeline.test.tsx.)
  */
 
 afterEach(cleanup);
@@ -35,69 +30,6 @@ function Harness({
   const [file, setFile] = useState(initial);
   return <>{children(file, (mutate) => setFile((current) => mutate(current)))}</>;
 }
-
-describe('reordering the structure board with a keyboard', () => {
-  const twoLanes = (): ProjectFile => addLane(createProjectFile({ title: 'Lighthouse', format: 'screenplay' }), { name: 'Subplot' }).file;
-
-  /** Lane names in the order they are drawn. */
-  const laneNames = () =>
-    screen
-      .getAllByLabelText(/^Lane name: /)
-      .map((element) => (element.getAttribute('aria-label') ?? '').replace('Lane name: ', ''));
-
-  const board = (initial: ProjectFile) =>
-    render(
-      <Harness initial={initial}>
-        {(file, update) => (
-          <StructureBoard file={file} selectedBeatId={null} onSelectBeat={() => undefined} onUpdate={update} />
-        )}
-      </Harness>,
-    );
-
-  it('moves a lane down with Alt and an arrow', () => {
-    // Until this existed, reordering — the board's whole point — could only be
-    // done by dragging, which a keyboard user cannot do at all.
-    const initial = twoLanes();
-    expect(lanesInOrder(initial).map((lane) => lane.name)).toEqual(['Main Plot', 'Subplot']);
-
-    board(initial);
-    const grip = screen.getByLabelText(/Reorder lane Main Plot/i);
-    fireEvent.keyDown(grip, { key: 'ArrowDown', altKey: true });
-
-    const names = laneNames();
-    expect(names).toEqual(['Subplot', 'Main Plot']);
-  });
-
-  it('does nothing at the ends of the list', () => {
-    board(twoLanes());
-    fireEvent.keyDown(screen.getByLabelText(/Reorder lane Main Plot/i), { key: 'ArrowUp', altKey: true });
-
-    const names = laneNames();
-    expect(names).toEqual(['Main Plot', 'Subplot']);
-  });
-
-  it('ignores an arrow without Alt, so arrowing around the board is still just navigation', () => {
-    board(twoLanes());
-    fireEvent.keyDown(screen.getByLabelText(/Reorder lane Main Plot/i), { key: 'ArrowDown' });
-
-    const names = laneNames();
-    expect(names).toEqual(['Main Plot', 'Subplot']);
-  });
-
-  it('moves a scene between lanes with Alt+Shift', () => {
-    const initial = twoLanes();
-    const subplot = lanesInOrder(initial)[1]!;
-    expect(unitsForLane(initial, subplot.id)).toHaveLength(0);
-
-    board(initial);
-    const grip = screen.getAllByLabelText(/Reorder .*Opening/i)[0]!;
-    fireEvent.keyDown(grip, { key: 'ArrowDown', altKey: true, shiftKey: true });
-
-    // The scene now sits under the second lane: its beat moved with it.
-    expect(screen.getByText('Subplot')).toBeDefined();
-    expect(screen.getAllByText(/No scenes in this lane/i)).toHaveLength(1);
-  });
-});
 
 describe('recovering what a sync overwrote', () => {
   const conflicted = (): { merged: ProjectFile; conflicts: SyncConflict[] } => {
