@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Paper } from './Paper';
 import {
   paginateProject,
   paginateUnit,
@@ -100,24 +101,7 @@ export function PagePreview({
 
       {message ? <p className="notice preview-message">{message}</p> : null}
 
-      <div className="pages">
-        {pages.map((page) => (
-          <section key={page.number} className="paper" aria-label={`Page ${page.number}`}>
-            {page.number > 1 ? <span className="paper-number">{page.number}.</span> : null}
-            {page.lines.map((line, index) => (
-              <div
-                // Lines have no identity of their own; they are a layout result.
-                key={`${page.number}-${index}`}
-                className={`paper-line ${line.type}`}
-                style={{ paddingLeft: `${line.indent}ch` }}
-              >
-                {line.text.length > 0 ? line.text : ' '}
-              </div>
-            ))}
-          </section>
-        ))}
-        {pages.length === 0 ? <p className="muted empty">Nothing written yet.</p> : null}
-      </div>
+      <Paper pages={pages} />
     </div>
   );
 }

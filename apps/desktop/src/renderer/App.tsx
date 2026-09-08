@@ -11,6 +11,7 @@ import {
   projectStats,
   unitsInStoryOrder,
   type BeatId,
+  type LaneId,
   type ProjectFile,
   type SyncConflict,
 } from '@vcwriter/domain';
@@ -20,6 +21,8 @@ import { Welcome } from './components/Welcome';
 import { MasterTimeline } from './components/MasterTimeline';
 import { MasterPanel } from './components/MasterPanel';
 import { Inspector } from './components/Inspector';
+import { Viewport, type ViewportView } from './components/Viewport';
+import { LaneDialog } from './components/LaneDialog';
 import { PageBar, type View } from './components/PageBar';
 import { PagePreview } from './components/PagePreview';
 import { AccountPanel } from './components/AccountPanel';
@@ -66,7 +69,12 @@ export default function App() {
   useEffect(() => applyScheme(scheme), [scheme]);
   const [timelineOpen, setTimelineOpen] = usePreference('timeline', true);
   const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
-  const split = useSplit({ key: 'timelineHeight', initial: 300, min: 140, reserve: 220 });
+  const [viewportView, setViewportView] = usePreference<ViewportView>('viewport', 'page');
+  const [openLaneId, setOpenLaneId] = useState<LaneId | null>(null);
+  // The Edit-page proportions (addendum 02 §3): a quarter for the script,
+  // and of the rest, just under half for the viewport above the lanes.
+  const columns = useSplit({ key: 'leftWidth', initial: 0.25, min: 300, reserve: 640, axis: 'x' });
+  const rows = useSplit({ key: 'viewportHeight', initial: 0.48, min: 160, reserve: 200, axis: 'y' });
 
   const file = project.file;
   const beats = useMemo(() => (file ? beatsInStoryOrder(file) : []), [file]);
@@ -250,7 +258,7 @@ export default function App() {
       ]
         .filter(Boolean)
         .join(' ')}
-      style={{ '--timeline-height': `${split.width}px` } as React.CSSProperties}
+      style={{ '--left-width': `${columns.size}px`, '--viewport-height': `${rows.size}px` } as React.CSSProperties}
     >
       <header className="titlebar">
         <div className="titlebar-left">
@@ -333,46 +341,71 @@ export default function App() {
 
       {writing ? (
         <div className="workspace-body">
-          {showTimeline ? (
+          {/* The left column, full height: the Script and the Research tabs. */}
+          <MasterPanel
+            file={file}
+            selectedBeatId={selectedBeat?.id ?? null}
+            onSelectBeat={setSelectedBeatId}
+            onUpdate={project.update}
+            focusMode={focused}
+            focusTitleBeatId={focusTitleBeatId}
+            onTitleFocused={clearTitleFocus}
+            dictationShortcut={dictationShortcut}
+          />
+          {focused ? null : (
             <>
-              <MasterTimeline
-                file={file}
-                selectedBeatId={selectedBeat?.id ?? null}
-                onSelectBeat={setSelectedBeatId}
-                onUpdate={project.update}
-                pixelsPerPage={pixelsPerPage}
-                onZoom={setPixelsPerPage}
-                inspectorOpen={inspectorOpen}
-                onToggleInspector={() => setInspectorOpen(!inspectorOpen)}
-                onAddScene={addSceneAfterSelection}
-                onAddBeat={addBeatAfterSelection}
-                onAddLane={addLaneToProject}
-                onAddAct={addActAtSelection}
-              />
               <div
-                className="divider"
+                className="divider vertical"
                 role="separator"
-                aria-orientation="horizontal"
-                aria-label="Resize the timeline"
-                {...split.dividerProps}
+                aria-orientation="vertical"
+                aria-label="Resize the script column"
+                {...columns.dividerProps}
               />
+              {/* The stage: viewport and inspector above, the lanes below. */}
+              <div className="stage">
+                <div className="stage-top">
+                  <Viewport
+                    file={file}
+                    selectedBeatId={selectedBeat?.id ?? null}
+                    onSelectBeat={setSelectedBeatId}
+                    onUpdate={project.update}
+                    view={viewportView}
+                    onView={setViewportView}
+                  />
+                  {showInspector ? (
+                    <Inspector file={file} selectedBeatId={selectedBeat?.id ?? null} onUpdate={project.update} />
+                  ) : null}
+                </div>
+                {showTimeline ? (
+                  <>
+                    <div
+                      className="divider"
+                      role="separator"
+                      aria-orientation="horizontal"
+                      aria-label="Resize the viewport"
+                      {...rows.dividerProps}
+                    />
+                    <MasterTimeline
+                      file={file}
+                      selectedBeatId={selectedBeat?.id ?? null}
+                      onSelectBeat={setSelectedBeatId}
+                      onUpdate={project.update}
+                      pixelsPerPage={pixelsPerPage}
+                      onZoom={setPixelsPerPage}
+                      inspectorOpen={inspectorOpen}
+                      onToggleInspector={() => setInspectorOpen(!inspectorOpen)}
+                      onAddScene={addSceneAfterSelection}
+                      onAddBeat={addBeatAfterSelection}
+                      onAddLane={addLaneToProject}
+                      onAddAct={addActAtSelection}
+                      onOpenLane={setOpenLaneId}
+                    />
+                  </>
+                ) : null}
+              </div>
             </>
-          ) : null}
-          <div className="editor-windows">
-            <MasterPanel
-              file={file}
-              selectedBeatId={selectedBeat?.id ?? null}
-              onSelectBeat={setSelectedBeatId}
-              onUpdate={project.update}
-              focusMode={focused}
-              focusTitleBeatId={focusTitleBeatId}
-              onTitleFocused={clearTitleFocus}
-              dictationShortcut={dictationShortcut}
-            />
-            {showInspector ? (
-              <Inspector file={file} selectedBeatId={selectedBeat?.id ?? null} onUpdate={project.update} />
-            ) : null}
-          </div>
+          )}
+          <LaneDialog file={file} laneId={openLaneId} onClose={() => setOpenLaneId(null)} onUpdate={project.update} />
         </div>
       ) : (
         <main className="full">

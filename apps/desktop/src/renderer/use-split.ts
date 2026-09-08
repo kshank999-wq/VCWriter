@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
- * Small per-machine preferences: panel widths, what is shown, zoom. These are
- * not project data (a colleague opening the file should not inherit my
- * divider position), so they live in the renderer's storage rather than in
+ * Small per-machine preferences: panel sizes, what is shown, zoom, scheme.
+ * These are not project data (a colleague opening the file should not inherit
+ * my divider position), so they live in the renderer's storage rather than in
  * the document. Every read is guarded: storage can be absent or refuse.
  */
 export const readPreference = <T>(key: string, fallback: T): T => {
@@ -37,20 +37,30 @@ export const usePreference = <T>(key: string, fallback: T): [T, (next: T) => voi
 
 interface SplitOptions {
   key: string;
+  /** Pixels for the first pane, or a fraction of the container when under 1. */
   initial: number;
   min: number;
   /** Leave at least this much for whatever is on the other side. */
   reserve: number;
+  /** `x`: the divider moves left–right and sizes a column. `y`: up–down, a row. */
+  axis?: 'x' | 'y';
 }
 
 /**
- * A draggable divider. The width is the left pane's, in pixels, clamped so
+ * A draggable divider. The size is the first pane's, in pixels, clamped so
  * neither side can be dragged out of existence; it is remembered per machine.
+ * The divider element's parent is the container the size is measured in.
  */
-export const useSplit = ({ key, initial, min, reserve }: SplitOptions) => {
-  const [width, setWidth] = usePreference(key, initial);
+export const useSplit = ({ key, initial, min, reserve, axis = 'x' }: SplitOptions) => {
+  const [size, setSize] = usePreference<number | null>(key, null);
   const container = useRef<HTMLElement | null>(null);
   const dragging = useRef(false);
+  const extent = () => {
+    const box = container.current?.getBoundingClientRect();
+    if (box) return axis === 'x' ? box.width : box.height;
+    return axis === 'x' ? window.innerWidth : window.innerHeight;
+  };
+  const resolved = size ?? (initial < 1 ? Math.round(initial * extent()) : initial);
 
   const onPointerDown = useCallback((event: React.PointerEvent<HTMLElement>) => {
     dragging.current = true;
@@ -63,25 +73,27 @@ export const useSplit = ({ key, initial, min, reserve }: SplitOptions) => {
     (event: React.PointerEvent<HTMLElement>) => {
       if (!dragging.current || !container.current) return;
       const box = container.current.getBoundingClientRect();
-      const next = Math.round(Math.min(Math.max(event.clientX - box.left, min), box.width - reserve));
-      setWidth(next);
+      const along = axis === 'x' ? event.clientX - box.left : event.clientY - box.top;
+      const total = axis === 'x' ? box.width : box.height;
+      setSize(Math.round(Math.min(Math.max(along, min), total - reserve)));
     },
-    [min, reserve, setWidth],
+    [axis, min, reserve, setSize],
   );
 
   const onPointerUp = useCallback(() => {
     dragging.current = false;
   }, []);
 
-  // The window can shrink under a remembered width; keep the right side alive.
+  // The window can shrink under a remembered size; keep the other side alive.
   useEffect(() => {
     const clamp = () => {
-      const available = container.current?.getBoundingClientRect().width ?? window.innerWidth;
-      if (width > available - reserve) setWidth(Math.max(min, available - reserve));
+      const available = extent();
+      if (resolved > available - reserve) setSize(Math.max(min, available - reserve));
     };
     window.addEventListener('resize', clamp);
     return () => window.removeEventListener('resize', clamp);
-  }, [width, min, reserve, setWidth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolved, min, reserve, setSize]);
 
-  return { width, dividerProps: { onPointerDown, onPointerMove, onPointerUp } };
+  return { size: resolved, dividerProps: { onPointerDown, onPointerMove, onPointerUp } };
 };

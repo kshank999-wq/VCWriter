@@ -531,7 +531,7 @@ const withoutLinksTouching = (file: ProjectFile, removedIds: ReadonlySet<string>
 export const updateLane = (
   file: ProjectFile,
   laneId: LaneId,
-  patch: Partial<Pick<Lane, 'name' | 'kind' | 'color' | 'description' | 'collapsed'>>,
+  patch: Partial<Pick<Lane, 'name' | 'kind' | 'color' | 'description' | 'arc' | 'collapsed'>>,
 ): ProjectFile => {
   if (!file.lanes.some((lane) => lane.id === laneId)) throw new DomainError(`Lane ${laneId} does not exist`);
   return touchProject({

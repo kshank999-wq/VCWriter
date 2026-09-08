@@ -42,7 +42,10 @@ export const laneSchema = z.object({
   kind: laneKindSchema.default('custom'),
   /** Hex colour the timeline draws the lane's track and blocks in. */
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#5b7fa6'),
+  /** What this thread of the story is about: its summary. */
   description: z.string().default(''),
+  /** How it develops: the arc, as the writer works it out (addendum 02 §4). */
+  arc: z.string().default(''),
   orderKey: orderKey(),
   collapsed: z.boolean().default(false),
   ...timestamps,

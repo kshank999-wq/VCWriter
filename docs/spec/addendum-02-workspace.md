@@ -9,15 +9,16 @@ how those are arranged on screen. This addendum does.
 
 ## 1. Objective
 
-The workspace behaves like a non-linear video editor, for writing. Across
-the top, full width, is the **master timeline**: the whole story in order,
-its plot lanes as tracks, scenes as blocks in the lanes, beats inside the
-scenes, and every setup, payoff and link drawn across it as a curve from
-where it starts to where it lands. Under the timeline are the editor
-windows: the **master panel** on the left, where the script itself is
-written and where research lives under tabs, and the **inspector** on the
-right, with the properties of whatever is selected. Selecting anything in
-any window selects it everywhere.
+The workspace is laid out like a non-linear video editor's edit page, for
+writing. The left quarter, top to bottom, is the **master panel**: the
+script itself, and under a second tab the research. To its right, above, is
+the **viewport**, where an editor shows the picture and this shows the
+story: the selected scene as it prints, or the whole story as a diagram of
+its threads. Beside the viewport is the **inspector**, with the properties
+of whatever is selected. Below them is the **master timeline**: the story in
+order, its plot lanes as tracks, scenes as blocks in the lanes, beats inside
+the scenes, and every setup, payoff and link drawn across it as a curve.
+Selecting anything in any window selects it everywhere.
 
 The arrangement is familiar to anyone who has used Causality (Hollywood
 Camera Work) — script, lanes and blocks, properties — and the finish is
@@ -37,7 +38,9 @@ parentheses are retired.
 
 | Name | What it is |
 | --- | --- |
-| **Master timeline** (was: structure board, timeline strip) | The story in order, across the top: ruler, acts, links, then one track per plot lane |
+| **Master timeline** (was: structure board, timeline strip) | The story in order, below the viewport: ruler, acts, links, then one track per plot lane |
+| **Viewport** | Above the timeline, where the viewer would be: the **Page** view and the **Threads** view |
+| **Plot pop-up** | The plot's summary and arc, opened from a lane's track header |
 | **Plot lane** | A track on the master timeline; a story thread (§5.1) |
 | **Scene block** (was: unit column, scene group) | A scene or chapter as it appears in a lane, with its beats inside |
 | **Links track** | The row of the timeline where setups, payoffs and story links are drawn |
@@ -51,40 +54,40 @@ parentheses are retired.
 
 ## 3. Layout
 
-The Write page, which is the workspace:
+The Write page, which is the workspace, in the proportions of an editor's
+edit page: a quarter for the script column, and of the rest just under half
+for the viewport above the lanes.
 
 ```
-┌ title bar ──────────────────────────────────────────────────────────────┐
-│ VC WRITER · Project title                 pages · beats · words  Focus … │
-├──────────────────────────────────────────────────────────────────────────┤
-│ MASTER TIMELINE                                                          │
-│ Pages   │ 1        │ 2      │ 4              │ 5   │                     │
-│ Acts    │ ACT I ────────────┤ ACT II ─────────────────                   │
-│ Links   │   ╭───────────────╮      ╭──────╮                              │
-│ Main    │ [Sc 1 ▸ ▸ ] [Sc 2 ▸ ]   [Sc 4 ▸ ▸ ▸ ]                          │
-│ Subplot │              [Sc 3 ▸ ]         [Sc 5 ▸ ]                       │
-│ Theme   │                                                                │
-│ + Scene  + Beat  + Lane  + Act        zoom ───●───        Inspector ▣    │
-├══════════════════════ divider ═══════════════════════════════════════════┤
-│ MASTER PANEL                                          │ INSPECTOR        │
-│ Script │ Research                                     │ Beat             │
-│ ───────────────────────────────────────────────────── │  title           │
-│ ▾ Sc 1 · HOME LIFE                        p. 1        │  status          │
-│   ▾ Home life                              ● drafting │  summary         │
-│     INT. SANCHEZ HOME - KITCHEN - MORNING             │ Scene            │
-│     He listens for the voices of God…                 │  …               │
-│   ▾ On the corner                          ○ planned  │ Lane             │
-├──────────────────────────────────────────────────────────────────────────┤
-│            WRITE  PREVIEW  EDITORS  READ BACK  CAPTURES  RECOVERY        │
-└──────────────────────────────────────────────────────────────────────────┘
+┌ title bar ─────────────────────────────────────────────────────────────────┐
+│ VC WRITER · Project title                    pages · beats · words  Focus ⚙ │
+├──────────────┬────────────────────────────────────────────────┬────────────┤
+│ MASTER PANEL │ VIEWPORT   Page | Threads   SC 2 · MEGA CHURCH  p. 1 / 4 │ INSPECTOR  │
+│ Script│Resrch│ ┌──────────────────────────────────────────┐  │ Beat       │
+│ ─────────────│ │                                          │  │  title     │
+│ ▾ Sc 1 · HOME│ │      the scene, as it prints             │  │  status    │
+│   ▾ Home life│ │                                          │  │ Scene      │
+│     INT. …   │ └──────────────────────────────────────────┘  │ Lane       │
+│     He liste…│  1 / 13 · Home life     ⏮ ◀ ▶ ⏭              │ Act        │
+│   ▾ On the … ├════════════ divider ═══════════════════════════┴────────────┤
+│     …        │ Pages │ 1        │ 2      │ 4              │ 5   │           │
+│              │ Acts  │ ACT I ────────────┤ ACT II ─────────────────         │
+│              │ Links │   ╭───────────────╮      ╭──────╮                    │
+│              │ P1 Main    [Sc 1 ▸ ▸ ] [Sc 2 ▸ ]   [Sc 4 ▸ ▸ ▸ ]             │
+│              │ P2 Subplot              [Sc 3 ▸ ]         [Sc 5 ▸ ]          │
+│              │ + Scene  + Beat  + Lane  + Act    zoom ───●───   Inspector ▣ │
+├──────────────┴─────────────────────────────────────────────────────────────┤
+│              WRITE  PREVIEW  EDITORS  READ BACK  CAPTURES  RECOVERY        │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- The divider between the timeline and the editor windows drags. Its
-  position is remembered per machine (a preference, not project data).
+- The divider between the master panel and the stage drags, as does the one
+  between the viewport and the timeline. Both positions are remembered per
+  machine (a preference, not project data).
 - The inspector is 300px and can be hidden from the timeline toolbar or with
   `Ctrl/Cmd+Shift+I`; hidden is remembered too.
-- The timeline can be hidden with `Ctrl/Cmd+Shift+L` to give the editor
-  windows the height, and shown again the same way.
+- The timeline can be hidden with `Ctrl/Cmd+Shift+L` to give the viewport
+  the height, and shown again the same way.
 - Focus mode (`Ctrl/Cmd+Shift+F`, `Escape` to leave) keeps only the Script,
   full width, and dims the title bar. Unchanged from §6.
 - Below 1100px of window width the inspector hides itself.
@@ -117,15 +120,22 @@ names its tracks:
    that ends in the air; a story link is a thin muted curve. Hovering names
    it; clicking selects the scene it lands in. This is the track that shows
    whether the story's promises are kept, in one look.
-4. **One track per plot lane**, in lane order. The header carries the lane's
-   colour swatch, its name (rename in place), scene count and collapse. In
+4. **One track per plot lane**, in lane order. The header carries the
+   track's code — `P1`, `P2`, the way an editor labels `V1`, `V2` — its name
+   (rename in place), scene count and collapse. Clicking the code opens the
+   **plot pop-up**: the plot's name, kind and colour, its **summary**, and
+   its **arc** — how the thread develops — as text to think in, over the
+   workspace. Closing it returns to the lanes with nothing else changed;
+   what was typed is kept as it was typed. In
    the body, that lane's scene blocks sit at their story position, and the
    space a scene in *another* lane occupies is left empty, so blocks line up
    vertically across lanes and the eye can read the interleaving: main plot,
    subplot, main plot. A collapsed lane is one thin row of bars.
 
 A **scene block** shows its sequence label and title in a header and its
-beats as compact rows — a status glyph and the title — stacked in order.
+beats as compact rows — a status glyph, the title, and at the right a dot
+per character who speaks in the beat, in the character's colour (§6) —
+stacked in order.
 Clicking a beat row selects it; clicking the header selects the scene's
 first beat. Blocks collapse to a header. The **playhead** is a gold rule
 through every track at the left edge of the selected beat's scene, the way
@@ -148,7 +158,48 @@ Everything reorders by drag and by keyboard, as today:
   earlier/later in the story, or a lane up/down; `Alt+Shift+↑/↓` moves a
   beat to the previous/next scene, or a scene to the previous/next lane.
 
-## 5. Master panel: Script
+## 5. Viewport
+
+Where an editor shows the picture, this shows the story. A header names
+the selected scene in the centre and counts pages at the right the way a
+viewer shows a clip name and a timecode; a transport row underneath steps
+to the first, previous, next and last beat in story order. Two views, as
+tabs at the left of the header:
+
+**Page.** The selected scene as it prints: the same paginated pages the
+Preview page and the PDF produce, white on black. Selecting a beat anywhere
+turns the viewport to its scene.
+
+**Threads.** The whole story as a connected diagram: one column per scene
+in story order, and across the columns the threads that run through them.
+
+- *Scenes*: each scene as a node coloured by its lane, with a line per lane
+  joining that lane's scenes, so a subplot reads as its own thread weaving
+  through the main plot.
+- *Promises*: every setup drawn as a curve to the scene where it pays off,
+  an unpaid one as a dashed curve into the air, and every scene-level story
+  link as a thin curve — the links track of the timeline, in the same
+  colours, at a size that can be read.
+- *Characters*: a row per character, coloured, with a dot in each scene the
+  character speaks in and a line joining them. A character "speaks in" a
+  beat when a character cue names them, so the row is derived from the
+  script and never falls out of date with it.
+- *Beats*: each scene's beats as chips, each carrying a dot per character in
+  it in that character's colour, and the links the writer has drawn between
+  beats as dashed curves.
+
+Dragging from one beat chip to another draws a link between them (a §7.4
+`relates_to` link); clicking a link removes it. Each thread is a layer with
+a toggle, so the diagram can be reduced to the one question being asked:
+where does this character go quiet, which promise is still open, where do
+the two plots touch.
+
+Character colours are assigned in order of first line and used everywhere a
+cast is drawn: the chips here, the dots on the timeline's beat rows. They
+are chosen to read on the dark and the light schemes and to stay apart from
+the lane palette; a character is not a lane.
+
+## 6. Master panel: Script
 
 The manuscript, all of it, in the order it will print (§5, §13): every scene
 in story order, every beat in its scene, every element in its beat. It reads
@@ -178,7 +229,7 @@ Large projects: a collapsed beat renders only its bar. Beyond that the view
 renders every beat, and the performance test in the domain package is the
 gate; when it fails, the loader lazy-reads beats, not the view (ADR 0002).
 
-## 6. Master panel: Research
+## 7. Master panel: Research
 
 The second tab of the master panel, with its own row of tabs beneath it, one
 per kind of material:
@@ -195,7 +246,7 @@ current beat" and "link to the current beat" act on the beat selected in
 the Script or on the timeline, which is the workflow §7.2 describes: read
 the material, write the scene, mark it used.
 
-## 7. Inspector
+## 8. Inspector
 
 The properties of the current selection, as a column of collapsible
 sections, top to bottom:
@@ -210,7 +261,7 @@ sections, top to bottom:
 Every field writes through the same domain mutations the panes use, so an
 edit here shows in the Script and on the timeline at once.
 
-## 8. Page bar
+## 9. Page bar
 
 The row of pages along the bottom of the window, centred, in the display
 face at 11px uppercase, the current page in gold with a gold rule above it:
@@ -220,7 +271,7 @@ identity on the left and its state and actions on the right. Counts stay on
 the page names (conflicts on Recovery); the research and setup counts move
 to the master panel's Research tab.
 
-## 9. Story order is global
+## 10. Story order is global
 
 This addendum changes one rule of §5 and §13. Until now the print order was
 *lane order, then scene order within the lane*: every scene of the main plot
@@ -239,7 +290,7 @@ order they printed before — lane by lane — so nothing changes in the
 manuscript until the writer moves something. The migration takes the usual
 pre-migration snapshot.
 
-## 10. Act markers
+## 11. Act markers
 
 A marker is a label at a position in the story order: `{ id, title,
 kind: 'act' | 'sequence' | 'note', unitId }`, meaning *this scene starts
@@ -254,7 +305,7 @@ scene in story order, or goes with the last scene if there is none.
 Markers are stored in the project file (`markers[]`) and synced like any
 other structural record (`story_markers`).
 
-## 11. Keyboard
+## 12. Keyboard
 
 In addition to §5's reordering keys and §6's writing keys:
 
@@ -268,7 +319,7 @@ In addition to §5's reordering keys and §6's writing keys:
 Every control on the timeline is a focusable element with an accessible
 name; the reorder keys work from the same elements that drag (§15).
 
-## 12. Preferences
+## 13. Preferences
 
 A gear on the title bar opens Preferences. These are kept on the machine,
 not in the project file — a collaborator opening the file must not inherit
@@ -284,7 +335,7 @@ anyone's colours — alongside the layout preferences of §3.
   and a dark page is a strain over a long day. Off, the Script follows the
   scheme.
 
-## 13. Later
+## 14. Later
 
 Named so that nobody mistakes their absence for an oversight:
 
@@ -293,14 +344,15 @@ Named so that nobody mistakes their absence for an oversight:
   monitor. Electron supports it; it is a later addendum because it needs a
   second render root sharing one document, which is a change to the
   project state plumbing, not to the panes.
-- Causal links between beats ("must be caused", "create cause"). The links
-  track draws §7.3 setups and §7.4 links; a dependency graph with its own
-  rules is a later addendum.
-- Character lanes with per-scene tick marks. Characters in a beat are shown
-  in the inspector; a lane per character is a later addendum.
+- Causal links between beats ("must be caused", "create cause"). The
+  Threads view draws and edits §7.4 links between beats; a link that
+  *means* "this must happen before that", with rules the timeline enforces,
+  is a later addendum.
+- Character lanes on the timeline itself. The Threads view has a row per
+  character; a lane per character among the plot lanes is a later addendum.
 - Timing in minutes. Pages are the industry's unit and the ruler uses them.
 
-## 14. Acceptance
+## 15. Acceptance
 
 - The Script shows every beat of the fixture project in print order, and
   typing in the third beat changes the third beat and nothing else.

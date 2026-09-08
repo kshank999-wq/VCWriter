@@ -116,10 +116,14 @@ button.twisty {
 /* -------------------------------------------------------------------- body */
 
 .workspace-body {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: var(--left-width, 25%) 7px minmax(0, 1fr);
   flex: 1;
   min-height: 0;
+}
+
+.workspace.focus-mode .workspace-body {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 main.full {
@@ -149,16 +153,402 @@ main {
   touch-action: none;
 }
 
+.divider.vertical {
+  height: auto;
+  width: 7px;
+  cursor: col-resize;
+  border: none;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
 .divider:hover,
 .divider:active {
   background: var(--gold-deep);
 }
 
-.editor-windows {
+/* The stage: viewport and inspector above, the lanes below (addendum 02 §3). */
+.stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.stage-top {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  height: var(--viewport-height, 48%);
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.stage .timeline {
+  flex: 1;
+  height: auto;
+}
+
+/* ---------------------------------------------------------------- viewport */
+
+.viewport {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: var(--ink);
+}
+
+.viewport-head {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: 30px;
+  padding: 0 8px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--ui);
+}
+
+.viewport-head .tabs .tab {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 10.5px;
+  padding: 3px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+
+.viewport-head .tabs .tab.selected {
+  background: transparent;
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+.viewport-title {
+  text-align: center;
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.viewport-counter {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.viewport-body {
   flex: 1;
   min-height: 0;
+  overflow: auto;
+}
+
+.viewport-body.page-view {
+  padding: 14px 0;
+}
+
+.viewport-body.page-view .pages {
+  padding: 0;
+  gap: 14px;
+}
+
+.viewport-body.page-view .paper {
+  transform-origin: top center;
+  box-shadow: 0 2px 12px color-mix(in srgb, #000 40%, transparent);
+}
+
+.transport {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  font-size: var(--ui);
+}
+
+.transport-buttons {
+  display: flex;
+  gap: 2px;
+}
+
+.transport-buttons .tool {
+  padding: 2px 9px;
+  font-size: 11px;
+}
+
+.transport-beat {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------------- threads */
+
+.threads {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.threads-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10.5px;
+  flex: 0 0 auto;
+}
+
+.threads-toolbar .toggle {
+  padding: 4px 6px;
+  font-size: 10.5px;
+}
+
+.threads-hint {
+  font-size: 10px;
+}
+
+.threads-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.threads-canvas {
+  display: block;
+  font-size: 11px;
+}
+
+.thread-label {
+  fill: var(--muted);
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 9.5px;
+}
+
+.thread-row-label {
+  fill: var(--muted);
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 9.5px;
+}
+
+.thread-column-rule {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.thread-lane {
+  fill: none;
+  stroke-width: 2;
+  opacity: 0.6;
+}
+
+.thread-scene rect:first-of-type {
+  fill: var(--panel-2);
+  stroke-width: 1;
+  cursor: pointer;
+}
+
+.thread-scene.selected rect:first-of-type {
+  fill: var(--panel);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--gold) 50%, transparent));
+}
+
+.thread-scene-title {
+  fill: var(--text);
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10.5px;
+  pointer-events: none;
+}
+
+.thread-scene-meta {
+  fill: var(--muted);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.thread-character polyline {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  opacity: 0.8;
+}
+
+.thread-character circle {
+  fill: currentColor;
+  cursor: pointer;
+}
+
+.thread-character-name {
+  font-size: 10px;
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.thread-beat rect {
+  fill: var(--panel-2);
+  stroke: var(--border);
+  stroke-width: 1;
+  cursor: grab;
+}
+
+.thread-beat:hover rect {
+  stroke: var(--gold-deep);
+}
+
+.thread-beat.selected rect {
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  fill: var(--panel);
+}
+
+.thread-beat-title {
+  fill: var(--text);
+  font-size: 10.5px;
+  pointer-events: none;
+}
+
+.beat-link path {
+  fill: none;
+  stroke: var(--gold-deep);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  cursor: pointer;
+}
+
+.beat-link:hover path {
+  stroke: var(--red);
+  stroke-width: 2;
+}
+
+.thread-drag {
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------- lane dialog */
+
+.lane-code {
+  font-family: var(--display);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  padding: 1px 5px;
+  background: transparent;
+  border: 1px solid;
+  border-radius: 2px;
+  margin-right: 2px;
+  flex: 0 0 auto;
+}
+
+.lane-code:hover {
+  background: var(--panel-2);
+}
+
+.cast {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.cast-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+dialog.lane-dialog {
+  width: min(640px, calc(100vw - 48px));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+dialog.lane-dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 65%, transparent);
+}
+
+dialog.lane-dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 8px 8px 14px;
+  border-bottom: 1px solid var(--border);
+  border-left: 4px solid var(--gold-deep);
+}
+
+.lane-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.lane-dialog-title .bar-title {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 3px 6px;
+  font-size: 13px;
+}
+
+.lane-dialog-title .bar-title:hover,
+.lane-dialog-title .bar-title:focus {
+  border-color: var(--border);
+}
+
+.lane-dialog-title select {
+  font-size: 11.5px;
+  padding: 3px 6px;
+}
+
+.lane-dialog-body {
+  padding: 14px 18px 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.lane-dialog-body .field {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.lane-dialog-body textarea {
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.55;
+  background: var(--ink);
 }
 
 /* ----------------------------------------------------------- master timeline */
@@ -688,7 +1078,6 @@ button.tool:disabled {
   flex-direction: column;
   min-height: 0;
   min-width: 0;
-  border-right: 1px solid var(--border);
 }
 
 .master-tabs,
@@ -1441,4 +1830,57 @@ button.scheme.selected {
 .scheme-description {
   font-size: 11px;
   color: var(--muted);
+}
+
+/* ------------------------------------------------------ narrow script column */
+
+/* At a quarter of the window the Script cannot show a 60-column page with a
+   gutter beside it. Below 640px the gutter goes, the element type moves to
+   the top right of its element and appears on hover, the type steps down a
+   size, and the lane chip leaves the scene bar. The text still wraps at the
+   page's column width, so what is written is what will print. */
+.story {
+  container-type: inline-size;
+}
+
+@container (max-width: 640px) {
+  .page-column {
+    margin-left: 6px;
+    font-size: 12.5px;
+    width: auto !important;
+    max-width: 100%;
+  }
+
+  .element textarea {
+    width: min(var(--width, 100%), calc(100% - var(--indent, 0ch))) !important;
+  }
+
+  .element-type {
+    left: auto;
+    right: 0;
+    top: -14px;
+    width: auto;
+    font-size: 10px;
+    text-align: right;
+    z-index: 1;
+  }
+
+  .scene-bar .lane-chip {
+    display: none;
+  }
+
+  .beat-block {
+    margin-left: 4px;
+    padding-left: 8px;
+  }
+
+  .story {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* The viewport's page scales to fit its width (set from a ResizeObserver). */
+.viewport-body.page-view .paper {
+  zoom: var(--page-scale, 1);
 }

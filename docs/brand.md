@@ -32,7 +32,7 @@ text. It is a representation of paper and is exempt from the palette.
 
 The palette above is the *Gold* scheme, the default. Preferences offer three
 others (Graphite, Slate, Parchment) that swap the token values and nothing
-else; see `docs/spec/addendum-02-workspace.md` §12.
+else; see `docs/spec/addendum-02-workspace.md` §13.
 
 ## Type
 
@@ -63,14 +63,16 @@ labels the same at 11–12px in `--muted`.
 
 ## Layout
 
-The desktop workspace is laid out like a non-linear video editor
-(`docs/spec/addendum-02-workspace.md`): across the top, the master timeline —
-the story in order, one track per plot lane, scenes as blocks sized to their
-pages, beats inside the blocks, and setups, payoffs and links drawn as curves
-on their own track; below it, the editor windows — the script on the left
-with research under tabs, the inspector on the right; and the pages along the
-bottom. The finish is an editing application's: flat surfaces stepped by one
-shade, hairlines, small uniform controls, a playhead, and the gold spent on
+The desktop workspace is laid out like a non-linear video editor's edit page
+(`docs/spec/addendum-02-workspace.md`): the left quarter is the script, with
+research under a second tab; to its right, above, the viewport — the selected
+scene as it prints, or the story as a diagram of its threads — with the
+inspector beside it; below them the master timeline — the story in order,
+one track per plot lane, scenes as blocks sized to their pages, beats inside
+the blocks, and setups, payoffs and links drawn as curves on their own
+track; and the pages along the bottom. The finish is an editing
+application's: flat surfaces stepped by one shade, hairlines, small uniform
+controls, track codes, a playhead, a transport row, and the gold spent on
 selection and the working accent rather than on ornament. Selecting a beat
 anywhere selects it everywhere.
 

@@ -11,6 +11,7 @@ import {
   removeUnit,
   spanWidth,
   storyLayout,
+  threadLayout,
   timelineArcs,
   unitsForLane,
   updateLane,
@@ -42,6 +43,8 @@ interface MasterTimelineProps {
   onAddBeat(): void;
   onAddLane(): void;
   onAddAct(): void;
+  /** The track header was clicked: open the plot's summary and arc. */
+  onOpenLane(laneId: LaneId): void;
 }
 
 const HEAD_WIDTH = 168;
@@ -72,10 +75,12 @@ export function MasterTimeline({
   onAddBeat,
   onAddLane,
   onAddAct,
+  onOpenLane,
 }: MasterTimelineProps) {
   const drag = useDragDrop();
   const layout = useMemo(() => storyLayout(file), [file]);
   const arcs = useMemo(() => timelineArcs(file), [file]);
+  const threads = useMemo(() => threadLayout(file), [file]);
   const { spans, lanes } = layout;
   const noun = file.project.format === 'novel' || file.project.format === 'short_story' ? 'chapter' : 'scene';
 
@@ -225,7 +230,10 @@ export function MasterTimeline({
               selectedBeatId={selectedBeatId}
               selectedUnitId={selectedUnitId}
               drag={drag}
+              speakers={threads.speakers}
+              colours={threads.colours}
               onSelectBeat={onSelectBeat}
+              onOpenLane={onOpenLane}
               onUpdate={onUpdate}
               onDropUnit={dropUnitAt}
               onDropBeat={dropBeatAt}
@@ -401,7 +409,10 @@ interface LaneTrackProps {
   selectedBeatId: BeatId | null;
   selectedUnitId: string | null;
   drag: ReturnType<typeof useDragDrop>;
+  speakers: Map<BeatId, string[]>;
+  colours: Map<string, string>;
   onSelectBeat(beatId: BeatId): void;
+  onOpenLane(laneId: LaneId): void;
   onUpdate: MasterTimelineProps['onUpdate'];
   onDropUnit(toLaneId: LaneId, index: number): void;
   onDropBeat(toUnitId: StructuralUnitId, index: number): void;
@@ -421,7 +432,10 @@ function LaneTrack({
   selectedBeatId,
   selectedUnitId,
   drag,
+  speakers,
+  colours,
   onSelectBeat,
+  onOpenLane,
   onUpdate,
   onDropUnit,
   onDropBeat,
@@ -482,6 +496,18 @@ function LaneTrack({
           onClick={() => onUpdate((current) => updateLane(current, lane.id, { collapsed: !lane.collapsed }))}
         >
           {lane.collapsed ? '▸' : '▾'}
+        </button>
+        {/* The track's code, the way an editor labels V1, V2: click it to
+            open the plot's summary and arc. */}
+        <button
+          type="button"
+          className="lane-code"
+          style={{ borderColor: lane.color, color: lane.color }}
+          title={`Open ${lane.name}: summary and arc`}
+          aria-label={`Open plot ${lane.name}`}
+          onClick={() => onOpenLane(lane.id)}
+        >
+          P{laneIndex + 1}
         </button>
         <InlineText
           value={lane.name}
@@ -631,6 +657,12 @@ function LaneTrack({
                       </span>
                       {/* The internal beat title is an authoring reference only (§5.3). */}
                       <span className="beat-row-title">{beat.title || 'Untitled beat'}</span>
+                      {/* Who speaks in the beat, as the cast's colours (addendum 02 §6). */}
+                      <span className="cast" aria-hidden="true">
+                        {(speakers.get(beat.id) ?? []).slice(0, 3).map((name) => (
+                          <span key={name} className="cast-dot" style={{ background: colours.get(name) }} title={name} />
+                        ))}
+                      </span>
                     </button>
                     <button
                       type="button"

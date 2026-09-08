@@ -135,7 +135,13 @@ export function BeatBody({ file, beat, onUpdate, onActivate }: BeatBodyProps) {
         const indent = layout.indent[element.type] ?? 0;
         const width = layout.width[element.type] ?? layout.columns;
         return (
-          <div key={element.id} className={`element element-${element.type}`}>
+          <div
+            key={element.id}
+            className={`element element-${element.type}`}
+            // The page geometry as variables, so a narrow column can trade the
+            // fixed width for the room it has without losing the indent.
+            style={{ '--indent': `${indent}ch`, '--width': `${width}ch` } as React.CSSProperties}
+          >
             <select
               className="element-type"
               value={element.type}
@@ -153,7 +159,7 @@ export function BeatBody({ file, beat, onUpdate, onActivate }: BeatBodyProps) {
                 if (node) inputs.current.set(element.id, node);
                 else inputs.current.delete(element.id);
               }}
-              style={{ marginLeft: `${indent}ch`, width: `${width}ch` }}
+              style={{ marginLeft: 'var(--indent)', width: 'var(--width)' }}
               rows={Math.max(1, Math.ceil((element.text.length || 1) / width) + element.text.split('\n').length - 1)}
               placeholder={element.type.replace(/_/g, ' ')}
               value={element.text}

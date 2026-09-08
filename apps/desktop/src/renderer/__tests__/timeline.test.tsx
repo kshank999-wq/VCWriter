@@ -64,6 +64,7 @@ const timeline = (initial: ProjectFile, extra: Partial<React.ComponentProps<type
           onAddBeat={() => undefined}
           onAddLane={() => undefined}
           onAddAct={() => undefined}
+          onOpenLane={() => undefined}
           {...extra}
         />
       )}
@@ -123,6 +124,7 @@ describe('master timeline', () => {
               onAddBeat={() => undefined}
               onAddLane={() => undefined}
               onAddAct={() => undefined}
+              onOpenLane={() => undefined}
             />
           );
         }}
