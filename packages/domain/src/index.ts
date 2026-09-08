@@ -23,6 +23,7 @@ export * from './selectors.js';
 export * from './mutations.js';
 export * from './render.js';
 export * from './editing.js';
+export * from './reformat.js';
 export * from './pagination.js';
 export * from './story-layout.js';
 export * from './story-threads.js';

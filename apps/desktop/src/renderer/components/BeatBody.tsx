@@ -13,6 +13,7 @@ import {
   onEnter,
   onTab,
   parseInlineMarks,
+  reformatText,
   setDualDialogue,
   styleShortcuts,
   toggleInline,
@@ -175,6 +176,37 @@ export function BeatBody({
     updateElement(element.id, become ? { text, type: become } : { text });
   };
 
+  /**
+   * Text pasted from somewhere else arrives as typed elements rather than as
+   * one block to re-type by hand: the reformat tool reads the sluglines,
+   * cues and speeches out of it (`reformat.ts`). A paste with nothing to
+   * read — a phrase, a single line — is left to the ordinary paste.
+   */
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>, element: ManuscriptElement, index: number) => {
+    const pasted = event.clipboardData.getData('text/plain');
+    if (pasted.trim().length === 0 || !pasted.includes('\n')) return;
+    const parts = reformatText(pasted, format);
+    if (parts.length <= 1) return;
+
+    event.preventDefault();
+    const input = event.currentTarget;
+    const before = element.text.slice(0, input.selectionStart);
+    const after = element.text.slice(input.selectionEnd);
+    const made = parts.map((part) => ({ ...makeElement(part.type), text: part.text }));
+
+    const next = [...elements];
+    const at = before.trim().length > 0 ? index + 1 : index;
+    if (before.trim().length > 0) next[index] = { ...element, text: before };
+    next.splice(at, before.trim().length > 0 ? 0 : 1, ...made);
+    if (after.trim().length > 0) {
+      next.splice(at + made.length, 0, { ...makeElement(element.type), text: after });
+    }
+
+    setElements(next);
+    const last = made[made.length - 1];
+    if (last) setFocusId(last.id);
+  };
+
   /** The character cue the given element speaks under, if it is in a speech. */
   const cueFor = (index: number): ManuscriptElement | null => {
     for (let position = index; position >= 0; position -= 1) {
@@ -324,6 +356,7 @@ export function BeatBody({
                   : {})}
               onFocus={onActivate}
               onChange={(event) => writeText(element, event.target.value)}
+              onPaste={(event) => handlePaste(event, element, index)}
               onKeyDown={(event) => handleKeyDown(event, element, index)}
             />
           </div>

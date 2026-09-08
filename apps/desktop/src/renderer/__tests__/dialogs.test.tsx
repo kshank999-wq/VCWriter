@@ -157,6 +157,44 @@ describe('the writing screen', () => {
   });
 });
 
+describe('the reformat tool', () => {
+  it('reads the beat’s plain lines as a script and leaves styled lines alone', () => {
+    let latest = scene();
+    const beatId = latest.beats[0]!.id;
+    // A scene typed or pasted in as plain text, under the heading the beat
+    // already carries.
+    latest = updateBeat(latest, beatId, {
+      manuscript: {
+        elements: [
+          el('scene_heading', 'INT. KITCHEN - MORNING'),
+          el('action', 'He waits by the door.'),
+          el('action', 'MIKE\nShe was here.'),
+        ],
+      },
+    });
+
+    render(
+      <Harness initial={latest}>
+        {(file, update) => {
+          latest = file;
+          return <BeatDialog file={file} beatId={beatId} onClose={() => undefined} onUpdate={update} />;
+        }}
+      </Harness>,
+    );
+
+    fireEvent.click(screen.getByText('Reformat'));
+    expect(latest.beats[0]!.manuscript.elements.map((element) => [element.type, element.text])).toEqual([
+      ['scene_heading', 'INT. KITCHEN - MORNING'],
+      ['action', 'He waits by the door.'],
+      ['character', 'MIKE'],
+      ['dialogue', 'She was here.'],
+    ]);
+
+    // Nothing is left to reformat, so the tool says so.
+    expect((screen.getByText('Reformat') as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
 describe('opening the pop-ups', () => {
   it('opens the scene from its block and the beat from a double-click on its row', () => {
     const file = scene();

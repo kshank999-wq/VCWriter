@@ -1,15 +1,18 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   countWords,
   findBeat,
   findLane,
   findUnit,
+  newId,
+  reformatUntyped,
   startRevision,
   switchRevision,
   updateBeat,
   type Beat,
   type BeatId,
   type BeatRevisionId,
+  type ManuscriptElementId,
   type ProjectFile,
 } from '@vcwriter/domain';
 import { BeatBody } from './BeatBody';
@@ -70,6 +73,45 @@ function Writer({
   const lane = unit ? findLane(file, unit.laneId) : undefined;
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState('');
+
+  // The tool offers itself only when it would actually change something, so
+  // a beat that is already a script leaves it greyed out.
+  const reformatted = useMemo(
+    () => reformatUntyped(beat.manuscript.elements, file.project.format),
+    [beat.manuscript.elements, file.project.format],
+  );
+  const untyped =
+    reformatted.length !== beat.manuscript.elements.length ||
+    reformatted.some((part, position) => {
+      const original = beat.manuscript.elements[position];
+      return !original || original.type !== part.type || original.text !== part.text;
+    });
+
+  /**
+   * Re-read the beat's plain lines as a script, keeping every line that was
+   * deliberately styled exactly as it is — and keeping the identity of the
+   * elements the text came from, so nothing hanging off them is lost.
+   */
+  const reformat = () => {
+    onUpdate((current) => {
+      const beatNow = current.beats.find((candidate) => candidate.id === beat.id);
+      if (!beatNow) return current;
+      const source = beatNow.manuscript.elements;
+      const elements = reformatUntyped(source, current.project.format).map((part) => {
+        const original = part.from === undefined ? undefined : source[part.from];
+        return original
+          ? { ...original, type: part.type, text: part.text }
+          : {
+              id: newId<ManuscriptElementId>(),
+              type: part.type,
+              text: part.text,
+              characterId: null,
+              attributes: {},
+            };
+      });
+      return updateBeat(current, beat.id, { manuscript: { elements } });
+    });
+  };
 
   const chooseVersion = (value: string) => {
     if (value === NEW_REVISION) {
@@ -156,7 +198,21 @@ function Writer({
           {countWords(beat.manuscript)} words
           {beat.inScript ? '' : ' · not in the script'}
         </span>
-        <span>Return for the next element · Tab to change its type</span>
+        <span className="writer-actions">
+          {/* Text that came in as plain text, read as a script (§7.1). It
+              only ever re-types lines nobody styled, so it is safe to press
+              and pressing it twice does nothing further. */}
+          <button
+            type="button"
+            className="ghost"
+            disabled={!untyped}
+            title={untyped ? 'Read the plain lines as sluglines, cues and dialogue' : 'Nothing left to reformat'}
+            onClick={reformat}
+          >
+            Reformat
+          </button>
+          <span>Return for the next element · Tab to change its type</span>
+        </span>
       </footer>
     </>
   );

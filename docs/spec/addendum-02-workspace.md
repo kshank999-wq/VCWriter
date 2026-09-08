@@ -266,7 +266,23 @@ edited side by side in two columns exactly as it is printed — two
 27-character columns with 6 between them, in the 60-character body — and it
 moves to the next page as one, never split under a `(MORE)`.
 
-Not yet: a reformat tool for pasted text (§14).
+**Text from somewhere else.** Paste a scene from a mail, a text editor or
+another program and it arrives as typed elements, not as one block to
+re-type by hand: the reformat tool (`reformat.ts`) reads the shape a
+screenplay has even in plain text — the capitals, the blank lines, the
+parentheses — and gives back sluglines, cues, parentheticals, dialogue,
+transitions and action. Hard-wrapped lines are rejoined into the paragraph
+they were before someone's column width broke them, a cue whose speech was
+left in the block below it is put back together, and Fountain's forcing
+characters (`.slug`, `@CUE`, `>TRANSITION:`) are honoured. A paste with
+nothing to read — a phrase, a single line — is left to the ordinary paste.
+
+The same reading is available after the fact: **Reformat**, in the writing
+screen's status line, re-reads the beat's plain lines and leaves every line
+that was deliberately styled exactly as it is. It offers itself only when
+it would change something, so a beat that is already a script leaves it
+greyed out, and running it twice does nothing further. Elements keep their
+identity through it, so nothing hanging off them is lost.
 
 Every pop-up writes through the same domain mutations as everything else,
 as the fields are typed; Close returns to the workspace with nothing else

@@ -2273,6 +2273,30 @@ dialog.writer-dialog::backdrop {
   font-size: 11px;
 }
 
+.writer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.writer-actions .ghost {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.writer-actions .ghost:not(:disabled):hover {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+}
+
+.writer-actions .ghost:disabled {
+  opacity: 0.4;
+}
+
 /* ------------------------------------------------------------------- paper */
 
 /* With the paper preference on (the default), the manuscript is a sheet of

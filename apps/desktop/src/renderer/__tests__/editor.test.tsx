@@ -164,6 +164,37 @@ describe('the whole script in story order', () => {
   });
 });
 
+describe('pasting a scene in as text', () => {
+  const paste = (target: Element, text: string) =>
+    fireEvent.paste(target, { clipboardData: { getData: () => text } });
+
+  it('reads it as sluglines, cues and dialogue instead of one block', () => {
+    render(<Harness initial={screenplayWithAction()} />);
+    const action = screen.getByDisplayValue('Rain hammers the glass.') as HTMLTextAreaElement;
+    action.setSelectionRange(action.value.length, action.value.length);
+
+    paste(
+      action,
+      ['INT. LIGHTHOUSE - NIGHT', '', 'Mike stands at the lamp,', 'watching the water.', '', 'MIKE', 'She was here.'].join('\n'),
+    );
+
+    expect(elementTypes()).toEqual(['action', 'scene_heading', 'action', 'character', 'dialogue']);
+    // The line that was already there is untouched, and the hard-wrapped
+    // lines are one paragraph again.
+    expect(screen.getByDisplayValue('Rain hammers the glass.')).toBeDefined();
+    expect(screen.getByDisplayValue('Mike stands at the lamp, watching the water.')).toBeDefined();
+    expect(screen.getByDisplayValue('She was here.')).toBeDefined();
+  });
+
+  it('leaves an ordinary paste to the ordinary paste', () => {
+    render(<Harness initial={screenplayWithAction()} />);
+    const action = screen.getByDisplayValue('Rain hammers the glass.');
+    paste(action, ' Again.');
+    // Nothing was intercepted: still the one element the beat started with.
+    expect(elementTypes()).toEqual(['action']);
+  });
+});
+
 describe('emphasis and dual dialogue while writing', () => {
   it('puts emphasis on the selection and draws it under the cursor', () => {
     const { container } = render(<Harness initial={screenplayWithAction()} />);
