@@ -61,6 +61,130 @@ export const findLane = (file: ProjectFile, laneId: LaneId): Lane | undefined =>
 export const researchCategoriesInOrder = (file: ProjectFile, includeArchived = false): ResearchCategory[] =>
   sortByOrderKey(file.researchCategories.filter((category) => includeArchived || !category.archived));
 
+/**
+ * Research as the tree it is drawn as (addendum 02 §7): folders in order,
+ * each with the folders under it, how many items are filed directly in it,
+ * and how many are in it and everything below.
+ *
+ * A folder whose parent is missing — or whose parents form a loop, which
+ * only a broken file could do — is shown at the top rather than vanishing.
+ */
+export interface ResearchFolder {
+  category: ResearchCategory;
+  depth: number;
+  children: ResearchFolder[];
+  /** Items filed directly here. */
+  count: number;
+  /** Items here and in every folder under this one. */
+  total: number;
+}
+
+export const researchTree = (file: ProjectFile, includeArchived = false): ResearchFolder[] => {
+  const categories = researchCategoriesInOrder(file, includeArchived);
+  const known = new Set(categories.map((category) => category.id as string));
+  const direct = new Map<string, number>();
+  for (const item of file.researchItems) {
+    if (item.archived) continue;
+    direct.set(item.categoryId, (direct.get(item.categoryId) ?? 0) + 1);
+  }
+
+  /** The parent to draw under: null at the top, and null for a broken chain. */
+  const parentOf = (category: ResearchCategory): string | null => {
+    const parent = category.parentId;
+    if (!parent || !known.has(parent)) return null;
+    // Follow the chain up only to be sure it ends: a folder in a loop is
+    // drawn at the top rather than disappearing from the tree.
+    const seen = new Set<string>([category.id]);
+    let cursor: string | null = parent;
+    while (cursor) {
+      if (seen.has(cursor)) return null;
+      seen.add(cursor);
+      const next = categories.find((candidate) => candidate.id === cursor);
+      if (!next) return null;
+      cursor = next.parentId && known.has(next.parentId) ? next.parentId : null;
+    }
+    return parent;
+  };
+
+  const build = (parent: string | null, depth: number): ResearchFolder[] =>
+    categories
+      .filter((category) => parentOf(category) === parent)
+      .map((category) => {
+        const children = build(category.id, depth + 1);
+        const count = direct.get(category.id) ?? 0;
+        return {
+          category,
+          depth,
+          children,
+          count,
+          total: count + children.reduce((sum, child) => sum + child.total, 0),
+        };
+      });
+
+  return build(null, 0);
+};
+
+/** Every folder id under this one, the folder itself included. */
+export const researchSubtree = (file: ProjectFile, categoryId: ResearchCategoryId): ResearchCategoryId[] => {
+  const found: ResearchCategoryId[] = [categoryId];
+  const walk = (parent: ResearchCategoryId) => {
+    for (const category of file.researchCategories) {
+      if (category.parentId !== parent) continue;
+      if (found.includes(category.id)) continue;
+      found.push(category.id);
+      walk(category.id);
+    }
+  };
+  walk(categoryId);
+  return found;
+};
+
+/** The smart folders: views over everything rather than places to file in. */
+export type ResearchView = 'all' | 'used' | 'unused' | 'archived';
+
+const matches = (item: ResearchItem, query: string): boolean => {
+  const needle = query.trim().toLowerCase();
+  if (needle.length === 0) return true;
+  return (
+    item.title.toLowerCase().includes(needle) ||
+    item.body.toLowerCase().includes(needle) ||
+    item.tags.some((tag) => tag.toLowerCase().includes(needle))
+  );
+};
+
+/**
+ * What the contents pane shows: a folder and everything under it, or one of
+ * the smart folders, narrowed by the search box.
+ */
+export const researchItemsIn = (
+  file: ProjectFile,
+  where: { categoryId: ResearchCategoryId } | { view: ResearchView },
+  options: { query?: string; includeDescendants?: boolean } = {},
+): ResearchItem[] => {
+  const query = options.query ?? '';
+  if ('view' in where) {
+    const items = file.researchItems.filter((item) => {
+      if (where.view === 'archived') return item.archived;
+      if (item.archived) return false;
+      if (where.view === 'used') return item.usage === 'used';
+      if (where.view === 'unused') return item.usage === 'unused';
+      return true;
+    });
+    return sortByOrderKey(items.filter((item) => matches(item, query)));
+  }
+
+  // Folder by folder, down the tree, and in order within each: what is
+  // filed here comes before what is filed in the folders under it.
+  const folders = options.includeDescendants === false ? [where.categoryId] : researchSubtree(file, where.categoryId);
+  const place = new Map(folders.map((id, index) => [id as string, index]));
+  const items = file.researchItems.filter(
+    (item) => !item.archived && place.has(item.categoryId) && matches(item, query),
+  );
+  return sortByOrderKey(items).sort(
+    (a, b) => (place.get(a.categoryId) as number) - (place.get(b.categoryId) as number),
+  );
+};
+
 /** Items in one category, newest ordering first honoured. */
 export const researchItemsForCategory = (
   file: ProjectFile,

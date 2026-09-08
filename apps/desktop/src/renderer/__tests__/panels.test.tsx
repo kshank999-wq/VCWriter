@@ -8,7 +8,6 @@ import {
   createProjectFile,
   type ProjectFile,
 } from '@vcwriter/domain';
-import { ResearchPanel } from '../components/ResearchPanel';
 import { SetupsPanel } from '../components/SetupsPanel';
 
 /**
@@ -33,57 +32,6 @@ function Harness({
   const [file, setFile] = useState(initial);
   return <>{children(file, (mutate) => setFile((current) => mutate(current)))}</>;
 }
-
-describe('research panel', () => {
-  const projectWithNote = () => {
-    const file = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
-    const ideas = file.researchCategories.find((category) => category.systemKey === 'ideas')!;
-    return addResearchItem(file, { categoryId: ideas.id, title: 'A revolver in the drawer' });
-  };
-
-  it('moves a note to used and restores it, with the record surviving both', () => {
-    render(
-      <Harness initial={projectWithNote()}>
-        {(file, update) => <ResearchPanel file={file} currentBeatId={null} onUpdate={update} />}
-      </Harness>,
-    );
-
-    // The seeded default categories are present, Ideas among them (§7.1).
-    fireEvent.click(screen.getByText('Ideas'));
-    fireEvent.click(screen.getByText('A revolver in the drawer'));
-    fireEvent.click(screen.getByRole('button', { name: /mark used/i }));
-
-    // Gone from the working inventory…
-    expect(screen.queryByText('A revolver in the drawer')).toBeNull();
-    expect(screen.getByRole('tab', { name: /unused \(0\)/i })).toBeDefined();
-
-    // …but present under Used, and restorable.
-    fireEvent.click(screen.getByRole('tab', { name: /used \(1\)/i }));
-    fireEvent.click(screen.getByText('A revolver in the drawer'));
-    fireEvent.click(screen.getByRole('button', { name: /restore to unused/i }));
-
-    fireEvent.click(screen.getByRole('tab', { name: /unused \(1\)/i }));
-    expect(screen.getByText('A revolver in the drawer')).toBeDefined();
-  });
-
-  it('adds a category and keeps archived ones out of the working view', () => {
-    render(
-      <Harness initial={createProjectFile({ title: 'Lighthouse', format: 'screenplay' })}>
-        {(file, update) => <ResearchPanel file={file} currentBeatId={null} onUpdate={update} />}
-      </Harness>,
-    );
-
-    fireEvent.click(screen.getByTitle('Add category'));
-    expect(screen.getByText('New category')).toBeDefined();
-
-    const row = screen.getByText('New category').closest('li')!;
-    fireEvent.click(within(row).getByTitle('Archive category'));
-    expect(screen.queryByText('New category')).toBeNull();
-
-    fireEvent.click(screen.getByLabelText(/show archived/i));
-    expect(screen.getByText('New category')).toBeDefined();
-  });
-});
 
 describe('setups and payoffs panel', () => {
   it('tracks a setup, records the payoff, then reopens it with the setup intact', () => {

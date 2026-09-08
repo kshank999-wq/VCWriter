@@ -2508,3 +2508,350 @@ dialog.writer-dialog::backdrop {
 .workspace.script-paper .writer-sheet ::selection {
   background: color-mix(in srgb, var(--gold) 45%, transparent);
 }
+
+/* ------------------------------------------------------- research window */
+
+/* Research is where the material lives before, during and after it is used,
+   so it gets the whole screen rather than a quarter of it: folders down the
+   left, what is in the folder in the middle, the thing itself on the right
+   (addendum 02 §7). */
+dialog.research-window {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: var(--ink);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+dialog.research-window[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+dialog.research-window::backdrop {
+  background: var(--ink);
+}
+
+.research-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 10px 0 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.research-name {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.research-search {
+  flex: 1;
+  max-width: 420px;
+  margin-left: 12px;
+  padding: 4px 9px;
+  font-size: 12px;
+}
+
+.research-head .ghost:last-child {
+  margin-left: auto;
+  font-size: 15px;
+  padding: 2px 10px;
+}
+
+.research-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 320px;
+}
+
+/* The side menu. */
+.research-side {
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  padding: 10px 0 24px;
+}
+
+.research-side h4 {
+  margin: 14px 0 4px;
+  padding: 0 12px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  font-weight: normal;
+}
+
+.research-side h4:first-child {
+  margin-top: 0;
+}
+
+.research-side ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.folder-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.folder-row:hover {
+  background: var(--ink);
+}
+
+.folder-row.selected {
+  background: var(--ink);
+  border-color: var(--gold-deep);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+
+.folder-open {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.folder-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.folder-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+/* The folder's own controls stay out of the way until it is pointed at. */
+.folder-colour,
+.folder-row > .ghost:not(.twisty) {
+  opacity: 0;
+  flex: 0 0 auto;
+}
+
+.folder-colour {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: transparent;
+}
+
+.folder-row:hover .folder-colour,
+.folder-row:hover > .ghost,
+.folder-row:focus-within .folder-colour,
+.folder-row:focus-within > .ghost {
+  opacity: 1;
+}
+
+/* The contents. */
+.research-contents {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.research-contents-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px 8px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--ink);
+  z-index: 1;
+}
+
+.research-contents-head h3 {
+  margin: 0;
+  font-size: 12px;
+}
+
+.research-cards {
+  list-style: none;
+  margin: 0;
+  padding: 12px 18px 32px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+
+.research-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 11px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold-deep);
+  border-radius: 2px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.research-card:hover {
+  border-color: var(--gold-deep);
+}
+
+.research-card.selected {
+  border-color: var(--gold);
+  background: var(--panel);
+}
+
+.research-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.research-card-title {
+  font-size: 12.5px;
+}
+
+.used-mark {
+  color: var(--gold);
+  flex: 0 0 auto;
+}
+
+.research-card-body {
+  font-size: 11.5px;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.research-card-foot {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.research-embedded {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.research-plots {
+  list-style: none;
+  margin: 0;
+  padding: 12px 18px 32px;
+  display: grid;
+  gap: 12px;
+}
+
+.research-plot-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.research-plot-name {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The thing itself. */
+.research-detail {
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  padding: 14px 16px 32px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.research-detail .field {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.research-detail .field input,
+.research-detail .field select,
+.research-detail .field textarea {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12.5px;
+}
+
+.research-detail textarea {
+  line-height: 1.5;
+  background: var(--ink);
+}
+
+.research-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* The detail column is a fixed width, so everything in it fits that width
+   rather than pushing the column off the side of the window. */
+.research-detail {
+  min-width: 0;
+}
+
+.research-detail input,
+.research-detail select,
+.research-detail textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.research-detail .link-form {
+  display: grid;
+  gap: 6px;
+}
+
+.research-detail .related li {
+  flex-wrap: wrap;
+}

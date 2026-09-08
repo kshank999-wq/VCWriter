@@ -404,22 +404,60 @@ Large projects: the view renders every beat, and the performance test in the
 domain package is the gate; when it fails, the loader lazy-reads beats, not
 the view (ADR 0002).
 
-## 7. Master panel: Research
+## 7. The research window
 
-The second tab of the master panel, with its own row of tabs beneath it, one
-per kind of material:
+Research is where the material is kept **before, during and after** it is
+used in the script — a working inventory, not a junk drawer — so it is not
+a quarter of the screen with a strip of category tabs across the top. It is
+its own window over the whole of the workspace, opened from **Research**
+beside the Script tab, and closed with `Escape`.
 
-| Tab | What it is |
+Three columns:
+
+| Column | What it is |
 | --- | --- |
-| **Characters**, **Ideas**, **Plot Points**, **Locations**, **Props**, **Themes**, and any category the writer adds | The research categories of §7.1, one per tab, each with its Unused / Used / All filter and its detail column. Archived categories are not shown as tabs |
-| **Plots** | The plot lanes as a list: name, kind, colour, description. The same records the timeline draws, edited here as text |
-| **Setups & payoffs** | The §7.3 tracker, unchanged |
+| **Folders**, down the left | The side menu: the views that are not places, then the folder tree, then the two other things that are not the script |
+| **Contents**, in the middle | What is in the selected folder, as cards |
+| **Detail**, on the right | The selected note itself |
 
-The Research and Setups & payoffs pages leave the page bar; this is where
-they live now. Because the selected beat is shared, "mark used in the
-current beat" and "link to the current beat" act on the beat selected in
-the Script or on the timeline, which is the workflow §7.2 describes: read
-the material, write the scene, mark it used.
+### The side menu
+
+**Everything** — the views that are not places to file in, and the part a
+fixed set of folders cannot do: *All research*, *Not yet used*, *Used in the
+script*, *Put away*. Each carries its count.
+
+**Folders** — a tree. A folder holds folders: Characters ▸ Mike ▸ Journey,
+with notes at any level. Each shows the count of what is in it *and*
+everything under it, a colour of its own, a **+** that makes a folder inside
+it, and a **×** that removes it. Removing a folder never loses anything:
+its notes and the folders under it move up to where it was. The six seeded
+folders (Characters, Ideas, Plot Points, Locations, Props, Themes) cannot be
+moved or removed, the way Causality's blue folders cannot; everything else
+can go anywhere. Dragging a note onto a folder files it there, and dragging
+a folder onto another files that — except into itself or its own
+descendants, which would cut it out of the tree.
+
+Selecting a folder shows what is filed in it **and everything under it**, so
+selecting Mike shows his journey too. The search box narrows whatever is on
+screen, across titles, notes and tags.
+
+**Also** — the two other things that are not the script: the **plot lanes**
+as records, and the **setups and payoffs** tracker (§7.3). They were tabs in
+the master panel; they belong in the one window that holds everything the
+script is made from.
+
+### The detail
+
+Title, the note itself, tags, and the folder it is filed in (a select, so a
+note can be moved without dragging). Under them: **Mark used** — as *used in
+the beat I am writing* when there is one, which is the §7.2 workflow — and
+**Put away**, both reversible, because moving something to used has never
+been a delete. Then where it was used, and the related-elements panel
+(§7.4).
+
+Not yet: **popping the window out** onto a second monitor. It needs the
+project state to be shared between two windows rather than owned by one, so
+it is its own piece of work rather than a flag on this one.
 
 ## 8. Inspector
 

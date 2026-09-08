@@ -12,7 +12,13 @@ import {
   type StoryLink,
   type StoryLinkType,
 } from './entities/links.js';
-import { beatsForUnit, lanesInOrder, researchCategoriesInOrder, unitsInStoryOrder } from './selectors.js';
+import {
+  beatsForUnit,
+  lanesInOrder,
+  researchCategoriesInOrder,
+  researchSubtree,
+  unitsInStoryOrder,
+} from './selectors.js';
 import type { ManuscriptSegment } from './entities/manuscript.js';
 import type { VoiceAssignment } from './entities/project.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
@@ -753,15 +759,21 @@ export const removeBeat = (file: ProjectFile, beatId: BeatId): ProjectFile => {
 
 export const addResearchCategory = (
   file: ProjectFile,
-  input: { name: string; description?: string; index?: number },
+  input: { name: string; description?: string; index?: number; parentId?: ResearchCategoryId | null; color?: string | null },
 ): { file: ProjectFile; category: ResearchCategory } => {
   const timestamp = nowIso();
-  const siblings = researchCategoriesInOrder(file);
+  const parentId = input.parentId ?? null;
+  if (parentId && !file.researchCategories.some((category) => category.id === parentId)) {
+    throw new DomainError(`Research category ${parentId} does not exist`);
+  }
+  const siblings = researchCategoriesInOrder(file).filter((category) => (category.parentId ?? null) === parentId);
   const category = researchCategorySchema.parse({
     id: newId<ResearchCategoryId>(),
     projectId: file.project.id,
     name: input.name,
     description: input.description ?? '',
+    parentId,
+    color: input.color ?? null,
     orderKey: orderKeyForIndex(siblings, input.index ?? siblings.length),
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -775,7 +787,7 @@ export const addResearchCategory = (
 export const updateResearchCategory = (
   file: ProjectFile,
   categoryId: ResearchCategoryId,
-  patch: Partial<Pick<ResearchCategory, 'name' | 'description'>>,
+  patch: Partial<Pick<ResearchCategory, 'name' | 'description' | 'color'>>,
 ): ProjectFile => {
   if (!file.researchCategories.some((category) => category.id === categoryId)) {
     throw new DomainError(`Research category ${categoryId} does not exist`);
@@ -784,6 +796,67 @@ export const updateResearchCategory = (
     ...file,
     researchCategories: file.researchCategories.map((category) =>
       category.id === categoryId ? touch({ ...category, ...patch }) : category,
+    ),
+  });
+};
+
+/**
+ * File a folder inside another one, or at the top with `null` (addendum 02
+ * §7). A folder cannot be filed inside itself or inside its own descendants
+ * — that would cut it out of the tree — and the seeded folders stay where
+ * they are, the way Causality's blue folders do.
+ */
+export const reparentResearchCategory = (
+  file: ProjectFile,
+  categoryId: ResearchCategoryId,
+  parentId: ResearchCategoryId | null,
+): ProjectFile => {
+  const category = file.researchCategories.find((candidate) => candidate.id === categoryId);
+  if (!category) throw new DomainError(`Research category ${categoryId} does not exist`);
+  if (category.systemKey !== null) throw new DomainError('A seeded folder cannot be moved');
+  if (parentId !== null) {
+    if (!file.researchCategories.some((candidate) => candidate.id === parentId)) {
+      throw new DomainError(`Research category ${parentId} does not exist`);
+    }
+    if (researchSubtree(file, categoryId).includes(parentId)) {
+      throw new DomainError('A folder cannot be filed inside itself');
+    }
+  }
+  const siblings = researchCategoriesInOrder(file).filter(
+    (candidate) => (candidate.parentId ?? null) === parentId && candidate.id !== categoryId,
+  );
+  return touchProject({
+    ...file,
+    researchCategories: file.researchCategories.map((candidate) =>
+      candidate.id === categoryId
+        ? touch({ ...candidate, parentId, orderKey: orderKeyForIndex(siblings, siblings.length) })
+        : candidate,
+    ),
+  });
+};
+
+/**
+ * Remove a folder. Nothing filed in it is lost: its items and the folders
+ * under it move up to where it was, which is the answer to "what happened
+ * to my notes" that a writer should never have to ask. Seeded folders stay.
+ */
+export const removeResearchCategory = (file: ProjectFile, categoryId: ResearchCategoryId): ProjectFile => {
+  const category = file.researchCategories.find((candidate) => candidate.id === categoryId);
+  if (!category) throw new DomainError(`Research category ${categoryId} does not exist`);
+  if (category.systemKey !== null) throw new DomainError('A seeded folder cannot be removed');
+
+  const parentId = category.parentId ?? null;
+  const home =
+    parentId ?? researchCategoriesInOrder(file).find((candidate) => candidate.id !== categoryId)?.id ?? null;
+  if (home === null) throw new DomainError('The last research folder cannot be removed');
+
+  return touchProject({
+    ...file,
+    researchCategories: file.researchCategories
+      .filter((candidate) => candidate.id !== categoryId)
+      .map((candidate) => (candidate.parentId === categoryId ? touch({ ...candidate, parentId }) : candidate)),
+    researchItems: file.researchItems.map((item) =>
+      item.categoryId === categoryId ? touch({ ...item, categoryId: home }) : item,
     ),
   });
 };

@@ -29,6 +29,14 @@ export const researchCategorySchema = z.object({
   /** Set for seeded categories; `null` for anything the writer created. */
   systemKey: systemCategoryKeySchema.nullable().default(null),
   description: z.string().default(''),
+  /**
+   * The folder this one sits in, or null at the top (addendum 02 §7).
+   * Research is a tree: a character folder can hold a folder of their
+   * journey, which can hold the beats of it.
+   */
+  parentId: id<ResearchCategoryId>().nullable().default(null),
+  /** A colour for the folder and everything filed in it; null inherits. */
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().default(null),
   orderKey: orderKey(),
   archived: z.boolean().default(false),
   ...timestamps,

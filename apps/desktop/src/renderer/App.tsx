@@ -28,6 +28,7 @@ import { TimelineViewer } from './components/TimelineViewer';
 import { DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay } from './components/StoryView';
 import { LaneDialog } from './components/LaneDialog';
 import { SceneDialog } from './components/SceneDialog';
+import { ResearchWindow } from './components/ResearchWindow';
 import { BeatDialog } from './components/BeatDialog';
 import { PageBar, type View } from './components/PageBar';
 import { PagePreview } from './components/PagePreview';
@@ -83,6 +84,7 @@ export default function App() {
   const [openLaneId, setOpenLaneId] = useState<LaneId | null>(null);
   const [openUnitId, setOpenUnitId] = useState<StructuralUnitId | null>(null);
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
+  const [researchOpen, setResearchOpen] = useState(false);
   // The Edit-page proportions (addendum 02 §3): a quarter for the script,
   // and of the rest, just under half for the viewport above the lanes.
   const columns = useSplit({ key: 'leftWidth', initial: 0.25, min: 300, reserve: 640, axis: 'x' });
@@ -376,6 +378,7 @@ export default function App() {
             onDisplay={setScriptDisplay}
             onOpenUnit={setOpenUnitId}
             onOpenBeat={setOpenBeatId}
+            onOpenResearch={() => setResearchOpen(true)}
           />
           {focused ? null : (
             <>
@@ -453,6 +456,13 @@ export default function App() {
             onClose={() => setOpenBeatId(null)}
             onUpdate={project.update}
             onSelect={setSelectedBeatId}
+          />
+          <ResearchWindow
+            file={file}
+            open={researchOpen}
+            currentBeatId={selectedBeat?.id ?? null}
+            onClose={() => setResearchOpen(false)}
+            onUpdate={project.update}
           />
         </div>
       ) : (

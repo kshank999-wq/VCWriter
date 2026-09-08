@@ -214,7 +214,8 @@ describe('inspector', () => {
 });
 
 describe('master panel', () => {
-  it('switches between the script and the research tabs', () => {
+  it('is the Script, with Research opening over the whole workspace', () => {
+    const opened = vi.fn();
     render(
       <Harness initial={twoLanes()}>
         {(file, update, selected, select) => (
@@ -227,6 +228,7 @@ describe('master panel', () => {
             focusTitleBeatId={null}
             onTitleFocused={() => undefined}
             dictationShortcut={null}
+            onOpenResearch={opened}
           />
         )}
       </Harness>,
@@ -237,11 +239,9 @@ describe('master panel', () => {
     fireEvent.click(screen.getByLabelText('Beat names'));
     expect(screen.getByLabelText('Beat title (not printed)')).toBeDefined();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Research' }));
-    expect(screen.getByRole('tab', { name: /^Characters/ })).toBeDefined();
-    expect(screen.getByRole('tab', { name: /Setups & payoffs/ })).toBeDefined();
-
-    fireEvent.click(screen.getByRole('tab', { name: /^Plots/ }));
-    expect(screen.getByLabelText('Main Plot description')).toBeDefined();
+    // Research is no longer a tab with a strip of categories under it.
+    fireEvent.click(screen.getByText('Research'));
+    expect(opened).toHaveBeenCalled();
+    expect(screen.queryByRole('tab', { name: /^Characters/ })).toBeNull();
   });
 });
