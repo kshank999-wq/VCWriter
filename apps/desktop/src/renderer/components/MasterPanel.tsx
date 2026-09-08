@@ -10,6 +10,7 @@ import {
   type ProjectFile,
   type ResearchCategoryId,
   type StoryLayout,
+  type StructuralUnitId,
 } from '@vcwriter/domain';
 import { StoryView } from './StoryView';
 import { ResearchPanel } from './ResearchPanel';
@@ -26,6 +27,8 @@ interface MasterPanelProps {
   focusTitleBeatId: BeatId | null;
   onTitleFocused(): void;
   dictationShortcut: string | null;
+  onOpenUnit?(unitId: StructuralUnitId): void;
+  onOpenBeat?(beatId: BeatId): void;
 }
 
 type MasterTab = 'script' | 'research';

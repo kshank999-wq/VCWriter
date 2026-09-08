@@ -275,7 +275,14 @@ export function ThreadView({ file, threads, selectedBeatId, onSelectBeat, onUpda
                   endDrag(beat.id);
                 }}
               >
-                <rect x={x} y={y} width={COLUMN - 16} height={BEAT_H} rx={2} />
+                <rect
+                  x={x}
+                  y={y}
+                  width={COLUMN - 16}
+                  height={BEAT_H}
+                  rx={2}
+                  style={beat.color ? { stroke: beat.color, fill: `color-mix(in srgb, ${beat.color} 22%, var(--panel-2))` } : undefined}
+                />
                 {cast.slice(0, 4).map((name, position) => (
                   <circle key={name} cx={x + 9 + position * 9} cy={y + BEAT_H / 2} r={3.5} style={{ fill: colours.get(name) ?? 'currentColor' }}>
                     <title>{name}</title>

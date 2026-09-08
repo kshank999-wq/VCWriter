@@ -51,6 +51,10 @@ interface MasterTimelineProps {
   onAddAct(): void;
   /** The track header was clicked: open the plot's summary and arc. */
   onOpenLane(laneId: LaneId): void;
+  /** A scene block's header was clicked: open the scene pop-up. */
+  onOpenUnit?(unitId: StructuralUnitId): void;
+  /** A beat row was double-clicked: open the beat pop-up. */
+  onOpenBeat?(beatId: BeatId): void;
 }
 
 const HEAD_WIDTH = 168;
@@ -85,6 +89,8 @@ export function MasterTimeline({
   onAddLane,
   onAddAct,
   onOpenLane,
+  onOpenUnit,
+  onOpenBeat,
 }: MasterTimelineProps) {
   const drag = useDragDrop();
   const layout = useMemo(() => givenLayout ?? storyLayout(file), [givenLayout, file]);
@@ -243,6 +249,8 @@ export function MasterTimeline({
               colours={threads.colours}
               onSelectBeat={onSelectBeat}
               onOpenLane={onOpenLane}
+              onOpenUnit={onOpenUnit}
+              onOpenBeat={onOpenBeat}
               onUpdate={onUpdate}
               onDropUnit={dropUnitAt}
               onDropBeat={dropBeatAt}
@@ -422,6 +430,8 @@ interface LaneTrackProps {
   colours: Map<string, string>;
   onSelectBeat(beatId: BeatId): void;
   onOpenLane(laneId: LaneId): void;
+  onOpenUnit: MasterTimelineProps['onOpenUnit'];
+  onOpenBeat: MasterTimelineProps['onOpenBeat'];
   onUpdate: MasterTimelineProps['onUpdate'];
   onDropUnit(toLaneId: LaneId, index: number): void;
   onDropBeat(toUnitId: StructuralUnitId, index: number): void;
@@ -445,6 +455,8 @@ function LaneTrack({
   colours,
   onSelectBeat,
   onOpenLane,
+  onOpenUnit,
+  onOpenBeat,
   onUpdate,
   onDropUnit,
   onDropBeat,
@@ -555,21 +567,27 @@ function LaneTrack({
         }
         const beats = beatsForUnit(file, unit.id);
         const collapsed = unit.collapsed || lane.collapsed;
+        const off = unit.inScript ? '' : ' off';
         return (
           <article
             key={unit.id}
-            className={`block${collapsed ? ' collapsed' : ''}${atPlayhead}${dropClass(drag.dropTarget, unit.id)}`}
+            className={`block${collapsed ? ' collapsed' : ''}${atPlayhead}${off}${dropClass(drag.dropTarget, unit.id)}`}
             style={{ borderTopColor: lane.color }}
+            title={unit.inScript ? undefined : `Switched off: not in the script`}
             onDragOver={(event) => unitDragOver(event, unit.id)}
             onDragLeave={() => drag.clearHover(unit.id)}
             onDrop={(event) => dropWithEdge(event, span.index)}
           >
+            {/* Clicking the block opens the scene, the way a clip opens in an
+                editor; the selection follows so the playhead moves there too. */}
             <header
               className="block-head"
               draggable
+              title={onOpenUnit ? `Open this ${noun}` : undefined}
               onClick={() => {
                 const first = beats[0];
                 if (first) onSelectBeat(first.id);
+                onOpenUnit?.(unit.id);
               }}
               onDragStart={(event) => {
                 event.stopPropagation();
@@ -655,10 +673,12 @@ function LaneTrack({
                   >
                     <button
                       type="button"
-                      className={beat.id === selectedBeatId ? 'beat-row selected' : 'beat-row'}
+                      className={`beat-row${beat.id === selectedBeatId ? ' selected' : ''}${beat.color ? ' coloured' : ''}`}
+                      style={beat.color ? ({ '--beat-colour': beat.color } as React.CSSProperties) : undefined}
                       aria-current={beat.id === selectedBeatId ? 'true' : undefined}
-                      title={`${beat.status} · Alt+↑/↓ to reorder · Alt+Shift+↑/↓ to move between ${noun}s`}
+                      title={`${beat.status} · double-click to open · Alt+↑/↓ to reorder · Alt+Shift+↑/↓ to move between ${noun}s`}
                       onClick={() => onSelectBeat(beat.id)}
+                      onDoubleClick={() => onOpenBeat?.(beat.id)}
                       onKeyDown={beatKeys(beat)}
                     >
                       <span className={`glyph status-${beat.status}`} aria-hidden="true">

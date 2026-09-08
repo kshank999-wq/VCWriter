@@ -69,6 +69,7 @@ export const renderUnit = (file: ProjectFile, unitId: StructuralUnitId, options:
 export const renderProject = (file: ProjectFile, options: RenderOptions = {}): string => {
   const screenplayLayout = options.screenplayLayout ?? file.project.format !== 'novel';
   return unitsInStoryOrder(file)
+    .filter((unit) => unit.inScript)
     .map((unit) => renderUnit(file, unit.id, { ...options, screenplayLayout }))
     .filter((text) => text.length > 0)
     .join('\n\n\n');
@@ -129,7 +130,9 @@ export const speechSegmentsForUnit = (file: ProjectFile, unitId: StructuralUnitI
 };
 
 export const speechSegmentsForProject = (file: ProjectFile): SpeechSegment[] =>
-  unitsInStoryOrder(file).flatMap((unit) => speechSegmentsForUnit(file, unit.id));
+  unitsInStoryOrder(file)
+    .filter((unit) => unit.inScript)
+    .flatMap((unit) => speechSegmentsForUnit(file, unit.id));
 
 // Page counts come from `pagination.ts`, which lays the manuscript out at the
 // real geometry rather than estimating from line counts.

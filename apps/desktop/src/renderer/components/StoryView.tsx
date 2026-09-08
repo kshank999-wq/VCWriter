@@ -10,6 +10,7 @@ import {
   type BeatId,
   type ProjectFile,
   type StoryLayout,
+  type StructuralUnitId,
 } from '@vcwriter/domain';
 import { BeatBody } from './BeatBody';
 import { STATUS_GLYPH } from './status';
@@ -26,6 +27,10 @@ interface StoryViewProps {
   focusTitleBeatId: BeatId | null;
   onTitleFocused(): void;
   dictationShortcut: string | null;
+  /** A scene bar was double-clicked: open the scene pop-up. */
+  onOpenUnit?(unitId: StructuralUnitId): void;
+  /** A beat bar was double-clicked: open the beat pop-up. */
+  onOpenBeat?(beatId: BeatId): void;
 }
 
 /**
@@ -50,6 +55,8 @@ export function StoryView({
   focusTitleBeatId,
   onTitleFocused,
   dictationShortcut,
+  onOpenUnit,
+  onOpenBeat,
 }: StoryViewProps) {
   const layout = useMemo(() => givenLayout ?? storyLayout(file), [givenLayout, file]);
   const prose = isProseFormat(file.project.format);
@@ -95,6 +102,9 @@ export function StoryView({
 
       {layout.spans.map((span) => {
         const unit = span.unit;
+        // A scene switched off leaves the script (addendum 02 §4); it is
+        // still on the timeline, dimmed, and opens from there.
+        if (!unit.inScript) return null;
         const lane = findLane(file, unit.laneId);
         const beats = beatsForUnit(file, unit.id);
         const noun = unit.kind;
@@ -108,10 +118,12 @@ export function StoryView({
             <header
               className={unit.collapsed ? 'scene-bar collapsed' : 'scene-bar'}
               style={{ borderLeftColor: lane?.color }}
+              title={onOpenUnit ? `Double-click to open this ${noun}` : undefined}
               onClick={() => {
                 const first = beats[0];
                 if (first) onSelectBeat(first.id);
               }}
+              onDoubleClick={() => onOpenUnit?.(unit.id)}
             >
               <button
                 type="button"
@@ -166,6 +178,7 @@ export function StoryView({
                     collapsed={collapsedBeats.has(beat.id)}
                     onToggle={() => toggleBeat(beat.id)}
                     onSelect={() => onSelectBeat(beat.id)}
+                    onOpen={onOpenBeat ? () => onOpenBeat(beat.id) : undefined}
                     onUpdate={onUpdate}
                     registerBlock={(node) => {
                       if (node) blocks.current.set(beat.id, node);
@@ -216,19 +229,26 @@ interface BeatBlockProps {
   collapsed: boolean;
   onToggle(): void;
   onSelect(): void;
+  onOpen?(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   registerBlock(node: HTMLElement | null): void;
   registerTitle(node: HTMLInputElement | null): void;
 }
 
-function BeatBlock({ file, beat, selected, collapsed, onToggle, onSelect, onUpdate, registerBlock, registerTitle }: BeatBlockProps) {
+function BeatBlock({ file, beat, selected, collapsed, onToggle, onSelect, onOpen, onUpdate, registerBlock, registerTitle }: BeatBlockProps) {
   return (
     <article
       ref={registerBlock}
-      className={selected ? 'beat-block selected' : 'beat-block'}
+      className={`beat-block${selected ? ' selected' : ''}${beat.color ? ' coloured' : ''}`}
+      style={beat.color ? ({ '--beat-colour': beat.color } as React.CSSProperties) : undefined}
       aria-current={selected ? 'true' : undefined}
     >
-      <header className="beat-bar" onClick={onSelect}>
+      <header
+        className="beat-bar"
+        title={onOpen ? 'Double-click to open this beat' : undefined}
+        onClick={onSelect}
+        onDoubleClick={onOpen}
+      >
         <button
           type="button"
           className="ghost twisty"
@@ -252,6 +272,11 @@ function BeatBlock({ file, beat, selected, collapsed, onToggle, onSelect, onUpda
           onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { title: event.target.value }))}
           onClick={(event) => event.stopPropagation()}
         />
+        {beat.revisions.length > 0 ? (
+          <span className="revision-chip muted" title={`${beat.revisions.length} other ${beat.revisions.length === 1 ? 'revision' : 'revisions'} kept`}>
+            {beat.revisionName}
+          </span>
+        ) : null}
         <span className={`status-pill status-${beat.status}`} title={beat.status}>
           <span aria-hidden="true">{STATUS_GLYPH[beat.status]}</span> {beat.status}
         </span>

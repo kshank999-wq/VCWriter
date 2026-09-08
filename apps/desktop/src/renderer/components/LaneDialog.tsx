@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
 import { findLane, laneKindSchema, updateLane, type LaneId, type ProjectFile } from '@vcwriter/domain';
+import { useModal } from '../use-modal';
 
 interface LaneDialogProps {
   file: ProjectFile;
@@ -15,19 +15,8 @@ interface LaneDialogProps {
  * write through `updateLane` as they are typed, so there is no Save.
  */
 export function LaneDialog({ file, laneId, onClose, onUpdate }: LaneDialogProps) {
-  const dialog = useRef<HTMLDialogElement>(null);
   const lane = laneId ? findLane(file, laneId) : undefined;
-
-  useEffect(() => {
-    const node = dialog.current;
-    if (!node) return;
-    if (lane && !node.open) {
-      if (typeof node.showModal === 'function') node.showModal();
-      else node.setAttribute('open', '');
-    } else if (!lane && node.open) {
-      node.close();
-    }
-  }, [lane]);
+  const dialog = useModal(Boolean(lane));
 
   return (
     <dialog ref={dialog} className="lane-dialog" aria-label="Plot" onClose={onClose}>

@@ -135,11 +135,72 @@ names its tracks:
 A **scene block** shows its sequence label and title in a header and its
 beats as compact rows — a status glyph, the title, and at the right a dot
 per character who speaks in the beat, in the character's colour (§6) —
-stacked in order.
+stacked in order. A beat the writer has coloured carries that colour as an
+edge on its row, and in the Script and the Threads view.
 Clicking a beat row selects it; clicking the header selects the scene's
-first beat. Blocks collapse to a header. The **playhead** is a gold rule
-through every track at the left edge of the selected beat's scene, the way
-an editor's playhead marks the frame; it moves when the selection does.
+first beat and opens the **scene pop-up**; double-clicking a beat row opens
+the **beat pop-up**. Blocks collapse to a header. The **playhead** is a
+gold rule through every track at the left edge of the selected beat's
+scene, the way an editor's playhead marks the frame; it moves when the
+selection does. A scene that is **switched off** (below) is drawn dimmed
+with a dashed edge, still at its story position.
+
+### The scene pop-up
+
+Opened from a scene block, or by double-clicking a scene bar in the Script.
+Laid out the way an editing program's clip dialog is, and differently from
+the plot pop-up:
+
+- The **scene's name**, top centre. To its left the sequence label and the
+  lane; to its right the **in-script switch** and Close.
+- Under the name, for a screenplay, the **slugline** as three fields —
+  INT./EXT., the location, the time of day — exactly as it reads in the
+  script. They are not stored anywhere of their own: they read from, and
+  write back to, the scene's first scene-heading element, so a heading
+  typed in the Script shows here and one set here appears in the Script. A
+  scene with no heading yet gets one at the top of its first beat. A novel
+  or short story has no slugline, so the row is not there.
+- A **left column** that fills itself from the text: the **characters**
+  who speak in the scene, in order of first line, and the **setups and
+  payoffs** placed in or landing in the scene (§7.3), each marked *setup*
+  or *payoff*.
+- The rest: status, label, summary, notes, and the beat and page count.
+
+The **in-script switch** takes the scene out of the script without
+deleting it: off, the scene leaves the Script, the page view, the preview,
+every export and the page count, and stays on the timeline, dimmed, where
+it opens and switches back on. It is a way to hold a scene in reserve
+while trying the story without it. The field syncs with the scene.
+
+### The beat pop-up
+
+Opened by double-clicking a beat row on the timeline or a beat bar in the
+Script. The same shape as the scene pop-up with no slugline — a beat has no
+heading of its own — and, beside the beat's name, **Revision**.
+
+- **Revision** is a list: the working revision, marked *(current)*, every
+  kept revision by name, and *New revision…*. Choosing *New revision…*
+  asks for a name inline and starts the new revision as a copy of the
+  working text, which is kept under its old name; the writer then changes
+  the text in the Script. Choosing a kept revision puts its text in the
+  Script and keeps the text that was there in its place. A beat can hold
+  as many revisions as the writer wants, each in full; the left column
+  lists the kept ones with their word counts, to open or remove. The
+  Script marks a beat with kept revisions with the working revision's name
+  on its bar.
+- The **left column**: the characters who speak in the beat and the setups
+  and payoffs placed in or landing in it.
+- **Colour**: swatches in the lane palette, a *no colour* swatch, and a
+  picker for any other. The colour is the beat's own, kept with it and
+  synced; the timeline row, the Script's beat bar and the Threads chip
+  show it.
+- **Links**: the related-elements panel (§7.4), the same one the inspector
+  shows, so a link that moves the story forward is made or read here.
+- Status and summary.
+
+Both pop-ups write through the same domain mutations as everything else,
+as the fields are typed; Close returns to the workspace with nothing else
+changed.
 
 The **toolbar** along the bottom of the timeline: `+ Scene` (after the
 selected scene, in its lane), `+ Beat` (after the selected beat, in its

@@ -110,6 +110,7 @@ const unitToRow = (unit: StructuralUnit): Row => ({
   status: unit.status,
   order_key: unit.orderKey,
   collapsed: unit.collapsed,
+  in_script: unit.inScript,
   created_at: unit.createdAt,
   updated_at: unit.updatedAt,
 });
@@ -123,6 +124,9 @@ const beatToRow = (beat: Beat): Row => ({
   status: beat.status,
   order_key: beat.orderKey,
   manuscript: beat.manuscript,
+  revision_name: beat.revisionName,
+  revisions: beat.revisions,
+  color: beat.color,
   // Denormalised so the dashboard and admin views can count without loading
   // every manuscript; the document stays the source of truth.
   word_count: countWords(beat.manuscript),
@@ -256,6 +260,7 @@ const unitFromRow = (row: Row): StructuralUnit =>
     status: row['status'],
     orderKey: row['order_key'],
     collapsed: flag(row['collapsed']),
+    inScript: row['in_script'] === undefined || row['in_script'] === null ? true : flag(row['in_script']),
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });
@@ -270,6 +275,9 @@ const beatFromRow = (row: Row): Beat =>
     status: row['status'],
     orderKey: row['order_key'],
     manuscript: row['manuscript'] ?? { elements: [] },
+    revisionName: text(row['revision_name'], 'Draft 1'),
+    revisions: row['revisions'] ?? [],
+    color: row['color'] ?? null,
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });

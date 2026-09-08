@@ -15,6 +15,7 @@ import {
   type BeatId,
   type LaneId,
   type ProjectFile,
+  type StructuralUnitId,
   type SyncConflict,
 } from '@vcwriter/domain';
 import { useProject } from './use-project';
@@ -25,6 +26,8 @@ import { MasterPanel } from './components/MasterPanel';
 import { Inspector } from './components/Inspector';
 import { Viewport, type ViewportView } from './components/Viewport';
 import { LaneDialog } from './components/LaneDialog';
+import { SceneDialog } from './components/SceneDialog';
+import { BeatDialog } from './components/BeatDialog';
 import { PageBar, type View } from './components/PageBar';
 import { PagePreview } from './components/PagePreview';
 import { AccountPanel } from './components/AccountPanel';
@@ -73,6 +76,8 @@ export default function App() {
   const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
   const [viewportView, setViewportView] = usePreference<ViewportView>('viewport', 'page');
   const [openLaneId, setOpenLaneId] = useState<LaneId | null>(null);
+  const [openUnitId, setOpenUnitId] = useState<StructuralUnitId | null>(null);
+  const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
   // The Edit-page proportions (addendum 02 §3): a quarter for the script,
   // and of the rest, just under half for the viewport above the lanes.
   const columns = useSplit({ key: 'leftWidth', initial: 0.25, min: 300, reserve: 640, axis: 'x' });
@@ -362,6 +367,8 @@ export default function App() {
             focusTitleBeatId={focusTitleBeatId}
             onTitleFocused={clearTitleFocus}
             dictationShortcut={dictationShortcut}
+            onOpenUnit={setOpenUnitId}
+            onOpenBeat={setOpenBeatId}
           />
           {focused ? null : (
             <>
@@ -415,6 +422,8 @@ export default function App() {
                       onAddLane={addLaneToProject}
                       onAddAct={addActAtSelection}
                       onOpenLane={setOpenLaneId}
+                      onOpenUnit={setOpenUnitId}
+                      onOpenBeat={setOpenBeatId}
                     />
                   </>
                 ) : null}
@@ -422,6 +431,8 @@ export default function App() {
             </>
           )}
           <LaneDialog file={file} laneId={openLaneId} onClose={() => setOpenLaneId(null)} onUpdate={project.update} />
+          <SceneDialog file={file} unitId={openUnitId} onClose={() => setOpenUnitId(null)} onUpdate={project.update} />
+          <BeatDialog file={file} beatId={openBeatId} onClose={() => setOpenBeatId(null)} onUpdate={project.update} />
         </div>
       ) : (
         <main className="full">

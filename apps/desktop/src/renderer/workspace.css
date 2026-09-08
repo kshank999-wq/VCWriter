@@ -551,6 +551,354 @@ dialog.lane-dialog > header {
   background: var(--ink);
 }
 
+/* ------------------------------------------------- scene and beat dialogs */
+
+dialog.scene-dialog,
+dialog.beat-dialog {
+  width: min(860px, calc(100vw - 48px));
+}
+
+dialog.scene-dialog > header,
+dialog.beat-dialog > header {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) minmax(0, 2fr) minmax(80px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+dialog.scene-dialog > header.off {
+  opacity: 0.8;
+}
+
+.scene-dialog-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The name, top centre, the way the clip dialog names the clip. */
+.scene-dialog-name {
+  text-align: center;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.scene-dialog-name:hover,
+.scene-dialog-name:focus {
+  border-color: var(--border);
+}
+
+/* The in-script switch. */
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: end;
+  cursor: pointer;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  position: relative;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.switch-track {
+  width: 28px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--border);
+  position: relative;
+  transition: background 120ms;
+}
+
+.switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--panel);
+  transition: left 120ms;
+}
+
+.switch input:checked + .switch-track {
+  background: var(--gold-deep);
+}
+
+.switch input:checked + .switch-track::after {
+  left: 16px;
+  background: var(--ink);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 1px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.switch input:checked ~ .switch-label {
+  color: var(--gold);
+}
+
+/* The slugline, under the name, the way it reads in the script. */
+.scene-heading-fields {
+  display: grid;
+  grid-template-columns: 110px 1fr 140px;
+  gap: 6px;
+  padding: 10px 18px 0;
+}
+
+.scene-heading-fields input,
+.scene-heading-fields select {
+  font-family: var(--mono, 'Courier Prime', 'Courier New', monospace);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 12.5px;
+  background: var(--ink);
+}
+
+.scene-heading-fields input::placeholder {
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: inherit;
+}
+
+.scene-dialog-body {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 0;
+  min-height: 300px;
+}
+
+.scene-dialog-side {
+  border-right: 1px solid var(--border);
+  padding: 12px 14px 12px 18px;
+  font-size: 12px;
+  background: color-mix(in srgb, var(--ink) 40%, var(--panel));
+}
+
+.scene-dialog-side h4 {
+  margin: 16px 0 6px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-weight: normal;
+}
+
+.scene-dialog-side h4:first-child {
+  margin-top: 0;
+}
+
+.scene-dialog-side ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.scene-dialog-side li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  line-height: 1.4;
+}
+
+.scene-dialog-side p {
+  margin: 0;
+  font-size: 11.5px;
+}
+
+.promise-role {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 4px;
+  border-radius: 2px;
+  border: 1px solid var(--gold-deep);
+  color: var(--gold);
+}
+
+.promise-role.payoff {
+  border-color: var(--red, #8b1c1c);
+  color: color-mix(in srgb, var(--red, #8b1c1c) 55%, var(--text));
+}
+
+.scene-dialog-main {
+  padding: 12px 18px 12px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.scene-dialog-main .field {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.scene-dialog-main .field input,
+.scene-dialog-main .field select,
+.scene-dialog-main .field textarea {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12.5px;
+}
+
+.scene-dialog-main textarea {
+  line-height: 1.5;
+  background: var(--ink);
+}
+
+.scene-dialog-main > p {
+  margin: 0;
+  font-size: 11.5px;
+}
+
+.scene-dialog-main .related {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+/* The revision picker beside the beat name. */
+.revision-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: end;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.revision-picker select {
+  font-size: 11.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 3px 6px;
+  max-width: 180px;
+}
+
+.revision-naming {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px 0;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.revision-naming input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.revision-list li {
+  gap: 2px;
+}
+
+.revision-list .link {
+  padding: 0;
+}
+
+.revision-chip {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+
+/* Colour swatches. */
+.swatches {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.swatches .swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.swatches .swatch.none {
+  background: transparent;
+  position: relative;
+}
+
+.swatches .swatch.none::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-top: 1px solid var(--muted);
+  transform: rotate(-45deg);
+  transform-origin: center;
+}
+
+.swatches .swatch.checked {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+.swatches input[type='color'].swatch {
+  width: 26px;
+  height: 22px;
+  padding: 1px;
+}
+
+/* A coloured beat carries its colour as an edge, in the lanes and the Script. */
+.beat-row.coloured {
+  box-shadow: inset 3px 0 0 var(--beat-colour);
+  padding-left: 9px;
+}
+
+.beat-row.coloured.selected {
+  box-shadow: inset 3px 0 0 var(--beat-colour), 0 0 0 1px var(--gold-deep);
+}
+
+.beat-block.coloured {
+  border-left-color: var(--beat-colour);
+}
+
+.beat-block.coloured.selected {
+  border-left-color: var(--gold);
+  box-shadow: inset 2px 0 0 var(--beat-colour);
+}
+
+/* A scene switched off: still on the timeline, dimmed. */
+.block.off {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.block.off .block-title {
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
+}
+
 /* ----------------------------------------------------------- master timeline */
 
 .timeline {

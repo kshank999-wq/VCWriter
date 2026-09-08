@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { id, orderKey, timestamps } from './common.js';
 import { manuscriptSegmentSchema } from './manuscript.js';
-import type { BeatId, LaneId, ProjectId, StoryMarkerId, StructuralUnitId } from '../ids.js';
+import type { BeatId, BeatRevisionId, LaneId, ProjectId, StoryMarkerId, StructuralUnitId } from '../ids.js';
 
 /**
  * Story structure: lanes -> scene/chapter containers -> beats (spec §5).
@@ -79,9 +79,24 @@ export const structuralUnitSchema = z.object({
   /** Position in the story, across every lane (addendum 02 §8). */
   orderKey: orderKey(),
   collapsed: z.boolean().default(false),
+  /**
+   * Off: the scene stays in the structure — on the timeline, dimmed — but
+   * leaves the script, the preview and every export (addendum 02 §4). A way
+   * to hold a scene in reserve without deleting it.
+   */
+  inScript: z.boolean().default(true),
   ...timestamps,
 });
 export type StructuralUnit = z.infer<typeof structuralUnitSchema>;
+
+/** A kept version of a beat's manuscript (addendum 02 §4). */
+export const beatRevisionSchema = z.object({
+  id: id<BeatRevisionId>(),
+  name: z.string().min(1),
+  manuscript: manuscriptSegmentSchema,
+  savedAt: z.string().datetime({ offset: true }),
+});
+export type BeatRevision = z.infer<typeof beatRevisionSchema>;
 
 export const beatStatusSchema = z.enum(['planned', 'drafting', 'written', 'revised', 'cut']);
 export type BeatStatus = z.infer<typeof beatStatusSchema>;
@@ -99,7 +114,14 @@ export const beatSchema = z.object({
   summary: z.string().default(''),
   status: beatStatusSchema.default('planned'),
   orderKey: orderKey(),
+  /** The working text: the revision named by `revisionName`. */
   manuscript: manuscriptSegmentSchema.default({ elements: [] }),
+  /** The name of the working revision; the others are in `revisions`. */
+  revisionName: z.string().default('Draft 1'),
+  /** Every revision that is not the working one, kept in full. */
+  revisions: z.array(beatRevisionSchema).default([]),
+  /** A colour the writer gave the beat, for the timeline and the threads; null for none. */
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().default(null),
   ...timestamps,
 });
 export type Beat = z.infer<typeof beatSchema>;

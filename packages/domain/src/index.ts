@@ -25,6 +25,8 @@ export * from './editing.js';
 export * from './pagination.js';
 export * from './story-layout.js';
 export * from './story-threads.js';
+export * from './scene-heading.js';
+export * from './scene-cast.js';
 export * from './print-html.js';
 export * from './sync-mapping.js';
 export * from './sync-merge.js';

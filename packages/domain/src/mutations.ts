@@ -29,6 +29,7 @@ import type {
 import type { ProjectFile } from './project-file.js';
 import type {
   BeatId,
+  BeatRevisionId,
   CharacterId,
   LaneId,
   ResearchCategoryId,
@@ -283,7 +284,7 @@ const reanchorMarkers = (file: ProjectFile, removedUnitIds: ReadonlySet<string>)
 export const updateBeat = (
   file: ProjectFile,
   beatId: BeatId,
-  patch: Partial<Pick<Beat, 'title' | 'summary' | 'status'>> & { manuscript?: ManuscriptSegment },
+  patch: Partial<Pick<Beat, 'title' | 'summary' | 'status' | 'color' | 'revisionName'>> & { manuscript?: ManuscriptSegment },
 ): ProjectFile => {
   if (!file.beats.some((beat) => beat.id === beatId)) throw new DomainError(`Beat ${beatId} does not exist`);
   return touchProject({
@@ -291,6 +292,55 @@ export const updateBeat = (
     beats: file.beats.map((beat) => (beat.id === beatId ? touch({ ...beat, ...patch }) : beat)),
   });
 };
+
+// ---------------------------------------------------------------------------
+// Beat revisions (addendum 02 §4)
+// ---------------------------------------------------------------------------
+
+const withBeat = (file: ProjectFile, beatId: BeatId, change: (beat: Beat) => Beat): ProjectFile => {
+  if (!file.beats.some((beat) => beat.id === beatId)) throw new DomainError(`Beat ${beatId} does not exist`);
+  return touchProject({
+    ...file,
+    beats: file.beats.map((beat) => (beat.id === beatId ? touch(change(beat)) : beat)),
+  });
+};
+
+/**
+ * Start a new revision of a beat: the working text is kept under its current
+ * name and stays as the starting point of the new one, so a revision begins
+ * as a copy and diverges from there.
+ */
+export const startRevision = (file: ProjectFile, beatId: BeatId, name: string): ProjectFile =>
+  withBeat(file, beatId, (beat) => ({
+    ...beat,
+    revisions: [
+      ...beat.revisions,
+      { id: newId<BeatRevisionId>(), name: beat.revisionName, manuscript: beat.manuscript, savedAt: nowIso() },
+    ],
+    revisionName: name.trim() || `Draft ${beat.revisions.length + 2}`,
+  }));
+
+/** Make a kept revision the working one; the working text is kept in its place. */
+export const switchRevision = (file: ProjectFile, beatId: BeatId, revisionId: BeatRevisionId): ProjectFile =>
+  withBeat(file, beatId, (beat) => {
+    const chosen = beat.revisions.find((revision) => revision.id === revisionId);
+    if (!chosen) throw new DomainError(`Revision ${revisionId} does not exist`);
+    return {
+      ...beat,
+      manuscript: chosen.manuscript,
+      revisionName: chosen.name,
+      revisions: [
+        ...beat.revisions.filter((revision) => revision.id !== revisionId),
+        { id: chosen.id, name: beat.revisionName, manuscript: beat.manuscript, savedAt: nowIso() },
+      ],
+    };
+  });
+
+export const removeRevision = (file: ProjectFile, beatId: BeatId, revisionId: BeatRevisionId): ProjectFile =>
+  withBeat(file, beatId, (beat) => ({
+    ...beat,
+    revisions: beat.revisions.filter((revision) => revision.id !== revisionId),
+  }));
 
 export const addResearchItem = (
   file: ProjectFile,
@@ -578,7 +628,7 @@ export const removeLane = (file: ProjectFile, laneId: LaneId): ProjectFile => {
 export const updateUnit = (
   file: ProjectFile,
   unitId: StructuralUnitId,
-  patch: Partial<Pick<StructuralUnit, 'title' | 'sequenceLabel' | 'summary' | 'notes' | 'status' | 'collapsed'>>,
+  patch: Partial<Pick<StructuralUnit, 'title' | 'sequenceLabel' | 'summary' | 'notes' | 'status' | 'collapsed' | 'inScript'>>,
 ): ProjectFile => {
   if (!file.units.some((unit) => unit.id === unitId)) {
     throw new DomainError(`Scene/chapter ${unitId} does not exist`);

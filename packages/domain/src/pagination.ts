@@ -268,7 +268,10 @@ export const manuscriptElements = (
   file: ProjectFile,
   options: ManuscriptOptions = {},
 ): ManuscriptElement[] =>
-  unitsInStoryOrder(file).flatMap((unit) =>
+  unitsInStoryOrder(file)
+    // A scene switched off stays in the structure and leaves the manuscript.
+    .filter((unit) => unit.inScript)
+    .flatMap((unit) =>
     beatsForUnit(file, unit.id).flatMap((beat) => {
       const body = beat.manuscript.elements;
       if (!options.includeBeatTitles || beat.title.length === 0) return body;

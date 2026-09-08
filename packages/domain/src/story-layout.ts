@@ -65,7 +65,8 @@ export const storyLayout = (file: ProjectFile): StoryLayout => {
 
   let cursor = 0;
   const spans: StorySpan[] = units.map((unit, index) => {
-    const pages = pagesForUnit(file, unit.id);
+    // A scene that is off takes no pages: it is not in the manuscript.
+    const pages = unit.inScript ? pagesForUnit(file, unit.id) : 0;
     const span: StorySpan = {
       unit,
       index,

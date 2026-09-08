@@ -37,7 +37,8 @@ export function Viewport({ file, layout: givenLayout, threads, selectedBeatId, o
   const position = beats.findIndex((beat) => beat.id === selectedBeatId);
   const beat = beats[position];
   const unit = beat ? findUnit(file, beat.unitId) : undefined;
-  const pages = useMemo(() => (unit ? paginateUnit(file, unit.id) : []), [file, unit]);
+  // A scene switched off has no pages to show: it is out of the script.
+  const pages = useMemo(() => (unit?.inScript ? paginateUnit(file, unit.id) : []), [file, unit]);
   const layout = useMemo(() => givenLayout ?? storyLayout(file), [givenLayout, file]);
   const span = unit ? layout.spans.find((candidate) => candidate.unit.id === unit.id) : undefined;
   const total = Math.max(1, Math.ceil(layout.totalPages));
@@ -83,6 +84,7 @@ export function Viewport({ file, layout: givenLayout, threads, selectedBeatId, o
           {unit ? (
             <>
               <span className="muted">{unit.sequenceLabel || unit.kind}</span> {unit.title || `Untitled ${unit.kind}`}
+              {unit.inScript ? null : <span className="muted"> · off</span>}
             </>
           ) : (
             <span className="muted">No scene selected</span>
@@ -100,7 +102,16 @@ export function Viewport({ file, layout: givenLayout, threads, selectedBeatId, o
         style={{ '--page-scale': scale } as React.CSSProperties}
       >
         {view === 'page' ? (
-          <Paper pages={pages} empty={unit ? 'Nothing written in this scene yet.' : 'Select a scene to see its pages.'} />
+          <Paper
+            pages={pages}
+            empty={
+              !unit
+                ? 'Select a scene to see its pages.'
+                : unit.inScript
+                  ? 'Nothing written in this scene yet.'
+                  : `Switched off: this ${unit.kind} is not in the script. Open it from the timeline to switch it back on.`
+            }
+          />
         ) : (
           <ThreadView file={file} threads={threads} selectedBeatId={selectedBeatId} onSelectBeat={onSelectBeat} onUpdate={onUpdate} />
         )}
