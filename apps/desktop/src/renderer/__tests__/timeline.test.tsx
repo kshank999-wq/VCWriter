@@ -182,7 +182,7 @@ describe('master timeline', () => {
     const onAddAct = vi.fn();
     timeline(twoLanes(), { onAddScene, onAddAct });
     fireEvent.click(screen.getByRole('button', { name: '+ Scene' }));
-    fireEvent.click(screen.getByRole('button', { name: '+ Act' }));
+    fireEvent.click(screen.getByRole('button', { name: '+ Marker' }));
     expect(onAddScene).toHaveBeenCalledTimes(1);
     expect(onAddAct).toHaveBeenCalledTimes(1);
   });
@@ -234,6 +234,7 @@ describe('master panel', () => {
 
     // The Script opens as the finished script: the page, not the scaffolding.
     expect(screen.queryByLabelText('Beat title (not printed)')).toBeNull();
+    fireEvent.click(screen.getByLabelText('Page options'));
     fireEvent.click(screen.getByLabelText('Beat names'));
     expect(screen.getByLabelText('Beat title (not printed)')).toBeDefined();
 

@@ -1,12 +1,15 @@
 import { useMemo } from 'react';
 import {
   beatsForUnit,
+  hasChapterPages,
+  placedMarkers,
   spanWidth,
   threadLayout,
   timecode,
   unlink,
   type BeatId,
   type ProjectFile,
+  type StoryMarkerId,
   type StorySpan,
   type ThreadLayout,
   type TimelineArc,
@@ -24,6 +27,8 @@ interface TimelineViewerProps {
   /** A character's name, or '' for all of them. */
   isolated: string;
   onIsolate(name: string): void;
+  /** A marker was clicked: open it (addendum 02 §11). */
+  onOpenMarker?(markerId: StoryMarkerId): void;
 }
 
 const HEAD = 132;
@@ -58,6 +63,7 @@ export function TimelineViewer({
   onZoom,
   isolated,
   onIsolate,
+  onOpenMarker,
 }: TimelineViewerProps) {
   const layout = useMemo(() => threads ?? threadLayout(file), [threads, file]);
   const { spans, characters, themes, arcs } = layout;
@@ -67,6 +73,16 @@ export function TimelineViewer({
     const beat = selectedBeatId ? file.beats.find((candidate) => candidate.id === selectedBeatId) : undefined;
     return beat?.unitId ?? null;
   }, [file.beats, selectedBeatId]);
+
+  // The markers, by the column they fall in. An editing program puts these
+  // along the top of the timeline and this is the same thing: a labelled
+  // point in the story, at the moment it happens (addendum 02 §11).
+  const marks = useMemo(() => {
+    const byUnit = new Map<string, ReturnType<typeof placedMarkers>[number]>();
+    for (const placed of placedMarkers(file)) byUnit.set(placed.marker.unitId as string, placed);
+    return byUnit;
+  }, [file]);
+  const leaves = hasChapterPages(file.project.format);
 
   const widths = spans.map((span) => spanWidth(span, zoom));
   const columns = `${HEAD}px ${widths.map((width) => `${width}px`).join(' ')} minmax(40px, 1fr)`;
@@ -145,6 +161,36 @@ export function TimelineViewer({
             </div>
           ))}
           <div className="viewer-time viewer-sticky tail" />
+
+          {/* The markers, above the scenes: acts in a script, chapters in a
+              book, each at the point it starts. */}
+          <div className="track-head viewer-sticky marks">Markers</div>
+          {spans.map((span) => {
+            const placed = marks.get(span.unit.id as string);
+            if (!placed) return <div key={span.unit.id} className="viewer-mark viewer-sticky" />;
+            const leaf = leaves && placed.marker.page.include;
+            return (
+              <button
+                type="button"
+                key={span.unit.id}
+                className={`viewer-mark viewer-sticky set${leaf ? ' has-page' : ''}`}
+                aria-label={`Marker: ${placed.label}${placed.marker.title ? ` — ${placed.marker.title}` : ''}`}
+                title={
+                  leaves
+                    ? `${placed.label} — open it to design the page it starts with`
+                    : `${placed.label} — open it for its notes`
+                }
+                onClick={() => onOpenMarker?.(placed.marker.id)}
+              >
+                <span className="viewer-mark-flag">
+                  {placed.label}
+                  {placed.marker.title ? ` · ${placed.marker.title}` : ''}
+                  {leaf ? ' ◲' : ''}
+                </span>
+              </button>
+            );
+          })}
+          <div className="viewer-mark viewer-sticky tail" />
 
           <div className="track-head viewer-sticky scenes">{noun}</div>
           {spans.map((span) => {

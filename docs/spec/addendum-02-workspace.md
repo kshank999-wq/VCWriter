@@ -475,6 +475,25 @@ Pages are written in exactly as the continuous view is. It is the same
 manuscript, the same mutations and the same two keys; what changes is where
 the paper ends.
 
+### 6.2 The gear: paper, ink and face
+
+Everything about *how the page looks* is behind one gear at the left of the
+bar, rather than strung across it. The bar above a page should be the page's.
+
+- **Paper and ink.** Four papers a manuscript is actually read on — white,
+  cream, cool grey, night — and, under them, a colour for each, because a
+  writer who wants their own is not wrong. The ink follows the paper when a
+  swatch is picked and can be set on its own after.
+- **Typeface.** Courier, Courier Prime, Consolas, Georgia, Times, Palatino.
+  What is *not* on offer is a size: the column stays sixty characters wide
+  whatever the face, because that is what makes a page a page, and the size
+  control is the page zoom of §6.1.
+- **Layout**, the continuous/pages choice of §6.1.
+- **What shows**: the display switches that used to be chips in the bar.
+
+None of it is project data. A colleague opening the file should not inherit
+somebody's dark mode, so it lives with the other per-machine preferences.
+
 Large projects: the view renders every beat, and the performance test in the
 domain package is the gate; when it fails, the loader lazy-reads beats, not
 the view (ADR 0002).
@@ -656,7 +675,56 @@ order they printed before — lane by lane — so nothing changes in the
 manuscript until the writer moves something. The migration takes the usual
 pre-migration snapshot.
 
-## 12. Act markers
+## 12. Markers: acts, chapters, and what hangs off one
+
+Every format puts points in its story, and every format means something
+different by them.
+
+| Format | What a marker is | What hangs off it |
+| --- | --- | --- |
+| Screenplay, stage play | An **act** | **Notes** — a script prints no leaf between its acts |
+| Novel | A **chapter** | A **chapter page**, if the writer wants one |
+| Short story | A **chapter**, numbered I, II, III | The same |
+
+They are drawn on the **Timeline & Viewer** as an editing program draws
+markers: a tick at the point in the story with its label beside it, in a row
+of its own above the scenes, sticky like the rest of that header. Clicking
+one opens it.
+
+### Numbering
+
+One scheme for the whole project, because a book whose chapters are numbered
+three different ways is not a book: numbers, Roman numerals upper or lower,
+letters, words (*Chapter Thirty-Two*), a symbol, or nothing. A format starts
+with the scheme it is written in — Roman for a screenplay's acts and a short
+story's sections, plain numbers for a novel's chapters — and the writer can
+change it from any marker, which says that it changes them all. What the
+writer types as a marker's *title* sits beside the number, never instead of
+it. Each kind counts on its own, so parts do not disturb the chapter count.
+
+### The chapter page
+
+The leaf a book puts between chapters: the chapter's number, its name, an
+epigraph, and a device or illustration. Each of the four is a switch, so a
+page showing only a device on blank paper is possible, which is a real thing
+books do. It sits a third of the way down the sheet, centred or ranged left.
+
+It is **not manuscript**. Nothing on it is text the writer is writing, so it
+lives on the marker rather than among the elements, and a printing can leave
+every one of them out without touching a word — the Preview and the export
+carry a switch for exactly that, and switching a page off keeps its design
+for the next printing that wants it.
+
+In the paginator it is a page of its own, ahead of the chapter it opens.
+That is not a compromise: a chapter starts on a fresh page in every book ever
+printed, so the story is paginated in runs between the leaves and the pages
+are numbered straight through.
+
+The graphic is held in the document as a data URL and capped at 2MB. The
+project is a text file that syncs; a full-bleed photograph in it would make
+every save enormous, and a printer's ornament is what this is for.
+
+### The older act-marker rules, unchanged
 
 A marker is a label at a position in the story order: `{ id, title,
 kind: 'act' | 'sequence' | 'note', unitId }`, meaning *this scene starts
@@ -742,6 +810,17 @@ Named so that nobody mistakes their absence for an oversight:
   both edits.
 - The writing screen's page measures 8½ by 11 inches at 100%, with an inch
   and a half at the left, and its column wraps where the paginator wraps.
+- A marker is drawn on the Timeline & Viewer at the point it marks, in a row
+  of its own, and clicking it opens what hangs off it: a chapter page to
+  design in a book, notes in a script.
+- Changing the numbering from one marker changes them all, and a short story
+  starts in Roman numerals without being asked.
+- Switching a chapter page on adds one printed page and leaves every line of
+  the manuscript on the page it was on; switching it off again keeps what was
+  designed on it.
+- The Script's gear carries the paper, the ink, the typeface and the display
+  switches, and the page takes the writer's colours without the paper
+  preference overriding them.
 - The Script in **Pages** draws one sheet per printed page, each laid out at
   8½ by 11 whatever size it is shown at, and a beat that runs over the leaf
   appears on both sheets with every one of its elements on the page exactly

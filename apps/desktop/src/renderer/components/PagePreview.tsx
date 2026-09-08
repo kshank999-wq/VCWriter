@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Paper } from './Paper';
 import {
+  hasChapterPages,
   paginateProject,
   paginateUnit,
   type ProjectFile,
@@ -13,6 +14,9 @@ interface PagePreviewProps {
   unitId?: StructuralUnitId | null;
   includeBeatTitles: boolean;
   onToggleBeatTitles(next: boolean): void;
+  /** Whether a printing carries the leaves between chapters (§11). */
+  includeChapterPages: boolean;
+  onToggleChapterPages(next: boolean): void;
   onExportPdf(): void;
   onPrint(): void;
   busy: boolean;
@@ -33,6 +37,8 @@ export function PagePreview({
   unitId,
   includeBeatTitles,
   onToggleBeatTitles,
+  includeChapterPages,
+  onToggleChapterPages,
   onExportPdf,
   onPrint,
   busy,
@@ -44,9 +50,10 @@ export function PagePreview({
     () =>
       scope === 'unit' && unitId
         ? paginateUnit(file, unitId)
-        : paginateProject(file, { includeBeatTitles }),
-    [file, scope, unitId, includeBeatTitles],
+        : paginateProject(file, { includeBeatTitles, includeChapterPages }),
+    [file, scope, unitId, includeBeatTitles, includeChapterPages],
   );
+  const chapters = hasChapterPages(file.project.format);
 
   return (
     <div className="preview">
@@ -88,6 +95,20 @@ export function PagePreview({
           />
           Show beat titles
         </label>
+
+        {/* A book's leaves between chapters. A script has none, so the
+            control is not there to puzzle over (§11). */}
+        {chapters ? (
+          <label className="toggle" title="Print the page each chapter opens with">
+            <input
+              type="checkbox"
+              checked={includeChapterPages}
+              disabled={scope === 'unit'}
+              onChange={(event) => onToggleChapterPages(event.target.checked)}
+            />
+            Chapter pages
+          </label>
+        ) : null}
 
         <div className="preview-actions">
           <button type="button" onClick={onPrint} disabled={busy}>

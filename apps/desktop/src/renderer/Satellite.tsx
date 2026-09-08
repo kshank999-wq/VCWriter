@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   addLane,
   addMarker,
+  defaultMarkerKind,
   beatsInStoryOrder,
   findBeat,
   storyLayout,
@@ -10,6 +11,7 @@ import {
   type BeatId,
   type LaneId,
   type ProjectFile,
+  type StoryMarkerId,
   type StructuralUnitId,
 } from '@vcwriter/domain';
 import { useLinkedProject } from './use-linked-project';
@@ -18,12 +20,14 @@ import { addBeatAfter, addSceneAfter } from './structure';
 import { beatIdOf, paneTitle, type PaneKey } from './panes';
 import { applyScheme, DEFAULT_SCHEME, type SchemeId } from './themes';
 import { StoryView, DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay, type ScriptLayout } from './components/StoryView';
+import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
 import { ResearchBody } from './components/ResearchWindow';
 import { TimelineViewer } from './components/TimelineViewer';
 import { MasterTimeline } from './components/MasterTimeline';
 import { Inspector } from './components/Inspector';
 import { BeatWriter } from './components/BeatWriter';
 import { BeatDialog } from './components/BeatDialog';
+import { MarkerDialog } from './components/MarkerDialog';
 import { SceneDialog } from './components/SceneDialog';
 import { LaneDialog } from './components/LaneDialog';
 
@@ -87,11 +91,14 @@ function Section({
   const [openLaneId, setOpenLaneId] = useState<LaneId | null>(null);
   const [openUnitId, setOpenUnitId] = useState<StructuralUnitId | null>(null);
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
+  const [openMarkerId, setOpenMarkerId] = useState<StoryMarkerId | null>(null);
   const [scriptDisplay, setScriptDisplay] = usePreference<ScriptDisplay>('scriptDisplay', DEFAULT_SCRIPT_DISPLAY);
   const [scriptLayout, setScriptLayout] = usePreference<ScriptLayout>('scriptLayout', 'flow');
   // Zero is 'fit the width there is' — a page is 8½ inches and the
   // Script's column is not (§6.1).
   const [scriptZoom, setScriptZoom] = usePreference('scriptZoom', 0);
+  // Paper, ink and face: the writer's, per machine, never project data (§6.2).
+  const [pageStyle, setPageStyle] = usePreference<PageStyle>('pageStyle', DEFAULT_PAGE_STYLE);
   const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
   const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', 180);
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
@@ -133,6 +140,7 @@ function Section({
         onOpenBeat={setOpenBeatId}
         onSelectBeat={setSelectedBeatId}
       />
+      <MarkerDialog file={file} markerId={openMarkerId} onClose={() => setOpenMarkerId(null)} onUpdate={onUpdate} />
       <BeatDialog
         file={file}
         beatId={openBeatId}
@@ -185,6 +193,8 @@ function Section({
           onScriptLayout={setScriptLayout}
           pageZoom={scriptZoom}
           onPageZoom={setScriptZoom}
+          pageStyle={{ ...DEFAULT_PAGE_STYLE, ...pageStyle }}
+          onPageStyle={setPageStyle}
           onOpenUnit={setOpenUnitId}
           onOpenBeat={openBeatWindow}
         />
@@ -206,6 +216,7 @@ function Section({
           onZoom={setViewerZoom}
           isolated={isolatedCharacter}
           onIsolate={setIsolatedCharacter}
+          onOpenMarker={setOpenMarkerId}
         />
         {dialogs}
       </div>
@@ -239,7 +250,11 @@ function Section({
         onAddLane={() => onUpdate((current) => addLane(current, { name: 'New lane' }).file)}
         onAddAct={() =>
           selectedBeat
-            ? onUpdate((current) => addMarker(current, { unitId: selectedBeat.unitId, title: 'New act' }).file)
+            ? onUpdate((current) => addMarker(current, {
+            unitId: selectedBeat.unitId,
+            title: '',
+            kind: defaultMarkerKind(current.project.format),
+          }).file)
             : undefined
         }
         onOpenLane={setOpenLaneId}

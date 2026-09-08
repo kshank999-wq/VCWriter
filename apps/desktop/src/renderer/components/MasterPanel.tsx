@@ -1,5 +1,6 @@
 import { type BeatId, type ProjectFile, type StoryLayout, type StructuralUnitId } from '@vcwriter/domain';
 import { StoryView, type ScriptDisplay, type ScriptLayout } from './StoryView';
+import type { PageStyle } from './ScriptOptions';
 
 interface MasterPanelProps {
   file: ProjectFile;
@@ -21,6 +22,8 @@ interface MasterPanelProps {
   onScriptLayout?(next: ScriptLayout): void;
   pageZoom?: number;
   onPageZoom?(next: number): void;
+  pageStyle?: PageStyle;
+  onPageStyle?(next: PageStyle): void;
 }
 
 /**

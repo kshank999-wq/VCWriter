@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import {
+  defaultMarkerKind,
+  markerNoun,
   addBeat,
   beatsForUnit,
   moveBeat,
@@ -216,9 +218,9 @@ export function MasterTimeline({
             </span>
           </div>
 
-          {/* Acts */}
+          {/* The markers as bands: acts in a script, chapters in a book. */}
           <div className="track-head">
-            Acts
+            {markerNoun(defaultMarkerKind(file.project.format))}s
           </div>
           <ActsTrack layout={layout} playheadUnitId={selectedUnitId} onUpdate={onUpdate} />
           <div className="acts-cell tail" />
@@ -277,8 +279,19 @@ export function MasterTimeline({
         <button type="button" className="tool" onClick={onAddLane}>
           + Lane
         </button>
-        <button type="button" className="tool" onClick={onAddAct} disabled={!selectedUnitId}>
-          + Act
+        {/* Always "Marker": in prose the scene button already says Chapter,
+            and what kind of marker this one is — act, chapter, part — is
+            chosen on the marker itself (addendum 02 §11). */}
+        <button
+          type="button"
+          className="tool"
+          onClick={onAddAct}
+          disabled={!selectedUnitId}
+          title={`A point in the story: an act in a script, a chapter in a book. Starts a ${markerNoun(
+            defaultMarkerKind(file.project.format),
+          ).toLowerCase()} here.`}
+        >
+          + Marker
         </button>
         <label className="zoom">
           <span className="muted">Zoom</span>

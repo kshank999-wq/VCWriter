@@ -31,6 +31,18 @@ export const projectSettingsSchema = z.object({
   /** §6: internal beat labels stay out of the manuscript unless asked for. */
   includeBeatTitlesInExport: z.boolean().default(false),
   focusMode: z.boolean().default(false),
+  /**
+   * How the story's markers are numbered (addendum 02 §11). One scheme for
+   * the whole project, because a book whose chapters are numbered three
+   * different ways is not a book. Empty means "whatever this format does":
+   * Roman for a screenplay's acts and a short story's sections, plain
+   * numbers for a novel's chapters.
+   */
+  markerNumbering: z.enum(['numeric', 'roman', 'roman_lower', 'letters', 'words', 'symbol', 'none', '']).default(''),
+  /** The glyph used when the numbering is a symbol. */
+  markerSymbol: z.string().default('❦'),
+  /** Whether a printing carries the chapter pages. */
+  includeChapterPagesInExport: z.boolean().default(true),
 });
 export type ProjectSettings = z.infer<typeof projectSettingsSchema>;
 

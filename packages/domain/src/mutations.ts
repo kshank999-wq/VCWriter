@@ -1,7 +1,14 @@
 import { newId } from './ids.js';
 import { orderKeyForIndex } from './ordering.js';
 import { nowIso } from './entities/common.js';
-import { LANE_COLOURS, beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
+import {
+  LANE_COLOURS,
+  beatSchema,
+  chapterPageSchema,
+  laneSchema,
+  storyMarkerSchema,
+  structuralUnitSchema,
+} from './entities/structure.js';
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
 import { setupPayoffSchema, setupPointSchema } from './entities/setups.js';
 import { characterSchema } from './entities/character.js';
@@ -27,6 +34,7 @@ import type {
   Beat,
   Lane,
   LaneKind,
+  ChapterPage,
   StoryMarker,
   StoryMarkerKind,
   StructuralUnit,
@@ -204,7 +212,7 @@ export const moveUnit = (
 };
 
 // ---------------------------------------------------------------------------
-// Act markers (addendum 02 §9)
+// Story markers: acts in a script, chapters in a book (addendum 02 §9, §11)
 // ---------------------------------------------------------------------------
 
 /** A scene starts at most one marker; adding another replaces its label. */
@@ -242,7 +250,7 @@ export const addMarker = (
 export const updateMarker = (
   file: ProjectFile,
   markerId: StoryMarkerId,
-  patch: Partial<Pick<StoryMarker, 'title' | 'kind' | 'unitId'>>,
+  patch: Partial<Pick<StoryMarker, 'title' | 'kind' | 'unitId' | 'notes'>>,
 ): ProjectFile => {
   if (!file.markers.some((marker) => marker.id === markerId)) {
     throw new DomainError(`Marker ${markerId} does not exist`);
@@ -258,6 +266,26 @@ export const updateMarker = (
 
 export const removeMarker = (file: ProjectFile, markerId: StoryMarkerId): ProjectFile =>
   touchProject({ ...file, markers: file.markers.filter((marker) => marker.id !== markerId) });
+
+/**
+ * The page a chapter opens with (addendum 02 §11). Patched rather than
+ * replaced, so turning the page on does not wipe what was designed on it
+ * last time and turning it off keeps the design for when it comes back —
+ * `include` is a switch, never a delete.
+ */
+export const setChapterPage = (
+  file: ProjectFile,
+  markerId: StoryMarkerId,
+  patch: Partial<ChapterPage>,
+): ProjectFile => {
+  const existing = file.markers.find((marker) => marker.id === markerId);
+  if (!existing) throw new DomainError(`Marker ${markerId} does not exist`);
+  const page = chapterPageSchema.parse({ ...existing.page, ...patch });
+  return touchProject({
+    ...file,
+    markers: file.markers.map((marker) => (marker.id === markerId ? touch({ ...marker, page }) : marker)),
+  });
+};
 
 /**
  * When scenes go, a marker anchored to one of them moves to the next

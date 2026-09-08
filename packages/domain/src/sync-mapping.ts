@@ -141,6 +141,10 @@ const markerToRow = (marker: StoryMarker): Row => ({
   unit_id: marker.unitId,
   kind: marker.kind,
   title: marker.title,
+  notes: marker.notes,
+  // The designed leaf travels as one JSON column: it is a handful of
+  // switches and a data URL, and nothing queries inside it.
+  page: marker.page,
   created_at: marker.createdAt,
   updated_at: marker.updatedAt,
 });
@@ -293,6 +297,10 @@ const markerFromRow = (row: Row): StoryMarker =>
     unitId: row['unit_id'],
     kind: row['kind'],
     title: text(row['title']),
+    notes: text(row['notes']),
+    // Absent in a row written before chapter pages existed; the schema's
+    // own defaults fill it in.
+    page: row['page'] ?? undefined,
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });

@@ -260,7 +260,8 @@ describe('a beat in a window of its own', () => {
     const workspace = connect(initial);
     render(<Satellite pane="script" />);
 
-    await waitFor(() => expect(screen.getByLabelText('Beat names')).toBeDefined());
+    await waitFor(() => expect(screen.getByLabelText('Page options')).toBeDefined());
+    fireEvent.click(screen.getByLabelText('Page options'));
     fireEvent.click(screen.getByLabelText('Beat names'));
     fireEvent.click(screen.getByLabelText('Write in this beat'));
     expect(workspace.opened).toEqual([`beat:${beat.id}`]);

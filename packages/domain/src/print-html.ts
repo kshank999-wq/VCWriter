@@ -19,6 +19,8 @@ import type { ProjectFile } from './project-file.js';
 export interface PrintOptions extends ManuscriptOptions {
   /** A title page precedes the manuscript unless this is explicitly false. */
   includeTitlePage?: boolean;
+  // `includeChapterPages` comes from ManuscriptOptions: the paginator decides
+  // whether the leaves are there at all, and this renderer draws what it gets.
   /** Diagonal marking for drafts sent out for notes. */
   watermark?: string;
 }
@@ -50,6 +52,8 @@ const renderSpans = (line: PageLine): string => {
 };
 
 const renderPage = (page: Page, isProse: boolean): string => {
+  // A leaf between chapters is a page of the book, not of the manuscript.
+  if (page.chapter) return renderChapterPage(page, isProse);
   const lines = page.lines
     .map((line) =>
       line.text.length === 0
@@ -60,6 +64,34 @@ const renderPage = (page: Page, isProse: boolean): string => {
   // Page numbers sit top right from page two, as scripts and manuscripts do.
   const number = page.number > 1 ? `<div class="page-number">${page.number}.</div>` : '';
   return `<section class="page${isProse ? ' prose' : ''}">${number}\n${lines}\n</section>`;
+};
+
+/**
+ * The leaf a chapter opens with (addendum 02 §11): its number, its name, an
+ * epigraph and a device, in whatever combination the writer left switched
+ * on. A page with none of them switched on is a blank leaf, which is also a
+ * thing books do.
+ */
+const renderChapterPage = (page: Page, isProse: boolean): string => {
+  const chapter = page.chapter as NonNullable<Page['chapter']>;
+  const parts: string[] = [];
+  if (chapter.label.length > 0) parts.push(`<h2 class="chapter-label">${escapeHtml(chapter.label)}</h2>`);
+  if (chapter.title.length > 0) parts.push(`<p class="chapter-title">${escapeHtml(chapter.title)}</p>`);
+  if (chapter.image) {
+    // The source is a data URL held in the project; it is escaped as an
+    // attribute like any other, and nothing else about it is trusted.
+    parts.push(
+      `<img class="chapter-device" alt="${escapeHtml(chapter.image.name)}" ` +
+        `style="width:${Math.round(chapter.image.width)}%" src="${escapeHtml(chapter.image.dataUrl)}" />`,
+    );
+  }
+  if (chapter.epigraph.trim().length > 0) {
+    parts.push(`<p class="chapter-epigraph">${escapeHtml(chapter.epigraph)}</p>`);
+  }
+  const number = page.number > 1 ? `<div class="page-number">${page.number}.</div>` : '';
+  return `<section class="page chapter-page${isProse ? ' prose' : ''}" style="text-align:${chapter.align}">${number}
+  <div class="chapter-block">${parts.join('\n')}</div>
+</section>`;
 };
 
 const renderTitlePage = (file: ProjectFile): string => {
@@ -113,6 +145,14 @@ const STYLES = `
   }
   /* Annotated reference copies mark the beat labels as what they are. */
   .general { color: #444; }
+  /* The leaf between chapters. Its block sits a third of the way down, which
+     is where a book puts a chapter opening. */
+  .chapter-page { display: flex; align-items: flex-start; justify-content: center; }
+  .chapter-block { width: 100%; padding-top: 2.5in; }
+  .chapter-label { font-size: 12pt; font-weight: normal; text-transform: uppercase; letter-spacing: 0.2em; margin: 0; }
+  .chapter-title { margin: 1.5em 0 0; }
+  .chapter-device { display: block; margin: 2em auto 0; max-width: 100%; }
+  .chapter-epigraph { margin: 2.5em 0 0; white-space: pre-wrap; font-style: italic; }
   @media print {
     body { background: #fff; }
     .page {

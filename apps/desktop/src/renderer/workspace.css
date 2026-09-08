@@ -3253,3 +3253,358 @@ dialog.research-window::backdrop {
 .workspace.script-paper .page-sheet-number {
   color: var(--paper-muted);
 }
+
+/* ------------------------------------------------------- markers and leaves */
+
+/* The markers along the top of the Timeline & Viewer (addendum 02 §11), drawn
+   the way an editing program draws them: a coloured tick at the point in the
+   story, with its label running to the right of it. Acts in a script,
+   chapters in a book, and clicking one opens what hangs off it. */
+.viewer-grid .track-head.marks {
+  z-index: 3;
+}
+
+.viewer-mark {
+  position: relative;
+  height: 20px;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  border-left: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  background: var(--panel);
+  color: var(--muted);
+  text-align: left;
+  overflow: visible;
+}
+
+.viewer-mark.tail {
+  border-left: none;
+}
+
+/* A column with a marker in it: the tick, and the flag beside it. */
+.viewer-mark.set {
+  cursor: pointer;
+  border-left: 2px solid var(--gold);
+}
+
+.viewer-mark.set::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 0;
+  border-left: 7px solid var(--gold);
+  border-bottom: 7px solid transparent;
+  height: 0;
+}
+
+.viewer-mark-flag {
+  position: absolute;
+  left: 9px;
+  top: 3px;
+  white-space: nowrap;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold);
+  pointer-events: none;
+}
+
+.viewer-mark.set:hover {
+  background: color-mix(in srgb, var(--gold) 12%, var(--panel));
+}
+
+/* A chapter that opens a page of its own is marked as such. */
+.viewer-mark.has-page::before {
+  border-left-color: var(--gold);
+  border-bottom-width: 9px;
+}
+
+/* ------------------------------------------------------------ the marker */
+
+dialog.marker-dialog {
+  width: min(920px, calc(100vw - 40px));
+}
+
+.marker-dialog-title {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.marker-dialog-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0;
+  min-height: 0;
+}
+
+.marker-dialog-main {
+  padding: 12px 14px 18px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.marker-dialog-main .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.marker-dialog-main .field input,
+.marker-dialog-main .field select,
+.marker-dialog-main .field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+}
+
+.marker-page-fields {
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 10px 12px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.marker-page-fields:disabled {
+  opacity: 0.45;
+}
+
+.marker-device {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.marker-remove {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+.ghost.danger:hover {
+  color: var(--red);
+  border-color: var(--red);
+}
+
+/* The page as it will print, beside the controls that shape it. */
+.marker-page-preview {
+  width: 300px;
+  border-left: 1px solid var(--border);
+  background: var(--ink);
+  padding: 14px;
+  overflow-y: auto;
+}
+
+.chapter-leaf-sheet {
+  aspect-ratio: 8.5 / 11;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  padding: 14% 12% 0;
+  box-sizing: border-box;
+  font-family: 'Courier New', Courier, ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.workspace.script-paper .chapter-leaf-sheet {
+  background: #ffffff;
+  color: #000000;
+}
+
+/* The leaf itself, in the preview and on the printed page alike. */
+.paper.chapter-leaf {
+  display: block;
+}
+
+.chapter-leaf-block {
+  padding-top: 2.5in;
+}
+
+.chapter-leaf-label,
+.chapter-leaf-sheet .chapter-leaf-label {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.chapter-leaf-title,
+.chapter-leaf-sheet .chapter-leaf-title {
+  margin: 1.5em 0 0;
+}
+
+.chapter-leaf-device {
+  display: block;
+  margin: 2em auto 0;
+  max-width: 100%;
+}
+
+.chapter-leaf-epigraph {
+  margin: 2.5em 0 0;
+  white-space: pre-wrap;
+  font-style: italic;
+}
+
+/* --------------------------------------------------- the writer's own page */
+
+/* Paper and ink are the writer's (addendum 02 §6.2). These come last so they
+   beat the paper preference's own black-on-white — hence the leading
+   `.workspace`, which matches its specificity and wins on order — and they
+   are named apart from it because the sheet declares `--paper` on itself and
+   a variable cannot be inherited past a declaration on the element it lands
+   on. */
+.workspace .script-view.own-paper .script-sheet,
+.workspace .script-view.own-paper .page-sheet {
+  background: var(--own-paper);
+  color: var(--own-ink);
+  color-scheme: light;
+}
+
+.workspace .script-view.own-paper .page-column,
+.workspace .script-view.own-paper .element .ink,
+.workspace .script-view.own-paper .script-title-block h1,
+.workspace .script-view.own-paper .scene-name input,
+.workspace .script-view.own-paper .chapter-leaf-block {
+  color: var(--own-ink);
+}
+
+.workspace .script-view.own-paper .page-column,
+.workspace .script-view.own-paper .script-title-block h1 {
+  font-family: var(--own-face);
+}
+
+.workspace .script-view.own-paper .element textarea {
+  caret-color: var(--own-ink);
+}
+
+/* Everything that is *about* the page rather than on it stays quieter than
+   the writing, whatever colour the writing is. */
+.workspace .script-view.own-paper .beat-name input,
+.workspace .script-view.own-paper .bar-label,
+.workspace .script-view.own-paper .revision-chip,
+.workspace .script-view.own-paper .script-title-block p,
+.workspace .script-view.own-paper .page-break,
+.workspace .script-view.own-paper .page-sheet-number,
+.workspace .script-view.own-paper .collapsed-note {
+  color: color-mix(in srgb, var(--own-ink) 55%, var(--own-paper));
+}
+
+.workspace .script-view.own-paper .element textarea::placeholder {
+  color: color-mix(in srgb, var(--own-ink) 35%, var(--own-paper));
+}
+
+.workspace .script-view.own-paper ::selection {
+  background: color-mix(in srgb, var(--gold) 45%, transparent);
+}
+
+/* ------------------------------------------------------- the Script's gear */
+
+.script-options {
+  position: relative;
+}
+
+.chip.gear {
+  font-size: 12px;
+  padding: 1px 7px;
+}
+
+.script-options-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 4px;
+  z-index: 40;
+  width: 268px;
+  max-height: 70vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px 14px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  box-shadow: 0 8px 28px color-mix(in srgb, #000 55%, transparent);
+}
+
+.script-options-panel h4 {
+  margin: 4px 0 0;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+.script-options-panel h4:first-child {
+  margin-top: 0;
+}
+
+.script-options-panel .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.script-options-panel .field select,
+.script-options-panel .field input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+}
+
+.script-options-panel .muted {
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.option-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.option-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* The papers a manuscript is actually read on, as swatches. */
+.paper-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.paper-swatch {
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+}
+
+.paper-swatch.on {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}

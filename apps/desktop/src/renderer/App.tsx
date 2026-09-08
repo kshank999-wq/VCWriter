@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addLane,
   addMarker,
+  defaultMarkerKind,
   beatsInStoryOrder,
   projectStats,
   storyLayout,
@@ -10,6 +11,7 @@ import {
   type BeatId,
   type LaneId,
   type ProjectFile,
+  type StoryMarkerId,
   type StructuralUnitId,
   type SyncConflict,
 } from '@vcwriter/domain';
@@ -38,8 +40,10 @@ import { LaneDialog } from './components/LaneDialog';
 import { SceneDialog } from './components/SceneDialog';
 import { ResearchWindow } from './components/ResearchWindow';
 import { BeatDialog } from './components/BeatDialog';
+import { MarkerDialog } from './components/MarkerDialog';
 import { PageBar, type View } from './components/PageBar';
 import { PagePreview } from './components/PagePreview';
+import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
 import { AccountPanel } from './components/AccountPanel';
 import { CapturesPanel } from './components/CapturesPanel';
 import { EditorPanel } from './components/EditorPanel';
@@ -56,6 +60,8 @@ export default function App() {
   const [focusTitleBeatId, setFocusTitleBeatId] = useState<BeatId | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [includeBeatTitles, setIncludeBeatTitles] = useState(false);
+  // A book's leaves between chapters, in a printing or not (§11).
+  const [includeChapterPages, setIncludeChapterPages] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
@@ -85,9 +91,12 @@ export default function App() {
   // Zero is 'fit the width there is' — a page is 8½ inches and the
   // Script's column is not (§6.1).
   const [scriptZoom, setScriptZoom] = usePreference('scriptZoom', 0);
+  // Paper, ink and face: the writer's, per machine, never project data (§6.2).
+  const [pageStyle, setPageStyle] = usePreference<PageStyle>('pageStyle', DEFAULT_PAGE_STYLE);
   const [openLaneId, setOpenLaneId] = useState<LaneId | null>(null);
   const [openUnitId, setOpenUnitId] = useState<StructuralUnitId | null>(null);
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
+  const [openMarkerId, setOpenMarkerId] = useState<StoryMarkerId | null>(null);
   const [researchOpen, setResearchOpen] = useState(false);
   // Where the four sections sit, and which of them are in windows of their
   // own right now (addendum 02 §8).
@@ -233,7 +242,11 @@ export default function App() {
 
   const addActAtSelection = useCallback(() => {
     if (!selectedBeat) return;
-    project.update((current) => addMarker(current, { unitId: selectedBeat.unitId, title: 'New act' }).file);
+    project.update((current) => addMarker(current, {
+            unitId: selectedBeat.unitId,
+            title: '',
+            kind: defaultMarkerKind(current.project.format),
+          }).file);
   }, [selectedBeat, project]);
 
   // ------------------------------------------------------------- sync, export
@@ -289,24 +302,24 @@ export default function App() {
     // Flush first: the export reads the project it is handed, and a writer who
     // just typed a line expects it in the PDF.
     await project.saveNow();
-    const result = await window.vcwriter.exportPdf({ file, options: { includeBeatTitles } });
+    const result = await window.vcwriter.exportPdf({ file, options: { includeBeatTitles, includeChapterPages } });
     setExporting(false);
     if (!result.ok) {
       setExportMessage(result.error ?? 'The PDF could not be created');
       return;
     }
     setExportMessage(result.data ? `Exported ${result.data.pageCount} pages to ${result.data.path}` : null);
-  }, [file, includeBeatTitles, project]);
+  }, [file, includeBeatTitles, includeChapterPages, project]);
 
   const print = useCallback(async () => {
     if (!file) return;
     setExporting(true);
     setExportMessage(null);
     await project.saveNow();
-    const result = await window.vcwriter.print({ file, options: { includeBeatTitles } });
+    const result = await window.vcwriter.print({ file, options: { includeBeatTitles, includeChapterPages } });
     setExporting(false);
     if (!result.ok) setExportMessage(result.error ?? 'The document could not be printed');
-  }, [file, includeBeatTitles, project]);
+  }, [file, includeBeatTitles, includeChapterPages, project]);
 
   if (!file) {
     return (
@@ -348,6 +361,8 @@ export default function App() {
         onScriptLayout={setScriptLayout}
         pageZoom={scriptZoom}
         onPageZoom={setScriptZoom}
+        pageStyle={{ ...DEFAULT_PAGE_STYLE, ...pageStyle }}
+        onPageStyle={setPageStyle}
         onOpenUnit={setOpenUnitId}
         onOpenBeat={setOpenBeatId}
       />
@@ -363,6 +378,7 @@ export default function App() {
         onZoom={setViewerZoom}
         isolated={isolatedCharacter}
         onIsolate={setIsolatedCharacter}
+        onOpenMarker={setOpenMarkerId}
       />
     ),
     lanes: (
@@ -553,6 +569,7 @@ export default function App() {
               openPane(`beat:${beatId}`);
             }}
           />
+          <MarkerDialog file={file} markerId={openMarkerId} onClose={() => setOpenMarkerId(null)} onUpdate={project.update} />
           <ResearchWindow
             file={file}
             open={researchOpen && !away.has('research')}
@@ -573,6 +590,8 @@ export default function App() {
               unitId={selectedBeat?.unitId ?? null}
               includeBeatTitles={includeBeatTitles}
               onToggleBeatTitles={setIncludeBeatTitles}
+              includeChapterPages={includeChapterPages}
+              onToggleChapterPages={setIncludeChapterPages}
               onExportPdf={() => void exportPdf()}
               onPrint={() => void print()}
               busy={exporting}

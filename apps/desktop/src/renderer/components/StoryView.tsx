@@ -14,6 +14,7 @@ import {
   type StructuralUnitId,
 } from '@vcwriter/domain';
 import { BeatBody } from './BeatBody';
+import { DEFAULT_PAGE_STYLE, ScriptOptions, type PageStyle } from './ScriptOptions';
 import { ManuscriptDataLists } from './ManuscriptDataLists';
 
 /** What the Script shows besides the manuscript itself (addendum 02 §6). */
@@ -76,6 +77,9 @@ interface StoryViewProps {
   onScriptLayout?(next: ScriptLayout): void;
   pageZoom?: number;
   onPageZoom?(next: number): void;
+  /** Paper, ink and face — the writer's, not the program's (§6.2). */
+  pageStyle?: PageStyle;
+  onPageStyle?(next: PageStyle): void;
   /** A scene name was double-clicked: open the scene pop-up. */
   onOpenUnit?(unitId: StructuralUnitId): void;
   /** A beat name was double-clicked: open the beat in the writing screen. */
@@ -113,6 +117,8 @@ export function StoryView({
   onScriptLayout,
   pageZoom: givenZoom,
   onPageZoom,
+  pageStyle: givenStyle,
+  onPageStyle,
   onOpenUnit,
   onOpenBeat,
 }: StoryViewProps) {
@@ -121,12 +127,16 @@ export function StoryView({
   const [ownDisplay, setOwnDisplay] = useState<ScriptDisplay>(DEFAULT_SCRIPT_DISPLAY);
   const [ownLayout, setOwnLayout] = useState<ScriptLayout>('flow');
   const [ownZoom, setOwnZoom] = useState(1);
+  const [ownStyle, setOwnStyle] = useState<PageStyle>(DEFAULT_PAGE_STYLE);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const display = givenDisplay ?? ownDisplay;
   const setDisplay = onDisplay ?? setOwnDisplay;
   const scriptLayout = givenScriptLayout ?? ownLayout;
   const setScriptLayout = onScriptLayout ?? setOwnLayout;
   const zoom = givenZoom ?? ownZoom;
   const setZoom = onPageZoom ?? setOwnZoom;
+  const style = givenStyle ?? ownStyle;
+  const setStyle = onPageStyle ?? setOwnStyle;
   const paged = scriptLayout === 'pages';
   const blocks = useRef(new Map<string, HTMLElement>());
   const titles = useRef(new Map<string, HTMLInputElement>());
@@ -283,27 +293,37 @@ export function StoryView({
   );
 
   return (
-    <div className={['story script-view', focusMode ? 'focus' : '', paged ? 'paged' : ''].filter(Boolean).join(' ')}>
+    <div
+      className={['story script-view', focusMode ? 'focus' : '', paged ? 'paged' : '', style.on ? 'own-paper' : '']
+        .filter(Boolean)
+        .join(' ')}
+      style={
+        style.on
+          ? // Names of their own rather than the paper preference's: the
+            // sheet re-declares those locally, and a variable cannot be
+            // inherited past a declaration on the element itself.
+            ({ '--own-paper': style.paper, '--own-ink': style.ink, '--own-face': style.face } as React.CSSProperties)
+          : undefined
+      }
+    >
       <ManuscriptDataLists file={file} />
 
       {focusMode ? null : (
         <div className="script-options" role="group" aria-label="Script display">
-          <label className="script-layout">
-            <span className="visually-hidden">Script layout</span>
-            <select
-              aria-label="Script layout"
-              value={scriptLayout}
-              onChange={(event) => setScriptLayout(event.target.value as ScriptLayout)}
-            >
-              <option value="flow">Continuous</option>
-              <option value="pages">Pages</option>
-            </select>
-          </label>
-          <span className="muted">Display</span>
-          {prose ? null : <Chip label="Scene headings" on={display.headings} onClick={() => toggle('headings')} />}
-          <Chip label={`${noun} names`} on={display.sceneNames} onClick={() => toggle('sceneNames')} />
-          <Chip label="Beat names" on={display.beatNames} onClick={() => toggle('beatNames')} />
-          <Chip label="Acts" on={display.acts} onClick={() => toggle('acts')} />
+          {/* Everything about how the page looks is behind the gear now: the
+              bar above the page should be the page's, not a control panel. */}
+          <button
+            type="button"
+            className={optionsOpen ? 'chip on gear' : 'chip gear'}
+            aria-label="Page options"
+            aria-haspopup="dialog"
+            aria-expanded={optionsOpen}
+            title="Paper, ink, typeface and what shows"
+            onClick={() => setOptionsOpen((current) => !current)}
+          >
+            ⚙
+          </button>
+          <span className="muted">{paged ? 'Pages' : 'Continuous'}</span>
           {paged ? (
             <label className="script-zoom">
               <span className="muted">Page</span>
@@ -315,9 +335,18 @@ export function StoryView({
                 ))}
               </select>
             </label>
-          ) : (
-            <Chip label="Page breaks" on={display.pages} onClick={() => toggle('pages')} />
-          )}
+          ) : null}
+          <ScriptOptions
+            open={optionsOpen}
+            onClose={() => setOptionsOpen(false)}
+            style={style}
+            onStyle={setStyle}
+            display={display}
+            onDisplay={setDisplay}
+            scriptLayout={scriptLayout}
+            onScriptLayout={setScriptLayout}
+            prose={prose}
+          />
         </div>
       )}
 

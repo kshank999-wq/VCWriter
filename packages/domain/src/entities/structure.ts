@@ -138,8 +138,37 @@ export type Beat = z.infer<typeof beatSchema>;
  * that owned scenes would cut across lanes and the hierarchy is lanes →
  * scenes → beats (§19). A marker is anchored to the unit that starts it.
  */
-export const storyMarkerKindSchema = z.enum(['act', 'sequence', 'note']);
+export const storyMarkerKindSchema = z.enum(['act', 'sequence', 'chapter', 'part', 'note']);
 export type StoryMarkerKind = z.infer<typeof storyMarkerKindSchema>;
+
+/**
+ * The page a chapter opens with (addendum 02 §11).
+ *
+ * A novel puts a leaf between chapters: the chapter's number, its name if it
+ * has one, sometimes an epigraph, sometimes a device or an illustration. It
+ * is a page of the book, not of the manuscript — nothing on it is text the
+ * writer is writing — so it lives on the marker rather than among the
+ * elements, and it can be left out of a printing without touching a word.
+ */
+export const chapterPageSchema = z.object({
+  /** Off: the chapter still exists, it just has no page of its own. */
+  include: z.boolean().default(false),
+  showNumber: z.boolean().default(true),
+  showTitle: z.boolean().default(true),
+  /** A few lines under the title: a dedication, an epigraph, a date. */
+  epigraph: z.string().default(''),
+  /**
+   * A device or illustration, held in the document as a data URL. Kept small
+   * on purpose (`MAX_CHAPTER_IMAGE_BYTES`): the project is a text file that
+   * syncs, and a full-bleed photograph in it would make every save enormous.
+   */
+  image: z
+    .object({ dataUrl: z.string(), name: z.string().default(''), width: z.number().min(5).max(100).default(40) })
+    .nullable()
+    .default(null),
+  align: z.enum(['left', 'center']).default('center'),
+});
+export type ChapterPage = z.infer<typeof chapterPageSchema>;
 
 export const storyMarkerSchema = z.object({
   id: id<StoryMarkerId>(),
@@ -147,6 +176,14 @@ export const storyMarkerSchema = z.object({
   unitId: id<StructuralUnitId>(),
   kind: storyMarkerKindSchema.default('act'),
   title: z.string().default(''),
+  /**
+   * What the writer wants to remember about this point in the story. A
+   * screenplay's act markers have no page to design, and this is what they
+   * carry instead — the note that would otherwise go on a card.
+   */
+  notes: z.string().default(''),
+  /** Ignored by a screenplay, which has no chapter pages to print. */
+  page: chapterPageSchema.default({}),
   ...timestamps,
 });
 export type StoryMarker = z.infer<typeof storyMarkerSchema>;

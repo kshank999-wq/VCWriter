@@ -1,4 +1,5 @@
 import { beatsInScript, unitsInStoryOrder } from './selectors.js';
+import { chapterPageContent, chapterPagesFor, type ChapterPageContent } from './markers.js';
 import { groupManuscript } from './editing.js';
 import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
 import type { ManuscriptElement, ManuscriptElementType } from './entities/manuscript.js';
@@ -113,6 +114,12 @@ export interface Page {
    * them. Null when nothing was laid out.
    */
   startsWith: string | null;
+  /**
+   * Set on a chapter page (addendum 02 §11): a leaf of the book carrying the
+   * chapter's number, its name and whatever the writer put on it, rather
+   * than lines of manuscript. `lines` is empty on such a page.
+   */
+  chapter?: ChapterPageContent;
 }
 
 /** Greedy wrap at `width`, breaking on spaces and never mid-word when avoidable. */
@@ -437,35 +444,81 @@ export interface ManuscriptOptions {
    * metadata, so the delivered manuscript never contains it.
    */
   includeBeatTitles?: boolean;
+  /**
+   * Print the leaf a chapter opens with (addendum 02 §11). Defaults to the
+   * project's own setting; a format with no chapter pages ignores it.
+   */
+  includeChapterPages?: boolean;
 }
 
 /** Every manuscript element in the project, in reading order. */
-export const manuscriptElements = (
-  file: ProjectFile,
-  options: ManuscriptOptions = {},
-): ManuscriptElement[] =>
+export const manuscriptElements = (file: ProjectFile, options: ManuscriptOptions = {}): ManuscriptElement[] =>
   unitsInStoryOrder(file)
     // A scene switched off stays in the structure and leaves the manuscript.
     .filter((unit) => unit.inScript)
-    .flatMap((unit) =>
-    beatsInScript(file, unit.id).flatMap((beat) => {
-      const body = beat.manuscript.elements;
-      if (!options.includeBeatTitles || beat.title.length === 0) return body;
-      const annotation: ManuscriptElement = {
-        id: `${beat.id}-title` as ManuscriptElement['id'],
-        type: 'general',
-        text: `[${beat.title}]`,
-        characterId: null,
-        attributes: { annotation: true },
-      };
-      return [annotation, ...body];
-    }),
-  );
+    .flatMap((unit) => unitElements(file, unit.id, options));
 
-export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = {}): Page[] =>
-  paginateElements(manuscriptElements(file, options), layoutFor(file.project.format), (element) => {
+/**
+ * The whole project, paginated — with the leaves a book puts between its
+ * chapters (addendum 02 §11).
+ *
+ * A chapter page is a page in its own right, so the story is paginated in
+ * runs between them rather than as one stream. That is not a compromise: a
+ * chapter starts on a fresh page in every book ever printed, which is
+ * exactly what breaking the run does. A format with no chapter pages, or a
+ * printing that leaves them out, paginates as one run and is unchanged.
+ */
+export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = {}): Page[] => {
+  const speakerFor = (element: ManuscriptElement) => {
     if (!element.characterId) return null;
     return file.characters.find((character) => character.id === element.characterId)?.name.toUpperCase() ?? null;
+  };
+  const layout = layoutFor(file.project.format);
+
+  const leaves = chapterPagesFor(file, options);
+  if (leaves.length === 0) {
+    return paginateElements(manuscriptElements(file, options), layout, speakerFor);
+  }
+
+  // Where each leaf falls, by the unit it is anchored to.
+  const opensAt = new Map(leaves.map((placed) => [placed.marker.unitId as string, placed]));
+  const units = unitsInStoryOrder(file).filter((unit) => unit.inScript);
+
+  const pages: Page[] = [];
+  let run: ManuscriptElement[] = [];
+  const flush = () => {
+    if (run.length === 0) return;
+    pages.push(...paginateElements(run, layout, speakerFor));
+    run = [];
+  };
+
+  for (const unit of units) {
+    const leaf = opensAt.get(unit.id as string);
+    if (leaf) {
+      flush();
+      pages.push({ number: 0, lines: [], startsWith: null, chapter: chapterPageContent(leaf) });
+    }
+    run.push(...unitElements(file, unit.id, options));
+  }
+  flush();
+
+  // Each run numbered itself from one; the book numbers straight through.
+  return pages.map((page, index) => ({ ...page, number: index + 1 }));
+};
+
+/** One unit's manuscript, with the beat annotations if they were asked for. */
+const unitElements = (file: ProjectFile, unitId: StructuralUnitId, options: ManuscriptOptions): ManuscriptElement[] =>
+  beatsInScript(file, unitId).flatMap((beat) => {
+    const body = beat.manuscript.elements;
+    if (!options.includeBeatTitles || beat.title.length === 0) return body;
+    const annotation: ManuscriptElement = {
+      id: `${beat.id}-title` as ManuscriptElement['id'],
+      type: 'general',
+      text: `[${beat.title}]`,
+      characterId: null,
+      attributes: { annotation: true },
+    };
+    return [annotation, ...body];
   });
 
 export const paginateUnit = (file: ProjectFile, unitId: StructuralUnitId): Page[] =>

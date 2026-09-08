@@ -140,6 +140,7 @@ describe('writing keyboard flow', () => {
 
   it('keeps the beat title out of the manuscript column', () => {
     const { container } = render(<Harness initial={screenplayWithAction()} />);
+    fireEvent.click(screen.getByLabelText('Page options'));
     fireEvent.click(screen.getByLabelText('Beat names'));
 
     // The title is present as a labelled bar…
@@ -163,6 +164,7 @@ describe('the whole script in story order', () => {
     });
 
     render(<Harness initial={file} />);
+    fireEvent.click(screen.getByLabelText('Page options'));
     fireEvent.click(screen.getByLabelText('Beat names'));
     const titles = screen.getAllByLabelText('Beat title (not printed)').map((node) => (node as HTMLInputElement).value);
     expect(titles).toEqual(['She confronts him', 'Second', 'Third']);
@@ -317,6 +319,7 @@ describe('the finished script', () => {
     expect(container.querySelectorAll('.page-break').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Page 2 starts here')).toBeDefined();
 
+    fireEvent.click(screen.getByLabelText('Page options'));
     fireEvent.click(screen.getByLabelText('Scene headings'));
     expect(container.querySelector('.script-sheet.no-headings')).toBeDefined();
 
@@ -330,6 +333,7 @@ describe('the finished script', () => {
     const pages = pageCount(long);
     expect(pages).toBeGreaterThan(1);
 
+    fireEvent.click(screen.getByLabelText('Page options'));
     fireEvent.change(screen.getByLabelText('Script layout'), { target: { value: 'pages' } });
 
     // One sheet per printed page — the paginator's pages, not a guess.
@@ -356,9 +360,11 @@ describe('the finished script', () => {
 
   it('goes back to one continuous page, with the rules again', () => {
     const { container } = render(<Harness initial={longScript()} />);
+    fireEvent.click(screen.getByLabelText('Page options'));
     fireEvent.change(screen.getByLabelText('Script layout'), { target: { value: 'pages' } });
     expect(container.querySelectorAll('.page-sheet').length).toBeGreaterThan(1);
 
+    // The gear stays open while it is being used, so it is still there.
     fireEvent.change(screen.getByLabelText('Script layout'), { target: { value: 'flow' } });
     expect(container.querySelectorAll('.page-sheet')).toHaveLength(0);
     expect(container.querySelector('.script-sheet')).toBeDefined();
@@ -389,6 +395,8 @@ describe('page preview', () => {
         unitId={null}
         includeBeatTitles={false}
         onToggleBeatTitles={() => undefined}
+        includeChapterPages
+        onToggleChapterPages={() => undefined}
         onExportPdf={() => undefined}
         onPrint={() => undefined}
         busy={false}
@@ -408,6 +416,8 @@ describe('page preview', () => {
         unitId={null}
         includeBeatTitles={false}
         onToggleBeatTitles={() => undefined}
+        includeChapterPages
+        onToggleChapterPages={() => undefined}
         onExportPdf={() => undefined}
         onPrint={() => undefined}
         busy
