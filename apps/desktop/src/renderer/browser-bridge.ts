@@ -132,10 +132,85 @@ export interface BrowserBridge extends VcWriterApi {
   downloadCurrent(): boolean;
 }
 
+/**
+ * Sections in windows of their own, in a browser.
+ *
+ * The desktop application asks the main process for a real window; here the
+ * browser opens one, which the writer can drag to another monitor exactly the
+ * same way. The two windows are the same origin, so the document link between
+ * them is a `BroadcastChannel` rather than an IPC relay — the protocol above
+ * it (`link.ts`) does not know or care which.
+ */
+const createPaneWindows = (): VcWriterApi['panes'] => {
+  const popups = new Map<string, Window>();
+  const listeners = new Set<(panes: string[]) => void>();
+
+  const live = () => {
+    for (const [pane, popup] of popups) if (popup.closed) popups.delete(pane);
+    return [...popups.keys()];
+  };
+  const announce = () => {
+    const panes = live();
+    for (const listener of listeners) listener(panes);
+  };
+
+  // A browser gives no event when a window someone else closed goes away, so
+  // the set is swept; a second a time is far below noticing and costs nothing.
+  if (typeof window !== 'undefined') window.setInterval(announce, 1000);
+
+  return {
+    async open(pane) {
+      const existing = popups.get(pane);
+      if (existing && !existing.closed) {
+        existing.focus();
+        return ok(true as const);
+      }
+      const url = new URL(window.location.href);
+      url.search = `?pane=${encodeURIComponent(pane)}`;
+      const shape = pane.startsWith('beat') || pane === 'script' ? 'width=900,height=1040' : 'width=1280,height=860';
+      const popup = window.open(url.toString(), `vcwriter-${pane}`, `popup=yes,${shape}`);
+      if (!popup) return fail<true>('The browser blocked the new window — allow pop-ups for this site.');
+      popups.set(pane, popup);
+      announce();
+      return ok(true as const);
+    },
+    async close(pane) {
+      popups.get(pane)?.close();
+      popups.delete(pane);
+      announce();
+      return ok(true as const);
+    },
+    async list() {
+      return ok(live());
+    },
+    onChanged(handler) {
+      listeners.add(handler);
+      return () => listeners.delete(handler);
+    },
+    self: () => new URLSearchParams(window.location.search).get('pane'),
+  };
+};
+
+const createLink = (): VcWriterApi['link'] => {
+  const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel('vcwriter-link') : null;
+  return {
+    send: (message) => channel?.postMessage(message),
+    subscribe(handler) {
+      if (!channel) return () => undefined;
+      const listener = (event: MessageEvent) => handler(event.data as Record<string, unknown>);
+      channel.addEventListener('message', listener);
+      return () => channel.removeEventListener('message', listener);
+    },
+  };
+};
+
 export const createBrowserBridge = (): BrowserBridge => {
   let current: { path: string; file: ProjectFile } | null = null;
 
   return {
+    panes: createPaneWindows(),
+    link: createLink(),
+
     async createProject(input) {
       try {
         const file = createProjectFile(input);

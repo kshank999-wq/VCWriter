@@ -1,17 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  addBeat,
   addLane,
   addMarker,
-  addUnit,
-  beatsForUnit,
   beatsInStoryOrder,
-  findUnit,
   projectStats,
   storyLayout,
   threadLayout,
   timelineArcs,
-  unitsInStoryOrder,
   type BeatId,
   type LaneId,
   type ProjectFile,
@@ -20,6 +15,18 @@ import {
 } from '@vcwriter/domain';
 import { useProject } from './use-project';
 import { usePreference, useSplit } from './use-split';
+import { createHub, createTransport, everyFew, type DocumentHub } from './link';
+import { addBeatAfter, addSceneAfter } from './structure';
+import {
+  DEFAULT_ARRANGEMENT,
+  movePane,
+  normaliseArrangement,
+  slotOf,
+  type Arrangement,
+  type PaneId,
+  type SlotId,
+} from './panes';
+import { PaneFrame } from './components/PaneFrame';
 import { Welcome } from './components/Welcome';
 import { MasterTimeline } from './components/MasterTimeline';
 import { MasterPanel } from './components/MasterPanel';
@@ -85,6 +92,12 @@ export default function App() {
   const [openUnitId, setOpenUnitId] = useState<StructuralUnitId | null>(null);
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
   const [researchOpen, setResearchOpen] = useState(false);
+  // Where the four sections sit, and which of them are in windows of their
+  // own right now (addendum 02 §8).
+  const [storedArrangement, setArrangement] = usePreference<Arrangement>('panes', DEFAULT_ARRANGEMENT);
+  const arrangement = useMemo(() => normaliseArrangement(storedArrangement), [storedArrangement]);
+  const [detached, setDetached] = useState<string[]>([]);
+  const [dragging, setDragging] = useState<PaneId | null>(null);
   // The Edit-page proportions (addendum 02 §3): a quarter for the script,
   // and of the rest, just under half for the viewport above the lanes.
   const columns = useSplit({ key: 'leftWidth', initial: 0.25, min: 300, reserve: 640, axis: 'x' });
@@ -105,6 +118,57 @@ export default function App() {
   const pages = layout ? Math.ceil(layout.totalPages) : 0;
 
   const clearTitleFocus = useCallback(() => setFocusTitleBeatId(null), []);
+
+  // ------------------------------------------------ the same project, elsewhere
+
+  /**
+   * The workspace is the one window that holds the document (addendum 02 §8).
+   * Every section that has been moved to a window of its own edits it from
+   * there over the link: it proposes, this window decides and publishes, and
+   * the autosave below stays the only thing that writes to disk.
+   */
+  const hub = useRef<DocumentHub | null>(null);
+  const latest = useRef<{ file: ProjectFile | null; path: string | null }>({ file: null, path: null });
+  latest.current = { file: project.file, path: project.path };
+
+  useEffect(() => {
+    const made = createHub({
+      transport: createTransport(),
+      // A held-down key in another window is one document a few times a
+      // second, not one per character.
+      schedule: everyFew(60),
+      onProposal: (next) => project.replace(next),
+      current: () => latest.current,
+    });
+    hub.current = made;
+    return () => {
+      hub.current = null;
+      made.stop();
+    };
+    // The project's `replace` is stable; the hub must outlive every document.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (project.file) hub.current?.publish(project.file, project.path);
+  }, [project.file, project.path]);
+
+  // Which sections are out of the workspace, so it can hold their places.
+  useEffect(() => {
+    const panes = window.vcwriter?.panes;
+    if (!panes) return;
+    void panes.list().then((result) => {
+      if (result.ok && result.data) setDetached(result.data);
+    });
+    return panes.onChanged(setDetached);
+  }, []);
+
+  const openPane = useCallback((pane: string) => {
+    void window.vcwriter?.panes?.open(pane);
+  }, []);
+  const closePane = useCallback((pane: string) => {
+    void window.vcwriter?.panes?.close(pane);
+  }, []);
 
   // Keyboard: focus mode, the panes, and stepping through beats (addendum 02 §11).
   useEffect(() => {
@@ -150,26 +214,20 @@ export default function App() {
 
   const addSceneAfterSelection = useCallback(() => {
     if (!file) return;
-    const unit = selectedBeat ? findUnit(file, selectedBeat.unitId) : undefined;
-    const order = unitsInStoryOrder(file);
-    const position = unit ? order.findIndex((candidate) => candidate.id === unit.id) : order.length - 1;
-    const laneId = unit?.laneId ?? file.lanes[0]?.id;
-    if (!laneId) return;
-    const created = addUnit(file, { laneId, index: position + 1 });
-    const withBeat = addBeat(created.file, { unitId: created.unit.id });
-    project.update(() => withBeat.file);
-    setSelectedBeatId(withBeat.beat.id);
-    setFocusTitleBeatId(withBeat.beat.id);
+    const made = addSceneAfter(file, selectedBeat);
+    if (!made) return;
+    project.update(() => made.file);
+    setSelectedBeatId(made.beatId);
+    setFocusTitleBeatId(made.beatId);
   }, [file, selectedBeat, project]);
 
   const addBeatAfterSelection = useCallback(() => {
-    if (!file || !selectedBeat) return;
-    const siblings = beatsForUnit(file, selectedBeat.unitId);
-    const position = siblings.findIndex((beat) => beat.id === selectedBeat.id);
-    const created = addBeat(file, { unitId: selectedBeat.unitId, index: position + 1 });
-    project.update(() => created.file);
-    setSelectedBeatId(created.beat.id);
-    setFocusTitleBeatId(created.beat.id);
+    if (!file) return;
+    const made = addBeatAfter(file, selectedBeat);
+    if (!made) return;
+    project.update(() => made.file);
+    setSelectedBeatId(made.beatId);
+    setFocusTitleBeatId(made.beatId);
   }, [file, selectedBeat, project]);
 
   const addLaneToProject = useCallback(() => {
@@ -266,8 +324,96 @@ export default function App() {
 
   const writing = view === 'write';
   const focused = focusMode && writing;
-  const showTimeline = writing && timelineOpen && !focused;
-  const showInspector = writing && inspectorOpen && !focused;
+  const showBottom = writing && timelineOpen && !focused;
+  const showRight = writing && inspectorOpen && !focused;
+  const away = new Set(detached);
+  const display = { ...DEFAULT_SCRIPT_DISPLAY, ...scriptDisplay };
+
+  /** Each section, drawn once, ready to be placed wherever it has been put. */
+  const sections: Record<PaneId, React.ReactNode> = {
+    script: (
+      <MasterPanel
+        file={file}
+        layout={layout ?? undefined}
+        selectedBeatId={selectedBeat?.id ?? null}
+        onSelectBeat={setSelectedBeatId}
+        onUpdate={project.update}
+        focusMode={false}
+        focusTitleBeatId={focusTitleBeatId}
+        onTitleFocused={clearTitleFocus}
+        dictationShortcut={dictationShortcut}
+        display={display}
+        onDisplay={setScriptDisplay}
+        onOpenUnit={setOpenUnitId}
+        onOpenBeat={setOpenBeatId}
+        onOpenResearch={() => (away.has('research') ? openPane('research') : setResearchOpen(true))}
+      />
+    ),
+    viewer: (
+      <TimelineViewer
+        file={file}
+        threads={threads ?? undefined}
+        selectedBeatId={selectedBeat?.id ?? null}
+        onSelectBeat={setSelectedBeatId}
+        onUpdate={project.update}
+        zoom={viewerZoom}
+        onZoom={setViewerZoom}
+        isolated={isolatedCharacter}
+        onIsolate={setIsolatedCharacter}
+      />
+    ),
+    lanes: (
+      <MasterTimeline
+        file={file}
+        layout={layout ?? undefined}
+        arcs={arcs ?? undefined}
+        threads={threads ?? undefined}
+        selectedBeatId={selectedBeat?.id ?? null}
+        onSelectBeat={setSelectedBeatId}
+        onUpdate={project.update}
+        pixelsPerPage={pixelsPerPage}
+        onZoom={setPixelsPerPage}
+        inspectorOpen={inspectorOpen}
+        onToggleInspector={() => setInspectorOpen(!inspectorOpen)}
+        onAddScene={addSceneAfterSelection}
+        onAddBeat={addBeatAfterSelection}
+        onAddLane={addLaneToProject}
+        onAddAct={addActAtSelection}
+        onOpenLane={setOpenLaneId}
+        onOpenUnit={setOpenUnitId}
+        onOpenBeat={setOpenBeatId}
+      />
+    ),
+    inspector: <Inspector file={file} selectedBeatId={selectedBeat?.id ?? null} onUpdate={project.update} />,
+  };
+
+  /**
+   * A section in its place, with the strip that lets it be moved out of it.
+   * Dropping one section on another swaps the two, which is the only move
+   * there is: four sections, four places.
+   */
+  const inSlot = (slot: SlotId) => {
+    const pane = arrangement[slot];
+    return (
+      <PaneFrame
+        pane={pane}
+        arrangement={arrangement}
+        onMove={(moved, to) => setArrangement(movePane(arrangement, moved, to))}
+        detached={away.has(pane)}
+        onDetach={() => openPane(pane)}
+        onAttach={() => closePane(pane)}
+        dragging={dragging}
+        onDragStart={setDragging}
+        onDragEnd={() => setDragging(null)}
+        onDrop={(onto) => {
+          if (dragging) setArrangement(movePane(arrangement, dragging, slotOf(arrangement, onto)));
+          setDragging(null);
+        }}
+      >
+        {sections[pane]}
+      </PaneFrame>
+    );
+  };
 
   return (
     <div
@@ -275,8 +421,8 @@ export default function App() {
         'workspace',
         focused ? 'focus-mode' : '',
         paper ? 'script-paper' : '',
-        showTimeline ? 'with-timeline' : '',
-        showInspector ? 'with-inspector' : '',
+        showBottom ? 'with-timeline' : '',
+        showRight ? 'with-inspector' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -363,25 +509,26 @@ export default function App() {
 
       {writing ? (
         <div className="workspace-body">
-          {/* The left column, full height: the Script and the Research tabs. */}
-          <MasterPanel
-            file={file}
-            layout={layout ?? undefined}
-            selectedBeatId={selectedBeat?.id ?? null}
-            onSelectBeat={setSelectedBeatId}
-            onUpdate={project.update}
-            focusMode={focused}
-            focusTitleBeatId={focusTitleBeatId}
-            onTitleFocused={clearTitleFocus}
-            dictationShortcut={dictationShortcut}
-            display={{ ...DEFAULT_SCRIPT_DISPLAY, ...scriptDisplay }}
-            onDisplay={setScriptDisplay}
-            onOpenUnit={setOpenUnitId}
-            onOpenBeat={setOpenBeatId}
-            onOpenResearch={() => setResearchOpen(true)}
-          />
-          {focused ? null : (
+          {focused ? (
+            // Focus mode is the page and nothing else: no places, no strips.
+            <MasterPanel
+              file={file}
+              layout={layout ?? undefined}
+              selectedBeatId={selectedBeat?.id ?? null}
+              onSelectBeat={setSelectedBeatId}
+              onUpdate={project.update}
+              focusMode
+              focusTitleBeatId={focusTitleBeatId}
+              onTitleFocused={clearTitleFocus}
+              dictationShortcut={dictationShortcut}
+              display={display}
+              onDisplay={setScriptDisplay}
+            />
+          ) : (
             <>
+              {/* The tall column down the side. Which section is in it is the
+                  writer's arrangement, not ours (addendum 02 §8). */}
+              <div className="slot slot-left">{inSlot('left')}</div>
               <div
                 className="divider vertical"
                 role="separator"
@@ -389,25 +536,12 @@ export default function App() {
                 aria-label="Resize the script column"
                 {...columns.dividerProps}
               />
-              {/* The stage: viewport and inspector above, the lanes below. */}
               <div className="stage">
                 <div className="stage-top">
-                  <TimelineViewer
-                    file={file}
-                    threads={threads ?? undefined}
-                    selectedBeatId={selectedBeat?.id ?? null}
-                    onSelectBeat={setSelectedBeatId}
-                    onUpdate={project.update}
-                    zoom={viewerZoom}
-                    onZoom={setViewerZoom}
-                    isolated={isolatedCharacter}
-                    onIsolate={setIsolatedCharacter}
-                  />
-                  {showInspector ? (
-                    <Inspector file={file} selectedBeatId={selectedBeat?.id ?? null} onUpdate={project.update} />
-                  ) : null}
+                  <div className="slot slot-top">{inSlot('top')}</div>
+                  {showRight ? <div className="slot slot-right">{inSlot('right')}</div> : null}
                 </div>
-                {showTimeline ? (
+                {showBottom ? (
                   <>
                     <div
                       className="divider"
@@ -416,26 +550,7 @@ export default function App() {
                       aria-label="Resize the viewport"
                       {...rows.dividerProps}
                     />
-                    <MasterTimeline
-                      file={file}
-                      layout={layout ?? undefined}
-                      arcs={arcs ?? undefined}
-                      threads={threads ?? undefined}
-                      selectedBeatId={selectedBeat?.id ?? null}
-                      onSelectBeat={setSelectedBeatId}
-                      onUpdate={project.update}
-                      pixelsPerPage={pixelsPerPage}
-                      onZoom={setPixelsPerPage}
-                      inspectorOpen={inspectorOpen}
-                      onToggleInspector={() => setInspectorOpen(!inspectorOpen)}
-                      onAddScene={addSceneAfterSelection}
-                      onAddBeat={addBeatAfterSelection}
-                      onAddLane={addLaneToProject}
-                      onAddAct={addActAtSelection}
-                      onOpenLane={setOpenLaneId}
-                      onOpenUnit={setOpenUnitId}
-                      onOpenBeat={setOpenBeatId}
-                    />
+                    <div className="slot slot-bottom">{inSlot('bottom')}</div>
                   </>
                 ) : null}
               </div>
@@ -456,13 +571,21 @@ export default function App() {
             onClose={() => setOpenBeatId(null)}
             onUpdate={project.update}
             onSelect={setSelectedBeatId}
+            onPopOut={(beatId) => {
+              setOpenBeatId(null);
+              openPane(`beat:${beatId}`);
+            }}
           />
           <ResearchWindow
             file={file}
-            open={researchOpen}
+            open={researchOpen && !away.has('research')}
             currentBeatId={selectedBeat?.id ?? null}
             onClose={() => setResearchOpen(false)}
             onUpdate={project.update}
+            onPopOut={() => {
+              setResearchOpen(false);
+              openPane('research');
+            }}
           />
         </div>
       ) : (

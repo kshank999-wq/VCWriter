@@ -93,7 +93,52 @@ const toOpenResult = (loaded: LoadedProject): OpenResult => ({
   contentHash: loaded.contentHash,
 });
 
-export const registerIpcHandlers = (getWindow: () => BrowserWindow | null): void => {
+export interface PaneWindows {
+  open(pane: string): void;
+  close(pane: string): void;
+  list(): string[];
+  relay(fromWebContentsId: number, message: unknown): void;
+}
+
+export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes?: PaneWindows): void => {
+  // --- sections in windows of their own, and the link between them ---------
+
+  if (panes) {
+    ipcMain.handle('panes:open', (_event, pane: string): DesktopApiResult<true> => {
+      try {
+        // The pane key comes from the renderer, and it ends up in a URL and a
+        // window registry: keep it to the shape the workspace actually uses.
+        if (typeof pane !== 'string' || !/^[a-z]+(:[A-Za-z0-9_-]+)?$/.test(pane)) {
+          return fail(new Error('Unknown section'));
+        }
+        panes.open(pane);
+        return ok(true as const);
+      } catch (cause) {
+        return fail(cause);
+      }
+    });
+
+    ipcMain.handle('panes:close', (_event, pane: string): DesktopApiResult<true> => {
+      try {
+        panes.close(String(pane));
+        return ok(true as const);
+      } catch (cause) {
+        return fail(cause);
+      }
+    });
+
+    ipcMain.handle('panes:list', (): DesktopApiResult<string[]> => ok(panes.list()));
+
+    /**
+     * The document link (addendum 02 §8). The main process relays and does
+     * not read: the message is whatever the windows agreed between them, and
+     * it goes to every window but the sender.
+     */
+    ipcMain.on('link:send', (event, message: unknown) => {
+      panes.relay(event.sender.id, message);
+    });
+  }
+
   ipcMain.handle(
     'project:create',
     async (

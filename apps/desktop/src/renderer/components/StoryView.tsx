@@ -212,8 +212,12 @@ export function StoryView({
 
       {focusMode ? null : (
         <footer className="script-foot muted">
-          The whole {prose ? 'manuscript' : 'script'} in story order · double-click a beat to write in it · Return for the next
-          element, Tab to change its type
+          {/* The page is not a preview of the writing: it *is* the writing,
+              with the same keys and the same formatting as the beat's own
+              screen. Saying so is the difference between a writer using it
+              and a writer double-clicking their way around it. */}
+          The whole {prose ? 'manuscript' : 'script'} in story order · type straight into the page, or double-click a beat to
+          open it on its own · Return for the next element, Tab to change its type
           {dictationShortcut ? ` · to dictate, ${dictationShortcut}` : ''}
         </footer>
       )}

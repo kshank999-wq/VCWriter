@@ -39,12 +39,11 @@ export function MasterPanel(props: MasterPanelProps) {
 
   return (
     <section className="master" aria-label="Master panel">
-      <div className="master-tabs" role="tablist" aria-label="Master panel">
-        <button type="button" role="tab" aria-selected className="tab selected">
-          Script
-        </button>
-        {/* Research is not a quarter of the screen: it opens over the whole
-            of it, with its folders down the side (addendum 02 §7). */}
+      {/* The section is named by the strip above it (§8), so this row is not a
+          set of tabs any more — only the one door out of the Script.
+          Research is not a quarter of the screen: it opens over the whole of
+          it, with its folders down the side (addendum 02 §7). */}
+      <div className="master-tabs">
         <button type="button" className="tab" title="Open the research window" onClick={onOpenResearch}>
           Research
         </button>

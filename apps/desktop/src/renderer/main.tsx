@@ -1,6 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import Satellite from './Satellite';
+import type { PaneKey } from './panes';
 import './styles.css';
 import './workspace.css';
 
@@ -30,8 +32,13 @@ window.addEventListener('unhandledrejection', (event) => {
   );
 });
 
+/**
+ * One bundle, two kinds of window (addendum 02 §8). Without `?pane=` this is
+ * the workspace, which owns the project; with it, the window holds that one
+ * section and edits the workspace's project over the link.
+ */
+const pane = new URLSearchParams(window.location.search).get('pane');
+
 createRoot(container).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+  <React.StrictMode>{pane ? <Satellite pane={pane as PaneKey} /> : <App />}</React.StrictMode>,
 );

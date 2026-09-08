@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { registerIpcHandlers } from './ipc';
 import { restoreSession } from './cloud';
 import { installCrashHandlers } from './reporting';
+import { createWindowRegistry } from './windows';
 
 /**
  * Electron main process.
@@ -15,6 +16,19 @@ import { installCrashHandlers } from './reporting';
 let mainWindow: BrowserWindow | null = null;
 
 const isDevelopment = !app.isPackaged;
+
+/**
+ * The windows sections have been moved into (addendum 02 §8). It is created
+ * once and outlives any particular workspace window, so a section can be told
+ * that the workspace closed rather than being left editing nothing.
+ */
+const panes = createWindowRegistry({
+  getWorkspace: () => mainWindow,
+  onChanged: (open) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('panes:changed', open);
+  },
+  isDevelopment,
+});
 
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
@@ -41,6 +55,10 @@ const createWindow = (): void => {
   mainWindow.on('ready-to-show', () => mainWindow?.show());
   mainWindow.on('closed', () => {
     mainWindow = null;
+    // The workspace holds the document; a section on another monitor is a
+    // window onto it. With the workspace gone there is nothing for them to
+    // edit and nothing to save them, so they go too.
+    panes.closeAll();
   });
 
   // External links open in the browser, never inside the app window.
@@ -62,7 +80,7 @@ const createWindow = (): void => {
 installCrashHandlers();
 
 app.whenReady().then(() => {
-  registerIpcHandlers(() => mainWindow);
+  registerIpcHandlers(() => mainWindow, panes);
   createWindow();
 
   // A stored session is restored in the background: signing in should last

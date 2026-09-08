@@ -167,6 +167,178 @@ main {
   background: var(--gold-deep);
 }
 
+/* ------------------------------------------------------ places and sections */
+
+/* Four places, and whichever section the writer has put in each of them
+   (addendum 02 §8). The geometry belongs to the place, not to the section:
+   that is what lets the Script and the lanes trade sides without either of
+   them knowing it happened. */
+.slot {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+}
+
+.slot-right {
+  width: var(--right-width, 300px);
+}
+
+.slot > .pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+}
+
+/* The section fills its place; none of them carries its own width any more. */
+.pane > *:not(.pane-grip) {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: auto;
+}
+
+/* The strip that says where a section is and lets it be moved. Thin on
+   purpose: a section's own controls are inside it, and this is only about
+   where the section sits. */
+.pane-grip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 18px;
+  padding: 0 4px 0 8px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  cursor: grab;
+  user-select: none;
+}
+
+.pane-grip:active {
+  cursor: grabbing;
+}
+
+.pane-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.pane-place select {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--muted);
+  font-size: 9.5px;
+  padding: 0 2px;
+  max-width: 92px;
+}
+
+.pane-place select:hover,
+.pane-place select:focus {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.pane-out {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 5px;
+  cursor: pointer;
+}
+
+.pane-out:hover {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+}
+
+/* Being dragged over: the section under the pointer is the one that will
+   trade places with the one in hand. */
+.pane.drop-target::after {
+  content: '';
+  position: absolute;
+  inset: 18px 0 0;
+  border: 1px dashed var(--gold-deep);
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+  pointer-events: none;
+}
+
+/* The place a section left behind when it went to its own window. */
+.pane-away {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 7px,
+    color-mix(in srgb, var(--border) 45%, transparent) 7px,
+    color-mix(in srgb, var(--border) 45%, transparent) 8px
+  );
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------- a section on its own */
+
+/* A window holding one section and nothing else, so it can be pushed onto a
+   second monitor and left there (addendum 02 §8). */
+.satellite {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+}
+
+.satellite-body {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.satellite-body.stage-top {
+  height: auto;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Research fills its window exactly as it fills the workspace it covers. */
+.research-window.standalone {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--ink);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
 /* The stage: viewport and inspector above, the lanes below (addendum 02 §3). */
 .stage {
   display: flex;
@@ -2337,11 +2509,22 @@ dialog.writer-dialog::backdrop {
   padding: 20px 16px 56px;
 }
 
+/* The page, at the size it is printed (addendum 02 §7).
+   US Letter is 8½ by 11, and a script's margins are an inch and a half at the
+   left — where the brads go — and an inch on the other three sides. That
+   leaves a six-inch column, which is exactly sixty characters of 12pt Courier:
+   the geometry the paginator counts in, so a line that turns here turns on
+   paper. The zoom scales the whole page rather than the text alone, so what
+   is on screen stays a page and never becomes a wider one. */
 .writer-sheet {
-  width: min(100%, 880px);
-  min-height: calc(100% - 4px);
+  --page-zoom: 1;
+  width: calc(8.5in * var(--page-zoom));
+  max-width: 100%;
+  min-height: calc(11in * var(--page-zoom));
   margin: 0 auto;
-  padding: 44px 40px 64px;
+  padding: calc(1in * var(--page-zoom)) calc(1in * var(--page-zoom)) calc(1in * var(--page-zoom))
+    calc(1.5in * var(--page-zoom));
+  box-sizing: border-box;
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 2px;
@@ -2349,7 +2532,34 @@ dialog.writer-dialog::backdrop {
 }
 
 .writer-sheet .page-column {
-  font-size: 15px;
+  font-size: calc(12pt * var(--page-zoom));
+}
+
+.writer-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.writer-zoom select {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text);
+  font-size: 10px;
+  padding: 1px 3px;
+}
+
+/* In a window of its own the writing screen is the window: the same bar, the
+   same page, the same status line, without a dialog around them. */
+.writer-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12.5px;
 }
 
 .writer-status {

@@ -91,6 +91,34 @@ export interface VcWriterApi {
   reportingSettings(): Promise<DesktopApiResult<{ enabled: boolean }>>;
   setReporting(enabled: boolean): Promise<DesktopApiResult<{ enabled: boolean }>>;
   reportError(input: { name: string; message: string; stack: string }): Promise<DesktopApiResult<boolean>>;
+
+  /** Sections in windows of their own, and the link between them (§8). */
+  panes: PaneApi;
+  link: LinkApi;
+}
+
+/**
+ * Moving a section of the workspace to a window of its own — and, from there,
+ * to another monitor. A pane key is `script`, `research`, `viewer`, `lanes`,
+ * or `beat:<id>`; beats key on their own id so two can be open at once.
+ */
+export interface PaneApi {
+  open(pane: string): Promise<DesktopApiResult<true>>;
+  close(pane: string): Promise<DesktopApiResult<true>>;
+  list(): Promise<DesktopApiResult<string[]>>;
+  /** Told whenever a section is taken out or put back. Returns an unsubscribe. */
+  onChanged(handler: (panes: string[]) => void): () => void;
+  /** Which section this window *is*, or null in the workspace itself. */
+  self(): string | null;
+}
+
+/**
+ * The document link. The main process relays these messages between windows
+ * and never reads them; what they mean is agreed in the renderer (`link.ts`).
+ */
+export interface LinkApi {
+  send(message: Record<string, unknown>): void;
+  subscribe(handler: (message: Record<string, unknown>) => void): () => void;
 }
 
 export interface ActivationResult {
@@ -143,6 +171,33 @@ const api: VcWriterApi = {
   reportingSettings: () => ipcRenderer.invoke('reporting:get'),
   setReporting: (enabled) => ipcRenderer.invoke('reporting:set', enabled),
   reportError: (input) => ipcRenderer.invoke('reporting:report', input),
+
+  panes: {
+    open: (pane) => ipcRenderer.invoke('panes:open', pane),
+    close: (pane) => ipcRenderer.invoke('panes:close', pane),
+    list: () => ipcRenderer.invoke('panes:list'),
+    onChanged(handler) {
+      const listener = (_event: unknown, panes: string[]) => handler(panes);
+      ipcRenderer.on('panes:changed', listener);
+      return () => ipcRenderer.off('panes:changed', listener);
+    },
+    // Which section this window is, from the URL the main process opened it
+    // with. The workspace has no `pane`, so it gets null. The preload is
+    // compiled against Node's types, hence the reach for the window's own.
+    self: () => {
+      const search = (globalThis as { location?: { search?: string } }).location?.search ?? '';
+      return new URLSearchParams(search).get('pane');
+    },
+  },
+
+  link: {
+    send: (message) => ipcRenderer.send('link:send', message),
+    subscribe(handler) {
+      const listener = (_event: unknown, message: Record<string, unknown>) => handler(message);
+      ipcRenderer.on('link:message', listener);
+      return () => ipcRenderer.off('link:message', listener);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('vcwriter', api);

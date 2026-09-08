@@ -147,6 +147,23 @@ describe('the whole script in story order', () => {
     expect(screen.getByDisplayValue('Rain hammers the glass.')).toBeDefined();
   });
 
+  it('is written in, not just read: the same two keys work on the page itself', () => {
+    render(<Harness initial={screenplayWithAction()} />);
+    const action = screen.getByDisplayValue('Rain hammers the glass.');
+
+    // Tab re-types the line you are on, exactly as in the beat's own screen.
+    fireEvent.keyDown(action, { key: 'Tab' });
+    expect(elementTypes()).toEqual(['character']);
+
+    // Return gives the element that conventionally follows a cue.
+    fireEvent.keyDown(screen.getByDisplayValue('Rain hammers the glass.'), { key: 'Enter' });
+    expect(elementTypes()).toEqual(['character', 'dialogue']);
+
+    // And what is typed into it is the manuscript, not a copy of it.
+    fireEvent.change(screen.getAllByRole('textbox')[1] as HTMLElement, { target: { value: 'You came back.' } });
+    expect(screen.getByDisplayValue('You came back.')).toBeDefined();
+  });
+
   it('selects the beat the cursor lands in', () => {
     let file = screenplayWithAction();
     const second = addBeat(file, { unitId: file.units[0]!.id, title: 'Second' });

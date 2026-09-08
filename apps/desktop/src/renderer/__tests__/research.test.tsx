@@ -72,6 +72,23 @@ describe('the research window', () => {
     expect(parseInt(mike.style.paddingLeft)).toBeGreaterThan(parseInt(characters.style.paddingLeft));
   });
 
+  it('opens a folder on one click and renames it on two', () => {
+    render(<Harness initial={withNotes()} />);
+    const side = within(screen.getByLabelText('Research folders'));
+
+    // One click opens it: the middle column is now Mike's.
+    fireEvent.click(side.getByText('Mike'));
+    expect(screen.getByLabelText('Notes')).toBeDefined();
+    expect(within(screen.getByLabelText('Notes')).getByText('Wears his father’s coat')).toBeDefined();
+    // …and does not put the name into an edit box on the way.
+    expect(side.queryByLabelText('Folder name')).toBeNull();
+
+    fireEvent.doubleClick(side.getByText('Mike'));
+    fireEvent.change(side.getByLabelText('Folder name'), { target: { value: 'Mike Hanlon' } });
+    fireEvent.keyDown(side.getByLabelText('Folder name'), { key: 'Enter' });
+    expect(side.getByText('Mike Hanlon')).toBeDefined();
+  });
+
   it('shows a folder with everything under it, and opens a note on the right', () => {
     render(<Harness initial={withNotes()} />);
     fireEvent.click(within(screen.getByLabelText('Research folders')).getByText('Characters'));

@@ -81,6 +81,12 @@ for the viewport above the lanes.
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
+This is the **default** arrangement, not a fixed one. Each section sits in
+one of four places and can be moved to any other, or taken out into a window
+of its own; §8 has the rules. The strip along the top of each section — its
+name, the menu of places, and the control that takes it out — is 18px and
+carries nothing else, because a section's own controls belong inside it.
+
 - The divider between the master panel and the stage drags, as does the one
   between the viewport and the timeline. Both positions are remembered per
   machine (a preference, not project data).
@@ -206,13 +212,25 @@ carrying the three things that belong to the beat as a whole.
   script, the page count and every export — the same switch a scene has
   (§4) — and its row on the timeline is struck through.
 
-Below the bar is the page, and nothing else: the beat's manuscript at the
-format's real geometry, with the writing rules of §7.1. The status line
-under it names the scene and lane the beat is in, its word count, and the
-two keys.
+Below the bar is the page, and nothing else — and it is a **page**, not a
+column of text on a dark ground. US Letter is 8½ by 11, and a script's
+margins are an inch and a half at the left, where the brads go, and an inch
+on the other three sides. That leaves a six-inch column, which is exactly
+sixty characters of 12pt Courier: the geometry the paginator counts in, so a
+line that turns here turns on paper. The rules across it are the printed
+page breaks, from the same paginator the PDF uses.
+
+The **Page** control in the status line scales the whole page rather than
+the text alone, from 75% to 160%, so what is on screen stays a page and
+never becomes a wider one. The rest of the status line names the scene and
+lane the beat is in, its word count, and the two keys.
+
+The writing screen is the same component whether it opens over the workspace
+or in **a window of its own** on another monitor (§8); the bar carries the
+control that moves it there.
 
 Colour, status, summary, links and what the beat sets up or pays off are
-the **inspector's** business (§8) rather than the page's, so that the
+the **inspector's** business (§9) rather the page's, so that the
 writing screen is the page.
 
 ### 7.1 The two keys
@@ -366,7 +384,7 @@ belong to the lanes and the scene's own screen.
 ## 6. Master panel: Script
 
 **The Script is the finished thing.** All of the manuscript, in the order it
-will print (§5, §13) — every scene in story order, every beat in its scene,
+will print (§5, §14) — every scene in story order, every beat in its scene,
 every element in its beat — set as it will be delivered: the format's real
 page geometry, its indents, its capitals, on paper, with the page breaks
 ruled exactly where the printed pages break. This is where the work comes
@@ -387,7 +405,7 @@ one **Display** toggle at a time, in a thin bar above the page:
 
 A writer reading for flow and a writer working on structure want different
 amounts of scaffolding, and this is the one control that decides it. The
-choice is per machine, not project data (§13).
+choice is per machine, not project data (§14).
 
 The page opens with the title and the author, the way a script does. Putting
 the cursor in a beat's text selects that beat, and selecting a beat anywhere
@@ -395,10 +413,18 @@ else scrolls the Script to it; the selected beat is marked by a gold rule in
 the page's left margin, and a beat given a colour by a rule in its own. A
 beat or scene switched off (§4, §7) is not on the page at all.
 
-The Script stays editable — the same mutations the writing screen makes —
-but it does not compete with it: hovering a beat offers a **✎** in the left
-margin that opens that beat's screen, which is the way in that does not take
-double-click away from selecting a word.
+**The Script is written in, not only read.** Putting the cursor in a line
+and typing is the same edit the beat's own screen makes, through the same
+mutations, with the same two keys (§7.1), the same auto-typing, the same
+emphasis and the same dual dialogue: the page is the manuscript, not a
+preview of it. What the writing screen adds is a page of its own to do it
+on, one beat at a time, and it does not compete with the Script for
+double-click: hovering a beat offers a **✎** in the left margin that opens
+that beat's screen, and the footer says plainly that you can also just type.
+
+The Script also opens in **a window of its own** (§8), which is what makes
+the second monitor worth having: the finished script on one screen, the beat
+being written on the other.
 
 Large projects: the view renders every beat, and the performance test in the
 domain package is the gate; when it fails, the loader lazy-reads beats, not
@@ -455,11 +481,86 @@ the beat I am writing* when there is one, which is the §7.2 workflow — and
 been a delete. Then where it was used, and the related-elements panel
 (§7.4).
 
-Not yet: **popping the window out** onto a second monitor. It needs the
-project state to be shared between two windows rather than owned by one, so
-it is its own piece of work rather than a flag on this one.
+Research also opens in **a window of its own** (§8), which is what a second
+monitor is for: the material on one screen, the script on the other.
 
-## 8. Inspector
+## 8. Sections, places and windows
+
+A workspace is not a layout the program gets to decide. Someone cutting a
+sequence wants the lanes big and the script small; someone drafting wants
+the opposite; someone with two monitors wants the page on one of them and
+everything else on the other. So the sections move.
+
+### The four places
+
+The workspace has four places a section can be — the tall column down one
+side, the two stacked halves of the stage beside it, and the narrow column
+on the far side — and four sections to put in them: the **Script**, the
+**Timeline & Viewer**, the **plot lanes** and the **inspector**. Any section
+can go in any place.
+
+Each section carries a thin strip along its top: its name, which is also the
+grip you drag it by; a menu of the four places, so the arrangement can be
+changed without a mouse; and the control that takes it out into a window of
+its own. Dragging one section onto another **swaps the two**. There is no
+notion of an empty place or of a section pushed off the edge — four
+sections, four places, and every rearrangement is a permutation of them. A
+remembered arrangement that is not a permutation (written by an older
+version, or by hand) falls back to the default rather than losing a section.
+
+The arrangement is a preference, per machine, not project data.
+
+### A section in a window of its own
+
+Any of the four, plus **research** and **any number of beats**, can be
+opened as a real window and pushed onto another monitor. The window runs the
+same renderer with `?pane=` naming what it holds: `script`, `viewer`,
+`lanes`, `inspector`, `research`, or `beat:<id>` — beats key on their own id,
+so two beats can be open side by side. Asking twice for the same section
+raises the window that already exists rather than making a second one.
+
+The workspace holds the section's place while it is gone, saying where it
+went and offering to bring it back, rather than closing up as though the
+section had never been there.
+
+Closing the workspace closes them: the workspace holds the document, and a
+window with nothing to edit and nothing to save it is worse than no window.
+
+### One document, several windows
+
+The windows edit the **same project**, not copies of it. A line typed in the
+beat window is in the Script a moment later; a beat dragged in the lanes
+moves its text in the beat window. Exactly one window — the workspace — holds
+the document and runs the autosave, which keeps a single writer to the file.
+
+The rule between them is the ordinary one for optimistic editing:
+
+1. A window applies its own edit **at once**, so typing never waits for a
+   round trip, and proposes the result to the workspace along with the
+   version it was working from.
+2. The workspace accepts a proposal whose version is the one it holds, and
+   publishes the result to every window.
+3. A proposal written against an older version is **refused**. The window is
+   handed the current document and **replays** the edits it has not had
+   acknowledged on top of it, then proposes again.
+
+So two windows writing at the same moment keep both edits: the beat window
+taking a beat out of the script while the workspace renames it ends with the
+beat renamed *and* out of the script, and neither window shows a document
+the other has moved past. A document older than the one in hand is ignored
+rather than applied — a refusal that crossed with the acceptance of the very
+edit it refused must not put back what has already been superseded.
+
+Proposals and publications are coalesced to a few a second, so a held-down
+key sends the document a handful of times rather than once per character;
+what is on screen in the window doing the typing is never delayed by it.
+
+The transport is not part of the rule. In the desktop application the main
+process relays between windows and never reads what it relays; in the
+browser preview the windows are tabs of the same origin and talk over a
+`BroadcastChannel`. Both are the same three lines.
+
+## 9. Inspector
 
 The properties of the current selection, as a column of collapsible
 sections, top to bottom:
@@ -474,7 +575,7 @@ sections, top to bottom:
 Every field writes through the same domain mutations the panes use, so an
 edit here shows in the Script and on the timeline at once.
 
-## 9. Page bar
+## 10. Page bar
 
 The row of pages along the bottom of the window, centred, in the display
 face at 11px uppercase, the current page in gold with a gold rule above it:
@@ -484,7 +585,7 @@ identity on the left and its state and actions on the right. Counts stay on
 the page names (conflicts on Recovery); the research and setup counts move
 to the master panel's Research tab.
 
-## 10. Story order is global
+## 11. Story order is global
 
 This addendum changes one rule of §5 and §13. Until now the print order was
 *lane order, then scene order within the lane*: every scene of the main plot
@@ -503,7 +604,7 @@ order they printed before — lane by lane — so nothing changes in the
 manuscript until the writer moves something. The migration takes the usual
 pre-migration snapshot.
 
-## 11. Act markers
+## 12. Act markers
 
 A marker is a label at a position in the story order: `{ id, title,
 kind: 'act' | 'sequence' | 'note', unitId }`, meaning *this scene starts
@@ -518,7 +619,7 @@ scene in story order, or goes with the last scene if there is none.
 Markers are stored in the project file (`markers[]`) and synced like any
 other structural record (`story_markers`).
 
-## 12. Keyboard
+## 13. Keyboard
 
 In addition to §5's reordering keys and §6's writing keys:
 
@@ -530,9 +631,9 @@ In addition to §5's reordering keys and §6's writing keys:
 | `Alt+PageUp` / `Alt+PageDown` | Select the previous/next beat in story order |
 
 Every control on the timeline is a focusable element with an accessible
-name; the reorder keys work from the same elements that drag (§15).
+name; the reorder keys work from the same elements that drag (§16).
 
-## 13. Preferences
+## 14. Preferences
 
 A gear on the title bar opens Preferences. These are kept on the machine,
 not in the project file — a collaborator opening the file must not inherit
@@ -548,15 +649,10 @@ anyone's colours — alongside the layout preferences of §3.
   and a dark page is a strain over a long day. Off, the Script follows the
   scheme.
 
-## 14. Later
+## 15. Later
 
 Named so that nobody mistakes their absence for an oversight:
 
-- **Pop-out windows.** Any editor window — the Script, a Research tab, the
-  inspector — opened in its own operating-system window for a second
-  monitor. Electron supports it; it is a later addendum because it needs a
-  second render root sharing one document, which is a change to the
-  project state plumbing, not to the panes.
 - Causal links between beats ("must be caused", "create cause"). The
   Threads view draws and edits §7.4 links between beats; a link that
   *means* "this must happen before that", with rules the timeline enforces,
@@ -565,7 +661,7 @@ Named so that nobody mistakes their absence for an oversight:
   character; a lane per character among the plot lanes is a later addendum.
 - Timing in minutes. Pages are the industry's unit and the ruler uses them.
 
-## 15. Acceptance
+## 16. Acceptance
 
 - The Script shows every beat of the fixture project in print order, and
   typing in the third beat changes the third beat and nothing else.
@@ -580,5 +676,16 @@ Named so that nobody mistakes their absence for an oversight:
 - The `+ Scene` and `+ Beat` controls add after the selection, and the new
   item is selected and its title focused for typing.
 - Every reorder is possible with the keyboard alone.
+- Dragging the Script's strip onto the plot lanes puts each in the other's
+  place, and the same move is available from the strip's menu without a
+  mouse. A remembered arrangement that is not a permutation of the four
+  sections falls back to the default rather than losing one.
+- A beat opened in a window of its own shows the workspace's beat; typing in
+  it changes the workspace's project, and renaming the beat in the workspace
+  changes what the window shows. Neither window holds a copy.
+- A window and the workspace editing the same beat at the same moment keep
+  both edits.
+- The writing screen's page measures 8½ by 11 inches at 100%, with an inch
+  and a half at the left, and its column wraps where the paginator wraps.
 - Renderer and domain tests cover the above; a screenshot of the fixture at
   1440×900 and at 1100×700 is reviewed before the change ships.

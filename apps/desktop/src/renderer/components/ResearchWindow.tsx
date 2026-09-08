@@ -36,6 +36,8 @@ interface ResearchWindowProps {
   currentBeatId: BeatId | null;
   onClose(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  /** Move research into a window of its own, for a second monitor (§8). */
+  onPopOut?(): void;
 }
 
 /** What the side menu can be pointed at. */
@@ -71,25 +73,39 @@ const VIEWS: ReadonlyArray<{ view: ResearchView; label: string }> = [
  * Everything that is not the script lives here, so the plot lanes and the
  * setups and payoffs are the last two entries in the same menu.
  */
-export function ResearchWindow({ file, open, currentBeatId, onClose, onUpdate }: ResearchWindowProps) {
+export function ResearchWindow({ file, open, currentBeatId, onClose, onUpdate, onPopOut }: ResearchWindowProps) {
   const dialog = useModal(open);
   return (
     <dialog ref={dialog} className="research-window" aria-label="Research" onClose={onClose}>
-      {open ? <ResearchBody file={file} currentBeatId={currentBeatId} onClose={onClose} onUpdate={onUpdate} /> : null}
+      {open ? (
+        <ResearchBody
+          file={file}
+          currentBeatId={currentBeatId}
+          onClose={onClose}
+          onUpdate={onUpdate}
+          {...(onPopOut ? { onPopOut } : {})}
+        />
+      ) : null}
     </dialog>
   );
 }
 
-function ResearchBody({
+/**
+ * The window's contents, without the window. A research window on a second
+ * monitor is this, in an OS window rather than over the workspace (§8).
+ */
+export function ResearchBody({
   file,
   currentBeatId,
   onClose,
   onUpdate,
+  onPopOut,
 }: {
   file: ProjectFile;
   currentBeatId: BeatId | null;
   onClose(): void;
   onUpdate: ResearchWindowProps['onUpdate'];
+  onPopOut?(): void;
 }) {
   const [selection, setSelection] = useState<Selection>({ kind: 'view', view: 'all' });
   const [selectedItemId, setSelectedItemId] = useState<ResearchItemId | null>(null);
@@ -170,6 +186,17 @@ function ResearchBody({
         <button type="button" className="ghost" onClick={addFolder}>
           + Folder
         </button>
+        {onPopOut ? (
+          <button
+            type="button"
+            className="ghost"
+            aria-label="Open research in its own window"
+            title="Open research in its own window — put it on another monitor"
+            onClick={onPopOut}
+          >
+            ⧉
+          </button>
+        ) : null}
         <button type="button" className="ghost" aria-label="Close research" onClick={onClose}>
           ×
         </button>
@@ -381,9 +408,13 @@ function FolderNode({
           {shut ? '▸' : '▾'}
         </button>
         <span className="folder-dot" style={{ background: category.color ?? 'transparent' }} aria-hidden="true" />
+        {/* One click opens the folder, two rename it. The name is text rather
+            than a control of its own: a button inside a button is neither
+            valid nor navigable. */}
         <button type="button" className="folder-open" onClick={() => onSelect(category.id)}>
           <InlineText
             value={category.name}
+            begin="doubleClick"
             ariaLabel="Folder name"
             className="folder-name"
             onCommit={(name) => onUpdate((current) => updateResearchCategory(current, category.id, { name: name || 'Folder' }))}
