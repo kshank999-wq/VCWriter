@@ -53,32 +53,40 @@ export function Paper({ pages, empty = 'Nothing written yet.' }: { pages: Page[]
 }
 
 /**
- * The contents page a season is bound with (addendum 02 §17): the series'
- * name, then one line for each script — its label, its name, how long it runs
- * and which sheet of the stack it begins on. The two figures are headed,
- * because each episode numbers from its own page one and the sheet must not
- * be read as the page the script prints.
+ * The contents page a document is bound with (addendum 02 §11, §17): the
+ * work's name, then one line for each division.
+ *
+ * A book gives the page each chapter opens on, as a table of contents always
+ * has. A series cannot — each episode numbers from its own page one — so its
+ * lines carry how long each script runs and which sheet of the stack it
+ * begins on, each under a heading, because a number that is not a page number
+ * must not be read as one.
  */
 function ContentsLeaf({ contents }: { contents: ContentsPage }) {
+  const stack = contents.kind === 'episodes';
   return (
     <div className="contents-leaf-block">
       <h1 className="contents-series">{contents.title || 'Untitled'}</h1>
       <p className="contents-heading">Contents</p>
       <div className="contents-list">
-        <div className="contents-row contents-head">
-          <span className="contents-label" />
-          <span className="contents-title" />
-          <span className="contents-pages">Length</span>
-          <span className="contents-sheet">Sheet</span>
-        </div>
+        {stack ? (
+          <div className="contents-row contents-head">
+            <span className="contents-label" />
+            <span className="contents-title" />
+            <span className="contents-pages">Length</span>
+            <span className="contents-sheet">Sheet</span>
+          </div>
+        ) : null}
         {contents.entries.map((entry) => (
           <div key={entry.label} className="contents-row">
             <span className="contents-label">{entry.label}</span>
             <span className="contents-title">{entry.title}</span>
-            <span className="contents-pages">
-              {entry.pages} {entry.pages === 1 ? 'page' : 'pages'}
-            </span>
-            <span className="contents-sheet">{entry.sheet}</span>
+            {stack ? (
+              <span className="contents-pages">
+                {entry.pages} {entry.pages === 1 ? 'page' : 'pages'}
+              </span>
+            ) : null}
+            <span className="contents-sheet">{stack ? entry.sheet : entry.page}</span>
           </div>
         ))}
       </div>

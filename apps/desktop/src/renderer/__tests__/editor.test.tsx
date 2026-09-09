@@ -2,7 +2,16 @@
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { addBeat, createProjectFile, pageCount, updateBeat, type BeatId, type ProjectFile } from '@vcwriter/domain';
+import {
+  addBeat,
+  addMarker,
+  addUnit,
+  createProjectFile,
+  pageCount,
+  updateBeat,
+  type BeatId,
+  type ProjectFile,
+} from '@vcwriter/domain';
 import { StoryView } from '../components/StoryView';
 import { PagePreview } from '../components/PagePreview';
 
@@ -469,5 +478,57 @@ describe('page preview', () => {
     expect((screen.getByRole('button', { name: 'Print…' }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole('button', { name: 'Working…' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText('Exporting the script')).toBeDefined();
+  });
+});
+
+/**
+ * A book's table of contents (addendum 02 §11), drawn as it prints.
+ */
+describe('a book’s contents page', () => {
+  const novel = (): ProjectFile => {
+    let file = createProjectFile({ title: 'The Lighthouse', format: 'novel' });
+    const laneId = file.lanes[0]!.id;
+    const fill = (current: ProjectFile, unitId: string, text: string) =>
+      updateBeat(current, current.beats.find((beat) => (beat.unitId as string) === unitId)!.id, {
+        manuscript: {
+          elements: [{ id: `${unitId}-p` as never, type: 'paragraph', text, characterId: null, attributes: {} }],
+        },
+      });
+
+    file = fill(file, file.units[0]!.id as string, 'The lamp turned all that long night.');
+    file = addMarker(file, { unitId: file.units[0]!.id, title: 'The Lamp', kind: 'chapter' }).file;
+
+    const made = addUnit(file, { laneId, title: 'Two' });
+    file = addBeat(made.file, { unitId: made.unit.id }).file;
+    file = fill(file, made.unit.id as string, 'She did not sleep.');
+    file = addMarker(file, { unitId: made.unit.id, title: 'The Wreck', kind: 'chapter' }).file;
+    return file;
+  };
+
+  it('lists the chapters with the page each opens on, and no stack headings', () => {
+    render(
+      <PagePreview
+        file={novel()}
+        unitId={null}
+        includeBeatTitles={false}
+        onToggleBeatTitles={() => undefined}
+        includeChapterPages
+        onToggleChapterPages={() => undefined}
+        includeTitlePage
+        includeContentsPage
+        onExportPdf={() => undefined}
+        onPrint={() => undefined}
+        busy={false}
+        message={null}
+      />,
+    );
+
+    const sheet = screen.getByLabelText('Contents');
+    expect(within(sheet).getByText('Chapter 1')).toBeDefined();
+    expect(within(sheet).getByText('The Wreck')).toBeDefined();
+    // A page number, not a sheet: a book numbers straight through, so it
+    // needs no heading saying which kind of number this is.
+    expect(within(sheet).queryByText('Sheet')).toBeNull();
+    expect(within(sheet).queryByText('Length')).toBeNull();
   });
 });

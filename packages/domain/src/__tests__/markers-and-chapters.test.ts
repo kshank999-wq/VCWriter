@@ -145,15 +145,17 @@ describe('the leaf a chapter opens with', () => {
         .map((line) => line.text);
     expect(prose(after)).toEqual(prose(before));
 
-    // And they are numbered straight through, as a book is.
-    expect(after.map((page) => page.number)).toEqual(after.map((_, index) => index + 1));
+    // And they are numbered straight through, as a book is — behind the
+    // contents page, which takes no number of its own (§17).
+    expect(after[0]?.contents).toBeDefined();
+    expect(after.slice(1).map((page) => page.number)).toEqual(after.slice(1).map((_, index) => index + 1));
   });
 
   it('opens the chapter it belongs to, not the one before it', () => {
     let file = markAll(book(2));
     for (const marker of file.markers) file = setChapterPage(file, marker.id, { include: true });
-    const pages = paginateProject(file);
-    // The first page of the book is the first chapter's leaf.
+    // Behind the contents page, the book opens with the first chapter's leaf.
+    const pages = paginateProject(file).slice(1);
     expect(pages[0]?.chapter).toBeDefined();
     // The second chapter's leaf comes after the first chapter's prose.
     const leaves = pages.map((page, index) => (page.chapter ? index : -1)).filter((index) => index >= 0);
@@ -203,5 +205,63 @@ describe('the leaf a chapter opens with', () => {
     // The writer's own text is text, whatever it looks like.
     expect(html).toContain('Salt &amp; &lt;b&gt;smoke&lt;/b&gt;');
     expect(html).not.toContain('<b>smoke</b>');
+  });
+});
+
+/**
+ * A book's table of contents (addendum 02 §11): the chapters, and the page
+ * each one opens on. The same page a series is bound with, saying what a
+ * reader of a book needs rather than what a reader of a stack does.
+ */
+describe('the contents page of a book', () => {
+  it('lists the chapters and the page each one opens on', () => {
+    let file = markAll(book(3));
+    for (const marker of file.markers) file = setChapterPage(file, marker.id, { include: true });
+    const pages = paginateProject(file);
+    const contents = pages[0]?.contents;
+
+    expect(contents?.kind).toBe('chapters');
+    expect(contents?.title).toBe('The Lighthouse');
+    expect(contents?.entries.map((entry) => entry.label)).toEqual(['Chapter 1', 'Chapter 2', 'Chapter 3']);
+
+    // The page each entry names is the page that leaf actually carries.
+    const leaves = pages.filter((page) => page.chapter).map((page) => page.number);
+    expect(contents?.entries.map((entry) => entry.page)).toEqual(leaves);
+  });
+
+  it('points at the page a chapter falls on when it has no leaf of its own', () => {
+    // No chapter pages, so the book is one run and a chapter starts wherever
+    // the prose puts it. The contents still says which page to turn to.
+    const file = markAll(book(3));
+    const pages = paginateProject(file);
+    const contents = pages[0]?.contents;
+    expect(pages.some((page) => page.chapter)).toBe(false);
+
+    const numbers = contents?.entries.map((entry) => entry.page) ?? [];
+    expect(numbers[0]).toBe(1);
+    // Each chapter is further into the book than the one before it, and none
+    // is named past the end of it.
+    expect([...numbers].sort((a, b) => a - b)).toEqual(numbers);
+    expect(Math.max(...numbers)).toBeLessThanOrEqual(pages.length - 1);
+  });
+
+  it('is not printed for a book of one chapter, nor for a screenplay', () => {
+    expect(paginateProject(markAll(book(1))).some((page) => page.contents)).toBe(false);
+
+    let script = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
+    script = addMarker(script, { unitId: script.units[0]!.id, title: 'One', kind: 'act' }).file;
+    script = addMarker(script, { unitId: script.units[0]!.id, title: 'Two', kind: 'act' }).file;
+    // Three acts are not a table of contents; they are three marks in one script.
+    expect(paginateProject(script).some((page) => page.contents)).toBe(false);
+  });
+
+  it('gives a book the page and a series the sheet, on the same page design', () => {
+    let file = markAll(book(2));
+    for (const marker of file.markers) file = setChapterPage(file, marker.id, { include: true });
+    const html = renderPrintDocumentHtml(file);
+    expect(html).toContain('class="page contents-page"');
+    // A book's contents needs no headings: the number on it is a page number.
+    expect(html).not.toContain('>Sheet<');
+    expect(html).not.toContain('>Length<');
   });
 });

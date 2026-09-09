@@ -545,9 +545,10 @@ them — and the Preview draws them exactly as they print.
 #### The contents page
 
 A stack wants a list at the front of it saying what is in the stack, so a
-series opens with one: the series' title at the head, the word *Contents*
-under it, and one line for each episode — its label on the left, its name
-beside it, then two figures.
+series opens with the same contents page a book does (§12) — the series'
+title at the head, the word *Contents* under it, one line for each episode.
+What the line *says* on the right is where the two part, because a stack of
+scripts cannot be pointed at the way a book can.
 
 | Column | What it says |
 | --- | --- |
@@ -558,7 +559,8 @@ beside it, then two figures.
 its own page one, so "turn to page 34" would name three pages at once. The
 sheet is how far to count in, which is the question a reader of a stack
 actually has, and the two columns are headed so the one cannot be read as the
-other.
+other. A book, numbering straight through, needs neither: it gives the page,
+under no heading at all.
 
 It carries the series' title, so it stands as the front of the document with
 nothing needed in front of it: where a contents page opens the printing, the
@@ -897,6 +899,25 @@ The graphic is held in the document as a data URL and capped at 5MB. The
 project is a text file that syncs; a full-bleed photograph in it would make
 every save enormous, and a printer's ornament is what this is for.
 
+### The table of contents
+
+A book opens with one: its title at the head, the word *Contents* under it,
+and one line for each chapter — its number and name on the left, and on the
+right **the page it opens on**, which is what a table of contents has always
+said. A book numbers straight through, so that number is the number printed
+on the page itself, and needs no explaining.
+
+It points at the chapter's own leaf where it has one, and where chapter pages
+are switched off it names the page the chapter falls on, which is the page a
+reader would turn to. A contents page takes no number of its own, so nothing
+in the manuscript is renumbered by adding one.
+
+It is the same page a series is bound with — §17 has what a stack needs
+instead — and the same rules hold for both: only where there is **more than
+one** division to list, and only where **Contents page** is ticked in Page
+setup. A screenplay has none. Three acts are not a table of contents; they
+are three marks in one script.
+
 ### The older act-marker rules, unchanged
 
 A marker is a label at a position in the story order: `{ id, title,
@@ -966,7 +987,7 @@ It is in two groups, and the division is the point.
 | Switch | Default | |
 | --- | --- | --- |
 | Print the title page | on | What it says is its own screen, §6.1 — this only decides whether it prints. In a series it governs every episode's front page too |
-| Contents page | on | A series only, and only with more than one episode: the list at the front of the stack, §6.1 |
+| Contents page | on | The list at the front: a book's chapters with the page each opens on, §12, or a season's episodes with the sheet, §6.1. Only with more than one to list |
 | Chapter pages | on | §12, and only for a format that has them |
 | Scene headings | on | Off gives a read-through with no sluglines |
 | Page numbers | on | Top right, from page two |

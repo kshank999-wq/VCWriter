@@ -89,8 +89,9 @@ export function PageSetup({
 }: PageSetupProps) {
   const dialog = useModal(open);
   const leaves = hasChapterPages(file.project.format);
-  // Only a series has one, and only where there is more than one episode to
-  // list; the switch is not offered where there would be nothing to print.
+  // Offered only where there is more than one division to list: a season's
+  // episodes or a book's chapters, and nothing where there would be nothing
+  // to print.
   const contents = hasContentsPage(file);
   const prose = file.project.format === 'novel' || file.project.format === 'short_story';
   const paragraphStyle = file.settings.paragraphStyle;
@@ -135,7 +136,9 @@ export function PageSetup({
                 on={setup.includeContentsPage}
                 onChange={(includeContentsPage) => set({ includeContentsPage })}
               >
-                Contents — what is in the stack, at the front of it
+                {prose
+                  ? 'Contents — the chapters and the page each opens on'
+                  : 'Contents — what is in the stack, at the front of it'}
               </Check>
             ) : null}
 

@@ -2,7 +2,7 @@ import { layoutFor, paginateProject, type ManuscriptOptions, type Page, type Pag
 import { isProseFormat } from './editing.js';
 import { titlePageOf } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
-import type { ContentsPage } from './episodes.js';
+import type { ContentsPage } from './markers.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -106,31 +106,39 @@ const printedAt = (options: PrintOptions): string =>
 /**
  * The contents page a season is bound with (addendum 02 §17).
  *
- * The series' title at the head, so the page stands as the front of the
- * document, and one line for each episode: its label on the left, its name
- * beside it, then how long that script runs and which **sheet** of the stack
- * it begins on.
+ * The work's title at the head, so the page stands as the front of the
+ * document, then one line for each division: its label on the left, its name
+ * beside it, and on the right what a reader of *that* document needs.
  *
- * The two numbers are given a heading each, and they need one: each episode
- * numbers from its own page one, so the number that says where to turn is
- * not a page number and must not be read as one.
+ * **A book** gives the page each chapter opens on, which is what a table of
+ * contents has always said. **A series** cannot: each episode numbers from
+ * its own page one (§17), so a page number would name three pages at once.
+ * Its lines carry how long each script runs and which **sheet** of the stack
+ * it begins on — and those two are given a heading each, because a number
+ * that is not a page number must not be read as one.
  */
 const renderContentsPage = (contents: ContentsPage): string => {
-  const head =
-    '<div class="contents-row contents-head">' +
-    '<span class="contents-label"></span><span class="contents-title"></span>' +
-    '<span class="contents-pages">Length</span><span class="contents-sheet">Sheet</span>' +
-    '</div>';
+  const stack = contents.kind === 'episodes';
+  const head = stack
+    ? '<div class="contents-row contents-head">' +
+      '<span class="contents-label"></span><span class="contents-title"></span>' +
+      '<span class="contents-pages">Length</span><span class="contents-sheet">Sheet</span>' +
+      '</div>'
+    : '';
   const rows = contents.entries
-    .map(
-      (entry) =>
+    .map((entry) => {
+      const figures = stack
+        ? `<span class="contents-pages">${entry.pages} ${entry.pages === 1 ? 'page' : 'pages'}</span>` +
+          `<span class="contents-sheet">${entry.sheet}</span>`
+        : `<span class="contents-sheet">${entry.page}</span>`;
+      return (
         '<div class="contents-row">' +
         `<span class="contents-label">${escapeHtml(entry.label)}</span>` +
         `<span class="contents-title">${escapeHtml(entry.title)}</span>` +
-        `<span class="contents-pages">${entry.pages} ${entry.pages === 1 ? 'page' : 'pages'}</span>` +
-        `<span class="contents-sheet">${entry.sheet}</span>` +
-        '</div>',
-    )
+        figures +
+        '</div>'
+      );
+    })
     .join('');
   return (
     '<section class="page contents-page">' +

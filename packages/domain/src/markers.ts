@@ -269,3 +269,65 @@ export const chapterPagesFor = (
 
 /** A cap on what can be pasted onto a chapter page: the project is a text file. */
 export const MAX_CHAPTER_IMAGE_BYTES = 5 * 1024 * 1024;
+
+/**
+ * The contents page a document is bound with (addendum 02 §11, §17).
+ *
+ * A stack wants a list at the front of it saying what is in the stack, and so
+ * does a book. What the list says differs, because what a reader needs from
+ * it differs:
+ *
+ *  - **A series** is a stack of scripts, each numbering from its own page one
+ *    (§17), so "page 34" would name three pages at once. Its lines carry how
+ *    long each script runs and how far into the stack it begins — the
+ *    **sheet**, every leaf of the printing counted from the front.
+ *  - **A book** numbers straight through, so its lines carry the page each
+ *    chapter opens on, which is what a table of contents has always said.
+ */
+export type ContentsKind = 'episodes' | 'chapters';
+
+export interface ContentsEntry {
+  /** "EPISODE 2", "Chapter 4" — in whatever scheme the project numbers by. */
+  label: string;
+  /** What the writer named it. May be empty; the label never is. */
+  title: string;
+  /** How long it runs, in pages. */
+  pages: number;
+  /**
+   * Which sheet of the printing it begins on, counting every leaf from the
+   * front — the contents page is sheet one — and pointing at the division's
+   * own leaf where it has one, because that is where it begins.
+   */
+  sheet: number;
+  /** The page it opens on, as the page itself prints it. */
+  page: number;
+}
+
+export interface ContentsPage {
+  kind: ContentsKind;
+  /** The work's title, at the head of the page. */
+  title: string;
+  entries: ContentsEntry[];
+}
+
+/**
+ * The divisions a contents page would list: a series' episodes, a book's
+ * chapters, a short story's sections. Nothing else has one — a screenplay's
+ * acts are not a table of contents, they are three marks in one script.
+ */
+export const contentsDivisions = (file: ProjectFile): PlacedMarker[] => {
+  const format = file.project.format;
+  if (format !== 'series' && format !== 'novel' && format !== 'short_story') return [];
+  const kind = defaultMarkerKind(format);
+  return placedMarkers(file).filter((placed) => placed.marker.kind === kind);
+};
+
+/**
+ * Whether this printing carries a contents page: only where there is **more
+ * than one** division to list — a contents page naming a single thing is a
+ * sheet of paper saying nothing — and only where the printing asked for it.
+ */
+export const hasContentsPage = (
+  file: ProjectFile,
+  options: { includeContentsPage?: boolean } = {},
+): boolean => options.includeContentsPage !== false && contentsDivisions(file).length > 1;

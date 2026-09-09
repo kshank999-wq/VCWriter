@@ -1,6 +1,15 @@
 import { beatsInScript, relatedEntities, unitsInStoryOrder } from './selectors.js';
-import { chapterPageContent, chapterPagesFor, type ChapterPageContent } from './markers.js';
-import { episodeTitlePages, episodes, hasContentsPage, type ContentsPage, type Episode } from './episodes.js';
+import {
+  chapterPageContent,
+  chapterPagesFor,
+  contentsDivisions,
+  hasContentsPage,
+  type ChapterPageContent,
+  type ContentsEntry,
+  type ContentsPage,
+  type PlacedMarker,
+} from './markers.js';
+import { episodeTitlePages, episodes, type Episode } from './episodes.js';
 import type { TitlePage } from './entities/title-page.js';
 import { groupManuscript } from './editing.js';
 import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
@@ -617,7 +626,8 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   // Every episode begins a script of its own, whether or not its front page
   // is printing: it starts on a fresh page and numbers from one (§17).
   const opensEpisode = new Map(episodes(file).map((episode) => [episode.marker.unitId as string, episode]));
-  if (leaves.length === 0 && fronts.length === 0 && opensEpisode.size === 0) {
+  // Nothing to divide the run and nothing to list: one flat pass, unchanged.
+  if (leaves.length === 0 && fronts.length === 0 && opensEpisode.size === 0 && !hasContentsPage(file, options)) {
     return numbered(paginateElements(manuscriptElements(file, options), layout, speakerFor), new Set());
   }
 
@@ -634,11 +644,14 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   /** Where a script begins: the index of each episode's own page one. */
   const restartAt = new Set<number>();
   /**
-   * Each episode's run: where its first sheet falls (its cover, where it has
-   * one), and where its own page one does. The contents page is written from
-   * these — how far into the stack each script is, and how long it runs.
+   * Each division's run: which page index it opens on, and how far into the
+   * manuscript it falls. The contents page is written from these once the
+   * pages exist — how long each part runs, and where to turn for it.
    */
-  const runs: { episode: Episode; from: number; start: number }[] = [];
+  const runs: Division[] = [];
+  /** Every element as it went in, so a division with no leaf can be placed. */
+  const emitted: string[] = [];
+  const divisions = new Map(contentsDivisions(file).map((placed) => [placed.marker.unitId as string, placed]));
   let run: ManuscriptElement[] = [];
   const flush = () => {
     if (run.length === 0) return;
@@ -647,37 +660,64 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   };
 
   for (const unit of units) {
+    /** The first page this unit opens: its cover, its leaf, or its own page one. */
+    let opensAtIndex = -1;
+
     const episode = opensEpisode.get(unit.id as string);
     if (episode) {
       // The episode before it ends where it ends; this one starts on paper of
       // its own, with its front page ahead of it where it has one.
       flush();
-      const from = pages.length;
+      opensAtIndex = pages.length;
       const front = frontAt.get(unit.id as string);
       if (front) pages.push({ number: 0, lines: [], startsWith: null, titlePage: front });
       // Whatever is pushed next — a chapter leaf, or the first page of the
       // script — is this episode's page one.
       restartAt.add(pages.length);
-      runs.push({ episode, from, start: pages.length });
     }
+
     const leaf = opensAt.get(unit.id as string);
     if (leaf) {
       flush();
+      if (opensAtIndex < 0) opensAtIndex = pages.length;
       pages.push({ number: 0, lines: [], startsWith: null, chapter: chapterPageContent(leaf) });
     }
-    run.push(...unitElements(file, unit.id, options, String(sceneNumbers.get(unit.id as string) ?? 0)));
+
+    // A division opens at the first leaf of its own — its cover, its chapter
+    // page — or, where it has neither, at whatever page its first line falls
+    // on, which `emitted` is kept for.
+    const opens = divisions.get(unit.id as string);
+    if (opens) runs.push({ placed: opens, from: opensAtIndex, at: emitted.length });
+
+    const elements = unitElements(file, unit.id, options, String(sceneNumbers.get(unit.id as string) ?? 0));
+    emitted.push(...elements.map((element) => element.id as string));
+    run.push(...elements);
   }
   flush();
 
-  // The list at the front of the stack, which can only be written once the
-  // stack exists: it says how long each script runs.
-  if (hasContentsPage(file, options)) {
-    pages.unshift({ number: 0, lines: [], startsWith: null, contents: contentsOf(file, pages, runs) });
-    return numbered(pages, new Set([...restartAt].map((index) => index + 1)));
-  }
+  const laid = numbered(pages, restartAt);
 
-  return numbered(pages, restartAt);
+  // The list at the front, which can only be written once the pages exist:
+  // it says where to turn, and a page that is not there cannot be pointed at.
+  if (hasContentsPage(file, options)) {
+    laid.unshift({
+      number: 0,
+      lines: [],
+      startsWith: null,
+      contents: contentsOf(file, laid, runs, emitted),
+    });
+  }
+  return laid;
 };
+
+/** A division of the document, and where it landed once the pages were laid. */
+interface Division {
+  placed: PlacedMarker;
+  /** The page index its own leaves begin at, or -1 where it has none. */
+  from: number;
+  /** How many elements went in ahead of it, for a division with no leaf. */
+  at: number;
+}
 
 /**
  * What is in the stack: one line for each episode, with how long it runs.
@@ -690,20 +730,49 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
 const contentsOf = (
   file: ProjectFile,
   pages: readonly Page[],
-  runs: readonly { episode: Episode; from: number; start: number }[],
+  runs: readonly Division[],
+  emitted: readonly string[],
 ): ContentsPage => {
-  const entries = runs.map((run, position) => {
-    const end = runs[position + 1]?.from ?? pages.length;
+  // Where each element fell, so a division with no leaf of its own can still
+  // be pointed at: the page it opens on is the last one that had begun by the
+  // time its first line went in.
+  const position = new Map(emitted.map((id, index) => [id, index]));
+  const begun = pages.map((page, index) => ({
+    index,
+    at: page.startsWith === null ? -1 : (position.get(page.startsWith) ?? -1),
+  }));
+  const pageOf = (at: number): number => {
+    let found = 0;
+    for (const page of begun) {
+      if (page.at >= 0 && page.at <= at) found = page.index;
+    }
+    return found;
+  };
+
+  const opensAt = runs.map((run) => (run.from >= 0 ? run.from : pageOf(run.at)));
+
+  const entries: ContentsEntry[] = runs.map((run, position_) => {
+    const from = opensAt[position_] as number;
+    const end = opensAt[position_ + 1] ?? pages.length;
+    const own = pages.slice(from, end);
     return {
-      label: run.episode.label,
-      title: run.episode.title,
-      pages: pages.slice(run.start, end).filter((page) => page.titlePage === undefined).length,
-      // Counted from the front of the stack, sheet one being this contents
-      // page — which is not in `pages` yet, hence the extra one.
-      sheet: run.from + 2,
+      label: run.placed.label,
+      title: run.placed.marker.title,
+      // The covers between the scripts belong to no script; the pages do.
+      pages: own.filter((page) => page.titlePage === undefined).length,
+      // Sheet one is the contents page itself, which is not in `pages` yet.
+      sheet: from + 2,
+      // What the page it opens on prints on its own face. A cover carries no
+      // number, so the number is the first one the division actually has.
+      page: own.find((page) => page.number > 0)?.number ?? 0,
     };
   });
-  return { title: file.project.title, entries };
+
+  return {
+    kind: file.project.format === 'series' ? 'episodes' : 'chapters',
+    title: file.project.title,
+    entries,
+  };
 };
 
 /**
