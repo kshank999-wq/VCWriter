@@ -459,7 +459,41 @@ The Script also opens in **a window of its own** (§8), which is what makes
 the second monitor worth having: the finished script on one screen, the beat
 being written on the other.
 
-### 6.1 Continuous, or pages
+### 6.1 The title page
+
+**The Script screen carries no title.** Page one is page one. What used to
+sit above the first beat — the project's title and a by-line — was a heading
+over the *work*, and a heading over the work is not a page of the document.
+
+The title page is a real page, made with the project and kept in it, edited
+from **File → Title page**. It carries what the industry page carries:
+
+| | |
+| --- | --- |
+| **Title** | Or a **graphic** in place of it — a logotype, up to 5MB, held in the project so the page travels with the file. The graphic *is* the title: the words are not set underneath as well. |
+| **Episode** | Under the title, where a series puts it |
+| **Credit** | "written by", "screenplay by", "a novel by" |
+| **Author** | |
+| **Source** | "based on the novel by…" |
+| **Contact** | Foot left: agent, telephone, email, as many lines as needed |
+| **Draft date** | Foot right, with a **Today** beside the box |
+| **Revision** and **Notes** | Centred under both, where "FINAL PRODUCTION DRAFT" goes |
+
+Left empty, the **title and the author are the project's own**, so a project
+made five minutes ago already has a title page and nobody types their own
+name twice. Filling either in overrides it — which is what a writer wants
+when the script is titled one thing and the file another.
+
+The page is drawn **beside the fields**, at the proportions of a sheet, as it
+will print. A title page is a layout — where the title falls, what sits under
+it, what is at the foot — and a column of labelled boxes tells you nothing
+about whether it looks right.
+
+Only what has been filled in is drawn: an empty line printed for a contact
+nobody entered is worse than no line. It prints where **Print the title
+page** is ticked in Page setup, and nowhere else.
+
+### 6.2 Continuous, or pages
 
 The first control in the Display bar is the one that decides what the page
 *is*:
@@ -499,7 +533,7 @@ Pages are written in exactly as the continuous view is. It is the same
 manuscript, the same mutations and the same two keys; what changes is where
 the paper ends.
 
-### 6.2 The gear: paper, ink and face
+### 6.3 The gear: paper, ink and face
 
 Everything about *how the page looks* is behind one gear at the left of the
 bar, rather than strung across it. The bar above a page should be the page's.
@@ -778,7 +812,7 @@ does lives in the workspace, which is the only place that knows what is open.
 
 | Menu | What is in it |
 | --- | --- |
-| **File** | **New project** (one item, `Ctrl/Cmd+N`), **New episode** *in a series only*, Open, **Import a script**, Save, Save a copy, **Page setup**, Print, Export PDF, Preferences, Close project |
+| **File** | **New project** (one item, `Ctrl/Cmd+N`), **New episode** *in a series only*, Open, **Import a script**, Save, Save a copy, **Title page** (§6.1), **Page setup**, Print, Export PDF, Preferences, Close project |
 | **Editor** | Find, Find next, Find and replace, Reformat pasted text, and the two editors of spec §8 — Daily and Final — plus Read back |
 | **Reports** | Writing log, Story statistics (§15) |
 | **Window** | The episode rail; each section, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
@@ -816,7 +850,7 @@ It is in two groups, and the division is the point.
 
 | Switch | Default | |
 | --- | --- | --- |
-| Title page | on | |
+| Print the title page | on | What it says is its own screen, §6.1 — this only decides whether it prints |
 | Chapter pages | on | §12, and only for a format that has them |
 | Scene headings | on | Off gives a read-through with no sluglines |
 | Page numbers | on | Top right, from page two |

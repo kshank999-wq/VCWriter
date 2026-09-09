@@ -23,6 +23,7 @@ export type CommandId =
   | 'file.import'
   | 'file.save'
   | 'file.saveAs'
+  | 'file.titlePage'
   | 'file.pageSetup'
   | 'file.print'
   | 'file.exportPdf'
@@ -96,6 +97,7 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => [
       { command: 'file.save', label: 'Save', accelerator: 'CmdOrCtrl+S' },
       { command: 'file.saveAs', label: 'Save a copy…', accelerator: 'CmdOrCtrl+Shift+S' },
       null,
+      { command: 'file.titlePage', label: 'Title page…' },
       { command: 'file.pageSetup', label: 'Page setup…' },
       { command: 'file.print', label: 'Print…', accelerator: 'CmdOrCtrl+P' },
       { command: 'file.exportPdf', label: 'Export PDF…', accelerator: 'CmdOrCtrl+Shift+P' },

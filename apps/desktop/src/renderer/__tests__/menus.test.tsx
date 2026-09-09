@@ -7,6 +7,7 @@ import { MENUS, matchesAccelerator, menusFor, prettyAccelerator, type CommandId 
 import { MenuBar } from '../components/MenuBar';
 import { FindPanel } from '../components/FindPanel';
 import { PageSetup, DEFAULT_PRINT_SETUP, type PrintSetup } from '../components/PageSetup';
+import { TitlePageDialog } from '../components/TitlePageDialog';
 
 /**
  * The menu bar and what hangs off it (addendum 02 §13).
@@ -187,15 +188,25 @@ describe('find and replace', () => {
 describe('page setup', () => {
   function Setup({ format = 'screenplay' }: { format?: ProjectFormat }) {
     const [setup, setSetup] = useState<PrintSetup>(DEFAULT_PRINT_SETUP);
+    const [file, setFile] = useState(() => createProjectFile({ title: 'T', author: 'K. Shank', format }));
+    const [editing, setEditing] = useState(false);
     return (
       <>
         <p data-testid="setup">{JSON.stringify(setup)}</p>
+        <p data-testid="title-page">{JSON.stringify(file.settings.titlePage)}</p>
+        <TitlePageDialog
+          file={file}
+          open={editing}
+          onClose={() => setEditing(false)}
+          onUpdate={(mutate) => setFile((current) => mutate(current))}
+        />
         <PageSetup
-          file={createProjectFile({ title: 'T', format })}
+          file={file}
           open
           onClose={() => undefined}
           setup={setup}
           onSetup={setSetup}
+          onEditTitlePage={() => setEditing(true)}
           pages={12}
           onPrint={() => undefined}
           onExportPdf={() => undefined}
@@ -205,9 +216,33 @@ describe('page setup', () => {
     );
   }
 
+  it('sends the writer to the title page\u2019s own screen, and keeps what is typed there', () => {
+    render(<Setup />);
+    // A title page is a page of the document, not a checkbox's worth of
+    // settings, so it is not on this screen until asked for.
+    expect(screen.queryByLabelText('Author')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /what it says/i }));
+
+    // The project's own answers show as placeholders, not as typed values.
+    const author = screen.getByLabelText('Author') as HTMLInputElement;
+    expect(author.value).toBe('');
+    expect(author.placeholder).toBe('K. Shank');
+
+    fireEvent.change(author, { target: { value: 'Kevin Shank' } });
+    fireEvent.change(screen.getByLabelText('Revision'), { target: { value: 'Second draft' } });
+
+    const page = JSON.parse(screen.getByTestId('title-page').textContent as string) as Record<string, string>;
+    expect(page['author']).toBe('Kevin Shank');
+    expect(page['revision']).toBe('Second draft');
+
+    // And the page is drawn beside the fields, so the layout can be judged.
+    expect(document.querySelector('.title-page-sheet')?.textContent).toContain('Kevin Shank');
+  });
+
   it('holds what a printing carries, in one place', () => {
     render(<Setup />);
-    fireEvent.click(screen.getByLabelText('Title page'));
+    fireEvent.click(screen.getByLabelText('Print the title page'));
     fireEvent.click(screen.getByLabelText('Beat titles'));
     fireEvent.change(screen.getByLabelText('Watermark'), { target: { value: 'DRAFT' } });
 
@@ -220,7 +255,7 @@ describe('page setup', () => {
   it('offers every switch the writer asked for, in two groups', () => {
     render(<Setup />);
     for (const label of [
-      'Title page',
+      'Print the title page',
       'Scene headings',
       'Page numbers',
       'Scene numbers',
@@ -236,7 +271,7 @@ describe('page setup', () => {
   it('starts as the delivered manuscript: no notes, no date, no scene numbers', () => {
     render(<Setup />);
     const off = (label: string) => (screen.getByLabelText(label) as HTMLInputElement).checked;
-    expect(off('Title page')).toBe(true);
+    expect(off('Print the title page')).toBe(true);
     expect(off('Scene headings')).toBe(true);
     expect(off('Page numbers')).toBe(true);
     // None of these is the writing, so none of them prints by accident.

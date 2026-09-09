@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { ScriptDisplay, ScriptLayout } from './StoryView';
 
 /**
- * How the page itself looks (addendum 02 §6.2).
+ * How the page itself looks (addendum 02 §6.3).
  *
  * Paper and ink are the writer's, not the program's. Some people write on
  * white, some on the cream a paperback is printed on, some on black at two

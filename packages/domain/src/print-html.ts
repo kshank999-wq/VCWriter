@@ -1,5 +1,6 @@
 import { layoutFor, paginateProject, type ManuscriptOptions, type Page, type PageLine } from './pagination.js';
 import { isProseFormat } from './editing.js';
+import { titlePageOf } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -124,14 +125,55 @@ const renderChapterPage = (page: Page, isProse: boolean, options: PrintOptions):
 </section>`;
 };
 
+/**
+ * The title page as the industry sets it (spec §6.1): the title a third of
+ * the way down, the credit and the name under it, what it was written from
+ * below that, and the foot carrying the contact on the left and the draft on
+ * the right — the way a page handed to a reader carries them.
+ *
+ * A logotype, where the writer has given one, prints **in place of** the
+ * title: it is the title, and setting it in Courier underneath would be
+ * saying the same thing twice.
+ *
+ * Only what has been filled in is drawn. A first draft with a title and a
+ * name on it is a proper title page, and an empty line printed for a contact
+ * nobody entered is worse than no line.
+ */
 const renderTitlePage = (file: ProjectFile): string => {
-  const title = escapeHtml(file.project.title || 'Untitled');
-  const author = escapeHtml(file.project.author);
+  const page = titlePageOf(file.project, file.settings);
+  const lines = (text: string): string =>
+    escapeHtml(text)
+      .split(/\r?\n/)
+      .filter((line) => line.trim().length > 0)
+      .join('<br />');
+
+  const heading = page.titleImage
+    ? `<img class="title-art" src="${escapeHtml(page.titleImage)}" alt="${escapeHtml(page.title || 'Title')}" />`
+    : `<h1>${escapeHtml(page.title || 'Untitled')}</h1>`;
+
+  // The foot as the industry sets it: who to reach on the left, the date on
+  // the right, and the draft's own note centred under both.
+  const centred = [page.revision, page.notes].filter((part) => part.length > 0);
+  const hasFoot = page.contact.length > 0 || page.draftDate.length > 0 || centred.length > 0;
+
   return `<section class="page title-page">
   <div class="title-block">
-    <h1>${title}</h1>
-    ${author.length > 0 ? `<p class="byline">written by</p><p class="author">${author}</p>` : ''}
+    ${heading}
+    ${page.episode.length > 0 ? `<p class="episode">${lines(page.episode)}</p>` : ''}
+    ${page.author.length > 0 ? `<p class="byline">${escapeHtml(page.credit)}</p><p class="author">${escapeHtml(page.author)}</p>` : ''}
+    ${page.source.length > 0 ? `<p class="based-on">${lines(page.source)}</p>` : ''}
   </div>
+  ${
+    hasFoot
+      ? `<div class="title-foot">
+    <div class="title-foot-row">
+      <p class="contact">${lines(page.contact)}</p>
+      <p class="draft">${lines(page.draftDate)}</p>
+    </div>
+    ${centred.length > 0 ? `<p class="title-note">${centred.map((part) => lines(part)).join('<br />')}</p>` : ''}
+  </div>`
+      : ''
+  }
 </section>`;
 };
 
@@ -168,7 +210,19 @@ const STYLES = `
   .scene-number.left { left: 0.75in; }
   .scene-number.right { right: 0.75in; }
   .printed-at { position: absolute; bottom: 0.5in; left: 1.5in; font-size: 9pt; color: #555; }
-  .title-page { display: flex; align-items: center; justify-content: center; text-align: center; }
+  .title-page { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .title-page .title-block { margin-top: 2.6in; }
+  .title-page .based-on { margin-top: 0.5in; }
+  .title-page .episode { margin-top: 0.25in; }
+  /* The logotype prints in place of the title, kept inside the margins. */
+  .title-art { display: block; max-width: 5in; max-height: 3in; margin: 0 auto; }
+  /* The foot of the page: which draft on the left, who to call on the right. */
+  .title-foot { margin-top: auto; width: 100%; }
+  .title-foot-row { display: flex; justify-content: space-between; align-items: flex-end; }
+  .title-foot .contact { text-align: left; }
+  .title-foot .draft { text-align: right; }
+  .title-note { margin: 0.35in 0 0; text-align: center; }
+  .title-foot p { margin: 0; }
   .title-block h1 { font-size: 12pt; font-weight: normal; text-transform: uppercase; margin: 0 0 4em; }
   .byline { margin: 0 0 1em; }
   .author { margin: 0; }

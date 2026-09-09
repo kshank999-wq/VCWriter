@@ -57,13 +57,26 @@ interface PageSetupProps {
   onClose(): void;
   setup: PrintSetup;
   onSetup(next: PrintSetup): void;
+  /** Open the title page's own screen, where what it says is decided. */
+  onEditTitlePage(): void;
   pages: number;
   onPrint(): void;
   onExportPdf(): void;
   busy: boolean;
 }
 
-export function PageSetup({ file, open, onClose, setup, onSetup, pages, onPrint, onExportPdf, busy }: PageSetupProps) {
+export function PageSetup({
+  file,
+  open,
+  onClose,
+  setup,
+  onSetup,
+  onEditTitlePage,
+  pages,
+  onPrint,
+  onExportPdf,
+  busy,
+}: PageSetupProps) {
   const dialog = useModal(open);
   const leaves = hasChapterPages(file.project.format);
   const prose = file.project.format === 'novel' || file.project.format === 'short_story';
@@ -83,11 +96,23 @@ export function PageSetup({ file, open, onClose, setup, onSetup, pages, onPrint,
           <div className="page-setup-body">
             <h4>The document</h4>
             <Check
-              label="Title page"
+              label="Print the title page"
               on={setup.includeTitlePage}
               onChange={(includeTitlePage) => set({ includeTitlePage })}
             >
               Title page
+              {/* What it says is its own screen: a title page is a page of
+                  the document, not a checkbox's worth of settings. */}
+              <button
+                type="button"
+                className="ghost small"
+                onClick={(event) => {
+                  event.preventDefault();
+                  onEditTitlePage();
+                }}
+              >
+                What it says…
+              </button>
             </Check>
 
             {leaves ? (
@@ -219,3 +244,4 @@ function Check({
     </label>
   );
 }
+

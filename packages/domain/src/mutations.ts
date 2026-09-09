@@ -32,7 +32,8 @@ import {
   unitsInStoryOrder,
 } from './selectors.js';
 import type { ManuscriptSegment } from './entities/manuscript.js';
-import type { VoiceAssignment } from './entities/project.js';
+import { titlePageSchema } from './entities/project.js';
+import type { TitlePage, VoiceAssignment } from './entities/project.js';
 import type { Character, CharacterCategory } from './entities/character.js';
 import type { SceneGrid, SceneRead } from './entities/structure.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
@@ -767,6 +768,22 @@ export const setSceneRead = (
 };
 
 // --------------------------------------------------------- the editor's own settings
+
+/**
+ * The title page (spec §6.1).
+ *
+ * A patch, because the six fields are filled in at different moments: the
+ * title and the name when the project is made, the draft and the contact when
+ * it goes out to somebody.
+ */
+export const setTitlePage = (file: ProjectFile, patch: Partial<TitlePage>): ProjectFile =>
+  touchProject({
+    ...file,
+    settings: {
+      ...file.settings,
+      titlePage: titlePageSchema.parse({ ...file.settings.titlePage, ...patch }),
+    },
+  });
 
 /**
  * Switch a Daily Editor rule off, or back on (spec §8.1).

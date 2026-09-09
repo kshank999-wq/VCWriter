@@ -3515,7 +3515,7 @@ dialog.marker-dialog {
 
 /* --------------------------------------------------- the writer's own page */
 
-/* Paper and ink are the writer's (addendum 02 §6.2). These come last so they
+/* Paper and ink are the writer's (addendum 02 §6.3). These come last so they
    beat the paper preference's own black-on-white — hence the leading
    `.workspace`, which matches its specificity and wins on order — and they
    are named apart from it because the sheet declares `--paper` on itself and
@@ -4786,4 +4786,174 @@ dialog.lane-dialog:has(.with-scenes) {
 
 .arc-tick.on {
   background: var(--gold);
+}
+
+/* ---------------------------------------------------------------- title page
+   Its own screen, off File. The fields on the left, the page as it will
+   print on the right, because a title page is a layout and a column of
+   labelled boxes says nothing about whether it looks right. */
+dialog.lane-dialog.title-page-dialog {
+  width: min(940px, 95vw);
+  max-width: none;
+}
+
+.title-page-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
+  padding: 14px 16px;
+}
+
+.title-page-fields {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.title-page-fields .field-row {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  align-items: start;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.title-page-fields .field-row > span {
+  color: var(--muted);
+  padding-top: 5px;
+}
+
+.title-page-fields .field-input {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.title-page-fields .field-input > input,
+.title-page-fields .field-input > textarea,
+.title-page-fields .title-art-picker > input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+}
+
+.title-page-fields textarea {
+  resize: vertical;
+  font: inherit;
+}
+
+.title-art-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.title-art-picker > input[type='text'],
+.title-art-picker > input:not([type]) {
+  flex: 1;
+  min-width: 0;
+}
+
+.title-art-held {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.title-art-held img {
+  display: block;
+  max-width: 100%;
+  max-height: 72px;
+  margin: 0 auto;
+}
+
+.title-art-held .danger {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  line-height: 1;
+  padding: 1px 6px;
+}
+
+/* The page itself, at the proportions of a sheet of letter paper. */
+.title-page-preview {
+  align-self: start;
+}
+
+.title-page-sheet {
+  aspect-ratio: 8.5 / 11;
+  display: flex;
+  flex-direction: column;
+  padding: 8% 10%;
+  background: #fff;
+  color: #000;
+  border: 1px solid var(--border);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 6px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.title-page-sheet .sheet-block {
+  margin-top: 22%;
+}
+
+.title-page-sheet h1,
+.title-page-sheet p,
+.title-page-sheet span {
+  /* Ink on paper. The dialog's own headings are gold; this is a page. */
+  color: #000;
+}
+
+.title-page-sheet h1 {
+  margin: 0;
+  font-size: 9px;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.title-page-sheet .sheet-art {
+  display: block;
+  max-width: 70%;
+  max-height: 90px;
+  margin: 0 auto;
+}
+
+.title-page-sheet p {
+  margin: 0;
+}
+
+.title-page-sheet .sheet-episode { margin-top: 6px; }
+.title-page-sheet .sheet-credit { margin-top: 14px; }
+.title-page-sheet .sheet-source { margin-top: 14px; }
+
+.title-page-sheet .sheet-foot {
+  margin-top: auto;
+}
+
+.title-page-sheet .sheet-foot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  text-align: left;
+}
+
+.title-page-sheet .sheet-foot-row .right { text-align: right; }
+.title-page-sheet .sheet-note { margin-top: 10px; }
+.title-page-sheet .sheet-line { display: block; }
+
+.check .ghost.small,
+.title-page-fields .ghost.small {
+  font-size: 11px;
+  padding: 1px 6px;
+  margin-left: 8px;
 }

@@ -16,7 +16,7 @@ import { StoryView } from '../components/StoryView';
 
 /**
  * Markers and the leaves between chapters (addendum 02 §11), and the gear
- * that decides how the page looks (§6.2).
+ * that decides how the page looks (§6.3).
  */
 
 afterEach(cleanup);

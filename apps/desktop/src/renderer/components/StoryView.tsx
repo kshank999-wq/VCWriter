@@ -77,7 +77,7 @@ interface StoryViewProps {
   onScriptLayout?(next: ScriptLayout): void;
   pageZoom?: number;
   onPageZoom?(next: number): void;
-  /** Paper, ink and face — the writer's, not the program's (§6.2). */
+  /** Paper, ink and face — the writer's, not the program's (§6.3). */
   pageStyle?: PageStyle;
   onPageStyle?(next: PageStyle): void;
   /** A scene name was double-clicked: open the scene pop-up. */
@@ -368,12 +368,9 @@ export function StoryView({
               <span className="page-sheet-number" aria-hidden="true">
                 {index + 1}.
               </span>
-              {index === 0 ? (
-                <header className="script-title-block">
-                  <h1>{file.project.title}</h1>
-                  {file.project.author ? <p>by {file.project.author}</p> : null}
-                </header>
-              ) : null}
+              {/* No title block. The title page is a page of the document,
+                  printed when the writer asks for it in Page setup — not a
+                  heading over the work (§6.1). Page one is page one. */}
               {/* Fragments rather than wrappers: the sheet's own children must
                   be the blocks themselves, so the blank line the paginator
                   puts between two of them is a rule between siblings. */}
@@ -402,11 +399,6 @@ export function StoryView({
         </div>
       ) : (
         <div className={display.headings ? 'script-sheet' : 'script-sheet no-headings'}>
-          <header className="script-title-block">
-            <h1>{file.project.title}</h1>
-            {file.project.author ? <p>by {file.project.author}</p> : null}
-          </header>
-
           {layout.spans.map((span) => {
             const unit = span.unit;
             // A scene switched off leaves the script and stays on the timeline.

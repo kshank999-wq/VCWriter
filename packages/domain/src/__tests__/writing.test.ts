@@ -12,7 +12,7 @@ import {
 } from '../editing.js';
 import { renderPrintDocumentHtml, printedPageCount, suggestedExportFileName } from '../print-html.js';
 import { createProjectFile } from '../project-file.js';
-import { updateBeat } from '../mutations.js';
+import { setTitlePage, updateBeat } from '../mutations.js';
 import { newId } from '../ids.js';
 import type { ManuscriptElement, ManuscriptElementType } from '../entities/manuscript.js';
 import type { ManuscriptElementId } from '../ids.js';
@@ -134,6 +134,56 @@ describe('printable document', () => {
     expect(html).toContain('Lighthouse');
     expect(html).toContain('K. Shank');
     expect(printedPageCount(script())).toBe(2);
+  });
+
+  it('carries what the writer put on the title page, and nothing they did not', () => {
+    const file = setTitlePage(script(), {
+      credit: 'screenplay by',
+      source: 'Based on the novel by A. Author',
+      episode: 'Episode 4 — The Lamp',
+      draftDate: '12 March 2026',
+      revision: 'Second draft',
+      notes: 'Final production draft\nomitted scenes included',
+      contact: 'The Agency\nlondon@example.com',
+    });
+    const html = renderPrintDocumentHtml(file);
+
+    expect(html).toContain('screenplay by');
+    expect(html).toContain('Based on the novel by A. Author');
+    expect(html).toContain('Episode 4 — The Lamp');
+    // Several lines in one field print as several lines.
+    expect(html).toContain('The Agency<br />london@example.com');
+    expect(html).toContain('Final production draft<br />omitted scenes included');
+    // The title and the name were never typed here, so they are the project's.
+    expect(html).toContain('Lighthouse');
+    expect(html).toContain('K. Shank');
+  });
+
+  it('prints a logotype in place of the title, not as well as it', () => {
+    const art = 'data:image/png;base64,iVBORw0KGgo=';
+    const html = renderPrintDocumentHtml(setTitlePage(script(), { titleImage: art }));
+
+    expect(html).toContain(`src="${art}"`);
+    // The graphic *is* the title; setting it in Courier underneath would be
+    // saying the same thing twice.
+    expect(html).not.toContain('<h1>Lighthouse</h1>');
+    // It still carries a name, for a reader who cannot see the picture.
+    expect(html).toContain('alt="Lighthouse"');
+  });
+
+  it('draws no foot on a title page nobody has filled in', () => {
+    const html = renderPrintDocumentHtml(script());
+    expect(html).toContain('class="page title-page"');
+    // An empty line printed for a contact nobody entered is worse than none.
+    // The stylesheet always defines the class; what must be absent is the div.
+    expect(html).not.toContain('class="title-foot"');
+    expect(html).toContain('written by');
+  });
+
+  it('takes the writer’s title over the project’s when they differ', () => {
+    const html = renderPrintDocumentHtml(setTitlePage(script(), { title: 'THE KEEPER', author: 'K. S.' }));
+    expect(html).toContain('THE KEEPER');
+    expect(html).toContain('K. S.');
   });
 
   it('can be produced without a title page', () => {

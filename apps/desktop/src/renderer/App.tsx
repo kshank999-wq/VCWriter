@@ -47,6 +47,7 @@ import { PageBar, type View } from './components/PageBar';
 import { PagePreview } from './components/PagePreview';
 import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
 import { DEFAULT_PRINT_SETUP, PageSetup, type PrintSetup } from './components/PageSetup';
+import { TitlePageDialog } from './components/TitlePageDialog';
 import { Reports, type ReportTab } from './components/Reports';
 import { EpisodeRail } from './components/EpisodeRail';
 import { ImportDialog } from './components/ImportDialog';
@@ -118,7 +119,7 @@ export default function App() {
   // Zero is 'fit the width there is' — a page is 8½ inches and the
   // Script's column is not (§6.1).
   const [scriptZoom, setScriptZoom] = usePreference('scriptZoom', 0);
-  // Paper, ink and face: the writer's, per machine, never project data (§6.2).
+  // Paper, ink and face: the writer's, per machine, never project data (§6.3).
   const [pageStyle, setPageStyle] = usePreference<PageStyle>('pageStyle', DEFAULT_PAGE_STYLE);
   const [openLaneId, setOpenLaneId] = useState<LaneId | null>(null);
   const [openUnitId, setOpenUnitId] = useState<StructuralUnitId | null>(null);
@@ -131,6 +132,8 @@ export default function App() {
    * does, rather than guessed from a menu item's noun.
    */
   const [startingNew, setStartingNew] = useState(false);
+  /** The title page's own screen: a page of the document, off the File menu. */
+  const [titlePageOpen, setTitlePageOpen] = useState(false);
   /** Set when something sent the writer to research to look at one thing. */
   const [researchView, setResearchView] = useState<ResearchView | undefined>(undefined);
   // Where the four sections sit, and which of them are in windows of their
@@ -417,6 +420,8 @@ export default function App() {
           // The desktop writes through the same channel a save does; the
           // browser preview hands back a file to keep.
           return void project.saveNow();
+        case 'file.titlePage':
+          return setTitlePageOpen(true);
         case 'file.pageSetup':
           return setPageSetupOpen(true);
         case 'file.print':
@@ -947,10 +952,21 @@ export default function App() {
         onClose={() => setPageSetupOpen(false)}
         setup={setup}
         onSetup={setPrintSetup}
+        onEditTitlePage={() => {
+          setPageSetupOpen(false);
+          setTitlePageOpen(true);
+        }}
         pages={pages}
         onPrint={() => void print()}
         onExportPdf={() => void exportPdf()}
         busy={exporting}
+      />
+
+      <TitlePageDialog
+        file={file}
+        open={titlePageOpen}
+        onClose={() => setTitlePageOpen(false)}
+        onUpdate={project.update}
       />
 
       {focused ? null : <PageBar view={view} onSelect={setView} counts={{ recovery: conflicts.length }} />}

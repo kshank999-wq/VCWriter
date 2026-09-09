@@ -101,7 +101,7 @@ function Section({
   // Zero is 'fit the width there is' — a page is 8½ inches and the
   // Script's column is not (§6.1).
   const [scriptZoom, setScriptZoom] = usePreference('scriptZoom', 0);
-  // Paper, ink and face: the writer's, per machine, never project data (§6.2).
+  // Paper, ink and face: the writer's, per machine, never project data (§6.3).
   const [pageStyle, setPageStyle] = usePreference<PageStyle>('pageStyle', DEFAULT_PAGE_STYLE);
   const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
   const [beatsPerColumn] = usePreference('beatsPerColumn', DEFAULT_BEATS_PER_COLUMN);
