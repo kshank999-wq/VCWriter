@@ -11,6 +11,10 @@ interface WelcomeProps {
   /** Somebody else's script: Final Draft or a PDF (addendum 02 §18). */
   onImport(): void;
   onOpenPath(path: string): void;
+  /** Set when a project is already open, so this screen can be left again. */
+  onCancel?(): void;
+  /** What to go back to, named, so the way out says where it goes. */
+  openTitle?: string;
   error: string | null;
 }
 
@@ -23,7 +27,7 @@ const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string; detail: stri
   { value: 'short_form', label: 'Short form', detail: 'Commercials, web video, social' },
 ];
 
-export function Welcome({ onCreate, onOpen, onImport, onOpenPath, error }: WelcomeProps) {
+export function Welcome({ onCreate, onOpen, onImport, onOpenPath, onCancel, openTitle, error }: WelcomeProps) {
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [format, setFormat] = useState<ProjectFormat>('screenplay');
@@ -40,6 +44,13 @@ export function Welcome({ onCreate, onOpen, onImport, onOpenPath, error }: Welco
       <header className="welcome-header">
         <img src={logo} alt="VC Writer" className="welcome-logo" width={720} height={563} />
         <p>Start a project, or pick up where you left off.</p>
+        {onCancel ? (
+          // Arrived here from the File menu with work already open. Nothing
+          // has happened to it yet, and this is the way back to it.
+          <button type="button" className="ghost welcome-back" onClick={onCancel}>
+            ← Back to {openTitle || 'the project'}
+          </button>
+        ) : null}
       </header>
 
       <section className="panel">

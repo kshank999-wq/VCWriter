@@ -13,13 +13,11 @@
  * that is all it should ever know.
  */
 
+import type { ProjectFormat } from '@vcwriter/domain';
+
 export type CommandId =
   // File
-  | 'file.new.screenplay'
-  | 'file.new.novel'
-  | 'file.new.shortStory'
-  | 'file.new.series'
-  | 'file.new.shortForm'
+  | 'file.new'
   | 'file.new.episode'
   | 'file.open'
   | 'file.import'
@@ -72,17 +70,25 @@ export interface Menu {
   items: (MenuItem | null)[];
 }
 
-export const MENUS: readonly Menu[] = [
+/**
+ * The menus, for the project that is open (addendum 02 §13).
+ *
+ * **New project** is one item, not six. Which kind of thing this is going to
+ * be is the first decision of the work, and it belongs on the screen where
+ * the title and the author are set, beside a description of what each format
+ * does — not buried in a menu as a list of nouns.
+ *
+ * **New episode** is the exception, and appears only in a series. It is not
+ * a kind of project; it is a thing you do inside one, and a menu that offers
+ * it in a novel is a menu that lies.
+ */
+export const menusFor = (format: ProjectFormat | null): readonly Menu[] => [
   {
     id: 'file',
     label: 'File',
     items: [
-      { command: 'file.new.screenplay', label: 'New screenplay…' },
-      { command: 'file.new.novel', label: 'New novel…' },
-      { command: 'file.new.shortStory', label: 'New short story…' },
-      { command: 'file.new.series', label: 'New series or episode…' },
-      { command: 'file.new.shortForm', label: 'New short-form piece…' },
-      { command: 'file.new.episode', label: 'New episode…' },
+      { command: 'file.new', label: 'New project…', accelerator: 'CmdOrCtrl+N' },
+      ...(format === 'series' ? [{ command: 'file.new.episode' as CommandId, label: 'New episode…' }] : []),
       null,
       { command: 'file.open', label: 'Open…', accelerator: 'CmdOrCtrl+O' },
       { command: 'file.import', label: 'Import a script…' },
@@ -152,6 +158,9 @@ export const MENUS: readonly Menu[] = [
     ],
   },
 ];
+
+/** The menus with nothing open: everything a project does not decide. */
+export const MENUS: readonly Menu[] = menusFor(null);
 
 /** The accelerator as a reader of the menu should see it, per platform. */
 export const prettyAccelerator = (accelerator: string, mac: boolean): string =>

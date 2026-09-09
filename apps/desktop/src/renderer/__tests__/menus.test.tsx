@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { addBeat, createProjectFile, updateBeat, type ProjectFile, type ProjectFormat } from '@vcwriter/domain';
-import { MENUS, matchesAccelerator, prettyAccelerator, type CommandId } from '../menus';
+import { MENUS, matchesAccelerator, menusFor, prettyAccelerator, type CommandId } from '../menus';
 import { MenuBar } from '../components/MenuBar';
 import { FindPanel } from '../components/FindPanel';
 import { PageSetup, DEFAULT_PRINT_SETUP, type PrintSetup } from '../components/PageSetup';
@@ -19,6 +19,23 @@ describe('the menu list', () => {
     expect(MENUS.map((menu) => menu.label)).toEqual(['File', 'Editor', 'Reports', 'Window', 'Help']);
     const commands = MENUS.flatMap((menu) => menu.items.filter(Boolean).map((item) => item!.command));
     expect(new Set(commands).size).toBe(commands.length);
+    // A series adds an item, and must not repeat one either.
+    const series = menusFor('series').flatMap((menu) => menu.items.filter(Boolean).map((item) => item!.command));
+    expect(new Set(series).size).toBe(series.length);
+  });
+
+  it('offers one way to start a project, not a list of nouns', () => {
+    const file = MENUS.find((menu) => menu.id === 'file')!;
+    const starting = file.items.filter(Boolean).filter((item) => item!.command.startsWith('file.new'));
+    expect(starting.map((item) => item!.label)).toEqual(['New project…']);
+  });
+
+  it('never gives two items the same accelerator', () => {
+    const keys = menusFor('series')
+      .flatMap((menu) => menu.items.filter(Boolean))
+      .map((item) => item!.accelerator)
+      .filter(Boolean);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 
   it('writes an accelerator the way each platform writes it', () => {

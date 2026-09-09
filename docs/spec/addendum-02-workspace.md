@@ -774,7 +774,7 @@ does lives in the workspace, which is the only place that knows what is open.
 
 | Menu | What is in it |
 | --- | --- |
-| **File** | New screenplay / series / novel / short story / short-form piece, **New episode**, Open, **Import a script**, Save, Save a copy, **Page setup**, Print, Export PDF, Preferences, Close project |
+| **File** | **New project** (one item, `Ctrl/Cmd+N`), **New episode** *in a series only*, Open, **Import a script**, Save, Save a copy, **Page setup**, Print, Export PDF, Preferences, Close project |
 | **Editor** | Find, Find next, Find and replace, Reformat pasted text, and the two editors of spec §8 — Daily and Final — plus Read back |
 | **Reports** | Writing log, Story statistics (§15) |
 | **Window** | The episode rail; each section, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
@@ -785,7 +785,20 @@ for. On macOS the clipboard roles are added to the native menu regardless —
 an Electron application with no menu loses ⌘C, ⌘V and ⌘A entirely, because
 on a Mac those live on the menu and nowhere else.
 
-More menus go here as they are earned; the list is one array.
+**New project is one item, not six.** What kind of thing this is going to be
+is the first decision of the work, and it is made on the project screen —
+beside the title, the author, and a line on what each format does — rather
+than picked out of a menu as a list of nouns. Choosing it opens that screen
+over an open project, with **← Back to *the project*** on it: nothing has
+happened to the work yet, and this is the way back to it.
+
+**New episode is the exception**, and appears only in a series. An episode is
+not a kind of project; it is a thing you do inside one, and a menu that
+offers it in a novel is a menu that lies. The menus are therefore built for
+the project that is open — one list, used by the bar in the window and by the
+native menu, so the two can never say different things.
+
+More menus go here as they are earned; the list is one function.
 
 ### Page setup
 

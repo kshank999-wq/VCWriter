@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { MENUS, matchesAccelerator, prettyAccelerator, type CommandId, type Menu } from '../menus';
 
 interface MenuBarProps {
+  /**
+   * The menus to draw. The workspace works them out from the project that is
+   * open — a series has an episode item and a novel does not — and hands the
+   * same list to the native menu, so the two can never disagree.
+   */
+  menus?: readonly Menu[];
   /** Run a command. Everything the menus do goes through here. */
   onCommand(command: CommandId): void;
   /** Commands that are currently on, for the ticks. */
@@ -27,7 +33,7 @@ interface MenuBarProps {
  * hidden there rather than duplicated, and the accelerators are left to the
  * native menu so a keystroke is not handled twice.
  */
-export function MenuBar({ onCommand, checked, disabled, mac, native = false }: MenuBarProps) {
+export function MenuBar({ menus = MENUS, onCommand, checked, disabled, mac, native = false }: MenuBarProps) {
   const [open, setOpen] = useState<string | null>(null);
   const bar = useRef<HTMLDivElement>(null);
 
@@ -58,7 +64,7 @@ export function MenuBar({ onCommand, checked, disabled, mac, native = false }: M
   useEffect(() => {
     if (native) return;
     const handler = (event: KeyboardEvent) => {
-      for (const menu of MENUS) {
+      for (const menu of menus) {
         for (const item of menu.items) {
           if (!item?.accelerator || !matchesAccelerator(event, item.accelerator)) continue;
           if (disabled?.has(item.command)) return;
@@ -71,13 +77,13 @@ export function MenuBar({ onCommand, checked, disabled, mac, native = false }: M
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [native, onCommand, disabled]);
+  }, [native, onCommand, disabled, menus]);
 
   if (native) return null;
 
   return (
     <div className="menu-bar" ref={bar} role="menubar" aria-label="Menu">
-      {MENUS.map((menu) => (
+      {menus.map((menu) => (
         <MenuButton
           key={menu.id}
           menu={menu}

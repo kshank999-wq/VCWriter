@@ -54,7 +54,7 @@ import { NewEpisodeDialog } from './components/NewEpisodeDialog';
 import { useWritingClock } from './use-writing-clock';
 import { FindPanel } from './components/FindPanel';
 import { MenuBar } from './components/MenuBar';
-import { MENUS, type CommandId } from './menus';
+import { menusFor, type CommandId } from './menus';
 import { AccountPanel } from './components/AccountPanel';
 import { CapturesPanel } from './components/CapturesPanel';
 import { EditorPanel } from './components/EditorPanel';
@@ -125,6 +125,12 @@ export default function App() {
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
   const [openMarkerId, setOpenMarkerId] = useState<StoryMarkerId | null>(null);
   const [researchOpen, setResearchOpen] = useState(false);
+  /**
+   * File → New project shows the project screen even with one already open:
+   * the format is chosen there, beside the title and a word on what each one
+   * does, rather than guessed from a menu item's noun.
+   */
+  const [startingNew, setStartingNew] = useState(false);
   /** Set when something sent the writer to research to look at one thing. */
   const [researchView, setResearchView] = useState<ResearchView | undefined>(undefined);
   // Where the four sections sit, and which of them are in windows of their
@@ -395,19 +401,12 @@ export default function App() {
    */
   const runCommand = useCallback(
     (command: CommandId) => {
-      const newProject = (format: ProjectFormat) => void project.createProject({ title: 'Untitled', format });
-
       switch (command) {
-        case 'file.new.screenplay':
-          return newProject('screenplay');
-        case 'file.new.novel':
-          return newProject('novel');
-        case 'file.new.shortStory':
-          return newProject('short_story');
-        case 'file.new.series':
-          return newProject('series');
-        case 'file.new.shortForm':
-          return newProject('short_form');
+        case 'file.new':
+          // The project screen, not six menu items. What kind of thing this
+          // is going to be is the first decision of the work, and it is made
+          // where the title and the author are, beside what each format does.
+          return setStartingNew(true);
         case 'file.open':
           return void project.openProject();
         case 'file.import':
@@ -501,14 +500,21 @@ export default function App() {
   }, [detached, focusMode, episodeRailOpen]);
 
   /**
+   * The menus for what is open: a series has New episode, nothing else does.
+   * One list, used by the bar in the window and by the native menu, so the
+   * two can never say different things.
+   */
+  const menus = useMemo(() => menusFor(file?.project.format ?? null), [file?.project.format]);
+
+  /**
    * The native menu, rebuilt whenever a tick changes. On a Mac this is the
    * menu; everywhere else it is absent and the bar in the window is.
    */
   useEffect(() => {
     const menu = window.vcwriter?.menu;
     if (!menu?.native()) return;
-    void menu.install({ menus: MENUS, checked: [...checkedCommands] });
-  }, [checkedCommands]);
+    void menu.install({ menus, checked: [...checkedCommands] });
+  }, [checkedCommands, menus]);
 
   useEffect(() => {
     const menu = window.vcwriter?.menu;
@@ -516,14 +522,25 @@ export default function App() {
     return menu.onCommand((command) => runCommand(command as CommandId));
   }, [runCommand]);
 
-  if (!file) {
+  if (!file || startingNew) {
     return (
       <>
         <Welcome
-          onCreate={(input) => void project.createProject(input)}
-          onOpen={() => void project.openProject()}
+          onCreate={(input) => {
+            setStartingNew(false);
+            void project.createProject(input);
+          }}
+          onOpen={() => {
+            setStartingNew(false);
+            void project.openProject();
+          }}
           onImport={() => setImportOpen(true)}
-          onOpenPath={(path) => void project.openProjectAtPath(path)}
+          onOpenPath={(path) => {
+            setStartingNew(false);
+            void project.openProjectAtPath(path);
+          }}
+          // Only when there is something to go back to.
+          {...(file ? { onCancel: () => setStartingNew(false), openTitle: file.project.title } : {})}
           error={project.error}
         />
         {/* Importing is most useful from here: it is how a script arrives. */}
@@ -664,6 +681,7 @@ export default function App() {
       <TitleBar
         menu={
           <MenuBar
+            menus={menus}
             onCommand={runCommand}
             checked={checkedCommands}
             mac={platform === 'darwin'}

@@ -16,7 +16,7 @@ import {
 import { EpisodeRail } from '../components/EpisodeRail';
 import { NewEpisodeDialog } from '../components/NewEpisodeDialog';
 import { CastPanel } from '../components/CastPanel';
-import { MENUS } from '../menus';
+import { menusFor } from '../menus';
 
 /**
  * The episode rail, starting an episode, and the cast under its headings
@@ -161,10 +161,23 @@ describe('starting an episode', () => {
     expect(castOf(seen, made[0]!).map((person) => person.name)).toEqual(['MAEVE']);
   });
 
-  it('is on the File menu, and the rail is on the Window menu', () => {
-    const commands = MENUS.flatMap((menu) => menu.items.filter(Boolean).map((item) => item!.command));
-    expect(commands).toContain('file.new.episode');
-    expect(commands).toContain('window.episodes');
+  it('is on the File menu in a series, and nowhere else', () => {
+    const commands = (format: Parameters<typeof menusFor>[0]) =>
+      menusFor(format).flatMap((menu) => menu.items.filter(Boolean).map((item) => item!.command));
+
+    expect(commands('series')).toContain('file.new.episode');
+    // An episode is not a kind of project; it is a thing you do inside one.
+    // A menu that offers it in a novel is a menu that lies.
+    expect(commands('novel')).not.toContain('file.new.episode');
+    expect(commands('screenplay')).not.toContain('file.new.episode');
+    expect(commands(null)).not.toContain('file.new.episode');
+
+    // And a new project is one item, whatever is open.
+    expect(commands('series')).toContain('file.new');
+    expect(commands(null)).toContain('file.new');
+    expect(commands(null).filter((command) => command.startsWith('file.new'))).toEqual(['file.new']);
+
+    expect(commands('series')).toContain('window.episodes');
   });
 });
 
