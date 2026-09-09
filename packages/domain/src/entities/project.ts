@@ -44,9 +44,9 @@ export type VoiceAssignment = z.infer<typeof voiceAssignmentSchema>;
  * What a title page carries (spec §6.1).
  *
  * The industry page and nothing beyond it, in the order a reader's eye takes
- * it: the title, which episode this is, who wrote it and under what credit,
- * what it was written from, how to reach them, which draft this is, and any
- * note the front page has to carry.
+ * it: the title, which episode this is, who wrote it, what it was written
+ * from, how to reach them, which draft this is, and any note the front page
+ * has to carry.
  *
  * Everything is optional. A first draft with a title and a name on it is a
  * proper title page; the rest is for when it goes out.
@@ -64,18 +64,17 @@ export const titlePageSchema = z.object({
   /** "Episode 4 — The Lamp". Under the title, where a series puts it. */
   episode: z.string().default(''),
   /**
-   * The credit word: "written", "screenplay", "story". The page sets **by**
-   * on its own line under it and the name under that, so this does not carry
-   * the "by" itself — a credit typed with one has it taken off rather than
-   * printed twice.
+   * Who wrote it. The page sets the words **Written** and **by** on their own
+   * lines above this, so the field holds the *name* and nothing else — which
+   * is why there is no separate credit field to fill in the same thing twice.
+   *
+   * Empty means the project's author.
    */
-  credit: z.string().default('written'),
-  /** Empty means the project's author. */
   author: z.string().default(''),
   /**
-   * What it was written from: "based on the novel", "original story". The
-   * line, without the name — the name goes under it, the same way the credit
-   * puts the author under "written by".
+   * What it was written from: "based on the novel", "an original story". The
+   * line without the name — the name goes under it, the same way the author
+   * goes under "Written by".
    */
   source: z.string().default(''),
   /** Who wrote the source. Printed on the line under it, as "by <name>". */
@@ -162,18 +161,10 @@ export const projectSchema = z.object({
 export type Project = z.infer<typeof projectSchema>;
 
 /**
- * The title page as it will actually print: the writer's own words where they
- * gave them, the project's where they did not.
+ * A source line without its trailing "by".
  *
- * "written by" is the default byline rather than a stored one, so a project
- * that has never been near this dialog still prints a proper page.
- */
-/**
- * A credit or a source line without its trailing "by".
- *
- * The page prints **by** on a line of its own above the name — for the credit
- * and for the source alike — so a writer who types "written by" out of habit
- * must not get "written by / by / John August".
+ * The page prints **by** on a line of its own above the name, so a writer who
+ * types "based on the novel by" out of habit must not get it twice.
  */
 export const withoutBy = (text: string): string => text.trim().replace(/\s+by$/i, '').trim();
 
@@ -183,7 +174,6 @@ export const titlePageOf = (project: Project, settings: ProjectSettings): TitleP
     title: page.title.trim() || project.title,
     titleImage: page.titleImage,
     episode: page.episode.trim(),
-    credit: withoutBy(page.credit) || 'written',
     author: page.author.trim() || project.author,
     source: withoutBy(page.source),
     sourceAuthor: page.sourceAuthor.trim(),

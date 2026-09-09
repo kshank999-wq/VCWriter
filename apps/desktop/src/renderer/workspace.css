@@ -4902,8 +4902,18 @@ dialog.lane-dialog.title-page-dialog {
   text-align: center;
 }
 
+ /* Two halves, as the printed page has them: the title centred in the top
+   one, everything else beginning at the middle. */
 .title-page-sheet .sheet-block {
-  margin-top: 22%;
+  height: 41%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.title-page-sheet .sheet-credit-block {
+  width: 100%;
 }
 
 .title-page-sheet h1,
@@ -4914,11 +4924,11 @@ dialog.lane-dialog.title-page-dialog {
 }
 
 .title-page-sheet h1 {
+  /* Four times the manuscript's size, and bold, as on the page. */
   margin: 0;
-  font-size: 9px;
-  font-weight: normal;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1.1;
 }
 
 .title-page-sheet .sheet-art {

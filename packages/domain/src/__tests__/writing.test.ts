@@ -138,7 +138,6 @@ describe('printable document', () => {
 
   it('carries what the writer put on the title page, and nothing they did not', () => {
     const file = setTitlePage(script(), {
-      credit: 'screenplay',
       source: 'Based on the novel',
       sourceAuthor: 'A. Author',
       episode: 'Episode 4 — The Lamp',
@@ -149,7 +148,6 @@ describe('printable document', () => {
     });
     const html = renderPrintDocumentHtml(file);
 
-    expect(html).toContain('screenplay');
     expect(html).toContain('Based on the novel');
     expect(html).toContain('A. Author');
     expect(html).toContain('Episode 4 — The Lamp');
@@ -161,21 +159,34 @@ describe('printable document', () => {
     expect(html).toContain('K. Shank');
   });
 
-  it('sets “by” on a line of its own, above each name it belongs to', () => {
+  it('sets “Written” and “by” on lines of their own, above the name', () => {
     const html = renderPrintDocumentHtml(
-      setTitlePage(script(), { credit: 'written', source: 'based on the novel', sourceAuthor: 'Daniel Wallace' }),
+      setTitlePage(script(), { source: 'an original story', sourceAuthor: 'Daniel Wallace' }),
     );
-    // The credit word, then by, then who wrote it — and the same shape again
-    // for what it was written from.
-    expect(html).toContain('<p class="byline">written</p><p class="by">by</p><p class="author">K. Shank</p>');
+    // The words belong to the page, so the field holds only the name.
+    expect(html).toContain('<p class="byline">Written</p><p class="by">by</p><p class="author">K. Shank</p>');
+    // The same shape again for what it was written from.
     expect(html).toContain('<p class="by">by</p><p class="source-author">Daniel Wallace</p>');
   });
 
-  it('does not print “by” twice when the credit was typed with one', () => {
-    const html = renderPrintDocumentHtml(setTitlePage(script(), { credit: 'screenplay by', source: 'based on the novel by' }));
-    expect(html).toContain('<p class="byline">screenplay</p><p class="by">by</p>');
-    expect(html).not.toContain('screenplay by');
+  it('does not print “by” twice when the source was typed with one', () => {
+    const html = renderPrintDocumentHtml(setTitlePage(script(), { source: 'based on the novel by' }));
     expect(html).toContain('based on the novel</p>');
+    expect(html).not.toContain('based on the novel by');
+  });
+
+  it('sets the title four times the manuscript’s size, in bold', () => {
+    const html = renderPrintDocumentHtml(script());
+    // 12pt is the manuscript; the title is 48pt.
+    expect(html).toContain('.title-block h1 { font-size: 48pt; font-weight: bold;');
+  });
+
+  it('puts the title in the top half and everything else below the middle', () => {
+    const html = renderPrintDocumentHtml(script());
+    // A page is 11in with an inch of padding, so half of it is 4.5in down.
+    expect(html).toContain('.title-page .title-block {\n    height: 4.5in;');
+    // Which means a logotype falls halfway between the top and the middle.
+    expect(html).toContain('justify-content: center;');
   });
 
   it('leaves the source alone when nobody is named under it', () => {
@@ -184,7 +195,8 @@ describe('printable document', () => {
     // No dangling "by" over a source author who was never given. The credit
     // still has its own, because the project has an author.
     expect(html).not.toContain('class="source-author"');
-    expect(html).toContain('<p class="based-on">an original story</p>\n    \n  ');
+    // The source line closes the credit block; no "by" follows it.
+    expect(html).toContain('<p class="based-on">an original story</p></div>');
   });
 
   it('prints a logotype in place of the title, not as well as it', () => {
@@ -205,8 +217,8 @@ describe('printable document', () => {
     // An empty line printed for a contact nobody entered is worse than none.
     // The stylesheet always defines the class; what must be absent is the div.
     expect(html).not.toContain('class="title-foot"');
-    // The credit word and its "by" are separate lines on the page.
-    expect(html).toContain('<p class="byline">written</p><p class="by">by</p>');
+    // The words the page supplies, on lines of their own.
+    expect(html).toContain('<p class="byline">Written</p><p class="by">by</p>');
   });
 
   it('takes the writer’s title over the project’s when they differ', () => {

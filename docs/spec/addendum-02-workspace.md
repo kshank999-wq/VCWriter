@@ -472,20 +472,24 @@ from **File → Title page**. It carries what the industry page carries:
 | --- | --- |
 | **Title** | Or a **graphic** in place of it — a logotype, up to 5MB, held in the project so the page travels with the file. The graphic *is* the title: the words are not set underneath as well. |
 | **Episode** | Under the title, where a series puts it |
-| **Credit** | The credit *word* — "written", "screenplay", "story" |
-| **Author** | |
+| **Written by** | The name. The words *Written* and *by* are the page's, not the writer's |
 | **Source** | What it was written from: "based on the novel", "an original story" |
 | **Source author** | Who wrote that |
 | **Contact** | Foot left: agent, telephone, email, as many lines as needed |
 | **Draft date** | Foot right, with a **Today** beside the box |
 | **Revision** and **Notes** | Centred under both, where "FINAL PRODUCTION DRAFT" goes |
 
-**"by" is the page's, not the writer's.** It is set on a line of its own
-between a credit and the name under it — the credit word, then *by*, then the
-author; and the same shape again for the source, then *by*, then who wrote
-it. So the credit field holds "written", not "written by"; a credit typed
-with one anyway has it taken off rather than printed twice. A source with
-nobody named under it gets no dangling *by*.
+**The words are the page's, not the writer's.** *Written* and *by* are set on
+lines of their own above the name, so **Written by** holds the name and
+nothing else — there is no second field asking for the same thing under
+another label. The source has the same shape: the line, then *by*, then who
+wrote it; a source typed with a trailing "by" has it taken off rather than
+printed twice, and one with nobody named under it gets no dangling *by*.
+
+**The page in two halves.** The title sits in the top one, centred in it — so
+a logotype falls halfway between the top of the page and the middle — and it
+is set **four times the manuscript's size, in bold**. Everything else begins
+at the halfway mark and runs down from there, with the foot at the bottom.
 
 Left empty, the **title and the author are the project's own**, so a project
 made five minutes ago already has a title page and nobody types their own

@@ -156,34 +156,41 @@ const renderTitlePage = (file: ProjectFile): string => {
   const centred = [page.revision, page.notes].filter((part) => part.length > 0);
   const hasFoot = page.contact.length > 0 || page.draftDate.length > 0 || centred.length > 0;
 
-  return `<section class="page title-page">
-  <div class="title-block">
-    ${heading}
-    ${page.episode.length > 0 ? `<p class="episode">${lines(page.episode)}</p>` : ''}
-    ${
-      page.author.length > 0
-        ? `<p class="byline">${escapeHtml(page.credit)}</p><p class="by">by</p><p class="author">${escapeHtml(page.author)}</p>`
-        : ''
-    }
-    ${page.source.length > 0 ? `<p class="based-on">${lines(page.source)}</p>` : ''}
-    ${
-      page.sourceAuthor.length > 0
-        ? `<p class="by">by</p><p class="source-author">${escapeHtml(page.sourceAuthor)}</p>`
-        : ''
-    }
-  </div>
-  ${
-    hasFoot
-      ? `<div class="title-foot">
-    <div class="title-foot-row">
-      <p class="contact">${lines(page.contact)}</p>
-      <p class="draft">${lines(page.draftDate)}</p>
-    </div>
-    ${centred.length > 0 ? `<p class="title-note">${centred.map((part) => lines(part)).join('<br />')}</p>` : ''}
-  </div>`
-      : ''
-  }
-</section>`;
+  /*
+    Joined without the whitespace a formatted template would leave between
+    the elements: a stray text node inside a block makes an anonymous line
+    box, and two of them pushed the byline a third of an inch below the
+    halfway mark it is supposed to sit on.
+  */
+  const block = [heading, page.episode.length > 0 ? `<p class="episode">${lines(page.episode)}</p>` : ''].filter(
+    Boolean,
+  );
+
+  const credit = [
+    page.author.length > 0
+      ? `<p class="byline">Written</p><p class="by">by</p><p class="author">${escapeHtml(page.author)}</p>`
+      : '',
+    page.source.length > 0 ? `<p class="based-on">${lines(page.source)}</p>` : '',
+    page.sourceAuthor.length > 0
+      ? `<p class="by">by</p><p class="source-author">${escapeHtml(page.sourceAuthor)}</p>`
+      : '',
+  ].filter(Boolean);
+
+  const foot = hasFoot
+    ? '<div class="title-foot">' +
+      `<div class="title-foot-row"><p class="contact">${lines(page.contact)}</p>` +
+      `<p class="draft">${lines(page.draftDate)}</p></div>` +
+      (centred.length > 0 ? `<p class="title-note">${centred.map((part) => lines(part)).join('<br />')}</p>` : '') +
+      '</div>'
+    : '';
+
+  return (
+    '<section class="page title-page">' +
+    `<div class="title-block">${block.join('')}</div>` +
+    `<div class="title-credit">${credit.join('')}</div>` +
+    foot +
+    '</section>'
+  );
 };
 
 const STYLES = `
@@ -220,7 +227,22 @@ const STYLES = `
   .scene-number.right { right: 0.75in; }
   .printed-at { position: absolute; bottom: 0.5in; left: 1.5in; font-size: 9pt; color: #555; }
   .title-page { display: flex; flex-direction: column; align-items: center; text-align: center; }
-  .title-page .title-block { margin-top: 2.6in; }
+  /*
+     The page in two halves. The title sits in the top one — centred in it, so
+     a logotype falls halfway between the top of the page and the middle — and
+     everything else begins at the halfway mark and runs down from there.
+     The page is 11in with an inch of padding at the top, so the top half is
+     4.5in of the 9in between the margins.
+  */
+  .title-page .title-block {
+    height: 4.5in;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .title-page .title-credit { width: 100%; }
   .title-page .based-on { margin-top: 0.5in; }
   .title-page .episode { margin-top: 0.25in; }
   /* "by" sits on a line of its own between the credit and the name. */
@@ -235,8 +257,9 @@ const STYLES = `
   .title-foot .draft { text-align: right; }
   .title-note { margin: 0.35in 0 0; text-align: center; }
   .title-foot p { margin: 0; }
-  .title-block h1 { font-size: 12pt; font-weight: normal; text-transform: uppercase; margin: 0 0 4em; }
-  .byline { margin: 0 0 1em; }
+  /* Four times the manuscript's 12pt, and bold. */
+  .title-block h1 { font-size: 48pt; font-weight: bold; text-transform: uppercase; margin: 0; line-height: 1.1; }
+  .byline { margin: 0; }
   .author { margin: 0; }
   .watermark {
     position: fixed;

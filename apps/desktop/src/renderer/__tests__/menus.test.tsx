@@ -220,12 +220,12 @@ describe('page setup', () => {
     render(<Setup />);
     // A title page is a page of the document, not a checkbox's worth of
     // settings, so it is not on this screen until asked for.
-    expect(screen.queryByLabelText('Author')).toBeNull();
+    expect(screen.queryByLabelText('Written by')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /what it says/i }));
 
     // The project's own answers show as placeholders, not as typed values.
-    const author = screen.getByLabelText('Author') as HTMLInputElement;
+    const author = screen.getByLabelText('Written by') as HTMLInputElement;
     expect(author.value).toBe('');
     expect(author.placeholder).toBe('K. Shank');
 
@@ -233,8 +233,9 @@ describe('page setup', () => {
     fireEvent.change(screen.getByLabelText('Revision'), { target: { value: 'Second draft' } });
 
     // The sheet shows what Update page would do, so the layout can be judged
-    // before it is committed — but the document has not changed yet.
-    expect(document.querySelector('.title-page-sheet')?.textContent).toContain('Kevin Shank');
+    // before it is committed — but the document has not changed yet. The page
+    // supplies the words; the field held only the name.
+    expect(document.querySelector('.title-page-sheet')?.textContent).toContain('WrittenbyKevin Shank');
     expect(JSON.parse(screen.getByTestId('title-page').textContent as string)['author']).toBe('');
 
     fireEvent.click(screen.getByRole('button', { name: 'Update page' }));
@@ -246,14 +247,14 @@ describe('page setup', () => {
   it('throws away a cancelled edit, and does not leave it waiting next time', () => {
     render(<Setup />);
     fireEvent.click(screen.getByRole('button', { name: /what it says/i }));
-    fireEvent.change(screen.getByLabelText('Author'), { target: { value: 'Somebody Else' } });
+    fireEvent.change(screen.getByLabelText('Written by'), { target: { value: 'Somebody Else' } });
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(JSON.parse(screen.getByTestId('title-page').textContent as string)['author']).toBe('');
 
     // Reopening starts from the document, not from the abandoned attempt.
     fireEvent.click(screen.getByRole('button', { name: /what it says/i }));
-    expect((screen.getByLabelText('Author') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('Written by') as HTMLInputElement).value).toBe('');
   });
 
   it('holds what a printing carries, in one place', () => {

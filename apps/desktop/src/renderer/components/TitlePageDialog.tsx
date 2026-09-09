@@ -164,11 +164,10 @@ export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDial
               ) : null}
 
               <Field label="Episode" value={stored.episode} placeholder="Episode 4 — The Lamp" onChange={(episode) => write({ episode })} />
-              {/* The page sets "by" on its own line under this, so the credit
-                  is the word, not the phrase: "written", "screenplay". */}
-              <Field label="Credit" value={stored.credit} placeholder="written" onChange={(credit) => write({ credit })} />
+              {/* The page sets the words "Written" and "by" above this, so
+                  the field holds the name and nothing else. */}
               <Field
-                label="Author"
+                label="Written by"
                 value={stored.author}
                 placeholder={page.author || 'Your name'}
                 onChange={(author) => write({ author })}
@@ -229,9 +228,11 @@ export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDial
                     <h1>{page.title || 'Untitled'}</h1>
                   )}
                   {page.episode ? <p className="sheet-episode">{page.episode}</p> : null}
+                </div>
+                <div className="sheet-credit-block">
                   {page.author ? (
                     <>
-                      <p className="sheet-credit">{page.credit}</p>
+                      <p className="sheet-credit">Written</p>
                       <p className="sheet-by">by</p>
                       <p className="sheet-author">{page.author}</p>
                     </>
