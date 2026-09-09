@@ -7,9 +7,11 @@ import {
   findUnit,
   groupFindings,
   isProseFormat,
+  gridFromRead,
   runDailyEditor,
   setEditorRule,
   setSceneGrid,
+  setSceneRead,
   FINDING_LABELS,
   runFinalEditor,
   sceneTextForReview,
@@ -26,7 +28,6 @@ import {
 interface EditorPanelProps {
   file: ProjectFile;
   currentUnitId: StructuralUnitId | null;
-  signedIn: boolean;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   /** Going to a finding selects its beat, so the writer can see it in place. */
   onGoTo?(beatId: BeatId): void;
@@ -35,6 +36,20 @@ interface EditorPanelProps {
 }
 
 type Tab = 'daily' | 'final';
+
+/**
+ * When a read was made, and by what.
+ *
+ * Worth saying because a read goes stale: the scene it describes may have
+ * been rewritten since, and the panel has no way to know that. The date is
+ * how the writer knows.
+ */
+const readWhen = (read: { readAt: string; model: string }): string => {
+  const when = read.readAt
+    ? new Date(read.readAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+    : 'just now';
+  return read.model ? `${when} · ${read.model}` : when;
+};
 
 /**
  * The two editors (spec §8).
@@ -47,7 +62,7 @@ type Tab = 'daily' | 'final';
  * writer has considered and rejected is a fact about this sitting, not a
  * property of the manuscript, and it should not travel to another machine.
  */
-export function EditorPanel({ file, currentUnitId, signedIn, onUpdate, onGoTo, openOn }: EditorPanelProps) {
+export function EditorPanel({ file, currentUnitId, onUpdate, onGoTo, openOn }: EditorPanelProps) {
   const [tab, setTab] = useState<Tab>(openOn ?? 'daily');
 
   // The Editor menu names an editor; choosing it opens that one.
@@ -57,8 +72,12 @@ export function EditorPanel({ file, currentUnitId, signedIn, onUpdate, onGoTo, o
   const [scope, setScope] = useState<'project' | 'scene'>('project');
   const [includeStyle, setIncludeStyle] = useState(true);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [verdicts, setVerdicts] = useState<Record<string, SceneVerdict>>({});
   const [reading, setReading] = useState<string | null>(null);
+  /** Whether a read can be asked for at all, and what to say when it cannot. */
+  const [readable, setReadable] = useState<{ available: boolean; reason: string | null }>({
+    available: false,
+    reason: null,
+  });
   const [error, setError] = useState<string | null>(null);
   /** The rule being worked through; null shows the list of rules. */
   const [rule, setRule] = useState<FindingKind | null>(null);
@@ -107,7 +126,27 @@ export function EditorPanel({ file, currentUnitId, signedIn, onUpdate, onGoTo, o
     return [unit?.sequenceLabel || unit?.title || 'Scene', beat?.title].filter(Boolean).join(' · ') || 'Go to it';
   };
 
-  const report = useMemo(() => runFinalEditor(file, { verdicts }), [file, verdicts]);
+  // Reads the document keeps. Nothing is held in this component: a read cost
+  // money, so it belongs in the manuscript, not in a panel that closes.
+  const report = useMemo(() => runFinalEditor(file), [file]);
+
+  // Asked once when the Final Editor is opened, so the button can say why it
+  // is greyed out instead of failing after the click.
+  useEffect(() => {
+    if (tab !== 'final') return;
+    let current = true;
+    void window.vcwriter.sceneReviewStatus().then((result) => {
+      if (!current) return;
+      setReadable(
+        result.ok && result.data
+          ? result.data
+          : { available: false, reason: result.error ?? 'AI review is unavailable.' },
+      );
+    });
+    return () => {
+      current = false;
+    };
+  }, [tab]);
 
   const readScene = async (unitId: StructuralUnitId, label: string, position: number) => {
     setReading(unitId);
@@ -122,7 +161,8 @@ export function EditorPanel({ file, currentUnitId, signedIn, onUpdate, onGoTo, o
       setError(result.error ?? 'The structural read failed');
       return;
     }
-    setVerdicts((current) => ({ ...current, [unitId]: result.data as SceneVerdict }));
+    const verdict = result.data as SceneVerdict;
+    onUpdate((current) => setSceneRead(current, unitId, verdict));
   };
 
   return (
@@ -470,7 +510,9 @@ export function EditorPanel({ file, currentUnitId, signedIn, onUpdate, onGoTo, o
 
           <h3>Scene by scene</h3>
           <ul className="scene-list">
-            {report.scenes.map((scene) => (
+            {report.scenes.map((scene) => {
+              const read = scene.aiVerdict;
+              return (
               <li key={scene.unitId} className="scene-row">
                 <header>
                   <strong>
@@ -483,38 +525,71 @@ export function EditorPanel({ file, currentUnitId, signedIn, onUpdate, onGoTo, o
                   <button
                     type="button"
                     className="ghost"
-                    disabled={!signedIn || reading !== null}
-                    title={signedIn ? 'Ask for a structural read of this scene' : 'Sign in to use the Final Editor'}
+                    disabled={!readable.available || reading !== null || scene.words === 0}
+                    title={
+                      scene.words === 0
+                        ? 'There is nothing written in this scene yet'
+                        : (readable.reason ?? 'Ask for a structural read of this scene')
+                    }
                     onClick={() => void readScene(scene.unitId, scene.label, scene.position)}
                   >
-                    {reading === scene.unitId ? 'Reading…' : scene.aiVerdict ? 'Read again' : 'Read scene'}
+                    {reading === scene.unitId ? 'Reading…' : read ? 'Read again' : 'Read scene'}
                   </button>
                 </header>
 
-                {scene.aiVerdict ? (
+                {read ? (
                   <dl className="verdict">
                     <dt>Opens</dt>
-                    <dd>{scene.aiVerdict.opening}</dd>
+                    <dd>{read.opening}</dd>
                     <dt>Changes</dt>
-                    <dd>{scene.aiVerdict.change}</dd>
+                    <dd>{read.change}</dd>
                     <dt>Turn</dt>
-                    <dd>{scene.aiVerdict.turn ?? <span className="muted">No turn found.</span>}</dd>
+                    <dd>{read.turn ?? <span className="muted">No turn found.</span>}</dd>
                     <dt>Value</dt>
-                    <dd>{scene.aiVerdict.valueShift}</dd>
+                    <dd>{read.valueShift}</dd>
                     <dt>Purpose</dt>
-                    <dd>{scene.aiVerdict.purpose}</dd>
-                    {scene.aiVerdict.concerns.length > 0 ? (
+                    <dd>{read.purpose}</dd>
+                    {read.concerns.length > 0 ? (
                       <>
                         <dt>Concerns</dt>
                         <dd>
                           <ul>
-                            {scene.aiVerdict.concerns.map((concern) => (
+                            {read.concerns.map((concern) => (
                               <li key={concern}>{concern}</li>
                             ))}
                           </ul>
                         </dd>
                       </>
                     ) : null}
+                    <dt>Read</dt>
+                    <dd className="muted small verdict-foot">
+                      <span>{readWhen(read)}</span>
+                      {/*
+                        The read is a proposal until the writer says otherwise.
+                        This is the one button that makes it theirs, and it
+                        writes only the three questions the read answers.
+                      */}
+                      <button
+                        type="button"
+                        className="ghost"
+                        title="Copy this reading into the story grid as your own"
+                        onClick={() =>
+                          onUpdate((current) =>
+                            setSceneGrid(current, scene.unitId, gridFromRead(read)),
+                          )
+                        }
+                      >
+                        Take this as mine
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost"
+                        title="Forget this reading"
+                        onClick={() => onUpdate((current) => setSceneRead(current, scene.unitId, null))}
+                      >
+                        Discard
+                      </button>
+                    </dd>
                   </dl>
                 ) : (
                   <p className="muted small">
@@ -523,7 +598,8 @@ export function EditorPanel({ file, currentUnitId, signedIn, onUpdate, onGoTo, o
                   </p>
                 )}
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
       )}

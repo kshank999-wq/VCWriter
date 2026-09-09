@@ -316,6 +316,8 @@ export const requestSceneReview = async (input: {
       authorization: `Bearer ${data.session.access_token}`,
     },
     body: JSON.stringify(input),
+  }).catch(() => {
+    throw new CloudError('vc-writer.com could not be reached. Check your connection and try again.');
   });
 
   const payload = (await response.json().catch(() => null)) as
@@ -327,6 +329,48 @@ export const requestSceneReview = async (input: {
   }
   return payload.verdict;
 };
+
+/**
+ * Whether a read can be asked for, before the writer clicks and finds out.
+ *
+ * Three things have to be true — the deployment has a key, this copy is
+ * signed in, and the account holds a license — and each of them has a
+ * different answer for the writer. Asking costs nothing and reaches no model.
+ */
+export const sceneReviewStatus = async (): Promise<SceneReviewAvailability> => {
+  if (!isCloudConfigured()) {
+    return { available: false, reason: 'This build has no connection to vc-writer.com.' };
+  }
+
+  const { data, error } = await supabase().auth.getSession();
+  if (error || !data.session) {
+    return { available: false, reason: 'Sign in to use the Final Editor.' };
+  }
+
+  try {
+    const response = await fetch(`${SITE_URL}/api/ai/scene-review`, {
+      headers: { authorization: `Bearer ${data.session.access_token}` },
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | { configured?: boolean; signedIn?: boolean; entitled?: boolean; reason?: string | null }
+      | null;
+    if (!response.ok || !payload) {
+      return { available: false, reason: 'AI review could not be reached just now.' };
+    }
+    return {
+      available: payload.configured === true && payload.entitled === true,
+      reason: payload.reason ?? null,
+    };
+  } catch {
+    // Offline is not an error worth a dialog; the button simply says so.
+    return { available: false, reason: 'vc-writer.com could not be reached.' };
+  }
+};
+
+export interface SceneReviewAvailability {
+  available: boolean;
+  reason: string | null;
+}
 
 // ---------------------------------------------------------------------------
 // Licensing (spec §3.3)

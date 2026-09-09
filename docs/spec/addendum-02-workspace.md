@@ -1232,6 +1232,35 @@ scene, or want something between them.
 Nothing in this pass mutates the project, and it never claims to know
 whether a scene turns on its own.
 
+### The read
+
+The other half of the grid: **Read scene** sends one scene's text to
+vc-writer.com, which asks a model the same four questions and sends back an
+answer. It is a proposal, and it stays labelled as one.
+
+Where it runs is the point. The key lives on the server, never in an
+installer, so what leaves the machine is the scene the writer asked to have
+read and nothing else — no project, no research, no other scene. The desktop
+sends its session token; the browser preview is already behind the
+administrator gate on the same origin, so its cookie is enough.
+
+Three things have to be true before the button is live — the deployment has
+a key, this copy is signed in, and the account holds a licence — and the
+button says which one is missing rather than failing after the click.
+Administrators are entitled without a licence row: nobody sold Kevin a copy
+of his own application, and a feature the people who build it cannot try is
+a feature nobody checks. It is a spending limit, not a noise limit, so it is
+counted per account rather than per address.
+
+**The read is kept on the scene, dated, and syncs.** A read costs real
+money; paying twice to see it twice would be a poor bargain, and the reading
+the writer argued with belongs beside the answer they settled on. Two
+buttons close it: *Take this as mine* copies the three questions the read
+answers into the grid — which way it moves, where it turns, what it is for —
+and leaves what is at stake and what is being fought over alone, because
+those are the writer's and the read is not asked for them. *Discard* forgets
+the reading and leaves anything already accepted standing.
+
 ## 22. Keyboard
 
 In addition to §5's reordering keys and §6's writing keys:

@@ -119,6 +119,9 @@ const unitToRow = (unit: StructuralUnit): Row => ({
   // The writer's structural reading, as one JSON column: five short strings
   // read and written whole with the scene, and nothing queries inside it.
   grid: unit.grid,
+  // The AI's proposed reading, kept beside the writer's own so a scene read
+  // on one machine is already read on the next.
+  ai_read: unit.aiRead,
   created_at: unit.createdAt,
   updated_at: unit.updatedAt,
 });
@@ -308,6 +311,7 @@ const unitFromRow = (row: Row): StructuralUnit =>
     inScript: row['in_script'] === undefined || row['in_script'] === null ? true : flag(row['in_script']),
     // Absent in a row written before the grid existed; the schema fills it.
     grid: row['grid'] ?? undefined,
+    aiRead: row['ai_read'] ?? null,
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });

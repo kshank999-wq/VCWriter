@@ -7,6 +7,7 @@ import {
   chapterPageSchema,
   laneSchema,
   sceneGridSchema,
+  sceneReadSchema,
   storyMarkerSchema,
   structuralUnitSchema,
 } from './entities/structure.js';
@@ -32,7 +33,7 @@ import {
 import type { ManuscriptSegment } from './entities/manuscript.js';
 import type { VoiceAssignment } from './entities/project.js';
 import type { Character, CharacterCategory } from './entities/character.js';
-import type { SceneGrid } from './entities/structure.js';
+import type { SceneGrid, SceneRead } from './entities/structure.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
 import type { SetupPayoff, SetupPoint } from './entities/setups.js';
 import type {
@@ -699,6 +700,32 @@ export const setSceneGrid = (
     units: file.units.map((unit) =>
       unit.id === unitId ? touch({ ...unit, grid: sceneGridSchema.parse({ ...unit.grid, ...patch }) }) : unit,
     ),
+  });
+};
+
+/**
+ * Keep an AI read on the scene it is about (spec §8.2).
+ *
+ * Whole, not patched: a reading is one answer given at one moment, and half
+ * of an old one mixed into a new one would be neither. Passing null forgets
+ * it — the writer disagreed, or the scene has been rewritten under it.
+ *
+ * The timestamp is set here rather than taken from the server: it is the
+ * document saying when it learnt this, which is what "read before the
+ * rewrite" has to be measured against.
+ */
+export const setSceneRead = (
+  file: ProjectFile,
+  unitId: StructuralUnitId,
+  read: Omit<SceneRead, 'readAt'> | null,
+): ProjectFile => {
+  if (!file.units.some((unit) => unit.id === unitId)) {
+    throw new DomainError(`Scene/chapter ${unitId} does not exist`);
+  }
+  const stored = read === null ? null : sceneReadSchema.parse({ ...read, readAt: nowIso() });
+  return touchProject({
+    ...file,
+    units: file.units.map((unit) => (unit.id === unitId ? touch({ ...unit, aiRead: stored }) : unit)),
   });
 };
 

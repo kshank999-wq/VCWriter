@@ -20,11 +20,13 @@ import {
   requestSceneReview,
   requestSignInCode,
   resolveCapture,
+  sceneReviewStatus,
   signOut,
   syncProject,
   verifySignInCode,
   type AccountStatus,
   type ActivationResult,
+  type SceneReviewAvailability,
   type SyncOutcome,
 } from './cloud';
 import { deviceFingerprint, deviceName, devicePlatform } from './device';
@@ -368,6 +370,14 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
       }
     },
   );
+
+  ipcMain.handle('cloud:sceneReviewStatus', async (): Promise<DesktopApiResult<SceneReviewAvailability>> => {
+    try {
+      return ok(await sceneReviewStatus());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
 
   // --- licensing and updates -----------------------------------------------
 

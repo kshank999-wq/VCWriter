@@ -805,7 +805,6 @@ export default function App() {
             <EditorPanel
               file={file}
               currentUnitId={selectedBeat?.unitId ?? null}
-              signedIn={account.signedIn}
               openOn={editorTab}
               onGoTo={(beatId) => {
                 setSelectedBeatId(beatId);

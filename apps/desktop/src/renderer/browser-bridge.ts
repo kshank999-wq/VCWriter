@@ -6,6 +6,7 @@ import {
   serializeProjectFile,
   suggestedExportFileName,
   type ProjectFile,
+  type SceneVerdict,
 } from '@vcwriter/domain';
 import type { DesktopApiResult, OpenResult, VcWriterApi } from '../preload/index';
 
@@ -298,7 +299,51 @@ export const createBrowserBridge = (): BrowserBridge => {
     syncProject: async () => fail(NOT_HERE),
     listCaptures: async () => ok([]),
     resolveCapture: async () => fail(NOT_HERE),
-    reviewScene: async () => fail(NOT_HERE),
+    /**
+     * The one cloud call the preview can honestly make.
+     *
+     * Everything else here is unavailable because a browser has no keychain
+     * and no files; this is different. The preview is served from
+     * vc-writer.com behind the administrator gate, so the same session cookie
+     * that got the page is already good for the site's own API — no token to
+     * hold, no key to ship, same origin, and the content security policy
+     * allows it (`connect-src 'self'`).
+     */
+    async reviewScene(input) {
+      try {
+        const response = await fetch('/api/ai/scene-review', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(input),
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | { verdict?: SceneVerdict; error?: string }
+          | null;
+        if (!response.ok || !payload?.verdict) {
+          return fail(payload?.error ?? `The structural read failed (${response.status})`);
+        }
+        return ok(payload.verdict);
+      } catch {
+        return fail('The structural read could not be sent. Check your connection.');
+      }
+    },
+
+    async sceneReviewStatus() {
+      try {
+        const response = await fetch('/api/ai/scene-review', { credentials: 'same-origin' });
+        const payload = (await response.json().catch(() => null)) as
+          | { configured?: boolean; entitled?: boolean; reason?: string | null }
+          | null;
+        if (!response.ok || !payload) return ok({ available: false, reason: 'AI review could not be reached.' });
+        return ok({
+          available: payload.configured === true && payload.entitled === true,
+          reason: payload.reason ?? null,
+        });
+      } catch {
+        return ok({ available: false, reason: 'AI review could not be reached.' });
+      }
+    },
 
     activateLicense: async () => fail(NOT_HERE),
     checkForUpdate: async () => fail(NOT_HERE),

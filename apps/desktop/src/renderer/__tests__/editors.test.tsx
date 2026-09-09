@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { addCharacter, createProjectFile, updateBeat, type ProjectFile } from '@vcwriter/domain';
 import { EditorPanel } from '../components/EditorPanel';
 import { ReadBackPanel } from '../components/ReadBackPanel';
@@ -44,12 +44,10 @@ const scriptWithProblems = (): ProjectFile => {
 
 function EditorHarness({
   initial,
-  signedIn = false,
   onGoTo,
   onFile,
 }: {
   initial: ProjectFile;
-  signedIn?: boolean;
   onGoTo?(beatId: string): void;
   onFile?(file: ProjectFile): void;
 }) {
@@ -59,12 +57,23 @@ function EditorHarness({
     <EditorPanel
       file={file}
       currentUnitId={file.units[0]!.id}
-      signedIn={signedIn}
       onGoTo={onGoTo as never}
       onUpdate={(mutate) => setFile((current) => mutate(current))}
     />
   );
 }
+
+/**
+ * The Final Editor asks the bridge whether a read can be had before it offers
+ * one, so every test that opens that tab needs an answer to that question.
+ */
+const bridge = (over: Partial<Record<string, unknown>> = {}) => {
+  (window as unknown as { vcwriter: unknown }).vcwriter = {
+    sceneReviewStatus: async () => ({ ok: true, data: { available: false, reason: 'Sign in to use the Final Editor' } }),
+    reviewScene: async () => ({ ok: false, error: 'Sign in to use the Final Editor' }),
+    ...over,
+  };
+};
 
 /** A scene with several of the same mistake, plus one of another kind. */
 const scriptWithMany = (): ProjectFile => {
@@ -189,6 +198,8 @@ describe('daily editor panel', () => {
 });
 
 describe('final editor panel', () => {
+  beforeEach(() => bridge());
+
   it('is a grid the writer fills in, and what is typed is kept on the scene', () => {
     let latest = scriptWithProblems();
     render(<EditorHarness initial={scriptWithProblems()} onFile={(file) => (latest = file)} />);
@@ -247,11 +258,54 @@ describe('final editor panel', () => {
     expect(screen.getByText(/has not been read yet/i)).toBeDefined();
   });
 
-  it('does not offer a structural read when signed out', () => {
+  it('does not offer a structural read when it cannot be had, and says why', async () => {
     render(<EditorHarness initial={scriptWithProblems()} />);
     fireEvent.click(screen.getByRole('tab', { name: /final/i }));
+    await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'Read scene' }) as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+      expect(button.title).toContain('Sign in');
+    });
+  });
 
-    expect((screen.getByRole('button', { name: 'Read scene' }) as HTMLButtonElement).disabled).toBe(true);
+  it('keeps a read on the scene, and takes it as the writer’s own when asked', async () => {
+    bridge({
+      sceneReviewStatus: async () => ({ ok: true, data: { available: true, reason: null } }),
+      reviewScene: async () => ({
+        ok: true,
+        data: {
+          opening: 'She is afraid of the door.',
+          change: 'She opens it anyway.',
+          turn: 'Her hand on the handle.',
+          valueShift: 'positive',
+          purpose: 'It earns the ending.',
+          concerns: ['The keeper is never seen.'],
+          model: 'a-model',
+        },
+      }),
+    });
+
+    let latest = scriptWithProblems();
+    render(<EditorHarness initial={scriptWithProblems()} onFile={(file) => (latest = file)} />);
+    fireEvent.click(screen.getByRole('tab', { name: /final/i }));
+
+    const read = await screen.findByRole('button', { name: 'Read scene' });
+    await waitFor(() => expect((read as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(read);
+
+    // The reading is shown, and the document is the thing holding it.
+    await screen.findByText('She opens it anyway.');
+    expect(latest.units[0]!.aiRead?.turn).toBe('Her hand on the handle.');
+    // …and it is still only a proposal until the writer says otherwise.
+    expect(latest.units[0]!.grid.polarity).toBe('');
+
+    fireEvent.click(screen.getByRole('button', { name: /take this as mine/i }));
+    expect(latest.units[0]!.grid).toMatchObject({ polarity: 'up', turn: 'Her hand on the handle.' });
+
+    fireEvent.click(screen.getByRole('button', { name: /discard/i }));
+    expect(latest.units[0]!.aiRead).toBeNull();
+    // Discarding the reading does not take back what the writer accepted.
+    expect(latest.units[0]!.grid.polarity).toBe('up');
   });
 });
 

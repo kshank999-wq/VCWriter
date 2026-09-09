@@ -78,6 +78,8 @@ export interface VcWriterApi {
     position?: string;
     format: 'screenplay' | 'prose';
   }): Promise<DesktopApiResult<SceneVerdict>>;
+  /** Whether a read can be asked for, and if not, what to tell the writer. */
+  sceneReviewStatus(): Promise<DesktopApiResult<{ available: boolean; reason: string | null }>>;
 
   // Licensing and updates (§3.3).
   activateLicense(serial: string): Promise<DesktopApiResult<ActivationResult>>;
@@ -178,6 +180,7 @@ const api: VcWriterApi = {
   listCaptures: (projectId) => ipcRenderer.invoke('cloud:captures', projectId),
   resolveCapture: (capture) => ipcRenderer.invoke('cloud:resolveCapture', capture),
   reviewScene: (input) => ipcRenderer.invoke('cloud:reviewScene', input),
+  sceneReviewStatus: () => ipcRenderer.invoke('cloud:sceneReviewStatus'),
   activateLicense: (serial) => ipcRenderer.invoke('license:activate', serial),
   checkForUpdate: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: (input) => ipcRenderer.invoke('update:download', input),

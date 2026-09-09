@@ -91,13 +91,31 @@ caller must hold an **active license**, because every request costs real money.
 // 200
 { "verdict": { "opening": "…", "change": "…", "turn": null, "valueShift": "none",
                "purpose": "…", "concerns": ["…"], "model": "claude-opus-5" } }
-// 401 not signed in · 403 no active license · 502 the read failed
+// 400 no scene · 401 not signed in · 403 no active license · 429 too many
+// 500 the license could not be checked · 502 the read failed
 // 503 AI review is not configured on this deployment
 ```
 
 The response shape has no field that could carry replacement prose: the pass
 reads, it does not rewrite. `ANTHROPIC_API_KEY` lives here and never ships in
 an installer.
+
+Administrators are entitled without a license row — nobody sold Kevin a copy
+of his own application. The 429 is a spending limit rather than a noise
+limit, so it is counted per account (60 an hour) instead of per address.
+
+### `GET /api/ai/scene-review`
+
+Whether a read can be asked for, without asking for one. The button that
+spends money uses it to say why it is greyed out instead of failing after the
+click; it reaches no model and costs nothing.
+
+```jsonc
+// 200 — always 200, including for a visitor who is not signed in
+{ "configured": true, "signedIn": true, "entitled": true, "reason": null }
+{ "configured": true, "signedIn": false, "entitled": false,
+  "reason": "Sign in to use the Final Editor" }
+```
 
 ### `POST /api/licenses/activate`
 

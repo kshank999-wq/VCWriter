@@ -99,6 +99,35 @@ export const sceneGridSchema = z.object({
 });
 export type SceneGrid = z.infer<typeof sceneGridSchema>;
 
+/**
+ * What an AI structural pass answered for a scene (spec §8.2).
+ *
+ * Kept on the scene rather than in the panel's memory for two reasons. A read
+ * costs real money, so paying for it twice to see it twice would be a poor
+ * bargain; and the writer's own grid is a document, so the reading it was
+ * argued with belongs in the document beside it.
+ *
+ * It is a proposal and stays labelled as one. Nothing here is ever treated as
+ * the writer's answer unless the writer copies it across.
+ */
+export const sceneReadSchema = z.object({
+  /** What is true when the scene opens. */
+  opening: z.string().default(''),
+  /** What has changed by the end. */
+  change: z.string().default(''),
+  /** Where the scene turns. Null on a scene the read found no turn in. */
+  turn: z.string().nullable().default(null),
+  /** Whether the scene's value moves, and in which direction. */
+  valueShift: z.enum(['positive', 'negative', 'mixed', 'none']).default('none'),
+  purpose: z.string().default(''),
+  concerns: z.array(z.string()).default([]),
+  /** Which model answered, so an old read can be told from a new one. */
+  model: z.string().default(''),
+  /** When it was read, so a read made before an edit can be spotted. */
+  readAt: z.string().default(''),
+});
+export type SceneRead = z.infer<typeof sceneReadSchema>;
+
 export const structuralUnitSchema = z.object({
   id: id<StructuralUnitId>(),
   projectId: id<ProjectId>(),
@@ -121,6 +150,8 @@ export const structuralUnitSchema = z.object({
   inScript: z.boolean().default(true),
   /** The writer's own structural reading of the scene (spec §8.2). */
   grid: sceneGridSchema.default({}),
+  /** The last AI read of this scene, if one has been asked for. */
+  aiRead: sceneReadSchema.nullable().default(null),
   ...timestamps,
 });
 export type StructuralUnit = z.infer<typeof structuralUnitSchema>;

@@ -946,6 +946,19 @@ button.item.selected {
   padding-left: 18px;
 }
 
+/* Whose reading it is, and the two ways to answer it. */
+.verdict-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.verdict-foot button {
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
 .voice-list li {
   display: flex;
   align-items: center;

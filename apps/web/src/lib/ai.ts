@@ -103,10 +103,54 @@ export interface SceneReviewResult extends SceneVerdictPayload {
   usage: { inputTokens: number; outputTokens: number };
 }
 
+/**
+ * What went wrong, said in a sentence a writer can act on.
+ *
+ * The SDK's own errors are for the operator, not the customer: a writer who
+ * clicked "Read scene" needs to know whether to try again, wait, or tell us —
+ * not which header was rejected. The detail still reaches the server log.
+ */
+export class SceneReviewError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SceneReviewError';
+  }
+}
+
+const explain = (cause: unknown): SceneReviewError => {
+  if (cause instanceof Anthropic.RateLimitError) {
+    return new SceneReviewError('The reader is busy just now. Try that scene again in a moment.');
+  }
+  if (cause instanceof Anthropic.AuthenticationError || cause instanceof Anthropic.PermissionDeniedError) {
+    return new SceneReviewError('AI review is not set up correctly on the server. We have been told.');
+  }
+  if (cause instanceof Anthropic.APIConnectionTimeoutError) {
+    return new SceneReviewError('The read took too long. Try again, or try a shorter scene.');
+  }
+  if (cause instanceof Anthropic.APIConnectionError) {
+    return new SceneReviewError('The reader could not be reached. Check your connection and try again.');
+  }
+  if (cause instanceof Anthropic.APIError) {
+    return new SceneReviewError('The structural read failed. Try again in a moment.');
+  }
+  return cause instanceof SceneReviewError ? cause : new SceneReviewError('The structural read failed.');
+};
+
 export const reviewScene = async (input: SceneReviewRequest): Promise<SceneReviewResult> => {
+  try {
+    return await ask(input);
+  } catch (cause) {
+    console.error('scene review failed', cause);
+    throw explain(cause);
+  }
+};
+
+const ask = async (input: SceneReviewRequest): Promise<SceneReviewResult> => {
   const response = await client().messages.create({
+    // Thinking shares this budget with the answer, and the answer itself is a
+    // few hundred tokens. Room to think is the point of the number.
+    max_tokens: 16000,
     model: MODEL,
-    max_tokens: 4000,
     system: SYSTEM,
     thinking: { type: 'adaptive' },
     output_config: {
@@ -131,17 +175,29 @@ export const reviewScene = async (input: SceneReviewRequest): Promise<SceneRevie
   });
 
   if (response.stop_reason === 'refusal') {
-    throw new Error('The structural read was declined for this scene.');
+    throw new SceneReviewError('The structural read was declined for this scene.');
+  }
+  if (response.stop_reason === 'max_tokens') {
+    throw new SceneReviewError('The read ran long and was cut off. Try a shorter scene.');
   }
 
   const text = response.content.find((block) => block.type === 'text');
   if (!text || text.type !== 'text') {
-    throw new Error('The structural read came back empty.');
+    throw new SceneReviewError('The structural read came back empty.');
   }
 
-  const parsed = sceneVerdictSchema.safeParse(JSON.parse(text.text));
+  // Structured output makes malformed JSON unlikely, not impossible; a syntax
+  // error here must read like every other failure, not like a stack trace.
+  let body: unknown;
+  try {
+    body = JSON.parse(text.text);
+  } catch {
+    throw new SceneReviewError('The structural read came back in an unreadable shape.');
+  }
+
+  const parsed = sceneVerdictSchema.safeParse(body);
   if (!parsed.success) {
-    throw new Error('The structural read came back in an unreadable shape.');
+    throw new SceneReviewError('The structural read came back in an unreadable shape.');
   }
 
   return {

@@ -5,7 +5,7 @@ import { paginateElements, layoutFor } from './pagination.js';
 import { countWords } from './entities/manuscript.js';
 import type { ProjectFile } from './project-file.js';
 import type { CharacterId, StructuralUnitId } from './ids.js';
-import type { SceneGrid } from './entities/structure.js';
+import type { SceneGrid, SceneRead } from './entities/structure.js';
 
 /**
  * The Final Editor (spec §8.2).
@@ -40,26 +40,48 @@ export interface SceneReview {
   actionLines: number;
   /** Location taken from the scene heading, upper-cased. */
   location: string | null;
-  /** Filled by the AI pass when one has run; null otherwise, and shown as unknown. */
-  aiVerdict: SceneVerdict | null;
+  /**
+   * The AI pass's reading when one has been made; null otherwise, and shown
+   * as unknown. A read the document is keeping carries the moment it was
+   * made; one that has just come back and not been saved carries none.
+   */
+  aiVerdict: SceneRead | null;
   /** The writer's own reading, from the document. */
   grid: SceneGrid;
 }
 
-/** What an AI structural pass returns for a scene. Never invented locally. */
-export interface SceneVerdict {
-  /** What is true when the scene opens. */
-  opening: string;
-  /** What has changed by the end. */
-  change: string;
-  /** Where the scene turns, if it does. */
-  turn: string | null;
-  /** Whether the scene's value moves, and in which direction. */
-  valueShift: 'positive' | 'negative' | 'mixed' | 'none';
-  purpose: string;
-  concerns: string[];
-  model: string;
-}
+/**
+ * What an AI structural pass returns for a scene. Never invented locally.
+ *
+ * The same shape the document keeps on the scene (`SceneRead`), minus the
+ * timestamp the document adds when it stores one: what comes back over the
+ * wire is the reading, not the record of it.
+ */
+export type SceneVerdict = Omit<SceneRead, 'readAt'>;
+
+/**
+ * A read turned into the grid patch the writer can accept (spec §8.2).
+ *
+ * Only the three questions the read actually answers: which way it moves,
+ * where it turns, what it is for. What is at stake and what is being fought
+ * over stay the writer's own — the read is not asked for them, and a patch
+ * that overwrote them with silence would lose work.
+ *
+ * "None" becomes "flat", which is a claim, so accepting it is a deliberate
+ * act: the button says take this reading as mine, and this is what that means.
+ */
+export const gridFromRead = (read: SceneVerdict): Partial<SceneGrid> => ({
+  polarity:
+    read.valueShift === 'positive'
+      ? 'up'
+      : read.valueShift === 'negative'
+        ? 'down'
+        : read.valueShift === 'mixed'
+          ? 'mixed'
+          : 'flat',
+  turn: read.turn ?? '',
+  purpose: read.purpose,
+});
 
 export type StoryFindingKind =
   | 'empty_scene'
@@ -139,7 +161,10 @@ export const reviewScenes = (file: ProjectFile): SceneReview[] => {
       dialogueLines,
       actionLines,
       location,
-      aiVerdict: null,
+      // The read the document is keeping, if one has ever been asked for.
+      // `options.verdicts` overrides it for a read that has just come back
+      // and not yet been saved.
+      aiVerdict: unit.aiRead ?? null,
       // A document written before the grid existed has none. This is a
       // read-only pass over someone's manuscript; it must never be the thing
       // that takes the editor down.
@@ -337,9 +362,11 @@ export const runFinalEditor = (file: ProjectFile, options: FinalEditorOptions = 
   const longScenePages = options.longScenePages ?? 6;
   const absenceThreshold = options.absenceThreshold ?? 12;
 
-  const scenes = reviewScenes(file).map((scene) =>
-    options.verdicts?.[scene.unitId] ? { ...scene, aiVerdict: options.verdicts[scene.unitId] ?? null } : scene,
-  );
+  const scenes = reviewScenes(file).map((scene) => {
+    const override = options.verdicts?.[scene.unitId];
+    // A read handed in has not been saved, so it has no moment yet.
+    return override ? { ...scene, aiVerdict: { readAt: '', ...override } } : scene;
+  });
 
   const findings: StoryFinding[] = [];
   let sequence = 0;

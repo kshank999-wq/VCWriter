@@ -41,6 +41,13 @@ export const RULES = {
   checkout: { name: 'checkout', limit: 10, windowSeconds: 600 },
   /** Activation is account-scoped already; this stops a loop hammering auth. */
   activate: { name: 'activate', limit: 30, windowSeconds: 3600 },
+  /**
+   * A structural read costs real money on every call, so this one is a
+   * spending limit rather than a noise limit, and it is keyed to the account
+   * that holds the license instead of an address. Sixty an hour is more scenes
+   * than anyone reads in a sitting and far short of a bill worth noticing.
+   */
+  sceneReview: { name: 'scene-review', limit: 60, windowSeconds: 3600 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /** The first hop in X-Forwarded-For is the client; Vercel sets it. */
@@ -50,9 +57,16 @@ export const clientAddress = (request: Request): string => {
   return first || request.headers.get('x-real-ip')?.trim() || 'unknown';
 };
 
-export const rateLimitKey = (rule: RateLimitRule, request: Request): string => {
+/**
+ * `subject` names who to count against when the address is the wrong unit:
+ * a signed-in account, for a route where the cost belongs to the account and
+ * not to whichever café it was called from. It is hashed like an address —
+ * the table holds no user ids either.
+ */
+export const rateLimitKey = (rule: RateLimitRule, request: Request, subject?: string): string => {
   const salt = process.env['RATE_LIMIT_SALT'] ?? 'vcwriter-rate-limit';
-  const digest = createHmac('sha256', salt).update(clientAddress(request)).digest('hex').slice(0, 32);
+  const who = subject ?? clientAddress(request);
+  const digest = createHmac('sha256', salt).update(who).digest('hex').slice(0, 32);
   return `${rule.name}:${digest}`;
 };
 
@@ -86,10 +100,11 @@ export const rateLimit = async (
   request: Request,
   rule: RateLimitRule,
   consume: Consume = consumeInDatabase,
+  subject?: string,
 ): Promise<Response | null> => {
   let verdict: RateLimitVerdict;
   try {
-    verdict = await consume(rateLimitKey(rule, request), rule);
+    verdict = await consume(rateLimitKey(rule, request, subject), rule);
   } catch (cause) {
     console.warn(`rate limit threw for ${rule.name}; allowing the request`, cause);
     return null;
@@ -98,8 +113,9 @@ export const rateLimit = async (
   if (verdict.allowed) return null;
 
   const retryAfter = Math.max(1, Math.ceil(verdict.retryAfterSeconds));
+  const from = subject ? 'on this account' : 'from this address';
   return NextResponse.json(
-    { error: 'Too many requests from this address. Try again shortly.' },
+    { error: `Too many requests ${from}. Try again shortly.` },
     { status: 429, headers: { 'retry-after': String(retryAfter) } },
   );
 };

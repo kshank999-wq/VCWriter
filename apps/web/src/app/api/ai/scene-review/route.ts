@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminClient, currentUser } from '@/lib/supabase';
+import { RULES, rateLimit } from '@/lib/rate-limit';
 import { isAiConfigured, reviewScene } from '@/lib/ai';
 
 export const runtime = 'nodejs';
@@ -28,7 +29,7 @@ const bodySchema = z.object({
  */
 export async function POST(request: Request): Promise<Response> {
   if (!isAiConfigured()) {
-    return NextResponse.json({ error: 'AI review is not configured on this deployment' }, { status: 503 });
+    return NextResponse.json({ error: NOT_CONFIGURED }, { status: 503 });
   }
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
@@ -36,23 +37,21 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: 'A scene to read is required' }, { status: 400 });
   }
 
-  const userId = await resolveUserId(request);
-  if (!userId) {
+  const caller = await resolveCaller(request);
+  if (!caller) {
     return NextResponse.json({ error: 'Sign in to use the Final Editor' }, { status: 401 });
   }
-
-  const { data: licenses, error } = await adminClient()
-    .from('licenses')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('status', 'active')
-    .limit(1);
-  if (error) {
+  if (caller.unchecked) {
     return NextResponse.json({ error: 'Your license could not be checked' }, { status: 500 });
   }
-  if (!licenses || licenses.length === 0) {
-    return NextResponse.json({ error: 'An active VC Writer license is needed for AI review' }, { status: 403 });
+  if (!caller.entitled) {
+    return NextResponse.json({ error: NO_LICENSE }, { status: 403 });
   }
+
+  // Counted against the account rather than the address: the cost belongs to
+  // whoever is signed in, wherever they are sitting.
+  const limited = await rateLimit(request, RULES.sceneReview, undefined, caller.userId);
+  if (limited) return limited;
 
   try {
     const verdict = await reviewScene(parsed.data);
@@ -63,7 +62,70 @@ export async function POST(request: Request): Promise<Response> {
   }
 }
 
-/** Session cookie for the website, bearer token for the desktop application. */
+/**
+ * Whether a read can be asked for at all, without asking for one.
+ *
+ * The button that spends money should be able to say why it is greyed out —
+ * not configured, not signed in, no license — instead of failing after the
+ * click. Nothing here costs anything or reaches a model.
+ */
+export async function GET(request: Request): Promise<Response> {
+  const configured = isAiConfigured();
+  const caller = await resolveCaller(request);
+  return NextResponse.json({
+    configured,
+    signedIn: caller !== null,
+    entitled: caller?.entitled ?? false,
+    reason: !configured
+      ? NOT_CONFIGURED
+      : !caller
+        ? 'Sign in to use the Final Editor'
+        : !caller.entitled
+          ? NO_LICENSE
+          : null,
+  });
+}
+
+const NOT_CONFIGURED = 'AI review is not configured on this deployment';
+const NO_LICENSE = 'An active VC Writer license is needed for AI review';
+
+interface Caller {
+  userId: string;
+  entitled: boolean;
+  /** The license question could not be put to the database at all. */
+  unchecked?: true;
+}
+
+/**
+ * Who is asking, and whether they may.
+ *
+ * Session cookie for the website and the browser preview, bearer token for the
+ * desktop application. An administrator is entitled without a license row:
+ * the people who build and support VC Writer have no order behind them, and
+ * a feature they cannot try is a feature nobody checks.
+ */
+const resolveCaller = async (request: Request): Promise<Caller | null> => {
+  const userId = await resolveUserId(request);
+  if (!userId) return null;
+
+  const client = adminClient();
+
+  const { data: profile } = await client.from('profiles').select('is_admin').eq('id', userId).maybeSingle();
+  if (profile?.is_admin) return { userId, entitled: true };
+
+  const { data: licenses, error } = await client
+    .from('licenses')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .limit(1);
+  // A database that cannot answer is not permission to spend; it is a no,
+  // and it says which kind of no it is.
+  if (error) return { userId, entitled: false, unchecked: true };
+
+  return { userId, entitled: (licenses?.length ?? 0) > 0 };
+};
+
 const resolveUserId = async (request: Request): Promise<string | null> => {
   const header = request.headers.get('authorization');
   if (header?.toLowerCase().startsWith('bearer ')) {
