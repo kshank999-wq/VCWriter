@@ -12,6 +12,7 @@ import {
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
 import { setupPayoffSchema, setupPointSchema } from './entities/setups.js';
 import { characterCategorySchema, characterSchema } from './entities/character.js';
+import { countWords } from './entities/manuscript.js';
 import { characterCategoriesInOrder } from './characters.js';
 import {
   storyLinkSchema,
@@ -371,19 +372,48 @@ const withBeat = (file: ProjectFile, beatId: BeatId, change: (beat: Beat) => Bea
 };
 
 /**
- * Start a new revision of a beat: the working text is kept under its current
- * name and stays as the starting point of the new one, so a revision begins
- * as a copy and diverges from there.
+ * Start a new draft of a beat (addendum 02 §19).
+ *
+ * The text in hand is kept whole under its own name, and the beat is
+ * **cleared**: a new draft is a new attempt at the scene, not an edit of the
+ * last one. That is the point of drafting a beat rather than revising it —
+ * you write it again, and then you read the two side by side.
+ *
+ * `from: 'copy'` keeps the old text as the starting point instead, for the
+ * pass that is a revision rather than a rewrite.
  */
-export const startRevision = (file: ProjectFile, beatId: BeatId, name: string): ProjectFile =>
+export const startRevision = (
+  file: ProjectFile,
+  beatId: BeatId,
+  name: string,
+  options: { from?: 'blank' | 'copy' } = {},
+): ProjectFile =>
   withBeat(file, beatId, (beat) => ({
     ...beat,
     revisions: [
       ...beat.revisions,
       { id: newId<BeatRevisionId>(), name: beat.revisionName, manuscript: beat.manuscript, savedAt: nowIso() },
     ],
+    manuscript: options.from === 'copy' ? beat.manuscript : { elements: [] },
     revisionName: name.trim() || `Draft ${beat.revisions.length + 2}`,
   }));
+
+/** Every draft of a beat, the working one included, in the order they were made. */
+export const draftsOf = (beat: Beat): Array<{ id: string; name: string; working: boolean; words: number }> => [
+  ...beat.revisions.map((revision) => ({
+    id: revision.id as string,
+    name: revision.name,
+    working: false,
+    words: countWords(revision.manuscript),
+  })),
+  { id: 'working', name: beat.revisionName, working: true, words: countWords(beat.manuscript) },
+];
+
+/** The text of one draft by its id, for reading beside the one being written. */
+export const draftText = (beat: Beat, draftId: string): ManuscriptSegment | null => {
+  if (draftId === 'working') return beat.manuscript;
+  return beat.revisions.find((revision) => (revision.id as string) === draftId)?.manuscript ?? null;
+};
 
 /** Make a kept revision the working one; the working text is kept in its place. */
 export const switchRevision = (file: ProjectFile, beatId: BeatId, revisionId: BeatRevisionId): ProjectFile =>

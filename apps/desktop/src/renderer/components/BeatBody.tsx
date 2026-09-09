@@ -2,8 +2,12 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   autoType,
   CHARACTER_EXTENSIONS,
+  EXTENSIONS,
+  EXTENSION_GROUPS,
   castNamesForBeat,
   cueSuggestions,
+  hasExtension,
+  withExtension,
   cuesInOrder,
   defaultElementType,
   elementTypesFor,
@@ -35,7 +39,13 @@ interface BeatBodyProps {
   beat: Beat;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   /** The writer put the cursor in this beat. */
-  onActivate(): void;
+  onActivate?(): void;
+  /**
+   * Draw it, do not let it be typed in: the draft read beside the one being
+   * written (addendum 02 §19). Two live editors of the same scene is a way
+   * to lose an afternoon's work.
+   */
+  readOnly?: boolean;
   /**
    * Element id -> printed page number, from the paginator: an element that
    * opens a page is drawn under a page rule. Null draws no page breaks.
@@ -95,6 +105,7 @@ export function BeatBody({
   detectShots = false,
   emptyLabel = 'Start writing this beat',
   only = null,
+  readOnly = false,
 }: BeatBodyProps) {
   const format = file.project.format;
   const layout = layoutFor(format);
@@ -148,6 +159,12 @@ export function BeatBody({
       ...suggestions.slice(0, 3).flatMap((name) => CHARACTER_EXTENSIONS.map((extension) => `${name} ${extension}`)),
     ];
   }, [file, beat.id, beat.manuscript]);
+
+  // Tab beside a name asks which voice this is. The menu is open for one
+  // element at a time, and once it has been offered for that cue the next Tab
+  // walks on to the parenthetical rather than asking again.
+  const [extensionsFor, setExtensionsFor] = useState<ManuscriptElementId | null>(null);
+  const offered = useRef<Set<string>>(new Set());
 
   const setElements = (next: ManuscriptElement[]) => {
     onUpdate((current) => updateBeat(current, beat.id, { manuscript: { elements: next } }));
@@ -267,6 +284,8 @@ export function BeatBody({
       return;
     }
 
+    if (readOnly) return;
+
     // Return continues what you are doing.
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
@@ -277,7 +296,18 @@ export function BeatBody({
     // Tab reaches for the next mode rather than moving focus.
     if (event.key === 'Tab') {
       event.preventDefault();
-      applyTyping(onTab(format, element.type, empty, event.shiftKey ? -1 : 1), element, index);
+      const typing = onTab(format, element.type, {
+        empty,
+        extensionOffered: offered.current.has(element.id as string) || hasExtension(element.text),
+        direction: event.shiftKey ? -1 : 1,
+      });
+      if (typing.extensions) {
+        offered.current.add(element.id as string);
+        setExtensionsFor(element.id);
+        return;
+      }
+      setExtensionsFor(null);
+      applyTyping(typing, element, index);
       return;
     }
 
@@ -330,6 +360,7 @@ export function BeatBody({
             className="element-type"
             value={element.type}
             aria-label="Element type"
+            disabled={readOnly}
             onChange={(event) => updateElement(element.id, { type: event.target.value as ManuscriptElementType })}
           >
             {elementTypes.map((type) => (
@@ -338,7 +369,7 @@ export function BeatBody({
               </option>
             ))}
           </select>
-          {element.type === 'character' && layout.dual ? (
+          {element.type === 'character' && layout.dual && !readOnly ? (
             <button
               type="button"
               className={isDual(element) ? 'dual-toggle on' : 'dual-toggle'}
@@ -369,19 +400,39 @@ export function BeatBody({
                 : element.type === 'scene_heading'
                   ? { list: 'vcwriter-slugs' }
                   : {})}
+              readOnly={readOnly}
               onFocus={onActivate}
               onChange={(event) => writeText(element, event.target.value)}
               onPaste={(event) => handlePaste(event, element, index)}
               onKeyDown={(event) => handleKeyDown(event, element, index)}
             />
           </div>
+
+          {/* Which voice is this? Offered beside the name, closed by choosing
+              one or by pressing Escape (addendum 02 §19). */}
+          {extensionsFor === element.id ? (
+            <ExtensionMenu
+              onPick={(mark) => {
+                updateElement(element.id, { text: withExtension(element.text, mark) });
+                setExtensionsFor(null);
+                setFocusId(element.id);
+              }}
+              onClose={() => {
+                setExtensionsFor(null);
+                setFocusId(element.id);
+              }}
+            />
+          ) : null}
         </div>
       </Fragment>
     );
   };
 
   return (
-    <div className="page-column" style={{ width: `${layout.columns}ch` }}>
+    <div
+      className={readOnly ? 'page-column reading' : 'page-column'}
+      style={{ width: `${layout.columns}ch` }}
+    >
       {/* The cue list is the beat's own: it is ordered for this beat. */}
       <datalist id={`cues-${beat.id}`}>
         {cues.map((name) => (
@@ -408,12 +459,12 @@ export function BeatBody({
         );
       })}
 
-      {elements.length === 0 && emptyLabel ? (
+      {elements.length === 0 && emptyLabel && !readOnly ? (
         <button
           type="button"
           className="ghost add-element"
           onClick={() => {
-            onActivate();
+            onActivate?.();
             insertAfter(-1, defaultElementType(format));
           }}
         >
@@ -453,4 +504,58 @@ function Emphasis({ span }: { span: InlineSpan }) {
   if (span.italic) node = <i>{node}</i>;
   if (span.bold) node = <b>{node}</b>;
   return <>{node}</>;
+}
+
+/**
+ * The extensions a cue can carry, grouped the way they are used and each
+ * saying what it means — "(P.A.)" on its own tells nobody anything.
+ */
+function ExtensionMenu({ onPick, onClose }: { onPick(mark: string): void; onClose(): void }) {
+  const panel = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    panel.current?.querySelector('button')?.focus();
+  }, []);
+
+  return (
+    <div
+      ref={panel}
+      className="extension-menu"
+      role="menu"
+      aria-label="Extension"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
+      {EXTENSION_GROUPS.map((group) => {
+        const marks = EXTENSIONS.filter((extension) => extension.group === group.id);
+        if (marks.length === 0) return null;
+        return (
+          <Fragment key={group.id}>
+            <h5>{group.label}</h5>
+            {marks.map((extension) => (
+              <button
+                key={extension.mark}
+                type="button"
+                role="menuitem"
+                className="extension-item"
+                onClick={() => onPick(extension.mark)}
+              >
+                <span className="extension-mark">{extension.mark}</span>
+                <span className="extension-term">{extension.term}</span>
+                <span className="extension-what muted">{extension.what}</span>
+              </button>
+            ))}
+          </Fragment>
+        );
+      })}
+      <button type="button" role="menuitem" className="extension-item ghost" onClick={() => onPick('')}>
+        <span className="extension-mark">—</span>
+        <span className="extension-term">No extension</span>
+      </button>
+    </div>
+  );
 }

@@ -100,16 +100,53 @@ describe('writing keyboard flow', () => {
 
   it('re-types the line on Tab rather than moving focus, as Final Draft does', () => {
     render(<Harness initial={screenplayWithAction()} />);
+    const line = () => screen.getByDisplayValue('Rain hammers the glass.');
 
-    // Action → Character → Parenthetical, the line itself changing style.
-    fireEvent.keyDown(screen.getByDisplayValue('Rain hammers the glass.'), { key: 'Tab' });
+    // A scene starts on action; Tab makes the line a character cue.
+    fireEvent.keyDown(line(), { key: 'Tab' });
     expect(elementTypes()).toEqual(['character']);
-    fireEvent.keyDown(screen.getByDisplayValue('Rain hammers the glass.'), { key: 'Tab' });
+
+    // Beside a name, the next Tab asks which voice it is rather than moving
+    // on — the line is still a cue (addendum 02 §19).
+    fireEvent.keyDown(line(), { key: 'Tab' });
+    expect(screen.getByRole('menu', { name: 'Extension' })).toBeTruthy();
+    expect(elementTypes()).toEqual(['character']);
+
+    // Having been asked once, the Tab after that walks on.
+    fireEvent.keyDown(line(), { key: 'Tab' });
     expect(elementTypes()).toEqual(['parenthetical']);
 
     // Shift+Tab walks back.
-    fireEvent.keyDown(screen.getByDisplayValue('Rain hammers the glass.'), { key: 'Tab', shiftKey: true });
+    fireEvent.keyDown(line(), { key: 'Tab', shiftKey: true });
     expect(elementTypes()).toEqual(['character']);
+  });
+
+  it('marks the cue with the extension chosen, and swaps rather than stacks', () => {
+    render(<Harness initial={screenplayWithAction()} />);
+    fireEvent.keyDown(screen.getByDisplayValue('Rain hammers the glass.'), { key: 'Tab' });
+    fireEvent.keyDown(screen.getByDisplayValue('Rain hammers the glass.'), { key: 'Tab' });
+
+    fireEvent.click(screen.getByText('Voiceover'));
+    expect(screen.getByDisplayValue('Rain hammers the glass. (V.O.)')).toBeTruthy();
+    // The menu closes once it has been answered.
+    expect(screen.queryByRole('menu', { name: 'Extension' })).toBeNull();
+  });
+
+  it('offers a parenthetical from inside a speech, which is what Tab there is for', () => {
+    render(<Harness initial={screenplayWithAction()} />);
+    // Action → cue → (asked) → parenthetical → Return into the speech.
+    const line = () => screen.getByDisplayValue('Rain hammers the glass.');
+    fireEvent.keyDown(line(), { key: 'Tab' });
+    fireEvent.keyDown(line(), { key: 'Tab' });
+    fireEvent.keyDown(line(), { key: 'Tab' });
+    expect(elementTypes()).toEqual(['parenthetical']);
+    fireEvent.keyDown(line(), { key: 'Enter' });
+    expect(elementTypes()).toEqual(['parenthetical', 'dialogue']);
+
+    // And Tab in the speech reaches for a parenthetical, not back to a cue.
+    const speech = screen.getAllByPlaceholderText('dialogue')[0] as HTMLTextAreaElement;
+    fireEvent.keyDown(speech, { key: 'Tab' });
+    expect(elementTypes()).toEqual(['parenthetical', 'parenthetical']);
   });
 
   it('sets the paragraph style from the number keys', () => {

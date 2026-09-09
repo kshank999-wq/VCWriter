@@ -110,7 +110,9 @@ describe('beat revisions', () => {
     const beatId = file.beats[0]!.id;
     file = updateBeat(file, beatId, { manuscript: { elements: [el('action', 'First pass.')] } });
 
-    file = startRevision(file, beatId, 'Tighter');
+    // A new draft clears the beat; this pass is a revision of the last one,
+    // which is what `from: 'copy'` is for (addendum 02 §19).
+    file = startRevision(file, beatId, 'Tighter', { from: 'copy' });
     let beat = file.beats[0]!;
     expect(beat.revisionName).toBe('Tighter');
     expect(beat.manuscript.elements[0]?.text).toBe('First pass.');

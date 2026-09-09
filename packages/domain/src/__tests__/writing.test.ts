@@ -54,12 +54,20 @@ describe('element flow while writing', () => {
     // Tab re-types the line you are on, following Final Draft's table.
     expect(onTab('screenplay', 'scene_heading')).toEqual({ type: 'action', newLine: false });
     expect(onTab('screenplay', 'action')).toEqual({ type: 'character', newLine: false });
-    expect(onTab('screenplay', 'character')).toEqual({ type: 'parenthetical', newLine: false });
+    // Beside a name, Tab asks which voice this is rather than moving on; the
+    // Tab after that walks to the parenthetical (addendum 02 §19).
+    expect(onTab('screenplay', 'character')).toEqual({ type: 'character', newLine: false, extensions: true });
+    expect(onTab('screenplay', 'character', { extensionOffered: true })).toEqual({
+      type: 'parenthetical',
+      newLine: false,
+    });
+    expect(onTab('screenplay', 'character', { empty: true })).toEqual({ type: 'parenthetical', newLine: false });
     expect(onTab('screenplay', 'parenthetical')).toEqual({ type: 'dialogue', newLine: false });
-    expect(onTab('screenplay', 'dialogue')).toEqual({ type: 'character', newLine: false });
+    // A parenthetical is what Tab in dialogue is always reaching for.
+    expect(onTab('screenplay', 'dialogue')).toEqual({ type: 'parenthetical', newLine: false });
     expect(onTab('screenplay', 'transition')).toEqual({ type: 'scene_heading', newLine: false });
     // Shift+Tab walks back through the styles.
-    expect(onTab('screenplay', 'character', false, -1)).toEqual({ type: 'action', newLine: false });
+    expect(onTab('screenplay', 'character', { direction: -1 })).toEqual({ type: 'action', newLine: false });
 
     // Return starts the next line in the style that continues the work.
     expect(onEnter('screenplay', 'character', false)).toEqual({ type: 'dialogue', newLine: true });

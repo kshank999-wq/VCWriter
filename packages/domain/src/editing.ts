@@ -98,6 +98,12 @@ export interface Typing {
   type: ManuscriptElementType;
   /** True: start a new element. False: re-type the current element in place. */
   newLine: boolean;
+  /**
+   * Offer the list of extensions for the cue in hand instead of changing the
+   * line: Tab beside a character's name asks *which* voice this is, and only
+   * the next Tab moves on (addendum 02 §19).
+   */
+  extensions?: true;
 }
 
 const line = (type: ManuscriptElementType): Typing => ({ type, newLine: true });
@@ -118,24 +124,35 @@ const here = (type: ManuscriptElementType): Typing => ({ type, newLine: false })
  * Prose has no such convention: Return continues the paragraph, and Tab
  * walks the small ring of prose styles in place.
  */
-export const onTab = (
-  format: ProjectFormat,
-  current: ManuscriptElementType,
-  _isEmpty = false,
-  direction: 1 | -1 = 1,
-): Typing => {
+export interface TabContext {
+  /** Nothing has been typed on the line yet. */
+  empty?: boolean;
+  /** The extensions have already been offered for this cue, or one is on it. */
+  extensionOffered?: boolean;
+  direction?: 1 | -1;
+}
+
+export const onTab = (format: ProjectFormat, current: ManuscriptElementType, context: TabContext = {}): Typing => {
+  const direction = context.direction ?? 1;
   if (isProseFormat(format) || direction === -1) return here(cycleType(format, current, direction));
   switch (current) {
     case 'scene_heading':
       return here('action');
+    // The line a scene starts on, and the one Tab leaves.
     case 'action':
       return here('character');
     case 'character':
-      return here('parenthetical');
+      // Beside a name: which voice is this? Only the Tab after that moves on.
+      // An empty cue has no name to qualify, so it walks straight past.
+      return context.empty || context.extensionOffered
+        ? here('parenthetical')
+        : { type: 'character', newLine: false, extensions: true };
     case 'parenthetical':
       return here('dialogue');
     case 'dialogue':
-      return here('character');
+      // A parenthetical qualifies the speech you are in the middle of, which
+      // is the only thing Tab in dialogue is ever reaching for.
+      return here('parenthetical');
     case 'transition':
       return here('scene_heading');
     default:
@@ -194,8 +211,95 @@ export const SHOT_WORDS = [
   'REVERSE ANGLE',
 ] as const;
 
-/** Extensions offered after a character cue. */
-export const CHARACTER_EXTENSIONS = ["(CONT'D)", '(O.S.)', '(O.C.)', '(V.O.)', '(ON VIDEO)', '(ON PHONE)', '(PRELAP)'] as const;
+/**
+ * The extensions a character cue can carry (addendum 02 §19).
+ *
+ * Writers invent their own for a scene's particular audio, but this is the
+ * set the industry recognises, grouped the way it is actually used: the three
+ * everyone knows, the ones that say a voice came out of a device, the ones
+ * that place a body relative to the frame, and the one that asks for
+ * subtitles. Each carries what it means, because "(P.A.)" on a menu tells
+ * nobody anything.
+ */
+export interface CharacterExtension {
+  mark: string;
+  term: string;
+  what: string;
+  group: 'standard' | 'audio' | 'frame' | 'language';
+}
+
+export const EXTENSIONS: readonly CharacterExtension[] = [
+  {
+    mark: '(V.O.)',
+    term: 'Voiceover',
+    what: 'Not in the scene at all: a narrator, an inner monologue, a voice we never cut to.',
+    group: 'standard',
+  },
+  {
+    mark: '(O.S.)',
+    term: 'Off-screen',
+    what: 'In the room, out of shot — shouting from the kitchen, hidden in a closet.',
+    group: 'standard',
+  },
+  { mark: '(O.C.)', term: 'Off-camera', what: 'Off-screen, as multi-camera sitcoms write it.', group: 'standard' },
+  {
+    mark: "(CONT'D)",
+    term: 'Continued',
+    what: 'The same person carrying on after action interrupted them. Usually written for you.',
+    group: 'standard',
+  },
+  {
+    mark: '(FILTERED)',
+    term: 'Filtered',
+    what: 'Through a device: a radio, a phone, a helmet, a recording. Often alongside (V.O.).',
+    group: 'audio',
+  },
+  {
+    mark: '(P.A.)',
+    term: 'Public address',
+    what: 'Over a loudspeaker, an intercom or a megaphone, heard by the room.',
+    group: 'audio',
+  },
+  { mark: '(TAPE)', term: 'Tape recording', what: 'The characters are listening to a recording.', group: 'audio' },
+  { mark: '(O.F.)', term: 'Off-frame', what: 'In the room, just outside the frame. A variant of (O.S.).', group: 'frame' },
+  {
+    mark: '(INTO PHONE)',
+    term: 'Into phone',
+    what: 'On screen, speaking into the receiver rather than to the room.',
+    group: 'frame',
+  },
+  {
+    mark: '(LOUDSPEAKER)',
+    term: 'Loudspeaker',
+    what: 'An alternative to (P.A.), in historical and military scripts.',
+    group: 'frame',
+  },
+  {
+    mark: '(SUBTITLED)',
+    term: 'Subtitled',
+    what: 'A foreign language or sign language: text must be laid over the picture.',
+    group: 'language',
+  },
+];
+
+export const EXTENSION_GROUPS: ReadonlyArray<{ id: CharacterExtension['group']; label: string }> = [
+  { id: 'standard', label: 'The standard three' },
+  { id: 'audio', label: 'Through a device' },
+  { id: 'frame', label: 'Where they are' },
+  { id: 'language', label: 'Language' },
+];
+
+/** Just the marks, for anything that only needs the text. */
+export const CHARACTER_EXTENSIONS = EXTENSIONS.map((extension) => extension.mark);
+
+/** Whether a cue already carries an extension, which is what Tab looks at. */
+export const hasExtension = (cue: string): boolean => /\([^)]*\)\s*$/.test(cue.trim());
+
+/** The cue with an extension on it, replacing one already there. */
+export const withExtension = (cue: string, mark: string): string => {
+  const name = cue.trim().replace(/\s*\([^)]*\)\s*$/, '').trim();
+  return mark.length === 0 ? name : `${name} ${mark}`;
+};
 
 export interface AutoTypeOptions {
   /** Shot detection is off by default: "INSERT" is a word writers use in action. */

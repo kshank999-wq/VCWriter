@@ -2156,17 +2156,22 @@ input[type='color'].swatch {
   background: color-mix(in srgb, var(--gold) 40%, transparent);
 }
 
+/* No box around the writing (addendum 02 §19). A rectangle that follows the
+   cursor down the page is the thing you end up looking at instead of the
+   sentence. The caret says where you are; a hairline under the line being
+   written says which line that is, and nothing else moves. */
 .element textarea:hover {
-  border-color: var(--border);
+  border-color: transparent;
 }
 
 .element textarea:focus {
-  border-color: var(--gold-deep);
+  border-color: transparent;
   outline: none;
 }
 
 .element:focus-within .ink {
-  background: var(--panel-2);
+  background: transparent;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--gold) 22%, transparent);
 }
 
 /* The emphasis marks themselves: present, and out of the way. */
@@ -2571,6 +2576,11 @@ button.page.selected {
 /* ------------------------------------------------------------------ writing */
 
 /* The writing screen: one beat, the full window, the page on a desk. */
+/* Comparing, the screen expands: two pages need the room (§19). */
+dialog.writer-dialog:has(.writer-body.comparing) {
+  width: calc(100vw - 24px);
+}
+
 dialog.writer-dialog {
   width: min(1180px, calc(100vw - 40px));
   height: min(880px, calc(100vh - 40px));
@@ -2596,7 +2606,7 @@ dialog.writer-dialog::backdrop {
 .writer-bar {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: minmax(90px, 1fr) minmax(0, 2fr) minmax(90px, 1fr);
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr) minmax(0, auto);
   align-items: center;
   gap: 10px;
   padding: 7px 8px 7px 14px;
@@ -2611,8 +2621,10 @@ dialog.writer-dialog::backdrop {
   letter-spacing: 0.12em;
 }
 
-/* The beat's name, centred: the only thing in the bar that is the beat. */
+/* The beat's name, centred: the only thing in the bar that is the beat. It
+   gives way rather than overlapping when the tools beside it grow. */
 .writer-name {
+  min-width: 0;
   text-align: center;
   background: transparent;
   border: 1px solid transparent;
@@ -2632,7 +2644,9 @@ dialog.writer-dialog::backdrop {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
 }
 
 .check {
@@ -4202,4 +4216,233 @@ dialog.import-dialog {
   gap: 4px;
   font-size: 11.5px;
   color: var(--danger, #d38b8b);
+}
+
+/* ------------------------------------------------- two drafts side by side
+   Addendum 02 §19. A new draft clears the beat, so the way to judge one
+   against another is to read them together: the one being written on the
+   left, one to read on the right. The right-hand page is read-only on
+   purpose — two live editors of the same scene is a way to lose an
+   afternoon's work. */
+
+.writer-body.comparing {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.writer-column-name {
+  margin: 0 0 8px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.writer-sheet.reading {
+  opacity: 0.86;
+}
+
+.page-column.reading textarea {
+  cursor: default;
+}
+
+/* --------------------------------------------------- the extension menu
+   Tab beside a name asks which voice this is. Each says what it means:
+   "(P.A.)" on its own tells nobody anything. */
+
+.extension-menu {
+  position: absolute;
+  z-index: 60;
+  left: var(--indent, 0);
+  margin-top: 2px;
+  width: min(420px, 90vw);
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--gold-deep, var(--border));
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.extension-menu h5 {
+  margin: 6px 4px 3px;
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+.extension-item {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  grid-template-areas: 'mark term' 'mark what';
+  gap: 0 8px;
+  width: 100%;
+  text-align: left;
+  padding: 5px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  font-family: inherit;
+}
+
+.extension-item:hover,
+.extension-item:focus-visible {
+  border-color: var(--gold-deep, var(--border));
+  background: var(--panel-2, rgba(255, 255, 255, 0.03));
+  outline: none;
+}
+
+.extension-mark {
+  grid-area: mark;
+  align-self: center;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.extension-term {
+  grid-area: term;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.extension-what {
+  grid-area: what;
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+/* The element is the menu's anchor while it is open. */
+.element {
+  position: relative;
+}
+
+/* -------------------------------------------- the plot's scenes, in a rail
+   Addendum 02 §19. The same rail the episodes have, listing scenes: choose
+   one and what is in it appears under the arc, which is what the scene is
+   being read against. */
+
+dialog.lane-dialog:has(.with-scenes) {
+  width: min(920px, calc(100vw - 40px));
+}
+
+.lane-dialog-body.with-scenes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 14px;
+  align-items: start;
+}
+
+.lane-dialog-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.scene-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: min(58vh, 520px);
+  overflow-y: auto;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+
+.scene-rail h4,
+.scene-facts h4 {
+  margin: 0;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+.scene-rail-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scene-rail-row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: transparent;
+}
+
+.scene-rail-row.current {
+  border-color: var(--gold);
+  background: rgba(201, 164, 92, 0.08);
+}
+
+.scene-rail-number,
+.scene-rail-figures {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.scene-rail-title {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.scene-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-2, rgba(255, 255, 255, 0.02));
+}
+
+.scene-facts-summary {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.scene-facts dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 108px 1fr;
+  gap: 4px 10px;
+  font-size: 11.5px;
+}
+
+.scene-facts dt {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  padding-top: 2px;
+}
+
+.scene-facts dd {
+  margin: 0;
+}
+
+.scene-facts dd ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }

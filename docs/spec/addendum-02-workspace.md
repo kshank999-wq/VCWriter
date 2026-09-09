@@ -1038,7 +1038,80 @@ pages to find out whether it worked.
 The imported project arrives **unsaved**: it is a document that has just
 turned up, and where it lives is the writer's to say.
 
-## 19. Keyboard
+## 19. Drafting a beat, and writing in one
+
+### A draft is the scene written again
+
+Starting a new draft **clears the page**. The draft in hand is kept whole
+under its own name, and the beat is a blank sheet — because that is what
+drafting a beat is for. A pass that edits what is already there is a
+revision, and `Start from a copy` is the tick that does it; the default is
+the blank page, because a draft you can only edit is not a second attempt at
+the scene, it is the same one with the corners knocked off.
+
+Any draft can be made the working one again at any time. The one being left
+is kept in its place, so switching back and forth loses nothing either way.
+
+### Two drafts side by side
+
+**Compare** opens the beat screen wider and sets a second page beside the
+first: the draft being written on the left, one to read on the right, chosen
+from a list of the rest. The page size comes down so both fit, and can be
+put back.
+
+The right-hand page is **read-only**, deliberately. Two live editors of the
+same scene is a way to lose an afternoon's work, and what the second column
+is for is judging one against the other, not editing both.
+
+### No box around the writing
+
+There is no rectangle around the line being typed. A box that follows the
+cursor down the page is the thing you end up looking at instead of the
+sentence. The caret says where you are; a hairline under the line being
+written says which line that is; nothing else moves.
+
+### The two keys
+
+A scene always starts on **action**. From there:
+
+| On | Tab | Return |
+| --- | --- | --- |
+| Action | → a character cue | a new action line |
+| A cue, beside a name | **which voice is this?** — the extensions | → dialogue |
+| A cue, having been asked | → a parenthetical | → dialogue |
+| Dialogue | → a parenthetical | a new action line |
+| A parenthetical | → dialogue | → dialogue |
+
+Typing into a cue offers the cast as you go, this episode's people first and
+main characters before minor ones (§16, §17).
+
+Tab beside a name is the one that is new: rather than moving on, it asks
+**which voice this is**, and offers the extensions the industry recognises —
+each with its full term and what it means, because `(P.A.)` on a menu tells
+nobody anything. Choosing one puts it on the cue and swaps whatever was
+there; choosing "no extension" takes it off. Only the Tab *after* that walks
+on to the parenthetical, so the question is asked once and never gets in the
+way.
+
+| | | |
+| --- | --- | --- |
+| **The standard three** | `(V.O.)` `(O.S.)` `(O.C.)` `(CONT'D)` | Voiceover, off-screen, off-camera, continued |
+| **Through a device** | `(FILTERED)` `(P.A.)` `(TAPE)` | A radio, a loudspeaker, a recording |
+| **Where they are** | `(O.F.)` `(INTO PHONE)` `(LOUDSPEAKER)` | Off-frame, into the receiver, over the tannoy |
+| **Language** | `(SUBTITLED)` | Text must be laid over the picture |
+
+Shift+Tab still walks back the way it came.
+
+### The plot pop-up lists its scenes
+
+The same rail the episodes have (§17), listing **scenes** instead: every
+scene on this plot in story order, with how many beats and words are in it.
+Choosing one puts what is in that scene in a box **under the arc** — who
+speaks in it, what it sets up or pays off, what it is linked to — because
+the arc is what the scene is being read against, and the two belong on the
+same screen.
+
+## 20. Keyboard
 
 In addition to §5's reordering keys and §6's writing keys:
 
@@ -1052,7 +1125,7 @@ In addition to §5's reordering keys and §6's writing keys:
 Every control on the timeline is a focusable element with an accessible
 name; the reorder keys work from the same elements that drag (§16).
 
-## 20. Preferences
+## 21. Preferences
 
 A gear on the title bar opens Preferences. These are kept on the machine,
 not in the project file — a collaborator opening the file must not inherit
@@ -1068,7 +1141,7 @@ anyone's colours — alongside the layout preferences of §3.
   and a dark page is a strain over a long day. Off, the Script follows the
   scheme.
 
-## 21. Later
+## 22. Later
 
 Named so that nobody mistakes their absence for an oversight:
 
@@ -1080,7 +1153,7 @@ Named so that nobody mistakes their absence for an oversight:
   character; a lane per character among the plot lanes is a later addendum.
 - Timing in minutes. Pages are the industry's unit and the ruler uses them.
 
-## 22. Acceptance
+## 23. Acceptance
 
 - The Script shows every beat of the fixture project in print order, and
   typing in the third beat changes the third beat and nothing else.
@@ -1163,5 +1236,15 @@ Named so that nobody mistakes their absence for an oversight:
 - Scene numbers appear in both margins and change not one character of the
   paginated text; the summary and the beat label print under the slugline,
   in that order, and only when asked for.
+- A new draft clears the beat and keeps the last one whole under its name;
+  switching back and forth loses neither. `Start from a copy` keeps the text.
+- Compare sets two drafts side by side, the screen widens to hold them, and
+  the one being read cannot be typed in.
+- Nothing draws a box around the line being written.
+- Tab beside a character's name offers the extensions with their full terms;
+  choosing one marks the cue and swaps any mark already there; the Tab after
+  that goes to a parenthetical, and Tab in dialogue goes to one too.
+- The plot pop-up lists its scenes and opens one to its cast, its promises
+  and its links, under the arc.
 - Renderer and domain tests cover the above; a screenshot of the fixture at
   1440×900 and at 1100×700 is reviewed before the change ships.

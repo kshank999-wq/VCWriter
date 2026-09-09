@@ -130,27 +130,37 @@ describe('the writing screen', () => {
     fireEvent.change(screen.getByDisplayValue('Morning.'), { target: { value: 'Morning, love.' } });
     expect(latest.beats[0]!.manuscript.elements[2]!.text).toBe('Morning, love.');
 
-    // A new version starts as a copy: the text carries over, the old version
-    // is kept under its name, and what is typed now belongs to the new one.
-    fireEvent.change(screen.getByLabelText('Version'), { target: { value: '__new__' } });
-    fireEvent.change(screen.getByLabelText('New version name'), { target: { value: 'Tighter' } });
+    // A new draft clears the page: the last one is kept whole under its name,
+    // and the beat is a blank sheet to write the scene again (§19).
+    fireEvent.change(screen.getByLabelText('Draft'), { target: { value: '__new__' } });
+    fireEvent.change(screen.getByLabelText('New draft name'), { target: { value: 'Tighter' } });
     fireEvent.click(screen.getByText('Start'));
     expect(latest.beats[0]!.revisionName).toBe('Tighter');
     expect(latest.beats[0]!.revisions.map((revision) => revision.name)).toEqual(['Draft 1']);
-    expect(screen.getByDisplayValue('Morning, love.')).toBeDefined();
-    fireEvent.change(screen.getByDisplayValue('Morning, love.'), { target: { value: 'Morning.' } });
+    expect(latest.beats[0]!.manuscript.elements).toEqual([]);
+    expect(screen.queryByDisplayValue('Morning, love.')).toBeNull();
 
-    const versions = Array.from((screen.getByLabelText('Version') as HTMLSelectElement).options).map((option) => option.text);
-    expect(versions).toEqual(['Tighter', 'Draft 1', 'New version…']);
+    const drafts = Array.from((screen.getByLabelText('Draft') as HTMLSelectElement).options).map((option) => option.text);
+    expect(drafts).toEqual(['Tighter', 'Draft 1', 'New draft…']);
 
-    // Switching back brings that version's text into the script, and the
-    // version left behind keeps what was written in it.
-    fireEvent.change(screen.getByLabelText('Version'), { target: { value: latest.beats[0]!.revisions[0]!.id } });
+    // Switching back brings that draft's text into the script, and the one
+    // left behind keeps what was written in it.
+    fireEvent.change(screen.getByLabelText('Draft'), { target: { value: latest.beats[0]!.revisions[0]!.id } });
     expect(latest.beats[0]!.revisionName).toBe('Draft 1');
     expect(screen.getByDisplayValue('Morning, love.')).toBeDefined();
-    expect(latest.beats[0]!.revisions.map((revision) => [revision.name, revision.manuscript.elements[2]?.text])).toEqual([
-      ['Tighter', 'Morning.'],
+    expect(latest.beats[0]!.revisions.map((revision) => [revision.name, revision.manuscript.elements.length])).toEqual([
+      ['Tighter', 0],
     ]);
+
+    // Two drafts side by side: the one being written, and one to read.
+    fireEvent.click(screen.getByLabelText('Compare'));
+    expect(container.querySelectorAll('.writer-sheet')).toHaveLength(2);
+    expect(screen.getByLabelText('Draft to compare')).toBeTruthy();
+    // The one being read cannot be typed in.
+    const reading = container.querySelector('.writer-sheet.reading textarea') as HTMLTextAreaElement | null;
+    expect(reading === null || reading.readOnly).toBe(true);
+    fireEvent.click(screen.getByLabelText('Compare'));
+    expect(container.querySelectorAll('.writer-sheet')).toHaveLength(1);
 
     // The checkbox takes the beat out of the script; the text stays.
     fireEvent.click(screen.getByLabelText('In script'));
