@@ -9,6 +9,7 @@ import {
   characterCategoriesInOrder,
   createProjectFile,
   episodes,
+  updateBeat,
   updateCharacter,
   type Episode,
   type ProjectFile,
@@ -16,6 +17,7 @@ import {
 import { EpisodeRail } from '../components/EpisodeRail';
 import { NewEpisodeDialog } from '../components/NewEpisodeDialog';
 import { CastPanel } from '../components/CastPanel';
+import { PagePreview } from '../components/PagePreview';
 import { menusFor } from '../menus';
 
 /**
@@ -236,5 +238,63 @@ describe('the cast under its headings', () => {
     fireEvent.change(screen.getByLabelText('New heading'), { target: { value: 'The precinct' } });
     fireEvent.click(screen.getByRole('button', { name: '+ Heading' }));
     expect(seen.characterCategories.map((entry) => entry.name)).toContain('The precinct');
+  });
+});
+
+/**
+ * The Preview shows the pages that will print, and an episode's own front
+ * page is one of them (addendum 02 §17).
+ */
+describe('an episode’s front page in the preview', () => {
+  const twoEpisodes = (): ProjectFile => {
+    let file = createProjectFile({ title: 'The Lighthouse', format: 'series', author: 'K. Shank' });
+    for (const title of ['Pilot', 'The Wreck']) {
+      const made = addEpisode(file, { title });
+      file = updateBeat(made.file, made.episode.beats[0]!.id, {
+        manuscript: {
+          elements: [
+            {
+              id: `${made.episode.marker.id}-a` as never,
+              type: 'action',
+              text: 'The lamp turns.',
+              characterId: null,
+              attributes: {},
+            },
+          ],
+        },
+      });
+    }
+    return file;
+  };
+
+  const preview = (file: ProjectFile, includeTitlePage = true) =>
+    render(
+      <PagePreview
+        file={file}
+        unitId={null}
+        includeBeatTitles={false}
+        onToggleBeatTitles={() => undefined}
+        includeChapterPages
+        onToggleChapterPages={() => undefined}
+        includeTitlePage={includeTitlePage}
+        onExportPdf={() => undefined}
+        onPrint={() => undefined}
+        busy={false}
+        message={null}
+      />,
+    );
+
+  it('draws one at the head of each episode, with the series’ credit on it', () => {
+    preview(twoEpisodes());
+    expect(screen.getByLabelText('Title page: Episode 1')).toBeDefined();
+    expect(screen.getByLabelText('Title page: Episode 2')).toBeDefined();
+    // The title and the credit come from the series where the episode is silent.
+    expect(screen.getAllByText('The Lighthouse')).toHaveLength(2);
+    expect(screen.getAllByText('K. Shank')).toHaveLength(2);
+  });
+
+  it('draws none of them when the title page is switched off', () => {
+    preview(twoEpisodes(), false);
+    expect(screen.queryByLabelText('Title page: Episode 1')).toBeNull();
   });
 });

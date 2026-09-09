@@ -18,6 +18,7 @@ import {
   episodes,
   fromRows,
   moveCharacterCategory,
+  paginateProject,
   removeCharacterCategory,
   setEpisodeTitlePage,
   setTitlePage,
@@ -265,5 +266,81 @@ describe('an episode’s own title page', () => {
     const file = createProjectFile({ title: 'The Lighthouse', format: 'screenplay' });
     const made = addMarker(file, { unitId: file.units[0]!.id, kind: 'act', title: 'One' });
     expect(made.marker.titlePage).toBeNull();
+  });
+});
+
+/**
+ * An episode is a script that goes out on its own, so its front page prints
+ * at the head of its own run rather than once at the front of the stack
+ * (addendum 02 §17).
+ */
+describe('printing an episode with its own front page', () => {
+  /** A series of `count` episodes, each with a scene of prose in it. */
+  const seriesOf = (count: number): ProjectFile => {
+    let file = series();
+    for (let n = 1; n <= count; n += 1) {
+      const made = addEpisode(file, { title: `Episode ${n}` });
+      file = updateBeat(made.file, made.episode.beats[0]!.id, {
+        manuscript: {
+          elements: [
+            {
+              id: `${made.episode.marker.id}-a` as never,
+              type: 'action',
+              text: 'The lamp turns.',
+              characterId: null,
+              attributes: {},
+            },
+          ],
+        },
+      });
+    }
+    return file;
+  };
+
+  it('opens each episode with its own page, in story order', () => {
+    const file = seriesOf(3);
+    const fronts = paginateProject(file).filter((page) => page.titlePage);
+    expect(fronts).toHaveLength(3);
+    expect(fronts.map((page) => page.titlePage?.episode)).toEqual(['Episode 1', 'Episode 2', 'Episode 3']);
+    // The series' title and credit are on each of them, filled in from above.
+    expect(fronts.every((page) => page.titlePage?.title === 'The Lighthouse')).toBe(true);
+  });
+
+  it('gives a front page no number, and takes none from the page after it', () => {
+    const file = seriesOf(2);
+    const pages = paginateProject(file);
+    expect(pages.filter((page) => page.titlePage).every((page) => page.number === 0)).toBe(true);
+
+    // The manuscript's own pages are numbered straight through, 1, 2, 3…, as
+    // though the front pages were not between them.
+    const manuscript = pages.filter((page) => !page.titlePage).map((page) => page.number);
+    expect(manuscript).toEqual(manuscript.map((_, index) => index + 1));
+  });
+
+  it('breaks the run, so an episode never starts halfway down a page', () => {
+    const file = seriesOf(2);
+    const pages = paginateProject(file);
+    const second = pages.findIndex((page) => page.titlePage?.episode === 'Episode 2');
+    // The page after episode two's front page is the first page of its script.
+    expect(pages[second + 1]?.lines.some((line) => line.text.length > 0)).toBe(true);
+  });
+
+  it('prints none of them when the writer asks for no title page', () => {
+    const file = seriesOf(2);
+    expect(paginateProject(file, { includeTitlePage: false }).some((page) => page.titlePage)).toBe(false);
+  });
+
+  it('leaves an episode given back to the series without a page of its own', () => {
+    let file = seriesOf(2);
+    const [first] = episodes(file);
+    file = setEpisodeTitlePage(file, first!.marker.id, null);
+    const fronts = paginateProject(file).filter((page) => page.titlePage);
+    expect(fronts.map((page) => page.titlePage?.episode)).toEqual(['Episode 2']);
+  });
+
+  it('gives a screenplay no front pages at all: it has no episodes', () => {
+    let file = createProjectFile({ title: 'The Lighthouse', format: 'screenplay' });
+    file = addMarker(file, { unitId: file.units[0]!.id, kind: 'act', title: 'One' }).file;
+    expect(paginateProject(file).some((page) => page.titlePage)).toBe(false);
   });
 });

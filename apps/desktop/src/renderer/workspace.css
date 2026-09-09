@@ -4985,10 +4985,15 @@ dialog.lane-dialog.title-page-dialog {
 }
 
 .title-page-sheet h1 {
-  /* Four times the manuscript's size, and bold, as on the page. */
+  /* Four times the manuscript's size, and bold, as on the page. The app's
+     own display face and its tracking are for headings; this is a page, and
+     it is set in the same Courier the manuscript is. */
   margin: 0;
+  font-family: inherit;
+  letter-spacing: normal;
   font-size: 24px;
   font-weight: bold;
+  text-transform: uppercase;
   line-height: 1.1;
 }
 
@@ -5023,6 +5028,46 @@ dialog.lane-dialog.title-page-dialog {
 .title-page-sheet .sheet-foot-row .right { text-align: right; }
 .title-page-sheet .sheet-note { margin-top: 10px; }
 .title-page-sheet .sheet-line { display: block; }
+
+/* The same sheet at the size of a real page: the Preview draws an episode's
+   front page as a page of the document (§17), so the geometry here is the
+   print stylesheet's, in inches, rather than the dialog's thumbnail. */
+.paper.title-leaf {
+  display: block;
+  white-space: normal;
+}
+
+.paper.title-leaf .title-page-sheet {
+  aspect-ratio: auto;
+  min-height: 9in;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12pt;
+  line-height: 1;
+}
+
+.paper.title-leaf .title-page-sheet .sheet-block {
+  /* The page is 11in with an inch of margin: the top half is 4.5in of the 9. */
+  height: 4.5in;
+}
+
+.paper.title-leaf .title-page-sheet h1 {
+  /* Four times the manuscript's 12pt, and bold, as it prints. */
+  font-size: 48pt;
+}
+
+.paper.title-leaf .title-page-sheet .sheet-art {
+  max-width: 5in;
+  max-height: 3in;
+}
+
+/* The credit begins at the halfway mark, where the top half ends; what it
+   was written from sits half an inch under it, as the printed page has it. */
+.paper.title-leaf .title-page-sheet .sheet-episode { margin-top: 0.25in; }
+.paper.title-leaf .title-page-sheet .sheet-credit { margin-top: 0; }
+.paper.title-leaf .title-page-sheet .sheet-source { margin-top: 0.5in; }
+.paper.title-leaf .title-page-sheet .sheet-note { margin-top: 0.35in; }
 
 .check .ghost.small,
 .title-page-fields .ghost.small {

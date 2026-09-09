@@ -860,6 +860,7 @@ export default function App() {
               onToggleBeatTitles={(next) => setPrintSetup({ ...printSetup, includeBeatTitles: next })}
               includeChapterPages={printSetup.includeChapterPages}
               onToggleChapterPages={(next) => setPrintSetup({ ...printSetup, includeChapterPages: next })}
+              includeTitlePage={setup.includeTitlePage}
               onPageSetup={() => setPageSetupOpen(true)}
               onExportPdf={() => void exportPdf()}
               onPrint={() => void print()}

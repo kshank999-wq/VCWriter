@@ -3,7 +3,8 @@ import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
 import { orderKeyForIndex } from './ordering.js';
 import { LANE_COLOURS, laneSchema, storyMarkerSchema, structuralUnitSchema, beatSchema } from './entities/structure.js';
-import { titlePageSchema } from './entities/title-page.js';
+import { titlePageOf, titlePageSchema } from './entities/title-page.js';
+import type { TitlePage } from './entities/title-page.js';
 import { countWords } from './entities/manuscript.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { markerNumber, markerNoun, markerNumbering as numberingOf } from './markers.js';
@@ -308,3 +309,36 @@ export const setEpisodeCast = (
 /** The scenes of an episode, so a view can show one episode at a time. */
 export const beatsOfEpisode = (file: ProjectFile, episode: Episode): Beat[] =>
   episode.units.flatMap((unit) => beatsForUnit(file, unit.id));
+
+/**
+ * The front page each episode opens with (addendum 02 §17).
+ *
+ * An episode is a script that goes out on its own, so it prints with its own
+ * title page at the head of its run — not with the series' page once at the
+ * front of the stack. Each is the episode's own answers over the series',
+ * field by field, so an episode that names only its number and its date still
+ * carries the series' title, credit and contact.
+ *
+ * A marker with no page of its own is not given one: an act has no front page
+ * (§11), and neither has an episode the writer has handed back to the series.
+ */
+export interface EpisodeFrontPage {
+  episode: Episode;
+  /** The page as it will print, the series' answers filled in. */
+  page: TitlePage;
+}
+
+export const episodeTitlePages = (
+  file: ProjectFile,
+  options: { includeTitlePage?: boolean } = {},
+): EpisodeFrontPage[] => {
+  // One switch covers every front page in the document: a writer who does not
+  // want a title page does not want eleven of them.
+  if (options.includeTitlePage === false) return [];
+  return episodes(file)
+    .filter((episode) => episode.marker.titlePage !== null)
+    .map((episode) => ({
+      episode,
+      page: titlePageOf(file.project, file.settings, episode.marker.titlePage),
+    }));
+};

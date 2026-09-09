@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   addBeat,
+  addEpisode,
   addUnit,
   createProjectFile,
   linkEntities,
   paginateProject,
+  printedPageCount,
   renderPrintDocumentHtml,
   updateBeat,
   updateUnit,
@@ -169,5 +171,73 @@ describe('the printed document', () => {
     const html = renderPrintDocumentHtml(file, { includeSceneNumbers: true });
     expect(html).toContain('<span class="scene-number left">1</span>');
     expect(html).toContain('<span class="scene-number right">1</span>');
+  });
+});
+
+/**
+ * The front pages of a series (spec §6.1, addendum 02 §17): one for each
+ * episode, at the head of its own run, rather than one for the season at the
+ * front of the stack.
+ */
+describe('the front pages a series prints', () => {
+  const seriesOf = (count: number): ProjectFile => {
+    let file = createProjectFile({ title: 'The Lighthouse', format: 'series', author: 'K. Shank' });
+    for (let n = 1; n <= count; n += 1) {
+      const made = addEpisode(file, { title: `Episode ${n}` });
+      file = updateBeat(made.file, made.episode.beats[0]!.id, {
+        manuscript: {
+          elements: [
+            { id: `${made.episode.marker.id}-a` as never, type: 'action', text: 'The lamp turns.', characterId: null, attributes: {} },
+          ],
+        },
+      });
+    }
+    return file;
+  };
+
+  it('sets one for each episode, naming the episode and carrying the series’ credit', () => {
+    const html = renderPrintDocumentHtml(seriesOf(2));
+    expect(html.split('class="page title-page"').length - 1).toBe(2);
+    expect(html).toContain('Episode 1');
+    expect(html).toContain('Episode 2');
+    // The series' own answers are filled in on each page (§17).
+    expect(html.split('K. Shank').length - 1).toBe(2);
+  });
+
+  it('does not set the project’s page in front of the first episode’s', () => {
+    // Episode one opens at the first scene, so its page is the front of the
+    // document; the series' would say very nearly the same thing again.
+    const html = renderPrintDocumentHtml(seriesOf(1));
+    expect(html.split('class="page title-page"').length - 1).toBe(1);
+    expect(printedPageCount(seriesOf(1))).toBe(paginateProject(seriesOf(1)).length);
+  });
+
+  it('keeps the project’s page when there is a script ahead of the first episode', () => {
+    // The scene the project was made with sits before any episode marker.
+    let file = createProjectFile({ title: 'The Lighthouse', format: 'series' });
+    file = updateBeat(file, file.beats[0]!.id, {
+      manuscript: {
+        elements: [{ id: 'a0' as never, type: 'action', text: 'Cold open.', characterId: null, attributes: {} }],
+      },
+    });
+    file = addEpisode(file, { title: 'Pilot' }).file;
+
+    const html = renderPrintDocumentHtml(file);
+    // The series' page, then the cold open, then the pilot's own page.
+    expect(html.split('class="page title-page"').length - 1).toBe(2);
+    expect(printedPageCount(file)).toBe(paginateProject(file).length + 1);
+  });
+
+  it('prints none of them when the title page is switched off', () => {
+    const html = renderPrintDocumentHtml(seriesOf(2), { includeTitlePage: false });
+    expect(html).not.toContain('class="page title-page"');
+  });
+
+  it('numbers the manuscript straight through, and the front pages not at all', () => {
+    const pages = paginateProject(seriesOf(3));
+    const fronts = pages.filter((page) => page.titlePage);
+    expect(fronts).toHaveLength(3);
+    expect(fronts.every((page) => page.number === 0)).toBe(true);
+    expect(pages.filter((page) => !page.titlePage).map((page) => page.number)).toEqual([1, 2, 3]);
   });
 });

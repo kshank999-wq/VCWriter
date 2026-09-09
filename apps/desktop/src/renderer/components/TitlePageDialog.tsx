@@ -10,6 +10,7 @@ import {
   type TitlePage,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
+import { TitleSheet } from './TitleSheet';
 
 interface TitlePageDialogProps {
   file: ProjectFile;
@@ -105,11 +106,6 @@ export function TitlePageDialog({ file, open, episode, onClose, onUpdate }: Titl
     reader.onerror = () => setImageError('That file could not be read.');
     reader.readAsDataURL(picked);
   };
-
-  // Contact left, date right, the draft's note centred under both — the way
-  // the reference page sets it.
-  const centred = [page.revision, page.notes].filter((part) => part.length > 0);
-  const hasFoot = page.contact.length > 0 || page.draftDate.length > 0 || centred.length > 0;
 
   return (
     <dialog ref={dialog} className="lane-dialog title-page-dialog" aria-label="Title page" onClose={cancel}>
@@ -237,41 +233,7 @@ export function TitlePageDialog({ file, open, episode, onClose, onUpdate }: Titl
 
             {/* The page at the shape it prints, so the layout can be judged. */}
             <div className="title-page-preview" aria-label="The title page as it will print">
-              <div className="title-page-sheet">
-                <div className="sheet-block">
-                  {page.titleImage ? (
-                    <img className="sheet-art" src={page.titleImage} alt="" />
-                  ) : (
-                    <h1>{page.title || 'Untitled'}</h1>
-                  )}
-                  {page.episode ? <p className="sheet-episode">{page.episode}</p> : null}
-                </div>
-                <div className="sheet-credit-block">
-                  {page.author ? (
-                    <>
-                      <p className="sheet-credit">Written</p>
-                      <p className="sheet-by">by</p>
-                      <p className="sheet-author">{page.author}</p>
-                    </>
-                  ) : null}
-                  {page.source ? <p className="sheet-source">{page.source}</p> : null}
-                  {page.sourceAuthor ? (
-                    <>
-                      <p className="sheet-by">by</p>
-                      <p className="sheet-author">{page.sourceAuthor}</p>
-                    </>
-                  ) : null}
-                </div>
-                {hasFoot ? (
-                  <div className="sheet-foot">
-                    <div className="sheet-foot-row">
-                      <p>{lines(page.contact)}</p>
-                      <p className="right">{lines(page.draftDate)}</p>
-                    </div>
-                    {centred.length > 0 ? <p className="sheet-note">{lines(centred.join('\n'))}</p> : null}
-                  </div>
-                ) : null}
-              </div>
+              <TitleSheet page={page} />
             </div>
           </div>
 
@@ -295,17 +257,6 @@ export function TitlePageDialog({ file, open, episode, onClose, onUpdate }: Titl
     </dialog>
   );
 }
-
-/** Several lines in one field are several lines on the page. */
-const lines = (text: string) =>
-  text
-    .split(/\r?\n/)
-    .filter((line) => line.trim().length > 0)
-    .map((line, index) => (
-      <span key={`${index}-${line}`} className="sheet-line">
-        {line}
-      </span>
-    ));
 
 function Field({
   label,

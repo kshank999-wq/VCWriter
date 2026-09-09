@@ -1,5 +1,7 @@
 import { beatsInScript, relatedEntities, unitsInStoryOrder } from './selectors.js';
 import { chapterPageContent, chapterPagesFor, type ChapterPageContent } from './markers.js';
+import { episodeTitlePages } from './episodes.js';
+import type { TitlePage } from './entities/title-page.js';
 import { groupManuscript } from './editing.js';
 import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
 import type { ManuscriptElement, ManuscriptElementType } from './entities/manuscript.js';
@@ -175,6 +177,13 @@ export interface Page {
    * than lines of manuscript. `lines` is empty on such a page.
    */
   chapter?: ChapterPageContent;
+  /**
+   * Set on a front page (spec §6.1, addendum 02 §17): the title page an
+   * episode opens with, rather than lines of manuscript. `lines` is empty,
+   * and `number` is 0 — a title page is not numbered, and does not take a
+   * number from the page that follows it.
+   */
+  titlePage?: TitlePage;
 }
 
 /** Greedy wrap at `width`, breaking on spaces and never mid-word when avoidable. */
@@ -541,6 +550,13 @@ export interface ManuscriptOptions {
    */
   includeChapterPages?: boolean;
   /**
+   * Print the front pages: the document's, and the one each episode opens
+   * with (§6.1, addendum 02 §17). On unless asked otherwise — one switch for
+   * all of them, because a writer who does not want a title page does not
+   * want eleven of them.
+   */
+  includeTitlePage?: boolean;
+  /**
    * The sluglines themselves. On unless asked otherwise — a script without
    * them is a rehearsal script or a prose read-through, which is a real
    * thing to want and never the default.
@@ -585,16 +601,19 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   const layout = layoutForFile(file);
 
   const leaves = chapterPagesFor(file, options);
-  if (leaves.length === 0) {
-    return paginateElements(manuscriptElements(file, options), layout, speakerFor);
+  const fronts = episodeTitlePages(file, options);
+  if (leaves.length === 0 && fronts.length === 0) {
+    return numbered(paginateElements(manuscriptElements(file, options), layout, speakerFor));
   }
 
-  // Where each leaf falls, by the unit it is anchored to.
+  // Where each leaf falls, and where each episode's front page does, by the
+  // unit each is anchored to.
   const opensAt = new Map(leaves.map((placed) => [placed.marker.unitId as string, placed]));
+  const frontAt = new Map(fronts.map((front) => [front.episode.marker.unitId as string, front.page]));
   const units = unitsInStoryOrder(file).filter((unit) => unit.inScript);
 
   // The same numbering as the flat run above, worked out once.
-  const numbered = new Map(units.map((unit, index) => [unit.id as string, index + 1]));
+  const sceneNumbers = new Map(units.map((unit, index) => [unit.id as string, index + 1]));
 
   const pages: Page[] = [];
   let run: ManuscriptElement[] = [];
@@ -605,17 +624,36 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   };
 
   for (const unit of units) {
+    // The episode's front page comes first, then whatever leaf the chapter or
+    // act opens with: the title page is the front of the episode, and the
+    // leaf is the front of what is inside it.
+    const front = frontAt.get(unit.id as string);
+    if (front) {
+      flush();
+      pages.push({ number: 0, lines: [], startsWith: null, titlePage: front });
+    }
     const leaf = opensAt.get(unit.id as string);
     if (leaf) {
       flush();
       pages.push({ number: 0, lines: [], startsWith: null, chapter: chapterPageContent(leaf) });
     }
-    run.push(...unitElements(file, unit.id, options, String(numbered.get(unit.id as string) ?? 0)));
+    run.push(...unitElements(file, unit.id, options, String(sceneNumbers.get(unit.id as string) ?? 0)));
   }
   flush();
 
-  // Each run numbered itself from one; the book numbers straight through.
-  return pages.map((page, index) => ({ ...page, number: index + 1 }));
+  return numbered(pages);
+};
+
+/**
+ * Each run numbered itself from one; the document numbers straight through.
+ *
+ * A title page takes no number and gives none away: the page after the front
+ * page of episode two is the page it would have been without it, so the
+ * numbering a reader sees is the numbering of the manuscript.
+ */
+const numbered = (pages: Page[]): Page[] => {
+  let n = 0;
+  return pages.map((page) => (page.titlePage ? { ...page, number: 0 } : { ...page, number: (n += 1) }));
 };
 
 /** An annotation: the writer's own note about the text, not the text. */

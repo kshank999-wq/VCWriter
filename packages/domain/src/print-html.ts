@@ -1,6 +1,7 @@
 import { layoutFor, paginateProject, type ManuscriptOptions, type Page, type PageLine } from './pagination.js';
 import { isProseFormat } from './editing.js';
 import { titlePageOf } from './entities/title-page.js';
+import type { TitlePage } from './entities/title-page.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -65,7 +66,9 @@ const renderSpans = (line: PageLine): string => {
 };
 
 const renderPage = (page: Page, isProse: boolean, options: PrintOptions): string => {
-  // A leaf between chapters is a page of the book, not of the manuscript.
+  // A front page and a leaf between chapters are both pages of the document
+  // rather than of the manuscript, and neither carries a page number.
+  if (page.titlePage) return renderTitleSheet(page.titlePage);
   if (page.chapter) return renderChapterPage(page, isProse, options);
   const lines = page.lines
     .map((line) => {
@@ -139,8 +142,10 @@ const renderChapterPage = (page: Page, isProse: boolean, options: PrintOptions):
  * name on it is a proper title page, and an empty line printed for a contact
  * nobody entered is worse than no line.
  */
-const renderTitlePage = (file: ProjectFile): string => {
-  const page = titlePageOf(file.project, file.settings);
+const renderTitlePage = (file: ProjectFile): string =>
+  renderTitleSheet(titlePageOf(file.project, file.settings));
+
+const renderTitleSheet = (page: TitlePage): string => {
   const lines = (text: string): string =>
     escapeHtml(text)
       .split(/\r?\n/)
@@ -305,7 +310,7 @@ export const renderPrintDocumentHtml = (file: ProjectFile, options: PrintOptions
   const pages = paginateProject(file, options);
   const isProse = isProseFormat(file.project.format);
   const body = [
-    options.includeTitlePage === false ? '' : renderTitlePage(file),
+    opensWithItsOwn(pages, options) ? '' : renderTitlePage(file),
     ...pages.map((page) => renderPage(page, isProse, options)),
   ]
     .filter((section) => section.length > 0)
@@ -329,9 +334,23 @@ ${body}
 </html>`;
 };
 
-/** Page count for the export, title page included when there is one. */
-export const printedPageCount = (file: ProjectFile, options: PrintOptions = {}): number =>
-  paginateProject(file, options).length + (options.includeTitlePage === false ? 0 : 1);
+/**
+ * Whether the document already opens with a front page of its own.
+ *
+ * A series whose first episode starts at the first scene prints that
+ * episode's title page first, and the project's would sit in front of it
+ * saying very nearly the same thing — the episode's page carries the series'
+ * title and credit already (addendum 02 §17). Where there is material ahead
+ * of the first episode, the project's page still opens the document.
+ */
+const opensWithItsOwn = (pages: Page[], options: PrintOptions): boolean =>
+  options.includeTitlePage === false || pages[0]?.titlePage !== undefined;
+
+/** Page count for the export, every front page in it included. */
+export const printedPageCount = (file: ProjectFile, options: PrintOptions = {}): number => {
+  const pages = paginateProject(file, options);
+  return pages.length + (opensWithItsOwn(pages, options) ? 0 : 1);
+};
 
 export const suggestedExportFileName = (file: ProjectFile): string => {
   const base = (file.project.title || 'Untitled').replace(/[^\w\-. ]+/g, '').trim() || 'Untitled';

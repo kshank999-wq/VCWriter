@@ -516,6 +516,25 @@ that names only its own date still carries the series' title, credit, contact
 and logotype without them being typed a second time. A new episode is not a
 blank front page — it is the series' with this episode's number on it.
 
+**And it prints with its episode**, at the head of that episode's own run
+rather than once at the front of the stack. A printing of a series is a stack
+of scripts, each opening with its own front page, and the run is broken there
+the same way a chapter page breaks it (§11): an episode never begins halfway
+down somebody else's page.
+
+A front page **takes no number and gives none away**. Page numbers run
+straight through the manuscript — the page after episode two's front page is
+the page it would have been without it — so what a reader counts is the
+script, not the covers between the scripts.
+
+Where the first episode starts at the first scene, its page *is* the front of
+the document and the project's own is not set in front of it: the episode's
+page already carries the series' title and credit. Where there is a script
+ahead of the first episode marker, the project's page opens the document as
+it always did. **Print the title page** in Page setup governs all of them
+together — a writer who does not want a title page does not want eleven of
+them — and the Preview draws them exactly as they print.
+
 Alone in the application, this screen **does not save as you type**. What is
 typed is a draft, drawn on the sheet as it goes; **Update page** puts it in
 the document and **Cancel** throws it away, leaving nothing waiting the next
@@ -910,7 +929,7 @@ It is in two groups, and the division is the point.
 
 | Switch | Default | |
 | --- | --- | --- |
-| Print the title page | on | What it says is its own screen, §6.1 — this only decides whether it prints |
+| Print the title page | on | What it says is its own screen, §6.1 — this only decides whether it prints. In a series it governs every episode's front page too |
 | Chapter pages | on | §12, and only for a format that has them |
 | Scene headings | on | Off gives a read-through with no sluglines |
 | Page numbers | on | Top right, from page two |
@@ -1125,6 +1144,15 @@ top of the list while a cue is being typed (§16).
 **What does not come over is any of the writing.** A new episode is a clear
 slate: its own scene, one empty beat, and nothing in it. That is the point of
 a new episode.
+
+### Its own front page
+
+An episode is a script that goes out on its own, so it has a title page of
+its own, kept on the marker that starts it. Starting an episode opens that
+page's screen already knowing which episode it is; **double-clicking an
+episode in the rail** opens it again. It falls back to the series' page field
+by field, and **it prints at the head of its own run** rather than once at
+the front of the stack — §6.1 has the whole of it.
 
 ## 18. Importing somebody else's script
 

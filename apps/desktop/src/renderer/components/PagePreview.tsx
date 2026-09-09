@@ -17,6 +17,13 @@ interface PagePreviewProps {
   /** Whether a printing carries the leaves between chapters (§11). */
   includeChapterPages: boolean;
   onToggleChapterPages(next: boolean): void;
+  /**
+   * Whether the front pages print: the document's, and the one each episode
+   * opens with (§6.1, §17). Read-only here — it is set in Page setup with the
+   * rest of what a printing carries — but the preview has to honour it, or it
+   * is not showing the pages that will print.
+   */
+  includeTitlePage: boolean;
   /** The rest of what a printing carries lives in Page setup (§13). */
   onPageSetup?(): void;
   onExportPdf(): void;
@@ -41,6 +48,7 @@ export function PagePreview({
   onToggleBeatTitles,
   includeChapterPages,
   onToggleChapterPages,
+  includeTitlePage,
   onPageSetup,
   onExportPdf,
   onPrint,
@@ -53,8 +61,8 @@ export function PagePreview({
     () =>
       scope === 'unit' && unitId
         ? paginateUnit(file, unitId)
-        : paginateProject(file, { includeBeatTitles, includeChapterPages }),
-    [file, scope, unitId, includeBeatTitles, includeChapterPages],
+        : paginateProject(file, { includeBeatTitles, includeChapterPages, includeTitlePage }),
+    [file, scope, unitId, includeBeatTitles, includeChapterPages, includeTitlePage],
   );
   const chapters = hasChapterPages(file.project.format);
 

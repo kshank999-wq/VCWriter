@@ -1,4 +1,5 @@
 import type { ChapterPageContent, InlineSpan, Page } from '@vcwriter/domain';
+import { TitleSheet } from './TitleSheet';
 
 /**
  * Paginated manuscript pages drawn as paper. Shared by the Preview page and
@@ -8,16 +9,24 @@ import type { ChapterPageContent, InlineSpan, Page } from '@vcwriter/domain';
 export function Paper({ pages, empty = 'Nothing written yet.' }: { pages: Page[]; empty?: string }) {
   return (
     <div className="pages">
-      {pages.map((page) => (
-        <section key={page.number} className={`paper${page.chapter ? ' chapter-leaf' : ''}`} aria-label={`Page ${page.number}`}>
+      {pages.map((page, sheet) => (
+        <section
+          // A front page takes no number (§17), so several pages of the
+          // document can be page 0; their place in the stack is the identity.
+          key={sheet}
+          className={`paper${page.chapter ? ' chapter-leaf' : ''}${page.titlePage ? ' title-leaf' : ''}`}
+          aria-label={page.titlePage ? `Title page: ${page.titlePage.episode || page.titlePage.title}` : `Page ${page.number}`}
+        >
           {page.number > 1 ? <span className="paper-number">{page.number}.</span> : null}
-          {page.chapter ? (
+          {page.titlePage ? (
+            <TitleSheet page={page.titlePage} />
+          ) : page.chapter ? (
             <ChapterLeaf chapter={page.chapter} />
           ) : (
             page.lines.map((line, index) => (
               <div
                 // Lines have no identity of their own; they are a layout result.
-                key={`${page.number}-${index}`}
+                key={`${sheet}-${index}`}
                 className={`paper-line ${line.type}`}
                 style={{ paddingLeft: `${line.indent}ch` }}
               >
