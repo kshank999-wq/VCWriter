@@ -233,11 +233,19 @@ describe('the front pages a series prints', () => {
     expect(html).not.toContain('class="page title-page"');
   });
 
-  it('numbers the manuscript straight through, and the front pages not at all', () => {
+  it('numbers each episode from its own page one, and the front pages not at all', () => {
     const pages = paginateProject(seriesOf(3));
     const fronts = pages.filter((page) => page.titlePage);
     expect(fronts).toHaveLength(3);
     expect(fronts.every((page) => page.number === 0)).toBe(true);
-    expect(pages.filter((page) => !page.titlePage).map((page) => page.number)).toEqual([1, 2, 3]);
+    // Three scripts, each a page long, each of them page one of itself.
+    expect(pages.filter((page) => !page.titlePage).map((page) => page.number)).toEqual([1, 1, 1]);
+  });
+
+  it('starts each episode on paper of its own even with no front page to print', () => {
+    // The numbering belongs to the episode, not to whether its cover prints.
+    const pages = paginateProject(seriesOf(3), { includeTitlePage: false });
+    expect(pages.some((page) => page.titlePage)).toBe(false);
+    expect(pages.map((page) => page.number)).toEqual([1, 1, 1]);
   });
 });

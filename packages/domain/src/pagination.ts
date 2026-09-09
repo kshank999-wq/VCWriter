@@ -1,6 +1,6 @@
 import { beatsInScript, relatedEntities, unitsInStoryOrder } from './selectors.js';
 import { chapterPageContent, chapterPagesFor, type ChapterPageContent } from './markers.js';
-import { episodeTitlePages } from './episodes.js';
+import { episodeTitlePages, episodes } from './episodes.js';
 import type { TitlePage } from './entities/title-page.js';
 import { groupManuscript } from './editing.js';
 import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
@@ -602,8 +602,11 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
 
   const leaves = chapterPagesFor(file, options);
   const fronts = episodeTitlePages(file, options);
-  if (leaves.length === 0 && fronts.length === 0) {
-    return numbered(paginateElements(manuscriptElements(file, options), layout, speakerFor));
+  // Every episode begins a script of its own, whether or not its front page
+  // is printing: it starts on a fresh page and numbers from one (§17).
+  const opensEpisode = new Set(episodes(file).map((episode) => episode.marker.unitId as string));
+  if (leaves.length === 0 && fronts.length === 0 && opensEpisode.size === 0) {
+    return numbered(paginateElements(manuscriptElements(file, options), layout, speakerFor), new Set());
   }
 
   // Where each leaf falls, and where each episode's front page does, by the
@@ -616,6 +619,8 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   const sceneNumbers = new Map(units.map((unit, index) => [unit.id as string, index + 1]));
 
   const pages: Page[] = [];
+  /** Where a script begins: the index of each episode's own page one. */
+  const restartAt = new Set<number>();
   let run: ManuscriptElement[] = [];
   const flush = () => {
     if (run.length === 0) return;
@@ -624,13 +629,15 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   };
 
   for (const unit of units) {
-    // The episode's front page comes first, then whatever leaf the chapter or
-    // act opens with: the title page is the front of the episode, and the
-    // leaf is the front of what is inside it.
-    const front = frontAt.get(unit.id as string);
-    if (front) {
+    if (opensEpisode.has(unit.id as string)) {
+      // The episode before it ends where it ends; this one starts on paper of
+      // its own, with its front page ahead of it where it has one.
       flush();
-      pages.push({ number: 0, lines: [], startsWith: null, titlePage: front });
+      const front = frontAt.get(unit.id as string);
+      if (front) pages.push({ number: 0, lines: [], startsWith: null, titlePage: front });
+      // Whatever is pushed next — a chapter leaf, or the first page of the
+      // script — is this episode's page one.
+      restartAt.add(pages.length);
     }
     const leaf = opensAt.get(unit.id as string);
     if (leaf) {
@@ -641,19 +648,26 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   }
   flush();
 
-  return numbered(pages);
+  return numbered(pages, restartAt);
 };
 
 /**
- * Each run numbered itself from one; the document numbers straight through.
+ * Number the pages: from one, and from one again at the head of each script.
+ *
+ * A series is a stack of scripts, not one long document, so **each episode
+ * numbers from its own page one** (§17) — page two of episode three is page
+ * two, the way it would be if that episode had been printed on its own.
  *
  * A title page takes no number and gives none away: the page after the front
- * page of episode two is the page it would have been without it, so the
- * numbering a reader sees is the numbering of the manuscript.
+ * page of episode two is that episode's page one, and the covers between the
+ * scripts are not counted in either of them.
  */
-const numbered = (pages: Page[]): Page[] => {
+const numbered = (pages: Page[], restartAt: ReadonlySet<number>): Page[] => {
   let n = 0;
-  return pages.map((page) => (page.titlePage ? { ...page, number: 0 } : { ...page, number: (n += 1) }));
+  return pages.map((page, index) => {
+    if (restartAt.has(index)) n = 0;
+    return page.titlePage ? { ...page, number: 0 } : { ...page, number: (n += 1) };
+  });
 };
 
 /** An annotation: the writer's own note about the text, not the text. */
@@ -738,11 +752,19 @@ export const pageCount = (file: ProjectFile): number => paginateProject(file).le
  * page after the first. The Script draws the manuscript as one flow and
  * uses this to rule the page breaks exactly where the printed page has
  * them, without pagination and editing having to be the same thing.
+ *
+ * Every break after the document's first page of manuscript is ruled, with
+ * its own number on it. That includes an episode's page one (§17): it is a
+ * break in the flow like any other, and the one a reader most wants to see
+ * coming. The covers are not in the flow and rule nothing.
  */
 export const pageBreaks = (file: ProjectFile, options: ManuscriptOptions = {}): Map<string, number> => {
   const breaks = new Map<string, number>();
+  let started = false;
   for (const page of paginateProject(file, options)) {
-    if (page.number > 1 && page.startsWith) breaks.set(page.startsWith, page.number);
+    if (page.titlePage || page.chapter) continue;
+    if (started && page.startsWith) breaks.set(page.startsWith, page.number);
+    started = true;
   }
   return breaks;
 };

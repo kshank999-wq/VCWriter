@@ -307,15 +307,34 @@ describe('printing an episode with its own front page', () => {
     expect(fronts.every((page) => page.titlePage?.title === 'The Lighthouse')).toBe(true);
   });
 
-  it('gives a front page no number, and takes none from the page after it', () => {
+  it('gives a front page no number, and starts the episode after it at one', () => {
     const file = seriesOf(2);
     const pages = paginateProject(file);
     expect(pages.filter((page) => page.titlePage).every((page) => page.number === 0)).toBe(true);
 
-    // The manuscript's own pages are numbered straight through, 1, 2, 3…, as
-    // though the front pages were not between them.
-    const manuscript = pages.filter((page) => !page.titlePage).map((page) => page.number);
-    expect(manuscript).toEqual(manuscript.map((_, index) => index + 1));
+    // A series is a stack of scripts: each episode numbers from its own page
+    // one, and the covers between them are not counted in either.
+    expect(pages.map((page) => page.number)).toEqual([0, 1, 0, 1]);
+  });
+
+  it('numbers a long episode through to its end, then starts the next at one', () => {
+    let file = seriesOf(2);
+    // Enough in the first episode to run past one page.
+    const [first] = episodes(file);
+    file = updateBeat(file, first!.beats[0]!.id, {
+      manuscript: {
+        elements: Array.from({ length: 80 }, (_, index) => ({
+          id: `x${index}` as never,
+          type: 'action' as const,
+          text: `Line ${index} of the thing that goes on and on and on.`,
+          characterId: null,
+          attributes: {},
+        })),
+      },
+    });
+
+    const pages = paginateProject(file);
+    expect(pages.map((page) => page.number)).toEqual([0, 1, 2, 3, 0, 1]);
   });
 
   it('breaks the run, so an episode never starts halfway down a page', () => {

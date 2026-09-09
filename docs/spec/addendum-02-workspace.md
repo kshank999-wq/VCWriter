@@ -522,10 +522,17 @@ of scripts, each opening with its own front page, and the run is broken there
 the same way a chapter page breaks it (§11): an episode never begins halfway
 down somebody else's page.
 
-A front page **takes no number and gives none away**. Page numbers run
-straight through the manuscript — the page after episode two's front page is
-the page it would have been without it — so what a reader counts is the
-script, not the covers between the scripts.
+**Each episode numbers from its own page one.** A series is a stack of
+scripts, not one long document: page two of episode three is page two, the
+way it would be if that episode had been printed on its own. So an episode
+begins on paper of its own and starts the count again — and it does so
+whether or not its front page is printing, because the numbering belongs to
+the episode and not to whether its cover is being run off.
+
+A front page **takes no number and gives none away**: the page after the
+front page of episode two is that episode's page one, and the covers between
+the scripts are counted in neither. As everywhere else, page one carries no
+number on it; the number starts appearing at two.
 
 Where the first episode starts at the first scene, its page *is* the front of
 the document and the project's own is not set in front of it: the episode's
@@ -1152,7 +1159,8 @@ its own, kept on the marker that starts it. Starting an episode opens that
 page's screen already knowing which episode it is; **double-clicking an
 episode in the rail** opens it again. It falls back to the series' page field
 by field, and **it prints at the head of its own run** rather than once at
-the front of the stack — §6.1 has the whole of it.
+the front of the stack, with **each episode numbering from its own page
+one** — §6.1 has the whole of it.
 
 **The front page is where an episode is numbered.** The number typed in its
 *Episode* field is the number of that script — the first whole number in the
