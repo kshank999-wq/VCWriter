@@ -63,12 +63,23 @@ export const titlePageSchema = z.object({
   titleImage: z.string().default(''),
   /** "Episode 4 — The Lamp". Under the title, where a series puts it. */
   episode: z.string().default(''),
-  /** "written by", "screenplay by", "a novel by" — the line above the name. */
-  credit: z.string().default(''),
+  /**
+   * The credit word: "written", "screenplay", "story". The page sets **by**
+   * on its own line under it and the name under that, so this does not carry
+   * the "by" itself — a credit typed with one has it taken off rather than
+   * printed twice.
+   */
+  credit: z.string().default('written'),
   /** Empty means the project's author. */
   author: z.string().default(''),
-  /** "Based on the novel by…", and the like. */
+  /**
+   * What it was written from: "based on the novel", "original story". The
+   * line, without the name — the name goes under it, the same way the credit
+   * puts the author under "written by".
+   */
   source: z.string().default(''),
+  /** Who wrote the source. Printed on the line under it, as "by <name>". */
+  sourceAuthor: z.string().default(''),
   /** Agent, address, telephone, email. Bottom left, as many lines as needed. */
   contact: z.string().default(''),
   /** "12 March 2026". Bottom right, above the revision. */
@@ -157,15 +168,25 @@ export type Project = z.infer<typeof projectSchema>;
  * "written by" is the default byline rather than a stored one, so a project
  * that has never been near this dialog still prints a proper page.
  */
+/**
+ * A credit or a source line without its trailing "by".
+ *
+ * The page prints **by** on a line of its own above the name — for the credit
+ * and for the source alike — so a writer who types "written by" out of habit
+ * must not get "written by / by / John August".
+ */
+export const withoutBy = (text: string): string => text.trim().replace(/\s+by$/i, '').trim();
+
 export const titlePageOf = (project: Project, settings: ProjectSettings): TitlePage => {
   const page = titlePageSchema.parse(settings.titlePage ?? {});
   return {
     title: page.title.trim() || project.title,
     titleImage: page.titleImage,
     episode: page.episode.trim(),
-    credit: page.credit.trim() || 'written by',
+    credit: withoutBy(page.credit) || 'written',
     author: page.author.trim() || project.author,
-    source: page.source.trim(),
+    source: withoutBy(page.source),
+    sourceAuthor: page.sourceAuthor.trim(),
     contact: page.contact.trim(),
     draftDate: page.draftDate.trim(),
     revision: page.revision.trim(),

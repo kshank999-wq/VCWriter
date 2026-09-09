@@ -232,12 +232,28 @@ describe('page setup', () => {
     fireEvent.change(author, { target: { value: 'Kevin Shank' } });
     fireEvent.change(screen.getByLabelText('Revision'), { target: { value: 'Second draft' } });
 
+    // The sheet shows what Update page would do, so the layout can be judged
+    // before it is committed — but the document has not changed yet.
+    expect(document.querySelector('.title-page-sheet')?.textContent).toContain('Kevin Shank');
+    expect(JSON.parse(screen.getByTestId('title-page').textContent as string)['author']).toBe('');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update page' }));
     const page = JSON.parse(screen.getByTestId('title-page').textContent as string) as Record<string, string>;
     expect(page['author']).toBe('Kevin Shank');
     expect(page['revision']).toBe('Second draft');
+  });
 
-    // And the page is drawn beside the fields, so the layout can be judged.
-    expect(document.querySelector('.title-page-sheet')?.textContent).toContain('Kevin Shank');
+  it('throws away a cancelled edit, and does not leave it waiting next time', () => {
+    render(<Setup />);
+    fireEvent.click(screen.getByRole('button', { name: /what it says/i }));
+    fireEvent.change(screen.getByLabelText('Author'), { target: { value: 'Somebody Else' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(JSON.parse(screen.getByTestId('title-page').textContent as string)['author']).toBe('');
+
+    // Reopening starts from the document, not from the abandoned attempt.
+    fireEvent.click(screen.getByRole('button', { name: /what it says/i }));
+    expect((screen.getByLabelText('Author') as HTMLInputElement).value).toBe('');
   });
 
   it('holds what a printing carries, in one place', () => {

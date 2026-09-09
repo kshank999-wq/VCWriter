@@ -160,8 +160,17 @@ const renderTitlePage = (file: ProjectFile): string => {
   <div class="title-block">
     ${heading}
     ${page.episode.length > 0 ? `<p class="episode">${lines(page.episode)}</p>` : ''}
-    ${page.author.length > 0 ? `<p class="byline">${escapeHtml(page.credit)}</p><p class="author">${escapeHtml(page.author)}</p>` : ''}
+    ${
+      page.author.length > 0
+        ? `<p class="byline">${escapeHtml(page.credit)}</p><p class="by">by</p><p class="author">${escapeHtml(page.author)}</p>`
+        : ''
+    }
     ${page.source.length > 0 ? `<p class="based-on">${lines(page.source)}</p>` : ''}
+    ${
+      page.sourceAuthor.length > 0
+        ? `<p class="by">by</p><p class="source-author">${escapeHtml(page.sourceAuthor)}</p>`
+        : ''
+    }
   </div>
   ${
     hasFoot
@@ -214,6 +223,9 @@ const STYLES = `
   .title-page .title-block { margin-top: 2.6in; }
   .title-page .based-on { margin-top: 0.5in; }
   .title-page .episode { margin-top: 0.25in; }
+  /* "by" sits on a line of its own between the credit and the name. */
+  .title-page .by { margin: 0; }
+  .title-page .byline, .title-page .author, .title-page .source-author { margin: 0; }
   /* The logotype prints in place of the title, kept inside the margins. */
   .title-art { display: block; max-width: 5in; max-height: 3in; margin: 0 auto; }
   /* The foot of the page: which draft on the left, who to call on the right. */

@@ -15,7 +15,10 @@ export function useModal(open: boolean) {
       if (typeof node.showModal === 'function') node.showModal();
       else node.setAttribute('open', '');
     } else if (!open && node.open) {
-      node.close();
+      // Same story closing as opening: jsdom has no `close` either, so the
+      // attribute comes off by hand and the tests see the app's own markup.
+      if (typeof node.close === 'function') node.close();
+      else node.removeAttribute('open');
     }
   }, [open]);
   return dialog;

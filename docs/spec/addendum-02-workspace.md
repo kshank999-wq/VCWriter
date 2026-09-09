@@ -472,12 +472,20 @@ from **File → Title page**. It carries what the industry page carries:
 | --- | --- |
 | **Title** | Or a **graphic** in place of it — a logotype, up to 5MB, held in the project so the page travels with the file. The graphic *is* the title: the words are not set underneath as well. |
 | **Episode** | Under the title, where a series puts it |
-| **Credit** | "written by", "screenplay by", "a novel by" |
+| **Credit** | The credit *word* — "written", "screenplay", "story" |
 | **Author** | |
-| **Source** | "based on the novel by…" |
+| **Source** | What it was written from: "based on the novel", "an original story" |
+| **Source author** | Who wrote that |
 | **Contact** | Foot left: agent, telephone, email, as many lines as needed |
 | **Draft date** | Foot right, with a **Today** beside the box |
 | **Revision** and **Notes** | Centred under both, where "FINAL PRODUCTION DRAFT" goes |
+
+**"by" is the page's, not the writer's.** It is set on a line of its own
+between a credit and the name under it — the credit word, then *by*, then the
+author; and the same shape again for the source, then *by*, then who wrote
+it. So the credit field holds "written", not "written by"; a credit typed
+with one anyway has it taken off rather than printed twice. A source with
+nobody named under it gets no dangling *by*.
 
 Left empty, the **title and the author are the project's own**, so a project
 made five minutes ago already has a title page and nobody types their own
@@ -492,6 +500,13 @@ about whether it looks right.
 Only what has been filled in is drawn: an empty line printed for a contact
 nobody entered is worse than no line. It prints where **Print the title
 page** is ticked in Page setup, and nowhere else.
+
+Alone in the application, this screen **does not save as you type**. What is
+typed is a draft, drawn on the sheet as it goes; **Update page** puts it in
+the document and **Cancel** throws it away, leaving nothing waiting the next
+time it is opened. A title page is the front of a thing that goes out to
+people, and trying a credit line on for size should not be the same act as
+changing it.
 
 ### 6.2 Continuous, or pages
 

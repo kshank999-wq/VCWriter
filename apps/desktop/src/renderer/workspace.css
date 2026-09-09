@@ -4935,6 +4935,8 @@ dialog.lane-dialog.title-page-dialog {
 .title-page-sheet .sheet-episode { margin-top: 6px; }
 .title-page-sheet .sheet-credit { margin-top: 14px; }
 .title-page-sheet .sheet-source { margin-top: 14px; }
+/* "by" on a line of its own, between the credit and the name it belongs to. */
+.title-page-sheet .sheet-by { margin: 0; }
 
 .title-page-sheet .sheet-foot {
   margin-top: auto;
@@ -4956,4 +4958,25 @@ dialog.lane-dialog.title-page-dialog {
   font-size: 11px;
   padding: 1px 6px;
   margin-left: 8px;
+}
+
+/* The title page commits on a button rather than as you type, so its footer
+   carries the two answers. */
+.title-page-dialog .lane-dialog-foot {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.title-page-dialog .lane-dialog-foot > p {
+  margin: 0;
+  flex: 1;
+}
+
+.dialog-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

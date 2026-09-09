@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   MAX_TITLE_IMAGE_BYTES,
   setTitlePage,
@@ -30,15 +30,45 @@ interface TitlePageDialogProps {
  * Left empty, the title and the name are the project's own, so a project made
  * five minutes ago already has a title page and nobody types their own name
  * twice.
+ *
+ * Unlike the rest of the application, this screen does **not** save as you
+ * type. What is typed is a draft, drawn on the sheet as it goes; **Update
+ * page** puts it in the document and **Cancel** throws it away. A title page
+ * is the front of a thing that goes out to people, and trying a credit line
+ * on for size should not be the same act as changing it.
  */
 export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDialogProps) {
   const dialog = useModal(open);
   const picker = useRef<HTMLInputElement>(null);
   const [imageError, setImageError] = useState<string | null>(null);
 
-  const stored = file.settings.titlePage;
-  const page = titlePageOf(file.project, file.settings);
-  const write = (patch: Partial<TitlePage>) => onUpdate((current) => setTitlePage(current, patch));
+  const saved = file.settings.titlePage;
+  /**
+   * What is being typed, which is not yet what the document says. Started
+   * afresh each time the screen opens, so a cancelled edit is not waiting
+   * there the next time it is opened.
+   */
+  const [stored, setStored] = useState<TitlePage>(saved);
+  useEffect(() => {
+    if (open) setStored(saved);
+    // Only when the screen opens: re-reading it on every keystroke of the
+    // draft would undo the typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const write = (patch: Partial<TitlePage>) => setStored((current) => ({ ...current, ...patch }));
+  // The sheet is drawn from the draft, so it shows what Update page would do.
+  const page = titlePageOf(file.project, { ...file.settings, titlePage: stored });
+
+  const cancel = () => {
+    setStored(saved);
+    onClose();
+  };
+
+  const commit = () => {
+    onUpdate((current) => setTitlePage(current, stored));
+    onClose();
+  };
 
   /**
    * A logotype in place of the typed title. Held in the project as a data URI
@@ -67,12 +97,14 @@ export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDial
   const hasFoot = page.contact.length > 0 || page.draftDate.length > 0 || centred.length > 0;
 
   return (
-    <dialog ref={dialog} className="lane-dialog title-page-dialog" aria-label="Title page" onClose={onClose}>
+    <dialog ref={dialog} className="lane-dialog title-page-dialog" aria-label="Title page" onClose={cancel}>
       {open ? (
         <>
           <header className="lane-dialog-title">
             <span className="bar-title">Title page</span>
-            <button type="button" className="ghost" aria-label="Close" onClick={onClose}>
+            {/* The × is Cancel: closing without saying "update" keeps the
+                page the document already has. */}
+            <button type="button" className="ghost" aria-label="Close without saving" onClick={cancel}>
               ×
             </button>
           </header>
@@ -132,7 +164,9 @@ export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDial
               ) : null}
 
               <Field label="Episode" value={stored.episode} placeholder="Episode 4 — The Lamp" onChange={(episode) => write({ episode })} />
-              <Field label="Credit" value={stored.credit} placeholder="written by" onChange={(credit) => write({ credit })} />
+              {/* The page sets "by" on its own line under this, so the credit
+                  is the word, not the phrase: "written", "screenplay". */}
+              <Field label="Credit" value={stored.credit} placeholder="written" onChange={(credit) => write({ credit })} />
               <Field
                 label="Author"
                 value={stored.author}
@@ -142,8 +176,14 @@ export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDial
               <Field
                 label="Source"
                 value={stored.source}
-                placeholder="based on the novel by…"
+                placeholder="based on the novel"
                 onChange={(source) => write({ source })}
+              />
+              <Field
+                label="Source author"
+                value={stored.sourceAuthor}
+                placeholder="Daniel Wallace"
+                onChange={(sourceAuthor) => write({ sourceAuthor })}
               />
               <Field
                 label="Contact"
@@ -192,10 +232,17 @@ export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDial
                   {page.author ? (
                     <>
                       <p className="sheet-credit">{page.credit}</p>
+                      <p className="sheet-by">by</p>
                       <p className="sheet-author">{page.author}</p>
                     </>
                   ) : null}
                   {page.source ? <p className="sheet-source">{page.source}</p> : null}
+                  {page.sourceAuthor ? (
+                    <>
+                      <p className="sheet-by">by</p>
+                      <p className="sheet-author">{page.sourceAuthor}</p>
+                    </>
+                  ) : null}
                 </div>
                 {hasFoot ? (
                   <div className="sheet-foot">
@@ -212,12 +259,17 @@ export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDial
 
           <footer className="lane-dialog-foot">
             <p className="muted small">
-              The writing screen never shows this. It prints when <strong>Title page</strong> is ticked in File → Page
-              setup.
+              The writing screen never shows this. It prints when <strong>Print the title page</strong> is ticked in
+              File → Page setup.
             </p>
-            <button type="button" className="primary" onClick={onClose}>
-              Done
-            </button>
+            <div className="dialog-buttons">
+              <button type="button" className="ghost" onClick={cancel}>
+                Cancel
+              </button>
+              <button type="button" className="primary" onClick={commit}>
+                Update page
+              </button>
+            </div>
           </footer>
         </>
       ) : null}
