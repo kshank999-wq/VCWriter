@@ -5096,6 +5096,27 @@ dialog.lane-dialog.title-page-dialog {
   flex: 1;
 }
 
+.contents-leaf-block .contents-pages {
+  width: 10ch;
+  flex: none;
+  text-align: right;
+}
+
+.contents-leaf-block .contents-sheet {
+  width: 6ch;
+  flex: none;
+  text-align: right;
+}
+
+/* The two figures need saying: the sheet is not the page the script prints,
+   because every episode numbers from its own page one. */
+.contents-leaf-block .contents-head {
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding-bottom: 0;
+}
+
 /* The same sheet at the size of a real page: the Preview draws an episode's
    front page as a page of the document (§17), so the geometry here is the
    print stylesheet's, in inches, rather than the dialog's thumbnail. */

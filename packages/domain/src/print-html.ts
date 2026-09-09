@@ -108,11 +108,19 @@ const printedAt = (options: PrintOptions): string =>
  *
  * The series' title at the head, so the page stands as the front of the
  * document, and one line for each episode: its label on the left, its name
- * beside it, and how long that script runs on the right. Not a page
- * reference — each episode numbers from its own page one, so a page number
- * would name three pages at once.
+ * beside it, then how long that script runs and which **sheet** of the stack
+ * it begins on.
+ *
+ * The two numbers are given a heading each, and they need one: each episode
+ * numbers from its own page one, so the number that says where to turn is
+ * not a page number and must not be read as one.
  */
 const renderContentsPage = (contents: ContentsPage): string => {
+  const head =
+    '<div class="contents-row contents-head">' +
+    '<span class="contents-label"></span><span class="contents-title"></span>' +
+    '<span class="contents-pages">Length</span><span class="contents-sheet">Sheet</span>' +
+    '</div>';
   const rows = contents.entries
     .map(
       (entry) =>
@@ -120,6 +128,7 @@ const renderContentsPage = (contents: ContentsPage): string => {
         `<span class="contents-label">${escapeHtml(entry.label)}</span>` +
         `<span class="contents-title">${escapeHtml(entry.title)}</span>` +
         `<span class="contents-pages">${entry.pages} ${entry.pages === 1 ? 'page' : 'pages'}</span>` +
+        `<span class="contents-sheet">${entry.sheet}</span>` +
         '</div>',
     )
     .join('');
@@ -127,7 +136,7 @@ const renderContentsPage = (contents: ContentsPage): string => {
     '<section class="page contents-page">' +
     `<h1 class="contents-series">${escapeHtml(contents.title || 'Untitled')}</h1>` +
     '<p class="contents-heading">Contents</p>' +
-    `<div class="contents-list">${rows}</div>` +
+    `<div class="contents-list">${head}${rows}</div>` +
     '</section>'
   );
 };
@@ -279,7 +288,11 @@ const STYLES = `
   .contents-row { display: flex; align-items: baseline; gap: 1em; padding: 0.5em 0; }
   .contents-label { width: 12ch; flex: none; }
   .contents-title { flex: 1; }
-  .contents-pages { flex: none; }
+  .contents-pages { width: 10ch; flex: none; text-align: right; }
+  .contents-sheet { width: 6ch; flex: none; text-align: right; }
+  /* The two figures need saying: the sheet is not the page the script
+     prints, because every episode numbers from its own page one. */
+  .contents-head { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.15em; padding-bottom: 0; }
   .title-page { display: flex; flex-direction: column; align-items: center; text-align: center; }
   /*
      The page in two halves. The title sits in the top one — centred in it, so

@@ -547,14 +547,18 @@ them — and the Preview draws them exactly as they print.
 A stack wants a list at the front of it saying what is in the stack, so a
 series opens with one: the series' title at the head, the word *Contents*
 under it, and one line for each episode — its label on the left, its name
-beside it, and how long that script runs on the right.
+beside it, then two figures.
 
-**Not a page reference.** Each episode numbers from its own page one, so
-"turn to page 34" would name three pages at once. What a reader of a stack
-wants is which episode is which and how long each one runs, and that is what
-the line says. The length is counted from the pages as they lay out, not
-estimated, and the covers between the scripts belong to no script and are
-counted in none of them.
+| Column | What it says |
+| --- | --- |
+| **Length** | How long that script runs. Counted from the pages as they lay out, not estimated; the covers between the scripts belong to no script and are counted in none of them |
+| **Sheet** | How far into the stack it begins: every leaf of the printing counted from the front, the contents page being sheet one. It points at the episode's cover, because that is where the episode begins — or at its first page where it has no cover |
+
+**The sheet is not the page the script prints.** Each episode numbers from
+its own page one, so "turn to page 34" would name three pages at once. The
+sheet is how far to count in, which is the question a reader of a stack
+actually has, and the two columns are headed so the one cannot be read as the
+other.
 
 It carries the series' title, so it stands as the front of the document with
 nothing needed in front of it: where a contents page opens the printing, the

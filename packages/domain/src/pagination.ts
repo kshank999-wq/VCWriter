@@ -633,8 +633,12 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   const pages: Page[] = [];
   /** Where a script begins: the index of each episode's own page one. */
   const restartAt = new Set<number>();
-  /** Which episode begins there, so the contents can say how long each runs. */
-  const startsHere = new Map<number, Episode>();
+  /**
+   * Each episode's run: where its first sheet falls (its cover, where it has
+   * one), and where its own page one does. The contents page is written from
+   * these — how far into the stack each script is, and how long it runs.
+   */
+  const runs: { episode: Episode; from: number; start: number }[] = [];
   let run: ManuscriptElement[] = [];
   const flush = () => {
     if (run.length === 0) return;
@@ -648,12 +652,13 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
       // The episode before it ends where it ends; this one starts on paper of
       // its own, with its front page ahead of it where it has one.
       flush();
+      const from = pages.length;
       const front = frontAt.get(unit.id as string);
       if (front) pages.push({ number: 0, lines: [], startsWith: null, titlePage: front });
       // Whatever is pushed next — a chapter leaf, or the first page of the
       // script — is this episode's page one.
       restartAt.add(pages.length);
-      startsHere.set(pages.length, episode);
+      runs.push({ episode, from, start: pages.length });
     }
     const leaf = opensAt.get(unit.id as string);
     if (leaf) {
@@ -667,7 +672,7 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   // The list at the front of the stack, which can only be written once the
   // stack exists: it says how long each script runs.
   if (hasContentsPage(file, options)) {
-    pages.unshift({ number: 0, lines: [], startsWith: null, contents: contentsOf(file, pages, startsHere) });
+    pages.unshift({ number: 0, lines: [], startsWith: null, contents: contentsOf(file, pages, runs) });
     return numbered(pages, new Set([...restartAt].map((index) => index + 1)));
   }
 
@@ -685,16 +690,17 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
 const contentsOf = (
   file: ProjectFile,
   pages: readonly Page[],
-  startsHere: ReadonlyMap<number, Episode>,
+  runs: readonly { episode: Episode; from: number; start: number }[],
 ): ContentsPage => {
-  const starts = [...startsHere.keys()].sort((a, b) => a - b);
-  const entries = starts.map((start, position) => {
-    const end = starts[position + 1] ?? pages.length;
-    const episode = startsHere.get(start) as Episode;
+  const entries = runs.map((run, position) => {
+    const end = runs[position + 1]?.from ?? pages.length;
     return {
-      label: episode.label,
-      title: episode.title,
-      pages: pages.slice(start, end).filter((page) => page.titlePage === undefined).length,
+      label: run.episode.label,
+      title: run.episode.title,
+      pages: pages.slice(run.start, end).filter((page) => page.titlePage === undefined).length,
+      // Counted from the front of the stack, sheet one being this contents
+      // page — which is not in `pages` yet, hence the extra one.
+      sheet: run.from + 2,
     };
   });
   return { title: file.project.title, entries };

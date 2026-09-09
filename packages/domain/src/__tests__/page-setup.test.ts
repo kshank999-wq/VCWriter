@@ -282,6 +282,38 @@ describe('the contents page of a series', () => {
     expect(pages[1]?.titlePage?.episode).toBe('Episode 1');
   });
 
+  it('says which sheet of the stack each script begins on', () => {
+    // Contents, cover, page, cover, page, cover, page — so the covers, which
+    // are where an episode begins, are sheets two, four and six.
+    const pages = paginateProject(seriesOf(3));
+    expect(pages).toHaveLength(7);
+    expect(pages[0]?.contents?.entries.map((entry) => entry.sheet)).toEqual([2, 4, 6]);
+  });
+
+  it('counts the sheet through a longer script, and past a cold open', () => {
+    let file = seriesOf(2);
+    const [first] = episodes(file);
+    file = updateBeat(file, first!.beats[0]!.id, {
+      manuscript: {
+        elements: Array.from({ length: 80 }, (_, index) => ({
+          id: `x${index}` as never,
+          type: 'action' as const,
+          text: `Line ${index} of the thing that goes on and on and on.`,
+          characterId: null,
+          attributes: {},
+        })),
+      },
+    });
+    // Contents, cover, three pages, cover — the second episode is sheet six.
+    expect(paginateProject(file)[0]?.contents?.entries.map((entry) => entry.sheet)).toEqual([2, 6]);
+  });
+
+  it('points at the episode itself where it has no cover of its own', () => {
+    const pages = paginateProject(seriesOf(2), { includeTitlePage: false });
+    // No covers: contents, page, page. The scripts are sheets two and three.
+    expect(pages[0]?.contents?.entries.map((entry) => entry.sheet)).toEqual([2, 3]);
+  });
+
   it('says how long each script runs, counting the pages and not the covers', () => {
     const pages = paginateProject(seriesOf(2));
     expect(pages[0]?.contents?.entries.map((entry) => entry.pages)).toEqual([1, 1]);

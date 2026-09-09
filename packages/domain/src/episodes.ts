@@ -433,10 +433,11 @@ export const episodeTitlePages = (
  * so it stands as the front of the document without a cover of its own in
  * front of it — and one line for each episode.
  *
- * **Not a page reference.** Each episode numbers from its own page one, so
- * "turn to page 34" would name three pages at once. What a reader of a stack
- * actually wants is which episode is which and how long each one runs, so
- * that is what the line says.
+ * **Not the page the script prints.** Each episode numbers from its own page
+ * one, so "turn to page 34" would name three pages at once. What a reader of
+ * a stack needs is how far into the stack to count, so the line carries the
+ * **sheet** — every leaf of the printing counted from the front — beside how
+ * long that script runs.
  */
 export interface ContentsEntry {
   /** "EPISODE 2", in whatever scheme the project numbers by. */
@@ -445,6 +446,12 @@ export interface ContentsEntry {
   title: string;
   /** How long that script runs, in pages. */
   pages: number;
+  /**
+   * Which sheet of the stack it begins on, counting every leaf from the front
+   * — the contents page is sheet one — and pointing at the episode's cover
+   * where it has one, because that is where the episode begins.
+   */
+  sheet: number;
 }
 
 export interface ContentsPage {

@@ -406,6 +406,14 @@ describe('the contents page in the preview', () => {
     expect(within(sheet).getByText('EPISODE 2')).toBeDefined();
     expect(within(sheet).getByText('Blue Water')).toBeDefined();
     expect(within(sheet).getAllByText('1 page')).toHaveLength(3);
+
+    // How far to count into the stack, headed so it is not read as the page
+    // the script prints — every episode numbers from its own page one.
+    expect(within(sheet).getByText('Sheet')).toBeDefined();
+    expect(within(sheet).getByText('Length')).toBeDefined();
+    expect(
+      [...sheet.querySelectorAll('.contents-row:not(.contents-head) .contents-sheet')].map((cell) => cell.textContent),
+    ).toEqual(['2', '4', '6']);
   });
 
   it('is not drawn for one episode, or when it is switched off', () => {

@@ -54,8 +54,10 @@ export function Paper({ pages, empty = 'Nothing written yet.' }: { pages: Page[]
 
 /**
  * The contents page a season is bound with (addendum 02 §17): the series'
- * name, then one line for each script — its label, its name, and how long it
- * runs. Not a page reference: each episode numbers from its own page one.
+ * name, then one line for each script — its label, its name, how long it runs
+ * and which sheet of the stack it begins on. The two figures are headed,
+ * because each episode numbers from its own page one and the sheet must not
+ * be read as the page the script prints.
  */
 function ContentsLeaf({ contents }: { contents: ContentsPage }) {
   return (
@@ -63,6 +65,12 @@ function ContentsLeaf({ contents }: { contents: ContentsPage }) {
       <h1 className="contents-series">{contents.title || 'Untitled'}</h1>
       <p className="contents-heading">Contents</p>
       <div className="contents-list">
+        <div className="contents-row contents-head">
+          <span className="contents-label" />
+          <span className="contents-title" />
+          <span className="contents-pages">Length</span>
+          <span className="contents-sheet">Sheet</span>
+        </div>
         {contents.entries.map((entry) => (
           <div key={entry.label} className="contents-row">
             <span className="contents-label">{entry.label}</span>
@@ -70,6 +78,7 @@ function ContentsLeaf({ contents }: { contents: ContentsPage }) {
             <span className="contents-pages">
               {entry.pages} {entry.pages === 1 ? 'page' : 'pages'}
             </span>
+            <span className="contents-sheet">{entry.sheet}</span>
           </div>
         ))}
       </div>
