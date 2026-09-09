@@ -33,7 +33,7 @@ push live; the build takes a minute or two.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor; its §13.6 is the
-  build order and §13.7 says what stage 1 already does.
+  build order and §13.7 says what stages 1-2 already do.
 
 ## Before pushing
 

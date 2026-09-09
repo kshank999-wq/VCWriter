@@ -1,6 +1,6 @@
 # Addendum 03 — Story Sculptor
 
-Status: approved for build, September 2026. Stage 1 of §13.6 is built.
+Status: approved for build, September 2026. Stages 1–2 of §13.6 are built.
 Extends §5 (story structure) and §19 (the hierarchy) of the master
 specification, and adds an area alongside the workspace of addendum 02.
 
@@ -306,7 +306,7 @@ against the reconciliation above:
 Stages 1–4 are the module standing on its own. Stage 5 is where it joins the
 rest of the program, and is the first point at which it earns its keep.
 
-### 13.7 Stage 1, as built
+### 13.7 Stages 1–2, as built
 
 The canvas, from **Sculptor** in the title bar. Down it: **Beginning**, the
 regions, **End**.
@@ -339,3 +339,40 @@ regions, **End**.
 One thing changed outside the module to make it work: a `note` marker used to
 be numbered like a division ("I") despite having no noun. It now carries the
 writer's words, which is what *just a note* meant all along.
+
+**Stage 2 — the expansion, and folding.**
+
+**The canvas is measured in units, not pixels.** The domain says how much
+room a node needs; the renderer decides how big a unit is. So the shape is a
+property of the story and the size is a property of the screen, and the zoom
+cannot change the shape.
+
+**A node is as tall as what is inside it** — a scene is its own card plus a
+row for each beat; a region is its head plus its scenes. Both are summed
+every time, from the story order, and neither is stored. Put a scene in a
+region and it grows by exactly that scene; put a beat in a scene and it
+grows by exactly that beat, pushing what follows down.
+
+**Not as long as its manuscript.** This is the correction stage 2 makes to
+stage 1, which took a region's height from its page count. The canvas is a
+diagram of the structure, not a bar chart of the word count: a region with
+eight scenes is tall because it has eight scenes, whether or not a word of
+them is written. Pages stay as a figure on the band, where they are useful
+and cannot mislead.
+
+**Folding.** A twisty on every region, and *Fold all* in the header. A folded
+region keeps its figures — scenes, beats, pages — so it is compressed rather
+than emptied, and its order and relationships are untouched because there is
+nothing to touch. Folding everything is §17's *collapse from beat-level
+detail back to a readable macro story shape*, in one click. What is folded is
+remembered, per machine.
+
+**+ Scene** on every region, including the opening. The scene lands at the
+end of that region's run — where a writer filling a shape in puts the next
+one — in the lane the region is already plotted in, so a scene added to a
+subplot's act does not jump to the main plot. Nothing about the region is
+edited; it is bigger because it now contains the scene.
+
+Still to come: the scene column proper is stage 3 and the beat column stage
+4. The room each scene reserves for its beats is already correct, so those
+stages fill space that is there rather than moving everything.

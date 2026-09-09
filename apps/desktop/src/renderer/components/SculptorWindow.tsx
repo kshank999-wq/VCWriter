@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  addSceneToRegion,
   addStructurePoint,
   markerNoun,
   moveStructurePoint,
@@ -47,10 +48,13 @@ interface SculptorWindowProps {
   onOpenUnit?(unitId: string): void;
 }
 
-/** Pixels a page of manuscript is worth, before the zoom is applied. */
-const PIXELS_PER_PAGE = 34;
-/** A region with nothing in it is still a place on the canvas. */
-const EMPTY_HEIGHT = 64;
+/**
+ * Pixels a canvas unit is worth, before the zoom. The domain says how many
+ * units a node needs (`SCENE_UNITS`, `BEAT_UNITS`); this is the only place
+ * that turns them into a height, so the shape is the story's and the size is
+ * the screen's.
+ */
+const PIXELS_PER_UNIT = 14;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
 
@@ -64,6 +68,13 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onOpenUnit }: Sc
   const [zoom, setZoom] = usePreference('sculptorZoom', 1);
   const [scroll, setScroll] = usePreference('sculptorScroll', 0);
   const canvas = useRef<HTMLDivElement | null>(null);
+
+  // Collapsed regions, remembered: a canvas folded down to its shape is a
+  // way of looking at the story, not a thing to redo every morning (§12).
+  const [shut, setShut] = usePreference<string[]>('sculptorCollapsed', []);
+  const collapsed = new Set(shut);
+  const fold = (key: string, closed: boolean) =>
+    setShut(closed ? [...new Set([...shut, key])] : shut.filter((entry) => entry !== key));
 
   const [selected, setSelected] = useState<StoryMarkerId | null>(null);
   const [dragging, setDragging] = useState<StoryMarkerId | null>(null);
@@ -119,6 +130,21 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onOpenUnit }: Sc
                   + {markerNoun(kind) || 'Milestone'}
                 </button>
               ))}
+              {/* The macro shape in one click: everything folded to its heads
+                  and back again (§17, "collapse to a readable macro shape"). */}
+              <button
+                type="button"
+                className="ghost small"
+                onClick={() =>
+                  setShut(
+                    collapsed.size > 0
+                      ? []
+                      : spine.regions.map((region) => (region.marker?.id as string) ?? 'opening'),
+                  )
+                }
+              >
+                {collapsed.size > 0 ? 'Open all' : 'Fold all'}
+              </button>
             </div>
 
             <label className="sculptor-zoom">
@@ -159,6 +185,8 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onOpenUnit }: Sc
                   key={region.marker?.id ?? 'opening'}
                   region={region}
                   zoom={zoom}
+                  collapsed={collapsed.has((region.marker?.id as string) ?? 'opening')}
+                  onFold={(closed) => fold((region.marker?.id as string) ?? 'opening', closed)}
                   selected={region.marker?.id === selected}
                   naming={region.marker?.id === naming}
                   dragging={dragging}
@@ -176,6 +204,9 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onOpenUnit }: Sc
                   onDragStart={() => setDragging(region.marker?.id ?? null)}
                   onDragEnd={() => setDragging(null)}
                   onDrop={() => drop(region)}
+                  onAddScene={() =>
+                    onUpdate((current) => addSceneToRegion(current, region.marker?.id ?? null).file)
+                  }
                   onOpenUnit={onOpenUnit}
                 />
               ))}
@@ -205,6 +236,9 @@ function Bookend({ label }: { label: string }) {
 interface RegionBandProps {
   region: SculptorRegion;
   zoom: number;
+  /** Folded to its head, its children compressed and their order kept (§4). */
+  collapsed: boolean;
+  onFold(closed: boolean): void;
   selected: boolean;
   naming: boolean;
   dragging: StoryMarkerId | null;
@@ -215,6 +249,7 @@ interface RegionBandProps {
   onDragStart(): void;
   onDragEnd(): void;
   onDrop(): void;
+  onAddScene(): void;
   onOpenUnit?(unitId: string): void;
 }
 
@@ -227,6 +262,8 @@ interface RegionBandProps {
 function RegionBand({
   region,
   zoom,
+  collapsed,
+  onFold,
   selected,
   naming,
   dragging,
@@ -237,10 +274,13 @@ function RegionBand({
   onDragStart,
   onDragEnd,
   onDrop,
+  onAddScene,
   onOpenUnit,
 }: RegionBandProps) {
   const own = region.marker !== null;
-  const height = Math.max(EMPTY_HEIGHT, region.pages * PIXELS_PER_PAGE) * zoom;
+  // The room the domain says it needs — a sum of what is in it, not a size
+  // anybody set — turned into pixels here and nowhere else.
+  const height = collapsed ? 0 : region.extent * PIXELS_PER_UNIT * zoom;
   const target = own && dragging !== null && dragging !== region.marker?.id;
 
   return (
@@ -248,6 +288,7 @@ function RegionBand({
       className={[
         'sculptor-region',
         own ? '' : 'opening',
+        collapsed ? 'folded' : '',
         selected ? 'selected' : '',
         target ? 'drop-target' : '',
       ]
@@ -271,6 +312,19 @@ function RegionBand({
         onDragEnd={onDragEnd}
         onClick={onSelect}
       >
+        <button
+          type="button"
+          className="ghost sculptor-twisty"
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? `Open ${region.label}` : `Fold ${region.label}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onFold(!collapsed);
+          }}
+        >
+          {collapsed ? '▸' : '▾'}
+        </button>
+
         {naming && own ? (
           <input
             className="sculptor-name"
@@ -296,39 +350,63 @@ function RegionBand({
         )}
 
         <span className="sculptor-figures muted">
-          {region.units.length} {region.units.length === 1 ? 'scene' : 'scenes'} ·{' '}
-          {region.pages.toFixed(1)} {region.pages === 1 ? 'page' : 'pages'}
+          {region.units.length} {region.units.length === 1 ? 'scene' : 'scenes'} · {region.beats}{' '}
+          {region.beats === 1 ? 'beat' : 'beats'} · {region.pages.toFixed(1)}{' '}
+          {region.pages === 1 ? 'page' : 'pages'}
         </span>
 
-        {own && !naming ? (
+        {!naming ? (
           <span className="sculptor-actions">
-            <button type="button" className="ghost small" aria-label={`Rename ${region.label}`} onClick={onRename}>
-              Name
+            <button
+              type="button"
+              className="ghost small"
+              aria-label={`Add a scene to ${region.label}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onAddScene();
+              }}
+            >
+              + Scene
             </button>
-            <button type="button" className="ghost small" aria-label={`Remove ${region.label}`} onClick={onRemove}>
-              ×
-            </button>
+            {own ? (
+              <button type="button" className="ghost small" aria-label={`Rename ${region.label}`} onClick={onRename}>
+                Name
+              </button>
+            ) : null}
+            {own ? (
+              <button type="button" className="ghost small" aria-label={`Remove ${region.label}`} onClick={onRemove}>
+                ×
+              </button>
+            ) : null}
           </span>
         ) : null}
       </header>
 
-      <div className="sculptor-scenes">
-        {region.units.length === 0 ? (
-          <p className="muted small sculptor-thin">Nothing under it yet.</p>
-        ) : (
-          region.units.map((unit) => (
-            <button
-              key={unit.id}
-              type="button"
-              className="sculptor-scene"
-              title="Go to this scene"
-              onClick={() => onOpenUnit?.(unit.id as string)}
-            >
-              {unit.title || 'Untitled scene'}
-            </button>
-          ))
-        )}
-      </div>
+      {collapsed ? null : (
+        <div className="sculptor-scenes">
+          {region.scenes.length === 0 ? (
+            <p className="muted small sculptor-thin">Nothing under it yet.</p>
+          ) : (
+            region.scenes.map((scene) => (
+              <button
+                key={scene.unit.id}
+                type="button"
+                className="sculptor-scene"
+                title={`Go to this scene · ${scene.beats} ${scene.beats === 1 ? 'beat' : 'beats'}`}
+                // A scene is as tall as its beats, so putting one in pushes
+                // what follows down — §4, seen rather than described.
+                style={{ minHeight: `${scene.extent * PIXELS_PER_UNIT * zoom}px` }}
+                onClick={() => onOpenUnit?.(scene.unit.id as string)}
+              >
+                <span className="sculptor-scene-name">{scene.unit.title || 'Untitled scene'}</span>
+                <span className="sculptor-scene-figures muted">
+                  {scene.beats} {scene.beats === 1 ? 'beat' : 'beats'}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
     </section>
   );
 }

@@ -5,7 +5,7 @@ import { beatSchema, storyMarkerSchema, structuralUnitSchema } from './entities/
 import { beatsForUnit, lanesInOrder, unitsInStoryOrder } from './selectors.js';
 import { defaultMarkerKind, placedMarkers } from './markers.js';
 import { pagesForUnit } from './story-layout.js';
-import { moveUnit, DomainError } from './mutations.js';
+import { addBeat, addUnit, moveUnit, DomainError } from './mutations.js';
 import type { ProjectFile } from './project-file.js';
 import type { StoryMarker, StoryMarkerKind, StructuralUnit } from './entities/structure.js';
 import type { BeatId, LaneId, StoryMarkerId, StructuralUnitId } from './ids.js';
@@ -30,6 +30,31 @@ import type { BeatId, LaneId, StoryMarkerId, StructuralUnitId } from './ids.js';
  * nowhere.
  */
 
+/**
+ * The canvas is measured in **units**, not pixels: the domain says how much
+ * room a thing needs and the renderer decides how big a unit is, so the zoom
+ * is a property of the screen and the shape is a property of the story.
+ *
+ * A node is as tall as **what is inside it** (§4) — not as long as its
+ * manuscript. This is a diagram of the structure, not a bar chart of the word
+ * count: a region with eight scenes in it is tall because it has eight
+ * scenes, whether or not a word of them is written.
+ */
+export const SCENE_UNITS = 2;
+export const BEAT_UNITS = 1;
+export const REGION_HEAD_UNITS = 2;
+/** A region with nothing in it is still a place on the canvas. */
+export const REGION_MIN_UNITS = 4;
+
+export interface SculptorScene {
+  unit: StructuralUnit;
+  beats: number;
+  /** How much of it is written. A figure to show, never a height. */
+  pages: number;
+  /** The room it needs: itself, and a row for each beat in it. */
+  extent: number;
+}
+
 export interface SculptorRegion {
   /**
    * The structure point that opens it, or null for the run before the first
@@ -44,9 +69,17 @@ export interface SculptorRegion {
   toIndex: number;
   /** The scenes in it, in story order. */
   units: StructuralUnit[];
+  /** The same scenes, each measured. */
+  scenes: SculptorScene[];
   beats: number;
-  /** How much manuscript is under it, which is what makes it tall. */
+  /** How much manuscript is under it. A figure to show, never a height. */
   pages: number;
+  /**
+   * The room it needs: its own head, and everything under it. **This is the
+   * automatic expansion** — put a scene in and the number goes up, because it
+   * is a sum of what is there rather than a size somebody set.
+   */
+  extent: number;
 }
 
 export interface SculptorSpine {
@@ -55,6 +88,8 @@ export interface SculptorSpine {
   /** Every scene in the story, so the canvas can size itself against the whole. */
   units: number;
   pages: number;
+  /** The whole canvas, so a mini-map can be drawn against it later. */
+  extent: number;
 }
 
 /**
@@ -71,14 +106,26 @@ export const sculptorSpine = (file: ProjectFile): SculptorSpine => {
 
   const regionAt = (marker: StoryMarker | null, label: string, from: number, to: number): SculptorRegion => {
     const own = units.slice(from, to + 1);
+    const scenes: SculptorScene[] = own.map((unit) => {
+      const beats = beatsForUnit(file, unit.id).length;
+      return {
+        unit,
+        beats,
+        pages: unit.inScript ? pagesForUnit(file, unit.id) : 0,
+        extent: SCENE_UNITS + beats * BEAT_UNITS,
+      };
+    });
+    const inside = scenes.reduce((total, scene) => total + scene.extent, 0);
     return {
       marker,
       label,
       fromIndex: own.length > 0 ? from : -1,
       toIndex: own.length > 0 ? to : -1,
       units: own,
-      beats: own.reduce((total, unit) => total + beatsForUnit(file, unit.id).length, 0),
-      pages: own.reduce((total, unit) => total + (unit.inScript ? pagesForUnit(file, unit.id) : 0), 0),
+      scenes,
+      beats: scenes.reduce((total, scene) => total + scene.beats, 0),
+      pages: scenes.reduce((total, scene) => total + scene.pages, 0),
+      extent: Math.max(REGION_MIN_UNITS, REGION_HEAD_UNITS + inside),
     };
   };
 
@@ -100,6 +147,7 @@ export const sculptorSpine = (file: ProjectFile): SculptorSpine => {
     regions,
     units: units.length,
     pages: regions.reduce((total, region) => total + region.pages, 0),
+    extent: regions.reduce((total, region) => total + region.extent, 0),
   };
 };
 
@@ -174,6 +222,42 @@ export const addStructurePoint = (
     unit,
     beatId: beat.id,
   };
+};
+
+/**
+ * Put a scene in a region (§4).
+ *
+ * It goes at the end of the region's run, which is where a writer filling a
+ * shape in puts the next one. Nothing about the region is edited: the scene
+ * lands at that position in the story order and the region is bigger because
+ * it now contains it — which is the whole of "automatic vertical expansion".
+ *
+ * The opening — the run before the first structure point — takes scenes the
+ * same way, with `markerId` null.
+ */
+export const addSceneToRegion = (
+  file: ProjectFile,
+  markerId: StoryMarkerId | null,
+  input: { title?: string } = {},
+): { file: ProjectFile; unit: StructuralUnit; beatId: BeatId } => {
+  const region = sculptorSpine(file).regions.find((candidate) =>
+    markerId === null ? candidate.marker === null : candidate.marker?.id === markerId,
+  );
+  if (!region) throw new DomainError(`Region ${markerId ?? 'opening'} is not in the story`);
+
+  // The lane the region is already plotted in, so a scene added to a subplot's
+  // act does not jump to the main plot.
+  const lane =
+    region.units.at(-1)?.laneId ?? lanesInOrder(file)[0]?.id;
+  if (!lane) throw new DomainError('A project needs a lane before a scene can be put in it');
+
+  const made = addUnit(file, {
+    laneId: lane,
+    ...(input.title ? { title: input.title } : {}),
+    index: region.toIndex >= 0 ? region.toIndex + 1 : 0,
+  });
+  const beat = addBeat(made.file, { unitId: made.unit.id });
+  return { file: beat.file, unit: made.unit, beatId: beat.beat.id };
 };
 
 /**

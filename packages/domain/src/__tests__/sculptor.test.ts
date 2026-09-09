@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BEAT_UNITS,
+  REGION_HEAD_UNITS,
+  REGION_MIN_UNITS,
+  SCENE_UNITS,
   addBeat,
+  addLane,
+  addSceneToRegion,
   addStructurePoint,
   addUnit,
   createProjectFile,
@@ -195,5 +201,106 @@ describe('what the canvas does not own', () => {
     const removed = removeMarker(renamed, made.marker.id);
     expect(removed.units).toHaveLength(2);
     expect(sculptorSpine(removed).regions.map((region) => region.label)).toEqual(['Opening']);
+  });
+});
+
+/**
+ * Stage two (addendum 03 §4): a region is as tall as what is inside it.
+ *
+ * The canvas is a diagram of the structure, not a bar chart of the word
+ * count — so the room a node needs is a **sum of its children**, worked out
+ * every time, never a size anybody set.
+ */
+describe('automatic vertical expansion', () => {
+  it('gives an empty region its floor and no more', () => {
+    const made = addStructurePoint(project(), { title: 'One' });
+    const region = sculptorSpine(made.file).regions.at(-1)!;
+    // Its own head, and the one scene it came with.
+    expect(region.extent).toBe(REGION_HEAD_UNITS + SCENE_UNITS + BEAT_UNITS);
+    expect(region.extent).toBeGreaterThanOrEqual(REGION_MIN_UNITS);
+  });
+
+  it('grows when a scene is put in it, and by exactly that scene', () => {
+    const made = addStructurePoint(project(), { title: 'One' });
+    const before = sculptorSpine(made.file).regions.at(-1)!;
+
+    const added = addSceneToRegion(made.file, made.marker.id);
+    const after = sculptorSpine(added.file).regions.at(-1)!;
+
+    expect(after.units).toHaveLength(before.units.length + 1);
+    // A scene with its one beat: nothing else moved, and nothing was set.
+    expect(after.extent).toBe(before.extent + SCENE_UNITS + BEAT_UNITS);
+  });
+
+  it('grows when a beat is put in a scene, and pushes the region down with it', () => {
+    const made = addStructurePoint(project(), { title: 'One' });
+    const before = sculptorSpine(made.file).regions.at(-1)!;
+
+    const file = addBeat(made.file, { unitId: made.unit.id }).file;
+    const after = sculptorSpine(file).regions.at(-1)!;
+    expect(after.extent).toBe(before.extent + BEAT_UNITS);
+    expect(after.scenes[0]?.extent).toBe(SCENE_UNITS + 2 * BEAT_UNITS);
+  });
+
+  it('takes its height from its children and not from what is written in them', () => {
+    const made = addStructurePoint(project(), { title: 'One' });
+    const before = sculptorSpine(made.file).regions.at(-1)!;
+
+    const beat = made.file.beats.find((candidate) => candidate.unitId === made.unit.id)!;
+    const written = updateBeat(made.file, beat.id, {
+      manuscript: {
+        elements: [
+          { id: 'a' as never, type: 'action', text: 'The lamp turns. '.repeat(500), characterId: null, attributes: {} },
+        ],
+      },
+    });
+    const after = sculptorSpine(written).regions.at(-1)!;
+
+    // Pages of manuscript, and not one unit taller: a diagram of the shape.
+    expect(after.pages).toBeGreaterThan(1);
+    expect(after.extent).toBe(before.extent);
+  });
+
+  it('measures the whole canvas as the sum of its regions', () => {
+    let file = project();
+    file = addStructurePoint(file, { title: 'One' }).file;
+    file = addStructurePoint(file, { title: 'Two' }).file;
+    const spine = sculptorSpine(file);
+    expect(spine.extent).toBe(spine.regions.reduce((total, region) => total + region.extent, 0));
+  });
+});
+
+describe('putting a scene in a region', () => {
+  it('puts it at the end of that region’s run, not at the end of the story', () => {
+    let file = project();
+    const first = addStructurePoint(file, { title: 'One' });
+    file = addStructurePoint(first.file, { title: 'Two' }).file;
+
+    const added = addSceneToRegion(file, first.marker.id, { title: 'The wreck' });
+    const spine = sculptorSpine(added.file);
+    // It landed in region one, ahead of the second structure point.
+    expect(spine.regions[1]?.units.map((unit) => unit.title)).toEqual(['', 'The wreck']);
+    expect(spine.regions[2]?.units).toHaveLength(1);
+  });
+
+  it('plots it in the lane its region is already in', () => {
+    let file = project();
+    const lane = addLane(file, { name: 'Subplot' });
+    file = lane.file;
+    const made = addStructurePoint(file, { title: 'One', laneId: lane.lane.id });
+    const added = addSceneToRegion(made.file, made.marker.id);
+    expect(added.unit.laneId).toBe(lane.lane.id);
+  });
+
+  it('takes scenes into the opening, which has no structure point', () => {
+    const file = addStructurePoint(project(), { title: 'One' }).file;
+    const added = addSceneToRegion(file, null, { title: 'Cold open' });
+    const spine = sculptorSpine(added.file);
+    expect(spine.regions[0]?.marker).toBeNull();
+    expect(spine.regions[0]?.units.map((unit) => unit.title)).toContain('Cold open');
+  });
+
+  it('refuses a region that is not in the story', () => {
+    expect(() => addSceneToRegion(project(), 'nope' as never)).toThrow(/not in the story/);
   });
 });

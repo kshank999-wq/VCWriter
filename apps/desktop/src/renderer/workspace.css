@@ -5346,11 +5346,14 @@ dialog.sculptor-window::backdrop {
   min-width: 0;
 }
 
+/* Scenes down the region, each as tall as its own beats: putting one in
+   pushes what follows down, which is the expansion of §4 seen rather than
+   described. They run down rather than across because story time is the
+   vertical axis; the scene *column* proper is stage three. */
 .sculptor-scenes {
   flex: 1;
   display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
+  flex-direction: column;
   gap: 6px;
   padding: 10px;
 }
@@ -5360,7 +5363,11 @@ dialog.sculptor-window::backdrop {
 }
 
 .sculptor-scene {
-  padding: 4px 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 3px;
@@ -5371,4 +5378,27 @@ dialog.sculptor-window::backdrop {
 
 .sculptor-scene:hover {
   border-color: var(--gold);
+}
+
+.sculptor-scene-figures {
+  flex: none;
+  font-size: 10.5px;
+}
+
+/* Folded: the head alone, and the story read as its shape. */
+.sculptor-region.folded {
+  min-height: 0;
+}
+
+.sculptor-region.folded .sculptor-point {
+  border-bottom: none;
+}
+
+.sculptor-twisty {
+  flex: none;
+  width: 16px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1;
 }
