@@ -1145,7 +1145,7 @@ top of the list while a cue is being typed (§16).
 slate: its own scene, one empty beat, and nothing in it. That is the point of
 a new episode.
 
-### Its own front page
+### Its own front page, and its number
 
 An episode is a script that goes out on its own, so it has a title page of
 its own, kept on the marker that starts it. Starting an episode opens that
@@ -1153,6 +1153,25 @@ page's screen already knowing which episode it is; **double-clicking an
 episode in the rail** opens it again. It falls back to the series' page field
 by field, and **it prints at the head of its own run** rather than once at
 the front of the stack — §6.1 has the whole of it.
+
+**The front page is where an episode is numbered.** The number typed in its
+*Episode* field is the number of that script — the first whole number in the
+field, so "Episode 4 — The Lamp" is episode four — and it is what the rail,
+the timeline and the printed page all call it. It is not the episode's place
+in the running order: a pilot going out as episode seven is episode seven,
+and a script written last week can be episode one.
+
+**No two episodes carry the same number.** The screen says so while it is
+being typed — *EPISODE 1 already carries that number* under the field, with
+**Update page** held until it is changed — rather than throwing when the page
+is committed. A new episode is given the **lowest number nobody has claimed**,
+so the usual case needs no thought at all.
+
+A page that names no number makes no claim, and the episode takes the lowest
+free number underneath. And where a file merged from two machines arrives
+with both claiming the same number, the earlier in the story keeps the claim
+and the later falls through to the next free one: a document never shows the
+same number twice.
 
 ## 18. Importing somebody else's script
 

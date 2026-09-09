@@ -15,6 +15,7 @@ import { researchCategorySchema, researchItemSchema } from './entities/research.
 import { setupPayoffSchema, setupPointSchema } from './entities/setups.js';
 import { characterCategorySchema, characterSchema } from './entities/character.js';
 import { knowsCharacter, spokenNames } from './characters.js';
+import { episodeNumberClash } from './episodes.js';
 import { countWords } from './entities/manuscript.js';
 import { characterCategoriesInOrder } from './characters.js';
 import {
@@ -811,6 +812,19 @@ export const setEpisodeTitlePage = (
   if (!marker) throw new DomainError(`Marker ${markerId} does not exist`);
   const next =
     patch === null ? null : titlePageSchema.parse({ ...(marker.titlePage ?? {}), ...patch });
+
+  // Two scripts cannot be Episode 1. The number lives on the front page
+  // (§6.1), so this is where it is kept unique — the screen that edits the
+  // page asks first, and this is the backstop under it.
+  if (next !== null) {
+    const clash = episodeNumberClash(file, markerId, next.episode);
+    if (clash) {
+      throw new DomainError(
+        `${clash.label} already carries that number. Two episodes cannot be numbered the same.`,
+      );
+    }
+  }
+
   return touchProject({
     ...file,
     markers: file.markers.map((candidate) =>

@@ -18,6 +18,7 @@ import { EpisodeRail } from '../components/EpisodeRail';
 import { NewEpisodeDialog } from '../components/NewEpisodeDialog';
 import { CastPanel } from '../components/CastPanel';
 import { PagePreview } from '../components/PagePreview';
+import { TitlePageDialog } from '../components/TitlePageDialog';
 import { menusFor } from '../menus';
 
 /**
@@ -296,5 +297,60 @@ describe('an episode’s front page in the preview', () => {
   it('draws none of them when the title page is switched off', () => {
     preview(twoEpisodes(), false);
     expect(screen.queryByLabelText('Title page: Episode 1')).toBeNull();
+  });
+});
+
+/**
+ * An episode is numbered on its own front page, and two of them cannot carry
+ * the same number (addendum 02 §17).
+ */
+describe('numbering an episode on its front page', () => {
+  const twoEpisodes = (): ProjectFile => {
+    let file = createProjectFile({ title: 'The Lighthouse', format: 'series' });
+    file = addEpisode(file, { title: 'Pilot' }).file;
+    file = addEpisode(file, { title: 'The Wreck' }).file;
+    return file;
+  };
+
+  /** The second episode's page, open, over a project held in state. */
+  function Editing({ start }: { start: ProjectFile }) {
+    const [file, setFile] = useState(start);
+    const second = episodes(file)[1]!;
+    return (
+      <>
+        <p data-testid="numbers">{episodes(file).map((episode) => episode.number).join(',')}</p>
+        <TitlePageDialog
+          file={file}
+          episode={second}
+          open
+          onClose={() => undefined}
+          onUpdate={(mutate) => setFile((current) => mutate(current))}
+        />
+      </>
+    );
+  }
+
+  it('says which episode already has the number, and will not commit it', () => {
+    render(<Editing start={twoEpisodes()} />);
+    const field = screen.getByLabelText('Episode') as HTMLInputElement;
+    expect(field.value).toBe('Episode 2');
+
+    fireEvent.change(field, { target: { value: 'Episode 1' } });
+    expect(screen.getByText(/EPISODE 1 already carries that number/)).toBeDefined();
+
+    const update = screen.getByRole('button', { name: 'Update page' }) as HTMLButtonElement;
+    expect(update.disabled).toBe(true);
+    fireEvent.click(update);
+    // Nothing was written: the two episodes are still one and two.
+    expect(screen.getByTestId('numbers').textContent).toBe('1,2');
+  });
+
+  it('takes a free number, and the episode is that number from then on', () => {
+    render(<Editing start={twoEpisodes()} />);
+    fireEvent.change(screen.getByLabelText('Episode'), { target: { value: 'Episode 7 — The Wreck' } });
+    expect(screen.queryByText(/already carries that number/)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update page' }));
+    expect(screen.getByTestId('numbers').textContent).toBe('1,7');
   });
 });

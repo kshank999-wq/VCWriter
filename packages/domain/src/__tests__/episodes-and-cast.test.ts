@@ -15,6 +15,7 @@ import {
   defaultEpisodeCarry,
   episodeOfBeat,
   episodeOfUnit,
+  episodeNumberClash,
   episodes,
   fromRows,
   moveCharacterCategory,
@@ -342,5 +343,79 @@ describe('printing an episode with its own front page', () => {
     let file = createProjectFile({ title: 'The Lighthouse', format: 'screenplay' });
     file = addMarker(file, { unitId: file.units[0]!.id, kind: 'act', title: 'One' }).file;
     expect(paginateProject(file).some((page) => page.titlePage)).toBe(false);
+  });
+});
+
+/**
+ * An episode is numbered on its own front page (addendum 02 §17), and two
+ * scripts cannot carry the same number.
+ */
+describe('numbering the episodes', () => {
+  it('numbers a new one from the lowest number nobody has claimed', () => {
+    let file = series();
+    file = addEpisode(file, { title: 'Pilot' }).file;
+    file = addEpisode(file, { title: 'The Wreck' }).file;
+    expect(episodes(file).map((episode) => episode.number)).toEqual([1, 2]);
+    expect(episodes(file).map((episode) => episode.marker.titlePage?.episode)).toEqual([
+      'Episode 1',
+      'Episode 2',
+    ]);
+  });
+
+  it('takes the number the writer typed on the page, not the running order', () => {
+    let file = addEpisode(series(), { title: 'Pilot' }).file;
+    const [first] = episodes(file);
+    // A pilot that is going out as episode seven is episode seven.
+    file = setEpisodeTitlePage(file, first!.marker.id, { episode: 'Episode 7 — The Lamp' });
+    expect(episodes(file)[0]?.number).toBe(7);
+    expect(episodes(file)[0]?.label).toBe('EPISODE 7');
+
+    // And the next one made takes the lowest free number, not eight.
+    const made = addEpisode(file, { title: 'The Wreck' });
+    expect(made.episode.number).toBe(1);
+  });
+
+  it('refuses a number another episode already carries', () => {
+    let file = addEpisode(series(), { title: 'Pilot' }).file;
+    file = addEpisode(file, { title: 'The Wreck' }).file;
+    const [first, second] = episodes(file);
+
+    expect(episodeNumberClash(file, second!.marker.id, 'Episode 1')?.label).toBe('EPISODE 1');
+    expect(() => setEpisodeTitlePage(file, second!.marker.id, { episode: 'Episode 1' })).toThrow(
+      /already carries that number/,
+    );
+
+    // Its own number is not a clash with itself, and a free one is fine.
+    expect(episodeNumberClash(file, first!.marker.id, 'Episode 1')).toBeNull();
+    expect(episodes(setEpisodeTitlePage(file, second!.marker.id, { episode: 'Episode 9' }))[1]?.number).toBe(9);
+  });
+
+  it('lets a page name no number at all, and fills one in underneath', () => {
+    let file = addEpisode(series(), { title: 'Pilot' }).file;
+    file = addEpisode(file, { title: 'The Wreck' }).file;
+    const [first, second] = episodes(file);
+    file = setEpisodeTitlePage(file, second!.marker.id, { episode: 'Episode 5' });
+    file = setEpisodeTitlePage(file, first!.marker.id, { episode: 'The Pilot' });
+
+    // Five is claimed, so the unnumbered one takes one — the lowest free.
+    expect(episodes(file).map((episode) => episode.number)).toEqual([1, 5]);
+  });
+
+  it('settles a clash that arrives from a sync rather than showing it twice', () => {
+    let file = addEpisode(series(), { title: 'Pilot' }).file;
+    file = addEpisode(file, { title: 'The Wreck' }).file;
+    const ids = episodes(file).map((episode) => episode.marker.id);
+
+    // Two machines each numbered their episode 3; the file arrives with both.
+    file = {
+      ...file,
+      markers: file.markers.map((marker) =>
+        ids.includes(marker.id)
+          ? { ...marker, titlePage: { ...marker.titlePage!, episode: 'Episode 3' } }
+          : marker,
+      ),
+    };
+    // The earlier in the story keeps the claim; the later takes a free number.
+    expect(episodes(file).map((episode) => episode.number)).toEqual([3, 1]);
   });
 });

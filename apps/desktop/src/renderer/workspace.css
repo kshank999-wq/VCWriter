@@ -4890,6 +4890,19 @@ dialog.lane-dialog.title-page-dialog {
   gap: 6px;
 }
 
+/* What is wrong with what is typed, under the box it is typed in — two
+   episodes cannot carry the same number (§17). */
+.title-page-fields .field-row.wrong .field-input > input {
+  border-color: var(--danger);
+}
+
+.title-page-fields .field-problem {
+  grid-column: 2;
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--danger);
+}
+
 .title-page-fields .field-input > input,
 .title-page-fields .field-input > textarea,
 .title-page-fields .title-art-picker > input {

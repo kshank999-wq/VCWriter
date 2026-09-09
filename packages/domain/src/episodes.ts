@@ -38,7 +38,11 @@ import type { BeatId, CharacterId, LaneId, StoryMarkerId, StructuralUnitId } fro
 
 export interface Episode {
   marker: StoryMarker;
-  /** 1-based, among episodes. */
+  /**
+   * The number of this script, from its own front page (§6.1) — not its
+   * place in the running order. An episode with no number on its page takes
+   * the lowest one nobody has claimed.
+   */
   number: number;
   /** "EPISODE 3" — what the timeline and the title card print. */
   label: string;
@@ -55,6 +59,80 @@ export interface Episode {
  * marker belong to no episode — which is the state a series is in before the
  * writer has marked anything, and is not an error.
  */
+/**
+ * The number an episode's front page claims, if it names one.
+ *
+ * **The title page is where an episode is numbered** (spec §6.1): the number
+ * typed there is the number of that script, so an episode can be *Episode 7*
+ * without six others in front of it, and a pilot written last is still the
+ * pilot. The first whole number in the field is the claim — "Episode 4 — The
+ * Lamp" claims four — and a page that names no number at all makes no claim.
+ */
+export const episodeNumberOnPage = (marker: StoryMarker): number | null => {
+  const found = /\d+/.exec(marker.titlePage?.episode ?? '');
+  if (!found) return null;
+  const number = Number.parseInt(found[0] as string, 10);
+  return Number.isFinite(number) && number > 0 ? number : null;
+};
+
+/**
+ * Number every episode: the pages that claim a number keep it, and the rest
+ * take the lowest number nobody has claimed.
+ *
+ * Two episodes cannot be Episode 1 — the writes refuse it (`setEpisodeTitlePage`,
+ * `addEpisode`) — but a file merged from two machines could arrive that way, so
+ * this settles it rather than showing the same number twice: the earlier in the
+ * story keeps the claim and the later falls through to the next free number.
+ */
+const numbersFor = (starts: readonly StoryMarker[]): number[] => {
+  const claimed = new Set<number>();
+  const claims = starts.map((marker) => {
+    const number = episodeNumberOnPage(marker);
+    if (number === null || claimed.has(number)) return null;
+    claimed.add(number);
+    return number;
+  });
+
+  let next = 1;
+  return claims.map((claim) => {
+    if (claim !== null) return claim;
+    while (claimed.has(next)) next += 1;
+    claimed.add(next);
+    return next;
+  });
+};
+
+/** The lowest number no episode's front page has claimed. */
+export const nextEpisodeNumber = (file: ProjectFile): number => {
+  const taken = new Set(episodes(file).map((episode) => episode.number));
+  let next = 1;
+  while (taken.has(next)) next += 1;
+  return next;
+};
+
+/**
+ * The episode already using the number this text claims, if there is one.
+ *
+ * The screen that edits a front page asks before it commits, so a clash is
+ * something a writer is told about rather than something that throws under
+ * them. `markerId` is the episode being edited, which never clashes with
+ * itself.
+ */
+export const episodeNumberClash = (
+  file: ProjectFile,
+  markerId: StoryMarkerId,
+  episodeText: string,
+): Episode | null => {
+  const found = /\d+/.exec(episodeText);
+  if (!found) return null;
+  const number = Number.parseInt(found[0] as string, 10);
+  return (
+    episodes(file).find(
+      (episode) => episode.marker.id !== markerId && episodeNumberOnPage(episode.marker) === number,
+    ) ?? null
+  );
+};
+
 export const episodes = (file: ProjectFile): Episode[] => {
   const order = unitsInStoryOrder(file);
   const position = new Map(order.map((unit, index) => [unit.id as string, index]));
@@ -65,6 +143,8 @@ export const episodes = (file: ProjectFile): Episode[] => {
     .filter((marker) => marker.kind === 'episode' && position.has(marker.unitId as string))
     .sort((a, b) => (position.get(a.unitId as string) ?? 0) - (position.get(b.unitId as string) ?? 0));
 
+  const numbers = numbersFor(starts);
+
   return starts.map((marker, index) => {
     const from = position.get(marker.unitId as string) ?? 0;
     const next = starts[index + 1];
@@ -72,7 +152,7 @@ export const episodes = (file: ProjectFile): Episode[] => {
     const units = order.slice(from, to);
     const ids = new Set(units.map((unit) => unit.id as string));
     const beats = file.beats.filter((beat) => ids.has(beat.unitId as string));
-    const number = index + 1;
+    const number = numbers[index] as number;
     return {
       marker,
       number,
@@ -180,7 +260,9 @@ export const addEpisode = (
 ): NewEpisode => {
   const carry = input.carry ?? defaultEpisodeCarry(file);
   const timestamp = nowIso();
-  const number = episodes(file).length + 1;
+  // The lowest number no episode has claimed, so two scripts never carry
+  // the same one (§17).
+  const number = nextEpisodeNumber(file);
 
   let lanes: Lane[] = file.lanes;
   let laneId: LaneId | undefined;

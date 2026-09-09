@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   MAX_TITLE_IMAGE_BYTES,
+  episodeNumberClash,
   setEpisodeTitlePage,
   setTitlePage,
   titlePageOf,
@@ -74,12 +75,22 @@ export function TitlePageDialog({ file, open, episode, onClose, onUpdate }: Titl
     ? titlePageOf(file.project, file.settings, stored)
     : titlePageOf(file.project, { ...file.settings, titlePage: stored });
 
+  /**
+   * The episode already carrying the number being typed, if there is one.
+   *
+   * An episode is numbered on its own front page (§17), so two of them
+   * claiming the same number is something to be told about while typing it —
+   * not something that throws when Update page is pressed.
+   */
+  const clash = episode ? episodeNumberClash(file, episode.marker.id, stored.episode) : null;
+
   const cancel = () => {
     setStored(saved);
     onClose();
   };
 
   const commit = () => {
+    if (clash) return;
     onUpdate((current) =>
       episode ? setEpisodeTitlePage(current, episode.marker.id, stored) : setTitlePage(current, stored),
     );
@@ -176,7 +187,13 @@ export function TitlePageDialog({ file, open, episode, onClose, onUpdate }: Titl
                 </p>
               ) : null}
 
-              <Field label="Episode" value={stored.episode} placeholder="Episode 4 — The Lamp" onChange={(episode) => write({ episode })} />
+              <Field
+                label="Episode"
+                value={stored.episode}
+                placeholder="Episode 4 — The Lamp"
+                onChange={(episode) => write({ episode })}
+                problem={clash ? `${clash.label} already carries that number.` : null}
+              />
               {/* The page sets the words "Written" and "by" above this, so
                   the field holds the name and nothing else. */}
               <Field
@@ -247,7 +264,7 @@ export function TitlePageDialog({ file, open, episode, onClose, onUpdate }: Titl
               <button type="button" className="ghost" onClick={cancel}>
                 Cancel
               </button>
-              <button type="button" className="primary" onClick={commit}>
+              <button type="button" className="primary" onClick={commit} disabled={clash !== null}>
                 Update page
               </button>
             </div>
@@ -265,6 +282,7 @@ function Field({
   onChange,
   lines: rows = 1,
   action,
+  problem = null,
 }: {
   label: string;
   value: string;
@@ -273,9 +291,11 @@ function Field({
   lines?: number;
   /** A shortcut beside the box, where one obvious answer exists. */
   action?: { label: string; onPick(): void };
+  /** What is wrong with what is typed, said beside the box rather than after. */
+  problem?: string | null;
 }) {
   return (
-    <label className="field-row">
+    <label className={problem ? 'field-row wrong' : 'field-row'}>
       <span>{label}</span>
       <div className="field-input">
         {rows > 1 ? (
@@ -300,6 +320,7 @@ function Field({
           </button>
         ) : null}
       </div>
+      {problem ? <p className="field-problem">{problem}</p> : null}
     </label>
   );
 }
