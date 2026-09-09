@@ -16,6 +16,9 @@ import {
  *
  * Only a series has it. In every other format the rail is not drawn at all,
  * because there is nothing for it to list.
+ *
+ * One click goes to an episode; two open **its own title page**, because an
+ * episode is a script that goes out on its own and has its own front page.
  */
 
 interface EpisodeRailProps {
@@ -25,10 +28,12 @@ interface EpisodeRailProps {
   /** The episode whose scenes the workspace is showing, if any. */
   currentUnitId: string | null;
   onGo(episode: Episode): void;
+  /** Two clicks open the episode's own title page (addendum 02 §17). */
+  onOpenTitlePage(episode: Episode): void;
   onNew(): void;
 }
 
-export function EpisodeRail({ file, open, onOpen, currentUnitId, onGo, onNew }: EpisodeRailProps) {
+export function EpisodeRail({ file, open, onOpen, currentUnitId, onGo, onOpenTitlePage, onNew }: EpisodeRailProps) {
   if (file.project.format !== 'series') return null;
   const episodes = episodesOf(file);
   const here = currentUnitId
@@ -64,7 +69,9 @@ export function EpisodeRail({ file, open, onOpen, currentUnitId, onGo, onNew }: 
                       type="button"
                       className={here?.marker.id === episode.marker.id ? 'episode-row current' : 'episode-row'}
                       aria-current={here?.marker.id === episode.marker.id ? 'true' : undefined}
+                      title={`Go to ${episode.label} · double-click for its title page`}
                       onClick={() => onGo(episode)}
+                      onDoubleClick={() => onOpenTitlePage(episode)}
                     >
                       <span className="episode-label">{episode.label}</span>
                       <span className="episode-title">{episode.title || 'Untitled'}</span>

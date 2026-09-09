@@ -3,6 +3,7 @@ import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
 import { orderKeyForIndex } from './ordering.js';
 import { LANE_COLOURS, laneSchema, storyMarkerSchema, structuralUnitSchema, beatSchema } from './entities/structure.js';
+import { titlePageSchema } from './entities/title-page.js';
 import { countWords } from './entities/manuscript.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { markerNumber, markerNoun, markerNumbering as numberingOf } from './markers.js';
@@ -243,6 +244,10 @@ export const addEpisode = (
     // than left in a panel nobody opens while writing.
     notes: owed.length > 0 ? `Still owed:\n${owed.map((record) => `— ${record.title}`).join('\n')}` : '',
     cast: castForNewEpisode(file, carry),
+    // Its own front page, started with the one thing that is already known:
+    // which episode this is. Everything else falls back to the series' page
+    // until the writer says otherwise (spec §6.1).
+    titlePage: titlePageSchema.parse({ episode: `Episode ${number}` }),
     createdAt: timestamp,
     updatedAt: timestamp,
   });

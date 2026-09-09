@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   MAX_TITLE_IMAGE_BYTES,
+  setEpisodeTitlePage,
   setTitlePage,
   titlePageOf,
+  titlePageSchema,
+  type Episode,
   type ProjectFile,
   type TitlePage,
 } from '@vcwriter/domain';
@@ -11,6 +14,12 @@ import { useModal } from '../use-modal';
 interface TitlePageDialogProps {
   file: ProjectFile;
   open: boolean;
+  /**
+   * The episode this page belongs to, where it belongs to one. Absent, the
+   * page is the project's; given, it is that episode's own, falling back to
+   * the series' field by field (addendum 02 §17).
+   */
+  episode?: Episode | null;
   onClose(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
 }
@@ -37,12 +46,14 @@ interface TitlePageDialogProps {
  * is the front of a thing that goes out to people, and trying a credit line
  * on for size should not be the same act as changing it.
  */
-export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDialogProps) {
+export function TitlePageDialog({ file, open, episode, onClose, onUpdate }: TitlePageDialogProps) {
   const dialog = useModal(open);
   const picker = useRef<HTMLInputElement>(null);
   const [imageError, setImageError] = useState<string | null>(null);
 
-  const saved = file.settings.titlePage;
+  // An episode's page, or the project's. An episode that has never been
+  // filled in starts from the series' rather than from nothing.
+  const saved = episode ? (episode.marker.titlePage ?? titlePageSchema.parse({})) : file.settings.titlePage;
   /**
    * What is being typed, which is not yet what the document says. Started
    * afresh each time the screen opens, so a cancelled edit is not waiting
@@ -58,7 +69,9 @@ export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDial
 
   const write = (patch: Partial<TitlePage>) => setStored((current) => ({ ...current, ...patch }));
   // The sheet is drawn from the draft, so it shows what Update page would do.
-  const page = titlePageOf(file.project, { ...file.settings, titlePage: stored });
+  const page = episode
+    ? titlePageOf(file.project, file.settings, stored)
+    : titlePageOf(file.project, { ...file.settings, titlePage: stored });
 
   const cancel = () => {
     setStored(saved);
@@ -66,7 +79,9 @@ export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDial
   };
 
   const commit = () => {
-    onUpdate((current) => setTitlePage(current, stored));
+    onUpdate((current) =>
+      episode ? setEpisodeTitlePage(current, episode.marker.id, stored) : setTitlePage(current, stored),
+    );
     onClose();
   };
 
@@ -101,7 +116,9 @@ export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDial
       {open ? (
         <>
           <header className="lane-dialog-title">
-            <span className="bar-title">Title page</span>
+            <span className="bar-title">
+              {episode ? `${episode.label} — title page` : 'Title page'}
+            </span>
             {/* The × is Cancel: closing without saying "update" keeps the
                 page the document already has. */}
             <button type="button" className="ghost" aria-label="Close without saving" onClick={cancel}>
@@ -260,8 +277,9 @@ export function TitlePageDialog({ file, open, onClose, onUpdate }: TitlePageDial
 
           <footer className="lane-dialog-foot">
             <p className="muted small">
-              The writing screen never shows this. It prints when <strong>Print the title page</strong> is ticked in
-              File → Page setup.
+              {episode
+                ? 'Anything left empty is the series’ own. The writing screen never shows this; it prints with the episode.'
+                : 'The writing screen never shows this. It prints when Print the title page is ticked in File → Page setup.'}
             </p>
             <div className="dialog-buttons">
               <button type="button" className="ghost" onClick={cancel}>

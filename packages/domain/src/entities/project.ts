@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { id, isoDateTime, timestamps } from './common.js';
+import { titlePageSchema } from './title-page.js';
 import type { AssetId, ProjectId, UserId } from '../ids.js';
 
 /** Spec §4: a project is created as a screenplay, a novel, or another format. */
@@ -40,58 +41,6 @@ export const voiceAssignmentSchema = z.object({
 });
 export type VoiceAssignment = z.infer<typeof voiceAssignmentSchema>;
 
-/**
- * What a title page carries (spec §6.1).
- *
- * The industry page and nothing beyond it, in the order a reader's eye takes
- * it: the title, which episode this is, who wrote it, what it was written
- * from, how to reach them, which draft this is, and any note the front page
- * has to carry.
- *
- * Everything is optional. A first draft with a title and a name on it is a
- * proper title page; the rest is for when it goes out.
- */
-export const titlePageSchema = z.object({
-  /** Empty means the project's own title, which is the usual case. */
-  title: z.string().default(''),
-  /**
-   * A logotype in place of the typed title — a data URI, held in the project
-   * so the page travels with the file rather than pointing at a folder on one
-   * machine. When it is set, the title text is not printed: the graphic *is*
-   * the title.
-   */
-  titleImage: z.string().default(''),
-  /** "Episode 4 — The Lamp". Under the title, where a series puts it. */
-  episode: z.string().default(''),
-  /**
-   * Who wrote it. The page sets the words **Written** and **by** on their own
-   * lines above this, so the field holds the *name* and nothing else — which
-   * is why there is no separate credit field to fill in the same thing twice.
-   *
-   * Empty means the project's author.
-   */
-  author: z.string().default(''),
-  /**
-   * What it was written from: "based on the novel", "an original story". The
-   * line without the name — the name goes under it, the same way the author
-   * goes under "Written by".
-   */
-  source: z.string().default(''),
-  /** Who wrote the source. Printed on the line under it, as "by <name>". */
-  sourceAuthor: z.string().default(''),
-  /** Agent, address, telephone, email. Bottom left, as many lines as needed. */
-  contact: z.string().default(''),
-  /** "12 March 2026". Bottom right, above the revision. */
-  draftDate: z.string().default(''),
-  /** "Second draft", "Blue pages". Bottom right. */
-  revision: z.string().default(''),
-  /** Anything else the front page must say. Bottom right, under the rest. */
-  notes: z.string().default(''),
-});
-export type TitlePage = z.infer<typeof titlePageSchema>;
-
-/** A cap on the logotype: the project is a text file with a picture in it. */
-export const MAX_TITLE_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export const projectSettingsSchema = z.object({
   /** Narrator/action voice, assigned separately from character dialogue (§10). */
@@ -159,27 +108,3 @@ export const projectSchema = z.object({
   ...timestamps,
 });
 export type Project = z.infer<typeof projectSchema>;
-
-/**
- * A source line without its trailing "by".
- *
- * The page prints **by** on a line of its own above the name, so a writer who
- * types "based on the novel by" out of habit must not get it twice.
- */
-export const withoutBy = (text: string): string => text.trim().replace(/\s+by$/i, '').trim();
-
-export const titlePageOf = (project: Project, settings: ProjectSettings): TitlePage => {
-  const page = titlePageSchema.parse(settings.titlePage ?? {});
-  return {
-    title: page.title.trim() || project.title,
-    titleImage: page.titleImage,
-    episode: page.episode.trim(),
-    author: page.author.trim() || project.author,
-    source: withoutBy(page.source),
-    sourceAuthor: page.sourceAuthor.trim(),
-    contact: page.contact.trim(),
-    draftDate: page.draftDate.trim(),
-    revision: page.revision.trim(),
-    notes: page.notes.trim(),
-  };
-};

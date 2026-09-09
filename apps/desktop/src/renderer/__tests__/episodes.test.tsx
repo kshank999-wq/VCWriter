@@ -55,6 +55,7 @@ describe('the episode rail', () => {
         onOpen={() => {}}
         currentUnitId={null}
         onGo={() => {}}
+        onOpenTitlePage={() => {}}
         onNew={() => {}}
       />,
     );
@@ -67,7 +68,7 @@ describe('the episode rail', () => {
     file = addEpisode(file, { title: 'The Wreck' }).file;
 
     render(
-      <EpisodeRail file={file} open onOpen={() => {}} currentUnitId={null} onGo={() => {}} onNew={() => {}} />,
+      <EpisodeRail file={file} open onOpen={() => {}} currentUnitId={null} onGo={() => {}} onOpenTitlePage={() => {}} onNew={() => {}} />,
     );
     const rows = document.querySelectorAll('.episode-row');
     expect(rows).toHaveLength(2);
@@ -91,6 +92,7 @@ describe('the episode rail', () => {
         onOpen={() => {}}
         currentUnitId={second!.units[0]!.id}
         onGo={(episode) => went.push(episode)}
+        onOpenTitlePage={() => {}}
         onNew={() => {}}
       />,
     );
@@ -102,7 +104,7 @@ describe('the episode rail', () => {
 
   it('is a tab and nothing more while it is shut', () => {
     render(
-      <EpisodeRail file={series()} open={false} onOpen={() => {}} currentUnitId={null} onGo={() => {}} onNew={() => {}} />,
+      <EpisodeRail file={series()} open={false} onOpen={() => {}} currentUnitId={null} onGo={() => {}} onOpenTitlePage={() => {}} onNew={() => {}} />,
     );
     expect(screen.getByText('Episodes')).toBeTruthy();
     expect(document.querySelector('.episode-rail-body')).toBeNull();

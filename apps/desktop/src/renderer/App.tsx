@@ -11,6 +11,7 @@ import {
   type BeatId,
   type LaneId,
   type ProjectFile,
+  type Episode,
   type ProjectFormat,
   type ResearchView,
   type StoryMarkerId,
@@ -134,6 +135,8 @@ export default function App() {
   const [startingNew, setStartingNew] = useState(false);
   /** The title page's own screen: a page of the document, off the File menu. */
   const [titlePageOpen, setTitlePageOpen] = useState(false);
+  /** Whose page it is: an episode's, or — null — the project's own. */
+  const [titlePageEpisode, setTitlePageEpisode] = useState<Episode | null>(null);
   /** Set when something sent the writer to research to look at one thing. */
   const [researchView, setResearchView] = useState<ResearchView | undefined>(undefined);
   // Where the four sections sit, and which of them are in windows of their
@@ -421,6 +424,7 @@ export default function App() {
           // browser preview hands back a file to keep.
           return void project.saveNow();
         case 'file.titlePage':
+          setTitlePageEpisode(null);
           return setTitlePageOpen(true);
         case 'file.pageSetup':
           return setPageSetupOpen(true);
@@ -910,6 +914,10 @@ export default function App() {
             const first = episode.beats[0];
             if (first) setSelectedBeatId(first.id);
           }}
+          onOpenTitlePage={(episode) => {
+            setTitlePageEpisode(episode);
+            setTitlePageOpen(true);
+          }}
           onNew={() => setNewEpisodeOpen(true)}
         />
       ) : null}
@@ -923,6 +931,10 @@ export default function App() {
           const first = episode.beats[0];
           if (first) setSelectedBeatId(first.id);
           setEpisodeRailOpen(true);
+          // Straight on to its front page: an episode is a script that goes
+          // out on its own, and naming it is part of starting it.
+          setTitlePageEpisode(episode);
+          setTitlePageOpen(true);
         }}
       />
 
@@ -954,6 +966,7 @@ export default function App() {
         onSetup={setPrintSetup}
         onEditTitlePage={() => {
           setPageSetupOpen(false);
+          setTitlePageEpisode(null);
           setTitlePageOpen(true);
         }}
         pages={pages}
@@ -965,6 +978,7 @@ export default function App() {
       <TitlePageDialog
         file={file}
         open={titlePageOpen}
+        episode={titlePageEpisode}
         onClose={() => setTitlePageOpen(false)}
         onUpdate={project.update}
       />

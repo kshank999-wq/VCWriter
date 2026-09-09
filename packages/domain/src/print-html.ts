@@ -1,6 +1,6 @@
 import { layoutFor, paginateProject, type ManuscriptOptions, type Page, type PageLine } from './pagination.js';
 import { isProseFormat } from './editing.js';
-import { titlePageOf } from './entities/project.js';
+import { titlePageOf } from './entities/title-page.js';
 import type { ProjectFile } from './project-file.js';
 
 /**

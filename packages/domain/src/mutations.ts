@@ -32,8 +32,9 @@ import {
   unitsInStoryOrder,
 } from './selectors.js';
 import type { ManuscriptSegment } from './entities/manuscript.js';
-import { titlePageSchema } from './entities/project.js';
-import type { TitlePage, VoiceAssignment } from './entities/project.js';
+import { titlePageSchema } from './entities/title-page.js';
+import type { TitlePage } from './entities/title-page.js';
+import type { VoiceAssignment } from './entities/project.js';
 import type { Character, CharacterCategory } from './entities/character.js';
 import type { SceneGrid, SceneRead } from './entities/structure.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
@@ -784,6 +785,29 @@ export const setTitlePage = (file: ProjectFile, patch: Partial<TitlePage>): Proj
       titlePage: titlePageSchema.parse({ ...file.settings.titlePage, ...patch }),
     },
   });
+
+/**
+ * An episode's own title page (addendum 02 §17).
+ *
+ * The same patch as the project's, addressed to the marker that starts the
+ * episode. Passing null gives the episode back to the series' page.
+ */
+export const setEpisodeTitlePage = (
+  file: ProjectFile,
+  markerId: StoryMarkerId,
+  patch: Partial<TitlePage> | null,
+): ProjectFile => {
+  const marker = file.markers.find((candidate) => candidate.id === markerId);
+  if (!marker) throw new DomainError(`Marker ${markerId} does not exist`);
+  const next =
+    patch === null ? null : titlePageSchema.parse({ ...(marker.titlePage ?? {}), ...patch });
+  return touchProject({
+    ...file,
+    markers: file.markers.map((candidate) =>
+      candidate.id === markerId ? touch({ ...candidate, titlePage: next }) : candidate,
+    ),
+  });
+};
 
 /**
  * Switch a Daily Editor rule off, or back on (spec §8.1).

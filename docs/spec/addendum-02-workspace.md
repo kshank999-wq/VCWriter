@@ -505,6 +505,17 @@ Only what has been filled in is drawn: an empty line printed for a contact
 nobody entered is worse than no line. It prints where **Print the title
 page** is ticked in Page setup, and nowhere else.
 
+**An episode has one of its own.** A series is a run of scripts, each going
+out on its own, so each episode carries its own front page — its number, its
+name, its draft date — on the marker that starts it. Starting an episode
+opens this screen for it, already knowing which episode it is; **double-click
+an episode in the rail** to open its page again.
+
+An episode's page falls back to the series' **field by field**: an episode
+that names only its own date still carries the series' title, credit, contact
+and logotype without them being typed a second time. A new episode is not a
+blank front page — it is the series' with this episode's number on it.
+
 Alone in the application, this screen **does not save as you type**. What is
 typed is a draft, drawn on the sheet as it goes; **Update page** puts it in
 the document and **Cancel** throws it away, leaving nothing waiting the next

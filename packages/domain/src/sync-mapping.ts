@@ -159,6 +159,8 @@ const markerToRow = (marker: StoryMarker): Row => ({
   // An episode's cast: a list of ids, read and written whole with the marker.
   // `cast` is a reserved word in Postgres, hence the column's own name.
   cast_ids: marker.cast,
+  // An episode's own front page; null on every other kind of marker.
+  title_page: marker.titlePage,
   created_at: marker.createdAt,
   updated_at: marker.updatedAt,
 });
@@ -346,6 +348,7 @@ const markerFromRow = (row: Row): StoryMarker =>
     // own defaults fill it in.
     page: row['page'] ?? undefined,
     cast: Array.isArray(row['cast_ids']) ? row['cast_ids'] : [],
+    titlePage: row['title_page'] ?? null,
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });

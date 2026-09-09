@@ -3,6 +3,7 @@ import {
   addCharacter,
   addCharacterCategory,
   addEpisode,
+  addMarker,
   addUnit,
   castByCategory,
   castForNewEpisode,
@@ -15,8 +16,13 @@ import {
   episodeOfBeat,
   episodeOfUnit,
   episodes,
+  fromRows,
   moveCharacterCategory,
   removeCharacterCategory,
+  setEpisodeTitlePage,
+  setTitlePage,
+  titlePageOf,
+  toRows,
   updateBeat,
   updateCharacter,
   type CharacterCategoryId,
@@ -209,5 +215,55 @@ describe('an episode', () => {
     expect(castNamesForBeat(next, episode.beats[0]!.id)).toEqual(['DR HALE', 'MAEVE', 'THE FERRYMAN']);
     // A beat outside any episode falls back to the headings' own order.
     expect(castNamesForBeat(next, next.beats[0]!.id)).toEqual(['MAEVE', 'DR HALE', 'THE FERRYMAN']);
+  });
+});
+
+describe('an episode’s own title page', () => {
+  it('starts knowing which episode it is, and nothing else', () => {
+    const made = addEpisode(series(), { title: 'The Lamp' });
+    const page = made.file.markers.find((marker) => marker.id === made.episode.marker.id)?.titlePage;
+    expect(page?.episode).toBe('Episode 1');
+    // Everything else is the series' until the writer says otherwise.
+    expect(page?.author).toBe('');
+    expect(page?.title).toBe('');
+  });
+
+  it('falls back to the series’ page field by field', () => {
+    let file = setTitlePage(series(), { author: 'K. Shank', contact: 'VC Entertainment' });
+    const made = addEpisode(file, { title: 'The Lamp' });
+    file = setEpisodeTitlePage(made.file, made.episode.marker.id, { draftDate: '12 March 2026' });
+    const marker = file.markers.find((candidate) => candidate.id === made.episode.marker.id);
+
+    const page = titlePageOf(file.project, file.settings, marker?.titlePage);
+    // Its own date and number, the series' name and contact.
+    expect(page.draftDate).toBe('12 March 2026');
+    expect(page.episode).toBe('Episode 1');
+    expect(page.author).toBe('K. Shank');
+    expect(page.contact).toBe('VC Entertainment');
+  });
+
+  it('takes the episode’s own answer over the series’ where it has one', () => {
+    let file = setTitlePage(series(), { author: 'K. Shank' });
+    const made = addEpisode(file, {});
+    file = setEpisodeTitlePage(made.file, made.episode.marker.id, { author: 'A Guest Writer' });
+    const marker = file.markers.find((candidate) => candidate.id === made.episode.marker.id);
+    expect(titlePageOf(file.project, file.settings, marker?.titlePage).author).toBe('A Guest Writer');
+  });
+
+  it('can be given back to the series, and survives a sync', () => {
+    const made = addEpisode(series(), {});
+    const given = setEpisodeTitlePage(made.file, made.episode.marker.id, null);
+    expect(given.markers.find((m) => m.id === made.episode.marker.id)?.titlePage).toBeNull();
+
+    const kept = setEpisodeTitlePage(made.file, made.episode.marker.id, { revision: 'Blue pages' });
+    const after = fromRows(toRows(kept)).markers.find((m) => m.id === made.episode.marker.id);
+    expect(after?.titlePage?.revision).toBe('Blue pages');
+    expect(after?.titlePage?.episode).toBe('Episode 1');
+  });
+
+  it('is not given to an act, which has no front page', () => {
+    const file = createProjectFile({ title: 'The Lighthouse', format: 'screenplay' });
+    const made = addMarker(file, { unitId: file.units[0]!.id, kind: 'act', title: 'One' });
+    expect(made.marker.titlePage).toBeNull();
   });
 });

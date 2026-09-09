@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { id, orderKey, timestamps } from './common.js';
 import { manuscriptSegmentSchema } from './manuscript.js';
+import { titlePageSchema } from './title-page.js';
 import type {
   BeatId,
   BeatRevisionId,
@@ -258,6 +259,17 @@ export const storyMarkerSchema = z.object({
    * character cue is typed inside it (addendum 02 §17).
    */
   cast: z.array(id<CharacterId>()).default([]),
+  /**
+   * This episode's own title page (spec §6.1, addendum 02 §17). Used by
+   * episode markers and ignored by the rest — an episode is a script that
+   * goes out on its own, so it has its own front page, with its own number,
+   * its own name and its own draft date.
+   *
+   * Null means it has never been filled in, and the series' own title page
+   * stands in for it: a new episode is not a blank front page, it is the
+   * series' with the episode's number on it.
+   */
+  titlePage: titlePageSchema.nullable().default(null),
   ...timestamps,
 });
 export type StoryMarker = z.infer<typeof storyMarkerSchema>;
