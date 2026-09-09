@@ -586,6 +586,36 @@ Large projects: the view renders every beat, and the performance test in the
 domain package is the gate; when it fails, the loader lazy-reads beats, not
 the view (ADR 0002).
 
+### 6.4 Prose: the manuscript, and how it sets its paragraphs
+
+**A novel and a short story are not scripts, and are not called one.** In
+those two formats the section is **Manuscript** — in the workspace, in the
+strip above it, in the window it opens into on its own (§8), and in the list
+of what has gone to another monitor. Nothing else about the section changes:
+it is the same finished pages under the name its writer uses for them.
+
+The beats in those formats are set as prose. There is no screenwriting
+format in them at all — no sluglines, no cues, no parentheticals; the
+element types are paragraph, heading, block quote and scene break, and the
+page is standard manuscript geometry: 12pt Courier, double spaced, 25 lines
+to the page in a sixty-character column.
+
+**A paragraph is marked one way or the other, never both.** Which one is a
+property of the document — the writer sees the style they chose while they
+are writing, and it comes out of the printer the same way — so it is set in
+**File → Page setup**, under *Paragraphs*, and it is offered only in the two
+prose formats. Each choice is shown rather than described: four lines of
+type set the way it sets them.
+
+| Style | The page |
+| --- | --- |
+| **Indented** (default) | Standard manuscript format. Paragraphs run on with nothing between them, and each new one opens with a five-space **first-line** indent. The rest of the paragraph is flush — an indent on every line would make a block quote of it. |
+| **Blocked** | No indent at all, and a blank line between paragraphs instead. How most people read on a screen. |
+
+A paragraph resumed at the top of the next page is set flush: the indent
+belongs to the paragraph's opening line, not to wherever the page happened
+to break.
+
 ## 7. The research window
 
 Research is where the material is kept **before, during and after** it is

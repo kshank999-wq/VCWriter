@@ -1,6 +1,7 @@
 import { type BeatId, type ProjectFile, type StoryLayout, type StructuralUnitId } from '@vcwriter/domain';
 import { StoryView, type ScriptDisplay, type ScriptLayout } from './StoryView';
 import type { PageStyle } from './ScriptOptions';
+import { paneNamesFor } from '../panes';
 
 interface MasterPanelProps {
   file: ProjectFile;
@@ -35,10 +36,12 @@ interface MasterPanelProps {
  */
 export function MasterPanel(props: MasterPanelProps) {
   const { focusMode } = props;
+  // "Script", or "Manuscript" in a novel or a short story (§6.4).
+  const name = paneNamesFor(props.file.project.format).script;
 
   if (focusMode) {
     return (
-      <section className="master focus" aria-label="Script">
+      <section className="master focus" aria-label={name}>
         <StoryView {...props} />
       </section>
     );

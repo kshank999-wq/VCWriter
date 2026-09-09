@@ -79,10 +79,10 @@ export function Preferences({
       </section>
 
       <section>
-        <h3>Script</h3>
+        <h3>The page</h3>
         <label className="toggle">
           <input type="checkbox" checked={paper} onChange={(event) => onPaper(event.target.checked)} />
-          Draw the script on white paper with black text, whatever the scheme
+          Draw the pages on white paper with black text, whatever the scheme
         </label>
       </section>
 

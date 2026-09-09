@@ -28,6 +28,20 @@ export const projectStatusSchema = z.enum(['development', 'drafting', 'revising'
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 
 /**
+ * How a prose manuscript sets its paragraphs (spec §6.4).
+ *
+ * `indented` is standard manuscript format — paragraphs run on, each new one
+ * marked by a five-space first-line indent — and is what a novel is submitted
+ * in. `blocked` leaves the indent off and puts a space between paragraphs
+ * instead, which is how most people read on a screen. One mark or the other:
+ * a page that carries both says the same thing twice.
+ *
+ * Screenplay formats ignore it; a screenplay's geometry is not a choice.
+ */
+export const paragraphStyleSchema = z.enum(['indented', 'blocked']);
+export type ParagraphStyle = z.infer<typeof paragraphStyleSchema>;
+
+/**
  * Provider-abstracted voice reference (spec §10, §18: the TTS vendor must be
  * replaceable without touching manuscript data).
  */
@@ -62,6 +76,12 @@ export const projectSettingsSchema = z.object({
   markerSymbol: z.string().default('❦'),
   /** Whether a printing carries the chapter pages. */
   includeChapterPagesInExport: z.boolean().default(true),
+  /**
+   * How a novel or short story sets its paragraphs (spec §6.4). Standard
+   * manuscript format by default, because that is what a manuscript goes out
+   * in. Screenplay formats never read it.
+   */
+  paragraphStyle: paragraphStyleSchema.default('indented'),
   /**
    * What a new episode carries over from the ones before it (addendum 02
    * §17). Remembered rather than asked afresh every week; an empty object

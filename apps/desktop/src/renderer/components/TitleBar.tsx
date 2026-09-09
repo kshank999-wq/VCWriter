@@ -1,6 +1,6 @@
-import { PANE_NAMES, beatIdOf, type PaneId } from '../panes';
+import { beatIdOf, paneNamesFor, type PaneId } from '../panes';
 import { Wordmark } from './Brand';
-import type { ProjectFile } from '@vcwriter/domain';
+import type { ProjectFile, ProjectFormat } from '@vcwriter/domain';
 import type { AccountStatus } from '../../preload/index';
 
 const SAVE_LABEL: Record<string, string> = {
@@ -88,11 +88,11 @@ export function TitleBar({
             key={pane}
             type="button"
             className="ghost away-chip"
-            title={`${nameOf(pane)} is in a window of its own — bring it back here`}
-            aria-label={`Bring ${nameOf(pane)} back`}
+            title={`${nameOf(pane, file.project.format)} is in a window of its own — bring it back here`}
+            aria-label={`Bring ${nameOf(pane, file.project.format)} back`}
             onClick={() => onBringBack(pane)}
           >
-            {nameOf(pane)} ⇤
+            {nameOf(pane, file.project.format)} ⇤
           </button>
         ))}
 
@@ -150,4 +150,5 @@ export function TitleBar({
   );
 }
 
-const nameOf = (pane: string): string => (pane === 'research' ? 'Research' : (PANE_NAMES[pane as PaneId] ?? pane));
+const nameOf = (pane: string, format: ProjectFormat | null): string =>
+  pane === 'research' ? 'Research' : (paneNamesFor(format)[pane as PaneId] ?? pane);

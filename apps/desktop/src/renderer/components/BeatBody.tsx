@@ -14,7 +14,7 @@ import {
   elementTypesFor,
   groupManuscript,
   isDual,
-  layoutFor,
+  layoutForFile,
   newId,
   onEnter,
   onTab,
@@ -109,7 +109,7 @@ export function BeatBody({
   readOnly = false,
 }: BeatBodyProps) {
   const format = file.project.format;
-  const layout = layoutFor(format);
+  const layout = layoutForFile(file);
   const elementTypes = elementTypesFor(format);
   const shortcuts = useMemo(() => styleShortcuts(format), [format]);
 
@@ -342,6 +342,8 @@ export function BeatBody({
   const row = (element: ManuscriptElement, index: number, dual: boolean) => {
     const geometry = dual && layout.dual ? layout.dual : layout;
     const indent = geometry.indent[element.type] ?? 0;
+    // A prose paragraph's five spaces belong to its opening line only (§6.4).
+    const firstIndent = dual ? 0 : layout.firstIndent?.[element.type] ?? 0;
     const width = dual && layout.dual ? layout.dual.width - indent : layout.width[element.type] ?? layout.columns;
     const page = breaks?.get(element.id);
     return (
@@ -355,7 +357,13 @@ export function BeatBody({
           className={`element element-${element.type}`}
           // The page geometry as variables, so a narrow column can trade the
           // fixed width for the room it has without losing the indent.
-          style={{ '--indent': `${indent}ch`, '--width': `${width}ch` } as React.CSSProperties}
+          style={
+            {
+              '--indent': `${indent}ch`,
+              '--width': `${width}ch`,
+              '--first-indent': `${firstIndent}ch`,
+            } as React.CSSProperties
+          }
         >
           <select
             className="element-type"

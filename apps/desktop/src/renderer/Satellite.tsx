@@ -51,7 +51,8 @@ export default function Satellite({ pane }: { pane: PaneKey }) {
 
   const file = project.file;
   useEffect(() => {
-    document.title = file ? `${paneTitle(pane)} — ${file.project.title}` : paneTitle(pane);
+    const format = file?.project.format ?? null;
+    document.title = file ? `${paneTitle(pane, format)} — ${file.project.title}` : paneTitle(pane);
   }, [pane, file]);
 
   if (!file) {

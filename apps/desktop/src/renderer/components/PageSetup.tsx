@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { hasChapterPages, type ProjectFile } from '@vcwriter/domain';
+import { hasChapterPages, type ParagraphStyle, type ProjectFile } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 
 /**
@@ -59,6 +59,12 @@ interface PageSetupProps {
   onSetup(next: PrintSetup): void;
   /** Open the title page's own screen, where what it says is decided. */
   onEditTitlePage(): void;
+  /**
+   * How a prose manuscript sets its paragraphs (§6.4). It belongs to the
+   * document rather than to one printing, which is why it is not part of
+   * `PrintSetup` — but this is where a writer comes looking for it.
+   */
+  onParagraphStyle(next: ParagraphStyle): void;
   pages: number;
   onPrint(): void;
   onExportPdf(): void;
@@ -72,6 +78,7 @@ export function PageSetup({
   setup,
   onSetup,
   onEditTitlePage,
+  onParagraphStyle,
   pages,
   onPrint,
   onExportPdf,
@@ -80,6 +87,7 @@ export function PageSetup({
   const dialog = useModal(open);
   const leaves = hasChapterPages(file.project.format);
   const prose = file.project.format === 'novel' || file.project.format === 'short_story';
+  const paragraphStyle = file.settings.paragraphStyle;
   const set = (patch: Partial<PrintSetup>) => onSetup({ ...setup, ...patch });
 
   return (
@@ -140,6 +148,32 @@ export function PageSetup({
             >
               Page numbers, from page two
             </Check>
+
+            {/* §6.4: the two ways a prose page marks a new paragraph. One or
+                the other — a page that carries both says it twice. */}
+            {prose ? (
+              <>
+                <h4>Paragraphs</h4>
+                <div className="paragraph-style" role="radiogroup" aria-label="Paragraph style">
+                  <Style
+                    label="Indented"
+                    on={paragraphStyle !== 'blocked'}
+                    onChange={() => onParagraphStyle('indented')}
+                    sample={['    The lamp went out.', 'She did not', 'move for a long time.', '    Then she did.']}
+                  >
+                    Standard manuscript format: paragraphs run on, each new one indented five spaces.
+                  </Style>
+                  <Style
+                    label="Blocked"
+                    on={paragraphStyle === 'blocked'}
+                    onChange={() => onParagraphStyle('blocked')}
+                    sample={['The lamp went out.', 'She did not', 'move for a long time.', '', 'Then she did.']}
+                  >
+                    No indent; a space between paragraphs instead. How most people read on a screen.
+                  </Style>
+                </div>
+              </>
+            ) : null}
 
             {prose ? null : (
               <Check
@@ -241,6 +275,42 @@ function Check({
     <label className="check">
       <input type="checkbox" aria-label={label} checked={on} onChange={(event) => onChange(event.target.checked)} />
       <span>{children}</span>
+    </label>
+  );
+}
+
+/**
+ * One way of setting a paragraph, shown rather than described: four lines of
+ * type set the way this choice sets them. A writer picking between an indent
+ * and a space is picking a look, so the look is what is on the button.
+ */
+function Style({
+  label,
+  on,
+  onChange,
+  sample,
+  children,
+}: {
+  label: string;
+  on: boolean;
+  onChange(): void;
+  sample: readonly string[];
+  children: ReactNode;
+}) {
+  return (
+    <label className={on ? 'paragraph-choice chosen' : 'paragraph-choice'}>
+      <input type="radio" name="paragraph-style" aria-label={label} checked={on} onChange={onChange} />
+      <span className="paragraph-sample" aria-hidden="true">
+        {sample.map((line, index) => (
+          <span key={index} className={line.length === 0 ? 'sample-line blank' : 'sample-line'}>
+            {line.replace(/ /g, ' ')}
+          </span>
+        ))}
+      </span>
+      <span className="paragraph-words">
+        <strong>{label}</strong>
+        {children}
+      </span>
     </label>
   );
 }

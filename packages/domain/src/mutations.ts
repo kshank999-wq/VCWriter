@@ -34,7 +34,7 @@ import {
 import type { ManuscriptSegment } from './entities/manuscript.js';
 import { titlePageSchema } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
-import type { VoiceAssignment } from './entities/project.js';
+import type { ParagraphStyle, VoiceAssignment } from './entities/project.js';
 import type { Character, CharacterCategory } from './entities/character.js';
 import type { SceneGrid, SceneRead } from './entities/structure.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
@@ -769,6 +769,16 @@ export const setSceneRead = (
 };
 
 // --------------------------------------------------------- the editor's own settings
+
+/**
+ * How the manuscript sets its paragraphs (spec §6.4).
+ *
+ * A property of the document rather than of one printing: the writer sees the
+ * style they chose while they are writing, and it comes out of the printer
+ * the same way.
+ */
+export const setParagraphStyle = (file: ProjectFile, paragraphStyle: ParagraphStyle): ProjectFile =>
+  touchProject({ ...file, settings: { ...file.settings, paragraphStyle } });
 
 /**
  * The title page (spec §6.1).

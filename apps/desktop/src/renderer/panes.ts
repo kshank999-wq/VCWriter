@@ -15,6 +15,8 @@
  * keys on its own id so two beats can be open at once.
  */
 
+import type { ProjectFormat } from '@vcwriter/domain';
+
 export type PaneId = 'script' | 'viewer' | 'lanes' | 'inspector';
 export type SlotId = 'left' | 'top' | 'bottom' | 'right';
 
@@ -36,6 +38,21 @@ export const PANE_NAMES: Record<PaneId, string> = {
   lanes: 'Plot lanes',
   inspector: 'Inspector',
 };
+
+/**
+ * The sections, named for the format in hand.
+ *
+ * A novel and a short story are written as a manuscript, not a script, and
+ * the section that shows the finished pages is called what the work is
+ * called (spec §6.4). Nothing else changes: it is the same section doing the
+ * same thing, under the name its writer uses for it.
+ */
+export const paneNamesFor = (format: ProjectFormat | null): Record<PaneId, string> =>
+  format === 'novel' || format === 'short_story' ? { ...PANE_NAMES, script: 'Manuscript' } : PANE_NAMES;
+
+/** What the finished pages are called in this format. */
+export const scriptWordFor = (format: ProjectFormat | null): string =>
+  format === 'novel' || format === 'short_story' ? 'manuscript' : 'script';
 
 export const SLOT_NAMES: Record<SlotId, string> = {
   left: 'Side column',
@@ -89,8 +106,8 @@ export const beatIdOf = (pane: string): string | null =>
   pane.startsWith('beat:') ? pane.slice('beat:'.length) : null;
 
 /** What a window of this section calls itself, before the project is known. */
-export const paneTitle = (pane: string): string => {
+export const paneTitle = (pane: string, format: ProjectFormat | null = null): string => {
   if (pane === 'research') return 'Research';
   if (beatIdOf(pane)) return 'Beat';
-  return PANE_NAMES[pane as PaneId] ?? 'VC Writer';
+  return paneNamesFor(format)[pane as PaneId] ?? 'VC Writer';
 };

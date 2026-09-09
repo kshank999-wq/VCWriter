@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   SCREENPLAY_LAYOUT,
+  layoutFor,
   paginateElements,
   paginateProject,
   pageCount,
@@ -8,7 +9,8 @@ import {
   type Page,
 } from '../pagination.js';
 import { createProjectFile } from '../project-file.js';
-import { addBeat, updateBeat } from '../mutations.js';
+import { addBeat, setParagraphStyle, updateBeat } from '../mutations.js';
+import type { ParagraphStyle } from '../entities/project.js';
 import { newId } from '../ids.js';
 import type { ManuscriptElement, ManuscriptElementType } from '../entities/manuscript.js';
 import type { ManuscriptElementId } from '../ids.js';
@@ -175,5 +177,69 @@ describe('project pagination', () => {
     const first = pages[0]!;
     expect(first.lines.filter((line) => line.type === 'blank').length).toBeGreaterThan(0);
     expect(first.lines.length).toBeLessThanOrEqual(25);
+  });
+});
+
+/**
+ * Spec §6.4: a novel and a short story are set as a manuscript, and the
+ * writer chooses which of the two ways it marks a new paragraph.
+ */
+describe('the two ways a prose page sets its paragraphs', () => {
+  const novel = (style?: ParagraphStyle) => {
+    let file = createProjectFile({ title: 'The Keeper', format: 'novel' });
+    if (style) file = setParagraphStyle(file, style);
+    return updateBeat(file, file.beats[0]!.id, {
+      manuscript: {
+        elements: [
+          element('paragraph', 'The lamp turned and the sea answered, all that long night.'),
+          element('paragraph', 'She did not move.'),
+        ],
+      },
+    });
+  };
+
+  /** Every line of the manuscript, blanks included, in order. */
+  const rows = (file: ReturnType<typeof novel>) => paginateProject(file).flatMap((page) => page.lines);
+
+  it('indents the first line of each paragraph and runs them on, by default', () => {
+    const file = novel();
+    expect(file.settings.paragraphStyle).toBe('indented');
+
+    const written = rows(file).filter((line) => line.text.length > 0);
+    expect(written.map((line) => line.indent)).toEqual([5, 5]);
+
+    // Nothing between them but the blank double spacing puts under every line.
+    const between = rows(file);
+    const second = between.findIndex((line) => line.text.startsWith('She did not'));
+    expect(between.slice(0, second).filter((line) => line.type === 'blank')).toHaveLength(1);
+  });
+
+  it('indents nothing and puts a space between them when blocked', () => {
+    const file = novel('blocked');
+    const written = rows(file).filter((line) => line.text.length > 0);
+    expect(written.map((line) => line.indent)).toEqual([0, 0]);
+
+    const between = rows(file);
+    const second = between.findIndex((line) => line.text.startsWith('She did not'));
+    expect(between.slice(0, second).filter((line) => line.type === 'blank')).toHaveLength(2);
+  });
+
+  it('sets the indent on the opening line only, not on every line of the paragraph', () => {
+    let file = createProjectFile({ title: 'The Keeper', format: 'novel' });
+    file = updateBeat(file, file.beats[0]!.id, {
+      manuscript: { elements: [element('paragraph', 'The lamp turned and the sea answered. '.repeat(6))] },
+    });
+
+    const written = paginateProject(file)
+      .flatMap((page) => page.lines)
+      .filter((line) => line.text.length > 0);
+    expect(written.length).toBeGreaterThan(1);
+    expect(written[0]?.indent).toBe(5);
+    expect(written.slice(1).every((line) => line.indent === 0)).toBe(true);
+  });
+
+  it('leaves a screenplay alone: its geometry is not a choice', () => {
+    const file = setParagraphStyle(createProjectFile({ title: 'The Keeper', format: 'screenplay' }), 'blocked');
+    expect(layoutFor(file.project.format, file.settings.paragraphStyle)).toBe(SCREENPLAY_LAYOUT);
   });
 });

@@ -10,6 +10,8 @@ interface PaneFrameProps {
   onDragStart(pane: PaneId): void;
   onDragEnd(): void;
   onDrop(onto: PaneId): void;
+  /** What the sections are called in this format — "Manuscript" in prose. */
+  names?: Record<PaneId, string>;
   children: React.ReactNode;
 }
 
@@ -40,9 +42,10 @@ export function PaneFrame({
   onDragStart,
   onDragEnd,
   onDrop,
+  names = PANE_NAMES,
   children,
 }: PaneFrameProps) {
-  const name = PANE_NAMES[pane];
+  const name = names[pane];
   const target = dragging !== null && dragging !== pane;
 
   return (

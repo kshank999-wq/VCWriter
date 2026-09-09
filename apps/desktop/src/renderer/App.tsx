@@ -5,6 +5,7 @@ import {
   defaultMarkerKind,
   beatsInStoryOrder,
   projectStats,
+  setParagraphStyle,
   storyLayout,
   threadLayout,
   timelineArcs,
@@ -26,6 +27,7 @@ import {
   DEFAULT_ARRANGEMENT,
   movePane,
   normaliseArrangement,
+  paneNamesFor,
   slotOf,
   type Arrangement,
   type PaneId,
@@ -571,6 +573,8 @@ export default function App() {
   // drawn and the rest of the workspace takes the room (§8).
   const here = (slot: SlotId) => !away.has(arrangement[slot]);
   const display = { ...DEFAULT_SCRIPT_DISPLAY, ...scriptDisplay };
+  // A novel's finished pages are its manuscript, not its script (§6.4).
+  const paneNames = paneNamesFor(file.project.format);
 
   /** Each section, drawn once, ready to be placed wherever it has been put. */
   const sections: Record<PaneId, React.ReactNode> = {
@@ -663,6 +667,7 @@ export default function App() {
           if (dragging) setArrangement(movePane(arrangement, dragging, slotOf(arrangement, onto)));
           setDragging(null);
         }}
+        names={paneNames}
       >
         {sections[pane]}
       </PaneFrame>
@@ -969,6 +974,7 @@ export default function App() {
           setTitlePageEpisode(null);
           setTitlePageOpen(true);
         }}
+        onParagraphStyle={(style) => project.update((current) => setParagraphStyle(current, style))}
         pages={pages}
         onPrint={() => void print()}
         onExportPdf={() => void exportPdf()}

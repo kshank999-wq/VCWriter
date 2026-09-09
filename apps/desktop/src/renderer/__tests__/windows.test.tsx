@@ -7,6 +7,8 @@ import {
   DEFAULT_ARRANGEMENT,
   movePane,
   normaliseArrangement,
+  paneNamesFor,
+  paneTitle,
   slotOf,
   type Arrangement,
   type PaneId,
@@ -36,6 +38,21 @@ describe('where the sections sit', () => {
 
   it('leaves an arrangement alone when a section is put back where it is', () => {
     expect(movePane(DEFAULT_ARRANGEMENT, 'script', 'left')).toBe(DEFAULT_ARRANGEMENT);
+  });
+
+  // Spec §6.4: a novel and a short story are written as a manuscript, and the
+  // section that shows the finished pages is called what the work is called.
+  it('calls the pages a manuscript in prose and a script everywhere else', () => {
+    expect(paneNamesFor('novel').script).toBe('Manuscript');
+    expect(paneNamesFor('short_story').script).toBe('Manuscript');
+    expect(paneNamesFor('screenplay').script).toBe('Script');
+    expect(paneNamesFor('series').script).toBe('Script');
+    expect(paneNamesFor(null).script).toBe('Script');
+    // The other three sections are the same work under either name.
+    expect(paneNamesFor('novel').lanes).toBe(paneNamesFor('screenplay').lanes);
+    // And a window of its own carries the same name on its title.
+    expect(paneTitle('script', 'novel')).toBe('Manuscript');
+    expect(paneTitle('script')).toBe('Script');
   });
 
   it('falls back rather than losing a section to a bad remembered arrangement', () => {

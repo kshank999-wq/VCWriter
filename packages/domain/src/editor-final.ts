@@ -1,7 +1,7 @@
 import { beatsForUnit, unitsInStoryOrder, unresolvedSetupsPayoffs, unusedResearch } from './selectors.js';
 import { placedMarkers } from './markers.js';
 import { sceneGridSchema } from './entities/structure.js';
-import { paginateElements, layoutFor } from './pagination.js';
+import { paginateElements, layoutForFile } from './pagination.js';
 import { countWords } from './entities/manuscript.js';
 import type { ProjectFile } from './project-file.js';
 import type { CharacterId, StructuralUnitId } from './ids.js';
@@ -127,7 +127,7 @@ const headingLocation = (text: string): string | null => {
 
 /** Per-scene numbers, computed from the manuscript at the real page geometry. */
 export const reviewScenes = (file: ProjectFile): SceneReview[] => {
-  const layout = layoutFor(file.project.format);
+  const layout = layoutForFile(file);
 
   return unitsInStoryOrder(file).map((unit, index) => {
     const beats = beatsForUnit(file, unit.id);

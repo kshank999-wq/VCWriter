@@ -2,7 +2,14 @@
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { addBeat, createProjectFile, updateBeat, type ProjectFile, type ProjectFormat } from '@vcwriter/domain';
+import {
+  addBeat,
+  createProjectFile,
+  setParagraphStyle,
+  updateBeat,
+  type ProjectFile,
+  type ProjectFormat,
+} from '@vcwriter/domain';
 import { MENUS, matchesAccelerator, menusFor, prettyAccelerator, type CommandId } from '../menus';
 import { MenuBar } from '../components/MenuBar';
 import { FindPanel } from '../components/FindPanel';
@@ -194,6 +201,7 @@ describe('page setup', () => {
       <>
         <p data-testid="setup">{JSON.stringify(setup)}</p>
         <p data-testid="title-page">{JSON.stringify(file.settings.titlePage)}</p>
+        <p data-testid="paragraph-style">{file.settings.paragraphStyle}</p>
         <TitlePageDialog
           file={file}
           open={editing}
@@ -207,6 +215,7 @@ describe('page setup', () => {
           setup={setup}
           onSetup={setSetup}
           onEditTitlePage={() => setEditing(true)}
+          onParagraphStyle={(style) => setFile((current) => setParagraphStyle(current, style))}
           pages={12}
           onPrint={() => undefined}
           onExportPdf={() => undefined}
@@ -325,5 +334,21 @@ describe('page setup', () => {
     cleanup();
     render(<Setup format="novel" />);
     expect(screen.getByLabelText('Chapter pages')).toBeDefined();
+  });
+
+  // Spec §6.4: prose is set one way or the other, and it is the document's
+  // choice rather than one printing's.
+  it('offers the two paragraph styles to a book, and to nothing else', () => {
+    render(<Setup format="screenplay" />);
+    expect(screen.queryByLabelText('Indented')).toBeNull();
+    cleanup();
+
+    render(<Setup format="novel" />);
+    expect(screen.getByTestId('paragraph-style').textContent).toBe('indented');
+    expect((screen.getByLabelText('Indented') as HTMLInputElement).checked).toBe(true);
+
+    fireEvent.click(screen.getByLabelText('Blocked'));
+    expect(screen.getByTestId('paragraph-style').textContent).toBe('blocked');
+    expect((screen.getByLabelText('Blocked') as HTMLInputElement).checked).toBe(true);
   });
 });

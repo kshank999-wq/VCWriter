@@ -3,7 +3,7 @@ import { chapterPageContent, chapterPagesFor, type ChapterPageContent } from './
 import { groupManuscript } from './editing.js';
 import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
 import type { ManuscriptElement, ManuscriptElementType } from './entities/manuscript.js';
-import type { ProjectFormat } from './entities/project.js';
+import type { ParagraphStyle, ProjectFormat } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
 import type { StructuralUnitId } from './ids.js';
 
@@ -25,12 +25,27 @@ export interface PageLayoutSpec {
   linesPerPage: number;
   /** Column each element starts at, measured from the left of the text area. */
   indent: Record<string, number>;
+  /**
+   * Extra columns given to the **first line only**. A prose paragraph's
+   * five-space indent is a first-line indent: indenting every line would make
+   * a block quote of it. Absent means the block is set flush at `indent`.
+   */
+  firstIndent?: Record<string, number>;
   /** Characters per line before wrapping. */
   width: Record<string, number>;
   /** Element types rendered in capitals. */
   uppercase: ReadonlySet<string>;
   /** Prose is double spaced; screenplays are not. */
   doubleSpaced: boolean;
+  /**
+   * Element types that follow their own kind with no blank between them.
+   *
+   * Standard manuscript format runs paragraphs on and marks each new one
+   * with a first-line indent; block style leaves the indent off and marks
+   * the break with a space instead. The two are the same page set two ways,
+   * so it is one set here rather than two layouts (§6.4).
+   */
+  runOn?: ReadonlySet<string>;
   columns: number;
   /**
    * Two speeches printed side by side. Absent in a format that has no
@@ -80,14 +95,32 @@ export const SCREENPLAY_LAYOUT: PageLayoutSpec = {
   },
 };
 
+/**
+ * Standard manuscript format: 12pt Courier, double spaced, ~25 lines a page,
+ * paragraphs running on with a five-space first-line indent.
+ */
 export const PROSE_LAYOUT: PageLayoutSpec = {
-  // Standard manuscript format: 12pt Courier, double spaced, ~25 lines a page.
   linesPerPage: 25,
   columns: 60,
   doubleSpaced: true,
-  indent: { paragraph: 5, heading: 0, blockquote: 5, scene_break: 28 },
+  indent: { paragraph: 0, heading: 0, blockquote: 5, scene_break: 28 },
+  // Five spaces on the opening line, and the rest of the paragraph flush.
+  firstIndent: { paragraph: 5 },
   width: { paragraph: 60, heading: 60, blockquote: 55, scene_break: 5 },
   uppercase: new Set(['heading']),
+  // The indent is what says "a new paragraph", so nothing else has to.
+  runOn: new Set(['paragraph']),
+};
+
+/**
+ * The same page, set block style: no first-line indent, and a space between
+ * paragraphs to mark the break the indent would otherwise have marked. One
+ * or the other — a page with both is a page that says it twice.
+ */
+export const PROSE_BLOCK_LAYOUT: PageLayoutSpec = {
+  ...PROSE_LAYOUT,
+  firstIndent: {},
+  runOn: new Set<string>(),
 };
 
 /**
@@ -95,8 +128,19 @@ export const PROSE_LAYOUT: PageLayoutSpec = {
  * same geometry, the same elements, the same two keys. What differs is how
  * they are divided (§14), not how a page is set.
  */
-export const layoutFor = (format: ProjectFormat): PageLayoutSpec =>
-  format === 'novel' || format === 'short_story' ? PROSE_LAYOUT : SCREENPLAY_LAYOUT;
+export const layoutFor = (format: ProjectFormat, paragraphStyle?: ParagraphStyle): PageLayoutSpec => {
+  if (format !== 'novel' && format !== 'short_story') return SCREENPLAY_LAYOUT;
+  return paragraphStyle === 'blocked' ? PROSE_BLOCK_LAYOUT : PROSE_LAYOUT;
+};
+
+/**
+ * The layout this project is written in — the format's geometry, set the way
+ * the writer asked for it. Everything that paginates a whole file goes
+ * through here, so the choice cannot be honoured in one place and missed in
+ * another.
+ */
+export const layoutForFile = (file: ProjectFile): PageLayoutSpec =>
+  layoutFor(file.project.format, file.settings.paragraphStyle);
 
 export interface PageLine {
   text: string;
@@ -174,6 +218,8 @@ interface Block {
   /** The emphasis on each of those lines, character for character. */
   spans: InlineSpan[][];
   indent: number;
+  /** Extra columns on the opening line only: a paragraph's first-line indent. */
+  firstIndent: number;
   /**
    * A scene heading or character cue must not be the last thing on a page —
    * the reader would turn over to find the content it introduces.
@@ -243,6 +289,7 @@ const toBlock = (element: ManuscriptElement, layout: PageLayoutSpec, speaker: st
     lines,
     spans,
     indent,
+    firstIndent: layout.firstIndent?.[element.type] ?? 0,
     keepWithNext: element.type === 'scene_heading' || element.type === 'character' || element.type === 'parenthetical',
     splittable: element.type === 'dialogue',
     speaker,
@@ -307,6 +354,7 @@ const toDualBlock = (
     lines,
     spans,
     indent: 0,
+    firstIndent: 0,
     keepWithNext: false,
     // Two columns cannot be resumed under one (MORE); the pair moves together.
     splittable: false,
@@ -373,9 +421,13 @@ export const paginateElements = (
     lines = [];
     pageStart = null;
   };
+  // What separates two blocks. A double-spaced page already carries a blank
+  // under every line, so one more is a paragraph break; a single-spaced
+  // screenplay page needs the whole line.
+  const gap = layout.doubleSpaced ? 1 : spacing;
   const pushBlank = () => {
     if (lines.length === 0) return;
-    for (let i = 0; i < spacing; i += 1) lines.push({ text: '', type: 'blank', indent: 0, spans: [] });
+    for (let i = 0; i < gap; i += 1) lines.push({ text: '', type: 'blank', indent: 0, spans: [] });
   };
 
   /**
@@ -403,14 +455,22 @@ export const paginateElements = (
     block.lines.slice(from, to).forEach((text, offset) => {
       // The mark belongs beside the first line of the block, not every one.
       const mark = from + offset === 0 ? block.mark : undefined;
-      pushContent(text, block.type, block.indent, block.spans[from + offset] ?? [{ text }], mark);
+      // The first-line indent belongs to the paragraph's opening line, so a
+      // paragraph resumed at the top of a page is set flush, as it should be.
+      const indent = block.indent + (from + offset === 0 ? block.firstIndent : 0);
+      pushContent(text, block.type, indent, block.spans[from + offset] ?? [{ text }], mark);
     });
   };
 
   for (let index = 0; index < blocks.length; index += 1) {
     const block = blocks[index] as Block;
     currentId = block.id;
-    const separator = lines.length === 0 ? 0 : spacing;
+    // A paragraph that runs on from the paragraph before it takes no blank:
+    // in standard manuscript format the indent is what marks the new one.
+    const previous = index > 0 ? (blocks[index - 1] as Block) : null;
+    const runsOn =
+      previous !== null && previous.type === block.type && (layout.runOn?.has(block.type) ?? false);
+    const separator = lines.length === 0 || runsOn ? 0 : gap;
     const needed = block.lines.length * spacing + separator;
 
     // A block that keeps with the next one needs room for a couple of lines of
@@ -419,7 +479,7 @@ export const paginateElements = (
     const companionLines = block.keepWithNext && follower ? Math.min(2, follower.lines.length) * spacing + spacing : 0;
 
     if (needed + companionLines <= remaining()) {
-      pushBlank();
+      if (!runsOn) pushBlank();
       pushBlockLines(block);
       continue;
     }
@@ -432,7 +492,7 @@ export const paginateElements = (
       fittable >= MIN_SPLIT_LINES &&
       block.lines.length - fittable >= MIN_SPLIT_LINES
     ) {
-      pushBlank();
+      if (!runsOn) pushBlank();
       pushBlockLines(block, 0, fittable);
       lines.push({ text: '(MORE)', type: 'more', indent: layout.indent['parenthetical'] ?? 16, spans: [{ text: '(MORE)' }] });
       startNewPage();
@@ -522,7 +582,7 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
     if (!element.characterId) return null;
     return file.characters.find((character) => character.id === element.characterId)?.name.toUpperCase() ?? null;
   };
-  const layout = layoutFor(file.project.format);
+  const layout = layoutForFile(file);
 
   const leaves = chapterPagesFor(file, options);
   if (leaves.length === 0) {
@@ -629,7 +689,7 @@ const unitElements = (
 export const paginateUnit = (file: ProjectFile, unitId: StructuralUnitId): Page[] =>
   paginateElements(
     beatsInScript(file, unitId).flatMap((beat) => beat.manuscript.elements),
-    layoutFor(file.project.format),
+    layoutForFile(file),
   );
 
 /** Page count in the sense the industry means it. */

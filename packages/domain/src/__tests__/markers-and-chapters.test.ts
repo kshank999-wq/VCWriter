@@ -130,11 +130,19 @@ describe('the leaf a chapter opens with', () => {
     }
     const after = paginateProject(file);
 
-    // Three more pages, each of them a leaf, and the manuscript's own pages
-    // are the same pages with the same lines on them.
+    // A leaf for each chapter, and the manuscript itself word for word as it
+    // was: the same lines in the same order. Where they *break* changes, and
+    // has to — a chapter that ends halfway down a page leaves the rest of it
+    // empty, exactly as a printed book does — so the page count grows by the
+    // three leaves and by whatever those part-pages cost.
     expect(after.filter((page) => page.chapter)).toHaveLength(3);
-    expect(after.length).toBe(before.length + 3);
-    const prose = (pages: typeof after) => pages.filter((page) => !page.chapter).map((page) => page.lines);
+    expect(after.length).toBeGreaterThanOrEqual(before.length + 3);
+    const prose = (pages: typeof after) =>
+      pages
+        .filter((page) => !page.chapter)
+        .flatMap((page) => page.lines)
+        .filter((line) => line.text.length > 0)
+        .map((line) => line.text);
     expect(prose(after)).toEqual(prose(before));
 
     // And they are numbered straight through, as a book is.

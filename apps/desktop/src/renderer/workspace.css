@@ -2176,6 +2176,8 @@ input[type='color'].swatch {
   overflow-wrap: break-word;
   word-break: normal;
   text-align: inherit;
+  /* A prose paragraph's opening line, indented; the rest set flush (§6.4). */
+  text-indent: var(--first-indent, 0);
 }
 
 .element .ink {
@@ -3876,6 +3878,65 @@ dialog.page-setup {
   font-size: 12px;
   text-transform: none;
   letter-spacing: normal;
+  color: var(--text);
+}
+
+/* The two ways a prose page marks a new paragraph (§6.4), shown as the
+   thing itself: four lines of type set each way, side by side. */
+.paragraph-style {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.paragraph-choice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: 'radio sample' 'words words';
+  align-items: start;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.paragraph-choice.chosen {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+}
+
+.paragraph-choice input {
+  grid-area: radio;
+  margin: 2px 0 0;
+}
+
+.paragraph-sample {
+  grid-area: sample;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 8px;
+  line-height: 1.9;
+  color: var(--muted);
+  white-space: pre;
+}
+
+.paragraph-sample .sample-line.blank {
+  min-height: 1.9em;
+}
+
+.paragraph-words {
+  grid-area: words;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.paragraph-words strong {
+  font-size: 11px;
   color: var(--text);
 }
 
