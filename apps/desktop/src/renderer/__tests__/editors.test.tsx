@@ -10,7 +10,7 @@ import { ReadBackPanel } from '../components/ReadBackPanel';
  * The editors and read-back through the interface.
  *
  * The rules themselves are tested in the domain; what these cover is that a
- * finding reaches the writer, that Fix and Dismiss do what they say, that the
+ * finding reaches the writer, that Fix and "Leave it" do what they say, that the
  * Final Editor does not claim to know whether a scene turns, and that
  * read-back reflects the voices actually assigned.
  */
@@ -42,17 +42,54 @@ const scriptWithProblems = (): ProjectFile => {
   });
 };
 
-function EditorHarness({ initial, signedIn = false }: { initial: ProjectFile; signedIn?: boolean }) {
+function EditorHarness({
+  initial,
+  signedIn = false,
+  onGoTo,
+  onFile,
+}: {
+  initial: ProjectFile;
+  signedIn?: boolean;
+  onGoTo?(beatId: string): void;
+  onFile?(file: ProjectFile): void;
+}) {
   const [file, setFile] = useState(initial);
+  onFile?.(file);
   return (
     <EditorPanel
       file={file}
       currentUnitId={file.units[0]!.id}
       signedIn={signedIn}
+      onGoTo={onGoTo as never}
       onUpdate={(mutate) => setFile((current) => mutate(current))}
     />
   );
 }
+
+/** A scene with several of the same mistake, plus one of another kind. */
+const scriptWithMany = (): ProjectFile => {
+  const file = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
+  return updateBeat(file, file.beats[0]!.id, {
+    manuscript: {
+      elements: [
+        {
+          id: 'm1111111-1111-4111-8111-111111111111' as never,
+          type: 'action',
+          text: 'She climbs , slowly , then stops , breathing.',
+          characterId: null,
+          attributes: {},
+        },
+        {
+          id: 'm2222222-2222-4222-8222-222222222222' as never,
+          type: 'action',
+          text: 'She could of stayed.',
+          characterId: null,
+          attributes: {},
+        },
+      ],
+    },
+  });
+};
 
 describe('daily editor panel', () => {
   it('shows a mechanical finding and fixes it in place', () => {
@@ -68,13 +105,65 @@ describe('daily editor panel', () => {
   it('keeps a dismissed finding dismissed when the pass re-runs', () => {
     render(<EditorHarness initial={scriptWithProblems()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Leave it' }));
     expect(screen.queryByText(/"the" is repeated/i)).toBeNull();
 
     // Toggling an option re-runs the pass; the dismissal must survive it.
     fireEvent.click(screen.getByLabelText(/include style notes/i));
     fireEvent.click(screen.getByLabelText(/include style notes/i));
     expect(screen.queryByText(/"the" is repeated/i)).toBeNull();
+  });
+
+  it('lists the rules with what each one found, worst first', () => {
+    render(<EditorHarness initial={scriptWithMany()} />);
+
+    const rules = [...document.querySelectorAll('.rule-row')].map((node) => node.textContent);
+    expect(rules[0]).toContain('Everything');
+    expect(rules.join(' ')).toContain('A space before punctuation');
+    expect(rules.join(' ')).toContain('“of” where “have” belongs');
+  });
+
+  it('works through one rule at a time, and fixes every one of them at once', () => {
+    let latest = scriptWithMany();
+    render(<EditorHarness initial={scriptWithMany()} onFile={(file) => (latest = file)} />);
+
+    // Choosing a rule shows only that rule's findings.
+    fireEvent.click(screen.getByText('A space before punctuation'));
+    expect(document.querySelectorAll('.finding')).toHaveLength(3);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fix all 3' }));
+    expect(latest.beats[0]!.manuscript.elements[0]!.text).toBe('She climbs, slowly, then stops, breathing.');
+    // The other rule's finding is untouched.
+    expect(latest.beats[0]!.manuscript.elements[1]!.text).toBe('She could of stayed.');
+  });
+
+  it('shows the offending text in the line it is in', () => {
+    render(<EditorHarness initial={scriptWithMany()} />);
+    const marked = [...document.querySelectorAll('.finding-excerpt mark')].map((node) => node.textContent);
+    expect(marked.length).toBeGreaterThan(0);
+    expect(document.querySelector('.finding-excerpt')?.textContent).toContain('She climbs');
+  });
+
+  it('goes to the beat a finding is in', () => {
+    const went: string[] = [];
+    render(<EditorHarness initial={scriptWithMany()} onGoTo={(beatId) => went.push(beatId)} />);
+
+    fireEvent.click(document.querySelector('.finding-where') as HTMLElement);
+    expect(went).toHaveLength(1);
+  });
+
+  it('switches a rule off for the project, and back on', () => {
+    let latest = scriptWithMany();
+    render(<EditorHarness initial={scriptWithMany()} onFile={(file) => (latest = file)} />);
+
+    fireEvent.click(screen.getByLabelText('Stop checking: “of” where “have” belongs'));
+    expect(latest.settings.editorIgnoredRules).toContain('modal_of');
+    expect(screen.queryByText('“of” where “have” belongs')).toBeNull();
+
+    // And it can be put back, from the list of what is switched off.
+    fireEvent.click(screen.getByText('1 switched off'));
+    fireEvent.click(screen.getByRole('button', { name: /“of” where “have” belongs/ }));
+    expect(latest.settings.editorIgnoredRules).toEqual([]);
   });
 
   it('marks opinions as style rather than errors', () => {

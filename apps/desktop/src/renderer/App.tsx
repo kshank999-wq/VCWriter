@@ -802,6 +802,10 @@ export default function App() {
               file={file}
               currentUnitId={selectedBeat?.unitId ?? null}
               signedIn={account.signedIn}
+              onGoTo={(beatId) => {
+                setSelectedBeatId(beatId);
+                setView('write');
+              }}
               onUpdate={project.update}
             />
           ) : view === 'readback' ? (

@@ -1111,7 +1111,61 @@ speaks in it, what it sets up or pays off, what it is linked to — because
 the arc is what the scene is being read against, and the two belong on the
 same screen.
 
-## 20. Keyboard
+## 20. Editing mode
+
+Spec §8.1 asks for grammar, spelling, punctuation and mechanics, with
+actionable suggestions that preserve the writer's control and voice. What
+was there was a list you scrolled. **Editing mode** is a screen you work in.
+
+### The rules, one at a time
+
+The rules are down the left with what each one found, errors before opinions
+and the commonest first. Choosing one shows only its findings — because
+working through a manuscript one rule at a time is how it is actually done:
+the eye stays on one kind of mistake instead of switching between eleven of
+them line by line.
+
+Each finding shows **the line it is in with the fault marked in place** —
+one you cannot see in context is one you cannot judge — and says where in
+the script it is; clicking that goes there.
+
+Three answers to each: **Fix** (only where the fix is unambiguous), **Fix
+all N** for every one of that rule at once, and **Leave it**. Fixing a whole
+rule applies back-to-front within each element so the earlier offsets are
+still true when their turn comes.
+
+### Saying "that is not a mistake"
+
+Two things persist in the project, because an editor with no way to say that
+is one a writer switches off entirely after the second false alarm:
+
+- **A rule switched off** — the `×` beside it. What is off is listed, and
+  goes back on from the same place.
+- **A word allowed** — "It's a word", on a suspected typo. Said once, never
+  asked again. The cast are never asked about at all.
+
+### What it now checks
+
+Beyond the mechanics and style it already had:
+
+| | |
+| --- | --- |
+| **Punctuation** | A space before punctuation · doubled punctuation (an ellipsis is three dots and is not a mistake) · a straight quote where the manuscript is otherwise curly · a hyphen doing an em dash's job, outside sluglines |
+| **Spelling** | The misspellings a keyboard actually makes · `could of` for `could have` · **a word used once that is one keystroke from one used often** |
+| **Shape** | A speech with no cue above it · a cue with nothing under it · a slugline that does not say when · a parenthetical doing action's work · a wall of action |
+
+The typo check is the closest thing to a spell-check that can be honest
+without shipping a dictionary: it knows nothing about English, only about
+what this writer actually writes. A word appearing once, four letters or
+more, one edit from a word this manuscript uses three times or more, is
+almost always a slip. **One edit includes a transposition** — `lantren` for
+`lantern` is two substitutions by the textbook measure and one slip in life.
+Inflections are not typos, and neither are the cast's names.
+
+Everything deterministic still runs locally: it costs nothing, works on a
+plane, and gives the same answer twice.
+
+## 21. Keyboard
 
 In addition to §5's reordering keys and §6's writing keys:
 
@@ -1125,7 +1179,7 @@ In addition to §5's reordering keys and §6's writing keys:
 Every control on the timeline is a focusable element with an accessible
 name; the reorder keys work from the same elements that drag (§16).
 
-## 21. Preferences
+## 22. Preferences
 
 A gear on the title bar opens Preferences. These are kept on the machine,
 not in the project file — a collaborator opening the file must not inherit
@@ -1141,7 +1195,7 @@ anyone's colours — alongside the layout preferences of §3.
   and a dark page is a strain over a long day. Off, the Script follows the
   scheme.
 
-## 22. Later
+## 23. Later
 
 Named so that nobody mistakes their absence for an oversight:
 
@@ -1153,7 +1207,7 @@ Named so that nobody mistakes their absence for an oversight:
   character; a lane per character among the plot lanes is a later addendum.
 - Timing in minutes. Pages are the industry's unit and the ruler uses them.
 
-## 23. Acceptance
+## 24. Acceptance
 
 - The Script shows every beat of the fixture project in print order, and
   typing in the third beat changes the third beat and nothing else.
@@ -1246,5 +1300,12 @@ Named so that nobody mistakes their absence for an oversight:
   that goes to a parenthetical, and Tab in dialogue goes to one too.
 - The plot pop-up lists its scenes and opens one to its cast, its promises
   and its links, under the arc.
+- Editing mode lists the rules with what each found; choosing one shows only
+  its findings, each with its line and the fault marked in it, and Fix all
+  fixes every one of that rule without disturbing another's.
+- A rule switched off stays off for the project and can be put back; a word
+  allowed is never raised again.
+- `lantren` beside three `lantern`s is caught; `stairs` beside three
+  `stair`s is not, and neither is a character's name.
 - Renderer and domain tests cover the above; a screenshot of the fixture at
   1440×900 and at 1100×700 is reviewed before the change ships.

@@ -67,6 +67,14 @@ export const projectSettingsSchema = z.object({
    * the episodes rather than with the settings.
    */
   episodeCarry: z.record(z.unknown()).default({}),
+  /**
+   * The Daily Editor's rules the writer has switched off, and the words they
+   * have said are fine (spec §8.1). An editor with no way to say "that is
+   * not a mistake" is one a writer turns off entirely after the second false
+   * alarm, so both of these travel with the project.
+   */
+  editorIgnoredRules: z.array(z.string()).default([]),
+  editorAllowedWords: z.array(z.string()).default([]),
 });
 export type ProjectSettings = z.infer<typeof projectSettingsSchema>;
 

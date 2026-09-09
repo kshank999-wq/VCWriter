@@ -4446,3 +4446,119 @@ dialog.lane-dialog:has(.with-scenes) {
   flex-direction: column;
   gap: 2px;
 }
+
+/* ---------------------------------------------------------- editing mode
+   Spec §8.1. The rules on the left with what each one found, the findings
+   on the right. Working through a manuscript one rule at a time is how it
+   is actually done: the eye stays on one kind of mistake instead of
+   switching between eleven of them line by line. */
+
+.editing-mode {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding-right: 10px;
+  border-right: 1px solid var(--border);
+}
+
+.rule-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rule-row {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  text-align: left;
+  padding: 6px 7px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  min-width: 0;
+}
+
+.rule-row:hover {
+  border-color: var(--border);
+}
+
+.rule-row.current {
+  border-color: var(--gold);
+  background: rgba(201, 164, 92, 0.08);
+}
+
+.rule-name {
+  flex: 1;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--text);
+  min-width: 0;
+  /* Wrapped, not truncated: a rule you cannot read is one you cannot choose. */
+  overflow-wrap: break-word;
+}
+
+.rules-off {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.rules-off button {
+  display: block;
+  text-align: left;
+  width: 100%;
+}
+
+.editing-mode .findings {
+  max-height: 100%;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.findings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 1;
+}
+
+/* The line as it stands, with the offending part marked in place: a finding
+   you cannot see in context is one you cannot judge. */
+.finding-excerpt mark {
+  background: color-mix(in srgb, var(--gold) 30%, transparent);
+  color: var(--text);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.finding-where {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--gold);
+  cursor: pointer;
+}

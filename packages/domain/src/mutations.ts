@@ -678,6 +678,32 @@ export const removeCharacter = (file: ProjectFile, characterId: CharacterId): Pr
   });
 };
 
+// --------------------------------------------------------- the editor's own settings
+
+/**
+ * Switch a Daily Editor rule off, or back on (spec §8.1).
+ *
+ * The writer's judgement about a rule is a property of the project, not of a
+ * sitting: a script whose action is deliberately dense should not be told
+ * about walls of action every time it is opened.
+ */
+export const setEditorRule = (file: ProjectFile, kind: string, on: boolean): ProjectFile => {
+  const ignored = new Set(file.settings.editorIgnoredRules ?? []);
+  if (on) ignored.delete(kind);
+  else ignored.add(kind);
+  return touchProject({ ...file, settings: { ...file.settings, editorIgnoredRules: [...ignored] } });
+};
+
+/** "That is a word." Said once, and the typo check never asks again. */
+export const allowWord = (file: ProjectFile, word: string): ProjectFile => {
+  const clean = word.trim().toLowerCase();
+  if (clean.length === 0) return file;
+  const allowed = new Set((file.settings.editorAllowedWords ?? []).map((entry) => entry.toLowerCase()));
+  if (allowed.has(clean)) return file;
+  allowed.add(clean);
+  return touchProject({ ...file, settings: { ...file.settings, editorAllowedWords: [...allowed] } });
+};
+
 // ------------------------------------------------- the headings the cast sits under
 
 /**
