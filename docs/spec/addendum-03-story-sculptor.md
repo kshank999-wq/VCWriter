@@ -1,8 +1,8 @@
 # Addendum 03 — Story Sculptor
 
-Status: specified, not yet approved for build. September 2026. Extends §5
-(story structure) and §19 (the hierarchy) of the master specification, and
-adds a screen alongside the workspace of addendum 02.
+Status: approved for build, September 2026. Stage 1 of §13.6 is built.
+Extends §5 (story structure) and §19 (the hierarchy) of the master
+specification, and adds an area alongside the workspace of addendum 02.
 
 Story Sculptor is a **node-based vertical story-development module**: the
 place a story is shaped before it is assembled. It is part of the standard
@@ -10,8 +10,8 @@ program and does not depend on Writers Room.
 
 This addendum is the development spec as written, reconciled against what VC
 Writer already has. §§1–12 are the module. §13 is the reconciliation: what
-already exists and is reused, what is genuinely new, and the four decisions
-that are still open. Nothing here is built yet.
+already exists and is reused, what is genuinely new, and how the four open
+decisions were settled.
 
 ## 1. Objective
 
@@ -269,26 +269,22 @@ arc turns, against where the manuscript shows it turning.
 So `Arc`, `ArcPoint` and `ArcLink` are new entities. The existing threads
 stay as they are, and neither replaces the other.
 
-### 13.5 Open decisions
+### 13.5 The four decisions, settled
 
-Four things the spec does not settle, and I should not settle alone.
-
-1. **Where the Sculptor lives.** A page on the page bar beside Write and
-   Preview, or a pane in the workspace arrangement? Recommendation: a page.
-   It wants the whole window, and the page bar is where a whole-window
-   workspace goes.
-2. **"Sequencer" as a name.** Adopt it for the master timeline, or read it
-   as referring to it and keep the built name? Recommendation: keep *master
-   timeline*, since renaming a built screen churns the code and two addenda
-   for no gain in what the writer can do.
-3. **Sculptor-only material.** §9 wants a scene that exists here before it is
-   in the assembled story. The existing `inScript` switch already means
-   *this scene is in the structure and out of the manuscript*, which is very
-   nearly the same statement. Recommendation: reuse it rather than add a
-   parallel flag — but it needs deciding before the first scene is drawn.
-4. **Writers Room (§12).** It does not exist yet. The contributor metadata
-   and alternate-proposal support belong with it and should be built with
-   it, not ahead of it — §12 already says the Sculptor does not depend on it.
+1. **Where the Sculptor lives.** **Its own area over the whole workspace**,
+   opened from **Sculptor** in the title bar beside Research and closed with
+   `Escape` — the shape addendum 02 §7 already gives the research window.
+   Not a page on the page bar and not a pane in the arrangement: it is where
+   the story is thought about, and it wants the room.
+2. **"Sequencer" as a name.** Keep **master timeline**. Renaming a built
+   screen churns the code and two addenda for no gain in what a writer can
+   do; the spec's Sequencer is read as referring to it.
+3. **Sculptor-only material.** Reuse the existing `inScript` switch, which
+   already means *this scene is in the structure and out of the manuscript*.
+   No parallel flag.
+4. **Writers Room (§12).** Deferred with it. The contributor metadata and
+   alternate proposals are built when Writers Room is; §12 already says the
+   Sculptor does not depend on it.
 
 ### 13.6 Build order
 
@@ -309,3 +305,37 @@ against the reconciliation above:
 
 Stages 1–4 are the module standing on its own. Stage 5 is where it joins the
 rest of the program, and is the first point at which it earns its keep.
+
+### 13.7 Stage 1, as built
+
+The canvas, from **Sculptor** in the title bar. Down it: **Beginning**, the
+regions, **End**.
+
+- **Beginning and End are drawn, not stored.** A story has both whatever is
+  in it, and a writer who could delete the Beginning would be left with a
+  story that starts nowhere.
+- **A region is as tall as the manuscript under it.** Nothing here is a
+  stored size, so a thin second act looks thin — which is the whole reason to
+  shape on a canvas rather than in an outline.
+- **The opening** — whatever precedes the first structure point — is drawn as
+  a region without one. It is the state every project is in before anything
+  is marked, and is not a fault.
+- **A structure point brings its scene with it.** A marker marks *this scene
+  starts this act*, so a point needs a scene to mark, and a writer with only
+  a beginning and an end has none. The scene it makes is where the filling-in
+  will happen. (`addEpisode` has always worked this way.)
+- **The kinds on offer are the format's**: act, sequence and a milestone of
+  the writer's own in a script; part, chapter and a milestone in a book;
+  episode, act, sequence and a milestone in a series. A milestone is a `note`
+  marker — no noun, so no number, so what it says is what the writer typed.
+  That is §2's *no named paradigm at all*.
+- **Dragging a point takes its region with it.** "Move the midpoint earlier"
+  moves the midpoint *and what is under it*; a boundary that slid off its
+  material would leave the story saying something nobody asked for.
+- Removing a point removes the shape, never the writing: its scenes stay
+  where they are and fall into the region around them.
+- Zoom and scroll position are remembered, per machine.
+
+One thing changed outside the module to make it work: a `note` marker used to
+be numbered like a division ("I") despite having no noun. It now carries the
+writer's words, which is what *just a note* meant all along.

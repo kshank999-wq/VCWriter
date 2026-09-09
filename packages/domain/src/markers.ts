@@ -209,9 +209,13 @@ export const placedMarkers = (file: ProjectFile): PlacedMarker[] => {
   return inOrder.map((marker) => {
     const position = (counts.get(marker.kind) ?? 0) + 1;
     counts.set(marker.kind, position);
-    const number = markerNumber(position, numbering, symbol);
+    // "Just a note" is a labelled point rather than a division of the work:
+    // it has no noun, so it takes no number either, and what it says is what
+    // the writer typed. That is what a milestone of one's own is made of on
+    // the Sculptor's canvas (addendum 03 §2).
+    const counted = marker.kind !== 'note';
+    const number = counted ? markerNumber(position, numbering, symbol) : '';
     const noun = markerNoun(marker.kind);
-    // A screenplay prints ACT TWO in capitals; a book prints Chapter Two.
     // A script prints ACT TWO and EPISODE 2 in capitals; a book prints
     // Chapter Two.
     const shouts = marker.kind === 'act' || marker.kind === 'episode';
