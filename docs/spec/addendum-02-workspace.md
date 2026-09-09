@@ -387,9 +387,13 @@ Under them, the threads that run through the story — and only threads,
 because this screen answers "who and what is where", not "what does it
 say":
 
-- A row per **character**, filled in every scene they speak in. The cast
-  keeps itself: a character joins the list the first time a cue names them,
-  the way a screenwriting program's character list does.
+- **Characters**, a heading of their own directly under the scenes, holding a
+  row per character filled in every scene they speak in, each in that
+  character's colour: who is in what, in one look. The heading folds them
+  away — a cast of thirty is a lot of rows, and the scenes above them are
+  what most of the work is about — and whether it is folded is remembered
+  per machine. The cast keeps itself: a character joins the list the first
+  time a cue names them (§16).
 - A row per **theme**, filled in every scene it is linked to (§7.4).
   A theme leaves no trace in the text, so this is the one thread the writer
   draws by hand.
@@ -953,6 +957,32 @@ it.
 
 Removing a heading **unfiles** the people under it. It never deletes them.
 Losing a character because a heading was tidied away would be indefensible.
+
+### One master list
+
+**Every name the script speaks with is in the cast**, whether it was typed
+into a cue or entered in Research. A character cue *is* the act of
+introducing someone; typing one and then having to enter the same name again
+under Research is asking the writer to say it twice, and until they do, every
+list built on the cast is wrong — who is offered while the next cue is typed,
+the character track on the timeline, read-back's voices, an episode's
+carry-over.
+
+So a name typed as a cue joins the cast when the writer leaves the line —
+not on every keystroke, or R, RU and RUV would become three people. It joins
+**unfiled**: a name in a script is a character before anyone has decided how
+important they are, and guessing that from one line would be inventing a
+judgement. `MAEVE`, `MAEVE (V.O.)` and `MAEVE (CONT'D)` are one person; an
+extension is how a cue is marked, not who is speaking. A name the cast
+already knows as an **alias** is not added again.
+
+Nothing is ever removed. Cutting a line is not saying the character never
+existed, and a cast list that emptied itself as scenes were cut would be a
+trap.
+
+Typing a cue therefore offers the cast from the first letter, in both the
+Script and the beat: type `M` and the Ms are there, `MA` narrows it, and the
+name is complete without typing it out again.
 
 ## 17. Episodes
 

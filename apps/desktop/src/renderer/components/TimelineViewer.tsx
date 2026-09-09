@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { usePreference } from '../use-split';
 import {
   beatsForUnit,
   hasChapterPages,
@@ -67,6 +68,9 @@ export function TimelineViewer({
 }: TimelineViewerProps) {
   const layout = useMemo(() => threads ?? threadLayout(file), [threads, file]);
   const { spans, characters, themes, arcs } = layout;
+  // Folded or not, remembered per machine: a writer with a cast of thirty
+  // wants them away, and one with four wants them there.
+  const [castOpen, setCastOpen] = usePreference('viewerCast', true);
   const noun = file.project.format === 'novel' || file.project.format === 'short_story' ? 'Chapters' : 'Scenes';
 
   const selectedUnitId = useMemo(() => {
@@ -100,24 +104,25 @@ export function TimelineViewer({
     if (first) onSelectBeat(first.id);
   };
 
-  const rows = [
-    ...characters
-      .filter((character) => isolated.length === 0 || character.name === isolated)
-      .map((character) => ({
-        key: `character:${character.name}`,
-        kind: 'character' as const,
-        name: character.name,
-        color: character.color,
-        indexes: new Set(character.appearances.map((appearance) => appearance.index)),
-      })),
-    ...themes.map((theme) => ({
-      key: `theme:${theme.id}`,
-      kind: 'theme' as const,
-      name: theme.name,
-      color: theme.color,
-      indexes: new Set(theme.appearances.map((appearance) => appearance.index)),
-    })),
-  ];
+  const castRows = characters
+    .filter((character) => isolated.length === 0 || character.name === isolated)
+    .map((character) => ({
+      key: `character:${character.name}`,
+      kind: 'character' as const,
+      name: character.name,
+      color: character.color,
+      indexes: new Set(character.appearances.map((appearance) => appearance.index)),
+    }));
+
+  const themeRows = themes.map((theme) => ({
+    key: `theme:${theme.id}`,
+    kind: 'theme' as const,
+    name: theme.name,
+    color: theme.color,
+    indexes: new Set(theme.appearances.map((appearance) => appearance.index)),
+  }));
+
+  const rows = [...castRows, ...themeRows];
 
   return (
     <section className="viewer" aria-label="Timeline and viewer">
@@ -212,8 +217,33 @@ export function TimelineViewer({
           })}
           <div className="viewer-scene viewer-sticky tail" />
 
-          {/* The threads. */}
-          {rows.map((row) => (
+          {/*
+            Every character, one lane each in their own colour, filled in the
+            scenes they speak in — who is in what, in one look. Under a
+            heading that folds them away, because a large cast is a lot of
+            rows and the scenes above them are what most of the work is about.
+          */}
+          {castRows.length > 0 ? (
+            <>
+              <div className="track-head viewer-sticky viewer-cast-head">
+                <button
+                  type="button"
+                  className="ghost twisty"
+                  aria-expanded={castOpen}
+                  aria-label={castOpen ? 'Hide the characters' : 'Show the characters'}
+                  onClick={() => setCastOpen(!castOpen)}
+                >
+                  {castOpen ? '▾' : '▸'}
+                </button>
+                <span>Characters</span>
+                <span className="count muted">{castRows.length}</span>
+              </div>
+              <div className="viewer-cast-rule" style={{ gridColumn: `span ${spans.length + 1}` }} />
+              {castOpen ? castRows.map((row) => <Row key={row.key} row={row} spans={spans} onPick={pick} />) : null}
+            </>
+          ) : null}
+
+          {themeRows.map((row) => (
             <Row key={row.key} row={row} spans={spans} onPick={pick} />
           ))}
 

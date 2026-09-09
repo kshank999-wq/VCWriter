@@ -53,30 +53,82 @@ const looksLikeTransition = (text: string): boolean => {
   return TRANSITION_WORDS.some((word) => upper === word) || /\bTO:$/.test(upper);
 };
 
-/** The commonest left edge: in a screenplay that is the margin, by volume. */
+/**
+ * Where a line really starts.
+ *
+ * Two ways a PDF can indent, and scripts in the wild use both: move the pen
+ * before drawing (the `x` of the text run), or draw spaces at the margin.
+ * A file that pads with spaces has the same `x` on every line, and reading
+ * `x` alone would make every line an action line — no cues, so no cast, and
+ * no speeches, so no dialogue. They are additive, so both are counted.
+ */
+const startOf = (line: LaidOutLine): number => {
+  const padding = line.text.length - line.text.replace(/^\s+/, '').length;
+  return line.x + padding * CHAR;
+};
+
+/**
+ * The margin: the **leftmost edge the page actually uses**, not the commonest.
+ *
+ * Commonest was wrong, and wrong in the way that matters. In a talky script
+ * the speech indent is the commonest edge — dialogue outnumbers action on
+ * page after page — so the margin came out an inch too far right, every cue
+ * fell short of the cue band, and the whole script imported as action with no
+ * cast at all. Action and sluglines are always *present* at the true margin
+ * even when they are outnumbered, so the leftmost edge with real use behind
+ * it is the margin, and how popular it is does not come into it.
+ *
+ * "Real use" keeps a stray line — a header, a revision mark in the gutter —
+ * from dragging the margin left: an edge has to carry a twentieth of the
+ * page's lines, or three of them, whichever is more forgiving.
+ */
 export const marginOf = (lines: readonly LaidOutLine[]): number => {
+  // Round to a quarter-character so two lines typed at the same margin count
+  // together despite the sub-point wobble a PDF carries.
+  const edge = (line: LaidOutLine): number => Math.round((startOf(line) / CHAR) * 4) / 4;
+
   const counts = new Map<number, number>();
+  const sluglines = new Map<number, number>();
+  let total = 0;
   for (const line of lines) {
-    if (line.text.trim().length === 0) continue;
-    // Round to a quarter-character so two lines typed at the same margin
-    // count together despite the sub-point wobble a PDF carries.
-    const key = Math.round((line.x / CHAR) * 4) / 4;
+    const text = line.text.trim();
+    if (text.length === 0) continue;
+    const key = edge(line);
     counts.set(key, (counts.get(key) ?? 0) + 1);
+    // A slugline is at the margin by definition — that is what a margin is.
+    // It is the one line whose position the format guarantees, so where the
+    // page has them they settle the question outright.
+    if (SCENE_PREFIX.test(text)) sluglines.set(key, (sluglines.get(key) ?? 0) + 1);
+    total += 1;
   }
-  let best = 0;
-  let mostSeen = -1;
-  for (const [key, seen] of counts) {
-    // Ties go to the left: a margin is the leftmost of the common edges.
-    if (seen > mostSeen || (seen === mostSeen && key < best)) {
-      best = key;
-      mostSeen = seen;
+  if (total === 0) return 0;
+
+  if (sluglines.size > 0) {
+    let best = 0;
+    let mostSeen = -1;
+    for (const [key, seen] of sluglines) {
+      if (seen > mostSeen || (seen === mostSeen && key < best)) {
+        best = key;
+        mostSeen = seen;
+      }
     }
+    return best * CHAR;
   }
-  return best * CHAR;
+
+  // No sluglines — an extract, or a script that writes them some other way.
+  // Then it is the leftmost edge with real use behind it, which keeps a stray
+  // header or a revision mark in the gutter from dragging the margin left.
+  const enough = Math.max(2, Math.ceil(total * 0.05));
+  let best: number | null = null;
+  for (const [key, seen] of counts) {
+    if (seen < enough) continue;
+    if (best === null || key < best) best = key;
+  }
+  return (best ?? Math.min(...counts.keys())) * CHAR;
 };
 
 /** Indent in characters from the margin, which is what the format is written in. */
-const indentOf = (line: LaidOutLine, margin: number): number => Math.max(0, Math.round((line.x - margin) / CHAR));
+const indentOf = (line: LaidOutLine, margin: number): number => Math.max(0, Math.round((startOf(line) - margin) / CHAR));
 
 /**
  * What a line is, from where it sits and — only where that is not enough —
@@ -186,7 +238,7 @@ export const readLaidOutLines = (lines: readonly LaidOutLine[], options: { title
     const { type, guessed } = classify(line, margin, previous);
     if (guessed) guessedCount += 1;
 
-    const sameIndent = previousLine !== null && Math.abs(previousLine.x - line.x) < CHAR;
+    const sameIndent = previousLine !== null && Math.abs(startOf(previousLine) - startOf(line)) < CHAR;
     // A gap of much more than one line means a paragraph ended. Line spacing
     // is 12pt at 12 point, so anything past about 1.6 lines is a break.
     const gap = previousLine !== null && previousLine.page === line.page ? Math.abs(line.y - previousLine.y) : Infinity;

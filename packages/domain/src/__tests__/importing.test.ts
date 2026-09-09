@@ -218,6 +218,60 @@ describe('a PDF', () => {
     expect(read.scenes[0]?.heading).toBe('INT. SANCHEZ HOME - KITCHEN - MORNING');
   });
 
+  it('finds the margin in a talky script, where dialogue is the commonest edge', () => {
+    // Six speeches and two action lines: the speech indent is now the edge
+    // most lines sit at. Taking the *commonest* edge put the margin an inch
+    // too far right, which dropped every cue below the cue band — the script
+    // imported as one long action passage with no cast at all.
+    const talky: LaidOutLine[] = [
+      at(0, 'INT. LIGHTHOUSE - NIGHT', 0),
+      at(0, 'Rain on the glass.', 2),
+      at(22, 'MAEVE', 4),
+      at(10, 'You were out.', 5),
+      at(22, 'THE KEEPER', 7),
+      at(10, 'I was.', 8),
+      at(22, 'MAEVE (CONT’D)', 10),
+      at(10, 'All night.', 11),
+      at(22, 'THE KEEPER (CONT’D)', 13),
+      at(10, 'All night.', 14),
+      at(22, 'MAEVE (CONT’D)', 16),
+      at(10, 'And the lamp?', 17),
+      at(22, 'THE KEEPER (CONT’D)', 19),
+      at(10, 'The lamp turned.', 20),
+    ];
+    expect(Math.round(marginOf(talky))).toBe(M);
+
+    const read = readLaidOutLines(talky);
+    expect(read.characters.map((person) => person.name)).toEqual(['MAEVE', 'THE KEEPER']);
+    const types = read.scenes.flatMap((scene) => scene.elements.map((element) => element.type));
+    expect(new Set(types)).toEqual(new Set(['action', 'character', 'dialogue']));
+  });
+
+  it('reads a script that indents with spaces instead of moving the pen', () => {
+    // Plenty of PDFs draw the indent as spaces at the margin, so every line
+    // has the same x. Read from x alone there are no cues and no speeches.
+    const padded = (text: string, line: number): LaidOutLine => ({ text, x: M, y: 720 - line * 12, page: 1 });
+    const read = readLaidOutLines([
+      padded('INT. LIGHTHOUSE - NIGHT', 0),
+      padded('Rain on the glass.', 2),
+      padded('                      MAEVE', 4),
+      padded('             (not looking up)', 5),
+      padded('          You were out.', 6),
+      padded('He says nothing.', 8),
+    ]);
+
+    expect(read.characters.map((person) => person.name)).toEqual(['MAEVE']);
+    expect(read.scenes[0]?.elements.map((element) => element.type)).toEqual([
+      'action',
+      'character',
+      'parenthetical',
+      'dialogue',
+      'action',
+    ]);
+    // The padding is not part of what was written.
+    expect(read.scenes[0]?.elements[3]?.text).toBe('You were out.');
+  });
+
   it('says when it had to guess, and when there was nothing to read', () => {
     // A shout at the margin is very likely a slug the script wrote without
     // INT./EXT., but it is a guess and says so.

@@ -14,6 +14,7 @@ import {
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
 import { setupPayoffSchema, setupPointSchema } from './entities/setups.js';
 import { characterCategorySchema, characterSchema } from './entities/character.js';
+import { knowsCharacter, spokenNames } from './characters.js';
 import { countWords } from './entities/manuscript.js';
 import { characterCategoriesInOrder } from './characters.js';
 import {
@@ -651,6 +652,42 @@ export const addCharacter = (
     updatedAt: timestamp,
   });
   return touchProject({ ...file, characters: [...file.characters, character] });
+};
+
+/**
+ * Every name the script speaks with is in the cast (addendum 02 §16).
+ *
+ * A character cue *is* the act of introducing someone. Typing one and then
+ * having to go and enter the same name in Research is asking the writer to
+ * say it twice, and every list built on the cast — who is offered while the
+ * next cue is typed, the character track on the timeline, read-back's voices,
+ * an episode's carry-over — is wrong until they do.
+ *
+ * So this is run after a cue is written: any name the manuscript uses and the
+ * cast does not know is added, unfiled. Unfiled because a name typed into a
+ * script is a character before anyone has decided how important they are, and
+ * guessing at that from one line would be inventing a judgement.
+ *
+ * Nothing is ever removed. Deleting a line is not the same as saying the
+ * character never existed, and a cast list that emptied itself as the writer
+ * cut a scene would be a trap.
+ */
+export const notedCast = (file: ProjectFile): ProjectFile => {
+  const missing = spokenNames(file).filter((name) => knowsCharacter(file, name) === null);
+  if (missing.length === 0) return file;
+
+  const timestamp = nowIso();
+  const added = missing.map((name) =>
+    characterSchema.parse({
+      id: newId<CharacterId>(),
+      projectId: file.project.id,
+      name,
+      categoryId: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }),
+  );
+  return touchProject({ ...file, characters: [...file.characters, ...added] });
 };
 
 export const updateCharacter = (

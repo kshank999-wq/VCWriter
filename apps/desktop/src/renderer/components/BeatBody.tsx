@@ -6,6 +6,7 @@ import {
   EXTENSION_GROUPS,
   castNamesForBeat,
   cueSuggestions,
+  notedCast,
   hasExtension,
   withExtension,
   cuesInOrder,
@@ -402,6 +403,13 @@ export function BeatBody({
                   : {})}
               readOnly={readOnly}
               onFocus={onActivate}
+              // A name typed as a cue is a character. Noted when the writer
+              // leaves the line rather than on every keystroke, so R, RU, RUV
+              // do not become three people (addendum 02 §16).
+              onBlur={() => {
+                if (element.type !== 'character' || element.text.trim().length === 0) return;
+                onUpdate((current) => notedCast(current));
+              }}
               onChange={(event) => writeText(element, event.target.value)}
               onPaste={(event) => handlePaste(event, element, index)}
               onKeyDown={(event) => handleKeyDown(event, element, index)}

@@ -1,4 +1,5 @@
 import { sortByOrderKey } from './ordering.js';
+import { beatsInStoryOrder } from './selectors.js';
 import type { ProjectFile } from './project-file.js';
 import type { ProjectFormat } from './entities/project.js';
 import type { Character, CharacterCategory } from './entities/character.js';
@@ -87,4 +88,45 @@ export const castInCueOrder = (file: ProjectFile): string[] =>
 export const charactersIn = (file: ProjectFile, categoryIds: readonly string[]): Character[] => {
   const wanted = new Set(categoryIds);
   return file.characters.filter((character) => !character.archived && wanted.has(character.categoryId as string));
+};
+
+/**
+ * The name a cast list files someone under, whatever was typed.
+ *
+ * Extensions and the dual-dialogue caret are how a cue is *marked*, not who
+ * is speaking: MAEVE, `MAEVE (V.O.)` and `MAEVE (CONT'D)` are one person.
+ */
+const cueKey = (name: string): string =>
+  name
+    .replace(/\s*\((?:[^)]*)\)\s*$/, '')
+    .replace(/\s*\^\s*$/, '')
+    .trim()
+    .toUpperCase();
+
+/** Whether the project already knows this person, by name or by an alias. */
+export const knowsCharacter = (file: ProjectFile, name: string): Character | null => {
+  const key = cueKey(name);
+  if (key.length === 0) return null;
+  return (
+    file.characters.find(
+      (character) =>
+        cueKey(character.name) === key || character.aliases.some((alias) => cueKey(alias) === key),
+    ) ?? null
+  );
+};
+
+/**
+ * Every name the script itself speaks with, in the order it first speaks
+ * them. What the manuscript says, rather than what the cast list remembers.
+ */
+export const spokenNames = (file: ProjectFile): string[] => {
+  const seen: string[] = [];
+  for (const beat of beatsInStoryOrder(file)) {
+    for (const element of beat.manuscript.elements) {
+      if (element.type !== 'character') continue;
+      const key = cueKey(element.text);
+      if (key.length > 0 && !seen.includes(key)) seen.push(key);
+    }
+  }
+  return seen;
 };

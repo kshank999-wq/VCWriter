@@ -535,6 +535,30 @@ main {
 }
 
 /* One row per character, one per theme. */
+/* The heading the character lanes hang under, and the rule beside it. */
+.viewer-cast-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  height: 22px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+
+.viewer-cast-head .twisty {
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.viewer-cast-rule {
+  height: 22px;
+  border-top: 1px solid var(--border);
+}
+
 .viewer-thread-head {
   display: flex;
   align-items: center;
