@@ -23,7 +23,7 @@ import { StoryView, DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay, type ScriptLayou
 import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
 import { ResearchBody } from './components/ResearchWindow';
 import { TimelineViewer } from './components/TimelineViewer';
-import { MasterTimeline } from './components/MasterTimeline';
+import { MasterTimeline, DEFAULT_BEATS_PER_COLUMN } from './components/MasterTimeline';
 import { Inspector } from './components/Inspector';
 import { BeatWriter } from './components/BeatWriter';
 import { BeatDialog } from './components/BeatDialog';
@@ -89,6 +89,10 @@ function Section({
   const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
   const [focusTitleBeatId, setFocusTitleBeatId] = useState<BeatId | null>(null);
   const [openLaneId, setOpenLaneId] = useState<LaneId | null>(null);
+  // What was last clicked into: the scene a beat goes in, the lane a scene
+  // lands in. The same rule as the workspace, because it is the same toolbar.
+  const [selectedUnitId, setSelectedUnitId] = useState<StructuralUnitId | null>(null);
+  const [selectedLaneId, setSelectedLaneId] = useState<LaneId | null>(null);
   const [openUnitId, setOpenUnitId] = useState<StructuralUnitId | null>(null);
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
   const [openMarkerId, setOpenMarkerId] = useState<StoryMarkerId | null>(null);
@@ -100,6 +104,7 @@ function Section({
   // Paper, ink and face: the writer's, per machine, never project data (§6.2).
   const [pageStyle, setPageStyle] = usePreference<PageStyle>('pageStyle', DEFAULT_PAGE_STYLE);
   const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
+  const [beatsPerColumn] = usePreference('beatsPerColumn', DEFAULT_BEATS_PER_COLUMN);
   const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', 180);
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
 
@@ -113,21 +118,28 @@ function Section({
     void window.vcwriter?.panes?.open(`beat:${beatId}`);
   }, []);
 
+  const selection = useMemo(
+    () => ({ laneId: selectedLaneId, unitId: selectedUnitId, beat: selectedBeat }),
+    [selectedLaneId, selectedUnitId, selectedBeat],
+  );
+
   const addScene = useCallback(() => {
-    const made = addSceneAfter(file, selectedBeat);
+    const made = addSceneAfter(file, selection);
     if (!made) return;
     onUpdate(() => made.file);
     setSelectedBeatId(made.beatId);
+    setSelectedUnitId(made.unitId);
     setFocusTitleBeatId(made.beatId);
-  }, [file, selectedBeat, onUpdate]);
+  }, [file, selection, onUpdate]);
 
   const addBeat = useCallback(() => {
-    const made = addBeatAfter(file, selectedBeat);
+    const made = addBeatAfter(file, selection);
     if (!made) return;
     onUpdate(() => made.file);
     setSelectedBeatId(made.beatId);
+    setSelectedUnitId(made.unitId);
     setFocusTitleBeatId(made.beatId);
-  }, [file, selectedBeat, onUpdate]);
+  }, [file, selection, onUpdate]);
 
   const dialogs = (
     <>
@@ -240,10 +252,17 @@ function Section({
         threads={threads}
         selectedBeatId={selectedBeat?.id ?? null}
         onSelectBeat={setSelectedBeatId}
+        selectedUnitId={selectedUnitId}
+        onSelectUnit={(unitId, laneId) => {
+          setSelectedUnitId(unitId);
+          setSelectedLaneId(laneId);
+        }}
+        onSelectLane={setSelectedLaneId}
+        beatsPerColumn={beatsPerColumn}
         onUpdate={onUpdate}
         pixelsPerPage={pixelsPerPage}
         onZoom={setPixelsPerPage}
-        inspectorOpen={false}
+        inspectorOpen={null}
         onToggleInspector={() => undefined}
         onAddScene={addScene}
         onAddBeat={addBeat}

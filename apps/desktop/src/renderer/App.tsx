@@ -12,6 +12,7 @@ import {
   type LaneId,
   type ProjectFile,
   type ProjectFormat,
+  type ResearchView,
   type StoryMarkerId,
   type StructuralUnitId,
   type SyncConflict,
@@ -32,7 +33,7 @@ import {
 import { PaneFrame } from './components/PaneFrame';
 import { TitleBar } from './components/TitleBar';
 import { Welcome } from './components/Welcome';
-import { MasterTimeline } from './components/MasterTimeline';
+import { MasterTimeline, DEFAULT_BEATS_PER_COLUMN } from './components/MasterTimeline';
 import { MasterPanel } from './components/MasterPanel';
 import { Inspector } from './components/Inspector';
 import { TimelineViewer } from './components/TimelineViewer';
@@ -67,6 +68,14 @@ export default function App() {
   const project = useProject();
   const [view, setView] = useState<View>('write');
   const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
+  /**
+   * What was last clicked into on the lanes: the scene a new beat goes in,
+   * and the lane a new scene lands in. Held separately from the selected beat
+   * because a scene with nothing in it is exactly the one you click before
+   * adding the first beat, and it has no beat to be remembered by.
+   */
+  const [selectedUnitId, setSelectedUnitId] = useState<StructuralUnitId | null>(null);
+  const [selectedLaneId, setSelectedLaneId] = useState<LaneId | null>(null);
   const [focusTitleBeatId, setFocusTitleBeatId] = useState<BeatId | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   // What a printing carries, in one place, read by the Preview, the print
@@ -97,6 +106,8 @@ export default function App() {
   useEffect(() => applyScheme(scheme), [scheme]);
   const [timelineOpen, setTimelineOpen] = usePreference('timeline', true);
   const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
+  // How many beats stack in a scene before the next column starts (§4).
+  const [beatsPerColumn, setBeatsPerColumn] = usePreference('beatsPerColumn', DEFAULT_BEATS_PER_COLUMN);
   // The Timeline & Viewer screen: its own zoom, and whose thread is isolated.
   const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', 180);
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
@@ -114,6 +125,8 @@ export default function App() {
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
   const [openMarkerId, setOpenMarkerId] = useState<StoryMarkerId | null>(null);
   const [researchOpen, setResearchOpen] = useState(false);
+  /** Set when something sent the writer to research to look at one thing. */
+  const [researchView, setResearchView] = useState<ResearchView | undefined>(undefined);
   // Where the four sections sit, and which of them are in windows of their
   // own right now (addendum 02 §8).
   const [storedArrangement, setArrangement] = usePreference<Arrangement>('panes', DEFAULT_ARRANGEMENT);
@@ -259,23 +272,30 @@ export default function App() {
   // Each adds after the selection and selects what it made (§4 of the
   // addendum), computed from the current document so the new id is known.
 
+  const selection = useMemo(
+    () => ({ laneId: selectedLaneId, unitId: selectedUnitId, beat: selectedBeat }),
+    [selectedLaneId, selectedUnitId, selectedBeat],
+  );
+
   const addSceneAfterSelection = useCallback(() => {
     if (!file) return;
-    const made = addSceneAfter(file, selectedBeat);
+    const made = addSceneAfter(file, selection);
     if (!made) return;
     project.update(() => made.file);
     setSelectedBeatId(made.beatId);
+    setSelectedUnitId(made.unitId);
     setFocusTitleBeatId(made.beatId);
-  }, [file, selectedBeat, project]);
+  }, [file, selection, project]);
 
   const addBeatAfterSelection = useCallback(() => {
     if (!file) return;
-    const made = addBeatAfter(file, selectedBeat);
+    const made = addBeatAfter(file, selection);
     if (!made) return;
     project.update(() => made.file);
     setSelectedBeatId(made.beatId);
+    setSelectedUnitId(made.unitId);
     setFocusTitleBeatId(made.beatId);
-  }, [file, selectedBeat, project]);
+  }, [file, selection, project]);
 
   const addLaneToProject = useCallback(() => {
     project.update((current) => addLane(current, { name: 'New lane' }).file);
@@ -573,6 +593,13 @@ export default function App() {
         threads={threads ?? undefined}
         selectedBeatId={selectedBeat?.id ?? null}
         onSelectBeat={setSelectedBeatId}
+        selectedUnitId={selectedUnitId}
+        onSelectUnit={(unitId, laneId) => {
+          setSelectedUnitId(unitId);
+          setSelectedLaneId(laneId);
+        }}
+        onSelectLane={setSelectedLaneId}
+        beatsPerColumn={beatsPerColumn}
         onUpdate={project.update}
         pixelsPerPage={pixelsPerPage}
         onZoom={setPixelsPerPage}
@@ -669,6 +696,8 @@ export default function App() {
         onScheme={setScheme}
         paper={paper}
         onPaper={setPaper}
+        beatsPerColumn={beatsPerColumn}
+        onBeatsPerColumn={setBeatsPerColumn}
       />
 
       {project.error ? (
@@ -777,7 +806,11 @@ export default function App() {
             file={file}
             open={researchOpen && !away.has('research')}
             currentBeatId={selectedBeat?.id ?? null}
-            onClose={() => setResearchOpen(false)}
+            {...(researchView ? { openOn: researchView } : {})}
+            onClose={() => {
+              setResearchOpen(false);
+              setResearchView(undefined);
+            }}
             onUpdate={project.update}
             onPopOut={() => {
               setResearchOpen(false);
@@ -882,6 +915,12 @@ export default function App() {
         onClose={() => setReportOpen(null)}
         onTab={setReportOpen}
         printOptions={printOptions}
+        onShowUnusedResearch={() => {
+          // The count is the question; the folder of notes is the answer.
+          setReportOpen(null);
+          setResearchView('unused');
+          setResearchOpen(true);
+        }}
       />
 
       <PageSetup

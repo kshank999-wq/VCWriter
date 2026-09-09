@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   addResearchCategory,
   addResearchItem,
@@ -33,6 +33,8 @@ import { useModal } from '../use-modal';
 interface ResearchWindowProps {
   file: ProjectFile;
   open: boolean;
+  /** Which view to land on, when something sent the writer here to look. */
+  openOn?: ResearchView;
   /** The beat being written, so material can be marked used where it landed. */
   currentBeatId: BeatId | null;
   onClose(): void;
@@ -74,7 +76,15 @@ const VIEWS: ReadonlyArray<{ view: ResearchView; label: string }> = [
  * Everything that is not the script lives here, so the plot lanes and the
  * setups and payoffs are the last two entries in the same menu.
  */
-export function ResearchWindow({ file, open, currentBeatId, onClose, onUpdate, onPopOut }: ResearchWindowProps) {
+export function ResearchWindow({
+  file,
+  open,
+  openOn,
+  currentBeatId,
+  onClose,
+  onUpdate,
+  onPopOut,
+}: ResearchWindowProps) {
   const dialog = useModal(open);
   return (
     <dialog ref={dialog} className="research-window" aria-label="Research" onClose={onClose}>
@@ -84,6 +94,7 @@ export function ResearchWindow({ file, open, currentBeatId, onClose, onUpdate, o
           currentBeatId={currentBeatId}
           onClose={onClose}
           onUpdate={onUpdate}
+          {...(openOn ? { openOn } : {})}
           {...(onPopOut ? { onPopOut } : {})}
         />
       ) : null}
@@ -98,17 +109,26 @@ export function ResearchWindow({ file, open, currentBeatId, onClose, onUpdate, o
 export function ResearchBody({
   file,
   currentBeatId,
+  openOn,
   onClose,
   onUpdate,
   onPopOut,
 }: {
   file: ProjectFile;
   currentBeatId: BeatId | null;
+  /** Which view to land on. The report's "research not used" arrives here. */
+  openOn?: ResearchView;
   onClose(): void;
   onUpdate: ResearchWindowProps['onUpdate'];
   onPopOut?(): void;
 }) {
-  const [selection, setSelection] = useState<Selection>({ kind: 'view', view: 'all' });
+  const [selection, setSelection] = useState<Selection>({ kind: 'view', view: openOn ?? 'all' });
+
+  // Arriving from somewhere that named a view — the report's count of what
+  // nothing points at — lands on it, even if the window was already open.
+  useEffect(() => {
+    if (openOn) setSelection({ kind: 'view', view: openOn });
+  }, [openOn]);
   const [selectedItemId, setSelectedItemId] = useState<ResearchItemId | null>(null);
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());

@@ -1414,6 +1414,16 @@ dialog.scene-dialog > header.off {
   box-shadow: inset 2px 0 0 var(--gold), 0 0 0 1px color-mix(in srgb, var(--gold) 25%, transparent);
 }
 
+/* Clicked into: the scene a new beat goes in. One click chooses, two open. */
+.block.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+.block.selected > .block-head {
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+}
+
 .block.collapsed {
   margin: 4px 3px 4px 0;
 }
@@ -1497,6 +1507,13 @@ dialog.scene-dialog > header.off {
   padding: 3px 4px 4px;
   display: grid;
   gap: 1px;
+  /* Beats stack down the column, and past the set number a second column
+     starts beside the first — the scene grows wider rather than taller, and
+     rather than growing a scrollbar (addendum 02 §4). */
+  grid-template-rows: repeat(var(--beat-rows, 5), auto);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-content: start;
 }
 
 .block-beats li {
@@ -3902,6 +3919,38 @@ dialog.reports {
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--panel-2, rgba(255, 255, 255, 0.02));
+}
+
+/* A figure you can go and look at: a count of things unused is an
+   instruction, so it is a way in rather than a number to read. */
+.report-figure.actionable {
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.report-figure.actionable:hover,
+.report-figure.actionable:focus-visible {
+  border-color: var(--gold-deep);
+}
+
+.report-figure.actionable .report-figure-value {
+  color: var(--gold);
+}
+
+/* The days scroll; the figures above them stay put. */
+.report-scroll {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.report-scroll .report-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel);
 }
 
 .report-figure-value {

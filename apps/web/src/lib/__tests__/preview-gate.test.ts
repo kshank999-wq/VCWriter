@@ -12,6 +12,11 @@ describe('the browser preview route', () => {
 
   it('treats everything under it as an asset and nothing else as its business', () => {
     expect(previewRoute('/preview/assets/index-abc.js')).toEqual({ kind: 'asset' });
+    // A chunk imported at the moment a button is pressed, an hour after the
+    // page loaded. It must be reachable without a session check: the middleware
+    // used to redirect it to sign-in once the token expired, and a dynamic
+    // import handed a sign-in page fails as "could not fetch module".
+    expect(previewRoute('/preview/assets/read-pdf-CNXFO7Xx.js')).toEqual({ kind: 'asset' });
     expect(previewRoute('/previews')).toBeNull();
     expect(previewRoute('/')).toBeNull();
     expect(previewRoute('/admin')).toBeNull();

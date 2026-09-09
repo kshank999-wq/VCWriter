@@ -46,7 +46,19 @@ interface MasterTimelineProps {
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   pixelsPerPage: number;
   onZoom(pixelsPerPage: number): void;
-  inspectorOpen: boolean;
+  /**
+   * The scene the writer has clicked into. Kept by the window rather than
+   * derived from the selected beat, because an empty scene has no beat to
+   * derive it from and is exactly the one you select before adding a beat.
+   */
+  selectedUnitId?: StructuralUnitId | null;
+  onSelectUnit?(unitId: StructuralUnitId, laneId: LaneId): void;
+  /** Clicking a lane's header makes it the one a new scene lands in. */
+  onSelectLane?(laneId: LaneId): void;
+  /** How many beats stack before the next column starts (addendum 02 §4). */
+  beatsPerColumn?: number;
+  /** Null in a window that holds only the lanes: there is no inspector there. */
+  inspectorOpen: boolean | null;
   onToggleInspector(): void;
   onAddScene(): void;
   onAddBeat(): void;
@@ -62,6 +74,25 @@ interface MasterTimelineProps {
 
 const HEAD_WIDTH = 168;
 const LINKS_HEIGHT = 44;
+
+/**
+ * How many beats stack in a scene before the next column starts.
+ *
+ * Five is a working default rather than a rule — it is the preference a
+ * writer sets once, and a scene of twelve beats then reads as three short
+ * columns instead of one column you cannot see the end of.
+ */
+export const DEFAULT_BEATS_PER_COLUMN = 5;
+
+/** A column of beats, and the padding a block draws around them. */
+const BEAT_COLUMN_WIDTH = 132;
+const BLOCK_PADDING = 12;
+
+/** How wide a scene has to be for its beats, once they run past one column. */
+const beatsWidth = (beatCount: number, rows: number): number => {
+  const columns = Math.ceil(beatCount / rows);
+  return columns <= 1 ? 0 : columns * BEAT_COLUMN_WIDTH + BLOCK_PADDING;
+};
 
 /**
  * The master timeline (addendum 02 §4): the story in order across the top
@@ -82,6 +113,10 @@ export function MasterTimeline({
   threads: givenThreads,
   selectedBeatId,
   onSelectBeat,
+  selectedUnitId: givenSelectedUnitId,
+  onSelectUnit,
+  onSelectLane,
+  beatsPerColumn = DEFAULT_BEATS_PER_COLUMN,
   onUpdate,
   pixelsPerPage,
   onZoom,
@@ -103,9 +138,17 @@ export function MasterTimeline({
   const noun = file.project.format === 'novel' || file.project.format === 'short_story' ? 'chapter' : 'scene';
 
   const selectedBeat = selectedBeatId ? file.beats.find((beat) => beat.id === selectedBeatId) : undefined;
-  const selectedUnitId = selectedBeat?.unitId ?? null;
+  // What was clicked wins; otherwise the scene being written in.
+  const selectedUnitId = givenSelectedUnitId ?? selectedBeat?.unitId ?? null;
 
-  const widths = spans.map((span) => spanWidth(span, pixelsPerPage));
+  const rows = Math.max(1, Math.round(beatsPerColumn));
+  // A scene is as wide as its pages, or as wide as its beats need — whichever
+  // is more. Past `rows` beats a second column starts and the block stretches
+  // rather than growing a scrollbar; every track shares these columns, so the
+  // lanes stay lined up by story position.
+  const widths = spans.map((span) =>
+    Math.max(spanWidth(span, pixelsPerPage), beatsWidth(beatsForUnit(file, span.unit.id).length, rows)),
+  );
   const columns = `${HEAD_WIDTH}px ${widths.map((width) => `${width}px`).join(' ')} minmax(96px, 1fr)`;
   const storyIndex = (unitId: StructuralUnitId) => spans.findIndex((span) => span.unit.id === unitId);
 
@@ -250,6 +293,9 @@ export function MasterTimeline({
               noun={noun}
               selectedBeatId={selectedBeatId}
               selectedUnitId={selectedUnitId}
+              beatRows={rows}
+              onSelectUnit={onSelectUnit}
+              onSelectLane={onSelectLane}
               drag={drag}
               speakers={threads.speakers}
               colours={threads.colours}
@@ -306,15 +352,17 @@ export function MasterTimeline({
           />
         </label>
         <span className="toolbar-spacer" />
-        <button
-          type="button"
-          className={inspectorOpen ? 'tool active' : 'tool'}
-          aria-pressed={inspectorOpen}
-          title="Inspector (Ctrl/Cmd+Shift+P)"
-          onClick={onToggleInspector}
-        >
-          Inspector
-        </button>
+        {inspectorOpen === null ? null : (
+          <button
+            type="button"
+            className={inspectorOpen ? 'tool active' : 'tool'}
+            aria-pressed={inspectorOpen}
+            title="Inspector (Ctrl/Cmd+Shift+P)"
+            onClick={onToggleInspector}
+          >
+            Inspector
+          </button>
+        )}
       </footer>
     </section>
   );
@@ -442,6 +490,9 @@ interface LaneTrackProps {
   noun: string;
   selectedBeatId: BeatId | null;
   selectedUnitId: string | null;
+  beatRows: number;
+  onSelectUnit: MasterTimelineProps['onSelectUnit'];
+  onSelectLane: MasterTimelineProps['onSelectLane'];
   drag: ReturnType<typeof useDragDrop>;
   speakers: Map<BeatId, string[]>;
   colours: Map<string, string>;
@@ -467,6 +518,9 @@ function LaneTrack({
   noun,
   selectedBeatId,
   selectedUnitId,
+  beatRows,
+  onSelectUnit,
+  onSelectLane,
   drag,
   speakers,
   colours,
@@ -504,6 +558,9 @@ function LaneTrack({
         className={`track-head lane-head${lane.collapsed ? ' collapsed' : ''}${dropClass(drag.dropTarget, lane.id)}`}
         style={{ borderLeftColor: lane.color }}
         draggable
+        // Clicking anywhere in the header makes this the lane a new scene
+        // lands in, so "add a chapter" means "here" rather than "somewhere".
+        onClick={() => onSelectLane?.(lane.id)}
         onDragStart={(event) => drag.begin({ kind: 'lane', id: lane.id }, event)}
         onDragEnd={drag.end}
         onDragOver={(event) => {
@@ -585,27 +642,29 @@ function LaneTrack({
         const beats = beatsForUnit(file, unit.id);
         const collapsed = unit.collapsed || lane.collapsed;
         const off = unit.inScript ? '' : ' off';
+        const chosen = unit.id === selectedUnitId ? ' selected' : '';
         return (
           <article
             key={unit.id}
-            className={`block${collapsed ? ' collapsed' : ''}${atPlayhead}${off}${dropClass(drag.dropTarget, unit.id)}`}
+            className={`block${collapsed ? ' collapsed' : ''}${atPlayhead}${chosen}${off}${dropClass(drag.dropTarget, unit.id)}`}
             style={{ borderTopColor: lane.color }}
             title={unit.inScript ? undefined : `Switched off: not in the script`}
             onDragOver={(event) => unitDragOver(event, unit.id)}
             onDragLeave={() => drag.clearHover(unit.id)}
             onDrop={(event) => dropWithEdge(event, span.index)}
           >
-            {/* Clicking the block opens the scene, the way a clip opens in an
-                editor; the selection follows so the playhead moves there too. */}
+            {/* One click selects it — highlighted, and the thing a new beat
+                goes into. Two opens it, the way a clip opens in an editor. */}
             <header
               className="block-head"
               draggable
-              title={onOpenUnit ? `Open this ${noun}` : undefined}
+              title={onOpenUnit ? `Click to select this ${noun}, double-click to open it` : undefined}
               onClick={() => {
+                onSelectUnit?.(unit.id, lane.id);
                 const first = beats[0];
                 if (first) onSelectBeat(first.id);
-                onOpenUnit?.(unit.id);
               }}
+              onDoubleClick={() => onOpenUnit?.(unit.id)}
               onDragStart={(event) => {
                 event.stopPropagation();
                 drag.begin({ kind: 'unit', id: unit.id, fromLaneId: lane.id }, event);
@@ -652,6 +711,7 @@ function LaneTrack({
             {collapsed ? null : (
               <ul
                 className="block-beats"
+                style={{ '--beat-rows': beatRows } as React.CSSProperties}
                 onDragOver={(event) => {
                   if (drag.payload?.kind !== 'beat') return;
                   event.preventDefault();

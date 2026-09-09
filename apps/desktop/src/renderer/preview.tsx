@@ -11,18 +11,25 @@ window.vcwriter = bridge;
 
 declare const __PREVIEW_BUILD__: string;
 
-const strip = document.createElement('div');
-strip.className = 'preview-strip';
-strip.innerHTML = `<span>Preview build ${__PREVIEW_BUILD__}</span>`;
-const button = document.createElement('button');
-button.type = 'button';
-button.textContent = 'Download .vcw';
-button.title = 'Save the open project as a file the desktop application opens';
-button.addEventListener('click', () => {
-  if (!bridge.downloadCurrent()) window.alert('Open or create a project first.');
-});
-strip.append(button);
-document.body.append(strip);
+/**
+ * The strip belongs to the workspace, not to a section pushed onto a second
+ * monitor. A satellite window (`?pane=`) is the section and almost nothing
+ * else, and the strip sat on top of that section's own toolbar.
+ */
+if (!new URLSearchParams(window.location.search).get('pane')) {
+  const strip = document.createElement('div');
+  strip.className = 'preview-strip';
+  strip.innerHTML = `<span>Preview build ${__PREVIEW_BUILD__}</span>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = 'Download .vcw';
+  button.title = 'Save the open project as a file the desktop application opens';
+  button.addEventListener('click', () => {
+    if (!bridge.downloadCurrent()) window.alert('Open or create a project first.');
+  });
+  strip.append(button);
+  document.body.append(strip);
+}
 
 const style = document.createElement('style');
 style.textContent = `

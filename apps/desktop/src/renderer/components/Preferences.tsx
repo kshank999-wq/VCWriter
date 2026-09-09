@@ -8,6 +8,8 @@ interface PreferencesProps {
   onScheme(id: SchemeId): void;
   paper: boolean;
   onPaper(on: boolean): void;
+  beatsPerColumn: number;
+  onBeatsPerColumn(count: number): void;
 }
 
 /**
@@ -16,7 +18,16 @@ interface PreferencesProps {
  * project settings — a collaborator opening the file should not inherit
  * anyone's colours — so they live in the renderer's storage.
  */
-export function Preferences({ open, onClose, scheme, onScheme, paper, onPaper }: PreferencesProps) {
+export function Preferences({
+  open,
+  onClose,
+  scheme,
+  onScheme,
+  paper,
+  onPaper,
+  beatsPerColumn,
+  onBeatsPerColumn,
+}: PreferencesProps) {
   const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -73,6 +84,28 @@ export function Preferences({ open, onClose, scheme, onScheme, paper, onPaper }:
           <input type="checkbox" checked={paper} onChange={(event) => onPaper(event.target.checked)} />
           Draw the script on white paper with black text, whatever the scheme
         </label>
+      </section>
+
+      <section>
+        <h3>Lanes</h3>
+        <label className="field">
+          <span>Beats before a new column</span>
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={beatsPerColumn}
+            aria-label="Beats before a new column"
+            onChange={(event) => {
+              const count = Number(event.target.value);
+              if (Number.isFinite(count)) onBeatsPerColumn(Math.min(20, Math.max(1, Math.round(count))));
+            }}
+          />
+        </label>
+        <p className="muted small">
+          Beats stack down a scene until this many, then the next one starts a column beside them and the scene grows
+          wider. A scene of twelve beats reads as three short columns rather than one you cannot see the end of.
+        </p>
       </section>
 
       <footer className="muted">Preferences are kept on this computer, not in the project.</footer>

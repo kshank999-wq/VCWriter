@@ -14,6 +14,7 @@ import {
   updateBeat,
   type BeatId,
   type ProjectFile,
+  type LaneId,
   type StructuralUnitId,
 } from '@vcwriter/domain';
 import { SceneDialog } from '../components/SceneDialog';
@@ -247,15 +248,18 @@ describe('the reformat tool', () => {
 });
 
 describe('opening the pop-ups', () => {
-  it('opens the scene from its block and the beat from a double-click on its row', () => {
+  it('selects a scene on one click and opens it on two', () => {
     const file = scene();
     const onOpenUnit = vi.fn<(id: StructuralUnitId) => void>();
     const onOpenBeat = vi.fn<(id: BeatId) => void>();
+    const onSelectUnit = vi.fn<(id: StructuralUnitId, laneId: LaneId) => void>();
     render(
       <MasterTimeline
         file={file}
         selectedBeatId={file.beats[0]!.id}
         onSelectBeat={() => undefined}
+        selectedUnitId={file.units[0]!.id}
+        onSelectUnit={onSelectUnit}
         onUpdate={() => undefined}
         pixelsPerPage={160}
         onZoom={() => undefined}
@@ -270,8 +274,17 @@ describe('opening the pop-ups', () => {
         onOpenBeat={onOpenBeat}
       />,
     );
+
+    // One click chooses the scene — this is the thing a new beat goes in —
+    // and does not open anything over the top of the writer.
     fireEvent.click(screen.getByText('Opening Scene'));
+    expect(onSelectUnit).toHaveBeenCalledWith(file.units[0]!.id, file.lanes[0]!.id);
+    expect(onOpenUnit).not.toHaveBeenCalled();
+    expect(document.querySelector('.block.selected')).toBeTruthy();
+
+    fireEvent.doubleClick(screen.getByText('Opening Scene'));
     expect(onOpenUnit).toHaveBeenCalledWith(file.units[0]!.id);
+
     fireEvent.doubleClick(screen.getByText('Home life'));
     expect(onOpenBeat).toHaveBeenCalledWith(file.beats[0]!.id);
   });

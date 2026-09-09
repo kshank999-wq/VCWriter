@@ -117,7 +117,18 @@ Access is decided in `src/middleware.ts` from the signed-in user's
 `profiles.is_admin`, the same flag the admin console uses; anyone else is
 sent to sign in. The page carries its own content security policy (a Vite
 bundle has no nonce to carry) and `Cache-Control: no-store`, so a refresh is
-always the newest deployment.
+always the newest deployment. The gate refreshes the session cookie, or a
+preview session expires while it is being used and never renews itself.
+
+**The gate is on the page, not on the bundle's files.** They are
+content-hashed artifacts of code that ships in the installer anyway, their
+names are only knowable from the page, and gating them cost two round trips
+to Supabase per chunk. Worse, a chunk fetched *late* — the PDF reader is
+imported at the moment Import is clicked, which may be an hour after the
+page loaded — was redirected to the sign-in page as soon as the token
+expired, and a dynamic import handed an HTML document fails with "Failed to
+fetch dynamically imported module". Being ungated, they are also cached
+`immutable`, which the page cannot be.
 
 ### Settings that must stay as they are
 

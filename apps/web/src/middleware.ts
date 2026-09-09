@@ -89,16 +89,45 @@ const previewResponse = async (
   request: NextRequest,
   route: NonNullable<ReturnType<typeof previewRoute>>,
 ): Promise<NextResponse> => {
+  /**
+   * The bundle's own files are served without the gate.
+   *
+   * They are content-hashed build artifacts of code that ships inside the
+   * installer anyway — there is nothing behind them the page does not already
+   * hand over, and their names are only knowable from the page, which is
+   * gated. Gating them as well bought nothing and cost a great deal: every
+   * chunk paid for two round trips to Supabase, and a chunk fetched *late* —
+   * the PDF reader is imported at the moment Import is clicked, which may be
+   * an hour after the page loaded — was redirected to the sign-in page the
+   * moment the access token expired. A dynamic import handed an HTML document
+   * fails with "Failed to fetch dynamically imported module", which is what
+   * the writer saw instead of the file picker.
+   *
+   * Hashed names also mean these can be cached hard, which the page cannot.
+   */
+  if (route.kind === 'asset') {
+    const response = NextResponse.next();
+    response.headers.set('cache-control', 'public, max-age=31536000, immutable');
+    return response;
+  }
+
   // Who is asking. The profile row is readable by its owner under RLS, so the
   // session client is enough; no service key runs at the edge.
+  const response = NextResponse.rewrite(new URL(route.to, request.url));
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
     {
       cookies: {
         get: (name: string) => request.cookies.get(name)?.value,
-        set: () => undefined,
-        remove: () => undefined,
+        // A refreshed token has to be written back, or a preview session
+        // expires while it is being used and never renews itself.
+        set: (name: string, value: string, options: CookieOptions) => {
+          response.cookies.set({ name, value, ...options });
+        },
+        remove: (name: string, options: CookieOptions) => {
+          response.cookies.set({ name, value: '', ...options });
+        },
       },
     },
   );
@@ -110,8 +139,6 @@ const previewResponse = async (
     : { data: null };
   if (!profile?.is_admin) return NextResponse.redirect(new URL(previewSignIn, request.url));
 
-  const response =
-    route.kind === 'rewrite' ? NextResponse.rewrite(new URL(route.to, request.url)) : NextResponse.next();
   response.headers.set('content-security-policy', previewContentSecurityPolicy);
   // Always the newest build: the point of the page is that a refresh is enough.
   response.headers.set('cache-control', 'no-store');

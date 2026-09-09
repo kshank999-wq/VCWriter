@@ -36,6 +36,8 @@ interface ReportsProps {
   onClose(): void;
   onTab(tab: ReportTab): void;
   printOptions: ManuscriptOptions;
+  /** Go and look at the research nothing points at (addendum 02 §15). */
+  onShowUnusedResearch(): void;
 }
 
 /** "Mon 8 Sep" — a day as a person reads it, from a `YYYY-MM-DD`. */
@@ -47,7 +49,7 @@ const asDay = (day: string): string => {
 
 const signed = (words: number): string => (words > 0 ? `+${words}` : String(words));
 
-export function Reports({ file, open, onClose, onTab, printOptions }: ReportsProps) {
+export function Reports({ file, open, onClose, onTab, printOptions, onShowUnusedResearch }: ReportsProps) {
   const dialog = useModal(open !== null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -111,17 +113,22 @@ export function Reports({ file, open, onClose, onTab, printOptions }: ReportsPro
                   spend writing, not the time the app is open.
                 </p>
               ) : (
+                // One line per day, in a box of its own that scrolls: a year
+                // of writing is three hundred lines, and the figures above
+                // must not be pushed off the top by them.
+                <div className="report-scroll" tabIndex={0} role="group" aria-label="Day by day">
                 <table className="report-table">
                   <thead>
                     <tr>
                       <th scope="col">Day</th>
+                      <th scope="col">Date</th>
                       <th scope="col">Sittings</th>
                       <th scope="col">Time</th>
                       <th scope="col">Words</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {days.map((row) => {
+                    {days.map((row, index) => {
                       const showing = expanded === row.day;
                       return [
                         <tr key={row.day}>
@@ -130,18 +137,22 @@ export function Reports({ file, open, onClose, onTab, printOptions }: ReportsPro
                               type="button"
                               className="ghost report-day"
                               aria-expanded={showing}
+                              title={`The sittings on ${asDay(row.day)}`}
                               onClick={() => setExpanded(showing ? null : row.day)}
                             >
-                              {asDay(row.day)}
+                              {/* Numbered from the first day worked, which is
+                                  how a writer counts them: day one, day two. */}
+                              Day {index + 1}
                             </button>
                           </th>
+                          <td className="muted">{asDay(row.day)}</td>
                           <td>{row.sessions}</td>
                           <td>{asDuration(row.minutes)}</td>
                           <td className={row.words < 0 ? 'report-loss' : undefined}>{signed(row.words)}</td>
                         </tr>,
                         showing ? (
                           <tr key={`${row.day}-sittings`} className="report-sittings">
-                            <td colSpan={4}>
+                            <td colSpan={5}>
                               <ul>
                                 {sittingsOn(row.day).map((session) => (
                                   <li key={session.id}>
@@ -162,6 +173,7 @@ export function Reports({ file, open, onClose, onTab, printOptions }: ReportsPro
                     })}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           ) : (
@@ -174,7 +186,12 @@ export function Reports({ file, open, onClose, onTab, printOptions }: ReportsPro
                 <Figure label="Written" value={`${stats.writtenBeatCount} of ${stats.beatCount}`} />
                 <Figure label="Markers" value={String(markers.length)} />
                 <Figure label="Plot lanes" value={String(stats.laneCount)} />
-                <Figure label="Research not used" value={String(stats.unusedResearchCount)} />
+                <Figure
+                  label="Research not used"
+                  value={String(stats.unusedResearchCount)}
+                  title="Open the research, showing only what nothing points at"
+                  onClick={onShowUnusedResearch}
+                />
                 <Figure label="Setups unpaid" value={String(stats.unresolvedSetupCount)} />
               </div>
               <p className="muted">
@@ -189,11 +206,33 @@ export function Reports({ file, open, onClose, onTab, printOptions }: ReportsPro
   );
 }
 
-function Figure({ label, value }: { label: string; value: string }) {
+/**
+ * A figure, and — where there is somewhere to go and look — the way there.
+ * A count of things unused is an instruction, not a statistic.
+ */
+function Figure({
+  label,
+  value,
+  title,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  title?: string;
+  onClick?: () => void;
+}) {
+  if (!onClick) {
+    return (
+      <div className="report-figure">
+        <span className="report-figure-value">{value}</span>
+        <span className="report-figure-label">{label}</span>
+      </div>
+    );
+  }
   return (
-    <div className="report-figure">
+    <button type="button" className="report-figure actionable" title={title} onClick={onClick}>
       <span className="report-figure-value">{value}</span>
       <span className="report-figure-label">{label}</span>
-    </div>
+    </button>
   );
 }

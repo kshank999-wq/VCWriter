@@ -28,7 +28,9 @@ describe('preferences panel', () => {
   it('offers every scheme and the paper toggle, and reports choices', () => {
     const onScheme = vi.fn();
     const onPaper = vi.fn();
-    render(<Preferences open onClose={() => undefined} scheme="gold" onScheme={onScheme} paper onPaper={onPaper} />);
+    render(<Preferences open onClose={() => undefined} scheme="gold" onScheme={onScheme} paper onPaper={onPaper}
+          beatsPerColumn={5}
+          onBeatsPerColumn={() => {}} />);
 
     expect(screen.getAllByRole('radio')).toHaveLength(4);
     expect(screen.getByRole('radio', { name: /Gold/ }).getAttribute('aria-checked')).toBe('true');

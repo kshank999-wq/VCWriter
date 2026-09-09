@@ -46,18 +46,39 @@ const withLog = (): ProjectFile => {
 describe('the writing log', () => {
   it('shows the figures and a row for each day worked', () => {
     render(
-      <Reports file={withLog()} open="writing" onClose={() => {}} onTab={() => {}} printOptions={{}} />,
+      <Reports file={withLog()} open="writing" onClose={() => {}} onTab={() => {}} printOptions={{}} onShowUnusedResearch={() => {}} />,
     );
     expect(screen.getByText('Days written')).toBeTruthy();
     expect(screen.getByText('Time at it')).toBeTruthy();
     expect(screen.getByText('Words an hour')).toBeTruthy();
-    // Two days, so two rows under the head row.
+    // Two days, so two rows under the head row — numbered from the first.
     expect(document.querySelectorAll('.report-table tbody tr').length).toBe(2);
+    expect(screen.getByText('Day 1')).toBeTruthy();
+    expect(screen.getByText('Day 2')).toBeTruthy();
+    // The days scroll in a box of their own; the figures stay put above them.
+    expect(document.querySelector('.report-scroll .report-table')).toBeTruthy();
+  });
+
+  it('sends the writer to the research nothing points at', () => {
+    const shown = vi.fn();
+    render(
+      <Reports
+        file={project()}
+        open="story"
+        onClose={() => {}}
+        onTab={() => {}}
+        printOptions={{}}
+        onShowUnusedResearch={shown}
+      />,
+    );
+    // The count is the question; the folder of notes is the answer.
+    fireEvent.click(screen.getByText('Research not used').closest('button') as HTMLElement);
+    expect(shown).toHaveBeenCalled();
   });
 
   it('opens a day to the sittings inside it, with the hours they ran', () => {
     render(
-      <Reports file={withLog()} open="writing" onClose={() => {}} onTab={() => {}} printOptions={{}} />,
+      <Reports file={withLog()} open="writing" onClose={() => {}} onTab={() => {}} printOptions={{}} onShowUnusedResearch={() => {}} />,
     );
     expect(document.querySelector('.report-sittings')).toBeNull();
     fireEvent.click(document.querySelectorAll('.report-day')[0] as HTMLElement);
@@ -69,13 +90,13 @@ describe('the writing log', () => {
   });
 
   it('says so plainly when nothing has been written yet', () => {
-    render(<Reports file={project()} open="writing" onClose={() => {}} onTab={() => {}} printOptions={{}} />);
+    render(<Reports file={project()} open="writing" onClose={() => {}} onTab={() => {}} printOptions={{}} onShowUnusedResearch={() => {}} />);
     expect(screen.getByText(/Nothing written yet/)).toBeTruthy();
     expect(document.querySelector('.report-table')).toBeNull();
   });
 
   it('reads the document for the other report', () => {
-    render(<Reports file={project()} open="story" onClose={() => {}} onTab={() => {}} printOptions={{}} />);
+    render(<Reports file={project()} open="story" onClose={() => {}} onTab={() => {}} printOptions={{}} onShowUnusedResearch={() => {}} />);
     expect(screen.getByText('Words')).toBeTruthy();
     expect(screen.getByText('Pages')).toBeTruthy();
     expect(screen.getByText('Scenes')).toBeTruthy();

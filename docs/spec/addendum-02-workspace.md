@@ -157,9 +157,29 @@ beats as compact rows — a status glyph, the title, and at the right a dot
 per character who speaks in the beat, in the character's colour (§6) —
 stacked in order. A beat the writer has coloured carries that colour as an
 edge on its row, and in the Script and the Threads view.
-Clicking a beat row selects it; clicking the header selects the scene's
-first beat and opens the **scene pop-up**; double-clicking a beat row opens
-the **beat pop-up**. Blocks collapse to a header. The **playhead** is a
+Beats stack **down** the block, and past a set number the next one starts a
+column beside them, so the block grows **wider** rather than taller and
+never grows a scrollbar. How many is a preference — five by default — set
+once, per machine. A scene of twelve beats then reads as three short columns
+instead of one column whose end you cannot see. The block is as wide as its
+pages *or* as wide as its beats need, whichever is more; every track shares
+the same columns, so the lanes stay lined up by story position either way.
+
+**One click selects, two open.** Clicking a beat row selects it; clicking a
+scene's header selects the *scene* — highlighted, and the thing a new beat
+goes into — and double-clicking it opens the **scene pop-up**.
+Double-clicking a beat row opens the **beat pop-up**. Selecting a scene must
+not open a window over the writer: a click is how you say *this one*, and
+saying it should cost nothing.
+
+What the toolbar adds follows from that. **+ Beat** goes into the scene last
+clicked into, including one with nothing in it yet — which is exactly the
+scene you select before adding its first beat, and the one that has no beat
+to be found by. **+ Scene** goes into the lane last clicked into, whether
+that was a lane's header or a scene inside it, so a chapter never lands in
+another plot because that is where the cursor happened to be.
+
+Blocks collapse to a header. The **playhead** is a
 gold rule through every track at the left edge of the selected beat's
 scene, the way an editor's playhead marks the frame; it moves when the
 selection does. A scene that is **switched off** (below) is drawn dimmed
@@ -879,14 +899,19 @@ reading. A day spent cutting is honestly **negative**, and shows as a loss.
 
 **Reports**, on the menu bar, opens two:
 
-- **Writing log** — days written, time at it, words, words an hour, the
-  current streak and the longest one; then a row per day, which opens to the
-  sittings inside it with the hours each ran. A streak counts only while it
-  is still alive: one that reaches today or yesterday. One that ended a week
-  ago is history, not a streak.
+- **Writing log** — the figures across the top: days written, time at it,
+  words, words an hour, the current streak and the longest one. Under them,
+  **one line per day in a box that scrolls**, numbered the way a writer
+  counts them — Day 1, Day 2 — with the date beside it, and opening to the
+  sittings inside it with the hours each ran. A year of writing is three
+  hundred lines, and they must not push the figures off the top. A streak
+  counts only while it is still alive: one that reaches today or yesterday.
+  One that ended a week ago is history, not a streak.
 - **Story statistics** — what the document says about itself: words, pages,
   scenes, beats, how many are written, markers, lanes, research not yet used,
-  setups not yet paid.
+  setups not yet paid. **Research not yet used** is a way in rather than a
+  number to read: clicking it opens Research on the notes nothing points at.
+  A count of things unused is an instruction.
 
 Both are read-only. A report that could be edited would be a claim rather
 than a record.
