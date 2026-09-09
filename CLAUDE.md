@@ -32,6 +32,8 @@ push live; the build takes a minute or two.
   part of the change, not afterwards.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
+  `addendum-03-story-sculptor.md` is specified but not built; its §13 says
+  what it reuses and which four decisions are still open.
 
 ## Before pushing
 
