@@ -312,9 +312,9 @@ describe('printing an episode with its own front page', () => {
     const pages = paginateProject(file);
     expect(pages.filter((page) => page.titlePage).every((page) => page.number === 0)).toBe(true);
 
-    // A series is a stack of scripts: each episode numbers from its own page
-    // one, and the covers between them are not counted in either.
-    expect(pages.map((page) => page.number)).toEqual([0, 1, 0, 1]);
+    // A series is a stack of scripts: the contents at the front, then each
+    // episode behind its cover, numbering from its own page one.
+    expect(pages.map((page) => page.number)).toEqual([0, 0, 1, 0, 1]);
   });
 
   it('numbers a long episode through to its end, then starts the next at one', () => {
@@ -334,7 +334,7 @@ describe('printing an episode with its own front page', () => {
     });
 
     const pages = paginateProject(file);
-    expect(pages.map((page) => page.number)).toEqual([0, 1, 2, 3, 0, 1]);
+    expect(pages.map((page) => page.number)).toEqual([0, 0, 1, 2, 3, 0, 1]);
   });
 
   it('breaks the run, so an episode never starts halfway down a page', () => {

@@ -278,6 +278,7 @@ describe('an episode’s front page in the preview', () => {
         includeChapterPages
         onToggleChapterPages={() => undefined}
         includeTitlePage={includeTitlePage}
+        includeContentsPage
         onExportPdf={() => undefined}
         onPrint={() => undefined}
         busy={false}
@@ -287,10 +288,10 @@ describe('an episode’s front page in the preview', () => {
 
   it('draws one at the head of each episode, with the series’ credit on it', () => {
     preview(twoEpisodes());
-    expect(screen.getByLabelText('Title page: Episode 1')).toBeDefined();
+    const first = screen.getByLabelText('Title page: Episode 1');
     expect(screen.getByLabelText('Title page: Episode 2')).toBeDefined();
     // The title and the credit come from the series where the episode is silent.
-    expect(screen.getAllByText('The Lighthouse')).toHaveLength(2);
+    expect(within(first).getByText('The Lighthouse')).toBeDefined();
     expect(screen.getAllByText('K. Shank')).toHaveLength(2);
   });
 
@@ -352,5 +353,69 @@ describe('numbering an episode on its front page', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Update page' }));
     expect(screen.getByTestId('numbers').textContent).toBe('1,7');
+  });
+});
+
+/**
+ * The list at the front of a season's stack (addendum 02 §17).
+ */
+describe('the contents page in the preview', () => {
+  const seriesOf = (count: number): ProjectFile => {
+    let file = createProjectFile({ title: 'The Lighthouse', format: 'series' });
+    for (const title of ['Pilot', 'The Wreck', 'Blue Water'].slice(0, count)) {
+      const made = addEpisode(file, { title });
+      file = updateBeat(made.file, made.episode.beats[0]!.id, {
+        manuscript: {
+          elements: [
+            {
+              id: `${made.episode.marker.id}-a` as never,
+              type: 'action',
+              text: 'The lamp turns.',
+              characterId: null,
+              attributes: {},
+            },
+          ],
+        },
+      });
+    }
+    return file;
+  };
+
+  const preview = (file: ProjectFile, includeContentsPage = true) =>
+    render(
+      <PagePreview
+        file={file}
+        unitId={null}
+        includeBeatTitles={false}
+        onToggleBeatTitles={() => undefined}
+        includeChapterPages
+        onToggleChapterPages={() => undefined}
+        includeTitlePage
+        includeContentsPage={includeContentsPage}
+        onExportPdf={() => undefined}
+        onPrint={() => undefined}
+        busy={false}
+        message={null}
+      />,
+    );
+
+  it('opens the stack, listing every episode and how long it runs', () => {
+    preview(seriesOf(3));
+    const sheet = screen.getByLabelText('Contents');
+    expect(within(sheet).getByText('The Lighthouse')).toBeDefined();
+    expect(within(sheet).getByText('EPISODE 2')).toBeDefined();
+    expect(within(sheet).getByText('Blue Water')).toBeDefined();
+    expect(within(sheet).getAllByText('1 page')).toHaveLength(3);
+  });
+
+  it('is not drawn for one episode, or when it is switched off', () => {
+    preview(seriesOf(1));
+    expect(screen.queryByLabelText('Contents')).toBeNull();
+    cleanup();
+
+    preview(seriesOf(3), false);
+    expect(screen.queryByLabelText('Contents')).toBeNull();
+    // The covers are its own switch, and are still there.
+    expect(screen.getByLabelText('Title page: Episode 1')).toBeDefined();
   });
 });

@@ -861,6 +861,7 @@ export default function App() {
               includeChapterPages={printSetup.includeChapterPages}
               onToggleChapterPages={(next) => setPrintSetup({ ...printSetup, includeChapterPages: next })}
               includeTitlePage={setup.includeTitlePage}
+              includeContentsPage={setup.includeContentsPage}
               onPageSetup={() => setPageSetupOpen(true)}
               onExportPdf={() => void exportPdf()}
               onPrint={() => void print()}

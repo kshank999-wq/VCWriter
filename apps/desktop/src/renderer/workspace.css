@@ -5042,6 +5042,60 @@ dialog.lane-dialog.title-page-dialog {
 .title-page-sheet .sheet-note { margin-top: 10px; }
 .title-page-sheet .sheet-line { display: block; }
 
+/* The list at the front of a season's stack (§17), drawn at the size of a
+   real page and set the way the print stylesheet sets it: the series' name,
+   the word Contents under it, then one line for each script with its label
+   and its length at the two edges. */
+.paper.contents-leaf {
+  display: block;
+  white-space: normal;
+  text-align: center;
+}
+
+.contents-leaf-block {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12pt;
+  line-height: 1;
+}
+
+.contents-leaf-block .contents-series {
+  margin: 1in 0 0;
+  /* Ink on paper: the interface's headings are gold, and this is a page. */
+  color: inherit;
+  font-family: inherit;
+  letter-spacing: normal;
+  font-size: 24pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.contents-leaf-block .contents-heading {
+  margin: 0.5in 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.contents-leaf-block .contents-list {
+  text-align: left;
+}
+
+.contents-leaf-block .contents-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1em;
+  padding: 0.5em 0;
+}
+
+.contents-leaf-block .contents-label {
+  width: 12ch;
+  flex: none;
+}
+
+.contents-leaf-block .contents-title {
+  flex: 1;
+}
+
 /* The same sheet at the size of a real page: the Preview draws an episode's
    front page as a page of the document (§17), so the geometry here is the
    print stylesheet's, in inches, rather than the dialog's thumbnail. */

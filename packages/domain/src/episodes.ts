@@ -424,3 +424,41 @@ export const episodeTitlePages = (
       page: titlePageOf(file.project, file.settings, episode.marker.titlePage),
     }));
 };
+
+/**
+ * The contents page a season is bound with (addendum 02 §17).
+ *
+ * A series printing is a stack of scripts, and a stack wants a list at the
+ * front of it saying what is in the stack. It carries the series' title —
+ * so it stands as the front of the document without a cover of its own in
+ * front of it — and one line for each episode.
+ *
+ * **Not a page reference.** Each episode numbers from its own page one, so
+ * "turn to page 34" would name three pages at once. What a reader of a stack
+ * actually wants is which episode is which and how long each one runs, so
+ * that is what the line says.
+ */
+export interface ContentsEntry {
+  /** "EPISODE 2", in whatever scheme the project numbers by. */
+  label: string;
+  /** What the writer named it. May be empty; the label never is. */
+  title: string;
+  /** How long that script runs, in pages. */
+  pages: number;
+}
+
+export interface ContentsPage {
+  /** The series' title, at the head of the page. */
+  title: string;
+  entries: ContentsEntry[];
+}
+
+/**
+ * Whether this printing carries a contents page.
+ *
+ * Only a series has one, only where there is more than one episode to list —
+ * a contents page naming a single script is a page of paper saying nothing —
+ * and only where the printing asked for it.
+ */
+export const hasContentsPage = (file: ProjectFile, options: { includeContentsPage?: boolean } = {}): boolean =>
+  options.includeContentsPage !== false && file.project.format === 'series' && episodes(file).length > 1;

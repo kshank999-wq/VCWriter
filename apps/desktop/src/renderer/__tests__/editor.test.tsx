@@ -435,6 +435,7 @@ describe('page preview', () => {
         includeChapterPages
         onToggleChapterPages={() => undefined}
         includeTitlePage
+        includeContentsPage
         onExportPdf={() => undefined}
         onPrint={() => undefined}
         busy={false}
@@ -457,6 +458,7 @@ describe('page preview', () => {
         includeChapterPages
         onToggleChapterPages={() => undefined}
         includeTitlePage
+        includeContentsPage
         onExportPdf={() => undefined}
         onPrint={() => undefined}
         busy

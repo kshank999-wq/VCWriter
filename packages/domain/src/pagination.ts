@@ -1,6 +1,6 @@
 import { beatsInScript, relatedEntities, unitsInStoryOrder } from './selectors.js';
 import { chapterPageContent, chapterPagesFor, type ChapterPageContent } from './markers.js';
-import { episodeTitlePages, episodes } from './episodes.js';
+import { episodeTitlePages, episodes, hasContentsPage, type ContentsPage, type Episode } from './episodes.js';
 import type { TitlePage } from './entities/title-page.js';
 import { groupManuscript } from './editing.js';
 import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
@@ -184,6 +184,12 @@ export interface Page {
    * number from the page that follows it.
    */
   titlePage?: TitlePage;
+  /**
+   * Set on the contents page a season is bound with (addendum 02 §17): what
+   * is in the stack, at the front of the stack. `lines` is empty, and like a
+   * title page it takes no number.
+   */
+  contents?: ContentsPage;
 }
 
 /** Greedy wrap at `width`, breaking on spaces and never mid-word when avoidable. */
@@ -557,6 +563,12 @@ export interface ManuscriptOptions {
    */
   includeTitlePage?: boolean;
   /**
+   * Print the contents page a season is bound with (addendum 02 §17). On
+   * unless asked otherwise, and only where there is more than one episode to
+   * list.
+   */
+  includeContentsPage?: boolean;
+  /**
    * The sluglines themselves. On unless asked otherwise — a script without
    * them is a rehearsal script or a prose read-through, which is a real
    * thing to want and never the default.
@@ -604,7 +616,7 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   const fronts = episodeTitlePages(file, options);
   // Every episode begins a script of its own, whether or not its front page
   // is printing: it starts on a fresh page and numbers from one (§17).
-  const opensEpisode = new Set(episodes(file).map((episode) => episode.marker.unitId as string));
+  const opensEpisode = new Map(episodes(file).map((episode) => [episode.marker.unitId as string, episode]));
   if (leaves.length === 0 && fronts.length === 0 && opensEpisode.size === 0) {
     return numbered(paginateElements(manuscriptElements(file, options), layout, speakerFor), new Set());
   }
@@ -621,6 +633,8 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   const pages: Page[] = [];
   /** Where a script begins: the index of each episode's own page one. */
   const restartAt = new Set<number>();
+  /** Which episode begins there, so the contents can say how long each runs. */
+  const startsHere = new Map<number, Episode>();
   let run: ManuscriptElement[] = [];
   const flush = () => {
     if (run.length === 0) return;
@@ -629,7 +643,8 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   };
 
   for (const unit of units) {
-    if (opensEpisode.has(unit.id as string)) {
+    const episode = opensEpisode.get(unit.id as string);
+    if (episode) {
       // The episode before it ends where it ends; this one starts on paper of
       // its own, with its front page ahead of it where it has one.
       flush();
@@ -638,6 +653,7 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
       // Whatever is pushed next — a chapter leaf, or the first page of the
       // script — is this episode's page one.
       restartAt.add(pages.length);
+      startsHere.set(pages.length, episode);
     }
     const leaf = opensAt.get(unit.id as string);
     if (leaf) {
@@ -648,7 +664,40 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   }
   flush();
 
+  // The list at the front of the stack, which can only be written once the
+  // stack exists: it says how long each script runs.
+  if (hasContentsPage(file, options)) {
+    pages.unshift({ number: 0, lines: [], startsWith: null, contents: contentsOf(file, pages, startsHere) });
+    return numbered(pages, new Set([...restartAt].map((index) => index + 1)));
+  }
+
   return numbered(pages, restartAt);
+};
+
+/**
+ * What is in the stack: one line for each episode, with how long it runs.
+ *
+ * The length is counted from the pages themselves rather than estimated —
+ * the covers between the scripts belong to no script and are not counted in
+ * one — so the figure on the contents page is the figure the last page of
+ * that episode carries.
+ */
+const contentsOf = (
+  file: ProjectFile,
+  pages: readonly Page[],
+  startsHere: ReadonlyMap<number, Episode>,
+): ContentsPage => {
+  const starts = [...startsHere.keys()].sort((a, b) => a - b);
+  const entries = starts.map((start, position) => {
+    const end = starts[position + 1] ?? pages.length;
+    const episode = startsHere.get(start) as Episode;
+    return {
+      label: episode.label,
+      title: episode.title,
+      pages: pages.slice(start, end).filter((page) => page.titlePage === undefined).length,
+    };
+  });
+  return { title: file.project.title, entries };
 };
 
 /**
@@ -658,15 +707,16 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
  * numbers from its own page one** (§17) — page two of episode three is page
  * two, the way it would be if that episode had been printed on its own.
  *
- * A title page takes no number and gives none away: the page after the front
- * page of episode two is that episode's page one, and the covers between the
- * scripts are not counted in either of them.
+ * The covers and the contents page take no number and give none away: the
+ * page after the front page of episode two is that episode's page one, and
+ * the leaves between the scripts are counted in neither of them.
  */
 const numbered = (pages: Page[], restartAt: ReadonlySet<number>): Page[] => {
   let n = 0;
   return pages.map((page, index) => {
     if (restartAt.has(index)) n = 0;
-    return page.titlePage ? { ...page, number: 0 } : { ...page, number: (n += 1) };
+    const front = page.titlePage !== undefined || page.contents !== undefined;
+    return front ? { ...page, number: 0 } : { ...page, number: (n += 1) };
   });
 };
 
@@ -762,7 +812,7 @@ export const pageBreaks = (file: ProjectFile, options: ManuscriptOptions = {}): 
   const breaks = new Map<string, number>();
   let started = false;
   for (const page of paginateProject(file, options)) {
-    if (page.titlePage || page.chapter) continue;
+    if (page.titlePage || page.contents || page.chapter) continue;
     if (started && page.startsWith) breaks.set(page.startsWith, page.number);
     started = true;
   }

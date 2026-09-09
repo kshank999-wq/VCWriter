@@ -2,6 +2,7 @@ import { layoutFor, paginateProject, type ManuscriptOptions, type Page, type Pag
 import { isProseFormat } from './editing.js';
 import { titlePageOf } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
+import type { ContentsPage } from './episodes.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -69,6 +70,7 @@ const renderPage = (page: Page, isProse: boolean, options: PrintOptions): string
   // A front page and a leaf between chapters are both pages of the document
   // rather than of the manuscript, and neither carries a page number.
   if (page.titlePage) return renderTitleSheet(page.titlePage);
+  if (page.contents) return renderContentsPage(page.contents);
   if (page.chapter) return renderChapterPage(page, isProse, options);
   const lines = page.lines
     .map((line) => {
@@ -100,6 +102,35 @@ const pageNumber = (page: Page, options: PrintOptions): string =>
  */
 const printedAt = (options: PrintOptions): string =>
   options.includePrintedAt ? `<div class="printed-at">${escapeHtml(new Date().toLocaleString())}</div>` : '';
+
+/**
+ * The contents page a season is bound with (addendum 02 §17).
+ *
+ * The series' title at the head, so the page stands as the front of the
+ * document, and one line for each episode: its label on the left, its name
+ * beside it, and how long that script runs on the right. Not a page
+ * reference — each episode numbers from its own page one, so a page number
+ * would name three pages at once.
+ */
+const renderContentsPage = (contents: ContentsPage): string => {
+  const rows = contents.entries
+    .map(
+      (entry) =>
+        '<div class="contents-row">' +
+        `<span class="contents-label">${escapeHtml(entry.label)}</span>` +
+        `<span class="contents-title">${escapeHtml(entry.title)}</span>` +
+        `<span class="contents-pages">${entry.pages} ${entry.pages === 1 ? 'page' : 'pages'}</span>` +
+        '</div>',
+    )
+    .join('');
+  return (
+    '<section class="page contents-page">' +
+    `<h1 class="contents-series">${escapeHtml(contents.title || 'Untitled')}</h1>` +
+    '<p class="contents-heading">Contents</p>' +
+    `<div class="contents-list">${rows}</div>` +
+    '</section>'
+  );
+};
 
 /**
  * The leaf a chapter opens with (addendum 02 §11): its number, its name, an
@@ -231,6 +262,24 @@ const STYLES = `
   .scene-number.left { left: 0.75in; }
   .scene-number.right { right: 0.75in; }
   .printed-at { position: absolute; bottom: 0.5in; left: 1.5in; font-size: 9pt; color: #555; }
+  /* The list at the front of the stack (§17): the series' name, the word
+     Contents under it, then one line for each script. The label and the
+     length are set at the two edges with the name between, so the eye runs
+     down the numbers on the left and the lengths on the right. */
+  .contents-page { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .contents-series {
+    font-size: 24pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin: 1in 0 0;
+    line-height: 1.1;
+  }
+  .contents-heading { text-transform: uppercase; letter-spacing: 0.2em; margin: 0.5in 0 0.5in; }
+  .contents-list { width: 100%; text-align: left; }
+  .contents-row { display: flex; align-items: baseline; gap: 1em; padding: 0.5em 0; }
+  .contents-label { width: 12ch; flex: none; }
+  .contents-title { flex: 1; }
+  .contents-pages { flex: none; }
   .title-page { display: flex; flex-direction: column; align-items: center; text-align: center; }
   /*
      The page in two halves. The title sits in the top one — centred in it, so
@@ -344,7 +393,11 @@ ${body}
  * of the first episode, the project's page still opens the document.
  */
 const opensWithItsOwn = (pages: Page[], options: PrintOptions): boolean =>
-  options.includeTitlePage === false || pages[0]?.titlePage !== undefined;
+  options.includeTitlePage === false ||
+  pages[0]?.titlePage !== undefined ||
+  // A contents page carries the series' title at its head, so it stands as
+  // the front of the document with nothing needed in front of it (§17).
+  pages[0]?.contents !== undefined;
 
 /** Page count for the export, every front page in it included. */
 export const printedPageCount = (file: ProjectFile, options: PrintOptions = {}): number => {

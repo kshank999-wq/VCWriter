@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { hasChapterPages, type ParagraphStyle, type ProjectFile } from '@vcwriter/domain';
+import { hasChapterPages, hasContentsPage, type ParagraphStyle, type ProjectFile } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 
 /**
@@ -15,6 +15,8 @@ import { useModal } from '../use-modal';
 export interface PrintSetup {
   includeTitlePage: boolean;
   includeChapterPages: boolean;
+  /** The list at the front of a season's stack (§17). */
+  includeContentsPage: boolean;
   /** The sluglines. On: a script without them is a read-through, not a draft. */
   includeSceneHeadings: boolean;
   /** Numbered in the margins, as a shooting script is. Off until production. */
@@ -41,6 +43,7 @@ export interface PrintSetup {
 export const DEFAULT_PRINT_SETUP: PrintSetup = {
   includeTitlePage: true,
   includeChapterPages: true,
+  includeContentsPage: true,
   includeSceneHeadings: true,
   includeSceneNumbers: false,
   includePageNumbers: true,
@@ -86,6 +89,9 @@ export function PageSetup({
 }: PageSetupProps) {
   const dialog = useModal(open);
   const leaves = hasChapterPages(file.project.format);
+  // Only a series has one, and only where there is more than one episode to
+  // list; the switch is not offered where there would be nothing to print.
+  const contents = hasContentsPage(file);
   const prose = file.project.format === 'novel' || file.project.format === 'short_story';
   const paragraphStyle = file.settings.paragraphStyle;
   const set = (patch: Partial<PrintSetup>) => onSetup({ ...setup, ...patch });
@@ -122,6 +128,16 @@ export function PageSetup({
                 What it says…
               </button>
             </Check>
+
+            {contents ? (
+              <Check
+                label="Contents page"
+                on={setup.includeContentsPage}
+                onChange={(includeContentsPage) => set({ includeContentsPage })}
+              >
+                Contents — what is in the stack, at the front of it
+              </Check>
+            ) : null}
 
             {leaves ? (
               <Check

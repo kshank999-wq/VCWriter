@@ -4,6 +4,7 @@ import {
   addEpisode,
   addUnit,
   createProjectFile,
+  episodes,
   linkEntities,
   paginateProject,
   printedPageCount,
@@ -239,13 +240,88 @@ describe('the front pages a series prints', () => {
     expect(fronts).toHaveLength(3);
     expect(fronts.every((page) => page.number === 0)).toBe(true);
     // Three scripts, each a page long, each of them page one of itself.
-    expect(pages.filter((page) => !page.titlePage).map((page) => page.number)).toEqual([1, 1, 1]);
+    expect(pages.filter((page) => page.lines.length > 0).map((page) => page.number)).toEqual([1, 1, 1]);
   });
 
   it('starts each episode on paper of its own even with no front page to print', () => {
     // The numbering belongs to the episode, not to whether its cover prints.
-    const pages = paginateProject(seriesOf(3), { includeTitlePage: false });
+    const pages = paginateProject(seriesOf(3), { includeTitlePage: false, includeContentsPage: false });
     expect(pages.some((page) => page.titlePage)).toBe(false);
     expect(pages.map((page) => page.number)).toEqual([1, 1, 1]);
+  });
+});
+
+/**
+ * The contents page a season is bound with (addendum 02 §17): what is in the
+ * stack, at the front of the stack.
+ */
+describe('the contents page of a series', () => {
+  const seriesOf = (count: number): ProjectFile => {
+    let file = createProjectFile({ title: 'The Lighthouse', format: 'series', author: 'K. Shank' });
+    for (let n = 1; n <= count; n += 1) {
+      const made = addEpisode(file, { title: ['Pilot', 'The Wreck', 'Blue Water'][n - 1] ?? `Episode ${n}` });
+      file = updateBeat(made.file, made.episode.beats[0]!.id, {
+        manuscript: {
+          elements: [
+            { id: `${made.episode.marker.id}-a` as never, type: 'action', text: 'The lamp turns.', characterId: null, attributes: {} },
+          ],
+        },
+      });
+    }
+    return file;
+  };
+
+  it('opens the document, naming the series and every episode in it', () => {
+    const pages = paginateProject(seriesOf(3));
+    const contents = pages[0]?.contents;
+    expect(contents?.title).toBe('The Lighthouse');
+    expect(contents?.entries.map((entry) => entry.label)).toEqual(['EPISODE 1', 'EPISODE 2', 'EPISODE 3']);
+    expect(contents?.entries.map((entry) => entry.title)).toEqual(['Pilot', 'The Wreck', 'Blue Water']);
+    // Its own page, taking no number, ahead of the first episode's cover.
+    expect(pages[0]?.number).toBe(0);
+    expect(pages[1]?.titlePage?.episode).toBe('Episode 1');
+  });
+
+  it('says how long each script runs, counting the pages and not the covers', () => {
+    const pages = paginateProject(seriesOf(2));
+    expect(pages[0]?.contents?.entries.map((entry) => entry.pages)).toEqual([1, 1]);
+
+    // A longer first episode is counted as it lays out, not as it is guessed.
+    let file = seriesOf(2);
+    const [first] = episodes(file);
+    file = updateBeat(file, first!.beats[0]!.id, {
+      manuscript: {
+        elements: Array.from({ length: 80 }, (_, index) => ({
+          id: `x${index}` as never,
+          type: 'action' as const,
+          text: `Line ${index} of the thing that goes on and on and on.`,
+          characterId: null,
+          attributes: {},
+        })),
+      },
+    });
+    expect(paginateProject(file)[0]?.contents?.entries.map((entry) => entry.pages)).toEqual([3, 1]);
+  });
+
+  it('stands as the front of the document, with no title page in front of it', () => {
+    const html = renderPrintDocumentHtml(seriesOf(2));
+    expect(html.indexOf('class="page contents-page"')).toBeLessThan(html.indexOf('class="page title-page"'));
+    // One cover for each episode, and none for the season on top of the list.
+    expect(html.split('class="page title-page"').length - 1).toBe(2);
+    expect(html).toContain('>Contents<');
+    expect(printedPageCount(seriesOf(2))).toBe(paginateProject(seriesOf(2)).length);
+  });
+
+  it('is not printed for one episode, which is a script rather than a stack', () => {
+    expect(paginateProject(seriesOf(1)).some((page) => page.contents)).toBe(false);
+    // Nor for a format that has no episodes at all.
+    expect(paginateProject(project().file).some((page) => page.contents)).toBe(false);
+  });
+
+  it('is left out when the writer asks for no contents page', () => {
+    const pages = paginateProject(seriesOf(3), { includeContentsPage: false });
+    expect(pages.some((page) => page.contents)).toBe(false);
+    // And the covers are untouched: it is its own switch.
+    expect(pages.filter((page) => page.titlePage)).toHaveLength(3);
   });
 });

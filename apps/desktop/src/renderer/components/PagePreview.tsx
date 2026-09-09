@@ -24,6 +24,8 @@ interface PagePreviewProps {
    * is not showing the pages that will print.
    */
   includeTitlePage: boolean;
+  /** And the list at the front of a season's stack (§17), for the same reason. */
+  includeContentsPage: boolean;
   /** The rest of what a printing carries lives in Page setup (§13). */
   onPageSetup?(): void;
   onExportPdf(): void;
@@ -49,6 +51,7 @@ export function PagePreview({
   includeChapterPages,
   onToggleChapterPages,
   includeTitlePage,
+  includeContentsPage,
   onPageSetup,
   onExportPdf,
   onPrint,
@@ -61,8 +64,8 @@ export function PagePreview({
     () =>
       scope === 'unit' && unitId
         ? paginateUnit(file, unitId)
-        : paginateProject(file, { includeBeatTitles, includeChapterPages, includeTitlePage }),
-    [file, scope, unitId, includeBeatTitles, includeChapterPages, includeTitlePage],
+        : paginateProject(file, { includeBeatTitles, includeChapterPages, includeTitlePage, includeContentsPage }),
+    [file, scope, unitId, includeBeatTitles, includeChapterPages, includeTitlePage, includeContentsPage],
   );
   const chapters = hasChapterPages(file.project.format);
 

@@ -1,4 +1,4 @@
-import type { ChapterPageContent, InlineSpan, Page } from '@vcwriter/domain';
+import type { ChapterPageContent, ContentsPage, InlineSpan, Page } from '@vcwriter/domain';
 import { TitleSheet } from './TitleSheet';
 
 /**
@@ -14,11 +14,22 @@ export function Paper({ pages, empty = 'Nothing written yet.' }: { pages: Page[]
           // A front page takes no number (§17), so several pages of the
           // document can be page 0; their place in the stack is the identity.
           key={sheet}
-          className={`paper${page.chapter ? ' chapter-leaf' : ''}${page.titlePage ? ' title-leaf' : ''}`}
-          aria-label={page.titlePage ? `Title page: ${page.titlePage.episode || page.titlePage.title}` : `Page ${page.number}`}
+          className={
+            `paper${page.chapter ? ' chapter-leaf' : ''}` +
+            `${page.titlePage ? ' title-leaf' : ''}${page.contents ? ' contents-leaf' : ''}`
+          }
+          aria-label={
+            page.contents
+              ? 'Contents'
+              : page.titlePage
+                ? `Title page: ${page.titlePage.episode || page.titlePage.title}`
+                : `Page ${page.number}`
+          }
         >
           {page.number > 1 ? <span className="paper-number">{page.number}.</span> : null}
-          {page.titlePage ? (
+          {page.contents ? (
+            <ContentsLeaf contents={page.contents} />
+          ) : page.titlePage ? (
             <TitleSheet page={page.titlePage} />
           ) : page.chapter ? (
             <ChapterLeaf chapter={page.chapter} />
@@ -37,6 +48,31 @@ export function Paper({ pages, empty = 'Nothing written yet.' }: { pages: Page[]
         </section>
       ))}
       {pages.length === 0 ? <p className="muted empty">{empty}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * The contents page a season is bound with (addendum 02 §17): the series'
+ * name, then one line for each script — its label, its name, and how long it
+ * runs. Not a page reference: each episode numbers from its own page one.
+ */
+function ContentsLeaf({ contents }: { contents: ContentsPage }) {
+  return (
+    <div className="contents-leaf-block">
+      <h1 className="contents-series">{contents.title || 'Untitled'}</h1>
+      <p className="contents-heading">Contents</p>
+      <div className="contents-list">
+        {contents.entries.map((entry) => (
+          <div key={entry.label} className="contents-row">
+            <span className="contents-label">{entry.label}</span>
+            <span className="contents-title">{entry.title}</span>
+            <span className="contents-pages">
+              {entry.pages} {entry.pages === 1 ? 'page' : 'pages'}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

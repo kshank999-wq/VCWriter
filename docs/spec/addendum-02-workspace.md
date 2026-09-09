@@ -542,6 +542,31 @@ it always did. **Print the title page** in Page setup governs all of them
 together — a writer who does not want a title page does not want eleven of
 them — and the Preview draws them exactly as they print.
 
+#### The contents page
+
+A stack wants a list at the front of it saying what is in the stack, so a
+series opens with one: the series' title at the head, the word *Contents*
+under it, and one line for each episode — its label on the left, its name
+beside it, and how long that script runs on the right.
+
+**Not a page reference.** Each episode numbers from its own page one, so
+"turn to page 34" would name three pages at once. What a reader of a stack
+wants is which episode is which and how long each one runs, and that is what
+the line says. The length is counted from the pages as they lay out, not
+estimated, and the covers between the scripts belong to no script and are
+counted in none of them.
+
+It carries the series' title, so it stands as the front of the document with
+nothing needed in front of it: where a contents page opens the printing, the
+project's own title page is not set ahead of it, the same way an episode's
+cover is not doubled by one.
+
+Only a series has one, only where there is **more than one episode** to list
+— a contents page naming a single script is a sheet of paper saying nothing —
+and only where **Contents page** is ticked in Page setup. It is its own
+switch: turning the covers off leaves the contents, and turning the contents
+off leaves the covers.
+
 Alone in the application, this screen **does not save as you type**. What is
 typed is a draft, drawn on the sheet as it goes; **Update page** puts it in
 the document and **Cancel** throws it away, leaving nothing waiting the next
@@ -937,6 +962,7 @@ It is in two groups, and the division is the point.
 | Switch | Default | |
 | --- | --- | --- |
 | Print the title page | on | What it says is its own screen, §6.1 — this only decides whether it prints. In a series it governs every episode's front page too |
+| Contents page | on | A series only, and only with more than one episode: the list at the front of the stack, §6.1 |
 | Chapter pages | on | §12, and only for a format that has them |
 | Scene headings | on | Off gives a read-through with no sluglines |
 | Page numbers | on | Top right, from page two |
@@ -1160,7 +1186,8 @@ page's screen already knowing which episode it is; **double-clicking an
 episode in the rail** opens it again. It falls back to the series' page field
 by field, and **it prints at the head of its own run** rather than once at
 the front of the stack, with **each episode numbering from its own page
-one** — §6.1 has the whole of it.
+one**. The stack opens with a **contents page** listing every episode and how
+long it runs — §6.1 has the whole of it.
 
 **The front page is where an episode is numbered.** The number typed in its
 *Episode* field is the number of that script — the first whole number in the
