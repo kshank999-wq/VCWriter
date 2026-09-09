@@ -1165,7 +1165,74 @@ Inflections are not typos, and neither are the cast's names.
 Everything deterministic still runs locally: it costs nothing, works on a
 plane, and gives the same answer twice.
 
-## 21. Keyboard
+## 21. The structural pass
+
+Spec §8.2 asks for an interactive structural review: each scene read as a
+story in miniature, the setups and threads and arcs checked, weak or
+repetitive or non-turning scenes surfaced, and nothing silently rewritten.
+What was there was the deterministic half — length, cast movement,
+obligations outstanding. This is the rest.
+
+### The grid
+
+**The Story Grid's question, asked of every scene and answered by the
+writer**: what is at stake, which way does it move, where does it turn, why
+is the scene in the script. It is a table, one row per scene, typed straight
+into.
+
+The structural read proposes an answer; **this is the writer's**, and it is
+the one the checks read. That matters because the AI pass needs signing in
+and a key: a writer on a plane can still work the grid, and everything built
+on it still works.
+
+Empty is the honest starting state. **An unanswered question is not the same
+as "nothing changes"**, and nothing here guesses: a scene nobody has read is
+never reported as flat.
+
+What the grid then makes possible:
+
+| | |
+| --- | --- |
+| **A scene that does not move** | Marked flat by the writer. The one thing in the grid that is a finding in its own right, and the "non-turning scene" §8.2 asks for — grounded in the writer's judgement rather than guessed from word counts |
+| **A run all going the same way** | Three or more consecutive scenes moving up, or down. A story with one gear reads as one long scene |
+| **Nothing read yet** | Said once, on a script long enough for it to matter |
+
+### The shape
+
+Where the act markers actually fall, as a share of the finished pages — the
+most useful structural number a screenwriter looks at, and one nobody reads
+off a page count by eye. Drawn as a bar, and queried when an act is under a
+eighth or over half of the script. A three-act shape usually runs about a
+quarter, a half, a quarter; that is a convention, so it asks rather than
+blocks.
+
+A long script with no acts marked at all is worth saying once: where the
+acts break is the first thing a reader feels and the last thing that can be
+fixed cheaply.
+
+### Who is where
+
+Every character across the story as a track of ticks, busiest first. **Not a
+judgement — a map.** A character who leaves for forty pages may be doing it
+on purpose, and the only useful thing is to show the shape and let the
+writer look at it. A gap long enough to notice is raised separately, naming
+the scene it starts after.
+
+### Threads
+
+Where each plot runs, and two things worth saying about one: a thread that
+**happens once** is an idea rather than a thread, and a thread that
+**stops before the story does** either resolved or will be missed.
+
+### Repetition
+
+Two consecutive scenes with the same cast in the same place are usually one
+scene, or want something between them.
+
+Nothing in this pass mutates the project, and it never claims to know
+whether a scene turns on its own.
+
+## 22. Keyboard
 
 In addition to §5's reordering keys and §6's writing keys:
 
@@ -1179,7 +1246,7 @@ In addition to §5's reordering keys and §6's writing keys:
 Every control on the timeline is a focusable element with an accessible
 name; the reorder keys work from the same elements that drag (§16).
 
-## 22. Preferences
+## 23. Preferences
 
 A gear on the title bar opens Preferences. These are kept on the machine,
 not in the project file — a collaborator opening the file must not inherit
@@ -1195,7 +1262,7 @@ anyone's colours — alongside the layout preferences of §3.
   and a dark page is a strain over a long day. Off, the Script follows the
   scheme.
 
-## 23. Later
+## 24. Later
 
 Named so that nobody mistakes their absence for an oversight:
 
@@ -1207,7 +1274,7 @@ Named so that nobody mistakes their absence for an oversight:
   character; a lane per character among the plot lanes is a later addendum.
 - Timing in minutes. Pages are the industry's unit and the ruler uses them.
 
-## 24. Acceptance
+## 25. Acceptance
 
 - The Script shows every beat of the fixture project in print order, and
   typing in the third beat changes the third beat and nothing else.
@@ -1307,5 +1374,11 @@ Named so that nobody mistakes their absence for an oversight:
   allowed is never raised again.
 - `lantren` beside three `lantern`s is caught; `stairs` beside three
   `stair`s is not, and neither is a character's name.
+- The grid is typed straight into and kept on the scene; answering one
+  question does not wipe out another's answer, and it survives a sync.
+- A scene marked flat is raised as blocking; a scene nobody has read is
+  never reported as flat.
+- The act bar shows what each act encloses and the shares add to the whole;
+  an act under an eighth or over half of the pages is queried.
 - Renderer and domain tests cover the above; a screenshot of the fixture at
   1440×900 and at 1100×700 is reviewed before the change ships.

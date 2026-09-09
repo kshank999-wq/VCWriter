@@ -73,6 +73,32 @@ export const structuralUnitStatusSchema = z.enum([
 ]);
 export type StructuralUnitStatus = z.infer<typeof structuralUnitStatusSchema>;
 
+/**
+ * A scene read as a story in miniature (spec §8.2).
+ *
+ * The Story Grid's question, asked of every scene: what is at stake, which
+ * way does it move, where does it turn, and why is the scene in the script
+ * at all. This is the **writer's** answer — the AI pass proposes one, but a
+ * writer with no key and no connection can fill the grid in themselves, and
+ * the checks that read it work either way.
+ *
+ * Empty throughout is the honest starting state: an unanswered question is
+ * not the same as "nothing changes", and nothing here guesses.
+ */
+export const sceneGridSchema = z.object({
+  /** What is at stake: "trust / betrayal", "life / death", "hope / despair". */
+  value: z.string().default(''),
+  /** Which way it moves by the end. Empty means nobody has said. */
+  polarity: z.enum(['up', 'down', 'mixed', 'flat', '']).default(''),
+  /** Where it turns. Empty on a scene that does not. */
+  turn: z.string().default(''),
+  /** Why this scene is in the script. */
+  purpose: z.string().default(''),
+  /** What is being fought over, and who wants what. */
+  conflict: z.string().default(''),
+});
+export type SceneGrid = z.infer<typeof sceneGridSchema>;
+
 export const structuralUnitSchema = z.object({
   id: id<StructuralUnitId>(),
   projectId: id<ProjectId>(),
@@ -93,6 +119,8 @@ export const structuralUnitSchema = z.object({
    * to hold a scene in reserve without deleting it.
    */
   inScript: z.boolean().default(true),
+  /** The writer's own structural reading of the scene (spec §8.2). */
+  grid: sceneGridSchema.default({}),
   ...timestamps,
 });
 export type StructuralUnit = z.infer<typeof structuralUnitSchema>;

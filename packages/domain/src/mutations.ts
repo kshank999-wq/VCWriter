@@ -6,6 +6,7 @@ import {
   beatSchema,
   chapterPageSchema,
   laneSchema,
+  sceneGridSchema,
   storyMarkerSchema,
   structuralUnitSchema,
 } from './entities/structure.js';
@@ -31,6 +32,7 @@ import {
 import type { ManuscriptSegment } from './entities/manuscript.js';
 import type { VoiceAssignment } from './entities/project.js';
 import type { Character, CharacterCategory } from './entities/character.js';
+import type { SceneGrid } from './entities/structure.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
 import type { SetupPayoff, SetupPoint } from './entities/setups.js';
 import type {
@@ -675,6 +677,28 @@ export const removeCharacter = (file: ProjectFile, characterId: CharacterId): Pr
     ...file,
     characters: file.characters.filter((character) => character.id !== characterId),
     links: withoutLinksTouching(file, removed),
+  });
+};
+
+/**
+ * The writer's structural reading of a scene (spec §8.2).
+ *
+ * A patch, not a replacement: answering "which way does it move" must not
+ * wipe out what is at stake, and the two are answered at different moments.
+ */
+export const setSceneGrid = (
+  file: ProjectFile,
+  unitId: StructuralUnitId,
+  patch: Partial<SceneGrid>,
+): ProjectFile => {
+  if (!file.units.some((unit) => unit.id === unitId)) {
+    throw new DomainError(`Scene/chapter ${unitId} does not exist`);
+  }
+  return touchProject({
+    ...file,
+    units: file.units.map((unit) =>
+      unit.id === unitId ? touch({ ...unit, grid: sceneGridSchema.parse({ ...unit.grid, ...patch }) }) : unit,
+    ),
   });
 };
 

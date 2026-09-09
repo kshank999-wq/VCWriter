@@ -4562,3 +4562,155 @@ dialog.lane-dialog:has(.with-scenes) {
   color: var(--gold);
   cursor: pointer;
 }
+
+/* ------------------------------------------------------------ the story grid
+   Spec §8.2. The Story Grid's question asked of every scene, and answered by
+   the writer: what is at stake, which way does it move, where does it turn,
+   why is the scene here. The structural read proposes an answer; this is the
+   one that counts, and the one that works with no key and no connection. */
+
+.story-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  margin-bottom: 18px;
+}
+
+.story-grid th,
+.story-grid td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+
+.story-grid thead th {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+}
+
+.story-grid tbody th {
+  width: 190px;
+  color: var(--text);
+}
+
+.story-grid input,
+.story-grid select {
+  width: 100%;
+  font-size: 11.5px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 2px 4px;
+  color: var(--text);
+}
+
+.story-grid input:hover,
+.story-grid select:hover {
+  border-color: var(--border);
+}
+
+.story-grid input:focus,
+.story-grid select:focus {
+  border-color: var(--gold-deep);
+  outline: none;
+}
+
+/* A scene the writer said does not move: the one thing in the grid that is
+   a finding in its own right. */
+.story-grid tr.grid-flat th {
+  box-shadow: inset 3px 0 0 var(--danger, #d38b8b);
+}
+
+.block {
+  display: block;
+}
+
+/* ------------------------------------------------------------- the shape
+   Where the acts actually fall, as a share of the finished pages: the most
+   useful structural number a writer looks at, and one nobody reads off a
+   page count by eye. */
+
+.act-shape,
+.arc-map {
+  margin-bottom: 16px;
+}
+
+.act-bar {
+  display: flex;
+  gap: 3px;
+  height: 42px;
+}
+
+.act-slice {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(201, 164, 92, 0.16), rgba(201, 164, 92, 0.05));
+  overflow: hidden;
+}
+
+.act-slice-name {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.act-slice-share {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Who is in the story, and where. Not a judgement — a map. */
+.arc-map ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.arc-map li {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: 10px;
+}
+
+.arc-name {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arc-track {
+  display: flex;
+  gap: 1px;
+  height: 12px;
+}
+
+.arc-tick {
+  flex: 1;
+  min-width: 2px;
+  border-radius: 1px;
+  background: var(--border);
+}
+
+.arc-tick.on {
+  background: var(--gold);
+}

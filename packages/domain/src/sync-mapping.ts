@@ -116,6 +116,9 @@ const unitToRow = (unit: StructuralUnit): Row => ({
   order_key: unit.orderKey,
   collapsed: unit.collapsed,
   in_script: unit.inScript,
+  // The writer's structural reading, as one JSON column: five short strings
+  // read and written whole with the scene, and nothing queries inside it.
+  grid: unit.grid,
   created_at: unit.createdAt,
   updated_at: unit.updatedAt,
 });
@@ -303,6 +306,8 @@ const unitFromRow = (row: Row): StructuralUnit =>
     orderKey: row['order_key'],
     collapsed: flag(row['collapsed']),
     inScript: row['in_script'] === undefined || row['in_script'] === null ? true : flag(row['in_script']),
+    // Absent in a row written before the grid existed; the schema fills it.
+    grid: row['grid'] ?? undefined,
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });

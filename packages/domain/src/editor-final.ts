@@ -1,8 +1,11 @@
 import { beatsForUnit, unitsInStoryOrder, unresolvedSetupsPayoffs, unusedResearch } from './selectors.js';
+import { placedMarkers } from './markers.js';
+import { sceneGridSchema } from './entities/structure.js';
 import { paginateElements, layoutFor } from './pagination.js';
 import { countWords } from './entities/manuscript.js';
 import type { ProjectFile } from './project-file.js';
-import type { StructuralUnitId } from './ids.js';
+import type { CharacterId, StructuralUnitId } from './ids.js';
+import type { SceneGrid } from './entities/structure.js';
 
 /**
  * The Final Editor (spec §8.2).
@@ -39,6 +42,8 @@ export interface SceneReview {
   location: string | null;
   /** Filled by the AI pass when one has run; null otherwise, and shown as unknown. */
   aiVerdict: SceneVerdict | null;
+  /** The writer's own reading, from the document. */
+  grid: SceneGrid;
 }
 
 /** What an AI structural pass returns for a scene. Never invented locally. */
@@ -67,7 +72,19 @@ export type StoryFindingKind =
   | 'character_absent'
   | 'unresolved_setup'
   | 'unused_research'
-  | 'no_turn';
+  | 'no_turn'
+  // What the writer's own grid says (§8.2)
+  | 'flat_scene'
+  | 'one_note_run'
+  | 'grid_unanswered'
+  // Threads and arcs
+  | 'thread_dropped'
+  | 'thread_single_scene'
+  | 'arc_gap'
+  // The shape of the whole
+  | 'act_out_of_proportion'
+  | 'no_acts'
+  | 'repetitive_scene';
 
 export interface StoryFinding {
   id: string;
@@ -123,8 +140,162 @@ export const reviewScenes = (file: ProjectFile): SceneReview[] => {
       actionLines,
       location,
       aiVerdict: null,
+      // A document written before the grid existed has none. This is a
+      // read-only pass over someone's manuscript; it must never be the thing
+      // that takes the editor down.
+      grid: sceneGridSchema.parse(unit.grid ?? {}),
     };
   });
+};
+
+
+// ---------------------------------------------------------------------------
+// Arcs and threads: who is in the story, and what it is made of (§8.2)
+// ---------------------------------------------------------------------------
+
+export interface Appearance {
+  unitId: StructuralUnitId;
+  position: number;
+  label: string;
+  /** Speaks in it, as against merely being named in the action. */
+  speaks: boolean;
+}
+
+export interface CharacterArc {
+  characterId: CharacterId | null;
+  name: string;
+  appearances: Appearance[];
+  first: number | null;
+  last: number | null;
+  /** The longest run of scenes between two appearances. */
+  longestGap: number;
+  /** Where that gap starts, so the writer can look at it. */
+  gapAfter: number | null;
+}
+
+/**
+ * Where each character is across the story.
+ *
+ * Not a judgement — a map. A character who leaves for forty pages may be
+ * doing it on purpose, and the only useful thing to do is show the shape and
+ * let the writer look at it.
+ */
+export const characterArcs = (file: ProjectFile): CharacterArc[] => {
+  const scenes = reviewScenes(file);
+  const byName = new Map<string, CharacterArc>();
+
+  const seen = (name: string): CharacterArc => {
+    const existing = byName.get(name);
+    if (existing) return existing;
+    const character = file.characters.find((candidate) => candidate.name.trim().toUpperCase() === name);
+    const arc: CharacterArc = {
+      characterId: character?.id ?? null,
+      name,
+      appearances: [],
+      first: null,
+      last: null,
+      longestGap: 0,
+      gapAfter: null,
+    };
+    byName.set(name, arc);
+    return arc;
+  };
+
+  for (const scene of scenes) {
+    for (const speaker of scene.speakers) {
+      const arc = seen(speaker);
+      arc.appearances.push({ unitId: scene.unitId, position: scene.position, label: scene.label, speaks: true });
+    }
+  }
+
+  for (const arc of byName.values()) {
+    if (arc.appearances.length === 0) continue;
+    arc.first = arc.appearances[0]?.position ?? null;
+    arc.last = arc.appearances[arc.appearances.length - 1]?.position ?? null;
+    for (let index = 1; index < arc.appearances.length; index += 1) {
+      const gap = (arc.appearances[index]?.position ?? 0) - (arc.appearances[index - 1]?.position ?? 0) - 1;
+      if (gap > arc.longestGap) {
+        arc.longestGap = gap;
+        arc.gapAfter = arc.appearances[index - 1]?.position ?? null;
+      }
+    }
+  }
+
+  // The busiest first: the order a cast list is read in.
+  return [...byName.values()].sort((a, b) => b.appearances.length - a.appearances.length);
+};
+
+export interface ThreadRun {
+  laneId: string;
+  name: string;
+  scenes: number[];
+  first: number | null;
+  last: number | null;
+}
+
+/** Where each plot thread runs, in scene positions. */
+export const threadRuns = (file: ProjectFile): ThreadRun[] => {
+  const scenes = reviewScenes(file);
+  const positions = new Map(scenes.map((scene) => [scene.unitId as string, scene.position]));
+
+  return file.lanes.map((lane) => {
+    const here = file.units
+      .filter((unit) => unit.laneId === lane.id && unit.inScript)
+      .map((unit) => positions.get(unit.id as string) ?? 0)
+      .filter((position) => position > 0)
+      .sort((a, b) => a - b);
+    return {
+      laneId: lane.id as string,
+      name: lane.name,
+      scenes: here,
+      first: here[0] ?? null,
+      last: here[here.length - 1] ?? null,
+    };
+  });
+};
+
+export interface ActShape {
+  label: string;
+  /** Scene position it starts at. */
+  from: number;
+  to: number;
+  pages: number;
+  /** Share of the whole, 0–1. */
+  share: number;
+}
+
+/**
+ * Where the act breaks actually fall, as a share of the finished pages.
+ *
+ * The most useful structural number a screenwriter looks at, and one nobody
+ * can read off a page count by eye. Markers already say where the acts are
+ * (addendum 02 §12); this measures what they enclose.
+ */
+export const actShape = (file: ProjectFile): ActShape[] => {
+  const scenes = reviewScenes(file);
+  if (scenes.length === 0) return [];
+  const total = scenes.reduce((sum, scene) => sum + scene.pages, 0);
+  if (total === 0) return [];
+
+  const placed = placedMarkers(file).filter((marker) => marker.marker.kind === 'act');
+  if (placed.length === 0) return [];
+
+  const startAt = new Map(placed.map((marker) => [marker.marker.unitId as string, marker.label]));
+  const acts: ActShape[] = [];
+  let current: { label: string; from: number; pages: number } | null = null;
+
+  for (const scene of scenes) {
+    const opens = startAt.get(scene.unitId as string);
+    if (opens !== undefined) {
+      if (current) acts.push({ ...current, to: scene.position - 1, share: current.pages / total });
+      current = { label: opens, from: scene.position, pages: 0 };
+    }
+    if (current) current.pages += scene.pages;
+  }
+  if (current) {
+    acts.push({ ...current, to: scenes[scenes.length - 1]?.position ?? current.from, share: current.pages / total });
+  }
+  return acts;
 };
 
 export interface FinalEditorOptions {
@@ -140,12 +311,20 @@ export interface FinalEditorOptions {
 export interface FinalEditorReport {
   scenes: SceneReview[];
   findings: StoryFinding[];
+  /** Where each character is across the story (§8.2). */
+  arcs: CharacterArc[];
+  /** Where each plot thread runs. */
+  threads: ThreadRun[];
+  /** What the acts enclose, as a share of the pages. */
+  acts: ActShape[];
   totals: {
     scenes: number;
     pages: number;
     words: number;
     /** Scenes an AI pass has read, out of the total. */
     reviewed: number;
+    /** Scenes the writer has answered the grid for. */
+    gridded: number;
   };
 }
 
@@ -312,14 +491,161 @@ export const runFinalEditor = (file: ProjectFile, options: FinalEditorOptions = 
     });
   }
 
+
+  // ---------------------------------------------------------- the grid
+  const answered = scenes.filter((scene) => scene.grid.polarity !== '');
+
+  for (const scene of scenes) {
+    if (scene.grid.polarity === 'flat') {
+      add({
+        kind: 'flat_scene',
+        severity: 'blocking',
+        message: `${scene.label} does not move.`,
+        unitId: scene.unitId,
+        detail:
+          scene.grid.value.length > 0
+            ? `You marked "${scene.grid.value}" as ending where it started. A scene that changes nothing is a scene the reader can skip.`
+            : 'You marked it as ending where it started. A scene that changes nothing is a scene the reader can skip.',
+      });
+    }
+  }
+
+  // Three scenes running the same way is a story with one gear. Only raised
+  // where the writer has actually answered — an unanswered grid says nothing.
+  let run: { polarity: string; scenes: SceneReview[] } = { polarity: '', scenes: [] };
+  const flushRun = () => {
+    if (run.scenes.length >= 3 && (run.polarity === 'up' || run.polarity === 'down')) {
+      const first = run.scenes[0] as SceneReview;
+      add({
+        kind: 'one_note_run',
+        severity: 'question',
+        message: `${run.scenes.length} scenes running from ${first.label} all move the same way.`,
+        unitId: first.unitId,
+        detail: `Every one of them goes ${run.polarity}. A run this long with no relief reads as one long scene.`,
+      });
+    }
+    run = { polarity: '', scenes: [] };
+  };
+  for (const scene of scenes) {
+    if (scene.grid.polarity !== run.polarity) flushRun();
+    run.polarity = scene.grid.polarity;
+    run.scenes.push(scene);
+  }
+  flushRun();
+
+  if (scenes.length >= 4 && answered.length === 0) {
+    add({
+      kind: 'grid_unanswered',
+      severity: 'question',
+      message: 'No scene has been read structurally yet.',
+      unitId: null,
+      detail:
+        'The grid asks what is at stake in each scene and which way it moves. Nothing here can tell you whether a scene turns until you say — or the structural read does.',
+    });
+  }
+
+  // --------------------------------------------------- threads and arcs
+  const threads = threadRuns(file);
+  const lastScene = scenes.length;
+  for (const thread of threads) {
+    if (thread.scenes.length === 0) continue;
+    if (thread.scenes.length === 1) {
+      add({
+        kind: 'thread_single_scene',
+        severity: 'question',
+        message: `${thread.name} happens once, at scene ${thread.first}.`,
+        unitId: null,
+        detail: 'A thread with one scene is an idea rather than a thread. Either it needs more, or it belongs to another plot.',
+      });
+      continue;
+    }
+    // A thread that stops in the first two-thirds and never comes back.
+    if (thread.last !== null && lastScene > 5 && thread.last < lastScene * 0.67) {
+      add({
+        kind: 'thread_dropped',
+        severity: 'question',
+        message: `${thread.name} stops at scene ${thread.last} of ${lastScene}.`,
+        unitId: null,
+        detail: 'It is not seen again. A thread that ends before the story does needs to have been resolved, or it will be missed.',
+      });
+    }
+  }
+
+  const arcs = characterArcs(file);
+  for (const arc of arcs) {
+    // Already covered by `character_absent` where that fires; this is the
+    // arc's own shape, and it names where to look.
+    if (arc.appearances.length >= 3 && arc.longestGap >= absenceThreshold) {
+      add({
+        kind: 'arc_gap',
+        severity: 'question',
+        message: `${arc.name} is gone for ${arc.longestGap} scenes after scene ${arc.gapAfter}.`,
+        unitId: null,
+        detail: `They speak in ${arc.appearances.length} scenes, from ${arc.first} to ${arc.last}. A gap this long needs a reason the reader can feel.`,
+      });
+    }
+  }
+
+  // ------------------------------------------------- the shape of the whole
+  const acts = actShape(file);
+  if (acts.length === 0 && scenes.length >= 8) {
+    add({
+      kind: 'no_acts',
+      severity: 'question',
+      message: 'No act markers in a script of this length.',
+      unitId: null,
+      detail: 'Where the acts break is the first thing a reader feels and the last thing that can be fixed cheaply.',
+    });
+  }
+  for (const act of acts) {
+    // A three-act shape is roughly a quarter, a half, a quarter. This is a
+    // convention, not a law, so it asks rather than blocks — but an act that
+    // is a tenth of the script, or over half of it, is worth looking at.
+    if (acts.length >= 3 && (act.share < 0.12 || act.share > 0.55)) {
+      add({
+        kind: 'act_out_of_proportion',
+        severity: 'question',
+        message: `${act.label} is ${Math.round(act.share * 100)}% of the pages.`,
+        unitId: null,
+        detail:
+          `${act.from === act.to ? `Scene ${act.from}` : `Scenes ${act.from}–${act.to}`}, ` +
+          `${act.pages} ${act.pages === 1 ? 'page' : 'pages'}. ` +
+          'A three-act shape usually runs about a quarter, a half, a quarter.',
+      });
+    }
+  }
+
+  // ------------------------------------------------------ repetitive scenes
+  for (let index = 1; index < scenes.length; index += 1) {
+    const here = scenes[index] as SceneReview;
+    const before = scenes[index - 1] as SceneReview;
+    const sameCast =
+      here.speakers.length > 0 &&
+      here.speakers.length === before.speakers.length &&
+      here.speakers.every((name) => before.speakers.includes(name));
+    if (sameCast && here.location !== null && here.location === before.location) {
+      add({
+        kind: 'repetitive_scene',
+        severity: 'question',
+        message: `${here.label} is the same people in the same place as the scene before it.`,
+        unitId: here.unitId,
+        detail: 'Two scenes running with the same cast in the same location are usually one scene, or want something between them.',
+      });
+    }
+  }
+
   return {
     scenes,
     findings,
+    arcs,
+    threads,
+    acts,
     totals: {
       scenes: scenes.length,
       pages: scenes.reduce((total, scene) => total + scene.pages, 0),
       words: scenes.reduce((total, scene) => total + scene.words, 0),
       reviewed: scenes.filter((scene) => scene.aiVerdict !== null).length,
+      gridded: answered.length,
     },
   };
 };

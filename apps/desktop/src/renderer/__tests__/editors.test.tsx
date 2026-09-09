@@ -189,6 +189,56 @@ describe('daily editor panel', () => {
 });
 
 describe('final editor panel', () => {
+  it('is a grid the writer fills in, and what is typed is kept on the scene', () => {
+    let latest = scriptWithProblems();
+    render(<EditorHarness initial={scriptWithProblems()} onFile={(file) => (latest = file)} />);
+    fireEvent.click(screen.getByRole('tab', { name: /final/i }));
+
+    const label = latest.units[0]!.sequenceLabel || latest.units[0]!.kind;
+    const name = `${label} ${latest.units[0]!.title || 'Untitled'}`.trim();
+
+    fireEvent.change(screen.getByLabelText(`What is at stake in ${name}`), {
+      target: { value: 'trust / betrayal' },
+    });
+    fireEvent.change(screen.getByLabelText(`Which way ${name} moves`), { target: { value: 'down' } });
+
+    // Answering one question does not wipe out the answer to another.
+    expect(latest.units[0]!.grid).toMatchObject({ value: 'trust / betrayal', polarity: 'down' });
+  });
+
+  it('raises a scene the writer says does not move', () => {
+    let latest = scriptWithProblems();
+    render(<EditorHarness initial={scriptWithProblems()} onFile={(file) => (latest = file)} />);
+    fireEvent.click(screen.getByRole('tab', { name: /final/i }));
+
+    const label = latest.units[0]!.sequenceLabel || latest.units[0]!.kind;
+    const name = `${label} ${latest.units[0]!.title || 'Untitled'}`.trim();
+    fireEvent.change(screen.getByLabelText(`Which way ${name} moves`), { target: { value: 'flat' } });
+
+    expect(screen.getByText(/does not move/)).toBeTruthy();
+    expect(document.querySelector('.story-grid tr.grid-flat')).toBeTruthy();
+  });
+
+  it('shows who is where, as a map rather than a judgement', () => {
+    // The map is drawn from who speaks, so a script with nobody in it has
+    // nothing to draw — which is why the fixture has a cue.
+    const base = scriptWithProblems();
+    const spoken = updateBeat(base, base.beats[0]!.id, {
+      manuscript: {
+        elements: [
+          { id: 's1' as never, type: 'character', text: 'MAEVE', characterId: null, attributes: {} },
+          { id: 's2' as never, type: 'dialogue', text: 'Not tonight.', characterId: null, attributes: {} },
+        ],
+      },
+    });
+    render(<EditorHarness initial={spoken} />);
+    fireEvent.click(screen.getByRole('tab', { name: /final/i }));
+
+    const map = screen.getByLabelText('Where each character is');
+    expect(map.textContent).toContain('MAEVE');
+    expect(map.querySelectorAll('.arc-tick.on').length).toBe(1);
+  });
+
   it('lists the scenes and says plainly that the turn has not been read', () => {
     render(<EditorHarness initial={scriptWithProblems()} />);
     fireEvent.click(screen.getByRole('tab', { name: /final/i }));

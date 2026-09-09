@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   allowWord,
   applyFinding,
@@ -9,6 +9,7 @@ import {
   isProseFormat,
   runDailyEditor,
   setEditorRule,
+  setSceneGrid,
   FINDING_LABELS,
   runFinalEditor,
   sceneTextForReview,
@@ -17,6 +18,7 @@ import {
   type EditorFinding,
   type FindingKind,
   type ProjectFile,
+  type SceneGrid,
   type SceneVerdict,
   type StructuralUnitId,
 } from '@vcwriter/domain';
@@ -28,6 +30,8 @@ interface EditorPanelProps {
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   /** Going to a finding selects its beat, so the writer can see it in place. */
   onGoTo?(beatId: BeatId): void;
+  /** Which editor to open on: the Editor menu names one, and means it. */
+  openOn?: 'daily' | 'final';
 }
 
 type Tab = 'daily' | 'final';
@@ -43,8 +47,13 @@ type Tab = 'daily' | 'final';
  * writer has considered and rejected is a fact about this sitting, not a
  * property of the manuscript, and it should not travel to another machine.
  */
-export function EditorPanel({ file, currentUnitId, signedIn, onUpdate, onGoTo }: EditorPanelProps) {
-  const [tab, setTab] = useState<Tab>('daily');
+export function EditorPanel({ file, currentUnitId, signedIn, onUpdate, onGoTo, openOn }: EditorPanelProps) {
+  const [tab, setTab] = useState<Tab>(openOn ?? 'daily');
+
+  // The Editor menu names an editor; choosing it opens that one.
+  useEffect(() => {
+    if (openOn) setTab(openOn);
+  }, [openOn]);
   const [scope, setScope] = useState<'project' | 'scene'>('project');
   const [includeStyle, setIncludeStyle] = useState(true);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -313,7 +322,8 @@ export function EditorPanel({ file, currentUnitId, signedIn, onUpdate, onGoTo }:
       ) : (
         <div className="final-review">
           <p className="muted">
-            {report.totals.scenes} scenes · {report.totals.pages} pages · {report.totals.words} words
+            {report.totals.scenes} scenes · {report.totals.pages} pages · {report.totals.words} words ·{' '}
+            {report.totals.gridded} of {report.totals.scenes} read
             {report.totals.reviewed > 0 ? ` · ${report.totals.reviewed} read structurally` : ''}
           </p>
 
@@ -334,6 +344,129 @@ export function EditorPanel({ file, currentUnitId, signedIn, onUpdate, onGoTo }:
           ) : (
             <p className="muted empty">Nothing structural to raise.</p>
           )}
+
+          {/* The shape of the whole, where the acts have been marked. */}
+          {report.acts.length > 0 ? (
+            <section className="act-shape" aria-label="The shape of the acts">
+              <h3>The shape</h3>
+              <div className="act-bar">
+                {report.acts.map((act) => (
+                  <div
+                    key={act.label}
+                    className="act-slice"
+                    style={{ flexGrow: Math.max(act.share, 0.02) }}
+                    title={`${act.label}: scenes ${act.from}–${act.to}, ${act.pages} pages`}
+                  >
+                    <span className="act-slice-name">{act.label}</span>
+                    <span className="act-slice-share muted">{Math.round(act.share * 100)}%</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {/* Who is in the story, and where. Not a judgement — a map. */}
+          {report.arcs.length > 0 ? (
+            <section className="arc-map" aria-label="Where each character is">
+              <h3>Who is where</h3>
+              <ul>
+                {report.arcs.slice(0, 10).map((arc) => (
+                  <li key={arc.name}>
+                    <span className="arc-name">{arc.name}</span>
+                    <span className="arc-track" aria-hidden="true">
+                      {report.scenes.map((scene) => (
+                        <i
+                          key={scene.unitId}
+                          className={
+                            arc.appearances.some((appearance) => appearance.unitId === scene.unitId)
+                              ? 'arc-tick on'
+                              : 'arc-tick'
+                          }
+                        />
+                      ))}
+                    </span>
+                    <span className="muted small">
+                      {arc.appearances.length} of {report.scenes.length}
+                      {arc.longestGap > 0 ? ` · away ${arc.longestGap}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {/* The grid itself: the Story Grid's question asked of every scene,
+              and answered by the writer. It works with no key and no
+              connection, which is the point of it being here (§8.2). */}
+          <h3>The grid</h3>
+          <p className="muted small">
+            What is at stake in each scene, and which way it moves. The structural read proposes an answer; this is
+            yours, and it is the one the checks above are reading.
+          </p>
+          <table className="story-grid">
+            <thead>
+              <tr>
+                <th scope="col">Scene</th>
+                <th scope="col">At stake</th>
+                <th scope="col">Moves</th>
+                <th scope="col">Turns on</th>
+                <th scope="col">Why it is here</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.scenes.map((scene) => {
+                const set = (patch: Partial<SceneGrid>) =>
+                  onUpdate((current) => setSceneGrid(current, scene.unitId, patch));
+                return (
+                  <tr key={scene.unitId} className={scene.grid.polarity === 'flat' ? 'grid-flat' : undefined}>
+                    <th scope="row">
+                      <span className="muted small">{scene.position}</span> {scene.label}
+                      <span className="muted small block">
+                        {scene.pages} {scene.pages === 1 ? 'page' : 'pages'} · {scene.words} words
+                      </span>
+                    </th>
+                    <td>
+                      <input
+                        aria-label={`What is at stake in ${scene.label}`}
+                        placeholder="trust / betrayal"
+                        value={scene.grid.value}
+                        onChange={(event) => set({ value: event.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <select
+                        aria-label={`Which way ${scene.label} moves`}
+                        value={scene.grid.polarity}
+                        onChange={(event) => set({ polarity: event.target.value as SceneGrid['polarity'] })}
+                      >
+                        <option value="">—</option>
+                        <option value="up">Up</option>
+                        <option value="down">Down</option>
+                        <option value="mixed">Both</option>
+                        <option value="flat">Not at all</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        aria-label={`Where ${scene.label} turns`}
+                        placeholder="the line that changes it"
+                        value={scene.grid.turn}
+                        onChange={(event) => set({ turn: event.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        aria-label={`Why ${scene.label} is here`}
+                        placeholder="what the script would lose without it"
+                        value={scene.grid.purpose}
+                        onChange={(event) => set({ purpose: event.target.value })}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
 
           <h3>Scene by scene</h3>
           <ul className="scene-list">

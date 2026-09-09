@@ -77,6 +77,7 @@ export default function App() {
   const [episodeRailOpen, setEpisodeRailOpen] = useState(false);
   const [newEpisodeOpen, setNewEpisodeOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [editorTab, setEditorTab] = useState<'daily' | 'final'>('daily');
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
@@ -420,7 +421,10 @@ export default function App() {
         case 'editor.reformat':
           return setOpenBeatId(selectedBeat?.id ?? null);
         case 'editor.daily':
+          setEditorTab('daily');
+          return setView('editor');
         case 'editor.final':
+          setEditorTab('final');
           return setView('editor');
         case 'editor.readBack':
           return setView('readback');
@@ -802,6 +806,7 @@ export default function App() {
               file={file}
               currentUnitId={selectedBeat?.unitId ?? null}
               signedIn={account.signedIn}
+              openOn={editorTab}
               onGoTo={(beatId) => {
                 setSelectedBeatId(beatId);
                 setView('write');
