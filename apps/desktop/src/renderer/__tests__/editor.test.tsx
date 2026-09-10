@@ -121,13 +121,17 @@ describe('writing keyboard flow', () => {
     expect(screen.getByRole('menu', { name: 'Extension' })).toBeTruthy();
     expect(elementTypes()).toEqual(['character']);
 
-    // Having been asked once, the Tab after that walks on.
+    // Having been asked once, the Tab after that walks on — and a
+    // parenthetical arrives inside its brackets, as Final Draft writes it.
     fireEvent.keyDown(line(), { key: 'Tab' });
     expect(elementTypes()).toEqual(['parenthetical']);
+    const wryly = () => screen.getByDisplayValue('(Rain hammers the glass.)');
+    expect(wryly()).toBeTruthy();
 
-    // Shift+Tab walks back.
-    fireEvent.keyDown(line(), { key: 'Tab', shiftKey: true });
+    // Shift+Tab walks back, and takes the brackets off again.
+    fireEvent.keyDown(wryly(), { key: 'Tab', shiftKey: true });
     expect(elementTypes()).toEqual(['character']);
+    expect(screen.getByDisplayValue('Rain hammers the glass.')).toBeTruthy();
   });
 
   it('marks the cue with the extension chosen, and swaps rather than stacks', () => {
@@ -149,13 +153,32 @@ describe('writing keyboard flow', () => {
     fireEvent.keyDown(line(), { key: 'Tab' });
     fireEvent.keyDown(line(), { key: 'Tab' });
     expect(elementTypes()).toEqual(['parenthetical']);
-    fireEvent.keyDown(line(), { key: 'Enter' });
+    const wryly = screen.getByDisplayValue('(Rain hammers the glass.)');
+    fireEvent.keyDown(wryly, { key: 'Enter' });
     expect(elementTypes()).toEqual(['parenthetical', 'dialogue']);
 
-    // And Tab in the speech reaches for a parenthetical, not back to a cue.
+    // And Tab in the speech reaches for a parenthetical, not back to a cue —
+    // an empty one, which arrives as an empty pair of brackets.
     const speech = screen.getAllByPlaceholderText('dialogue')[0] as HTMLTextAreaElement;
     fireEvent.keyDown(speech, { key: 'Tab' });
     expect(elementTypes()).toEqual(['parenthetical', 'parenthetical']);
+    expect(screen.getByDisplayValue('()')).toBeTruthy();
+  });
+
+  it('closes a parenthetical the writer left half-open', () => {
+    render(<Harness initial={screenplayWithAction()} />);
+    const line = () => screen.getByDisplayValue('Rain hammers the glass.');
+    fireEvent.keyDown(line(), { key: 'Tab' });
+    fireEvent.keyDown(line(), { key: 'Tab' });
+    fireEvent.keyDown(line(), { key: 'Tab' });
+
+    const wryly = screen.getByDisplayValue('(Rain hammers the glass.)');
+    // Typing over it, closing bracket and all, is not fought keystroke by
+    // keystroke — it is put right on the way out of the line.
+    fireEvent.change(wryly, { target: { value: '(whispering' } });
+    expect(screen.getByDisplayValue('(whispering')).toBeTruthy();
+    fireEvent.blur(wryly);
+    expect(screen.getByDisplayValue('(whispering)')).toBeTruthy();
   });
 
   it('sets the paragraph style from the number keys', () => {

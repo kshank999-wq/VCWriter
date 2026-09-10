@@ -6,6 +6,7 @@ import {
   addBeat,
   createProjectFile,
   setParagraphStyle,
+  setScriptFormat,
   updateBeat,
   type ProjectFile,
   type ProjectFormat,
@@ -216,6 +217,7 @@ describe('page setup', () => {
           onSetup={setSetup}
           onEditTitlePage={() => setEditing(true)}
           onParagraphStyle={(style) => setFile((current) => setParagraphStyle(current, style))}
+          onScriptFormat={(next) => setFile((current) => setScriptFormat(current, next))}
           pages={12}
           onPrint={() => undefined}
           onExportPdf={() => undefined}

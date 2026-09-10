@@ -7,6 +7,7 @@ import {
   beatsInStoryOrder,
   projectStats,
   setParagraphStyle,
+  setScriptFormat,
   storyLayout,
   threadLayout,
   timelineArcs,
@@ -988,6 +989,7 @@ export default function App() {
           setTitlePageOpen(true);
         }}
         onParagraphStyle={(style) => project.update((current) => setParagraphStyle(current, style))}
+        onScriptFormat={(next) => project.update((current) => setScriptFormat(current, next))}
         pages={pages}
         onPrint={() => void print()}
         onExportPdf={() => void exportPdf()}

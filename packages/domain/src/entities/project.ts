@@ -42,6 +42,22 @@ export const paragraphStyleSchema = z.enum(['indented', 'blocked']);
 export type ParagraphStyle = z.infer<typeof paragraphStyleSchema>;
 
 /**
+ * Which house a script is set in (spec §6.5).
+ *
+ * `us` is US studio format — the one Final Draft opens on, laid out for
+ * reading and for the page-a-minute rule. `bbc` is the BBC's, which grew up
+ * around taped television: A4, a cue that sits close to the action, dialogue
+ * as a wide block under it rather than a column down the middle, and a double
+ * blank line at every change of setting.
+ *
+ * It belongs to the project rather than to the machine. A script's page count
+ * is a fact about the script, and two people opening the same file must not
+ * get two different ones.
+ */
+export const scriptFormatSchema = z.enum(['us', 'bbc']);
+export type ScriptFormat = z.infer<typeof scriptFormatSchema>;
+
+/**
  * Provider-abstracted voice reference (spec §10, §18: the TTS vendor must be
  * replaceable without touching manuscript data).
  */
@@ -82,6 +98,11 @@ export const projectSettingsSchema = z.object({
    * in. Screenplay formats never read it.
    */
   paragraphStyle: paragraphStyleSchema.default('indented'),
+  /**
+   * The house a script is set in (spec §6.5). US studio format unless the
+   * writer says otherwise; prose formats never read it.
+   */
+  scriptFormat: scriptFormatSchema.default('us'),
   /**
    * What a new episode carries over from the ones before it (addendum 02
    * §17). Remembered rather than asked afresh every week; an empty object

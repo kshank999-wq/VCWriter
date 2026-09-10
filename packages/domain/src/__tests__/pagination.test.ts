@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BBC_LAYOUT,
   SCREENPLAY_LAYOUT,
   layoutFor,
+  layoutForFile,
   paginateElements,
   paginateProject,
   pageCount,
@@ -9,7 +11,7 @@ import {
   type Page,
 } from '../pagination.js';
 import { createProjectFile } from '../project-file.js';
-import { addBeat, setParagraphStyle, updateBeat } from '../mutations.js';
+import { addBeat, setParagraphStyle, setScriptFormat, updateBeat } from '../mutations.js';
 import type { ParagraphStyle } from '../entities/project.js';
 import { newId } from '../ids.js';
 import type { ManuscriptElement, ManuscriptElementType } from '../entities/manuscript.js';
@@ -241,5 +243,112 @@ describe('the two ways a prose page sets its paragraphs', () => {
   it('leaves a screenplay alone: its geometry is not a choice', () => {
     const file = setParagraphStyle(createProjectFile({ title: 'The Keeper', format: 'screenplay' }), 'blocked');
     expect(layoutFor(file.project.format, file.settings.paragraphStyle)).toBe(SCREENPLAY_LAYOUT);
+  });
+});
+
+describe('a speech is one block on the page', () => {
+  const speech = [
+    element('scene_heading', 'INT. GLASSELL PARK DINER - DAY'),
+    element('action', 'The bell above the door rings.'),
+    element('character', 'Sarah'),
+    element('parenthetical', '(whispering)'),
+    element('dialogue', "I didn't think you'd show."),
+    element('character', 'Mark'),
+    element('dialogue', "I almost didn't."),
+    element('action', 'Sarah looks down at her coffee.'),
+  ];
+
+  it('puts the cue, the wryly and the words on consecutive lines', () => {
+    const page = paginateElements(speech, SCREENPLAY_LAYOUT)[0] as Page;
+    expect(textOf(page).slice(0, 11)).toEqual([
+      'INT. GLASSELL PARK DINER - DAY',
+      '',
+      'The bell above the door rings.',
+      '',
+      'SARAH',
+      // No blank here, and none before the speech either: this is one block.
+      '(whispering)',
+      "I didn't think you'd show.",
+      '',
+      'MARK',
+      "I almost didn't.",
+      '',
+    ]);
+  });
+
+  it('still takes one blank line between everything else, and never two', () => {
+    const page = paginateElements(speech, SCREENPLAY_LAYOUT)[0] as Page;
+    const runs = textOf(page)
+      .join('\n')
+      .split(/[^\n]+/)
+      .map((run) => run.length)
+      .filter((length) => length > 0);
+    // A run of newlines longer than two means a double blank line somewhere.
+    expect(Math.max(...runs)).toBeLessThanOrEqual(2);
+  });
+
+  it('sets the US column at Final Draft’s own indents', () => {
+    const page = paginateElements(speech, SCREENPLAY_LAYOUT)[0] as Page;
+    const at = (text: string) => page.lines.find((line) => line.text === text)?.indent;
+    // Measured from the 1.5" left margin: 10 characters to the inch.
+    expect(at('INT. GLASSELL PARK DINER - DAY')).toBe(0); // 1.5"
+    expect(at('The bell above the door rings.')).toBe(0); // 1.5"
+    expect(at('SARAH')).toBe(22); // 3.7"
+    expect(at('(whispering)')).toBe(16); // 3.1"
+    expect(at("I didn't think you'd show.")).toBe(10); // 2.5"
+    expect(SCREENPLAY_LAYOUT.width['dialogue']).toBe(35); // wraps at 6.0"
+    expect(SCREENPLAY_LAYOUT.linesPerPage).toBe(55);
+  });
+});
+
+describe('BBC script format', () => {
+  const scene = [
+    element('scene_heading', 'INT. LOCK-UP - NIGHT'),
+    element('action', 'A strip light stutters.'),
+    element('character', 'Sarah'),
+    element('dialogue', "I didn't think you'd show."),
+    element('scene_heading', 'EXT. STREET - CONTINUOUS'),
+    element('action', 'Rain.'),
+  ];
+
+  it('sets the cue close to the action, with the speech under it', () => {
+    const page = paginateElements(scene, BBC_LAYOUT)[0] as Page;
+    const at = (text: string) => page.lines.find((line) => line.text === text)?.indent;
+    expect(at('SARAH')).toBe(10); // 2.5", not 3.7"
+    expect(at("I didn't think you'd show.")).toBe(10); // directly under the name
+    expect(BBC_LAYOUT.width['dialogue']).toBe(47); // a wide block, to the margin
+  });
+
+  it('blocks out a change of setting with a double blank line', () => {
+    const page = paginateElements(scene, BBC_LAYOUT)[0] as Page;
+    const lines = textOf(page);
+    const heading = lines.indexOf('EXT. STREET - CONTINUOUS');
+    expect(lines[heading - 1]).toBe('');
+    expect(lines[heading - 2]).toBe('');
+    expect(lines[heading - 3]).not.toBe('');
+    // And nothing else gains a second blank.
+    expect(lines[lines.indexOf('SARAH') - 1]).toBe('');
+    expect(lines[lines.indexOf('SARAH') - 2]).not.toBe('');
+  });
+
+  it('is A4, so it holds more lines in a narrower column', () => {
+    expect(BBC_LAYOUT.linesPerPage).toBe(58);
+    expect(BBC_LAYOUT.columns).toBe(57);
+  });
+
+  it('is chosen on the project, and only by a script', () => {
+    expect(layoutFor('screenplay', undefined, 'bbc')).toBe(BBC_LAYOUT);
+    expect(layoutFor('series', undefined, 'bbc')).toBe(BBC_LAYOUT);
+    expect(layoutFor('screenplay', undefined, 'us')).toBe(SCREENPLAY_LAYOUT);
+    // Unsaid means US studio format, as it always has.
+    expect(layoutFor('screenplay')).toBe(SCREENPLAY_LAYOUT);
+    // A novel is set as a manuscript whatever a script setting says.
+    expect(layoutFor('novel', 'indented', 'bbc')).not.toBe(BBC_LAYOUT);
+  });
+
+  it('follows the file’s own setting', () => {
+    const file = createProjectFile({ title: 'The Lock-Up', format: 'screenplay' });
+    expect(layoutForFile(file)).toBe(SCREENPLAY_LAYOUT);
+    expect(layoutForFile(setScriptFormat(file, 'bbc'))).toBe(BBC_LAYOUT);
   });
 });

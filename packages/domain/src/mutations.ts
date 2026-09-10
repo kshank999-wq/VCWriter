@@ -35,7 +35,7 @@ import {
 import type { ManuscriptSegment } from './entities/manuscript.js';
 import { titlePageSchema } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
-import type { ParagraphStyle, VoiceAssignment } from './entities/project.js';
+import type { ParagraphStyle, ScriptFormat, VoiceAssignment } from './entities/project.js';
 import type { Character, CharacterCategory } from './entities/character.js';
 import type { SceneGrid, SceneRead } from './entities/structure.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
@@ -780,6 +780,16 @@ export const setSceneRead = (
  */
 export const setParagraphStyle = (file: ProjectFile, paragraphStyle: ParagraphStyle): ProjectFile =>
   touchProject({ ...file, settings: { ...file.settings, paragraphStyle } });
+
+/**
+ * Which house a script is set in (spec §6.5): US studio format, or the BBC's.
+ *
+ * A project setting rather than a machine one. It changes the page geometry,
+ * and therefore the page count, so two people opening the same script have to
+ * be looking at the same thing.
+ */
+export const setScriptFormat = (file: ProjectFile, scriptFormat: ScriptFormat): ProjectFile =>
+  touchProject({ ...file, settings: { ...file.settings, scriptFormat } });
 
 /**
  * The title page (spec §6.1).

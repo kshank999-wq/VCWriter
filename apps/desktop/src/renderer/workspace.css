@@ -2136,9 +2136,26 @@ input[type='color'].swatch {
   /* The track is capped so a column wider than the pane wraps its lines
      instead of running off the edge of it. */
   grid-template-columns: minmax(0, 1fr);
-  gap: 2px;
+  /* The space between blocks is a margin rather than a grid gap, so a speech
+     can close it up: the cue, its wryly and the words are one block, on
+     consecutive lines, exactly as they print (spec §6.2). */
+  gap: 0;
   margin: 0 0 0 132px;
   max-width: 100%;
+}
+
+.page-column > * + * {
+  margin-top: 2px;
+}
+
+/* Inside a speech, nothing between the lines. */
+.element-character + .element-parenthetical,
+.element-character + .element-dialogue,
+.element-parenthetical + .element-dialogue,
+.element-parenthetical + .element-parenthetical,
+.element-dialogue + .element-parenthetical,
+.element-dialogue + .element-dialogue {
+  margin-top: 0;
 }
 
 .element {
@@ -2230,11 +2247,16 @@ input[type='color'].swatch {
   justify-content: start;
 }
 
+/* Each half of a dual speech is a speech: its lines are consecutive too. */
 .dual-column {
   display: grid;
-  gap: 2px;
+  gap: 0;
   align-content: start;
   min-width: 0;
+}
+
+.dual-column > * + * {
+  margin-top: 2px;
 }
 
 .dual-toggle {
@@ -2410,6 +2432,17 @@ input[type='color'].swatch {
 .script-pages .beat-block + .scene-name,
 .script-pages .beat-block + .act-bar {
   margin-top: 12pt;
+}
+
+/* Except inside a speech, which is one block of consecutive lines — the
+   paginator counts it that way, and the page prints it that way. */
+.script-pages .element-character + .element-parenthetical,
+.script-pages .element-character + .element-dialogue,
+.script-pages .element-parenthetical + .element-dialogue,
+.script-pages .element-parenthetical + .element-parenthetical,
+.script-pages .element-dialogue + .element-parenthetical,
+.script-pages .element-dialogue + .element-dialogue {
+  margin-top: 0;
 }
 
 /* Nothing may add height that the printed page does not have, so the box the

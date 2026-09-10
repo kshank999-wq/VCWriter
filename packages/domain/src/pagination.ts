@@ -14,7 +14,7 @@ import type { TitlePage } from './entities/title-page.js';
 import { groupManuscript } from './editing.js';
 import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
 import type { ManuscriptElement, ManuscriptElementType } from './entities/manuscript.js';
-import type { ParagraphStyle, ProjectFormat } from './entities/project.js';
+import type { ParagraphStyle, ProjectFormat, ScriptFormat } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
 import type { StructuralUnitId } from './ids.js';
 
@@ -57,6 +57,23 @@ export interface PageLayoutSpec {
    * so it is one set here rather than two layouts (§6.4).
    */
   runOn?: ReadonlySet<string>;
+  /**
+   * Elements that sit on the line straight under the one before, with no
+   * blank between them.
+   *
+   * A speech is **one block**: the cue, its wryly and the words are
+   * consecutive lines, and a blank line anywhere inside them is the mistake
+   * every writer spots at a glance. Everything else on a screenplay page —
+   * scene heading, action, a new cue, a transition — takes exactly one blank
+   * line before it, and never two. Keyed by the element, valued by the
+   * element types it may follow this closely.
+   */
+  follows?: Record<string, ReadonlySet<string>>;
+  /**
+   * Blank lines before a scene heading, where a format wants more than one.
+   * Absent means the ordinary single blank that separates any two blocks.
+   */
+  blanksBeforeHeading?: number;
   columns: number;
   /**
    * Two speeches printed side by side. Absent in a format that has no
@@ -97,12 +114,74 @@ export const SCREENPLAY_LAYOUT: PageLayoutSpec = {
     transition: 15,
   },
   uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
+  // The cue, its wryly and the speech are one block, on consecutive lines.
+  follows: {
+    parenthetical: new Set(['character', 'dialogue', 'parenthetical']),
+    dialogue: new Set(['character', 'parenthetical', 'dialogue']),
+  },
   // Two 27-character columns with 6 between them: the 60-character body,
   // halved, with each speech's cue sitting over its own column.
   dual: {
     width: 27,
     gap: 6,
     indent: { character: 8, parenthetical: 3, dialogue: 0 },
+  },
+};
+
+/**
+ * BBC script format (spec §6.5).
+ *
+ * The same twelve-point Courier, set for a different job. US studio format is
+ * laid out for reading and for timing; the BBC's grew up around taped
+ * television, where the margins carried the crew's technical notes — so the
+ * dialogue is a wide block sitting under a cue that is barely indented, rather
+ * than a narrow column down the middle of the page.
+ *
+ * A4 rather than US Letter: 8.27" × 11.69" with the same 1.5" left, 1" right
+ * and 1" top and bottom margins gives a 57-character column and 58 lines.
+ *
+ * A new scene heading takes a double blank line, which is how a BBC page
+ * blocks out a change of setting; nothing else about the vertical spacing
+ * differs. Scene headings are not set in bold — the house discourages it.
+ */
+export const BBC_LAYOUT: PageLayoutSpec = {
+  linesPerPage: 58,
+  columns: 57,
+  doubleSpaced: false,
+  indent: {
+    scene_heading: 0,
+    action: 0,
+    shot: 0,
+    general: 0,
+    // 2.5" from the paper's edge: the cue sits close to the action, not out
+    // in the middle of the page.
+    character: 10,
+    parenthetical: 10,
+    // Directly under the name, and running to the right margin.
+    dialogue: 10,
+    transition: 42,
+  },
+  width: {
+    scene_heading: 57,
+    action: 57,
+    shot: 57,
+    general: 57,
+    character: 47,
+    parenthetical: 47,
+    dialogue: 47,
+    transition: 15,
+  },
+  uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
+  follows: {
+    parenthetical: new Set(['character', 'dialogue', 'parenthetical']),
+    dialogue: new Set(['character', 'parenthetical', 'dialogue']),
+  },
+  // A heavy visual boundary at a change of setting.
+  blanksBeforeHeading: 2,
+  dual: {
+    width: 26,
+    gap: 5,
+    indent: { character: 0, parenthetical: 0, dialogue: 0 },
   },
 };
 
@@ -139,8 +218,14 @@ export const PROSE_BLOCK_LAYOUT: PageLayoutSpec = {
  * same geometry, the same elements, the same two keys. What differs is how
  * they are divided (§14), not how a page is set.
  */
-export const layoutFor = (format: ProjectFormat, paragraphStyle?: ParagraphStyle): PageLayoutSpec => {
-  if (format !== 'novel' && format !== 'short_story') return SCREENPLAY_LAYOUT;
+export const layoutFor = (
+  format: ProjectFormat,
+  paragraphStyle?: ParagraphStyle,
+  scriptFormat?: ScriptFormat,
+): PageLayoutSpec => {
+  if (format !== 'novel' && format !== 'short_story') {
+    return scriptFormat === 'bbc' ? BBC_LAYOUT : SCREENPLAY_LAYOUT;
+  }
   return paragraphStyle === 'blocked' ? PROSE_BLOCK_LAYOUT : PROSE_LAYOUT;
 };
 
@@ -151,7 +236,7 @@ export const layoutFor = (format: ProjectFormat, paragraphStyle?: ParagraphStyle
  * another.
  */
 export const layoutForFile = (file: ProjectFile): PageLayoutSpec =>
-  layoutFor(file.project.format, file.settings.paragraphStyle);
+  layoutFor(file.project.format, file.settings.paragraphStyle, file.settings.scriptFormat);
 
 export interface PageLine {
   text: string;
@@ -449,9 +534,21 @@ export const paginateElements = (
   // under every line, so one more is a paragraph break; a single-spaced
   // screenplay page needs the whole line.
   const gap = layout.doubleSpaced ? 1 : spacing;
-  const pushBlank = () => {
+  const pushBlank = (howMany = gap) => {
     if (lines.length === 0) return;
-    for (let i = 0; i < gap; i += 1) lines.push({ text: '', type: 'blank', indent: 0, spans: [] });
+    for (let i = 0; i < howMany; i += 1) lines.push({ text: '', type: 'blank', indent: 0, spans: [] });
+  };
+  /**
+   * What goes before this block: nothing inside a speech, more than one blank
+   * before a scene heading in a format that asks for it, one otherwise.
+   */
+  const blanksBefore = (block: Block, previous: Block | null): number => {
+    if (previous === null) return 0;
+    if (layout.follows?.[block.type]?.has(previous.type) ?? false) return 0;
+    if (block.type === 'scene_heading' && layout.blanksBeforeHeading) {
+      return layout.blanksBeforeHeading * gap;
+    }
+    return gap;
   };
 
   /**
@@ -490,11 +587,13 @@ export const paginateElements = (
     const block = blocks[index] as Block;
     currentId = block.id;
     // A paragraph that runs on from the paragraph before it takes no blank:
-    // in standard manuscript format the indent is what marks the new one.
+    // in standard manuscript format the indent is what marks the new one. Nor
+    // does a line inside a speech, which is one block down the page.
     const previous = index > 0 ? (blocks[index - 1] as Block) : null;
     const runsOn =
       previous !== null && previous.type === block.type && (layout.runOn?.has(block.type) ?? false);
-    const separator = lines.length === 0 || runsOn ? 0 : gap;
+    const before = runsOn ? 0 : blanksBefore(block, previous);
+    const separator = lines.length === 0 ? 0 : before;
     const needed = block.lines.length * spacing + separator;
 
     // A block that keeps with the next one needs room for a couple of lines of
@@ -503,7 +602,7 @@ export const paginateElements = (
     const companionLines = block.keepWithNext && follower ? Math.min(2, follower.lines.length) * spacing + spacing : 0;
 
     if (needed + companionLines <= remaining()) {
-      if (!runsOn) pushBlank();
+      if (before > 0) pushBlank(before);
       pushBlockLines(block);
       continue;
     }
@@ -516,7 +615,7 @@ export const paginateElements = (
       fittable >= MIN_SPLIT_LINES &&
       block.lines.length - fittable >= MIN_SPLIT_LINES
     ) {
-      if (!runsOn) pushBlank();
+      if (before > 0) pushBlank(before);
       pushBlockLines(block, 0, fittable);
       lines.push({ text: '(MORE)', type: 'more', indent: layout.indent['parenthetical'] ?? 16, spans: [{ text: '(MORE)' }] });
       startNewPage();

@@ -7,6 +7,7 @@ import {
   elementTypesFor,
   onEnter,
   onTab,
+  retype,
   styleShortcuts,
   typeOnEnter,
 } from '../editing.js';
@@ -258,5 +259,41 @@ describe('printable document', () => {
   it('suggests a file name from the project title', () => {
     expect(suggestedExportFileName(script('The Keeper: Part One'))).toBe('The Keeper Part One.pdf');
     expect(suggestedExportFileName(script('///'))).toBe('Untitled.pdf');
+  });
+});
+
+
+describe('a parenthetical wears its parentheses', () => {
+  it('opens an empty one with the caret between the brackets', () => {
+    const made = retype('', 'character', 'parenthetical');
+    expect(made.text).toBe('()');
+    expect(made.caret).toBe(1);
+  });
+
+  it('wraps what is already on the line, and leaves the caret after the words', () => {
+    const made = retype('whispering', 'dialogue', 'parenthetical');
+    expect(made.text).toBe('(whispering)');
+    expect(made.caret).toBe(11);
+  });
+
+  it('does not stack brackets on a line that already has them', () => {
+    expect(retype('(whispering)', 'dialogue', 'parenthetical').text).toBe('(whispering)');
+    expect(retype('(whispering', 'parenthetical', 'parenthetical').text).toBe('(whispering)');
+    expect(retype('whispering)', 'parenthetical', 'parenthetical').text).toBe('(whispering)');
+    expect(retype('  ((whispering))  ', 'dialogue', 'parenthetical').text).toBe('(whispering)');
+  });
+
+  it('takes them off again when the line is re-typed as something else', () => {
+    // What the writer wrote was the word, not the punctuation.
+    expect(retype('(whispering)', 'parenthetical', 'dialogue').text).toBe('whispering');
+    expect(retype('()', 'parenthetical', 'action').text).toBe('');
+  });
+
+  it('leaves every other line exactly as it is', () => {
+    const made = retype('She opens the door.', 'action', 'dialogue');
+    expect(made.text).toBe('She opens the door.');
+    expect(made.caret).toBe('She opens the door.'.length);
+    // Including brackets that are part of the sentence.
+    expect(retype('A beat (a long one).', 'action', 'action').text).toBe('A beat (a long one).');
   });
 });

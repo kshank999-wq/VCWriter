@@ -18,6 +18,7 @@ import {
   newId,
   onEnter,
   onTab,
+  retype,
   parseInlineMarks,
   reformatText,
   setDualDialogue,
@@ -184,11 +185,14 @@ export function BeatBody({
   });
 
   const insertAfter = (index: number, type: ManuscriptElementType) => {
-    const element = makeElement(type);
+    // A new parenthetical arrives with its brackets, ready to be typed into.
+    const made = retype('', type, type);
+    const element = { ...makeElement(type), text: made.text };
     const next = [...elements];
     next.splice(index + 1, 0, element);
     setElements(next);
-    setFocusId(element.id);
+    if (made.text.length > 0) setSelection({ id: element.id, start: made.caret, end: made.caret });
+    else setFocusId(element.id);
   };
 
   const removeAt = (index: number) => {
@@ -197,10 +201,26 @@ export function BeatBody({
     if (previous) setFocusId(previous.id);
   };
 
-  /** A keystroke's verdict: a new line in that style, or this line re-typed. */
+  /**
+   * A keystroke's verdict: a new line in that style, or this line re-typed.
+   *
+   * Re-typing carries the text across in the shape the new style wants it —
+   * which for a parenthetical means inside its brackets, with the caret
+   * between them, as Final Draft does it.
+   */
   const applyTyping = (typing: Typing, element: ManuscriptElement, index: number) => {
-    if (typing.newLine) insertAfter(index, typing.type);
-    else updateElement(element.id, { type: typing.type });
+    if (typing.newLine) {
+      insertAfter(index, typing.type);
+      return;
+    }
+    becomes(element, typing.type);
+  };
+
+  /** This line, re-typed as another style, with its punctuation put right. */
+  const becomes = (element: ManuscriptElement, type: ManuscriptElementType) => {
+    const made = retype(element.text, element.type, type);
+    updateElement(element.id, made.text === element.text ? { type } : { type, text: made.text });
+    setSelection({ id: element.id, start: made.caret, end: made.caret });
   };
 
   /** Text as it is typed, and the style the line turns out to be. */
@@ -281,7 +301,7 @@ export function BeatBody({
     // Ctrl/Cmd+1…9 sets the paragraph style outright.
     if (chord && !event.altKey && shortcuts[event.key]) {
       event.preventDefault();
-      updateElement(element.id, { type: shortcuts[event.key] as ManuscriptElementType });
+      becomes(element, shortcuts[event.key] as ManuscriptElementType);
       return;
     }
 
@@ -415,6 +435,14 @@ export function BeatBody({
               // leaves the line rather than on every keystroke, so R, RU, RUV
               // do not become three people (addendum 02 §16).
               onBlur={() => {
+                // A parenthetical left half-open closes itself. Done on the way
+                // out rather than on every keystroke, so deleting the bracket
+                // to retype the line is not fought character by character.
+                if (element.type === 'parenthetical') {
+                  const closed = retype(element.text, 'parenthetical', 'parenthetical').text;
+                  if (closed !== element.text) updateElement(element.id, { text: closed });
+                  return;
+                }
                 if (element.type !== 'character' || element.text.trim().length === 0) return;
                 onUpdate((current) => notedCast(current));
               }}

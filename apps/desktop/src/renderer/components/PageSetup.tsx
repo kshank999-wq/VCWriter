@@ -1,5 +1,11 @@
 import type { ReactNode } from 'react';
-import { hasChapterPages, hasContentsPage, type ParagraphStyle, type ProjectFile } from '@vcwriter/domain';
+import {
+  hasChapterPages,
+  hasContentsPage,
+  type ParagraphStyle,
+  type ProjectFile,
+  type ScriptFormat,
+} from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 
 /**
@@ -68,6 +74,12 @@ interface PageSetupProps {
    * `PrintSetup` — but this is where a writer comes looking for it.
    */
   onParagraphStyle(next: ParagraphStyle): void;
+  /**
+   * Which house the script is set in (spec §6.5). A project setting, not a
+   * machine one: it changes the geometry and so the page count, and two
+   * people opening the same script must be looking at the same thing.
+   */
+  onScriptFormat(next: ScriptFormat): void;
   pages: number;
   onPrint(): void;
   onExportPdf(): void;
@@ -82,6 +94,7 @@ export function PageSetup({
   onSetup,
   onEditTitlePage,
   onParagraphStyle,
+  onScriptFormat,
   pages,
   onPrint,
   onExportPdf,
@@ -95,6 +108,7 @@ export function PageSetup({
   const contents = hasContentsPage(file);
   const prose = file.project.format === 'novel' || file.project.format === 'short_story';
   const paragraphStyle = file.settings.paragraphStyle;
+  const scriptFormat = file.settings.scriptFormat ?? 'us';
   const set = (patch: Partial<PrintSetup>) => onSetup({ ...setup, ...patch });
 
   return (
@@ -193,6 +207,36 @@ export function PageSetup({
                 </div>
               </>
             ) : null}
+
+            {/* §6.5: the two houses a script is set in. Same twelve-point
+                Courier, laid out for two different jobs. */}
+            {prose ? null : (
+              <>
+                <h4>Script format</h4>
+                <div className="paragraph-style" role="radiogroup" aria-label="Script format">
+                  <Style
+                    group="script-format"
+                    label="US studio"
+                    on={scriptFormat !== 'bbc'}
+                    onChange={() => onScriptFormat('us')}
+                    sample={['INT. DINER - DAY', '', 'The bell rings.', '', '       SARAH', '    (whispering)', '  You came.']}
+                  >
+                    US Letter, and what Final Draft opens on: the cue out at 3.7", the speech a narrow
+                    column down the middle. Laid out for reading, and for the page-a-minute rule.
+                  </Style>
+                  <Style
+                    group="script-format"
+                    label="BBC"
+                    on={scriptFormat === 'bbc'}
+                    onChange={() => onScriptFormat('bbc')}
+                    sample={['INT. DINER - DAY', '', 'The bell rings.', '', '', '  SARAH', '  You came, and I did not', '  think you would.']}
+                  >
+                    A4, the cue in at 2.5" with the speech a wide block directly under it, and a double
+                    blank line at every change of setting. The layout that left the margins for the crew.
+                  </Style>
+                </div>
+              </>
+            )}
 
             {prose ? null : (
               <Check
@@ -304,12 +348,15 @@ function Check({
  * and a space is picking a look, so the look is what is on the button.
  */
 function Style({
+  group = 'paragraph-style',
   label,
   on,
   onChange,
   sample,
   children,
 }: {
+  /** Which set of choices this one belongs to; one radio group per set. */
+  group?: string;
   label: string;
   on: boolean;
   onChange(): void;
@@ -318,7 +365,7 @@ function Style({
 }) {
   return (
     <label className={on ? 'paragraph-choice chosen' : 'paragraph-choice'}>
-      <input type="radio" name="paragraph-style" aria-label={label} checked={on} onChange={onChange} />
+      <input type="radio" name={group} aria-label={label} checked={on} onChange={onChange} />
       <span className="paragraph-sample" aria-hidden="true">
         {sample.map((line, index) => (
           <span key={index} className={line.length === 0 ? 'sample-line blank' : 'sample-line'}>

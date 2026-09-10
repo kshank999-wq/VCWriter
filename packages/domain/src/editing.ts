@@ -160,6 +160,49 @@ export const onTab = (format: ProjectFormat, current: ManuscriptElementType, con
   }
 };
 
+/**
+ * A line re-typed into another style, and where the caret lands in it.
+ *
+ * Only the parenthetical needs this, and it needs it badly: a parenthetical is
+ * written **inside** its parentheses, and Final Draft puts them on the line the
+ * moment it becomes one so the writer types between them rather than typing
+ * punctuation nobody should have to remember. Re-typing the line as something
+ * else takes them off again — what the writer wrote was the words, not the
+ * brackets.
+ */
+export interface Retyped {
+  text: string;
+  /** Where to put the caret afterwards. Inside the brackets, for one of those. */
+  caret: number;
+}
+
+/** The words inside a parenthetical, with any brackets and spacing taken off. */
+const insideParentheses = (text: string): string => {
+  let inner = text.trim();
+  while (inner.startsWith('(') || inner.endsWith(')')) {
+    inner = inner.replace(/^\(+/, '').replace(/\)+$/, '').trim();
+  }
+  return inner;
+};
+
+export const retype = (
+  text: string,
+  from: ManuscriptElementType,
+  to: ManuscriptElementType,
+): Retyped => {
+  if (to === 'parenthetical') {
+    const inner = insideParentheses(text);
+    // The caret sits after the words and before the closing bracket, which is
+    // where it wants to be on an empty one and where it was on a full one.
+    return { text: `(${inner})`, caret: inner.length + 1 };
+  }
+  if (from === 'parenthetical') {
+    const inner = insideParentheses(text);
+    return { text: inner, caret: inner.length };
+  }
+  return { text, caret: text.length };
+};
+
 export const onEnter = (format: ProjectFormat, current: ManuscriptElementType, isEmpty: boolean): Typing => {
   if (isProseFormat(format)) return line(typeOnEnter(format, current));
   switch (current) {
