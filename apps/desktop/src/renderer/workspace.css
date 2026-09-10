@@ -5508,7 +5508,8 @@ dialog.lane-dialog.title-page-dialog {
    line of small print wants. */
 .story-grid .under,
 .commandment-table .under,
-.grid-table .under {
+.grid-table .under,
+.av-table .under {
   display: block;
 }
 
@@ -5635,4 +5636,224 @@ dialog.lane-dialog.title-page-dialog {
    a finding in its own right. */
 .grid-table tr.flat > th {
   box-shadow: inset 3px 0 0 var(--danger, #d38b8b);
+}
+
+/* ------------------------------------------------------------- the AV sheet
+   Addendum 05 §2. A commercial as the business writes one: what is heard on
+   the left, what is seen on the right, a frame beside each row and a running
+   time against it. In short form this stands where the Script stands. */
+
+.av-sheet {
+  overflow: auto;
+  padding: 26px 34px 40px;
+  min-width: 0;
+}
+
+.av-masthead {
+  margin-bottom: 30px;
+}
+
+.av-masthead h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 4px;
+  font-size: 28px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+/* The draft, in the box a board wears it in. Read from the title page: a
+   title typed in two places is a title that disagrees with itself. */
+.av-version {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+}
+
+.av-masthead p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.av-empty {
+  max-width: 560px;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  line-height: 1.55;
+}
+
+.av-segment {
+  margin-bottom: 34px;
+}
+
+.av-segment-head {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.av-segment-head h2 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.av-segment-line {
+  margin: 4px 0 0;
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* A board has five columns and they do not squeeze. In a narrow pane the
+   sheet scrolls sideways rather than crushing the visual into one word a
+   line. */
+.av-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.av-table {
+  width: 100%;
+  min-width: 880px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.av-table thead th {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  text-align: left;
+  padding: 0 10px 8px;
+  /* The heavy rule under the head, as the board has it. */
+  border-bottom: 2px solid var(--text);
+}
+
+.av-table .av-num {
+  text-align: right;
+  width: 92px;
+}
+
+.av-table .av-image-head {
+  text-align: right;
+}
+
+.av-table td,
+.av-table tbody th {
+  vertical-align: top;
+  padding: 14px 10px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+  text-align: left;
+}
+
+.av-table tbody th.av-num {
+  text-align: right;
+  color: var(--text);
+}
+
+.av-row-number {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+button.av-row-number {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.av-table tbody th .under {
+  font-size: 10px;
+  color: var(--gold-deep);
+}
+
+.av-audio p,
+.av-visual p {
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+
+.av-audio p:last-child,
+.av-visual p:last-child {
+  margin-bottom: 0;
+}
+
+/* The words are a check on the time and never a source for it (§4), so this
+   says what it sees and changes nothing. */
+.av-tight {
+  margin-top: 8px !important;
+  font-size: 10.5px;
+  color: var(--danger, #d38b8b);
+}
+
+.av-image {
+  width: 220px;
+}
+
+/* The plate a frame goes on. Empty until stage 3 puts one there. */
+.av-plate {
+  height: 108px;
+  border-radius: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+}
+
+.av-duration {
+  white-space: nowrap;
+}
+
+.av-segment-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding-top: 12px;
+}
+
+.av-foot-name {
+  display: grid;
+  gap: 2px;
+}
+
+.av-foot-name .small {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.av-figures {
+  display: flex;
+  gap: 26px;
+  margin: 0;
+}
+
+.av-figure {
+  text-align: right;
+}
+
+.av-figure dt {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.av-figure dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
 }

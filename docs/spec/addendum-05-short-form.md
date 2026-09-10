@@ -1,6 +1,6 @@
 # Addendum 05 — Short form: the AV sheet, and the board
 
-Status: specified, not yet built. September 2026. Fills in what addendum 02
+Status: stage 1 built, September 2026; the rest specified. Fills in what addendum 02
 §14 left open: *"the module that makes something of it, with the timings and
 the shapes that kind of work needs, is a later piece of work."* This is that
 piece.
@@ -161,9 +161,9 @@ once and a row holds a reference rather than a picture.
 
 ## 8. Where the work is
 
-1. **The sheet, read-only against the story that is there.** Segments, rows,
-   numbering, the word counts and the four figures at each foot, and the
-   masthead read from the title page.
+1. **Built.** The sheet, read-only against the story that is there.
+   Segments, rows, numbering, the word counts and the four figures at each
+   foot, and the masthead read from the title page.
 2. **Writing in it.** Audio and visual edited in place, rows added, removed
    and reordered, durations typed — the sheet as the place the work happens,
    in place of the Script.
@@ -176,3 +176,29 @@ once and a row holds a reference rather than a picture.
 Stage 1 alone is worth having: a writer who can see their commercial as an AV
 sheet, with the times and the counts adding up, has the document the business
 actually asks for.
+
+## 9. What stage 1 does
+
+Open a short-form project and the section on the left is **Sheet** rather
+than Script — the same place, a different document, in the workspace and in
+its own window alike.
+
+- The **masthead**: the title page's title and revision, with the running
+  time and the word count of the whole board beside them. Nothing typed.
+- A **segment** for each scene, its name in capitals and its summary in
+  italic under it, and a **row** for each beat, numbered `segment.row` from
+  the story order.
+- Each row: its word count and running time under its number, the audio read
+  from the manuscript, the visual from the beat, a plate where its frame will
+  go, and its duration.
+- Each segment closes with `END OF SEGMENT n` and the four figures — its own
+  time and words, and the totals to that point.
+- A row whose words will not fit its time says so, quietly, in the row, and
+  changes nothing (§4). A row nobody has timed says nothing at all.
+- Clicking a row's number opens its beat in the writing screen everything
+  else opens in.
+
+A beat gained two fields to make this possible — `visual` and `seconds` —
+both empty by default, so every project that already exists opens with a
+sheet that says nothing rather than a sheet that is wrong. Writing in it is
+stage 2.

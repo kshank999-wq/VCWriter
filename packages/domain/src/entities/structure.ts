@@ -220,6 +220,22 @@ export const beatSchema = z.object({
   revisions: z.array(beatRevisionSchema).default([]),
   /** A colour the writer gave the beat, for the timeline and the threads; null for none. */
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().default(null),
+  /**
+   * What is seen, where the beat is a row of an AV sheet (addendum 05 §6).
+   *
+   * The second column of a commercial board: plain lines, because that is
+   * what a visual column is. The manuscript above it is the audio. A format
+   * that has no sheet never reads it, and it is empty until it is written.
+   */
+  visual: z.string().default(''),
+  /**
+   * How long the row runs, in whole seconds (addendum 05 §4).
+   *
+   * The writer's, never derived. A four-word line can hold the screen for six
+   * seconds, so nothing here guesses at it from the words; zero means nobody
+   * has said yet, and the totals say so.
+   */
+  seconds: z.number().int().min(0).default(0),
   ...timestamps,
 });
 export type Beat = z.infer<typeof beatSchema>;

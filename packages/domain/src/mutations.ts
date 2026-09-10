@@ -330,7 +330,20 @@ const reanchorMarkers = (file: ProjectFile, removedUnitIds: ReadonlySet<string>)
 export const updateBeat = (
   file: ProjectFile,
   beatId: BeatId,
-  patch: Partial<Pick<Beat, 'title' | 'summary' | 'status' | 'color' | 'revisionName' | 'inScript'>> & { manuscript?: ManuscriptSegment },
+  patch: Partial<
+    Pick<
+      Beat,
+      | 'title'
+      | 'summary'
+      | 'status'
+      | 'color'
+      | 'revisionName'
+      | 'inScript'
+      // A row of an AV sheet: what is seen, and how long it runs (addendum 05).
+      | 'visual'
+      | 'seconds'
+    >
+  > & { manuscript?: ManuscriptSegment },
 ): ProjectFile => {
   if (!file.beats.some((beat) => beat.id === beatId)) throw new DomainError(`Beat ${beatId} does not exist`);
   return touchProject({

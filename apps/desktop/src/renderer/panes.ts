@@ -47,12 +47,19 @@ export const PANE_NAMES: Record<PaneId, string> = {
  * called (spec §6.4). Nothing else changes: it is the same section doing the
  * same thing, under the name its writer uses for it.
  */
-export const paneNamesFor = (format: ProjectFormat | null): Record<PaneId, string> =>
-  format === 'novel' || format === 'short_story' ? { ...PANE_NAMES, script: 'Manuscript' } : PANE_NAMES;
+export const paneNamesFor = (format: ProjectFormat | null): Record<PaneId, string> => {
+  if (format === 'novel' || format === 'short_story') return { ...PANE_NAMES, script: 'Manuscript' };
+  // Short form is written on a sheet, not in a script (addendum 05 §1).
+  if (format === 'short_form') return { ...PANE_NAMES, script: 'Sheet' };
+  return PANE_NAMES;
+};
 
 /** What the finished pages are called in this format. */
-export const scriptWordFor = (format: ProjectFormat | null): string =>
-  format === 'novel' || format === 'short_story' ? 'manuscript' : 'script';
+export const scriptWordFor = (format: ProjectFormat | null): string => {
+  if (format === 'novel' || format === 'short_story') return 'manuscript';
+  if (format === 'short_form') return 'sheet';
+  return 'script';
+};
 
 export const SLOT_NAMES: Record<SlotId, string> = {
   left: 'Side column',

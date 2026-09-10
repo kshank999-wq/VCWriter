@@ -1,5 +1,6 @@
 import { type BeatId, type ProjectFile, type StoryLayout, type StructuralUnitId } from '@vcwriter/domain';
 import { StoryView, type ScriptDisplay, type ScriptLayout } from './StoryView';
+import { AvSheet } from './AvSheet';
 import type { PageStyle } from './ScriptOptions';
 import { paneNamesFor } from '../panes';
 
@@ -36,20 +37,30 @@ interface MasterPanelProps {
  */
 export function MasterPanel(props: MasterPanelProps) {
   const { focusMode } = props;
-  // "Script", or "Manuscript" in a novel or a short story (§6.4).
+  // "Script", "Manuscript" in a novel or a short story (§6.4), "Sheet" in
+  // short form — where the document is an AV sheet (addendum 05 §1).
   const name = paneNamesFor(props.file.project.format).script;
+
+  // Short form does not have a script to show: the sheet stands where the
+  // Script stands, rather than beside it.
+  const body =
+    props.file.project.format === 'short_form' ? (
+      <AvSheet file={props.file} {...(props.onOpenBeat ? { onOpenRow: props.onOpenBeat } : {})} />
+    ) : (
+      <StoryView {...props} />
+    );
 
   if (focusMode) {
     return (
       <section className="master focus" aria-label={name}>
-        <StoryView {...props} />
+        {body}
       </section>
     );
   }
 
   return (
     <section className="master" aria-label="Master panel">
-      <StoryView {...props} />
+      {body}
     </section>
   );
 }

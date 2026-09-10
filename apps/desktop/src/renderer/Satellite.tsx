@@ -20,6 +20,7 @@ import { addBeatAfter, addSceneAfter } from './structure';
 import { beatIdOf, paneTitle, type PaneKey } from './panes';
 import { applyScheme, DEFAULT_SCHEME, type SchemeId } from './themes';
 import { StoryView, DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay, type ScriptLayout } from './components/StoryView';
+import { AvSheet } from './components/AvSheet';
 import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
 import { ResearchBody } from './components/ResearchWindow';
 import { TimelineViewer } from './components/TimelineViewer';
@@ -188,6 +189,14 @@ function Section({
   }
 
   if (pane === 'script') {
+    // Short form's document is the sheet, in its own window as anywhere else.
+    if (file.project.format === 'short_form') {
+      return (
+        <div className="satellite-body master">
+          <AvSheet file={file} onOpenRow={(beatId) => setSelectedBeatId(beatId)} />
+        </div>
+      );
+    }
     return (
       <div className="satellite-body master">
         <StoryView
