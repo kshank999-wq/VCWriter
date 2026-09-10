@@ -5681,6 +5681,44 @@ dialog.lane-dialog.title-page-dialog {
   font-size: 12px;
 }
 
+.av-totals strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Over the slot it was sold against: the number says so, and nothing else
+   happens — the writer decides what to cut (§4a). */
+.av-over {
+  color: var(--danger, #d38b8b) !important;
+}
+
+.av-limit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.av-limit .small {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.av-limit .av-time-line {
+  height: auto;
+}
+
+.av-limit .av-time {
+  width: 68px;
+  text-align: left;
+  border-color: var(--border);
+}
+
+.av-over-note {
+  font-size: 11px;
+  color: var(--danger, #d38b8b);
+}
+
 .av-empty {
   max-width: 560px;
   margin: 0;
@@ -5721,9 +5759,16 @@ dialog.lane-dialog.title-page-dialog {
   max-width: 100%;
 }
 
+/* The two text columns are the sheet; they do not get squeezed to one word a
+   line to make room for the furniture. */
+.av-audio,
+.av-visual {
+  min-width: 190px;
+}
+
 .av-table {
   width: 100%;
-  min-width: 880px;
+  min-width: 1080px;
   border-collapse: collapse;
   font-size: 12.5px;
 }
@@ -5752,12 +5797,14 @@ dialog.lane-dialog.title-page-dialog {
   min-width: 132px;
 }
 
+/* One line each, the same height on both sides, so a shot's time and its
+   word count sit on the line they belong to. */
 .av-time-line {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  min-height: 22px;
+  height: 26px;
   font-size: 11.5px;
   white-space: nowrap;
 }
@@ -6160,4 +6207,53 @@ input.av-segment-line:focus,
 .segment-empty {
   padding: 8px 10px;
   font-size: 11px;
+}
+
+/* ------------------------------------ the storyboard over the timeline
+   Addendum 05 §3a. The picture over the time, the way an edit suite has it:
+   each frame at the width of the shot it belongs to, so running your eye
+   along the strip is looking at the cut. */
+
+.board-cell {
+  display: flex;
+  gap: 2px;
+  align-items: stretch;
+  padding: 3px 2px;
+  min-height: 54px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.board-frame {
+  flex: 1 1 0;
+  /* Never so thin it stops being a picture. */
+  min-width: 26px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--panel-2);
+  cursor: pointer;
+}
+
+.board-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.board-frame:hover {
+  border-color: var(--gold-deep);
+}
+
+/* A shot nobody has drawn yet keeps its place: the gap in the strip is the
+   frame that is missing, which is a thing worth seeing. */
+.board-frame.empty {
+  border-style: dashed;
+  background: transparent;
+}
+
+.board-cell.tail {
+  border-right: 0;
 }

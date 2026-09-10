@@ -13,6 +13,7 @@ import {
   setRowAudio,
   setRowDialogue,
   setRowHead,
+  setMaxSeconds,
   setRowTail,
   readSeconds,
   setRowVisual,
@@ -409,5 +410,45 @@ describe('storyboard frames', () => {
     });
     expect(older.assets).toEqual([]);
     expect(avSheet(older).segments[0]?.rows.every((row) => row.frame === null)).toBe(true);
+  });
+});
+
+describe('the slot it has to fit', () => {
+  it('has none until one is set, and then nothing is over', () => {
+    const sheet = avSheet(commercial());
+    expect(sheet.limit).toBe(0);
+    expect(sheet.over).toBe(false);
+  });
+
+  it('says when the board runs past its slot', () => {
+    let file = setMaxSeconds(commercial(), 30);
+    // Four, five and six: fifteen seconds in a thirty.
+    expect(avSheet(file).limit).toBe(30);
+    expect(avSheet(file).seconds).toBe(15);
+    expect(avSheet(file).over).toBe(false);
+
+    file = setRowHead(file, file.beats[0]!.id, 20);
+    expect(avSheet(file).seconds).toBe(35);
+    expect(avSheet(file).over).toBe(true);
+  });
+
+  it('is exactly its slot at exactly its slot', () => {
+    // Thirty in a thirty is a thirty, not a problem.
+    let file = setMaxSeconds(commercial(), 15);
+    expect(avSheet(file).over).toBe(false);
+    file = setMaxSeconds(file, 14);
+    expect(avSheet(file).over).toBe(true);
+  });
+
+  it('refuses nothing: the sheet says so and the writer decides', () => {
+    const file = setMaxSeconds(commercial(), 5);
+    // Over its slot, and every word of it still there.
+    expect(avSheet(file).over).toBe(true);
+    expect(avSheet(file).words).toBe(26);
+  });
+
+  it('never keeps a negative or a fraction of a second', () => {
+    expect(avSheet(setMaxSeconds(commercial(), -30)).limit).toBe(0);
+    expect(avSheet(setMaxSeconds(commercial(), 29.6)).limit).toBe(30);
   });
 });

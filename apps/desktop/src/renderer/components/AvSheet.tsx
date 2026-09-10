@@ -11,6 +11,7 @@ import {
   setRowAudio,
   setRowFrame,
   setRowDialogue,
+  setMaxSeconds,
   setRowHead,
   setRowTail,
   setRowVisual,
@@ -52,24 +53,60 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false }: AvSheet
   const sheet = avSheet(file);
   const rows = sheet.segments.reduce((total, segment) => total + segment.rows.length, 0);
 
-  const addSegment = () =>
+  /**
+   * A new segment, numbered where it falls and waiting to be named — the
+   * caret lands in its title, because a segment nobody named is a segment
+   * nobody can find (§3a).
+   */
+  const addSegment = () => {
+    const at = sheet.segments.length + 1;
     onUpdate((current) => {
       const lane = current.lanes[0];
       if (!lane) return current;
       const made = addUnit(current, { laneId: lane.id, title: '' });
       return addRow(made.file, { unitId: made.unit.id }).file;
     });
+    requestAnimationFrame(() => {
+      const box = document.querySelector<HTMLInputElement>(`[aria-label="Name of segment ${at}"]`);
+      box?.focus();
+    });
+  };
 
   return (
     <div className="av-sheet">
       <header className="av-masthead">
+        {/* The title is the project's, given when the project was started —
+            not typed again here, where it could disagree with itself (§2). */}
         <h1>
           <span className="av-version">{sheet.version}</span>
           {sheet.title}
         </h1>
-        <p className="muted">
-          Total RT {formatRt(sheet.seconds)} • Total Words: {sheet.words}
+        <p className="muted av-totals">
+          Total RT{' '}
+          <strong className={sheet.over ? 'av-over' : undefined}>{formatRt(sheet.seconds)}</strong> • Total
+          Words: {sheet.words}
         </p>
+
+        {/* The slot it has to fit. A thirty is thirty (§4a). */}
+        <div className="av-limit">
+          <span className="muted small">Time constraint</span>
+          {readOnly ? (
+            <span>{sheet.limit > 0 ? formatRt(sheet.limit) : 'none'}</span>
+          ) : (
+            <Time
+              label="The time this has to fit"
+              name=""
+              seconds={sheet.limit}
+              readOnly={false}
+              onSet={(seconds) => onUpdate((current) => setMaxSeconds(current, seconds))}
+            />
+          )}
+          {sheet.over ? (
+            <span className="av-over-note" role="status">
+              Over by {formatRt(sheet.seconds - sheet.limit)}
+            </span>
+          ) : null}
+        </div>
       </header>
 
       {rows === 0 && sheet.segments.length === 0 ? (
@@ -292,6 +329,8 @@ function Row({ row, readOnly, onUpdate, onOpen }: RowProps) {
         />
       </td>
 
+      {/* Three lines, on the same three lines as the times beside them, so
+          the two columns read as the one thing they are. */}
       <td className="av-num av-words">
         <span className="av-time-line muted">—</span>
         <span className="av-time-line">

@@ -153,9 +153,29 @@ export function MasterTimeline({
   // is more. Past `rows` beats a second column starts and the block stretches
   // rather than growing a scrollbar; every track shares these columns, so the
   // lanes stay lined up by story position.
-  const widths = spans.map((span) =>
-    Math.max(spanWidth(span, pixelsPerPage), beatsWidth(beatsForUnit(file, span.unit.id).length, rows)),
-  );
+  /**
+   * How wide each segment is drawn.
+   *
+   * A script is measured in pages, so a scene is as wide as its pages. A
+   * commercial has no pages — it has seconds — so a segment is as wide as its
+   * own running time (addendum 05 §4), which is what makes the board strip
+   * above it read as a cut rather than as a row of stamps.
+   */
+  const widths = spans.map((span) => {
+    const beats = beatsForUnit(file, span.unit.id);
+    if (shortForm) {
+      const seconds = beats
+        .filter((beat) => beat.inScript)
+        .reduce(
+          (total, beat) => total + (beat.headSeconds ?? 0) + (beat.seconds ?? 0) + (beat.tailSeconds ?? 0),
+          0,
+        );
+      // A second is a comfortable slice at the middle of the zoom, and a
+      // segment nobody has timed is still wide enough to be clicked.
+      return Math.max(140, Math.round(seconds * (pixelsPerPage / 12)));
+    }
+    return Math.max(spanWidth(span, pixelsPerPage), beatsWidth(beats.length, rows));
+  });
   const columns = `${HEAD_WIDTH}px ${widths.map((width) => `${width}px`).join(' ')} minmax(96px, 1fr)`;
   const storyIndex = (unitId: StructuralUnitId) => spans.findIndex((span) => span.unit.id === unitId);
 
@@ -267,6 +287,19 @@ export function MasterTimeline({
               {layout.totalPages < 0.05 ? '' : `${Math.ceil(layout.totalPages)} pp. · ${timecode(layout.totalPages)}`}
             </span>
           </div>
+
+          {/* The storyboard, over the segments: each frame at the width of
+              the time it holds, so running your eye along it is looking at
+              the cut (addendum 05 §3a). */}
+          {shortForm ? (
+            <>
+              <div className="track-head">Board</div>
+              {spans.map((span) => (
+                <FrameStrip key={span.unit.id} file={file} unitId={span.unit.id} onSelectBeat={onSelectBeat} />
+              ))}
+              <div className="board-cell tail" />
+            </>
+          ) : null}
 
           {/* The markers as bands: acts in a script, chapters in a book.
               A commercial has neither, and nothing is linked across a
@@ -917,6 +950,50 @@ function SegmentDialogue({
           >
             <span className="segment-said">{said || '—'}</span>
             <span className="segment-rt muted">{formatRt(beat.seconds ?? 0)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+
+/**
+ * One segment's frames, in order, along the width it runs (addendum 05 §3a).
+ *
+ * The storyboard is the track above the timeline, the way an edit suite puts
+ * the picture over the time. A shot with no frame yet keeps its place — the
+ * gap in the strip is the shot that has not been drawn, which is a thing
+ * worth seeing.
+ */
+function FrameStrip({
+  file,
+  unitId,
+  onSelectBeat,
+}: {
+  file: ProjectFile;
+  unitId: StructuralUnitId;
+  onSelectBeat(beatId: BeatId): void;
+}) {
+  const frames = new Map((file.assets ?? []).map((asset) => [asset.id as string, asset]));
+  const beats = beatsForUnit(file, unitId).filter((beat) => beat.inScript);
+
+  return (
+    <div className="board-cell">
+      {beats.map((beat) => {
+        const frame = beat.imageAssetId ? frames.get(beat.imageAssetId as string) : undefined;
+        const seconds = (beat.headSeconds ?? 0) + (beat.seconds ?? 0) + (beat.tailSeconds ?? 0);
+        return (
+          <button
+            type="button"
+            key={beat.id}
+            className={frame ? 'board-frame' : 'board-frame empty'}
+            style={{ flexGrow: Math.max(1, seconds) }}
+            title={frame ? frame.name || 'A frame' : 'No frame yet'}
+            aria-label={frame ? `Frame: ${frame.name || 'untitled'}` : 'A shot with no frame yet'}
+            onClick={() => onSelectBeat(beat.id)}
+          >
+            {frame ? <img src={frame.data} alt="" /> : null}
           </button>
         );
       })}

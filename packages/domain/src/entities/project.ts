@@ -116,6 +116,15 @@ export const projectSettingsSchema = z.object({
    */
   actBreaks: z.boolean().default(false),
   /**
+   * The slot a short-form piece has to fit (addendum 05 §4a), in seconds.
+   *
+   * A thirty is thirty: a commercial is sold against a length, and a board
+   * that runs to thirty-four is not a board, it is a problem. Zero means no
+   * constraint has been set, which is the honest state of a piece nobody has
+   * sold yet.
+   */
+  maxSeconds: z.number().int().min(0).default(0),
+  /**
    * What a new episode carries over from the ones before it (addendum 02
    * §17). Remembered rather than asked afresh every week; an empty object
    * means the format's own answer. Kept loose here so the shape lives with

@@ -1,6 +1,6 @@
 # Addendum 05 — Short form: the AV sheet, and the board
 
-Status: stages 1–5 built, September 2026; the rest specified. Fills in what addendum 02
+Status: stages 1–6 built, September 2026; the rest specified. Fills in what addendum 02
 §14 left open: *"the module that makes something of it, with the timings and
 the shapes that kind of work needs, is a later piece of work."* This is that
 piece.
@@ -176,6 +176,29 @@ takes to cross a room.
 - Segment and total times are sums, and are always visible: at the head, and
   at the foot of each segment.
 
+## 4a. The slot
+
+**A thirty is thirty.** A commercial is not sold by the page, it is bought
+against a length — and a board that runs to thirty-four is not long, it is
+unsellable. So the sheet carries the number it has to hit, in the masthead
+directly under the title where the total is read:
+
+    COMMERCIAL 1
+    Time constraint  [ 00:30 ]     Total RT 00:29 • Total Words: 48
+
+- **It is typed once, the way any time on the sheet is typed** — `30`, `0:30`,
+  `00:30` — and it belongs to the project, not to the view.
+- Empty, or zero, means nobody has set one, which is the honest state of a
+  piece nobody has sold yet. The sheet then says nothing about length.
+- **Over it, the total turns red**, and beside the constraint the sheet says
+  by how much: `Over by 00:04`. That is the whole of the warning.
+
+**Nothing is refused.** The constraint is a hard number, not a hard stop: a
+writer is allowed to be four seconds over at four in the afternoon, and the
+sheet's job is to make sure they know it — the same as a shot whose words
+will not fit its time (§7). A tool that would not let you write the long
+version is a tool you would write the long version outside of.
+
 ## 5. Playback
 
 **Play the board.** From the sheet or the timeline: the frames advance at
@@ -232,9 +255,9 @@ Everything below already exists on a beat except where it says otherwise.
    them.
 5. **Built.** A shot's three times (§4): header, dialogue and tail, the
    dialogue estimated from its words until the writer says otherwise.
-6. **One timeline** (§3a): the frames above, the segments and their dialogue
-   below, and a playhead through both.
-7. **Playback**, with the voices already assigned.
+6. **Built.** One timeline (§3a): the frames above, the segments and their
+   dialogue below. The playhead through both comes with playback.
+7. **Playback**, with the voices already assigned, and the playhead.
 8. **Print and export**: the sheet as it is on screen, and a board.
 
 Stage 1 alone is worth having: a writer who can see their commercial as an AV
@@ -361,3 +384,30 @@ hands it back.
 **+ Segment** sits at the foot of every segment as well as at the end, because
 a board is written a segment at a time and the next one starts from where the
 last one ended.
+
+### Stage 6 — the strip, the slot, and lining the two columns up
+
+**The frames sit above the timeline**, in a track of their own called
+`BOARD` — one plate to a shot, in story order, each as wide as the time it
+holds, so running an eye along the strip is looking at the cut. A shot with
+no picture keeps its place as an empty plate rather than closing the gap: a
+board with a hole in it should look like a board with a hole in it.
+
+Under it, a segment is now **as wide as its seconds**, not as wide as its
+pages. A commercial has no pages, and drawing one against a page count drew
+every segment the same width however long it ran.
+
+**Duration and Words +/− line up.** Each of the three duration lines is the
+height of the line beside it, so `6 words` sits on the dialogue's own row
+rather than a little above it. They are one reading, and now they look like
+one.
+
+**The slot** (§4a) sits under the title: *Time constraint*, a box to type it
+in, and — over it — the total in red with `Over by 00:04` beside the box.
+
+**A new segment arrives with its name waiting.** `+ Segment` puts the cursor
+in the new segment's title, because the thing a writer wants to do the moment
+they add SEGMENT 3 is say what it is.
+
+The title itself was never typed on the sheet and still is not: it is the
+title page's, which is the one set when the project is started (§2).

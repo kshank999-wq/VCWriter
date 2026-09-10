@@ -133,7 +133,9 @@ describe('the sheet in place of the script', () => {
     panel(file);
     expect(screen.getByText('Commercial 1')).toBeTruthy();
     expect(screen.getByText('v1')).toBeTruthy();
-    expect(screen.getByText(/Total RT 00:09 • Total Words: 15/)).toBeTruthy();
+    expect(document.querySelector('.av-totals')?.textContent).toContain('Total RT');
+    expect(document.querySelector('.av-totals')?.textContent).toContain('00:09');
+    expect(document.querySelector('.av-totals')?.textContent).toContain('Total Words: 15');
 
     cleanup();
     file = setTitlePage(file, { title: 'Know Your Enemy', revision: 'v3' });
@@ -369,8 +371,8 @@ describe('a shot’s three times', () => {
     expect(screen.getByLabelText('Action before the line in shot 1.1')).toHaveProperty('value', '00:02');
     expect(screen.getByLabelText('Action after the line in shot 1.1')).toHaveProperty('value', '00:03');
     // Four for the line, plus two and three, plus the second shot's five:
-    // the segment's foot says fourteen, and so does the total.
-    expect(screen.getAllByText('00:14')).toHaveLength(2);
+    // the masthead says fourteen, and so do the segment's two figures.
+    expect(screen.getAllByText('00:14')).toHaveLength(3);
   });
 
   it('hands the line back to its words when the box is cleared', () => {
@@ -392,5 +394,41 @@ describe('a shot’s three times', () => {
     fireEvent.click(screen.getByRole('button', { name: '+ Segment' }));
     expect(screen.getAllByRole('button', { name: '+ Segment' })).toHaveLength(2);
     expect(screen.getByLabelText('Name of segment 2')).toBeTruthy();
+  });
+});
+
+describe('the slot it has to fit', () => {
+  it('offers a box for it, empty until one is set', () => {
+    panel(commercial());
+    expect(screen.getByText('Time constraint')).toBeTruthy();
+    expect(screen.getByLabelText('The time this has to fit')).toHaveProperty('value', '00:00');
+  });
+
+  it('turns the total red and says by how much when the board runs over', () => {
+    panel(commercial());
+    const limit = screen.getByLabelText('The time this has to fit');
+    fireEvent.change(limit, { target: { value: '30' } });
+    fireEvent.blur(limit);
+
+    // Nine seconds in a thirty: nothing to say.
+    expect(document.querySelector('.av-over')).toBeNull();
+    expect(screen.queryByText(/Over by/)).toBeNull();
+
+    const head = screen.getByLabelText('Action before the line in shot 1.1');
+    fireEvent.change(head, { target: { value: '40' } });
+    fireEvent.blur(head);
+
+    expect(document.querySelector('.av-over')?.textContent).toBe('00:49');
+    expect(screen.getByText('Over by 00:19')).toBeTruthy();
+  });
+
+  it('refuses nothing, and says so with the words still there', () => {
+    panel(commercial());
+    const limit = screen.getByLabelText('The time this has to fit');
+    fireEvent.change(limit, { target: { value: '2' } });
+    fireEvent.blur(limit);
+    expect(screen.getByText(/Over by/)).toBeTruthy();
+    // Every word of it still on the sheet.
+    expect(screen.getByLabelText('What is heard in row 1.1')).toBeTruthy();
   });
 });

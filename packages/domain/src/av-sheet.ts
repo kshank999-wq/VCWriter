@@ -115,6 +115,12 @@ export interface AvSheet {
   segments: AvSegment[];
   words: number;
   seconds: number;
+  /**
+   * The slot it has to fit, in seconds, and whether it does (§4a). Zero is no
+   * constraint, and then nothing is over.
+   */
+  limit: number;
+  over: boolean;
 }
 
 /** The beat's manuscript as the sheet shows it: its lines, one under another. */
@@ -191,12 +197,15 @@ export const avSheet = (file: ProjectFile): AvSheet => {
     };
   });
 
+  const limit = file.settings.maxSeconds ?? 0;
   return {
     title: file.settings.titlePage?.title?.trim() || file.project.title,
     version: versionOf(file),
     segments,
     words,
     seconds,
+    limit,
+    over: limit > 0 && seconds > limit,
   };
 };
 

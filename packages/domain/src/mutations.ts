@@ -817,6 +817,16 @@ export const setActBreaks = (file: ProjectFile, actBreaks: boolean): ProjectFile
   touchProject({ ...file, settings: { ...file.settings, actBreaks } });
 
 /**
+ * The slot a short-form piece has to fit (addendum 05 §4a).
+ *
+ * Zero clears it. Nothing is ever refused for being over — the sheet says so
+ * and the writer decides, which is the only way a constraint is useful while
+ * the work is still being written.
+ */
+export const setMaxSeconds = (file: ProjectFile, maxSeconds: number): ProjectFile =>
+  touchProject({ ...file, settings: { ...file.settings, maxSeconds: Math.max(0, Math.round(maxSeconds)) } });
+
+/**
  * The title page (spec §6.1).
  *
  * A patch, because the six fields are filled in at different moments: the
