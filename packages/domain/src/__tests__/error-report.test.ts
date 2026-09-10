@@ -16,9 +16,9 @@ const context: ErrorContext = {
 
 describe('redaction', () => {
   it('removes Windows paths, which carry the project title', () => {
-    const redacted = redact(String.raw`Cannot read C:\Users\Kevin\Documents\The Lighthouse.vcw`);
+    const redacted = redact(String.raw`Cannot read C:\Users\Ken\Documents\The Lighthouse.vcw`);
     expect(redacted).toBe('Cannot read <path>');
-    expect(redacted).not.toContain('Kevin');
+    expect(redacted).not.toContain('Ken');
     expect(redacted).not.toContain('Lighthouse');
   });
 
@@ -47,7 +47,7 @@ describe('redaction', () => {
     // directory and leaves "The Lighthouse.vcw" — the project's title, which
     // is the single thing most worth not storing.
     expect(redact('failed on projects/My Great Novel.vcw today')).toBe('failed on <path> today');
-    expect(redact(String.raw`saving C:\Users\Kevin\Act Two Rewrite.vcw`)).toBe('saving <path>');
+    expect(redact(String.raw`saving C:\Users\Ken\Act Two Rewrite.vcw`)).toBe('saving <path>');
   });
 
   it('leaves ordinary prose alone', () => {
@@ -75,7 +75,7 @@ describe('building a report', () => {
   });
 
   it('redacts the message as well as the stack', () => {
-    const error = new Error(String.raw`ENOENT: no such file, open 'C:\Users\Kevin\Act One.vcw'`);
+    const error = new Error(String.raw`ENOENT: no such file, open 'C:\Users\Ken\Act One.vcw'`);
     const report = buildErrorReport(error, context);
     expect(report.errorMessage).not.toContain('Act One');
     expect(report.errorMessage).toContain('ENOENT');

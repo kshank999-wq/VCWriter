@@ -2,7 +2,7 @@
 
 ## Reporting a revision
 
-**Finish every revision with a link.** Kevin wants to look at the change, not
+**Finish every revision with a link.** Ken wants to look at the change, not
 read about it.
 
 | Where the work is | What to hand over |
@@ -57,7 +57,7 @@ bridge stubbed. Looking at it catches what tests do not.
 ## Conventions
 
 - Develop on `claude/vc-writer-dev-spec-ymc7zy`. Push to `main` only when
-  Kevin says so.
+  Ken says so.
 - The beat's internal title is authoring metadata and never enters the
   manuscript (spec §5.3, §19).
 - The writing rules follow Final Draft: Return starts the next line in the

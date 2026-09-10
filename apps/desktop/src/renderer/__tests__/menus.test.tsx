@@ -242,18 +242,18 @@ describe('page setup', () => {
     expect(author.value).toBe('');
     expect(author.placeholder).toBe('K. Shank');
 
-    fireEvent.change(author, { target: { value: 'Kevin Shank' } });
+    fireEvent.change(author, { target: { value: 'Ken Shank' } });
     fireEvent.change(screen.getByLabelText('Revision'), { target: { value: 'Second draft' } });
 
     // The sheet shows what Update page would do, so the layout can be judged
     // before it is committed — but the document has not changed yet. The page
     // supplies the words; the field held only the name.
-    expect(document.querySelector('.title-page-sheet')?.textContent).toContain('WrittenbyKevin Shank');
+    expect(document.querySelector('.title-page-sheet')?.textContent).toContain('WrittenbyKen Shank');
     expect(JSON.parse(screen.getByTestId('title-page').textContent as string)['author']).toBe('');
 
     fireEvent.click(screen.getByRole('button', { name: 'Update page' }));
     const page = JSON.parse(screen.getByTestId('title-page').textContent as string) as Record<string, string>;
-    expect(page['author']).toBe('Kevin Shank');
+    expect(page['author']).toBe('Ken Shank');
     expect(page['revision']).toBe('Second draft');
   });
 

@@ -1,6 +1,6 @@
 # Addendum 03 — Story Sculptor
 
-Status: specified, September 2026. **Rewritten** from Kevin's diagram of
+Status: specified, September 2026. **Rewritten** from Ken's diagram of
 10 September; §14 says what changed and what happens to the code built
 against the first draft. Extends §5 (story structure) and §19 (the hierarchy)
 of the master specification, and adds an area alongside the workspace of

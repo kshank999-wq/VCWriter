@@ -100,7 +100,7 @@ The response shape has no field that could carry replacement prose: the pass
 reads, it does not rewrite. `ANTHROPIC_API_KEY` lives here and never ships in
 an installer.
 
-Administrators are entitled without a license row — nobody sold Kevin a copy
+Administrators are entitled without a license row — nobody sold Ken a copy
 of his own application. The 429 is a spending limit rather than a noise
 limit, so it is counted per account (60 an hour) instead of per address.
 
@@ -125,7 +125,7 @@ licenses on the authenticated account.
 
 ```jsonc
 // request
-{ "serial": "VCW-…", "deviceFingerprint": "…", "deviceName": "Kevin's laptop",
+{ "serial": "VCW-…", "deviceFingerprint": "…", "deviceName": "Ken's laptop",
   "platform": "windows", "appVersion": "1.0.0" }
 // 200
 { "activated": true, "reason": "new_device" | "already_active" | "reactivated" }

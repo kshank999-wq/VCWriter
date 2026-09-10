@@ -1558,7 +1558,7 @@ administrator gate on the same origin, so its cookie is enough.
 Three things have to be true before the button is live — the deployment has
 a key, this copy is signed in, and the account holds a licence — and the
 button says which one is missing rather than failing after the click.
-Administrators are entitled without a licence row: nobody sold Kevin a copy
+Administrators are entitled without a licence row: nobody sold Ken a copy
 of his own application, and a feature the people who build it cannot try is
 a feature nobody checks. It is a spending limit, not a noise limit, so it is
 counted per account rather than per address.

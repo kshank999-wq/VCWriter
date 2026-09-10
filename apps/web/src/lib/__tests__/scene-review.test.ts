@@ -127,7 +127,7 @@ describe('who may ask for a read', () => {
   });
 
   it('lets an administrator through without a licence row', async () => {
-    // Nobody sold Kevin a copy of his own application.
+    // Nobody sold Ken a copy of his own application.
     state.cookieUserId = 'kevin';
     state.admin = true;
     expect((await post()).status).toBe(200);

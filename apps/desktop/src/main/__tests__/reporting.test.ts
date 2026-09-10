@@ -56,8 +56,8 @@ describe('error reporting', () => {
     const { reportError, setReportingEnabled } = await load();
     await setReportingEnabled(true);
 
-    const error = new Error(String.raw`ENOENT: open 'C:\Users\Kevin\The Lighthouse.vcw'`);
-    error.stack = `${error.message}\n    at saveProject (C:\\Users\\Kevin\\app\\out\\main\\index.js:12:3)`;
+    const error = new Error(String.raw`ENOENT: open 'C:\Users\Ken\The Lighthouse.vcw'`);
+    error.stack = `${error.message}\n    at saveProject (C:\\Users\\Ken\\app\\out\\main\\index.js:12:3)`;
 
     expect(await reportError(error, 'main')).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -66,8 +66,8 @@ describe('error reporting', () => {
     const body = JSON.parse(String(init.body)) as Record<string, string>;
 
     expect(body['errorMessage']).not.toContain('Lighthouse');
-    expect(body['errorMessage']).not.toContain('Kevin');
-    expect(body['stack']).not.toContain('Kevin');
+    expect(body['errorMessage']).not.toContain('Ken');
+    expect(body['stack']).not.toContain('Ken');
     expect(body['stack']).toContain('at saveProject');
     expect(body['appVersion']).toBe('1.2.3');
     expect(body['surface']).toBe('main');

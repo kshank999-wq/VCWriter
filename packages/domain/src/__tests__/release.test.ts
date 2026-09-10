@@ -241,7 +241,7 @@ describe('what the customer sees about their devices', () => {
 
   it('names a device well enough to pick the right one to free', () => {
     const key = license();
-    expect(describeDevice(activation(key.id, { deviceName: "Kevin's laptop" }))).toBe("Kevin's laptop (Windows)");
+    expect(describeDevice(activation(key.id, { deviceName: "Ken's laptop" }))).toBe("Ken's laptop (Windows)");
     expect(
       describeDevice(activation(key.id, { deviceFingerprint: 'abcdef123456', platform: 'macos' })),
     ).toBe('Unnamed Mac · …123456');
