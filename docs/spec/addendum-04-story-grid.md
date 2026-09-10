@@ -152,7 +152,7 @@ Clicking a point goes to the scene.
    from a row.
 4. **Built.** The AI structural read extended to answer the five
    commandments (§9, stage 4).
-5. The value graph.
+5. **Built.** The value graph (§9, stage 5).
 6. Print and export the grid, as the Reports pages already print.
 
 Stage 1 alone is worth having: a writer who can see what their genre owes
@@ -280,3 +280,38 @@ story's inciting incident is a judgement, not a measurement (§4).
 A scene read before this existed opens with four unanswered questions rather
 than four wrong answers — they default to nothing, like every other field
 added to a record that was already in the wild.
+
+### Stage 5 — the value graph
+
+Above the grid, before the fifty rows it summarises: **the shape of the story
+first, then what it is made of.**
+
+**The line is a running total, not a column of bars.** §6 asks whether a story
+"never goes below the line, or never comes back above it", and only a value
+that accumulates can do either — a bar chart of per-scene polarity crosses the
+axis the moment any single scene is negative, which says nothing at all. So
+each scene moves the line by one and the line remembers: up is up, down is
+down, and a scene the writer marked as moving both ways ends where it began.
+
+**A scene nobody has answered holds the line without claiming it stayed
+still.** The two are different facts and the grid has always kept them apart;
+a graph that quietly read silence as *flat* would be inventing the writer's
+reading for them. Those points are drawn hollow.
+
+- **Clicking a point goes to that scene**, as §6 asks.
+- **Act dividers** run down the chart with their labels, so a fall inside one
+  act reads differently from a fall across the whole story.
+- The dashed baseline is where the story started. Everything is read against
+  it.
+
+Under it, at most one sentence — *the value never falls below where it
+started*, or *once the value goes below where it started, it never comes
+back*. It is **an observation and not a mark** (§7): a comedy that rises all
+the way is a real thing, and so is a story that has forgotten to cost its
+hero anything. It is said only where four or more scenes have been answered,
+because a story of three scenes has not earned being told anything, and it
+says nothing at all about a story that turns.
+
+The chart is drawn at its own width and scrolls: a sixty-scene script is a
+long line, and squeezing it to fit would flatten the very thing being looked
+at.

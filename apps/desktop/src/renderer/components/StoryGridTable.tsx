@@ -15,6 +15,7 @@ import {
   type SceneGrid,
   type StructuralUnitId,
 } from '@vcwriter/domain';
+import { ValueGraph } from './ValueGraph';
 
 /**
  * The grid itself (addendum 04 §5).
@@ -59,6 +60,10 @@ export function StoryGridTable({ file, onUpdate, onGoToUnit }: StoryGridTablePro
 
   return (
     <section className="grid-table-section">
+      {/* The polarity column, plotted, before the column itself (§6): the
+          shape of the story first, then the fifty rows it is made of. */}
+      <ValueGraph rows={all} {...(onGoToUnit ? { onGoToUnit } : {})} />
+
       <h3>
         The grid
         <span className="muted small grid-count">

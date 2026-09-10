@@ -18,6 +18,9 @@ import {
   setSceneHeading,
   setSceneRead,
   storyGridRows,
+  valueGraph,
+  valueGraphNote,
+  type SceneGrid,
   type SceneVerdict,
   viewGridRows,
   setSceneCommandment,
@@ -468,5 +471,70 @@ describe('a read, in the grid', () => {
     // Theirs in the answer, the read's beside it as an offer.
     expect(rows[0]?.commandments.inciting).toBe('The keeper does not come back.');
     expect(rows[0]?.suggested.inciting).toBe('The lamp goes out.');
+  });
+});
+
+/**
+ * The value graph (§6): the polarity column, plotted as a running line, and
+ * the one thing it is willing to say out loud.
+ */
+describe('the value graph', () => {
+  const withPolarities = (...shifts: SceneGrid['polarity'][]): ProjectFile => {
+    let file = script();
+    for (let extra = 1; extra < shifts.length; extra += 1) file = scene(file, `Scene ${extra + 1}`);
+    const order = unitsInStoryOrder(file);
+    shifts.forEach((polarity, index) => {
+      const unit = order[index];
+      if (unit && polarity !== '') file = setSceneGrid(file, unit.id, { polarity });
+    });
+    return file;
+  };
+
+  const graphOf = (...shifts: SceneGrid['polarity'][]) => valueGraph(storyGridRows(withPolarities(...shifts)));
+
+  it('runs a total rather than a column of bars', () => {
+    // Down, down, up: the line goes to −2 and climbs back to −1.
+    expect(graphOf('down', 'down', 'up').points.map((point) => point.value)).toEqual([-1, -2, -1]);
+  });
+
+  it('holds the line where nobody has said, without claiming it stayed still', () => {
+    const graph = graphOf('up', '', 'up');
+    expect(graph.points.map((point) => point.value)).toEqual([1, 1, 2]);
+    expect(graph.points.map((point) => point.said)).toEqual([true, false, true]);
+    // Which is not the same as a scene the writer called flat.
+    expect(graphOf('up', 'flat', 'up').points[1]?.said).toBe(true);
+  });
+
+  it('counts a scene that moves both ways as ending where it began', () => {
+    expect(graphOf('mixed').points[0]).toMatchObject({ step: 0, value: 0, said: true });
+  });
+
+  it('keeps zero inside the range, so the line always has its baseline', () => {
+    expect(graphOf('up', 'up')).toMatchObject({ low: 0, high: 2 });
+    expect(graphOf('down', 'down')).toMatchObject({ low: -2, high: 0 });
+  });
+
+  it('says when the value never falls, and says nothing about a story that turns', () => {
+    expect(valueGraphNote(graphOf('up', 'up', 'up', 'up'))).toContain('never falls below');
+    expect(valueGraphNote(graphOf('down', 'up', 'down', 'up'))).toBe('');
+  });
+
+  it('says when it goes below and never comes back', () => {
+    expect(valueGraphNote(graphOf('down', 'down', 'down', 'down'))).toContain('never comes back');
+    // One scene back above the line is enough: it came back.
+    expect(valueGraphNote(graphOf('down', 'up', 'up', 'up'))).toBe('');
+  });
+
+  it('says nothing at all until there is enough answered to be worth saying', () => {
+    expect(valueGraphNote(graphOf('up', 'up', 'up'))).toBe('');
+    expect(valueGraphNote(graphOf('', '', '', '', ''))).toBe('');
+  });
+
+  it('carries what a point needs to be clicked and gone to', () => {
+    const file = withPolarities('up');
+    const point = valueGraph(storyGridRows(file)).points[0];
+    expect(point?.unitId).toBe(unitsInStoryOrder(file)[0]?.id);
+    expect(point?.position).toBe(1);
+    expect(point?.label.length).toBeGreaterThan(0);
   });
 });

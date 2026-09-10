@@ -604,6 +604,108 @@ export const viewGridRows = (rows: GridRow[], view: Partial<GridView> = {}): Gri
   return kept;
 };
 
+// ------------------------------------------------------------- the graph
+
+/**
+ * The value graph (§6): the polarity column, plotted.
+ *
+ * **The line is a running total, not a column of bars.** §6 asks whether a
+ * story "never goes below the line, or never comes back above it", and only a
+ * value that accumulates can do either — a bar chart of per-scene polarity
+ * crosses the axis the moment any one scene is negative, which says nothing.
+ * So each scene moves the line by one and the line remembers: this is where
+ * the story's value stands after that scene, which is the thing the method
+ * is about.
+ *
+ * A scene nobody has answered **does not move the line and does not claim it
+ * stayed still**. The two are different facts and the grid has always kept
+ * them apart; a graph that quietly read silence as "flat" would be inventing
+ * the writer's reading for them.
+ */
+export interface ValuePoint {
+  unitId: StructuralUnitId;
+  position: number;
+  label: string;
+  act: string;
+  polarity: SceneGrid['polarity'];
+  /** Whether the writer has said which way this one moves. */
+  said: boolean;
+  /** What this scene does to the value: up, down, or neither. */
+  step: -1 | 0 | 1;
+  /** Where the value stands once this scene has played. */
+  value: number;
+}
+
+export interface ValueGraph {
+  points: ValuePoint[];
+  /** The range the line covers, for drawing it. Zero is always inside it. */
+  low: number;
+  high: number;
+  /** How many scenes have been answered at all. */
+  said: number;
+  /**
+   * Whether the value ever falls below where the story started. **A fact,
+   * not a mark** (§7): a comedy that rises all the way is a real thing, and
+   * so is a story that has forgotten to cost its hero anything.
+   */
+  everBelow: boolean;
+  /** Whether it comes back up after the first time it goes below. */
+  everBack: boolean;
+}
+
+const STEP: Record<SceneGrid['polarity'], -1 | 0 | 1> = {
+  '': 0,
+  up: 1,
+  down: -1,
+  // Both ways at once ends where it began; the row still says it moved.
+  mixed: 0,
+  flat: 0,
+};
+
+export const valueGraph = (rows: readonly GridRow[]): ValueGraph => {
+  let value = 0;
+  const points: ValuePoint[] = rows.map((row) => {
+    const step = STEP[row.polarity];
+    value += step;
+    return {
+      unitId: row.unitId,
+      position: row.position,
+      label: row.label,
+      act: row.act,
+      polarity: row.polarity,
+      said: row.polarity !== '',
+      step,
+      value,
+    };
+  });
+
+  const values = points.map((point) => point.value);
+  const below = points.findIndex((point) => point.value < 0);
+  return {
+    points,
+    low: Math.min(0, ...values),
+    high: Math.max(0, ...values),
+    said: points.filter((point) => point.said).length,
+    everBelow: below !== -1,
+    everBack: below !== -1 && points.slice(below).some((point) => point.value >= 0),
+  };
+};
+
+/**
+ * What the graph has noticed, in a sentence — or nothing (§6, §7).
+ *
+ * Said only where there is enough answered to be worth saying: a story of
+ * three scenes, or one nobody has read the value of, is not told anything.
+ * And it is an observation rather than a verdict, because a story that only
+ * rises may be exactly the story being written.
+ */
+export const valueGraphNote = (graph: ValueGraph): string => {
+  if (graph.said < 4) return '';
+  if (!graph.everBelow) return 'The value never falls below where it started.';
+  if (!graph.everBack) return 'Once the value goes below where it started, it never comes back.';
+  return '';
+};
+
 // ------------------------------------------------------------------ writing
 
 const touched = (file: ProjectFile, grid: StoryGrid): ProjectFile => ({

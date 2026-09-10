@@ -6974,3 +6974,72 @@ dialog.preferences .field {
   font-style: italic;
   opacity: 1;
 }
+
+/* ------------------------------------------------------------ the value graph
+   Addendum 04 §6. The polarity column plotted: the story's value across its
+   scenes, running left to right. Not a grade — the writer's own answers,
+   added up and drawn in order. */
+
+.value-graph {
+  margin: 0 0 20px;
+}
+
+.value-graph-scroll {
+  overflow-x: auto;
+  padding: 4px 0 2px;
+}
+
+.value-svg {
+  display: block;
+  overflow: visible;
+}
+
+/* Where the story started. Everything is read against this. */
+.value-base {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.value-line {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.value-act line {
+  stroke: var(--border);
+  stroke-width: 0.75;
+}
+
+.value-act text {
+  fill: var(--muted);
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.value-point circle {
+  fill: var(--gold);
+  stroke: var(--ink);
+  stroke-width: 1;
+  cursor: pointer;
+}
+
+.value-point circle:hover {
+  fill: var(--gold-bright);
+}
+
+/* A scene nobody has answered holds the line without claiming it stayed
+   still, and is drawn hollow so the difference is visible. */
+.value-point.unsaid circle {
+  fill: var(--panel);
+  stroke: var(--gold-deep);
+}
+
+.value-note {
+  margin: 6px 0 0;
+  color: var(--gold);
+}

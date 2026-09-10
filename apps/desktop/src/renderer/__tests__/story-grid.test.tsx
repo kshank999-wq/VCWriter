@@ -2,8 +2,20 @@
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { createProjectFile, findUnit, storyGridOf, type ProjectFile, type StructuralUnitId } from '@vcwriter/domain';
+import {
+  addUnit,
+  createProjectFile,
+  findUnit,
+  setSceneGrid,
+  storyGridOf,
+  storyGridRows,
+  unitsInStoryOrder,
+  type ProjectFile,
+  type SceneGrid,
+  type StructuralUnitId,
+} from '@vcwriter/domain';
 import { EditorPanel } from '../components/EditorPanel';
+import { ValueGraph } from '../components/ValueGraph';
 
 /**
  * The Story Grid's global layer through the interface (addendum 04 §3).
@@ -251,5 +263,60 @@ describe('the grid itself', () => {
     const row = document.querySelector('.grid-table tbody tr th button') as HTMLButtonElement;
     fireEvent.click(row);
     expect(went).toEqual([file!.units[0]!.id as string]);
+  });
+});
+
+/**
+ * The value graph (addendum 04 §6): the polarity column, plotted. The
+ * arithmetic is tested in the domain; what matters here is what a writer
+ * sees, and that clicking a point goes to the scene.
+ */
+describe('the value graph', () => {
+  const withScenes = (...shifts: SceneGrid['polarity'][]): ProjectFile => {
+    let file = createProjectFile({ title: 'Blackout', format: 'screenplay' });
+    for (let extra = 1; extra < shifts.length; extra += 1) {
+      file = addUnit(file, { laneId: file.lanes[0]!.id, title: `Scene ${extra + 1}` }).file;
+    }
+    unitsInStoryOrder(file).forEach((unit, index) => {
+      const polarity = shifts[index];
+      if (polarity) file = setSceneGrid(file, unit.id, { polarity });
+    });
+    return file;
+  };
+
+  const graph = (file: ProjectFile, onGoToUnit?: (id: StructuralUnitId) => void) =>
+    render(<ValueGraph rows={storyGridRows(file)} {...(onGoToUnit ? { onGoToUnit } : {})} />);
+
+  it('draws a point for every scene, and says how many are answered', () => {
+    graph(withScenes('up', 'down', '', 'up'));
+    expect(document.querySelectorAll('.value-point')).toHaveLength(4);
+    expect(screen.getByText('3 of 4 scenes')).toBeTruthy();
+  });
+
+  it('draws a scene nobody has answered hollow, so the difference is visible', () => {
+    graph(withScenes('up', '', 'up'));
+    expect(document.querySelectorAll('.value-point.unsaid')).toHaveLength(1);
+  });
+
+  it('is not drawn at all where there is nothing to draw a line between', () => {
+    const { container } = graph(withScenes('up'));
+    expect(container.querySelector('.value-graph')).toBeNull();
+  });
+
+  it('goes to the scene when a point is clicked', () => {
+    const went: StructuralUnitId[] = [];
+    const file = withScenes('up', 'down', 'up');
+    graph(file, (id) => went.push(id));
+    fireEvent.click(document.querySelectorAll('.value-point circle')[1]!);
+    expect(went).toEqual([unitsInStoryOrder(file)[1]?.id]);
+  });
+
+  it('says when a story never falls below where it started, and nothing when it turns', () => {
+    graph(withScenes('up', 'up', 'up', 'up'));
+    expect(screen.getByText(/never falls below/)).toBeTruthy();
+    cleanup();
+
+    graph(withScenes('down', 'up', 'down', 'up'));
+    expect(document.querySelector('.value-note')).toBeNull();
   });
 });
