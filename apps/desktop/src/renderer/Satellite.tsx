@@ -193,7 +193,7 @@ function Section({
     if (file.project.format === 'short_form') {
       return (
         <div className="satellite-body master">
-          <AvSheet file={file} onOpenRow={(beatId) => setSelectedBeatId(beatId)} />
+          <AvSheet file={file} onUpdate={onUpdate} onOpenRow={(beatId) => setSelectedBeatId(beatId)} />
         </div>
       );
     }

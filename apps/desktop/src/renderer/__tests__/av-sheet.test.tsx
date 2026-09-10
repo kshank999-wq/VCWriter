@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import {
@@ -50,20 +51,25 @@ const commercial = (): ProjectFile => {
   });
 };
 
-const panel = (file: ProjectFile, onOpenBeat?: (beatId: string) => void) =>
-  render(
+function Harness({ initial, onOpenBeat }: { initial: ProjectFile; onOpenBeat?(beatId: string): void }) {
+  const [file, setFile] = useState(initial);
+  return (
     <MasterPanel
       file={file}
       selectedBeatId={null}
       onSelectBeat={() => undefined}
-      onUpdate={() => undefined}
+      onUpdate={(mutate) => setFile((current) => mutate(current))}
       focusMode={false}
       focusTitleBeatId={null}
       onTitleFocused={() => undefined}
       dictationShortcut={null}
       {...(onOpenBeat ? { onOpenBeat: onOpenBeat as never } : {})}
-    />,
+    />
   );
+}
+
+const panel = (file: ProjectFile, onOpenBeat?: (beatId: string) => void) =>
+  render(<Harness initial={file} {...(onOpenBeat ? { onOpenBeat } : {})} />);
 
 describe('the sheet in place of the script', () => {
   it('is what a short-form project shows, and the section is called Sheet', () => {
@@ -89,16 +95,26 @@ describe('the sheet in place of the script', () => {
     const first = within(rows[0] as HTMLElement);
     expect(first.getByText('1.1')).toBeTruthy();
     expect(first.getByText('6 words')).toBeTruthy();
-    expect(first.getByText('Sun Tzu said "know your enemy"')).toBeTruthy();
-    expect(first.getByText('nerdy kid walking down the street')).toBeTruthy();
-    expect(first.getAllByText('00:04').length).toBeGreaterThan(0);
+    expect(first.getByLabelText('What is heard in row 1.1')).toHaveProperty(
+      'value',
+      'Sun Tzu said "know your enemy"',
+    );
+    expect(first.getByLabelText('What is seen in row 1.1')).toHaveProperty(
+      'value',
+      'nerdy kid walking down the street',
+    );
+    expect(first.getByLabelText('How long row 1.1 runs')).toHaveProperty('value', '00:04');
   });
 
   it('names the segment from the scene and closes it with its figures', () => {
     panel(commercial());
-    // The name is at the head of the segment, and again at its foot.
-    expect(screen.getAllByText('Know your enemy...')).toHaveLength(2);
-    expect(screen.getByText('More important to know who is not your enemy')).toBeTruthy();
+    // The name is typed at the head of the segment, and printed at its foot.
+    expect(screen.getByLabelText('Name of segment 1')).toHaveProperty('value', 'Know your enemy...');
+    expect(screen.getByLabelText('What segment 1 is for')).toHaveProperty(
+      'value',
+      'More important to know who is not your enemy',
+    );
+    expect(screen.getByText('Know your enemy...')).toBeTruthy();
 
     const foot = document.querySelector('.av-segment-foot') as HTMLElement;
     const figures = within(foot);
@@ -133,7 +149,7 @@ describe('the sheet in place of the script', () => {
 
   it('says so plainly when there is nothing on the board yet', () => {
     const empty = createProjectFile({ title: 'Untitled', format: 'short_form' });
-    panel({ ...empty, beats: [] });
+    panel({ ...empty, beats: [], units: [] });
     expect(screen.getByText(/Nothing on the board yet/)).toBeTruthy();
   });
 
@@ -144,5 +160,78 @@ describe('the sheet in place of the script', () => {
     expect(screen.getByText(/More words than 00:01 holds/)).toBeTruthy();
     // The other row is comfortable, so nothing is said about it.
     expect(screen.queryByText(/More words than 00:05/)).toBeNull();
+  });
+});
+
+describe('writing in the sheet', () => {
+  it('types the audio and the visual in place', () => {
+    panel(commercial());
+    const audio = screen.getByLabelText('What is heard in row 1.1');
+    fireEvent.change(audio, { target: { value: 'This is not for you...' } });
+    expect(screen.getByLabelText('What is heard in row 1.1')).toHaveProperty('value', 'This is not for you...');
+    // And the count follows what was typed, because it is the same words.
+    expect(within(document.querySelectorAll('.av-row')[0] as HTMLElement).getByText('5 words')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('What is seen in row 1.1'), { target: { value: 'The kid nods' } });
+    expect(screen.getByLabelText('What is seen in row 1.1')).toHaveProperty('value', 'The kid nods');
+  });
+
+  it('takes a time the way it is typed, and puts it back the way it prints', () => {
+    panel(commercial());
+    const box = () => screen.getByLabelText('How long row 1.1 runs');
+    fireEvent.change(box(), { target: { value: '1:02' } });
+    fireEvent.blur(box());
+    expect(box()).toHaveProperty('value', '01:02');
+
+    // Anything that is not a time leaves the row with the one it had.
+    fireEvent.change(box(), { target: { value: 'soon' } });
+    fireEvent.blur(box());
+    expect(box()).toHaveProperty('value', '01:02');
+  });
+
+  it('names the segment and says what it is for', () => {
+    panel(commercial());
+    fireEvent.change(screen.getByLabelText('Name of segment 1'), { target: { value: 'The tag' } });
+    // Which the foot of the segment says too, because it is one name.
+    expect(screen.getByText('The tag')).toBeTruthy();
+  });
+
+  it('adds a row at the foot of the segment, and it is numbered in place', () => {
+    panel(commercial());
+    expect(document.querySelectorAll('.av-row')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: '+ Row' }));
+    expect(document.querySelectorAll('.av-row')).toHaveLength(3);
+    expect(screen.getByLabelText('What is heard in row 1.3')).toBeTruthy();
+  });
+
+  it('moves a row up and down, and removes one', () => {
+    panel(commercial());
+    fireEvent.click(screen.getByLabelText('Move row 1.2 up'));
+    expect(screen.getByLabelText('What is heard in row 1.1')).toHaveProperty(
+      'value',
+      'In this era - almost everyone is the enemy...',
+    );
+
+    fireEvent.click(screen.getByLabelText('Remove row 1.1'));
+    expect(document.querySelectorAll('.av-row')).toHaveLength(1);
+    expect(screen.getByLabelText('What is heard in row 1.1')).toHaveProperty(
+      'value',
+      'Sun Tzu said "know your enemy"',
+    );
+  });
+
+  it('starts a segment, with a row in it to write on', () => {
+    panel(commercial());
+    fireEvent.click(screen.getByRole('button', { name: '+ Segment' }));
+    expect(screen.getByLabelText('Name of segment 2')).toBeTruthy();
+    expect(screen.getByLabelText('What is heard in row 2.1')).toBeTruthy();
+  });
+
+  it('starts a board from nothing at all', () => {
+    const empty = createProjectFile({ title: 'Untitled', format: 'short_form' });
+    panel({ ...empty, beats: [], units: [] });
+    fireEvent.click(screen.getByRole('button', { name: '+ Segment' }));
+    expect(screen.queryByText(/Nothing on the board yet/)).toBeNull();
+    expect(screen.getByLabelText('What is heard in row 1.1')).toBeTruthy();
   });
 });

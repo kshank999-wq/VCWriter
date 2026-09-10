@@ -1,7 +1,10 @@
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { countWords } from './entities/manuscript.js';
+import { addBeat, moveBeat, updateBeat } from './mutations.js';
+import { newId } from './ids.js';
 import type { ProjectFile } from './project-file.js';
-import type { BeatId, StructuralUnitId } from './ids.js';
+import type { BeatId, ManuscriptElementId, StructuralUnitId } from './ids.js';
+import type { ManuscriptElement } from './entities/manuscript.js';
 
 /**
  * The AV sheet (addendum 05).
@@ -156,4 +159,117 @@ export const avSheet = (file: ProjectFile): AvSheet => {
     words,
     seconds,
   };
+};
+
+
+// ------------------------------------------------------------------ writing
+
+/**
+ * A running time as a writer types one.
+ *
+ * `4`, `04`, `0:04`, `00:04` and `1:02` all mean what they look like, because
+ * a writer filling in a column of times should not have to think about which
+ * of those the box wants. Anything that is not a time at all leaves the value
+ * where it was, which is null here for the caller to ignore.
+ */
+export const parseRt = (text: string): number | null => {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return 0;
+  if (!/^\d{1,2}(:\d{1,2}){0,2}$/.test(trimmed)) return null;
+  const parts = trimmed.split(':').map((part) => Number.parseInt(part, 10));
+  return parts.reduce((total, part) => total * 60 + part, 0);
+};
+
+/**
+ * What is heard in a row, written in place.
+ *
+ * The audio column is plain lines, so this keeps them as plain lines: one
+ * line, one element. Elements already there keep their id and their type, so
+ * a speech typed in the beat window and then tidied on the sheet does not
+ * lose what it was; new lines arrive as dialogue, because in a commercial
+ * what is in the audio column is what somebody says.
+ *
+ * A row's audio opens in the beat window like anything else (§7). This is the
+ * quick pass over a board, not a second writing screen.
+ */
+export const setRowAudio = (file: ProjectFile, beatId: BeatId, text: string): ProjectFile => {
+  const beat = file.beats.find((candidate) => candidate.id === beatId);
+  if (!beat) return file;
+
+  const lines = text.split('\n');
+  const existing = beat.manuscript.elements;
+  const elements: ManuscriptElement[] = lines.map((line, index) => {
+    const was = existing[index];
+    if (was) return { ...was, text: line };
+    return {
+      id: newId<ManuscriptElementId>(),
+      type: 'dialogue',
+      text: line,
+      characterId: null,
+      attributes: {},
+    };
+  });
+
+  // A row emptied altogether keeps one line to type into rather than none.
+  return updateBeat(file, beatId, {
+    manuscript: { elements: elements.length > 0 ? elements : [] },
+  });
+};
+
+/** What is seen in a row. */
+export const setRowVisual = (file: ProjectFile, beatId: BeatId, visual: string): ProjectFile =>
+  updateBeat(file, beatId, { visual });
+
+/** How long a row runs. Never negative, and never anything but whole seconds. */
+export const setRowSeconds = (file: ProjectFile, beatId: BeatId, seconds: number): ProjectFile =>
+  updateBeat(file, beatId, { seconds: Math.max(0, Math.round(seconds)) });
+
+/**
+ * A new row under the one given, or at the end of the segment.
+ *
+ * It goes into the story order in the place it appears in, which is the
+ * whole point: the timeline has it the moment the sheet does.
+ */
+export const addRow = (
+  file: ProjectFile,
+  input: { unitId: StructuralUnitId; afterBeatId?: BeatId },
+): { file: ProjectFile; beatId: BeatId } => {
+  const siblings = beatsForUnit(file, input.unitId);
+  const at = input.afterBeatId
+    ? siblings.findIndex((beat) => beat.id === input.afterBeatId) + 1
+    : siblings.length;
+  const made = addBeat(file, { unitId: input.unitId, index: at < 1 ? siblings.length : at });
+  return { file: made.file, beatId: made.beat.id };
+};
+
+/**
+ * A row moved one place up or down the board.
+ *
+ * It crosses into the segment above or below when it runs off the end of its
+ * own, because that is what dragging a row up past a segment head means. The
+ * story order moves with it — there is no second order to keep in step.
+ */
+export const moveRow = (file: ProjectFile, beatId: BeatId, direction: -1 | 1): ProjectFile => {
+  const units = unitsInStoryOrder(file).filter((unit) => unit.inScript);
+  const unitIndex = units.findIndex((unit) => beatsForUnit(file, unit.id).some((beat) => beat.id === beatId));
+  if (unitIndex === -1) return file;
+
+  const unit = units[unitIndex] as (typeof units)[number];
+  const siblings = beatsForUnit(file, unit.id);
+  const at = siblings.findIndex((beat) => beat.id === beatId);
+  const to = at + direction;
+
+  if (to >= 0 && to < siblings.length) {
+    return moveBeat(file, { beatId, toUnitId: unit.id, index: to });
+  }
+
+  // Off the end of this segment: into the next one along, if there is one.
+  const neighbour = units[unitIndex + direction];
+  if (!neighbour) return file;
+  const into = beatsForUnit(file, neighbour.id);
+  return moveBeat(file, {
+    beatId,
+    toUnitId: neighbour.id,
+    index: direction === 1 ? 0 : into.length,
+  });
 };

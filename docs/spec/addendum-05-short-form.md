@@ -1,6 +1,6 @@
 # Addendum 05 — Short form: the AV sheet, and the board
 
-Status: stage 1 built, September 2026; the rest specified. Fills in what addendum 02
+Status: stages 1–2 built, September 2026; the rest specified. Fills in what addendum 02
 §14 left open: *"the module that makes something of it, with the timings and
 the shapes that kind of work needs, is a later piece of work."* This is that
 piece.
@@ -164,9 +164,9 @@ once and a row holds a reference rather than a picture.
 1. **Built.** The sheet, read-only against the story that is there.
    Segments, rows, numbering, the word counts and the four figures at each
    foot, and the masthead read from the title page.
-2. **Writing in it.** Audio and visual edited in place, rows added, removed
-   and reordered, durations typed — the sheet as the place the work happens,
-   in place of the Script.
+2. **Built.** Writing in it: audio and visual edited in place, rows added,
+   removed and reordered, durations typed — the sheet as the place the work
+   happens, in place of the Script.
 3. **Frames.** The asset store, dropping an image on a row, and the frames on
    the timeline's track.
 4. **The lanes as rows**, and reordering that goes both ways.
@@ -177,7 +177,9 @@ Stage 1 alone is worth having: a writer who can see their commercial as an AV
 sheet, with the times and the counts adding up, has the document the business
 actually asks for.
 
-## 9. What stage 1 does
+## 9. What is built
+
+### Stage 1 — the sheet
 
 Open a short-form project and the section on the left is **Sheet** rather
 than Script — the same place, a different document, in the workspace and in
@@ -202,3 +204,28 @@ A beat gained two fields to make this possible — `visual` and `seconds` —
 both empty by default, so every project that already exists opens with a
 sheet that says nothing rather than a sheet that is wrong. Writing in it is
 stage 2.
+
+### Stage 2 — writing in it
+
+Every column is typed in place, and each box is as tall as what is in it: a
+row is as deep as its longest column, so a box with a scrollbar in it would
+hide the very thing the two columns are for.
+
+- **Audio and visual**, in the row. The audio column is plain lines, one line
+  to an element, and a line already there keeps its id and its type — a
+  speech written in the beat window and then tidied on the sheet is not
+  turned into something else by the tidying. New lines arrive as dialogue,
+  because in a commercial the audio column is what somebody says.
+- **The time**, typed the way a writer types one: `4`, `04`, `0:04`, `00:04`
+  and `1:02` all mean what they look like, and the box shows it back the way
+  the sheet prints it. Anything that is not a time leaves the row with the
+  one it had.
+- **The segment's name and its line**, at the head where they are read.
+- **Rows**: `+ Row` at the foot of a segment, and under the cursor each row
+  carries ↑, ↓ and ×. A row moved off the end of its segment goes into the
+  one above or below, which is what dragging a row past a segment head means.
+- **`+ Segment`**, which arrives with a row in it to write on — an empty
+  segment is not a thing anybody wants.
+
+**A row added or moved here is added or moved on the timeline**, because
+there is only one of it. Nothing is kept in step; there is nothing to keep.

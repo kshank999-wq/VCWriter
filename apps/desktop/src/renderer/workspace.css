@@ -5857,3 +5857,128 @@ button.av-row-number {
   font-weight: 600;
   color: var(--text);
 }
+
+/* ------------------------------------------------- writing in the sheet
+   Addendum 05 §8 stage 2. The board is where the work happens, so every
+   column is typed in place — and a box with a scrollbar in it would hide the
+   very thing the two columns are for, so each grows to what is in it. */
+
+.av-segment-name {
+  width: 100%;
+  text-align: center;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+
+input.av-segment-line {
+  width: 100%;
+  text-align: center;
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 2px 6px;
+  margin-top: 4px;
+}
+
+.av-segment-name:hover,
+input.av-segment-line:hover,
+.av-time:hover {
+  border-color: var(--border);
+}
+
+.av-segment-name:focus,
+input.av-segment-line:focus,
+.av-time:focus {
+  border-color: var(--gold-deep);
+  outline: none;
+}
+
+/* The two layers of a growing box: the text sizes the cell, the box over it
+   carries the caret. The same trick the manuscript line uses. */
+.av-grow {
+  display: grid;
+}
+
+.av-grow-ink,
+.av-grow textarea {
+  grid-area: 1 / 1 / 2 / 2;
+  font: inherit;
+  line-height: 1.45;
+  padding: 3px 5px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.av-grow-ink {
+  pointer-events: none;
+  visibility: hidden;
+  /* Never shorter than one line, so an empty row is still a row. */
+  min-height: 1.45em;
+}
+
+.av-grow textarea {
+  width: 100%;
+  background: transparent;
+  color: var(--text);
+  resize: none;
+  overflow: hidden;
+}
+
+.av-grow textarea:hover {
+  border-color: var(--border);
+}
+
+.av-grow textarea:focus {
+  border-color: var(--gold-deep);
+  outline: none;
+}
+
+.av-time {
+  width: 72px;
+  text-align: right;
+  font-size: 12.5px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 2px 4px;
+}
+
+.av-table .av-tools-head,
+.av-table .av-tools {
+  width: 96px;
+  white-space: nowrap;
+}
+
+/* The row's own handles, out of the way until the row is under the cursor. */
+.av-tools {
+  opacity: 0;
+  transition: opacity 90ms ease;
+}
+
+.av-row:hover .av-tools,
+.av-row:focus-within .av-tools {
+  opacity: 1;
+}
+
+.av-add-row {
+  margin-top: 8px;
+}
+
+.av-add-segment {
+  margin-top: 4px;
+}

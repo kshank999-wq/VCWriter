@@ -45,7 +45,11 @@ export function MasterPanel(props: MasterPanelProps) {
   // Script stands, rather than beside it.
   const body =
     props.file.project.format === 'short_form' ? (
-      <AvSheet file={props.file} {...(props.onOpenBeat ? { onOpenRow: props.onOpenBeat } : {})} />
+      <AvSheet
+        file={props.file}
+        onUpdate={props.onUpdate}
+        {...(props.onOpenBeat ? { onOpenRow: props.onOpenBeat } : {})}
+      />
     ) : (
       <StoryView {...props} />
     );

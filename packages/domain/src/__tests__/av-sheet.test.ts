@@ -3,7 +3,13 @@ import {
   WORDS_PER_SECOND,
   addBeat,
   addUnit,
+  addRow,
   avSheet,
+  moveRow,
+  parseRt,
+  setRowAudio,
+  setRowSeconds,
+  setRowVisual,
   createProjectFile,
   formatRt,
   setTitlePage,
@@ -162,5 +168,111 @@ describe('the sheet', () => {
     expect(sheet.seconds).toBe(0);
     expect(sheet.words).toBe(0);
     expect(sheet.segments[0]?.rows.every((row) => row.seconds === 0)).toBe(true);
+  });
+});
+
+describe('writing in the sheet', () => {
+  const rowsOf = (file: ProjectFile) => avSheet(file).segments.flatMap((segment) => segment.rows);
+
+  it('reads a time the way a writer types one', () => {
+    expect(parseRt('4')).toBe(4);
+    expect(parseRt('04')).toBe(4);
+    expect(parseRt('0:04')).toBe(4);
+    expect(parseRt('00:04')).toBe(4);
+    expect(parseRt('1:02')).toBe(62);
+    expect(parseRt('1:02:03')).toBe(3723);
+    expect(parseRt('  30 ')).toBe(30);
+    // Emptying the box means no time yet, which is a thing a writer means.
+    expect(parseRt('')).toBe(0);
+    // And anything that is not a time at all is not one.
+    expect(parseRt('soon')).toBeNull();
+    expect(parseRt('4s')).toBeNull();
+  });
+
+  it('writes the audio as plain lines, one line to an element', () => {
+    let file = commercial();
+    const beatId = file.beats[0]!.id;
+    file = setRowAudio(file, beatId, 'This is not for you...\nThink for yourself...');
+
+    expect(rowsOf(file)[0]?.audio).toBe('This is not for you...\nThink for yourself...');
+    expect(avSheet(file).segments[0]?.rows[0]?.words).toBe(8);
+  });
+
+  it('keeps what a line already was when it is edited on the sheet', () => {
+    let file = commercial();
+    const beatId = file.beats[0]!.id;
+    const was = file.beats[0]!.manuscript.elements[0]!;
+    file = setRowAudio(file, beatId, 'Sun Tzu said something else');
+
+    const element = file.beats.find((beat) => beat.id === beatId)!.manuscript.elements[0]!;
+    // Same line, re-typed: it keeps its id and its type, so a speech written
+    // in the beat window is not turned into something else by a tidy-up here.
+    expect(element.id).toBe(was.id);
+    expect(element.type).toBe(was.type);
+    expect(element.text).toBe('Sun Tzu said something else');
+  });
+
+  it('writes the visual and the time', () => {
+    let file = commercial();
+    const beatId = file.beats[0]!.id;
+    file = setRowVisual(file, beatId, 'The kid nods');
+    file = setRowSeconds(file, beatId, 7);
+
+    expect(rowsOf(file)[0]?.visual).toBe('The kid nods');
+    expect(rowsOf(file)[0]?.seconds).toBe(7);
+    // Never negative, and never a fraction of a second.
+    expect(rowsOf(setRowSeconds(file, beatId, -3))[0]?.seconds).toBe(0);
+    expect(rowsOf(setRowSeconds(file, beatId, 4.6))[0]?.seconds).toBe(5);
+  });
+
+  it('adds a row under the one it was asked for, not at the end', () => {
+    let file = commercial();
+    const made = addRow(file, { unitId: file.units[0]!.id, afterBeatId: file.beats[0]!.id });
+    file = setRowAudio(made.file, made.beatId, 'A new line');
+
+    expect(rowsOf(file).map((row) => row.number)).toEqual(['1.1', '1.2', '1.3', '1.4']);
+    expect(rowsOf(file)[1]?.audio).toBe('A new line');
+  });
+
+  it('adds one at the end of the segment when nothing is named', () => {
+    let file = commercial();
+    const made = addRow(file, { unitId: file.units[0]!.id });
+    file = setRowAudio(made.file, made.beatId, 'The tag');
+    expect(rowsOf(file).at(-1)?.audio).toBe('The tag');
+  });
+
+  it('moves a row up and down, and the numbering follows it', () => {
+    let file = commercial();
+    const third = file.beats[2]!.id;
+    file = moveRow(file, third, -1);
+
+    const audio = rowsOf(file).map((row) => row.audio);
+    expect(audio[1]).toContain('more important');
+    expect(audio[2]).toContain('In this era');
+    // And back again.
+    file = moveRow(file, third, 1);
+    expect(rowsOf(file).map((row) => row.audio)[2]).toContain('more important');
+  });
+
+  it('carries a row into the segment above or below when it runs off the end', () => {
+    let file = commercial();
+    const made = addUnit(file, { laneId: file.lanes[0]!.id, title: 'The tag' });
+    file = made.file;
+    const beat = addBeat(file, { unitId: made.unit.id, title: 'Tag' });
+    file = updateBeat(beat.file, beat.beat.id, { manuscript: { elements: [line('Villain Academy.')] } });
+
+    // The tag's only row, moved up, lands at the foot of segment one.
+    file = moveRow(file, beat.beat.id, -1);
+    const sheet = avSheet(file);
+    expect(sheet.segments[0]?.rows.map((row) => row.number)).toEqual(['1.1', '1.2', '1.3', '1.4']);
+    expect(sheet.segments[0]?.rows.at(-1)?.audio).toBe('Villain Academy.');
+    expect(sheet.segments[1]?.rows).toHaveLength(0);
+  });
+
+  it('leaves the board alone when there is nowhere to move to', () => {
+    const file = commercial();
+    const before = rowsOf(file).map((row) => row.audio);
+    expect(rowsOf(moveRow(file, file.beats[0]!.id, -1)).map((row) => row.audio)).toEqual(before);
+    expect(rowsOf(moveRow(file, file.beats.at(-1)!.id, 1)).map((row) => row.audio)).toEqual(before);
   });
 });
