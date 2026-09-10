@@ -40,11 +40,9 @@ push live; the build takes a minute or two.
   grid itself) are built — §9 says what they do — and §8 lists the stages
   still to come.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
-  place of the Script, the storyboard on the timeline, and playback. Stages
-  1–7 (the sheet, writing in it, the workspace stripped, the storyboard
-  frames, the shot's three times, the one timeline with the board above it,
-  and playback) are built — §9 says what they do — and §8 lists what is left:
-  print and export.
+  place of the Script, the storyboard on the timeline, playback, and the two
+  documents it prints. **All eight stages are built** — §9 says what each one
+  does.
 
 ## Before pushing
 

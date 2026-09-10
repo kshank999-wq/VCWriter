@@ -6585,3 +6585,299 @@ dialog.preferences .field {
   display: grid;
   gap: 4px;
 }
+
+/* --------------------------------------------- the sheet and board on paper
+   Addendum 05 §8. The Preview tab in a short-form project: the document that
+   will print, drawn from the same `avSheet` under the same class names as
+   the printed HTML, so the two cannot drift apart. */
+
+.sheet-preview-screen .preview-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 0 32px;
+}
+
+.sheet-doc {
+  width: 8.5in;
+  min-height: 11in;
+  margin: 0 auto;
+  padding: 0.5in 0.5in 0.7in;
+  background: #fff;
+  color: #000;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 10pt;
+  line-height: 1.4;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.sheet-masthead {
+  border-bottom: 2px solid #000;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+
+.sheet-masthead h1 {
+  margin: 0;
+  font-size: 22pt;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #000;
+}
+
+.sheet-version {
+  display: inline-block;
+  border: 1px solid #000;
+  border-radius: 2px;
+  padding: 0 4px;
+  margin-right: 8px;
+  font-size: 9pt;
+  vertical-align: middle;
+}
+
+.sheet-totals {
+  margin: 4px 0 0;
+  font-size: 10pt;
+  color: #000;
+}
+
+.sheet-over {
+  color: #a00;
+}
+
+.sheet-segment {
+  margin-bottom: 18px;
+}
+
+.sheet-segment-head {
+  text-align: center;
+  margin: 12px 0 6px;
+}
+
+.sheet-segment-head h2 {
+  margin: 0;
+  font-size: 12pt;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #000;
+}
+
+.sheet-segment-line {
+  margin: 2px 0 0;
+  font-style: italic;
+  font-size: 9.5pt;
+  color: #333;
+}
+
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sheet-table th {
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  text-align: left;
+  padding: 0 6px 4px;
+  border-bottom: 2px solid #000;
+  color: #000;
+  font-weight: 400;
+}
+
+.sheet-table td {
+  vertical-align: top;
+  padding: 8px 6px;
+  border-bottom: 1px solid #999;
+}
+
+.sheet-no {
+  width: 46px;
+}
+
+.sheet-table td.sheet-no {
+  font-size: 13pt;
+  font-weight: 600;
+}
+
+.sheet-audio,
+.sheet-visual {
+  width: 22%;
+}
+
+.sheet-audio p,
+.sheet-visual p {
+  margin: 0 0 5px;
+}
+
+.sheet-none {
+  color: #888;
+}
+
+.sheet-doc .sheet-image {
+  width: 150px;
+}
+
+.sheet-frame {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #999;
+}
+
+.sheet-plate {
+  width: 100%;
+  height: 84px;
+  border: 1px dashed #999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 8pt;
+  color: #666;
+}
+
+.sheet-plate.clip {
+  border-style: solid;
+}
+
+.sheet-clip-name {
+  font-weight: 600;
+  color: #000;
+}
+
+.sheet-duration,
+.sheet-words {
+  width: 78px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* The four lines, the same height on both sides, so a shot's times and its
+   word count sit on the line they belong to — exactly as on the sheet. */
+.sheet-time {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 5px;
+  height: 20px;
+  font-size: 9pt;
+}
+
+.sheet-time-name {
+  font-size: 6.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #666;
+}
+
+.sheet-time.estimated {
+  font-style: italic;
+  color: #555;
+}
+
+.sheet-segment-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  border-top: 2px solid #000;
+  padding-top: 6px;
+}
+
+.sheet-foot-name span {
+  display: block;
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #666;
+}
+
+.sheet-figures {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+}
+
+.sheet-figure dt {
+  font-size: 6.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #666;
+}
+
+.sheet-figure dd {
+  margin: 0;
+  font-size: 10pt;
+  font-weight: 600;
+}
+
+/* The board: the frames in order, three across, each with its line. */
+.sheet-doc .board-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.board-run {
+  display: contents;
+}
+
+/* Every panel's picture the same shape and the same height, so the captions
+   run in a straight line across the wall. A drawing that is not 16:9 sits
+   inside its box rather than stretching to fill it. */
+.board-panel .sheet-frame,
+.board-panel .sheet-plate {
+  margin-bottom: 4px;
+  width: 100%;
+  height: 96px;
+  object-fit: contain;
+  background: #f4f4f4;
+}
+
+.board-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  border-bottom: 1px solid #000;
+  padding-bottom: 2px;
+}
+
+.board-shot {
+  font-weight: 600;
+  font-size: 10pt;
+}
+
+.board-rt {
+  font-size: 9pt;
+}
+
+.board-said {
+  margin-top: 4px;
+  font-size: 8.5pt;
+}
+
+.board-seen {
+  margin-top: 3px;
+  font-size: 8pt;
+  font-style: italic;
+  color: #555;
+}
+
+.board-said p,
+.board-seen p {
+  margin: 0 0 3px;
+}
+
+.sheet-doc .board-segment {
+  grid-column: 1 / -1;
+  margin: 6px 0 0;
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  border-bottom: 2px solid #000;
+  padding-bottom: 3px;
+  color: #000;
+}

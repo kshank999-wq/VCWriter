@@ -356,3 +356,47 @@ describe('page setup', () => {
     expect((screen.getByLabelText('Blocked') as HTMLInputElement).checked).toBe(true);
   });
 });
+
+/**
+ * The menus a short-form project gets (addendum 05 §3e, §8), and the one item
+ * that puts a shuffled workspace back the way it opens (addendum 02 §8).
+ */
+describe('the menus a board is written from', () => {
+  const commands = (format: ProjectFormat | null): string[] =>
+    menusFor(format)
+      .flatMap((menu) => menu.items)
+      .filter((item): item is NonNullable<typeof item> => Boolean(item))
+      .map((item) => item.command);
+
+  const labels = (format: ProjectFormat | null, menu: string): string[] =>
+    (menusFor(format).find((entry) => entry.id === menu)?.items ?? [])
+      .filter((item): item is NonNullable<typeof item> => Boolean(item))
+      .map((item) => item.label);
+
+  it('offers the board as a second document, and only in short form', () => {
+    expect(commands('short_form')).toContain('file.printBoard');
+    expect(commands('short_form')).toContain('file.exportBoard');
+    expect(commands('screenplay')).not.toContain('file.printBoard');
+    expect(commands('novel')).not.toContain('file.exportBoard');
+  });
+
+  it('names the sections for the format in hand', () => {
+    expect(labels('screenplay', 'window')).toContain('Script in its own window');
+    expect(labels('novel', 'window')).toContain('Manuscript in its own window');
+    expect(labels('short_form', 'window')).toContain('Sheet in its own window');
+    expect(labels('short_form', 'window')).toContain('Timeline in its own window');
+    expect(labels('short_form', 'window')).not.toContain('Plot lanes in its own window');
+  });
+
+  it('does not offer a viewer to a format that has none', () => {
+    expect(commands('short_form')).not.toContain('window.viewer');
+    expect(commands('screenplay')).toContain('window.viewer');
+  });
+
+  it('offers a way back when the sections have been shuffled about', () => {
+    for (const format of [null, 'screenplay', 'short_form'] as const) {
+      expect(commands(format)).toContain('window.reset');
+    }
+    expect(labels(null, 'window')).toContain('Reset windows to default');
+  });
+});

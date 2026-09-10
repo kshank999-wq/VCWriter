@@ -51,6 +51,7 @@ import { BeatDialog } from './components/BeatDialog';
 import { MarkerDialog } from './components/MarkerDialog';
 import { PageBar, type View } from './components/PageBar';
 import { PagePreview } from './components/PagePreview';
+import { SheetPreview } from './components/SheetPreview';
 import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
 import { DEFAULT_PRINT_SETUP, PageSetup, type PrintSetup } from './components/PageSetup';
 import { TitlePageDialog } from './components/TitlePageDialog';
@@ -402,31 +403,64 @@ export default function App() {
     setSyncMessage(parts.length === 0 ? 'Already up to date' : parts.join(' · '));
   }, [file, project]);
 
-  const exportPdf = useCallback(async () => {
-    if (!file) return;
-    setExporting(true);
-    setExportMessage(null);
-    // Flush first: the export reads the project it is handed, and a writer who
-    // just typed a line expects it in the PDF.
-    await project.saveNow();
-    const result = await window.vcwriter.exportPdf({ file, options: printOptions });
-    setExporting(false);
-    if (!result.ok) {
-      setExportMessage(result.error ?? 'The PDF could not be created');
-      return;
-    }
-    setExportMessage(result.data ? `Exported ${result.data.pageCount} pages to ${result.data.path}` : null);
-  }, [file, printOptions, project]);
+  /**
+   * Which document is being printed (addendum 05 §8).
+   *
+   * Left alone it is the one the project has — a script, or in short form the
+   * **sheet**, which is what a commercial's document *is*. `'board'` asks for
+   * the other one: the frames on their own, for a wall.
+   */
+  const exportPdf = useCallback(
+    async (kind: 'script' | 'board' = 'script') => {
+      if (!file) return;
+      setExporting(true);
+      setExportMessage(null);
+      // Flush first: the export reads the project it is handed, and a writer who
+      // just typed a line expects it in the PDF.
+      await project.saveNow();
+      const result = await window.vcwriter.exportPdf({ file, options: printOptions, kind });
+      setExporting(false);
+      if (!result.ok) {
+        setExportMessage(result.error ?? 'The PDF could not be created');
+        return;
+      }
+      setExportMessage(result.data ? `Exported ${result.data.pageCount} pages to ${result.data.path}` : null);
+    },
+    [file, printOptions, project],
+  );
 
-  const print = useCallback(async () => {
-    if (!file) return;
-    setExporting(true);
-    setExportMessage(null);
-    await project.saveNow();
-    const result = await window.vcwriter.print({ file, options: printOptions });
-    setExporting(false);
-    if (!result.ok) setExportMessage(result.error ?? 'The document could not be printed');
-  }, [file, printOptions, project]);
+  const print = useCallback(
+    async (kind: 'script' | 'board' = 'script') => {
+      if (!file) return;
+      setExporting(true);
+      setExportMessage(null);
+      await project.saveNow();
+      const result = await window.vcwriter.print({ file, options: printOptions, kind });
+      setExporting(false);
+      if (!result.ok) setExportMessage(result.error ?? 'The document could not be printed');
+    },
+    [file, printOptions, project],
+  );
+
+  /**
+   * The workspace as it opens (addendum 02 §8).
+   *
+   * Sections can be swapped about, dragged to other places and taken out to
+   * windows of their own, and after enough of that nobody remembers where
+   * anything started. **One item puts it all back**: everything docked, in its
+   * default place, at its default size, with focus mode off.
+   */
+  const resetWindows = useCallback(() => {
+    detached.forEach((pane) => closePane(pane));
+    setArrangement(DEFAULT_ARRANGEMENT);
+    setInspectorOpen(true);
+    setTimelineOpen(true);
+    setFocusMode(false);
+    // Null is "no remembered size", which is how the splits read their own
+    // defaults — the same path a machine that has never been dragged takes.
+    columns.reset();
+    rows.reset();
+  }, [detached, closePane, setArrangement, setInspectorOpen, setTimelineOpen, columns, rows]);
 
   // ------------------------------------------------------------ the menus
 
@@ -466,6 +500,10 @@ export default function App() {
           return void print();
         case 'file.exportPdf':
           return void exportPdf();
+        case 'file.printBoard':
+          return void print('board');
+        case 'file.exportBoard':
+          return void exportPdf('board');
         case 'file.preferences':
           return setPreferencesOpen(true);
         case 'file.close':
@@ -520,6 +558,8 @@ export default function App() {
           return selectedBeat ? openPane(`beat:${selectedBeat.id}`) : undefined;
         case 'window.bringAllBack':
           return detached.forEach((pane) => closePane(pane));
+        case 'window.reset':
+          return resetWindows();
         case 'window.focus':
           return setFocusMode((current) => !current);
         case 'window.preferences':
@@ -530,7 +570,7 @@ export default function App() {
           return setPreferencesOpen(true);
       }
     },
-    [project, print, exportPdf, selectedBeat, detached, openPane, closePane],
+    [project, print, exportPdf, selectedBeat, detached, openPane, closePane, resetWindows],
   );
 
   /** The items with a tick beside them right now. */
@@ -897,7 +937,18 @@ export default function App() {
         </div>
       ) : (
         <main className="full">
-          {view === 'preview' ? (
+          {view === 'preview' && shortForm ? (
+            /* A commercial's document is the sheet, and beside it a board
+               (addendum 05 §8). There are no script pages to preview. */
+            <SheetPreview
+              file={file}
+              onPageSetup={() => setPageSetupOpen(true)}
+              onExportPdf={(kind) => void exportPdf(kind)}
+              onPrint={(kind) => void print(kind)}
+              busy={exporting}
+              message={exportMessage}
+            />
+          ) : view === 'preview' ? (
             <PagePreview
               file={file}
               unitId={selectedBeat?.unitId ?? null}

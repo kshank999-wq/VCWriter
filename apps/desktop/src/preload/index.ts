@@ -60,8 +60,18 @@ export interface VcWriterApi {
   exportPdf(input: {
     file: ProjectFile;
     options?: PrintOptions;
+    /**
+     * Which document: the manuscript, the AV sheet, or the board (addendum 05
+     * §8). Omitted means the script — and a short-form project prints its
+     * sheet whatever is asked for, because it has no script to print instead.
+     */
+    kind?: 'script' | 'sheet' | 'board';
   }): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>>;
-  print(input: { file: ProjectFile; options?: PrintOptions }): Promise<DesktopApiResult<boolean>>;
+  print(input: {
+    file: ProjectFile;
+    options?: PrintOptions;
+    kind?: 'script' | 'sheet' | 'board';
+  }): Promise<DesktopApiResult<boolean>>;
   appInfo(): Promise<DesktopApiResult<{ version: string; platform: string }>>;
 
   // Sync is optional: a writer who never signs in has a fully working desktop

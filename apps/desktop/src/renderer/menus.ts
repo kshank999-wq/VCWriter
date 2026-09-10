@@ -14,6 +14,7 @@
  */
 
 import type { ProjectFormat } from '@vcwriter/domain';
+import { paneNamesFor } from './panes';
 
 export type CommandId =
   // File
@@ -27,6 +28,8 @@ export type CommandId =
   | 'file.pageSetup'
   | 'file.print'
   | 'file.exportPdf'
+  | 'file.printBoard'
+  | 'file.exportBoard'
   | 'file.preferences'
   | 'file.close'
   // Editor
@@ -51,6 +54,7 @@ export type CommandId =
   | 'window.beat'
   | 'window.focus'
   | 'window.bringAllBack'
+  | 'window.reset'
   | 'window.preferences'
   // Help
   | 'help.spec'
@@ -84,7 +88,9 @@ export interface Menu {
  * a kind of project; it is a thing you do inside one, and a menu that offers
  * it in a novel is a menu that lies.
  */
-export const menusFor = (format: ProjectFormat | null): readonly Menu[] => [
+export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
+  const names = paneNamesFor(format);
+  return [
   {
     id: 'file',
     label: 'File',
@@ -102,6 +108,15 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => [
       { command: 'file.pageSetup', label: 'Page setup…' },
       { command: 'file.print', label: 'Print…', accelerator: 'CmdOrCtrl+P' },
       { command: 'file.exportPdf', label: 'Export PDF…', accelerator: 'CmdOrCtrl+Shift+P' },
+      // The board is a second document, not a second view of the first: the
+      // frames on their own, for a wall (addendum 05 §8). Only short form
+      // has one.
+      ...(format === 'short_form'
+        ? [
+            { command: 'file.printBoard' as CommandId, label: 'Print the board…' },
+            { command: 'file.exportBoard' as CommandId, label: 'Export the board as PDF…' },
+          ]
+        : []),
       null,
       { command: 'file.preferences', label: 'Preferences…', accelerator: 'CmdOrCtrl+,' },
       { command: 'file.close', label: 'Close project' },
@@ -139,15 +154,25 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => [
     items: [
       // Each of these is a section: ticked when it is in a window of its own,
       // and choosing it docks it back (addendum 02 §8).
-      { command: 'window.script', label: 'Script in its own window', checkable: true },
-      { command: 'window.viewer', label: 'Timeline & Viewer in its own window', checkable: true },
-      { command: 'window.lanes', label: 'Plot lanes in its own window', checkable: true },
+      // Named for the format in hand: a novel has a Manuscript and a
+      // commercial has a Sheet and a Timeline (addendum 02 §6.4, 05 §3e).
+      { command: 'window.script', label: `${names.script} in its own window`, checkable: true },
+      // Short form has no viewer: screen time from a page count and threads
+      // across a thirty are a screenplay's business (addendum 05 §3e).
+      ...(format === 'short_form'
+        ? []
+        : [{ command: 'window.viewer' as CommandId, label: `${names.viewer} in its own window`, checkable: true }]),
+      { command: 'window.lanes', label: `${names.lanes} in its own window`, checkable: true },
       { command: 'window.inspector', label: 'Inspector in its own window', checkable: true },
       { command: 'window.research', label: 'Research in its own window', checkable: true },
       { command: 'window.episodes', label: 'Episodes', checkable: true },
       { command: 'window.beat', label: 'This beat in its own window' },
       null,
       { command: 'window.bringAllBack', label: 'Bring everything back' },
+      // When the sections have been shuffled about and nothing is where it
+      // was, one item puts the workspace back the way it opens: everything
+      // docked, in its default place, at its default size.
+      { command: 'window.reset', label: 'Reset windows to default' },
       null,
       { command: 'window.focus', label: 'Focus mode', accelerator: 'CmdOrCtrl+Shift+F', checkable: true },
       { command: 'window.preferences', label: 'Window preferences…' },
@@ -161,7 +186,8 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => [
       { command: 'help.about', label: 'About VC Writer' },
     ],
   },
-];
+  ];
+};
 
 /** The menus with nothing open: everything a project does not decide. */
 export const MENUS: readonly Menu[] = menusFor(null);

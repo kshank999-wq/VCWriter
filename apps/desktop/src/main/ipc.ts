@@ -10,7 +10,7 @@ import {
   type ProjectFile,
   type ProjectFormat,
 } from '@vcwriter/domain';
-import { exportProjectPdf, printProject } from './export-pdf';
+import { exportProjectPdf, printProject, type PrintKind } from './export-pdf';
 import { applyApplicationMenu, commandSender, type MenuSpec } from './menu';
 import {
   accessToken,
@@ -266,7 +266,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
     'project:exportPdf',
     async (
       _event,
-      input: { file: unknown; options?: PrintOptions },
+      input: { file: unknown; options?: PrintOptions; kind?: PrintKind },
     ): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>> => {
       try {
         return ok(await exportProjectPdf(input, getWindow()));
@@ -278,7 +278,10 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
 
   ipcMain.handle(
     'project:print',
-    async (_event, input: { file: unknown; options?: PrintOptions }): Promise<DesktopApiResult<boolean>> => {
+    async (
+      _event,
+      input: { file: unknown; options?: PrintOptions; kind?: PrintKind },
+    ): Promise<DesktopApiResult<boolean>> => {
       try {
         return ok(await printProject(input));
       } catch (cause) {

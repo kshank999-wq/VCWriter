@@ -6,9 +6,14 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import {
   parseProjectFile,
+  renderBoardDocumentHtml,
   renderPrintDocumentHtml,
+  renderSheetDocumentHtml,
+  suggestedBoardFileName,
   suggestedExportFileName,
+  suggestedSheetFileName,
   type PrintOptions,
+  type ProjectFile,
 } from '@vcwriter/domain';
 
 /**
@@ -59,12 +64,54 @@ const withDocumentWindow = async <T>(
   }
 };
 
+/**
+ * Which document is being printed.
+ *
+ * `script` is the manuscript, hand-paginated. In a short-form project the
+ * document is the **sheet**, and beside it there is a **board** — the frames
+ * on their own, for a wall (addendum 05 §8). They are three renderings of one
+ * project rather than three projects.
+ */
+export type PrintKind = 'script' | 'sheet' | 'board';
+
 export interface ExportPdfInput {
   file: unknown;
   options?: PrintOptions;
+  kind?: PrintKind;
   /** Skips the save dialog; used by tests and future batch export. */
   targetPath?: string;
 }
+
+/**
+ * The document, and what to call the file it is saved as.
+ *
+ * Short form prints its sheet whatever the caller asked for, because a
+ * commercial has no script to print instead — asking for one is asking for
+ * the document this project has.
+ */
+const documentFor = (project: ProjectFile, kind: PrintKind, options: PrintOptions) => {
+  const sheetish = kind === 'board' || kind === 'sheet' || project.project.format === 'short_form';
+  if (kind === 'board') {
+    return { html: renderBoardDocumentHtml(project, options), name: suggestedBoardFileName(project), paged: false };
+  }
+  if (sheetish) {
+    return { html: renderSheetDocumentHtml(project, options), name: suggestedSheetFileName(project), paged: false };
+  }
+  return { html: renderPrintDocumentHtml(project, options), name: suggestedExportFileName(project), paged: true };
+};
+
+/**
+ * How many pages came out.
+ *
+ * A hand-paginated script says so in its own markup — one section per page.
+ * A sheet is paginated by the browser, so the only place the answer exists is
+ * the PDF itself: count its page objects rather than guess.
+ */
+const pageCountOf = (pdf: Buffer, html: string, paged: boolean): number => {
+  if (paged) return html.split('class="page').length - 1;
+  const matches = pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g);
+  return matches ? matches.length : 1;
+};
 
 export interface ExportPdfResult {
   path: string;
@@ -76,17 +123,17 @@ export const exportProjectPdf = async (
   parent: BrowserWindowType | null,
 ): Promise<ExportPdfResult | null> => {
   const project = parseProjectFile(input.file);
-  const html = renderPrintDocumentHtml(project, input.options ?? {});
+  const { html, name, paged } = documentFor(project, input.kind ?? 'script', input.options ?? {});
 
   let targetPath = input.targetPath;
   if (!targetPath) {
     const choice = parent
       ? await dialog.showSaveDialog(parent, {
-          defaultPath: suggestedExportFileName(project),
+          defaultPath: name,
           filters: [{ name: 'PDF', extensions: ['pdf'] }],
         })
       : await dialog.showSaveDialog({
-          defaultPath: suggestedExportFileName(project),
+          defaultPath: name,
           filters: [{ name: 'PDF', extensions: ['pdf'] }],
         });
     if (choice.canceled || !choice.filePath) return null;
@@ -96,12 +143,16 @@ export const exportProjectPdf = async (
   const pdf = await withDocumentWindow(html, (window) => window.webContents.printToPDF(PAGE_SETUP));
   await writeFile(targetPath, pdf);
 
-  return { path: targetPath, pageCount: html.split('class="page').length - 1 };
+  return { path: targetPath, pageCount: pageCountOf(pdf, html, paged) };
 };
 
-export const printProject = async (input: { file: unknown; options?: PrintOptions }): Promise<boolean> => {
+export const printProject = async (input: {
+  file: unknown;
+  options?: PrintOptions;
+  kind?: PrintKind;
+}): Promise<boolean> => {
   const project = parseProjectFile(input.file);
-  const html = renderPrintDocumentHtml(project, input.options ?? {});
+  const { html } = documentFor(project, input.kind ?? 'script', input.options ?? {});
 
   return withDocumentWindow(
     html,

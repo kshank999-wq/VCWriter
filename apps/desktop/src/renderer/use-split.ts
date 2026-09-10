@@ -121,5 +121,15 @@ export const useSplit = ({ key, initial, min, reserve, axis = 'x' }: SplitOption
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolved, min, reserve, setSize]);
 
-  return { size: resolved, dividerProps: { onPointerDown, onPointerMove, onPointerUp } };
+  /**
+   * Forget the remembered size, so the divider reads its own default again —
+   * the same path a machine that has never been dragged takes. This is what
+   * Window → Reset windows to default calls (addendum 02 §8).
+   */
+  const reset = useCallback(() => {
+    setLive(null);
+    setStored(null);
+  }, [setStored]);
+
+  return { size: resolved, reset, dividerProps: { onPointerDown, onPointerMove, onPointerUp } };
 };

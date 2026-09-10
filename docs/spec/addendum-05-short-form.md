@@ -1,6 +1,6 @@
 # Addendum 05 — Short form: the AV sheet, and the board
 
-Status: stages 1–7 built, September 2026; the rest specified. Fills in what addendum 02
+Status: complete — all eight stages built, September 2026. Fills in what addendum 02
 §14 left open: *"the module that makes something of it, with the timings and
 the shapes that kind of work needs, is a later piece of work."* This is that
 piece.
@@ -267,6 +267,37 @@ nine-second shot, not a thirteen-second one.
 - A container the machine can hold but not measure comes in with no length,
   and the shot is timed by its head, line and tail like any other.
 
+## 4c. Printing it, and the board
+
+**Two documents come out of a short-form project**, and they go to different
+people:
+
+| | What it is | Who wants it |
+| --- | --- | --- |
+| **The sheet** | What is on screen: audio, visual, frame and duration, in rows, under the masthead, each segment closing on its own four figures | The client who signs it off, and the producer who budgets from it |
+| **The board** | The frames, in order, three across, each captioned with its shot number, its time and its line | The wall |
+
+Both open with the **title page the script has**, because it is the same piece
+of work; Page setup turns it off for either.
+
+**The browser paginates these, not the program.** A screenplay is
+hand-paginated because it is fixed-pitch, a page holds exactly fifty-five
+lines, and where `(MORE)` falls is part of the craft. A sheet is a table of
+rows whose heights depend on pictures and on how much somebody wrote —
+nothing about it is countable in advance, and pretending otherwise would give
+a preview that disagreed with the print. So a **shot never breaks across two
+sheets**, the column heads print again at the top of every page a segment runs
+onto, and the layout engine does the rest.
+
+**A clip prints as what it is**, not as a picture: a name and a length in a
+plate. There is no frame to pull out of a video without decoding it, and a
+board that printed a black rectangle where the footage goes would be lying
+about what is there.
+
+A shot with no picture still gets its panel on the board. **A board with a
+hole in it should look like a board with a hole in it** — that is the point of
+printing one before the work is done.
+
 ## 5. Playback
 
 **Play the board.** From the sheet or the timeline: the frames advance at
@@ -300,7 +331,8 @@ Everything below already exists on a beat except where it says otherwise.
   they fit, and stops there.
 - **It does not draw.** Frames come from somewhere else — a drawing, a
   photograph, a still. The sheet holds them and lines them up.
-- **It does not render video.** Playback is for hearing the shape.
+- **It does not render video.** Playback is for hearing the shape, and what
+  prints is paper: a clip on a plate prints as its name and its length (§4c).
 - **It does not replace the beat window.** A row's audio opens in the same
   writing screen everything else does, with the same two keys.
 - **It is not a second story order.** Anything that reordered rows without
@@ -327,11 +359,12 @@ Everything below already exists on a beat except where it says otherwise.
    dialogue below. The playhead through both comes with playback.
 7. **Built.** Playback (§5), with the voices already assigned and one
    playhead through the sheet and the timeline.
-8. **Print and export**: the sheet as it is on screen, and a board.
+8. **Built.** Print and export (§4c): the sheet as it is on screen, and a
+   board.
 
-Stage 1 alone is worth having: a writer who can see their commercial as an AV
+Stage 1 alone was worth having: a writer who can see their commercial as an AV
 sheet, with the times and the counts adding up, has the document the business
-actually asks for.
+actually asks for. The rest built on it, and it is all built now.
 
 ## 9. What is built
 
@@ -515,3 +548,26 @@ right corner** rather than from a control adrift in the middle of the panel.
 The section strips (SHEET, TIMELINE, INSPECTOR) were drawn in the muted
 colour, which on a light scheme is a washed-out bronze at nine and a half
 pixels; they are full text colour now.
+
+### Stage 8 — the sheet on paper, and the board on a wall
+
+**Preview** in a short-form project shows the document rather than script
+pages, with **Sheet** and **Board** beside each other and Print and Export PDF
+acting on whichever is being looked at. The File menu carries the board as its
+own pair — *Print the board…* and *Export the board as PDF…* — because it is a
+second document, not a second view of the first; only short form has them.
+
+The preview is drawn from the same `avSheet` as the printed HTML, under the
+same class names, so the two cannot drift apart. That is the pattern the
+Script's preview already follows: **one source of arithmetic, two renderings
+of it.**
+
+Files are named for the piece and apart from each other — `Know Your Enemy
+sheet.pdf`, `Know Your Enemy board.pdf`. The page count reported after an
+export is read out of the PDF itself, since the browser decided it.
+
+Two things came in beside it. The **Window menu names the sections for the
+format in hand** — Sheet and Timeline in short form, Manuscript in a novel —
+and offers no viewer where there is none. And **Window → Reset windows to
+default** puts a workspace that has been shuffled about back the way it opens:
+everything docked, in its default place, at its default size, focus mode off.

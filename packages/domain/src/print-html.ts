@@ -193,7 +193,12 @@ const renderChapterPage = (page: Page, isProse: boolean, options: PrintOptions):
 const renderTitlePage = (file: ProjectFile): string =>
   renderTitleSheet(titlePageOf(file.project, file.settings));
 
-const renderTitleSheet = (page: TitlePage): string => {
+/**
+ * The title page, on its own, so a document that is not a script can open
+ * with one (addendum 05 §8): a board is handed over with the same front page
+ * a screenplay is, because it is the same piece of work.
+ */
+export const renderTitleSheet = (page: TitlePage): string => {
   const lines = (text: string): string =>
     escapeHtml(text)
       .split(/\r?\n/)
@@ -245,6 +250,48 @@ const renderTitleSheet = (page: TitlePage): string => {
     '</section>'
   );
 };
+
+/**
+ * The front page's own rules, shared by every document that opens with one
+ * — the script, and the AV sheet and board beside it (addendum 05 §8).
+ */
+export const TITLE_PAGE_STYLES = `
+  .title-page { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  /*
+     The page in two halves. The title sits in the top one — centred in it, so
+     a logotype falls halfway between the top of the page and the middle — and
+     everything else begins at the halfway mark and runs down from there.
+     The page is 11in with an inch of padding at the top, so the top half is
+     4.5in of the 9in between the margins.
+  */
+  .title-page .title-block {
+    height: 4.5in;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .title-page .title-credit { width: 100%; }
+  .title-page .based-on { margin-top: 0.5in; }
+  .title-page .episode { margin-top: 0.25in; }
+  /* "by" sits on a line of its own between the credit and the name. */
+  .title-page .by { margin: 0; }
+  .title-page .byline, .title-page .author, .title-page .source-author { margin: 0; }
+  /* The logotype prints in place of the title, kept inside the margins. */
+  .title-art { display: block; max-width: 5in; max-height: 3in; margin: 0 auto; }
+  /* The foot of the page: which draft on the left, who to call on the right. */
+  .title-foot { margin-top: auto; width: 100%; }
+  .title-foot-row { display: flex; justify-content: space-between; align-items: flex-end; }
+  .title-foot .contact { text-align: left; }
+  .title-foot .draft { text-align: right; }
+  .title-note { margin: 0.35in 0 0; text-align: center; }
+  .title-foot p { margin: 0; }
+  /* Four times the manuscript's 12pt, and bold. */
+  .title-block h1 { font-size: 48pt; font-weight: bold; text-transform: uppercase; margin: 0; line-height: 1.1; }
+  .byline { margin: 0; }
+  .author { margin: 0; }
+`;
 
 const STYLES = `
   /* Zero, deliberately. The page's own padding is the manuscript's margin,
@@ -301,41 +348,7 @@ const STYLES = `
   /* The two figures need saying: the sheet is not the page the script
      prints, because every episode numbers from its own page one. */
   .contents-head { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.15em; padding-bottom: 0; }
-  .title-page { display: flex; flex-direction: column; align-items: center; text-align: center; }
-  /*
-     The page in two halves. The title sits in the top one — centred in it, so
-     a logotype falls halfway between the top of the page and the middle — and
-     everything else begins at the halfway mark and runs down from there.
-     The page is 11in with an inch of padding at the top, so the top half is
-     4.5in of the 9in between the margins.
-  */
-  .title-page .title-block {
-    height: 4.5in;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  .title-page .title-credit { width: 100%; }
-  .title-page .based-on { margin-top: 0.5in; }
-  .title-page .episode { margin-top: 0.25in; }
-  /* "by" sits on a line of its own between the credit and the name. */
-  .title-page .by { margin: 0; }
-  .title-page .byline, .title-page .author, .title-page .source-author { margin: 0; }
-  /* The logotype prints in place of the title, kept inside the margins. */
-  .title-art { display: block; max-width: 5in; max-height: 3in; margin: 0 auto; }
-  /* The foot of the page: which draft on the left, who to call on the right. */
-  .title-foot { margin-top: auto; width: 100%; }
-  .title-foot-row { display: flex; justify-content: space-between; align-items: flex-end; }
-  .title-foot .contact { text-align: left; }
-  .title-foot .draft { text-align: right; }
-  .title-note { margin: 0.35in 0 0; text-align: center; }
-  .title-foot p { margin: 0; }
-  /* Four times the manuscript's 12pt, and bold. */
-  .title-block h1 { font-size: 48pt; font-weight: bold; text-transform: uppercase; margin: 0; line-height: 1.1; }
-  .byline { margin: 0; }
-  .author { margin: 0; }
+  ${TITLE_PAGE_STYLES}
   .watermark {
     position: fixed;
     inset: 0;

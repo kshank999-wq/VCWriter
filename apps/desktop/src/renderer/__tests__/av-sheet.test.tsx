@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import {
   addBeat,
   createProjectFile,
+  setMaxSeconds,
   setRowFrame,
   setTitlePage,
   updateBeat,
@@ -12,6 +13,7 @@ import {
   type ProjectFile,
 } from '@vcwriter/domain';
 import { MasterPanel } from '../components/MasterPanel';
+import { SheetPreview } from '../components/SheetPreview';
 import { paneNamesFor, scriptWordFor } from '../panes';
 import { MAX_EDGE, isPicture, pictureFrom } from '../frames';
 
@@ -450,5 +452,79 @@ describe('the slot it has to fit', () => {
     expect(screen.getByText(/Over by/)).toBeTruthy();
     // Every word of it still on the sheet.
     expect(screen.getByLabelText('What is heard in row 1.1')).toBeTruthy();
+  });
+});
+
+/**
+ * The Preview tab in a short-form project (addendum 05 §8): the sheet as it
+ * will print, and the board beside it.
+ */
+describe('the sheet and the board on paper', () => {
+  const preview = (file: ProjectFile, calls: string[] = []) =>
+    render(
+      <SheetPreview
+        file={file}
+        onExportPdf={(kind) => calls.push(`export:${kind}`)}
+        onPrint={(kind) => calls.push(`print:${kind}`)}
+        busy={false}
+        message={null}
+      />,
+    );
+
+  it('shows the sheet, with its masthead, its rows and its foot', () => {
+    preview(commercial());
+    expect(document.querySelector('.sheet-doc')).toBeTruthy();
+    expect(screen.getByText('Commercial 1')).toBeTruthy();
+    expect(document.querySelectorAll('.sheet-row')).toHaveLength(2);
+    expect(screen.getByText('End of segment 1')).toBeTruthy();
+    expect(screen.getByText('Segment RT')).toBeTruthy();
+  });
+
+  it('gives every shot four times, named, as the print does', () => {
+    preview(commercial());
+    const first = within(document.querySelectorAll('.sheet-row')[0] as HTMLElement);
+    expect(first.getByText('Header')).toBeTruthy();
+    expect(first.getByText('Dialogue')).toBeTruthy();
+    expect(first.getByText('Tail')).toBeTruthy();
+    expect(first.getByText('Video')).toBeTruthy();
+  });
+
+  it('switches to the board, which is the frames and their lines', () => {
+    preview(commercial());
+    expect(document.querySelectorAll('.board-panel')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('tab', { name: 'Board' }));
+    expect(document.querySelectorAll('.board-panel')).toHaveLength(2);
+    expect(document.querySelectorAll('.sheet-row')).toHaveLength(0);
+    expect(screen.getByText(/Segment 1 — Know your enemy/)).toBeTruthy();
+  });
+
+  it('prints and exports the document being looked at', () => {
+    const calls: string[] = [];
+    preview(commercial(), calls);
+    fireEvent.click(screen.getByRole('button', { name: 'Export PDF…' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export PDF…' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Print…' }));
+    // The sheet is the project's own document, so it asks for no kind at all.
+    expect(calls).toEqual(['export:script', 'export:board', 'print:board']);
+  });
+
+  it('says the slot, and turns the total red over it', () => {
+    preview(setMaxSeconds(commercial(), 5));
+    expect(document.querySelector('.sheet-over')).toBeTruthy();
+    expect(screen.getByText(/over by 00:04/)).toBeTruthy();
+  });
+
+  it('draws a clip as what it is rather than as a black rectangle', () => {
+    const file = commercial();
+    const made = setRowFrame(file, file.beats[0]!.id, {
+      data: 'data:video/mp4;base64,AAAA',
+      kind: 'video',
+      name: 'street.mp4',
+      seconds: 11,
+    });
+    preview(made.file);
+    expect(screen.getByText('street.mp4')).toBeTruthy();
+    expect(document.querySelector('.sheet-plate.clip')).toBeTruthy();
   });
 });
