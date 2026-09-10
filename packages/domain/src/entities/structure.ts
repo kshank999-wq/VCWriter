@@ -235,13 +235,23 @@ export const beatSchema = z.object({
    */
   imageAssetId: id<AssetId>().nullable().default(null),
   /**
-   * How long the row runs, in whole seconds (addendum 05 §4).
+   * How long the **dialogue** of a shot runs, in whole seconds (addendum 05
+   * §4).
    *
-   * The writer's, never derived. A four-word line can hold the screen for six
-   * seconds, so nothing here guesses at it from the words; zero means nobody
-   * has said yet, and the totals say so.
+   * Zero means "as long as the words take" — the one place in the sheet where
+   * a time is estimated rather than typed, because the length of a read is
+   * the one thing the words really do determine. Set it and the writer's
+   * number wins.
    */
   seconds: z.number().int().min(0).default(0),
+  /**
+   * The action before the dialogue starts, and after it ends, in seconds
+   * (addendum 05 §4). A shot is rarely only its line: something happens, then
+   * somebody speaks, then something happens. Both are the writer's, and both
+   * are zero until they are set.
+   */
+  headSeconds: z.number().int().min(0).default(0),
+  tailSeconds: z.number().int().min(0).default(0),
   ...timestamps,
 });
 export type Beat = z.infer<typeof beatSchema>;

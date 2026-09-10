@@ -97,6 +97,7 @@ describe('the sheet in place of the script', () => {
     const first = within(rows[0] as HTMLElement);
     expect(first.getByText('1.1')).toBeTruthy();
     expect(first.getByText('6 words')).toBeTruthy();
+    expect(first.getByLabelText('Action before the line in shot 1.1')).toHaveProperty('value', '00:00');
     expect(first.getByLabelText('What is heard in row 1.1')).toHaveProperty(
       'value',
       'Sun Tzu said "know your enemy"',
@@ -105,7 +106,7 @@ describe('the sheet in place of the script', () => {
       'value',
       'nerdy kid walking down the street',
     );
-    expect(first.getByLabelText('How long row 1.1 runs')).toHaveProperty('value', '00:04');
+    expect(first.getByLabelText('How long the line in shot 1.1 takes')).toHaveProperty('value', '00:04');
   });
 
   it('names the segment from the scene and closes it with its figures', () => {
@@ -180,7 +181,7 @@ describe('writing in the sheet', () => {
 
   it('takes a time the way it is typed, and puts it back the way it prints', () => {
     panel(commercial());
-    const box = () => screen.getByLabelText('How long row 1.1 runs');
+    const box = () => screen.getByLabelText('How long the line in shot 1.1 takes');
     fireEvent.change(box(), { target: { value: '1:02' } });
     fireEvent.blur(box());
     expect(box()).toHaveProperty('value', '01:02');
@@ -201,7 +202,7 @@ describe('writing in the sheet', () => {
   it('adds a row at the foot of the segment, and it is numbered in place', () => {
     panel(commercial());
     expect(document.querySelectorAll('.av-row')).toHaveLength(2);
-    fireEvent.click(screen.getByRole('button', { name: '+ Row' }));
+    fireEvent.click(screen.getAllByRole('button', { name: '+ Shot' })[0]!);
     expect(document.querySelectorAll('.av-row')).toHaveLength(3);
     expect(screen.getByLabelText('What is heard in row 1.3')).toBeTruthy();
   });
@@ -332,5 +333,64 @@ describe('storyboard frames on the sheet', () => {
     } as unknown as FileList;
     expect(pictureFrom(list)?.name).toBe('frame.png');
     expect(pictureFrom(null)).toBeNull();
+  });
+});
+
+describe('a shot’s three times', () => {
+  it('calls it a shot, and takes the count off the number', () => {
+    panel(commercial());
+    expect(screen.getByText('Shot')).toBeTruthy();
+    expect(screen.queryByText('Row')).toBeNull();
+    // The words and the running time used to sit under the number; the
+    // duration is on the other side of the image, so they have gone.
+    const number = document.querySelectorAll('.av-row th')[0] as HTMLElement;
+    expect(number.textContent).toBe('1.1');
+  });
+
+  it('gives the duration three lines, and the words their own column', () => {
+    panel(commercial());
+    const row = within(document.querySelectorAll('.av-row')[0] as HTMLElement);
+    expect(row.getByText('Header')).toBeTruthy();
+    expect(row.getByText('Dialogue')).toBeTruthy();
+    expect(row.getByText('Tail')).toBeTruthy();
+    expect(screen.getByText('Words +/−')).toBeTruthy();
+    expect(row.getByText('6 words')).toBeTruthy();
+  });
+
+  it('sets the header and the tail, and adds them to the shot', () => {
+    panel(commercial());
+    const head = screen.getByLabelText('Action before the line in shot 1.1');
+    fireEvent.change(head, { target: { value: '2' } });
+    fireEvent.blur(head);
+    const tail = screen.getByLabelText('Action after the line in shot 1.1');
+    fireEvent.change(tail, { target: { value: '3' } });
+    fireEvent.blur(tail);
+
+    expect(screen.getByLabelText('Action before the line in shot 1.1')).toHaveProperty('value', '00:02');
+    expect(screen.getByLabelText('Action after the line in shot 1.1')).toHaveProperty('value', '00:03');
+    // Four for the line, plus two and three, plus the second shot's five:
+    // the segment's foot says fourteen, and so does the total.
+    expect(screen.getAllByText('00:14')).toHaveLength(2);
+  });
+
+  it('hands the line back to its words when the box is cleared', () => {
+    panel(commercial());
+    const box = () => screen.getByLabelText('How long the line in shot 1.1 takes');
+    expect(box().className).not.toContain('estimated');
+
+    fireEvent.change(box(), { target: { value: '' } });
+    fireEvent.blur(box());
+    // Six words at two and a half a second: three seconds, and drawn as the
+    // estimate it is.
+    expect(box()).toHaveProperty('value', '00:03');
+    expect((box().closest('.av-time-line') as HTMLElement).className).toContain('estimated');
+  });
+
+  it('offers a segment where the last one ended, not only at the bottom', () => {
+    panel(commercial());
+    expect(screen.getAllByRole('button', { name: '+ Segment' })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: '+ Segment' }));
+    expect(screen.getAllByRole('button', { name: '+ Segment' })).toHaveLength(2);
+    expect(screen.getByLabelText('Name of segment 2')).toBeTruthy();
   });
 });

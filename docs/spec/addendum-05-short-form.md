@@ -1,6 +1,6 @@
 # Addendum 05 — Short form: the AV sheet, and the board
 
-Status: stages 1–4 built, September 2026; the rest specified. Fills in what addendum 02
+Status: stages 1–5 built, September 2026; the rest specified. Fills in what addendum 02
 §14 left open: *"the module that makes something of it, with the timings and
 the shapes that kind of work needs, is a later piece of work."* This is that
 piece.
@@ -63,11 +63,12 @@ added up, and the word count of the audio.
 
 | Column | What it is |
 | --- | --- |
-| **Row** | `segment.row` — 1.1, 1.2, 2.1 — read from the story order, never typed. Under it, that row's word count and its running time. |
+| **Shot** | `segment.shot` — 1.1, 1.2, 2.1 — read from the story order, never typed. Nothing under it: the time is on the other side of the image. |
 | **Audio** | What is heard: voiceover, dialogue, a line of song. This is the beat's manuscript, and it is what the word count counts. |
 | **Visual** | What is seen. The beat's own second text, and new (§6). |
 | **Image** | One storyboard frame, or an empty plate to drop one on. |
-| **Duration** | The row's running time, in seconds. The writer's, not a guess from the words (§4). |
+| **Duration** | Three lines — **header**, **dialogue**, **tail** (§4). |
+| **Words +/−** | Beside the dialogue line, what the line's words come to. |
 | | The count of comments on the row, as the rest of the workspace shows them. |
 
 ### The segments
@@ -148,17 +149,32 @@ and a row holds a reference rather than a picture.
 
 Short form is timed to the second and always has been. A thirty is thirty.
 
-- **A row's duration is the writer's.** Typed in, in seconds. Nothing derives
-  it, because the thing being timed is a shot, not a paragraph — a four-word
-  line can hold the screen for six seconds.
-- **A row with no duration reads as 00:00**, and the totals say so. An
-  unfinished board should look unfinished.
-- **The word count is a check on the time, not a source for it.** Roughly
-  two-and-a-half words a second is the read; where a row's words cannot fit
-  its duration the sheet says so quietly, in the row, and never changes
-  anything (§7).
-- Segment and total times are sums, and are always visible: at the head, at
-  the foot of each segment, and against every row.
+**A shot is rarely only its line.** Something happens, then somebody speaks,
+then something happens — so a shot's duration is three figures, one under
+another, and the shot is the three of them added up:
+
+| | |
+| --- | --- |
+| **Header** | The action before the line begins. The writer's. |
+| **Dialogue** | How long the line takes. |
+| **Tail** | The action after the line ends. The writer's. |
+
+**The dialogue's time is the one figure in the sheet that is estimated.** How
+long a read takes really is what the words determine — roughly two and a half
+words a second — and asking a writer to time every line by hand when the
+answer is arithmetic is asking for nothing. It is drawn as the estimate it is,
+and typing over it makes it theirs; clearing the box hands it back to the
+words. Beside it, in **Words +/−**, is what the line's words actually come to.
+
+The header and the tail are never estimated. Nothing can know how long a man
+takes to cross a room.
+
+- **A shot with no times reads as its words and nothing else**, which is an
+  honest thing for an unfinished board to say.
+- Where a writer's own dialogue time is shorter than the words need, the sheet
+  says so quietly, in the shot, and changes nothing (§7).
+- Segment and total times are sums, and are always visible: at the head, and
+  at the foot of each segment.
 
 ## 5. Playback
 
@@ -214,10 +230,12 @@ Everything below already exists on a beat except where it says otherwise.
 4. **Built.** Frames (§3c): the pictures the document carries, dropping one
    on a row, more than one down a segment, and the audio spacing out against
    them.
-5. **One timeline** (§3a): the frames above, the segments and their dialogue
+5. **Built.** A shot's three times (§4): header, dialogue and tail, the
+   dialogue estimated from its words until the writer says otherwise.
+6. **One timeline** (§3a): the frames above, the segments and their dialogue
    below, and a playhead through both.
-6. **Playback**, with the voices already assigned.
-7. **Print and export**: the sheet as it is on screen, and a board.
+7. **Playback**, with the voices already assigned.
+8. **Print and export**: the sheet as it is on screen, and a board.
 
 Stage 1 alone is worth having: a writer who can see their commercial as an AV
 sheet, with the times and the counts adding up, has the document the business
@@ -327,3 +345,19 @@ it is.
 - Under the cursor a filled plate carries a **×**, like the row's own handles.
 
 A file that predates frames opens with none, rather than badly.
+
+### Stage 5 — the shot, and its three times
+
+**A row is a shot**, and the column says so. The word count and the running
+time have come off the shot number: the duration is on the other side of the
+image, where it belongs.
+
+Under **Duration**, three lines — **header**, **dialogue**, **tail** — and
+beside them, under **Words +/−**, what the line's words come to. The header
+and the tail are typed. The dialogue's time is the words' own estimate,
+italic and in gold to say so, until the writer types over it; clearing the box
+hands it back.
+
+**+ Segment** sits at the foot of every segment as well as at the end, because
+a board is written a segment at a time and the next one starts from where the
+last one ended.

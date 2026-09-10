@@ -11,7 +11,10 @@ import {
   moveRow,
   parseRt,
   setRowAudio,
-  setRowSeconds,
+  setRowDialogue,
+  setRowHead,
+  setRowTail,
+  readSeconds,
   setRowVisual,
   createProjectFile,
   formatRt,
@@ -217,17 +220,50 @@ describe('writing in the sheet', () => {
     expect(element.text).toBe('Sun Tzu said something else');
   });
 
-  it('writes the visual and the time', () => {
+  it('writes the visual, and the time the line takes', () => {
     let file = commercial();
     const beatId = file.beats[0]!.id;
     file = setRowVisual(file, beatId, 'The kid nods');
-    file = setRowSeconds(file, beatId, 7);
+    file = setRowDialogue(file, beatId, 7);
 
     expect(rowsOf(file)[0]?.visual).toBe('The kid nods');
-    expect(rowsOf(file)[0]?.seconds).toBe(7);
+    expect(rowsOf(file)[0]?.dialogue).toBe(7);
     // Never negative, and never a fraction of a second.
-    expect(rowsOf(setRowSeconds(file, beatId, -3))[0]?.seconds).toBe(0);
-    expect(rowsOf(setRowSeconds(file, beatId, 4.6))[0]?.seconds).toBe(5);
+    expect(rowsOf(setRowDialogue(file, beatId, -3))[0]?.dialogue).toBe(readSeconds(6));
+    expect(rowsOf(setRowDialogue(file, beatId, 4.6))[0]?.dialogue).toBe(5);
+  });
+
+  it('gives the line the time its words take until the writer says otherwise', () => {
+    let file = commercial();
+    const beatId = file.beats[0]!.id;
+    // Six words at two and a half a second is three seconds, rounded up.
+    expect(readSeconds(6)).toBe(3);
+    // The fixture gave this line four, so four is what it takes.
+    expect(rowsOf(file)[0]?.dialogue).toBe(4);
+    expect(rowsOf(file)[0]?.estimated).toBe(false);
+
+    file = setRowDialogue(file, beatId, 0);
+    expect(rowsOf(file)[0]?.estimated).toBe(true);
+    expect(rowsOf(file)[0]?.dialogue).toBe(3);
+    // An estimate cannot be wrong about itself.
+    expect(rowsOf(file)[0]?.fits).toBeNull();
+  });
+
+  it('takes a header and a tail, and the shot is the three together', () => {
+    let file = commercial();
+    const beatId = file.beats[0]!.id;
+    file = setRowDialogue(file, beatId, 4);
+    file = setRowHead(file, beatId, 2);
+    file = setRowTail(file, beatId, 3);
+
+    const row = rowsOf(file)[0]!;
+    expect(row.head).toBe(2);
+    expect(row.dialogue).toBe(4);
+    expect(row.tail).toBe(3);
+    expect(row.seconds).toBe(9);
+    // And the segment counts the whole shot, not just the line: this one's
+    // nine, and the two after it keep the times they were given.
+    expect(avSheet(file).segments[0]?.seconds).toBe(9 + 5 + 6);
   });
 
   it('adds a row under the one it was asked for, not at the end', () => {

@@ -10,7 +10,9 @@ import {
   removeBeat,
   setRowAudio,
   setRowFrame,
-  setRowSeconds,
+  setRowDialogue,
+  setRowHead,
+  setRowTail,
   setRowVisual,
   toggleSpoken,
   updateUnit,
@@ -72,7 +74,7 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false }: AvSheet
 
       {rows === 0 && sheet.segments.length === 0 ? (
         <p className="muted empty-state av-empty">
-          Nothing on the board yet. A segment is a scene and a row is a beat — start one and it appears here,
+          Nothing on the board yet. A segment is a scene and a shot is a beat — start one and it appears here,
           and on the timeline, because they are the same thing.
         </p>
       ) : null}
@@ -123,7 +125,7 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false }: AvSheet
               <thead>
                 <tr>
                   <th scope="col" className="av-num">
-                    Row
+                    Shot
                   </th>
                   <th scope="col">Audio</th>
                   <th scope="col">Visual</th>
@@ -132,6 +134,9 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false }: AvSheet
                   </th>
                   <th scope="col" className="av-num">
                     Duration
+                  </th>
+                  <th scope="col" className="av-num" title="What the line's words come to, and what you did about it">
+                    Words +/−
                   </th>
                   {readOnly ? null : <th scope="col" className="av-tools-head" aria-label="Move or remove" />}
                 </tr>
@@ -156,7 +161,7 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false }: AvSheet
               className="ghost small av-add-row"
               onClick={() => onUpdate((current) => addRow(current, { unitId: segment.unitId }).file)}
             >
-              + Row
+              + Shot
             </button>
           )}
 
@@ -174,10 +179,18 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false }: AvSheet
               <Figure label="Total words" value={String(segment.totalWords)} />
             </dl>
           </footer>
+
+          {/* A board is written a segment at a time, so the next one starts
+              from where the last one ended rather than from the bottom. */}
+          {readOnly ? null : (
+            <button type="button" className="ghost small av-add-segment-here" onClick={addSegment}>
+              + Segment
+            </button>
+          )}
         </section>
       ))}
 
-      {readOnly ? null : (
+      {readOnly || sheet.segments.length > 0 ? null : (
         <button type="button" className="ghost av-add-segment" onClick={addSegment}>
           + Segment
         </button>
@@ -203,23 +216,6 @@ interface RowProps {
 }
 
 function Row({ row, readOnly, onUpdate, onOpen }: RowProps) {
-  /**
-   * What is in the duration box while it is being typed in.
-   *
-   * A time is held as text until it is left, so `1:` on the way to `1:02` is
-   * not read as a minute and then argued with. Null means the box is showing
-   * what the row actually says.
-   */
-  const [typing, setTyping] = useState<string | null>(null);
-
-  const commit = (text: string) => {
-    const seconds = parseRt(text);
-    setTyping(null);
-    // Not a time at all: the row keeps the one it had.
-    if (seconds === null) return;
-    onUpdate((current) => setRowSeconds(current, row.beatId, seconds));
-  };
-
   return (
     <tr className="av-row">
       <th scope="row" className="av-num">
@@ -230,10 +226,6 @@ function Row({ row, readOnly, onUpdate, onOpen }: RowProps) {
         ) : (
           <span className="av-row-number">{row.number}</span>
         )}
-        <span className="muted small under">
-          {row.words} {row.words === 1 ? 'word' : 'words'}
-        </span>
-        <span className="muted small under">{formatRt(row.seconds)} RT</span>
       </th>
 
       <td className="av-audio">
@@ -273,22 +265,39 @@ function Row({ row, readOnly, onUpdate, onOpen }: RowProps) {
         <Plate row={row} readOnly={readOnly} onUpdate={onUpdate} />
       </td>
 
+      {/* A shot is rarely only its line: something happens, then somebody
+          speaks, then something happens (addendum 05 §4). */}
       <td className="av-num av-duration">
-        {readOnly ? (
-          formatRt(row.seconds)
-        ) : (
-          <input
-            className="av-time"
-            aria-label={`How long row ${row.number} runs`}
-            value={typing ?? formatRt(row.seconds)}
-            onChange={(event) => setTyping(event.target.value)}
-            onBlur={(event) => commit(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') event.currentTarget.blur();
-              if (event.key === 'Escape') setTyping(null);
-            }}
-          />
-        )}
+        <Time
+          label={`Action before the line in shot ${row.number}`}
+          name="Header"
+          seconds={row.head}
+          readOnly={readOnly}
+          onSet={(seconds) => onUpdate((current) => setRowHead(current, row.beatId, seconds))}
+        />
+        <Time
+          label={`How long the line in shot ${row.number} takes`}
+          name="Dialogue"
+          seconds={row.dialogue}
+          estimated={row.estimated}
+          readOnly={readOnly}
+          onSet={(seconds) => onUpdate((current) => setRowDialogue(current, row.beatId, seconds))}
+        />
+        <Time
+          label={`Action after the line in shot ${row.number}`}
+          name="Tail"
+          seconds={row.tail}
+          readOnly={readOnly}
+          onSet={(seconds) => onUpdate((current) => setRowTail(current, row.beatId, seconds))}
+        />
+      </td>
+
+      <td className="av-num av-words">
+        <span className="av-time-line muted">—</span>
+        <span className="av-time-line">
+          {row.words} {row.words === 1 ? 'word' : 'words'}
+        </span>
+        <span className="av-time-line muted">—</span>
       </td>
 
       {readOnly ? null : (
@@ -320,6 +329,66 @@ function Row({ row, readOnly, onUpdate, onOpen }: RowProps) {
         </td>
       )}
     </tr>
+  );
+}
+
+/**
+ * One of a shot's three times (addendum 05 §4).
+ *
+ * The header and the tail are the writer's outright. The dialogue's is the
+ * one figure in the sheet that is estimated — how long a read takes really is
+ * what the words determine — and typing over it makes it theirs. Clearing the
+ * box hands it back to the words.
+ */
+function Time({
+  label,
+  name,
+  seconds,
+  estimated = false,
+  readOnly,
+  onSet,
+}: {
+  label: string;
+  name: string;
+  seconds: number;
+  estimated?: boolean;
+  readOnly: boolean;
+  onSet(seconds: number): void;
+}) {
+  /**
+   * What is in the box while it is being typed in, so `1:` on the way to
+   * `1:02` is not read as a minute and then argued with.
+   */
+  const [typing, setTyping] = useState<string | null>(null);
+
+  const commit = (text: string) => {
+    const value = parseRt(text);
+    setTyping(null);
+    // Not a time at all: the shot keeps the one it had.
+    if (value === null) return;
+    onSet(value);
+  };
+
+  return (
+    <span className={`av-time-line${estimated ? ' estimated' : ''}`}>
+      <span className="av-time-name muted">{name}</span>
+      {readOnly ? (
+        <span>{formatRt(seconds)}</span>
+      ) : (
+        <input
+          className="av-time"
+          aria-label={label}
+          title={estimated ? 'As long as the words take. Type over it to say otherwise.' : undefined}
+          value={typing ?? formatRt(seconds)}
+          onChange={(event) => setTyping(event.target.value)}
+          onBlur={(event) => commit(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur();
+            if (event.key === 'Escape') setTyping(null);
+          }}
+        />
+      )}
+    </span>
   );
 }
 

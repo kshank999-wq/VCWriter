@@ -5744,6 +5744,41 @@ dialog.lane-dialog.title-page-dialog {
   width: 92px;
 }
 
+/* A shot's three times, one under another: what happens before the line, the
+   line, and what happens after (addendum 05 §4). */
+.av-table .av-duration,
+.av-table .av-words {
+  width: 132px;
+  min-width: 132px;
+}
+
+.av-time-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+  min-height: 22px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.av-time-name {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* The one figure in the sheet the words themselves decide. Typing over it
+   makes it the writer's, and it stops being drawn as a guess. */
+.av-time-line.estimated .av-time {
+  color: var(--gold-deep);
+  font-style: italic;
+}
+
+.av-words .av-time-line {
+  justify-content: flex-end;
+}
+
 .av-table .av-image-head {
   text-align: right;
 }
@@ -6031,7 +6066,7 @@ input.av-segment-line:focus,
 }
 
 .av-time {
-  width: 72px;
+  width: 62px;
   text-align: right;
   font-size: 12.5px;
   color: var(--text);
@@ -6064,6 +6099,10 @@ input.av-segment-line:focus,
 
 .av-add-segment {
   margin-top: 4px;
+}
+
+.av-add-segment-here {
+  margin-top: 10px;
 }
 
 /* ------------------------------------- the short-form timeline (addendum 05)

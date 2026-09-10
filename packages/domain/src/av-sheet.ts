@@ -45,10 +45,20 @@ export const formatRt = (seconds: number): string => {
  */
 export const WORDS_PER_SECOND = 2.5;
 
+/**
+ * How long a line takes to say, from the words in it.
+ *
+ * The one figure in the sheet that is estimated rather than typed: how long a
+ * read takes really is what the words determine, and asking a writer to time
+ * every line by hand when the answer is arithmetic is asking for nothing. The
+ * writer can still overrule it, and then their number is the one that counts.
+ */
+export const readSeconds = (words: number): number => Math.ceil(Math.max(0, words) / WORDS_PER_SECOND);
+
 export interface AvRow {
   beatId: BeatId;
   unitId: StructuralUnitId;
-  /** "1.1", "2.3" — the segment and the row within it. */
+  /** "1.1", "2.3" — the segment and the shot within it. */
   number: string;
   /** What is heard: the beat's manuscript, as plain lines. */
   audio: string;
@@ -56,10 +66,22 @@ export interface AvRow {
   visual: string;
   /** Counted from the audio, which is the only thing that is spoken. */
   words: number;
+  /** The whole shot: what happens before the line, the line, and after it. */
   seconds: number;
+  /** Action before the dialogue begins. The writer's. */
+  head: number;
+  /** How long the line itself takes. */
+  dialogue: number;
+  /** Action after the dialogue ends. The writer's. */
+  tail: number;
   /**
-   * Whether the words can be read in the time the row has. Null where the row
-   * has no time yet, because nothing has been claimed to be wrong.
+   * Whether the dialogue's time is the words' own estimate rather than a
+   * number the writer typed. A shot nobody has argued with reads as estimated.
+   */
+  estimated: boolean;
+  /**
+   * Whether the words can be read in the time the writer gave the dialogue.
+   * Null where the time is the words' own estimate, which by definition fits.
    */
   fits: boolean | null;
   /** The storyboard frame beside the row, resolved. Null where there is none. */
@@ -126,7 +148,11 @@ export const avSheet = (file: ProjectFile): AvSheet => {
 
     const rows: AvRow[] = beats.map((beat, row) => {
       const rowWords = countWords(beat.manuscript);
-      const rowSeconds = beat.seconds ?? 0;
+      const head = beat.headSeconds ?? 0;
+      const tail = beat.tailSeconds ?? 0;
+      const said = beat.seconds ?? 0;
+      const estimated = said === 0;
+      const dialogue = estimated ? readSeconds(rowWords) : said;
       return {
         beatId: beat.id,
         unitId: unit.id,
@@ -134,9 +160,14 @@ export const avSheet = (file: ProjectFile): AvSheet => {
         audio: audioOf(beat.manuscript.elements),
         visual: beat.visual ?? '',
         words: rowWords,
-        seconds: rowSeconds,
-        // A row with no time yet is not a row with a problem.
-        fits: rowSeconds === 0 ? null : rowWords <= rowSeconds * WORDS_PER_SECOND,
+        seconds: head + dialogue + tail,
+        head,
+        dialogue,
+        tail,
+        estimated,
+        // The words' own estimate always fits; a number the writer typed
+        // under it is the thing worth saying out loud.
+        fits: estimated ? null : rowWords <= said * WORDS_PER_SECOND,
         // A frame whose picture has gone reads as no frame rather than a gap.
         frame: beat.imageAssetId ? (frames.get(beat.imageAssetId as string) ?? null) : null,
       };
@@ -253,9 +284,7 @@ export const setRowAudio = (file: ProjectFile, beatId: BeatId, text: string): Pr
 export const setRowVisual = (file: ProjectFile, beatId: BeatId, visual: string): ProjectFile =>
   updateBeat(file, beatId, { visual });
 
-/** How long a row runs. Never negative, and never anything but whole seconds. */
-export const setRowSeconds = (file: ProjectFile, beatId: BeatId, seconds: number): ProjectFile =>
-  updateBeat(file, beatId, { seconds: Math.max(0, Math.round(seconds)) });
+
 
 /**
  * A new row under the one given, or at the end of the segment.
@@ -355,3 +384,19 @@ export const pruneFrames = (file: ProjectFile): ProjectFile => {
   if (kept.length === (file.assets ?? []).length) return file;
   return { ...file, assets: kept };
 };
+
+
+/** The action before the line starts. The writer's, in whole seconds. */
+export const setRowHead = (file: ProjectFile, beatId: BeatId, seconds: number): ProjectFile =>
+  updateBeat(file, beatId, { headSeconds: Math.max(0, Math.round(seconds)) });
+
+/** The action after the line ends. */
+export const setRowTail = (file: ProjectFile, beatId: BeatId, seconds: number): ProjectFile =>
+  updateBeat(file, beatId, { tailSeconds: Math.max(0, Math.round(seconds)) });
+
+/**
+ * How long the line itself takes. Zero hands it back to the words, which is
+ * how it starts and where it goes when the writer clears the box.
+ */
+export const setRowDialogue = (file: ProjectFile, beatId: BeatId, seconds: number): ProjectFile =>
+  updateBeat(file, beatId, { seconds: Math.max(0, Math.round(seconds)) });
