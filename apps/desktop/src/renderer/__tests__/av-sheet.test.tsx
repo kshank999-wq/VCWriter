@@ -498,6 +498,48 @@ describe('the sheet and the board on paper', () => {
     expect(screen.getByText(/Segment 1 — Know your enemy/)).toBeTruthy();
   });
 
+  it('puts the number and the time above the frame, and the boxes below it', () => {
+    preview(commercial());
+    fireEvent.click(screen.getByRole('tab', { name: 'Board' }));
+    const panel = document.querySelectorAll('.board-panel')[0] as HTMLElement;
+    const parts = [...panel.children].map((child) => child.className);
+    expect(parts).toEqual(['board-caption', 'sheet-plate empty', 'board-box board-dialogue', 'board-box board-action']);
+  });
+
+  it('carries the second a shot starts at rather than how long it runs', () => {
+    preview(commercial());
+    fireEvent.click(screen.getByRole('tab', { name: 'Board' }));
+    const times = [...document.querySelectorAll('.board-rt')].map((node) => node.textContent);
+    // Four then five: the second shot starts at four seconds.
+    expect(times).toEqual(['00:00', '00:04']);
+  });
+
+  it('does not draw a box with nothing in it', () => {
+    let file = commercial();
+    file = updateBeat(file, file.beats[0]!.id, { visual: '' });
+    preview(file);
+    fireEvent.click(screen.getByRole('tab', { name: 'Board' }));
+    expect(document.querySelectorAll('.board-dialogue')).toHaveLength(2);
+    expect(document.querySelectorAll('.board-action')).toHaveLength(1);
+  });
+
+  it('runs a timeline along the bottom, one span to a shot, ending where it lands', () => {
+    preview(commercial());
+    fireEvent.click(screen.getByRole('tab', { name: 'Board' }));
+    const ticks = document.querySelectorAll('.board-tick');
+    expect(ticks).toHaveLength(2);
+    expect(ticks[1]!.className).toContain('last');
+    expect(document.querySelector('.board-end')?.textContent).toBe('00:09');
+  });
+
+  it('keeps a short strip on the same columns as a full one', () => {
+    preview(commercial());
+    fireEvent.click(screen.getByRole('tab', { name: 'Board' }));
+    const strip = document.querySelector('.board-strip-set') as HTMLElement;
+    // Two shots, four columns: a last row is not stretched across the page.
+    expect(strip.style.getPropertyValue('--shots')).toBe('4');
+  });
+
   it('prints and exports the document being looked at', () => {
     const calls: string[] = [];
     preview(commercial(), calls);

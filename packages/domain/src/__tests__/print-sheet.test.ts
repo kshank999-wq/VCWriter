@@ -31,6 +31,9 @@ const line = (text: string) => ({
   attributes: {},
 });
 
+/** The document without its stylesheet, so a count is a count of the markup. */
+const bodyOf = (html: string): string => html.slice(html.indexOf('<body>'));
+
 const picture = 'data:image/png;base64,iVBORw0KGgo=';
 const clip = 'data:video/mp4;base64,AAAA';
 
@@ -155,6 +158,71 @@ describe('the board as a document', () => {
     expect(html).toContain('>1.2<');
     expect(html).toContain('Sun Tzu said &quot;know your enemy&quot;');
     expect(html).toContain('nerdy kid walking down the street');
+  });
+
+  it('is landscape, because a strip of shots reads across', () => {
+    expect(renderBoardDocumentHtml(commercial())).toContain('size: letter landscape');
+    // The sheet is a column of rows and stays upright.
+    expect(renderSheetDocumentHtml(commercial())).toContain('size: letter;');
+  });
+
+  it('puts the number and the time above the frame, not under it', () => {
+    const body = bodyOf(renderBoardDocumentHtml(commercial()));
+    expect(body.indexOf('board-caption')).toBeLessThan(body.indexOf('sheet-plate'));
+  });
+
+  it('carries the second a shot starts at, not how long it runs', () => {
+    const html = renderBoardDocumentHtml(commercial());
+    // Four then five: the second shot starts at four seconds.
+    expect(html).toContain('<span class="board-rt">00:00</span>');
+    expect(html).toContain('<span class="board-rt">00:04</span>');
+  });
+
+  it('labels the two boxes under the frame', () => {
+    const html = renderBoardDocumentHtml(commercial());
+    expect(html).toContain('<h3>Dialogue</h3>');
+    expect(html).toContain('<h3>Action</h3>');
+    expect(html).toContain('board-dialogue');
+    expect(html).toContain('board-action');
+  });
+
+  it('does not draw a box with nothing in it', () => {
+    let file = commercial();
+    file = updateBeat(file, file.beats[0]!.id, { visual: '' });
+    const body = bodyOf(renderBoardDocumentHtml(file));
+    // One shot lost its action, so one Action box fewer than there are shots.
+    expect(body.split('<h3>Action</h3>').length - 1).toBe(1);
+    expect(body.split('<h3>Dialogue</h3>').length - 1).toBe(2);
+  });
+
+  it('runs a timeline along the bottom of every strip', () => {
+    const body = bodyOf(renderBoardDocumentHtml(commercial()));
+    expect(body).toContain('board-timeline');
+    // One span to a shot, and the last one carries where the strip lands.
+    expect(body.split('class="board-tick').length - 1).toBe(2);
+    expect(body).toContain('class="board-tick last"');
+    expect(body).toContain('<span class="board-end">00:09</span>');
+  });
+
+  it('keeps every frame the same size, whatever is written under it', () => {
+    const html = renderBoardDocumentHtml(commercial());
+    expect(html).toContain('height: 108pt');
+    expect(html).toContain('object-fit: contain');
+    // The frames start on one line; what hangs below them does not move them.
+    expect(html).toContain('align-items: start');
+    // And a short strip keeps the columns a full one has.
+    expect(html).toContain('grid-template-columns: repeat(var(--shots), 1fr)');
+    expect(bodyOf(html)).toContain('style="--shots:4"');
+  });
+
+  it('cuts a long segment into strips rather than one endless row', () => {
+    let file = commercial();
+    for (let extra = 0; extra < 4; extra += 1) {
+      file = addBeat(file, { unitId: file.units[0]!.id, title: `Extra ${extra}` }).file;
+    }
+    // Six shots: a strip of four and a strip of two.
+    const body = bodyOf(renderBoardDocumentHtml(file));
+    expect(body.split('board-strip-set').length - 1).toBe(2);
   });
 
   it('heads each run of frames with its segment and how long it runs', () => {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { avSheet, formatRt, type AvRow, type ProjectFile } from '@vcwriter/domain';
+import { avSheet, formatRt, SHOTS_PER_STRIP, type AvRow, type ProjectFile } from '@vcwriter/domain';
 
 /**
  * What a board looks like on paper (addendum 05 §8).
@@ -31,6 +31,20 @@ export function SheetPreview({ file, onPageSetup, onExportPdf, onPrint, busy, me
   const [which, setWhich] = useState<Which>('sheet');
   const sheet = avSheet(file);
   const shots = sheet.segments.reduce((total, segment) => total + segment.rows.length, 0);
+
+  /**
+   * The board's own clock: where each shot starts, so the time above a frame
+   * is the second it begins at rather than how long it runs (§4c, §5).
+   */
+  const starts = new Map<string, number>();
+  let at = 0;
+  for (const segment of sheet.segments) {
+    for (const row of segment.rows) {
+      starts.set(row.beatId as string, at);
+      at += row.seconds;
+    }
+  }
+  const startOf = (row: AvRow): number => starts.get(row.beatId as string) ?? 0;
 
   return (
     <div className="preview sheet-preview-screen">
@@ -83,7 +97,7 @@ export function SheetPreview({ file, onPageSetup, onExportPdf, onPrint, busy, me
       ) : null}
 
       <div className="preview-scroll">
-        <article className="sheet-doc">
+        <article className={which === 'board' ? 'sheet-doc board-doc' : 'sheet-doc'}>
           <header className="sheet-masthead">
             <h1>
               <span className="sheet-version">{sheet.version}</span>
@@ -169,35 +183,85 @@ export function SheetPreview({ file, onPageSetup, onExportPdf, onPrint, busy, me
                   </footer>
                 </section>
               ))
-            : (
-                <div className="board-grid">
-                  {sheet.segments.map((segment) => (
-                    <div key={segment.unitId as string} className="board-run">
-                      <h2 className="board-segment">
-                        Segment {segment.position}
-                        {segment.name ? ` — ${segment.name}` : ''} · {formatRt(segment.seconds)}
-                      </h2>
-                      {segment.rows.map((row) => (
-                        <div key={row.beatId as string} className="board-panel">
-                          <Plate row={row} />
-                          <div className="board-caption">
-                            <span className="board-shot">{row.number}</span>
-                            <span className="board-rt">{formatRt(row.seconds)}</span>
-                          </div>
-                          <div className="board-said">
-                            <Lines text={row.audio} blank="" />
-                          </div>
-                          <div className="board-seen">
-                            <Lines text={row.visual} blank="" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+            : sheet.segments.map((segment) => (
+                <div key={segment.unitId as string}>
+                  <h2 className="board-segment">
+                    Segment {segment.position}
+                    {segment.name ? ` — ${segment.name}` : ''} · {formatRt(segment.seconds)}
+                  </h2>
+                  {inStrips(segment.rows, SHOTS_PER_STRIP).map((rows, index) => (
+                    <Strip key={index} rows={rows} startOf={startOf} />
                   ))}
                 </div>
-              )}
+              ))}
         </article>
       </div>
+    </div>
+  );
+}
+
+/** The list cut into strips of at most `size`, keeping the story order. */
+const inStrips = <T,>(items: readonly T[], size: number): T[][] => {
+  const strips: T[][] = [];
+  for (let at = 0; at < items.length; at += size) strips.push(items.slice(at, at + size));
+  return strips;
+};
+
+/**
+ * A strip of shots, and the timeline under it (§4c).
+ *
+ * **Every frame the same size, every frame on one line.** The boxes below are
+ * only as tall as what is in them, so the distance from the frames down to
+ * the timeline is whatever the fullest panel in the strip needs — and the
+ * shots with less under them carry space instead.
+ */
+function Strip({ rows, startOf }: { rows: AvRow[]; startOf(row: AvRow): number }) {
+  const last = rows[rows.length - 1];
+  const end = last ? startOf(last) + last.seconds : 0;
+  return (
+    <section className="board-strip-set" style={{ '--shots': SHOTS_PER_STRIP } as React.CSSProperties}>
+      <div className="board-strip">
+        {rows.map((row) => (
+          <div key={row.beatId as string} className="board-panel">
+            <div className="board-caption">
+              <span className="board-shot">{row.number}</span>
+              <span className="board-rt">{formatRt(startOf(row))}</span>
+            </div>
+            <Plate row={row} />
+            <Box label="Dialogue" className="board-dialogue" text={row.audio} />
+            <Box label="Action" className="board-action" text={row.visual} />
+          </div>
+        ))}
+      </div>
+      <div className="board-timeline">
+        {rows.map((row, index) => (
+          <div
+            key={row.beatId as string}
+            className={index === rows.length - 1 ? 'board-tick last' : 'board-tick'}
+          >
+            <span>{formatRt(startOf(row))}</span>
+            {index === rows.length - 1 ? <span className="board-end">{formatRt(end)}</span> : null}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * One of a panel's two boxes. Only as tall as what is in it, and not drawn at
+ * all when it is empty — a rule headed DIALOGUE with nothing under it is a
+ * thing to be read and then discarded, which is worse than a gap.
+ */
+function Box({ label, className, text }: { label: string; className: string; text: string }) {
+  const rows = text.split('\n').filter((line) => line.trim().length > 0);
+  if (rows.length === 0) return null;
+  return (
+    <div className={`board-box ${className}`}>
+      <h3>{label}</h3>
+      {rows.map((line, index) => (
+        <p key={index}>{line}</p>
+      ))}
     </div>
   );
 }

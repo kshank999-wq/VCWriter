@@ -6813,29 +6813,54 @@ dialog.preferences .field {
   font-weight: 600;
 }
 
-/* The board: the frames in order, three across, each with its line. */
-.sheet-doc .board-grid {
+/* ------------------------------------------------------------ the board
+   Addendum 05 §4c. Landscape, because a strip of shots reads across. Each
+   panel is a caption, a frame, and two labelled boxes under it, and a
+   timeline runs along the bottom of every strip.
+
+   Every frame is the same size and every frame in a strip is on one line —
+   that is what makes a board a board. The boxes under them are only as tall
+   as what is in them, so the distance from the frames down to the timeline
+   is set by the fullest panel in the strip. */
+
+.board-doc {
+  width: 11in;
+  min-height: 8.5in;
+  padding: 0.35in 0.5in 0.5in;
+}
+
+.board-strip-set {
+  margin-bottom: 18px;
+}
+
+/* A fixed set of columns, so a strip with two shots in it draws them at the
+   same size as a strip with four. */
+.board-strip {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  grid-template-columns: repeat(var(--shots), 1fr);
+  align-items: start;
+  gap: 12px;
 }
 
-.board-run {
-  display: contents;
+.board-panel {
+  min-width: 0;
 }
 
-/* Every panel's picture the same shape and the same height, so the captions
-   run in a straight line across the wall. A drawing that is not 16:9 sits
-   inside its box rather than stretching to fill it. */
 .board-panel .sheet-frame,
 .board-panel .sheet-plate {
-  margin-bottom: 4px;
   width: 100%;
-  height: 96px;
+  height: 108px;
   object-fit: contain;
   background: #f4f4f4;
+  border: 1px solid #999;
+  margin: 0;
 }
 
+.board-panel .sheet-plate.empty {
+  border-style: dashed;
+}
+
+/* The number and the time above the frame, where a board carries them. */
 .board-caption {
   display: flex;
   justify-content: space-between;
@@ -6843,6 +6868,7 @@ dialog.preferences .field {
   gap: 6px;
   border-bottom: 1px solid #000;
   padding-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .board-shot {
@@ -6854,26 +6880,84 @@ dialog.preferences .field {
   font-size: 9pt;
 }
 
-.board-said {
-  margin-top: 4px;
-  font-size: 8.5pt;
+/* Only as tall as what is in it. An empty one is not drawn at all. */
+.board-box {
+  margin-top: 5px;
+  border: 1px solid #999;
+  padding: 3px 4px 4px;
 }
 
-.board-seen {
-  margin-top: 3px;
-  font-size: 8pt;
-  font-style: italic;
-  color: #555;
+.board-box h3 {
+  margin: 0 0 2px;
+  font-size: 6.5pt;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #666;
 }
 
-.board-said p,
-.board-seen p {
+.board-box p {
   margin: 0 0 3px;
+  font-size: 8pt;
+  line-height: 1.35;
+}
+
+.board-box p:last-child {
+  margin-bottom: 0;
+}
+
+.board-action p {
+  font-style: italic;
+  color: #333;
+}
+
+/* The timeline along the bottom of the strip: a rule, a tick under each
+   shot, and the running time it starts at. */
+.board-timeline {
+  display: grid;
+  grid-template-columns: repeat(var(--shots), 1fr);
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.board-tick {
+  min-width: 0;
+  padding-top: 3px;
+  position: relative;
+  border-top: 1px solid #000;
+  display: flex;
+  justify-content: space-between;
+  font-size: 7pt;
+}
+
+.board-tick::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 4px;
+  background: #000;
+}
+
+/* The last shot's span carries where the strip lands as well, on its right
+   edge, with a tick of its own. */
+.board-tick.last::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1px;
+  height: 4px;
+  background: #000;
+}
+
+.board-end {
+  color: #444;
 }
 
 .sheet-doc .board-segment {
-  grid-column: 1 / -1;
-  margin: 6px 0 0;
+  margin: 12px 0 8px;
   font-size: 9pt;
   text-transform: uppercase;
   letter-spacing: 0.12em;

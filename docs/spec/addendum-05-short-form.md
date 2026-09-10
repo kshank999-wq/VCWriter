@@ -275,7 +275,7 @@ people:
 | | What it is | Who wants it |
 | --- | --- | --- |
 | **The sheet** | What is on screen: audio, visual, frame and duration, in rows, under the masthead, each segment closing on its own four figures | The client who signs it off, and the producer who budgets from it |
-| **The board** | The frames, in order, three across, each captioned with its shot number, its time and its line | The wall |
+| **The board** | **Landscape.** The frames in strips of four, each with its number and time above it and its dialogue and action boxed below, with a timeline under every strip | The wall |
 
 Both open with the **title page the script has**, because it is the same piece
 of work; Page setup turns it off for either.
@@ -288,6 +288,41 @@ nothing about it is countable in advance, and pretending otherwise would give
 a preview that disagreed with the print. So a **shot never breaks across two
 sheets**, the column heads print again at the top of every page a segment runs
 onto, and the layout engine does the rest.
+
+### What a shot looks like on the board
+
+```
+  1.1                        00:00
+  ┌──────────────────────────────┐
+  │                              │   ← the frame. every one the same size,
+  │            FRAME             │     and every one in a strip on one line
+  └──────────────────────────────┘
+  ┌──────────────────────────────┐
+  │ DIALOGUE                     │   ← only as tall as what is in it
+  │ "Know your enemy."           │
+  └──────────────────────────────┘
+  ┌──────────────────────────────┐
+  │ ACTION                       │   ← and this one too. An empty box is
+  │ A kid walks down the street. │     not drawn at all
+  └──────────────────────────────┘
+
+  ├──────────────────────────────    ← the timeline, along the bottom
+  00:00                       00:04
+```
+
+**The frames are all one size and all on one line.** That is what makes a
+board a board: the eye runs along the pictures without being dragged up and
+down by how much somebody wrote. The boxes under them are only as tall as
+what is in them, so **what sets the distance from the frames down to the
+timeline is the fullest panel in the strip** — the longest dialogue and
+action decide it, and every other shot in that strip simply carries space.
+
+Four shots to a strip, and a strip of two draws them at the same size as a
+strip of four: a last row stretched across the page would make its frames the
+odd ones out. The timeline runs on the same columns as the shots, one span to
+a shot, so each stretch of it sits exactly under its own frame, with the
+second that shot starts at on the left and — on the last one — where the strip
+lands on the right.
 
 **A clip prints as what it is**, not as a picture: a name and a length in a
 plate. There is no frame to pull out of a video without decoding it, and a
@@ -553,7 +588,9 @@ pixels; they are full text colour now.
 
 **Preview** in a short-form project shows the document rather than script
 pages, with **Sheet** and **Board** beside each other and Print and Export PDF
-acting on whichever is being looked at. The File menu carries the board as its
+acting on whichever is being looked at. The sheet prints portrait, because it
+is a column of rows; **the board prints landscape**, because a strip of shots
+reads across. The File menu carries the board as its
 own pair — *Print the board…* and *Export the board as PDF…* — because it is a
 second document, not a second view of the first; only short form has them.
 

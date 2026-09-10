@@ -36,6 +36,14 @@ const PAGE_SETUP = {
   margins: { marginType: 'none' } as const,
 };
 
+/**
+ * The board is landscape (addendum 05 §4c): a strip of shots reads across.
+ * The document's own `@page` rule says so, but `printToPDF` takes the paper
+ * from here, so it has to be told as well or the pages come out portrait with
+ * a landscape layout squeezed onto them.
+ */
+const setupFor = (landscape: boolean) => ({ ...PAGE_SETUP, landscape });
+
 const withDocumentWindow = async <T>(
   html: string,
   action: (window: BrowserWindowType) => Promise<T>,
@@ -90,14 +98,29 @@ export interface ExportPdfInput {
  * the document this project has.
  */
 const documentFor = (project: ProjectFile, kind: PrintKind, options: PrintOptions) => {
-  const sheetish = kind === 'board' || kind === 'sheet' || project.project.format === 'short_form';
+  const sheetish = kind === 'sheet' || project.project.format === 'short_form';
   if (kind === 'board') {
-    return { html: renderBoardDocumentHtml(project, options), name: suggestedBoardFileName(project), paged: false };
+    return {
+      html: renderBoardDocumentHtml(project, options),
+      name: suggestedBoardFileName(project),
+      paged: false,
+      landscape: true,
+    };
   }
   if (sheetish) {
-    return { html: renderSheetDocumentHtml(project, options), name: suggestedSheetFileName(project), paged: false };
+    return {
+      html: renderSheetDocumentHtml(project, options),
+      name: suggestedSheetFileName(project),
+      paged: false,
+      landscape: false,
+    };
   }
-  return { html: renderPrintDocumentHtml(project, options), name: suggestedExportFileName(project), paged: true };
+  return {
+    html: renderPrintDocumentHtml(project, options),
+    name: suggestedExportFileName(project),
+    paged: true,
+    landscape: false,
+  };
 };
 
 /**
@@ -123,7 +146,7 @@ export const exportProjectPdf = async (
   parent: BrowserWindowType | null,
 ): Promise<ExportPdfResult | null> => {
   const project = parseProjectFile(input.file);
-  const { html, name, paged } = documentFor(project, input.kind ?? 'script', input.options ?? {});
+  const { html, name, paged, landscape } = documentFor(project, input.kind ?? 'script', input.options ?? {});
 
   let targetPath = input.targetPath;
   if (!targetPath) {
@@ -140,7 +163,7 @@ export const exportProjectPdf = async (
     targetPath = choice.filePath;
   }
 
-  const pdf = await withDocumentWindow(html, (window) => window.webContents.printToPDF(PAGE_SETUP));
+  const pdf = await withDocumentWindow(html, (window) => window.webContents.printToPDF(setupFor(landscape)));
   await writeFile(targetPath, pdf);
 
   return { path: targetPath, pageCount: pageCountOf(pdf, html, paged) };
@@ -152,13 +175,13 @@ export const printProject = async (input: {
   kind?: PrintKind;
 }): Promise<boolean> => {
   const project = parseProjectFile(input.file);
-  const { html } = documentFor(project, input.kind ?? 'script', input.options ?? {});
+  const { html, landscape } = documentFor(project, input.kind ?? 'script', input.options ?? {});
 
   return withDocumentWindow(
     html,
     (window) =>
       new Promise<boolean>((resolve, reject) => {
-        window.webContents.print({ silent: false, printBackground: false }, (success, failureReason) => {
+        window.webContents.print({ silent: false, printBackground: false, landscape }, (success, failureReason) => {
           // A cancelled print dialog is an ordinary outcome, not an error.
           if (!success && failureReason && failureReason !== 'cancelled') {
             reject(new Error(failureReason));

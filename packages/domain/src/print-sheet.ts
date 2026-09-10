@@ -120,8 +120,8 @@ const renderSegment = (segment: AvSegment): string =>
 const figure = (label: string, value: string): string =>
   `<div class="sheet-figure"><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`;
 
-const SHEET_STYLES = `
-  @page { size: letter; margin: 0.6in; }
+const stylesFor = (page: string, margin: string): string => `
+  @page { size: ${page}; margin: ${margin}; }
   * { box-sizing: border-box; }
   body {
     margin: 0;
@@ -257,26 +257,49 @@ const SHEET_STYLES = `
     color: #666;
   }
   .sheet-figure dd { margin: 0; font-size: 10pt; font-weight: bold; }
-  /* The board: the frames in order, captioned, several to a page. */
+  /* ------------------------------------------------------- the board
+     Addendum 05 §4c. Landscape, because a strip of shots reads across.
+     Each panel is a caption, a frame, and two labelled boxes under it, and
+     a timeline runs along the bottom of every strip.
+
+     **The frames are all the same size and all on one line.** That is what
+     makes a board a board: the eye runs along the pictures without being
+     dragged up and down by how much somebody wrote. The boxes under them
+     are only as tall as what is in them, so the distance from the frames
+     down to the timeline is set by the fullest panel in the strip — and
+     every other panel simply has space under it. */
   .board-doc {
-    width: 8.5in;
-    padding: 0.3in 0.4in 0.6in;
+    width: 11in;
+    padding: 0.3in 0.5in 0.5in;
     margin: 0 auto;
     background: #fff;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   }
-  .board-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14pt; }
-  .board-panel { break-inside: avoid; page-break-inside: avoid; }
-  /* Every panel's picture the same shape and the same height, so the
-     captions run in a straight line across the wall. A drawing that is not
-     16:9 sits inside its box rather than stretching to fill it. */
+  .board-strip-set { break-inside: avoid; page-break-inside: avoid; margin-bottom: 18pt; }
+  /* One line of shots, on a fixed set of columns so **a strip with two shots
+     in it draws them at the same size as a strip with four** — a last row
+     stretched across the page would make its frames the odd ones out.
+     Starting them all at the top is the rest of the design: every frame at
+     the same height, whatever hangs below it. */
+  .board-strip {
+    display: grid;
+    grid-template-columns: repeat(var(--shots), 1fr);
+    align-items: start;
+    gap: 12pt;
+  }
+  .board-panel { min-width: 0; }
+  /* Uniform, always. A drawing that is not 16:9 sits inside its box rather
+     than stretching to fill it, and the box stays the size it was. */
   .board-panel .sheet-frame, .board-panel .sheet-plate {
-    margin-bottom: 4pt;
     width: 100%;
-    height: 96pt;
+    height: 108pt;
     object-fit: contain;
     background: #f4f4f4;
+    border: 0.75pt solid #999;
+    margin: 0;
   }
+  .board-panel .sheet-plate.empty { border-style: dashed; }
+  /* The number and the time above the frame, where a board carries them. */
   .board-caption {
     display: flex;
     justify-content: space-between;
@@ -284,20 +307,73 @@ const SHEET_STYLES = `
     gap: 6pt;
     border-bottom: 0.75pt solid #000;
     padding-bottom: 2pt;
+    margin-bottom: 3pt;
   }
   .board-shot { font-weight: bold; font-size: 10pt; }
   .board-rt { font-size: 9pt; }
-  .board-said { margin: 4pt 0 0; font-size: 8.5pt; }
-  .board-seen { margin: 3pt 0 0; font-size: 8pt; font-style: italic; color: #555; }
-  .board-seen p, .board-said p { margin: 0 0 3pt; }
+  /* Only as tall as what is in it. An empty one is not drawn at all. */
+  .board-box {
+    margin-top: 5pt;
+    border: 0.5pt solid #999;
+    padding: 3pt 4pt 4pt;
+  }
+  .board-box h3 {
+    margin: 0 0 2pt;
+    font-size: 6.5pt;
+    font-weight: normal;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #666;
+  }
+  .board-box p { margin: 0 0 3pt; font-size: 8pt; line-height: 1.35; }
+  .board-box p:last-child { margin-bottom: 0; }
+  .board-action p { font-style: italic; color: #333; }
+  /* The timeline along the bottom of the strip, on the same columns as the
+     shots — so each span of it sits exactly under its own frame, and the
+     rule runs only as far as the shots do. */
+  .board-timeline {
+    display: grid;
+    grid-template-columns: repeat(var(--shots), 1fr);
+    gap: 12pt;
+    margin-top: 8pt;
+  }
+  .board-tick {
+    min-width: 0;
+    padding-top: 3pt;
+    position: relative;
+    border-top: 1pt solid #000;
+    display: flex;
+    justify-content: space-between;
+    font-size: 7pt;
+  }
+  .board-tick::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0.75pt;
+    height: 4pt;
+    background: #000;
+  }
+  /* The last shot's span carries where the strip lands as well, on its right
+     edge, with a tick of its own. */
+  .board-tick.last::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0.75pt;
+    height: 4pt;
+    background: #000;
+  }
+  .board-end { color: #444; }
   .board-segment {
-    grid-column: 1 / -1;
     font-size: 9pt;
     text-transform: uppercase;
     letter-spacing: 0.12em;
     border-bottom: 1.5pt solid #000;
     padding-bottom: 3pt;
-    margin-top: 6pt;
+    margin: 12pt 0 8pt;
     break-after: avoid;
     page-break-after: avoid;
   }
@@ -327,17 +403,83 @@ const renderMasthead = (file: ProjectFile): string => {
   );
 };
 
-const document = (title: string, body: string): string => `<!doctype html>
+const document = (title: string, body: string, landscape = false): string => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <title>${escapeHtml(title)}</title>
-<style>${SHEET_STYLES}</style>
+<style>${stylesFor(landscape ? 'letter landscape' : 'letter', landscape ? '0.5in' : '0.6in')}</style>
 </head>
 <body>
 ${body}
 </body>
 </html>`;
+
+/** How many shots run across a strip. Four is a comfortable width in landscape. */
+export const SHOTS_PER_STRIP = 4;
+
+/** The list cut into strips of at most `size`, keeping the story order. */
+const inStrips = <T,>(items: readonly T[], size: number): T[][] => {
+  const strips: T[][] = [];
+  for (let at = 0; at < items.length; at += size) strips.push(items.slice(at, at + size));
+  return strips;
+};
+
+/**
+ * One shot's panel: the number and the time **above** the frame, the frame
+ * itself at the one size every frame is, and under it the two boxes.
+ *
+ * A box that has nothing in it is not drawn. An empty rule headed DIALOGUE is
+ * a thing to be read and then discarded, which is worse than a gap.
+ */
+const renderPanel = (row: AvRow, at: number): string => {
+  const box = (label: string, className: string, text: string): string => {
+    const body = lines(text);
+    return body.length === 0 ? '' : `<div class="board-box ${className}"><h3>${label}</h3>${body}</div>`;
+  };
+  return (
+    '<div class="board-panel">' +
+    '<div class="board-caption">' +
+    `<span class="board-shot">${escapeHtml(row.number)}</span>` +
+    `<span class="board-rt">${formatRt(at)}</span>` +
+    '</div>' +
+    renderPlate(row) +
+    box('Dialogue', 'board-dialogue', row.audio) +
+    box('Action', 'board-action', row.visual) +
+    '</div>'
+  );
+};
+
+/**
+ * A strip of shots, and the timeline under it.
+ *
+ * The strip's height is its fullest panel's, because the frames are all one
+ * size and all on one line — so **the distance from the frames down to the
+ * timeline is set by the longest dialogue and action in the strip**, and the
+ * shots with less under them simply carry space. The ticks are laid out on
+ * the same shares as the panels, so each one falls under its own shot.
+ */
+const renderStrip = (rows: AvRow[], starts: number[], end: number): string => {
+  const panels = rows.map((row, index) => renderPanel(row, starts[index] ?? 0)).join('');
+  const ticks = starts
+    .map((at, index) => {
+      const last = index === starts.length - 1;
+      return (
+        `<div class="board-tick${last ? ' last' : ''}"><span>${formatRt(at)}</span>` +
+        (last ? `<span class="board-end">${formatRt(end)}</span>` : '') +
+        '</div>'
+      );
+    })
+    .join('');
+  // The columns are declared once, here, so the shots and the timeline under
+  // them cannot end up on different ones.
+  return (
+    `<section class="board-strip-set" style="--shots:${SHOTS_PER_STRIP}">` +
+    `<div class="board-strip">${panels}</div>` +
+    `<div class="board-timeline">${ticks}</div>` +
+    '</section>'
+  );
+};
 
 const front = (file: ProjectFile, options: PrintOptions): string =>
   options.includeTitlePage === false ? '' : renderTitleSheet(titlePageOf(file.project, file.settings));
@@ -367,12 +509,19 @@ export const renderSheetDocumentHtml = (file: ProjectFile, options: PrintOptions
 };
 
 /**
- * The board: the pictures in order, and what is said over each (§8).
+ * The board: the pictures in order, with the clock under them (§4c).
  *
- * The thing that goes on a wall. Shots run three to a row, with a rule and
- * the segment's name where each segment begins, and every panel carries its
- * shot number, its time, its line and what is seen — because a frame on a
- * wall with nothing under it is a frame nobody can discuss.
+ * The thing that goes on a wall, and it is **landscape**, because a strip of
+ * shots reads across rather than down. Each shot is its number and its time,
+ * then the frame, then a box of dialogue and a box of action; each strip runs
+ * four shots wide with a timeline along its bottom.
+ *
+ * **Every frame is the same size and every frame in a strip is on one line.**
+ * That is what makes a board a board — the eye runs along the pictures
+ * without being dragged up and down by how much somebody wrote. The boxes
+ * below are only as tall as what is in them, so the distance from the frames
+ * down to the timeline is whatever the fullest panel in the strip needs, and
+ * the rest carry space.
  *
  * **A shot with no picture still gets a panel.** A board with a hole in it
  * should look like a board with a hole in it; that is the point of printing
@@ -381,37 +530,42 @@ export const renderSheetDocumentHtml = (file: ProjectFile, options: PrintOptions
 export const renderBoardDocumentHtml = (file: ProjectFile, options: PrintOptions = {}): string => {
   const sheet = avSheet(file);
 
-  const panels = sheet.segments
+  // The board's own clock, so a shot's time on the wall is the second it
+  // starts at rather than how long it runs (§5).
+  let at = 0;
+  const starts = new Map<string, number>();
+  for (const segment of sheet.segments) {
+    for (const row of segment.rows) {
+      starts.set(row.beatId as string, at);
+      at += row.seconds;
+    }
+  }
+
+  const body = sheet.segments
     .map((segment) => {
       const head =
         `<h2 class="board-segment">Segment ${segment.position}` +
         `${segment.name ? ` — ${escapeHtml(segment.name)}` : ''} &#183; ${formatRt(segment.seconds)}</h2>`;
-      const shots = segment.rows
-        .map(
-          (row) =>
-            '<div class="board-panel">' +
-            renderPlate(row) +
-            '<div class="board-caption">' +
-            `<span class="board-shot">${escapeHtml(row.number)}</span>` +
-            `<span class="board-rt">${formatRt(row.seconds)}</span>` +
-            '</div>' +
-            `<div class="board-said">${lines(row.audio)}</div>` +
-            `<div class="board-seen">${lines(row.visual)}</div>` +
-            '</div>',
-        )
+      const strips = inStrips(segment.rows, SHOTS_PER_STRIP)
+        .map((rows) => {
+          const from = rows.map((row) => starts.get(row.beatId as string) ?? 0);
+          const last = rows[rows.length - 1];
+          const end = (starts.get((last?.beatId ?? '') as string) ?? 0) + (last?.seconds ?? 0);
+          return renderStrip(rows, from, end);
+        })
         .join('');
-      return head + shots;
+      return head + strips;
     })
     .join('');
 
-  const body =
+  const article =
     front(file, options) +
     '<article class="board-doc">' +
     renderMasthead(file) +
-    (panels.length === 0 ? '<p class="sheet-none">Nothing on the board yet.</p>' : `<div class="board-grid">${panels}</div>`) +
+    (body.length === 0 ? '<p class="sheet-none">Nothing on the board yet.</p>' : body) +
     printedAt(options) +
     '</article>';
-  return document(`${sheet.title || 'Untitled'} — board`, body);
+  return document(`${sheet.title || 'Untitled'} — board`, article, true);
 };
 
 const cleanName = (title: string): string =>
