@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
   GENRE_VALUES,
+  actCommandments,
   addGridPromise,
+  addMarker,
   addUnit,
+  answeredCount,
   createProjectFile,
+  findUnit,
+  parseProjectFile,
   promisesForGenre,
   removeGridPromise,
+  removeMarker,
+  sceneCommandments,
+  setActCommandments,
+  setSceneCommandment,
+  setStoryCommandments,
   setStoryGrid,
   storyGridOf,
   storyGridStatus,
@@ -172,5 +182,131 @@ describe('the promises, and the scenes that keep them', () => {
     const parsed = JSON.parse(JSON.stringify(file)) as ProjectFile;
     expect(storyGridOf(parsed).controllingIdea).toBe('Love costs what it is worth.');
     expect(storyGridOf(parsed).promises.length).toBe(promisesForGenre('love').length);
+  });
+});
+
+describe('the five commandments', () => {
+  /** Six scenes, with act markers on the first, third and fifth. */
+  const acted = (): ProjectFile => {
+    let file = script();
+    for (const title of ['Two', 'Three', 'Four', 'Five', 'Six']) file = scene(file, title);
+    const order = unitsInStoryOrder(file);
+    for (const [index, name] of [[0, 'Setup'], [2, 'Confrontation'], [4, 'Resolution']] as const) {
+      file = addMarker(file, { unitId: order[index]!.id, title: name, kind: 'act' }).file;
+    }
+    return file;
+  };
+
+  it('starts with all five unanswered at every scale', () => {
+    const file = acted();
+    expect(answeredCount(storyGridOf(file).story)).toBe(0);
+    expect(actCommandments(file).map((act) => answeredCount(act.commandments))).toEqual([0, 0, 0]);
+    expect(sceneCommandments(file).every((entry) => answeredCount(entry.commandments) === 0)).toBe(true);
+  });
+
+  it('takes the whole story’s five, and counts what has been answered', () => {
+    let file = setStoryCommandments(script(), { inciting: 'The lamp fails' });
+    file = setStoryCommandments(file, { climax: 'He climbs anyway' });
+    const story = storyGridOf(file).story;
+    expect(story.inciting).toBe('The lamp fails');
+    expect(story.climax).toBe('He climbs anyway');
+    expect(answeredCount(story)).toBe(2);
+  });
+
+  it('divides the work by the coarsest marker the writer has used', () => {
+    const acts = actCommandments(acted());
+    expect(acts.map((act) => act.label)).toEqual(['ACT I', 'ACT II', 'ACT III']);
+    // Each region runs from its marker to the scene before the next.
+    expect(acts.map((act) => [act.from, act.to])).toEqual([
+      [1, 2],
+      [3, 4],
+      [5, 6],
+    ]);
+  });
+
+  it('keeps each act’s five against the marker that opens it', () => {
+    let file = acted();
+    const second = actCommandments(file)[1]!;
+    file = setActCommandments(file, second.markerId, { crisis: 'Stay, or go down for her' });
+
+    const after = actCommandments(file);
+    expect(after[1]?.commandments.crisis).toBe('Stay, or go down for her');
+    expect(after[0]?.commandments.crisis).toBe('');
+  });
+
+  it('says which act a scene falls in', () => {
+    const scenes = sceneCommandments(acted());
+    expect(scenes.map((entry) => entry.act)).toEqual([
+      'ACT I',
+      'ACT I',
+      'ACT II',
+      'ACT II',
+      'ACT III',
+      'ACT III',
+    ]);
+  });
+
+  it('does not divide a story whose regions have not been marked', () => {
+    expect(actCommandments(scene(script(), 'Two'))).toEqual([]);
+    // Every scene is still asked the five; none of them is in an act.
+    expect(sceneCommandments(scene(script(), 'Two')).map((entry) => entry.act)).toEqual(['', '']);
+  });
+
+  it('asks a scene that predates the grid, rather than falling over it', () => {
+    // A project saved before any of this existed has units with no `grid` at
+    // all. Every question is simply unanswered, which is where they all start.
+    const file = script();
+    const bare = { ...file, units: file.units.map(({ grid, ...rest }) => rest) } as unknown as ProjectFile;
+    const scenes = sceneCommandments(bare);
+    expect(scenes).toHaveLength(file.units.length);
+    expect(answeredCount(scenes[0]!.commandments)).toBe(0);
+  });
+
+  it('writes a scene’s five to the scene, and the complication is the turn', () => {
+    let file = script();
+    const unitId = unitsInStoryOrder(file)[0]!.id;
+    file = setSceneCommandment(file, unitId, 'complication', 'She reads the log');
+    file = setSceneCommandment(file, unitId, 'resolution', 'The door stays shut');
+
+    // The Final Editor has always asked for the turn; this is the same field.
+    expect(findUnit(file, unitId)?.grid.turn).toBe('She reads the log');
+    expect(findUnit(file, unitId)?.grid.resolution).toBe('The door stays shut');
+
+    const first = sceneCommandments(file)[0]!;
+    expect(first.commandments.complication).toBe('She reads the log');
+    expect(answeredCount(first.commandments)).toBe(2);
+  });
+
+  it('survives a round trip through the file, and an older file has none', () => {
+    let file = setStoryCommandments(acted(), { resolution: 'The light comes back on' });
+    const acts = actCommandments(file);
+    file = setActCommandments(file, acts[0]!.markerId, { inciting: 'The keeper does not come' });
+
+    const back = parseProjectFile(JSON.parse(JSON.stringify(file)));
+    expect(storyGridOf(back).story.resolution).toBe('The light comes back on');
+    expect(actCommandments(back)[0]?.commandments.inciting).toBe('The keeper does not come');
+
+    // A project saved before any of this existed opens with the five empty.
+    const older = parseProjectFile({
+      ...JSON.parse(JSON.stringify(script())),
+      settings: { ...script().settings, storyGrid: undefined },
+    });
+    expect(answeredCount(storyGridOf(older).story)).toBe(0);
+    expect(actCommandments(older)).toEqual([]);
+  });
+
+  it('drops an act whose marker has gone, and keeps what was said about it', () => {
+    let file = acted();
+    const first = actCommandments(file)[0]!;
+    file = setActCommandments(file, first.markerId, { climax: 'He lights it by hand' });
+    file = removeMarker(file, first.markerId);
+
+    // Two acts left, renumbered, and neither of them wearing the first's answers.
+    const after = actCommandments(file);
+    expect(after.map((act) => act.label)).toEqual(['ACT I', 'ACT II']);
+    expect(after.every((act) => act.commandments.climax === '')).toBe(true);
+    // What was said about the act that went is still in the record, for a
+    // marker put back where it was.
+    expect(storyGridOf(file).acts[first.markerId as string]?.climax).toBe('He lights it by hand');
   });
 });

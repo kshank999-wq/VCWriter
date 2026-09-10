@@ -487,7 +487,7 @@ export function EditorPanel({ file, currentUnitId, onUpdate, onGoTo, onGoToUnit,
                   <tr key={scene.unitId} className={scene.grid.polarity === 'flat' ? 'grid-flat' : undefined}>
                     <th scope="row">
                       <span className="muted small">{scene.position}</span> {scene.label}
-                      <span className="muted small block">
+                      <span className="muted small under">
                         {scene.pages} {scene.pages === 1 ? 'page' : 'pages'} · {scene.words} words
                       </span>
                     </th>

@@ -5320,3 +5320,147 @@ dialog.lane-dialog.title-page-dialog {
   border-color: var(--gold-deep);
   outline: none;
 }
+
+/* -------------------------------------------------- the five commandments
+   Addendum 04 §4. The same five questions at three scales. Read down a
+   column rather than across a row: three scenes with no crisis between them
+   is a thing the eye finds, not a thing a rule has to announce. */
+
+.grid-commandments .commandments-note {
+  max-width: 620px;
+  margin: -4px 0 10px;
+  line-height: 1.5;
+}
+
+.scale-switch {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.scale-switch .scale {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.scale-switch .scale:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.scale-switch .scale.selected {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+}
+
+.scale-switch .scale:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.commandment-form {
+  display: grid;
+  gap: 8px;
+  max-width: 720px;
+}
+
+.commandment-form .field-row {
+  display: grid;
+  grid-template-columns: 168px 1fr;
+  align-items: start;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.commandment-form .field-row > span {
+  color: var(--muted);
+  padding-top: 5px;
+}
+
+.commandment-form .field-input > input {
+  width: 100%;
+}
+
+/* Five columns and a row header do not fit a narrow window; the table
+   scrolls sideways rather than crushing the boxes. */
+.commandment-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.commandment-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.commandment-table th,
+.commandment-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+
+.commandment-table thead th {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+}
+
+.commandment-table tbody th {
+  width: 170px;
+  color: var(--text);
+}
+
+.commandment-table input {
+  width: 100%;
+  font-size: 11.5px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 2px 4px;
+  color: var(--text);
+}
+
+/* Empty is the state most cells are in, and an invisible box is a box
+   nobody finds. The rule under each one says where to type without drawing
+   a grid of borders over the whole table. */
+.commandment-table input {
+  border-bottom-color: var(--border);
+}
+
+.commandment-table input:hover {
+  border-color: var(--border);
+}
+
+.commandment-table input:focus {
+  border-color: var(--gold-deep);
+  outline: none;
+}
+
+/* A row with nothing said about it at all. Not an error — the state most
+   rows start in — so it is dimmed rather than flagged. */
+.commandment-table tr.commandment-empty > th {
+  color: var(--muted);
+}
+
+/* A caption under a row's name. `.block` is the workspace's own layout class
+   and paints a panel behind whatever wears it, which is not what a second
+   line of small print wants. */
+.story-grid .under,
+.commandment-table .under {
+  display: block;
+}

@@ -97,6 +97,18 @@ export const sceneGridSchema = z.object({
   purpose: z.string().default(''),
   /** What is being fought over, and who wants what. */
   conflict: z.string().default(''),
+  /**
+   * The five commandments, asked of the scene (addendum 04 §4).
+   *
+   * `turn` above is the progressive complication — the turn that makes going
+   * back impossible — so it is not asked twice; these are the other four. A
+   * scene is a story in miniature, which is why the same five questions work
+   * at this scale as at the story's.
+   */
+  inciting: z.string().default(''),
+  crisis: z.string().default(''),
+  climax: z.string().default(''),
+  resolution: z.string().default(''),
 });
 export type SceneGrid = z.infer<typeof sceneGridSchema>;
 

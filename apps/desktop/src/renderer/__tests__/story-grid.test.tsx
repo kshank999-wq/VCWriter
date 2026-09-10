@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { createProjectFile, storyGridOf, type ProjectFile, type StructuralUnitId } from '@vcwriter/domain';
+import { createProjectFile, findUnit, storyGridOf, type ProjectFile, type StructuralUnitId } from '@vcwriter/domain';
 import { EditorPanel } from '../components/EditorPanel';
 
 /**
@@ -143,5 +143,60 @@ describe('the Story Grid tab', () => {
 
     expect(storyGridOf(file!).promises.some((entry) => entry.text === 'Mine')).toBe(false);
     expect(storyGridOf(file!).promises.some((entry) => entry.text === 'A false ally')).toBe(true);
+  });
+});
+
+describe('the five commandments', () => {
+  it('asks the story its five, whether or not a genre has been chosen', () => {
+    bridge();
+    let file: ProjectFile | null = null;
+    render(<Harness onFile={(next) => (file = next)} />);
+
+    expect(screen.getByText('The five commandments')).toBeTruthy();
+    expect(screen.getByText('0 of 5 for the story')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Crisis, for the story'), {
+      target: { value: 'Tell the truth and lose her, or keep her and lie' },
+    });
+    expect(storyGridOf(file!).story.crisis).toContain('lose her');
+    expect(screen.getByText('1 of 5 for the story')).toBeTruthy();
+  });
+
+  it('has nothing to ask of the acts until the act breaks are marked', () => {
+    bridge();
+    render(<Harness />);
+    const acts = screen.getByRole('tab', { name: /^Each act/ });
+    expect(acts.textContent).toBe('Each act (0)');
+    expect((acts as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('asks each scene the same five, and the complication is the turn', () => {
+    bridge();
+    let file: ProjectFile | null = null;
+    render(<Harness onFile={(next) => (file = next)} />);
+
+    fireEvent.click(screen.getByRole('tab', { name: /^Scene by scene/ }));
+    const unitId = file!.units[0]!.id;
+    const label = file!.units[0]!.title;
+
+    fireEvent.change(screen.getByLabelText(`Progressive complication, ${label}`), {
+      target: { value: 'She reads the log' },
+    });
+    // The Final Editor's grid has always asked for the turn. Same field.
+    expect(findUnit(file!, unitId)?.grid.turn).toBe('She reads the log');
+
+    fireEvent.change(screen.getByLabelText(`Resolution, ${label}`), { target: { value: 'The door stays shut' } });
+    expect(findUnit(file!, unitId)?.grid.resolution).toBe('The door stays shut');
+  });
+
+  it('goes to a scene from its row', () => {
+    bridge();
+    let file: ProjectFile | null = null;
+    const went: string[] = [];
+    render(<Harness onFile={(next) => (file = next)} onGoToUnit={(id) => went.push(id as string)} />);
+
+    fireEvent.click(screen.getByRole('tab', { name: /^Scene by scene/ }));
+    fireEvent.click(screen.getByRole('button', { name: file!.units[0]!.title }));
+    expect(went).toEqual([file!.units[0]!.id as string]);
   });
 });

@@ -14,6 +14,7 @@ import {
   type ProjectFile,
   type StructuralUnitId,
 } from '@vcwriter/domain';
+import { CommandmentsSection } from './CommandmentsSection';
 
 /**
  * The Story Grid's global layer (addendum 04 §3).
@@ -153,6 +154,11 @@ export function StoryGridPanel({ file, onUpdate, onGoToUnit }: StoryGridPanelPro
           />
         </>
       )}
+
+      {/* The five commandments, at all three scales (§4). Asked whether or not
+          a genre has been chosen: they are the method's questions about this
+          story, not about its genre. */}
+      <CommandmentsSection file={file} onUpdate={onUpdate} {...(onGoToUnit ? { onGoToUnit } : {})} />
     </div>
   );
 }

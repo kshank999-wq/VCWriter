@@ -2,9 +2,12 @@ import { z } from 'zod';
 import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
 import { unitsInStoryOrder } from './selectors.js';
-import { placedMarkerForUnit } from './markers.js';
+import { placedMarkerForUnit, placedMarkers } from './markers.js';
+import { setSceneGrid } from './mutations.js';
+import { sceneGridSchema } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
-import type { StructuralUnitId } from './ids.js';
+import type { StoryMarkerId, StructuralUnitId } from './ids.js';
+import type { SceneGrid, StoryMarkerKind } from './entities/structure.js';
 
 /**
  * The Story Grid's global layer (addendum 04 §3).
@@ -97,6 +100,76 @@ export const gridPromiseSchema = z.object({
 });
 export type GridPromise = z.infer<typeof gridPromiseSchema>;
 
+/**
+ * The five commandments (§4), asked at three scales: the whole story, each
+ * act or region, and each scene.
+ *
+ * Nothing derives them. A story's inciting incident is a judgement, not a
+ * measurement, and a tool that guessed at it would be wrong in a way the
+ * writer could not see. The AI structural read may offer answers at the scene
+ * scale later; these stay the writer's.
+ */
+export const COMMANDMENTS = ['inciting', 'complication', 'crisis', 'climax', 'resolution'] as const;
+export type Commandment = (typeof COMMANDMENTS)[number];
+
+export const COMMANDMENT_NAMES: Record<Commandment, string> = {
+  inciting: 'Inciting incident',
+  complication: 'Progressive complication',
+  crisis: 'Crisis',
+  climax: 'Climax',
+  resolution: 'Resolution',
+};
+
+/** What each one asks, in the words of §4. */
+export const COMMANDMENT_ASKS: Record<Commandment, string> = {
+  inciting: 'What upsets the balance',
+  complication: 'The turn that makes going back impossible',
+  crisis: 'The best bad choice, or the irreconcilable good',
+  climax: 'The choice, taken',
+  resolution: 'What it settles into',
+};
+
+export const commandmentsSchema = z.object({
+  inciting: z.string().default(''),
+  complication: z.string().default(''),
+  crisis: z.string().default(''),
+  climax: z.string().default(''),
+  resolution: z.string().default(''),
+});
+export type Commandments = z.infer<typeof commandmentsSchema>;
+
+/** How many of the five have been answered. Not a score — a glance. */
+export const answeredCount = (commandments: Commandments): number =>
+  COMMANDMENTS.filter((which) => commandments[which].trim().length > 0).length;
+
+/**
+ * Where a scene's five live on its record.
+ *
+ * The progressive complication *is* the turn the scene grid already asks for,
+ * so it is not stored twice: this map is the only place that knows it.
+ */
+const SCENE_FIELD: Record<Commandment, keyof SceneGrid> = {
+  inciting: 'inciting',
+  complication: 'turn',
+  crisis: 'crisis',
+  climax: 'climax',
+  resolution: 'resolution',
+};
+
+/**
+ * A scene's grid read as the five commandments.
+ *
+ * The grid is filled in from defaults first: a scene that predates any of
+ * these questions — or the grid itself — has no record of them, and an
+ * unanswered question is the state every scene starts in.
+ */
+export const commandmentsOfScene = (grid?: Partial<SceneGrid>): Commandments => {
+  const scene = sceneGridSchema.parse(grid ?? {});
+  return commandmentsSchema.parse(
+    Object.fromEntries(COMMANDMENTS.map((which) => [which, scene[SCENE_FIELD[which]]])),
+  );
+};
+
 export const storyGridSchema = z.object({
   /** Empty until the writer says. Nothing is assumed from the format. */
   genre: z.union([globalGenreSchema, z.literal('')]).default(''),
@@ -108,6 +181,15 @@ export const storyGridSchema = z.object({
   controllingIdea: z.string().default(''),
   /** What the story owes, and what it is expected to carry. */
   promises: z.array(gridPromiseSchema).default([]),
+  /** The five commandments asked of the whole story (§4). */
+  story: commandmentsSchema.default({}),
+  /**
+   * The same five asked of each act or region, keyed by the marker that opens
+   * it. A set whose marker has since been deleted is simply not shown; it
+   * costs nothing to leave in place, and a marker put back finds its answers
+   * where it left them.
+   */
+  acts: z.record(commandmentsSchema).default({}),
 });
 export type StoryGrid = z.infer<typeof storyGridSchema>;
 
@@ -292,6 +374,85 @@ export const storyGridStatus = (file: ProjectFile): StoryGridStatus => {
   };
 };
 
+// ------------------------------------------------- the five commandments
+
+/**
+ * Which marker kind divides the work into its regions.
+ *
+ * A series is divided into episodes, a screenplay into acts, a novel into
+ * parts where it has them and chapters where it does not. The coarsest kind
+ * the writer has actually used wins, so nobody is asked to fill in five
+ * questions per sequence in a script whose acts are already marked.
+ */
+const DIVISIONS: StoryMarkerKind[] = ['episode', 'act', 'part', 'sequence', 'chapter'];
+
+export interface ActCommandments {
+  markerId: StoryMarkerId;
+  /** "ACT II", "Chapter 4" — what the marker is called in this project. */
+  label: string;
+  /** The reading positions it encloses, 1-based and inclusive. */
+  from: number;
+  to: number;
+  commandments: Commandments;
+}
+
+export interface SceneCommandments {
+  unitId: StructuralUnitId;
+  label: string;
+  position: number;
+  /** The act or region it falls in. Empty before the first marker. */
+  act: string;
+  commandments: Commandments;
+}
+
+/**
+ * The five, act by act.
+ *
+ * A region runs from its marker to the scene before the next one, exactly as
+ * the act shape in the Final Editor measures it. Scenes before the first
+ * marker belong to no region, which is a true thing to say about a script
+ * whose first act break has not been placed.
+ */
+export const actCommandments = (file: ProjectFile): ActCommandments[] => {
+  const grid = storyGridOf(file);
+  const order = unitsInStoryOrder(file);
+  if (order.length === 0) return [];
+
+  const placed = placedMarkers(file);
+  const kind = DIVISIONS.find((candidate) => placed.some((marker) => marker.marker.kind === candidate));
+  if (kind === undefined) return [];
+
+  const dividing = placed.filter((marker) => marker.marker.kind === kind);
+  return dividing.map((marker, index) => {
+    const next = dividing[index + 1];
+    return {
+      markerId: marker.marker.id,
+      label: marker.label,
+      from: marker.unitIndex + 1,
+      to: next ? next.unitIndex : order.length,
+      commandments: commandmentsSchema.parse(grid.acts[marker.marker.id as string] ?? {}),
+    };
+  });
+};
+
+/** The five, scene by scene, in reading order. */
+export const sceneCommandments = (file: ProjectFile): SceneCommandments[] => {
+  const acts = actCommandments(file);
+  return unitsInStoryOrder(file).map((unit, index) => {
+    const position = index + 1;
+    const placed = placedMarkerForUnit(file, unit.id as string);
+    const named = unit.title || placed?.label || '';
+    const act = acts.find((region) => position >= region.from && position <= region.to);
+    return {
+      unitId: unit.id,
+      label: named || `Scene ${position}`,
+      position,
+      act: act?.label ?? '',
+      commandments: commandmentsOfScene(unit.grid),
+    };
+  });
+};
+
 // ------------------------------------------------------------------ writing
 
 const touched = (file: ProjectFile, grid: StoryGrid): ProjectFile => ({
@@ -370,3 +531,37 @@ export const removeGridPromise = (file: ProjectFile, promiseId: string): Project
   const grid = storyGridOf(file);
   return touched(file, { ...grid, promises: grid.promises.filter((promise) => promise.id !== promiseId) });
 };
+
+/** The whole story's five (§4). Nobody but the writer writes these. */
+export const setStoryCommandments = (file: ProjectFile, patch: Partial<Commandments>): ProjectFile => {
+  const grid = storyGridOf(file);
+  return touched(file, { ...grid, story: commandmentsSchema.parse({ ...grid.story, ...patch }) });
+};
+
+/** One act or region's five, against the marker that opens it. */
+export const setActCommandments = (
+  file: ProjectFile,
+  markerId: StoryMarkerId,
+  patch: Partial<Commandments>,
+): ProjectFile => {
+  const grid = storyGridOf(file);
+  const key = markerId as string;
+  return touched(file, {
+    ...grid,
+    acts: { ...grid.acts, [key]: commandmentsSchema.parse({ ...(grid.acts[key] ?? {}), ...patch }) },
+  });
+};
+
+/**
+ * One of a scene's five.
+ *
+ * It goes to the scene's own record rather than into the grid's blob, because
+ * that is where the rest of the scene's reading already lives — and the
+ * progressive complication is the turn the Final Editor has always asked for.
+ */
+export const setSceneCommandment = (
+  file: ProjectFile,
+  unitId: StructuralUnitId,
+  which: Commandment,
+  text: string,
+): ProjectFile => setSceneGrid(file, unitId, { [SCENE_FIELD[which]]: text });

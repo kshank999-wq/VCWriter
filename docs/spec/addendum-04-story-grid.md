@@ -1,6 +1,6 @@
 # Addendum 04 — The Story Grid
 
-Status: stage 1 built, September 2026; the rest specified. Extends §8.2 of
+Status: stages 1–2 built, September 2026; the rest specified. Extends §8.2 of
 the master specification, which already asks for "a scene-by-scene
 **story-grid style review**". This addendum says what that grid is and where
 it lives.
@@ -146,7 +146,8 @@ Clicking a point goes to the scene.
 1. **Built.** The global panel: genre, value, controlling idea, and the
    obligatory scenes and conventions each genre seeds — with a scene named
    against each line.
-2. The five commandments on the scene record, and on the story and its acts.
+2. **Built.** The five commandments on the scene record, and on the story
+   and its acts.
 3. The grid view: rows, sorting, filtering, and going to a scene from a row.
 4. The AI structural read extended to answer the five commandments.
 5. The value graph.
@@ -156,11 +157,13 @@ Stage 1 alone is worth having: a writer who can see what their genre owes
 them, and which of it the script has actually delivered, has most of what
 they came for.
 
-## 9. What stage 1 does
+## 9. What is built
 
-Built September 2026, as **Story Grid**, the third tab of the Editors page,
-also reachable from Editor → Story Grid. The tab reads `answered/owed` so the
-one number is visible without opening it.
+**Story Grid** is the third tab of the Editors page, also reachable from
+Editor → Story Grid. The tab reads `answered/owed` so the one number is
+visible without opening it.
+
+### Stage 1 — the global layer
 
 - **What the story is.** Genre, sub-genre, the value and the controlling
   idea. Choosing a genre for the first time fills the checklist and offers
@@ -180,3 +183,32 @@ holds their edits and their scenes. That is what the button is for.
 It lives in `projectSettings.storyGrid`, so an older project opens with an
 empty grid and no migration, and `packages/domain/src/story-grid.ts` holds
 the method: the genres, what each owes, and what counts as kept.
+
+### Stage 2 — the five commandments
+
+The same five questions — inciting incident, progressive complication,
+crisis, climax, resolution — at the three scales of §4, under one switch:
+
+- **The story.** Five boxes, each carrying its question as its placeholder,
+  with a count of how many have been answered beside the heading.
+- **Each act.** One row per region, five columns across. Which marker kind
+  divides the work is whichever coarsest one the writer has actually used —
+  episodes for a series, acts for a screenplay, parts for a novel that has
+  them and chapters for one that does not — so nobody is asked five questions
+  per sequence in a script whose acts are already marked. A region runs from
+  its marker to the scene before the next, exactly as the Final Editor
+  measures the act shape.
+- **Scene by scene.** The same five columns, one row per scene in reading
+  order, each row saying which act it falls in and going to the scene when
+  its name is clicked.
+
+**The progressive complication is the turn.** The Final Editor's grid has
+always asked where a scene turns; that is the same field under the name the
+method uses, so filling it in either place fills it in both. The other four
+are new on the scene's record.
+
+Nothing derives any of it. The story's and the acts' answers live in
+`projectSettings.storyGrid` (the acts keyed by the marker that opens them, so
+answers survive a marker being renamed and wait where they were if one is
+deleted and put back); the scene's live on the scene, beside the rest of its
+reading.
