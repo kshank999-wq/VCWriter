@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BBC_LAYOUT,
+  BBC_TAPED_LAYOUT,
   SCREENPLAY_LAYOUT,
   US_MULTI_LAYOUT,
   layoutFor,
@@ -12,7 +13,17 @@ import {
   type Page,
 } from '../pagination.js';
 import { createProjectFile } from '../project-file.js';
-import { addBeat, setParagraphStyle, setScriptFormat, updateBeat } from '../mutations.js';
+import {
+  addBeat,
+  addMarker,
+  addUnit,
+  setActBreaks,
+  setParagraphStyle,
+  setScriptFormat,
+  updateBeat,
+} from '../mutations.js';
+import { unitsInStoryOrder } from '../selectors.js';
+import type { ProjectFile } from '../project-file.js';
 import type { ParagraphStyle } from '../entities/project.js';
 import { newId } from '../ids.js';
 import type { ManuscriptElement, ManuscriptElementType } from '../entities/manuscript.js';
@@ -406,5 +417,113 @@ describe('US multi-camera sitcom format', () => {
     const single = paginateElements(many, SCREENPLAY_LAYOUT).length;
     const multi = paginateElements(many, US_MULTI_LAYOUT).length;
     expect(multi).toBeGreaterThan(single);
+  });
+});
+
+describe('BBC taped format', () => {
+  const scene = [
+    element('scene_heading', 'INT. GLASSELL PARK DINER - DAY'),
+    element('action', 'The bell above the door rings.'),
+    element('character', 'Sarah'),
+    element('parenthetical', '(Without looking up)'),
+    element('dialogue', "You're always late, Mark. You have been late every single time we have met."),
+    element('character', 'Mark'),
+    element('dialogue', 'I know.'),
+  ];
+
+  it('writes the cue in the margin beside the line it introduces', () => {
+    const page = paginateElements(scene, BBC_TAPED_LAYOUT)[0] as Page;
+    const lines = nonBlank(page);
+    // The cue is not a line of its own; it opens the speech's first line.
+    expect(lines).not.toContain('SARAH');
+    expect(lines.some((line) => line.startsWith('SARAH') && line.includes('(Without looking up)'))).toBe(true);
+    expect(lines).toContain('MARK            I know.');
+  });
+
+  it('sets the rest of the speech in its own column, clear of the margin', () => {
+    const page = paginateElements(scene, BBC_TAPED_LAYOUT)[0] as Page;
+    const wrapped = page.lines.filter((line) => line.text.startsWith("You're always late") || line.indent === 16);
+    // The speech's continuation lines are indented to the column, and the
+    // right of the page is left clear for the crew.
+    expect(wrapped.every((line) => line.indent === 16)).toBe(true);
+    expect(BBC_TAPED_LAYOUT.width['dialogue']).toBe(41);
+  });
+
+  it('keeps the cue and its speech on one line, not two', () => {
+    const page = paginateElements(scene, BBC_TAPED_LAYOUT)[0] as Page;
+    const lines = textOf(page);
+    const mark = lines.findIndex((line) => line.startsWith('MARK'));
+    expect(lines[mark]).toBe('MARK            I know.');
+    // One blank between the two speeches, and nothing inside either.
+    expect(lines[mark - 1]).toBe('');
+    expect(lines[mark - 2]).not.toBe('');
+  });
+
+  it('is the fourth choice, and the drama layout is untouched', () => {
+    expect(layoutFor('series', undefined, 'bbc_taped')).toBe(BBC_TAPED_LAYOUT);
+    expect(layoutFor('series', undefined, 'bbc')).toBe(BBC_LAYOUT);
+    // The drama layout still puts the cue on a line above the speech.
+    const drama = paginateElements(scene, BBC_LAYOUT)[0] as Page;
+    expect(nonBlank(drama)).toContain('SARAH');
+  });
+});
+
+describe('act breaks', () => {
+  /** Six scenes with an act marker on the first, third and fifth. */
+  const episode = (): ProjectFile => {
+    let file = createProjectFile({ title: 'The Diner', format: 'series' });
+    file = updateBeat(file, file.beats[0]!.id, {
+      manuscript: { elements: [element('action', 'The bell rings.')] },
+    });
+    for (const title of ['Two', 'Three', 'Four', 'Five', 'Six']) {
+      const made = addUnit(file, { laneId: file.lanes[0]!.id, title });
+      file = made.file;
+      const beat = addBeat(file, { unitId: made.unit.id, title });
+      file = updateBeat(beat.file, beat.beat.id, {
+        manuscript: { elements: [element('action', `${title} happens.`)] },
+      });
+    }
+    const order = unitsInStoryOrder(file);
+    for (const [index, name] of [[0, 'Setup'], [2, 'Turn'], [4, 'End']] as const) {
+      file = addMarker(file, { unitId: order[index]!.id, title: name, kind: 'act' }).file;
+    }
+    // Named in words, so the acts read ACT ONE rather than ACT I.
+    return { ...file, settings: { ...file.settings, markerNumbering: 'words' as const } };
+  };
+
+  it('does nothing at all until it is asked for', () => {
+    const pages = paginateProject(episode());
+    expect(pages).toHaveLength(1);
+    expect(nonBlank(pages[0] as Page)).not.toContain('ACT ONE');
+  });
+
+  it('starts each act on a page of its own, named at the head', () => {
+    const pages = paginateProject(setActBreaks(episode(), true));
+    expect(pages).toHaveLength(3);
+    expect((pages[0] as Page).lines[0]?.text).toBe('ACT ONE');
+    expect((pages[1] as Page).lines[0]?.text).toBe('ACT TWO');
+    expect((pages[2] as Page).lines[0]?.text).toBe('ACT THREE');
+  });
+
+  it('marks the end of each act under its last line', () => {
+    const pages = paginateProject(setActBreaks(episode(), true));
+    expect(nonBlank(pages[0] as Page).at(-1)).toBe('END OF ACT ONE');
+    expect(nonBlank(pages[1] as Page).at(-1)).toBe('END OF ACT TWO');
+    // Including the last one, which ends where the script does.
+    expect(nonBlank(pages[2] as Page).at(-1)).toBe('END OF ACT THREE');
+  });
+
+  it('centres the heading and underlines it, as a script does', () => {
+    const pages = paginateProject(setActBreaks(episode(), true));
+    const head = (pages[0] as Page).lines[0]!;
+    expect(head.type).toBe('act_head');
+    expect(head.indent).toBe(Math.floor((60 - 'ACT ONE'.length) / 2));
+    expect(head.spans[0]?.underline).toBe(true);
+    expect((pages[0] as Page).lines.find((line) => line.type === 'act_end')?.spans[0]?.underline).toBe(true);
+  });
+
+  it('never pushes a line off the foot of the page to make room for a heading', () => {
+    const pages = paginateProject(setActBreaks(episode(), true));
+    expect(pages.every((page) => page.lines.length <= SCREENPLAY_LAYOUT.linesPerPage)).toBe(true);
   });
 });

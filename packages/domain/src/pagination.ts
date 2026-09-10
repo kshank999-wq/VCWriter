@@ -2,6 +2,7 @@ import { beatsInScript, relatedEntities, unitsInStoryOrder } from './selectors.j
 import {
   chapterPageContent,
   chapterPagesFor,
+  placedMarkers,
   contentsDivisions,
   hasContentsPage,
   type ChapterPageContent,
@@ -11,7 +12,7 @@ import {
 } from './markers.js';
 import { episodeTitlePages, episodes, type Episode } from './episodes.js';
 import type { TitlePage } from './entities/title-page.js';
-import { groupManuscript } from './editing.js';
+import { groupManuscript, isProseFormat } from './editing.js';
 import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
 import type { ManuscriptElement, ManuscriptElementType } from './entities/manuscript.js';
 import type { ParagraphStyle, ProjectFormat, ScriptFormat } from './entities/project.js';
@@ -82,6 +83,16 @@ export interface PageLayoutSpec {
    * Absent means the ordinary single blank that separates any two blocks.
    */
   blanksBeforeHeading?: number;
+  /**
+   * The cue is not a line of its own: it sits in the left margin, beside the
+   * first line of the speech it introduces.
+   *
+   * How a taped BBC script is laid out. The cue is out at the left edge and
+   * the speech is a column to its right, which leaves the whole right-hand
+   * side of the page clear for the crew's camera cues — the reason the format
+   * exists at all.
+   */
+  cueBeside?: boolean;
   columns: number;
   /**
    * Two speeches printed side by side. Absent in a format that has no
@@ -245,6 +256,40 @@ export const BBC_LAYOUT: PageLayoutSpec = {
 };
 
 /**
+ * BBC taped format (spec §6.5).
+ *
+ * The other BBC tradition, and the one a studio drama or a multi-camera show
+ * was actually shot from. The cue does not get a line: it sits out at the left
+ * edge, beside the first line of what the character says, and the speech is a
+ * column to its right. That leaves the whole right-hand side of the page clear
+ * — which is the point of it, because that is where the crew wrote their
+ * camera cues.
+ *
+ * A4, like the drama layout, and the same double blank line at a change of
+ * setting.
+ */
+export const BBC_TAPED_LAYOUT: PageLayoutSpec = {
+  ...BBC_LAYOUT,
+  cueBeside: true,
+  indent: {
+    ...BBC_LAYOUT.indent,
+    // The speech's column. The cue is written into the margin to its left.
+    character: 0,
+    parenthetical: 16,
+    dialogue: 16,
+  },
+  width: {
+    ...BBC_LAYOUT.width,
+    character: 15,
+    parenthetical: 41,
+    dialogue: 41,
+  },
+  // Two columns of this would leave no margin to write in, which is the whole
+  // reason for the layout; two speeches at once print one after the other.
+  dual: undefined as unknown as PageLayoutSpec['dual'],
+};
+
+/**
  * Standard manuscript format: 12pt Courier, double spaced, ~25 lines a page,
  * paragraphs running on with a five-space first-line indent.
  */
@@ -284,6 +329,7 @@ export const layoutFor = (
 ): PageLayoutSpec => {
   if (format !== 'novel' && format !== 'short_story') {
     if (scriptFormat === 'bbc') return BBC_LAYOUT;
+    if (scriptFormat === 'bbc_taped') return BBC_TAPED_LAYOUT;
     if (scriptFormat === 'us_multi') return US_MULTI_LAYOUT;
     return SCREENPLAY_LAYOUT;
   }
@@ -301,7 +347,7 @@ export const layoutForFile = (file: ProjectFile): PageLayoutSpec =>
 
 export interface PageLine {
   text: string;
-  type: ManuscriptElementType | 'blank' | 'more' | 'continued';
+  type: ManuscriptElementType | 'blank' | 'more' | 'continued' | 'act_head' | 'act_end';
   indent: number;
   /**
    * The same characters as `text`, carrying the emphasis they were written
@@ -401,6 +447,11 @@ interface Block {
   mark?: string;
   /** The speaker, so a continuation can be labelled. */
   speaker: string | null;
+  /**
+   * A cue printed in the left margin beside this block's opening line rather
+   * than on a line of its own (`cueBeside`).
+   */
+  cue?: string;
 }
 
 const MIN_SPLIT_LINES = 2;
@@ -548,9 +599,17 @@ export const paginateElements = (
   elements: readonly ManuscriptElement[],
   layout: PageLayoutSpec,
   speakerFor: (element: ManuscriptElement) => string | null = () => null,
+  /**
+   * Lines already on the first page before the manuscript starts: an act's
+   * heading, which belongs to the page rather than to the writing. Counted in
+   * the page's own fifty-five, so nothing is pushed off the bottom.
+   */
+  lead: readonly PageLine[] = [],
 ): Page[] => {
   const blocks: Block[] = [];
   let currentSpeaker: string | null = null;
+  /** A cue waiting to be written beside the line it introduces. */
+  let pendingCue: string | null = null;
 
   // Dual speeches are laid out as one two-column block; everything else is
   // an element on its own.
@@ -562,11 +621,25 @@ export const paginateElements = (
         currentSpeaker = last ? (item.right[0] as ManuscriptElement).text.toUpperCase() : currentSpeaker;
         continue;
       }
-      // A format without dual columns prints the two speeches in sequence.
+      // A format without dual columns prints the two speeches in sequence,
+      // and each one is laid out exactly as it would be on its own.
       for (const element of [...item.left, ...item.right]) {
         if (element.text.trim().length === 0) continue;
         if (element.type === 'character') currentSpeaker = element.text.toUpperCase();
-        blocks.push(toBlock(element, layout, element.type === 'dialogue' ? (speakerFor(element) ?? currentSpeaker) : null));
+        if (layout.cueBeside && element.type === 'character') {
+          pendingCue = layoutText(element.text, layout.columns, layout.uppercase.has('character')).lines[0] ?? '';
+          continue;
+        }
+        const made = toBlock(
+          element,
+          layout,
+          element.type === 'dialogue' ? (speakerFor(element) ?? currentSpeaker) : null,
+        );
+        if (pendingCue !== null) {
+          made.cue = pendingCue;
+          pendingCue = null;
+        }
+        blocks.push(made);
       }
       continue;
     }
@@ -575,11 +648,38 @@ export const paginateElements = (
     if (element.text.trim().length === 0 && element.type !== 'scene_break') continue;
     if (element.type === 'character') currentSpeaker = element.text.toUpperCase();
     const speaker = speakerFor(element) ?? currentSpeaker;
-    blocks.push(toBlock(element, layout, element.type === 'dialogue' ? speaker : null));
+
+    // Where the cue goes in the margin, it is held back and written beside the
+    // first line of whatever it introduces, rather than being a line itself.
+    if (layout.cueBeside && element.type === 'character') {
+      pendingCue = layoutText(element.text, layout.columns, layout.uppercase.has('character')).lines[0] ?? '';
+      continue;
+    }
+    const block = toBlock(element, layout, element.type === 'dialogue' ? speaker : null);
+    if (pendingCue !== null) {
+      block.cue = pendingCue;
+      pendingCue = null;
+    }
+    blocks.push(block);
+  }
+
+  // A cue with nothing after it still belongs on the page.
+  if (pendingCue !== null && pendingCue.length > 0) {
+    blocks.push({
+      id: `cue-${blocks.length}`,
+      type: 'character',
+      lines: [pendingCue],
+      spans: [[{ text: pendingCue }]],
+      indent: 0,
+      firstIndent: 0,
+      keepWithNext: false,
+      splittable: false,
+      speaker: null,
+    });
   }
 
   const pages: Page[] = [];
-  let lines: PageLine[] = [];
+  let lines: PageLine[] = [...lead];
   const spacing = layout.doubleSpaced ? 2 : 1;
   // The element being laid out, and the one that opened the page in hand.
   let currentId: string | null = null;
@@ -605,7 +705,9 @@ export const paginateElements = (
    */
   const blanksBefore = (block: Block, previous: Block | null): number => {
     if (previous === null) return 0;
-    if (layout.follows?.[block.type]?.has(previous.type) ?? false) return 0;
+    // A block carrying its own cue is a new speech, however it is typed, so
+    // it takes the blank line that separates one speaker from the next.
+    if (!block.cue && (layout.follows?.[block.type]?.has(previous.type) ?? false)) return 0;
     if (block.type === 'scene_heading' && layout.blanksBeforeHeading) {
       return layout.blanksBeforeHeading * gap;
     }
@@ -636,12 +738,22 @@ export const paginateElements = (
 
   const pushBlockLines = (block: Block, from = 0, to = Number.POSITIVE_INFINITY) => {
     block.lines.slice(from, to).forEach((text, offset) => {
+      const first = from + offset === 0;
       // The mark belongs beside the first line of the block, not every one.
-      const mark = from + offset === 0 ? block.mark : undefined;
+      const mark = first ? block.mark : undefined;
       // The first-line indent belongs to the paragraph's opening line, so a
       // paragraph resumed at the top of a page is set flush, as it should be.
-      const indent = block.indent + (from + offset === 0 ? block.firstIndent : 0);
-      pushContent(text, block.type, indent, block.spans[from + offset] ?? [{ text }], mark);
+      const indent = block.indent + (first ? block.firstIndent : 0);
+      const spans = block.spans[from + offset] ?? [{ text }];
+
+      // A cue set in the margin is written into the opening line itself, so
+      // the line is one line and the speech's own column is where it belongs.
+      if (first && block.cue) {
+        const gutter = block.cue.padEnd(block.indent, ' ');
+        pushContent(gutter + text, block.type, 0, [{ text: gutter }, ...spans], mark);
+        return;
+      }
+      pushContent(text, block.type, indent, spans, mark);
     });
   };
 
@@ -786,6 +898,7 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
     return file.characters.find((character) => character.id === element.characterId)?.name.toUpperCase() ?? null;
   };
   const layout = layoutForFile(file);
+  const isProse = isProseFormat(file.project.format);
 
   const leaves = chapterPagesFor(file, options);
   const fronts = episodeTitlePages(file, options);
@@ -793,7 +906,17 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   // is printing: it starts on a fresh page and numbers from one (§17).
   const opensEpisode = new Map(episodes(file).map((episode) => [episode.marker.unitId as string, episode]));
   // Nothing to divide the run and nothing to list: one flat pass, unchanged.
-  if (leaves.length === 0 && fronts.length === 0 && opensEpisode.size === 0 && !hasContentsPage(file, options)) {
+  const anyActBreaks =
+    (file.settings.actBreaks ?? false) &&
+    !isProse &&
+    placedMarkers(file).some((placed) => placed.marker.kind === 'act');
+  if (
+    leaves.length === 0 &&
+    fronts.length === 0 &&
+    opensEpisode.size === 0 &&
+    !anyActBreaks &&
+    !hasContentsPage(file, options)
+  ) {
     return numbered(paginateElements(manuscriptElements(file, options), layout, speakerFor), new Set());
   }
 
@@ -819,15 +942,67 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   const emitted: string[] = [];
   const divisions = new Map(contentsDivisions(file).map((placed) => [placed.marker.unitId as string, placed]));
   let run: ManuscriptElement[] = [];
+
+  /**
+   * Act breaks (spec §6.5). A network episode is written in acts with a
+   * commercial between them, so each one starts on paper of its own with its
+   * name at the head of the page and `END OF …` under its last line. A
+   * streaming script has none of this, which is why it is a choice.
+   */
+  const actBreaks = (file.settings.actBreaks ?? false) && !isProse;
+  const opensAct = new Map(
+    actBreaks
+      ? placedMarkers(file)
+          .filter((placed) => placed.marker.kind === 'act')
+          .map((placed) => [placed.marker.unitId as string, placed])
+      : [],
+  );
+  /** The act being written, so its end can be marked when the next one opens. */
+  let actOpen: string | null = null;
+  /** A heading waiting for the page its act begins on. */
+  let actHead: PageLine[] = [];
+
+  /** One line of a script's furniture: centred in the column, and underlined. */
+  const centred = (text: string, type: PageLine['type']): PageLine => ({
+    text,
+    type,
+    indent: Math.max(0, Math.floor((layout.columns - text.length) / 2)),
+    spans: [{ text, underline: true }],
+  });
+
   const flush = () => {
-    if (run.length === 0) return;
-    pages.push(...paginateElements(run, layout, speakerFor));
+    if (run.length === 0 && actHead.length === 0) return;
+    pages.push(...paginateElements(run, layout, speakerFor, actHead));
+    actHead = [];
     run = [];
+  };
+
+  /** `END OF ACT ONE`, under the last line of the act that is ending. */
+  const closeAct = () => {
+    if (actOpen === null) return;
+    const line = centred(`END OF ${actOpen}`, 'act_end');
+    const last = pages[pages.length - 1];
+    if (last && last.lines.length + 2 <= layout.linesPerPage) {
+      last.lines.push({ text: '', type: 'blank', indent: 0, spans: [] }, line);
+    } else {
+      pages.push({ number: 0, lines: [line], startsWith: null });
+    }
+    actOpen = null;
   };
 
   for (const unit of units) {
     /** The first page this unit opens: its cover, its leaf, or its own page one. */
     let opensAtIndex = -1;
+
+    // An act ends where the next begins, and each starts on a page of its own.
+    const act = opensAct.get(unit.id as string);
+    if (act) {
+      flush();
+      closeAct();
+      actOpen = act.label;
+      actHead = [centred(act.label, 'act_head'), { text: '', type: 'blank', indent: 0, spans: [] }];
+      if (opensAtIndex < 0) opensAtIndex = pages.length;
+    }
 
     const episode = opensEpisode.get(unit.id as string);
     if (episode) {
@@ -860,6 +1035,7 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
     run.push(...elements);
   }
   flush();
+  closeAct();
 
   const laid = numbered(pages, restartAt);
 

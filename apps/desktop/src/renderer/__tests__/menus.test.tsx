@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import {
   addBeat,
   createProjectFile,
+  setActBreaks,
   setParagraphStyle,
   setScriptFormat,
   updateBeat,
@@ -218,6 +219,7 @@ describe('page setup', () => {
           onEditTitlePage={() => setEditing(true)}
           onParagraphStyle={(style) => setFile((current) => setParagraphStyle(current, style))}
           onScriptFormat={(next) => setFile((current) => setScriptFormat(current, next))}
+          onActBreaks={(on) => setFile((current) => setActBreaks(current, on))}
           pages={12}
           onPrint={() => undefined}
           onExportPdf={() => undefined}

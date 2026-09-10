@@ -50,13 +50,16 @@ export type ParagraphStyle = z.infer<typeof paragraphStyleSchema>;
  * page opened right up so the crew can write on it, with the speech double
  * spaced and everything that is not spoken set in capitals. `bbc` is the
  * BBC's, which grew up around taped television: A4, a cue that sits close to
- * the action, and a double blank line at every change of setting.
+ * the action, and a double blank line at every change of setting. `bbc_taped`
+ * is the other BBC tradition, where the cue goes out into the left margin
+ * beside the speech rather than above it, leaving the right of the page clear
+ * for the crew's camera cues.
  *
  * It belongs to the project rather than to the machine. A script's page count
  * is a fact about the script, and two people opening the same file must not
  * get two different ones.
  */
-export const scriptFormatSchema = z.enum(['us', 'us_multi', 'bbc']);
+export const scriptFormatSchema = z.enum(['us', 'us_multi', 'bbc', 'bbc_taped']);
 export type ScriptFormat = z.infer<typeof scriptFormatSchema>;
 
 /**
@@ -105,6 +108,13 @@ export const projectSettingsSchema = z.object({
    * writer says otherwise; prose formats never read it.
    */
   scriptFormat: scriptFormatSchema.default('us'),
+  /**
+   * Act breaks (spec §6.5). A network episode is written in acts with a
+   * commercial between them: each starts on a page of its own, with its name
+   * at the head and `END OF …` under its last line. A feature and a streaming
+   * script have none, which is why it is off unless asked for.
+   */
+  actBreaks: z.boolean().default(false),
   /**
    * What a new episode carries over from the ones before it (addendum 02
    * §17). Remembered rather than asked afresh every week; an empty object

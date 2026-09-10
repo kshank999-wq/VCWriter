@@ -80,6 +80,8 @@ interface PageSetupProps {
    * people opening the same script must be looking at the same thing.
    */
   onScriptFormat(next: ScriptFormat): void;
+  /** Whether the acts break the script into pages of their own (§6.5). */
+  onActBreaks(on: boolean): void;
   pages: number;
   onPrint(): void;
   onExportPdf(): void;
@@ -95,6 +97,7 @@ export function PageSetup({
   onEditTitlePage,
   onParagraphStyle,
   onScriptFormat,
+  onActBreaks,
   pages,
   onPrint,
   onExportPdf,
@@ -236,15 +239,36 @@ export function PageSetup({
                   </Style>
                   <Style
                     group="script-format"
-                    label="BBC"
+                    label="BBC drama"
                     on={scriptFormat === 'bbc'}
                     onChange={() => onScriptFormat('bbc')}
                     sample={['INT. DINER - DAY', '', 'The bell rings.', '', '', '  SARAH', '  You came, and I did not', '  think you would.']}
                   >
                     A4, the cue in at 2.5" with the speech a wide block directly under it, and a double
-                    blank line at every change of setting. The layout that left the margins for the crew.
+                    blank line at every change of setting.
+                  </Style>
+                  <Style
+                    group="script-format"
+                    label="BBC taped"
+                    on={scriptFormat === 'bbc_taped'}
+                    onChange={() => onScriptFormat('bbc_taped')}
+                    sample={['INT. DINER - DAY', '', 'The bell rings.', '', '', 'SARAH   You came, and I', '        did not think you', '        would.']}
+                  >
+                    The studio layout: the cue out in the left margin beside the speech rather than above
+                    it, leaving the whole right of the page clear for the crew’s camera cues.
                   </Style>
                 </div>
+
+                {/* §6.5: a network episode breaks for the commercials; a
+                    feature and a streaming script do not. */}
+                <Check
+                  label="Act breaks"
+                  on={file.settings.actBreaks ?? false}
+                  onChange={onActBreaks}
+                >
+                  Each act on a page of its own, named at the head and closed with END OF — a network
+                  episode, not a feature or a streaming one
+                </Check>
               </>
             )}
 

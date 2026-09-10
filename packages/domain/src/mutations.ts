@@ -792,6 +792,15 @@ export const setScriptFormat = (file: ProjectFile, scriptFormat: ScriptFormat): 
   touchProject({ ...file, settings: { ...file.settings, scriptFormat } });
 
 /**
+ * Whether the acts break the script into pages of their own (spec §6.5).
+ *
+ * A network episode is written that way and a streaming one is not, so it is
+ * a choice rather than something inferred from the format.
+ */
+export const setActBreaks = (file: ProjectFile, actBreaks: boolean): ProjectFile =>
+  touchProject({ ...file, settings: { ...file.settings, actBreaks } });
+
+/**
  * The title page (spec §6.1).
  *
  * A patch, because the six fields are filled in at different moments: the

@@ -6,6 +6,7 @@ import {
   beatsForUnit,
   beatsInStoryOrder,
   projectStats,
+  setActBreaks,
   setParagraphStyle,
   setScriptFormat,
   storyLayout,
@@ -990,6 +991,7 @@ export default function App() {
         }}
         onParagraphStyle={(style) => project.update((current) => setParagraphStyle(current, style))}
         onScriptFormat={(next) => project.update((current) => setScriptFormat(current, next))}
+        onActBreaks={(on) => project.update((current) => setActBreaks(current, on))}
         pages={pages}
         onPrint={() => void print()}
         onExportPdf={() => void exportPdf()}
