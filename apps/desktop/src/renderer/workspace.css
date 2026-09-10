@@ -2421,9 +2421,11 @@ input[type='color'].swatch {
   border: 0;
 }
 
+/* The same rule on the paged Script: the caret says where you are, and the
+   hairline under the line says which line (§19). An outline here would be a
+   box that follows the cursor down the page. */
 .script-pages .element textarea:focus {
-  outline: 1px solid var(--gold-deep);
-  outline-offset: 0;
+  outline: none;
 }
 
 .script-pages .beat-block {
@@ -2916,22 +2918,26 @@ dialog.writer-dialog::backdrop {
   color: #b5b0a4;
 }
 
+/* On paper as everywhere else: no rectangle around the line being typed
+   (addendum 02 §19). Paper had kept a box on hover and a gold one on focus,
+   which is the thing a writer ends up looking at instead of the sentence. */
 .workspace.script-paper .script-sheet .element textarea:hover,
 .workspace.script-paper .page-sheet .element textarea:hover,
-.workspace.script-paper .writer-sheet .element textarea:hover {
-  border-color: var(--paper-line);
-}
-
+.workspace.script-paper .writer-sheet .element textarea:hover,
 .workspace.script-paper .script-sheet .element textarea:focus,
 .workspace.script-paper .page-sheet .element textarea:focus,
 .workspace.script-paper .writer-sheet .element textarea:focus {
-  border-color: var(--gold-deep);
+  border-color: transparent;
+  outline: none;
 }
 
+/* A hairline under the line being written, and nothing else moves. Paper
+   draws it in ink rather than gold, and no band behind the words. */
 .workspace.script-paper .script-sheet .element:focus-within .ink,
 .workspace.script-paper .page-sheet .element:focus-within .ink,
 .workspace.script-paper .writer-sheet .element:focus-within .ink {
-  background: var(--paper-bar-2);
+  background: transparent;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--paper-ink) 28%, transparent);
 }
 
 .workspace.script-paper .script-sheet .element-type,
