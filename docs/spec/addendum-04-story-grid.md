@@ -1,0 +1,156 @@
+# Addendum 04 — The Story Grid
+
+Status: specified, not yet built. September 2026. Extends §8.2 of the master
+specification, which already asks for "a scene-by-scene **story-grid style
+review**". This addendum says what that grid is and where it lives.
+
+The Story Grid is the craft method as it is commonly taught — a global genre
+that owes the reader certain scenes, a value that moves in every scene, and
+five things every story does at every scale. VC Writer uses the vocabulary
+because writers use it. This is not an affiliation with anybody, and nothing
+here is licensed from anyone.
+
+## 1. Where it lives, and why
+
+**A third tab of the Editors page**, beside Daily and Final. It belongs
+there because it is *analysis of what is written* — it reads the manuscript
+and asks whether the scenes are doing their work.
+
+That is the whole reason it is not in Story Sculptor (addendum 03). The
+Sculptor is for what is **not written yet**: shapes, guesses, ideas dropped
+on a canvas. A method that asks "what is the value shift of this scene"
+cannot be answered by a scene that does not exist. Two rooms, two jobs:
+
+| | Sculptor | Story Grid |
+| --- | --- | --- |
+| Works on | What might be | What is |
+| Made of | Nodes the writer invents | The scenes the manuscript has |
+| Asks | *What if it went like this?* | *Is this scene working?* |
+| Prescriptive | Never | Deliberately |
+
+**Prescriptive is the point here.** Addendum 03 §1 forbids making a writer
+fill in a template to proceed; that rule is about the Sculptor, where the
+story is being found. The Story Grid is opened *on purpose*, by a writer who
+has asked to be held to a method. A tab you choose to open is not a template
+you are forced through.
+
+## 2. What is already built
+
+Most of the per-scene half exists. The Final Editor's grid already asks four
+of the questions, and the AI structural read (§8.2) already answers several
+of them.
+
+| Story Grid asks | What VC Writer already holds |
+| --- | --- |
+| Value at stake | `SceneGrid.value` — "trust / betrayal", "life / death" |
+| Value shift, its polarity | `SceneGrid.polarity`, and `SceneRead.valueShift` from the AI pass |
+| The turning point | `SceneGrid.turn`, `SceneRead.turn` |
+| Why the scene is here | `SceneGrid.purpose`, `SceneRead.purpose` |
+| What is fought over | `SceneGrid.conflict` |
+| Scene length, POV, who is in it | `SceneReview` — pages, words, speakers, location, dialogue and action lines |
+| Setups and payoffs still open | The Setups & Payoffs tracker |
+| Where a character actually moves | The character threads of the Timeline & Viewer |
+
+So this addendum adds two things to what is there: **the global layer**, and
+**the five commandments**. Everything else is the same data, laid out as a
+grid instead of a card.
+
+## 3. The global layer
+
+What the story is, and what that obliges it to deliver. One panel at the head
+of the tab.
+
+| | |
+| --- | --- |
+| **Global genre** | Action, horror, crime, thriller, western, war, love, performance, society, status, worldview, morality — and a sub-genre where the writer wants one |
+| **Global value** | The value the whole story moves: life/death, love/hate, truth/lie, justice/tyranny, or the writer's own |
+| **The controlling idea** | One sentence: what the ending says |
+| **The obligatory scenes** | What this genre owes its reader, as a checklist |
+| **The conventions** | The furniture the genre is expected to carry |
+
+**The checklist is the useful part.** Choosing a genre fills it with what
+that genre owes — a thriller owes its hero at the mercy of the villain, a
+love story owes the lovers meeting — and each line can be **ticked off
+against a scene in the script**. A line with no scene against it is the
+question the whole tab exists to ask.
+
+Nothing is enforced. A writer who deletes half the obligatory scenes, or adds
+five of their own, has a genre of their own, and the grid says so without
+complaint.
+
+## 4. The five commandments
+
+At three scales — the whole story, each act or region, and each scene:
+
+| | What it asks |
+| --- | --- |
+| **Inciting incident** | What upsets the balance |
+| **Progressive complication** | The turn that makes going back impossible |
+| **Crisis** | The best bad choice, or the irreconcilable good |
+| **Climax** | The choice, taken |
+| **Resolution** | What it settles into |
+
+The scene grid already holds the turn; the other four are new fields on the
+same record, and the AI structural read is extended to answer them alongside
+what it already answers. The global and act-level sets are the writer's own —
+nothing derives them, because a story's inciting incident is a judgement, not
+a measurement.
+
+## 5. The grid itself
+
+One row per scene, in reading order, read **down** the columns rather than
+across a card. That is the difference from the Final Editor: a card tells you
+about a scene, a grid tells you about the story.
+
+| Column | From |
+| --- | --- |
+| # | Reading order |
+| Scene | Its heading, or its number and name |
+| Words / pages | Measured |
+| Story event | The writer's, or the AI's `change` |
+| Value | `SceneGrid.value` |
+| Shift | The polarity, drawn as **+ / −** so the eye can run down it |
+| The five commandments | Five narrow columns, filled or empty |
+| POV, characters, setting, time | Measured where they can be, the writer's where they cannot |
+
+**Empty cells are the finding.** A run of scenes with no value shift, a scene
+with no crisis, three scenes in a row that turn the same direction — these
+are visible because the grid is dense and regular, not because a rule fired.
+Sorting and filtering are the analysis: show me the scenes that do not turn,
+show me everything in this act, show me the negative ones.
+
+## 6. The value graph
+
+The polarity column, plotted: the story's value across its scenes, one point
+per scene, running left to right. A story that never goes below the line, or
+never comes back above it, is a story with a problem — and the graph says so
+in a glance where fifty rows would not.
+
+Clicking a point goes to the scene.
+
+## 7. What it does not do
+
+- **It does not rewrite.** §8.2 is explicit: findings are an interactive
+  review, never a silent edit. The same holds here.
+- **It does not grade.** No score, no "your story is 68% complete". A grid
+  with holes in it is a working document, not a failure.
+- **It does not fill itself in.** The AI pass offers answers and the writer
+  accepts, edits or ignores them; the grid is the writer's reading of their
+  own story, which is the only reading that can change anything.
+- **It does not follow the Sculptor.** Where a scene exists in both, the
+  grid reads the real scene, because the grid is about what is written.
+
+## 8. Where the work is
+
+1. The global panel: genre, value, controlling idea, and the obligatory
+   scenes and conventions each genre seeds — with a scene tickable against
+   each line.
+2. The five commandments on the scene record, and on the story and its acts.
+3. The grid view: rows, sorting, filtering, and going to a scene from a row.
+4. The AI structural read extended to answer the five commandments.
+5. The value graph.
+6. Print and export the grid, as the Reports pages already print.
+
+Stage 1 alone is worth having: a writer who can see what their genre owes
+them, and which of it the script has actually delivered, has most of what
+they came for.
