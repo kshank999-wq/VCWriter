@@ -231,15 +231,25 @@ function Row({
           ))}
         </select>
       </td>
-      {COMMANDMENTS.map((which) => (
-        <td key={which}>
-          <input
-            aria-label={`${COMMANDMENT_NAMES[which]}, ${row.label}`}
-            value={row.commandments[which]}
-            onChange={(event) => onSetCommandment(which, event.target.value)}
-          />
-        </td>
-      ))}
+      {COMMANDMENTS.map((which) => {
+        const found = row.suggested[which];
+        return (
+          <td key={which}>
+            <input
+              aria-label={`${COMMANDMENT_NAMES[which]}, ${row.label}`}
+              // What the read found, offered rather than written — the same
+              // way the event column offers its suggestion. A scene that has
+              // been read and has none of this one says so, because an empty
+              // cell that is *known* empty is the useful kind (addendum 04 §4).
+              placeholder={found || (row.read ? 'none found' : COMMANDMENT_ASKS[which])}
+              title={found ? `The read found: ${found}` : undefined}
+              className={found && row.commandments[which].length === 0 ? 'grid-offered' : undefined}
+              value={row.commandments[which]}
+              onChange={(event) => onSetCommandment(which, event.target.value)}
+            />
+          </td>
+        );
+      })}
       <td>
         <input
           aria-label={`Whose eyes ${row.label} is seen through`}

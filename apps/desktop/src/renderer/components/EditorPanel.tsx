@@ -569,12 +569,26 @@ export function EditorPanel({ file, currentUnitId, onUpdate, onGoTo, onGoToUnit,
                     <dd>{read.opening}</dd>
                     <dt>Changes</dt>
                     <dd>{read.change}</dd>
-                    <dt>Turn</dt>
-                    <dd>{read.turn ?? <span className="muted">No turn found.</span>}</dd>
                     <dt>Value</dt>
                     <dd>{read.valueShift}</dd>
                     <dt>Purpose</dt>
                     <dd>{read.purpose}</dd>
+                    {/*
+                      The five commandments at scene scale (addendum 04 §4).
+                      Most scenes do not have all five, and the empty ones are
+                      the useful part — a scene that raises a dilemma and ends
+                      before anyone chooses says so here.
+                    */}
+                    <dt>Inciting incident</dt>
+                    <dd>{read.inciting ?? <span className="muted">Nothing upsets the balance here.</span>}</dd>
+                    <dt>Progressive complication</dt>
+                    <dd>{read.turn ?? <span className="muted">No turn found.</span>}</dd>
+                    <dt>Crisis</dt>
+                    <dd>{read.crisis ?? <span className="muted">No dilemma is reached.</span>}</dd>
+                    <dt>Climax</dt>
+                    <dd>{read.climax ?? <span className="muted">Nobody chooses.</span>}</dd>
+                    <dt>Resolution</dt>
+                    <dd>{read.resolution ?? <span className="muted">It does not settle.</span>}</dd>
                     {read.concerns.length > 0 ? (
                       <>
                         <dt>Concerns</dt>
@@ -593,7 +607,8 @@ export function EditorPanel({ file, currentUnitId, onUpdate, onGoTo, onGoToUnit,
                       {/*
                         The read is a proposal until the writer says otherwise.
                         This is the one button that makes it theirs, and it
-                        writes only the three questions the read answers.
+                        writes only the questions the read was asked — and, of
+                        the five, only the ones it actually found (§4).
                       */}
                       <button
                         type="button"

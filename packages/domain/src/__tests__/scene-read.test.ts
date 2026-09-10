@@ -54,6 +54,10 @@ const verdict = (over: Partial<SceneVerdict> = {}): SceneVerdict => ({
   valueShift: 'positive',
   purpose: 'It buys the ending its credibility.',
   concerns: ['The keeper is mentioned but never seen.'],
+  inciting: 'The lamp goes out.',
+  crisis: 'Climb blind, or leave the boats to it.',
+  climax: 'She climbs.',
+  resolution: null,
   model: 'a-model',
   ...over,
 });
@@ -142,5 +146,58 @@ describe('taking a read as your own', () => {
     const next = setSceneRead(file, unitId, verdict());
     expect(next.units[0]?.grid.polarity).toBe('');
     expect(runFinalEditor(next).totals.gridded).toBe(0);
+  });
+});
+
+/**
+ * The five commandments, at scene scale (addendum 04 §4, §8 stage 4). The
+ * read answers them alongside what it already answered; the writer's own
+ * answers still win.
+ */
+describe('the five commandments in a read', () => {
+  it('carries the four new ones across, with the turn as the complication', () => {
+    const taken = gridFromRead(verdict());
+    expect(taken).toMatchObject({
+      inciting: 'The lamp goes out.',
+      turn: 'The moment she lets go of the rail.',
+      crisis: 'Climb blind, or leave the boats to it.',
+      climax: 'She climbs.',
+    });
+  });
+
+  it('leaves a question the read did not find alone rather than blanking it', () => {
+    const { file, unitId } = scene();
+    // The writer has a resolution; the read found none.
+    const mine = setSceneGrid(file, unitId, { resolution: 'The boats come in.' });
+    const taken = setSceneGrid(mine, unitId, gridFromRead(verdict()));
+    expect(taken.units[0]?.grid.resolution).toBe('The boats come in.');
+  });
+
+  it('does not offer an answer it did not find', () => {
+    const taken = gridFromRead(verdict({ inciting: null, crisis: null, climax: null }));
+    expect(taken).not.toHaveProperty('inciting');
+    expect(taken).not.toHaveProperty('crisis');
+    expect(taken).not.toHaveProperty('climax');
+  });
+
+  it('treats a read of nothing but whitespace as nothing found', () => {
+    expect(gridFromRead(verdict({ inciting: '   ' }))).not.toHaveProperty('inciting');
+  });
+
+  it('opens a scene read before any of this with four unanswered questions', () => {
+    const { file, unitId } = scene();
+    // A read stored by an older build: none of the four in it.
+    const older = { ...verdict() } as Record<string, unknown>;
+    delete older['inciting'];
+    delete older['crisis'];
+    delete older['climax'];
+    delete older['resolution'];
+    const next = setSceneRead(file, unitId, older as unknown as SceneVerdict);
+    expect(next.units[0]?.aiRead).toMatchObject({
+      inciting: null,
+      crisis: null,
+      climax: null,
+      resolution: null,
+    });
   });
 });

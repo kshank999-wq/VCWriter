@@ -150,7 +150,8 @@ Clicking a point goes to the scene.
    and its acts.
 3. **Built.** The grid view: rows, sorting, filtering, and going to a scene
    from a row.
-4. The AI structural read extended to answer the five commandments.
+4. **Built.** The AI structural read extended to answer the five
+   commandments (§9, stage 4).
 5. The value graph.
 6. Print and export the grid, as the Reports pages already print.
 
@@ -243,3 +244,39 @@ the one row in the grid that is a finding in its own right.
 The Final Editor keeps its own smaller grid (value, shift, turn, purpose):
 the same fields, and filling one in fills the other. A card there tells you
 about a scene; this tells you about the story.
+
+### Stage 4 — the read answers the five
+
+**The structural read is asked the same five questions the writer is**, at
+scene scale, and answers them alongside what it already answered. The
+progressive complication is the turn it was always asked for, so it is not
+asked twice; the other four are new.
+
+**Most scenes do not have all five, and saying so is the useful answer.** A
+scene that raises a dilemma and ends before anyone chooses has a crisis and
+no climax; a scene of pure setup may have none of them. The read returns
+nothing for each one it does not find rather than stretching the text to fill
+the field — a writer reading down a column of these needs the empty cells to
+be true.
+
+Where it shows:
+
+- **The Final Editor's verdict card** lists all five under the value and the
+  purpose, each with its own sentence where the read found nothing: *nobody
+  chooses*, *no dilemma is reached*.
+- **The grid** offers what the read found as the **placeholder** in an empty
+  box — the read's own words, in the accent, so it is plainly an offer and
+  never mistaken for an answer. A scene that has been read and genuinely has
+  none of a commandment says `none found` rather than repeating the question.
+- **Take this as mine** writes them onto the scene, and this is the one place
+  the rule differs from the older fields: **it only fills a box the read
+  answered.** Blanking a crisis the writer had already written down, because
+  the read could not find one, would be the read overruling them on a
+  question it failed to answer.
+
+The global and act-level sets are untouched: nothing derives them, because a
+story's inciting incident is a judgement, not a measurement (§4).
+
+A scene read before this existed opens with four unanswered questions rather
+than four wrong answers — they default to nothing, like every other field
+added to a record that was already in the wild.

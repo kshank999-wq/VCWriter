@@ -36,9 +36,9 @@ push live; the build takes a minute or two.
   specified and not built; its §14 says why the first draft was wrong and
   what happened to the code written against it.
   `addendum-04-story-grid.md` is the Story Grid, the third tab of the
-  Editors page: stages 1–3 (the global layer, the five commandments, and the
-  grid itself) are built — §9 says what they do — and §8 lists the stages
-  still to come.
+  Editors page: stages 1–4 (the global layer, the five commandments, the
+  grid itself, and the AI read answering the five) are built — §9 says what
+  they do — and §8 lists what is left: the value graph, and printing it.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

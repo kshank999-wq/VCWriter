@@ -22,7 +22,9 @@ export const sceneVerdictSchema = z.object({
   turn: z
     .string()
     .nullable()
-    .describe('The moment the scene turns, quoted or described. Null if the scene does not turn.'),
+    .describe(
+      'The progressive complication: the turn that makes going back impossible, quoted or described. Null if the scene does not turn.',
+    ),
   valueShift: z
     .enum(['positive', 'negative', 'mixed', 'none'])
     .describe('Which way the scene value moves for the character who wants something.'),
@@ -30,6 +32,26 @@ export const sceneVerdictSchema = z.object({
   concerns: z
     .array(z.string())
     .describe('Specific, actionable concerns a story editor would raise. Empty if there are none.'),
+  /**
+   * The other four of the five commandments, at scene scale (addendum 04 §4).
+   * The turn above is the progressive complication, so it is not asked twice.
+   * Null where the scene does not have one — which is a finding, not a gap.
+   */
+  inciting: z
+    .string()
+    .nullable()
+    .describe('What upsets the balance in this scene. Null if nothing does.'),
+  crisis: z
+    .string()
+    .nullable()
+    .describe(
+      'The best bad choice or irreconcilable good this scene puts to someone. Null if no dilemma is reached.',
+    ),
+  climax: z.string().nullable().describe('The choice, taken, in this scene. Null if nobody chooses.'),
+  resolution: z
+    .string()
+    .nullable()
+    .describe('What the scene settles into after the choice. Null if it does not settle.'),
 });
 
 export type SceneVerdictPayload = z.infer<typeof sceneVerdictSchema>;
@@ -49,7 +71,8 @@ const OUTPUT_SCHEMA = {
     change: { type: 'string', description: 'What is different by the end of the scene, in one sentence.' },
     turn: {
       type: ['string', 'null'],
-      description: 'The moment the scene turns, quoted or described. Null if the scene does not turn.',
+      description:
+        'The progressive complication: the turn that makes going back impossible, quoted or described. Null if the scene does not turn.',
     },
     valueShift: {
       type: 'string',
@@ -62,8 +85,36 @@ const OUTPUT_SCHEMA = {
       items: { type: 'string' },
       description: 'Specific, actionable concerns a story editor would raise. Empty if there are none.',
     },
+    inciting: {
+      type: ['string', 'null'],
+      description: 'What upsets the balance in this scene. Null if nothing does.',
+    },
+    crisis: {
+      type: ['string', 'null'],
+      description:
+        'The best bad choice or irreconcilable good this scene puts to someone. Null if no dilemma is reached.',
+    },
+    climax: {
+      type: ['string', 'null'],
+      description: 'The choice, taken, in this scene. Null if nobody chooses.',
+    },
+    resolution: {
+      type: ['string', 'null'],
+      description: 'What the scene settles into after the choice. Null if it does not settle.',
+    },
   },
-  required: ['opening', 'change', 'turn', 'valueShift', 'purpose', 'concerns'],
+  required: [
+    'opening',
+    'change',
+    'turn',
+    'valueShift',
+    'purpose',
+    'concerns',
+    'inciting',
+    'crisis',
+    'climax',
+    'resolution',
+  ],
   additionalProperties: false,
 } as const;
 
@@ -79,7 +130,22 @@ Judge the scene as a scene: what is true at the start, what has changed by the e
 where it turns, and which way its value moves. A scene where nothing changes has a
 valueShift of "none" and a null turn — say so plainly rather than finding a turn
 that is not there. Keep concerns specific and few; three sharp observations are
-worth more than ten general ones.`;
+worth more than ten general ones.
+
+Then answer the five commandments for this scene:
+
+- inciting: what upsets the balance
+- turn: the progressive complication, the turn that makes going back impossible
+- crisis: the best bad choice, or the irreconcilable good
+- climax: the choice, taken
+- resolution: what it settles into
+
+**Most scenes do not have all five, and saying so is the useful answer.** A scene
+that raises a dilemma and ends before anyone chooses has a crisis and no climax;
+a scene of pure setup may have none of them. Return null for each one that is not
+in the scene rather than stretching the text to fill the field — a writer looking
+down a column of these needs the empty cells to be true. Quote or describe in one
+short sentence; do not write the scene's missing beats for it.`;
 
 let cached: Anthropic | null = null;
 

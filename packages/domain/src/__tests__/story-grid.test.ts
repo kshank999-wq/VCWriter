@@ -18,6 +18,7 @@ import {
   setSceneHeading,
   setSceneRead,
   storyGridRows,
+  type SceneVerdict,
   viewGridRows,
   setSceneCommandment,
   setStoryCommandments,
@@ -408,5 +409,64 @@ describe('the grid itself', () => {
 
     const rows = viewGridRows(storyGridRows(file), { show: 'unasked' });
     expect(rows.map((row) => row.position)).toEqual([1, 3, 4, 6]);
+  });
+});
+
+/**
+ * What a read offers the grid (addendum 04 §8 stage 4): its answers beside
+ * the writer's, never in place of them.
+ */
+describe('a read, in the grid', () => {
+  /** Two scenes is enough: the read is per scene. */
+  const gridded = (): ProjectFile => scene(script(), 'Two');
+
+  const read = (over: Partial<SceneVerdict> = {}): SceneVerdict => ({
+    opening: 'She is afraid of the climb.',
+    change: 'She climbs it anyway.',
+    turn: 'She lets go of the rail.',
+    valueShift: 'positive',
+    purpose: 'It buys the ending its credibility.',
+    concerns: [],
+    inciting: 'The lamp goes out.',
+    crisis: 'Climb blind, or leave the boats to it.',
+    climax: 'She climbs.',
+    resolution: null,
+    model: 'a-model',
+    ...over,
+  });
+
+  it('offers nothing on a scene nobody has read', () => {
+    const rows = storyGridRows(gridded());
+    expect(rows[0]?.read).toBe(false);
+    expect(rows[0]?.suggested).toEqual({
+      inciting: '',
+      complication: '',
+      crisis: '',
+      climax: '',
+      resolution: '',
+    });
+  });
+
+  it('carries what the read found, with the turn as the complication', () => {
+    const file = gridded();
+    const rows = storyGridRows(setSceneRead(file, file.units[0]!.id, read()));
+    expect(rows[0]?.read).toBe(true);
+    expect(rows[0]?.suggested).toMatchObject({
+      inciting: 'The lamp goes out.',
+      complication: 'She lets go of the rail.',
+      crisis: 'Climb blind, or leave the boats to it.',
+      climax: 'She climbs.',
+      // The read found no resolution, which is a finding rather than a gap.
+      resolution: '',
+    });
+  });
+
+  it('leaves the writer\u2019s own answers exactly as they are', () => {
+    let file = gridded();
+    file = setSceneGrid(file, file.units[0]!.id, { inciting: 'The keeper does not come back.' });
+    const rows = storyGridRows(setSceneRead(file, file.units[0]!.id, read()));
+    // Theirs in the answer, the read's beside it as an offer.
+    expect(rows[0]?.commandments.inciting).toBe('The keeper does not come back.');
+    expect(rows[0]?.suggested.inciting).toBe('The lamp goes out.');
   });
 });

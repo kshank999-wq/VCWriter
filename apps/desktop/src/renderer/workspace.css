@@ -6965,3 +6965,12 @@ dialog.preferences .field {
   padding-bottom: 3px;
   color: #000;
 }
+
+/* A cell the read has an answer for and the writer has not filled in. The
+   placeholder is the read's own words, so it is marked as an offer rather
+   than left to look like a hint (addendum 04 §8 stage 4). */
+.grid-table .grid-offered::placeholder {
+  color: var(--gold-deep);
+  font-style: italic;
+  opacity: 1;
+}

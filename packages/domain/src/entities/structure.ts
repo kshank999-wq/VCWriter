@@ -141,12 +141,29 @@ export const sceneReadSchema = z.object({
   opening: z.string().default(''),
   /** What has changed by the end. */
   change: z.string().default(''),
-  /** Where the scene turns. Null on a scene the read found no turn in. */
+  /**
+   * Where the scene turns. Null on a scene the read found no turn in.
+   *
+   * This is the **progressive complication** of the five commandments under
+   * the name the Final Editor's grid has always used for it (addendum 04 §4).
+   */
   turn: z.string().nullable().default(null),
   /** Whether the scene's value moves, and in which direction. */
   valueShift: z.enum(['positive', 'negative', 'mixed', 'none']).default('none'),
   purpose: z.string().default(''),
   concerns: z.array(z.string()).default([]),
+  /**
+   * The other four commandments at scene scale (addendum 04 §4, §8 stage 4).
+   *
+   * **Null means the read did not find one**, which is a finding rather than
+   * a gap: a scene with no crisis in it is worth being told about. They
+   * default to null so a project read before this existed opens with four
+   * unanswered questions rather than four wrong answers.
+   */
+  inciting: z.string().nullable().default(null),
+  crisis: z.string().nullable().default(null),
+  climax: z.string().nullable().default(null),
+  resolution: z.string().nullable().default(null),
   /** Which model answered, so an old read can be told from a new one. */
   model: z.string().default(''),
   /** When it was read, so a read made before an edit can be spotted. */

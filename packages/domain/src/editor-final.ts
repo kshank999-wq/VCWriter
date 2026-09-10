@@ -60,28 +60,45 @@ export interface SceneReview {
 export type SceneVerdict = Omit<SceneRead, 'readAt'>;
 
 /**
- * A read turned into the grid patch the writer can accept (spec §8.2).
+ * A read turned into the grid patch the writer can accept (spec §8.2,
+ * addendum 04 §4).
  *
- * Only the three questions the read actually answers: which way it moves,
- * where it turns, what it is for. What is at stake and what is being fought
- * over stay the writer's own — the read is not asked for them, and a patch
- * that overwrote them with silence would lose work.
+ * The questions the read is actually asked: which way it moves, what it is
+ * for, and the five commandments at scene scale — the turn being the
+ * progressive complication under the name this grid has always used. What is
+ * at stake and what is being fought over stay the writer's own; the read is
+ * not asked for them, and a patch that overwrote them with silence would lose
+ * work.
  *
  * "None" becomes "flat", which is a claim, so accepting it is a deliberate
  * act: the button says take this reading as mine, and this is what that means.
+ *
+ * **The four newer commandments only fill a box the read answered.** A read
+ * that found no crisis says so by leaving it null, and blanking a crisis the
+ * writer had already written down would be the read overruling them on a
+ * question it could not answer.
  */
-export const gridFromRead = (read: SceneVerdict): Partial<SceneGrid> => ({
-  polarity:
-    read.valueShift === 'positive'
-      ? 'up'
-      : read.valueShift === 'negative'
-        ? 'down'
-        : read.valueShift === 'mixed'
-          ? 'mixed'
-          : 'flat',
-  turn: read.turn ?? '',
-  purpose: read.purpose,
-});
+export const gridFromRead = (read: SceneVerdict): Partial<SceneGrid> => {
+  const answered: Partial<SceneGrid> = {};
+  if (read.inciting?.trim()) answered.inciting = read.inciting;
+  if (read.crisis?.trim()) answered.crisis = read.crisis;
+  if (read.climax?.trim()) answered.climax = read.climax;
+  if (read.resolution?.trim()) answered.resolution = read.resolution;
+
+  return {
+    polarity:
+      read.valueShift === 'positive'
+        ? 'up'
+        : read.valueShift === 'negative'
+          ? 'down'
+          : read.valueShift === 'mixed'
+            ? 'mixed'
+            : 'flat',
+    turn: read.turn ?? '',
+    purpose: read.purpose,
+    ...answered,
+  };
+};
 
 export type StoryFindingKind =
   | 'empty_scene'

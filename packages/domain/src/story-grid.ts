@@ -7,6 +7,7 @@ import { setSceneGrid } from './mutations.js';
 import { reviewScenes } from './editor-final.js';
 import { sceneHeadingOf } from './scene-heading.js';
 import { sceneGridSchema } from './entities/structure.js';
+import type { SceneRead } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
 import type { StoryMarkerId, StructuralUnitId } from './ids.js';
 import type { SceneGrid, StoryMarkerKind } from './entities/structure.js';
@@ -171,6 +172,29 @@ export const commandmentsOfScene = (grid?: Partial<SceneGrid>): Commandments => 
     Object.fromEntries(COMMANDMENTS.map((which) => [which, scene[SCENE_FIELD[which]]])),
   );
 };
+
+/**
+ * What an AI read found for the five, at scene scale (addendum 04 §8 stage 4).
+ *
+ * The read answers the same five questions the writer is asked, so it comes
+ * back in the same shape and can sit beside their answers. A question the
+ * read did not find an answer to comes through empty, exactly as an
+ * unanswered box does — the two are the same fact about the scene.
+ *
+ * Null in, empty out: a scene nobody has read has nothing to suggest.
+ */
+export const commandmentsOfRead = (read?: SceneRead | null): Commandments =>
+  commandmentsSchema.parse(
+    read
+      ? {
+          inciting: read.inciting ?? '',
+          complication: read.turn ?? '',
+          crisis: read.crisis ?? '',
+          climax: read.climax ?? '',
+          resolution: read.resolution ?? '',
+        }
+      : {},
+  );
 
 export const storyGridSchema = z.object({
   /** Empty until the writer says. Nothing is assumed from the format. */
@@ -484,6 +508,18 @@ export interface GridRow {
   value: string;
   polarity: SceneGrid['polarity'];
   commandments: Commandments;
+  /**
+   * What the read found for each of the five, where one has been made
+   * (addendum 04 §8 stage 4).
+   *
+   * **Beside the writer's answers, never in place of them.** A box the writer
+   * has filled in shows what they wrote; an empty one can show what the read
+   * saw, as an offer. An empty string here means the read did not find one,
+   * which is worth seeing on a scene nobody has answered either.
+   */
+  suggested: Commandments;
+  /** Whether this scene has been read at all, so an empty row can say why. */
+  read: boolean;
   pov: string;
   /** Measured: who has a cue in it, where it is, and when. */
   characters: string[];
@@ -509,6 +545,8 @@ export const storyGridRows = (file: ProjectFile): GridRow[] => {
       value: grid.value,
       polarity: grid.polarity,
       commandments: commandmentsOfScene(grid),
+      suggested: commandmentsOfRead(scene.aiVerdict),
+      read: scene.aiVerdict !== null,
       pov: grid.pov,
       characters: scene.speakers,
       setting: heading ? [heading.setting, heading.place].filter(Boolean).join(' ') : (scene.location ?? ''),
