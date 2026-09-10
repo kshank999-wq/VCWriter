@@ -216,13 +216,23 @@ export function PageSetup({
                 <div className="paragraph-style" role="radiogroup" aria-label="Script format">
                   <Style
                     group="script-format"
-                    label="US studio"
+                    label="US single-camera"
                     on={scriptFormat !== 'bbc'}
                     onChange={() => onScriptFormat('us')}
                     sample={['INT. DINER - DAY', '', 'The bell rings.', '', '       SARAH', '    (whispering)', '  You came.']}
                   >
                     US Letter, and what Final Draft opens on: the cue out at 3.7", the speech a narrow
                     column down the middle. Laid out for reading, and for the page-a-minute rule.
+                  </Style>
+                  <Style
+                    group="script-format"
+                    label="US multi-camera"
+                    on={scriptFormat === 'us_multi'}
+                    onChange={() => onScriptFormat('us_multi')}
+                    sample={['INT. DINER - DAY', '', 'THE BELL RINGS.', '', '     SARAH', '  You came.', '', '  I did not think you would.']}
+                  >
+                    The traditional sitcom, shot on a stage: the speech double spaced so the cast can write
+                    between the lines, and everything not spoken in capitals. Half an hour runs forty-odd pages.
                   </Style>
                   <Style
                     group="script-format"

@@ -673,6 +673,34 @@ A paragraph resumed at the top of the next page is set flush: the indent
 belongs to the paragraph's opening line, not to wherever the page happened
 to break.
 
+### 6.5 Scripts: which house the page is set in
+
+A screenplay page is a physical object, and there is more than one of them.
+The same twelve-point Courier is laid out three different ways depending on
+who the script is going to, so **File → Page setup** offers the three under
+*Script format*, each shown rather than described. It is a property of the
+project rather than of the machine: the choice changes the geometry, and
+therefore the page count, and two people opening one script have to be
+looking at the same thing.
+
+| | The page |
+| --- | --- |
+| **US single-camera** (default) | What Final Draft opens on, and what a feature, a streaming drama and a single-camera comedy are written in. US Letter, 55 lines, a sixty-character column. Scene heading and action at 1.5"; the cue at 3.7"; the wryly at 3.1", wrapping at 5.6"; dialogue at 2.5", wrapping at 6.0"; the transition at 6.0". Single spaced. |
+| **US multi-camera** | The traditional sitcom, shot on a stage in front of an audience. The same page opened right up so it can be written on: the speech is double spaced, the cue comes in to 3.0" with the speech at 2.5", and everything that is not spoken — headings, action, wrylies — is set in capitals. Half an hour of it runs forty-odd pages rather than thirty, which is the format doing its job. |
+| **BBC** | A4 — 8.27" × 11.69", so 58 lines in a fifty-seven-character column. The cue in at 2.5" with the speech a wide block directly under it rather than a column down the middle, and a double blank line at every change of setting. Scene headings are not set in bold. |
+
+**Everything else about the vertical spacing is the same in all three, and
+is not negotiable.** Exactly one blank line before a scene heading, before
+an action paragraph, before a character cue and before a transition — and
+never two. **Zero** inside a speech: the cue, its wryly and the words are
+consecutive lines. A speech is one block, and a blank line inside it is the
+mistake every writer spots at a glance.
+
+**A parenthetical wears its brackets.** They go on the line the moment it
+becomes one, with the caret between them, and come off again if the line is
+re-typed as something else — what the writer wrote is the words, not the
+punctuation. One left half-open closes itself when the writer leaves it.
+
 ## 7. The research window
 
 Research is where the material is kept **before, during and after** it is

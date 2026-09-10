@@ -49,6 +49,14 @@ export interface PageLayoutSpec {
   /** Prose is double spaced; screenplays are not. */
   doubleSpaced: boolean;
   /**
+   * Element types double spaced on a page that otherwise is not.
+   *
+   * A multi-camera sitcom's speeches are set with a blank line between every
+   * line of them, so the cast and the crew have somewhere to write. It is why
+   * a half-hour multi-cam script runs forty-odd pages rather than thirty.
+   */
+  doubleSpacedTypes?: ReadonlySet<string>;
+  /**
    * Element types that follow their own kind with no blank between them.
    *
    * Standard manuscript format runs paragraphs on and marks each new one
@@ -125,6 +133,57 @@ export const SCREENPLAY_LAYOUT: PageLayoutSpec = {
     width: 27,
     gap: 6,
     indent: { character: 8, parenthetical: 3, dialogue: 0 },
+  },
+};
+
+/**
+ * US multi-camera sitcom format (spec §6.5).
+ *
+ * The same US Letter page, opened right up. A show shot on a stage in front
+ * of an audience is rehearsed off the script, so the page is built to be
+ * written on: the speech is double spaced, the cue sits in close to the left
+ * rather than out in the middle, and everything that is not spoken — the
+ * headings, the action, the wrylies — is set in capitals so an actor can see
+ * at a glance what is theirs to say. A half-hour of this is forty-odd pages,
+ * not thirty, and that is the format doing its job rather than the writer
+ * overwriting.
+ */
+export const US_MULTI_LAYOUT: PageLayoutSpec = {
+  linesPerPage: 55,
+  columns: 60,
+  doubleSpaced: false,
+  // The speech, and only the speech: room to write between the lines.
+  doubleSpacedTypes: new Set(['dialogue']),
+  indent: {
+    scene_heading: 0,
+    action: 0,
+    shot: 0,
+    general: 0,
+    character: 15,
+    parenthetical: 10,
+    dialogue: 10,
+    transition: 45,
+  },
+  width: {
+    scene_heading: 60,
+    action: 60,
+    shot: 60,
+    general: 60,
+    character: 45,
+    parenthetical: 45,
+    dialogue: 45,
+    transition: 15,
+  },
+  // Everything that is not spoken is in capitals.
+  uppercase: new Set(['scene_heading', 'character', 'transition', 'shot', 'action', 'general', 'parenthetical']),
+  follows: {
+    parenthetical: new Set(['character', 'dialogue', 'parenthetical']),
+    dialogue: new Set(['character', 'parenthetical', 'dialogue']),
+  },
+  dual: {
+    width: 27,
+    gap: 6,
+    indent: { character: 5, parenthetical: 0, dialogue: 0 },
   },
 };
 
@@ -224,7 +283,9 @@ export const layoutFor = (
   scriptFormat?: ScriptFormat,
 ): PageLayoutSpec => {
   if (format !== 'novel' && format !== 'short_story') {
-    return scriptFormat === 'bbc' ? BBC_LAYOUT : SCREENPLAY_LAYOUT;
+    if (scriptFormat === 'bbc') return BBC_LAYOUT;
+    if (scriptFormat === 'us_multi') return US_MULTI_LAYOUT;
+    return SCREENPLAY_LAYOUT;
   }
   return paragraphStyle === 'blocked' ? PROSE_BLOCK_LAYOUT : PROSE_LAYOUT;
 };
@@ -567,7 +628,8 @@ export const paginateElements = (
     if (lines.length >= layout.linesPerPage) startNewPage();
     if (pageStart === null) pageStart = currentId;
     lines.push({ text, type, indent, spans, ...(mark ? { mark } : {}) });
-    if (layout.doubleSpaced && lines.length < layout.linesPerPage) {
+    const doubled = layout.doubleSpaced || (layout.doubleSpacedTypes?.has(type) ?? false);
+    if (doubled && lines.length < layout.linesPerPage) {
       lines.push({ text: '', type: 'blank', indent: 0, spans: [] });
     }
   };
@@ -594,12 +656,17 @@ export const paginateElements = (
       previous !== null && previous.type === block.type && (layout.runOn?.has(block.type) ?? false);
     const before = runsOn ? 0 : blanksBefore(block, previous);
     const separator = lines.length === 0 ? 0 : before;
-    const needed = block.lines.length * spacing + separator;
+    // A block set double spaced on an otherwise single-spaced page takes two
+    // lines for each of its own, and the room it needs has to say so.
+    const step = layout.doubleSpacedTypes?.has(block.type) ? 2 : spacing;
+    const needed = block.lines.length * step + separator;
 
     // A block that keeps with the next one needs room for a couple of lines of
     // that next block too, or the page break lands between them.
     const follower = blocks[index + 1];
-    const companionLines = block.keepWithNext && follower ? Math.min(2, follower.lines.length) * spacing + spacing : 0;
+    const followerStep = follower && layout.doubleSpacedTypes?.has(follower.type) ? 2 : spacing;
+    const companionLines =
+      block.keepWithNext && follower ? Math.min(2, follower.lines.length) * followerStep + gap : 0;
 
     if (needed + companionLines <= remaining()) {
       if (before > 0) pushBlank(before);
@@ -608,8 +675,8 @@ export const paginateElements = (
     }
 
     // It does not fit. Split dialogue when both halves stay readable.
-    const availableForLines = remaining() - separator - spacing; // reserve the (MORE) line
-    const fittable = Math.floor(availableForLines / spacing);
+    const availableForLines = remaining() - separator - step; // reserve the (MORE) line
+    const fittable = Math.floor(availableForLines / step);
     if (
       block.splittable &&
       fittable >= MIN_SPLIT_LINES &&

@@ -44,17 +44,19 @@ export type ParagraphStyle = z.infer<typeof paragraphStyleSchema>;
 /**
  * Which house a script is set in (spec §6.5).
  *
- * `us` is US studio format — the one Final Draft opens on, laid out for
- * reading and for the page-a-minute rule. `bbc` is the BBC's, which grew up
- * around taped television: A4, a cue that sits close to the action, dialogue
- * as a wide block under it rather than a column down the middle, and a double
- * blank line at every change of setting.
+ * `us` is US single-camera studio format — the one Final Draft opens on, and
+ * what a feature, a streaming drama and a single-camera comedy are all
+ * written in. `us_multi` is the traditional multi-camera sitcom: the same
+ * page opened right up so the crew can write on it, with the speech double
+ * spaced and everything that is not spoken set in capitals. `bbc` is the
+ * BBC's, which grew up around taped television: A4, a cue that sits close to
+ * the action, and a double blank line at every change of setting.
  *
  * It belongs to the project rather than to the machine. A script's page count
  * is a fact about the script, and two people opening the same file must not
  * get two different ones.
  */
-export const scriptFormatSchema = z.enum(['us', 'bbc']);
+export const scriptFormatSchema = z.enum(['us', 'us_multi', 'bbc']);
 export type ScriptFormat = z.infer<typeof scriptFormatSchema>;
 
 /**

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BBC_LAYOUT,
   SCREENPLAY_LAYOUT,
+  US_MULTI_LAYOUT,
   layoutFor,
   layoutForFile,
   paginateElements,
@@ -350,5 +351,60 @@ describe('BBC script format', () => {
     const file = createProjectFile({ title: 'The Lock-Up', format: 'screenplay' });
     expect(layoutForFile(file)).toBe(SCREENPLAY_LAYOUT);
     expect(layoutForFile(setScriptFormat(file, 'bbc'))).toBe(BBC_LAYOUT);
+  });
+});
+
+describe('US multi-camera sitcom format', () => {
+  const scene = [
+    element('scene_heading', 'INT. GLASSELL PARK DINER - DAY'),
+    element('action', 'The bell above the door rings. Mark steps inside.'),
+    element('character', 'Sarah'),
+    element('parenthetical', '(without looking up)'),
+    element('dialogue', "You're always late, Mark. You have been late every single time."),
+  ];
+
+  it('sets everything that is not spoken in capitals', () => {
+    const page = paginateElements(scene, US_MULTI_LAYOUT)[0] as Page;
+    const lines = nonBlank(page);
+    expect(lines).toContain('THE BELL ABOVE THE DOOR RINGS. MARK STEPS INSIDE.');
+    expect(lines).toContain('(WITHOUT LOOKING UP)');
+    // The speech is the one thing left alone: it is what somebody says.
+    expect(lines.some((line) => line.startsWith("You're always late"))).toBe(true);
+  });
+
+  it('brings the cue in from the middle of the page', () => {
+    const page = paginateElements(scene, US_MULTI_LAYOUT)[0] as Page;
+    const at = (start: string) => page.lines.find((line) => line.text.startsWith(start))?.indent;
+    expect(at('SARAH')).toBe(15); // 3.0", not 3.7"
+    expect(at('(WITHOUT')).toBe(10);
+    expect(at("You're always late")).toBe(10);
+  });
+
+  it('double spaces the speech, and nothing else', () => {
+    const page = paginateElements(scene, US_MULTI_LAYOUT)[0] as Page;
+    const lines = textOf(page);
+    const first = lines.findIndex((line) => line.startsWith("You're always late"));
+    // A blank line between every line of the speech, so it can be written on.
+    expect(lines[first + 1]).toBe('');
+    expect(lines[first + 2]).not.toBe('');
+    // But the cue and its wryly still sit straight above it.
+    expect(lines[lines.indexOf('(WITHOUT LOOKING UP)') - 1]).toBe('SARAH');
+  });
+
+  it('is chosen on the project, beside the other two houses', () => {
+    expect(layoutFor('series', undefined, 'us_multi')).toBe(US_MULTI_LAYOUT);
+    expect(layoutFor('screenplay', undefined, 'us')).toBe(SCREENPLAY_LAYOUT);
+    const file = createProjectFile({ title: 'The Diner', format: 'series' });
+    expect(layoutForFile(setScriptFormat(file, 'us_multi'))).toBe(US_MULTI_LAYOUT);
+  });
+
+  it('takes more pages for the same words, which is the point of it', () => {
+    const many = Array.from({ length: 30 }, () => [
+      element('character', 'Sarah'),
+      element('dialogue', 'You are late again and I have been sitting here for a very long time.'),
+    ]).flat();
+    const single = paginateElements(many, SCREENPLAY_LAYOUT).length;
+    const multi = paginateElements(many, US_MULTI_LAYOUT).length;
+    expect(multi).toBeGreaterThan(single);
   });
 });
