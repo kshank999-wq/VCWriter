@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
-import { unitsInStoryOrder } from './selectors.js';
+import { findUnit, unitsInStoryOrder } from './selectors.js';
 import { placedMarkerForUnit, placedMarkers } from './markers.js';
 import { setSceneGrid } from './mutations.js';
+import { reviewScenes } from './editor-final.js';
+import { sceneHeadingOf } from './scene-heading.js';
 import { sceneGridSchema } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
 import type { StoryMarkerId, StructuralUnitId } from './ids.js';
@@ -312,6 +314,14 @@ export const promisesForGenre = (genre: GlobalGenre): GridPromise[] => {
   ];
 };
 
+/**
+ * A scene as the story names it: what the writer called it, else the marker
+ * that opens it, else where it falls. One naming for the whole tab, so a
+ * scene is not "The harbour" in one list and "3 The harbour" in the next.
+ */
+const sceneLabel = (file: ProjectFile, unitId: StructuralUnitId, title: string, position: number): string =>
+  title || placedMarkerForUnit(file, unitId as string)?.label || `Scene ${position}`;
+
 /** The project's grid, with its defaults filled in. */
 export const storyGridOf = (file: ProjectFile): StoryGrid =>
   storyGridSchema.parse(file.settings.storyGrid ?? {});
@@ -349,13 +359,11 @@ export const storyGridStatus = (file: ProjectFile): StoryGridStatus => {
     const index = promise.unitId === null ? undefined : at.get(promise.unitId);
     if (index === undefined) return { promise, scene: null };
     const unit = order[index] as (typeof order)[number];
-    const placed = placedMarkerForUnit(file, unit.id as string);
-    const named = unit.title || placed?.label || '';
     return {
       promise,
       scene: {
         id: unit.id,
-        label: named || `Scene ${index + 1}`,
+        label: sceneLabel(file, unit.id, unit.title, index + 1),
         position: index + 1,
       },
     };
@@ -440,17 +448,122 @@ export const sceneCommandments = (file: ProjectFile): SceneCommandments[] => {
   const acts = actCommandments(file);
   return unitsInStoryOrder(file).map((unit, index) => {
     const position = index + 1;
-    const placed = placedMarkerForUnit(file, unit.id as string);
-    const named = unit.title || placed?.label || '';
     const act = acts.find((region) => position >= region.from && position <= region.to);
     return {
       unitId: unit.id,
-      label: named || `Scene ${position}`,
+      label: sceneLabel(file, unit.id, unit.title, position),
       position,
       act: act?.label ?? '',
       commandments: commandmentsOfScene(unit.grid),
     };
   });
+};
+
+// ---------------------------------------------------------------- the grid
+
+/**
+ * One scene's row (§5).
+ *
+ * Measured where it can be — pages, words, who speaks, where and when — and
+ * the writer's where it cannot. The point of the shape is that it is dense
+ * and regular: a run of scenes with no value shift, or three in a row that
+ * turn the same way, is something the eye finds going **down** a column.
+ */
+export interface GridRow {
+  unitId: StructuralUnitId;
+  position: number;
+  label: string;
+  /** The act or region it falls in. Empty before the first marker. */
+  act: string;
+  pages: number;
+  words: number;
+  /** What happens, in the writer's words. */
+  event: string;
+  /** The AI read's `change`, offered where one has been made and nothing said. */
+  suggestedEvent: string;
+  value: string;
+  polarity: SceneGrid['polarity'];
+  commandments: Commandments;
+  pov: string;
+  /** Measured: who has a cue in it, where it is, and when. */
+  characters: string[];
+  setting: string;
+  time: string;
+}
+
+export const storyGridRows = (file: ProjectFile): GridRow[] => {
+  const acts = actCommandments(file);
+  return reviewScenes(file).map((scene) => {
+    const grid = sceneGridSchema.parse(scene.grid ?? {});
+    const heading = sceneHeadingOf(file, scene.unitId);
+    const act = acts.find((region) => scene.position >= region.from && scene.position <= region.to);
+    return {
+      unitId: scene.unitId,
+      position: scene.position,
+      label: sceneLabel(file, scene.unitId, findUnit(file, scene.unitId)?.title ?? '', scene.position),
+      act: act?.label ?? '',
+      pages: scene.pages,
+      words: scene.words,
+      event: grid.event,
+      suggestedEvent: scene.aiVerdict?.change ?? '',
+      value: grid.value,
+      polarity: grid.polarity,
+      commandments: commandmentsOfScene(grid),
+      pov: grid.pov,
+      characters: scene.speakers,
+      setting: heading ? [heading.setting, heading.place].filter(Boolean).join(' ') : (scene.location ?? ''),
+      time: heading?.time ?? '',
+    };
+  });
+};
+
+/**
+ * What the grid is showing (§5).
+ *
+ * Filtering and sorting *are* the analysis: show me the scenes that do not
+ * turn, show me everything in this act, show me the negative ones. None of it
+ * changes the manuscript, and none of it is a judgement — a row that matches
+ * "does not turn" is a question, not a verdict.
+ */
+export interface GridView {
+  /** Empty shows every scene. */
+  show: '' | 'no_turn' | 'flat' | 'negative' | 'positive' | 'no_value' | 'unasked';
+  /** An act's label, or empty for the whole story. */
+  act: string;
+  sort: 'order' | 'longest' | 'shortest';
+}
+
+export const GRID_SHOW_NAMES: Record<GridView['show'], string> = {
+  '': 'Every scene',
+  no_turn: 'Scenes that do not turn',
+  flat: 'Scenes that do not move',
+  negative: 'The negative ones',
+  positive: 'The positive ones',
+  no_value: 'Nothing at stake yet',
+  unasked: 'Nothing said about them yet',
+};
+
+const MATCHES: Record<GridView['show'], (row: GridRow) => boolean> = {
+  '': () => true,
+  no_turn: (row) => row.commandments.complication.trim().length === 0,
+  flat: (row) => row.polarity === 'flat',
+  negative: (row) => row.polarity === 'down',
+  positive: (row) => row.polarity === 'up',
+  no_value: (row) => row.value.trim().length === 0,
+  unasked: (row) =>
+    answeredCount(row.commandments) === 0 && row.value.trim().length === 0 && row.event.trim().length === 0,
+};
+
+/** The rows, filtered and ordered. Reading order unless asked otherwise. */
+export const viewGridRows = (rows: GridRow[], view: Partial<GridView> = {}): GridRow[] => {
+  const show = view.show ?? '';
+  const act = view.act ?? '';
+  const matches = MATCHES[show] ?? MATCHES[''];
+
+  const kept = rows.filter((row) => matches(row) && (act === '' || row.act === act));
+  if (view.sort === 'longest') return [...kept].sort((a, b) => b.words - a.words || a.position - b.position);
+  if (view.sort === 'shortest') return [...kept].sort((a, b) => a.words - b.words || a.position - b.position);
+  return kept;
 };
 
 // ------------------------------------------------------------------ writing

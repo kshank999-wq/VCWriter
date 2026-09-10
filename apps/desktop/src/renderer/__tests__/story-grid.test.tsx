@@ -170,12 +170,11 @@ describe('the five commandments', () => {
     expect((acts as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('asks each scene the same five, and the complication is the turn', () => {
+  it('asks each scene the same five in the grid, and the complication is the turn', () => {
     bridge();
     let file: ProjectFile | null = null;
     render(<Harness onFile={(next) => (file = next)} />);
 
-    fireEvent.click(screen.getByRole('tab', { name: /^Scene by scene/ }));
     const unitId = file!.units[0]!.id;
     const label = file!.units[0]!.title;
 
@@ -188,6 +187,60 @@ describe('the five commandments', () => {
     fireEvent.change(screen.getByLabelText(`Resolution, ${label}`), { target: { value: 'The door stays shut' } });
     expect(findUnit(file!, unitId)?.grid.resolution).toBe('The door stays shut');
   });
+});
+
+describe('the grid itself', () => {
+  it('is one row per scene, and says how many are showing', () => {
+    bridge();
+    let file: ProjectFile | null = null;
+    render(<Harness onFile={(next) => (file = next)} />);
+
+    const rows = document.querySelectorAll('.grid-table tbody tr');
+    expect(rows).toHaveLength(file!.units.length);
+    expect(screen.getByText(`${file!.units.length} ${file!.units.length === 1 ? 'scene' : 'scenes'}`)).toBeTruthy();
+  });
+
+  it('takes the story event and what is at stake, on the scene', () => {
+    bridge();
+    let file: ProjectFile | null = null;
+    render(<Harness onFile={(next) => (file = next)} />);
+    const label = file!.units[0]!.title;
+
+    fireEvent.change(screen.getByLabelText(`What happens in ${label}`), { target: { value: 'The lamp fails' } });
+    fireEvent.change(screen.getByLabelText(`What is at stake in ${label}`), { target: { value: 'light / dark' } });
+
+    const unit = findUnit(file!, file!.units[0]!.id);
+    expect(unit?.grid.event).toBe('The lamp fails');
+    expect(unit?.grid.value).toBe('light / dark');
+  });
+
+  it('draws the shift as a mark, and marks a scene that does not move', () => {
+    bridge();
+    let file: ProjectFile | null = null;
+    render(<Harness onFile={(next) => (file = next)} />);
+    const label = file!.units[0]!.title;
+
+    const shift = screen.getByLabelText(`Which way ${label} moves`);
+    expect([...(shift as HTMLSelectElement).options].map((option) => option.text)).toEqual(['·', '+', '−', '±', '=']);
+
+    fireEvent.change(shift, { target: { value: 'flat' } });
+    expect(findUnit(file!, file!.units[0]!.id)?.grid.polarity).toBe('flat');
+    expect(document.querySelectorAll('.grid-table tr.flat')).toHaveLength(1);
+  });
+
+  it('filters to the scenes that do not turn, and counts what is left', () => {
+    bridge();
+    let file: ProjectFile | null = null;
+    render(<Harness onFile={(next) => (file = next)} />);
+    const all = file!.units.length;
+    const label = file!.units[0]!.title;
+
+    fireEvent.change(screen.getByLabelText(`Progressive complication, ${label}`), { target: { value: 'It turns' } });
+    fireEvent.change(screen.getByLabelText('Which scenes to show'), { target: { value: 'no_turn' } });
+
+    expect(document.querySelectorAll('.grid-table tbody tr')).toHaveLength(all - 1);
+    expect(screen.getByText(`${all - 1} of ${all}`)).toBeTruthy();
+  });
 
   it('goes to a scene from its row', () => {
     bridge();
@@ -195,8 +248,8 @@ describe('the five commandments', () => {
     const went: string[] = [];
     render(<Harness onFile={(next) => (file = next)} onGoToUnit={(id) => went.push(id as string)} />);
 
-    fireEvent.click(screen.getByRole('tab', { name: /^Scene by scene/ }));
-    fireEvent.click(screen.getByRole('button', { name: file!.units[0]!.title }));
+    const row = document.querySelector('.grid-table tbody tr th button') as HTMLButtonElement;
+    fireEvent.click(row);
     expect(went).toEqual([file!.units[0]!.id as string]);
   });
 });

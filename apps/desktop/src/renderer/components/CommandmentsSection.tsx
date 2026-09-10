@@ -5,20 +5,18 @@ import {
   COMMANDMENT_NAMES,
   actCommandments,
   answeredCount,
-  sceneCommandments,
   setActCommandments,
-  setSceneCommandment,
   setStoryCommandments,
   storyGridOf,
   type Commandment,
   type Commandments,
   type ProjectFile,
-  type StructuralUnitId,
 } from '@vcwriter/domain';
 
 /**
- * The five commandments (addendum 04 §4), at the three scales the method
- * asks them at: the whole story, each act or region, and each scene.
+ * The five commandments (addendum 04 §4), at the two scales above the scene:
+ * the whole story, and each act or region. A scene's five are five columns of
+ * the grid below, where they can be read down instead of one at a time.
  *
  * **Nothing derives them.** A story's inciting incident is a judgement, not a
  * measurement, so every box here is the writer's own and starts empty. What
@@ -31,19 +29,17 @@ import {
  * so filling it in either place fills it in both.
  */
 
-type Scale = 'story' | 'acts' | 'scenes';
+type Scale = 'story' | 'acts';
 
 interface CommandmentsSectionProps {
   file: ProjectFile;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
-  onGoToUnit?(unitId: StructuralUnitId): void;
 }
 
-export function CommandmentsSection({ file, onUpdate, onGoToUnit }: CommandmentsSectionProps) {
+export function CommandmentsSection({ file, onUpdate }: CommandmentsSectionProps) {
   const [scale, setScale] = useState<Scale>('story');
   const story = storyGridOf(file).story;
   const acts = actCommandments(file);
-  const scenes = sceneCommandments(file);
 
   return (
     <section className="grid-commandments">
@@ -60,8 +56,13 @@ export function CommandmentsSection({ file, onUpdate, onGoToUnit }: Commandments
 
       <div className="scale-switch" role="tablist" aria-label="At what scale">
         <ScaleTab name="The story" value="story" scale={scale} onPick={setScale} />
-        <ScaleTab name={`Each act (${acts.length})`} value="acts" scale={scale} onPick={setScale} disabled={acts.length === 0} />
-        <ScaleTab name={`Scene by scene (${scenes.length})`} value="scenes" scale={scale} onPick={setScale} />
+        <ScaleTab
+          name={`Each act (${acts.length})`}
+          value="acts"
+          scale={scale}
+          onPick={setScale}
+          disabled={acts.length === 0}
+        />
       </div>
 
       {scale === 'story' ? (
@@ -104,20 +105,6 @@ export function CommandmentsSection({ file, onUpdate, onGoToUnit }: Commandments
         )
       ) : null}
 
-      {scale === 'scenes' ? (
-        <CommandmentTable
-          heading="Scene"
-          rows={scenes.map((entry) => ({
-            key: entry.unitId as string,
-            label: entry.label,
-            under: entry.act ? `${entry.position} · ${entry.act}` : `${entry.position}`,
-            commandments: entry.commandments,
-            set: (which, text) =>
-              onUpdate((current) => setSceneCommandment(current, entry.unitId, which, text)),
-            ...(onGoToUnit ? { onGo: () => onGoToUnit(entry.unitId) } : {}),
-          }))}
-        />
-      ) : null}
     </section>
   );
 }

@@ -5198,6 +5198,13 @@ dialog.lane-dialog.title-page-dialog {
   align-content: start;
 }
 
+/* A wide table inside a grid track would otherwise push the whole panel
+   sideways and take the page's own margin with it. The table scrolls; the
+   panel does not. */
+.grid-panel > * {
+  min-width: 0;
+}
+
 .grid-panel h3 {
   margin: 0 0 8px;
   font-size: 9px;
@@ -5461,6 +5468,132 @@ dialog.lane-dialog.title-page-dialog {
    and paints a panel behind whatever wears it, which is not what a second
    line of small print wants. */
 .story-grid .under,
-.commandment-table .under {
+.commandment-table .under,
+.grid-table .under {
   display: block;
+}
+
+/* ------------------------------------------------------------- the grid
+   Addendum 04 §5. One row per scene, read down the columns. Empty cells are
+   the finding: a run with no value shift, a scene with no crisis, three in a
+   row turning the same way — visible because the shape is dense and regular,
+   not because a rule fired. */
+
+.grid-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.grid-controls .toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.grid-controls select {
+  font-size: 11.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+.grid-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.grid-table {
+  border-collapse: collapse;
+  font-size: 11.5px;
+  min-width: 1680px;
+}
+
+.grid-table th,
+.grid-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+
+.grid-table thead th {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  white-space: nowrap;
+}
+
+.grid-table tbody th {
+  width: 150px;
+  min-width: 150px;
+  color: var(--text);
+}
+
+.grid-table .grid-num {
+  width: 58px;
+  min-width: 58px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.grid-table td input {
+  width: 100%;
+  min-width: 130px;
+  font-size: 11.5px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom-color: var(--border);
+  border-radius: 3px;
+  padding: 2px 4px;
+  color: var(--text);
+}
+
+.grid-table td input:hover {
+  border-color: var(--border);
+}
+
+.grid-table td input:focus {
+  border-color: var(--gold-deep);
+  outline: none;
+}
+
+/* The shift, drawn as + − ± so a column of it reads at a glance. */
+.grid-shift {
+  width: 100%;
+  min-width: 40px;
+  /* No native arrow: the mark is the whole point of the column, and a row of
+     dropdown chevrons reads as furniture rather than as the story's shape. */
+  appearance: none;
+  text-align: center;
+  text-align-last: center;
+  font-size: 14px;
+  line-height: 1.1;
+  padding: 1px 2px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.grid-shift:hover {
+  border-color: var(--border);
+}
+
+/* A scene the writer has said does not move: the one row in the grid that is
+   a finding in its own right. */
+.grid-table tr.flat > th {
+  box-shadow: inset 3px 0 0 var(--danger, #d38b8b);
 }

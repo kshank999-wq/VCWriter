@@ -1,6 +1,6 @@
 # Addendum 04 — The Story Grid
 
-Status: stages 1–2 built, September 2026; the rest specified. Extends §8.2 of
+Status: stages 1–3 built, September 2026; the rest specified. Extends §8.2 of
 the master specification, which already asks for "a scene-by-scene
 **story-grid style review**". This addendum says what that grid is and where
 it lives.
@@ -148,7 +148,8 @@ Clicking a point goes to the scene.
    against each line.
 2. **Built.** The five commandments on the scene record, and on the story
    and its acts.
-3. The grid view: rows, sorting, filtering, and going to a scene from a row.
+3. **Built.** The grid view: rows, sorting, filtering, and going to a scene
+   from a row.
 4. The AI structural read extended to answer the five commandments.
 5. The value graph.
 6. Print and export the grid, as the Reports pages already print.
@@ -198,9 +199,9 @@ crisis, climax, resolution — at the three scales of §4, under one switch:
   per sequence in a script whose acts are already marked. A region runs from
   its marker to the scene before the next, exactly as the Final Editor
   measures the act shape.
-- **Scene by scene.** The same five columns, one row per scene in reading
-  order, each row saying which act it falls in and going to the scene when
-  its name is clicked.
+A scene's five are five columns of the grid below rather than a scale of
+their own: at that size they are worth reading down against everything else
+the scene is.
 
 **The progressive complication is the turn.** The Final Editor's grid has
 always asked where a scene turns; that is the same field under the name the
@@ -212,3 +213,33 @@ Nothing derives any of it. The story's and the acts' answers live in
 answers survive a marker being renamed and wait where they were if one is
 deleted and put back); the scene's live on the scene, beside the rest of its
 reading.
+
+### Stage 3 — the grid
+
+Every scene, one row, in reading order, at the foot of the tab.
+
+| Column | From |
+| --- | --- |
+| # | Reading order |
+| Scene | What the writer called it, else its marker, else its number — with the act it falls in under it, and a click to go there |
+| Length | Measured: pages and words |
+| Story event | The writer's. Where an AI read has been made, its `change` shows as the placeholder — offered, never written |
+| At stake | `SceneGrid.value` |
+| Shift | The polarity as **+ − ± =**, so a column of it reads at a glance |
+| The five commandments | Five columns, filled or empty |
+| POV | The writer's; nothing measures it |
+| Who, where, when | Measured: who has a cue, and the scene heading's place and time |
+
+**Filtering and sorting are the analysis.** *Show* takes every scene, the
+ones that do not turn, the ones that do not move, the negative or positive
+ones, the ones with nothing at stake yet, or the ones nobody has said
+anything about at all. *In* narrows to one act. *Order* is reading order,
+longest first, or shortest first. The heading says how many of how many are
+showing; none of it changes a word of the manuscript.
+
+A scene the writer has marked as not moving carries a rule down its edge —
+the one row in the grid that is a finding in its own right.
+
+The Final Editor keeps its own smaller grid (value, shift, turn, purpose):
+the same fields, and filling one in fills the other. A card there tells you
+about a scene; this tells you about the story.

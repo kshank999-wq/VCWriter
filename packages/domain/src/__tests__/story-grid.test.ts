@@ -14,6 +14,11 @@ import {
   removeMarker,
   sceneCommandments,
   setActCommandments,
+  setSceneGrid,
+  setSceneHeading,
+  setSceneRead,
+  storyGridRows,
+  viewGridRows,
   setSceneCommandment,
   setStoryCommandments,
   setStoryGrid,
@@ -308,5 +313,100 @@ describe('the five commandments', () => {
     // What was said about the act that went is still in the record, for a
     // marker put back where it was.
     expect(storyGridOf(file).acts[first.markerId as string]?.climax).toBe('He lights it by hand');
+  });
+});
+
+describe('the grid itself', () => {
+  /** Six scenes with acts on the first, third and fifth. */
+  const gridded = (): ProjectFile => {
+    let file = script();
+    for (const title of ['Two', 'Three', 'Four', 'Five', 'Six']) file = scene(file, title);
+    const order = unitsInStoryOrder(file);
+    for (const [index, name] of [[0, 'Setup'], [2, 'Confrontation'], [4, 'Resolution']] as const) {
+      file = addMarker(file, { unitId: order[index]!.id, title: name, kind: 'act' }).file;
+    }
+    return file;
+  };
+
+  it('is one row per scene, in reading order, with what can be measured', () => {
+    const rows = storyGridRows(gridded());
+    expect(rows.map((row) => row.position)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(rows.map((row) => row.act)).toEqual(['ACT I', 'ACT I', 'ACT II', 'ACT II', 'ACT III', 'ACT III']);
+    // Nothing is claimed about a scene nobody has written or read.
+    expect(rows.every((row) => row.event === '' && row.value === '' && row.polarity === '')).toBe(true);
+    expect(rows.every((row) => row.suggestedEvent === '')).toBe(true);
+  });
+
+  it('takes the scene heading’s place and time, and who speaks', () => {
+    let file = script();
+    const unit = unitsInStoryOrder(file)[0]!;
+    file = setSceneHeading(file, unit.id, { setting: 'INT.', place: 'Lighthouse', time: 'Night' });
+
+    const row = storyGridRows(file)[0]!;
+    expect(row.setting).toBe('INT. LIGHTHOUSE');
+    expect(row.time).toBe('NIGHT');
+  });
+
+  it('offers the read’s change as the story event, without writing it', () => {
+    let file = script();
+    const unitId = unitsInStoryOrder(file)[0]!.id;
+    file = setSceneRead(file, unitId, {
+      opening: 'The lamp is lit',
+      change: 'The lamp goes out and she is alone',
+      turn: null,
+      valueShift: 'negative',
+      purpose: 'Sets the isolation',
+      concerns: [],
+      model: 'test',
+    });
+
+    const row = storyGridRows(file)[0]!;
+    expect(row.event).toBe('');
+    expect(row.suggestedEvent).toBe('The lamp goes out and she is alone');
+
+    // The writer's own answer wins once given.
+    file = setSceneGrid(file, unitId, { event: 'She loses the light' });
+    expect(storyGridRows(file)[0]?.event).toBe('She loses the light');
+  });
+
+  it('shows the scenes that do not turn', () => {
+    let file = gridded();
+    const order = unitsInStoryOrder(file);
+    file = setSceneCommandment(file, order[0]!.id, 'complication', 'She reads the log');
+    file = setSceneCommandment(file, order[3]!.id, 'complication', 'The boat leaves');
+
+    const rows = viewGridRows(storyGridRows(file), { show: 'no_turn' });
+    expect(rows.map((row) => row.position)).toEqual([2, 3, 5, 6]);
+  });
+
+  it('shows everything in one act, and the negative ones', () => {
+    let file = gridded();
+    const order = unitsInStoryOrder(file);
+    file = setSceneGrid(file, order[2]!.id, { polarity: 'down' });
+    file = setSceneGrid(file, order[5]!.id, { polarity: 'down' });
+    const rows = storyGridRows(file);
+
+    expect(viewGridRows(rows, { act: 'ACT II' }).map((row) => row.position)).toEqual([3, 4]);
+    expect(viewGridRows(rows, { show: 'negative' }).map((row) => row.position)).toEqual([3, 6]);
+    // The two together: the negative ones inside one act.
+    expect(viewGridRows(rows, { show: 'negative', act: 'ACT II' }).map((row) => row.position)).toEqual([3]);
+  });
+
+  it('sorts by length without losing reading order as the tie-break', () => {
+    const rows = storyGridRows(gridded());
+    expect(viewGridRows(rows, { sort: 'longest' }).map((row) => row.position)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(viewGridRows(rows, { sort: 'shortest' }).map((row) => row.position)).toEqual([1, 2, 3, 4, 5, 6]);
+    // And it never changes the manuscript.
+    expect(storyGridRows(gridded()).map((row) => row.position)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it('shows the scenes nobody has said anything about at all', () => {
+    let file = gridded();
+    const order = unitsInStoryOrder(file);
+    file = setSceneGrid(file, order[1]!.id, { value: 'faith / doubt' });
+    file = setSceneCommandment(file, order[4]!.id, 'crisis', 'Stay or go');
+
+    const rows = viewGridRows(storyGridRows(file), { show: 'unasked' });
+    expect(rows.map((row) => row.position)).toEqual([1, 3, 4, 6]);
   });
 });

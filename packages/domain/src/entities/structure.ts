@@ -98,6 +98,18 @@ export const sceneGridSchema = z.object({
   /** What is being fought over, and who wants what. */
   conflict: z.string().default(''),
   /**
+   * The story event: what actually happens, in a line (addendum 04 §5).
+   *
+   * The writer's own. An AI read's `change` is offered as a suggestion where
+   * one has been made, but is never written here without being taken.
+   */
+  event: z.string().default(''),
+  /**
+   * Whose eyes the scene is seen through. A novel's column; a screenplay's
+   * only where the writer wants one. Nothing measures it.
+   */
+  pov: z.string().default(''),
+  /**
    * The five commandments, asked of the scene (addendum 04 §4).
    *
    * `turn` above is the progressive complication — the turn that makes going
