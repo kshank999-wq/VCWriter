@@ -1,6 +1,6 @@
 # Addendum 05 — Short form: the AV sheet, and the board
 
-Status: stages 1–6 built, September 2026; the rest specified. Fills in what addendum 02
+Status: stages 1–7 built, September 2026; the rest specified. Fills in what addendum 02
 §14 left open: *"the module that makes something of it, with the timings and
 the shapes that kind of work needs, is a later piece of work."* This is that
 piece.
@@ -66,8 +66,8 @@ added up, and the word count of the audio.
 | **Shot** | `segment.shot` — 1.1, 1.2, 2.1 — read from the story order, never typed. Nothing under it: the time is on the other side of the image. |
 | **Audio** | What is heard: voiceover, dialogue, a line of song. This is the beat's manuscript, and it is what the word count counts. |
 | **Visual** | What is seen. The beat's own second text, and new (§6). |
-| **Image** | One storyboard frame, or an empty plate to drop one on. |
-| **Duration** | Three lines — **header**, **dialogue**, **tail** (§4). |
+| **Image** | One storyboard frame — a picture or a clip — or an empty plate to drop one on (§3c, §4b). |
+| **Duration** | Four lines — **header**, **dialogue**, **tail** (§4), and **video** where the plate holds a clip (§4b). |
 | **Words +/−** | Beside the dialogue line, what the line's words come to. |
 | | The count of comments on the row, as the rest of the workspace shows them. |
 
@@ -94,6 +94,9 @@ does not are taken out** rather than left there greyed:
 | Plot lanes | A commercial has no subplot. There is nothing to lane. |
 | Acts | There are no act breaks in a thirty. |
 | Threads, and Links | Nobody tracks a character's arc across a spot. |
+| The **Timeline & Viewer** | Screen time from a page count, and threads. A commercial has neither (§3e). |
+| The side column | There are two sections here, not four: the sheet, and the strip under it (§3e). |
+| **Pages**, everywhere | A commercial is measured in seconds. The ruler says Time and the window says the running time. |
 | The word **Scene** | It is a **Segment**, everywhere it is written. |
 
 What is left is the sheet, and one timeline under a strip of frames.
@@ -144,6 +147,36 @@ not a feature bolted on — it is what the layout is.
 another machine, so the frames travel in it: an `assets` collection holding
 each image once, referenced by id, so a frame used in two rows is stored once
 and a row holds a reference rather than a picture.
+
+## 3d. Moving a shot, and closing one
+
+**A shot is moved by dragging it.** Pick it up by its number and put it where
+you want it; it takes the place of the shot you drop it on, and dropping it on
+one in another segment moves it into that segment. A pair of ↑↓ arrows told
+you nothing about where a shot would land, moved it one place at a time, and
+sat where the eye reads a shot's times — so they are gone.
+
+**Closing a shot is one control, in a box, above the line**, at the top of the
+row where it cannot be mistaken for part of the timings. It is the one control
+here that loses work, and a board is written next to it all day, so **it asks
+first**: *Close shot 1.3?* — Close it, or Keep it.
+
+## 3e. The workspace a board is written in
+
+Short form is written **on the sheet**, so the sheet gets the room:
+
+- **The sheet is the stage**, full size, in the middle of the window.
+- **The timeline is docked under it** — the board strip and the segments —
+  and it can be dragged smaller, or taken out to a window of its own and put
+  on another monitor, like any other section (addendum 02 §8).
+- **There is nothing above the sheet and nothing beside it but the
+  inspector.** The Timeline & Viewer is a screenplay's screen — screen time
+  from a page count, threads, markers — and a commercial has none of that.
+  The side column goes with it.
+- The strip under the sheet is called **Timeline**, not Plot lanes. There is
+  no subplot to lane.
+- The window's own count says **the running time and the shots**, not pages
+  and beats. A commercial has no pages anywhere in it.
 
 ## 4. Time
 
@@ -199,6 +232,41 @@ sheet's job is to make sure they know it — the same as a shot whose words
 will not fit its time (§7). A tool that would not let you write the long
 version is a tool you would write the long version outside of.
 
+## 4b. The clip, and what it does to a shot
+
+**A plate holds a picture or a clip.** A board is drawn before it is shot and
+cut after it is shot, and the same document should carry both — a frame that
+is a drawing on Monday is a piece of footage on Friday, in the same shot, in
+the same row.
+
+A clip brings one thing a drawing does not: **its own length**. So the
+Duration column has a fourth line under Tail:
+
+| | Where its number comes from |
+| --- | --- |
+| **Header** | Typed |
+| **Dialogue** | The words, until the writer types over it |
+| **Tail** | Typed |
+| **Video** | **The file.** Read on the way in, and never typed |
+
+A shot with no clip still draws the line, and it says nothing — a dash, the
+way an empty column always reads here.
+
+**Sound and picture run at once.** Head, line and tail are the *sound*; the
+clip is the *picture*; they do not queue up behind one another. So a shot is
+over when both are done — **the longer of the two** — and where the picture
+outlasts the sound the sheet says `holds` beside it, quietly, and changes
+nothing else. Adding a nine-second clip to a four-second line makes a
+nine-second shot, not a thirteen-second one.
+
+- The clip travels in the document like a frame does, for the same reason.
+- **It is not re-encoded.** A browser cannot, and a board that silently
+  transcoded somebody's footage would be worse than one that did not. So a
+  clip has a size it must stay under to travel, and one over it is refused
+  with the reason rather than swallowed.
+- A container the machine can hold but not measure comes in with no length,
+  and the shot is timed by its head, line and tail like any other.
+
 ## 5. Playback
 
 **Play the board.** From the sheet or the timeline: the frames advance at
@@ -220,8 +288,8 @@ Everything below already exists on a beat except where it says otherwise.
 | --- | --- |
 | Audio | The beat's `manuscript`, written the way beats are written |
 | **Visual** | **New.** The beat's second text: plain lines, what is seen |
-| **Image** | **New.** A reference to a frame in the project's own store |
-| **Duration** | **New.** Seconds, an integer, zero until it is said |
+| **Image** | **New.** A reference to a frame — a picture or a clip — in the project's own store |
+| **Duration** | **New.** Seconds, an integer, zero until it is said. A clip's own length comes with the clip (§4b) |
 | Its number | The story order, counted |
 | Its words | The audio, counted |
 | Comments | The workspace's own |
@@ -257,7 +325,8 @@ Everything below already exists on a beat except where it says otherwise.
    dialogue estimated from its words until the writer says otherwise.
 6. **Built.** One timeline (§3a): the frames above, the segments and their
    dialogue below. The playhead through both comes with playback.
-7. **Playback**, with the voices already assigned, and the playhead.
+7. **Built.** Playback (§5), with the voices already assigned and one
+   playhead through the sheet and the timeline.
 8. **Print and export**: the sheet as it is on screen, and a board.
 
 Stage 1 alone is worth having: a writer who can see their commercial as an AV
@@ -411,3 +480,38 @@ they add SEGMENT 3 is say what it is.
 
 The title itself was never typed on the sheet and still is not: it is the
 title page's, which is the one set when the project is started (§2).
+
+### Stage 7 — playing it, the clip, and the shape of the window
+
+**Play the board.** ▶ Play in the masthead runs the board's own clock: the
+shot under the playhead is shown in a monitor under the title with its line
+beside it, the shot lights up on the sheet, and a gold playhead runs across
+the timeline through the board strip and the segments alike. The audio is read
+aloud in the voices already assigned (spec §10) — a character in theirs, and
+everything else in the narrator's, because a commercial is mostly narration.
+
+**The clock is the sheet's, not the synthesiser's.** A voice reads a line in
+however long it takes; the board holds the shot for as long as the writer
+said, and a read that over-runs is cut off by the next shot. That is what
+happens in an edit suite, and it is the one fact playback exists to reveal —
+timing the board to the voice instead would hide it.
+
+**A plate takes a clip** as readily as a drawing (§4b), and the Video line
+under Tail reads its length off the file. Where the picture outlasts the
+sound the shot runs to the picture, and the sheet says `holds`.
+
+**A shot is dragged, not arrowed** (§3d), and closing one is a boxed × above
+the line that asks first.
+
+**The window is the board's** (§3e): the sheet full size in the middle, the
+timeline docked under it, the Timeline & Viewer and the side column gone, the
+strip called Timeline, the ruler saying Time, and the window's count saying
+`00:21 · 3 shots · 26 words`.
+
+Two things that were wrong are right: **the zoom works** — its floor scaled
+with it, so every segment was swallowed by the minimum until the slider was
+most of the way across — and **Preferences closes from a square in its top
+right corner** rather than from a control adrift in the middle of the panel.
+The section strips (SHEET, TIMELINE, INSPECTOR) were drawn in the muted
+colour, which on a light scheme is a washed-out bronze at nine and a half
+pixels; they are full text colour now.

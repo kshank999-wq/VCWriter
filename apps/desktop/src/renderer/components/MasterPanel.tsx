@@ -26,6 +26,8 @@ interface MasterPanelProps {
   onPageZoom?(next: number): void;
   pageStyle?: PageStyle;
   onPageStyle?(next: PageStyle): void;
+  /** Short form only: where the board's playhead is while it plays (§5). */
+  onPlayhead?(seconds: number | null): void;
 }
 
 /**
@@ -49,6 +51,7 @@ export function MasterPanel(props: MasterPanelProps) {
         file={props.file}
         onUpdate={props.onUpdate}
         {...(props.onOpenBeat ? { onOpenRow: props.onOpenBeat } : {})}
+        {...(props.onPlayhead ? { onPlayhead: props.onPlayhead } : {})}
       />
     ) : (
       <StoryView {...props} />

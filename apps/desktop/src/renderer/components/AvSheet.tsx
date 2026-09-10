@@ -1,11 +1,13 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   addRow,
   addUnit,
   avSheet,
+  boardPlayback,
   clearRowFrame,
+  dropRow,
+  dropRowInSegment,
   formatRt,
-  moveRow,
   parseRt,
   removeBeat,
   setRowAudio,
@@ -22,7 +24,8 @@ import {
   type ProjectFile,
   type StructuralUnitId,
 } from '@vcwriter/domain';
-import { frameFrom, pictureFrom } from '../frames';
+import { frameFrom, mediaFrom } from '../frames';
+import { useBoardPlayer } from '../use-board-player';
 
 /**
  * The AV sheet (addendum 05 §2), and the place the work happens (§8 stage 2).
@@ -47,11 +50,29 @@ interface AvSheetProps {
   onOpenRow?(beatId: BeatId): void;
   /** Read-only where the sheet is being looked at rather than written in. */
   readOnly?: boolean;
+  /**
+   * Where the playhead is while the board plays, so the timeline under the
+   * sheet moves with it (§5). Null when nothing is playing.
+   */
+  onPlayhead?(seconds: number | null): void;
 }
 
-export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false }: AvSheetProps) {
+export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhead }: AvSheetProps) {
   const sheet = avSheet(file);
   const rows = sheet.segments.reduce((total, segment) => total + segment.rows.length, 0);
+
+  /** The board, laid end to end, and the clock that walks it (§5). */
+  const board = boardPlayback(file);
+  const player = useBoardPlayer(board);
+
+  /** The shot being dragged, so the one under it can show it will take it. */
+  const [lifting, setLifting] = useState<BeatId | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+
+  // One playhead, seen twice: the sheet plays it and the timeline draws it.
+  useEffect(() => {
+    onPlayhead?.(player.playing ? player.elapsed : null);
+  }, [player.playing, player.elapsed, onPlayhead]);
 
   /**
    * A new segment, numbered where it falls and waiting to be named — the
@@ -106,7 +127,55 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false }: AvSheet
               Over by {formatRt(sheet.seconds - sheet.limit)}
             </span>
           ) : null}
+
+          {/* Play the board: the frames advance at their own durations and
+              the audio is read in the voices already assigned (§5). */}
+          <div className="av-transport">
+            {player.playing ? (
+              <button type="button" className="ghost small" onClick={player.stop}>
+                ■ Stop
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="ghost small"
+                disabled={board.shots.length === 0}
+                title={
+                  player.supported
+                    ? 'Play the board: the frames advance and the audio is read aloud'
+                    : 'This build has no speech synthesis, so the board plays silently'
+                }
+                onClick={() => player.play(0)}
+              >
+                ▶ Play
+              </button>
+            )}
+            {player.playing ? (
+              <span className="av-elapsed" role="status">
+                {formatRt(player.elapsed)}
+                {player.shot ? <span className="muted"> · shot {player.shot.number}</span> : null}
+              </span>
+            ) : null}
+          </div>
         </div>
+
+        {/* What is on screen at the playhead. The board playing, seen. */}
+        {player.playing && player.shot ? (
+          <div className="av-monitor" aria-label="What is on screen now">
+            {player.shot.frame ? (
+              player.shot.moving ? (
+                <video src={player.shot.frame.data} autoPlay muted playsInline />
+              ) : (
+                <img src={player.shot.frame.data} alt="" />
+              )
+            ) : (
+              <span className="muted small">No frame on shot {player.shot.number}</span>
+            )}
+            <p className="av-monitor-line">
+              {player.shot.lines.map((line) => line.text).join(' ') || <span className="muted">—</span>}
+            </p>
+          </div>
+        ) : null}
       </header>
 
       {rows === 0 && sheet.segments.length === 0 ? (
@@ -175,16 +244,33 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false }: AvSheet
                   <th scope="col" className="av-num" title="What the line's words come to, and what you did about it">
                     Words +/−
                   </th>
-                  {readOnly ? null : <th scope="col" className="av-tools-head" aria-label="Move or remove" />}
+                  {readOnly ? null : <th scope="col" className="av-tools-head" aria-label="Close the shot" />}
                 </tr>
               </thead>
-              <tbody>
+              <tbody
+                onDragOver={(event) => {
+                  if (lifting) event.preventDefault();
+                }}
+                onDrop={() => {
+                  // Dropped on the segment rather than on one of its shots:
+                  // the end of it, which is what the space under the last
+                  // shot means.
+                  if (lifting) onUpdate((current) => dropRowInSegment(current, lifting, segment.unitId));
+                  setLifting(null);
+                  setOver(null);
+                }}
+              >
                 {segment.rows.map((row) => (
                   <Row
                     key={row.beatId as string}
                     row={row}
                     readOnly={readOnly}
                     onUpdate={onUpdate}
+                    lifting={lifting}
+                    over={over}
+                    onLift={setLifting}
+                    onOver={setOver}
+                    playing={player.playing && player.shot?.beatId === row.beatId}
                     {...(onOpenRow ? { onOpen: onOpenRow } : {})}
                   />
                 ))}
@@ -250,18 +336,86 @@ interface RowProps {
   readOnly: boolean;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   onOpen?(beatId: BeatId): void;
+  /** Which shot is in the air, and which one it is over (§3d). */
+  lifting?: BeatId | null;
+  over?: string | null;
+  onLift?(beatId: BeatId | null): void;
+  onOver?(beatId: string | null): void;
+  /** Whether the playhead is on this shot, so the sheet shows the read (§5). */
+  playing?: boolean;
 }
 
-function Row({ row, readOnly, onUpdate, onOpen }: RowProps) {
+function Row({
+  row,
+  readOnly,
+  onUpdate,
+  onOpen,
+  lifting = null,
+  over = null,
+  onLift,
+  onOver,
+  playing = false,
+}: RowProps) {
+  /**
+   * Closing a shot is asked about before it is done. It is the one control
+   * here that loses work, and a board is written next to a delete button all
+   * day (§3d).
+   */
+  const [closing, setClosing] = useState(false);
+
+  const lifted = lifting === row.beatId;
+  const target = lifting !== null && !lifted && over === (row.beatId as string);
+
   return (
-    <tr className="av-row">
-      <th scope="row" className="av-num">
+    <tr
+      className={`av-row${lifted ? ' lifted' : ''}${target ? ' av-drop' : ''}${playing ? ' av-playing' : ''}`}
+      onDragOver={(event) => {
+        if (lifting === null || lifted) return;
+        event.preventDefault();
+        onOver?.(row.beatId as string);
+      }}
+      onDragLeave={() => {
+        if (target) onOver?.(null);
+      }}
+      onDrop={(event) => {
+        if (lifting === null || lifted) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const moved = lifting;
+        onUpdate((current) => dropRow(current, moved, row.beatId));
+        onLift?.(null);
+        onOver?.(null);
+      }}
+    >
+      <th
+        scope="row"
+        className="av-num"
+        // The shot number is the grip: a board is rearranged by picking a
+        // shot up and putting it where you want it (§3d).
+        draggable={!readOnly}
+        onDragStart={(event) => {
+          if (readOnly) return;
+          onLift?.(row.beatId);
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', row.number);
+        }}
+        onDragEnd={() => {
+          onLift?.(null);
+          onOver?.(null);
+        }}
+        title={readOnly ? undefined : 'Drag to move this shot'}
+      >
         {onOpen ? (
           <button type="button" className="link av-row-number" onClick={() => onOpen(row.beatId)} title="Open the row">
             {row.number}
           </button>
         ) : (
           <span className="av-row-number">{row.number}</span>
+        )}
+        {readOnly ? null : (
+          <span className="av-grip" aria-hidden="true">
+            ⠿
+          </span>
         )}
       </th>
 
@@ -327,44 +481,71 @@ function Row({ row, readOnly, onUpdate, onOpen }: RowProps) {
           readOnly={readOnly}
           onSet={(seconds) => onUpdate((current) => setRowTail(current, row.beatId, seconds))}
         />
+        {/* The clip's own length, which is the one time here nobody types:
+            a clip's length is a fact about the clip (§4b). With no clip on
+            the plate the line is still drawn, and says nothing. */}
+        <span className="av-time-line av-video-line">
+          <span className="av-time-name muted">Video</span>
+          {row.video > 0 ? (
+            <span className="av-time-read" title="The clip's own length, read from the file">
+              {formatRt(row.video)}
+            </span>
+          ) : (
+            <span className="muted">—</span>
+          )}
+        </span>
       </td>
 
-      {/* Three lines, on the same three lines as the times beside them, so
-          the two columns read as the one thing they are. */}
+      {/* Four lines, on the same four lines as the times beside them, so the
+          two columns read as the one thing they are. */}
       <td className="av-num av-words">
         <span className="av-time-line muted">—</span>
         <span className="av-time-line">
           {row.words} {row.words === 1 ? 'word' : 'words'}
         </span>
         <span className="av-time-line muted">—</span>
+        <span className="av-time-line muted">
+          {/* Where the picture outlasts the sound, the shot runs to the
+              picture — said quietly, in the shot, and changing nothing. */}
+          {row.video > 0 && row.video > row.head + row.dialogue + row.tail ? (
+            <span className="av-holds" title="The clip runs longer than the sound, so the shot runs to the clip">
+              holds
+            </span>
+          ) : (
+            '—'
+          )}
+        </span>
       </td>
 
       {readOnly ? null : (
         <td className="av-tools">
-          <button
-            type="button"
-            className="ghost small"
-            aria-label={`Move row ${row.number} up`}
-            onClick={() => onUpdate((current) => moveRow(current, row.beatId, -1))}
-          >
-            ↑
-          </button>
-          <button
-            type="button"
-            className="ghost small"
-            aria-label={`Move row ${row.number} down`}
-            onClick={() => onUpdate((current) => moveRow(current, row.beatId, 1))}
-          >
-            ↓
-          </button>
-          <button
-            type="button"
-            className="ghost small"
-            aria-label={`Remove row ${row.number}`}
-            onClick={() => onUpdate((current) => removeBeat(current, row.beatId))}
-          >
-            ×
-          </button>
+          {/* Closing a shot sits above the line, on its own, in a box — and
+              asks first, because it is the one control that loses work. */}
+          {closing ? (
+            <span className="av-sure" role="alertdialog" aria-label={`Close shot ${row.number}?`}>
+              <span className="small">Close shot {row.number}?</span>
+              <button
+                type="button"
+                className="small danger"
+                onClick={() => onUpdate((current) => removeBeat(current, row.beatId))}
+              >
+                Close it
+              </button>
+              <button type="button" className="ghost small" onClick={() => setClosing(false)}>
+                Keep it
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              className="av-close"
+              aria-label={`Close shot ${row.number}`}
+              title={`Close shot ${row.number}`}
+              onClick={() => setClosing(true)}
+            >
+              ×
+            </button>
+          )}
         </td>
       )}
     </tr>
@@ -432,13 +613,17 @@ function Time({
 }
 
 /**
- * The plate a storyboard frame goes on (addendum 05 §3c).
+ * The plate a storyboard frame goes on (addendum 05 §3c, §4b).
  *
- * Drop a picture on it, or click it and choose one. The frame is scaled on
- * the way in and kept in the document, so the board travels; and because a
- * row is as deep as its tallest column, **the audio beside a frame spaces out
- * to line up with it**. That alignment is not a feature bolted on — it is
- * what the layout is.
+ * Drop a picture **or a clip** on it, or click it and choose one. A still is
+ * scaled on the way in and kept in the document, so the board travels; and
+ * because a row is as deep as its tallest column, **the audio beside a frame
+ * spaces out to line up with it**. That alignment is not a feature bolted on —
+ * it is what the layout is.
+ *
+ * A clip goes in as it came, because a browser cannot re-encode video, and it
+ * brings its own length with it: the Video line under Tail is read from the
+ * file rather than typed (§4b).
  */
 function Plate({
   row,
@@ -452,23 +637,29 @@ function Plate({
   const picker = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** A clip too big to travel says so here, rather than failing silently. */
+  const [refused, setRefused] = useState<string | null>(null);
 
   const take = async (file: File | null) => {
     if (!file) return;
     setBusy(true);
+    setRefused(null);
     try {
       const frame = await frameFrom(file);
       onUpdate((current) => setRowFrame(current, row.beatId, frame).file);
+    } catch (error) {
+      setRefused(error instanceof Error ? error.message : 'That file could not be added');
     } finally {
       setBusy(false);
     }
   };
 
   if (readOnly) {
-    return row.frame ? (
-      <img className="av-frame" src={row.frame.data} alt={`Frame for row ${row.number}`} />
+    if (!row.frame) return <div className="av-plate" aria-label={`Frame for row ${row.number}`} />;
+    return row.moving ? (
+      <video className="av-frame" src={row.frame.data} controls aria-label={`Clip for row ${row.number}`} />
     ) : (
-      <div className="av-plate" aria-label={`Frame for row ${row.number}`} />
+      <img className="av-frame" src={row.frame.data} alt={`Frame for row ${row.number}`} />
     );
   }
 
@@ -478,7 +669,7 @@ function Plate({
         type="button"
         className={`av-plate${over ? ' over' : ''}${row.frame ? ' filled' : ''}`}
         aria-label={row.frame ? `Replace the frame for row ${row.number}` : `Add a frame to row ${row.number}`}
-        title="Drop a picture here, or click to choose one"
+        title="Drop a picture or a clip here, or click to choose one"
         onClick={() => picker.current?.click()}
         onDragOver={(event) => {
           event.preventDefault();
@@ -487,15 +678,26 @@ function Plate({
         onDragLeave={() => setOver(false)}
         onDrop={(event) => {
           event.preventDefault();
+          event.stopPropagation();
           setOver(false);
-          void take(pictureFrom(event.dataTransfer.files));
+          void take(mediaFrom(event.dataTransfer.files));
         }}
       >
         {row.frame ? (
-          <img src={row.frame.data} alt="" />
+          row.moving ? (
+            // Muted and unplayed: the plate is the board, not the monitor.
+            <video src={row.frame.data} muted playsInline preload="metadata" />
+          ) : (
+            <img src={row.frame.data} alt="" />
+          )
         ) : (
-          <span className="muted small">{busy ? 'Adding…' : 'Drop a frame'}</span>
+          <span className="muted small">{busy ? 'Adding…' : 'Drop a frame or a clip'}</span>
         )}
+        {row.moving ? (
+          <span className="av-clip-mark" aria-hidden="true">
+            ▶
+          </span>
+        ) : null}
       </button>
 
       {row.frame ? (
@@ -509,10 +711,16 @@ function Plate({
         </button>
       ) : null}
 
+      {refused ? (
+        <p className="av-refused" role="alert">
+          {refused}
+        </p>
+      ) : null}
+
       <input
         ref={picker}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         hidden
         aria-label={`Choose a frame for row ${row.number}`}
         onChange={(event) => {

@@ -12,6 +12,9 @@ import {
   lanesInOrder,
   recordPayoff,
   ref,
+  setRowFrame,
+  updateBeat,
+  updateUnit,
   unitsForLane,
   unitsInStoryOrder,
   type BeatId,
@@ -242,5 +245,67 @@ describe('master panel', () => {
     // bar, so taking the Script to another monitor does not take it too.
     expect(screen.queryByText('Research')).toBeNull();
     expect(screen.queryByRole('tab', { name: /^Characters/ })).toBeNull();
+  });
+});
+
+/**
+ * Short form's timeline (addendum 05 §3a, §3e, §5): a commercial has no pages
+ * to count, no plot to lane, and a clock the strip and the sheet share.
+ */
+describe('the timeline under a board', () => {
+  const commercial = (): ProjectFile => {
+    let file = createProjectFile({ title: 'Commercial 1', format: 'short_form' });
+    file = updateUnit(file, file.units[0]!.id, { title: 'Know your enemy...' });
+    return updateBeat(file, file.beats[0]!.id, {
+      manuscript: {
+        elements: [
+          { id: 'e1' as never, type: 'dialogue', text: '"Know your enemy."', characterId: null, attributes: {} },
+        ],
+      },
+      seconds: 6,
+    });
+  };
+
+  it('says Time rather than Pages, because a commercial has neither', () => {
+    timeline(commercial());
+    expect(screen.getByText('Time')).toBeDefined();
+    expect(screen.queryByText('Pages · time')).toBeNull();
+  });
+
+  it('draws no playhead until the board is playing, and one when it is', () => {
+    const { unmount } = timeline(commercial());
+    expect(document.querySelector('.board-playhead')).toBeNull();
+    unmount();
+
+    timeline(commercial(), { playheadSeconds: 3 });
+    expect(document.querySelector('.board-playhead')).not.toBeNull();
+  });
+
+  it('widens a segment as the zoom widens, at every zoom', () => {
+    const width = (zoom: number) => {
+      cleanup();
+      timeline(commercial(), { pixelsPerPage: zoom });
+      const grid = document.querySelector('.timeline-grid') as HTMLElement;
+      // The second column is the one segment there is; the first is the head.
+      return Number((grid.style.gridTemplateColumns.split(' ')[1] ?? '0').replace('px', ''));
+    };
+    // Six seconds. Not a fixed floor swallowing the lot at the low end.
+    expect(width(40)).toBeLessThan(width(160));
+    expect(width(160)).toBeLessThan(width(600));
+  });
+
+  it('runs a shot to its clip in the strip as well as on the sheet', () => {
+    const file = commercial();
+    const made = setRowFrame(file, file.beats[0]!.id, {
+      data: 'data:video/mp4;base64,AAAA',
+      kind: 'video',
+      seconds: 20,
+    });
+    timeline(made.file);
+    // Twenty seconds of clip over six of line: the shot reads twenty, on the
+    // segment strip and at the end of the ruler alike.
+    expect(screen.getAllByText('00:20').length).toBeGreaterThan(0);
+    expect(document.querySelector('.segment-rt')?.textContent).toBe('00:20');
+    expect(document.querySelector('.board-frame video')).not.toBeNull();
   });
 });

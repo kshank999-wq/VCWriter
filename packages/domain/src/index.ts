@@ -36,6 +36,7 @@ export * from './editing.js';
 export * from './reformat.js';
 export * from './pagination.js';
 export * from './av-sheet.js';
+export * from './board.js';
 export * from './story-grid.js';
 export * from './story-layout.js';
 export * from './story-threads.js';

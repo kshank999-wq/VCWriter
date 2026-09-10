@@ -12,6 +12,12 @@ interface PaneFrameProps {
   onDrop(onto: PaneId): void;
   /** What the sections are called in this format — "Manuscript" in prose. */
   names?: Record<PaneId, string>;
+  /**
+   * The places a section may be put. All four normally; short form has two,
+   * because it draws two (addendum 05 §3e), and offering a place that is not
+   * drawn would be offering a way to lose a section.
+   */
+  slots?: SlotId[];
   children: React.ReactNode;
 }
 
@@ -43,6 +49,7 @@ export function PaneFrame({
   onDragEnd,
   onDrop,
   names = PANE_NAMES,
+  slots = SLOT_IDS,
   children,
 }: PaneFrameProps) {
   const name = names[pane];
@@ -80,7 +87,7 @@ export function PaneFrame({
             value={slotOf(arrangement, pane)}
             onChange={(event) => onMove(pane, event.target.value as SlotId)}
           >
-            {SLOT_IDS.map((slot) => (
+            {slots.map((slot) => (
               <option key={slot} value={slot}>
                 {SLOT_NAMES[slot]}
               </option>

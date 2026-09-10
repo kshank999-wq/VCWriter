@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+
 /**
  * Small per-machine preferences: panel sizes, what is shown, zoom, scheme.
  * These are not project data (a colleague opening the file should not inherit
@@ -25,6 +26,23 @@ export const writePreference = (key: string, value: unknown): void => {
 
 export const usePreference = <T>(key: string, fallback: T): [T, (next: T) => void] => {
   const [value, setValue] = useState<T>(() => readPreference(key, fallback));
+
+  /**
+   * A preference whose *key* changes is a different preference, and has to be
+   * read again. That happens when one window opens a short-form project after
+   * a screenplay: the sheet keeps its own proportions rather than inheriting
+   * the ones a script was left at (addendum 05 §3e).
+   */
+  const current = useRef(key);
+  useEffect(() => {
+    if (current.current === key) return;
+    current.current = key;
+    setValue(readPreference(key, fallback));
+    // `fallback` is deliberately not a dependency: only the key changing means
+    // a different preference, and an object fallback would fire every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
   const set = useCallback(
     (next: T) => {
       setValue(next);

@@ -6,6 +6,8 @@ import {
   addRow,
   avSheet,
   clearRowFrame,
+  dropRow,
+  dropRowInSegment,
   parseProjectFile,
   setRowFrame,
   moveRow,
@@ -450,5 +452,102 @@ describe('the slot it has to fit', () => {
   it('never keeps a negative or a fraction of a second', () => {
     expect(avSheet(setMaxSeconds(commercial(), -30)).limit).toBe(0);
     expect(avSheet(setMaxSeconds(commercial(), 29.6)).limit).toBe(30);
+  });
+});
+
+describe('a clip on the plate', () => {
+  const clip = 'data:video/mp4;base64,AAAA';
+  const picture = 'data:image/png;base64,iVBORw0KGgo=';
+
+  it('brings its own length, which nobody types', () => {
+    const started = commercial();
+    const made = setRowFrame(started, started.beats[0]!.id, { data: clip, kind: 'video', seconds: 9 });
+    const row = avSheet(made.file).segments[0]?.rows[0];
+    expect(row?.moving).toBe(true);
+    expect(row?.video).toBe(9);
+  });
+
+  it('leaves the Video line at nothing where the plate holds a still', () => {
+    const started = commercial();
+    const made = setRowFrame(started, started.beats[0]!.id, { data: picture, kind: 'image' });
+    const row = avSheet(made.file).segments[0]?.rows[0];
+    expect(row?.moving).toBe(false);
+    expect(row?.video).toBe(0);
+  });
+
+  it('runs the shot to the picture where the picture outlasts the sound', () => {
+    // Four seconds of line; a nine-second clip over it.
+    const started = commercial();
+    expect(avSheet(started).segments[0]?.rows[0]?.seconds).toBe(4);
+    const made = setRowFrame(started, started.beats[0]!.id, { data: clip, kind: 'video', seconds: 9 });
+    expect(avSheet(made.file).segments[0]?.rows[0]?.seconds).toBe(9);
+  });
+
+  it('leaves the shot alone where the sound outlasts the picture', () => {
+    const file = commercial();
+    const started = setRowFrame(file, file.beats[0]!.id, { data: clip, kind: 'video', seconds: 2 });
+    const longer = setRowHead(started.file, file.beats[0]!.id, 10);
+    // Ten of header and four of line beats a two-second clip.
+    expect(avSheet(longer).segments[0]?.rows[0]?.seconds).toBe(14);
+  });
+
+  it('a still is never given a length, however hard it is asked', () => {
+    const started = commercial();
+    const made = setRowFrame(started, started.beats[0]!.id, { data: picture, seconds: 12 });
+    expect(made.file.assets[0]?.seconds).toBe(0);
+  });
+
+  it('counts a clip into the board and against its slot', () => {
+    let file = setMaxSeconds(commercial(), 30);
+    expect(avSheet(file).seconds).toBe(15);
+    const made = setRowFrame(file, file.beats[0]!.id, { data: clip, kind: 'video', seconds: 40 });
+    file = made.file;
+    // The first shot now runs forty rather than four: fifty-one in a thirty.
+    expect(avSheet(file).seconds).toBe(51);
+    expect(avSheet(file).over).toBe(true);
+  });
+});
+
+describe('dragging a shot', () => {
+  it('takes the place of the shot it is dropped on, dragging down', () => {
+    const file = commercial();
+    const [one, two, three] = file.beats;
+    const moved = dropRow(file, one!.id, three!.id);
+    const order = avSheet(moved).segments[0]!.rows.map((row) => row.audio);
+    expect(order).toEqual([two!.manuscript.elements[0]!.text, three!.manuscript.elements[0]!.text, one!.manuscript.elements[0]!.text]);
+  });
+
+  it('lands above the shot it is dropped on, dragging up', () => {
+    const file = commercial();
+    const [one, two, three] = file.beats;
+    const moved = dropRow(file, three!.id, two!.id);
+    const order = avSheet(moved).segments[0]!.rows.map((row) => row.audio);
+    expect(order).toEqual([one!.manuscript.elements[0]!.text, three!.manuscript.elements[0]!.text, two!.manuscript.elements[0]!.text]);
+  });
+
+  it('moves a shot into another segment when it is dropped in one', () => {
+    let file = commercial();
+    const made = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Second' });
+    const added = addRow(made.file, { unitId: made.unit.id });
+    file = added.file;
+
+    const moved = dropRow(file, file.beats[0]!.id, added.beatId);
+    const sheet = avSheet(moved);
+    expect(sheet.segments[0]?.rows).toHaveLength(2);
+    expect(sheet.segments[1]?.rows).toHaveLength(2);
+  });
+
+  it('drops a shot at the end of a segment when it is dropped on the segment', () => {
+    let file = commercial();
+    const made = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Second' });
+    file = made.file;
+
+    const moved = dropRowInSegment(file, file.beats[0]!.id, made.unit.id);
+    expect(avSheet(moved).segments[1]?.rows.map((row) => row.number)).toEqual(['2.1']);
+  });
+
+  it('does nothing at all when a shot is dropped on itself', () => {
+    const file = commercial();
+    expect(dropRow(file, file.beats[0]!.id, file.beats[0]!.id)).toBe(file);
   });
 });

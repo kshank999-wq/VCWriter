@@ -11,6 +11,7 @@ import {
   removeLane,
   removeMarker,
   removeUnit,
+  avSheet,
   spanWidth,
   storyLayout,
   threadLayout,
@@ -21,6 +22,7 @@ import {
   updateMarker,
   updateUnit,
   formatRt,
+  type AvRow,
   type Beat,
   type BeatId,
   type Lane,
@@ -47,6 +49,12 @@ interface MasterTimelineProps {
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   pixelsPerPage: number;
   onZoom(pixelsPerPage: number): void;
+  /**
+   * Where the board's playhead is while it plays, in seconds (addendum 05 §5).
+   * Null or absent when nothing is playing, which is when there is no
+   * playhead to draw. Short form only: a script's timeline has no clock.
+   */
+  playheadSeconds?: number | null;
   /**
    * The scene the writer has clicked into. Kept by the window rather than
    * derived from the selected beat, because an empty scene has no beat to
@@ -121,6 +129,7 @@ export function MasterTimeline({
   onUpdate,
   pixelsPerPage,
   onZoom,
+  playheadSeconds = null,
   inspectorOpen,
   onToggleInspector,
   onAddScene,
@@ -161,22 +170,52 @@ export function MasterTimeline({
    * own running time (addendum 05 §4), which is what makes the board strip
    * above it read as a cut rather than as a row of stamps.
    */
+  /**
+   * The sheet's own arithmetic, where there is a sheet. A segment's seconds
+   * are worked out in one place (addendum 05 §4, §4b) and read here, so the
+   * strip and the sheet cannot disagree about how long anything is.
+   */
+  const sheet = useMemo(() => (shortForm ? avSheet(file) : null), [shortForm, file]);
+  const secondsOf = (unitId: StructuralUnitId): number =>
+    sheet?.segments.find((segment) => segment.unitId === unitId)?.seconds ?? 0;
+
   const widths = spans.map((span) => {
     const beats = beatsForUnit(file, span.unit.id);
     if (shortForm) {
-      const seconds = beats
-        .filter((beat) => beat.inScript)
-        .reduce(
-          (total, beat) => total + (beat.headSeconds ?? 0) + (beat.seconds ?? 0) + (beat.tailSeconds ?? 0),
-          0,
-        );
-      // A second is a comfortable slice at the middle of the zoom, and a
-      // segment nobody has timed is still wide enough to be clicked.
-      return Math.max(140, Math.round(seconds * (pixelsPerPage / 12)));
+      // **The floor scales with the zoom as well.** A fixed minimum swallowed
+      // every short segment whole, so dragging the zoom moved nothing until it
+      // was most of the way across — which is a zoom that does not work.
+      const perSecond = pixelsPerPage / 6;
+      return Math.round(Math.max(pixelsPerPage * 0.5, secondsOf(span.unit.id) * perSecond));
     }
     return Math.max(spanWidth(span, pixelsPerPage), beatsWidth(beats.length, rows));
   });
   const columns = `${HEAD_WIDTH}px ${widths.map((width) => `${width}px`).join(' ')} minmax(96px, 1fr)`;
+
+  /**
+   * Where the playhead sits, in pixels across the grid (§5).
+   *
+   * The board's clock, turned into a distance: whole segments before it, plus
+   * however far into the one it is on. Null while nothing is playing, which
+   * is when there is no playhead to draw.
+   */
+  const playheadAt = (() => {
+    if (!shortForm || playheadSeconds === null || playheadSeconds === undefined) return null;
+    let left = HEAD_WIDTH;
+    let remaining = playheadSeconds;
+    for (const [index, span] of spans.entries()) {
+      const seconds = secondsOf(span.unit.id);
+      const width = widths[index] ?? 0;
+      if (seconds <= 0) {
+        left += width;
+        continue;
+      }
+      if (remaining < seconds) return left + (remaining / seconds) * width;
+      remaining -= seconds;
+      left += width;
+    }
+    return left;
+  })();
   const storyIndex = (unitId: StructuralUnitId) => spans.findIndex((span) => span.unit.id === unitId);
 
   // ----------------------------------------------------------------- drops
@@ -274,17 +313,33 @@ export function MasterTimeline({
     <section className="timeline" aria-label="Master timeline">
       <div className="timeline-scroll">
         <div className="timeline-grid" style={{ gridTemplateColumns: columns }}>
-          {/* Pages, and the time they play for: a page is a minute (§5). */}
-          <div className="track-head ruler-head">Pages · time</div>
-          {spans.map((span) => (
+          {/* Pages, and the time they play for: a page is a minute (§5).
+              A commercial has no pages, so short form says Time and means it
+              (addendum 05 §3a). */}
+          <div className="track-head ruler-head">{shortForm ? 'Time' : 'Pages · time'}</div>
+          {spans.map((span, index) => (
             <div key={span.unit.id} className={`ruler-cell${playhead(span.unit.id)}`}>
-              <span>{Math.floor(span.startPage) + 1}</span>
-              <span className="ruler-time muted">{timecode(span.startPage)}</span>
+              {shortForm ? (
+                <span className="ruler-time">
+                  {formatRt(
+                    spans.slice(0, index).reduce((total, before) => total + secondsOf(before.unit.id), 0),
+                  )}
+                </span>
+              ) : (
+                <>
+                  <span>{Math.floor(span.startPage) + 1}</span>
+                  <span className="ruler-time muted">{timecode(span.startPage)}</span>
+                </>
+              )}
             </div>
           ))}
           <div className="ruler-cell tail">
             <span className="muted">
-              {layout.totalPages < 0.05 ? '' : `${Math.ceil(layout.totalPages)} pp. · ${timecode(layout.totalPages)}`}
+              {shortForm
+                ? formatRt(sheet?.seconds ?? 0)
+                : layout.totalPages < 0.05
+                  ? ''
+                  : `${Math.ceil(layout.totalPages)} pp. · ${timecode(layout.totalPages)}`}
             </span>
           </div>
 
@@ -295,7 +350,11 @@ export function MasterTimeline({
             <>
               <div className="track-head">Board</div>
               {spans.map((span) => (
-                <FrameStrip key={span.unit.id} file={file} unitId={span.unit.id} onSelectBeat={onSelectBeat} />
+                <FrameStrip
+                  key={span.unit.id}
+                  rows={sheet?.segments.find((segment) => segment.unitId === span.unit.id)?.rows ?? []}
+                  onSelectBeat={onSelectBeat}
+                />
               ))}
               <div className="board-cell tail" />
             </>
@@ -339,6 +398,7 @@ export function MasterTimeline({
               spans={spans}
               noun={noun}
               shortForm={shortForm}
+              rowsFor={(unitId) => sheet?.segments.find((segment) => segment.unitId === unitId)?.rows ?? []}
               selectedBeatId={selectedBeatId}
               selectedUnitId={selectedUnitId}
               beatRows={rows}
@@ -360,6 +420,12 @@ export function MasterTimeline({
               beatKeys={(beat) => reorderKeys((direction, shift) => moveBeatByKeyboard(beat, direction, shift))}
             />
           ))}
+
+          {/* One playhead through both tracks: the board's clock, drawn as a
+              line, so playing on the sheet moves the timeline (§5). */}
+          {playheadAt === null ? null : (
+            <div className="board-playhead" style={{ left: `${playheadAt}px` }} aria-hidden="true" />
+          )}
         </div>
       </div>
 
@@ -401,7 +467,7 @@ export function MasterTimeline({
             max={600}
             step={10}
             value={pixelsPerPage}
-            aria-label="Timeline zoom, pixels per page"
+            aria-label={shortForm ? 'Timeline zoom, pixels per second' : 'Timeline zoom, pixels per page'}
             onChange={(event) => onZoom(Number(event.target.value))}
           />
         </label>
@@ -547,6 +613,8 @@ interface LaneTrackProps {
    * has no beats drawn in it (addendum 05 §3, §3a).
    */
   shortForm: boolean;
+  /** The sheet's rows for a segment, so a shot is the same width in both tracks. */
+  rowsFor(unitId: StructuralUnitId): AvRow[];
   selectedBeatId: BeatId | null;
   selectedUnitId: string | null;
   beatRows: number;
@@ -576,6 +644,7 @@ function LaneTrack({
   spans,
   noun,
   shortForm,
+  rowsFor,
   selectedBeatId,
   selectedUnitId,
   beatRows,
@@ -793,7 +862,7 @@ function LaneTrack({
             {shortForm ? (
               collapsed ? null : (
                 <SegmentDialogue
-                  beats={beats}
+                  rows={rowsFor(unit.id)}
                   selectedBeatId={selectedBeatId}
                   onSelectBeat={onSelectBeat}
                   onOpenBeat={onOpenBeat}
@@ -917,39 +986,43 @@ function LaneTrack({
  * duration, so the strip under a segment *is* the read — long lines look
  * long, and a row nobody has timed takes an even share until somebody says.
  */
+/**
+ * A segment's dialogue, stretched along the time it takes (addendum 05 §3a).
+ *
+ * Read off the sheet's own rows rather than off the beats, so a shot is the
+ * same width here as its frame is in the strip above it — head, line, tail
+ * and clip all counted the once, in one place (§4, §4b).
+ */
 function SegmentDialogue({
-  beats,
+  rows,
   selectedBeatId,
   onSelectBeat,
   onOpenBeat,
 }: {
-  beats: Beat[];
+  rows: AvRow[];
   selectedBeatId: BeatId | null;
   onSelectBeat(beatId: BeatId): void;
   onOpenBeat: MasterTimelineProps['onOpenBeat'];
 }) {
-  if (beats.length === 0) return <p className="segment-empty muted">No rows yet.</p>;
+  if (rows.length === 0) return <p className="segment-empty muted">No rows yet.</p>;
   return (
     <div className="segment-dialogue" role="list">
-      {beats.map((beat) => {
-        const said = beat.manuscript.elements
-          .map((element) => element.text.trim())
-          .filter((text) => text.length > 0)
-          .join(' ');
+      {rows.map((row) => {
+        const said = row.audio.split('\n').filter((line) => line.trim().length > 0).join(' ');
         return (
           <button
             type="button"
             role="listitem"
-            key={beat.id}
-            className={`segment-line${beat.id === selectedBeatId ? ' selected' : ''}`}
-            style={{ flexGrow: Math.max(1, beat.seconds ?? 0) }}
+            key={row.beatId}
+            className={`segment-line${row.beatId === selectedBeatId ? ' selected' : ''}`}
+            style={{ flexGrow: Math.max(1, row.seconds) }}
             title={said || 'Nothing said yet'}
-            aria-label={`${formatRt(beat.seconds ?? 0)} — ${said || 'nothing said yet'}`}
-            onClick={() => onSelectBeat(beat.id)}
-            onDoubleClick={() => onOpenBeat?.(beat.id)}
+            aria-label={`${formatRt(row.seconds)} — ${said || 'nothing said yet'}`}
+            onClick={() => onSelectBeat(row.beatId)}
+            onDoubleClick={() => onOpenBeat?.(row.beatId)}
           >
             <span className="segment-said">{said || '—'}</span>
-            <span className="segment-rt muted">{formatRt(beat.seconds ?? 0)}</span>
+            <span className="segment-rt muted">{formatRt(row.seconds)}</span>
           </button>
         );
       })}
@@ -966,37 +1039,34 @@ function SegmentDialogue({
  * gap in the strip is the shot that has not been drawn, which is a thing
  * worth seeing.
  */
-function FrameStrip({
-  file,
-  unitId,
-  onSelectBeat,
-}: {
-  file: ProjectFile;
-  unitId: StructuralUnitId;
-  onSelectBeat(beatId: BeatId): void;
-}) {
-  const frames = new Map((file.assets ?? []).map((asset) => [asset.id as string, asset]));
-  const beats = beatsForUnit(file, unitId).filter((beat) => beat.inScript);
-
+function FrameStrip({ rows, onSelectBeat }: { rows: AvRow[]; onSelectBeat(beatId: BeatId): void }) {
   return (
     <div className="board-cell">
-      {beats.map((beat) => {
-        const frame = beat.imageAssetId ? frames.get(beat.imageAssetId as string) : undefined;
-        const seconds = (beat.headSeconds ?? 0) + (beat.seconds ?? 0) + (beat.tailSeconds ?? 0);
-        return (
-          <button
-            type="button"
-            key={beat.id}
-            className={frame ? 'board-frame' : 'board-frame empty'}
-            style={{ flexGrow: Math.max(1, seconds) }}
-            title={frame ? frame.name || 'A frame' : 'No frame yet'}
-            aria-label={frame ? `Frame: ${frame.name || 'untitled'}` : 'A shot with no frame yet'}
-            onClick={() => onSelectBeat(beat.id)}
-          >
-            {frame ? <img src={frame.data} alt="" /> : null}
-          </button>
-        );
-      })}
+      {rows.map((row) => (
+        <button
+          type="button"
+          key={row.beatId}
+          className={row.frame ? 'board-frame' : 'board-frame empty'}
+          // Each frame at the width of the time it holds, so running an eye
+          // along the strip is looking at the cut (addendum 05 §3a).
+          style={{ flexGrow: Math.max(1, row.seconds) }}
+          title={row.frame ? row.frame.name || (row.moving ? 'A clip' : 'A frame') : 'No frame yet'}
+          aria-label={
+            row.frame
+              ? `${row.moving ? 'Clip' : 'Frame'}: ${row.frame.name || 'untitled'}`
+              : 'A shot with no frame yet'
+          }
+          onClick={() => onSelectBeat(row.beatId)}
+        >
+          {row.frame ? (
+            row.moving ? (
+              <video src={row.frame.data} muted playsInline preload="metadata" />
+            ) : (
+              <img src={row.frame.data} alt="" />
+            )
+          ) : null}
+        </button>
+      ))}
     </div>
   );
 }

@@ -49,8 +49,10 @@ export const PANE_NAMES: Record<PaneId, string> = {
  */
 export const paneNamesFor = (format: ProjectFormat | null): Record<PaneId, string> => {
   if (format === 'novel' || format === 'short_story') return { ...PANE_NAMES, script: 'Manuscript' };
-  // Short form is written on a sheet, not in a script (addendum 05 §1).
-  if (format === 'short_form') return { ...PANE_NAMES, script: 'Sheet' };
+  // Short form is written on a sheet, not in a script, and the strip under it
+  // is a timeline rather than a set of plot lanes — a commercial has no
+  // subplot to lane (addendum 05 §1, §3).
+  if (format === 'short_form') return { ...PANE_NAMES, script: 'Sheet', lanes: 'Timeline' };
   return PANE_NAMES;
 };
 

@@ -147,7 +147,7 @@ export default function App() {
   // Where the four sections sit, and which of them are in windows of their
   // own right now (addendum 02 §8).
   const [storedArrangement, setArrangement] = usePreference<Arrangement>('panes', DEFAULT_ARRANGEMENT);
-  const arrangement = useMemo(() => normaliseArrangement(storedArrangement), [storedArrangement]);
+  const chosenArrangement = useMemo(() => normaliseArrangement(storedArrangement), [storedArrangement]);
   const [detached, setDetached] = useState<string[]>([]);
   const [dragging, setDragging] = useState<PaneId | null>(null);
   // Find and replace, opened from the Editor menu (§13).
@@ -157,7 +157,36 @@ export default function App() {
   // The Edit-page proportions (addendum 02 §3): a quarter for the script,
   // and of the rest, just under half for the viewport above the lanes.
   const columns = useSplit({ key: 'leftWidth', initial: 0.25, min: 300, reserve: 640, axis: 'x' });
-  const rows = useSplit({ key: 'viewportHeight', initial: 0.48, min: 160, reserve: 200, axis: 'y' });
+  /**
+   * Short form is written on the sheet, so the sheet opens at full size and
+   * the timeline is the strip docked under it (addendum 05 §3e). Its own key,
+   * because a board's proportions are not a script's.
+   */
+  const shortForm = project.file?.project.format === 'short_form';
+  const rows = useSplit({
+    key: shortForm ? 'sheetHeight' : 'viewportHeight',
+    // Enough for the board and the segments under it without a scrollbar,
+    // and every pixel above that to the sheet.
+    initial: shortForm ? 0.68 : 0.48,
+    min: shortForm ? 240 : 160,
+    // The strip under the sheet has two tracks to show — the board and the
+    // segments — so it is never squeezed below the height of both.
+    reserve: shortForm ? 270 : 200,
+    axis: 'y',
+  });
+
+  /** Where the board's playhead is while it plays, shared by sheet and timeline. */
+  const [boardSeconds, setBoardSeconds] = useState<number | null>(null);
+
+  /**
+   * Where the sections sit. Short form does not get a say: the sheet is the
+   * document and it takes the stage, with the timeline under it (addendum 05
+   * §3e). The viewer is parked in the side column, which short form does not
+   * draw — a commercial has nothing to view that the board does not show.
+   */
+  const arrangement: Arrangement = shortForm
+    ? { left: 'viewer', top: 'script', bottom: 'lanes', right: 'inspector' }
+    : chosenArrangement;
 
   const file = project.file;
   const beats = useMemo(() => (file ? beatsInStoryOrder(file) : []), [file]);
@@ -577,7 +606,11 @@ export default function App() {
   const away = new Set(detached);
   // A section in a window of its own leaves no gap here: its place is not
   // drawn and the rest of the workspace takes the room (§8).
-  const here = (slot: SlotId) => !away.has(arrangement[slot]);
+  const here = (slot: SlotId) =>
+    // Short form has two sections, not four: the sheet, full size, and the
+    // timeline docked under it (addendum 05 §3e). There is no side column and
+    // nothing above the sheet — a commercial has no viewer to look at.
+    shortForm && slot === 'left' ? false : !away.has(arrangement[slot]);
   const display = { ...DEFAULT_SCRIPT_DISPLAY, ...scriptDisplay };
   // A novel's finished pages are its manuscript, not its script (§6.4).
   const paneNames = paneNamesFor(file.project.format);
@@ -605,6 +638,7 @@ export default function App() {
         onPageStyle={setPageStyle}
         onOpenUnit={setOpenUnitId}
         onOpenBeat={setOpenBeatId}
+        onPlayhead={setBoardSeconds}
       />
     ),
     viewer: (
@@ -639,6 +673,7 @@ export default function App() {
         onUpdate={project.update}
         pixelsPerPage={pixelsPerPage}
         onZoom={setPixelsPerPage}
+        playheadSeconds={boardSeconds}
         inspectorOpen={inspectorOpen}
         onToggleInspector={() => setInspectorOpen(!inspectorOpen)}
         onAddScene={addSceneAfterSelection}
@@ -674,6 +709,10 @@ export default function App() {
           setDragging(null);
         }}
         names={paneNames}
+        // Short form has two places, not four: the stage and the strip under
+        // it. Offering a side column that is not drawn would offer a way to
+        // lose the sheet (addendum 05 §3e).
+        {...(shortForm ? { slots: ['top', 'bottom'] as SlotId[] } : {})}
       >
         {sections[pane]}
       </PaneFrame>

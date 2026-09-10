@@ -66,7 +66,13 @@ export interface AvRow {
   visual: string;
   /** Counted from the audio, which is the only thing that is spoken. */
   words: number;
-  /** The whole shot: what happens before the line, the line, and after it. */
+  /**
+   * How long the shot runs: the sound, or the picture, whichever is longer.
+   *
+   * Head, line and tail are the **sound**; a video is the **picture**, and
+   * the two run at once rather than one after the other. So a shot is over
+   * when both are done, which is the longer of them (§4b).
+   */
   seconds: number;
   /** Action before the dialogue begins. The writer's. */
   head: number;
@@ -74,6 +80,8 @@ export interface AvRow {
   dialogue: number;
   /** Action after the dialogue ends. The writer's. */
   tail: number;
+  /** How long the clip on the plate runs. Read from it; zero where there is none. */
+  video: number;
   /**
    * Whether the dialogue's time is the words' own estimate rather than a
    * number the writer typed. A shot nobody has argued with reads as estimated.
@@ -86,6 +94,8 @@ export interface AvRow {
   fits: boolean | null;
   /** The storyboard frame beside the row, resolved. Null where there is none. */
   frame: Asset | null;
+  /** Whether that frame moves. A clip is played on the board; a still is held. */
+  moving: boolean;
 }
 
 export interface AvSegment {
@@ -159,6 +169,10 @@ export const avSheet = (file: ProjectFile): AvSheet => {
       const said = beat.seconds ?? 0;
       const estimated = said === 0;
       const dialogue = estimated ? readSeconds(rowWords) : said;
+      // A frame whose picture has gone reads as no frame rather than a gap.
+      const frame = beat.imageAssetId ? (frames.get(beat.imageAssetId as string) ?? null) : null;
+      const moving = frame?.kind === 'video';
+      const video = moving ? Math.round(frame?.seconds ?? 0) : 0;
       return {
         beatId: beat.id,
         unitId: unit.id,
@@ -166,16 +180,18 @@ export const avSheet = (file: ProjectFile): AvSheet => {
         audio: audioOf(beat.manuscript.elements),
         visual: beat.visual ?? '',
         words: rowWords,
-        seconds: head + dialogue + tail,
+        // Sound and picture run together, so the shot is the longer of them.
+        seconds: Math.max(head + dialogue + tail, video),
         head,
         dialogue,
         tail,
+        video,
         estimated,
         // The words' own estimate always fits; a number the writer typed
         // under it is the thing worth saying out loud.
         fits: estimated ? null : rowWords <= said * WORDS_PER_SECOND,
-        // A frame whose picture has gone reads as no frame rather than a gap.
-        frame: beat.imageAssetId ? (frames.get(beat.imageAssetId as string) ?? null) : null,
+        frame,
+        moving,
       };
     });
 
@@ -347,26 +363,85 @@ export const moveRow = (file: ProjectFile, beatId: BeatId, direction: -1 | 1): P
 
 
 /**
- * Put a picture in the document and hang it beside a row (§3c).
+ * A shot picked up and dropped on another one (§3d).
+ *
+ * Dragging is how a shot moves now. A pair of arrows said nothing about where
+ * a shot would end up and moved it one place at a time; a board is a thing you
+ * rearrange by picking a shot up and putting it where you want it. Dropping a
+ * shot on one in another segment moves it into that segment, which is plainly
+ * what dragging it past a segment head means.
+ *
+ * **The dragged shot takes the target's place**, dragging up or down alike.
+ * The story order moves with it, because there is only one order.
+ */
+export const dropRow = (file: ProjectFile, beatId: BeatId, ontoBeatId: BeatId): ProjectFile => {
+  if (beatId === ontoBeatId) return file;
+  const onto = file.beats.find((beat) => beat.id === ontoBeatId);
+  if (!onto || !file.beats.some((beat) => beat.id === beatId)) return file;
+
+  const list = beatsForUnit(file, onto.unitId);
+  const target = list.findIndex((beat) => beat.id === ontoBeatId);
+  const from = list.findIndex((beat) => beat.id === beatId);
+
+  // `moveBeat` counts the places the shot is *not* in, so the target's index
+  // is taken from the list with the shot already lifted out of it.
+  const base = list.filter((beat) => beat.id !== beatId).findIndex((beat) => beat.id === ontoBeatId);
+  if (base === -1) return file;
+
+  // Dragged downwards it lands where the target was; upwards, above it.
+  const index = from !== -1 && from < target ? base + 1 : base;
+  return moveBeat(file, { beatId, toUnitId: onto.unitId, index });
+};
+
+/**
+ * A shot dropped on a segment rather than on one of its shots: the end of it.
+ *
+ * What the empty space under the last shot means, and the only way to drag a
+ * shot into a segment that has none.
+ */
+export const dropRowInSegment = (
+  file: ProjectFile,
+  beatId: BeatId,
+  unitId: StructuralUnitId,
+): ProjectFile => {
+  if (!file.beats.some((beat) => beat.id === beatId)) return file;
+  const siblings = beatsForUnit(file, unitId).filter((beat) => beat.id !== beatId);
+  return moveBeat(file, { beatId, toUnitId: unitId, index: siblings.length });
+};
+
+/**
+ * Put a picture or a clip in the document and hang it beside a row (§3c).
  *
  * The picture is stored once, in the file, and the row holds a reference to
  * it — a frame used on two rows is one picture. It arrives already scaled and
  * encoded: what a storyboard needs is a legible frame, not the original from
  * somebody's camera, and the file has to stay a file somebody can send.
+ *
+ * A **video** brings its own length with it, which is the one thing about a
+ * shot the writer does not get to type (§4b).
  */
 export const setRowFrame = (
   file: ProjectFile,
   beatId: BeatId,
-  frame: { name?: string; data: string; width?: number; height?: number },
+  frame: {
+    name?: string;
+    data: string;
+    width?: number;
+    height?: number;
+    kind?: 'image' | 'video';
+    seconds?: number;
+  },
 ): { file: ProjectFile; assetId: AssetId } => {
   const asset = assetSchema.parse({
     id: newId<AssetId>(),
     projectId: file.project.id,
-    kind: 'image',
+    kind: frame.kind ?? 'image',
     name: frame.name ?? '',
     data: frame.data,
     width: frame.width ?? 0,
     height: frame.height ?? 0,
+    // A still has no length; a clip's is whatever the file says it is.
+    seconds: frame.kind === 'video' ? Math.max(0, frame.seconds ?? 0) : 0,
     createdAt: nowIso(),
     updatedAt: nowIso(),
   });

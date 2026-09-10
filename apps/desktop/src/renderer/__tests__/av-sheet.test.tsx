@@ -209,20 +209,39 @@ describe('writing in the sheet', () => {
     expect(screen.getByLabelText('What is heard in row 1.3')).toBeTruthy();
   });
 
-  it('moves a row up and down, and removes one', () => {
+  it('asks before it closes a shot, and closes it when told', () => {
     panel(commercial());
-    fireEvent.click(screen.getByLabelText('Move row 1.2 up'));
+    const before = document.querySelectorAll('.av-row').length;
+
+    fireEvent.click(screen.getByLabelText('Close shot 1.1'));
+    // Nothing has gone yet: it asks first.
+    expect(document.querySelectorAll('.av-row')).toHaveLength(before);
+    expect(screen.getByText('Close shot 1.1?')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close it' }));
+    expect(document.querySelectorAll('.av-row')).toHaveLength(before - 1);
     expect(screen.getByLabelText('What is heard in row 1.1')).toHaveProperty(
       'value',
       'In this era - almost everyone is the enemy...',
     );
+  });
 
-    fireEvent.click(screen.getByLabelText('Remove row 1.1'));
-    expect(document.querySelectorAll('.av-row')).toHaveLength(1);
-    expect(screen.getByLabelText('What is heard in row 1.1')).toHaveProperty(
-      'value',
-      'Sun Tzu said "know your enemy"',
-    );
+  it('keeps the shot when the asking is answered the other way', () => {
+    panel(commercial());
+    const before = document.querySelectorAll('.av-row').length;
+    fireEvent.click(screen.getByLabelText('Close shot 1.2'));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep it' }));
+    expect(document.querySelectorAll('.av-row')).toHaveLength(before);
+    expect(screen.getByLabelText('Close shot 1.2')).toBeTruthy();
+  });
+
+  it('has no arrows on a shot: a board is rearranged by dragging one', () => {
+    panel(commercial());
+    expect(screen.queryByLabelText('Move row 1.2 up')).toBeNull();
+    expect(screen.queryByLabelText('Move row 1.2 down')).toBeNull();
+    // The number is the grip.
+    const number = document.querySelectorAll('.av-row th.av-num')[0] as HTMLElement;
+    expect(number.getAttribute('draggable')).toBe('true');
   });
 
   it('starts a segment, with a row in it to write on', () => {
@@ -290,7 +309,7 @@ describe('storyboard frames on the sheet', () => {
     panel(commercial());
     expect(screen.getByLabelText('Add a frame to row 1.1')).toBeTruthy();
     expect(screen.getByLabelText('Add a frame to row 1.2')).toBeTruthy();
-    expect(screen.getAllByText('Drop a frame')).toHaveLength(2);
+    expect(screen.getAllByText('Drop a frame or a clip')).toHaveLength(2);
   });
 
   it('shows the frame a row already has, and lets it go', () => {
@@ -346,7 +365,8 @@ describe('a shot’s three times', () => {
     // The words and the running time used to sit under the number; the
     // duration is on the other side of the image, so they have gone.
     const number = document.querySelectorAll('.av-row th')[0] as HTMLElement;
-    expect(number.textContent).toBe('1.1');
+    // The number, and the grip beside it. No runtime, no word count.
+    expect(number.textContent).toBe('1.1⠿');
   });
 
   it('gives the duration three lines, and the words their own column', () => {

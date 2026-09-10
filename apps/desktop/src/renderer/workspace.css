@@ -227,26 +227,31 @@ main {
   cursor: grabbing;
 }
 
+/* The strip's own lettering. It was `--muted`, which on a light scheme is a
+   washed-out bronze at 9.5px — the name of the section you are looking at
+   should not be the faintest thing on the screen. Full text colour, and a
+   little more weight to carry the letter-spacing. */
 .pane-name {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 9.5px;
+  font-size: 10px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--muted);
+  color: var(--text);
 }
 
 .pane-place select {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 2px;
-  color: var(--muted);
-  font-size: 9.5px;
+  color: var(--text);
+  font-size: 10px;
   padding: 0 2px;
-  max-width: 92px;
+  max-width: 110px;
 }
 
 .pane-place select:hover,
@@ -1212,6 +1217,8 @@ dialog.scene-dialog > header.off {
   align-items: stretch;
   min-width: 100%;
   font-size: var(--ui);
+  /* The board's playhead is drawn across the whole grid (addendum 05 §5). */
+  position: relative;
 }
 
 .track-head {
@@ -6125,19 +6132,67 @@ input.av-segment-line:focus,
 
 .av-table .av-tools-head,
 .av-table .av-tools {
-  width: 96px;
+  width: 120px;
   white-space: nowrap;
 }
 
-/* The row's own handles, out of the way until the row is under the cursor. */
-.av-tools {
-  opacity: 0;
-  transition: opacity 90ms ease;
+/* Closing a shot: one control, in a box, at the top of the row — above the
+   line rather than beside the times, where a pair of arrows used to be
+   (addendum 05 §3d). It stays visible, quietly, because a control that has
+   to be hunted for is a control nobody trusts. */
+.av-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  opacity: 0.55;
+  transition:
+    opacity 90ms ease,
+    color 90ms ease,
+    border-color 90ms ease;
 }
 
-.av-row:hover .av-tools,
-.av-row:focus-within .av-tools {
+.av-row:hover .av-close,
+.av-row:focus-within .av-close {
   opacity: 1;
+}
+
+.av-close:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* It asks first. Closing a shot is the one control here that loses work, and
+   a board is written next to it all day. */
+.av-sure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px 7px;
+  border: 1px solid var(--danger);
+  border-radius: 3px;
+  background: var(--panel-2);
+  white-space: normal;
+}
+
+.av-sure button {
+  padding: 2px 8px;
+  font-size: 10.5px;
+}
+
+.av-sure .danger {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: transparent;
 }
 
 .av-add-row {
@@ -6214,12 +6269,15 @@ input.av-segment-line:focus,
    each frame at the width of the shot it belongs to, so running your eye
    along the strip is looking at the cut. */
 
+/* A fixed height, not a minimum: a clip with no poster frame carries a
+   video element's own intrinsic size, and one of those in the strip would
+   push the track to twice the height of the pictures beside it. */
 .board-cell {
   display: flex;
   gap: 2px;
   align-items: stretch;
   padding: 3px 2px;
-  min-height: 54px;
+  height: 58px;
   border-bottom: 1px solid var(--border);
   border-right: 1px solid var(--border);
 }
@@ -6228,6 +6286,7 @@ input.av-segment-line:focus,
   flex: 1 1 0;
   /* Never so thin it stops being a picture. */
   min-width: 26px;
+  height: 100%;
   padding: 0;
   overflow: hidden;
   border: 1px solid var(--border);
@@ -6256,4 +6315,273 @@ input.av-segment-line:focus,
 
 .board-cell.tail {
   border-right: 0;
+}
+
+/* ------------------------------------------ dragging a shot, and clips
+   Addendum 05 §3d, §4b. A board is rearranged by picking a shot up and
+   putting it where you want it, and a plate holds a clip as readily as a
+   drawing. */
+
+/* The grip beside the shot number. The number is what you drag. */
+.av-grip {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0;
+  cursor: grab;
+  transition: opacity 90ms ease;
+}
+
+.av-row:hover .av-grip {
+  opacity: 0.8;
+}
+
+.av-table tbody th.av-num[draggable='true'] {
+  cursor: grab;
+}
+
+/* The shot in the air, and the one it would land on. */
+.av-row.lifted {
+  opacity: 0.4;
+}
+
+.av-row.av-drop > * {
+  box-shadow: inset 0 2px 0 0 var(--gold);
+}
+
+/* A clip on the plate says so, so a board can be read at a glance. */
+.av-plate video {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.av-clip-mark {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 2px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--ink) 70%, transparent);
+  pointer-events: none;
+}
+
+video.av-frame {
+  border: 1px solid var(--border);
+}
+
+/* A clip too big to travel inside the project says why. */
+.av-refused {
+  margin: 6px 0 0;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--danger);
+  white-space: normal;
+}
+
+/* The clip's own length, read from the file rather than typed (§4b). */
+.av-video-line .av-time-read {
+  padding-right: 3px;
+  color: var(--text);
+}
+
+.av-holds {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold-deep);
+}
+
+/* ---------------------------------------------------- playing the board
+   Addendum 05 §5. The frames advance at their own durations, the audio is
+   read in the voices already assigned, and one playhead runs through the
+   sheet and the timeline alike. */
+
+.av-transport {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.av-elapsed {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--text);
+}
+
+/* What is on screen at the playhead: the board playing, seen. */
+.av-monitor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--panel-2);
+}
+
+.av-monitor img,
+.av-monitor video {
+  display: block;
+  width: 200px;
+  max-width: 40%;
+  height: auto;
+  border-radius: 2px;
+  background: var(--ink);
+}
+
+.av-monitor-line {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* The shot the playhead is on, on the sheet. */
+.av-row.av-playing > * {
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+}
+
+/* The playhead itself, drawn across every track of the timeline. */
+.board-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--gold-bright);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--gold-bright) 60%, transparent);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* A clip in the strip over the timeline is a frame like any other. */
+.board-frame video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---------------------------------------------------------- preferences
+   The close control belongs in the corner it is looked for in: a square at
+   the top right of the panel, not adrift in the middle of it. */
+
+dialog.preferences {
+  width: min(560px, calc(100vw - 48px));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+dialog.preferences::backdrop {
+  background: color-mix(in srgb, var(--ink) 65%, transparent);
+}
+
+dialog.preferences > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 10px 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+dialog.preferences > header h2 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+dialog.preferences > header button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+}
+
+dialog.preferences > header button:hover {
+  border-color: var(--gold-deep);
+  color: var(--gold);
+}
+
+dialog.preferences > section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+dialog.preferences > footer {
+  padding: 10px 16px;
+  font-size: 10.5px;
+}
+
+/* The schemes, one to a row: swatch, name, and what it is. They had no
+   styling at all, so a name ran straight into its own description. */
+dialog.preferences .scheme-grid {
+  display: grid;
+  gap: 6px;
+}
+
+dialog.preferences .scheme {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 2px 10px;
+  padding: 8px 10px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+}
+
+dialog.preferences .scheme.selected {
+  border-color: var(--gold);
+  background: var(--panel-2);
+}
+
+dialog.preferences .scheme-swatch {
+  grid-row: 1 / span 2;
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+dialog.preferences .scheme-name {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+dialog.preferences .scheme-description {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+dialog.preferences .toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+dialog.preferences .field {
+  display: grid;
+  gap: 4px;
 }

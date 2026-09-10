@@ -1,6 +1,6 @@
 import { beatIdOf, paneNamesFor, type PaneId } from '../panes';
 import { Wordmark } from './Brand';
-import type { ProjectFile, ProjectFormat } from '@vcwriter/domain';
+import { avSheet, formatRt, type ProjectFile, type ProjectFormat } from '@vcwriter/domain';
 import type { AccountStatus } from '../../preload/index';
 
 const SAVE_LABEL: Record<string, string> = {
@@ -80,7 +80,17 @@ export function TitleBar({
       </div>
       <div className="titlebar-right">
         <span className="muted">
-          {pages} {pages === 1 ? 'page' : 'pages'} · {beatCount} beats · {wordCount} words
+          {/* A commercial has no pages. It has a running time, and shots
+              rather than beats (addendum 05 §1). */}
+          {file.project.format === 'short_form' ? (
+            <>
+              {formatRt(avSheet(file).seconds)} · {beatCount} shots · {wordCount} words
+            </>
+          ) : (
+            <>
+              {pages} {pages === 1 ? 'page' : 'pages'} · {beatCount} beats · {wordCount} words
+            </>
+          )}
         </span>
 
         {sections.map((pane) => (
