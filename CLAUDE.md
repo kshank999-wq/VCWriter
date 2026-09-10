@@ -39,6 +39,9 @@ push live; the build takes a minute or two.
   Editors page: stages 1–3 (the global layer, the five commandments, and the
   grid itself) are built — §9 says what they do — and §8 lists the stages
   still to come.
+  `addendum-05-short-form.md` is the short-form module: the AV sheet in
+  place of the Script, the storyboard on the timeline, and playback.
+  Specified, not built; §8 is the build order.
 
 ## Before pushing
 

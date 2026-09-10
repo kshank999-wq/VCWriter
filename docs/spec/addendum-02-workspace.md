@@ -1100,10 +1100,10 @@ numbered `1, 2, 3` by default, because nobody writes *Episode IV* on a call
 sheet, and their labels shout: `EPISODE 2`, the way `ACT TWO` does.
 
 **Short form** is for commercials, web video, and the short pieces made for
-social. The framework is here — the format exists, a project can be created
-in it, and it is written in script format — and the module that makes
-something of it, with the timings and the shapes that kind of work needs, is
-a later piece of work.
+social. The framework is here — the format exists and a project can be
+created in it — and what it becomes is **addendum 05**: the Script is
+replaced by an AV sheet, two columns with a frame and a duration against
+each row, and the timeline carries the storyboard.
 
 ## 15. The writing log
 

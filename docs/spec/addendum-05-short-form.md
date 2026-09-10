@@ -1,0 +1,178 @@
+# Addendum 05 — Short form: the AV sheet, and the board
+
+Status: specified, not yet built. September 2026. Fills in what addendum 02
+§14 left open: *"the module that makes something of it, with the timings and
+the shapes that kind of work needs, is a later piece of work."* This is that
+piece.
+
+Short form is a commercial, a web video, a spot, a piece made for social.
+It is not a screenplay set to a stopwatch — it is a **different document**,
+and it is written in the two-column form the business has always used: what
+is heard on the left, what is seen on the right, in rows, with a frame beside
+each row and a running time against it.
+
+## 1. What replaces what
+
+In a short-form project the **Script becomes the AV sheet**. Not a tab beside
+it — instead of it. Everything else about the workspace stays where it is:
+the same lanes, the same timeline, the same research, the same editors.
+
+| | Screenplay | Short form |
+| --- | --- | --- |
+| The finished document | Script — pages | **The sheet** — rows |
+| The unit of work | A beat, written as manuscript | **A row**: audio, visual, a frame, a duration |
+| What it is measured in | Pages | **Seconds** |
+| The timeline's lanes | Beats | The same beats, **as the rows** |
+| The timeline's track | Screen time from the page count | **The storyboard**, frame by frame |
+
+**Nothing new is invented underneath.** A segment is a scene; a row is a
+beat; the story order is the story order. What the sheet adds is a second
+column of text, a frame, and a duration — and a view that reads down them
+rather than across a page.
+
+## 2. The sheet
+
+```
+ v1   COMMERCIAL 1
+      Total RT 00:00 • Total Words: 48
+
+                    KNOW YOUR ENEMY...
+           More important to know who is not your enemy
+
+  Row     Audio              Visual              Image      Duration
+
+  1.1     Sun Tzu said       nerdy kid walking   [frame]    00:00      💬 0
+  6 words "know your enemy"  down the street…
+  00:00 RT
+
+  …
+
+  END OF SEGMENT 1        SEGMENT RT  SEGMENT WORDS   TOTAL RT  TOTAL WORDS
+  KNOW YOUR ENEMY...        00:00          48          00:00       48
+```
+
+### The masthead
+
+**Nothing in the masthead is typed on the sheet.** The title and the version
+are the **title page's** (spec §6.1) — a short-form piece has one like
+anything else, and a title typed in two places is a title that disagrees with
+itself. The two figures beside it are measured: the running time of every row
+added up, and the word count of the audio.
+
+### The rows
+
+| Column | What it is |
+| --- | --- |
+| **Row** | `segment.row` — 1.1, 1.2, 2.1 — read from the story order, never typed. Under it, that row's word count and its running time. |
+| **Audio** | What is heard: voiceover, dialogue, a line of song. This is the beat's manuscript, and it is what the word count counts. |
+| **Visual** | What is seen. The beat's own second text, and new (§6). |
+| **Image** | One storyboard frame, or an empty plate to drop one on. |
+| **Duration** | The row's running time, in seconds. The writer's, not a guess from the words (§4). |
+| | The count of comments on the row, as the rest of the workspace shows them. |
+
+### The segments
+
+A segment is a scene. Its **name** is the scene's title, set above its rows
+in capitals, with the scene's summary under it in italic — the line that says
+what the segment is for.
+
+Each segment closes with its own foot: `END OF SEGMENT 1`, its name again,
+and four figures — the segment's running time and words, and the running
+totals to that point. A commercial is sold in segments and cut in segments,
+and the person reading it wants to know where each one lands.
+
+## 3. The board, and the timeline
+
+**The storyboard is the timeline's track.** Where a screenplay's timeline
+shows screen time measured off the page count, a short-form one shows the
+frames themselves, in order, one to a row, at the width of that row's
+duration. Run your eye along it and you are looking at the cut.
+
+**The lanes hold the rows.** The same lanes as everywhere else, holding the
+same beats — but each one drawn as its row: its number, the first words of
+its audio, its frame.
+
+**One thing, seen twice.** Writing a row into the sheet puts it on the
+timeline; there is no *add to timeline* anywhere, because there is nothing to
+add — it is already there. Dragging rows into a new order in the sheet
+reorders the timeline, and dragging them on the timeline reorders the sheet.
+They are the same story order the whole workspace already shares (addendum 02
+§8), which is why this costs nothing to be true.
+
+## 4. Time
+
+Short form is timed to the second and always has been. A thirty is thirty.
+
+- **A row's duration is the writer's.** Typed in, in seconds. Nothing derives
+  it, because the thing being timed is a shot, not a paragraph — a four-word
+  line can hold the screen for six seconds.
+- **A row with no duration reads as 00:00**, and the totals say so. An
+  unfinished board should look unfinished.
+- **The word count is a check on the time, not a source for it.** Roughly
+  two-and-a-half words a second is the read; where a row's words cannot fit
+  its duration the sheet says so quietly, in the row, and never changes
+  anything (§7).
+- Segment and total times are sums, and are always visible: at the head, at
+  the foot of each segment, and against every row.
+
+## 5. Playback
+
+**Play the board.** From the sheet or the timeline: the frames advance at
+their durations, and the audio is read aloud by the voices already assigned
+(spec §10, read-back). It is an animatic, made of what is already in the
+document.
+
+- A voice is assigned per character exactly as it is now, and a row with no
+  character reads in the narrator's voice — a commercial is mostly narration.
+- The playhead is the timeline's own, so playing on one moves the other.
+- Nothing is rendered to a file by this. It is a way of hearing whether a
+  thirty is a thirty, which is the question the format exists to ask.
+
+## 6. What a row is made of
+
+Everything below already exists on a beat except where it says otherwise.
+
+| | |
+| --- | --- |
+| Audio | The beat's `manuscript`, written the way beats are written |
+| **Visual** | **New.** The beat's second text: plain lines, what is seen |
+| **Image** | **New.** A reference to a frame in the project's own store |
+| **Duration** | **New.** Seconds, an integer, zero until it is said |
+| Its number | The story order, counted |
+| Its words | The audio, counted |
+| Comments | The workspace's own |
+
+**Frames are kept in the file.** A project is one document that opens on
+another machine, so the frames travel in it: an `assets` collection holding
+each image once, referenced by id, so a frame used in two rows is stored
+once and a row holds a reference rather than a picture.
+
+## 7. What it does not do
+
+- **It does not time the script for you.** It counts words and says whether
+  they fit, and stops there.
+- **It does not draw.** Frames come from somewhere else — a drawing, a
+  photograph, a still. The sheet holds them and lines them up.
+- **It does not render video.** Playback is for hearing the shape.
+- **It does not replace the beat window.** A row's audio opens in the same
+  writing screen everything else does, with the same two keys.
+- **It is not a second story order.** Anything that reordered rows without
+  reordering the story would be a bug, not a feature.
+
+## 8. Where the work is
+
+1. **The sheet, read-only against the story that is there.** Segments, rows,
+   numbering, the word counts and the four figures at each foot, and the
+   masthead read from the title page.
+2. **Writing in it.** Audio and visual edited in place, rows added, removed
+   and reordered, durations typed — the sheet as the place the work happens,
+   in place of the Script.
+3. **Frames.** The asset store, dropping an image on a row, and the frames on
+   the timeline's track.
+4. **The lanes as rows**, and reordering that goes both ways.
+5. **Playback**, with the voices already assigned.
+6. **Print and export**: the sheet as it is on screen, and a board.
+
+Stage 1 alone is worth having: a writer who can see their commercial as an AV
+sheet, with the times and the counts adding up, has the document the business
+actually asks for.
