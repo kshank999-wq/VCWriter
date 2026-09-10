@@ -35,7 +35,7 @@ export * from './render.js';
 export * from './editing.js';
 export * from './reformat.js';
 export * from './pagination.js';
-export * from './sculptor.js';
+export * from './story-grid.js';
 export * from './story-layout.js';
 export * from './story-threads.js';
 export * from './scene-heading.js';

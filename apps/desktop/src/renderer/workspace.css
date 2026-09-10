@@ -5185,220 +5185,138 @@ dialog.lane-dialog.title-page-dialog {
   gap: 8px;
 }
 
-/* ------------------------------------------------------ Story Sculptor
-   Addendum 03. An area of its own over the whole workspace, like research:
-   this is where the story is thought about, and it wants the room.
+/* ------------------------------------------------------ the Story Grid panel
+   Addendum 04 §3. The global layer: what the story is, and what that obliges
+   it to deliver. The checklist is the point — a line with no scene against it
+   is the question the tab exists to ask, so nothing here is folded away. */
 
-   The canvas runs *down* through story time. A region is as tall as the
-   manuscript under it — nothing here is a stored size — so a story whose
-   second act is thin looks thin, which is the point of shaping on a canvas
-   rather than in an outline. */
-dialog.sculptor-window {
-  width: 100vw;
-  height: 100vh;
-  max-width: 100vw;
-  max-height: 100vh;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: var(--ink);
-  color: var(--text);
-  font-size: 12.5px;
+.grid-panel {
+  padding: 16px 18px 28px;
+  overflow: auto;
+  display: grid;
+  gap: 22px;
+  align-content: start;
 }
 
-dialog.sculptor-window[open] {
-  display: flex;
-  flex-direction: column;
-}
-
-dialog.sculptor-window::backdrop {
-  background: var(--ink);
-}
-
-.sculptor-head {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 40px;
-  padding: 0 10px 0 16px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-}
-
-.sculptor-tools {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
-}
-
-/* The same slider the timeline's zoom uses: one control, one look. */
-.sculptor-zoom input[type='range'] {
-  width: 140px;
-  accent-color: var(--gold);
-  padding: 0;
-  background: transparent;
-  border: none;
-}
-
-.sculptor-canvas {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 28px 0 64px;
-}
-
-/* One column of story time, centred, with room beside it for the scene and
-   beat columns that come in stages three and four. */
-.sculptor-spine {
-  width: min(760px, calc(100vw - 64px));
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* The ends of the story: drawn because they are true, not because they are
-   stored. There is nothing to select and nothing to delete. */
-.sculptor-bookend {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
-  border: 1px dashed var(--border);
-  border-radius: 3px;
-  color: var(--muted);
-  font-size: 10px;
+.grid-panel h3 {
+  margin: 0 0 8px;
+  font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 0.22em;
-}
-
-.sculptor-empty {
-  padding: 24px 8px;
-  text-align: center;
-  max-width: 46ch;
-  margin: 0 auto;
-}
-
-.sculptor-region {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--gold-deep, var(--border));
-  border-radius: 3px;
-  background: var(--panel);
-}
-
-/* Before the first structure point: the story with no shape given to it yet,
-   which is where every project starts and is not a fault. */
-.sculptor-region.opening {
-  border-left-style: dashed;
-  background: transparent;
-}
-
-.sculptor-region.selected {
-  border-color: var(--gold);
-  border-left-color: var(--gold);
-}
-
-.sculptor-region.drop-target {
-  outline: 1px dashed var(--gold);
-  outline-offset: 2px;
-}
-
-.sculptor-point {
+  letter-spacing: 0.14em;
+  color: var(--gold);
   display: flex;
   align-items: baseline;
   gap: 10px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  cursor: grab;
 }
 
-.sculptor-region.opening .sculptor-point {
-  cursor: default;
+.grid-panel .grid-count {
+  text-transform: none;
+  letter-spacing: 0;
 }
 
-.sculptor-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--gold);
+.grid-global {
+  display: grid;
+  gap: 8px;
+  max-width: 640px;
 }
 
-/* The writer's own words beside the label, where the label is a number. */
-.sculptor-said {
-  color: var(--text);
+.grid-global .field-row {
+  display: grid;
+  grid-template-columns: 106px 1fr;
+  align-items: start;
+  gap: 10px;
+  font-size: 12px;
 }
 
-.sculptor-figures {
-  margin-left: auto;
-  font-size: 11px;
+.grid-global .field-row > span {
+  color: var(--muted);
+  padding-top: 5px;
 }
 
-.sculptor-actions {
+.grid-global .field-input {
   display: flex;
-  gap: 2px;
+  align-items: flex-start;
+  gap: 6px;
 }
 
-.sculptor-name {
+.grid-global .field-input > input,
+.grid-global .field-input > select,
+.grid-global .field-input > textarea {
   flex: 1;
   min-width: 0;
 }
 
-/* Scenes down the region, each as tall as its own beats: putting one in
-   pushes what follows down, which is the expansion of §4 seen rather than
-   described. They run down rather than across because story time is the
-   vertical axis; the scene *column* proper is stage three. */
-.sculptor-scenes {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px;
+.grid-global textarea {
+  resize: vertical;
 }
 
-.sculptor-thin {
+.grid-panel .empty-state {
+  max-width: 560px;
   margin: 0;
-}
-
-.sculptor-scene {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 6px 10px;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--text);
-  font-size: 11.5px;
-  text-align: left;
-}
-
-.sculptor-scene:hover {
-  border-color: var(--gold);
-}
-
-.sculptor-scene-figures {
-  flex: none;
-  font-size: 10.5px;
-}
-
-/* Folded: the head alone, and the story read as its shape. */
-.sculptor-region.folded {
-  min-height: 0;
-}
-
-.sculptor-region.folded .sculptor-point {
-  border-bottom: none;
-}
-
-.sculptor-twisty {
-  flex: none;
-  width: 16px;
   padding: 0;
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* A line and the scene that keeps it want to be read together, so the list
+   stops well short of the window rather than running the width of it. */
+.grid-promises {
+  max-width: 860px;
+}
+
+.grid-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.grid-promise {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) 190px auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Kept or not, at a glance. An unanswered line is the louder of the two,
+   because it is the one with something still to do. */
+.grid-mark {
   color: var(--muted);
   font-size: 10px;
-  line-height: 1;
+  text-align: center;
+}
+
+.grid-promise.kept .grid-mark {
+  color: var(--gold);
+}
+
+.grid-promise.kept .grid-text {
+  color: var(--muted);
+}
+
+.grid-text,
+.grid-scene {
+  text-align: left;
+  font-size: 11.5px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 3px 4px;
+  color: var(--text);
+  width: 100%;
+}
+
+.grid-text:hover,
+.grid-scene:hover {
+  border-color: var(--border);
+}
+
+.grid-text:focus,
+.grid-scene:focus {
+  border-color: var(--gold-deep);
+  outline: none;
 }

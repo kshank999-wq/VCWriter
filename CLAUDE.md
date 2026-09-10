@@ -32,10 +32,12 @@ push live; the build takes a minute or two.
   part of the change, not afterwards.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
-  `addendum-03-story-sculptor.md` (the Story Sculptor node canvas) and
-  `addendum-04-story-grid.md` (the Story Grid, a third tab of the editor)
-  are specified and not built. Addendum 03 §14 says why its first draft was
-  wrong and what happens to the code written against it.
+  `addendum-03-story-sculptor.md` (the Story Sculptor node canvas) is
+  specified and not built; its §14 says why the first draft was wrong and
+  what happened to the code written against it.
+  `addendum-04-story-grid.md` is the Story Grid, the third tab of the
+  Editors page: its stage 1 (the global layer) is built — §9 says what it
+  does — and §8 lists the stages still to come.
 
 ## Before pushing
 

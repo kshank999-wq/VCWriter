@@ -1,8 +1,9 @@
 # Addendum 04 — The Story Grid
 
-Status: specified, not yet built. September 2026. Extends §8.2 of the master
-specification, which already asks for "a scene-by-scene **story-grid style
-review**". This addendum says what that grid is and where it lives.
+Status: stage 1 built, September 2026; the rest specified. Extends §8.2 of
+the master specification, which already asks for "a scene-by-scene
+**story-grid style review**". This addendum says what that grid is and where
+it lives.
 
 The Story Grid is the craft method as it is commonly taught — a global genre
 that owes the reader certain scenes, a value that moves in every scene, and
@@ -62,7 +63,7 @@ of the tab.
 
 | | |
 | --- | --- |
-| **Global genre** | Action, horror, crime, thriller, western, war, love, performance, society, status, worldview, morality — and a sub-genre where the writer wants one |
+| **Global genre** | Action, horror, crime, thriller, love, performance, society, status, worldview, morality — and a sub-genre where the writer wants one. Western and war are settings rather than genres: a western and a war film can both be action, and the sub-genre box is where they go |
 | **Global value** | The value the whole story moves: life/death, love/hate, truth/lie, justice/tyranny, or the writer's own |
 | **The controlling idea** | One sentence: what the ending says |
 | **The obligatory scenes** | What this genre owes its reader, as a checklist |
@@ -142,9 +143,9 @@ Clicking a point goes to the scene.
 
 ## 8. Where the work is
 
-1. The global panel: genre, value, controlling idea, and the obligatory
-   scenes and conventions each genre seeds — with a scene tickable against
-   each line.
+1. **Built.** The global panel: genre, value, controlling idea, and the
+   obligatory scenes and conventions each genre seeds — with a scene named
+   against each line.
 2. The five commandments on the scene record, and on the story and its acts.
 3. The grid view: rows, sorting, filtering, and going to a scene from a row.
 4. The AI structural read extended to answer the five commandments.
@@ -154,3 +155,28 @@ Clicking a point goes to the scene.
 Stage 1 alone is worth having: a writer who can see what their genre owes
 them, and which of it the script has actually delivered, has most of what
 they came for.
+
+## 9. What stage 1 does
+
+Built September 2026, as **Story Grid**, the third tab of the Editors page,
+also reachable from Editor → Story Grid. The tab reads `answered/owed` so the
+one number is visible without opening it.
+
+- **What the story is.** Genre, sub-genre, the value and the controlling
+  idea. Choosing a genre for the first time fills the checklist and offers
+  that genre's value; typing a value of one's own keeps it.
+- **What the story owes**, and **what it carries** — the obligatory scenes
+  and the conventions, each a line that can be reworded, removed, or added
+  to, with a `+ One of your own` at the foot of each list.
+- **A scene against each line.** Naming one marks the line kept (●) and
+  offers a **Go** that opens that scene in the writing screen. Cutting the
+  scene later leaves the line unanswered rather than pointing at nothing.
+- **Start the list again** puts the current genre's checklist back, and says
+  so out loud, because by then the list carries the writer's own wording.
+
+Changing the genre does **not** replace the list on its own — by then it
+holds their edits and their scenes. That is what the button is for.
+
+It lives in `projectSettings.storyGrid`, so an older project opens with an
+empty grid and no migration, and `packages/domain/src/story-grid.ts` holds
+the method: the genres, what each owes, and what counts as kept.

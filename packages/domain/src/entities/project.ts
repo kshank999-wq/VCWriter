@@ -98,6 +98,12 @@ export const projectSettingsSchema = z.object({
   editorIgnoredRules: z.array(z.string()).default([]),
   editorAllowedWords: z.array(z.string()).default([]),
   /**
+   * The Story Grid's global layer (addendum 04 §3): what the story is, and
+   * what that obliges it to deliver. Kept loose here so the method lives with
+   * `story-grid.ts` rather than with the settings.
+   */
+  storyGrid: z.record(z.unknown()).default({}),
+  /**
    * The title page (spec §6.1). A page of the document, not a heading on the
    * work screen — which is why it lives here and never in the manuscript.
    *

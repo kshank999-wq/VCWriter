@@ -15,6 +15,7 @@ import {
   FINDING_LABELS,
   runFinalEditor,
   sceneTextForReview,
+  storyGridStatus,
   summariseFindings,
   type BeatId,
   type EditorFinding,
@@ -24,6 +25,7 @@ import {
   type SceneVerdict,
   type StructuralUnitId,
 } from '@vcwriter/domain';
+import { StoryGridPanel } from './StoryGridPanel';
 
 interface EditorPanelProps {
   file: ProjectFile;
@@ -31,11 +33,19 @@ interface EditorPanelProps {
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   /** Going to a finding selects its beat, so the writer can see it in place. */
   onGoTo?(beatId: BeatId): void;
+  /** Naming a scene in the Story Grid should be able to go and look at it. */
+  onGoToUnit?(unitId: StructuralUnitId): void;
   /** Which editor to open on: the Editor menu names one, and means it. */
-  openOn?: 'daily' | 'final';
+  openOn?: Tab;
 }
 
-type Tab = 'daily' | 'final';
+/**
+ * Addendum 04 §1: the Story Grid is a third tab here rather than a screen of
+ * its own. It reads the manuscript and asks whether it delivers — which is
+ * what the other two tabs do, so this is where a writer already comes to be
+ * told what is missing.
+ */
+type Tab = 'daily' | 'final' | 'grid';
 
 /**
  * When a read was made, and by what.
@@ -62,7 +72,7 @@ const readWhen = (read: { readAt: string; model: string }): string => {
  * writer has considered and rejected is a fact about this sitting, not a
  * property of the manuscript, and it should not travel to another machine.
  */
-export function EditorPanel({ file, currentUnitId, onUpdate, onGoTo, openOn }: EditorPanelProps) {
+export function EditorPanel({ file, currentUnitId, onUpdate, onGoTo, onGoToUnit, openOn }: EditorPanelProps) {
   const [tab, setTab] = useState<Tab>(openOn ?? 'daily');
 
   // The Editor menu names an editor; choosing it opens that one.
@@ -130,6 +140,9 @@ export function EditorPanel({ file, currentUnitId, onUpdate, onGoTo, openOn }: E
   // money, so it belongs in the manuscript, not in a panel that closes.
   const report = useMemo(() => runFinalEditor(file), [file]);
 
+  // The global layer, read here only for the count on the tab.
+  const grid = useMemo(() => storyGridStatus(file), [file]);
+
   // Asked once when the Final Editor is opened, so the button can say why it
   // is greyed out instead of failing after the click.
   useEffect(() => {
@@ -186,6 +199,17 @@ export function EditorPanel({ file, currentUnitId, onUpdate, onGoTo, openOn }: E
             onClick={() => setTab('final')}
           >
             Final ({report.findings.length})
+          </button>
+          {/* What the story owes, and how much of it is answered. The count is
+              the one number the tab exists to show (addendum 04 §3). */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'grid'}
+            className={tab === 'grid' ? 'tab selected' : 'tab'}
+            onClick={() => setTab('grid')}
+          >
+            Story Grid ({grid.keptObligatory + grid.keptConventions}/{grid.promises.length})
           </button>
         </div>
 
@@ -359,6 +383,8 @@ export function EditorPanel({ file, currentUnitId, onUpdate, onGoTo, openOn }: E
             )}
           </div>
         </div>
+      ) : tab === 'grid' ? (
+        <StoryGridPanel file={file} onUpdate={onUpdate} {...(onGoToUnit ? { onGoToUnit } : {})} />
       ) : (
         <div className="final-review">
           <p className="muted">

@@ -107,6 +107,20 @@ describe('numbering', () => {
     expect(placedMarkers(file)[0]?.marker.title).toBe('The arrival');
   });
 
+  it('gives "just a note" the writer’s own words, and no number at all', () => {
+    // A note has no noun, so it is a labelled point rather than a division of
+    // the work — numbering it "I" would make it look like one.
+    let file = book(2);
+    file = addMarker(file, { unitId: file.units[0]!.id, title: 'The lamp goes out', kind: 'note' }).file;
+    file = addMarker(file, { unitId: file.units[1]!.id, title: '', kind: 'chapter' }).file;
+
+    const placed = placedMarkers(file);
+    expect(placed[0]?.label).toBe('The lamp goes out');
+    expect(placed[0]?.number).toBe('');
+    // And it takes no number away from the chapters, which count as before.
+    expect(placed[1]?.label).toBe('Chapter 1');
+  });
+
   it('numbers each kind on its own count, so parts do not disturb chapters', () => {
     let file = book(3);
     const [first, second, third] = file.units;

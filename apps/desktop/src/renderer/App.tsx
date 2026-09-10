@@ -3,6 +3,7 @@ import {
   addLane,
   addMarker,
   defaultMarkerKind,
+  beatsForUnit,
   beatsInStoryOrder,
   projectStats,
   setParagraphStyle,
@@ -44,7 +45,6 @@ import { DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay, type ScriptLayout } from '.
 import { LaneDialog } from './components/LaneDialog';
 import { SceneDialog } from './components/SceneDialog';
 import { ResearchWindow } from './components/ResearchWindow';
-import { SculptorWindow } from './components/SculptorWindow';
 import { BeatDialog } from './components/BeatDialog';
 import { MarkerDialog } from './components/MarkerDialog';
 import { PageBar, type View } from './components/PageBar';
@@ -91,7 +91,7 @@ export default function App() {
   const [episodeRailOpen, setEpisodeRailOpen] = useState(false);
   const [newEpisodeOpen, setNewEpisodeOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [editorTab, setEditorTab] = useState<'daily' | 'final'>('daily');
+  const [editorTab, setEditorTab] = useState<'daily' | 'final' | 'grid'>('daily');
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
@@ -130,8 +130,6 @@ export default function App() {
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
   const [openMarkerId, setOpenMarkerId] = useState<StoryMarkerId | null>(null);
   const [researchOpen, setResearchOpen] = useState(false);
-  /** Story Sculptor: an area of its own over the workspace (addendum 03). */
-  const [sculptorOpen, setSculptorOpen] = useState(false);
   /**
    * File → New project shows the project screen even with one already open:
    * the format is chosen there, beside the title and a word on what each one
@@ -459,6 +457,9 @@ export default function App() {
         case 'editor.final':
           setEditorTab('final');
           return setView('editor');
+        case 'editor.storyGrid':
+          setEditorTab('grid');
+          return setView('editor');
         case 'editor.readBack':
           return setView('readback');
 
@@ -713,7 +714,6 @@ export default function App() {
         focusMode={focusMode}
         onFocus={() => setFocusMode(!focusMode)}
         onOpenResearch={() => (away.has('research') ? openPane('research') : setResearchOpen(true))}
-        onOpenSculptor={() => setSculptorOpen(true)}
         away={detached}
         onBringBack={closePane}
         account={account}
@@ -853,16 +853,6 @@ export default function App() {
               openPane('research');
             }}
           />
-          <SculptorWindow
-            file={file}
-            open={sculptorOpen}
-            onClose={() => setSculptorOpen(false)}
-            onUpdate={project.update}
-            onOpenUnit={(unitId) => {
-              setSelectedUnitId(unitId as StructuralUnitId);
-              setSculptorOpen(false);
-            }}
-          />
         </div>
       ) : (
         <main className="full">
@@ -889,6 +879,13 @@ export default function App() {
               openOn={editorTab}
               onGoTo={(beatId) => {
                 setSelectedBeatId(beatId);
+                setView('write');
+              }}
+              // A scene named against a promise is a scene the writer wants to
+              // look at: go to where it starts.
+              onGoToUnit={(unitId) => {
+                const first = beatsForUnit(file, unitId)[0];
+                if (first) setSelectedBeatId(first.id);
                 setView('write');
               }}
               onUpdate={project.update}

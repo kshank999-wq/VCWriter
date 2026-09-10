@@ -35,6 +35,7 @@ export type CommandId =
   | 'editor.findNext'
   | 'editor.daily'
   | 'editor.final'
+  | 'editor.storyGrid'
   | 'editor.readBack'
   | 'editor.reformat'
   // Reports
@@ -120,6 +121,7 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => [
       // the whole thing. "More advanced" is where the rest will go.
       { command: 'editor.daily', label: 'Daily editor' },
       { command: 'editor.final', label: 'Final editor' },
+      { command: 'editor.storyGrid', label: 'Story Grid' },
       { command: 'editor.readBack', label: 'Read back' },
     ],
   },

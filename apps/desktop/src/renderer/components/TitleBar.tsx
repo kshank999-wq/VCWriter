@@ -24,8 +24,6 @@ interface TitleBarProps {
   onFocus(): void;
   /** Research is here rather than in the Script, so it survives the Script leaving. */
   onOpenResearch(): void;
-  /** The Sculptor is an area of its own beside it (addendum 03). */
-  onOpenSculptor(): void;
   /** Sections in windows of their own, and the way to bring one back (§8). */
   away: readonly string[];
   onBringBack(pane: string): void;
@@ -57,7 +55,6 @@ export function TitleBar({
   focusMode,
   onFocus,
   onOpenResearch,
-  onOpenSculptor,
   away,
   onBringBack,
   account,
@@ -99,16 +96,6 @@ export function TitleBar({
           </button>
         ))}
 
-        {writing ? (
-          <button
-            type="button"
-            className="ghost"
-            title="Story Sculptor: shape the story before it is assembled"
-            onClick={onOpenSculptor}
-          >
-            Sculptor
-          </button>
-        ) : null}
         {writing ? (
           <button
             type="button"
