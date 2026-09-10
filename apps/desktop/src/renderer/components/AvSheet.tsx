@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   addRow,
   addUnit,
   avSheet,
+  clearRowFrame,
   formatRt,
   moveRow,
   parseRt,
   removeBeat,
   setRowAudio,
+  setRowFrame,
   setRowSeconds,
   setRowVisual,
   toggleSpoken,
@@ -17,6 +19,7 @@ import {
   type ProjectFile,
   type StructuralUnitId,
 } from '@vcwriter/domain';
+import { frameFrom, pictureFrom } from '../frames';
 
 /**
  * The AV sheet (addendum 05 §2), and the place the work happens (§8 stage 2).
@@ -267,8 +270,7 @@ function Row({ row, readOnly, onUpdate, onOpen }: RowProps) {
       </td>
 
       <td className="av-image">
-        {/* The plate an image goes on. Dropping one there is stage 3. */}
-        <div className="av-plate" aria-label={`Frame for row ${row.number}`} />
+        <Plate row={row} readOnly={readOnly} onUpdate={onUpdate} />
       </td>
 
       <td className="av-num av-duration">
@@ -318,6 +320,99 @@ function Row({ row, readOnly, onUpdate, onOpen }: RowProps) {
         </td>
       )}
     </tr>
+  );
+}
+
+/**
+ * The plate a storyboard frame goes on (addendum 05 §3c).
+ *
+ * Drop a picture on it, or click it and choose one. The frame is scaled on
+ * the way in and kept in the document, so the board travels; and because a
+ * row is as deep as its tallest column, **the audio beside a frame spaces out
+ * to line up with it**. That alignment is not a feature bolted on — it is
+ * what the layout is.
+ */
+function Plate({
+  row,
+  readOnly,
+  onUpdate,
+}: {
+  row: AvRow;
+  readOnly: boolean;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+}) {
+  const picker = useRef<HTMLInputElement>(null);
+  const [over, setOver] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const take = async (file: File | null) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const frame = await frameFrom(file);
+      onUpdate((current) => setRowFrame(current, row.beatId, frame).file);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (readOnly) {
+    return row.frame ? (
+      <img className="av-frame" src={row.frame.data} alt={`Frame for row ${row.number}`} />
+    ) : (
+      <div className="av-plate" aria-label={`Frame for row ${row.number}`} />
+    );
+  }
+
+  return (
+    <div className="av-plate-holder">
+      <button
+        type="button"
+        className={`av-plate${over ? ' over' : ''}${row.frame ? ' filled' : ''}`}
+        aria-label={row.frame ? `Replace the frame for row ${row.number}` : `Add a frame to row ${row.number}`}
+        title="Drop a picture here, or click to choose one"
+        onClick={() => picker.current?.click()}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setOver(false);
+          void take(pictureFrom(event.dataTransfer.files));
+        }}
+      >
+        {row.frame ? (
+          <img src={row.frame.data} alt="" />
+        ) : (
+          <span className="muted small">{busy ? 'Adding…' : 'Drop a frame'}</span>
+        )}
+      </button>
+
+      {row.frame ? (
+        <button
+          type="button"
+          className="ghost small av-frame-off"
+          aria-label={`Remove the frame from row ${row.number}`}
+          onClick={() => onUpdate((current) => clearRowFrame(current, row.beatId))}
+        >
+          ×
+        </button>
+      ) : null}
+
+      <input
+        ref={picker}
+        type="file"
+        accept="image/*"
+        hidden
+        aria-label={`Choose a frame for row ${row.number}`}
+        onChange={(event) => {
+          void take(event.target.files?.[0] ?? null);
+          event.target.value = '';
+        }}
+      />
+    </div>
   );
 }
 

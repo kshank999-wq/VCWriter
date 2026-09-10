@@ -41,7 +41,8 @@ push live; the build takes a minute or two.
   still to come.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, and playback. Stages
-  1–3 (the sheet, writing in it, and the workspace stripped) are built — §9 says what they do — and
+  1–4 (the sheet, writing in it, the workspace stripped, and the storyboard
+  frames) are built — §9 says what they do — and
   §8 lists the stages still to come.
 
 ## Before pushing

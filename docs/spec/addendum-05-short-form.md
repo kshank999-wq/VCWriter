@@ -1,6 +1,6 @@
 # Addendum 05 — Short form: the AV sheet, and the board
 
-Status: stages 1–3 built, September 2026; the rest specified. Fills in what addendum 02
+Status: stages 1–4 built, September 2026; the rest specified. Fills in what addendum 02
 §14 left open: *"the module that makes something of it, with the timings and
 the shapes that kind of work needs, is a later piece of work."* This is that
 piece.
@@ -211,8 +211,9 @@ Everything below already exists on a beat except where it says otherwise.
    threads or links; Scene becomes Segment wherever it is written; one
    track, with each segment's dialogue laid along its time; and Tab marks a
    line as spoken (§3b).
-4. **Frames** (§3c): the asset store, dropping an image on a row, more than
-   one down a segment, and the audio spacing out against them.
+4. **Built.** Frames (§3c): the pictures the document carries, dropping one
+   on a row, more than one down a segment, and the audio spacing out against
+   them.
 5. **One timeline** (§3a): the frames above, the segments and their dialogue
    below, and a playhead through both.
 6. **Playback**, with the voices already assigned.
@@ -300,3 +301,29 @@ on in quotation marks — `"You're always late."` — and Tab again takes them
 off, because the same key that made it dialogue is the key that changes its
 mind. It does not move focus, for the same reason Tab does not in the beat
 window. The visual column has no such key: nothing there is spoken.
+
+### Stage 4 — the frames
+
+**Drop a picture on a row's plate**, or click it and choose one. Add a frame
+for the opening, another for the action that follows, and another below that:
+they are rows of the same segment, and the audio and the visual beside each
+one **space out to line up with it**. The alignment is not computed — a row is
+as deep as its tallest column, and that is the whole reason the layout is what
+it is.
+
+- **The picture travels in the document.** A frame pointing at a folder on
+  somebody's desktop is a frame that is gone the moment the file is sent, so
+  it goes into the file itself, stored once and referenced by id — a frame
+  used on two rows is one picture.
+- **Scaled on the way in**: no longer than 960 on its longest side, encoded as
+  JPEG. What a board needs is a legible frame, not the twelve megapixels a
+  camera produced, and a file with forty of those in it is a file nobody can
+  send. The original is not kept: the board is the deliverable, not the
+  archive.
+- **A frame replaced or removed takes its picture with it**, so a board
+  reworked a dozen times does not carry every version of every frame.
+- A row whose picture has somehow gone reads as a row with no frame rather
+  than a hole.
+- Under the cursor a filled plate carries a **×**, like the row's own handles.
+
+A file that predates frames opens with none, rather than badly.

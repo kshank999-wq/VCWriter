@@ -5,6 +5,9 @@ import {
   addUnit,
   addRow,
   avSheet,
+  clearRowFrame,
+  parseProjectFile,
+  setRowFrame,
   moveRow,
   parseRt,
   setRowAudio,
@@ -299,5 +302,76 @@ describe('narration and dialogue', () => {
     // A quotation inside a line of narration is not a line of dialogue.
     expect(isSpoken('He said "hello" and left.')).toBe(false);
     expect(isSpoken('')).toBe(false);
+  });
+});
+
+describe('storyboard frames', () => {
+  const picture = 'data:image/png;base64,iVBORw0KGgo=';
+
+  it('keeps the picture in the file and the reference on the row', () => {
+    let file = commercial();
+    const beatId = file.beats[0]!.id;
+    const made = setRowFrame(file, beatId, { name: 'open.png', data: picture, width: 800, height: 450 });
+    file = made.file;
+
+    // The picture travels in the document, not as a path to somebody's disk.
+    expect(file.assets).toHaveLength(1);
+    expect(file.assets[0]?.data).toBe(picture);
+    expect(file.assets[0]?.name).toBe('open.png');
+    const row = avSheet(file).segments[0]!.rows[0]!;
+    expect(row.frame?.id).toBe(made.assetId);
+    expect(row.frame?.width).toBe(800);
+  });
+
+  it('says a row has no frame until one is hung on it', () => {
+    expect(avSheet(commercial()).segments[0]?.rows[0]?.frame).toBeNull();
+  });
+
+  it('drops the picture when the row lets go of it', () => {
+    const started = commercial();
+    const beatId = started.beats[0]!.id;
+    let file = setRowFrame(started, beatId, { data: picture }).file;
+    expect(file.assets).toHaveLength(1);
+
+    file = clearRowFrame(file, beatId);
+    expect(file.assets).toHaveLength(0);
+    expect(avSheet(file).segments[0]?.rows[0]?.frame).toBeNull();
+  });
+
+  it('does not carry every version of every frame it has ever had', () => {
+    let file = commercial();
+    const beatId = file.beats[0]!.id;
+    for (const name of ['one', 'two', 'three']) {
+      file = setRowFrame(file, beatId, { name, data: picture }).file;
+    }
+    // Replaced three times, and the file holds the one that is wanted.
+    expect(file.assets).toHaveLength(1);
+    expect(file.assets[0]?.name).toBe('three');
+  });
+
+  it('reads as no frame when the picture has gone from under it', () => {
+    const started = commercial();
+    let file = setRowFrame(started, started.beats[0]!.id, { data: picture }).file;
+
+    // The row still points at it; the picture does not exist any more.
+    file = { ...file, assets: [] };
+    expect(avSheet(file).segments[0]?.rows[0]?.frame).toBeNull();
+  });
+
+  it('survives a save and a re-open, picture and all', () => {
+    const started = commercial();
+    const made = setRowFrame(started, started.beats[0]!.id, { data: picture, width: 800, height: 450 });
+    const back = parseProjectFile(JSON.parse(JSON.stringify(made.file)));
+    expect(back.assets[0]?.data).toBe(picture);
+    expect(avSheet(back).segments[0]?.rows[0]?.frame?.height).toBe(450);
+  });
+
+  it('opens a file that predates frames with none, rather than badly', () => {
+    const older = parseProjectFile({
+      ...JSON.parse(JSON.stringify(commercial())),
+      assets: undefined,
+    });
+    expect(older.assets).toEqual([]);
+    expect(avSheet(older).segments[0]?.rows.every((row) => row.frame === null)).toBe(true);
   });
 });

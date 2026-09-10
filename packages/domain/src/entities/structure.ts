@@ -3,6 +3,7 @@ import { id, orderKey, timestamps } from './common.js';
 import { manuscriptSegmentSchema } from './manuscript.js';
 import { titlePageSchema } from './title-page.js';
 import type {
+  AssetId,
   BeatId,
   BeatRevisionId,
   CharacterId,
@@ -228,6 +229,11 @@ export const beatSchema = z.object({
    * that has no sheet never reads it, and it is empty until it is written.
    */
   visual: z.string().default(''),
+  /**
+   * The storyboard frame beside the row (addendum 05 §3c), by id into the
+   * project's own pictures. Null until one is dropped on it.
+   */
+  imageAssetId: id<AssetId>().nullable().default(null),
   /**
    * How long the row runs, in whole seconds (addendum 05 §4).
    *

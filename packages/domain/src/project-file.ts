@@ -10,6 +10,7 @@ import {
   researchCategorySchema,
   researchItemSchema,
 } from './entities/research.js';
+import { assetSchema } from './entities/asset.js';
 import { setupPayoffSchema } from './entities/setups.js';
 import { snapshotSchema } from './entities/revision.js';
 import { writingSessionSchema } from './sessions.js';
@@ -50,6 +51,12 @@ export const projectFileSchema = z.object({
   units: z.array(structuralUnitSchema).default([]),
   beats: z.array(beatSchema).default([]),
   markers: z.array(storyMarkerSchema).default([]),
+  /**
+   * The pictures the document carries (addendum 05 §3c): storyboard frames,
+   * each stored once and referenced by id. Empty in a file that has none,
+   * which is every file that predates them.
+   */
+  assets: z.array(assetSchema).default([]),
   researchCategories: z.array(researchCategorySchema).default([]),
   researchItems: z.array(researchItemSchema).default([]),
   characters: z.array(characterSchema).default([]),

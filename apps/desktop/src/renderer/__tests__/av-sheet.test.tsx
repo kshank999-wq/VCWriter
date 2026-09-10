@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import {
   addBeat,
   createProjectFile,
+  setRowFrame,
   setTitlePage,
   updateBeat,
   updateUnit,
@@ -12,6 +13,7 @@ import {
 } from '@vcwriter/domain';
 import { MasterPanel } from '../components/MasterPanel';
 import { paneNamesFor, scriptWordFor } from '../panes';
+import { MAX_EDGE, isPicture, pictureFrom } from '../frames';
 
 /**
  * Short form's document is the AV sheet, in place of the Script (addendum 05).
@@ -275,5 +277,60 @@ describe('narration, dialogue and the stripped workspace', () => {
     const was = visual.value;
     fireEvent.keyDown(visual, { key: 'Tab' });
     expect(screen.getByLabelText('What is seen in row 1.1')).toHaveProperty('value', was);
+  });
+});
+
+describe('storyboard frames on the sheet', () => {
+  const picture = 'data:image/png;base64,iVBORw0KGgo=';
+
+  it('offers a plate to drop a frame on, one to a row', () => {
+    panel(commercial());
+    expect(screen.getByLabelText('Add a frame to row 1.1')).toBeTruthy();
+    expect(screen.getByLabelText('Add a frame to row 1.2')).toBeTruthy();
+    expect(screen.getAllByText('Drop a frame')).toHaveLength(2);
+  });
+
+  it('shows the frame a row already has, and lets it go', () => {
+    let file = commercial();
+    file = setRowFrame(file, file.beats[0]!.id, { name: 'open.png', data: picture, width: 800, height: 450 }).file;
+    panel(file);
+
+    const frame = document.querySelector('.av-plate.filled img') as HTMLImageElement;
+    expect(frame.getAttribute('src')).toBe(picture);
+    // And the plate says it would replace rather than add.
+    expect(screen.getByLabelText('Replace the frame for row 1.1')).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText('Remove the frame from row 1.1'));
+    expect(document.querySelector('.av-plate.filled')).toBeNull();
+    expect(screen.getByLabelText('Add a frame to row 1.1')).toBeTruthy();
+  });
+
+  it('lines the audio up with the frames, because a row is one row', () => {
+    let file = commercial();
+    file = setRowFrame(file, file.beats[0]!.id, { data: picture }).file;
+    panel(file);
+
+    // The frame and the words it belongs to are cells of the same row: the
+    // alignment is the layout, not a thing computed on top of it.
+    const row = document.querySelectorAll('.av-row')[0] as HTMLElement;
+    expect(within(row).getByLabelText('What is heard in row 1.1')).toBeTruthy();
+    expect(row.querySelector('.av-plate.filled img')).toBeTruthy();
+  });
+
+  it('reads a picture, scales it, and refuses what is not one', async () => {
+    // The scaling itself needs a canvas, which jsdom has none of; what is
+    // tested here is that a picture is told from anything else.
+    expect(isPicture(new File([''], 'a.png', { type: 'image/png' }))).toBe(true);
+    expect(isPicture(new File([''], 'a.txt', { type: 'text/plain' }))).toBe(false);
+    expect(MAX_EDGE).toBe(960);
+
+    const list = {
+      0: new File([''], 'note.txt', { type: 'text/plain' }),
+      1: new File([''], 'frame.png', { type: 'image/png' }),
+      length: 2,
+      item: (index: number) => (index === 0 ? list[0] : list[1]),
+    } as unknown as FileList;
+    expect(pictureFrom(list)?.name).toBe('frame.png');
+    expect(pictureFrom(null)).toBeNull();
   });
 });

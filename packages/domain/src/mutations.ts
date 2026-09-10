@@ -342,6 +342,7 @@ export const updateBeat = (
       // A row of an AV sheet: what is seen, and how long it runs (addendum 05).
       | 'visual'
       | 'seconds'
+      | 'imageAssetId'
     >
   > & { manuscript?: ManuscriptSegment },
 ): ProjectFile => {

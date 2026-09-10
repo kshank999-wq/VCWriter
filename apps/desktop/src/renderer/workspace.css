@@ -5803,12 +5803,71 @@ button.av-row-number {
   width: 220px;
 }
 
-/* The plate a frame goes on. Empty until stage 3 puts one there. */
+/* The plate a frame goes on: drop a picture on it, or click and choose one.
+   A filled plate is as tall as its picture, and the row is as deep as its
+   tallest column — which is how the audio beside a frame comes to line up
+   with it (addendum 05 §3c). */
+.av-plate-holder {
+  position: relative;
+}
+
 .av-plate {
-  height: 108px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 108px;
+  padding: 0;
   border-radius: 4px;
   background: var(--panel-2);
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.av-plate:hover,
+.av-plate.over {
+  border-color: var(--gold-deep);
+  color: var(--text);
+}
+
+.av-plate.over {
+  border-style: solid;
+}
+
+.av-plate.filled {
+  border-style: solid;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.av-plate img,
+.av-frame {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 3px;
+}
+
+.av-frame {
   border: 1px solid var(--border);
+}
+
+/* Out of the way until the row is under the cursor, like the row's own
+   handles — a board is looked at more than it is edited. */
+.av-frame-off {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  background: var(--panel);
+  border-radius: 3px;
+  transition: opacity 90ms ease;
+}
+
+.av-row:hover .av-frame-off,
+.av-plate-holder:focus-within .av-frame-off {
+  opacity: 1;
 }
 
 .av-duration {

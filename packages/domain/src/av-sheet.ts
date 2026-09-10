@@ -2,9 +2,12 @@ import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { countWords } from './entities/manuscript.js';
 import { addBeat, moveBeat, updateBeat } from './mutations.js';
 import { newId } from './ids.js';
+import { assetSchema } from './entities/asset.js';
+import { nowIso } from './entities/common.js';
 import type { ProjectFile } from './project-file.js';
-import type { BeatId, ManuscriptElementId, StructuralUnitId } from './ids.js';
+import type { AssetId, BeatId, ManuscriptElementId, StructuralUnitId } from './ids.js';
 import type { ManuscriptElement } from './entities/manuscript.js';
+import type { Asset } from './entities/asset.js';
 
 /**
  * The AV sheet (addendum 05).
@@ -59,6 +62,8 @@ export interface AvRow {
    * has no time yet, because nothing has been claimed to be wrong.
    */
   fits: boolean | null;
+  /** The storyboard frame beside the row, resolved. Null where there is none. */
+  frame: Asset | null;
 }
 
 export interface AvSegment {
@@ -110,6 +115,7 @@ const versionOf = (file: ProjectFile): string => {
 
 export const avSheet = (file: ProjectFile): AvSheet => {
   const units = unitsInStoryOrder(file).filter((unit) => unit.inScript);
+  const frames = new Map((file.assets ?? []).map((asset) => [asset.id as string, asset]));
 
   let words = 0;
   let seconds = 0;
@@ -131,6 +137,8 @@ export const avSheet = (file: ProjectFile): AvSheet => {
         seconds: rowSeconds,
         // A row with no time yet is not a row with a problem.
         fits: rowSeconds === 0 ? null : rowWords <= rowSeconds * WORDS_PER_SECOND,
+        // A frame whose picture has gone reads as no frame rather than a gap.
+        frame: beat.imageAssetId ? (frames.get(beat.imageAssetId as string) ?? null) : null,
       };
     });
 
@@ -297,4 +305,53 @@ export const moveRow = (file: ProjectFile, beatId: BeatId, direction: -1 | 1): P
     toUnitId: neighbour.id,
     index: direction === 1 ? 0 : into.length,
   });
+};
+
+
+/**
+ * Put a picture in the document and hang it beside a row (§3c).
+ *
+ * The picture is stored once, in the file, and the row holds a reference to
+ * it — a frame used on two rows is one picture. It arrives already scaled and
+ * encoded: what a storyboard needs is a legible frame, not the original from
+ * somebody's camera, and the file has to stay a file somebody can send.
+ */
+export const setRowFrame = (
+  file: ProjectFile,
+  beatId: BeatId,
+  frame: { name?: string; data: string; width?: number; height?: number },
+): { file: ProjectFile; assetId: AssetId } => {
+  const asset = assetSchema.parse({
+    id: newId<AssetId>(),
+    projectId: file.project.id,
+    kind: 'image',
+    name: frame.name ?? '',
+    data: frame.data,
+    width: frame.width ?? 0,
+    height: frame.height ?? 0,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  });
+  const withAsset: ProjectFile = { ...file, assets: [...(file.assets ?? []), asset] };
+  return { file: pruneFrames(updateBeat(withAsset, beatId, { imageAssetId: asset.id })), assetId: asset.id };
+};
+
+/** Take the frame off a row. The picture goes with it if nothing else wants it. */
+export const clearRowFrame = (file: ProjectFile, beatId: BeatId): ProjectFile =>
+  pruneFrames(updateBeat(file, beatId, { imageAssetId: null }));
+
+/**
+ * Drop the pictures nothing points at any more.
+ *
+ * A frame replaced or removed would otherwise sit in the file for good, and a
+ * board reworked a dozen times would carry every version of every frame with
+ * it. A picture two rows share is kept while either of them wants it.
+ */
+export const pruneFrames = (file: ProjectFile): ProjectFile => {
+  const wanted = new Set(
+    file.beats.map((beat) => beat.imageAssetId as string | null).filter((id): id is string => id !== null),
+  );
+  const kept = (file.assets ?? []).filter((asset) => wanted.has(asset.id as string));
+  if (kept.length === (file.assets ?? []).length) return file;
+  return { ...file, assets: kept };
 };
