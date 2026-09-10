@@ -1,6 +1,6 @@
 # Addendum 05 — Short form: the AV sheet, and the board
 
-Status: stages 1–2 built, September 2026; the rest specified. Fills in what addendum 02
+Status: stages 1–3 built, September 2026; the rest specified. Fills in what addendum 02
 §14 left open: *"the module that makes something of it, with the timings and
 the shapes that kind of work needs, is a later piece of work."* This is that
 piece.
@@ -22,8 +22,8 @@ the same lanes, the same timeline, the same research, the same editors.
 | The finished document | Script — pages | **The sheet** — rows |
 | The unit of work | A beat, written as manuscript | **A row**: audio, visual, a frame, a duration |
 | What it is measured in | Pages | **Seconds** |
-| The timeline's lanes | Beats | The same beats, **as the rows** |
-| The timeline's track | Screen time from the page count | **The storyboard**, frame by frame |
+| The timeline | Lanes of plot, acts, threads, links | **One track**, segments and their dialogue |
+| Above it | Screen time from the page count | **The storyboard**, frame by frame |
 
 **Nothing new is invented underneath.** A segment is a scene; a row is a
 beat; the story order is the story order. What the sheet adds is a second
@@ -81,23 +81,68 @@ and four figures — the segment's running time and words, and the running
 totals to that point. A commercial is sold in segments and cut in segments,
 and the person reading it wants to know where each one lands.
 
-## 3. The board, and the timeline
+## 3. The workspace, stripped
 
-**The storyboard is the timeline's track.** Where a screenplay's timeline
-shows screen time measured off the page count, a short-form one shows the
-frames themselves, in order, one to a row, at the width of that row's
-duration. Run your eye along it and you are looking at the cut.
+Short form is not a screenplay with a stopwatch on it, and the workspace
+should not pretend otherwise. **The things a script needs and a commercial
+does not are taken out** rather than left there greyed:
 
-**The lanes hold the rows.** The same lanes as everywhere else, holding the
-same beats — but each one drawn as its row: its number, the first words of
-its audio, its frame.
+| Gone in short form | Why |
+| --- | --- |
+| `+ Scene`, `+ Beat`, `+ Lane` | The work happens on the sheet. A segment and a row are made there. |
+| Plot lanes | A commercial has no subplot. There is nothing to lane. |
+| Acts | There are no act breaks in a thirty. |
+| Threads, and Links | Nobody tracks a character's arc across a spot. |
+| The word **Scene** | It is a **Segment**, everywhere it is written. |
+
+What is left is the sheet, and one timeline under a strip of frames.
+
+## 3a. One timeline, with the board above it
+
+**A single timeline**, the way an edit suite has one — a visual track over a
+time track, and a playhead through both.
+
+- **Above**: the storyboard. Each frame at the width of the time it holds,
+  in order, so running your eye along it is looking at the cut.
+- **Below**: the segments, named `SEGMENT 1 — Know your enemy`, each as wide
+  as it runs. There are **no beats drawn in a segment**: what is drawn is the
+  dialogue, stretched out along the time it takes, which is the thing being
+  timed.
+- **A playhead** through both, and playback (§5).
 
 **One thing, seen twice.** Writing a row into the sheet puts it on the
 timeline; there is no *add to timeline* anywhere, because there is nothing to
-add — it is already there. Dragging rows into a new order in the sheet
-reorders the timeline, and dragging them on the timeline reorders the sheet.
-They are the same story order the whole workspace already shares (addendum 02
-§8), which is why this costs nothing to be true.
+add — it is already there. Reordering rows on the sheet reorders the
+timeline. They are the same story order the whole workspace already shares
+(addendum 02 §8), which is why this costs nothing to be true.
+
+## 3b. Writing a row
+
+Type into **Audio** and you are writing what is heard — narration, plain.
+
+- **Return** starts the next line.
+- **Tab** makes the line a piece of **dialogue**, which the sheet sets in
+  quotation marks: `"You're always late."` Narration and dialogue are
+  different things in a commercial, and the quotation marks are how a board
+  says which is which at a glance.
+- Then across to **Visual**, and write what is seen.
+
+## 3c. Frames, and what they do to the row
+
+**The Visual column takes pictures.** Drop one on a row and it is that row's
+frame. Drop another below it and **that is another row** — still in the same
+segment, because a segment is not one shot.
+
+That is the whole reason the columns are what they are: a row is as deep as
+its tallest column, so the audio beside a frame **spaces out to line up with
+it**. Add a frame for the opening, another for the action that follows, and
+the dialogue distributes itself down the page against them. The alignment is
+not a feature bolted on — it is what the layout is.
+
+**Frames are kept in the file.** A project is one document that opens on
+another machine, so the frames travel in it: an `assets` collection holding
+each image once, referenced by id, so a frame used in two rows is stored once
+and a row holds a reference rather than a picture.
 
 ## 4. Time
 
@@ -142,11 +187,6 @@ Everything below already exists on a beat except where it says otherwise.
 | Its words | The audio, counted |
 | Comments | The workspace's own |
 
-**Frames are kept in the file.** A project is one document that opens on
-another machine, so the frames travel in it: an `assets` collection holding
-each image once, referenced by id, so a frame used in two rows is stored
-once and a row holds a reference rather than a picture.
-
 ## 7. What it does not do
 
 - **It does not time the script for you.** It counts words and says whether
@@ -167,11 +207,16 @@ once and a row holds a reference rather than a picture.
 2. **Built.** Writing in it: audio and visual edited in place, rows added,
    removed and reordered, durations typed — the sheet as the place the work
    happens, in place of the Script.
-3. **Frames.** The asset store, dropping an image on a row, and the frames on
-   the timeline's track.
-4. **The lanes as rows**, and reordering that goes both ways.
-5. **Playback**, with the voices already assigned.
-6. **Print and export**: the sheet as it is on screen, and a board.
+3. **Built.** The workspace stripped (§3): no scene, beat or lane; no acts,
+   threads or links; Scene becomes Segment wherever it is written; one
+   track, with each segment's dialogue laid along its time; and Tab marks a
+   line as spoken (§3b).
+4. **Frames** (§3c): the asset store, dropping an image on a row, more than
+   one down a segment, and the audio spacing out against them.
+5. **One timeline** (§3a): the frames above, the segments and their dialogue
+   below, and a playhead through both.
+6. **Playback**, with the voices already assigned.
+7. **Print and export**: the sheet as it is on screen, and a board.
 
 Stage 1 alone is worth having: a writer who can see their commercial as an AV
 sheet, with the times and the counts adding up, has the document the business
@@ -229,3 +274,29 @@ hide the very thing the two columns are for.
 
 **A row added or moved here is added or moved on the timeline**, because
 there is only one of it. Nothing is kept in step; there is nothing to keep.
+
+### Stage 3 — the workspace stripped
+
+Open a short-form project and the things a script needs and a commercial does
+not are **gone**, not greyed:
+
+- `+ Scene`, `+ Beat`, `+ Lane` and `+ Marker` leave the timeline's toolbar.
+  A segment and a row are made on the sheet.
+- The **Acts** and **Links** tracks go, in the timeline and in the Timeline &
+  Viewer, and so do **Markers** and **Threads** above. Nobody tracks an arc
+  across a thirty.
+- **One track**, not a lane per plot. Its head says **Segments**, and it holds
+  every segment there is — there is no subplot to lane.
+- **Segment**, everywhere the word Scene was.
+- A segment on the timeline is drawn as `SEGMENT 1 — Know your enemy`, and
+  under it, **no beats**: the dialogue, each row at the width of its own
+  duration, so the strip under a segment *is* the read. A row nobody has
+  timed takes an even share until somebody says.
+- On the sheet the heading is the same: the number, then the name beside it,
+  typed where it is read.
+
+**Tab marks a line as spoken.** In the audio column it puts the line you are
+on in quotation marks — `"You're always late."` — and Tab again takes them
+off, because the same key that made it dialogue is the key that changes its
+mind. It does not move focus, for the same reason Tab does not in the beat
+window. The visual column has no such key: nothing there is spoken.

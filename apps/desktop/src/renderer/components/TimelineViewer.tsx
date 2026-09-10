@@ -71,7 +71,19 @@ export function TimelineViewer({
   // Folded or not, remembered per machine: a writer with a cast of thirty
   // wants them away, and one with four wants them there.
   const [castOpen, setCastOpen] = usePreference('viewerCast', true);
-  const noun = file.project.format === 'novel' || file.project.format === 'short_story' ? 'Chapters' : 'Scenes';
+  /**
+   * What the story's parts are called here. A commercial's are segments, and
+   * short form drops the tracks a script needs and a spot does not: no
+   * markers to place, no threads to follow, no links to draw (addendum 05
+   * §3). What is left is the segments and their time.
+   */
+  const shortForm = file.project.format === 'short_form';
+  const noun =
+    file.project.format === 'novel' || file.project.format === 'short_story'
+      ? 'Chapters'
+      : shortForm
+        ? 'Segments'
+        : 'Scenes';
 
   const selectedUnitId = useMemo(() => {
     const beat = selectedBeatId ? file.beats.find((candidate) => candidate.id === selectedBeatId) : undefined;
@@ -168,7 +180,9 @@ export function TimelineViewer({
           <div className="viewer-time viewer-sticky tail" />
 
           {/* The markers, above the scenes: acts in a script, chapters in a
-              book, each at the point it starts. */}
+              book, each at the point it starts. A commercial has neither. */}
+          {shortForm ? null : (
+            <>
           <div className="track-head viewer-sticky marks">Markers</div>
           {spans.map((span) => {
             const placed = marks.get(span.unit.id as string);
@@ -196,6 +210,8 @@ export function TimelineViewer({
             );
           })}
           <div className="viewer-mark viewer-sticky tail" />
+            </>
+          )}
 
           <div className="track-head viewer-sticky scenes">{noun}</div>
           {spans.map((span) => {
@@ -247,7 +263,7 @@ export function TimelineViewer({
             <Row key={row.key} row={row} spans={spans} onPick={pick} />
           ))}
 
-          {rows.length === 0 ? (
+          {rows.length === 0 && !shortForm ? (
             <>
               <div className="track-head">Threads</div>
               <p className="muted viewer-empty" style={{ gridColumn: `span ${spans.length + 1}` }}>
@@ -256,9 +272,14 @@ export function TimelineViewer({
             </>
           ) : null}
 
-          <div className="track-head">Links</div>
-          <LinksRow arcs={arcs} widths={widths} spans={spans} onUpdate={onUpdate} />
-          <div className="viewer-links tail" />
+          {/* Nobody tracks a character's arc across a thirty (addendum 05 §3). */}
+          {shortForm ? null : (
+            <>
+              <div className="track-head">Links</div>
+              <LinksRow arcs={arcs} widths={widths} spans={spans} onUpdate={onUpdate} />
+              <div className="viewer-links tail" />
+            </>
+          )}
         </div>
       </div>
     </section>

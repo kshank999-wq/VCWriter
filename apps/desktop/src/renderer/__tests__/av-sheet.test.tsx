@@ -235,3 +235,45 @@ describe('writing in the sheet', () => {
     expect(screen.getByLabelText('What is heard in row 1.1')).toBeTruthy();
   });
 });
+
+describe('narration, dialogue and the stripped workspace', () => {
+  it('puts a line in quotation marks on Tab, and takes them off again', () => {
+    panel(commercial());
+    const box = () => screen.getByLabelText('What is heard in row 1.1') as HTMLTextAreaElement;
+    fireEvent.change(box(), { target: { value: 'You are always late' } });
+
+    box().setSelectionRange(0, 0);
+    fireEvent.keyDown(box(), { key: 'Tab' });
+    expect(box()).toHaveProperty('value', '"You are always late"');
+
+    // The same key changes its mind, because it is the same decision.
+    box().setSelectionRange(0, 0);
+    fireEvent.keyDown(box(), { key: 'Tab' });
+    expect(box()).toHaveProperty('value', 'You are always late');
+  });
+
+  it('marks only the line the caret is on', () => {
+    panel(commercial());
+    const audio = screen.getByLabelText('What is heard in row 1.1') as HTMLTextAreaElement;
+    fireEvent.change(audio, { target: { value: 'The bell rings.\nYou came.' } });
+
+    const box = screen.getByLabelText('What is heard in row 1.1') as HTMLTextAreaElement;
+    box.setSelectionRange(box.value.length, box.value.length);
+    fireEvent.keyDown(box, { key: 'Tab' });
+    expect(screen.getByLabelText('What is heard in row 1.1')).toHaveProperty(
+      'value',
+      'The bell rings.\n"You came."',
+    );
+  });
+
+  it('says Segment and puts the name beside the number', () => {
+    panel(commercial());
+    expect(screen.getByText('Segment 1')).toBeTruthy();
+    expect(screen.getByLabelText('Name of segment 1')).toHaveProperty('value', 'Know your enemy...');
+    // The visual column has no Tab of its own: it is not spoken.
+    const visual = screen.getByLabelText('What is seen in row 1.1') as HTMLTextAreaElement;
+    const was = visual.value;
+    fireEvent.keyDown(visual, { key: 'Tab' });
+    expect(screen.getByLabelText('What is seen in row 1.1')).toHaveProperty('value', was);
+  });
+});

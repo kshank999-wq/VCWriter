@@ -12,6 +12,8 @@ import {
   setRowVisual,
   createProjectFile,
   formatRt,
+  isSpoken,
+  toggleSpoken,
   setTitlePage,
   updateBeat,
   updateUnit,
@@ -274,5 +276,28 @@ describe('writing in the sheet', () => {
     const before = rowsOf(file).map((row) => row.audio);
     expect(rowsOf(moveRow(file, file.beats[0]!.id, -1)).map((row) => row.audio)).toEqual(before);
     expect(rowsOf(moveRow(file, file.beats.at(-1)!.id, 1)).map((row) => row.audio)).toEqual(before);
+  });
+});
+
+describe('narration and dialogue', () => {
+  it('puts a line in quotation marks, and takes them off again', () => {
+    expect(toggleSpoken('You are always late')).toBe('"You are always late"');
+    expect(toggleSpoken('"You are always late"')).toBe('You are always late');
+    // An empty line becomes an empty pair, ready to be typed between.
+    expect(toggleSpoken('')).toBe('""');
+    expect(toggleSpoken('   ')).toBe('""');
+  });
+
+  it('does not stack quotation marks on a line that has them', () => {
+    expect(toggleSpoken('  ""You came""  ')).toBe('You came');
+    expect(toggleSpoken('"You came')).toBe('"You came"');
+  });
+
+  it('knows a spoken line from a narrated one', () => {
+    expect(isSpoken('"You came"')).toBe(true);
+    expect(isSpoken('The bell rings.')).toBe(false);
+    // A quotation inside a line of narration is not a line of dialogue.
+    expect(isSpoken('He said "hello" and left.')).toBe(false);
+    expect(isSpoken('')).toBe(false);
   });
 });

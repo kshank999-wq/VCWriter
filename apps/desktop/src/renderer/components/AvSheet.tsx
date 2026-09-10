@@ -10,6 +10,7 @@ import {
   setRowAudio,
   setRowSeconds,
   setRowVisual,
+  toggleSpoken,
   updateUnit,
   type AvRow,
   type BeatId,
@@ -76,19 +77,29 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false }: AvSheet
       {sheet.segments.map((segment) => (
         <section key={segment.unitId as string} className="av-segment">
           <header className="av-segment-head">
-            {readOnly ? (
-              <h2>{segment.name || `Segment ${segment.position}`}</h2>
-            ) : (
-              <input
-                className="av-segment-name"
-                aria-label={`Name of segment ${segment.position}`}
-                placeholder={`Segment ${segment.position}`}
-                value={segment.name}
-                onChange={(event) =>
-                  onUpdate((current) => updateUnit(current, segment.unitId, { title: event.target.value }))
-                }
-              />
-            )}
+            {/* It says Segment, and the name is written beside the number
+                rather than in place of it (addendum 05 §3a). */}
+            <h2 className="av-segment-heading">
+              <span className="av-segment-no">Segment {segment.position}</span>
+              {readOnly ? (
+                segment.name ? <span className="av-segment-named">— {segment.name}</span> : null
+              ) : (
+                <>
+                  <span className="av-segment-dash" aria-hidden="true">
+                    —
+                  </span>
+                  <input
+                    className="av-segment-name"
+                    aria-label={`Name of segment ${segment.position}`}
+                    placeholder="name it"
+                    value={segment.name}
+                    onChange={(event) =>
+                      onUpdate((current) => updateUnit(current, segment.unitId, { title: event.target.value }))
+                    }
+                  />
+                </>
+              )}
+            </h2>
             {readOnly ? (
               segment.line ? <p className="av-segment-line">{segment.line}</p> : null
             ) : (
@@ -231,6 +242,7 @@ function Row({ row, readOnly, onUpdate, onOpen }: RowProps) {
             placeholder="what is heard"
             value={row.audio}
             onChange={(text) => onUpdate((current) => setRowAudio(current, row.beatId, text))}
+            spokenKey
           />
         )}
         {/* The words are a check on the time and never a source for it (§4). */}
@@ -321,12 +333,37 @@ function Grow({
   placeholder,
   value,
   onChange,
+  spokenKey = false,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange(text: string): void;
+  /** Tab marks the line as spoken, which only the audio column has (§3b). */
+  spokenKey?: boolean;
 }) {
+  /**
+   * Tab puts the line you are on in quotation marks, and Tab again takes them
+   * off — narration and dialogue are different things in a commercial, and
+   * this is how a board says which is which. It does not move focus, for the
+   * same reason Tab does not in the beat window.
+   */
+  const speak = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!spokenKey || event.key !== 'Tab' || event.metaKey || event.ctrlKey || event.altKey) return;
+    event.preventDefault();
+    const box = event.currentTarget;
+    const lines = box.value.split('\n');
+    const upTo = box.value.slice(0, box.selectionStart).split('\n').length - 1;
+    const was = lines[upTo] ?? '';
+    lines[upTo] = toggleSpoken(was);
+    onChange(lines.join('\n'));
+
+    // Leave the caret inside the quotation marks it just put there.
+    const before = lines.slice(0, upTo).reduce((total, line) => total + line.length + 1, 0);
+    const at = before + Math.max(0, (lines[upTo] ?? '').length - (was.trim().startsWith('"') ? 0 : 1));
+    requestAnimationFrame(() => box.setSelectionRange(at, at));
+  };
+
   return (
     <div className="av-grow">
       <div className="av-grow-ink" aria-hidden="true">
@@ -336,6 +373,7 @@ function Grow({
         aria-label={label}
         placeholder={placeholder}
         value={value}
+        onKeyDown={speak}
         onChange={(event) => onChange(event.target.value)}
       />
     </div>

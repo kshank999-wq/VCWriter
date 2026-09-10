@@ -20,6 +20,7 @@ import {
   updateLane,
   updateMarker,
   updateUnit,
+  formatRt,
   type Beat,
   type BeatId,
   type Lane,
@@ -136,6 +137,12 @@ export function MasterTimeline({
   const threads = useMemo(() => givenThreads ?? threadLayout(file, { layout, arcs }), [givenThreads, file, layout, arcs]);
   const { spans, lanes } = layout;
   const noun = file.project.format === 'novel' || file.project.format === 'short_story' ? 'chapter' : 'scene';
+  /**
+   * A commercial has no subplot to lane, no acts to mark and nothing to link
+   * across a thirty (addendum 05 §3). Those tracks and their buttons are
+   * taken out rather than left there greyed.
+   */
+  const shortForm = file.project.format === 'short_form';
 
   const selectedBeat = selectedBeatId ? file.beats.find((beat) => beat.id === selectedBeatId) : undefined;
   // What was clicked wins; otherwise the scene being written in.
@@ -261,28 +268,35 @@ export function MasterTimeline({
             </span>
           </div>
 
-          {/* The markers as bands: acts in a script, chapters in a book. */}
-          <div className="track-head">
-            {markerNoun(defaultMarkerKind(file.project.format))}s
-          </div>
-          <ActsTrack layout={layout} playheadUnitId={selectedUnitId} onUpdate={onUpdate} />
-          <div className="acts-cell tail" />
+          {/* The markers as bands: acts in a script, chapters in a book.
+              A commercial has neither, and nothing is linked across a
+              thirty, so short form has neither track (addendum 05 §3). */}
+          {shortForm ? null : (
+            <>
+              <div className="track-head">
+                {markerNoun(defaultMarkerKind(file.project.format))}s
+              </div>
+              <ActsTrack layout={layout} playheadUnitId={selectedUnitId} onUpdate={onUpdate} />
+              <div className="acts-cell tail" />
 
-          {/* Links */}
-          <div className="track-head">Links</div>
-          <LinksTrack
-            arcs={arcs}
-            widths={widths}
-            spans={spans}
-            onPick={(index) => {
-              const first = beatsForUnit(file, spans[index]!.unit.id)[0];
-              if (first) onSelectBeat(first.id);
-            }}
-          />
-          <div className="links-cell tail" />
+              <div className="track-head">Links</div>
+              <LinksTrack
+                arcs={arcs}
+                widths={widths}
+                spans={spans}
+                onPick={(index) => {
+                  const first = beatsForUnit(file, spans[index]!.unit.id)[0];
+                  if (first) onSelectBeat(first.id);
+                }}
+              />
+              <div className="links-cell tail" />
+            </>
+          )}
 
           {/* One track per lane */}
-          {lanes.map((lane, laneIndex) => (
+          {/* Short form has one track, not a lane per plot (§3): the first
+              lane carries every segment, and the rest are not drawn. */}
+          {(shortForm ? lanes.slice(0, 1) : lanes).map((lane, laneIndex) => (
             <LaneTrack
               key={lane.id}
               file={file}
@@ -291,6 +305,7 @@ export function MasterTimeline({
               laneCount={lanes.length}
               spans={spans}
               noun={noun}
+              shortForm={shortForm}
               selectedBeatId={selectedBeatId}
               selectedUnitId={selectedUnitId}
               beatRows={rows}
@@ -316,29 +331,35 @@ export function MasterTimeline({
       </div>
 
       <footer className="timeline-toolbar">
-        <button type="button" className="tool" onClick={onAddScene}>
-          + {noun === 'chapter' ? 'Chapter' : 'Scene'}
-        </button>
-        <button type="button" className="tool" onClick={onAddBeat} disabled={!selectedUnitId}>
-          + Beat
-        </button>
-        <button type="button" className="tool" onClick={onAddLane}>
-          + Lane
-        </button>
-        {/* Always "Marker": in prose the scene button already says Chapter,
-            and what kind of marker this one is — act, chapter, part — is
-            chosen on the marker itself (addendum 02 §11). */}
-        <button
-          type="button"
-          className="tool"
-          onClick={onAddAct}
-          disabled={!selectedUnitId}
-          title={`A point in the story: an act in a script, a chapter in a book. Starts a ${markerNoun(
-            defaultMarkerKind(file.project.format),
-          ).toLowerCase()} here.`}
-        >
-          + Marker
-        </button>
+        {/* In short form the work happens on the sheet: a segment and a row
+            are made there, and there is nothing to lane or to mark (§3). */}
+        {shortForm ? null : (
+          <>
+            <button type="button" className="tool" onClick={onAddScene}>
+              + {noun === 'chapter' ? 'Chapter' : 'Scene'}
+            </button>
+            <button type="button" className="tool" onClick={onAddBeat} disabled={!selectedUnitId}>
+              + Beat
+            </button>
+            <button type="button" className="tool" onClick={onAddLane}>
+              + Lane
+            </button>
+            {/* Always "Marker": in prose the scene button already says Chapter,
+                and what kind of marker this one is — act, chapter, part — is
+                chosen on the marker itself (addendum 02 §11). */}
+            <button
+              type="button"
+              className="tool"
+              onClick={onAddAct}
+              disabled={!selectedUnitId}
+              title={`A point in the story: an act in a script, a chapter in a book. Starts a ${markerNoun(
+                defaultMarkerKind(file.project.format),
+              ).toLowerCase()} here.`}
+            >
+              + Marker
+            </button>
+          </>
+        )}
         <label className="zoom">
           <span className="muted">Zoom</span>
           <input
@@ -488,6 +509,11 @@ interface LaneTrackProps {
   laneCount: number;
   spans: StorySpan[];
   noun: string;
+  /**
+   * Short form: the lane is not a plotline, a unit is a segment and a segment
+   * has no beats drawn in it (addendum 05 §3, §3a).
+   */
+  shortForm: boolean;
   selectedBeatId: BeatId | null;
   selectedUnitId: string | null;
   beatRows: number;
@@ -516,6 +542,7 @@ function LaneTrack({
   laneCount,
   spans,
   noun,
+  shortForm,
   selectedBeatId,
   selectedUnitId,
   beatRows,
@@ -593,25 +620,32 @@ function LaneTrack({
           {lane.collapsed ? '▸' : '▾'}
         </button>
         {/* The track's code, the way an editor labels V1, V2: click it to
-            open the plot's summary and arc. */}
-        <button
-          type="button"
-          className="lane-code"
-          style={{ borderColor: lane.color, color: lane.color }}
-          title={`Open ${lane.name}: summary and arc`}
-          aria-label={`Open plot ${lane.name}`}
-          onClick={() => onOpenLane(lane.id)}
-        >
-          P{laneIndex + 1}
-        </button>
-        <InlineText
-          value={lane.name}
-          ariaLabel="Lane name"
-          className="lane-name"
-          onCommit={(name) => onUpdate((current) => updateLane(current, lane.id, { name: name || 'Lane' }))}
-        />
+            open the plot's summary and arc. Short form has no plot to open —
+            the one track is the board, and it is not a plotline (§3). */}
+        {shortForm ? (
+          <span className="lane-name muted">Segments</span>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="lane-code"
+              style={{ borderColor: lane.color, color: lane.color }}
+              title={`Open ${lane.name}: summary and arc`}
+              aria-label={`Open plot ${lane.name}`}
+              onClick={() => onOpenLane(lane.id)}
+            >
+              P{laneIndex + 1}
+            </button>
+            <InlineText
+              value={lane.name}
+              ariaLabel="Lane name"
+              className="lane-name"
+              onCommit={(name) => onUpdate((current) => updateLane(current, lane.id, { name: name || 'Lane' }))}
+            />
+          </>
+        )}
         <span className="count muted">{units.length}</span>
-        {laneCount > 1 ? (
+        {laneCount > 1 && !shortForm ? (
           <button
             type="button"
             className="ghost danger"
@@ -626,7 +660,7 @@ function LaneTrack({
       {spans.map((span) => {
         const unit = span.unit;
         const atPlayhead = unit.id === selectedUnitId ? ' playhead' : '';
-        if (unit.laneId !== lane.id) {
+        if (!shortForm && unit.laneId !== lane.id) {
           // Another lane's scene occupies this story position; the empty
           // slot is where a scene can be dropped to take that position here.
           return (
@@ -693,8 +727,20 @@ function LaneTrack({
               >
                 {collapsed ? '▸' : '▾'}
               </button>
-              <span className="block-label">{unit.sequenceLabel}</span>
-              <span className="block-title">{unit.title || `Untitled ${unit.kind}`}</span>
+              {/* A commercial's parts are segments, numbered where they fall
+                  and named beside the number (addendum 05 §3a). */}
+              <span className="block-label">
+                {shortForm
+                  ? `Segment ${spans.findIndex((span) => span.unit.id === unit.id) + 1}`
+                  : unit.sequenceLabel}
+              </span>
+              <span className="block-title">
+                {shortForm
+                  ? unit.title
+                    ? `— ${unit.title}`
+                    : ''
+                  : unit.title || `Untitled ${unit.kind}`}
+              </span>
               <button
                 type="button"
                 className="ghost danger block-remove"
@@ -708,7 +754,19 @@ function LaneTrack({
               </button>
             </header>
 
-            {collapsed ? null : (
+            {/* A segment has no beats drawn in it: what is drawn is the
+                dialogue, stretched along the time it takes (addendum 05
+                §3a). That is the thing being timed. */}
+            {shortForm ? (
+              collapsed ? null : (
+                <SegmentDialogue
+                  beats={beats}
+                  selectedBeatId={selectedBeatId}
+                  onSelectBeat={onSelectBeat}
+                  onOpenBeat={onOpenBeat}
+                />
+              )
+            ) : collapsed ? null : (
               <ul
                 className="block-beats"
                 style={{ '--beat-rows': beatRows } as React.CSSProperties}
@@ -814,5 +872,54 @@ function LaneTrack({
         }}
       />
     </>
+  );
+}
+
+
+/**
+ * A segment's dialogue, laid along the time it takes (addendum 05 §3a).
+ *
+ * The short-form timeline draws no beats: a commercial is not built out of
+ * cards, it is built out of seconds. Each row takes the width of its own
+ * duration, so the strip under a segment *is* the read — long lines look
+ * long, and a row nobody has timed takes an even share until somebody says.
+ */
+function SegmentDialogue({
+  beats,
+  selectedBeatId,
+  onSelectBeat,
+  onOpenBeat,
+}: {
+  beats: Beat[];
+  selectedBeatId: BeatId | null;
+  onSelectBeat(beatId: BeatId): void;
+  onOpenBeat: MasterTimelineProps['onOpenBeat'];
+}) {
+  if (beats.length === 0) return <p className="segment-empty muted">No rows yet.</p>;
+  return (
+    <div className="segment-dialogue" role="list">
+      {beats.map((beat) => {
+        const said = beat.manuscript.elements
+          .map((element) => element.text.trim())
+          .filter((text) => text.length > 0)
+          .join(' ');
+        return (
+          <button
+            type="button"
+            role="listitem"
+            key={beat.id}
+            className={`segment-line${beat.id === selectedBeatId ? ' selected' : ''}`}
+            style={{ flexGrow: Math.max(1, beat.seconds ?? 0) }}
+            title={said || 'Nothing said yet'}
+            aria-label={`${formatRt(beat.seconds ?? 0)} — ${said || 'nothing said yet'}`}
+            onClick={() => onSelectBeat(beat.id)}
+            onDoubleClick={() => onOpenBeat?.(beat.id)}
+          >
+            <span className="segment-said">{said || '—'}</span>
+            <span className="segment-rt muted">{formatRt(beat.seconds ?? 0)}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }

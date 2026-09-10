@@ -181,6 +181,31 @@ export const parseRt = (text: string): number | null => {
 };
 
 /**
+ * A line of the audio column, marked as spoken (addendum 05 §3b).
+ *
+ * Narration and dialogue are different things in a commercial, and a board
+ * says which is which with quotation marks. Tab puts them on the line you are
+ * on; Tab again takes them off, because the same key that made it dialogue is
+ * the key that changes its mind.
+ */
+export const toggleSpoken = (line: string): string => {
+  const trimmed = line.trim();
+  if (trimmed.length === 0) return '""';
+  if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length > 1) {
+    // Every quotation mark at either end, so a line that somehow got two
+    // pairs comes back clean rather than one pair at a time.
+    return trimmed.replace(/^"+|"+$/g, '').trim();
+  }
+  return `"${trimmed.replace(/^"+|"+$/g, '').trim()}"`;
+};
+
+/** Whether a line of the audio column is spoken rather than narrated. */
+export const isSpoken = (line: string): boolean => {
+  const trimmed = line.trim();
+  return trimmed.length > 1 && trimmed.startsWith('"') && trimmed.endsWith('"');
+};
+
+/**
  * What is heard in a row, written in place.
  *
  * The audio column is plain lines, so this keeps them as plain lines: one
