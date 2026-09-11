@@ -1306,10 +1306,34 @@ indentation: a cue is 3.7in from the left edge, a speech 2.5in, a
 parenthetical 3in, action and sluglines at the margin.
 
 So the reader works from the left edge, and it **measures rather than
-assumes**: the margin is taken to be the commonest left edge in the
-document, since action and sluglines are the bulk of any screenplay, and
-every other indent is read relative to it. A script typed at 1.2in reads
-exactly as one typed at 1.5in.
+assumes** — **twice**.
+
+The **margin** is the leftmost edge with real use behind it, settled outright
+by the sluglines where the page has any, since a slugline is at the margin by
+definition. Every other indent is read relative to it, so a script typed at
+1.2in reads exactly as one typed at 1.5in.
+
+The **character** is measured too, and for a while it was not. It was a
+constant — twelve-point Courier, 7.2pt — and that is an assumption a scaled
+PDF breaks in the worst possible way. Print a script "fit to page", or put
+Letter content on A4, and everything lands at about 60% of where it should
+be: the margin still comes out right, because it is measured, and every other
+band comes out **proportionally short**, which shifts each one into the band
+below it. A cue at 22 characters reads as 13 and imports as dialogue; a
+speech at 10 reads as 6 and imports as action; only the parentheticals
+survive, because brackets are asked before the geometry is. The script
+arrives with its cues indented a little and its speeches at the margin —
+looking nearly right, which is the hardest way for it to be wrong.
+
+So the page is asked how wide its characters are, and **the cues answer**.
+They can be recognised by their words alone — short, shouting, no full stop,
+neither slugline nor transition — and the format puts them at a known 22
+characters from the margin, so the distance to where the cues actually sit,
+divided by 22, is the width of a character on this page whatever it was
+printed at. Three cues at one edge before the page is believed, so a stray
+shout in the middle of the action cannot rescale a script; a page with no
+cues to ask keeps the constant, which is what a full-size script measures
+anyway.
 
 Three things it does besides classify:
 

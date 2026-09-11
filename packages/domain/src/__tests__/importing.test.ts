@@ -6,6 +6,7 @@ import {
   gatherCast,
   marginOf,
   readFinalDraft,
+  charWidthOf,
   readLaidOutLines,
   readSlugline,
   type LaidOutLine,
@@ -372,5 +373,106 @@ describe('building the project', () => {
         { heading: 'INT. B - DAY', elements: [{ type: 'character', text: 'MAEVE' }] },
       ]).map((person) => [person.name, person.speeches, person.scenes]),
     ).toEqual([['MAEVE', 2, 2]]);
+  });
+});
+
+/**
+ * A PDF that has been **scaled** (addendum 02 §18).
+ *
+ * Print a script "fit to page", or put Letter content on A4, and everything
+ * lands at about 60% of where it should be. The margin still comes out right,
+ * because it is measured — but a *character* was a constant, so every other
+ * band came out proportionally short and shifted into the one below it. The
+ * script imported with its cues as dialogue and its speeches as action, which
+ * looks nearly right on the page and is the hardest way for it to be wrong.
+ */
+describe('a PDF that has been scaled', () => {
+  const CH = 7.2;
+  const MARGIN_IN = 1.5;
+
+  /** The same page, printed at `scale` of its proper size. */
+  const scaled = (scale: number): LaidOutLine[] => {
+    const margin = MARGIN_IN * 72 * scale;
+    const at = (indent: number, text: string, line: number): LaidOutLine => ({
+      text,
+      x: margin + indent * CH * scale,
+      y: (720 - line * 12) * scale,
+      page: 1,
+    });
+    return [
+      at(0, 'EXT. RUSSIAN GEOLOGY CENTER - DAY', 0),
+      at(0, 'A finger on a TV screen of the flyover video.', 2),
+      at(22, 'RUVIN', 4),
+      at(16, '(speaking to the room in Russian)', 5),
+      at(10, '2000 meters in diameter.', 6),
+      at(0, 'RUVIN MOROZOV, 45, tall, greasy hair.', 8),
+      at(22, 'RUVIN (CONT’D)', 10),
+      at(10, 'We need to survey the site.', 11),
+      at(22, 'GREGOR', 13),
+      at(10, 'The most excitement all year.', 14),
+      at(45, 'CUT TO:', 16),
+    ];
+  };
+
+  const typesOf = (lines: LaidOutLine[]): string[] => {
+    const read = readLaidOutLines(lines);
+    return read.scenes.flatMap((scene) => [
+      ...(scene.heading ? ['scene_heading'] : []),
+      ...scene.elements.map((element) => element.type),
+    ]);
+  };
+
+  const RIGHT = [
+    'scene_heading',
+    'action',
+    'character',
+    'parenthetical',
+    'dialogue',
+    'action',
+    'character',
+    'dialogue',
+    'character',
+    'dialogue',
+    'transition',
+  ];
+
+  it('measures the page rather than assuming twelve-point Courier', () => {
+    expect(charWidthOf(scaled(1), marginOf(scaled(1)))).toBeCloseTo(7.2, 1);
+    expect(charWidthOf(scaled(0.6), marginOf(scaled(0.6)))).toBeCloseTo(4.32, 1);
+  });
+
+  it('reads a full-size script exactly as it always did', () => {
+    expect(typesOf(scaled(1))).toEqual(RIGHT);
+  });
+
+  it('reads a scaled one the same way, instead of shifting every band down', () => {
+    // This is the one that used to come back with the cues as dialogue and the
+    // speeches as action — a script that looked nearly right and was not.
+    for (const scale of [0.85, 0.75, 0.65, 0.6, 0.55]) {
+      expect(typesOf(scaled(scale))).toEqual(RIGHT);
+    }
+  });
+
+  it('reads a script printed larger than life too', () => {
+    expect(typesOf(scaled(1.3))).toEqual(RIGHT);
+  });
+
+  it('keeps the constant where the page has no cues to ask', () => {
+    const noCues: LaidOutLine[] = [
+      { text: 'INT. A ROOM - DAY', x: 108, y: 700, page: 1 },
+      { text: 'Somebody waits.', x: 108, y: 676, page: 1 },
+    ];
+    expect(charWidthOf(noCues, marginOf(noCues))).toBe(7.2);
+  });
+
+  it('is not rescaled by one stray shout in the middle of the action', () => {
+    const page = scaled(1);
+    const strays = [
+      ...page,
+      { text: 'BANG', x: 108 + 30 * 7.2, y: 300, page: 1 },
+      { text: 'CRASH', x: 108 + 30 * 7.2, y: 288, page: 1 },
+    ];
+    // Two of them at one edge is not three, so the cues still answer.
+    expect(charWidthOf(strays, marginOf(strays))).toBeCloseTo(7.2, 1);
   });
 });

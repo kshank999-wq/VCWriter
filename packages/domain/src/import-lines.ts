@@ -127,8 +127,84 @@ export const marginOf = (lines: readonly LaidOutLine[]): number => {
   return (best ?? Math.min(...counts.keys())) * CHAR;
 };
 
+/**
+ * Where a cue sits, in characters from the margin: 3.7in less the 1.5in
+ * margin, in twelve-point Courier. The one indent in the format that is far
+ * enough from everything else to be recognised on its own.
+ */
+const CUE_CHARS = 22;
+
+/**
+ * **How wide a character is on this page, measured rather than assumed.**
+ *
+ * The margin is measured (`marginOf`) and every indent is read relative to it,
+ * which makes a script typed at 1.2in read exactly like one typed at 1.5in.
+ * But the *character* was a constant — twelve-point Courier, 7.2pt — and a PDF
+ * that has been scaled breaks that assumption in the worst possible way.
+ *
+ * Print a script "fit to page", or put Letter content on A4, and everything
+ * lands at about 60% of where it should be. The margin still comes out right,
+ * because it is measured; every other band comes out **proportionally short**,
+ * which shifts each one into the band below it. A cue at 22 characters reads
+ * as 13 and imports as dialogue. A speech at 10 reads as 6 and imports as
+ * action. Only the parentheticals survive, because brackets are asked before
+ * the geometry is. The result is a script that looks nearly right — cues
+ * indented a little, speeches at the margin — which is the hardest way for it
+ * to be wrong, because nothing about it says *import*.
+ *
+ * So the page is asked how wide its characters are. **Cues answer**: they can
+ * be recognised by their words alone — short, shouting, no full stop, not a
+ * slugline and not a transition — and the format puts them at a known 22
+ * characters, so the distance from the margin to where the cues actually sit
+ * divided by 22 is the width of a character on this page, whatever it was
+ * printed at.
+ *
+ * A page with no cues to ask keeps the constant, which is what every script
+ * typed at full size measures anyway.
+ */
+export const charWidthOf = (lines: readonly LaidOutLine[], margin: number): number => {
+  const counts = new Map<number, number>();
+
+  for (const line of lines) {
+    const text = line.text.trim();
+    if (text.length === 0 || text.length > 40) continue;
+    if (!isShout(text)) continue;
+    // A slugline is at the margin, a transition is past the cues, and a line
+    // that is all brackets is a (MORE) or a (CONT'D) rather than a name.
+    if (SCENE_PREFIX.test(text) || looksLikeTransition(text) || /^\(.*\)$/.test(text)) continue;
+    // A shouted sentence is action being emphatic, not somebody's name.
+    if (/[.!?]$/.test(text.replace(/\s*\(.*\)\s*$/, ''))) continue;
+
+    const offset = startOf(line) - margin;
+    if (offset <= 0) continue;
+    // To the nearest point: two cues typed at the same indent count together
+    // despite the sub-point wobble a PDF carries.
+    const key = Math.round(offset);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  let best = 0;
+  let mostSeen = 0;
+  for (const [key, seen] of counts) {
+    if (seen > mostSeen || (seen === mostSeen && key < best)) {
+      best = key;
+      mostSeen = seen;
+    }
+  }
+
+  // Three cues at one edge before the page is believed: one stray shout in the
+  // middle of the action should not be allowed to rescale the whole script.
+  if (mostSeen < 3) return CHAR;
+
+  const width = best / CUE_CHARS;
+  // A character narrower than a third of a point or wider than half an inch is
+  // not a scaled script, it is a misreading; the constant is the safer answer.
+  return width >= 2.5 && width <= 12 ? width : CHAR;
+};
+
 /** Indent in characters from the margin, which is what the format is written in. */
-const indentOf = (line: LaidOutLine, margin: number): number => Math.max(0, Math.round((startOf(line) - margin) / CHAR));
+const indentOf = (line: LaidOutLine, margin: number, char: number): number =>
+  Math.max(0, Math.round((startOf(line) - margin) / char));
 
 /**
  * What a line is, from where it sits and — only where that is not enough —
@@ -138,10 +214,11 @@ const indentOf = (line: LaidOutLine, margin: number): number => Math.max(0, Math
 const classify = (
   line: LaidOutLine,
   margin: number,
+  char: number,
   previous: ImportedElement | null,
 ): { type: ManuscriptElementType; guessed: boolean } => {
   const text = line.text.trim();
-  const indent = indentOf(line, margin);
+  const indent = indentOf(line, margin, char);
 
   if (SCENE_PREFIX.test(text)) return { type: 'scene_heading', guessed: false };
 
@@ -226,6 +303,8 @@ export const readLaidOutLines = (lines: readonly LaidOutLine[], options: { title
   const { titlePage, rest } = splitTitlePage(withoutFurniture);
   const usable = rest;
   const margin = marginOf(usable);
+  // How wide a character is here, asked of the page rather than assumed.
+  const char = charWidthOf(usable, margin);
   const warnings: string[] = [];
 
   const elements: ImportedElement[] = [];
@@ -235,7 +314,7 @@ export const readLaidOutLines = (lines: readonly LaidOutLine[], options: { title
   for (const line of usable) {
     const text = line.text.trim();
     const previous = elements[elements.length - 1] ?? null;
-    const { type, guessed } = classify(line, margin, previous);
+    const { type, guessed } = classify(line, margin, char, previous);
     if (guessed) guessedCount += 1;
 
     const sameIndent = previousLine !== null && Math.abs(startOf(previousLine) - startOf(line)) < CHAR;
