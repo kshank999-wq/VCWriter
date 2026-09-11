@@ -229,3 +229,53 @@ export const licenseReminder = (input: LicenseReminderInput): RenderedEmail => (
     'vc-writer.com',
   ].join('\n'),
 });
+
+export interface RoomInvitationInput {
+  /** The room, which is a project somebody is already writing. */
+  roomName: string;
+  /** Who asked, as a person rather than an address. */
+  from: string;
+  /** Their credit in the room — *Staff Writer*. Empty where none was given. */
+  title: string;
+  roleName: string;
+  acceptUrl: string;
+  /** When the link stops working, said plainly. */
+  expiresIn: string;
+}
+
+/**
+ * An invitation into a Writers Room (addendum 07 §14).
+ *
+ * It says what the person is being asked to be, because *role* and *title* are
+ * different things (§6) and an invitation that named only one of them would be
+ * asking somebody to accept a job nobody described. And it says when the link
+ * stops working, because an invitation that quietly expires looks like a
+ * broken product rather than a security decision.
+ */
+export const roomInvitation = (input: RoomInvitationInput): RenderedEmail => {
+  const asked = input.title.trim().length > 0 ? `${input.title} (${input.roleName})` : input.roleName;
+
+  return {
+    template: 'room_invitation',
+    version: 1,
+    subject: `${input.from} has invited you into ${input.roomName}`,
+    html: shell(
+      `You have been asked into ${input.roomName}`,
+      `<p style="margin:0 0 8px"><strong style="color:${GOLD}">${input.from}</strong> has invited you to join their Writers Room as <strong style="color:${GOLD}">${asked}</strong>.</p>
+       ${primaryLink(input.acceptUrl, 'Accept the invitation')}
+       ${note(`${diamond}The link works for ${input.expiresIn}. Your own drafts stay yours — nobody else in the room sees what you have not submitted.`)}`,
+    ),
+    text: [
+      'VC WRITER',
+      '',
+      `${input.from} has invited you into ${input.roomName} as ${asked}.`,
+      '',
+      `Accept: ${input.acceptUrl}`,
+      '',
+      `The link works for ${input.expiresIn}.`,
+      'Your own drafts stay yours — nobody else in the room sees what you have not submitted.',
+      '',
+      'vc-writer.com',
+    ].join('\n'),
+  };
+};

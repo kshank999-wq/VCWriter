@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { licenseReminder, purchaseConfirmation } from '../email-templates';
+import { licenseReminder, purchaseConfirmation, roomInvitation } from '../email-templates';
 
 /**
  * What a customer receives is a contract: the serial, the link, and a version
@@ -55,5 +55,49 @@ describe('email templates', () => {
     mkdirSync(dir, { recursive: true });
     writeFileSync(`${dir}/purchase-confirmation.html`, purchaseConfirmation({ ...inputs, platform: 'windows' }).html);
     writeFileSync(`${dir}/license-reminder.html`, licenseReminder(inputs).html);
+  });
+});
+
+/**
+ * The invitation into a Writers Room (addendum 07 §14).
+ *
+ * What it must say is what the person is being asked to *be*: role and title
+ * are different things (§6), and an invitation naming only one of them asks
+ * somebody to accept a job nobody described.
+ */
+describe('the room invitation', () => {
+  const invite = {
+    roomName: 'Blackout',
+    from: 'Ken Shank',
+    roleName: 'Writer',
+    acceptUrl: 'https://vc-writer.com/rooms/join/abc',
+    expiresIn: '14 days',
+  };
+
+  it('names the room, who asked, and the link, in both the HTML and the text', () => {
+    const email = roomInvitation({ ...invite, title: 'Staff Writer' });
+    for (const body of [email.html, email.text]) {
+      expect(body).toContain('Blackout');
+      expect(body).toContain('Ken Shank');
+      expect(body).toContain(invite.acceptUrl);
+      expect(body).toContain('14 days');
+    }
+    expect(email.subject).toBe('Ken Shank has invited you into Blackout');
+  });
+
+  it('says the title and the role together, because they are not one thing', () => {
+    expect(roomInvitation({ ...invite, title: 'Staff Writer' }).text).toContain('Staff Writer (Writer)');
+  });
+
+  it('says the role alone where no title was given, rather than empty brackets', () => {
+    const email = roomInvitation({ ...invite, title: '  ' });
+    expect(email.text).toContain('as Writer.');
+    expect(email.text).not.toContain('()');
+  });
+
+  it('promises the one thing a writer needs to hear before accepting', () => {
+    // §7: a room where everyone can read everyone's unfinished draft is a room
+    // where nobody drafts, so the invitation says so up front.
+    expect(roomInvitation({ ...invite, title: '' }).text).toContain('nobody else in the room sees');
   });
 });

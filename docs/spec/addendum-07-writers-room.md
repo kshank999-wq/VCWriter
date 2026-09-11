@@ -1,6 +1,6 @@
 # Addendum 07 — Writers Room
 
-Status: specified; **stage 0 built**, September 2026. From Ken's *VC Writer Writers
+Status: specified; **stages 0–1 built**, September 2026. From Ken's *VC Writer Writers
 Room Development Specification v1.0* of 11 September, and his elaboration of
 the same day — **the showrunner's dashboard is the front door, everyone has a
 login, and everyone submits.** Extends §12 (commerce), §14 (sync) and §15 (no
@@ -482,8 +482,9 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
 0. **Built.** Boards and outlines sync (§4). A prerequisite, in
    `packages/domain` and `packages/supabase` rather than in the Room. It also
    unblocks addendum 03 stage 10.
-1. Rooms, subscription entitlement, invitations, roles, titles, colours and
-   seat management — and `owns_project` widened into read and write (§3.2).
+1. **Built.** Rooms, entitlement, invitations, roles, titles, colours and seat
+   management — and `owns_project` split into a read question and a write one
+   (§3.2, §19).
 2. The landing page (§5): sign in, see your part in the room, open the editor
    from it.
 3. Cloud projects with branches, autosave, snapshots and immutable version
@@ -563,3 +564,71 @@ wrote, and that is where the room's work becomes the script.
 | **Curation Tray** | The staging area between contributions and the master |
 | **Merge record** | What a master version was assembled from |
 | **Overlay** | The master script tinted by who wrote what |
+
+## 19. What is built
+
+### Stage 0 — the plans in the cloud
+
+§4 says what it is and why: boards and outlines now sync, nested in the
+document and flat in the database, with `planParts`/`withPlanParts` the one
+place that knows the difference.
+
+### Stage 1 — rooms, seats, and the question split in two
+
+**The one question became two.** Since 0001 every child table in the project
+schema has carried the same policy — `owns_project(project_id)` — and §3.2 says
+that is the seam the Room enters through. It is now `may_read_project` and
+`may_write_project`: a live seat in the room reads, and the project's owner
+writes. Seventeen tables changed at once and none of them needed a policy
+written for it, which was the whole argument for entering there.
+
+**Writing is owner-only for now, on purpose.** A Writer writes to a *branch*
+(§9), and branches are stage 3. Until one exists, letting a Writer write to the
+project's own rows would let one writer's edit land on top of another's — §1,
+exactly. So `may_write_project` is written with the room in view and grants
+nothing yet, and widening it is a one-place change when there is somewhere safe
+for that writing to go.
+
+**Two policies per table, not one**, and this is the part that had to be got
+right. A single `for all using (read) with check (write)` reads plausibly and
+is wrong: `with check` governs the rows a statement *produces*, so an UPDATE or
+a DELETE is decided by `using` alone — and a Viewer would have been able to
+delete the script they were invited to read. Reading and writing are separate
+policies over separate commands.
+
+**The invitation token is not on the seat.** Row-level security is row-level: a
+policy letting the room see who else is in it would have shown a pending
+invitation's token too, and a Viewer who took up a pending Writer invitation
+would have promoted themselves. Tokens therefore live in `room_invitations`,
+which has RLS on and **no policy at all** — the one arrangement nobody but the
+server can read. Only a fingerprint is stored, because the room's database is
+not where a working invitation link should be recoverable from.
+
+**Role is permission and title is credit**, in two columns, as §6 requires. The
+seat also carries the colour and the initials that become the stamp (§6.1) —
+the room proposes a colour nobody is using so that nobody has to think about it
+to start, and the showrunner can overrule it.
+
+**Invited is not active**, in the state rather than in a comment, because they
+bill differently (§14): an invitation nobody has answered is not a seat, and
+charging for one would be charging for an email. A **deactivated** seat is
+neither billed nor deleted — it is how a room stops paying for somebody who has
+left without losing what they wrote, which is §1 applied to the invoice.
+
+Two rules came out of writing it down. A room cannot lose its **last
+showrunner**, because a room with nobody who can curate or invite is a room
+nobody can reopen. And an address that was deactivated **can be asked back**,
+because people leave rooms and return to them — so the constraint binds only
+the seats still standing.
+
+**Nothing on screen.** The landing page is stage 2; this is the model, the
+schema and the data layer under it, plus the invitation email.
+
+**Verified against a real Postgres**, not by reading the SQL. All twenty-four
+migrations applied to a clean database, then four callers — the showrunner, a
+Writer with a seat, a Viewer with a seat, and a stranger — were each put
+through the same transaction. All three members read the project, its beats,
+its board and who else is in the room; the stranger read nothing. Only the
+showrunner could edit or delete a beat, delete the board, promote a seat or
+delete the project. Nobody at all, the showrunner included, could read an
+invitation.
