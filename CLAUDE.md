@@ -42,10 +42,11 @@ push live; the build takes a minute or two.
   `addendum-04-story-grid.md` is the Story Grid, the third tab of the
   Editors page. **All six stages are built** — §9 says what each one does.
   `addendum-06-outliner.md` is the Outliner: the rigid sibling of the
-  Sculptor, a typed tree that promotes scenes into the script. Stages 1–3
-  (the document and its shape rules, the outline on screen, and moving it by
-  hand) are built — §14 says what they do — and §12 lists what is left,
-  starting with the Research shelf inside it. §1 and §2 are the decisions the rest hangs off.
+  Sculptor, a typed tree that promotes scenes into the script. Stages 1–4
+  (the document and its shape rules, the outline on screen, moving it by hand,
+  and the Research shelf it is filled from) are built — §14 says what they do
+  — and §12 lists what is left, starting with promotion, which §12 calls the
+  point of the whole thing. §1 and §2 are the decisions the rest hangs off.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

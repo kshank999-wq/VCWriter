@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   addItem,
+  addResearchCategory,
+  addResearchItem,
+  addResearchRow,
   createOutline,
   createProjectFile,
   depthOf,
@@ -18,10 +21,15 @@ import {
   outlineTally,
   parseProjectFile,
   removeItem,
+  rowSource,
+  rowTitle,
+  rowsUsing,
   updateItem,
+  updateResearchItem,
   type Outline,
   type OutlineItemId,
   type ProjectFile,
+  type ResearchItemId,
 } from '../index.js';
 
 /**
@@ -309,5 +317,103 @@ describe('what the header says', () => {
   it('counts the rows, the scenes, and how many are in the script', () => {
     const { file, outline } = warehouse();
     expect(outlineTally(live(file, outline))).toEqual({ rows: 6, scenes: 1, promoted: 0 });
+  });
+});
+
+/**
+ * Research dragged into the outline (addendum 06 §5).
+ *
+ * **A linked reference, not a copy.** A copy would be the same words in two
+ * places, and the moment one of them is edited the outline is telling a
+ * different story from the shelf.
+ */
+describe('research dragged in', () => {
+  const withShelf = (): { file: ProjectFile; outline: Outline; mara: ResearchItemId; warehouse: ResearchItemId } => {
+    const made = started();
+    const characters = made.file.researchCategories.find((category) => category.systemKey === 'characters')!;
+    const locations = made.file.researchCategories.find((category) => category.systemKey === 'locations')!;
+    // `addResearchItem` answers with the file; the item it made is the last
+    // one on the shelf.
+    const withMara = addResearchItem(made.file, { categoryId: characters.id, title: 'Mara Kessler' });
+    const mara = withMara.researchItems[withMara.researchItems.length - 1]!.id;
+    const file = addResearchItem(withMara, { categoryId: locations.id, title: 'The warehouse' });
+    const warehouse = file.researchItems[file.researchItems.length - 1]!.id;
+    return { file, outline: made.outline, mara, warehouse };
+  };
+
+  it('takes its type from the folder the item is filed in', () => {
+    const { file, outline, mara, warehouse } = withShelf();
+    const one = addResearchRow(file, outline.id, mara);
+    const two = addResearchRow(one.file, outline.id, warehouse);
+    const back = live(two.file, outline);
+    expect(findOutlineItem(back, one.itemId!)?.kind).toBe('character');
+    expect(findOutlineItem(back, two.itemId!)?.kind).toBe('setting');
+  });
+
+  it('arrives as a Note from a folder the writer made themselves', () => {
+    const made = started();
+    const folder = addResearchCategory(made.file, { name: 'Weather' });
+    const shelf = addResearchItem(folder.file, { categoryId: folder.category.id, title: 'The rain' });
+    const rain = shelf.researchItems[shelf.researchItems.length - 1]!.id;
+    const row = addResearchRow(shelf, made.outline.id, rain);
+    expect(findOutlineItem(live(row.file, made.outline), row.itemId!)?.kind).toBe('note');
+  });
+
+  it('references the item rather than copying it', () => {
+    const { file, outline, mara } = withShelf();
+    const row = addResearchRow(file, outline.id, mara);
+    const item = findOutlineItem(live(row.file, outline), row.itemId!)!;
+    expect(item.source).toEqual({ type: 'research_item', id: mara });
+    expect(rowSource(row.file, item)?.title).toBe('Mara Kessler');
+  });
+
+  it('takes its name from the shelf, and keeps taking it', () => {
+    const { file, outline, mara } = withShelf();
+    const row = addResearchRow(file, outline.id, mara);
+    const renamed = updateResearchItem(row.file, mara, { title: 'Mara Vance' });
+    const item = findOutlineItem(live(renamed, outline), row.itemId!)!;
+    // Nothing was written to the row: it is read through to the shelf, so
+    // there is no version of this where the two disagree.
+    expect(rowTitle(renamed, item)).toBe('Mara Vance');
+  });
+
+  it('keeps a body of its own, which is not a fact about the character', () => {
+    const { file, outline, mara } = withShelf();
+    const row = addResearchRow(file, outline.id, mara);
+    const said = updateItem(row.file, outline.id, row.itemId!, { body: 'She is lying about the address here.' });
+    expect(rowSource(said, findOutlineItem(live(said, outline), row.itemId!)!)?.body).toBe('');
+    expect(findOutlineItem(live(said, outline), row.itemId!)?.body).toBe('She is lying about the address here.');
+  });
+
+  it('can be dropped in more than once: a character is in more than one scene', () => {
+    const { file, outline, mara } = withShelf();
+    const one = addResearchRow(file, outline.id, mara);
+    const two = addResearchRow(one.file, outline.id, mara);
+    expect(two.itemId).not.toBeNull();
+    expect(rowsUsing(live(two.file, outline), mara)).toHaveLength(2);
+  });
+
+  it('leaves the shelf alone when the row is taken out', () => {
+    const { file, outline, mara } = withShelf();
+    const row = addResearchRow(file, outline.id, mara);
+    const gone = removeItem(row.file, outline.id, row.itemId!);
+    expect(gone.researchItems.find((item) => item.id === mara)?.title).toBe('Mara Kessler');
+  });
+
+  it('falls back to the name it arrived with if the item leaves the shelf', () => {
+    const { file, outline, mara } = withShelf();
+    const row = addResearchRow(file, outline.id, mara);
+    const without = { ...row.file, researchItems: row.file.researchItems.filter((item) => item.id !== mara) };
+    const item = findOutlineItem(live(without, outline), row.itemId!)!;
+    expect(rowTitle(without, item)).toBe('Mara Kessler');
+    expect(rowSource(without, item)).toBeNull();
+  });
+
+  it('lands where it was dropped, like any other row', () => {
+    const { file, outline, mara } = withShelf();
+    const scene = addItem(file, outline.id, { kind: 'scene', title: 'Warehouse' });
+    const beat = addItem(scene.file, outline.id, { parentId: scene.itemId, kind: 'beat', title: 'She enters' });
+    const row = addResearchRow(beat.file, outline.id, mara, { parentId: beat.itemId });
+    expect(outlineRows(live(row.file, outline)).map((entry) => entry.depth)).toEqual([0, 1, 2]);
   });
 });

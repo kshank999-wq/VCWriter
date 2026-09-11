@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { scrollNudge, zoneFor, type OutlineZone } from '../drag';
+import { ResearchShelf } from './ResearchShelf';
 import {
   OUTLINE_KINDS,
   addItem,
+  addResearchRow,
   createOutline,
   findOutline,
   findOutlineItem,
@@ -17,17 +19,20 @@ import {
   outlineTally,
   outlinesOf,
   removeItem,
+  rowSource,
+  rowTitle,
   updateItem,
   type Outline,
   type OutlineItem,
   type OutlineItemId,
   type OutlineRow,
   type ProjectFile,
+  type ResearchItemId,
 } from '@vcwriter/domain';
 
 /**
- * The Outliner (addendum 06), stages 2–3: the outline on screen, and moved
- * about by hand.
+ * The Outliner (addendum 06), stages 2–4: the outline on screen, moved about
+ * by hand, and the research shelf it is filled from.
  *
  * **A traditional outline.** Indentation guides, disclosure arrows, and a
  * weight that falls away with depth — scene rows strongest, beats lighter,
@@ -84,8 +89,14 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
    * a legal place to put it — so the payload is held here, exactly as the
    * structure board does it.
    */
-  const carrying = useRef<OutlineItemId | null>(null);
+  const carrying = useRef<
+    { kind: 'row'; id: OutlineItemId } | { kind: 'research'; id: ResearchItemId } | null
+  >(null);
   const [dragging, setDragging] = useState<OutlineItemId | null>(null);
+  /** True while anything at all is being carried, including off the shelf. */
+  const [carryingAny, setCarryingAny] = useState(false);
+  /** The research item a linked row points at, revealed on the shelf (§5). */
+  const [reveal, setReveal] = useState<ResearchItemId | null>(null);
   const [over, setOver] = useState<{ id: OutlineItemId; zone: OutlineZone } | null>(null);
   /** The last pointer height, so the list can scroll itself while held. */
   const edge = useRef(0);
@@ -93,7 +104,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
   // Auto-scroll while something is dragged near the top or bottom of a long
   // outline (§8). Without it the row being aimed at cannot be reached at all.
   useEffect(() => {
-    if (dragging === null) return undefined;
+    if (!carryingAny) return undefined;
     let frame = 0;
     const step = () => {
       const list = listRef.current;
@@ -102,7 +113,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [dragging]);
+  }, [carryingAny]);
 
   const outline: Outline | null = useMemo(() => {
     if (outlines.length === 0) return null;
@@ -131,10 +142,14 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
   const canDrop = useCallback(
     (targetId: OutlineItemId): boolean => {
       const held = carrying.current;
-      if (!outline || held === null || held === targetId) return false;
+      if (!outline || held === null) return false;
+      // Anything off the shelf can land anywhere: it is not in the tree yet,
+      // so there is nothing for it to be put inside of.
+      if (held.kind === 'research') return true;
+      if (held.id === targetId) return false;
       // A row cannot be put inside itself; the domain refuses it too, but the
       // indicator should not offer what will not happen.
-      return !isUnder(outline, targetId, held);
+      return !isUnder(outline, targetId, held.id);
     },
     [outline],
   );
@@ -152,15 +167,18 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
       const target = live ? findOutlineItem(live, targetId) : null;
       if (!target) return current;
 
-      return moveItem(current, id, held, {
-        // Into: the last child of the row, which is where a thing added to
-        // something belongs. Beside: its sibling, above or below it.
+      // Into: the last child of the row, which is where a thing added to
+      // something belongs. Beside: its sibling, above or below it.
+      const where = {
         parentId: zone === 'into' ? target.id : target.parentId,
         ...(zone === 'before' ? { beforeId: target.id } : {}),
         ...(zone === 'after' ? { afterId: target.id } : {}),
-      });
+      };
+      return held.kind === 'research'
+        ? addResearchRow(current, id, held.id, where).file
+        : moveItem(current, id, held.id, where);
     });
-    setSelected(held);
+    if (held.kind === 'row') setSelected(held.id);
   };
 
   const onListDragOver = (event: React.DragEvent) => {
@@ -307,9 +325,26 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
       </header>
 
       <div className="outliner-body">
+        {/* §3: the shelf lives *inside* the Outliner rather than beside it.
+            Two full-window overlays cannot be side by side, and a drag cannot
+            cross two windows that are not both on screen — so this is the only
+            place the thing being asked for can actually happen. */}
+        <ResearchShelf
+          file={file}
+          reveal={reveal}
+          onCarry={(researchItemId) => {
+            carrying.current = researchItemId === null ? null : { kind: 'research', id: researchItemId };
+            setCarryingAny(researchItemId !== null);
+            if (researchItemId === null) {
+              edge.current = 0;
+              setOver(null);
+            }
+          }}
+        />
+
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
         <div
-          className={dragging ? 'outline-list dragging' : 'outline-list'}
+          className={carryingAny ? 'outline-list dragging' : 'outline-list'}
           ref={listRef}
           role="tree"
           tabIndex={0}
@@ -327,6 +362,8 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
             <Row
               key={row.item.id as string}
               row={row}
+              title={rowTitle(file, row.item)}
+              linked={row.item.source?.type === 'research_item'}
               selected={selected === row.item.id}
               editing={editing === row.item.id}
               onSelect={() => setSelected(row.item.id)}
@@ -346,21 +383,27 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
               dragging={dragging === row.item.id}
               zone={over?.id === row.item.id ? over.zone : null}
               onDragStart={() => {
-                carrying.current = row.item.id;
+                carrying.current = { kind: 'row', id: row.item.id };
                 setDragging(row.item.id);
+                setCarryingAny(true);
               }}
               onDragEnd={() => {
                 carrying.current = null;
                 edge.current = 0;
                 setDragging(null);
+                setCarryingAny(false);
                 setOver(null);
               }}
               onDragOver={(zone) => {
-                if (!canDrop(row.item.id)) return false;
+                if (!canDrop(row.item.id)) return null;
                 setOver((current) =>
                   current?.id === row.item.id && current.zone === zone ? current : { id: row.item.id, zone },
                 );
-                return true;
+                // Research off the shelf is **copied** in — it stays on the
+                // shelf — and a row is **moved**. Saying the wrong one is not
+                // cosmetic: a drop whose effect the source did not allow is
+                // cancelled by the browser and never happens at all.
+                return carrying.current?.kind === 'research' ? 'copy' : 'move';
               }}
               onDragLeave={() => setOver((current) => (current?.id === row.item.id ? null : current))}
               onDrop={(zone) => {
@@ -368,6 +411,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
                 carrying.current = null;
                 edge.current = 0;
                 setDragging(null);
+                setCarryingAny(false);
                 setOver(null);
               }}
             />
@@ -380,14 +424,30 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
           {chosen ? (
             <>
               <h3>{nameOf(chosen.kind)}</h3>
-              <label className="field">
-                <span>Title</span>
-                <input
-                  aria-label="The row's title"
-                  value={chosen.title}
-                  onChange={(event) => write((current, id) => updateItem(current, id, chosen.id, { title: event.target.value }))}
-                />
-              </label>
+              {chosen.source?.type === 'research_item' ? (
+                <p className="small outline-from">
+                  <strong>{rowTitle(file, chosen)}</strong>, from the research shelf.{' '}
+                  <button
+                    type="button"
+                    className="ghost small"
+                    onClick={() => setReveal(chosen.source?.id as ResearchItemId)}
+                  >
+                    Show it
+                  </button>
+                  {rowSource(file, chosen) ? null : (
+                    <span className="muted"> It is no longer on the shelf.</span>
+                  )}
+                </p>
+              ) : (
+                <label className="field">
+                  <span>Title</span>
+                  <input
+                    aria-label="The row's title"
+                    value={chosen.title}
+                    onChange={(event) => write((current, id) => updateItem(current, id, chosen.id, { title: event.target.value }))}
+                  />
+                </label>
+              )}
               <label className="field">
                 <span>What it is</span>
                 <select
@@ -458,6 +518,8 @@ const topmostOf = (outline: Outline, item: OutlineItem): OutlineItem => {
  */
 function Row({
   row,
+  title,
+  linked,
   selected,
   editing,
   onSelect,
@@ -476,6 +538,9 @@ function Row({
   onDrop,
 }: {
   row: OutlineRow;
+  /** Read through to the shelf where the row references research (§5). */
+  title: string;
+  linked: boolean;
   selected: boolean;
   editing: boolean;
   onSelect(): void;
@@ -491,8 +556,14 @@ function Row({
   zone: OutlineZone | null;
   onDragStart(): void;
   onDragEnd(): void;
-  /** Answers whether the drop is legal, so the row knows to allow it. */
-  onDragOver(zone: OutlineZone): boolean;
+  /**
+   * Answers how the drop would happen, or null where it cannot.
+   *
+   * The answer is the `dropEffect`, and it has to agree with what the thing
+   * being carried allowed: a browser cancels a drop whose effect the source
+   * did not permit, silently and without firing `drop` at all.
+   */
+  onDragOver(zone: OutlineZone): 'copy' | 'move' | null;
   onDragLeave(): void;
   onDrop(zone: OutlineZone): void;
 }) {
@@ -509,6 +580,7 @@ function Row({
         'outline-row',
         `kind-${item.kind}`,
         selected ? 'selected' : '',
+        linked ? 'linked' : '',
         dragging ? 'carried' : '',
         zone ? `drop-${zone}` : '',
       ]
@@ -532,12 +604,12 @@ function Row({
       }}
       onDragEnd={onDragEnd}
       onDragOver={(event) => {
-        const where = zoneFor(event);
-        if (!onDragOver(where)) return;
+        const effect = onDragOver(zoneFor(event));
         // Only a legal target takes the drop, so an illegal one shows the
         // cursor that says so rather than lying about what will happen.
+        if (!effect) return;
         event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
+        event.dataTransfer.dropEffect = effect;
       }}
       onDragLeave={onDragLeave}
       onDrop={(event) => {
@@ -568,16 +640,25 @@ function Row({
         {markOf(item.kind)}
       </span>
 
-      <input
-        ref={input}
-        className="outline-title"
-        aria-label={`${nameOf(item.kind)}: what it is`}
-        placeholder={item.kind === 'scene' ? 'name the scene' : 'say what it is'}
-        value={item.title}
-        onFocus={() => onEdit(true)}
-        onBlur={() => onEdit(false)}
-        onChange={(event) => onTitle(event.target.value)}
-      />
+      {/* A row that references research takes its name from the shelf and is
+          not renamed here — that name belongs to the research (§5) — so it is
+          text rather than a box, and says as much by looking different. */}
+      {linked ? (
+        <span className="outline-title outline-linked" title="From the research shelf. Renaming it there renames it here">
+          {title}
+        </span>
+      ) : (
+        <input
+          ref={input}
+          className="outline-title"
+          aria-label={`${nameOf(item.kind)}: what it is`}
+          placeholder={item.kind === 'scene' ? 'name the scene' : 'say what it is'}
+          value={title}
+          onFocus={() => onEdit(true)}
+          onBlur={() => onEdit(false)}
+          onChange={(event) => onTitle(event.target.value)}
+        />
+      )}
 
       {item.collapsed && childCount > 0 ? <span className="muted small outline-hidden">{childCount}</span> : null}
 

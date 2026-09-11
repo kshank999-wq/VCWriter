@@ -1,6 +1,6 @@
 # Addendum 06 — The Outliner
 
-Status: stages 1–3 built, September 2026. From Ken's *VC Writer Outliner
+Status: stages 1–4 built, September 2026. From Ken's *VC Writer Outliner
 Development Specification* of 11 September, and the framing he gave with it:
 **the Outliner and the Story Sculptor are siblings, and material moves between
 them by hand.** Extends §5 (story structure), §7 (research and links) and §19
@@ -251,8 +251,8 @@ The panel resizes, and fills the window.
    folded, reordered, indented and outdented.
 3. **Built.** Dragging: rows moved by hand, with the sibling-or-child drop
    indicator.
-4. The Research shelf, inside the Outliner, and dropping an item in as a
-   linked reference.
+4. **Built.** The Research shelf, inside the Outliner, and dropping an item in
+   as a linked reference.
 5. Promotion: a scene and its beats into the script, and everything §6 says
    about it.
 6. The scene card.
@@ -277,7 +277,8 @@ becomes the script.
 
 ## 14. What is built
 
-Stages 1–3 — **the document, the outline on screen, and moving it by hand.** The Outliner is a
+Stages 1–4 — **the document, the outline on screen, moving it by hand, and the
+shelf it is filled from.** The Outliner is a
 button on the title bar beside Research and Sculptor, and it opens over the
 workspace the way the board does: an outline is worked on whole.
 
@@ -348,3 +349,42 @@ opening scene*, which is an ordinary thing to want; `moveItem` gained
 writing to rather than from the render that built the handler: a drag
 re-renders on every movement, and where it lands has to be decided by what the
 outline **is**, not by what it was when the gesture started.
+
+### Stage 4 — the Research shelf
+
+The shelf is down the Outliner's left side (§3): the same tree of folders the
+Research window has, narrow, with a search across everything and a way to put
+it out of the way when the outline wants the room. **Everything on it is a
+source and never a target** — nothing is dropped onto the shelf and nothing is
+edited there, because that is what the Research window is for.
+
+An item dragged into the outline lands as a **linked reference, not a copy**.
+A copy would be the same words in two places, and the moment one of them is
+edited the outline is telling a different story from the shelf.
+
+**Its type comes from the folder it was filed in**: a name from Characters
+arrives as a Character, a place from Locations as a Setting, an object from
+Props as a Prop. That is the whole of the guess, and a folder the writer made
+themselves gives a Note — the type that claims least about what the thing is.
+
+**Its name is read through to the shelf**, not copied across, so renaming it
+in Research renames every row that references it and there is no version of
+this where the two disagree. A linked row therefore shows its name as text
+rather than in a box: that name belongs to the research and is not the row's
+to change. The row's **body is its own**, which is the other half of §5 —
+*what this character wants in this scene* is not a fact about the character.
+
+The panel names the source and offers **Show it**, which opens the shelf at
+that item and lights it. Where the item has since left the shelf, the row
+falls back to the name it arrived with and says so, rather than going blank.
+
+**The same item can be dropped in as often as it is wanted.** A character is
+in more than one scene, and each of those is a different thing to say about
+them; this is not the Sculptor's one-claim rule, because a reference is not a
+claim. And taking the row out never touches the research — it was a reference.
+
+One thing came out of building it. Research is **copied** in and a row is
+**moved**, and saying the wrong one of those is not cosmetic: a browser
+cancels a drop whose effect the source did not allow, silently, without ever
+firing the drop. So the row now answers a hovering drag with *how* it would
+land rather than merely whether it could.

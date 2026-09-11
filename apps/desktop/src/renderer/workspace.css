@@ -7774,3 +7774,125 @@ dialog.preferences .field {
   background: var(--panel-2);
   box-shadow: inset 0 0 0 1px var(--gold-deep);
 }
+
+/* ---- the Research shelf, inside the Outliner (addendum 06 §3) --------- */
+
+.research-shelf {
+  flex: 0 0 210px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.shelf-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px 6px 12px;
+}
+
+.shelf-bar h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+.shelf-search {
+  margin: 0 8px 8px 12px;
+  font-size: 11.5px;
+}
+
+.shelf-tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 8px 20px 12px;
+}
+
+.shelf-folder-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 2px 0;
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.shelf-fold {
+  font-size: 8px;
+}
+
+/* Everything on the shelf is a source and never a target: it is picked up,
+   and nothing is dropped on it or edited in it. */
+.shelf-item {
+  padding: 3px 6px 3px 14px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: grab;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shelf-item:hover {
+  background: var(--panel-2);
+  color: var(--gold);
+}
+
+/* Material the writer has already placed, still there to be used again. */
+.shelf-item.used {
+  color: var(--muted);
+}
+
+/* What a linked row asked to be shown. */
+.shelf-item.revealed {
+  background: var(--panel-2);
+  box-shadow: inset 0 0 0 1px var(--gold);
+  color: var(--gold);
+}
+
+.shelf-shut {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 26px;
+  padding: 0;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  writing-mode: vertical-rl;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* A row that came off the shelf: its name belongs to the research, so it is
+   text rather than a box, and says so by looking different (§5). */
+.outline-row.linked .outline-mark {
+  color: var(--gold);
+}
+
+.outline-title.outline-linked {
+  align-self: center;
+  padding: 0 4px;
+  border-bottom: 1px dotted var(--gold-deep);
+  color: var(--gold);
+  cursor: default;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outline-from {
+  margin: 0 0 10px;
+}

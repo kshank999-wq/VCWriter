@@ -2,11 +2,13 @@ import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
 import { initialOrderKeys, orderKeyBetween } from './ordering.js';
 import { outlineSchema, type Outline, type OutlineItem } from './entities/outline.js';
+import type { ResearchItem } from './entities/research.js';
 import type { ProjectFile } from './project-file.js';
-import type { OutlineId, OutlineItemId } from './ids.js';
+import type { OutlineId, OutlineItemId, ResearchItemId } from './ids.js';
 
 /**
- * The Outliner (addendum 06), stage 1: the document and the shape rules.
+ * The Outliner (addendum 06), stages 1 and 4: the document, its shape rules,
+ * and the research dragged into it.
  *
  * **A tree of typed rows.** A row's *type* says what it is and its *parent*
  * says how deep it is, and neither constrains the other (§4) — which is what
@@ -382,3 +384,109 @@ export const outlineTally = (outline: Outline): { rows: number; scenes: number; 
   scenes: outline.items.filter((item) => item.kind === 'scene').length,
   promoted: outline.items.filter((item) => item.boundUnitId !== null || item.boundBeatId !== null).length,
 });
+
+// ------------------------------------ research, dragged in (§5)
+
+/**
+ * What a research item becomes when it is dropped into the outline.
+ *
+ * The category it is filed under says it: a name from **Characters** arrives
+ * as a Character, a place from **Locations** as a Setting. That is the whole
+ * of the guess, and where the folder is the writer's own — a system key it has
+ * no equivalent for — it arrives as a Note, which is the type that claims
+ * least about what the thing is.
+ */
+const FROM_CATEGORY: Record<string, string> = {
+  characters: 'character',
+  locations: 'setting',
+  props: 'prop',
+  ideas: 'idea',
+  plot_points: 'beat',
+  themes: 'note',
+};
+
+export const kindForResearch = (systemKey: string | null): string =>
+  (systemKey ? FROM_CATEGORY[systemKey] : undefined) ?? 'note';
+
+/**
+ * A row that **references** a research item rather than copying it (§5).
+ *
+ * The reference is the point. A copy would be the same words in two places,
+ * and the moment the writer edits one of them the outline is telling a
+ * different story from the shelf — which is exactly what §5 of the source
+ * specification means by "linked reference rather than an unrelated copy".
+ *
+ * So the row's **name is the research item's** and is read through to it, and
+ * its **body is its own**: *what this character wants in this scene* is not a
+ * fact about the character, and belongs to the row.
+ *
+ * The same item can be dropped in more than once. A character appears in many
+ * scenes, and each of those is a different thing to say about them; this is
+ * not the Sculptor's one-claim rule, because a reference is not a claim.
+ */
+export const addResearchRow = (
+  file: ProjectFile,
+  outlineId: OutlineId,
+  researchItemId: ResearchItemId,
+  input: { parentId?: OutlineItemId | null; afterId?: OutlineItemId | null; beforeId?: OutlineItemId | null } = {},
+): { file: ProjectFile; itemId: OutlineItemId | null } => {
+  const outline = findOutline(file, outlineId);
+  const source = file.researchItems.find((candidate) => candidate.id === researchItemId);
+  if (!outline || !source) return { file, itemId: null };
+
+  const parentId = input.parentId ?? null;
+  if (parentId !== null && !findOutlineItem(outline, parentId)) return { file, itemId: null };
+
+  const category = file.researchCategories.find((candidate) => candidate.id === source.categoryId);
+  const at = nowIso();
+  const item: OutlineItem = {
+    id: newId<OutlineItemId>(),
+    outlineId,
+    parentId,
+    orderKey: keyFor(outlineChildren(outline, parentId), input),
+    kind: kindForResearch(category?.systemKey ?? null),
+    // Kept as well as referenced, so an outline still reads if the item is
+    // ever removed from the shelf — the reference is what is read, and this
+    // is what is left when there is nothing to read through to.
+    title: source.title,
+    body: '',
+    status: '',
+    collapsed: false,
+    boundUnitId: null,
+    boundBeatId: null,
+    source: { type: 'research_item', id: researchItemId as string },
+    createdAt: at,
+    updatedAt: at,
+  };
+
+  return {
+    file: withOutline(file, outlineId, (current) => ({ ...current, items: [...current.items, item] })),
+    itemId: item.id,
+  };
+};
+
+/**
+ * What a row is called: the research item's name where it has one.
+ *
+ * **Read through rather than copied across**, so renaming on the shelf renames
+ * every row that references it and there is no version of this where the two
+ * disagree. A row that references something no longer on the shelf falls back
+ * to the name it arrived with, which is better than going blank.
+ */
+export const rowTitle = (file: ProjectFile, item: OutlineItem): string => {
+  if (item.source?.type !== 'research_item') return item.title;
+  const source = file.researchItems.find((candidate) => (candidate.id as string) === item.source?.id);
+  return source ? source.title : item.title;
+};
+
+/** The research item a row references, where it still exists. */
+export const rowSource = (file: ProjectFile, item: OutlineItem): ResearchItem | null => {
+  if (item.source?.type !== 'research_item') return null;
+  return file.researchItems.find((candidate) => (candidate.id as string) === item.source?.id) ?? null;
+};
+
+/** Every row referencing this research item, so the shelf can say it is in use. */
+export const rowsUsing = (outline: Outline, researchItemId: ResearchItemId): OutlineItem[] =>
+  outline.items.filter(
+    (item) => item.source?.type === 'research_item' && item.source.id === (researchItemId as string),
+  );
