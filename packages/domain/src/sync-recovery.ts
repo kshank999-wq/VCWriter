@@ -1,4 +1,5 @@
 import { projectFileSchema, type ProjectFile } from './project-file.js';
+import { recordsOf, withRecords, type SyncCollection } from './sync-mapping.js';
 import type { SyncConflict } from './sync-merge.js';
 
 /**
@@ -39,7 +40,9 @@ export const restoreDiscardedVersion = (
     });
   }
 
-  const current = file[conflict.collection] as unknown as Identified[];
+  // Asked of the mapping rather than the file: the plans are nested there and
+  // flat everywhere else, and this does not need to know which (addendum 07 §4).
+  const current = recordsOf(file, conflict.collection) as Identified[];
   // The id comes from the conflict rather than the payload: it is the record
   // this conflict is about, and it must not be possible to restore a version
   // under some other record's id.
@@ -53,7 +56,7 @@ export const restoreDiscardedVersion = (
     ? current.map((record) => (record.id === conflict.id ? restored : record))
     : [...current, restored];
 
-  return projectFileSchema.parse({ ...file, [conflict.collection]: next });
+  return projectFileSchema.parse(withRecords(file, conflict.collection, next));
 };
 
 /**
@@ -65,10 +68,15 @@ export const restoreDiscardedVersion = (
  * silently lose it a second time.
  */
 export const canRestore = (file: ProjectFile, conflict: SyncConflict): boolean => {
-  const parentOf: Partial<Record<SyncConflict['collection'], { field: string; collection: keyof ProjectFile }>> = {
+  const parentOf: Partial<Record<SyncConflict['collection'], { field: string; collection: SyncCollection }>> = {
     units: { field: 'laneId', collection: 'lanes' },
     beats: { field: 'unitId', collection: 'units' },
     researchItems: { field: 'categoryId', collection: 'researchCategories' },
+    // The plans have the same shape of dependency: a node cannot be put back
+    // onto a board that has gone, and neither can a row onto an outline.
+    sculptorNodes: { field: 'boardId', collection: 'boards' },
+    sculptorLinks: { field: 'boardId', collection: 'boards' },
+    outlineItems: { field: 'outlineId', collection: 'outlines' },
   };
 
   const parent = parentOf[conflict.collection];
@@ -77,5 +85,5 @@ export const canRestore = (file: ProjectFile, conflict: SyncConflict): boolean =
   const parentId = conflict.discarded[parent.field];
   if (typeof parentId !== 'string') return false;
 
-  return (file[parent.collection] as unknown as Identified[]).some((record) => record.id === parentId);
+  return (recordsOf(file, parent.collection) as Identified[]).some((record) => record.id === parentId);
 };

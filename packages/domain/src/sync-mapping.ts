@@ -1,4 +1,6 @@
+import { boardSchema, sculptorLinkSchema, sculptorNodeSchema } from './entities/sculptor.js';
 import { captureItemSchema, type CaptureItem } from './entities/capture.js';
+import { outlineItemSchema, outlineSchema } from './entities/outline.js';
 import { characterCategorySchema, characterSchema } from './entities/character.js';
 import { storyLinkSchema } from './entities/links.js';
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
@@ -14,6 +16,9 @@ import type { StoryLink } from './entities/links.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
 import type { SetupPayoff } from './entities/setups.js';
 import type { Project } from './entities/project.js';
+import type { Board, SculptorLink, SculptorNode } from './entities/sculptor.js';
+import type { Outline, OutlineItem } from './entities/outline.js';
+import type { BoardId, OutlineId, ProjectId } from './ids.js';
 
 /**
  * Translation between the project document and Supabase rows.
@@ -40,6 +45,11 @@ export interface ProjectRows {
   characterCategories: Row[];
   links: Row[];
   setupsPayoffs: Row[];
+  boards: Row[];
+  sculptorNodes: Row[];
+  sculptorLinks: Row[];
+  outlines: Row[];
+  outlineItems: Row[];
 }
 
 /** Table each collection lives in, so callers do not hard-code names. */
@@ -55,6 +65,13 @@ export const SYNC_TABLES = {
   characterCategories: 'character_categories',
   links: 'story_links',
   setupsPayoffs: 'setups_payoffs',
+  // The plans (addendum 07 §4). Order matters: `pushRows` upserts collections
+  // in the order they are declared here, and a node needs its board to exist.
+  boards: 'boards',
+  sculptorNodes: 'sculptor_nodes',
+  sculptorLinks: 'sculptor_links',
+  outlines: 'outlines',
+  outlineItems: 'outline_items',
 } as const;
 
 export type SyncCollection = keyof typeof SYNC_TABLES;
@@ -62,7 +79,8 @@ export const SYNC_COLLECTIONS = Object.keys(SYNC_TABLES) as SyncCollection[];
 
 const text = (value: unknown, fallback = ''): string => (typeof value === 'string' ? value : fallback);
 const flag = (value: unknown, fallback = false): boolean => (typeof value === 'boolean' ? value : fallback);
-const list = (value: unknown): string[] => (Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []);
+const list = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
 const nullableText = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
 // ---------------------------------------------------------------------------
@@ -263,6 +281,196 @@ const setupPayoffToRow = (record: SetupPayoff): Row => ({
   updated_at: record.updatedAt,
 });
 
+// ---------------------------------------------------------------------------
+// The plans, flattened
+// ---------------------------------------------------------------------------
+
+/**
+ * The Sculptor's boards and the Outliner's outlines, as flat lists (addendum
+ * 07 §4).
+ *
+ * **The document nests them and everything else here does not**, and that is
+ * not an inconsistency to be fixed in the document. A board *is* its nodes to
+ * the module that draws it, which is why addendum 03 built it that way. But a
+ * node is what two writers edit independently, so a node is what the database
+ * stores as a row and what a merge compares one at a time — and this file is
+ * already "the only place the two spellings meet", so the third spelling lives
+ * here with the other two.
+ *
+ * Flattening loses exactly one fact, which nesting was carrying for free: the
+ * board a link belongs to. It travels in the flat form the same way
+ * `project_id` travels in a row — the document gets it from where the thing
+ * sits, and anything flat has to be told.
+ */
+
+/** A link with the board it is on, which the document gets from nesting. */
+export type FlatSculptorLink = SculptorLink & { boardId: BoardId };
+/** A board without what it contains. */
+export type BoardRecord = Omit<Board, 'nodes' | 'links'>;
+/** An outline without what it contains. */
+export type OutlineRecord = Omit<Outline, 'items'>;
+
+export interface PlanParts {
+  boards: BoardRecord[];
+  sculptorNodes: SculptorNode[];
+  sculptorLinks: FlatSculptorLink[];
+  outlines: OutlineRecord[];
+  outlineItems: OutlineItem[];
+}
+
+/** The plans taken apart: five flat lists, in the order they must be written. */
+export const planParts = (file: ProjectFile): PlanParts => {
+  const boards = file.boards ?? [];
+  const outlines = file.outlines ?? [];
+  return {
+    boards: boards.map(({ nodes: _nodes, links: _links, ...board }) => board),
+    sculptorNodes: boards.flatMap((board) => board.nodes),
+    sculptorLinks: boards.flatMap((board) => board.links.map((link) => ({ ...link, boardId: board.id }))),
+    outlines: outlines.map(({ items: _items, ...outline }) => outline),
+    outlineItems: outlines.flatMap((outline) => outline.items),
+  };
+};
+
+/**
+ * The plans put back together.
+ *
+ * A node or a link whose board did not survive is dropped rather than kept
+ * somewhere it cannot be drawn — the same reasoning `pruneOrphans` applies to
+ * a beat whose scene has gone.
+ */
+export const withPlanParts = (file: ProjectFile, parts: PlanParts): ProjectFile => {
+  // A link whose ends did not both survive says nothing, and the board's own
+  // rule is that a link is an observation rather than what holds anything
+  // together (addendum 03 §7) — so losing one costs the observation and
+  // nothing moves.
+  const nodeIds = new Set(parts.sculptorNodes.map((node) => node.id as string));
+
+  return {
+    ...file,
+    boards: parts.boards.map((board) =>
+      boardSchema.parse({
+        ...board,
+        nodes: parts.sculptorNodes.filter((node) => node.boardId === board.id),
+        links: parts.sculptorLinks
+          .filter(
+            (link) =>
+              link.boardId === board.id && nodeIds.has(link.fromId as string) && nodeIds.has(link.toId as string),
+          )
+          .map(({ boardId: _boardId, ...link }) => link),
+      }),
+    ),
+    outlines: parts.outlines.map((outline) =>
+      outlineSchema.parse({
+        ...outline,
+        items: parts.outlineItems.filter((item) => item.outlineId === outline.id),
+      }),
+    ),
+  };
+};
+
+/**
+ * The collections the document nests. Everything else is a flat array on the
+ * file and can be read and written straight.
+ */
+export const PLAN_COLLECTIONS = ['boards', 'sculptorNodes', 'sculptorLinks', 'outlines', 'outlineItems'] as const;
+export type PlanCollection = (typeof PLAN_COLLECTIONS)[number];
+
+const PLAN_SET = new Set<string>(PLAN_COLLECTIONS);
+export const isPlanCollection = (collection: SyncCollection): collection is PlanCollection => PLAN_SET.has(collection);
+
+/**
+ * One collection's records, flat, whichever way the document keeps them.
+ *
+ * The merge and the restore both want "the records in this collection" and
+ * neither should have to know which of them the document nests. Asking here
+ * keeps that knowledge in the one file that is about the difference.
+ */
+export const recordsOf = (file: ProjectFile, collection: SyncCollection): unknown[] =>
+  isPlanCollection(collection)
+    ? (planParts(file)[collection] as unknown[])
+    : ((file as unknown as Record<string, unknown[]>)[collection] ?? []);
+
+/** The file with one collection replaced, put back together if it was nested. */
+export const withRecords = (file: ProjectFile, collection: SyncCollection, records: unknown[]): ProjectFile => {
+  if (!isPlanCollection(collection)) {
+    return { ...file, [collection]: records } as ProjectFile;
+  }
+  return withPlanParts(file, {
+    ...planParts(file),
+    [collection]: records,
+  } as PlanParts);
+};
+
+const boardToRow = (board: BoardRecord): Row => ({
+  id: board.id,
+  project_id: board.projectId,
+  name: board.name,
+  // The board's shape rather than its content: read and written whole, and
+  // nothing queries inside it.
+  columns: board.columns,
+  created_at: board.createdAt,
+  updated_at: board.updatedAt,
+});
+
+const sculptorNodeToRow = (node: SculptorNode, projectId: ProjectId): Row => ({
+  id: node.id,
+  project_id: projectId,
+  board_id: node.boardId,
+  column_id: node.columnId,
+  parent_id: node.parentId,
+  order_key: node.orderKey,
+  title: node.title,
+  note: node.note,
+  kind: node.kind,
+  colour: node.colour,
+  fields: node.fields,
+  // `end` is a reserved word in SQL, hence the column's own name.
+  node_end: node.end,
+  collapsed: node.collapsed,
+  bound_unit_id: node.boundUnitId,
+  bound_beat_id: node.boundBeatId,
+  created_at: node.createdAt,
+  updated_at: node.updatedAt,
+});
+
+const sculptorLinkToRow = (link: FlatSculptorLink, projectId: ProjectId): Row => ({
+  id: link.id,
+  project_id: projectId,
+  board_id: link.boardId,
+  from_id: link.fromId,
+  to_id: link.toId,
+  label: link.label,
+  created_at: link.createdAt,
+  updated_at: link.updatedAt,
+});
+
+const outlineToRow = (outline: OutlineRecord): Row => ({
+  id: outline.id,
+  project_id: outline.projectId,
+  name: outline.name,
+  created_at: outline.createdAt,
+  updated_at: outline.updatedAt,
+});
+
+const outlineItemToRow = (item: OutlineItem, projectId: ProjectId): Row => ({
+  id: item.id,
+  project_id: projectId,
+  outline_id: item.outlineId,
+  parent_id: item.parentId,
+  order_key: item.orderKey,
+  kind: item.kind,
+  title: item.title,
+  body: item.body,
+  status: item.status,
+  collapsed: item.collapsed,
+  bound_unit_id: item.boundUnitId,
+  bound_beat_id: item.boundBeatId,
+  // The research this row references, as the project's own `StoryEntityRef`.
+  source: item.source,
+  created_at: item.createdAt,
+  updated_at: item.updatedAt,
+});
+
 export const toRows = (file: ProjectFile): ProjectRows => ({
   project: projectToRow(file),
   lanes: file.lanes.map(laneToRow),
@@ -276,7 +484,29 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
   characterCategories: (file.characterCategories ?? []).map(characterCategoryToRow),
   links: file.links.map(linkToRow),
   setupsPayoffs: file.setupsPayoffs.map(setupPayoffToRow),
+  ...planRows(file),
 });
+
+/**
+ * The plan collections as rows.
+ *
+ * Nodes, links and items carry `project_id` although the document does not put
+ * it on them: every child table in the schema is reached through the one
+ * ownership question, and that question is asked of a column.
+ */
+const planRows = (
+  file: ProjectFile,
+): Pick<ProjectRows, 'boards' | 'sculptorNodes' | 'sculptorLinks' | 'outlines' | 'outlineItems'> => {
+  const parts = planParts(file);
+  const projectId = file.project.id;
+  return {
+    boards: parts.boards.map(boardToRow),
+    sculptorNodes: parts.sculptorNodes.map((node) => sculptorNodeToRow(node, projectId)),
+    sculptorLinks: parts.sculptorLinks.map((link) => sculptorLinkToRow(link, projectId)),
+    outlines: parts.outlines.map(outlineToRow),
+    outlineItems: parts.outlineItems.map((item) => outlineItemToRow(item, projectId)),
+  };
+};
 
 // ---------------------------------------------------------------------------
 // Rows -> document
@@ -505,6 +735,90 @@ export const captureReviewToRow = (capture: CaptureItem): Row => ({
   result_id: capture.resultRef?.id ?? null,
 });
 
+const sculptorNodeFromRow = (row: Row): SculptorNode =>
+  sculptorNodeSchema.parse({
+    id: row['id'],
+    boardId: row['board_id'],
+    columnId: row['column_id'],
+    parentId: nullableText(row['parent_id']),
+    orderKey: row['order_key'],
+    title: text(row['title']),
+    note: text(row['note']),
+    kind: text(row['kind']),
+    colour: text(row['colour']),
+    fields: row['fields'] ?? {},
+    end: nullableText(row['node_end']),
+    collapsed: flag(row['collapsed']),
+    boundUnitId: nullableText(row['bound_unit_id']),
+    boundBeatId: nullableText(row['bound_beat_id']),
+    createdAt: row['created_at'],
+    updatedAt: row['updated_at'],
+  });
+
+const sculptorLinkFromRow = (row: Row): FlatSculptorLink => ({
+  ...sculptorLinkSchema.parse({
+    id: row['id'],
+    fromId: row['from_id'],
+    toId: row['to_id'],
+    label: text(row['label']),
+    createdAt: row['created_at'],
+    updatedAt: row['updated_at'],
+  }),
+  boardId: row['board_id'] as BoardId,
+});
+
+const outlineItemFromRow = (row: Row): OutlineItem =>
+  outlineItemSchema.parse({
+    id: row['id'],
+    outlineId: row['outline_id'],
+    parentId: nullableText(row['parent_id']),
+    orderKey: row['order_key'],
+    kind: text(row['kind'], 'note'),
+    title: text(row['title']),
+    body: text(row['body']),
+    status: text(row['status']),
+    collapsed: flag(row['collapsed']),
+    boundUnitId: nullableText(row['bound_unit_id']),
+    boundBeatId: nullableText(row['bound_beat_id']),
+    source: row['source'] ?? null,
+    createdAt: row['created_at'],
+    updatedAt: row['updated_at'],
+  });
+
+/** The five plan collections, read back and put together again. */
+const plansFromRows = (rows: ProjectRows): Pick<ProjectFile, 'boards' | 'outlines'> => {
+  const nodes = rows.sculptorNodes.map(sculptorNodeFromRow);
+  const links = rows.sculptorLinks.map(sculptorLinkFromRow);
+  const items = rows.outlineItems.map(outlineItemFromRow);
+
+  return {
+    boards: rows.boards.map((row) =>
+      boardSchema.parse({
+        id: row['id'],
+        projectId: row['project_id'],
+        name: text(row['name']),
+        columns: row['columns'] ?? [],
+        nodes: nodes.filter((node) => (node.boardId as string) === row['id']),
+        links: links
+          .filter((link) => (link.boardId as string) === row['id'])
+          .map(({ boardId: _boardId, ...link }) => link),
+        createdAt: row['created_at'],
+        updatedAt: row['updated_at'],
+      }),
+    ),
+    outlines: rows.outlines.map((row) =>
+      outlineSchema.parse({
+        id: row['id'],
+        projectId: row['project_id'],
+        name: text(row['name']),
+        items: items.filter((item) => (item.outlineId as string) === row['id']),
+        createdAt: row['created_at'],
+        updatedAt: row['updated_at'],
+      }),
+    ),
+  };
+};
+
 export const fromRows = (rows: ProjectRows): ProjectFile =>
   projectFileSchema.parse({
     formatVersion: PROJECT_FORMAT_VERSION,
@@ -523,6 +837,7 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     characterCategories: rows.characterCategories.map(characterCategoryFromRow),
     links: rows.links.map(linkFromRow),
     setupsPayoffs: rows.setupsPayoffs.map(setupPayoffFromRow),
+    ...plansFromRows(rows),
     // Snapshots are local recovery points, not shared state; they stay on disk.
     snapshots: [],
   });

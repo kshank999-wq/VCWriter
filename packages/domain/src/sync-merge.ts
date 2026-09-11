@@ -1,5 +1,15 @@
 import { projectFileSchema, type ProjectFile } from './project-file.js';
-import { SYNC_COLLECTIONS, type SyncCollection } from './sync-mapping.js';
+import {
+  PLAN_COLLECTIONS,
+  SYNC_COLLECTIONS,
+  isPlanCollection,
+  planParts,
+  recordsOf,
+  withPlanParts,
+  type PlanCollection,
+  type PlanParts,
+  type SyncCollection,
+} from './sync-mapping.js';
 
 /**
  * Merging a local project with the copy in the cloud (spec §14: optimistic
@@ -267,8 +277,8 @@ export const mergeProjects = (
   for (const collection of SYNC_COLLECTIONS) {
     const merged = mergeCollection(
       collection,
-      local[collection] as unknown as Timestamped[],
-      remote[collection] as unknown as Timestamped[],
+      recordsOf(local, collection) as Timestamped[],
+      recordsOf(remote, collection) as Timestamped[],
       state.lastSyncedAt,
     );
     collections[collection] = merged.records;
@@ -278,6 +288,26 @@ export const mergeProjects = (
     summary.deletedLocally += merged.deletedLocally;
     summary.revivedByEdit += merged.revivedByEdit;
   }
+
+  /**
+   * The plans, put back the way the document keeps them (addendum 07 §4).
+   *
+   * The five plan collections merge exactly like the others — a node is a
+   * record and two writers edit records — but they are not keys on the file,
+   * so spreading them into the parse would drop them silently. They are nested
+   * back in afterwards instead.
+   */
+  const plans: PlanParts = { ...planParts(local) };
+  for (const collection of PLAN_COLLECTIONS) {
+    plans[collection] = (collections[collection] ?? []) as never;
+  }
+
+  const flat = Object.fromEntries(
+    Object.entries(collections).filter(([key]) => !isPlanCollection(key as SyncCollection)),
+  );
+
+  const assemble = (input: Record<string, unknown>): ProjectFile =>
+    pruneOrphans(withPlanParts(projectFileSchema.parse(input), plans));
 
   // The project record itself is one row, merged by the same rule — with one
   // guard. Every structural edit touches `project.updatedAt`, so two people
@@ -297,14 +327,14 @@ export const mergeProjects = (
   if (projectContentMatches) {
     project =
       remote.project.updatedAt > local.project.updatedAt ? remote.project : local.project;
-    const merged = projectFileSchema.parse({
+    const merged = assemble({
       ...local,
       project,
       settings,
-      ...collections,
+      ...flat,
       snapshots: local.snapshots,
     });
-    return { merged: pruneOrphans(merged), conflicts, summary };
+    return { merged, conflicts, summary };
   }
 
   if (remoteChanged && (!localChanged || remote.project.updatedAt > local.project.updatedAt)) {
@@ -333,16 +363,16 @@ export const mergeProjects = (
     });
   }
 
-  const merged = projectFileSchema.parse({
+  const merged = assemble({
     ...local,
     project,
     settings,
-    ...collections,
+    ...flat,
     // Snapshots are local recovery points and never travel.
     snapshots: local.snapshots,
   });
 
-  return { merged: pruneOrphans(merged), conflicts, summary };
+  return { merged, conflicts, summary };
 };
 
 /** A one-line report of what a sync did, for the status area. */

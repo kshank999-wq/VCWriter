@@ -208,16 +208,30 @@ const pullRows = async (projectId: string): Promise<ProjectFile | null> => {
     characterCategories: rows['characterCategories'] ?? [],
     links: rows['links'] ?? [],
     setupsPayoffs: rows['setupsPayoffs'] ?? [],
+    // The plans (addendum 07 §4). `fromRows` puts the nodes back on their
+    // board and the rows back in their outline.
+    boards: rows['boards'] ?? [],
+    sculptorNodes: rows['sculptorNodes'] ?? [],
+    sculptorLinks: rows['sculptorLinks'] ?? [],
+    outlines: rows['outlines'] ?? [],
+    outlineItems: rows['outlineItems'] ?? [],
   });
 };
 
 const pushRows = async (file: ProjectFile, remote: ProjectFile | null): Promise<void> => {
   const db = supabase();
   const rows = toRows(file);
+  // What the server had, in the same encoding as what is going out. Read
+  // through `toRows` rather than off the project: the plans are nested in the
+  // document and flat in the database (addendum 07 §4), so a collection like
+  // `sculptorNodes` is not a key on a `ProjectFile` at all, and asking for one
+  // would quietly find nothing to delete.
+  const remoteRows = remote ? toRows(remote) : null;
 
   const { error: projectError } = await db.from('projects').upsert(rows.project);
   if (projectError) throw new CloudError(projectError.message);
 
+  // In declaration order: a node cannot be written before the board it is on.
   for (const [key, table] of Object.entries(SYNC_TABLES)) {
     const collection = rows[key as keyof typeof SYNC_TABLES] as Row[];
     if (collection.length > 0) {
@@ -228,14 +242,14 @@ const pushRows = async (file: ProjectFile, remote: ProjectFile | null): Promise<
     // Rows the merge dropped have to go from the server too, or the next pull
     // brings them straight back.
     const keep = new Set(collection.map((row) => row['id'] as string));
-    const stale = (remote?.[key as keyof typeof SYNC_TABLES] as { id: string }[] | undefined)?.filter(
-      (record) => !keep.has(record.id),
+    const stale = (remoteRows?.[key as keyof typeof SYNC_TABLES] as Row[] | undefined)?.filter(
+      (row) => !keep.has(row['id'] as string),
     );
     if (stale && stale.length > 0) {
       const { error } = await db
         .from(table)
         .delete()
-        .in('id', stale.map((record) => record.id));
+        .in('id', stale.map((row) => row['id'] as string));
       if (error) throw new CloudError(error.message);
     }
   }

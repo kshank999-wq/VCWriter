@@ -1,6 +1,6 @@
 # Addendum 07 — Writers Room
 
-Status: specified, nothing built, September 2026. From Ken's *VC Writer Writers
+Status: specified; **stage 0 built**, September 2026. From Ken's *VC Writer Writers
 Room Development Specification v1.0* of 11 September, and his elaboration of
 the same day — **the showrunner's dashboard is the front door, everyone has a
 login, and everyone submits.** Extends §12 (commerce), §14 (sync) and §15 (no
@@ -154,17 +154,68 @@ that writer's Script, the master — and each window wears its writer's colour
 and name. Three windows showing the same scene are indistinguishable without
 that, which is the whole reason §6's stamp is not decoration.
 
-## 4. What is missing, and blocks work that is already scheduled
+## 4. The plans in the cloud — **built**
 
-**Boards and outlines do not sync.** `SYNC_TABLES` names eleven collections,
+**Boards and outlines did not sync.** `SYNC_TABLES` named eleven collections,
 and neither the Story Sculptor's boards (addendum 03) nor the Outliner's
-outlines (addendum 06) is among them: they live in the project file and nowhere
-else. A Room built today would carry a script and no plan.
+outlines (addendum 06) was among them: they lived in the project file and
+nowhere else. A Room built on that would carry a script and no plan, and
+addendum 03 §14.4 stage 10 — Writers Room attribution and alternate boards —
+cannot be built on a board the cloud has never seen.
 
-This is also what blocks **addendum 03 §14.4 stage 10** — Writers Room
-attribution and alternate boards — which cannot be built on a board the cloud
-has never seen. It is the first prerequisite in §14's build order, and it is
-work in `packages/domain` and `packages/supabase` rather than in the Room.
+So this was stage 0, and it is done. Migration `0023_boards_and_outlines.sql`
+adds five tables, and `sync-mapping.ts` gains the five collections that fill
+them.
+
+### 4.1 Five collections, not two
+
+A node is what two writers edit independently, so a node is a **row** and a
+merge compares one at a time. The five are `boards`, `sculptor_nodes`,
+`sculptor_links`, `outlines`, `outline_items`.
+
+A board's **columns** stay one `jsonb` column on the board rather than becoming
+tables. A column is the board's *shape* rather than its content: it is always
+read and written whole with the board, nothing queries inside it, and — unlike
+a node — it carries no timestamps, so there is nothing for a per-record merge
+to compare anyway.
+
+### 4.2 The document nests them and the database does not
+
+This is the one real decision in the stage, and the answer is not to change the
+document. A board *is* its nodes to the module that draws it, which is why
+addendum 03 built it that way and why every reader in the Sculptor and the
+Outliner reads it that way.
+
+So the flattening lives in `sync-mapping.ts`, which is already "the only place
+the two spellings meet" — the third spelling joins the other two there.
+`planParts` takes the plans apart into five flat lists; `withPlanParts` puts
+them back. Two consumers ask through one door — `recordsOf` and `withRecords` —
+so neither the merge nor the restore has to know which collections the document
+nests.
+
+Flattening loses exactly one fact that nesting was carrying for free: **the
+board a link belongs to**. It travels in the flat form the same way
+`project_id` travels in a row — the document gets it from where the thing sits,
+and anything flat has to be told.
+
+### 4.3 What the journey drops
+
+Putting the plans back drops what cannot be drawn, the way `pruneOrphans`
+already drops a beat whose scene has gone: a node whose board did not survive,
+and a **link whose two ends did not both survive**. The board's own rule makes
+the second one easy — a link is an observation rather than what holds anything
+together (addendum 03 §7), so losing one costs the observation and nothing
+moves.
+
+### 4.4 One thing this fixed on the way past
+
+`pushRows` deleted the server's stale rows by reading the remote **project
+file** with a collection's name. That worked only because every collection so
+far happened to be a key on `ProjectFile` — `sculptorNodes` is not, and asking
+for one would have found nothing to delete and quietly brought deleted nodes
+back on the next pull. It reads through `toRows(remote)` now, which is the same
+encoding as what is going out and is right for every collection rather than for
+eleven of them.
 
 ## 5. Where you land
 
@@ -428,8 +479,9 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
 
 ## 15. Build order
 
-0. **Boards and outlines sync** (§4). A prerequisite, in `packages/domain` and
-   `packages/supabase`, not in the Room. It also unblocks addendum 03 stage 10.
+0. **Built.** Boards and outlines sync (§4). A prerequisite, in
+   `packages/domain` and `packages/supabase` rather than in the Room. It also
+   unblocks addendum 03 stage 10.
 1. Rooms, subscription entitlement, invitations, roles, titles, colours and
    seat management — and `owns_project` widened into read and write (§3.2).
 2. The landing page (§5): sign in, see your part in the room, open the editor

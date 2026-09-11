@@ -52,13 +52,15 @@ push live; the build takes a minute or two.
   `addendum-07-writers-room.md` is Writers Room, the cloud collaboration
   module: the showrunner's dashboard as the front door, logins, assignments,
   submitting, the brainstorming room, curation and a non-destructive master
-  merge. **Specified, nothing built.** §1 and §2 are the rules it all hangs
+  merge. **Specified; stage 0 built.** §1 and §2 are the rules it all hangs
   off — one writer's work is never destroyed by another's, and a collaborator
   gets the whole program rather than a web editor. §3 says how much of it the
   product already has (the Room is `/preview` grown up; membership widens
   `owns_project` rather than adding a second set of policies; several writers
-  side by side is the pane windowing that exists), and §4 names the
-  prerequisite: boards and outlines do not sync. §15 is the build order.
+  side by side is the pane windowing that exists). §4 is stage 0, now built:
+  boards and outlines sync, nested in the document and flat in the database,
+  with `planParts`/`withPlanParts` in `sync-mapping.ts` the one place that
+  knows the difference. §15 is the build order.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
