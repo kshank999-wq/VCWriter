@@ -288,7 +288,9 @@ it worth opening.
 8. ~~Export as an outline~~ — **withdrawn** (§8). The Outliner is where a
    story becomes an outline, and material reaches it by being carried across.
 9. Folding, focus, filters, search, mini-map.
-10. Writers Room attribution and alternate boards, when Writers Room exists.
+10. Writers Room attribution and alternate boards (addendum 07). Blocked
+    twice over: Writers Room is specified but unbuilt, and a board does not
+    sync at all — addendum 07 §3 makes that the prerequisite it is.
 
 Stages 1–4 are the diagram. What the board is *for* is no longer stage 8,
 which is withdrawn: it is the Outliner, and carrying cards into it (addendum
