@@ -149,27 +149,27 @@ Connectors reroute as nodes move and columns resize. A connector is never
 what holds two things together; the parent relation is. So a connector can be
 deleted without losing anything but the observation.
 
-## 8. Export as an outline
+## 8. Export as an outline — **withdrawn**
 
-The canvas, walked depth-first, as indented text: each structure node, then
-its scenes, then their beats, then whatever is in the columns beyond.
+*Written when the Sculptor was the only place a story was planned. Ken's
+decision of 11 September: **the Sculptor does not make outlines.***
 
-- **Beside you**, in a window of its own, so the outline can be read while
-  the canvas is worked on.
-- **Printed**, or exported, like everything else that prints.
-- Columns can be left out: an outline of just structure and scenes is what
-  most people mean by "the outline".
+The original idea was the canvas walked depth-first as indented text, to read
+beside you and to print, and this section called it the payoff of the whole
+module. It was — right up until there was an Outliner.
 
-This is the payoff of the whole module. A writer who has spent an afternoon
-dropping shapes on a canvas wants to read the result as prose, and to hand it
-to somebody.
+Addendum 06 changed what the board is for. The Outliner is where a story is
+organised, and material reaches it from the board **by carrying a card across**
+(addendum 06 §2, §12 stage 7) — one at a time, with its subtree, because a
+board is a picture of possibilities and most of them are not in the story.
+An export that flattened the whole canvas would produce exactly the outline
+nobody asked for, and then sit beside the Outliner being a second, worse
+answer to the same question.
 
-**This is a document, not the Outliner.** Addendum 06 §2 keeps the two apart:
-the export is the canvas as indented text, to read and to print, while the
-Outliner is a workspace of its own with its own tree. Material passes between
-the board and the Outliner **by dragging, never by converting** — a board is a
-picture of possibilities, most of which are not in the story, and flattening
-the whole of one would produce an outline nobody asked for.
+So the payoff moved. It is the Outliner, and the way into it; printing an
+outline is addendum 06 §12 stage 9. What the board might still want one day is
+a way to print **the board** — the diagram, as a diagram — which is a different
+thing and is not specified here.
 
 ## 9. The detail panel
 
@@ -285,11 +285,14 @@ it worth opening.
 5. **Built.** Columns beyond the third, defined by the writer.
 6. **Built.** Binding a node to a real scene or beat.
 7. **Built.** The writer's own connections, labelled.
-8. Export as an outline: beside you, and printed.
+8. ~~Export as an outline~~ — **withdrawn** (§8). The Outliner is where a
+   story becomes an outline, and material reaches it by being carried across.
 9. Folding, focus, filters, search, mini-map.
 10. Writers Room attribution and alternate boards, when Writers Room exists.
 
-Stages 1–4 are the diagram. Stage 8 is the reason to have used it.
+Stages 1–4 are the diagram. What the board is *for* is no longer stage 8,
+which is withdrawn: it is the Outliner, and carrying cards into it (addendum
+06 §12 stage 7).
 
 ## 15. Names
 
