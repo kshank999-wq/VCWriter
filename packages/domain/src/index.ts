@@ -42,6 +42,7 @@ export * from './print-sheet.js';
 export * from './print-grid.js';
 export * from './story-grid.js';
 export * from './sculptor.js';
+export * from './sculptor-binding.js';
 export * from './story-layout.js';
 export * from './story-threads.js';
 export * from './scene-heading.js';

@@ -5,31 +5,45 @@ import {
   addChild,
   addColumn,
   addColumnField,
+  bindKindOf,
+  bindNode,
+  bindableBeats,
+  bindableUnits,
   blocksOf,
   boardLayout,
   boardsOf,
+  boundOf,
   columnOf,
   columnsOf,
   createBoard,
   fieldsOf,
   findBoard,
+  findNode,
+  followCanvas,
+  isBound,
   moveNode,
+  outOfStep,
+  realiseNode,
   removeColumn,
   removeColumnField,
   removeNode,
   renameColumn,
   renameColumnField,
   setNodeField,
+  unbindNode,
   updateNode,
+  type BeatId,
   type Board,
   type LaidNode,
   type ProjectFile,
   type SculptorColumn,
+  type SculptorNode,
   type SculptorNodeId,
+  type StructuralUnitId,
 } from '@vcwriter/domain';
 
 /**
- * The Story Sculptor's canvas (addendum 03), stages 1–4.
+ * The Story Sculptor's canvas (addendum 03), stages 1–6.
  *
  * **Story time runs down; detail runs right.** A new board is two nodes,
  * Beginning and End, and everything else is put in by the writer — there is
@@ -306,6 +320,7 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
                     setSelected(null);
                     write((current, id) => removeNode(current, id, laid.node.id));
                   }}
+                  onUnbind={() => write((current, id) => unbindNode(current, id, laid.node.id))}
                   onAddChild={() => write((current, id) => addChild(current, id, laid.node.id).file)}
                 />
               ))}
@@ -364,11 +379,9 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
                 }}
               />
 
-              <p className="muted small">
-                {/* §6: a node is an idea until the writer binds it, and
-                    binding is a later stage. The badge says which it is. */}
-                {chosen.boundUnitId || chosen.boundBeatId ? 'In the script.' : 'An idea. It lives only on the canvas.'}
-              </p>
+              {/* §6: a node is an idea until the writer binds it. This is
+                  where they say so, and where the board says which it is. */}
+              <Binding file={file} board={board as Board} node={chosen} onWrite={write} />
             </>
           ) : (
             <p className="muted small">
@@ -379,6 +392,147 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
         </aside>
       </div>
     </div>
+  );
+}
+
+/**
+ * An idea, or a scene (§6).
+ *
+ * **A node is an idea until the writer says otherwise**, so this is a
+ * statement of fact and one control, never a form. An idea offers two ways to
+ * stop being one — take a scene that already exists, or make a new one — and
+ * a scene that is real says which it is and offers to let go.
+ *
+ * Where the canvas and the script have fallen out of step it says so in a
+ * sentence and offers to fix it. It never fixes it on its own: §11 is that the
+ * board never reorders the script behind the writer's back.
+ */
+function Binding({
+  file,
+  board,
+  node,
+  onWrite,
+}: {
+  file: ProjectFile;
+  board: Board;
+  node: SculptorNode;
+  onWrite(mutate: (current: ProjectFile, id: Board['id']) => ProjectFile): void;
+}) {
+  const kind = bindKindOf(node);
+  const bound = boundOf(file, node);
+  const step = useMemo(() => (isBound(node) ? outOfStep(file, board, node.id) : null), [file, board, node]);
+
+  if (kind === null) {
+    return (
+      <p className="muted small sculpt-binding">
+        An idea. A block is the shape of the story rather than a scene in it, so there is nothing in the script for
+        it to be.
+      </p>
+    );
+  }
+
+  const what = kind === 'unit' ? 'scene' : 'beat';
+
+  if (bound) {
+    // Named the way the rest of the workspace names a scene: its sequence
+    // label where it has one, its title, and "Untitled" rather than a blank.
+    const name =
+      bound.kind === 'unit'
+        ? `${bound.unit.sequenceLabel || ''} ${bound.unit.title || 'Untitled'}`.trim()
+        : bound.beat.title.trim() || 'Untitled';
+    return (
+      <section className="sculpt-binding bound">
+        <p className="small">
+          <span className="sculpt-real">●</span> This <strong>is</strong> the {what} <em>{name}</em>, in the script.
+          Rename it here or there and it is renamed in both.
+        </p>
+        {step ? (
+          <p className="small sculpt-step">
+            On the canvas it comes {step.canvasFirst ? 'before' : 'after'} {step.otherTitle}; in the script it comes{' '}
+            {step.canvasFirst ? 'after' : 'before'}.{' '}
+            <button
+              type="button"
+              className="ghost small"
+              onClick={() => onWrite((current, id) => followCanvas(current, id, node.id))}
+            >
+              Move the {what} to match
+            </button>
+          </p>
+        ) : null}
+        <button
+          type="button"
+          className="ghost small"
+          onClick={() => onWrite((current, id) => unbindNode(current, id, node.id))}
+        >
+          Unbind
+        </button>
+      </section>
+    );
+  }
+
+  const parent = node.parentId ? findNode(board, node.parentId) : null;
+  const canMake = kind === 'unit' || (parent?.boundUnitId ?? null) !== null;
+  const candidates: Array<{ id: string; label: string }> =
+    kind === 'unit'
+      ? bindableUnits(file, node.id).map((unit) => ({
+          id: unit.id as string,
+          label: `${unit.sequenceLabel || unit.kind} ${unit.title || 'Untitled'}`.trim(),
+        }))
+      : bindableBeats(file, board, node.id).map((beat) => ({
+          id: beat.id as string,
+          label: beat.title || 'Untitled beat',
+        }));
+
+  return (
+    <section className="sculpt-binding">
+      <p className="muted small">An idea. It lives only on the canvas.</p>
+
+      {canMake ? (
+        <button
+          type="button"
+          className="ghost small"
+          title={`Put this in the script as a ${what}, and bind the two`}
+          onClick={() => onWrite((current, id) => realiseNode(current, id, node.id).file)}
+        >
+          Make it a {what}
+        </button>
+      ) : (
+        <p className="muted small">
+          A beat lives inside a scene, so this one can be real as soon as the scene above it is.
+        </p>
+      )}
+
+      {candidates.length > 0 ? (
+        <label className="field">
+          <span>or it already exists</span>
+          <select
+            aria-label={`Bind this node to a ${what}`}
+            value=""
+            onChange={(event) => {
+              const chosen = event.target.value;
+              if (!chosen) return;
+              onWrite((current, id) =>
+                bindNode(
+                  current,
+                  id,
+                  node.id,
+                  kind === 'unit'
+                    ? { unitId: chosen as unknown as StructuralUnitId }
+                    : { beatId: chosen as unknown as BeatId },
+                ),
+              );
+            }}
+          >
+            <option value="">Choose the {what} it is…</option>
+            {candidates.map((candidate) => (
+              <option key={candidate.id} value={candidate.id}>
+                {candidate.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+    </section>
   );
 }
 
@@ -418,8 +572,7 @@ function ColumnFields({
 
       {fields.length === 0 ? (
         <p className="muted small">
-          Nothing yet. A node is a title and a note; anything more — a scene’s POV, a character arc’s
-          before-and-after — belongs to the column, so every node in it is asked the same thing.
+          Nothing yet — a node is a title and a note. Ask this column something and every node in it is asked it.
         </p>
       ) : null}
 
@@ -472,6 +625,7 @@ function Node({
   onFold,
   onMove,
   onRemove,
+  onUnbind,
   onAddChild,
 }: {
   laid: LaidNode;
@@ -482,10 +636,15 @@ function Node({
   onFold(): void;
   onMove(direction: -1 | 1): void;
   onRemove(): void;
+  onUnbind(): void;
   onAddChild(): void;
 }) {
   const { node } = laid;
   const end = node.end !== null;
+  const bound = isBound(node);
+  // §11: deleting a bound node offers to unbind rather than to delete the
+  // scene. The writing is never what a × on a card is allowed to cost.
+  const [asking, setAsking] = useState(false);
   return (
     <div
       className={[
@@ -493,7 +652,8 @@ function Node({
         end ? 'end' : '',
         selected ? 'selected' : '',
         node.collapsed ? 'folded' : '',
-        node.boundUnitId || node.boundBeatId ? 'bound' : 'idea',
+        bound ? 'bound' : 'idea',
+        asking ? 'asking' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -505,6 +665,14 @@ function Node({
       }}
       onPointerDown={onSelect}
     >
+      {/* The badge §6 asks for, on every node: a glance says how much of the
+          canvas is real. A filled mark is in the script; an idea has none. */}
+      {bound ? (
+        <span className="sculpt-real" title="This is a scene in the script" aria-label="In the script">
+          ●
+        </span>
+      ) : null}
+
       <input
         className="sculpt-title"
         aria-label={end ? `What the story ${node.end === 'beginning' ? 'begins' : 'ends'} as` : 'What this is'}
@@ -512,6 +680,37 @@ function Node({
         value={node.title}
         onChange={(event) => onTitle(event.target.value)}
       />
+
+      {asking ? (
+        <span className="sculpt-sure" role="alertdialog" aria-label={`Remove ${node.title || 'this node'}?`}>
+          <span className="muted small">This is a scene in the script. Taking the card off leaves the scene there.</span>
+          <span className="sculpt-sure-row">
+            <button
+              type="button"
+              className="ghost small"
+              onClick={() => {
+                setAsking(false);
+                onUnbind();
+              }}
+            >
+              Unbind it
+            </button>
+            <button
+              type="button"
+              className="ghost small danger"
+              onClick={() => {
+                setAsking(false);
+                onRemove();
+              }}
+            >
+              Remove the card
+            </button>
+            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+              Keep it
+            </button>
+          </span>
+        </span>
+      ) : null}
 
       <div className="sculpt-tools">
         {laid.childCount > 0 ? (
@@ -536,7 +735,12 @@ function Node({
             <button type="button" className="ghost small" aria-label={`Move ${node.title || 'this node'} down`} onClick={() => onMove(1)}>
               ↓
             </button>
-            <button type="button" className="ghost small" aria-label={`Remove ${node.title || 'this node'}`} onClick={onRemove}>
+            <button
+              type="button"
+              className="ghost small"
+              aria-label={`Remove ${node.title || 'this node'}`}
+              onClick={() => (bound ? setAsking(true) : onRemove())}
+            >
               ×
             </button>
           </>

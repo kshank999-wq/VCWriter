@@ -1,5 +1,7 @@
 import { newId } from './ids.js';
 import { orderKeyForIndex } from './ordering.js';
+// The board's half of §6: a scene bound to a node is the same object as it.
+import { retitleBoards, unbindRemoved } from './sculptor.js';
 import { nowIso } from './entities/common.js';
 import {
   LANE_COLOURS,
@@ -349,10 +351,11 @@ export const updateBeat = (
   > & { manuscript?: ManuscriptSegment },
 ): ProjectFile => {
   if (!file.beats.some((beat) => beat.id === beatId)) throw new DomainError(`Beat ${beatId} does not exist`);
-  return touchProject({
+  const next = touchProject({
     ...file,
     beats: file.beats.map((beat) => (beat.id === beatId ? touch({ ...beat, ...patch }) : beat)),
   });
+  return patch.title === undefined ? next : retitleBoards(next, { beatId }, patch.title);
 };
 
 /**
@@ -1059,10 +1062,13 @@ export const updateUnit = (
   if (!file.units.some((unit) => unit.id === unitId)) {
     throw new DomainError(`Scene/chapter ${unitId} does not exist`);
   }
-  return touchProject({
+  const next = touchProject({
     ...file,
     units: file.units.map((unit) => (unit.id === unitId ? touch({ ...unit, ...patch }) : unit)),
   });
+  // Half of "rename it in either place and it is renamed in both" (addendum
+  // 03 §6): a scene bound to a node on the board is the same object as it.
+  return patch.title === undefined ? next : retitleBoards(next, { unitId }, patch.title);
 };
 
 /**
@@ -1120,29 +1126,37 @@ export const removeUnit = (file: ProjectFile, unitId: StructuralUnitId): Project
   );
   const removed = new Set<string>([unitId, ...removedBeatIds]);
 
-  return touchProject({
-    ...file,
-    units: file.units.filter((unit) => unit.id !== unitId),
-    beats: file.beats.filter((beat) => !removedBeatIds.has(beat.id)),
-    markers: reanchorMarkers(file, new Set<string>([unitId])),
-    links: withoutLinksTouching(file, removed),
-  });
+  // A node pointing at a scene that has left the script claims to be real and
+  // cannot say what it is, so it goes back to being an idea (addendum 03 §6).
+  return unbindRemoved(
+    touchProject({
+      ...file,
+      units: file.units.filter((unit) => unit.id !== unitId),
+      beats: file.beats.filter((beat) => !removedBeatIds.has(beat.id)),
+      markers: reanchorMarkers(file, new Set<string>([unitId])),
+      links: withoutLinksTouching(file, removed),
+    }),
+    { units: new Set<string>([unitId as string]), beats: removedBeatIds },
+  );
 };
 
 export const removeBeat = (file: ProjectFile, beatId: BeatId): ProjectFile => {
   if (!file.beats.some((beat) => beat.id === beatId)) throw new DomainError(`Beat ${beatId} does not exist`);
-  return touchProject({
-    ...file,
-    beats: file.beats.filter((beat) => beat.id !== beatId),
-    links: withoutLinksTouching(file, new Set<string>([beatId])),
-    // Research that was marked used in this beat keeps its used state; only the
-    // now-meaningless back-reference goes.
-    researchItems: file.researchItems.map((item) =>
-      item.usedInBeatIds.includes(beatId)
-        ? touch({ ...item, usedInBeatIds: item.usedInBeatIds.filter((candidate) => candidate !== beatId) })
-        : item,
-    ),
-  });
+  return unbindRemoved(
+    touchProject({
+      ...file,
+      beats: file.beats.filter((beat) => beat.id !== beatId),
+      links: withoutLinksTouching(file, new Set<string>([beatId])),
+      // Research that was marked used in this beat keeps its used state; only
+      // the now-meaningless back-reference goes.
+      researchItems: file.researchItems.map((item) =>
+        item.usedInBeatIds.includes(beatId)
+          ? touch({ ...item, usedInBeatIds: item.usedInBeatIds.filter((candidate) => candidate !== beatId) })
+          : item,
+      ),
+    }),
+    { units: new Set<string>(), beats: new Set<string>([beatId as string]) },
+  );
 };
 
 // ---------------------------------------------------------------------------

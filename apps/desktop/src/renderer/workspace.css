@@ -7325,3 +7325,96 @@ dialog.preferences .field {
   padding: 0 3px;
   font-size: 10px;
 }
+
+/* ---- the Sculptor: an idea, or a scene (addendum 03 §6) ---------------- */
+
+/* The badge every node carries, so a glance says how much of the canvas is
+   real. A card with no mark is an idea, which is what most of a board is. */
+.sculpt-real {
+  color: var(--gold);
+  font-size: 8px;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.sculpt-node.bound {
+  border-style: solid;
+  border-color: var(--gold);
+}
+
+/* A card is one row tall and clips what is in it, so the confirm has to be
+   allowed out of it while it is up. */
+.sculpt-node.asking {
+  overflow: visible;
+  z-index: 7;
+}
+
+.sculpt-binding {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.sculpt-binding p {
+  margin: 0 0 8px;
+}
+
+.sculpt-binding .field {
+  margin-top: 8px;
+}
+
+/* These are decisions about the script, not asides: they read as controls
+   rather than as another line of the paragraph above them. */
+.sculpt-binding button {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 9px;
+}
+
+.sculpt-binding button:hover {
+  border-color: var(--gold);
+}
+
+/* The canvas and the script have fallen out of step, said in a sentence with
+   the offer to fix it. It is never fixed without being asked (§11). */
+.sculpt-step {
+  border-left: 2px solid var(--gold);
+  padding-left: 8px;
+  color: var(--muted);
+}
+
+/* Deleting a bound node offers to unbind rather than to delete the scene
+   (§11), so the × on a card can never cost the writing. It floats off the
+   card, which is only one row tall. */
+.sculpt-sure {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: max(100%, 230px);
+  margin-top: 3px;
+  padding: 7px 8px;
+  border: 1px solid var(--danger);
+  border-radius: 3px;
+  background: var(--panel-2);
+  white-space: normal;
+}
+
+.sculpt-sure-row {
+  display: flex;
+  gap: 6px;
+}
+
+.sculpt-sure button {
+  padding: 2px 8px;
+  font-size: 10.5px;
+}
+
+.sculpt-sure .danger {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: transparent;
+}

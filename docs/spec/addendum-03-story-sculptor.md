@@ -1,6 +1,6 @@
 # Addendum 03 — Story Sculptor
 
-Status: stages 1–4 built, September 2026. **Rewritten** from Ken's diagram of
+Status: stages 1–6 built, September 2026. **Rewritten** from Ken's diagram of
 10 September; §14 says what changed and what happens to the code built
 against the first draft. Extends §5 (story structure) and §19 (the hierarchy)
 of the master specification, and adds an area alongside the workspace of
@@ -276,7 +276,7 @@ it worth opening.
    gaps.
 4. **Built.** The third column — beats, growing their scenes.
 5. **Built.** Columns beyond the third, defined by the writer.
-6. Binding a node to a real scene or beat.
+6. **Built.** Binding a node to a real scene or beat.
 7. The writer's own connections, labelled.
 8. Export as an outline: beside you, and printed.
 9. Folding, focus, filters, search, mini-map.
@@ -297,9 +297,9 @@ Stages 1–4 are the diagram. Stage 8 is the reason to have used it.
 
 ## 16. What is built
 
-Stages 1–5 — **the diagram, and the columns the writer defines**. The Sculptor
-is a button on the title bar again, beside Research, and it opens the canvas
-over the workspace.
+Stages 1–6 — **the diagram, the columns the writer defines, and the moment an
+idea becomes a scene**. The Sculptor is a button on the title bar again,
+beside Research, and it opens the canvas over the workspace.
 
 **A new board is two nodes.** Beginning and End, real and editable, with
 nothing in them: click either and type what the story begins or ends as. They
@@ -369,3 +369,53 @@ wanted three columns and a sentence on each is never shown a field to fill in.
 
 Answers live on the node, keyed by the question's id (`fields`, defaulting to
 empty), so a node in a column that asks nothing carries nothing.
+
+### Stage 6 — binding a node to a real scene
+
+**A node is an idea until the writer says otherwise**, so the detail panel
+says which it is in a sentence and offers exactly two ways to stop being one:
+*Make it a scene*, which puts one in the script with the node's name on it, or
+a list of the scenes that already exist, headed **or it already exists**. A
+block offers neither: there is no object in the script for *Act II* to be the
+same thing as, and the panel says so rather than showing a control that does
+nothing.
+
+A card that is real carries a small filled mark and a solid border; an idea is
+dashed and carries nothing, so **a glance says how much of the canvas is
+real** — which is the badge §6 asks for.
+
+**One node per scene.** "The two are one thing" only means anything if it is
+one thing, so a scene another node has already claimed is not offered again,
+on this board or any other. The claim is what makes the rest of it safe:
+renaming the node renames the scene and renaming the scene renames the node,
+in one place each, with nothing to reconcile.
+
+Where a scene it binds to already has a name and the node does not, the node
+takes the script's — binding to a scene reads as recognising it, never as
+wiping it.
+
+A **beat** node binds the same way, with one rule from the script: a beat
+lives inside a scene and never floats in a lane (spec §19), so a beat can only
+be made once the scene above it is real. Until then the panel says so, in
+those words, rather than failing when the button is pressed. Once the parent
+is bound, only **that scene's** beats are offered — the diagram already says
+which scene this beat is in, and offering another's would let the board say
+something it does not mean.
+
+**What binding costs, and what it never costs.** Unbinding leaves the scene in
+the script and the node on the canvas, no longer joined; it is not a deletion
+and never asks. The × on a bound card does ask, and what it offers is §11's
+rule in three buttons — *Unbind it*, *Remove the card*, *Keep it* — over a
+line saying the scene stays in the script either way. A scene removed from the
+script turns its node back into an idea rather than leaving it pointing at
+nothing.
+
+**The script is never reordered behind the writer's back** (§11). Moving a
+bound node moves the node, full stop. Where that puts it out of step with the
+script the panel says so in a sentence — *on the canvas it comes before The
+interview; in the script it comes after* — with one button, **Move the scene
+to match**, and that is the only route by which the board ever changes the
+story order. Making a new scene reads the canvas the same way: it lands after
+the scene of the nearest bound node above it, or before the nearest below it,
+and at the end when it has neither — so nothing that was already in the script
+moves.

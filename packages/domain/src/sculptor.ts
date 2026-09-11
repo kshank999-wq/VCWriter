@@ -11,10 +11,17 @@ import {
   type SculptorNode,
 } from './entities/sculptor.js';
 import type { ProjectFile } from './project-file.js';
-import type { BoardId, SculptorColumnId, SculptorFieldId, SculptorNodeId } from './ids.js';
+import type {
+  BeatId,
+  BoardId,
+  SculptorColumnId,
+  SculptorFieldId,
+  SculptorNodeId,
+  StructuralUnitId,
+} from './ids.js';
 
 /**
- * The Story Sculptor (addendum 03), stages 1–4.
+ * The Story Sculptor (addendum 03), stages 1–6.
  *
  * **A flat outline asks a writer to know the shape of the story before they
  * have found it.** This is the other way round: fix a frame — this is where
@@ -381,17 +388,30 @@ export const addChild = (
   };
 };
 
-/** What a node says, and what it is. Anything not given is left alone. */
+/**
+ * What a node says, and what it is. Anything not given is left alone.
+ *
+ * Retitling a **bound** node retitles the scene or beat it is (§6): they are
+ * one object, so there is no version of this where the card and the script
+ * say different things.
+ */
 export const updateNode = (
   file: ProjectFile,
   boardId: BoardId,
   nodeId: SculptorNodeId,
   patch: Partial<Pick<SculptorNode, 'title' | 'note' | 'kind' | 'colour' | 'collapsed'>>,
-): ProjectFile =>
-  withBoard(file, boardId, (board) => ({
-    ...board,
-    nodes: board.nodes.map((node) => (node.id === nodeId ? touch({ ...node, ...patch }) : node)),
+): ProjectFile => {
+  const board = findBoard(file, boardId);
+  const before = board ? findNode(board, nodeId) : null;
+  const next = withBoard(file, boardId, (current) => ({
+    ...current,
+    nodes: current.nodes.map((node) => (node.id === nodeId ? touch({ ...node, ...patch }) : node)),
   }));
+  if (patch.title === undefined || !before) return next;
+  if (before.boundUnitId !== null) return retitleScript(next, { unitId: before.boundUnitId }, patch.title);
+  if (before.boundBeatId !== null) return retitleScript(next, { beatId: before.boundBeatId }, patch.title);
+  return next;
+};
 
 /**
  * A node, and everything hanging off it, taken off the board.
@@ -631,3 +651,107 @@ export const boardTally = (board: Board): { nodes: number; bound: number } => ({
   nodes: board.nodes.length,
   bound: board.nodes.filter((node) => node.boundUnitId !== null || node.boundBeatId !== null).length,
 });
+
+// ----------------------------------------- one name, in both places (§6)
+
+/**
+ * Rename what a node is bound to, from the board.
+ *
+ * The board half of "rename it in either place and it is renamed in both".
+ * A node that is an idea renames only itself; a bound one renames the scene,
+ * because they are the same object and a card that disagreed with the script
+ * would be exactly the duplicate content §6 exists to avoid.
+ */
+export const retitleScript = (
+  file: ProjectFile,
+  target: { unitId: StructuralUnitId } | { beatId: BeatId },
+  title: string,
+): ProjectFile => {
+  const at = nowIso();
+  if ('unitId' in target) {
+    if (!file.units.some((unit) => unit.id === target.unitId)) return file;
+    return {
+      ...file,
+      units: file.units.map((unit) => (unit.id === target.unitId ? { ...unit, title, updatedAt: at } : unit)),
+      project: { ...file.project, updatedAt: at },
+    };
+  }
+  if (!file.beats.some((beat) => beat.id === target.beatId)) return file;
+  return {
+    ...file,
+    beats: file.beats.map((beat) => (beat.id === target.beatId ? { ...beat, title, updatedAt: at } : beat)),
+    project: { ...file.project, updatedAt: at },
+  };
+};
+
+/**
+ * Rename the nodes bound to a scene or beat, from the script.
+ *
+ * The other half. Called by `updateUnit` and `updateBeat` when a title
+ * changes, so a scene renamed in the workspace is renamed on every board that
+ * says it is real.
+ */
+export const retitleBoards = (
+  file: ProjectFile,
+  target: { unitId: StructuralUnitId } | { beatId: BeatId },
+  title: string,
+): ProjectFile => {
+  const boards = boardsOf(file);
+  if (boards.length === 0) return file;
+  const at = nowIso();
+  let changed = false;
+
+  const next = boards.map((board) => {
+    let touched = false;
+    const nodes = board.nodes.map((node) => {
+      const hit = 'unitId' in target ? node.boundUnitId === target.unitId : node.boundBeatId === target.beatId;
+      if (!hit || node.title === title) return node;
+      touched = true;
+      return { ...node, title, updatedAt: at };
+    });
+    if (!touched) return board;
+    changed = true;
+    return { ...board, nodes, updatedAt: at };
+  });
+
+  return changed ? { ...file, boards: next } : file;
+};
+
+/**
+ * Let go of a scene or beat that has left the script.
+ *
+ * Called by `removeUnit` and `removeBeat`. A node pointing at something that
+ * no longer exists is worse than an idea — it claims to be real and cannot say
+ * what it is — so it becomes an idea again, which is what it was before the
+ * writer bound it. Nothing else about the node changes.
+ */
+export const unbindRemoved = (
+  file: ProjectFile,
+  removed: { units: Set<string>; beats: Set<string> },
+): ProjectFile => {
+  const boards = boardsOf(file);
+  if (boards.length === 0) return file;
+  const at = nowIso();
+  let changed = false;
+
+  const next = boards.map((board) => {
+    let touched = false;
+    const nodes = board.nodes.map((node) => {
+      const unitGone = node.boundUnitId !== null && removed.units.has(node.boundUnitId as string);
+      const beatGone = node.boundBeatId !== null && removed.beats.has(node.boundBeatId as string);
+      if (!unitGone && !beatGone) return node;
+      touched = true;
+      return {
+        ...node,
+        boundUnitId: unitGone ? null : node.boundUnitId,
+        boundBeatId: beatGone ? null : node.boundBeatId,
+        updatedAt: at,
+      };
+    });
+    if (!touched) return board;
+    changed = true;
+    return { ...board, nodes, updatedAt: at };
+  });
+
+  return changed ? { ...file, boards: next } : file;
+};
