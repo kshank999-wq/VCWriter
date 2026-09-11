@@ -61,16 +61,17 @@ export interface VcWriterApi {
     file: ProjectFile;
     options?: PrintOptions;
     /**
-     * Which document: the manuscript, the AV sheet, or the board (addendum 05
-     * §8). Omitted means the script — and a short-form project prints its
-     * sheet whatever is asked for, because it has no script to print instead.
+     * Which document: the manuscript, the AV sheet, the board (addendum 05
+     * §8) or the Story Grid (addendum 04 §8). Omitted means the script — and
+     * a short-form project prints its sheet whatever is asked for, because it
+     * has no script to print instead.
      */
-    kind?: 'script' | 'sheet' | 'board';
+    kind?: 'script' | 'sheet' | 'board' | 'grid';
   }): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>>;
   print(input: {
     file: ProjectFile;
     options?: PrintOptions;
-    kind?: 'script' | 'sheet' | 'board';
+    kind?: 'script' | 'sheet' | 'board' | 'grid';
   }): Promise<DesktopApiResult<boolean>>;
   appInfo(): Promise<DesktopApiResult<{ version: string; platform: string }>>;
 

@@ -408,10 +408,11 @@ export default function App() {
    *
    * Left alone it is the one the project has — a script, or in short form the
    * **sheet**, which is what a commercial's document *is*. `'board'` asks for
-   * the other one: the frames on their own, for a wall.
+   * the other one: the frames on their own, for a wall. `'grid'` is the Story
+   * Grid tab as a document (addendum 04 §8).
    */
   const exportPdf = useCallback(
-    async (kind: 'script' | 'board' = 'script') => {
+    async (kind: 'script' | 'board' | 'grid' = 'script') => {
       if (!file) return;
       setExporting(true);
       setExportMessage(null);
@@ -430,7 +431,7 @@ export default function App() {
   );
 
   const print = useCallback(
-    async (kind: 'script' | 'board' = 'script') => {
+    async (kind: 'script' | 'board' | 'grid' = 'script') => {
       if (!file) return;
       setExporting(true);
       setExportMessage(null);
@@ -981,6 +982,10 @@ export default function App() {
                 setView('write');
               }}
               onUpdate={project.update}
+              onPrintGrid={() => void print('grid')}
+              onExportGrid={() => void exportPdf('grid')}
+              busy={exporting}
+              exportMessage={exportMessage}
             />
           ) : view === 'readback' ? (
             <ReadBackPanel file={file} currentUnitId={selectedBeat?.unitId ?? null} onUpdate={project.update} />

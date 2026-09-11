@@ -320,3 +320,38 @@ describe('the value graph', () => {
     expect(document.querySelector('.value-note')).toBeNull();
   });
 });
+
+/**
+ * The grid as a document (addendum 04 §8 stage 6). What it prints is tested
+ * in the domain; what matters here is that the controls are on the tab the
+ * grid is on, and nowhere else.
+ */
+describe('printing the grid', () => {
+  const panel = (calls: string[]) =>
+    render(
+      <EditorPanel
+        file={createProjectFile({ title: 'Blackout', format: 'screenplay' })}
+        currentUnitId={null}
+        onUpdate={() => undefined}
+        openOn="grid"
+        onPrintGrid={() => calls.push('print')}
+        onExportGrid={() => calls.push('export')}
+      />,
+    );
+
+  it('offers Print and Export PDF on the Story Grid', () => {
+    bridge();
+    const calls: string[] = [];
+    panel(calls);
+    fireEvent.click(screen.getByRole('button', { name: 'Print…' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export PDF…' }));
+    expect(calls).toEqual(['print', 'export']);
+  });
+
+  it('does not offer them on the other two editors', () => {
+    bridge();
+    panel([]);
+    fireEvent.click(screen.getByRole('tab', { name: /Daily/i }));
+    expect(screen.queryByRole('button', { name: 'Print…' })).toBeNull();
+  });
+});

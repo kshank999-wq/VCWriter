@@ -692,6 +692,65 @@ export const valueGraph = (rows: readonly GridRow[]): ValueGraph => {
 };
 
 /**
+ * Where the line and its points fall, in the pixels they are drawn at.
+ *
+ * **Worked out once and used twice**: the tab draws this and so does the
+ * printed grid, and a chart that disagreed with its own printing would be
+ * worse than no chart. The geometry is plain numbers rather than a drawing,
+ * so neither caller has to know what the other is made of.
+ */
+export interface ValueLayout {
+  width: number;
+  height: number;
+  /** Where the story started; everything is read against this. */
+  base: number;
+  points: { x: number; y: number; point: ValuePoint }[];
+  /** Where each act begins, with its label, for the dividers. */
+  acts: { x: number; label: string }[];
+  /** The line through every point, as an SVG path. */
+  path: string;
+}
+
+export interface ValueLayoutOptions {
+  /** Pixels between one scene and the next. */
+  side?: number;
+  /** Pixels for one step of value. */
+  band?: number;
+  /** Room above the highest point, for the act labels. */
+  top?: number;
+}
+
+export const valueGraphLayout = (graph: ValueGraph, options: ValueLayoutOptions = {}): ValueLayout => {
+  const side = options.side ?? 26;
+  const band = options.band ?? 34;
+  const top = options.top ?? 20;
+
+  const span = Math.max(1, graph.high - graph.low);
+  const height = span * band + top * 2;
+  // A point every `side`, with half a step of air at each end so the first
+  // and last markers are not cut in half by the frame.
+  const width = Math.max(1, graph.points.length - 1) * side + side * 2;
+
+  const at = (index: number) => side + index * side;
+  const up = (value: number) => top + (graph.high - value) * band;
+
+  const points = graph.points.map((point, index) => ({ x: at(index), y: up(point.value), point }));
+  const acts = graph.points
+    .map((point, index) => ({ point, index }))
+    .filter(({ point, index }) => point.act.length > 0 && point.act !== graph.points[index - 1]?.act)
+    .map(({ point, index }) => ({ x: at(index) - side / 2, label: point.act }));
+
+  return {
+    width,
+    height,
+    base: up(0),
+    points,
+    acts,
+    path: points.map((spot, index) => `${index === 0 ? 'M' : 'L'} ${spot.x} ${spot.y}`).join(' '),
+  };
+};
+
+/**
  * What the graph has noticed, in a sentence — or nothing (§6, §7).
  *
  * Said only where there is enough answered to be worth saying: a story of

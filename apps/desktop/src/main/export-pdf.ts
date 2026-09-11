@@ -7,10 +7,12 @@ import { tmpdir } from 'node:os';
 import {
   parseProjectFile,
   renderBoardDocumentHtml,
+  renderGridDocumentHtml,
   renderPrintDocumentHtml,
   renderSheetDocumentHtml,
   suggestedBoardFileName,
   suggestedExportFileName,
+  suggestedGridFileName,
   suggestedSheetFileName,
   type PrintOptions,
   type ProjectFile,
@@ -77,10 +79,11 @@ const withDocumentWindow = async <T>(
  *
  * `script` is the manuscript, hand-paginated. In a short-form project the
  * document is the **sheet**, and beside it there is a **board** — the frames
- * on their own, for a wall (addendum 05 §8). They are three renderings of one
- * project rather than three projects.
+ * on their own, for a wall (addendum 05 §8). The **grid** is the Story Grid
+ * tab as a document (addendum 04 §8). They are renderings of one project
+ * rather than separate projects.
  */
-export type PrintKind = 'script' | 'sheet' | 'board';
+export type PrintKind = 'script' | 'sheet' | 'board' | 'grid';
 
 export interface ExportPdfInput {
   file: unknown;
@@ -98,6 +101,14 @@ export interface ExportPdfInput {
  * the document this project has.
  */
 const documentFor = (project: ProjectFile, kind: PrintKind, options: PrintOptions) => {
+  if (kind === 'grid') {
+    return {
+      html: renderGridDocumentHtml(project, options),
+      name: suggestedGridFileName(project),
+      paged: false,
+      landscape: true,
+    };
+  }
   const sheetish = kind === 'sheet' || project.project.format === 'short_form';
   if (kind === 'board') {
     return {

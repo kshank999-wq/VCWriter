@@ -37,6 +37,11 @@ interface EditorPanelProps {
   onGoToUnit?(unitId: StructuralUnitId): void;
   /** Which editor to open on: the Editor menu names one, and means it. */
   openOn?: Tab;
+  /** The Story Grid, printed and exported (addendum 04 §8 stage 6). */
+  onPrintGrid?(): void;
+  onExportGrid?(): void;
+  busy?: boolean;
+  exportMessage?: string | null;
 }
 
 /**
@@ -72,7 +77,18 @@ const readWhen = (read: { readAt: string; model: string }): string => {
  * writer has considered and rejected is a fact about this sitting, not a
  * property of the manuscript, and it should not travel to another machine.
  */
-export function EditorPanel({ file, currentUnitId, onUpdate, onGoTo, onGoToUnit, openOn }: EditorPanelProps) {
+export function EditorPanel({
+  file,
+  currentUnitId,
+  onUpdate,
+  onGoTo,
+  onGoToUnit,
+  openOn,
+  onPrintGrid,
+  onExportGrid,
+  busy = false,
+  exportMessage = null,
+}: EditorPanelProps) {
   const [tab, setTab] = useState<Tab>(openOn ?? 'daily');
 
   // The Editor menu names an editor; choosing it opens that one.
@@ -212,6 +228,23 @@ export function EditorPanel({ file, currentUnitId, onUpdate, onGoTo, onGoToUnit,
             Story Grid ({grid.keptObligatory + grid.keptConventions}/{grid.promises.length})
           </button>
         </div>
+
+        {/* The grid is a document as well as a tab (§8 stage 6): what the
+            story is, the five at every scale, the graph, and the rows. */}
+        {tab === 'grid' && (onPrintGrid || onExportGrid) ? (
+          <div className="editor-controls">
+            {onPrintGrid ? (
+              <button type="button" className="ghost" disabled={busy} onClick={onPrintGrid}>
+                Print…
+              </button>
+            ) : null}
+            {onExportGrid ? (
+              <button type="button" className="ghost" disabled={busy} onClick={onExportGrid}>
+                {busy ? 'Working…' : 'Export PDF…'}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         {tab === 'daily' ? (
           <div className="editor-controls">
@@ -384,7 +417,14 @@ export function EditorPanel({ file, currentUnitId, onUpdate, onGoTo, onGoToUnit,
           </div>
         </div>
       ) : tab === 'grid' ? (
-        <StoryGridPanel file={file} onUpdate={onUpdate} {...(onGoToUnit ? { onGoToUnit } : {})} />
+        <>
+          {exportMessage ? (
+            <p className="notice" role="status">
+              {exportMessage}
+            </p>
+          ) : null}
+          <StoryGridPanel file={file} onUpdate={onUpdate} {...(onGoToUnit ? { onGoToUnit } : {})} />
+        </>
       ) : (
         <div className="final-review">
           <p className="muted">

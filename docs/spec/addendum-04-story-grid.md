@@ -153,7 +153,7 @@ Clicking a point goes to the scene.
 4. **Built.** The AI structural read extended to answer the five
    commandments (§9, stage 4).
 5. **Built.** The value graph (§9, stage 5).
-6. Print and export the grid, as the Reports pages already print.
+6. **Built.** Print and export the grid (§9, stage 6).
 
 Stage 1 alone is worth having: a writer who can see what their genre owes
 them, and which of it the script has actually delivered, has most of what
@@ -315,3 +315,33 @@ says nothing at all about a story that turns.
 The chart is drawn at its own width and scrolls: a sixty-scene script is a
 long line, and squeezing it to fit would flatten the very thing being looked
 at.
+
+### Stage 6 — the grid, printed
+
+**Print…** and **Export PDF…** sit at the head of the Story Grid tab, and
+nowhere else: they print *this* tab, not the script, so they belong on it
+rather than in a File menu that every format shares.
+
+What prints is **the tab, whole**: what the story is and what that obliges it
+to deliver, with a filled mark against each promise a scene answers and a
+hollow one against each that is still owed; the five commandments at the
+story and act scales; the value graph; and the grid itself, one row per
+scene. Nothing is left out — a printing that dropped the empty rows would be
+dropping the finding, because on this tab **the gaps are the point** (§5). An
+empty cell prints as a dash rather than as nothing, so a reader can tell a
+question nobody has answered from a column that has run off the page.
+
+**Landscape**, because twelve columns read across a wide page or not at all.
+A scene never breaks across two sheets and the column heads print again at
+the top of each page a long table runs onto — a column of answers with no
+heading over it is a column of sentences.
+
+The value graph is drawn from `valueGraphLayout`, the same geometry the tab
+draws from. **Worked out once and used twice**: a chart that disagreed with
+its own printing would be worse than no chart.
+
+It grades nothing here either (§7). No score at the foot, and the one
+sentence under the graph is the same observation the tab makes.
+
+The front page is the script's own, and Page setup turns it off. The file is
+named apart from the script: `Blackout story grid.pdf`.

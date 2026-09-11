@@ -1,5 +1,6 @@
 import {
   valueGraph,
+  valueGraphLayout,
   valueGraphNote,
   type GridRow,
   type StructuralUnitId,
@@ -17,8 +18,9 @@ import {
  * order; the one sentence under it is an observation, and a story that only
  * rises may be exactly the story being written.
  *
- * Drawn as an SVG on a `viewBox` rather than measured pixels, so it fits
- * whatever width the tab has without anything having to be told the size.
+ * **The geometry is the domain's** (`valueGraphLayout`), and the printed grid
+ * draws from the same numbers — a chart that disagreed with its own printing
+ * would be worse than no chart.
  */
 
 interface ValueGraphProps {
@@ -26,44 +28,13 @@ interface ValueGraphProps {
   onGoToUnit?(unitId: StructuralUnitId): void;
 }
 
-/**
- * The drawing's geometry, in the pixels it is actually drawn at.
- *
- * The `viewBox` uses these same numbers rather than a scaled-down set, so a
- * `font-size` in the stylesheet means what it says — scaling the whole SVG up
- * scales the lettering with it, and an act label ends up three times the size
- * of everything around it.
- */
-/** Pixels between one scene and the next. */
-const SIDE = 26;
-/** Pixels for one step of value. */
-const BAND = 34;
-/** Room above the highest point for the act labels. */
-const TOP = 20;
-
 export function ValueGraph({ rows, onGoToUnit }: ValueGraphProps) {
   const graph = valueGraph(rows);
   if (graph.points.length < 2) return null;
 
   const note = valueGraphNote(graph);
-  const span = Math.max(1, graph.high - graph.low);
-  const height = span * BAND + TOP * 2;
-  // A point every `SIDE`, with half a step of air at each end so the first
-  // and last markers are not cut in half by the frame.
-  const width = (graph.points.length - 1) * SIDE + SIDE * 2;
-
-  const x = (index: number) => SIDE + index * SIDE;
-  const y = (value: number) => TOP + (graph.high - value) * BAND;
-  const base = y(0);
-
-  const line = graph.points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${y(point.value)}`).join(' ');
-  const dot = 3.5;
-
-  // Where each act begins, so the eye can tell a fall inside one act from a
-  // fall across the whole story.
-  const acts = graph.points
-    .map((point, index) => ({ point, index }))
-    .filter(({ point, index }) => point.act.length > 0 && point.act !== graph.points[index - 1]?.act);
+  // The same numbers the printed grid draws from (addendum 04 §6).
+  const layout = valueGraphLayout(graph);
 
   return (
     <section className="value-graph">
@@ -83,32 +54,32 @@ export function ValueGraph({ rows, onGoToUnit }: ValueGraphProps) {
       <div className="value-graph-scroll">
         <svg
           className="value-svg"
-          viewBox={`0 0 ${width} ${height}`}
-          width={width}
-          height={height}
+          viewBox={`0 0 ${layout.width} ${layout.height}`}
+          width={layout.width}
+          height={layout.height}
           role="img"
           aria-label={`The story's value across ${graph.points.length} scenes`}
         >
           {/* Where the story started. Everything is read against this. */}
-          <line className="value-base" x1={0} y1={base} x2={width} y2={base} />
+          <line className="value-base" x1={0} y1={layout.base} x2={layout.width} y2={layout.base} />
 
-          {acts.map(({ point, index }) => (
-            <g key={point.unitId as string} className="value-act">
-              <line x1={x(index) - SIDE / 2} y1={0} x2={x(index) - SIDE / 2} y2={height} />
-              <text x={x(index) - SIDE / 2 + 4} y={12}>
-                {point.act}
+          {layout.acts.map((act) => (
+            <g key={act.label} className="value-act">
+              <line x1={act.x} y1={0} x2={act.x} y2={layout.height} />
+              <text x={act.x + 4} y={12}>
+                {act.label}
               </text>
             </g>
           ))}
 
-          <path className="value-line" d={line} />
+          <path className="value-line" d={layout.path} />
 
-          {graph.points.map((point, index) => (
+          {layout.points.map(({ x, y, point }) => (
             <g key={point.unitId as string} className={point.said ? 'value-point' : 'value-point unsaid'}>
               <circle
-                cx={x(index)}
-                cy={y(point.value)}
-                r={dot}
+                cx={x}
+                cy={y}
+                r={3.5}
                 {...(onGoToUnit ? { onClick: () => onGoToUnit(point.unitId) } : {})}
               >
                 <title>
