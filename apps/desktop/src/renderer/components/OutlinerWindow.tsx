@@ -72,6 +72,10 @@ const KINDS: Record<string, { name: string; mark: string }> = {
 };
 
 const nameOf = (kind: string): string => KINDS[kind]?.name ?? kind.replace(/_/g, ' ');
+
+/** What an empty row of each kind asks for. */
+const placeholderOf = (kind: string): string =>
+  kind === 'scene' ? 'name the scene' : kind === 'beat' ? 'what happens' : 'say what it is';
 const markOf = (kind: string): string => KINDS[kind]?.mark ?? '•';
 
 export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindowProps) {
@@ -194,15 +198,20 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
    *
    * A **Scene** always goes at the top level — it is the primary story unit,
    * and one nested inside another scene is not a thing the outline means.
-   * Anything else goes *under* the selected row, which is what "add a note"
-   * means when a beat is selected, and at the top when nothing is.
+   *
+   * Everything else depends on how it was asked for, and the two are different
+   * sentences. Pressing **+ Character** with a beat selected means *give this
+   * beat a character*, so it goes **under** it. Pressing **Return** at the end
+   * of a character means *another one of these*, so it goes **beside** it —
+   * a beat inside a beat is not what anybody means by "another beat".
    */
-  const add = (kind: string) => {
+  const add = (kind: string, beside = false) => {
     write((current, id) => {
       const live = findOutline(current, id);
       const here = live && selected ? findOutlineItem(live, selected) : null;
-      const parentId = kind === 'scene' ? null : here?.id ?? null;
-      const afterId = kind === 'scene' && here ? topmostOf(live as Outline, here).id : null;
+      const parentId = kind === 'scene' ? null : beside ? here?.parentId ?? null : here?.id ?? null;
+      const afterId =
+        kind === 'scene' && here ? topmostOf(live as Outline, here).id : beside ? here?.id ?? null : null;
       const made = addItem(current, id, { parentId, afterId, kind });
       if (made.itemId) {
         // Typed into straight away: outlining is typing, not form-filling (§8).
@@ -231,17 +240,21 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
       write((current, id) => nudgeItem(current, id, selected, event.key === 'ArrowUp' ? -1 : 1));
       return;
     }
+    // Return and the bare arrows belong to the box the caret is in, which
+    // knows where the caret is standing; the list only handles what happens
+    // outside one — a linked row, or a click on the list itself.
+    if (editing) return;
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-      if (editing) return;
       event.preventDefault();
       const to = rows[at + (event.key === 'ArrowUp' ? -1 : 1)];
       if (to) setSelected(to.item.id);
       return;
     }
-    if (event.key === 'Enter' && !editing) {
+    if (event.key === 'Enter') {
       event.preventDefault();
       const here = findOutlineItem(outline, selected);
-      add(here?.kind === 'scene' ? 'beat' : here?.kind ?? 'note');
+      if (!here || here.kind === 'scene') add('beat');
+      else add(here.kind, true);
     }
   };
 
@@ -379,6 +392,20 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
               onRemove={() => {
                 setSelected(null);
                 write((current, id) => removeItem(current, id, row.item.id));
+              }}
+              onEnter={() => {
+                setSelected(row.item.id);
+                // Another of what this is, beside it. A scene is the exception:
+                // its Return makes a **beat**, under it, because nobody writes
+                // two scene names in a row and a scene with nothing in it is
+                // what you have just finished naming.
+                if (row.item.kind === 'scene') add('beat');
+                else add(row.item.kind, true);
+              }}
+              onStep={(direction) => {
+                const at = rows.findIndex((entry) => entry.item.id === row.item.id);
+                const to = rows[at + direction];
+                if (to) setSelected(to.item.id);
               }}
               dragging={dragging === row.item.id}
               zone={over?.id === row.item.id ? over.zone : null}
@@ -529,6 +556,8 @@ function Row({
   onNudge,
   onIndent,
   onRemove,
+  onEnter,
+  onStep,
   dragging,
   zone,
   onDragStart,
@@ -550,6 +579,10 @@ function Row({
   onNudge(direction: -1 | 1): void;
   onIndent(deeper: boolean): void;
   onRemove(): void;
+  /** Return from inside the box: the next row, never a line break. */
+  onEnter(): void;
+  /** An arrow off the end of the box: the row above or below. */
+  onStep(direction: -1 | 1): void;
   /** This row is the one being carried. */
   dragging: boolean;
   /** Where the carried row would land on this one, while it is over it. */
@@ -568,7 +601,7 @@ function Row({
   onDrop(zone: OutlineZone): void;
 }) {
   const { item, depth, childCount } = row;
-  const input = useRef<HTMLInputElement | null>(null);
+  const input = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (editing) input.current?.focus();
@@ -640,25 +673,69 @@ function Row({
         {markOf(item.kind)}
       </span>
 
-      {/* A row that references research takes its name from the shelf and is
-          not renamed here — that name belongs to the research (§5) — so it is
-          text rather than a box, and says as much by looking different. */}
-      {linked ? (
-        <span className="outline-title outline-linked" title="From the research shelf. Renaming it there renames it here">
-          {title}
+      {/*
+        Every element sits in a box that **fits what is written in it**: two
+        layers in one grid cell, the text under and the box typed in over it,
+        laid out identically so the characters land on each other. The layer
+        under sizes the cell, which is what makes the box grow with the words
+        rather than guessing at a row count — the same way the script's lines
+        are built.
+
+        The cell hugs its content up to a line's worth of words and wraps after
+        that, so a short row is a short box and a long one is a taller box of
+        the same width, never a rule running off across the screen.
+
+        A row that references research is read rather than typed: the name
+        belongs to the shelf and is not the row's to change (§5), so it is a
+        box with no box in it.
+      */}
+      <span className={linked ? 'outline-box linked' : 'outline-box'}>
+        <span className="outline-ink" aria-hidden="true">
+          {title || placeholderOf(item.kind)}
+          {/* A zero-width space so a box with nothing in it still has a line's
+              height, and the caret has somewhere to stand. */}
+          {'\u200b'}
         </span>
-      ) : (
-        <input
-          ref={input}
-          className="outline-title"
-          aria-label={`${nameOf(item.kind)}: what it is`}
-          placeholder={item.kind === 'scene' ? 'name the scene' : 'say what it is'}
-          value={title}
-          onFocus={() => onEdit(true)}
-          onBlur={() => onEdit(false)}
-          onChange={(event) => onTitle(event.target.value)}
-        />
-      )}
+        {linked ? (
+          <span className="outline-read" title="From the research shelf. Renaming it there renames it here">
+            {title}
+          </span>
+        ) : (
+          <textarea
+            ref={input}
+            className="outline-title"
+            rows={1}
+            spellCheck={false}
+            aria-label={`${nameOf(item.kind)}: what it is`}
+            placeholder={placeholderOf(item.kind)}
+            value={title}
+            onFocus={() => onEdit(true)}
+            onBlur={() => onEdit(false)}
+            onChange={(event) => onTitle(event.target.value)}
+            onKeyDown={(event) => {
+              // Return makes the next row rather than a new line inside this
+              // one: the box wraps on its own, so a line break typed by hand
+              // would only be a way to make a row two rows tall by accident.
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                onEnter();
+                return;
+              }
+              // The arrows walk the outline from the ends of the box, and
+              // move the caret inside it everywhere else.
+              const box = event.currentTarget;
+              if (event.key === 'ArrowUp' && box.selectionStart === 0 && !event.altKey) {
+                event.preventDefault();
+                onStep(-1);
+              }
+              if (event.key === 'ArrowDown' && box.selectionEnd === box.value.length && !event.altKey) {
+                event.preventDefault();
+                onStep(1);
+              }
+            }}
+          />
+        )}
+      </span>
 
       {item.collapsed && childCount > 0 ? <span className="muted small outline-hidden">{childCount}</span> : null}
 

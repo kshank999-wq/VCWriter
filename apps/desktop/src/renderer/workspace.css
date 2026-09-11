@@ -7596,21 +7596,14 @@ dialog.preferences .field {
 .outline-row {
   position: relative;
   display: flex;
-  align-items: center;
+  /* The controls sit on the box's first line, so a box three lines tall does
+     not drag its fold arrow into the middle of itself. */
+  align-items: flex-start;
   gap: 4px;
-  height: 26px;
-  padding-right: 6px;
+  min-height: 26px;
+  padding: 2px 6px 2px 0;
   border: 1px solid transparent;
   border-radius: 3px;
-}
-
-.outline-row:hover {
-  background: var(--panel-2);
-}
-
-.outline-row.selected {
-  border-color: var(--gold);
-  background: var(--panel-2);
 }
 
 /* One guide per level, so the eye can run back up to the parent. */
@@ -7626,6 +7619,7 @@ dialog.preferences .field {
 .outline-fold {
   flex: 0 0 auto;
   width: 15px;
+  height: 20px;
   padding: 0;
   font-size: 9px;
   color: var(--muted);
@@ -7638,23 +7632,83 @@ dialog.preferences .field {
 .outline-mark {
   flex: 0 0 auto;
   width: 14px;
+  height: 20px;
+  line-height: 20px;
   font-size: 10px;
   text-align: center;
   color: var(--gold-deep);
 }
 
-.outline-title {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  color: inherit;
+/*
+  Each element in a box that fits what is written in it.
+
+  `max-content` hugs the words; the cap stops it at about ten of them, after
+  which the text wraps inside the box and the box grows downwards. The layer
+  under the writing is what sizes the cell — same font, same padding, same
+  wrapping — so the box is exactly as tall as the words in it rather than as
+  tall as a row count somebody guessed.
+*/
+.outline-box {
+  display: grid;
+  width: max-content;
+  min-width: 8ch;
+  /* About ten words. Long enough to hold a beat; short enough that the
+     outline reads as a column of cards rather than a page of rules. */
+  max-width: min(58ch, 100%);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--panel);
+}
+
+.outline-ink,
+.outline-title,
+.outline-read {
+  grid-area: 1 / 1 / 2 / 2;
+  font: inherit;
   font-size: 12.5px;
+  line-height: 1.35;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  padding: 2px 6px;
+  margin: 0;
+  border: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  text-align: left;
+}
+
+/* The sizer. It holds the same words in the same box and is never seen. */
+.outline-ink {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.outline-title,
+.outline-read {
+  background: transparent;
+  color: inherit;
+  resize: none;
+  overflow: hidden;
 }
 
 .outline-title:focus {
   outline: none;
+}
+
+.outline-row:hover {
+  background: var(--panel-2);
+}
+
+.outline-row:hover .outline-box,
+.outline-row.selected .outline-box {
+  background: var(--panel-2);
+}
+
+.outline-row.selected .outline-box {
+  border-color: var(--gold);
 }
 
 .outline-hidden {
@@ -7663,7 +7717,13 @@ dialog.preferences .field {
 
 /* §9: scene rows strongest, beats lighter, supporting rows lighter still, so
    the hierarchy reads at a glance without being read. */
-.outline-row.kind-scene .outline-title {
+.outline-row.kind-scene .outline-box {
+  border-color: var(--gold-deep);
+}
+
+.outline-row.kind-scene .outline-ink,
+.outline-row.kind-scene .outline-title,
+.outline-row.kind-scene .outline-read {
   font-family: var(--display);
   font-size: 12px;
   letter-spacing: 0.06em;
@@ -7675,16 +7735,35 @@ dialog.preferences .field {
   color: var(--gold);
 }
 
-.outline-row.kind-beat .outline-title {
+.outline-row.kind-beat .outline-ink,
+.outline-row.kind-beat .outline-title,
+.outline-row.kind-beat .outline-read {
   color: var(--text);
-  font-size: 12.5px;
 }
 
+.outline-row.kind-note .outline-box,
+.outline-row.kind-idea .outline-box,
+.outline-row.kind-character .outline-box,
+.outline-row.kind-setting .outline-box,
+.outline-row.kind-prop .outline-box {
+  background: transparent;
+}
+
+.outline-row.kind-note .outline-ink,
 .outline-row.kind-note .outline-title,
+.outline-row.kind-note .outline-read,
+.outline-row.kind-idea .outline-ink,
 .outline-row.kind-idea .outline-title,
+.outline-row.kind-idea .outline-read,
+.outline-row.kind-character .outline-ink,
 .outline-row.kind-character .outline-title,
+.outline-row.kind-character .outline-read,
+.outline-row.kind-setting .outline-ink,
 .outline-row.kind-setting .outline-title,
-.outline-row.kind-prop .outline-title {
+.outline-row.kind-setting .outline-read,
+.outline-row.kind-prop .outline-ink,
+.outline-row.kind-prop .outline-title,
+.outline-row.kind-prop .outline-read {
   color: var(--muted);
   font-size: 12px;
 }
@@ -7693,6 +7772,8 @@ dialog.preferences .field {
 .outline-tools {
   flex: 0 0 auto;
   display: flex;
+  align-items: flex-start;
+  height: 20px;
   gap: 1px;
   opacity: 0;
   transition: opacity 90ms ease;
@@ -7882,15 +7963,18 @@ dialog.preferences .field {
   color: var(--gold);
 }
 
-.outline-title.outline-linked {
-  align-self: center;
-  padding: 0 4px;
-  border-bottom: 1px dotted var(--gold-deep);
+.outline-box.linked {
+  border-style: dashed;
+  border-color: var(--gold-deep);
+}
+
+.outline-row.linked .outline-ink,
+.outline-row.linked .outline-read {
   color: var(--gold);
+}
+
+.outline-read {
   cursor: default;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .outline-from {

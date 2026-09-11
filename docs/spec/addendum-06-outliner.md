@@ -203,6 +203,23 @@ supporting rows lighter still** — so the hierarchy reads at a glance without
 being read. A compact type mark on each supporting row says which of them it
 is.
 
+**Every element sits in a box that fits what is written in it.** The box hugs
+its words up to about ten of them and wraps after that, growing downwards
+rather than running off across the screen — so a short row is a short box and
+a long one is a taller box of the same width, and the outline reads as a
+column of cards rather than a page of rules. A box is built the way the
+script's lines are: two layers in one cell, the text under and the box typed
+in over it, laid out identically, with the layer underneath sizing the cell.
+That is what makes a box exactly as tall as its words instead of as tall as a
+row count somebody guessed.
+
+**Return makes another of what you are on, beside it**; the type buttons put
+one **under** the selected row. The two are different sentences: *+ Character*
+with a beat selected means *give this beat a character*, and Return at the end
+of that character means *another one of these*. A beat inside a beat is not
+what anybody means by "another beat". A scene is the one exception — its
+Return makes a beat, under it, because nobody writes two scene names in a row.
+
 The panel resizes, and fills the window.
 
 ```
