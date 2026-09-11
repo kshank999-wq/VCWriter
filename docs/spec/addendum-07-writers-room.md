@@ -1,6 +1,6 @@
 # Addendum 07 — Writers Room
 
-Status: specified; **stages 0–2 built**, September 2026. From Ken's *VC Writer Writers
+Status: specified; **stages 0–2 built and live**, September 2026. From Ken's *VC Writer Writers
 Room Development Specification v1.0* of 11 September, and his elaboration of
 the same day — **the showrunner's dashboard is the front door, everyone has a
 login, and everyone submits.** Extends §12 (commerce), §14 (sync) and §15 (no
@@ -673,3 +673,44 @@ pill sat flush against the name. And the invitation row came out at three
 different heights, because the site styles an email field and a select and
 leaves a plain text input alone — the room's own fields are given one shape
 rather than left to inherit three.
+
+### The migrations, applied
+
+`0023`, `0024` and `0025` are on the live project. Three things are worth
+keeping, because two of them were mistakes the linter caught after the fact.
+
+**The cloud was empty.** Nine accounts and not one project: nobody had ever
+synced a story up, so the access change had no existing data to endanger. That
+is worth saying because it will not be true a second time.
+
+**A write policy was also a read policy.** 0024 gave every table
+`<t>_member_read` for SELECT and `<t>_owner_write` `for all` — and `for all`
+*includes* SELECT, so two permissive policies were being evaluated on every
+read of every row. The linter counted 101. 0025 says what the write policy is
+for: INSERT, UPDATE and DELETE. That narrows nothing, and the reason is the
+shape of the two functions — `may_write_project` is true only for the owner and
+`may_read_project` is true for the owner *and* every live seat, so the writer is
+a subset of the reader and the read policy already covered every SELECT the
+write policy was covering.
+
+**Four foreign keys had no covering index**: `bound_unit_id` and
+`bound_beat_id` on `sculptor_nodes` and `outline_items` — the columns saying
+which scene or beat a node or a row *is*. They are `on delete set null`, so
+deleting one scene made Postgres scan both tables to find what pointed at it.
+Migration 0011 made exactly this correction for the tables that existed then;
+0023 should have carried it and did not.
+
+**Proved on the live database, twice** — once after 0024 and again after 0025,
+to show the split narrowed nothing. Four callers (the showrunner, a Writer with
+a seat, a Viewer with a seat, and a stranger) went through the same transaction:
+all three members read the project, its beats, its board, its outline and who
+else is in the room; the stranger read nothing. Only the showrunner could add,
+edit or delete anything, or promote a seat. Nobody at all — the showrunner
+included — could read an invitation. The transaction was rolled back and the
+tables are empty again.
+
+One advisory stands and is correct as it is: `may_read_project` and
+`may_write_project` are `SECURITY DEFINER` functions executable by
+`authenticated`. They have to be — a row-level policy is evaluated as the
+querying user, so the user must be able to call the function the policy calls,
+which is why migration 0005 granted `owns_project` the same way and said so.

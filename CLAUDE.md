@@ -29,7 +29,10 @@ push live; the build takes a minute or two.
 - `apps/web` — the Next site, and the admin-gated browser preview built
   from the renderer into `public/preview`.
 - `packages/supabase/migrations` — apply new ones to the live project as
-  part of the change, not afterwards.
+  part of the change, not afterwards. The Supabase connector can do it from
+  here; afterwards run the advisors (`get_advisors`, security **and**
+  performance) and fix what they raise, because they catch what the SQL
+  reads like it does. Applied through 0025.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
