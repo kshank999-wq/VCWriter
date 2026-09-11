@@ -41,6 +41,10 @@ push live; the build takes a minute or two.
   first draft was wrong.
   `addendum-04-story-grid.md` is the Story Grid, the third tab of the
   Editors page. **All six stages are built** — §9 says what each one does.
+  `addendum-06-outliner.md` is the Outliner: the rigid sibling of the
+  Sculptor, a typed tree that promotes scenes into the script. **Specified,
+  not built** — §12 is the build order, §1 and §2 are the decisions the rest
+  hangs off.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

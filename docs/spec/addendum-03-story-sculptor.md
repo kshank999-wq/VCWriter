@@ -164,6 +164,13 @@ This is the payoff of the whole module. A writer who has spent an afternoon
 dropping shapes on a canvas wants to read the result as prose, and to hand it
 to somebody.
 
+**This is a document, not the Outliner.** Addendum 06 §2 keeps the two apart:
+the export is the canvas as indented text, to read and to print, while the
+Outliner is a workspace of its own with its own tree. Material passes between
+the board and the Outliner **by dragging, never by converting** — a board is a
+picture of possibilities, most of which are not in the story, and flattening
+the whole of one would produce an outline nobody asked for.
+
 ## 9. The detail panel
 
 Clicking a node opens its detail beside the canvas, without losing the map:
@@ -294,6 +301,7 @@ Stages 1–4 are the diagram. Stage 8 is the reason to have used it.
 | **Block** | A node in the structure column |
 | **Bound** | A node that is the same object as a scene or beat in the script |
 | **Link** | A connection the writer drew, as opposed to the parent relation |
+| **Shelf** | The Research tree down the side of the canvas, to drag from (addendum 06 §3) |
 
 ## 16. What is built
 

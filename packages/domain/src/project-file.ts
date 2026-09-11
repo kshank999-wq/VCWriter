@@ -12,6 +12,7 @@ import {
 } from './entities/research.js';
 import { assetSchema } from './entities/asset.js';
 import { boardSchema } from './entities/sculptor.js';
+import { outlineSchema } from './entities/outline.js';
 import { setupPayoffSchema } from './entities/setups.js';
 import { snapshotSchema } from './entities/revision.js';
 import { writingSessionSchema } from './sessions.js';
@@ -63,6 +64,8 @@ export const projectFileSchema = z.object({
    * predates them, and in every project whose writer has not opened one.
    */
   boards: z.array(boardSchema).default([]),
+  /** The Outliner's trees (addendum 06). Empty until one is made. */
+  outlines: z.array(outlineSchema).default([]),
   researchCategories: z.array(researchCategorySchema).default([]),
   researchItems: z.array(researchItemSchema).default([]),
   characters: z.array(characterSchema).default([]),
