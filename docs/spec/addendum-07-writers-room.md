@@ -1,9 +1,11 @@
 # Addendum 07 — Writers Room
 
 Status: specified, nothing built, September 2026. From Ken's *VC Writer Writers
-Room Development Specification v1.0* of 11 September. Extends §12 (commerce),
-§14 (sync) and §15 (no manuscript data loss) of the master specification, and
-is the module addendum 03 §14.4 stage 10 has been waiting on.
+Room Development Specification v1.0* of 11 September, and his elaboration of
+the same day — **the showrunner's dashboard is the front door, everyone has a
+login, and everyone submits.** Extends §12 (commerce), §14 (sync) and §15 (no
+manuscript data loss) of the master specification, and is the module addendum
+03 §14.4 stage 10 has been waiting on.
 
 Writers Room is **the collaborative, subscription-based extension of VC
 Writer**: shared cloud access, contribution tracking, review, comparison,
@@ -34,7 +36,23 @@ Everything the source specification asks for downstream — version history,
 snapshots, the curation tray, merge records, the audit trail — is an expression
 of that one rule rather than a separate feature.
 
-## 2. What already exists, and what the Room is allowed to assume
+## 2. The second decision: a writer gets the whole program
+
+Ken's words: *their individual packages are gonna act like an independent
+software program*.
+
+A collaborator in the Room is not given a web comment tool or a cut-down
+editor. They are given **VC Writer** — the Script, the timeline, Research, the
+Story Sculptor, the Outliner, the Story Grid, the reports, the print — running
+in a browser, on a project that lives in the cloud instead of on their disk.
+Two things are different from the desktop, and only two:
+
+1. where the project lives, and
+2. there is a **Submit** button.
+
+This is affordable because it is almost already true, and §3.1 says why.
+
+## 3. What already exists, and what the Room is allowed to assume
 
 This module is unusual among the addenda: most of its foundations are already
 in the product, built for one writer. Naming them decides how much of it is new
@@ -45,16 +63,18 @@ work and how much is widening.
 | A web application on the account | The site, auth, admin console | `apps/web` |
 | A browser build of the editor | `/preview`, the renderer built for a browser | `apps/web/public/preview`, `preview-gate.ts` |
 | The editor on something other than a local file | The browser bridge: the preload interface over IndexedDB | `apps/desktop/src/renderer/browser-bridge.ts` |
+| Several scripts open side by side | The pane API: a real window on the desktop, a browser window in the preview, joined by a document link | `preload/index.ts` (`PaneApi`, `LinkApi`), `renderer/link.ts` |
 | Project data in the cloud | Eleven synced collections, round-tripping | `packages/domain/src/sync-mapping.ts` |
 | A merge | Per-record merge with the loser preserved | `packages/domain/src/sync-merge.ts` |
 | Access control on every project table | One security-definer function, `owns_project` | `0001_core_story_schema.sql` |
+| A landing screen before the editor | The Welcome screen: recent projects, then open one | `renderer/components/Welcome.tsx` |
 | Purchases, receipts, entitlement | Stripe orders, licences, activations | `0002_commerce_and_releases.sql` |
 | Transactional email | Resend, with delivery events recorded | `email.ts`, `email_events` |
 | Admin gate | `profiles.is_admin`, `public.is_admin()` | `0008_admin_release_management.sql` |
 
-Three of these deserve a decision rather than a row in a table.
+Four of these deserve a decision rather than a row in a table.
 
-### 2.1 The Room is the preview, grown up
+### 3.1 The Room is the preview, grown up
 
 The source specification's §1 says the Room "evolves the existing browser-based
 VC Writer testing environment". That environment is real and it works: the
@@ -68,12 +88,16 @@ system, the preview implements it against IndexedDB, and the Room implements it
 against the cloud. Nothing in `src/renderer` needs to know which it is — that
 is the whole point of the interface, and it has already been proved twice.
 
+This is what makes §2 affordable. *An independent software program* is not a
+thing to be built for the Room; it is the thing that already exists, reached
+over a different bridge.
+
 What changes at `/preview` is the gate. Today it admits administrators only;
 under the Room it admits a member of a room, at a URL that names the room and
 the branch. The admin-only path stays, because the preview is still where the
 interface under development is looked at.
 
-### 2.2 Membership widens one function; it does not add a second set of rules
+### 3.2 Membership widens one function; it does not add a second set of rules
 
 Every child table in the project schema — lanes, units, beats, markers,
 research, characters, links, setups — carries the same generated policy:
@@ -99,7 +123,7 @@ The source specification's §12 is emphatic and correct: **server-side
 authorisation on every object; hiding it in the interface is not access
 control.** The policy function is where that lives.
 
-### 2.3 The sync merge is not the Room's merge
+### 3.3 The sync merge is not the Room's merge
 
 `sync-merge.ts` resolves a conflict by taking the newer record and keeping the
 loser whole so the writer can be told and can put it back. That is right for
@@ -116,7 +140,21 @@ stays exactly what it is: the desktop-to-cloud path for a single writer's own
 project. The two never meet. What the Room reuses from that file is its
 conscience — the losing side is always kept — not its algorithm.
 
-## 3. What is missing, and blocks work that is already scheduled
+### 3.4 Several writers' scripts, side by side, is the windowing that exists
+
+Ken asks to *open multiple script windows at a time from different writers*.
+The mechanism is built: a section of the workspace already goes out to a window
+of its own — a real window on the desktop, a browser window in the preview —
+and the windows stay in step over a document link that does not care which it
+is (`renderer/link.ts`).
+
+What the Room changes is **what gets opened**. Today the thing in a window is a
+*section* of one project; in the Room it is a *version* — this writer's Script,
+that writer's Script, the master — and each window wears its writer's colour
+and name. Three windows showing the same scene are indistinguishable without
+that, which is the whole reason §6's stamp is not decoration.
+
+## 4. What is missing, and blocks work that is already scheduled
 
 **Boards and outlines do not sync.** `SYNC_TABLES` names eleven collections,
 and neither the Story Sculptor's boards (addendum 03) nor the Outliner's
@@ -125,15 +163,99 @@ else. A Room built today would carry a script and no plan.
 
 This is also what blocks **addendum 03 §14.4 stage 10** — Writers Room
 attribution and alternate boards — which cannot be built on a board the cloud
-has never seen. It is the first prerequisite in §11's build order, and it is
+has never seen. It is the first prerequisite in §14's build order, and it is
 work in `packages/domain` and `packages/supabase` rather than in the Room.
 
-## 4. Roles and access
+## 5. Where you land
+
+**Signing in does not open the software. It opens the room.**
+
+This is Ken's structure and it is the right one: *when you sign in, before you
+go into the actual software, there's a showrunner dashboard*. The editor is
+something you open **from** the room, the way the Welcome screen already stands
+in front of the desktop application and hands you a project.
+
+So there is one front door and it shows you your standing in the room:
+
+- **A showrunner** lands on the room dashboard (§10): who is writing, what has
+  been submitted, what is unread, what conflicts, what the master version is.
+- **A writer** lands on their own: what they are assigned, what they have
+  submitted and what became of it, and the button that opens their branch.
+- **An editor or a viewer** lands on what they are allowed to see, which is
+  approved material and the room views they were given.
+
+It is the same page answering the same question — *what is my part in this* —
+with a different answer per role, rather than four pages.
+
+## 6. Identity: name, title, colour, initials
+
+**The showrunner hands these out.** Ken's words: *that assigns names, titles to
+a person with a color*. A seat is invited by email; the showrunner gives it a
+display name, a **title**, and a **colour**, and the room proposes a colour
+from a palette so that nobody has to think about it to get started.
+
+**Role and title are different things and must not be one field.**
+
+- **Role** is permission: Owner, Writer, Editor, Viewer (§7). The database
+  reads it.
+- **Title** is credit: *Staff Writer*, *Co-Producer*, *Executive Story Editor*.
+  The room reads it. It appears beside a name on the dashboard and on a
+  submission, and it changes nothing about what a person may do.
+
+Conflating them is how a writer ends up given producer permissions because
+somebody wanted the word on a page.
+
+### 6.1 The page stamp
+
+**Colour and initials in the top corner of every page of a writer's version.**
+This is Ken's requirement almost word for word, and it is the single most
+useful thing in the module, because §3.4 puts three writers' drafts of one
+scene on the screen at once.
+
+The geometry is already decided by the script and must not be argued with: the
+**page number sits top right from page two**, because that is where scripts put
+it. So the stamp goes **top left, on every page including the first** — the
+initials in the contributor's colour, with the name spelled out on the first
+page and in the identity bar above the document on screen.
+
+### 6.2 Where colour is used, and where it is refused
+
+Used in exactly four places:
+
+- the **page stamp** (§6.1) and the identity bar above a writer's version;
+- a small **initials badge** on every beat, saying who originated it;
+- the **contribution overlay**, where the master script is tinted by source;
+- the **boxes in the brainstorming room** (§11) — Ken: *the boxes are
+  colorized*.
+
+**Never on a lane.** Plot lanes already carry colour (addendum 02 §8), and two
+colour languages on one page is neither. A lane is a thread of the story; a
+contributor colour is a fact about who wrote a line. They must not be mistaken
+for each other, so they never appear in the same role.
+
+### 6.3 Origin is immutable, and the master is clean
+
+Scenes, beats, notes, proposals and imported material keep their origin
+metadata after being incorporated into a master draft — that is what makes §1's
+promise auditable rather than merely intended.
+
+But **the master script carries none of it**. Attribution is authoring
+metadata, in exactly the sense the beat's internal title is (master spec §5.3,
+§19): it belongs to the room and not to the script that leaves it. A printed
+master carries no stamp, no badges and no tint, and that is what clean-reading
+mode shows on screen.
+
+A **writer's version** is the opposite case and the distinction matters: it is
+a draft circulating inside the room, and it is *supposed* to say whose it is.
+It carries the stamp on screen and on paper. The rule is therefore not "never
+print attribution" but **the master is clean and a contribution is signed**.
+
+## 7. Roles and access
 
 | Role | What it may do | Typical |
 | --- | --- | --- |
-| **Owner / Showrunner** | Everything: review all work, curate, publish the master draft, invite and remove seats | Showrunner, lead writer |
-| **Writer** | A private working branch, plus the contributions they explicitly share; submit scenes, beats and ideas for review | Staff writer, co-writer |
+| **Owner / Showrunner** | Everything: review all work, curate, publish the master draft, invite and remove seats, set names, titles and colours | Showrunner, lead writer |
+| **Writer** | A private working branch, plus the contributions they explicitly submit; submit scenes, beats, research and ideas for review | Staff writer, co-writer |
 | **Editor / Producer** | Comment, compare, review, and propose changes — never a destructive write | Producer, editor |
 | **Viewer** | Read approved material and the room views they are given | Executive, stakeholder |
 
@@ -145,32 +267,30 @@ Two rules the table does not say:
 - **An Editor proposes.** *Propose* is a submission from someone who is not a
   Writer, and it lands in the same review queue. It is not a second mechanism.
 
-## 5. Identity and colour
+## 8. Assignments
 
-Every collaborator has a **persistent room colour**, a display name, and
-initials. The colour is the fastest fact on the page and it is used in exactly
-three places:
+Ken: *if a specific person is assigned to a task, there needs to be a menu for
+that to assign tasks*.
 
-- the **identity bar** at the top of a writer's version, with their name;
-- a small **initials badge** on every beat, saying who originated it;
-- the **contribution overlay**, where the master script is tinted by source.
+An **assignment** is a piece of the story given to a person, with a state. It
+is made from the showrunner's dashboard or from the thing itself — a scene, a
+beat, an act, a research question — through an **Assign** menu that lists the
+room's seats by name, title and colour. An assignment carries an optional due
+date and a note.
 
-**It is never used on a lane.** Plot lanes already carry colour (addendum 02
-§8), and two colour languages on one page is neither. A lane is a thread of the
-story; a contributor colour is a fact about who wrote a line. They must not be
-mistaken for each other, so they never appear in the same role.
+It appears in three places, and they are the same fact seen from three angles:
 
-**Origin is immutable.** Scenes, beats, notes, proposals and imported material
-keep their origin metadata after being incorporated into a master draft — that
-is what makes §1's promise auditable rather than merely intended.
+- on the **writer's landing page** (§5), as what they are being asked for;
+- on the **scene or beat**, as a badge beside the originator's;
+- on the **dashboard**, as the column that says who owes what.
 
-**And none of it enters the manuscript.** Attribution is authoring metadata, in
-exactly the sense the beat's internal title is (master spec §5.3, §19): it
-belongs to the room, not to the script. A printed script carries no badges, no
-tints, and no identity bar. The clean-reading mode is the same view the printer
-gets.
+**An assignment is not a lock.** It says who is expected to write something; it
+does not stop anyone else writing it, because a room where two writers took a
+run at the same scene is a room working properly, and §1 exists so that both
+runs survive. Soft locks are a separate and deliberate act by the showrunner
+(§9).
 
-## 6. Versions, branches and history
+## 9. Versions, branches and history
 
 - **Branch.** A writer's working line, taken from an approved version.
 - **Version.** An immutable point on a branch: timestamp, author, source
@@ -190,23 +310,55 @@ a lock that could stop a writer working is a lock that stops the room.
 The audit trail records who created, submitted, accepted, rejected, moved or
 modified collaborative material. It is the record §1 is enforced by.
 
-## 7. The room dashboard
+## 10. Submitting
 
-What the showrunner opens onto: active writers, assigned material, recent
-submissions, unresolved conflicts, comments, and the current master version.
+**One button, and what you are looking at decides where it goes.** This is the
+whole of Ken's mechanism and it needs no more machinery than that: you submit
+*from* somewhere, and the somewhere says what kind of thing it is.
 
-- A **writer selector** that loads any contributor's complete script or their
-  contribution set.
-- **Side-by-side and multi-version comparison.**
-- A **scene/beat matrix** saying which writers have an alternate version or a
-  proposal for each story unit — the one view that shows where the room agrees
-  and where it does not.
-- **Filters**: new, unread, submitted, approved, rejected, incorporated,
-  superseded.
-- An **activity feed** and notifications for submissions, mentions,
-  assignments, approvals and master-draft changes.
+| Submitted from | Arrives as | Lands in |
+| --- | --- | --- |
+| The Script, a scene, a beat | A script contribution | The review queue, and the Curation Tray (§12) |
+| Research, the Sculptor, the Outliner, a character, an idea | A research contribution | The **brainstorming room** (§11) |
 
-## 8. Curation
+A submission carries its author, their colour, a timestamp, the version it came
+from, and an optional note saying what it is. Its state runs *Draft → Submitted
+→ In Review → Approved / Revision Requested / Rejected → Incorporated*, and no
+state in that list deletes anything.
+
+Submitting **copies nothing out of the writer's branch**. The contribution
+references the version it was taken from, so the writer carries on working and
+what the showrunner is reading does not move under them.
+
+## 11. The brainstorming room
+
+Ken: *when they wanna submit either research or the ideas, characterizations,
+ideas for a story, that goes to the showrunner's brainstorming research area.
+When everyone submits, then they consider it out and talk about it from the
+showrunner's screen. And you can see whose ideas are what, because they're
+colorized and the boxes are colorized.*
+
+This is a second destination, not a second copy of the Curation Tray, and the
+difference is real: the tray assembles a **script**, and this is where a room
+argues about **what the story is** before there is a script to assemble.
+
+- It is the project's Research, shared — the same categories, the same items —
+  with a **Submitted** space where contributions arrive before anyone files
+  them.
+- **Every box wears its author's colour**, so a screenful of ideas says at a
+  glance whose room this is and where the agreement is.
+- The showrunner can file a submission into a real research category, hold it,
+  ask for more, or leave it in the open where it is.
+- Discussion happens on it: threaded comments, `@mentions`, and the room notes
+  area for concepts that belong to nobody yet.
+- Filing a submission does **not** consume it. It stays attributed, and it
+  stays findable, because §1 is about ideas as much as pages.
+
+One consequence falls out for free and is worth saying: the Research shelf
+already lives *inside* the Sculptor and the Outliner (addendum 06 §3), so a
+colourised shelf reaches both without either of them being taught anything.
+
+## 12. Curation
 
 The staging area between individual contributions and the master script, and
 the reason the source specification gives for it is the right one: *without it,
@@ -224,25 +376,25 @@ reviewing competing ideas is copy-and-paste chaos*.
 - Committing creates a new master version with a **merge record** naming every
   source contribution.
 
-## 9. The views
+## 13. The views
 
 | View | What it is |
 | --- | --- |
-| **Master Script** | The current approved room version |
-| **Writer Version** | One writer's branch, under their identity bar |
+| **Master Script** | The current approved room version, clean (§6.3) |
+| **Writer Version** | One writer's branch, stamped with their colour (§6.1) |
+| **Several at once** | Two or more versions in windows of their own, side by side (§3.4) |
 | **Contribution Overlay** | The master script tinted by source authorship |
-| **Beat / Scene** | Badges, comments, status, assignment, origin history |
+| **Beat / Scene** | Badges, assignment, comments, status, origin history |
 | **Diff** | Additions, deletions, moves and rewrites between any two versions |
-| **Clean reading** | All collaboration metadata hidden (§5) |
+| **Clean reading** | All collaboration metadata hidden — the same view the printer gets |
 
-## 10. Communication, AI, and the rest
+## 14. Communication, AI, and the rest
 
 **Communication.** Threaded comments at project, scene, beat, paragraph and
-research-item level. `@mentions` and assignments with a due date and a status.
-A room notes area for concepts not yet in the script. The submission workflow
-is *Draft → Submit → In Review → Approved / Revision Requested / Rejected →
-Incorporated*. Notifications in the Room, optionally by email — Resend already
-carries transactional mail and records delivery outcomes.
+research-item level. `@mentions` and assignments with a due date and a status
+(§8). A room notes area for concepts not yet in the script. Notifications in
+the Room, optionally by email — Resend already carries transactional mail and
+records delivery outcomes.
 
 **AI.** It uses the existing VC Writer AI service rather than a second stack
 (`apps/web/src/app/api/ai`). Three rules, all from the source specification's
@@ -272,71 +424,90 @@ behind or diverged** from the cloud master, in those words. Uploading desktop
 work **creates a contribution**, never an overwrite of the master. The Sculptor,
 the Outliner, Research, setups and payoffs, characters, arcs and scene and beat
 metadata share object ids with the cloud, which is what makes attribution
-survive the journey — and which is why §3 is a prerequisite and not a detail.
+survive the journey — and which is why §4 is a prerequisite and not a detail.
 
-## 11. Build order
+## 15. Build order
 
-0. **Boards and outlines sync** (§3). A prerequisite, in `packages/domain` and
+0. **Boards and outlines sync** (§4). A prerequisite, in `packages/domain` and
    `packages/supabase`, not in the Room. It also unblocks addendum 03 stage 10.
-1. Rooms, subscription entitlement, invitations, roles and seat management —
-   and `owns_project` widened into read and write (§2.2).
-2. Cloud projects with branches, autosave, snapshots and immutable version
-   history.
-3. Contributor colours, identity bars, beat initials badges, and the filters
-   that use them.
-4. The showrunner dashboard, and loading a writer's version.
-5. The submission workflow, and side-by-side comparison.
-6. The Curation Tray, and the non-destructive master merge.
-7. Comments, assignments, notifications and activity history.
-8. Desktop synchronisation, and export/backup of a whole room.
-9. AI comparison and summarisation, and the advanced collaboration features.
+1. Rooms, subscription entitlement, invitations, roles, titles, colours and
+   seat management — and `owns_project` widened into read and write (§3.2).
+2. The landing page (§5): sign in, see your part in the room, open the editor
+   from it.
+3. Cloud projects with branches, autosave, snapshots and immutable version
+   history — the third bridge behind the renderer (§3.1).
+4. Contributor colour end to end: the page stamp, the identity bar, beat
+   badges, and the filters that use them (§6).
+5. The showrunner dashboard, loading a writer's version, and several versions
+   open at once (§10, §3.4).
+6. Submitting, and the review queue (§10).
+7. The brainstorming room (§11).
+8. Assignments and the Assign menu (§8).
+9. The Curation Tray and the non-destructive master merge (§12).
+10. Comments, notifications and activity history.
+11. Desktop synchronisation, and export/backup of a whole room.
+12. AI comparison and summarisation, and the advanced collaboration features.
 
-Stage 6 is the point of the module, the way promotion is the point of the
+Stage 9 is the point of the module, the way promotion is the point of the
 Outliner: everything before it is making it possible to see what the room
 wrote, and that is where the room's work becomes the script.
 
-## 12. What it must never do
+## 16. What it must never do
 
 - **Never let one writer's edit destroy another's** (§1). Everything else here
   is a way of keeping this.
 - **Never resolve a disagreement by timestamp.** Two drafts are a decision, not
-  a conflict (§2.3).
-- **Never show a private branch's text** to anyone but its writer (§4).
-- **Never let attribution reach the manuscript** (§5).
-- **Never let removing a seat remove authorship** (§10).
+  a conflict (§3.3).
+- **Never show a private branch's text** to anyone but its writer (§7).
+- **Never let attribution reach the master script** — and never strip it from a
+  contribution, which is supposed to be signed (§6.3).
+- **Never make role and title one field** (§6).
+- **Never let an assignment become a lock** (§8).
+- **Never let removing a seat remove authorship** (§14).
 - **Never rely on the interface for access control.** The policy function
-  decides, on the server, every time (§2.2).
-- **Never overwrite the cloud master with an upload** (§10).
+  decides, on the server, every time (§3.2).
+- **Never overwrite the cloud master with an upload** (§14).
 - **Never require the Room.** The desktop application is a complete product for
   a writer who never signs in, and it stays one.
 
-## 13. Acceptance
+## 17. Acceptance
 
+- Signing in lands on the room, not on the editor, and says what your part in
+  it is.
 - Two writers edit separate branches of one project at the same time without
   overwriting each other.
-- The showrunner loads each writer's work, tells it apart on sight, compares
-  the alternatives, and curates a selection from them.
-- A beat shows its originator's initials and colour unless collaboration
-  metadata is deliberately hidden.
-- A master merge makes a recoverable new version and preserves every source
-  contribution.
+- Each writer's pages carry their initials in their colour, top left, on every
+  page, on screen and on paper.
+- Three versions of one scene can be open at once, in windows of their own, and
+  told apart without reading a word of them.
+- The showrunner assigns a scene to a writer, and it appears on that writer's
+  landing page, on the scene, and on the dashboard.
+- A writer submits a scene and a research idea, and the two arrive in different
+  places — the review queue and the brainstorming room — both in that writer's
+  colour.
+- The showrunner compares alternatives, curates a selection, and commits a
+  master version that is recoverable and preserves every source contribution.
+- A printed master script carries no collaboration metadata at all.
 - Removing a collaborator's active seat erases neither their historical
   authorship nor the room's record of it.
-- A printed master script carries no collaboration metadata at all.
 - A non-member is refused by the database, not by the page.
 
-## 14. Names
+## 18. Names
 
 | Name | What it is |
 | --- | --- |
 | **Room** | One collaborative workspace, attached to a project |
 | **Seat** | One collaborator's place in a room, billable and revocable |
+| **Role** | What a seat may do. The database reads it |
+| **Title** | What a seat is called. The room reads it |
+| **Stamp** | The initials and colour in the top corner of a writer's page |
 | **Branch** | A writer's private working line |
 | **Version** | An immutable point on a branch |
 | **Snapshot** | A version the writer named |
 | **Master version** | The approved room draft, made only by a merge |
-| **Contribution** | Material a writer has shared or submitted |
-| **Submission** | A contribution entered into review |
+| **Contribution** | Material a writer has submitted, script or research |
+| **Assignment** | A piece of the story given to a person, with a state |
+| **Brainstorming room** | Where research and ideas are submitted and argued about |
 | **Curation Tray** | The staging area between contributions and the master |
 | **Merge record** | What a master version was assembled from |
 | **Overlay** | The master script tinted by who wrote what |

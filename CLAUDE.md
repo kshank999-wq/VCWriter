@@ -50,12 +50,15 @@ push live; the build takes a minute or two.
   the script: one plan per scene across both, and the rename that reaches
   both. Rules about the *pair* go there rather than in either module. §1 and §2 are the decisions the rest hangs off.
   `addendum-07-writers-room.md` is Writers Room, the cloud collaboration
-  module: rooms, branches, contributor colour, curation and a non-destructive
-  master merge. **Specified, nothing built.** §1 is the rule it all hangs off
-  — one writer's work is never destroyed by another's — §2 says how much of it
-  the product already has (the Room is `/preview` grown up, and membership
-  widens `owns_project` rather than adding a second set of policies), and §3
-  names the prerequisite: boards and outlines do not sync.
+  module: the showrunner's dashboard as the front door, logins, assignments,
+  submitting, the brainstorming room, curation and a non-destructive master
+  merge. **Specified, nothing built.** §1 and §2 are the rules it all hangs
+  off — one writer's work is never destroyed by another's, and a collaborator
+  gets the whole program rather than a web editor. §3 says how much of it the
+  product already has (the Room is `/preview` grown up; membership widens
+  `owns_project` rather than adding a second set of policies; several writers
+  side by side is the pane windowing that exists), and §4 names the
+  prerequisite: boards and outlines do not sync. §15 is the build order.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
