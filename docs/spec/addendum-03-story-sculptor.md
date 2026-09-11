@@ -1,6 +1,6 @@
 # Addendum 03 — Story Sculptor
 
-Status: specified, September 2026. **Rewritten** from Ken's diagram of
+Status: stages 1–4 built, September 2026. **Rewritten** from Ken's diagram of
 10 September; §14 says what changed and what happens to the code built
 against the first draft. Extends §5 (story structure) and §19 (the hierarchy)
 of the master specification, and adds an area alongside the workspace of
@@ -253,7 +253,12 @@ parents.
 - **Folding**, and remembering what is folded.
 - The judgement in §11 that nothing may be lost by deleting.
 
-### 14.3 What goes
+### 14.3 What went
+
+Done: `sculptor.ts` and `SculptorWindow.tsx` and their tests came out with the
+Story Grid's first stage, and the names are free again for the model that
+replaced them. What follows is why they went.
+
 
 `packages/domain/src/sculptor.ts` and
 `apps/desktop/src/renderer/components/SculptorWindow.tsx`, and their tests.
@@ -264,10 +269,12 @@ it worth opening.
 
 ### 14.4 Build order
 
-1. The board, the two nodes, the canvas, pan and zoom.
-2. The structure column: blocks between the ends, named, reordered, connected.
-3. The layout rule, and the second column — scenes, widening the gaps.
-4. The third column — beats, growing their scenes.
+1. **Built.** The board, the two nodes, the canvas, pan and zoom.
+2. **Built.** The structure column: blocks between the ends, named,
+   reordered, connected.
+3. **Built.** The layout rule, and the second column — scenes, widening the
+   gaps.
+4. **Built.** The third column — beats, growing their scenes.
 5. Columns beyond the third, defined by the writer.
 6. Binding a node to a real scene or beat.
 7. The writer's own connections, labelled.
@@ -287,3 +294,50 @@ Stages 1–4 are the diagram. Stage 8 is the reason to have used it.
 | **Block** | A node in the structure column |
 | **Bound** | A node that is the same object as a scene or beat in the script |
 | **Link** | A connection the writer drew, as opposed to the parent relation |
+
+## 16. What is built
+
+Stages 1–4 — **the diagram**. The Sculptor is a button on the title bar again,
+beside Research, and it opens the canvas over the workspace.
+
+**A new board is two nodes.** Beginning and End, real and editable, with
+nothing in them: click either and type what the story begins or ends as. They
+cannot be deleted and nothing gets past them, which is what makes them the
+frame rather than two more cards. A project gets its board the first time the
+Sculptor is opened, because the work starts at those two nodes and they have
+to be there to type in.
+
+**Three columns** — Structure, Scenes, Beats — each renameable, because they
+are the writer's. `+ Block` puts a shape between the ends; a node's own `+`
+hangs a child off it in the column to its right; ↑ and ↓ move it among its
+siblings, and × takes it and its subtree off the board without touching the
+script, because a node is an idea until it is bound and binding is stage 6.
+
+**§4 is the whole of the layout**, and it is the domain's:
+
+> A node is as tall as its children, and no shorter than itself.
+
+Applied recursively that produces the diagram. A beat is one row; a scene is
+as tall as its beats; the gap between two structure nodes is as tall as the
+scenes stacked beside it, so the chain down the structure column **stretches
+as the clay goes on**. Adding a beat grows its scene, which grows its block,
+which pushes everything below it down the canvas — and **nothing ever
+overlaps, because nothing is positioned: everything is measured.** A folded
+node is one row tall and its children are not laid out at all, which
+compresses them and keeps their order.
+
+Sizes are in canvas units and the renderer turns a unit into pixels at the
+current zoom (§14.2). The shape belongs to the story; the size belongs to the
+screen.
+
+A column is six units wide rather than four because a block carries a
+sentence — *a woman who will not ask for help* — and a card that clips it is
+a card a writer cannot read their own story off.
+
+**The detail panel** (§9) sits beside the canvas: the node's title and its
+note, and a line saying which it is — *an idea, it lives only on the canvas*.
+Every node is an idea at this stage; the badge is already there for when
+binding arrives.
+
+Boards travel in the document, in `boards[]`, defaulting to empty — so every
+project that already exists opens with no board rather than a wrong one.

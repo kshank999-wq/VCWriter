@@ -47,6 +47,7 @@ import { DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay, type ScriptLayout } from '.
 import { LaneDialog } from './components/LaneDialog';
 import { SceneDialog } from './components/SceneDialog';
 import { ResearchWindow } from './components/ResearchWindow';
+import { SculptorWindow } from './components/SculptorWindow';
 import { BeatDialog } from './components/BeatDialog';
 import { MarkerDialog } from './components/MarkerDialog';
 import { PageBar, type View } from './components/PageBar';
@@ -133,6 +134,8 @@ export default function App() {
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
   const [openMarkerId, setOpenMarkerId] = useState<StoryMarkerId | null>(null);
   const [researchOpen, setResearchOpen] = useState(false);
+  /** The Story Sculptor's canvas, over the workspace (addendum 03). */
+  const [sculptorOpen, setSculptorOpen] = useState(false);
   /**
    * File → New project shows the project screen even with one already open:
    * the format is chosen there, beside the title and a word on what each one
@@ -796,6 +799,7 @@ export default function App() {
         focusMode={focusMode}
         onFocus={() => setFocusMode(!focusMode)}
         onOpenResearch={() => (away.has('research') ? openPane('research') : setResearchOpen(true))}
+        onOpenSculptor={() => setSculptorOpen(true)}
         away={detached}
         onBringBack={closePane}
         account={account}
@@ -934,6 +938,14 @@ export default function App() {
               setResearchOpen(false);
               openPane('research');
             }}
+          />
+          {/* The canvas over the workspace: a board is worked on whole, not
+              in a corner of the stage (addendum 03 §2). */}
+          <SculptorWindow
+            file={file}
+            open={sculptorOpen}
+            onClose={() => setSculptorOpen(false)}
+            onUpdate={project.update}
           />
         </div>
       ) : (

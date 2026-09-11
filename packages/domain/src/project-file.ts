@@ -11,6 +11,7 @@ import {
   researchItemSchema,
 } from './entities/research.js';
 import { assetSchema } from './entities/asset.js';
+import { boardSchema } from './entities/sculptor.js';
 import { setupPayoffSchema } from './entities/setups.js';
 import { snapshotSchema } from './entities/revision.js';
 import { writingSessionSchema } from './sessions.js';
@@ -57,6 +58,11 @@ export const projectFileSchema = z.object({
    * which is every file that predates them.
    */
   assets: z.array(assetSchema).default([]),
+  /**
+   * The Story Sculptor's boards (addendum 03). Empty in every file that
+   * predates them, and in every project whose writer has not opened one.
+   */
+  boards: z.array(boardSchema).default([]),
   researchCategories: z.array(researchCategorySchema).default([]),
   researchItems: z.array(researchItemSchema).default([]),
   characters: z.array(characterSchema).default([]),

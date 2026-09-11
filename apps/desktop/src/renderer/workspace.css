@@ -7043,3 +7043,207 @@ dialog.preferences .field {
   margin: 6px 0 0;
   color: var(--gold);
 }
+
+/* ------------------------------------------------------- the Story Sculptor
+   Addendum 03. A grid canvas that pans and zooms: story time runs down,
+   detail runs right. Nothing here decides where anything goes — §4's one
+   rule measures the whole diagram and this draws what it is handed. */
+
+.sculptor {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+}
+
+.sculptor-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  height: 42px;
+  padding: 0 10px 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.sculptor-bar h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.sculptor-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* The canvas. Grabbing anywhere but a node pans it. */
+.sculpt-canvas {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--panel-2) 1px, transparent 1px),
+    linear-gradient(90deg, var(--panel-2) 1px, transparent 1px);
+  background-size: 46px 46px;
+}
+
+.sculpt-canvas:active {
+  cursor: grabbing;
+}
+
+.sculpt-sheet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+/* A column's name, above what it holds. The writer's, and renameable. */
+.sculpt-column {
+  position: absolute;
+  top: -22px;
+}
+
+.sculpt-column-name {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--gold);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding: 0 2px 3px;
+}
+
+.sculpt-column-name:focus {
+  outline: none;
+  border-bottom-color: var(--gold);
+  color: var(--gold-bright);
+}
+
+.sculpt-wires {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.sculpt-wire {
+  fill: none;
+  stroke: var(--gold-deep);
+  stroke-width: 1.25;
+}
+
+/* The chain down the structure column: it stretches as material is added
+   beside it, which is what makes the frame spread as the clay goes on. */
+.sculpt-chain {
+  stroke: var(--gold);
+  stroke-width: 1.5;
+}
+
+.sculpt-node {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+/* Beginning and End are the frame: the only two a board cannot be without. */
+.sculpt-node.end {
+  border-color: var(--gold-deep);
+  background: var(--panel);
+}
+
+.sculpt-node.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold-deep);
+}
+
+/* A node is an idea until the writer binds it (§6), and says which it is. */
+.sculpt-node.idea {
+  border-style: dashed;
+}
+
+.sculpt-node.folded {
+  border-right-width: 3px;
+}
+
+.sculpt-title {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font-size: 12px;
+  padding: 0;
+}
+
+.sculpt-title:focus {
+  outline: none;
+}
+
+.sculpt-tools {
+  display: flex;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity 90ms ease;
+}
+
+.sculpt-node:hover .sculpt-tools,
+.sculpt-node:focus-within .sculpt-tools {
+  opacity: 1;
+}
+
+.sculpt-tools button {
+  padding: 1px 4px;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+/* The detail panel: the node's own, beside the canvas, without losing the
+   map (§9). */
+.sculpt-detail {
+  flex: 0 0 280px;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  padding: 14px;
+  overflow: auto;
+}
+
+.sculpt-detail h3 {
+  margin: 0 0 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+.sculpt-detail .field {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.sculpt-detail .field span {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}

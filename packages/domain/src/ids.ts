@@ -28,6 +28,10 @@ export type CaptureItemId = Id<'CaptureItem'>;
 export type SnapshotId = Id<'Snapshot'>;
 export type ManuscriptElementId = Id<'ManuscriptElement'>;
 export type AssetId = Id<'Asset'>;
+/** The Story Sculptor's own (addendum 03 §15). */
+export type BoardId = Id<'Board'>;
+export type SculptorColumnId = Id<'SculptorColumn'>;
+export type SculptorNodeId = Id<'SculptorNode'>;
 export type OrderId = Id<'Order'>;
 export type LicenseId = Id<'License'>;
 export type ReleaseBuildId = Id<'ReleaseBuild'>;
