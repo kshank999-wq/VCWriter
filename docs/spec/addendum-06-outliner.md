@@ -1,6 +1,6 @@
 # Addendum 06 — The Outliner
 
-Status: stages 1–7 built, September 2026. From Ken's *VC Writer Outliner
+Status: stages 1–8 built, September 2026. From Ken's *VC Writer Outliner
 Development Specification* of 11 September, and the framing he gave with it:
 **the Outliner and the Story Sculptor are siblings, and material moves between
 them by hand.** Extends §5 (story structure), §7 (research and links) and §19
@@ -54,10 +54,11 @@ asked for and then ask the writer to delete most of it. So there is no
 **drag a node and its subtree into the outline, or an outline item and its
 subtree onto the board, to start your organisation.**
 
-This also settles addendum 03 §8. *Export as an outline* stays exactly what it
-says: the canvas walked depth-first as **indented text**, to read beside you
-and to print. It is a document, not this workspace, and building the Outliner
-does not remove it.
+This also settled addendum 03 §8, and in the end removed it. *Export as an
+outline* was the canvas walked depth-first as indented text, and that section
+called it the payoff of the module; Ken's decision of 11 September is that
+**the Sculptor does not make outlines**, so it is withdrawn. Printing an
+outline is stage 9 here, where an outline actually lives.
 
 ## 3. Where it lives
 
@@ -275,7 +276,8 @@ The panel resizes, and fills the window.
 6. **Built.** The scene card.
 7. **Built.** Passing material between the Sculptor and the Outliner, both
    ways.
-8. Search, filters, multi-select, status, Collapse All, the keyboard.
+8. **Built.** Search, filters, multi-select, status, Collapse All, the
+   keyboard.
 9. Printing and exporting the outline.
 
 Stage 5 is the point of it, the way addendum 03's stage 8 is the point of the
@@ -515,3 +517,41 @@ the row's own words, which is the same place the generic **Notes** box writes
 to — two boxes over one field, which is two answers to it. The card owns a
 scene's words, because it is the thing that knows whether they belong to the
 row or to the scene; every other kind of row keeps the Notes box.
+
+### Stage 8 — finding rows, and doing things to several at once
+
+**A match brings its parents with it.** An outline row says only half of what
+it means on its own: *Mara is calm* is a different observation under *she
+enters the empty warehouse* than under *she runs*. So searching does not
+flatten the outline into a list of results; it hides everything that is not a
+result or on the way to one, and what the writer actually searched for is
+marked while the rows it hangs under are not. A filter also ignores what is
+folded — refusing to show a row because it sits inside something the writer
+folded an hour ago is the filter failing at its one job.
+
+Beside the search box, **one type at a time**: Scenes, Beats, Characters, and
+whatever kinds the writer has added. The domain filter takes more than the bar
+offers — a status, whether a row came off the research shelf, whether it is in
+the script — so the bar can grow without the reasoning moving.
+
+**Several rows at once.** Cmd-click adds a row and takes it back out again;
+Shift takes the run between the last row and this one, read **as the outline
+is drawn** rather than as it is stored, so under a filter a run is only the
+rows on screen — which is what the eye means by a run. One row stays the one
+the panel is about, because a panel showing four rows at once is showing none
+of them.
+
+A strip appears over the outline when there is more than one, and only then: a
+row of bulk actions over a single row is a row of things already in the panel.
+It marks how far along they are, moves them in and out, sends the scenes among
+them to the script, and takes them out. Removing gathers the subtrees first
+and removes them together, because a selection may hold both a row and
+something under it, and taking the outer one first leaves the next call
+looking for a row that is already gone.
+
+**One clash came out of building it.** §8 puts status on *any* row, but after
+stage 6 the only place to set one was inside the scene card — so a beat, an
+idea or a character could be searched by a status it had no way to acquire.
+The panel now has *How far along* for every kind but Scene, which keeps it in
+its card where it belongs to the script; the box offers the four §8 names and
+whatever the writer has already used elsewhere, and refuses none of them.

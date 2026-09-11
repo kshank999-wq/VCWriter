@@ -36,19 +36,20 @@ push live; the build takes a minute or two.
   1–7 (the board and its two nodes, the structure column, the layout rule
   with scenes, beats, the columns the writer defines, binding a node to a real
   scene, and the writer's own labelled connections) are built — §16 says what
-  they do — and §14.4 lists what is left, starting with the export as an
-  outline, which §14.4 calls the reason to have used it. §14 says why the
-  first draft was wrong.
+  they do — and §14.4 lists what is left: folding, focus, filters, search and
+  a mini-map, then Writers Room. §8, the export as an outline, is **withdrawn**
+  — the Sculptor does not make outlines. §14 says why the first draft was
+  wrong.
   `addendum-04-story-grid.md` is the Story Grid, the third tab of the
   Editors page. **All six stages are built** — §9 says what each one does.
   `addendum-06-outliner.md` is the Outliner: the rigid sibling of the
-  Sculptor, a typed tree that promotes scenes into the script. Stages 1–5
-  (the document and its shape rules, the outline on screen, moving it by hand,
-  the Research shelf, and promotion — which §12 calls the point of the whole
-  thing) are built, and stage 7 with them — the shelf holds the other plan, so
-  material passes between the board and the outline by hand, and stage 6 —
-  the scene card. §14 says what they do; §12 lists what is left: search,
-  filters and multi-select, and printing the outline.
+  Sculptor, a typed tree that promotes scenes into the script. Stages 1–8 are
+  built: the document and its shape rules, the outline on screen, moving it by
+  hand, the Research shelf, promotion — which §12 calls the point of the whole
+  thing — the scene card, carrying material between the board and the outline,
+  and searching, filtering and working on several rows at once. §14 says what
+  each one does; §12 lists what is left: stage 9, printing and exporting the
+  outline.
   `packages/domain/src/planning.ts` is where the board and the outline meet
   the script: one plan per scene across both, and the rename that reaches
   both. Rules about the *pair* go there rather than in either module. §1 and §2 are the decisions the rest hangs off.

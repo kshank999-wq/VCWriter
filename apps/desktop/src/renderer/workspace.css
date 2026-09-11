@@ -8127,3 +8127,41 @@ dialog.preferences .field {
 .scene-card p {
   margin: 0;
 }
+
+/* ---- searching, and more than one at once (addendum 06 §8) ----------- */
+
+.outline-search {
+  width: 150px;
+  font-size: 11.5px;
+}
+
+/* What the search was looking for, as against a parent along for the ride:
+   the hierarchy above a result stays readable, and stays quieter. */
+.outline-row.hit .outline-box {
+  border-color: var(--gold);
+}
+
+.outline-row.picked .outline-box {
+  border-color: var(--gold);
+  background: var(--panel-2);
+}
+
+.outline-row.picked .outline-mark {
+  color: var(--gold);
+}
+
+/* Only when there is more than one: a strip of bulk actions over a single
+   row is a strip of things already in the panel beside it. */
+.outline-bulk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
+.outline-bulk .danger {
+  color: var(--danger);
+}

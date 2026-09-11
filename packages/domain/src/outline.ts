@@ -98,17 +98,150 @@ export interface OutlineRow {
  * out entirely — the writer folded them — and their order is untouched, so
  * unfolding puts everything back exactly as it was.
  */
-export const outlineRows = (outline: Outline): OutlineRow[] => {
+export const outlineRows = (outline: Outline, only?: ReadonlySet<string>): OutlineRow[] => {
   const rows: OutlineRow[] = [];
   const walk = (parentId: OutlineItemId | null, depth: number): void => {
     for (const item of outlineChildren(outline, parentId)) {
+      if (only && !only.has(item.id as string)) continue;
       const children = outlineChildren(outline, item.id);
       rows.push({ item, depth, childCount: children.length });
-      if (!item.collapsed) walk(item.id, depth + 1);
+      // A filtered outline ignores what is folded: hiding a row the writer
+      // has just searched for, because it happens to sit inside something
+      // they folded an hour ago, is the filter failing to do its one job.
+      if (only || !item.collapsed) walk(item.id, depth + 1);
     }
   };
   walk(null, 0);
   return rows;
+};
+
+// --------------------------------------------------- searching it (§8)
+
+/** What a search is looking for. Everything given must match. */
+export interface OutlineFilter {
+  /** Free text, matched against what a row says and what it is called. */
+  query?: string;
+  /** Only rows of these types. */
+  kinds?: readonly string[];
+  /** Only rows with this status. */
+  status?: string;
+  /** Only rows that came off the research shelf. */
+  linked?: boolean;
+  /** Only rows that are in the script, or only rows that are not. */
+  promoted?: boolean;
+}
+
+const asks = (filter: OutlineFilter): boolean =>
+  (filter.query ?? '').trim().length > 0 ||
+  (filter.kinds?.length ?? 0) > 0 ||
+  (filter.status ?? '').length > 0 ||
+  filter.linked !== undefined ||
+  filter.promoted !== undefined;
+
+/**
+ * Which rows a search finds, **and the rows they hang under** (§8).
+ *
+ * An outline row on its own says half of what it means: *Mara is calm* is a
+ * different observation under *she enters the empty warehouse* than under *she
+ * runs*. So a match brings its parents with it, and the hierarchy above a
+ * result stays readable rather than the results arriving as a flat list that
+ * has thrown away where each of them was.
+ *
+ * The ancestors are along for the ride and are not themselves results, which
+ * is why they are not marked; what the writer searched for is.
+ *
+ * An empty filter finds everything, because a search nobody has typed into is
+ * not a search.
+ */
+export const filterOutline = (
+  file: ProjectFile,
+  outline: Outline,
+  filter: OutlineFilter,
+): { shown: Set<string>; hits: Set<string> } => {
+  if (!asks(filter)) {
+    const all = new Set(outline.items.map((item) => item.id as string));
+    return { shown: all, hits: new Set() };
+  }
+
+  const query = (filter.query ?? '').trim().toLowerCase();
+  const hits = new Set<string>();
+
+  for (const item of outline.items) {
+    if (filter.kinds?.length && !filter.kinds.includes(item.kind)) continue;
+    if (filter.status && item.status !== filter.status) continue;
+    if (filter.linked !== undefined && (item.source?.type === 'research_item') !== filter.linked) continue;
+    if (filter.promoted !== undefined) {
+      const promoted = item.boundUnitId !== null || item.boundBeatId !== null;
+      if (promoted !== filter.promoted) continue;
+    }
+    if (query.length > 0) {
+      // The name it shows, which for a linked row is the research item's.
+      const said = `${rowTitle(file, item)} ${item.body}`.toLowerCase();
+      if (!said.includes(query)) continue;
+    }
+    hits.add(item.id as string);
+  }
+
+  const shown = new Set(hits);
+  for (const id of hits) {
+    let walk = findOutlineItem(outline, id as unknown as OutlineItemId);
+    for (let step = 0; walk?.parentId && step <= outline.items.length; step += 1) {
+      shown.add(walk.parentId as string);
+      walk = findOutlineItem(outline, walk.parentId);
+    }
+  }
+  return { shown, hits };
+};
+
+/** Every status in use, so the filter can offer what is actually there. */
+export const statusesIn = (outline: Outline): string[] =>
+  [...new Set(outline.items.map((item) => item.status).filter((status) => status.length > 0))].sort();
+
+// ------------------------------------------------ more than one at once
+
+/**
+ * Several rows taken out at once (§8).
+ *
+ * A selection may hold both a row and something under it; removing the outer
+ * one takes the inner with it, so the subtrees are gathered first and removed
+ * together rather than one call tripping over the last one's work.
+ */
+export const removeItems = (
+  file: ProjectFile,
+  outlineId: OutlineId,
+  itemIds: readonly OutlineItemId[],
+): ProjectFile => {
+  const outline = findOutline(file, outlineId);
+  if (!outline) return file;
+
+  const doomed = new Set<string>();
+  for (const itemId of itemIds) {
+    if (!findOutlineItem(outline, itemId)) continue;
+    for (const item of outlineSubtree(outline, itemId)) doomed.add(item.id as string);
+  }
+  if (doomed.size === 0) return file;
+
+  return withOutline(file, outlineId, (current) => ({
+    ...current,
+    items: current.items.filter((item) => !doomed.has(item.id as string)),
+  }));
+};
+
+/** How far along several rows are, said once (§8). */
+export const setRowsStatus = (
+  file: ProjectFile,
+  outlineId: OutlineId,
+  itemIds: readonly OutlineItemId[],
+  status: string,
+): ProjectFile => {
+  const wanted = new Set(itemIds.map((id) => id as string));
+  if (wanted.size === 0) return file;
+  return withOutline(file, outlineId, (outline) => ({
+    ...outline,
+    items: outline.items.map((item) =>
+      wanted.has(item.id as string) && item.status !== status ? touch({ ...item, status }) : item,
+    ),
+  }));
 };
 
 /** Every row under this one, at any depth, itself included. */

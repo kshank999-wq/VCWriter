@@ -10,6 +10,7 @@ import {
   carryNodeToOutline,
   canPromote,
   createOutline,
+  filterOutline,
   findOutline,
   findOutlineItem,
   foldAll,
@@ -29,17 +30,21 @@ import {
   promoteRow,
   promotedOf,
   removeItem,
+  removeItems,
   rowOutOfStep,
   rowSource,
   rowTitle,
   sceneCardOf,
+  setRowsStatus,
   setSceneGrid,
+  statusesIn,
   unpromoteRow,
   updateItem,
   updateUnit,
   type Outline,
   type OutlineItem,
   type OutlineItemId,
+  type OutlineFilter,
   type OutlineRow,
   type ProjectFile,
   type ResearchItemId,
@@ -103,6 +108,15 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
   const outlines = outlinesOf(file);
   const [outlineId, setOutlineId] = useState<string | null>(null);
   const [selected, setSelected] = useState<OutlineItemId | null>(null);
+  /**
+   * The rest of a selection of more than one (§8).
+   *
+   * `selected` stays the one the panel is about — a panel showing four rows
+   * at once would be showing none of them — and this is everything else that
+   * a bulk action applies to.
+   */
+  const [alsoPicked, setAlsoPicked] = useState<ReadonlySet<string>>(new Set());
+  const [filter, setFilter] = useState<OutlineFilter>({});
   /** The row whose title is being typed, so a fresh one can be typed into at once. */
   const [editing, setEditing] = useState<OutlineItemId | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -151,7 +165,25 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
     if (open && outlines.length === 0) onUpdate((current) => createOutline(current).file);
   }, [open, outlines.length, onUpdate]);
 
-  const rows = useMemo(() => (outline ? outlineRows(outline) : []), [outline]);
+  const found = useMemo(
+    () => (outline ? filterOutline(file, outline, filter) : { shown: new Set<string>(), hits: new Set<string>() }),
+    [file, outline, filter],
+  );
+  const filtering = useMemo(
+    () =>
+      Boolean(
+        filter.query?.trim() ||
+          filter.kinds?.length ||
+          filter.status ||
+          filter.linked !== undefined ||
+          filter.promoted !== undefined,
+      ),
+    [filter],
+  );
+  const rows = useMemo(
+    () => (outline ? outlineRows(outline, filtering ? found.shown : undefined) : []),
+    [outline, filtering, found],
+  );
   const tally = useMemo(() => (outline ? outlineTally(outline) : null), [outline]);
 
   const write = (mutate: (current: ProjectFile, id: Outline['id']) => ProjectFile) => {
@@ -160,6 +192,54 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
   };
 
   const chosen = outline && selected ? findOutlineItem(outline, selected) : null;
+  /** Everything a bulk action applies to: the chosen row, and the rest. */
+  const picked = useMemo((): OutlineItemId[] => {
+    const ids = new Set(alsoPicked);
+    if (selected) ids.add(selected as string);
+    return [...ids] as OutlineItemId[];
+  }, [alsoPicked, selected]);
+
+  /**
+   * Choosing a row: on its own, added to, or a run of them.
+   *
+   * Shift takes everything between the last one and this, reading the outline
+   * as it is drawn rather than as it is stored — a run is what the eye sees,
+   * which under a filter is only the rows on screen.
+   */
+  const choose = (itemId: OutlineItemId, how: { add?: boolean; through?: boolean }) => {
+    if (how.through && selected) {
+      const from = rows.findIndex((row) => row.item.id === selected);
+      const to = rows.findIndex((row) => row.item.id === itemId);
+      if (from !== -1 && to !== -1) {
+        const run = rows.slice(Math.min(from, to), Math.max(from, to) + 1);
+        setAlsoPicked(new Set(run.map((row) => row.item.id as string)));
+        setSelected(itemId);
+        return;
+      }
+    }
+    if (how.add) {
+      // The same gesture takes one back out again, as long as it is not the
+      // one the panel is about: that one leaves by being replaced.
+      if (alsoPicked.has(itemId as string) && selected !== itemId) {
+        setAlsoPicked((current) => {
+          const next = new Set(current);
+          next.delete(itemId as string);
+          return next;
+        });
+        return;
+      }
+      setAlsoPicked((current) => {
+        const next = new Set(current);
+        if (selected) next.add(selected as string);
+        next.delete(itemId as string);
+        return next;
+      });
+      setSelected(itemId);
+      return;
+    }
+    setAlsoPicked(new Set());
+    setSelected(itemId);
+  };
 
   /** Whether this row is somewhere the carried one could actually go. */
   const canDrop = useCallback(
@@ -338,8 +418,32 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
               Expand all
             </button>
 
+            <input
+              className="outline-search"
+              type="search"
+              placeholder="Search the outline"
+              aria-label="Search the outline"
+              value={filter.query ?? ''}
+              onChange={(event) => setFilter((current) => ({ ...current, query: event.target.value }))}
+            />
+            <select
+              aria-label="Show only"
+              value={filter.kinds?.[0] ?? ''}
+              onChange={(event) =>
+                setFilter((current) => ({ ...current, kinds: event.target.value ? [event.target.value] : [] }))
+              }
+            >
+              <option value="">Everything</option>
+              {OUTLINE_KINDS.map((kind) => (
+                <option key={kind} value={kind}>
+                  {nameOf(kind)}s
+                </option>
+              ))}
+            </select>
+
             {tally ? (
               <span className="muted small">
+                {filtering ? `${found.hits.size} found · ` : ''}
                 {tally.scenes} {tally.scenes === 1 ? 'scene' : 'scenes'} · {tally.rows} rows
               </span>
             ) : null}
@@ -364,6 +468,68 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
           ×
         </button>
       </header>
+
+      {/* What can be done to more than one row at once (§8). It appears only
+          when there is more than one, because a strip of bulk actions over a
+          single row is a strip of things already in the panel. */}
+      {picked.length > 1 ? (
+        <div className="outline-bulk" role="toolbar" aria-label="The rows you have chosen">
+          <span className="muted small">{picked.length} rows</span>
+          <select
+            aria-label="How far along they are"
+            value=""
+            onChange={(event) => {
+              const status = event.target.value;
+              if (status) write((current, id) => setRowsStatus(current, id, picked, status));
+            }}
+          >
+            <option value="">Mark them…</option>
+            {['planned', 'in_progress', 'written', 'revised'].map((status) => (
+              <option key={status} value={status}>
+                {status.replace(/_/g, ' ')}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="ghost small"
+            onClick={() => write((current, id) => picked.reduce((file2, one) => indentItem(file2, id, one), current))}
+          >
+            Move in
+          </button>
+          <button
+            type="button"
+            className="ghost small"
+            onClick={() => write((current, id) => picked.reduce((file2, one) => outdentItem(file2, id, one), current))}
+          >
+            Move out
+          </button>
+          <button
+            type="button"
+            className="ghost small"
+            title="Send every scene among them, with its beats"
+            onClick={() =>
+              write((current, id) => picked.reduce((file2, one) => promoteRow(file2, id, one).file, current))
+            }
+          >
+            Send to Script
+          </button>
+          <button
+            type="button"
+            className="ghost small danger"
+            onClick={() => {
+              setSelected(null);
+              setAlsoPicked(new Set());
+              write((current, id) => removeItems(current, id, picked));
+            }}
+          >
+            Remove
+          </button>
+          <button type="button" className="ghost small" onClick={() => setAlsoPicked(new Set())}>
+            Done
+          </button>
+        </div>
+      ) : null}
 
       <div className="outliner-body">
         {/* §3: the shelf lives *inside* the Outliner rather than beside it.
@@ -408,8 +574,10 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
               linked={row.item.source?.type === 'research_item'}
               promoted={isPromoted(row.item)}
               selected={selected === row.item.id}
+              picked={alsoPicked.has(row.item.id as string)}
+              hit={filtering && found.hits.has(row.item.id as string)}
               editing={editing === row.item.id}
-              onSelect={() => setSelected(row.item.id)}
+              onSelect={(how) => choose(row.item.id, how)}
               onEdit={(on) => setEditing(on ? row.item.id : null)}
               onTitle={(title) => write((current, id) => updateItem(current, id, row.item.id, { title }))}
               onFold={() =>
@@ -478,6 +646,15 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
         {/* The row's own, beside the outline: its type, its status, and the
             words that are too long to sit on a line (§7, §8). */}
         <aside className="outline-detail">
+          {/* What is offered, rather than what is allowed: the four §8 names
+              and whatever the writer has already used elsewhere. */}
+          <datalist id="outline-statuses">
+            {[...new Set([...['planned', 'in progress', 'written', 'revised'], ...(outline ? statusesIn(outline) : [])])].map(
+              (status) => (
+                <option key={status} value={status} />
+              ),
+            )}
+          </datalist>
           {chosen ? (
             <>
               <h3>{nameOf(chosen.kind)}</h3>
@@ -524,6 +701,23 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
                   ))}
                 </select>
               </label>
+              {/* How far along it is (§8). A scene keeps this in its card,
+                  where it is the script's own; everything else has it here. */}
+              {chosen.kind === 'scene' ? null : (
+                <label className="field">
+                  <span>How far along</span>
+                  <input
+                    aria-label="How far along this row is"
+                    list="outline-statuses"
+                    placeholder="planned"
+                    value={chosen.status}
+                    onChange={(event) =>
+                      write((current, id) => updateItem(current, id, chosen.id, { status: event.target.value }))
+                    }
+                  />
+                </label>
+              )}
+
               {/* A scene's words belong to its card, which has a place for
                   them and knows whether that place is the row or the scene.
                   Two boxes over one field would be two answers to it. */}
@@ -844,6 +1038,8 @@ function Row({
   linked,
   promoted,
   selected,
+  picked,
+  hit,
   editing,
   onSelect,
   onEdit,
@@ -869,8 +1065,12 @@ function Row({
   /** In the script, so the row wears the badge (§6). */
   promoted: boolean;
   selected: boolean;
+  /** One of several chosen at once (§8). */
+  picked: boolean;
+  /** What the search was actually looking for, as against a parent along for the ride. */
+  hit: boolean;
   editing: boolean;
-  onSelect(): void;
+  onSelect(how: { add?: boolean; through?: boolean }): void;
   onEdit(on: boolean): void;
   onTitle(title: string): void;
   onFold(): void;
@@ -911,6 +1111,8 @@ function Row({
         'outline-row',
         `kind-${item.kind}`,
         selected ? 'selected' : '',
+        picked ? 'picked' : '',
+        hit ? 'hit' : '',
         linked ? 'linked' : '',
         promoted ? 'in-script' : '',
         dragging ? 'carried' : '',
@@ -923,7 +1125,7 @@ function Row({
       aria-level={depth + 1}
       aria-selected={selected}
       aria-expanded={childCount === 0 ? undefined : !item.collapsed}
-      onPointerDown={onSelect}
+      onPointerDown={(event) => onSelect({ add: event.metaKey || event.ctrlKey, through: event.shiftKey })}
       // The whole row is the handle. A grip would be one more thing to aim at,
       // and the title is an input, so the browser leaves its text alone.
       draggable

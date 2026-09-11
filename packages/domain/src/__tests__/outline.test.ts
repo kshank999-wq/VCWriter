@@ -8,6 +8,7 @@ import {
   createProjectFile,
   depthOf,
   findOutline,
+  filterOutline,
   findOutlineItem,
   foldAll,
   indentItem,
@@ -21,6 +22,9 @@ import {
   outlineTally,
   parseProjectFile,
   removeItem,
+  removeItems,
+  setRowsStatus,
+  statusesIn,
   rowSource,
   rowTitle,
   rowsUsing,
@@ -415,5 +419,98 @@ describe('research dragged in', () => {
     const beat = addItem(scene.file, outline.id, { parentId: scene.itemId, kind: 'beat', title: 'She enters' });
     const row = addResearchRow(beat.file, outline.id, mara, { parentId: beat.itemId });
     expect(outlineRows(live(row.file, outline)).map((entry) => entry.depth)).toEqual([0, 1, 2]);
+  });
+});
+
+/**
+ * Searching and filtering (addendum 06 §8).
+ *
+ * **A match brings its parents with it.** An outline row says half of what it
+ * means on its own — *Mara is calm* is a different observation under *she
+ * enters the empty warehouse* than under *she runs* — so results arrive in
+ * place rather than as a flat list that has thrown away where each of them
+ * was.
+ */
+describe('searching the outline', () => {
+  it('finds nothing in particular when nothing was asked', () => {
+    const { file, outline } = warehouse();
+    const found = filterOutline(file, live(file, outline), {});
+    expect(found.shown.size).toBe(6);
+    expect(found.hits.size).toBe(0);
+  });
+
+  it('finds a row by what it says, and shows what it hangs under', () => {
+    const { file, outline, scene, enters, idea } = warehouse();
+    const found = filterOutline(file, live(file, outline), { query: 'upstairs' });
+
+    expect([...found.hits]).toEqual([idea as string]);
+    // The idea, the beat it is under, and the scene that is under: in place.
+    expect(found.shown).toEqual(new Set([idea as string, enters as string, scene as string]));
+    expect(outlineRows(live(file, outline), found.shown).map((row) => [row.depth, row.item.kind])).toEqual([
+      [0, 'scene'],
+      [1, 'beat'],
+      [2, 'idea'],
+    ]);
+  });
+
+  it('searches what a row says as well as what it is called', () => {
+    const { file, outline, scene } = warehouse();
+    const said = updateItem(file, outline.id, scene, { body: 'Nobody has been inside for a year.' });
+    expect(filterOutline(said, live(said, outline), { query: 'nobody' }).hits).toEqual(new Set([scene as string]));
+  });
+
+  it('filters by what a row is', () => {
+    const { file, outline, enters, finds } = warehouse();
+    const found = filterOutline(file, live(file, outline), { kinds: ['beat'] });
+    expect(found.hits).toEqual(new Set([enters as string, finds as string]));
+  });
+
+  it('filters by how far along it is', () => {
+    const { file, outline, scene, enters } = warehouse();
+    const marked = setRowsStatus(file, outline.id, [scene, enters], 'written');
+    expect(filterOutline(marked, live(marked, outline), { status: 'written' }).hits).toEqual(
+      new Set([scene as string, enters as string]),
+    );
+    expect(statusesIn(live(marked, outline))).toEqual(['written']);
+  });
+
+  it('everything asked for has to match', () => {
+    const { file, outline, enters } = warehouse();
+    const marked = setRowsStatus(file, outline.id, [enters], 'written');
+    expect(filterOutline(marked, live(marked, outline), { kinds: ['beat'], status: 'written' }).hits).toEqual(
+      new Set([enters as string]),
+    );
+    expect(filterOutline(marked, live(marked, outline), { kinds: ['scene'], status: 'written' }).hits.size).toBe(0);
+  });
+
+  it('shows a match that is inside something folded, because that is the job', () => {
+    const { file, outline, scene, idea } = warehouse();
+    const folded = updateItem(file, outline.id, scene, { collapsed: true });
+    expect(outlineRows(live(folded, outline))).toHaveLength(1);
+
+    const found = filterOutline(folded, live(folded, outline), { query: 'upstairs' });
+    expect(outlineRows(live(folded, outline), found.shown).map((row) => row.item.id)).toContain(idea);
+  });
+});
+
+describe('more than one row at once', () => {
+  it('takes several out, and is not tripped by a row inside another', () => {
+    const { file, outline, scene, enters, idea } = warehouse();
+    // The beat and something under it, listed together.
+    const gone = removeItems(file, outline.id, [enters, idea]);
+    expect(live(gone, outline).items).toHaveLength(2);
+  });
+
+  it('sets how far along several rows are, in one go', () => {
+    const { file, outline, scene, finds } = warehouse();
+    const marked = setRowsStatus(file, outline.id, [scene, finds], 'in_progress');
+    expect(findOutlineItem(live(marked, outline), scene)?.status).toBe('in_progress');
+    expect(findOutlineItem(live(marked, outline), finds)?.status).toBe('in_progress');
+  });
+
+  it('does nothing when nothing is selected', () => {
+    const { file, outline } = warehouse();
+    expect(removeItems(file, outline.id, [])).toBe(file);
+    expect(setRowsStatus(file, outline.id, [], 'written')).toBe(file);
   });
 });
