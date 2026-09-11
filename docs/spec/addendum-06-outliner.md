@@ -1,6 +1,6 @@
 # Addendum 06 — The Outliner
 
-Status: specified, not built. September 2026. From Ken's *VC Writer Outliner
+Status: stages 1–2 built, September 2026. From Ken's *VC Writer Outliner
 Development Specification* of 11 September, and the framing he gave with it:
 **the Outliner and the Story Sculptor are siblings, and material moves between
 them by hand.** Extends §5 (story structure), §7 (research and links) and §19
@@ -245,10 +245,10 @@ The panel resizes, and fills the window.
 
 ## 12. Build order
 
-1. The document: the outline, the typed row, the tree, and the shape rules.
-   Nothing on screen.
-2. The panel: the outline drawn, rows added, renamed inline, folded,
-   reordered, indented and outdented.
+1. **Built.** The document: the outline, the typed row, the tree, and the
+   shape rules. Nothing on screen.
+2. **Built.** The panel: the outline drawn, rows added, renamed inline,
+   folded, reordered, indented and outdented.
 3. Dragging: rows moved by hand, with the sibling-or-child drop indicator.
 4. The Research shelf, inside the Outliner, and dropping an item in as a
    linked reference.
@@ -273,3 +273,46 @@ becomes the script.
 | **Linked** | A row that references a research item and takes its name from it |
 | **Promoted** | A row that is the same object as a scene or beat in the script |
 | **Shelf** | The Research tree down the side of the Outliner and the Sculptor |
+
+## 14. What is built
+
+Stages 1–2 — **the document, and the outline on screen.** The Outliner is a
+button on the title bar beside Research and Sculptor, and it opens over the
+workspace the way the board does: an outline is worked on whole.
+
+**A new outline is genuinely empty.** A board arrives with Beginning and End
+because a story has both and the writer needs somewhere to type; an outline
+has no row every story must have, so offering one would be the template §1
+refuses. What it offers instead is a sentence saying a scene or a note will do
+and that everything here is a plan until it is sent to the script.
+
+**Type and depth stay apart** (§4). `+ Scene` always lands at the top level,
+because a scene inside another scene is not something the outline can mean;
+everything else lands *under* whatever is selected, which is what "add a note"
+means with a beat chosen. So a Character sits under a beat, a Note under that
+Character, and an Idea under the Note, and the type dropdown in the panel will
+keep a type nobody has heard of — the list is a list of words (§12).
+
+The row is **a line, not a form**: the title is an input, so renaming is
+typing, and a row added is focused and ready to be typed into. Depth is
+padding rather than nesting, which means every row is a sibling in the markup
+— and that is what lets the arrow keys walk the outline. One guide is drawn
+per level so the eye can run back up to the parent.
+
+**§9's weights**: scene rows in the display face, gold and small-capped; beats
+in full reading weight; supporting rows muted and a size down. A compact mark
+carries the type rather than a word, because *CHARACTER —* in front of every
+one of them is a column of noise down the left of the outline. Rows stop at a
+readable measure rather than running the width of the screen, which also keeps
+a row's controls beside its words.
+
+**Keyboard first** (§8): Tab and Shift+Tab move a row in and out, Alt with the
+up and down arrows moves it among its siblings, the bare arrows walk the list,
+and Return adds another of what is selected — another beat under a scene,
+another note beside a note. Collapse All and Expand All are in the bar, and
+folding never touches a row with nothing under it, because a disclosure arrow
+with nothing behind it is a lie.
+
+The panel beside it holds the row's title, its type, and the notes too long to
+sit on a line, and says which the row is: *a plan, it lives only in the
+outline*. The badge is already there for stage 5, when promotion arrives.

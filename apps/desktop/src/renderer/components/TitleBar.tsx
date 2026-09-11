@@ -26,6 +26,8 @@ interface TitleBarProps {
   onOpenResearch(): void;
   /** The Story Sculptor's canvas (addendum 03). */
   onOpenSculptor(): void;
+  /** The Outliner's tree (addendum 06), the Sculptor's rigid sibling. */
+  onOpenOutliner(): void;
   /** Sections in windows of their own, and the way to bring one back (§8). */
   away: readonly string[];
   onBringBack(pane: string): void;
@@ -58,6 +60,7 @@ export function TitleBar({
   onFocus,
   onOpenResearch,
   onOpenSculptor,
+  onOpenOutliner,
   away,
   onBringBack,
   account,
@@ -127,6 +130,16 @@ export function TitleBar({
             onClick={onOpenSculptor}
           >
             Sculptor
+          </button>
+        ) : null}
+        {writing ? (
+          <button
+            type="button"
+            className="ghost"
+            title="Outliner: arrange what you have into scenes and beats"
+            onClick={onOpenOutliner}
+          >
+            Outliner
           </button>
         ) : null}
         {writing ? (

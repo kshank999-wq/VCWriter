@@ -51,6 +51,7 @@ describe('the research window', () => {
         onFocus={() => undefined}
         onOpenResearch={onOpenResearch}
         onOpenSculptor={() => undefined}
+        onOpenOutliner={() => undefined}
         away={['script']}
         onBringBack={() => undefined}
         account={{ configured: false, signedIn: false, email: null }}

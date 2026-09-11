@@ -48,6 +48,7 @@ import { LaneDialog } from './components/LaneDialog';
 import { SceneDialog } from './components/SceneDialog';
 import { ResearchWindow } from './components/ResearchWindow';
 import { SculptorWindow } from './components/SculptorWindow';
+import { OutlinerWindow } from './components/OutlinerWindow';
 import { BeatDialog } from './components/BeatDialog';
 import { MarkerDialog } from './components/MarkerDialog';
 import { PageBar, type View } from './components/PageBar';
@@ -136,6 +137,7 @@ export default function App() {
   const [researchOpen, setResearchOpen] = useState(false);
   /** The Story Sculptor's canvas, over the workspace (addendum 03). */
   const [sculptorOpen, setSculptorOpen] = useState(false);
+  const [outlinerOpen, setOutlinerOpen] = useState(false);
   /**
    * File → New project shows the project screen even with one already open:
    * the format is chosen there, beside the title and a word on what each one
@@ -800,6 +802,7 @@ export default function App() {
         onFocus={() => setFocusMode(!focusMode)}
         onOpenResearch={() => (away.has('research') ? openPane('research') : setResearchOpen(true))}
         onOpenSculptor={() => setSculptorOpen(true)}
+        onOpenOutliner={() => setOutlinerOpen(true)}
         away={detached}
         onBringBack={closePane}
         account={account}
@@ -945,6 +948,14 @@ export default function App() {
             file={file}
             open={sculptorOpen}
             onClose={() => setSculptorOpen(false)}
+            onUpdate={project.update}
+          />
+          {/* The outline over the workspace too: the rigid sibling of the
+              board, and worked on whole for the same reason (addendum 06). */}
+          <OutlinerWindow
+            file={file}
+            open={outlinerOpen}
+            onClose={() => setOutlinerOpen(false)}
             onUpdate={project.update}
           />
         </div>

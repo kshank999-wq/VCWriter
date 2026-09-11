@@ -7530,3 +7530,196 @@ dialog.preferences .field {
   width: 100%;
   margin-top: 4px;
 }
+
+/* ---- the Outliner (addendum 06) --------------------------------------- */
+
+.outliner {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+}
+
+.outliner-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  height: 42px;
+  padding: 0 10px 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.outliner-bar h2 {
+  margin: 0 4px 0 0;
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.outliner-gap {
+  width: 12px;
+}
+
+.outliner-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.outline-list {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 12px 12px 40px;
+  background: var(--bg);
+}
+
+/* An outline is a document, not a spreadsheet: the rows stop at a readable
+   measure rather than running the width of the screen, which also keeps a
+   row's controls beside its words instead of a hand's travel away. */
+.outline-row {
+  max-width: 920px;
+}
+
+.outline-list:focus {
+  outline: none;
+}
+
+/* A row is a flex line whose depth is padding rather than nesting, so every
+   row is a sibling in the DOM and the arrow keys can walk the list. */
+.outline-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding-right: 6px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+.outline-row:hover {
+  background: var(--panel-2);
+}
+
+.outline-row.selected {
+  border-color: var(--gold);
+  background: var(--panel-2);
+}
+
+/* One guide per level, so the eye can run back up to the parent. */
+.outline-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+  pointer-events: none;
+}
+
+.outline-fold {
+  flex: 0 0 auto;
+  width: 15px;
+  padding: 0;
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.outline-fold.empty {
+  display: inline-block;
+}
+
+.outline-mark {
+  flex: 0 0 auto;
+  width: 14px;
+  font-size: 10px;
+  text-align: center;
+  color: var(--gold-deep);
+}
+
+.outline-title {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: 12.5px;
+}
+
+.outline-title:focus {
+  outline: none;
+}
+
+.outline-hidden {
+  flex: 0 0 auto;
+}
+
+/* §9: scene rows strongest, beats lighter, supporting rows lighter still, so
+   the hierarchy reads at a glance without being read. */
+.outline-row.kind-scene .outline-title {
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.outline-row.kind-scene .outline-mark {
+  color: var(--gold);
+}
+
+.outline-row.kind-beat .outline-title {
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.outline-row.kind-note .outline-title,
+.outline-row.kind-idea .outline-title,
+.outline-row.kind-character .outline-title,
+.outline-row.kind-setting .outline-title,
+.outline-row.kind-prop .outline-title {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* The controls belong to the row under the pointer, not to every row at once. */
+.outline-tools {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity 90ms ease;
+}
+
+.outline-row:hover .outline-tools,
+.outline-row.selected .outline-tools {
+  opacity: 1;
+}
+
+.outline-tools button {
+  padding: 0 4px;
+  font-size: 10px;
+}
+
+.outline-detail {
+  flex: 0 0 280px;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  padding: 14px;
+  overflow: auto;
+}
+
+.outline-detail h3 {
+  margin: 0 0 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}

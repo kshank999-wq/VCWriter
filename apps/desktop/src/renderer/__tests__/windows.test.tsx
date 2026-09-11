@@ -133,6 +133,7 @@ describe('the title bar', () => {
         onFocus={() => undefined}
         onOpenResearch={() => undefined}
         onOpenSculptor={() => undefined}
+        onOpenOutliner={() => undefined}
         away={away}
         onBringBack={() => undefined}
         account={{ configured: false, signedIn: false, email: null }}
