@@ -46,9 +46,9 @@ push live; the build takes a minute or two.
   (the document and its shape rules, the outline on screen, moving it by hand,
   the Research shelf, and promotion — which §12 calls the point of the whole
   thing) are built, and stage 7 with them — the shelf holds the other plan, so
-  material passes between the board and the outline by hand. §14 says what
-  they do; §12 lists what is left: the scene card, search and filters, and
-  printing.
+  material passes between the board and the outline by hand, and stage 6 —
+  the scene card. §14 says what they do; §12 lists what is left: search,
+  filters and multi-select, and printing the outline.
   `packages/domain/src/planning.ts` is where the board and the outline meet
   the script: one plan per scene across both, and the rename that reaches
   both. Rules about the *pair* go there rather than in either module. §1 and §2 are the decisions the rest hangs off.

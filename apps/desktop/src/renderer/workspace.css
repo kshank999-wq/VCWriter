@@ -8090,3 +8090,40 @@ dialog.preferences .field {
   box-shadow: inset 0 0 0 1px var(--gold-deep);
   background: var(--panel-2);
 }
+
+/* ---- the scene card (addendum 06 §7) --------------------------------- */
+
+.scene-card {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.scene-card h4 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 9.5px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.scene-card h4 button {
+  padding: 0;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+
+.scene-card .field {
+  margin-bottom: 8px;
+}
+
+.scene-card p {
+  margin: 0;
+}

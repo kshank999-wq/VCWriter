@@ -21,6 +21,8 @@ import {
   removeItem,
   removeUnit,
   rowOutOfStep,
+  sceneCardOf,
+  setSceneGrid,
   unitsInStoryOrder,
   unpromoteRow,
   updateItem,
@@ -292,5 +294,86 @@ describe('when the outline and the script disagree', () => {
     const followed = followOutline(moved, outline.id, two.itemId!);
     const order = unitsInStoryOrder(followed).map((unit) => unit.id);
     expect(order.indexOf(next.unitId!)).toBeLessThan(order.indexOf(one.unitId!));
+  });
+});
+
+/**
+ * The scene card (addendum 06 §7).
+ *
+ * **The card shows what exists**, which is the module's rule throughout: read
+ * through rather than copy across. A plan has a name, a note and a status; a
+ * scene in the script has a number, a synopsis, a purpose, a point of view and
+ * a lane as well, and those are the scene's own — so promotion adds to the
+ * card rather than moving it, and there is no second set of fields to keep in
+ * step.
+ */
+describe('the scene card', () => {
+  it('is only on a scene', () => {
+    const { file, outline, scene, enters, idea } = planned();
+    const back = findOutline(file, outline.id)!;
+    expect(sceneCardOf(file, back, findOutlineItem(back, scene)!)).not.toBeNull();
+    expect(sceneCardOf(file, back, findOutlineItem(back, enters)!)).toBeNull();
+    expect(sceneCardOf(file, back, findOutlineItem(back, idea)!)).toBeNull();
+  });
+
+  it('on a plan, holds only what a plan has', () => {
+    const { file, outline, scene } = planned();
+    const said = updateItem(file, outline.id, scene, { body: 'They meet where nobody goes.', status: 'planned' });
+    const back = findOutline(said, outline.id)!;
+    const card = sceneCardOf(said, back, findOutlineItem(back, scene)!)!;
+
+    expect(card).toMatchObject({
+      inScript: false,
+      title: 'Warehouse Confrontation',
+      number: null,
+      synopsis: 'They meet where nobody goes.',
+      purpose: null,
+      pov: null,
+      lane: null,
+      status: 'planned',
+      beats: 2,
+    });
+  });
+
+  it('in the script, reads the scene’s own fields rather than a copy of them', () => {
+    const { file, outline, scene } = planned();
+    const sent = promoteRow(file, outline.id, scene);
+    const described = updateUnit(sent.file, sent.unitId!, {
+      sequenceLabel: 'Sc. 12',
+      summary: 'Mara learns Daniel lied.',
+      status: 'drafting',
+    });
+    const gridded = setSceneGrid(described, sent.unitId!, { purpose: 'It turns the trust.', pov: 'Mara' });
+
+    const back = findOutline(gridded, outline.id)!;
+    const card = sceneCardOf(gridded, back, findOutlineItem(back, scene)!)!;
+    expect(card).toMatchObject({
+      inScript: true,
+      title: 'Warehouse Confrontation',
+      number: 'Sc. 12',
+      synopsis: 'Mara learns Daniel lied.',
+      purpose: 'It turns the trust.',
+      pov: 'Mara',
+      status: 'drafting',
+      beats: 2,
+    });
+    expect(card.lane?.name).toBe('Main Plot');
+  });
+
+  it('is empty until it is filled in, and says nothing about that', () => {
+    const { file, outline, scene } = planned();
+    const sent = promoteRow(file, outline.id, scene);
+    const back = findOutline(sent.file, outline.id)!;
+    const card = sceneCardOf(sent.file, back, findOutlineItem(back, scene)!)!;
+    expect([card.number, card.synopsis, card.purpose, card.pov]).toEqual(['', '', '', '']);
+  });
+
+  it('counts the beats under it whether they are in the script or not', () => {
+    const { file, outline, scene } = planned();
+    const back = findOutline(file, outline.id)!;
+    expect(sceneCardOf(file, back, findOutlineItem(back, scene)!)?.beats).toBe(2);
+    const sent = promoteRow(file, outline.id, scene);
+    const after = findOutline(sent.file, outline.id)!;
+    expect(sceneCardOf(sent.file, after, findOutlineItem(after, scene)!)?.beats).toBe(2);
   });
 });

@@ -1,6 +1,6 @@
 # Addendum 06 — The Outliner
 
-Status: stages 1–5 and 7 built, September 2026. From Ken's *VC Writer Outliner
+Status: stages 1–7 built, September 2026. From Ken's *VC Writer Outliner
 Development Specification* of 11 September, and the framing he gave with it:
 **the Outliner and the Story Sculptor are siblings, and material moves between
 them by hand.** Extends §5 (story structure), §7 (research and links) and §19
@@ -272,7 +272,7 @@ The panel resizes, and fills the window.
    as a linked reference.
 5. **Built.** Promotion: a scene and its beats into the script, and everything
    §6 says about it.
-6. The scene card.
+6. **Built.** The scene card.
 7. **Built.** Passing material between the Sculptor and the Outliner, both
    ways.
 8. Search, filters, multi-select, status, Collapse All, the keyboard.
@@ -295,8 +295,9 @@ becomes the script.
 
 ## 14. What is built
 
-Stages 1–5 — **the document, the outline on screen, moving it by hand, the
-shelf it is filled from, and the way into the script.** The Outliner is a
+Stages 1–7 — **the document, the outline on screen, moving it by hand, the
+shelf it is filled from, the way into the script, the scene card, and carrying
+material between the two plans.** The Outliner is a
 button on the title bar beside Research and Sculptor, and it opens over the
 workspace the way the board does: an outline is worked on whole.
 
@@ -491,3 +492,26 @@ running out of columns is to carry what fits, not to invent columns nobody
 asked for.
 
 There is still no *Convert*, and there will not be (§2).
+
+### Stage 6 — the scene card
+
+A Scene row carries its own summary in the panel, under a heading that folds
+and says what is behind it — *2 beats · Sc. 12* — so a writer can see what a
+scene is without opening the script.
+
+**The card shows what exists**, which is the rule the whole module follows:
+read through rather than copy across. A row that is still a plan has a
+synopsis and a status and no more, because that is all a plan is. A row in the
+script gains a number, a purpose, a point of view and the lane it is drawn in
+— and those are **the scene's own fields, shown here rather than copied here**
+(§7). So promotion *adds* to the card rather than moving it, and there is never
+a second set of fields to keep in step.
+
+Empty throughout is the honest starting state: nothing here is marked missing
+and nothing is required.
+
+One thing came out of building it. A scene's synopsis while it is a plan is
+the row's own words, which is the same place the generic **Notes** box writes
+to — two boxes over one field, which is two answers to it. The card owns a
+scene's words, because it is the thing that knows whether they belong to the
+row or to the scene; every other kind of row keeps the Notes box.

@@ -32,8 +32,11 @@ import {
   rowOutOfStep,
   rowSource,
   rowTitle,
+  sceneCardOf,
+  setSceneGrid,
   unpromoteRow,
   updateItem,
+  updateUnit,
   type Outline,
   type OutlineItem,
   type OutlineItemId,
@@ -44,8 +47,9 @@ import {
 } from '@vcwriter/domain';
 
 /**
- * The Outliner (addendum 06), stages 2–5: the outline on screen, moved about
- * by hand, the research shelf it is filled from, and the way into the script.
+ * The Outliner (addendum 06), stages 2–7: the outline on screen, moved about
+ * by hand, the research shelf it is filled from, the way into the script, the
+ * scene card, and the board to carry material from.
  *
  * **A traditional outline.** Indentation guides, disclosure arrows, and a
  * weight that falls away with depth — scene rows strongest, beats lighter,
@@ -520,15 +524,24 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
                   ))}
                 </select>
               </label>
-              <label className="field">
-                <span>Notes</span>
-                <textarea
-                  aria-label="The row's notes"
-                  rows={10}
-                  value={chosen.body}
-                  onChange={(event) => write((current, id) => updateItem(current, id, chosen.id, { body: event.target.value }))}
-                />
-              </label>
+              {/* A scene's words belong to its card, which has a place for
+                  them and knows whether that place is the row or the scene.
+                  Two boxes over one field would be two answers to it. */}
+              {chosen.kind === 'scene' ? null : (
+                <label className="field">
+                  <span>Notes</span>
+                  <textarea
+                    aria-label="The row's notes"
+                    rows={10}
+                    value={chosen.body}
+                    onChange={(event) => write((current, id) => updateItem(current, id, chosen.id, { body: event.target.value }))}
+                  />
+                </label>
+              )}
+
+              {/* The scene card (§7): what a scene says about itself, from
+                  wherever each part of it actually lives. */}
+              <SceneCardPanel file={file} outline={outline as Outline} item={chosen} onWrite={write} />
 
               {/* §1: a row is a plan until the writer says otherwise, and
                   saying so is this. */}
@@ -548,6 +561,132 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
         </aside>
       </div>
     </div>
+  );
+}
+
+/**
+ * The scene card (addendum 06 §7).
+ *
+ * **Lightweight, collapsible, and empty until it is filled in** — an
+ * unanswered field is not a gap to be nagged about, so nothing here is marked
+ * as missing and nothing is required.
+ *
+ * Each part of it is edited where it lives. While the row is a plan there is a
+ * synopsis and a status and no more, because that is all a plan has. Once it
+ * is in the script the number, the purpose, the point of view and the lane
+ * appear, and they are **the scene's own fields, shown here rather than copied
+ * here** — so promotion adds to the card rather than moving it, and there is
+ * never a second copy to keep in step.
+ */
+function SceneCardPanel({
+  file,
+  outline,
+  item,
+  onWrite,
+}: {
+  file: ProjectFile;
+  outline: Outline;
+  item: OutlineItem;
+  onWrite(mutate: (current: ProjectFile, id: Outline['id']) => ProjectFile): void;
+}) {
+  const [open, setOpen] = useState(true);
+  const card = sceneCardOf(file, outline, item);
+  if (!card) return null;
+
+  const unitId = item.boundUnitId;
+  const toScript = (patch: Parameters<typeof updateUnit>[2]) => {
+    if (unitId) onWrite((current) => updateUnit(current, unitId, patch));
+  };
+
+  return (
+    <section className="scene-card">
+      <h4>
+        <button type="button" className="ghost small" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? '▾' : '▸'} The scene
+        </button>
+        <span className="muted">
+          {card.beats} {card.beats === 1 ? 'beat' : 'beats'}
+          {card.number ? ` · ${card.number}` : ''}
+        </span>
+      </h4>
+
+      {open ? (
+        <>
+          {card.inScript ? (
+            <label className="field">
+              <span>Number</span>
+              <input
+                aria-label="The scene's number"
+                placeholder="Sc. 14"
+                value={card.number ?? ''}
+                onChange={(event) => toScript({ sequenceLabel: event.target.value })}
+              />
+            </label>
+          ) : null}
+
+          <label className="field">
+            <span>Synopsis</span>
+            <textarea
+              aria-label="What happens in the scene"
+              rows={3}
+              placeholder="what happens, in a line"
+              value={card.synopsis}
+              onChange={(event) =>
+                card.inScript
+                  ? toScript({ summary: event.target.value })
+                  : onWrite((current, id) => updateItem(current, id, item.id, { body: event.target.value }))
+              }
+            />
+          </label>
+
+          {card.inScript && unitId ? (
+            <>
+              <label className="field">
+                <span>Why it is in the script</span>
+                <input
+                  aria-label="The scene's purpose"
+                  value={card.purpose ?? ''}
+                  onChange={(event) => onWrite((current) => setSceneGrid(current, unitId, { purpose: event.target.value }))}
+                />
+              </label>
+              <label className="field">
+                <span>Point of view</span>
+                <input
+                  aria-label="Whose eyes the scene is seen through"
+                  value={card.pov ?? ''}
+                  onChange={(event) => onWrite((current) => setSceneGrid(current, unitId, { pov: event.target.value }))}
+                />
+              </label>
+              <label className="field">
+                <span>Status</span>
+                <select
+                  aria-label="How far along the scene is"
+                  value={card.status}
+                  onChange={(event) => toScript({ status: event.target.value as 'outline' })}
+                >
+                  {(['outline', 'drafting', 'draft_complete', 'revised', 'final'] as const).map((state) => (
+                    <option key={state} value={state}>
+                      {state.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {card.lane ? <p className="muted small">In the {card.lane.name} lane.</p> : null}
+            </>
+          ) : (
+            <label className="field">
+              <span>Status</span>
+              <input
+                aria-label="How far along the scene is"
+                placeholder="planned"
+                value={card.status}
+                onChange={(event) => onWrite((current, id) => updateItem(current, id, item.id, { status: event.target.value }))}
+              />
+            </label>
+          )}
+        </>
+      ) : null}
+    </section>
   );
 }
 

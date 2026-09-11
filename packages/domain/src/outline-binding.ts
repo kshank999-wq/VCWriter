@@ -368,3 +368,73 @@ export const followOutline = (file: ProjectFile, outlineId: OutlineId, itemId: O
   const index = here !== -1 && target > here ? target - 1 : target;
   return moveBeat(file, { beatId: item.boundBeatId, toUnitId: unitId, index });
 };
+
+// --------------------------------------------- the scene card (§7)
+
+/**
+ * What a Scene row says about itself, resolved from wherever it lives.
+ *
+ * **The card shows what exists**, which is the same rule the rest of the
+ * module follows: read through rather than copy across. A row that is still a
+ * plan has a name, a note and a status of its own, because that is all a plan
+ * is. A row in the script has a number, a synopsis, a purpose, a point of view
+ * and a lane as well — and those are **the scene's own fields**, shown here
+ * rather than copied here (§7), so there is no second set of them to keep in
+ * step and promotion adds to the card rather than moving it.
+ *
+ * Empty throughout is the honest starting state. An unanswered field is not a
+ * gap to be nagged about.
+ */
+export interface SceneCard {
+  /** Whether these are the scene's fields or the row's own. */
+  inScript: boolean;
+  title: string;
+  /** The scene's label in the script — "Sc. 14" — or null for a plan. */
+  number: string | null;
+  /** The summary, or the row's own note while it is still a plan. */
+  synopsis: string;
+  /** Why the scene is in the script (spec §8.2). Null for a plan. */
+  purpose: string | null;
+  /** Whose eyes it is seen through. Null for a plan. */
+  pov: string | null;
+  /** The thread it is drawn in (addendum 02 §8). Null for a plan. */
+  lane: { id: string; name: string } | null;
+  status: string;
+  /** How many beat rows are under it, promoted or not. */
+  beats: number;
+}
+
+export const sceneCardOf = (file: ProjectFile, outline: Outline, item: OutlineItem): SceneCard | null => {
+  if (item.kind !== 'scene') return null;
+
+  const beats = outlineChildren(outline, item.id).filter((child) => child.kind === 'beat').length;
+  const promoted = promotedOf(file, item);
+
+  if (promoted?.kind !== 'unit') {
+    return {
+      inScript: false,
+      title: item.title,
+      number: null,
+      synopsis: item.body,
+      purpose: null,
+      pov: null,
+      lane: null,
+      status: item.status,
+      beats,
+    };
+  }
+
+  const unit = promoted.unit;
+  const lane = file.lanes.find((candidate) => candidate.id === unit.laneId);
+  return {
+    inScript: true,
+    title: unit.title,
+    number: unit.sequenceLabel,
+    synopsis: unit.summary,
+    purpose: unit.grid.purpose,
+    pov: unit.grid.pov,
+    lane: lane ? { id: lane.id as string, name: lane.name } : null,
+    status: unit.status,
+    beats,
+  };
+};
