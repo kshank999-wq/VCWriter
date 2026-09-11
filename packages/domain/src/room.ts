@@ -338,3 +338,65 @@ export const seatRefusalText = (refusal: SeatRefusal): string => {
       return 'Only the showrunner can change who is in the room.';
   }
 };
+
+// ------------------------------------------------------- what you land on
+
+/**
+ * What a room says to the person who has just signed in (§5).
+ *
+ * **Signing in does not open the software; it opens the room.** One page
+ * answering one question — *what is my part in this* — with a different answer
+ * per role, rather than four pages that would drift apart.
+ */
+export type LandingSection =
+  /** Who else is in the room: names, titles, colours. Everyone sees this. */
+  | 'seats'
+  /** Asking somebody in, and changing what they are called. */
+  | 'invite'
+  /** What the room costs, and what another seat would cost. */
+  | 'billing';
+
+export interface RoomLanding {
+  /** One line saying what this person is here. */
+  standing: string;
+  /**
+   * Which document the editor would open for them, or null where they have no
+   * part in this room at all. A Writer opens **their own branch** and never
+   * the master — that is §1 stated as a door rather than as a rule.
+   */
+  opens: 'master' | 'ownBranch' | null;
+  sections: readonly LandingSection[];
+}
+
+export const landingFor = (
+  role: RoomRole | null,
+  seat?: Pick<Seat, 'title'> | null,
+): RoomLanding => {
+  if (role === null) return { standing: 'You are not in this room.', opens: null, sections: [] };
+
+  // The title is what a person calls themselves here; the role is what the
+  // room lets them do. Both belong in the sentence, and the title goes first
+  // because it is the one they answer to (§6).
+  const credit = seat?.title.trim() ? `${seat.title.trim()} · ${ROLE_NAMES[role]}` : ROLE_NAMES[role];
+
+  switch (role) {
+    case 'owner':
+      return {
+        standing: `You are the ${ROLE_NAMES.owner.toLowerCase()}.`,
+        opens: 'master',
+        sections: ['seats', 'invite', 'billing'],
+      };
+    case 'writer':
+      return { standing: `You are a ${credit} here.`, opens: 'ownBranch', sections: ['seats'] };
+    case 'editor':
+      return { standing: `You are an ${credit} here.`, opens: 'master', sections: ['seats'] };
+    default:
+      return { standing: `You are a ${credit} here.`, opens: 'master', sections: ['seats'] };
+  }
+};
+
+/** What the door says, given what it would open. */
+export const OPENS_LABEL: Record<NonNullable<RoomLanding['opens']>, string> = {
+  master: 'Open the room’s script',
+  ownBranch: 'Open your draft',
+};

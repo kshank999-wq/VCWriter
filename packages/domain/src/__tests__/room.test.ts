@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  OPENS_LABEL,
   ROOM_ACTIONS,
   ROOM_COLOURS,
   canDeactivate,
   canInvite,
   describeSeats,
+  landingFor,
   mayInRoom,
   proposeColour,
   roleAtLeast,
@@ -228,5 +230,49 @@ describe('changing who is in the room', () => {
     expect(seatRefusalText({ reason: 'already_invited', email: 'jo@example.test' })).toContain(
       'jo@example.test',
     );
+  });
+});
+
+/**
+ * Where you land (§5).
+ *
+ * One page, one question — *what is my part in this* — and a different answer
+ * per role. The test that matters is the one that says a Writer opens their
+ * own branch and never the master, because that is §1 stated as a door.
+ */
+describe('what the room says when you arrive', () => {
+  it('tells the showrunner they are the showrunner, and shows them the room', () => {
+    const landing = landingFor('owner');
+    expect(landing.standing).toBe('You are the showrunner.');
+    expect(landing.opens).toBe('master');
+    expect(landing.sections).toEqual(['seats', 'invite', 'billing']);
+  });
+
+  it('opens a writer’s own draft, never the master', () => {
+    expect(landingFor('writer').opens).toBe('ownBranch');
+  });
+
+  it('shows nobody but the showrunner how to invite or what it costs', () => {
+    for (const role of ['writer', 'editor', 'viewer'] as const) {
+      expect(landingFor(role).sections).toEqual(['seats']);
+    }
+  });
+
+  it('says the title and the role together, title first', () => {
+    expect(landingFor('writer', seat({ title: 'Staff Writer' })).standing).toBe(
+      'You are a Staff Writer · Writer here.',
+    );
+    expect(landingFor('writer', seat({ title: '' })).standing).toBe('You are a Writer here.');
+  });
+
+  it('gives somebody with no part in it nothing at all', () => {
+    const landing = landingFor(null);
+    expect(landing.opens).toBeNull();
+    expect(landing.sections).toEqual([]);
+  });
+
+  it('names the door after what is behind it', () => {
+    expect(OPENS_LABEL.ownBranch).toBe('Open your draft');
+    expect(OPENS_LABEL.master).toContain('script');
   });
 });

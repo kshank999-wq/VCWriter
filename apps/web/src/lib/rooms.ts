@@ -2,12 +2,14 @@ import { randomBytes, createHash } from 'node:crypto';
 import {
   canDeactivate,
   canInvite,
+  landingFor,
   proposeColour,
   roomRoleFor,
   seatCount,
   seatSchema,
   roomSchema,
   type Room,
+  type RoomLanding,
   type RoomRole,
   type Seat,
   type SeatCount,
@@ -95,9 +97,14 @@ export interface RoomView {
   seats: Seat[];
   /** The project's owner, who is the showrunner whether or not they hold a seat. */
   projectOwnerId: string;
+  projectTitle: string;
   /** What the person asking may do here, or null if they are not in the room. */
   role: RoomRole | null;
-  seats_count: SeatCount;
+  /** Their own seat, where they hold one — the colour and initials are theirs. */
+  you: Seat | null;
+  /** What the room says to them when they arrive (§5). */
+  landing: RoomLanding;
+  seatsCount: SeatCount;
 }
 
 /**
@@ -106,28 +113,95 @@ export interface RoomView {
  * Read through the visitor's own session: a stranger gets nothing back because
  * the database says so, not because this function checked.
  */
-export const loadRoom = async (projectId: string): Promise<RoomView | null> => {
+const viewOf = async (roomRow: RoomRow | null): Promise<RoomView | null> => {
+  if (!roomRow) return null;
   const db = serverClient();
   const { data: auth } = await db.auth.getUser();
   const userId = auth.user?.id ?? null;
 
-  const { data: roomRow } = await db.from('rooms').select('*').eq('project_id', projectId).maybeSingle();
-  if (!roomRow) return null;
+  const [{ data: project }, { data: seatRows }] = await Promise.all([
+    db.from('projects').select('owner_id, title').eq('id', roomRow.project_id).maybeSingle(),
+    db.from('room_seats').select('*').eq('room_id', roomRow.id),
+  ]);
 
-  const { data: project } = await db.from('projects').select('owner_id').eq('id', projectId).maybeSingle();
-  const { data: seatRows } = await db.from('room_seats').select('*').eq('room_id', (roomRow as RoomRow).id);
-
-  const room = roomFromRow(roomRow as RoomRow);
+  const room = roomFromRow(roomRow);
   const seats = ((seatRows ?? []) as SeatRow[]).map(seatFromRow);
   const projectOwnerId = (project as { owner_id: string } | null)?.owner_id ?? '';
+  const role = roomRoleFor(seats, userId, projectOwnerId);
 
   return {
     room,
     seats,
     projectOwnerId,
-    role: roomRoleFor(seats, userId, projectOwnerId),
-    seats_count: seatCount(room, seats),
+    projectTitle: (project as { title: string } | null)?.title ?? '',
+    role,
+    you: seats.find((seat) => seat.userId === userId && seat.state === 'active') ?? null,
+    landing: landingFor(role, seats.find((seat) => seat.userId === userId) ?? null),
+    seatsCount: seatCount(room, seats),
   };
+};
+
+export const loadRoom = async (projectId: string): Promise<RoomView | null> => {
+  const { data } = await serverClient().from('rooms').select('*').eq('project_id', projectId).maybeSingle();
+  return viewOf(data as RoomRow | null);
+};
+
+export const loadRoomById = async (roomId: string): Promise<RoomView | null> => {
+  const { data } = await serverClient().from('rooms').select('*').eq('id', roomId).maybeSingle();
+  return viewOf(data as RoomRow | null);
+};
+
+export interface RoomCard {
+  room: Room;
+  projectTitle: string;
+  /** What this person is here, so the list already answers §5's question. */
+  role: RoomRole | null;
+}
+
+/**
+ * Every room this person is in.
+ *
+ * Row-level security does the filtering: the query asks for all of them and
+ * gets back the ones with a seat in them. That is the arrangement §16 wants —
+ * the database decides, and this never has a chance to be wrong about it.
+ */
+export const loadMyRooms = async (): Promise<RoomCard[]> => {
+  const db = serverClient();
+  const { data: auth } = await db.auth.getUser();
+  const userId = auth.user?.id ?? null;
+  if (!userId) return [];
+
+  const { data } = await db
+    .from('rooms')
+    .select('*, projects(title, owner_id), room_seats(user_id, role, state)')
+    .order('updated_at', { ascending: false });
+
+  return ((data ?? []) as (RoomRow & {
+    projects: { title: string; owner_id: string } | null;
+    room_seats: { user_id: string | null; role: RoomRole; state: Seat['state'] }[];
+  })[]).map((row) => {
+    const mine = row.room_seats.find((seat) => seat.user_id === userId && seat.state === 'active');
+    return {
+      room: roomFromRow(row),
+      projectTitle: row.projects?.title ?? '',
+      role: row.projects?.owner_id === userId ? 'owner' : (mine?.role ?? null),
+    };
+  });
+};
+
+/** Projects this person owns that have no room yet, to start one from. */
+export const roomlessProjects = async (): Promise<{ id: string; title: string }[]> => {
+  const db = serverClient();
+  const { data: auth } = await db.auth.getUser();
+  if (!auth.user) return [];
+
+  const [{ data: projects }, { data: rooms }] = await Promise.all([
+    db.from('projects').select('id, title').eq('owner_id', auth.user.id).order('updated_at', { ascending: false }),
+    db.from('rooms').select('project_id'),
+  ]);
+
+  const taken = new Set(((rooms ?? []) as { project_id: string }[]).map((row) => row.project_id));
+  return ((projects ?? []) as { id: string; title: string }[]).filter((project) => !taken.has(project.id));
 };
 
 /** A room over a project its owner already has. One per project. */

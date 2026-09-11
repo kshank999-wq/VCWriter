@@ -62,6 +62,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/#features">Features</Link>
               <Link href="/download">Buy &amp; download</Link>
               <Link href="/notes">Notes</Link>
+              {/* Signing in opens the room, not the software (addendum 07 §5),
+                  so the way in is in the site's own nav rather than behind an
+                  account page. */}
+              <Link href="/rooms">Writers Room</Link>
               <Link href="/account">My account</Link>
               {admin ? <Link href="/admin">Admin</Link> : null}
             </nav>

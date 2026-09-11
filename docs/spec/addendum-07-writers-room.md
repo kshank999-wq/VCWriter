@@ -1,6 +1,6 @@
 # Addendum 07 — Writers Room
 
-Status: specified; **stages 0–1 built**, September 2026. From Ken's *VC Writer Writers
+Status: specified; **stages 0–2 built**, September 2026. From Ken's *VC Writer Writers
 Room Development Specification v1.0* of 11 September, and his elaboration of
 the same day — **the showrunner's dashboard is the front door, everyone has a
 login, and everyone submits.** Extends §12 (commerce), §14 (sync) and §15 (no
@@ -485,8 +485,8 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
 1. **Built.** Rooms, entitlement, invitations, roles, titles, colours and seat
    management — and `owns_project` split into a read question and a write one
    (§3.2, §19).
-2. The landing page (§5): sign in, see your part in the room, open the editor
-   from it.
+2. **Built.** The landing page (§5): sign in, see your part in the room, open
+   the editor from it (§19).
 3. Cloud projects with branches, autosave, snapshots and immutable version
    history — the third bridge behind the renderer (§3.1).
 4. Contributor colour end to end: the page stamp, the identity bar, beat
@@ -632,3 +632,44 @@ its board and who else is in the room; the stranger read nothing. Only the
 showrunner could edit or delete a beat, delete the board, promote a seat or
 delete the project. Nobody at all, the showrunner included, could read an
 invitation.
+
+### Stage 2 — the front door
+
+**Signing in opens the room, not the software.** `/rooms` lists the rooms you
+are in and each card already says what you are in it; `/rooms/<id>` is the
+landing, and it is **one page answering one question** — *what is my part in
+this* — with a different answer per role rather than four pages that would
+drift apart.
+
+What each role is shown is `landingFor` in the domain rather than a condition
+in a component, so the decision is testable and the page draws what it is
+given. A showrunner gets the seats, the invitation form and what the room
+costs. A writer gets the room and their own standing in it. Everyone gets
+**their stamp** — their initials in their colour, at the size it will appear in
+the corner of a page (§6.1), because a colour described in a sentence is not a
+colour anyone will recognise across a desk.
+
+**The door is drawn and it does not lie.** A writer's control says *Open your
+draft* and a showrunner's says *Open the room's script* — §1 stated as a door —
+and both are disabled with a line saying the editor opens from here once the
+room can hold a draft of its own. A button that pretended to work would be
+worse than a button that says what it is waiting for.
+
+**Invitations go out by email and the token is never returned to the browser.**
+The route sends it and answers with the seat; the secret belongs in the message
+and nowhere else. Taking it up needs a signed-in person, because a seat is what
+a person holds and billing counts people — an unsigned visitor is sent to sign
+in and brought straight back. Accepting spends the link.
+
+**Nothing here can delete a seat**, which is §16 built rather than promised:
+the row is what keeps a contribution's author, so the control says *take out of
+the room* and deactivates.
+
+Looking at it caught four things tests could not. The seat table ran off the
+right of the page, so the two controls stack and the table scrolls inside its
+own box rather than making the page scroll sideways. The stamp was rendering at
+body size, because `.card p` is the more specific selector and won. The *you*
+pill sat flush against the name. And the invitation row came out at three
+different heights, because the site styles an email field and a select and
+leaves a plain text input alone — the room's own fields are given one shape
+rather than left to inherit three.

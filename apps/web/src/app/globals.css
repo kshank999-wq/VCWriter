@@ -775,3 +775,106 @@ input[type='email'] {
 .subnav ~ section {
   padding: 24px 0;
 }
+
+/* ---------------------------------------------------------------------------
+   Writers Room (addendum 07 §5, §6)
+
+   The colour is the fastest fact on the page, and it is used in exactly the
+   places §6.2 allows: the stamp on a writer's pages, and the chip that stands
+   for it in the room. Never on a lane — that is a different language.
+--------------------------------------------------------------------------- */
+
+/* What the top-left corner of a page of this writer's draft carries (§6.1).
+   Typed as `p.room-stamp` because `.card p` sets a size and is the more
+   specific of the two — the stamp is the one thing on this card meant to be
+   read across a desk. */
+p.room-stamp {
+  margin: 0 0 6px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+}
+
+/* The same fact, small enough to sit in a table of who is in the room. */
+.room-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 3px;
+  color: #fff;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* The two controls stack, so the column they sit in stays narrow enough for
+   the table to fit the page rather than run off the side of it. */
+/* A card that says a thing and then explains it needs the two apart. */
+.card .lede + .small,
+.card p + .small {
+  display: block;
+  margin-top: 10px;
+}
+
+.room-controls {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.room-controls select {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+/* A table of a whole room is wider than a phone. It scrolls inside its own
+   box rather than making the page scroll sideways. */
+.room-table {
+  overflow-x: auto;
+}
+
+.room-table .pill {
+  margin-left: 8px;
+}
+
+/*
+  The invitation asks for three things and they read across: an address, what
+  they may do, and what they are called (§6). A grid rather than a flex row
+  because the three labels are different lengths, and with `flex-end` a longer
+  one drops its field a line below the others.
+*/
+.room-invite {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(140px, 0.6fr) minmax(160px, 0.8fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+/*
+  The site styles an email field and a select and leaves a plain text input
+  alone, so a row of all three comes out at three different heights. The room's
+  own fields are given one shape here rather than being left to inherit three.
+*/
+.room-invite input,
+.room-invite select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .room-invite {
+    grid-template-columns: 1fr;
+  }
+}

@@ -52,7 +52,7 @@ push live; the build takes a minute or two.
   `addendum-07-writers-room.md` is Writers Room, the cloud collaboration
   module: the showrunner's dashboard as the front door, logins, assignments,
   submitting, the brainstorming room, curation and a non-destructive master
-  merge. **Specified; stages 0–1 built.** §1 and §2 are the rules it all hangs
+  merge. **Specified; stages 0–2 built.** §1 and §2 are the rules it all hangs
   off — one writer's work is never destroyed by another's, and a collaborator
   gets the whole program rather than a web editor. §3 says how much of it the
   product already has (the Room is `/preview` grown up; membership widens
@@ -63,8 +63,10 @@ push live; the build takes a minute or two.
   knows the difference. Stage 1 is rooms and seats: `packages/domain/room.ts`
   holds the rules, `apps/web/src/lib/rooms.ts` the data layer, and migration
   0024 splits `owns_project` into `may_read_project` and `may_write_project` —
-  writing stays owner-only until branches exist. §19 says what each built
-  stage does; §15 is the build order.
+  writing stays owner-only until branches exist. Stage 2 is the front door:
+  `/rooms` and `/rooms/[roomId]` in `apps/web`, with `landingFor` in the domain
+  deciding what each role is shown. §19 says what each built stage does; §15 is
+  the build order.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 import type { Platform } from '@vcwriter/domain';
 import { env } from './env';
 import { adminClient } from './supabase';
-import { licenseReminder, purchaseConfirmation, type RenderedEmail } from './email-templates';
+import { licenseReminder, purchaseConfirmation, roomInvitation, type RenderedEmail } from './email-templates';
 
 /**
  * Transactional email (spec §12.3).
@@ -82,4 +82,34 @@ export const sendLicenseReminder = async (input: {
     to: input.to,
     userId: input.userId,
     email: licenseReminder({ serial: input.serial, accountUrl: `${env.siteUrl}/account` }),
+  });
+
+/**
+ * An invitation into a Writers Room (addendum 07 §14).
+ *
+ * Recorded like every other send, and a failure never fails the invitation:
+ * the seat already exists and the showrunner can send the link again, so a
+ * Resend outage costs a resend rather than the room.
+ */
+export const sendRoomInvitation = async (input: {
+  to: string;
+  roomName: string;
+  from: string;
+  title: string;
+  roleName: string;
+  acceptUrl: string;
+  expiresIn: string;
+}): Promise<SendResult> =>
+  deliver({
+    to: input.to,
+    // Nobody has an account behind this address yet — that is what accepting is.
+    userId: null,
+    email: roomInvitation({
+      roomName: input.roomName,
+      from: input.from,
+      title: input.title,
+      roleName: input.roleName,
+      acceptUrl: input.acceptUrl,
+      expiresIn: input.expiresIn,
+    }),
   });
