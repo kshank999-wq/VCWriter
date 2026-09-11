@@ -7418,3 +7418,115 @@ dialog.preferences .field {
   color: var(--danger);
   background: transparent;
 }
+
+/* ---- the Sculptor: the writer's own connections (addendum 03 §7) ------- */
+
+/* Drawn over the cards rather than under them: a structural wire says where
+   a thing belongs and may hide behind one, but an observation is the point of
+   having drawn it, and has to be clickable. The layer lets clicks through
+   everywhere except on a line. */
+.sculpt-links {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.sculpt-link {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.sculpt-link-line {
+  fill: none;
+  stroke: var(--gold-deep);
+  stroke-width: 1.2;
+  stroke-dasharray: 5 3;
+}
+
+.sculpt-arrow path {
+  fill: var(--gold-deep);
+}
+
+.sculpt-arrow-lit path {
+  fill: var(--gold);
+}
+
+/* The one the selected node is at an end of, so the panel and the picture
+   are talking about the same line. */
+.sculpt-link.lit .sculpt-link-line {
+  stroke: var(--gold);
+  stroke-width: 1.8;
+}
+
+.sculpt-link-label {
+  fill: var(--gold);
+  font-size: 10px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--panel);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+/* While a connection is being drawn, every other card is somewhere it could
+   land, and the one it starts at says so. */
+.sculpt-node.landable {
+  cursor: crosshair;
+}
+
+.sculpt-node.landable:hover {
+  border-color: var(--gold);
+}
+
+.sculpt-node.linking-from {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold-deep);
+}
+
+/* What it is connected to, in the detail panel (§9). */
+.sculpt-links-panel {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.sculpt-links-panel h4 {
+  margin: 0 0 8px;
+  font-size: 9.5px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.sculpt-link-row {
+  margin-bottom: 10px;
+}
+
+.sculpt-link-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sculpt-link-way {
+  color: var(--gold);
+  font-size: 11px;
+}
+
+.sculpt-link-other {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sculpt-link-row input {
+  width: 100%;
+  margin-top: 4px;
+}

@@ -33,6 +33,7 @@ export type BoardId = Id<'Board'>;
 export type SculptorColumnId = Id<'SculptorColumn'>;
 export type SculptorNodeId = Id<'SculptorNode'>;
 export type SculptorFieldId = Id<'SculptorField'>;
+export type SculptorLinkId = Id<'SculptorLink'>;
 export type OrderId = Id<'Order'>;
 export type LicenseId = Id<'License'>;
 export type ReleaseBuildId = Id<'ReleaseBuild'>;

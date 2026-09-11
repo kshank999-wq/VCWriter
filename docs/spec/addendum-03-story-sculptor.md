@@ -1,6 +1,6 @@
 # Addendum 03 — Story Sculptor
 
-Status: stages 1–6 built, September 2026. **Rewritten** from Ken's diagram of
+Status: stages 1–7 built, September 2026. **Rewritten** from Ken's diagram of
 10 September; §14 says what changed and what happens to the code built
 against the first draft. Extends §5 (story structure) and §19 (the hierarchy)
 of the master specification, and adds an area alongside the workspace of
@@ -277,7 +277,7 @@ it worth opening.
 4. **Built.** The third column — beats, growing their scenes.
 5. **Built.** Columns beyond the third, defined by the writer.
 6. **Built.** Binding a node to a real scene or beat.
-7. The writer's own connections, labelled.
+7. **Built.** The writer's own connections, labelled.
 8. Export as an outline: beside you, and printed.
 9. Folding, focus, filters, search, mini-map.
 10. Writers Room attribution and alternate boards, when Writers Room exists.
@@ -297,9 +297,10 @@ Stages 1–4 are the diagram. Stage 8 is the reason to have used it.
 
 ## 16. What is built
 
-Stages 1–6 — **the diagram, the columns the writer defines, and the moment an
-idea becomes a scene**. The Sculptor is a button on the title bar again,
-beside Research, and it opens the canvas over the workspace.
+Stages 1–7 — **the diagram, the columns the writer defines, the moment an idea
+becomes a scene, and what the writer noticed between two of them**. The
+Sculptor is a button on the title bar again, beside Research, and it opens the
+canvas over the workspace.
 
 **A new board is two nodes.** Beginning and End, real and editable, with
 nothing in them: click either and type what the story begins or ends as. They
@@ -419,3 +420,50 @@ story order. Making a new scene reads the canvas the same way: it lands after
 the scene of the nearest bound node above it, or before the nearest below it,
 and at the end when it has neither — so nothing that was already in the script
 moves.
+
+### Stage 7 — the writer's own connections
+
+**Connect**, in the bar, with a node chosen: the button arms, every other card
+says it is somewhere the line could land, and clicking one draws it. Escape
+gets out. It is armed rather than dragged because the canvas's own drag is the
+pan, and a writer reaching for a connection should not have to think about
+which drag they are starting.
+
+A connection is **any node to any node**, in any direction, across any number
+of columns — and it carries a label, which is the whole point of it: *this is
+why they cannot find her*, *she goes back*. The label is typed in the detail
+panel, under **Connected to**, which lists every line touching the selected
+node with an arrow saying which way it runs, a way to go to the other end, ⇄
+to turn it round keeping the words, and × to take it off.
+
+**A pair is connected or it is not.** Drawing the same two cards again does
+nothing, whichever way round it is asked — the same observation twice is not
+two observations — and the direction, which *is* the observation, is changed
+by turning the arrow rather than by drawing the reverse. A node cannot be
+connected to itself: a line from a card back to the same card says nothing a
+writer could read.
+
+The lines are drawn **over** the cards rather than under them. A structural
+wire says where a thing belongs and may hide behind a card; an observation is
+the reason the writer drew it, and has to be clickable — clicking one selects
+the card it starts at, so the picture and the panel are talking about the same
+line. Two shapes, and which one is drawn says something: a connection running
+into a later column leaves the right edge and arrives at the left, like every
+other line on the canvas, while one running **backwards, or within a column**,
+leaves the right edge and comes back to the right edge, bowing out into the
+air. Squeezing that one through the gap between two columns — which is merely
+where its ends happen to be — would draw a kink in the one place the canvas is
+busiest.
+
+Labels sit on the curve rather than between its ends, and a label landing on
+one already drawn is pushed clear of it, because two sentences on top of each
+other are worse than one of them. A long one is shortened on the line and read
+in full in the panel.
+
+**A connector is never what holds two things together; the parent relation
+is** (§7). So the layout is identical before and after a line is drawn — this
+is the one thing on the board that moves nothing — and removing one loses the
+observation and not one thing more. A line whose card is deleted goes with it,
+and so does one drawn into a column that is removed. A line into a **fold** is
+drawn to the folded card standing in for what is hidden, rather than
+disappearing, because folding should not look like losing something.

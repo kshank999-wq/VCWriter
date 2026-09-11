@@ -8,6 +8,7 @@ import {
   type SculptorColumnKind,
   type SculptorField,
   type SculptorFieldKind,
+  type SculptorLink,
   type SculptorNode,
 } from './entities/sculptor.js';
 import type { ProjectFile } from './project-file.js';
@@ -16,6 +17,7 @@ import type {
   BoardId,
   SculptorColumnId,
   SculptorFieldId,
+  SculptorLinkId,
   SculptorNodeId,
   StructuralUnitId,
 } from './ids.js';
@@ -440,6 +442,11 @@ export const removeNode = (file: ProjectFile, boardId: BoardId, nodeId: Sculptor
   return withBoard(file, boardId, (current) => ({
     ...current,
     nodes: current.nodes.filter((candidate) => !doomed.has(candidate.id as string)),
+    // An observation about a card that is gone has no ends to be drawn
+    // between; the link goes with it, and nothing else does (§7).
+    links: (current.links ?? []).filter(
+      (link) => !doomed.has(link.fromId as string) && !doomed.has(link.toId as string),
+    ),
   }));
 };
 
@@ -524,10 +531,17 @@ export const removeColumn = (file: ProjectFile, boardId: BoardId, columnId: Scul
   const last = columns[columns.length - 1];
   if (!last || last.id !== columnId || columns.length <= FIRST_COLUMNS.length) return file;
 
+  const leaving = new Set(
+    board.nodes.filter((node) => node.columnId === columnId).map((node) => node.id as string),
+  );
+
   return withBoard(file, boardId, (current) => ({
     ...current,
     columns: current.columns.filter((column) => column.id !== columnId),
     nodes: current.nodes.filter((node) => node.columnId !== columnId),
+    links: (current.links ?? []).filter(
+      (link) => !leaving.has(link.fromId as string) && !leaving.has(link.toId as string),
+    ),
   }));
 };
 
@@ -754,4 +768,119 @@ export const unbindRemoved = (
   });
 
   return changed ? { ...file, boards: next } : file;
+};
+
+// ------------------------------------ the writer's own connections (§7)
+
+/**
+ * Any node to any node, with a label the writer types.
+ *
+ * **A pair is connected or it is not.** Drawing the same pair twice is the
+ * same observation twice, so a second attempt does nothing whichever way round
+ * it is asked — and the direction, which is the observation (*this* sets up
+ * *that*), is changed with `flipLink` rather than by drawing the reverse.
+ *
+ * A node cannot be linked to itself: a line from a card back to the same card
+ * says nothing a writer could read.
+ */
+export const linkNodes = (
+  file: ProjectFile,
+  boardId: BoardId,
+  fromId: SculptorNodeId,
+  toId: SculptorNodeId,
+  input: { label?: string } = {},
+): { file: ProjectFile; linkId: SculptorLinkId | null } => {
+  const board = findBoard(file, boardId);
+  if (!board || fromId === toId) return { file, linkId: null };
+  if (!findNode(board, fromId) || !findNode(board, toId)) return { file, linkId: null };
+  if (linkBetween(board, fromId, toId)) return { file, linkId: null };
+
+  const at = nowIso();
+  const link: SculptorLink = {
+    id: newId<SculptorLinkId>(),
+    fromId,
+    toId,
+    label: input.label ?? '',
+    createdAt: at,
+    updatedAt: at,
+  };
+
+  return {
+    file: withBoard(file, boardId, (current) => ({ ...current, links: [...linksOf(current), link] })),
+    linkId: link.id,
+  };
+};
+
+/** Every connection the writer drew, oldest first. */
+export const linksOf = (board: Board): SculptorLink[] => board.links ?? [];
+
+/** The link joining these two, whichever way round it was drawn. */
+export const linkBetween = (board: Board, a: SculptorNodeId, b: SculptorNodeId): SculptorLink | null =>
+  linksOf(board).find(
+    (link) => (link.fromId === a && link.toId === b) || (link.fromId === b && link.toId === a),
+  ) ?? null;
+
+/** What this node is connected to, in either direction (§9). */
+export const linksTouching = (board: Board, nodeId: SculptorNodeId): SculptorLink[] =>
+  linksOf(board).filter((link) => link.fromId === nodeId || link.toId === nodeId);
+
+/** What the writer noticed, in their own words. */
+export const relabelLink = (
+  file: ProjectFile,
+  boardId: BoardId,
+  linkId: SculptorLinkId,
+  label: string,
+): ProjectFile =>
+  withBoard(file, boardId, (board) => ({
+    ...board,
+    links: linksOf(board).map((link) => (link.id === linkId ? touch({ ...link, label }) : link)),
+  }));
+
+/**
+ * The other way round, keeping the label.
+ *
+ * *This setup pays off here* and *this is the payoff of that* are the same
+ * observation seen from either end, so turning the arrow is an edit rather
+ * than a second link.
+ */
+export const flipLink = (file: ProjectFile, boardId: BoardId, linkId: SculptorLinkId): ProjectFile =>
+  withBoard(file, boardId, (board) => ({
+    ...board,
+    links: linksOf(board).map((link) =>
+      link.id === linkId ? touch({ ...link, fromId: link.toId, toId: link.fromId }) : link,
+    ),
+  }));
+
+/**
+ * A connection removed, and **nothing else** (§7).
+ *
+ * A connector is never what holds two things together; the parent relation is.
+ * So this loses the observation and not one thing more, and nothing on the
+ * board moves.
+ */
+export const unlinkNodes = (file: ProjectFile, boardId: BoardId, linkId: SculptorLinkId): ProjectFile =>
+  withBoard(file, boardId, (board) => ({
+    ...board,
+    links: linksOf(board).filter((link) => link.id !== linkId),
+  }));
+
+/**
+ * Which card stands for a node on the drawn canvas.
+ *
+ * A folded node's children are not laid out at all (§4), so a link into a fold
+ * has no end to be drawn to. Rather than dropping the line — which would make
+ * folding look like losing something — it is drawn to the folded ancestor that
+ * is standing in for it, which is exactly what the writer is looking at.
+ */
+export const standingFor = (board: Board, layout: BoardLayout, nodeId: SculptorNodeId): LaidNode | null => {
+  const drawn = new Map(layout.nodes.map((laid) => [laid.node.id as string, laid]));
+  let node = findNode(board, nodeId);
+  // The chain of parents is finite and acyclic, but a hand-edited file need
+  // not be: count the steps rather than trusting it.
+  for (let step = 0; node && step <= board.nodes.length; step += 1) {
+    const here = drawn.get(node.id as string);
+    if (here) return here;
+    node = node.parentId ? findNode(board, node.parentId) : null;
+  }
+  return null;
 };

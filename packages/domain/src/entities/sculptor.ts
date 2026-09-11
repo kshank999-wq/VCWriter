@@ -6,6 +6,7 @@ import type {
   ProjectId,
   SculptorColumnId,
   SculptorFieldId,
+  SculptorLinkId,
   SculptorNodeId,
   StructuralUnitId,
 } from '../ids.js';
@@ -113,6 +114,30 @@ export const sculptorNodeSchema = z.object({
 });
 export type SculptorNode = z.infer<typeof sculptorNodeSchema>;
 
+/**
+ * A connection the writer drew, as opposed to the parent relation (§7).
+ *
+ * **The two kinds of connection are different things.** The structural ones —
+ * parent to children, and each structure node to the next — are drawn
+ * automatically and say where a thing *belongs*. These are the writer's own:
+ * any node to any node, with a label. *This setup pays off here. This scene is
+ * why she does that.* They say what a writer **noticed**.
+ *
+ * A link is never what holds two things together; the parent relation is. So
+ * deleting one loses nothing but the observation, and nothing on the board
+ * moves when it goes.
+ */
+export const sculptorLinkSchema = z.object({
+  id: id<SculptorLinkId>(),
+  /** The direction is the observation: this sets up that, not the reverse. */
+  fromId: id<SculptorNodeId>(),
+  toId: id<SculptorNodeId>(),
+  /** What the writer noticed. Empty is allowed: some links are just a line. */
+  label: z.string().default(''),
+  ...timestamps,
+});
+export type SculptorLink = z.infer<typeof sculptorLinkSchema>;
+
 export const boardSchema = z.object({
   id: id<BoardId>(),
   projectId: id<ProjectId>(),
@@ -120,6 +145,8 @@ export const boardSchema = z.object({
   name: z.string().default(''),
   columns: z.array(sculptorColumnSchema).default([]),
   nodes: z.array(sculptorNodeSchema).default([]),
+  /** The writer's own connections (§7). None, on a board nobody has drawn on. */
+  links: z.array(sculptorLinkSchema).default([]),
   ...timestamps,
 });
 export type Board = z.infer<typeof boardSchema>;

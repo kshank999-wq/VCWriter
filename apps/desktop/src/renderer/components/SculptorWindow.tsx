@@ -19,18 +19,25 @@ import {
   fieldsOf,
   findBoard,
   findNode,
+  flipLink,
   followCanvas,
   isBound,
+  linkNodes,
+  linksOf,
+  linksTouching,
   moveNode,
   outOfStep,
   realiseNode,
   removeColumn,
   removeColumnField,
+  relabelLink,
   removeNode,
   renameColumn,
   renameColumnField,
   setNodeField,
+  standingFor,
   unbindNode,
+  unlinkNodes,
   updateNode,
   type BeatId,
   type Board,
@@ -43,7 +50,7 @@ import {
 } from '@vcwriter/domain';
 
 /**
- * The Story Sculptor's canvas (addendum 03), stages 1–6.
+ * The Story Sculptor's canvas (addendum 03), stages 1–7.
  *
  * **Story time runs down; detail runs right.** A new board is two nodes,
  * Beginning and End, and everything else is put in by the writer — there is
@@ -68,13 +75,101 @@ const UNIT = 46;
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 2;
 
+/**
+ * The curve for one of the writer's own connections, and where its label goes.
+ *
+ * Two shapes, and which one is drawn says something:
+ *
+ * - **Forwards**, into a later column, is the flow of detail: it leaves the
+ *   right edge and arrives at the left, like every other line on the canvas.
+ * - **Backwards, or within one column**, leaves the right edge and comes back
+ *   to the right edge, bowing out into the air to the right of both. Squeezing
+ *   it through the gap between two columns — which is merely where the ends
+ *   happen to be — draws a kink in the one place the canvas is busiest.
+ *
+ * The label sits at the curve's midpoint, which for a cubic is
+ * `(P0 + 3·P1 + 3·P2 + P3) / 8` — a point actually on the line, rather than
+ * halfway between the ends, which on a bend is nowhere near it.
+ */
+const linkCurve = (
+  from: LaidNode,
+  to: LaidNode,
+  zoom: number,
+): { d: string; midX: number; midY: number } => {
+  const px = (units: number) => units * UNIT * zoom;
+  const midOf = (laid: LaidNode) => px(laid.y + laid.headHeight / 2);
+
+  const forwards = to.column > from.column;
+  const y0 = midOf(from);
+  const y1 = midOf(to);
+  const x0 = px(from.x + COLUMN_WIDTH);
+  const x1 = forwards ? px(to.x) : px(to.x + COLUMN_WIDTH);
+
+  // Forwards, the curve is shaped by the gap it crosses, exactly as the
+  // structural wires are — a control point thrown further out than the span is
+  // wide draws a hook rather than a curve. Backwards, there is no span to
+  // shape it, so the bow is its own: wide enough to read, and wider the
+  // further apart the ends are, so a line down the length of the board does
+  // not flatten against it.
+  const flow = Math.max((x1 - x0) / 2, px(0.5));
+  const bow = px(COLUMN_WIDTH * 0.55) + Math.abs(y1 - y0) * 0.22;
+  const cx0 = forwards ? x0 + flow : x0 + bow;
+  const cx1 = forwards ? x1 - flow : x1 + bow;
+
+  return {
+    d: `M ${x0} ${y0} C ${cx0} ${y0}, ${cx1} ${y1}, ${x1} ${y1}`,
+    midX: (x0 + 3 * cx0 + 3 * cx1 + x1) / 8,
+    midY: (y0 + 3 * y0 + 3 * y1 + y1) / 8,
+  };
+};
+
+/** As much of an observation as will sit on a line without crossing the board. */
+const shortened = (label: string): string => (label.length > 30 ? `${label.slice(0, 29)}\u2026` : label);
+
+/**
+ * Push a label clear of one already drawn near it.
+ *
+ * Two links between nearby cards put their midpoints in nearly the same place,
+ * and two sentences on top of each other are worse than one of them. Each is
+ * moved down past whatever it collides with, in the order the lines were
+ * drawn, so the picture stays readable without moving the lines themselves.
+ */
+const LABEL_ROW = 14;
+const spreadLabels = (points: { x: number; y: number }[]): number[] => {
+  const placed: { x: number; y: number }[] = [];
+  return points.map((point) => {
+    let y = point.y;
+    for (let pass = 0; pass < placed.length; pass += 1) {
+      const clash = placed.find(
+        (other) => Math.abs(other.x - point.x) < 120 && Math.abs(other.y - y) < LABEL_ROW,
+      );
+      if (!clash) break;
+      y = clash.y + LABEL_ROW;
+    }
+    placed.push({ x: point.x, y });
+    return y;
+  });
+};
+
 export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindowProps) {
   const boards = boardsOf(file);
   const [boardId, setBoardId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 40, y: 24 });
   const [selected, setSelected] = useState<SculptorNodeId | null>(null);
+  /** The node a connection is being drawn from, while one is (§7). */
+  const [linking, setLinking] = useState<SculptorNodeId | null>(null);
   const dragging = useRef<{ x: number; y: number } | null>(null);
+
+  // Escape gets out of drawing a connection, which is what Escape is for.
+  useEffect(() => {
+    if (linking === null) return undefined;
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setLinking(null);
+    };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  }, [linking]);
 
   const board: Board | null = useMemo(() => {
     if (boards.length === 0) return null;
@@ -117,6 +212,27 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
 
   const chosen = board && selected ? board.nodes.find((node) => node.id === selected) ?? null : null;
   const column = board && chosen ? columnOf(board, chosen) : null;
+
+  // Each of the writer's own connections, measured once: a link whose ends
+  // are both inside one fold has nothing to say while it is folded, because
+  // the card standing in for them would be pointing at itself.
+  const drawnLinks =
+    board && layout
+      ? linksOf(board).flatMap((link) => {
+          const from = standingFor(board, layout, link.fromId);
+          const to = standingFor(board, layout, link.toId);
+          if (!from || !to || from.node.id === to.node.id) return [];
+          return [
+            {
+              link,
+              fromTitle: from.node.title.trim() || 'Untitled',
+              toTitle: to.node.title.trim() || 'Untitled',
+              ...linkCurve(from, to, zoom),
+            },
+          ];
+        })
+      : [];
+  const labelRows = spreadLabels(drawnLinks.map((drawn) => ({ x: drawn.midX, y: drawn.midY })));
 
   return (
     <div className="sculptor" role="dialog" aria-label="Story Sculptor">
@@ -167,6 +283,25 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
               onClick={() => write((current, id) => addColumn(current, id).file)}
             >
               + Column
+            </button>
+            {/* The writer's own connection (§7): say where it starts, then
+                click where it goes. Armed rather than dragged, because the
+                canvas's own drag is the pan. */}
+            <button
+              type="button"
+              className={linking ? 'tool active' : 'tool'}
+              disabled={!chosen && !linking}
+              aria-pressed={linking !== null}
+              title={
+                linking
+                  ? 'Now click the node it connects to, or press this again to stop'
+                  : chosen
+                    ? 'Connect this node to another: this setup pays off here, this scene is why she does that'
+                    : 'Choose the node the connection starts at'
+              }
+              onClick={() => setLinking(linking ? null : chosen?.id ?? null)}
+            >
+              {linking ? 'Connecting…' : 'Connect'}
             </button>
             <label className="zoom">
               <span className="muted">Zoom</span>
@@ -308,7 +443,17 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
                   laid={laid}
                   zoom={zoom}
                   selected={selected === laid.node.id}
-                  onSelect={() => setSelected(laid.node.id)}
+                  linking={linking !== null}
+                  linkingFrom={linking === laid.node.id}
+                  onSelect={() => {
+                    if (linking !== null && linking !== laid.node.id) {
+                      write((current, id) => linkNodes(current, id, linking, laid.node.id).file);
+                      setLinking(null);
+                      setSelected(linking);
+                      return;
+                    }
+                    setSelected(laid.node.id);
+                  }}
                   onTitle={(title) => write((current, id) => updateNode(current, id, laid.node.id, { title }))}
                   onFold={() =>
                     write((current, id) =>
@@ -324,6 +469,69 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
                   onAddChild={() => write((current, id) => addChild(current, id, laid.node.id).file)}
                 />
               ))}
+
+              {/* The writer's own connections (§7), drawn **over** the cards
+                  rather than under them: a structural wire says where a thing
+                  belongs and can hide behind it, but an observation is the
+                  point of having drawn it, and has to be clickable. */}
+              <svg
+                className="sculpt-links"
+                width={layout.width * UNIT * zoom}
+                height={layout.height * UNIT * zoom}
+              >
+<defs>
+                  {/* Two of them, because a marker cannot inherit the colour of
+                      the line that used it: the lit one is the link an end of
+                      which is the selected card. */}
+                  {(['sculpt-arrow', 'sculpt-arrow-lit'] as const).map((name) => (
+                    <marker
+                      key={name}
+                      id={name}
+                      className={name}
+                      viewBox="0 0 8 8"
+                      refX="7"
+                      refY="4"
+                      markerWidth="5"
+                      markerHeight="5"
+                      orient="auto-start-reverse"
+                    >
+                      <path d="M 0 0 L 8 4 L 0 8 z" />
+                    </marker>
+                  ))}
+                </defs>
+                {drawnLinks.map((drawn, index) => (
+                  <g
+                    key={drawn.link.id as string}
+                    className={
+                      selected === drawn.link.fromId || selected === drawn.link.toId
+                        ? 'sculpt-link lit'
+                        : 'sculpt-link'
+                    }
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+                      setSelected(drawn.link.fromId);
+                    }}
+                  >
+                    <title>
+                      {drawn.link.label || `${drawn.fromTitle} → ${drawn.toTitle}`}
+                    </title>
+                    <path
+                      className="sculpt-link-line"
+                      d={drawn.d}
+                      markerEnd={
+                        selected === drawn.link.fromId || selected === drawn.link.toId
+                          ? 'url(#sculpt-arrow-lit)'
+                          : 'url(#sculpt-arrow)'
+                      }
+                    />
+                    {drawn.link.label ? (
+                      <text className="sculpt-link-label" x={drawn.midX} y={labelRows[index]}>
+                        {shortened(drawn.link.label)}
+                      </text>
+                    ) : null}
+                  </g>
+                ))}
+              </svg>
             </div>
           ) : (
             <p className="muted empty-state">Starting a board…</p>
@@ -381,6 +589,9 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
 
               {/* §6: a node is an idea until the writer binds it. This is
                   where they say so, and where the board says which it is. */}
+              {/* What it is connected to (§9), and the words on each line. */}
+              <Connections board={board as Board} node={chosen} onGo={setSelected} onWrite={write} />
+
               <Binding file={file} board={board as Board} node={chosen} onWrite={write} />
             </>
           ) : (
@@ -392,6 +603,82 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
         </aside>
       </div>
     </div>
+  );
+}
+
+/**
+ * What this node is connected to, and what the writer noticed (§7, §9).
+ *
+ * **A connector is never what holds two things together**, so everything here
+ * is safe: the words can be rewritten, the arrow turned round, and the line
+ * removed, and none of it moves a card or touches the script. The only thing
+ * losing a line loses is the observation.
+ */
+function Connections({
+  board,
+  node,
+  onGo,
+  onWrite,
+}: {
+  board: Board;
+  node: SculptorNode;
+  onGo(nodeId: SculptorNodeId): void;
+  onWrite(mutate: (current: ProjectFile, id: Board['id']) => ProjectFile): void;
+}) {
+  const links = linksTouching(board, node.id);
+  if (links.length === 0) return null;
+
+  return (
+    <section className="sculpt-links-panel">
+      <h4>Connected to</h4>
+      {links.map((link) => {
+        const outward = link.fromId === node.id;
+        const other = findNode(board, outward ? link.toId : link.fromId);
+        return (
+          <div key={link.id as string} className="sculpt-link-row">
+            <div className="sculpt-link-head">
+              {/* Which way the arrow points, said rather than drawn: this one
+                  goes out to that card, or comes in from it. */}
+              <span className="sculpt-link-way" aria-hidden="true">
+                {outward ? '→' : '←'}
+              </span>
+              <button
+                type="button"
+                className="ghost small sculpt-link-other"
+                title="Go to it"
+                onClick={() => other && onGo(other.id)}
+              >
+                {other?.title.trim() || 'Untitled'}
+              </button>
+              <button
+                type="button"
+                className="ghost small"
+                aria-label={`Turn the connection to ${other?.title.trim() || 'it'} round`}
+                title="The other way round, keeping the words"
+                onClick={() => onWrite((current, id) => flipLink(current, id, link.id))}
+              >
+                ⇄
+              </button>
+              <button
+                type="button"
+                className="ghost small"
+                aria-label={`Remove the connection to ${other?.title.trim() || 'it'}`}
+                title="Remove the line. Nothing else changes"
+                onClick={() => onWrite((current, id) => unlinkNodes(current, id, link.id))}
+              >
+                ×
+              </button>
+            </div>
+            <input
+              aria-label={`What you noticed about ${other?.title.trim() || 'it'}`}
+              placeholder="what you noticed"
+              value={link.label}
+              onChange={(event) => onWrite((current, id) => relabelLink(current, id, link.id, event.target.value))}
+            />
+          </div>
+        );
+      })}
+    </section>
   );
 }
 
@@ -620,6 +907,8 @@ function Node({
   laid,
   zoom,
   selected,
+  linking,
+  linkingFrom,
   onSelect,
   onTitle,
   onFold,
@@ -631,6 +920,9 @@ function Node({
   laid: LaidNode;
   zoom: number;
   selected: boolean;
+  /** A connection is being drawn: every card is a place it could land (§7). */
+  linking: boolean;
+  linkingFrom: boolean;
   onSelect(): void;
   onTitle(title: string): void;
   onFold(): void;
@@ -654,6 +946,8 @@ function Node({
         node.collapsed ? 'folded' : '',
         bound ? 'bound' : 'idea',
         asking ? 'asking' : '',
+        linking && !linkingFrom ? 'landable' : '',
+        linkingFrom ? 'linking-from' : '',
       ]
         .filter(Boolean)
         .join(' ')}
