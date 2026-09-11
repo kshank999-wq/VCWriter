@@ -1,6 +1,6 @@
 # Addendum 06 — The Outliner
 
-Status: stages 1–5 built, September 2026. From Ken's *VC Writer Outliner
+Status: stages 1–5 and 7 built, September 2026. From Ken's *VC Writer Outliner
 Development Specification* of 11 September, and the framing he gave with it:
 **the Outliner and the Story Sculptor are siblings, and material moves between
 them by hand.** Extends §5 (story structure), §7 (research and links) and §19
@@ -273,7 +273,8 @@ The panel resizes, and fills the window.
 5. **Built.** Promotion: a scene and its beats into the script, and everything
    §6 says about it.
 6. The scene card.
-7. Passing material between the Sculptor and the Outliner, both ways.
+7. **Built.** Passing material between the Sculptor and the Outliner, both
+   ways.
 8. Search, filters, multi-select, status, Collapse All, the keyboard.
 9. Printing and exporting the outline.
 
@@ -455,3 +456,38 @@ about *both* — so they live in one module (`planning.ts`) rather than twice
 over in two that would drift. That is what makes "one plan per scene" true
 across the board and the outline at once rather than within each of them
 separately.
+
+### Stage 7 — passing material between the two
+
+**The shelf now holds the other plan.** §3 argued that the Research shelf
+belongs *inside* the Outliner because two full-window workspaces cannot be
+dragged between; the same argument applies again to the board and the outline,
+so the shelf gained a second tab. The Outliner's shelf offers the **board**;
+the Sculptor's offers the **outline** — and the Sculptor now has the shelf §3
+promised it, with Research on it too.
+
+Drag a card across and **it is copied, with everything under it**. Three rules
+hold in both directions:
+
+- **The drop decides the depth.** A node carried into the outline lands under
+  the row it was dropped on; a row carried onto the board hangs off the node it
+  was dropped on, in the column after. Neither keeps its old depth, because
+  depth means different things on the two sides — a column there, a parent
+  here — and the writer is choosing by where they let go.
+- **What it says comes with it; what it *is* does not.** The title travels and
+  so do the writer's words — a node's note becomes a row's body, and back. The
+  **binding does not**: a scene in the script is claimed by exactly one plan,
+  so a copy arrives as a plan of its own rather than a second claim on the same
+  scene. Nor does a research reference, because the board has nothing to hold
+  one in; the name is kept and the link is not.
+- **Nothing leaves where it came from.** A copy in both directions.
+
+A block becomes a **Note** in the outline, because the outline has nothing that
+is a *shape* — so a block dragged across brings its scenes with it as scenes,
+under a note saying what that part of the story is, which is what the board was
+saying. Going the other way, a subtree deeper than the board has columns stops
+at the last one and says how many rows stayed behind: the right answer to
+running out of columns is to carry what fits, not to invent columns nobody
+asked for.
+
+There is still no *Convert*, and there will not be (§2).

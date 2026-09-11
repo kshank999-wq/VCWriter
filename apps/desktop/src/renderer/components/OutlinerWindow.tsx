@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { scrollNudge, zoneFor, type OutlineZone } from '../drag';
-import { ResearchShelf } from './ResearchShelf';
+import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
 import {
   OUTLINE_KINDS,
   addItem,
   addResearchRow,
   bindRow,
+  boardsOf,
+  carryNodeToOutline,
   canPromote,
   createOutline,
   findOutline,
@@ -108,9 +110,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
    * a legal place to put it — so the payload is held here, exactly as the
    * structure board does it.
    */
-  const carrying = useRef<
-    { kind: 'row'; id: OutlineItemId } | { kind: 'research'; id: ResearchItemId } | null
-  >(null);
+  const carrying = useRef<{ kind: 'row'; id: OutlineItemId } | ShelfCarry | null>(null);
   const [dragging, setDragging] = useState<OutlineItemId | null>(null);
   /** True while anything at all is being carried, including off the shelf. */
   const [carryingAny, setCarryingAny] = useState(false);
@@ -162,9 +162,9 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
     (targetId: OutlineItemId): boolean => {
       const held = carrying.current;
       if (!outline || held === null) return false;
-      // Anything off the shelf can land anywhere: it is not in the tree yet,
+      // Anything off the shelf can land anywhere: it is not in this tree yet,
       // so there is nothing for it to be put inside of.
-      if (held.kind === 'research') return true;
+      if (held.kind !== 'row') return true;
       if (held.id === targetId) return false;
       // A row cannot be put inside itself; the domain refuses it too, but the
       // indicator should not offer what will not happen.
@@ -193,9 +193,18 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
         ...(zone === 'before' ? { beforeId: target.id } : {}),
         ...(zone === 'after' ? { afterId: target.id } : {}),
       };
-      return held.kind === 'research'
-        ? addResearchRow(current, id, held.id, where).file
-        : moveItem(current, id, held.id, where);
+      if (held.kind === 'research') return addResearchRow(current, id, held.id, where).file;
+      // A card off the board, carried across with everything under it (§2).
+      if (held.kind === 'node') {
+        const board = boardsOf(current)[0];
+        if (!board) return current;
+        return carryNodeToOutline(current, board.id, held.id, id, {
+          under: where.parentId,
+          afterId: 'afterId' in where ? where.afterId : null,
+          beforeId: 'beforeId' in where ? where.beforeId : undefined,
+        }).file;
+      }
+      return moveItem(current, id, held.id, where);
     });
     if (held.kind === 'row') setSelected(held.id);
   };
@@ -359,11 +368,12 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
             place the thing being asked for can actually happen. */}
         <ResearchShelf
           file={file}
+          from="outline"
           reveal={reveal}
-          onCarry={(researchItemId) => {
-            carrying.current = researchItemId === null ? null : { kind: 'research', id: researchItemId };
-            setCarryingAny(researchItemId !== null);
-            if (researchItemId === null) {
+          onCarry={(held) => {
+            carrying.current = held;
+            setCarryingAny(held !== null);
+            if (held === null) {
               edge.current = 0;
               setOver(null);
             }
@@ -446,7 +456,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
                 // shelf — and a row is **moved**. Saying the wrong one is not
                 // cosmetic: a drop whose effect the source did not allow is
                 // cancelled by the browser and never happens at all.
-                return carrying.current?.kind === 'research' ? 'copy' : 'move';
+                return carrying.current?.kind === 'row' ? 'move' : 'copy';
               }}
               onDragLeave={() => setOver((current) => (current?.id === row.item.id ? null : current))}
               onDrop={(zone) => {

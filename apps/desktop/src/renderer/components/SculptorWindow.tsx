@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
 import {
   COLUMN_WIDTH,
   addBlock,
   addChild,
   addColumn,
   addColumnField,
+  addResearchRow,
+  canCarryToBoard,
+  carryRowToBoard,
   bindKindOf,
   bindNode,
   bindableBeats,
@@ -24,6 +28,7 @@ import {
   isBound,
   linkNodes,
   linksOf,
+  outlinesOf,
   linksTouching,
   moveNode,
   outOfStep,
@@ -159,6 +164,16 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
   const [selected, setSelected] = useState<SculptorNodeId | null>(null);
   /** The node a connection is being drawn from, while one is (§7). */
   const [linking, setLinking] = useState<SculptorNodeId | null>(null);
+  /**
+   * What is being carried off the shelf, in a ref as well as in state.
+   *
+   * `dataTransfer.getData` is empty during `dragover` by design, so the
+   * handler that has to say whether a card is a legal place to put something
+   * reads it from here.
+   */
+  const carrying = useRef<ShelfCarry | null>(null);
+  const [carryingAny, setCarryingAny] = useState(false);
+  const [overNode, setOverNode] = useState<SculptorNodeId | null>(null);
   const dragging = useRef<{ x: number; y: number } | null>(null);
 
   // Escape gets out of drawing a connection, which is what Escape is for.
@@ -337,8 +352,21 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
       </header>
 
       <div className="sculptor-body">
+        {/* The shelf the Outliner has, for the same reason (addendum 06 §3),
+            and with the outline on it to drag across from (§2). */}
+        <ResearchShelf
+          file={file}
+          from="board"
+          reveal={null}
+          onCarry={(held) => {
+            carrying.current = held;
+            setCarryingAny(held !== null);
+            if (held === null) setOverNode(null);
+          }}
+        />
+
         <div
-          className="sculpt-canvas"
+          className={carryingAny ? 'sculpt-canvas carrying' : 'sculpt-canvas'}
           // The grid is a texture, so it zooms with what it is behind.
           style={{ backgroundSize: `${UNIT * zoom}px ${UNIT * zoom}px` }}
           onPointerDown={onPointerDown}
@@ -467,6 +495,39 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
                   }}
                   onUnbind={() => write((current, id) => unbindNode(current, id, laid.node.id))}
                   onAddChild={() => write((current, id) => addChild(current, id, laid.node.id).file)}
+                  landing={overNode === laid.node.id}
+                  onCarryOver={() => {
+                    const held = carrying.current;
+                    if (!held || !board) return null;
+                    // A card off the outline needs a column to its right to
+                    // land in; research can go anywhere.
+                    if (held.kind === 'row' && !canCarryToBoard(file, board.id, laid.node.id)) return null;
+                    if (held.kind === 'node') return null;
+                    setOverNode(laid.node.id);
+                    return 'copy';
+                  }}
+                  onCarryLeave={() => setOverNode((current) => (current === laid.node.id ? null : current))}
+                  onCarryDrop={() => {
+                    const held = carrying.current;
+                    setOverNode(null);
+                    setCarryingAny(false);
+                    carrying.current = null;
+                    if (!held) return;
+                    if (held.kind === 'research') {
+                      // The board has nowhere to hold a reference, so research
+                      // arrives as a node with the item's name on it (§2).
+                      const item = file.researchItems.find((candidate) => candidate.id === held.id);
+                      if (item) {
+                        write((current, id) => addChild(current, id, laid.node.id, { title: item.title }).file);
+                      }
+                      return;
+                    }
+                    if (held.kind === 'row') {
+                      const outline = outlinesOf(file)[0];
+                      if (!outline) return;
+                      write((current, id) => carryRowToBoard(current, outline.id, held.id, id, laid.node.id).file);
+                    }
+                  }}
                 />
               ))}
 
@@ -916,6 +977,10 @@ function Node({
   onRemove,
   onUnbind,
   onAddChild,
+  landing,
+  onCarryOver,
+  onCarryLeave,
+  onCarryDrop,
 }: {
   laid: LaidNode;
   zoom: number;
@@ -930,6 +995,12 @@ function Node({
   onRemove(): void;
   onUnbind(): void;
   onAddChild(): void;
+  /** Something off the shelf is over this card. */
+  landing: boolean;
+  /** Answers how it would land, or null where it cannot (§2). */
+  onCarryOver(): 'copy' | null;
+  onCarryLeave(): void;
+  onCarryDrop(): void;
 }) {
   const { node } = laid;
   const end = node.end !== null;
@@ -948,6 +1019,7 @@ function Node({
         asking ? 'asking' : '',
         linking && !linkingFrom ? 'landable' : '',
         linkingFrom ? 'linking-from' : '',
+        landing ? 'landing' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -958,6 +1030,19 @@ function Node({
         height: `${laid.headHeight * UNIT * zoom}px`,
       }}
       onPointerDown={onSelect}
+      onDragOver={(event) => {
+        const effect = onCarryOver();
+        if (!effect) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = effect;
+      }}
+      onDragLeave={onCarryLeave}
+      onDrop={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onCarryDrop();
+      }}
     >
       {/* The badge §6 asks for, on every node: a glance says how much of the
           canvas is real. A filled mark is in the script; an idea has none. */}

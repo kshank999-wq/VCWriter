@@ -8030,3 +8030,63 @@ dialog.preferences .field {
   padding-left: 8px;
   color: var(--muted);
 }
+
+/* ---- the shelf's second source: the other plan (addendum 06 §2) ------- */
+
+.shelf-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 8px 6px 12px;
+}
+
+.shelf-tabs button {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shelf-tabs button.on {
+  border-color: var(--border);
+  background: var(--panel-2);
+  color: var(--gold);
+}
+
+.shelf-note {
+  margin: 0 0 8px;
+}
+
+/* A card off the other plan reads as borrowed rather than filed. */
+.shelf-card {
+  border-left: 1px dotted var(--gold-deep);
+}
+
+/* While something is being carried, a card that will take it says so.
+
+   Its contents stop taking the pointer for the duration: a card holds a title
+   box and a row of controls, and `dragleave` fires every time the pointer
+   crosses from the card onto one of them — so without this the indicator
+   blinks off and on as the hand moves across a card it is aiming at. */
+.sculpt-canvas.carrying .sculpt-node {
+  cursor: copy;
+}
+
+.sculpt-canvas.carrying .sculpt-title,
+.sculpt-canvas.carrying .sculpt-tools,
+.sculpt-canvas.carrying .sculpt-real {
+  pointer-events: none;
+}
+
+.sculpt-node.landing {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px var(--gold-deep);
+  background: var(--panel-2);
+}

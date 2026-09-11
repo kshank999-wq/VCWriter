@@ -47,6 +47,7 @@ export * from './sculptor.js';
 export * from './sculptor-binding.js';
 export * from './outline.js';
 export * from './outline-binding.js';
+export * from './crossing.js';
 export * from './story-layout.js';
 export * from './story-threads.js';
 export * from './scene-heading.js';
