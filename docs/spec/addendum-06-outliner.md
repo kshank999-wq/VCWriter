@@ -1,6 +1,6 @@
 # Addendum 06 — The Outliner
 
-Status: stages 1–8 built, September 2026. From Ken's *VC Writer Outliner
+Status: **all nine stages built**, September 2026. From Ken's *VC Writer Outliner
 Development Specification* of 11 September, and the framing he gave with it:
 **the Outliner and the Story Sculptor are siblings, and material moves between
 them by hand.** Extends §5 (story structure), §7 (research and links) and §19
@@ -195,6 +195,10 @@ the scene's own fields, shown here rather than copied here.
 - **Search and filter** by scene, character, location, object, idea, status,
   or linked research.
 - **Keyboard first**, for writers who would rather not reach for the mouse.
+- **Take it out**: the outline as a document to print or save, and as indented
+  text on the clipboard for whatever the writer already works in (§12 stage 9).
+  Both say the whole outline; folding and filtering are how it is read, not
+  what it is.
 
 ## 9. How it looks
 
@@ -260,6 +264,8 @@ The panel resizes, and fills the window.
 - A node dragged from the Sculptor arrives as a row, with its subtree.
 - A row dragged to the Sculptor arrives as a node, with its subtree.
 - The outline survives a save, a restart, and reopening the project.
+- The outline prints as a document, and copies as indented text, with nothing
+  left out because it was folded or filtered away.
 
 ## 12. Build order
 
@@ -278,7 +284,7 @@ The panel resizes, and fills the window.
    ways.
 8. **Built.** Search, filters, multi-select, status, Collapse All, the
    keyboard.
-9. Printing and exporting the outline.
+9. **Built.** Printing and exporting the outline.
 
 Stage 5 is the point of it, the way addendum 03's stage 8 is the point of the
 Sculptor: everything before it is arranging, and that is where the arrangement
@@ -555,3 +561,50 @@ idea or a character could be searched by a status it had no way to acquire.
 The panel now has *How far along* for every kind but Scene, which keeps it in
 its card where it belongs to the script; the box offers the four §8 names and
 whatever the writer has already used elsewhere, and refuses none of them.
+
+### Stage 9 — the two ways out
+
+An outline is made to be taken somewhere: into a room, into an email, into the
+treatment somebody else is writing. There are two ways out, and they are
+deliberately different things rather than two buttons over one idea.
+
+**The document** is the outline as §9 draws it — indentation, and a weight
+falling away with depth, scene rows strongest and supporting rows lightest, so
+the hierarchy reads at a glance without being read. Portrait, unlike the Story
+Grid: an outline is a column of sentences that get shorter as they get deeper,
+and a wide page would leave most of it white. A scene carries its card under
+its name (§7), and **only the fields that have something in them** — a printed
+card listing *POV: —* for every scene would be nagging in the one place the
+writer cannot answer it. The scene's summary is read through to wherever it
+lives: the row's own words while it is a plan, the scene's own once it is in
+the script, never both. The title sheet in front of it is the script's,
+because this is a document about that script and not a document of its own.
+
+A scene that is in the script goes out under its number — *Sc. 12 — Warehouse
+Confrontation*, the way §9's example has it — because the writer's own label
+already says what kind of thing it is, and *Scene Sc. 12* says it twice.
+
+**The indented text** is the outline as characters, on the clipboard. This is
+the thing addendum 03 §8 used to promise the Sculptor and no longer does, and
+it is here instead, where an outline actually lives. Indentation carries the
+whole shape, because indentation is the one thing every editor, every email
+client and every notes application agrees about; a row's body follows it one
+step further in, so a note attached to a beat cannot be read as a row of its
+own. It goes to the clipboard rather than a file: a file would make the writer
+find it again, and the clipboard puts it where they were already going.
+
+**Both say the whole outline.** Folding is how you stop looking at part of it
+for an afternoon and a filter is a search; neither is an edit, and a document
+that quietly left out what was folded would be one the writer could not
+account for.
+
+Two things came out of building it. The browser preview had been printing the
+script whatever document was asked for, which meant every document but one —
+the sheet, the board, the Story Grid, and now the outline — was unreachable at
+the URL the work is actually looked at; the renderings all live in the domain,
+so the preview now makes the same choice the main process does. And the bar
+had reached the end of what it could hold: seven types, folding, a search, a
+filter, a tally and three ways out, with labels wrapping to three lines in a
+42-pixel bar. Nothing in it wraps now, and where a window is too narrow for all
+of it the bar scrolls sideways — the one behaviour that does not change the
+height of everything below it.

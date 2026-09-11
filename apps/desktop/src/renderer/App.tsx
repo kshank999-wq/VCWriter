@@ -72,7 +72,10 @@ import { ReadBackPanel } from './components/ReadBackPanel';
 import { RecoveryPanel } from './components/RecoveryPanel';
 import { Preferences } from './components/Preferences';
 import { applyScheme, DEFAULT_SCHEME, type SchemeId } from './themes';
-import type { AccountStatus } from '../preload/index';
+import type { AccountStatus, VcWriterApi } from '../preload/index';
+
+/** Which document a print or an export is asking for. The bridge decides. */
+type PrintKind = NonNullable<Parameters<VcWriterApi['print']>[0]['kind']>;
 
 export default function App() {
   const project = useProject();
@@ -414,34 +417,46 @@ export default function App() {
    * Left alone it is the one the project has — a script, or in short form the
    * **sheet**, which is what a commercial's document *is*. `'board'` asks for
    * the other one: the frames on their own, for a wall. `'grid'` is the Story
-   * Grid tab as a document (addendum 04 §8).
+   * Grid tab as a document (addendum 04 §8), and `'outline'` is the Outliner's
+   * tree as one (addendum 06 §12) — which takes the outline's id with it,
+   * because a project may hold more than one.
    */
   const exportPdf = useCallback(
-    async (kind: 'script' | 'board' | 'grid' = 'script') => {
+    async (kind: PrintKind = 'script', outlineId?: string) => {
       if (!file) return;
       setExporting(true);
       setExportMessage(null);
       // Flush first: the export reads the project it is handed, and a writer who
       // just typed a line expects it in the PDF.
       await project.saveNow();
-      const result = await window.vcwriter.exportPdf({ file, options: printOptions, kind });
+      const result = await window.vcwriter.exportPdf({ file, options: printOptions, kind, outlineId });
       setExporting(false);
       if (!result.ok) {
         setExportMessage(result.error ?? 'The PDF could not be created');
         return;
       }
-      setExportMessage(result.data ? `Exported ${result.data.pageCount} pages to ${result.data.path}` : null);
+      if (!result.data) {
+        setExportMessage(null);
+        return;
+      }
+      // A document the browser paginates as it lays it out cannot say how many
+      // pages it came to until it has, so it says where it went instead.
+      setExportMessage(
+        result.data.pageCount > 0
+          ? `Exported ${result.data.pageCount} pages to ${result.data.path}`
+          : `Exported to ${result.data.path}`,
+      );
     },
     [file, printOptions, project],
   );
 
   const print = useCallback(
-    async (kind: 'script' | 'board' | 'grid' = 'script') => {
+    async (kind: PrintKind = 'script', outlineId?: string) => {
       if (!file) return;
       setExporting(true);
       setExportMessage(null);
       await project.saveNow();
-      const result = await window.vcwriter.print({ file, options: printOptions, kind });
+      const result = await window.vcwriter.print({ file, options: printOptions, kind, outlineId });
       setExporting(false);
       if (!result.ok) setExportMessage(result.error ?? 'The document could not be printed');
     },
@@ -957,6 +972,8 @@ export default function App() {
             open={outlinerOpen}
             onClose={() => setOutlinerOpen(false)}
             onUpdate={project.update}
+            onPrint={(outlineId) => void print('outline', outlineId)}
+            onExport={(outlineId) => void exportPdf('outline', outlineId)}
           />
         </div>
       ) : (

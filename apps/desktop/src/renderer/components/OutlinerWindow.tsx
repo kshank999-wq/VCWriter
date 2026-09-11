@@ -22,6 +22,7 @@ import {
   nudgeItem,
   outdentItem,
   outlineChildren,
+  outlineAsText,
   outlineRows,
   outlineTally,
   outlinesOf,
@@ -71,6 +72,9 @@ interface OutlinerWindowProps {
   open: boolean;
   onClose(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  /** The outline as a document (§12 stage 9). Absent where there is no printer. */
+  onPrint?(outlineId: string): void;
+  onExport?(outlineId: string): void;
 }
 
 /** How far one level of depth moves a row in. */
@@ -104,7 +108,7 @@ const placeholderOf = (kind: string): string =>
   kind === 'scene' ? 'name the scene' : kind === 'beat' ? 'what happens' : 'say what it is';
 const markOf = (kind: string): string => KINDS[kind]?.mark ?? '•';
 
-export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindowProps) {
+export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExport }: OutlinerWindowProps) {
   const outlines = outlinesOf(file);
   const [outlineId, setOutlineId] = useState<string | null>(null);
   const [selected, setSelected] = useState<OutlineItemId | null>(null);
@@ -117,6 +121,8 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
    */
   const [alsoPicked, setAlsoPicked] = useState<ReadonlySet<string>>(new Set());
   const [filter, setFilter] = useState<OutlineFilter>({});
+  /** Says the copy happened, since a clipboard write leaves nothing on screen. */
+  const [copied, setCopied] = useState(false);
   /** The row whose title is being typed, so a fresh one can be typed into at once. */
   const [editing, setEditing] = useState<OutlineItemId | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -239,6 +245,33 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
     }
     setAlsoPicked(new Set());
     setSelected(itemId);
+  };
+
+  /**
+   * The outline as indented text, on the clipboard (§12 stage 9).
+   *
+   * A file would make the writer find it again; the clipboard puts it where
+   * they were already going — an email, a treatment, a notes application.
+   * `navigator.clipboard` is refused in some contexts and there is no useful
+   * thing to tell a writer about why, so the old way stands behind it.
+   */
+  const copyAsText = async () => {
+    if (!outline) return;
+    const text = outlineAsText(file, outline);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const box = document.createElement('textarea');
+      box.value = text;
+      box.style.position = 'fixed';
+      box.style.opacity = '0';
+      document.body.append(box);
+      box.select();
+      document.execCommand('copy');
+      box.remove();
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
   };
 
   /** Whether this row is somewhere the carried one could actually go. */
@@ -461,6 +494,39 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
                 ))}
               </select>
             ) : null}
+
+            {/* Two ways out, and they are different things (§12 stage 9): a
+                document to take into a room, and the characters to paste into
+                whatever the writer already works in. */}
+            <span className="outliner-gap" />
+            {onPrint ? (
+              <button
+                type="button"
+                className="ghost small"
+                title="The whole outline as a document, folded rows and all"
+                onClick={() => onPrint(outline.id as string)}
+              >
+                Print…
+              </button>
+            ) : null}
+            {onExport ? (
+              <button
+                type="button"
+                className="ghost small"
+                title="Save it as a PDF"
+                onClick={() => onExport(outline.id as string)}
+              >
+                PDF…
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="ghost small"
+              title="The outline as indented text, on the clipboard"
+              onClick={() => void copyAsText()}
+            >
+              {copied ? 'Copied' : 'Copy'}
+            </button>
           </>
         ) : null}
 

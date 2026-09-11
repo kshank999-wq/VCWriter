@@ -43,13 +43,9 @@ push live; the build takes a minute or two.
   `addendum-04-story-grid.md` is the Story Grid, the third tab of the
   Editors page. **All six stages are built** — §9 says what each one does.
   `addendum-06-outliner.md` is the Outliner: the rigid sibling of the
-  Sculptor, a typed tree that promotes scenes into the script. Stages 1–8 are
-  built: the document and its shape rules, the outline on screen, moving it by
-  hand, the Research shelf, promotion — which §12 calls the point of the whole
-  thing — the scene card, carrying material between the board and the outline,
-  and searching, filtering and working on several rows at once. §14 says what
-  each one does; §12 lists what is left: stage 9, printing and exporting the
-  outline.
+  Sculptor, a typed tree that promotes scenes into the script. **All nine
+  stages are built** — §14 says what each one does, and §12 calls promotion
+  the point of the whole thing.
   `packages/domain/src/planning.ts` is where the board and the outline meet
   the script: one plan per scene across both, and the rename that reaches
   both. Rules about the *pair* go there rather than in either module. §1 and §2 are the decisions the rest hangs off.

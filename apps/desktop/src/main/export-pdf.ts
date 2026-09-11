@@ -8,11 +8,13 @@ import {
   parseProjectFile,
   renderBoardDocumentHtml,
   renderGridDocumentHtml,
+  renderOutlineDocumentHtml,
   renderPrintDocumentHtml,
   renderSheetDocumentHtml,
   suggestedBoardFileName,
   suggestedExportFileName,
   suggestedGridFileName,
+  suggestedOutlineFileName,
   suggestedSheetFileName,
   type PrintOptions,
   type ProjectFile,
@@ -80,15 +82,18 @@ const withDocumentWindow = async <T>(
  * `script` is the manuscript, hand-paginated. In a short-form project the
  * document is the **sheet**, and beside it there is a **board** — the frames
  * on their own, for a wall (addendum 05 §8). The **grid** is the Story Grid
- * tab as a document (addendum 04 §8). They are renderings of one project
+ * tab as a document (addendum 04 §8), and the **outline** is the Outliner's
+ * tree as one (addendum 06 §12, stage 9). They are renderings of one project
  * rather than separate projects.
  */
-export type PrintKind = 'script' | 'sheet' | 'board' | 'grid';
+export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline';
 
 export interface ExportPdfInput {
   file: unknown;
   options?: PrintOptions;
   kind?: PrintKind;
+  /** Which outline, when there is more than one. Left out, it is the first. */
+  outlineId?: string;
   /** Skips the save dialog; used by tests and future batch export. */
   targetPath?: string;
 }
@@ -100,7 +105,20 @@ export interface ExportPdfInput {
  * commercial has no script to print instead — asking for one is asking for
  * the document this project has.
  */
-const documentFor = (project: ProjectFile, kind: PrintKind, options: PrintOptions) => {
+const documentFor = (
+  project: ProjectFile,
+  kind: PrintKind,
+  options: PrintOptions,
+  outlineId?: string,
+) => {
+  if (kind === 'outline') {
+    return {
+      html: renderOutlineDocumentHtml(project, outlineId ?? null, options),
+      name: suggestedOutlineFileName(project, outlineId ?? null),
+      paged: false,
+      landscape: false,
+    };
+  }
   if (kind === 'grid') {
     return {
       html: renderGridDocumentHtml(project, options),
@@ -157,7 +175,12 @@ export const exportProjectPdf = async (
   parent: BrowserWindowType | null,
 ): Promise<ExportPdfResult | null> => {
   const project = parseProjectFile(input.file);
-  const { html, name, paged, landscape } = documentFor(project, input.kind ?? 'script', input.options ?? {});
+  const { html, name, paged, landscape } = documentFor(
+    project,
+    input.kind ?? 'script',
+    input.options ?? {},
+    input.outlineId,
+  );
 
   let targetPath = input.targetPath;
   if (!targetPath) {
@@ -184,9 +207,10 @@ export const printProject = async (input: {
   file: unknown;
   options?: PrintOptions;
   kind?: PrintKind;
+  outlineId?: string;
 }): Promise<boolean> => {
   const project = parseProjectFile(input.file);
-  const { html, landscape } = documentFor(project, input.kind ?? 'script', input.options ?? {});
+  const { html, landscape } = documentFor(project, input.kind ?? 'script', input.options ?? {}, input.outlineId);
 
   return withDocumentWindow(
     html,

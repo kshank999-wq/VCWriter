@@ -41,6 +41,7 @@ export * from './av-sheet.js';
 export * from './board.js';
 export * from './print-sheet.js';
 export * from './print-grid.js';
+export * from './print-outline.js';
 export * from './story-grid.js';
 export * from './planning.js';
 export * from './sculptor.js';

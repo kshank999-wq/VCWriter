@@ -2,7 +2,11 @@ import {
   createProjectFile,
   parseProjectFile,
   printedPageCount,
+  renderBoardDocumentHtml,
+  renderGridDocumentHtml,
+  renderOutlineDocumentHtml,
   renderPrintDocumentHtml,
+  renderSheetDocumentHtml,
   serializeProjectFile,
   suggestedExportFileName,
   type ProjectFile,
@@ -117,10 +121,32 @@ const download = (name: string, text: string): void => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-const printDocument = (file: ProjectFile, options: Parameters<typeof renderPrintDocumentHtml>[1]): boolean => {
+type PrintInput = Parameters<VcWriterApi['print']>[0];
+type PrintOptions = NonNullable<PrintInput['options']>;
+
+/**
+ * The same choice of document the desktop makes (`main/export-pdf.ts`).
+ *
+ * The preview used to print the script whatever it was asked for, which meant
+ * every document but one was unreachable at the URL Ken actually looks at.
+ * The renderings are all in `@vcwriter/domain`, so the browser can make the
+ * same choice the main process does rather than a poorer one.
+ */
+const documentFor = (input: PrintInput): string => {
+  const options: PrintOptions = input.options ?? {};
+  if (input.kind === 'outline') return renderOutlineDocumentHtml(input.file, input.outlineId ?? null, options);
+  if (input.kind === 'grid') return renderGridDocumentHtml(input.file, options);
+  if (input.kind === 'board') return renderBoardDocumentHtml(input.file, options);
+  if (input.kind === 'sheet' || input.file.project.format === 'short_form') {
+    return renderSheetDocumentHtml(input.file, options);
+  }
+  return renderPrintDocumentHtml(input.file, options);
+};
+
+const printDocument = (input: PrintInput): boolean => {
   const popup = window.open('', '_blank');
   if (!popup) return false;
-  popup.document.write(renderPrintDocumentHtml(file, options));
+  popup.document.write(documentFor(input));
   popup.document.close();
   popup.focus();
   popup.print();
@@ -281,13 +307,15 @@ export const createBrowserBridge = (): BrowserBridge => {
     restoreSnapshot: async () => fail(NOT_HERE),
 
     async exportPdf(input) {
-      const options = input.options ?? {};
-      if (!printDocument(input.file, options)) return fail('The browser blocked the print window');
-      return ok({ path: "your browser's Save as PDF", pageCount: printedPageCount(input.file, options) });
+      if (!printDocument(input)) return fail('The browser blocked the print window');
+      // Only the manuscript is paginated by hand; the browser decides the rest
+      // as it lays them out, and it has not laid them out yet.
+      const pageCount = input.kind && input.kind !== 'script' ? 0 : printedPageCount(input.file, input.options ?? {});
+      return ok({ path: "your browser's Save as PDF", pageCount });
     },
 
     async print(input) {
-      return ok(printDocument(input.file, input.options ?? {}));
+      return ok(printDocument(input));
     },
 
     appInfo: async () => ok({ version: 'preview', platform: 'browser' }),
