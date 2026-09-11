@@ -275,7 +275,7 @@ it worth opening.
 3. **Built.** The layout rule, and the second column — scenes, widening the
    gaps.
 4. **Built.** The third column — beats, growing their scenes.
-5. Columns beyond the third, defined by the writer.
+5. **Built.** Columns beyond the third, defined by the writer.
 6. Binding a node to a real scene or beat.
 7. The writer's own connections, labelled.
 8. Export as an outline: beside you, and printed.
@@ -297,8 +297,9 @@ Stages 1–4 are the diagram. Stage 8 is the reason to have used it.
 
 ## 16. What is built
 
-Stages 1–4 — **the diagram**. The Sculptor is a button on the title bar again,
-beside Research, and it opens the canvas over the workspace.
+Stages 1–5 — **the diagram, and the columns the writer defines**. The Sculptor
+is a button on the title bar again, beside Research, and it opens the canvas
+over the workspace.
 
 **A new board is two nodes.** Beginning and End, real and editable, with
 nothing in them: click either and type what the story begins or ends as. They
@@ -341,3 +342,30 @@ binding arrives.
 
 Boards travel in the document, in `boards[]`, defaulting to empty — so every
 project that already exists opens with no board rather than a wrong one.
+
+### Stage 5 — the columns the writer defines
+
+`+ Column` puts a fourth level of detail on the right and leaves it unnamed,
+because the name is the writer's: *Character arc*, *Reveals*, *Questions to
+answer*, whatever the story is actually asking for. There is no limit, and a
+node in the new column hangs off one in the column before it exactly as a beat
+hangs off a scene — §4 measures it with everything else, so the chain down the
+structure column stretches to fit what has been added off to the right.
+
+A column can be taken off the board, and **only the last one, and never one of
+the three every board is made with.** A column from the middle would orphan
+the one to its right, which is a diagram that cannot be drawn; the × appears on
+the last column's name and nowhere else.
+
+**§5's rule is the point of the stage.** A node stays a title and a note. What
+a scene's POV is, what a character arc runs *from* and *to* — that is a
+**question the column asks of everything in it**, not a field on the card. So
+the detail panel, under the note, says *Character arc asks* and lists the
+questions with this node's answers in them; `+ Question` adds one, typing over
+its name renames it on every node at once, and × stops asking it and takes the
+answers with it, because an answer to a question nobody is asking is not worth
+keeping. A column that asks nothing shows no form at all — the writer who
+wanted three columns and a sentence on each is never shown a field to fill in.
+
+Answers live on the node, keyed by the question's id (`fields`, defaulting to
+empty), so a node in a column that asks nothing carries nothing.

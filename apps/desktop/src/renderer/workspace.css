@@ -7247,3 +7247,81 @@ dialog.preferences .field {
   letter-spacing: 0.12em;
   color: var(--muted);
 }
+
+/* A column's own questions, and this node's answers to them (addendum 03 §5).
+   The questions belong to the column, so adding one here adds it to every
+   node in that column. */
+.sculpt-fields {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.sculpt-fields h4 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.sculpt-field {
+  margin-bottom: 10px;
+}
+
+.sculpt-field-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sculpt-field-name {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dotted var(--border);
+  color: var(--gold);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 0 2px;
+}
+
+.sculpt-field-name:focus {
+  outline: none;
+  border-bottom-style: solid;
+  border-bottom-color: var(--gold);
+}
+
+/* The answer, which is a child of the field itself; the question's own name
+   sits inside the head above it and is laid out by that flex row. */
+.sculpt-field > input,
+.sculpt-field > textarea {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.sculpt-field-head button {
+  opacity: 0;
+  transition: opacity 90ms ease;
+}
+
+.sculpt-field:hover .sculpt-field-head button,
+.sculpt-field:focus-within .sculpt-field-head button {
+  opacity: 1;
+}
+
+/* Only the last column carries a way off the board. */
+.sculpt-column-off {
+  position: absolute;
+  right: 0;
+  top: -2px;
+  padding: 0 3px;
+  font-size: 10px;
+}

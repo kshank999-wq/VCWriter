@@ -6,10 +6,12 @@ import {
   type Board,
   type SculptorColumn,
   type SculptorColumnKind,
+  type SculptorField,
+  type SculptorFieldKind,
   type SculptorNode,
 } from './entities/sculptor.js';
 import type { ProjectFile } from './project-file.js';
-import type { BoardId, SculptorColumnId, SculptorNodeId } from './ids.js';
+import type { BoardId, SculptorColumnId, SculptorFieldId, SculptorNodeId } from './ids.js';
 
 /**
  * The Story Sculptor (addendum 03), stages 1–4.
@@ -50,6 +52,7 @@ export const createBoard = (file: ProjectFile, input: { name?: string } = {}): {
     name: column.name,
     kind: column.kind,
     orderKey: columnKeys[index] as string,
+    fields: [],
   }));
 
   const structure = columns[0] as SculptorColumn;
@@ -64,6 +67,7 @@ export const createBoard = (file: ProjectFile, input: { name?: string } = {}): {
     note: '',
     kind: 'structure',
     colour: '',
+    fields: {},
     end,
     collapsed: false,
     boundUnitId: null,
@@ -274,6 +278,7 @@ const madeNode = (input: {
     note: '',
     kind: input.kind,
     colour: '',
+    fields: {},
     end: null,
     collapsed: false,
     boundUnitId: null,
@@ -452,6 +457,159 @@ export const moveNode = (
     ),
   }));
 };
+
+/**
+ * A column to the right of the last one, **without limit** (§3).
+ *
+ * Character arcs, plot arcs, reveals, setups, research, questions to answer —
+ * whatever the next level of detail is. It arrives empty, and what it asks of
+ * the nodes in it is the writer's to say (§5).
+ */
+export const addColumn = (
+  file: ProjectFile,
+  boardId: BoardId,
+  input: { name?: string } = {},
+): { file: ProjectFile; columnId: SculptorColumnId | null } => {
+  const board = findBoard(file, boardId);
+  if (!board) return { file, columnId: null };
+
+  const existing = columnsOf(board);
+  const column: SculptorColumn = {
+    id: newId<SculptorColumnId>(),
+    name: input.name ?? '',
+    kind: 'custom',
+    orderKey: orderKeyBetween(existing[existing.length - 1]?.orderKey ?? null, null),
+    fields: [],
+  };
+
+  return {
+    file: withBoard(file, boardId, (current) => ({ ...current, columns: [...current.columns, column] })),
+    columnId: column.id,
+  };
+};
+
+/**
+ * A column taken off the board, with everything in it.
+ *
+ * **Only the last one can go.** Removing a column from the middle would leave
+ * the column to its right hanging off parents that no longer exist, and a
+ * board with orphans in it is a board that cannot be drawn. The first three
+ * stay: a board without structure, scenes and beats is not the thing §3
+ * describes.
+ */
+export const removeColumn = (file: ProjectFile, boardId: BoardId, columnId: SculptorColumnId): ProjectFile => {
+  const board = findBoard(file, boardId);
+  if (!board) return file;
+  const columns = columnsOf(board);
+  const last = columns[columns.length - 1];
+  if (!last || last.id !== columnId || columns.length <= FIRST_COLUMNS.length) return file;
+
+  return withBoard(file, boardId, (current) => ({
+    ...current,
+    columns: current.columns.filter((column) => column.id !== columnId),
+    nodes: current.nodes.filter((node) => node.columnId !== columnId),
+  }));
+};
+
+/**
+ * A question this column asks of everything in it (§5).
+ *
+ * Defined on the column rather than on the node, so a writer who wants a
+ * before-and-after on their character arcs has it on every one of them, and a
+ * writer who does not is never shown the boxes.
+ */
+export const addColumnField = (
+  file: ProjectFile,
+  boardId: BoardId,
+  columnId: SculptorColumnId,
+  input: { name?: string; kind?: SculptorFieldKind } = {},
+): { file: ProjectFile; fieldId: SculptorFieldId | null } => {
+  const board = findBoard(file, boardId);
+  const column = board ? columnsOf(board).find((candidate) => candidate.id === columnId) : undefined;
+  if (!board || !column) return { file, fieldId: null };
+
+  const fields = fieldsOf(column);
+  const field: SculptorField = {
+    id: newId<SculptorFieldId>(),
+    name: input.name ?? '',
+    kind: input.kind ?? 'line',
+    orderKey: orderKeyBetween(fields[fields.length - 1]?.orderKey ?? null, null),
+  };
+
+  return {
+    file: withBoard(file, boardId, (current) => ({
+      ...current,
+      columns: current.columns.map((candidate) =>
+        candidate.id === columnId ? { ...candidate, fields: [...candidate.fields, field] } : candidate,
+      ),
+    })),
+    fieldId: field.id,
+  };
+};
+
+export const renameColumnField = (
+  file: ProjectFile,
+  boardId: BoardId,
+  columnId: SculptorColumnId,
+  fieldId: SculptorFieldId,
+  name: string,
+): ProjectFile =>
+  withBoard(file, boardId, (board) => ({
+    ...board,
+    columns: board.columns.map((column) =>
+      column.id === columnId
+        ? { ...column, fields: column.fields.map((field) => (field.id === fieldId ? { ...field, name } : field)) }
+        : column,
+    ),
+  }));
+
+/**
+ * A question taken off a column, and the answers to it with it.
+ *
+ * The answers go because they were answers to *that* question; leaving them
+ * keyed to a field nobody can see would be leaving the board carrying text
+ * the writer has no way to read.
+ */
+export const removeColumnField = (
+  file: ProjectFile,
+  boardId: BoardId,
+  columnId: SculptorColumnId,
+  fieldId: SculptorFieldId,
+): ProjectFile =>
+  withBoard(file, boardId, (board) => ({
+    ...board,
+    columns: board.columns.map((column) =>
+      column.id === columnId ? { ...column, fields: column.fields.filter((field) => field.id !== fieldId) } : column,
+    ),
+    nodes: board.nodes.map((node) => {
+      if (node.columnId !== columnId || !(fieldId in node.fields)) return node;
+      const { [fieldId as string]: gone, ...rest } = node.fields;
+      void gone;
+      return touch({ ...node, fields: rest });
+    }),
+  }));
+
+/** A node's answer to one of its column's questions. */
+export const setNodeField = (
+  file: ProjectFile,
+  boardId: BoardId,
+  nodeId: SculptorNodeId,
+  fieldId: SculptorFieldId,
+  value: string,
+): ProjectFile =>
+  withBoard(file, boardId, (board) => ({
+    ...board,
+    nodes: board.nodes.map((node) =>
+      node.id === nodeId ? touch({ ...node, fields: { ...node.fields, [fieldId as string]: value } }) : node,
+    ),
+  }));
+
+/** A column's questions, in the order they were asked. */
+export const fieldsOf = (column: SculptorColumn): SculptorField[] => [...column.fields].sort(byOrder);
+
+/** The column a node is in, for the detail panel's sake. */
+export const columnOf = (board: Board, node: SculptorNode): SculptorColumn | null =>
+  columnsOf(board).find((column) => column.id === node.columnId) ?? null;
 
 /** The column's own name, which is the writer's (§3). */
 export const renameColumn = (

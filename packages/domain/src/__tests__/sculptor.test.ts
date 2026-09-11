@@ -4,17 +4,25 @@ import {
   ROW,
   addBlock,
   addChild,
+  addColumn,
+  addColumnField,
   blocksOf,
   boardLayout,
   childrenOf,
+  columnOf,
   columnsOf,
   createBoard,
+  fieldsOf,
   createProjectFile,
   findBoard,
   moveNode,
   parseProjectFile,
+  removeColumn,
+  removeColumnField,
   removeNode,
   renameColumn,
+  renameColumnField,
+  setNodeField,
   updateNode,
   type Board,
   type ProjectFile,
@@ -308,5 +316,174 @@ describe('what a node is', () => {
     const deeper = addChild(beat.file, board.id, beat.nodeId!);
     expect(deeper.nodeId).toBeNull();
     expect(boardIn(deeper.file, board).nodes).toHaveLength(5);
+  });
+});
+
+/**
+ * Columns beyond the third, defined by the writer (§3, §5, stage 5).
+ */
+describe('the columns the writer defines', () => {
+  it('adds a column to the right, without limit', () => {
+    let { file, board } = started();
+    for (const name of ['Character arcs', 'Reveals', 'Questions to answer']) {
+      file = addColumn(file, board.id, { name }).file;
+    }
+    expect(columnsOf(boardIn(file, board)).map((column) => column.name)).toEqual([
+      'Structure',
+      'Scenes',
+      'Beats',
+      'Character arcs',
+      'Reveals',
+      'Questions to answer',
+    ]);
+  });
+
+  it('gives the new column somewhere to hang nodes from', () => {
+    let { file, board } = started();
+    const block = addBlock(file, board.id);
+    file = block.file;
+    const scene = addChild(file, board.id, block.nodeId!);
+    file = scene.file;
+    const beat = addChild(file, board.id, scene.nodeId!);
+    file = beat.file;
+
+    // Nothing to the right of Beats, so nothing hangs off one.
+    expect(addChild(file, board.id, beat.nodeId!).nodeId).toBeNull();
+
+    file = addColumn(file, board.id, { name: 'Character arcs' }).file;
+    const arc = addChild(file, board.id, beat.nodeId!, { title: 'She stops asking' });
+    expect(arc.nodeId).not.toBeNull();
+    expect(boardLayout(boardIn(arc.file, board)).columns).toHaveLength(4);
+  });
+
+  it('removes only the last column, and never the three every board has', () => {
+    let { file, board } = started();
+    const made = addColumn(file, board.id, { name: 'Character arcs' });
+    file = made.file;
+
+    // Not one from the middle: the column to its right would be orphaned.
+    const middle = columnsOf(boardIn(file, board))[1]!;
+    expect(columnsOf(boardIn(removeColumn(file, board.id, middle.id), board))).toHaveLength(4);
+
+    file = removeColumn(file, board.id, made.columnId!);
+    expect(columnsOf(boardIn(file, board)).map((column) => column.name)).toEqual([
+      'Structure',
+      'Scenes',
+      'Beats',
+    ]);
+    // And now Beats is the last, but it is one of the three.
+    const beats = columnsOf(boardIn(file, board))[2]!;
+    expect(columnsOf(boardIn(removeColumn(file, board.id, beats.id), board))).toHaveLength(3);
+  });
+
+  it('takes the column’s nodes with it when it goes', () => {
+    let { file, board } = started();
+    const block = addBlock(file, board.id);
+    file = block.file;
+    const scene = addChild(file, board.id, block.nodeId!);
+    file = scene.file;
+    const beat = addChild(file, board.id, scene.nodeId!);
+    file = beat.file;
+    const made = addColumn(file, board.id, { name: 'Arcs' });
+    file = addChild(made.file, board.id, beat.nodeId!, { title: 'She stops asking' }).file;
+    expect(boardIn(file, board).nodes).toHaveLength(6);
+
+    file = removeColumn(file, board.id, made.columnId!);
+    expect(boardIn(file, board).nodes).toHaveLength(5);
+  });
+});
+
+describe('what a column asks of what is in it', () => {
+  const withArcs = () => {
+    let { file, board } = started();
+    const made = addColumn(file, board.id, { name: 'Character arcs' });
+    return { file: made.file, board, columnId: made.columnId! };
+  };
+
+  it('asks nothing at all until the writer says otherwise', () => {
+    const { file, board, columnId } = withArcs();
+    const column = columnsOf(boardIn(file, board)).find((candidate) => candidate.id === columnId)!;
+    expect(fieldsOf(column)).toEqual([]);
+  });
+
+  it('asks its question of every node in it, and of no node anywhere else', () => {
+    let { file, board, columnId } = withArcs();
+    const made = addColumnField(file, board.id, columnId, { name: 'Before', kind: 'line' });
+    file = made.file;
+    file = addColumnField(file, board.id, columnId, { name: 'After', kind: 'line' }).file;
+
+    const live = boardIn(file, board);
+    const arcs = columnsOf(live).find((candidate) => candidate.id === columnId)!;
+    expect(fieldsOf(arcs).map((field) => field.name)).toEqual(['Before', 'After']);
+    // The Structure column was not asked anything.
+    expect(fieldsOf(columnsOf(live)[0]!)).toEqual([]);
+    expect(columnOf(live, blocksOf(live)[0]!)?.name).toBe('Structure');
+  });
+
+  it('keeps a node’s answers on the node, keyed by the question', () => {
+    let { file, board, columnId } = withArcs();
+    const field = addColumnField(file, board.id, columnId, { name: 'Before' });
+    file = field.file;
+
+    const block = addBlock(file, board.id);
+    file = block.file;
+    const scene = addChild(file, board.id, block.nodeId!);
+    file = scene.file;
+    const beat = addChild(file, board.id, scene.nodeId!);
+    file = beat.file;
+    const arc = addChild(file, board.id, beat.nodeId!, { title: 'She stops asking' });
+    file = arc.file;
+
+    file = setNodeField(file, board.id, arc.nodeId!, field.fieldId!, 'She asks nobody for anything.');
+    const node = boardIn(file, board).nodes.find((candidate) => candidate.id === arc.nodeId);
+    expect(node?.fields[field.fieldId as unknown as string]).toBe('She asks nobody for anything.');
+  });
+
+  it('takes the answers with the question when the question goes', () => {
+    let { file, board, columnId } = withArcs();
+    const field = addColumnField(file, board.id, columnId, { name: 'Before' });
+    file = field.file;
+
+    const block = addBlock(file, board.id);
+    file = block.file;
+    const scene = addChild(file, board.id, block.nodeId!);
+    file = scene.file;
+    const beat = addChild(file, board.id, scene.nodeId!);
+    file = beat.file;
+    const arc = addChild(file, board.id, beat.nodeId!);
+    file = setNodeField(arc.file, board.id, arc.nodeId!, field.fieldId!, 'She asks nobody.');
+
+    file = removeColumnField(file, board.id, columnId, field.fieldId!);
+    const node = boardIn(file, board).nodes.find((candidate) => candidate.id === arc.nodeId);
+    expect(node?.fields).toEqual({});
+  });
+
+  it('renames a question without losing what was answered to it', () => {
+    let { file, board, columnId } = withArcs();
+    const field = addColumnField(file, board.id, columnId, { name: 'Before' });
+    file = renameColumnField(field.file, board.id, columnId, field.fieldId!, 'Where she starts');
+    const column = columnsOf(boardIn(file, board)).find((candidate) => candidate.id === columnId)!;
+    expect(fieldsOf(column)[0]?.name).toBe('Where she starts');
+  });
+
+  it('survives a save and a re-open, questions and answers alike', () => {
+    let { file, board, columnId } = withArcs();
+    const field = addColumnField(file, board.id, columnId, { name: 'Before', kind: 'text' });
+    file = field.file;
+    const block = addBlock(file, board.id);
+    file = block.file;
+    const scene = addChild(file, board.id, block.nodeId!);
+    file = scene.file;
+    const beat = addChild(file, board.id, scene.nodeId!);
+    file = beat.file;
+    const arc = addChild(file, board.id, beat.nodeId!);
+    file = setNodeField(arc.file, board.id, arc.nodeId!, field.fieldId!, 'She asks nobody.');
+
+    const back = parseProjectFile(JSON.parse(JSON.stringify(file)));
+    const column = back.boards[0]!.columns.find((candidate) => candidate.id === columnId)!;
+    expect(fieldsOf(column)[0]).toMatchObject({ name: 'Before', kind: 'text' });
+    expect(back.boards[0]!.nodes.find((node) => node.id === arc.nodeId)?.fields).toEqual({
+      [field.fieldId as unknown as string]: 'She asks nobody.',
+    });
   });
 });

@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import { id, orderKey, timestamps } from './common.js';
-import type { BeatId, BoardId, ProjectId, SculptorColumnId, SculptorNodeId, StructuralUnitId } from '../ids.js';
+import type {
+  BeatId,
+  BoardId,
+  ProjectId,
+  SculptorColumnId,
+  SculptorFieldId,
+  SculptorNodeId,
+  StructuralUnitId,
+} from '../ids.js';
 
 /**
  * The Story Sculptor's board (addendum 03).
@@ -24,6 +32,27 @@ import type { BeatId, BoardId, ProjectId, SculptorColumnId, SculptorNodeId, Stru
 export const sculptorColumnKindSchema = z.enum(['structure', 'scene', 'beat', 'custom']);
 export type SculptorColumnKind = z.infer<typeof sculptorColumnKindSchema>;
 
+/**
+ * A question a column asks of everything in it (§5).
+ *
+ * **A node is a title and a note.** Everything beyond that — a scene's POV,
+ * its conflict, a character arc's before-and-after state — belongs to the
+ * column rather than to the node, and is defined when the column is made. So
+ * a writer who wants those columns has them, and one who does not is never
+ * shown a form to fill in.
+ */
+export const sculptorFieldKindSchema = z.enum(['line', 'text']);
+export type SculptorFieldKind = z.infer<typeof sculptorFieldKindSchema>;
+
+export const sculptorFieldSchema = z.object({
+  id: id<SculptorFieldId>(),
+  name: z.string().default(''),
+  /** A one-line answer, or somewhere to write at length. */
+  kind: sculptorFieldKindSchema.default('line'),
+  orderKey: orderKey(),
+});
+export type SculptorField = z.infer<typeof sculptorFieldSchema>;
+
 export const sculptorColumnSchema = z.object({
   id: id<SculptorColumnId>(),
   /** The writer's, and renameable: what this level of detail is called. */
@@ -31,6 +60,8 @@ export const sculptorColumnSchema = z.object({
   kind: sculptorColumnKindSchema.default('custom'),
   /** Left to right; the first column is the structure. */
   orderKey: orderKey(),
+  /** What this column asks of everything in it (§5). None, by default. */
+  fields: z.array(sculptorFieldSchema).default([]),
 });
 export type SculptorColumn = z.infer<typeof sculptorColumnSchema>;
 
@@ -63,6 +94,11 @@ export const sculptorNodeSchema = z.object({
   kind: z.string().default(''),
   /** The writer's own, or empty for the board's. */
   colour: z.string().default(''),
+  /**
+   * The answers to its column's fields, keyed by field id (§5). Empty until
+   * something is typed, and a node whose column has no fields never has any.
+   */
+  fields: z.record(z.string()).default({}),
   /** Beginning, End, or an ordinary node. */
   end: sculptorEndSchema.nullable().default(null),
   /** Folded: its children compressed, their order kept (§4, §10). */

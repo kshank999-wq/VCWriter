@@ -3,19 +3,28 @@ import {
   COLUMN_WIDTH,
   addBlock,
   addChild,
+  addColumn,
+  addColumnField,
   blocksOf,
   boardLayout,
   boardsOf,
+  columnOf,
   columnsOf,
   createBoard,
+  fieldsOf,
   findBoard,
   moveNode,
+  removeColumn,
+  removeColumnField,
   removeNode,
   renameColumn,
+  renameColumnField,
+  setNodeField,
   updateNode,
   type Board,
   type LaidNode,
   type ProjectFile,
+  type SculptorColumn,
   type SculptorNodeId,
 } from '@vcwriter/domain';
 
@@ -93,6 +102,7 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
   };
 
   const chosen = board && selected ? board.nodes.find((node) => node.id === selected) ?? null : null;
+  const column = board && chosen ? columnOf(board, chosen) : null;
 
   return (
     <div className="sculptor" role="dialog" aria-label="Story Sculptor">
@@ -135,6 +145,14 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
               }}
             >
               + Under it
+            </button>
+            <button
+              type="button"
+              className="tool"
+              title="A column to the right: character arcs, reveals, questions to answer — whatever the next level of detail is"
+              onClick={() => write((current, id) => addColumn(current, id).file)}
+            >
+              + Column
             </button>
             <label className="zoom">
               <span className="muted">Zoom</span>
@@ -198,11 +216,26 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
                   <input
                     className="sculpt-column-name"
                     aria-label={`Name of column ${column.index + 1}`}
+                    placeholder="name it"
                     value={column.column.name}
                     onChange={(event) =>
                       write((current, id) => renameColumn(current, id, column.column.id, event.target.value))
                     }
                   />
+                  {/* Only the last, and never one of the three every board
+                      has: a column from the middle would orphan the one to
+                      its right (§3). */}
+                  {column.index === layout.columns.length - 1 && column.index > 2 ? (
+                    <button
+                      type="button"
+                      className="ghost small sculpt-column-off"
+                      aria-label={`Remove the ${column.column.name || 'last'} column`}
+                      title="Remove this column, and everything in it"
+                      onClick={() => write((current, id) => removeColumn(current, id, column.column.id))}
+                    >
+                      ×
+                    </button>
+                  ) : null}
                 </div>
               ))}
 
@@ -310,6 +343,27 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
                   }
                 />
               </label>
+              {/* Everything beyond a title and a note belongs to the column
+                  rather than to the node (§5), so a writer who wants a
+                  before-and-after on their arcs has it on every one of them
+                  and a writer who does not is never shown the boxes. */}
+              <ColumnFields
+                column={column}
+                node={chosen}
+                onSet={(fieldId, value) =>
+                  write((current, id) => setNodeField(current, id, chosen.id, fieldId, value))
+                }
+                onAdd={() => {
+                  if (column) write((current, id) => addColumnField(current, id, column.id).file);
+                }}
+                onRename={(fieldId, name) => {
+                  if (column) write((current, id) => renameColumnField(current, id, column.id, fieldId, name));
+                }}
+                onRemove={(fieldId) => {
+                  if (column) write((current, id) => removeColumnField(current, id, column.id, fieldId));
+                }}
+              />
+
               <p className="muted small">
                 {/* §6: a node is an idea until the writer binds it, and
                     binding is a later stage. The badge says which it is. */}
@@ -325,6 +379,87 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
         </aside>
       </div>
     </div>
+  );
+}
+
+/**
+ * What a column asks of everything in it (§5), and the node's answers.
+ *
+ * The questions are the column's and the answers are the node's, so adding
+ * one here adds it to every node in that column — which is the point: a
+ * writer defines the level of detail once, not once per card.
+ */
+function ColumnFields({
+  column,
+  node,
+  onSet,
+  onAdd,
+  onRename,
+  onRemove,
+}: {
+  column: SculptorColumn | null;
+  node: { fields: Record<string, string> };
+  onSet(fieldId: Parameters<typeof setNodeField>[3], value: string): void;
+  onAdd(): void;
+  onRename(fieldId: Parameters<typeof setNodeField>[3], name: string): void;
+  onRemove(fieldId: Parameters<typeof setNodeField>[3]): void;
+}) {
+  if (!column) return null;
+  const fields = fieldsOf(column);
+
+  return (
+    <section className="sculpt-fields">
+      <h4>
+        {column.name || 'This column'} asks
+        <button type="button" className="ghost small" title="A question this column asks of everything in it" onClick={onAdd}>
+          + Question
+        </button>
+      </h4>
+
+      {fields.length === 0 ? (
+        <p className="muted small">
+          Nothing yet. A node is a title and a note; anything more — a scene’s POV, a character arc’s
+          before-and-after — belongs to the column, so every node in it is asked the same thing.
+        </p>
+      ) : null}
+
+      {fields.map((field) => (
+        <div key={field.id as string} className="sculpt-field">
+          <div className="sculpt-field-head">
+            <input
+              className="sculpt-field-name"
+              aria-label={`What this column asks: ${field.name || 'unnamed'}`}
+              placeholder="the question"
+              value={field.name}
+              onChange={(event) => onRename(field.id, event.target.value)}
+            />
+            <button
+              type="button"
+              className="ghost small"
+              aria-label={`Stop asking ${field.name || 'this'}`}
+              title="Stop asking this, on every node in the column"
+              onClick={() => onRemove(field.id)}
+            >
+              ×
+            </button>
+          </div>
+          {field.kind === 'text' ? (
+            <textarea
+              aria-label={`${field.name || 'Answer'} for this node`}
+              rows={3}
+              value={node.fields[field.id as string] ?? ''}
+              onChange={(event) => onSet(field.id, event.target.value)}
+            />
+          ) : (
+            <input
+              aria-label={`${field.name || 'Answer'} for this node`}
+              value={node.fields[field.id as string] ?? ''}
+              onChange={(event) => onSet(field.id, event.target.value)}
+            />
+          )}
+        </div>
+      ))}
+    </section>
   );
 }
 
