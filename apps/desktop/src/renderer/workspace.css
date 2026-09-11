@@ -7723,3 +7723,54 @@ dialog.preferences .field {
   letter-spacing: 0.14em;
   color: var(--gold);
 }
+
+/* ---- the Outliner: rows moved by hand (addendum 06 §8) ---------------- */
+
+.outline-row {
+  cursor: default;
+}
+
+/* The row being carried stays in place and goes quiet, so the outline does
+   not jump about underneath the hand that is holding something. */
+.outline-row.carried {
+  opacity: 0.4;
+}
+
+/* While a drag is on, nothing takes the pointer but the rows themselves —
+   the title inputs and the row controls would otherwise swallow dragover. */
+.outline-list.dragging .outline-title,
+.outline-list.dragging .outline-tools,
+.outline-list.dragging .outline-fold {
+  pointer-events: none;
+}
+
+.outline-list.dragging .outline-tools {
+  opacity: 0;
+}
+
+/* Sibling or child, said in the shape of the mark (§8): a line above or
+   below for beside it, and the row itself outlined for inside it. */
+.outline-row.drop-before::before,
+.outline-row.drop-after::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--gold);
+  pointer-events: none;
+}
+
+.outline-row.drop-before::before {
+  top: -1px;
+}
+
+.outline-row.drop-after::before {
+  bottom: -1px;
+}
+
+.outline-row.drop-into {
+  border-color: var(--gold);
+  background: var(--panel-2);
+  box-shadow: inset 0 0 0 1px var(--gold-deep);
+}

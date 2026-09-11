@@ -1,6 +1,6 @@
 # Addendum 06 — The Outliner
 
-Status: stages 1–2 built, September 2026. From Ken's *VC Writer Outliner
+Status: stages 1–3 built, September 2026. From Ken's *VC Writer Outliner
 Development Specification* of 11 September, and the framing he gave with it:
 **the Outliner and the Story Sculptor are siblings, and material moves between
 them by hand.** Extends §5 (story structure), §7 (research and links) and §19
@@ -249,7 +249,8 @@ The panel resizes, and fills the window.
    shape rules. Nothing on screen.
 2. **Built.** The panel: the outline drawn, rows added, renamed inline,
    folded, reordered, indented and outdented.
-3. Dragging: rows moved by hand, with the sibling-or-child drop indicator.
+3. **Built.** Dragging: rows moved by hand, with the sibling-or-child drop
+   indicator.
 4. The Research shelf, inside the Outliner, and dropping an item in as a
    linked reference.
 5. Promotion: a scene and its beats into the script, and everything §6 says
@@ -276,7 +277,7 @@ becomes the script.
 
 ## 14. What is built
 
-Stages 1–2 — **the document, and the outline on screen.** The Outliner is a
+Stages 1–3 — **the document, the outline on screen, and moving it by hand.** The Outliner is a
 button on the title bar beside Research and Sculptor, and it opens over the
 workspace the way the board does: an outline is worked on whole.
 
@@ -316,3 +317,34 @@ with nothing behind it is a lie.
 The panel beside it holds the row's title, its type, and the notes too long to
 sit on a line, and says which the row is: *a plan, it lives only in the
 outline*. The badge is already there for stage 5, when promotion arrives.
+
+### Stage 3 — rows moved by hand
+
+**The whole row is the handle.** A grip would be one more thing to aim at, and
+the title is an input, so the browser leaves its text alone while the row
+travels.
+
+A drop says **sibling or child** (§8), and it says it in the shape of the
+mark: a gold line above or below the row for *beside it*, and the row itself
+outlined for *inside it*. The three zones are a **third of the row's height
+each, deliberately equal** — reordering wants the edges and nesting wants the
+middle, and both are ordinary things to be doing, so neither gets the larger
+target. Halves would leave nowhere to aim for *inside*; a quarter puts each
+edge under seven pixels, which is finer than a hand can reliably hit.
+
+The row being carried stays where it is and goes quiet rather than leaving a
+hole, so the outline does not jump about under the hand holding something. A
+long outline **scrolls itself** when the pointer nears the top or bottom,
+without which the row being aimed at cannot be reached at all.
+
+**A row cannot be dropped inside itself.** The domain refuses it, and so does
+the indicator: an illegal target draws no mark and shows the cursor that says
+so, rather than offering something that will not happen.
+
+Two things came out of building it. The drop needed a way to say **first** —
+`afterId: null` means *at the end*, so there was no way to express *above the
+opening scene*, which is an ordinary thing to want; `moveItem` gained
+`beforeId` for it. And the drop now reads its target from the document it is
+writing to rather than from the render that built the handler: a drag
+re-renders on every movement, and where it lands has to be decided by what the
+outline **is**, not by what it was when the gesture started.

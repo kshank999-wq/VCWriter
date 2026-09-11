@@ -144,13 +144,33 @@ export const depthOf = (outline: Outline, item: OutlineItem): number => {
 
 // --------------------------------------------------------- writing it
 
-/** A key that puts a row after the one named, or at the end of its siblings. */
-const keyAfter = (siblings: readonly OutlineItem[], afterId: OutlineItemId | null): string => {
+/**
+ * Where a row lands among its siblings.
+ *
+ * `afterId` puts it directly after the row named, and **null means the end**,
+ * which is where a row added with nothing selected belongs. `beforeId` is the
+ * other half, and exists because "the end" cannot express *first*: dropping
+ * something above the opening scene is an ordinary thing to want and there was
+ * no way to say it. Where both are given, `beforeId` wins.
+ */
+const keyFor = (
+  siblings: readonly OutlineItem[],
+  at: { afterId?: OutlineItemId | null; beforeId?: OutlineItemId | null },
+): string => {
   if (siblings.length === 0) return initialOrderKeys(1)[0] as string;
+
+  if (at.beforeId !== undefined && at.beforeId !== null) {
+    const index = siblings.findIndex((item) => item.id === at.beforeId);
+    if (index !== -1) {
+      return orderKeyBetween(siblings[index - 1]?.orderKey ?? null, siblings[index]?.orderKey ?? null);
+    }
+  }
+
+  const afterId = at.afterId ?? null;
   if (afterId === null) return orderKeyBetween(siblings[siblings.length - 1]?.orderKey ?? null, null);
-  const at = siblings.findIndex((item) => item.id === afterId);
-  if (at === -1) return orderKeyBetween(siblings[siblings.length - 1]?.orderKey ?? null, null);
-  return orderKeyBetween(siblings[at]?.orderKey ?? null, siblings[at + 1]?.orderKey ?? null);
+  const index = siblings.findIndex((item) => item.id === afterId);
+  if (index === -1) return orderKeyBetween(siblings[siblings.length - 1]?.orderKey ?? null, null);
+  return orderKeyBetween(siblings[index]?.orderKey ?? null, siblings[index + 1]?.orderKey ?? null);
 };
 
 const madeItem = (input: {
@@ -200,7 +220,7 @@ export const addItem = (
   const item = madeItem({
     outlineId,
     parentId,
-    orderKey: keyAfter(outlineChildren(outline, parentId), input.afterId ?? null),
+    orderKey: keyFor(outlineChildren(outline, parentId), { afterId: input.afterId ?? null }),
     kind: input.kind ?? 'note',
     title: input.title ?? '',
   });
@@ -252,7 +272,7 @@ export const moveItem = (
   file: ProjectFile,
   outlineId: OutlineId,
   itemId: OutlineItemId,
-  to: { parentId: OutlineItemId | null; afterId?: OutlineItemId | null },
+  to: { parentId: OutlineItemId | null; afterId?: OutlineItemId | null; beforeId?: OutlineItemId | null },
 ): ProjectFile => {
   const outline = findOutline(file, outlineId);
   const item = outline ? findOutlineItem(outline, itemId) : null;
@@ -261,8 +281,10 @@ export const moveItem = (
   if (to.parentId === itemId) return file;
   if (to.parentId !== null && isUnder(outline, to.parentId, itemId)) return file;
 
+  // The dragged row is lifted out of the list before the key is worked out,
+  // so "after the row below me" is a real move rather than a no-op.
   const siblings = outlineChildren(outline, to.parentId).filter((candidate) => candidate.id !== itemId);
-  const orderKey = keyAfter(siblings, to.afterId ?? null);
+  const orderKey = keyFor(siblings, to);
 
   return withOutline(file, outlineId, (current) => ({
     ...current,

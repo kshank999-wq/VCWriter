@@ -194,6 +194,28 @@ describe('moving things about', () => {
     expect(outlineRows(back).find((row) => row.item.id === idea)?.depth).toBe(3);
   });
 
+  it('lands a row first, which "at the end" could never say', () => {
+    const { file, outline, scene, finds } = warehouse();
+    // Dropping something above the opening scene is an ordinary thing to want,
+    // and before `beforeId` there was no way to express it.
+    const moved = moveItem(file, outline.id, finds, { parentId: null, beforeId: scene });
+    expect(outlineChildren(live(moved, outline), null).map((item) => item.id)).toEqual([finds, scene]);
+  });
+
+  it('lands a row between two others, and takes its subtree with it', () => {
+    const { file, outline, scene, enters, finds, idea } = warehouse();
+    const moved = moveItem(file, outline.id, enters, { parentId: scene, beforeId: finds });
+    const back = live(moved, outline);
+    expect(outlineChildren(back, scene).map((item) => item.id)).toEqual([enters, finds]);
+    expect(findOutlineItem(back, idea)?.parentId).toBe(enters);
+  });
+
+  it('puts a row at the end when neither end is named', () => {
+    const { file, outline, scene, enters } = warehouse();
+    const moved = moveItem(file, outline.id, enters, { parentId: null });
+    expect(outlineChildren(live(moved, outline), null).map((item) => item.id)).toEqual([scene, enters]);
+  });
+
   it('refuses to move a row inside itself, which would cut the branch off the trunk', () => {
     const { file, outline, scene, enters, idea } = warehouse();
     expect(moveItem(file, outline.id, scene, { parentId: enters })).toBe(file);

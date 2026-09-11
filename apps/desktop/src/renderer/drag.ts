@@ -88,3 +88,61 @@ export const useDragDrop = (): UseDragDrop => {
 /** Class name for a row that is currently a drop target. */
 export const dropClass = (dropTarget: DropTarget | null, id: string): string =>
   dropTarget?.overId === id ? ` drop-${dropTarget.edge}` : '';
+
+// ------------------------------------------- the Outliner (addendum 06 §8)
+
+/**
+ * Where a row dropped on another one lands.
+ *
+ * A tree needs a third answer the structure board does not: *inside*. A drop
+ * has to be able to say **sibling or child**, because "under the beat" and
+ * "after the beat" are different sentences about the story and the writer is
+ * choosing between them as they let go.
+ */
+export type OutlineZone = 'before' | 'into' | 'after';
+
+/**
+ * How much of a row's height, top and bottom, means *beside it* rather than
+ * *inside it*.
+ *
+ * **A third each, and deliberately equal.** Reordering wants the edges and
+ * nesting wants the middle, and both are ordinary things to be doing, so
+ * neither gets the larger target. Halves would leave nowhere to aim for
+ * *inside*; a quarter puts each edge under seven pixels on a 26-pixel row,
+ * which is finer than a hand can reliably hit.
+ */
+export const ZONE_EDGE = 1 / 3;
+
+/** Which of the three zones a pointer at `y` is in, over a row of that box. */
+export const zoneAt = (y: number, top: number, height: number): OutlineZone => {
+  if (height <= 0) return 'into';
+  const into = (y - top) / height;
+  if (into < ZONE_EDGE) return 'before';
+  if (into > 1 - ZONE_EDGE) return 'after';
+  return 'into';
+};
+
+/** The same, read off a drag event over the row it is on. */
+export const zoneFor = (event: React.DragEvent): OutlineZone => {
+  const box = event.currentTarget.getBoundingClientRect();
+  return zoneAt(event.clientY, box.top, box.height);
+};
+
+/**
+ * How far a list scrolls itself while something is dragged near its edge, and
+ * how close to the edge counts.
+ *
+ * Without this a long outline cannot be dragged through at all: the row you
+ * want is off the screen and there is no way to reach it while holding the
+ * one you are carrying (§8, "smooth auto-scroll while dragging long
+ * outlines").
+ */
+export const SCROLL_EDGE = 48;
+export const SCROLL_STEP = 14;
+
+/** How far to scroll a box whose pointer is at `y`: zero anywhere but the edges. */
+export const scrollNudge = (y: number, top: number, bottom: number): number => {
+  if (y < top + SCROLL_EDGE) return -SCROLL_STEP;
+  if (y > bottom - SCROLL_EDGE) return SCROLL_STEP;
+  return 0;
+};

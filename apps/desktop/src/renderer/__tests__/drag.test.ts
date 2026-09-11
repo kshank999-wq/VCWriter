@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addBeat, addUnit, beatsForUnit, createProjectFile, moveBeat, updateBeat } from '@vcwriter/domain';
 import type { ProjectFile } from '@vcwriter/domain';
-import { adjustForSameList, indexForDrop, type DropEdge } from '../drag';
+import { adjustForSameList, indexForDrop, scrollNudge, zoneAt, type DropEdge } from '../drag';
 
 /**
  * The reordering arithmetic between a drop gesture and `moveBeat`.
@@ -94,5 +94,46 @@ describe('moving between containers', () => {
 
     expect(titles(file, unitId)).toEqual(['A', 'C']);
     expect(titles(file, created.unit.id)).toEqual(['X', 'B', 'Y']);
+  });
+});
+
+/**
+ * The Outliner's three zones (addendum 06 §8).
+ *
+ * A tree needs an answer the structure board does not — *inside* — and the
+ * arithmetic that turns a pointer into one of three answers is worth pinning
+ * down away from the DOM, because getting it wrong makes a drop land
+ * somewhere the writer did not aim.
+ */
+describe('where a dropped row lands', () => {
+  // A row of the height the Outliner actually draws.
+  const ROW = 26;
+  const zone = (y: number) => zoneAt(y, 100, ROW);
+
+  it('says beside it at the top and the bottom, and inside it in the middle', () => {
+    expect(zone(101)).toBe('before');
+    expect(zone(113)).toBe('into');
+    expect(zone(125)).toBe('after');
+  });
+
+  it('gives the three an equal share, and each one a target a hand can hit', () => {
+    const zones = Array.from({ length: ROW }, (unused, offset) => zone(100 + offset + 0.5));
+    const count = (which: string) => zones.filter((candidate) => candidate === which).length;
+    // Reordering wants the edges and nesting wants the middle; neither is the
+    // rarer thing to be doing, so neither gets the larger target.
+    expect(Math.max(count('before'), count('into'), count('after'))).toBeLessThanOrEqual(
+      Math.min(count('before'), count('into'), count('after')) + 1,
+    );
+    expect(Math.min(count('before'), count('into'), count('after'))).toBeGreaterThanOrEqual(8);
+  });
+
+  it('answers something for a row with no height rather than dividing by zero', () => {
+    expect(zoneAt(100, 100, 0)).toBe('into');
+  });
+
+  it('scrolls only near the edges, and the right way', () => {
+    expect(scrollNudge(500, 100, 900)).toBe(0);
+    expect(scrollNudge(110, 100, 900)).toBeLessThan(0);
+    expect(scrollNudge(890, 100, 900)).toBeGreaterThan(0);
   });
 });

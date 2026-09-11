@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { scrollNudge, zoneFor, type OutlineZone } from '../drag';
 import {
   OUTLINE_KINDS,
   addItem,
@@ -7,6 +8,8 @@ import {
   findOutlineItem,
   foldAll,
   indentItem,
+  isUnder,
+  moveItem,
   nudgeItem,
   outdentItem,
   outlineChildren,
@@ -23,7 +26,8 @@ import {
 } from '@vcwriter/domain';
 
 /**
- * The Outliner (addendum 06), stage 2: the outline on screen.
+ * The Outliner (addendum 06), stages 2–3: the outline on screen, and moved
+ * about by hand.
  *
  * **A traditional outline.** Indentation guides, disclosure arrows, and a
  * weight that falls away with depth — scene rows strongest, beats lighter,
@@ -72,6 +76,33 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
   /** The row whose title is being typed, so a fresh one can be typed into at once. */
   const [editing, setEditing] = useState<OutlineItemId | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * What is being dragged, in a ref as well as in state.
+   *
+   * `dataTransfer.getData` is empty during `dragover` by design, and the
+   * handler has to know what is being carried in order to say whether a row is
+   * a legal place to put it — so the payload is held here, exactly as the
+   * structure board does it.
+   */
+  const carrying = useRef<OutlineItemId | null>(null);
+  const [dragging, setDragging] = useState<OutlineItemId | null>(null);
+  const [over, setOver] = useState<{ id: OutlineItemId; zone: OutlineZone } | null>(null);
+  /** The last pointer height, so the list can scroll itself while held. */
+  const edge = useRef(0);
+
+  // Auto-scroll while something is dragged near the top or bottom of a long
+  // outline (§8). Without it the row being aimed at cannot be reached at all.
+  useEffect(() => {
+    if (dragging === null) return undefined;
+    let frame = 0;
+    const step = () => {
+      const list = listRef.current;
+      if (list && edge.current !== 0) list.scrollTop += edge.current;
+      frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [dragging]);
 
   const outline: Outline | null = useMemo(() => {
     if (outlines.length === 0) return null;
@@ -95,6 +126,50 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
   };
 
   const chosen = outline && selected ? findOutlineItem(outline, selected) : null;
+
+  /** Whether this row is somewhere the carried one could actually go. */
+  const canDrop = useCallback(
+    (targetId: OutlineItemId): boolean => {
+      const held = carrying.current;
+      if (!outline || held === null || held === targetId) return false;
+      // A row cannot be put inside itself; the domain refuses it too, but the
+      // indicator should not offer what will not happen.
+      return !isUnder(outline, targetId, held);
+    },
+    [outline],
+  );
+
+  const drop = (targetId: OutlineItemId, zone: OutlineZone) => {
+    const held = carrying.current;
+    if (!outline || held === null || !canDrop(targetId)) return;
+
+    write((current, id) => {
+      // The target is read from the document being written to, not from the
+      // render that built this handler: a drop is the end of a gesture that
+      // has been re-rendering on every move, and where it lands must be
+      // decided by what the outline is now.
+      const live = findOutline(current, id);
+      const target = live ? findOutlineItem(live, targetId) : null;
+      if (!target) return current;
+
+      return moveItem(current, id, held, {
+        // Into: the last child of the row, which is where a thing added to
+        // something belongs. Beside: its sibling, above or below it.
+        parentId: zone === 'into' ? target.id : target.parentId,
+        ...(zone === 'before' ? { beforeId: target.id } : {}),
+        ...(zone === 'after' ? { afterId: target.id } : {}),
+      });
+    });
+    setSelected(held);
+  };
+
+  const onListDragOver = (event: React.DragEvent) => {
+    if (carrying.current === null) return;
+    const list = listRef.current;
+    if (!list) return;
+    const box = list.getBoundingClientRect();
+    edge.current = scrollNudge(event.clientY, box.top, box.bottom);
+  };
 
   /**
    * A new row, put where the writer is looking.
@@ -233,7 +308,14 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
 
       <div className="outliner-body">
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
-        <div className="outline-list" ref={listRef} role="tree" tabIndex={0} onKeyDown={onKey}>
+        <div
+          className={dragging ? 'outline-list dragging' : 'outline-list'}
+          ref={listRef}
+          role="tree"
+          tabIndex={0}
+          onKeyDown={onKey}
+          onDragOver={onListDragOver}
+        >
           {rows.length === 0 ? (
             <p className="muted empty-state">
               Nothing yet. Start with a scene — or a note, if what you have is a thought rather than a scene.
@@ -260,6 +342,33 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
               onRemove={() => {
                 setSelected(null);
                 write((current, id) => removeItem(current, id, row.item.id));
+              }}
+              dragging={dragging === row.item.id}
+              zone={over?.id === row.item.id ? over.zone : null}
+              onDragStart={() => {
+                carrying.current = row.item.id;
+                setDragging(row.item.id);
+              }}
+              onDragEnd={() => {
+                carrying.current = null;
+                edge.current = 0;
+                setDragging(null);
+                setOver(null);
+              }}
+              onDragOver={(zone) => {
+                if (!canDrop(row.item.id)) return false;
+                setOver((current) =>
+                  current?.id === row.item.id && current.zone === zone ? current : { id: row.item.id, zone },
+                );
+                return true;
+              }}
+              onDragLeave={() => setOver((current) => (current?.id === row.item.id ? null : current))}
+              onDrop={(zone) => {
+                drop(row.item.id, zone);
+                carrying.current = null;
+                edge.current = 0;
+                setDragging(null);
+                setOver(null);
               }}
             />
           ))}
@@ -358,6 +467,13 @@ function Row({
   onNudge,
   onIndent,
   onRemove,
+  dragging,
+  zone,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop,
 }: {
   row: OutlineRow;
   selected: boolean;
@@ -369,6 +485,16 @@ function Row({
   onNudge(direction: -1 | 1): void;
   onIndent(deeper: boolean): void;
   onRemove(): void;
+  /** This row is the one being carried. */
+  dragging: boolean;
+  /** Where the carried row would land on this one, while it is over it. */
+  zone: OutlineZone | null;
+  onDragStart(): void;
+  onDragEnd(): void;
+  /** Answers whether the drop is legal, so the row knows to allow it. */
+  onDragOver(zone: OutlineZone): boolean;
+  onDragLeave(): void;
+  onDrop(zone: OutlineZone): void;
 }) {
   const { item, depth, childCount } = row;
   const input = useRef<HTMLInputElement | null>(null);
@@ -379,13 +505,45 @@ function Row({
 
   return (
     <div
-      className={['outline-row', `kind-${item.kind}`, selected ? 'selected' : ''].filter(Boolean).join(' ')}
+      className={[
+        'outline-row',
+        `kind-${item.kind}`,
+        selected ? 'selected' : '',
+        dragging ? 'carried' : '',
+        zone ? `drop-${zone}` : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={{ paddingLeft: `${8 + depth * STEP}px` }}
       role="treeitem"
       aria-level={depth + 1}
       aria-selected={selected}
       aria-expanded={childCount === 0 ? undefined : !item.collapsed}
       onPointerDown={onSelect}
+      // The whole row is the handle. A grip would be one more thing to aim at,
+      // and the title is an input, so the browser leaves its text alone.
+      draggable
+      onDragStart={(event) => {
+        // Something has to be set or the drag never begins; the payload the
+        // handlers actually read is held by the panel (§8).
+        event.dataTransfer.setData('text/plain', item.title || nameOf(item.kind));
+        event.dataTransfer.effectAllowed = 'move';
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
+      onDragOver={(event) => {
+        const where = zoneFor(event);
+        if (!onDragOver(where)) return;
+        // Only a legal target takes the drop, so an illegal one shows the
+        // cursor that says so rather than lying about what will happen.
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+      }}
+      onDragLeave={onDragLeave}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrop(zoneFor(event));
+      }}
     >
       {/* The guides: one per level, so the eye can run back up to the parent. */}
       {Array.from({ length: depth }, (unused, level) => (
