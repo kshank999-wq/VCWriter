@@ -1,6 +1,6 @@
 # Addendum 06 — The Outliner
 
-Status: stages 1–4 built, September 2026. From Ken's *VC Writer Outliner
+Status: stages 1–5 built, September 2026. From Ken's *VC Writer Outliner
 Development Specification* of 11 September, and the framing he gave with it:
 **the Outliner and the Story Sculptor are siblings, and material moves between
 them by hand.** Extends §5 (story structure), §7 (research and links) and §19
@@ -270,8 +270,8 @@ The panel resizes, and fills the window.
    indicator.
 4. **Built.** The Research shelf, inside the Outliner, and dropping an item in
    as a linked reference.
-5. Promotion: a scene and its beats into the script, and everything §6 says
-   about it.
+5. **Built.** Promotion: a scene and its beats into the script, and everything
+   §6 says about it.
 6. The scene card.
 7. Passing material between the Sculptor and the Outliner, both ways.
 8. Search, filters, multi-select, status, Collapse All, the keyboard.
@@ -294,8 +294,8 @@ becomes the script.
 
 ## 14. What is built
 
-Stages 1–4 — **the document, the outline on screen, moving it by hand, and the
-shelf it is filled from.** The Outliner is a
+Stages 1–5 — **the document, the outline on screen, moving it by hand, the
+shelf it is filled from, and the way into the script.** The Outliner is a
 button on the title bar beside Research and Sculptor, and it opens over the
 workspace the way the board does: an outline is worked on whole.
 
@@ -405,3 +405,53 @@ One thing came out of building it. Research is **copied** in and a row is
 cancels a drop whose effect the source did not allow, silently, without ever
 firing the drop. So the row now answers a hovering drag with *how* it would
 land rather than merely whether it could.
+
+### Stage 5 — promotion
+
+**The point of the whole thing.** Everything before it is arranging, and this
+is where the arrangement becomes the script.
+
+The panel says which a row is and offers one move. **Send to Script** on a
+scene makes a `StructuralUnit` and its child Beat rows the beats inside it, in
+their order, and says how many it is taking. A single beat can go in on its
+own once its scene is real. The supporting rows are not promoted and not lost:
+a Note, an Idea, a Character is something to know while the scene is written,
+and it stays in the outline, where it can be read while writing it. A row that
+can never be promoted says so — *planning* — rather than showing a button that
+does nothing, and a beat whose scene is still a plan is told exactly that,
+which is a sentence a writer can act on.
+
+Research links survive the move without being carried, because they were
+**references** and the ids do not change (§5).
+
+A promoted row carries the badge, so a glance says how much of the outline is
+real, and the panel names the scene it is. **Rename it in either place and it
+is renamed in both** — the same object, so there is no version of this where
+the outline and the script say different things.
+
+**One plan per scene.** A scene claimed by an outline row cannot be claimed by
+a board node, or by another row, on this outline or any other — it would be
+one scene that is two different intentions about it. Sending something already
+sent does nothing rather than making it twice, which is the source
+specification's duplicate warning seen from the inside. *or it already exists*
+offers the scenes nobody has spoken for.
+
+**The script is never reordered behind the writer's back.** A new scene lands
+after the scene of the nearest promoted row above it, or before the nearest
+below, and at the end when it has neither — so nothing already written moves.
+Where a promoted row is moved out of step the panel says so in a sentence —
+*in the outline it comes before Mara enters; in the script it comes after* —
+with one button, **Move the scene to match**, and that button is the only way
+the outline ever changes the story order.
+
+Taking a promoted row out of the outline leaves the scene in the script; a
+scene deleted from the script turns its row back into a plan rather than
+leaving it pointing at nothing.
+
+**Where the rules about the pair live.** The board and the outline are two
+plans over one script, and they say the same sentence about it. Who has
+claimed what, and who gets renamed when a scene is renamed, are questions
+about *both* — so they live in one module (`planning.ts`) rather than twice
+over in two that would drift. That is what makes "one plan per scene" true
+across the board and the outline at once rather than within each of them
+separately.

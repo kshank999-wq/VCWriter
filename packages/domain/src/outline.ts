@@ -2,6 +2,7 @@ import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
 import { initialOrderKeys, orderKeyBetween } from './ordering.js';
 import { outlineSchema, type Outline, type OutlineItem } from './entities/outline.js';
+import { retitleScript } from './planning.js';
 import type { ResearchItem } from './entities/research.js';
 import type { ProjectFile } from './project-file.js';
 import type { OutlineId, OutlineItemId, ResearchItemId } from './ids.js';
@@ -233,17 +234,30 @@ export const addItem = (
   };
 };
 
-/** What a row says, and what it is. Anything not given is left alone. */
+/**
+ * What a row says, and what it is. Anything not given is left alone.
+ *
+ * Retitling a **promoted** row retitles the scene or beat it is (§6): they are
+ * one object, so there is no version of this where the row and the script say
+ * different things.
+ */
 export const updateItem = (
   file: ProjectFile,
   outlineId: OutlineId,
   itemId: OutlineItemId,
   patch: Partial<Pick<OutlineItem, 'title' | 'body' | 'kind' | 'status' | 'collapsed'>>,
-): ProjectFile =>
-  withOutline(file, outlineId, (outline) => ({
-    ...outline,
-    items: outline.items.map((item) => (item.id === itemId ? touch({ ...item, ...patch }) : item)),
+): ProjectFile => {
+  const outline = findOutline(file, outlineId);
+  const before = outline ? findOutlineItem(outline, itemId) : null;
+  const next = withOutline(file, outlineId, (current) => ({
+    ...current,
+    items: current.items.map((item) => (item.id === itemId ? touch({ ...item, ...patch }) : item)),
   }));
+  if (patch.title === undefined || !before) return next;
+  if (before.boundUnitId !== null) return retitleScript(next, { unitId: before.boundUnitId }, patch.title);
+  if (before.boundBeatId !== null) return retitleScript(next, { beatId: before.boundBeatId }, patch.title);
+  return next;
+};
 
 /**
  * A row and everything under it, taken out of the outline.

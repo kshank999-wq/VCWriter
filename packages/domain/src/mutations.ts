@@ -1,7 +1,8 @@
 import { newId } from './ids.js';
 import { orderKeyForIndex } from './ordering.js';
-// The board's half of §6: a scene bound to a node is the same object as it.
-import { retitleBoards, unbindRemoved } from './sculptor.js';
+// Where the plan and the script meet: a scene bound to a node on a board, or
+// to a row in an outline, is the same object as it.
+import { retitlePlans, unbindRemovedFromPlans } from './planning.js';
 import { nowIso } from './entities/common.js';
 import {
   LANE_COLOURS,
@@ -355,7 +356,7 @@ export const updateBeat = (
     ...file,
     beats: file.beats.map((beat) => (beat.id === beatId ? touch({ ...beat, ...patch }) : beat)),
   });
-  return patch.title === undefined ? next : retitleBoards(next, { beatId }, patch.title);
+  return patch.title === undefined ? next : retitlePlans(next, { beatId }, patch.title);
 };
 
 /**
@@ -1068,7 +1069,7 @@ export const updateUnit = (
   });
   // Half of "rename it in either place and it is renamed in both" (addendum
   // 03 §6): a scene bound to a node on the board is the same object as it.
-  return patch.title === undefined ? next : retitleBoards(next, { unitId }, patch.title);
+  return patch.title === undefined ? next : retitlePlans(next, { unitId }, patch.title);
 };
 
 /**
@@ -1126,9 +1127,9 @@ export const removeUnit = (file: ProjectFile, unitId: StructuralUnitId): Project
   );
   const removed = new Set<string>([unitId, ...removedBeatIds]);
 
-  // A node pointing at a scene that has left the script claims to be real and
-  // cannot say what it is, so it goes back to being an idea (addendum 03 §6).
-  return unbindRemoved(
+  // A card pointing at a scene that has left the script claims to be real and
+  // cannot say what it is, so it goes back to being a plan.
+  return unbindRemovedFromPlans(
     touchProject({
       ...file,
       units: file.units.filter((unit) => unit.id !== unitId),
@@ -1142,7 +1143,7 @@ export const removeUnit = (file: ProjectFile, unitId: StructuralUnitId): Project
 
 export const removeBeat = (file: ProjectFile, beatId: BeatId): ProjectFile => {
   if (!file.beats.some((beat) => beat.id === beatId)) throw new DomainError(`Beat ${beatId} does not exist`);
-  return unbindRemoved(
+  return unbindRemovedFromPlans(
     touchProject({
       ...file,
       beats: file.beats.filter((beat) => beat.id !== beatId),

@@ -1,6 +1,7 @@
 import { addBeat, addUnit, moveUnit, moveBeat } from './mutations.js';
 import { beatsForUnit, lanesInOrder, unitsInStoryOrder } from './selectors.js';
-import { boardsOf, childrenOf, columnOf, findBoard, findNode, retitleScript } from './sculptor.js';
+import { boardsOf, childrenOf, columnOf, findBoard, findNode } from './sculptor.js';
+import { claimedInScript, retitleScript } from './planning.js';
 import type { Board, SculptorNode } from './entities/sculptor.js';
 import type { Beat, StructuralUnit } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
@@ -54,26 +55,9 @@ export const boundOf = (
 
 export const isBound = (node: SculptorNode): boolean => node.boundUnitId !== null || node.boundBeatId !== null;
 
-/**
- * Every scene and beat already claimed by a node, anywhere in the project.
- *
- * **One node per scene.** "The two are one thing" only means anything if it is
- * one thing: two nodes on the same scene would be one scene that is two
- * different ideas, so a scene that is already somebody's is not offered again
- * — on this board or any other.
- */
-const claimed = (file: ProjectFile, exceptNodeId: SculptorNodeId | null): { units: Set<string>; beats: Set<string> } => {
-  const units = new Set<string>();
-  const beats = new Set<string>();
-  for (const board of boardsOf(file)) {
-    for (const node of board.nodes) {
-      if (node.id === exceptNodeId) continue;
-      if (node.boundUnitId !== null) units.add(node.boundUnitId as string);
-      if (node.boundBeatId !== null) beats.add(node.boundBeatId as string);
-    }
-  }
-  return { units, beats };
-};
+/** What a scene or beat is already spoken for by, this node excepted (§6). */
+const claimed = (file: ProjectFile, exceptNodeId: SculptorNodeId | null) =>
+  claimedInScript(file, exceptNodeId as string | null);
 
 /** The scenes this node could be, in story order: every one not already spoken for. */
 export const bindableUnits = (file: ProjectFile, nodeId: SculptorNodeId | null = null): StructuralUnit[] => {

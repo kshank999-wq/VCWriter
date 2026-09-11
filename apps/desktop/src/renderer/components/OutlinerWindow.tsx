@@ -5,11 +5,15 @@ import {
   OUTLINE_KINDS,
   addItem,
   addResearchRow,
+  bindRow,
+  canPromote,
   createOutline,
   findOutline,
   findOutlineItem,
   foldAll,
+  followOutline,
   indentItem,
+  isPromoted,
   isUnder,
   moveItem,
   nudgeItem,
@@ -18,9 +22,15 @@ import {
   outlineRows,
   outlineTally,
   outlinesOf,
+  promotableUnits,
+  promoteKindOf,
+  promoteRow,
+  promotedOf,
   removeItem,
+  rowOutOfStep,
   rowSource,
   rowTitle,
+  unpromoteRow,
   updateItem,
   type Outline,
   type OutlineItem,
@@ -28,11 +38,12 @@ import {
   type OutlineRow,
   type ProjectFile,
   type ResearchItemId,
+  type StructuralUnitId,
 } from '@vcwriter/domain';
 
 /**
- * The Outliner (addendum 06), stages 2–4: the outline on screen, moved about
- * by hand, and the research shelf it is filled from.
+ * The Outliner (addendum 06), stages 2–5: the outline on screen, moved about
+ * by hand, the research shelf it is filled from, and the way into the script.
  *
  * **A traditional outline.** Indentation guides, disclosure arrows, and a
  * weight that falls away with depth — scene rows strongest, beats lighter,
@@ -72,6 +83,10 @@ const KINDS: Record<string, { name: string; mark: string }> = {
 };
 
 const nameOf = (kind: string): string => KINDS[kind]?.name ?? kind.replace(/_/g, ' ');
+
+/** "An idea", "a note" — the right article for a type the writer may have named. */
+const article = (name: string): string =>
+  `${/^[aeiou]/i.test(name) ? 'An' : 'A'} ${name.toLowerCase()}`;
 
 /** What an empty row of each kind asks for. */
 const placeholderOf = (kind: string): string =>
@@ -377,6 +392,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
               row={row}
               title={rowTitle(file, row.item)}
               linked={row.item.source?.type === 'research_item'}
+              promoted={isPromoted(row.item)}
               selected={selected === row.item.id}
               editing={editing === row.item.id}
               onSelect={() => setSelected(row.item.id)}
@@ -504,13 +520,14 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
                 />
               </label>
 
-              <p className="muted small">
-                {/* §1: a row is a plan until it is promoted, and promotion is
-                    stage 5. The badge is already here for when it arrives. */}
-                {chosen.boundUnitId || chosen.boundBeatId
-                  ? 'In the script.'
-                  : 'A plan. It lives only in the outline.'}
-              </p>
+              {/* §1: a row is a plan until the writer says otherwise, and
+                  saying so is this. */}
+              <Promotion
+                file={file}
+                outline={outline as Outline}
+                item={chosen}
+                onWrite={write}
+              />
             </>
           ) : (
             <p className="muted small">
@@ -521,6 +538,135 @@ export function OutlinerWindow({ file, open, onClose, onUpdate }: OutlinerWindow
         </aside>
       </div>
     </div>
+  );
+}
+
+/**
+ * A plan, or a scene (addendum 06 §6).
+ *
+ * **A statement of fact and one control, never a form.** A row that is still a
+ * plan offers the one move that makes it real; a row that is in the script
+ * says which scene it is and offers to let go. A row that can never be either
+ * — a Note, an Idea, a Character — says so rather than showing a button that
+ * does nothing.
+ */
+function Promotion({
+  file,
+  outline,
+  item,
+  onWrite,
+}: {
+  file: ProjectFile;
+  outline: Outline;
+  item: OutlineItem;
+  onWrite(mutate: (current: ProjectFile, id: Outline['id']) => ProjectFile): void;
+}) {
+  const kind = promoteKindOf(item);
+  const promoted = promotedOf(file, item);
+  const refusal = canPromote(file, outline, item);
+  const step = useMemo(
+    () => (isPromoted(item) ? rowOutOfStep(file, outline, item.id) : null),
+    [file, outline, item],
+  );
+
+  if (kind === null) {
+    return (
+      <p className="muted small outline-promotion">
+        Planning. {article(nameOf(item.kind))} is something to know while the scene is written, and it stays here
+        when it is.
+      </p>
+    );
+  }
+
+  const what = kind === 'unit' ? 'scene' : 'beat';
+
+  if (promoted) {
+    const name =
+      promoted.kind === 'unit'
+        ? `${promoted.unit.sequenceLabel || ''} ${promoted.unit.title || 'Untitled'}`.trim()
+        : promoted.beat.title.trim() || 'Untitled';
+    return (
+      <section className="outline-promotion in-script">
+        <p className="small">
+          <span className="outline-real">●</span> This <strong>is</strong> the {what} <em>{name}</em>, in the
+          script. Rename it here or there and it is renamed in both.
+        </p>
+        {step ? (
+          <p className="small outline-step">
+            In the outline it comes {step.outlineFirst ? 'before' : 'after'} {step.otherTitle}; in the script it
+            comes {step.outlineFirst ? 'after' : 'before'}.{' '}
+            <button
+              type="button"
+              className="ghost small"
+              onClick={() => onWrite((current, id) => followOutline(current, id, item.id))}
+            >
+              Move the {what} to match
+            </button>
+          </p>
+        ) : null}
+        <button
+          type="button"
+          className="ghost small"
+          onClick={() => onWrite((current, id) => unpromoteRow(current, id, item.id))}
+        >
+          Take it out of the script
+        </button>
+      </section>
+    );
+  }
+
+  const beats = outlineChildren(outline, item.id).filter((child) => child.kind === 'beat').length;
+  const existing = kind === 'unit' ? promotableUnits(file, item.id) : [];
+
+  return (
+    <section className="outline-promotion">
+      <p className="muted small">A plan. It lives only in the outline.</p>
+
+      {refusal === null ? (
+        <button
+          type="button"
+          className="ghost small"
+          title={
+            kind === 'unit'
+              ? `Put this scene in the script${beats > 0 ? `, with its ${beats} ${beats === 1 ? 'beat' : 'beats'}` : ''}`
+              : 'Put this beat into its scene'
+          }
+          onClick={() => onWrite((current, id) => promoteRow(current, id, item.id).file)}
+        >
+          Send to Script{kind === 'unit' && beats > 0 ? ` — and ${beats} ${beats === 1 ? 'beat' : 'beats'}` : ''}
+        </button>
+      ) : (
+        <p className="muted small">
+          {refusal === 'its scene is still a plan'
+            ? 'A beat lives inside a scene, so this one can go in as soon as the scene above it does.'
+            : refusal === 'there is no lane to put a scene in'
+              ? 'There is no plot lane to put a scene in yet.'
+              : refusal}
+        </p>
+      )}
+
+      {existing.length > 0 ? (
+        <label className="field">
+          <span>or it already exists</span>
+          <select
+            aria-label="Bind this row to a scene"
+            value=""
+            onChange={(event) => {
+              const unitId = event.target.value;
+              if (!unitId) return;
+              onWrite((current, id) => bindRow(current, id, item.id, unitId as unknown as StructuralUnitId));
+            }}
+          >
+            <option value="">Choose the scene it is…</option>
+            {existing.map((unit) => (
+              <option key={unit.id as string} value={unit.id as string}>
+                {`${unit.sequenceLabel || unit.kind} ${unit.title || 'Untitled'}`.trim()}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+    </section>
   );
 }
 
@@ -547,6 +693,7 @@ function Row({
   row,
   title,
   linked,
+  promoted,
   selected,
   editing,
   onSelect,
@@ -570,6 +717,8 @@ function Row({
   /** Read through to the shelf where the row references research (§5). */
   title: string;
   linked: boolean;
+  /** In the script, so the row wears the badge (§6). */
+  promoted: boolean;
   selected: boolean;
   editing: boolean;
   onSelect(): void;
@@ -614,6 +763,7 @@ function Row({
         `kind-${item.kind}`,
         selected ? 'selected' : '',
         linked ? 'linked' : '',
+        promoted ? 'in-script' : '',
         dragging ? 'carried' : '',
         zone ? `drop-${zone}` : '',
       ]
@@ -672,6 +822,14 @@ function Row({
       <span className="outline-mark" title={nameOf(item.kind)} aria-label={nameOf(item.kind)}>
         {markOf(item.kind)}
       </span>
+
+      {/* The badge §6 asks for: a glance says how much of the outline is in
+          the script. A row that is still a plan carries no mark. */}
+      {promoted ? (
+        <span className="outline-real" title="This is in the script" aria-label="In the script">
+          ●
+        </span>
+      ) : null}
 
       {/*
         Every element sits in a box that **fits what is written in it**: two
