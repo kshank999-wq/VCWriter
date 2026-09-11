@@ -77,19 +77,33 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
 
           <article className="card">
             <h3>The editor</h3>
-            {landing.opens ? (
+            {landing.opens === 'ownBranch' ? (
               <>
-                <p className="lede">{OPENS_LABEL[landing.opens]}.</p>
-                {/* Honest rather than hopeful: the door is drawn, and it opens
-                    when there is something behind it. A writer's draft is a
-                    branch, and branches are stage 3. */}
+                <p className="lede">Your own working line, taken from what the room has agreed.</p>
+                {/* The whole application, over the third bridge (§3.1). `?room=`
+                    is what tells the renderer its project lives in the cloud;
+                    nothing else about it changes. */}
                 <p style={{ marginTop: 16 }}>
-                  <button type="button" className="button" disabled>
-                    {OPENS_LABEL[landing.opens]}
-                  </button>
+                  <a className="button" href={`/preview?room=${view.room.id}`}>
+                    {OPENS_LABEL.ownBranch}
+                  </a>
                 </p>
                 <p className="small">
-                  The editor opens from here once the room can hold a draft of its own.
+                  Nobody else in the room sees it until you submit — not even the showrunner.
+                </p>
+              </>
+            ) : landing.opens === 'master' ? (
+              <>
+                <p className="lede">{OPENS_LABEL.master}.</p>
+                <p style={{ marginTop: 16 }}>
+                  <a className="button" href={`/preview?room=${view.room.id}`}>
+                    {OPENS_LABEL.master}
+                  </a>
+                </p>
+                <p className="small">
+                  {view.role === 'owner'
+                    ? 'The room’s draft, and your own working line on it.'
+                    : 'Read-only until the room asks you to write.'}
                 </p>
               </>
             ) : (

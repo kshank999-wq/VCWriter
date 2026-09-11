@@ -148,9 +148,12 @@ export function RecoveryPanel({
               <li key={snapshot.id}>
                 <div className="recovery-row">
                   <div>
-                    <strong>{when(snapshot.createdAt)}</strong>
+                    {/* A named point says its name; one taken by a timer has
+                        nothing true to say but when (addendum 07 §9). */}
+                    <strong>{snapshot.label?.trim() || when(snapshot.createdAt)}</strong>
                     <p className="muted">
-                      {REASON_LABEL[snapshot.reason] ?? snapshot.reason} · {size(snapshot.sizeBytes)}
+                      {snapshot.label?.trim() ? when(snapshot.createdAt) : REASON_LABEL[snapshot.reason] ?? snapshot.reason}
+                      {snapshot.sizeBytes > 0 ? ` · ${size(snapshot.sizeBytes)}` : ''}
                     </p>
                   </div>
                   <button type="button" disabled={busy} onClick={() => void restore(snapshot)}>

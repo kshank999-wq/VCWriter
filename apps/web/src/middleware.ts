@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { strayAuthRedirect } from '@/lib/auth-redirect';
-import { previewContentSecurityPolicy, previewRoute, previewSignIn } from '@/lib/preview-gate';
+import { previewContentSecurityPolicy, previewRoute } from '@/lib/preview-gate';
 
 /**
  * Refreshes the Supabase session cookie on navigation so a signed-in customer
@@ -137,7 +137,29 @@ const previewResponse = async (
   const { data: profile } = user
     ? await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
     : { data: null };
-  if (!profile?.is_admin) return NextResponse.redirect(new URL(previewSignIn, request.url));
+
+  /**
+   * Two ways through, and the second is what makes the Room possible
+   * (addendum 07 §3.1).
+   *
+   * An administrator gets in bare, because the page is still where the
+   * interface under development is looked at. Anyone else must name a room —
+   * `?room=<id>` — and be in it, which is not this middleware's judgement: it
+   * asks for the row, and row-level security answers. A stranger's room simply
+   * is not there.
+   */
+  const roomId = request.nextUrl.searchParams.get('room');
+  const inRoom =
+    user && roomId
+      ? Boolean((await supabase.from('rooms').select('id').eq('id', roomId).maybeSingle()).data)
+      : false;
+
+  if (!profile?.is_admin && !inRoom) {
+    const back = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+    return NextResponse.redirect(
+      new URL(`/signin?next=${encodeURIComponent(back)}`, request.url),
+    );
+  }
 
   response.headers.set('content-security-policy', previewContentSecurityPolicy);
   // Always the newest build: the point of the page is that a refresh is enough.

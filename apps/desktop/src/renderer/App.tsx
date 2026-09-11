@@ -629,6 +629,18 @@ export default function App() {
     return menu.onCommand((command) => runCommand(command as CommandId));
   }, [runCommand]);
 
+  /**
+   * A bridge that already knows which project this is opens it (addendum 07
+   * §5). In a Writers Room the answer was settled before the page loaded, so
+   * the Welcome screen would be asking a question nobody has.
+   */
+  const opening = useRef(false);
+  useEffect(() => {
+    if (file || opening.current || !window.vcwriter?.autoOpen?.()) return;
+    opening.current = true;
+    void project.openProject();
+  }, [file, project]);
+
   if (!file || startingNew) {
     return (
       <>

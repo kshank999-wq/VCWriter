@@ -1,12 +1,20 @@
 import { createBrowserBridge } from './browser-bridge';
+import { createCloudBridge, roomFromLocation } from './cloud-bridge';
 
 /**
- * Entry point for the browser preview. Installs the browser bridge where the
- * preload script would have put the real one, adds a strip naming the build
- * and offering the current project as a .vcw download, then starts the same
+ * Entry point for the browser preview. Installs a bridge where the preload
+ * script would have put the real one, adds a strip naming the build and
+ * offering the current project as a .vcw download, then starts the same
  * application the desktop runs.
+ *
+ * **Which bridge depends on the URL.** `?room=<id>` is a Writers Room, and the
+ * project lives in the cloud on this writer's own branch (addendum 07 §3.1);
+ * without it the project lives in this browser, which is what the preview has
+ * always been. The application above does not know the difference, and that is
+ * the entire point of the interface.
  */
-const bridge = createBrowserBridge();
+const room = roomFromLocation(window.location.search);
+const bridge = room ? createCloudBridge(room) : createBrowserBridge();
 window.vcwriter = bridge;
 
 declare const __PREVIEW_BUILD__: string;
@@ -19,7 +27,7 @@ declare const __PREVIEW_BUILD__: string;
 if (!new URLSearchParams(window.location.search).get('pane')) {
   const strip = document.createElement('div');
   strip.className = 'preview-strip';
-  strip.innerHTML = `<span>Preview build ${__PREVIEW_BUILD__}</span>`;
+  strip.innerHTML = `<span>${room ? 'Writers Room' : 'Preview build'} ${__PREVIEW_BUILD__}</span>`;
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = 'Download .vcw';

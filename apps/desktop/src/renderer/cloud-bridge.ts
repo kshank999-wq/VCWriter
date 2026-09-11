@@ -1,0 +1,144 @@
+import { describeVersion, parseProjectFile, versionSchema, type Version } from '@vcwriter/domain';
+import { createBrowserBridge, type BrowserBridge } from './browser-bridge';
+import type { DesktopApiResult } from '../preload/index';
+
+/**
+ * The third bridge: the renderer over a Writers Room (addendum 07 §3.1).
+ *
+ * The desktop implements `window.vcwriter` against Electron and the file
+ * system; the preview implements it against IndexedDB; this implements it
+ * against the cloud. **Nothing in `src/renderer` knows which it is** — that was
+ * the whole point of the interface, and this is the third time it has paid.
+ *
+ * It is built *on* the browser bridge rather than beside it, because only a
+ * handful of methods differ. Printing, the panes, the document link and the
+ * menu are the same in a room as they are anywhere else; what changes is where
+ * the project lives, which is exactly the two things §2 said would change.
+ *
+ * **A `path` here is a branch id.** The renderer passes the path it was given
+ * back on every save, so the one string it already carries is the one thing
+ * this needs, and no plumbing is added to a component to make a room work.
+ */
+
+const ok = <T>(data: T): DesktopApiResult<T> => ({ ok: true, data });
+const fail = <T>(error: string): DesktopApiResult<T> => ({ ok: false, error });
+
+/** Which room this window is in, if it is in one. */
+export const roomFromLocation = (search: string): string | null => {
+  const roomId = new URLSearchParams(search).get('room');
+  return roomId && /^[0-9a-f-]{36}$/i.test(roomId) ? roomId : null;
+};
+
+interface OpenedBranch {
+  branch: { id: string; name: string };
+  file: unknown;
+  contentHash: string;
+}
+
+const asError = async (response: Response): Promise<string> => {
+  const body = (await response.json().catch(() => ({}))) as { error?: string };
+  return body.error ?? 'The room did not answer.';
+};
+
+export const createCloudBridge = (roomId: string): BrowserBridge => {
+  const base = createBrowserBridge();
+  const api = `/api/rooms/${roomId}/branch`;
+
+  /** The branch this window is working on, once it has been opened. */
+  let branchId: string | null = null;
+  let current: { path: string; file: unknown } | null = null;
+
+  const open = async (): Promise<DesktopApiResult<{ path: string; file: never; contentHash: string }>> => {
+    const response = await fetch(api, { headers: { accept: 'application/json' } });
+    if (!response.ok) return fail(await asError(response));
+
+    const body = (await response.json()) as OpenedBranch;
+    // Parsed here rather than trusted: what comes back is the same document a
+    // file holds, and it goes through the same migration and the same schema.
+    const file = parseProjectFile(body.file);
+    branchId = body.branch.id;
+    current = { path: body.branch.id, file };
+    return ok({ path: body.branch.id, file: file as never, contentHash: body.contentHash });
+  };
+
+  return {
+    ...base,
+
+    // A room already has a project. There is nothing to pick and nothing to
+    // create: opening the room *is* opening it, however you got here — which
+    // is what `autoOpen` tells the application, so no Welcome screen asks a
+    // question that has already been answered.
+    autoOpen: () => true,
+    createProject: open,
+    openProject: open,
+    openProjectAtPath: open,
+
+    async saveProject(input) {
+      if (!branchId) return fail('Open the draft first.');
+      current = { path: input.path, file: input.file };
+
+      const response = await fetch(api, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          branchId,
+          file: input.file,
+          previousHash: input.previousHash,
+        }),
+      });
+      if (!response.ok) return fail(await asError(response));
+      return ok((await response.json()) as { contentHash: string; written: boolean });
+    },
+
+    // One room, one draft. A list of recent projects is a desktop's question.
+    recentProjects: async () => ok(branchId ? [branchId] : []),
+
+    /**
+     * The versions this writer may see, as the snapshots the renderer already
+     * draws. A version is not quite a snapshot — it is the room's record rather
+     * than a local recovery point — but it is the same list in the same place,
+     * and giving it a second panel would be giving one idea two homes.
+     */
+    async listSnapshots() {
+      const response = await fetch(`${api}/versions`, { headers: { accept: 'application/json' } });
+      if (!response.ok) return fail(await asError(response));
+
+      const body = (await response.json()) as { versions: unknown[] };
+      return ok(
+        body.versions
+          .map((row) => versionSchema.safeParse(row))
+          .filter((parsed): parsed is { success: true; data: Version } => parsed.success)
+          .map((parsed) => ({
+            id: parsed.data.id,
+            path: parsed.data.id,
+            createdAt: parsed.data.createdAt,
+            sizeBytes: 0,
+            // Every version in a room was made on purpose; none of them is a
+            // timer's doing, and calling one 'before a sync that had
+            // conflicts' would be telling a writer something untrue about
+            // their own history.
+            reason: 'manual' as const,
+            label: describeVersion(parsed.data),
+          })),
+      );
+    },
+
+    async restoreSnapshot(input) {
+      if (!branchId) return fail('Open the draft first.');
+
+      const response = await fetch(`${api}/versions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'restore', branchId, versionId: input.snapshotId }),
+      });
+      if (!response.ok) return fail(await asError(response));
+
+      const body = (await response.json()) as { file: unknown; document: unknown; contentHash: string };
+      const file = parseProjectFile(body.document ?? body.file);
+      current = { path: branchId, file };
+      return ok({ path: branchId, file: file as never, contentHash: body.contentHash });
+    },
+
+    current: () => (current ? { path: current.path, file: current.file as never } : null),
+  };
+};

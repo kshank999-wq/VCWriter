@@ -1,6 +1,6 @@
 # Addendum 07 — Writers Room
 
-Status: specified; **stages 0–2 built and live**, September 2026. From Ken's *VC Writer Writers
+Status: specified; **stages 0–3 built and live**, September 2026. From Ken's *VC Writer Writers
 Room Development Specification v1.0* of 11 September, and his elaboration of
 the same day — **the showrunner's dashboard is the front door, everyone has a
 login, and everyone submits.** Extends §12 (commerce), §14 (sync) and §15 (no
@@ -487,8 +487,8 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
    (§3.2, §19).
 2. **Built.** The landing page (§5): sign in, see your part in the room, open
    the editor from it (§19).
-3. Cloud projects with branches, autosave, snapshots and immutable version
-   history — the third bridge behind the renderer (§3.1).
+3. **Built.** Cloud projects with branches, autosave, snapshots and immutable
+   version history — the third bridge behind the renderer (§3.1, §19).
 4. Contributor colour end to end: the page stamp, the identity bar, beat
    badges, and the filters that use them (§6).
 5. The showrunner dashboard, loading a writer's version, and several versions
@@ -714,3 +714,65 @@ One advisory stands and is correct as it is: `may_read_project` and
 `authenticated`. They have to be — a row-level policy is evaluated as the
 querying user, so the user must be able to call the function the policy calls,
 which is why migration 0005 granted `owns_project` the same way and said so.
+
+### Stage 3 — branches, versions, and the third bridge
+
+**`may_write_project` did not need widening after all, and that is the better
+answer.** Stages 1 and 2 left it owner-only "until branches exist", assuming
+branches would open it up. They do the opposite: a writer never writes to the
+project's rows at all, they write to **their own branch**, which is a different
+table. §1 stops being a rule the policies have to be careful about and becomes
+a fact about the schema — there is no statement a writer can issue that reaches
+the master or anybody else's draft.
+
+**The desk is not the record.** A branch has one mutable head, which is what
+autosave rewrites forty times an afternoon, and a chain of **versions**, made
+when somebody decides a point has been reached. A history that recorded every
+autosave would be one nobody could read; one that recorded nothing would not be
+a history.
+
+**Immutable in fact.** A trigger refuses any update or delete on `versions` —
+not a policy, a trigger, so it refuses the **service role** too. Proved: the
+server's own credentials get *"A version cannot be changed once it exists"*.
+That is the difference between §1 being enforced and §1 being intended.
+
+**A private branch is private, and the showrunner is not an exception.** Proved
+on the live database: the showrunner sees *that* a writer has a branch, and
+reads neither its desk nor its snapshots. Submitting is how work becomes theirs
+to read (§10), and until then a room where everyone can read everyone's
+unfinished draft is a room where nobody drafts (§7).
+
+**The third bridge works, and the application did not have to be told.** The
+renderer talks to `window.vcwriter`; the desktop implements it against Electron
+and files, the preview against IndexedDB, and `cloud-bridge.ts` against the
+room. It is built *on* the browser bridge rather than beside it, because only
+the handful of methods about where the project lives differ — printing, the
+panes, the document link and the menu are the same in a room as anywhere else.
+A `path` is a branch id, so the one string the renderer already carries is the
+only thing it needed.
+
+`/preview?room=<id>` is the whole editor on that bridge, and the gate now has
+two ways through: an administrator bare, or a member of the named room, which
+the middleware does not judge — it asks for the row and row-level security
+answers.
+
+Three things came out of building it.
+
+**Nothing opened the project.** The bridge worked and the Welcome screen still
+asked which project to open — a question that, in a room, was settled before
+the page loaded. `autoOpen` on the bridge says so, and it is the only thing
+added to the interface for the whole stage.
+
+**A room's version had no name in the history.** Mapping a version onto the
+snapshot list dropped its label and showed a date instead, and worse, called
+the room's master draft *"before a sync that had conflicts"* — a sentence that
+is untrue about a version somebody made on purpose. `SnapshotSummary` gained an
+optional `label`; a named point says its name and keeps the date underneath,
+and one taken by a timer still shows what it always did, because a date is the
+only true thing to say about it.
+
+**The trigger function had a mutable `search_path`** — caught by the linter
+after the migration was applied, and corrected in 0027. Every other function in
+the schema pins it, and a trigger is the one place it matters most: it runs on
+every write to `versions`, under whatever search path the caller happens to
+have.

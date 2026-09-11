@@ -36,6 +36,15 @@ export interface SnapshotSummary {
   sizeBytes: number;
   /** Why the recovery point exists, so the writer can find the right one. */
   reason: 'autosave' | 'manual' | 'pre_migration' | 'pre_sync';
+  /**
+   * What this point is called, where it has a name.
+   *
+   * A local recovery point has none — it was taken by a timer and a date is
+   * the only true thing to say about it. A Writers Room version does: *First
+   * Draft*, *Room Pass*, *Network Notes* (addendum 07 §9), and the name is the
+   * one thing a writer will actually look for in the list.
+   */
+  label?: string;
 }
 
 export interface VcWriterApi {
@@ -77,6 +86,16 @@ export interface VcWriterApi {
     outlineId?: string;
   }): Promise<DesktopApiResult<boolean>>;
   appInfo(): Promise<DesktopApiResult<{ version: string; platform: string }>>;
+
+  /**
+   * Whether this bridge has exactly one project and should open it on start.
+   *
+   * True in a Writers Room, where the project is decided before the page loads
+   * and there is nothing to pick: opening the room *is* opening it (addendum
+   * 07 §5). Absent on the desktop and in the plain preview, where a writer has
+   * files and choosing between them is the first thing they do.
+   */
+  autoOpen?(): boolean;
 
   // Sync is optional: a writer who never signs in has a fully working desktop
   // application whose projects live in files.
