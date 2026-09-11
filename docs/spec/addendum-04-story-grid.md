@@ -1,6 +1,6 @@
 # Addendum 04 — The Story Grid
 
-Status: stages 1–3 built, September 2026; the rest specified. Extends §8.2 of
+Status: complete — all six stages built, September 2026. Extends §8.2 of
 the master specification, which already asks for "a scene-by-scene
 **story-grid style review**". This addendum says what that grid is and where
 it lives.
