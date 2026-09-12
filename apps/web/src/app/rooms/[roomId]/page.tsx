@@ -3,16 +3,22 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   OPENS_LABEL,
+  applyTray,
   assignableThings,
   assignmentsFor,
   canAssign,
+  canCurate,
   canReview,
+  curatableFrom,
+  awaitingCuration,
+  mergeRefusalText,
   describeSeats,
   filingChoices,
   ideaBoxes,
   ideasIn,
   owedBySeat,
   parseProjectFile,
+  sequenceOf,
   describeVersion,
   desksIn,
   masterVersion,
@@ -20,6 +26,7 @@ import {
   seatInitials,
   seatName,
   waitingCount,
+  type Curatable,
 } from '@vcwriter/domain';
 import { currentUser } from '@/lib/supabase';
 import { loadRoomById } from '@/lib/rooms';
@@ -28,11 +35,13 @@ import { submissionsIn } from '@/lib/submissions';
 import { versionWithDocument } from '@/lib/branches';
 import { projectDocument } from '@/lib/project-document';
 import { assignmentsIn } from '@/lib/assignments';
+import { masterNow, piecesFor, trayIn } from '@/lib/curation';
 import { Seats } from './seats';
 import { Desks } from './desks';
 import { Queue } from './queue';
 import { Ideas } from './ideas';
 import { WhoOwesWhat, YourAsks } from './assignments';
+import { Tray } from './tray';
 
 export const metadata: Metadata = { title: 'The room' };
 export const dynamic = 'force-dynamic';
@@ -121,6 +130,43 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
   // What there is to point the Assign menu at, read out of the project itself
   // — the room holds people, and the story is the project's.
   const things = giving && project ? assignableThings(project) : [];
+
+  // The Curation Tray, and the master it would make (§12, stage 9).
+  //
+  // **The preview is the merge**, run here and run again by the route that
+  // commits it — the same pure function over the same rows, so the picture the
+  // showrunner looks at and the master they get cannot disagree.
+  const curating = canCurate(view.role);
+  const tray = curating ? await trayIn(view.room.id) : [];
+  const awaiting = curating ? awaitingCuration(submissions, tray) : [];
+  // `standing` rather than `master`: `masterVersion` above is the *version*
+  // the room agreed on, and this is the document it holds. Two things one
+  // letter apart is exactly the confusion to avoid.
+  const [pieces, standing] = curating
+    ? await Promise.all([piecesFor(tray), masterNow(view.room.id, view.room.projectId)])
+    : [[], { file: null, versionId: null }];
+
+  const merged = curating && standing.file && tray.length > 0 ? applyTray(standing.file, pieces) : null;
+  const sequence =
+    merged && !('reason' in merged)
+      ? sequenceOf(merged.file, merged.record)
+      : standing.file
+        ? sequenceOf(standing.file)
+        : [];
+  const mergeRefusal = merged && 'reason' in merged ? mergeRefusalText(merged) : null;
+
+  // What each waiting contribution offers, read out of the version it
+  // references — a submission copies nothing (§10), so this is where the
+  // reading happens.
+  const offers: Record<string, Curatable[]> = {};
+  if (curating) {
+    await Promise.all(
+      awaiting.map(async (submission) => {
+        const found = await versionWithDocument(submission.versionId);
+        offers[submission.id] = found ? curatableFrom(parseProjectFile(found.document)) : [];
+      }),
+    );
+  }
 
   return (
     <>
@@ -236,6 +282,26 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
           </p>
         ) : null}
       </section>
+
+      {curating ? (
+        <section>
+          <h2>The Curation Tray</h2>
+          <p className="lede">
+            Where the room’s work becomes the script. Compare what has come in, take what you want of
+            it, look at what the master would read like, and commit — which writes a new master
+            beside the one before it and destroys nothing.
+          </p>
+          <Tray
+            roomId={view.room.id}
+            tray={tray}
+            offers={offers}
+            waiting={awaiting}
+            seats={view.seats}
+            sequence={sequence}
+            refusal={mergeRefusal}
+          />
+        </section>
+      ) : null}
 
       <section>
         <h2>The room’s ideas</h2>

@@ -1178,3 +1178,160 @@ p.room-stamp {
   width: 100%;
   min-width: 0;
 }
+
+/* ------------------------------- the Curation Tray (addendum 07 §12)
+
+   The point of the module, laid out in the order the work happens: what is
+   waiting, what is in the tray, what the master would read like, one button. */
+
+.offers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin: 12px 0 8px;
+}
+
+.offer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--panel);
+}
+
+.offer header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.offer-take {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Its own row. A scene heading is long, and squeezed beside a button at three
+   cards across it says "INT. WAREHOUSE - NIGHT · 5 wor". */
+.offer-take select {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.tray {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.tray-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tray-row:last-child {
+  border-bottom: 0;
+}
+
+.tray-what {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tray-what .block {
+  display: block;
+}
+
+.tray-acts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* The master as it would read. A numbered list because that is what a script
+   is — the order is the substance, not decoration. */
+/* Numbered on purpose: the order *is* the script, so the preview counts.
+
+   A counter rather than the list marker, because each row is a flex box and
+   `display: flex` replaces `list-item` — the marker is gone before any styling
+   reaches it. This draws the number as a real cell of the row instead, which
+   also lets it sit still while the scene name wraps. */
+.sequence {
+  counter-reset: scene;
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.sequence-row::before {
+  counter-increment: scene;
+  content: counter(scene);
+  flex: 0 0 24px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.sequence-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sequence-row:last-child {
+  border-bottom: 0;
+}
+
+/* What this merge would do to each scene. Down the edge rather than in colour:
+   the room's colours mean *people*, and a second meaning would cost that. */
+.sequence-row.added {
+  border-left: 3px solid var(--gold);
+  padding-left: 11px;
+}
+
+.sequence-row.changed {
+  border-left: 3px solid var(--gold-deep);
+  padding-left: 11px;
+}
+
+.sequence-what {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Takes the room between the number and the chips, so the scene name sits
+     hard left rather than floating in the middle of the row. */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Every writer with work in the scene. More than one chip here is §12's
+   promise kept: a merged scene has more than one author and says so. */
+.sequence-who {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.commit {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 20px 0 12px;
+}

@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0033.
+  reads like it does. Applied through 0034.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
@@ -58,7 +58,7 @@ push live; the build takes a minute or two.
   `addendum-07-writers-room.md` is Writers Room, the cloud collaboration
   module: the showrunner's dashboard as the front door, logins, assignments,
   submitting, the brainstorming room, curation and a non-destructive master
-  merge. **Specified; stages 0–8 built.** §1 and §2 are the rules it all hangs
+  merge. **Specified; stages 0–9 built.** §1 and §2 are the rules it all hangs
   off — one writer's work is never destroyed by another's, and a collaborator
   gets the whole program rather than a web editor. §3 says how much of it the
   product already has (the Room is `/preview` grown up; membership widens
@@ -100,6 +100,16 @@ push live; the build takes a minute or two.
   migration 0033 answers the *column* question RLS cannot with a trigger: a
   writer may change the state and nothing else, and only into the three states
   that say how their own work is going.
+  Stage 9 is the point of the module: `packages/domain/curation.ts` is the tray
+  and the merge, and `applyTray` is **pure**, which is what makes the preview
+  honest — the page runs it to draw what the master would read like and the
+  commit route runs the same function, so the picture and the commit cannot
+  disagree. A merge **adds**: a new master version beside the one before it,
+  never an overwrite. Attribution survives the journey for free (a record has
+  carried `origin` since stage 4), so a merged scene has two authors and the
+  preview draws both. Migration 0034 is the tray, the merge record on the
+  version, and a hole 0026 left — anybody in the room could insert a
+  `master`-kind version, which is readable by everybody.
   §19 says what each built stage does; §15 is the build order.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two

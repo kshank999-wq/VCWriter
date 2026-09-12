@@ -1,6 +1,6 @@
 # Addendum 07 — Writers Room
 
-Status: specified; **stages 0–8 built**, September 2026. From Ken's *VC Writer Writers
+Status: specified; **stages 0–9 built**, September 2026. From Ken's *VC Writer Writers
 Room Development Specification v1.0* of 11 September, and his elaboration of
 the same day — **the showrunner's dashboard is the front door, everyone has a
 login, and everyone submits.** Extends §12 (commerce), §14 (sync) and §15 (no
@@ -496,7 +496,7 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
 6. **Built.** Submitting, and the review queue (§10, §19).
 7. **Built.** The brainstorming room (§11, §19).
 8. **Built.** Assignments and the Assign menu (§8, §19).
-9. The Curation Tray and the non-destructive master merge (§12).
+9. **Built.** The Curation Tray and the non-destructive master merge (§12, §19).
 10. Comments, notifications and activity history.
 11. Desktop synchronisation, and export/backup of a whole room.
 12. AI comparison and summarisation, and the advanced collaboration features.
@@ -1060,3 +1060,76 @@ trigger is *created* and never again when it fires. So it is revoked from
 `authenticated` as well — no REST caller can reach it, and it still guards every
 update. Re-proved after the revoke, because a security fix that quietly
 disables the thing it protects is worse than the finding.
+
+### Stage 9 — the Curation Tray, and the master merge
+
+**The point of the module.** Everything before this made it possible to see what
+a room wrote; this is where the room's work becomes the script.
+
+**A merge adds. It does not overwrite.** Committing writes a *new* master
+version beside the one before it and points the room at it — so the master the
+room had five minutes ago is still a version anybody can open, every writer's
+line is untouched, and a scene the room changed its mind about is recovered by
+opening the version it came from, which is exactly where it still is. Two tests
+exist purely to keep this honest: after a merge, the master it started from and
+the contribution it took are byte-for-byte the objects they were.
+
+**Attribution survives the journey, and it cost nothing.** A record has carried
+`origin` since stage 4, and taking it into the master carries `origin` with it —
+so a scene assembled from Mara's pass and one of Jo's beats genuinely has two
+authors, and the preview draws both chips against that scene. §12 asks for
+*combine material from several writers with each source's attribution intact*;
+it falls out of stage 4 rather than being built again.
+
+**The preview is the merge.** §12 asks to see the resulting master sequence
+before committing, and the only truthful way to show it is to build it — so
+`applyTray` is pure, the page runs it to draw the preview, and the commit route
+runs the same function over the same rows. There is no second code path that
+could disagree with the picture, and the route re-reads the tray rather than
+trusting what the page drew, so a stale page cannot commit something nobody saw.
+
+**A beat is the precise excerpt.** §12 asks for *a whole contribution or a
+precise excerpt*, and a beat is where the manuscript lives, so scene and beat
+are the two grains the tray takes. Finer than that — a range of elements inside
+one beat — is a different and much more delicate thing, and pretending a beat is
+not precise enough would have meant building it badly today rather than properly
+later.
+
+**Two ways in, and `add` is the interesting one.** *In place of it* is the
+ordinary case: a writer was asked for a pass on a scene and this is it.
+*Alongside what is there* gives the piece an id of its own so the room keeps
+both — which is how §12's *compare alternate scenes* actually works, and why the
+beats are copied with new ids too: sharing an id would make editing one silently
+edit the other.
+
+**Merging something still waiting to be read *is* approving it**, so a
+submission that had not been decided on is walked through `approved` on the way
+to `incorporated` rather than jumping the state machine — two things happened
+and the row records both. A submission the showrunner had already **turned
+down** is deliberately left where it is: taking one beat out of a rejected pass
+is a real thing to do and does not un-reject the pass, and the merge record
+names the version permanently, which is the truthful account of what went in.
+
+**The merge record lives on the version rather than in a table.** A version
+cannot be changed once it exists — 0026's trigger refuses even the service role,
+which this stage re-proved — so a record written there is permanently true and
+can never drift from what it describes, which a separate table could.
+
+**The one delete in the whole Room, and it is the right one.** Taking a piece
+back *out of the tray* destroys nothing: the submission is untouched, the
+version is immutable, and the piece is where it always was. A tray that could
+not be cleared would make a showrunner commit things to be rid of them, which is
+a worse outcome than a delete. The tray is also the one thing here a writer
+cannot see — who owes what is information a room needs (§8), but what the
+showrunner is *considering* taking is a decision in progress.
+
+**And a hole 0026 left, closed by the first stage able to close it.**
+`versions_own_insert` let anybody in the room insert a version of any kind, and
+`versions_master_read` makes a master-kind version readable by the whole room —
+so a writer could have published their own draft to everybody by labelling it
+`master`. Nothing ever did, because nothing made master versions until now.
+Proved closed on the live database, alongside nine other claims in one
+transaction: Jo cannot publish herself as the master, cannot put anything in the
+tray and cannot read it; the same piece cannot be taken twice; Ken commits a
+master with its record and Mara can read it; nobody can rewrite the version it
+drew from — not Ken, not its author, not the service role.
