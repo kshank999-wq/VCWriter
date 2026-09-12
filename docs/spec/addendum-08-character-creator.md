@@ -1,6 +1,6 @@
 # Addendum 08 — Character Creator
 
-Status: specified; **stages 0–2 built**, September 2026. From Ken's *VC Writer
+Status: specified; **stages 0–3 built**, September 2026. From Ken's *VC Writer
 Character Creator Development Specification* — the first module of the Research
 room. Extends §7 (research), §8 (structure) and §19 of the master specification,
 and uses the typed link system §7.4 already built.
@@ -197,7 +197,7 @@ interrupts writing to say a character is underdeveloped.
 1. **Built.** The tables, the sync mapping, and the round trip.
 2. **Built.** The Character Creator screen: Overview, Traits, Characterization,
    red/green.
-3. Linking an item to a scene or beat from the Creator (plan → story).
+3. **Built.** Linking an item to a scene or beat from the Creator (plan → story).
 4. The right-click workflow in the editor (story → plan) (§7).
 5. The Arc Builder, with opportunity, refusal and doubling down (§8, §9).
 6. Arc-to-plot: the on-deck queue, assignment, and the Related Elements box (§10).
@@ -335,3 +335,47 @@ who knows*. A research item has carried exactly this since 0001.
 
 Two of §5's six tabs exist. Arc, Relationships, Connections and Usage arrive
 with stages 5, 7, 8 and 10, and are not drawn as empty tabs in the meantime.
+
+### Stage 3 — pinning it to the page
+
+`pinUsage`, `unpinUsage`, `whereItAppears`, `placesToPin` and `quotableLines`
+in the domain; the **Where** panel in the Creator, opened by pressing the
+state on a row.
+
+**There is no "mark as used" anywhere in this module, and there never will be.**
+That is the whole of §2 made operational: a writer says *where* something
+landed, and the colour follows from the manuscript. A button that set a flag
+would be a button that set it wrongly, and the module's one promise to a writer
+is that the colour is true.
+
+**The colour is the way in.** The question a colour raises is *where*, so the
+colour is the thing you press to find out — no separate link icon competing for
+the row.
+
+**The scene is worked out from the beat rather than asked for.** A link naming a
+beat in one scene and a scene it is not in would navigate somewhere wrong, so
+there is no way for a caller to make one.
+
+**Pointing at a line is optional.** The whole beat is a perfectly good answer;
+naming a line copies it as the quote, which is what lets the row read without
+opening the scene (§3.2). Blank lines are not offered — a quote of nothing reads
+as nothing.
+
+**A pin to writing that has gone keeps its row.** The item went red by itself
+the moment the beat was cut, and somebody looking at that wants to know why:
+*that writing is no longer there*, struck through, with the tidy-up beside it.
+Dropping the row silently would leave them a colour and no explanation.
+
+**Unpinning takes the pin and never the writing**, and the same is true the
+other way about: pinning the same thing to the same place twice does nothing and
+hands back the pin already there, which is the database's unique said in the
+document so the two cannot disagree.
+
+**The beat being written is one click**, when there is one. It is the same fact
+the research shelf already uses to mark material used where it landed, and most
+of the time somebody is pinning what they have just put on the page.
+
+Driven in the real interface: open the Where on an item on deck, choose the
+beat and the line, press Pin it — the dot fills, the row reads *In the writing*,
+and the line at the top goes from *1 in the writing, 2 on deck* to *2 in the
+writing, 1 on deck*.

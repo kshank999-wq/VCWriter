@@ -3,6 +3,7 @@ import {
   PROMINENCE_WORDS,
   TRAIT_TONES,
   TRAIT_TONE_WORDS,
+  USAGE_STANDING_WORDS,
   USAGE_WORDS,
   addCharacterization,
   addTrait,
@@ -10,16 +11,24 @@ import {
   characterCategoriesInOrder,
   characterStanding,
   fileCharacterization,
+  pinUsage,
+  placesToPin,
+  quotableLines,
   removeCharacterization,
   removeTrait,
+  unpinUsage,
   updateCharacter,
   updateCharacterization,
   updateTrait,
+  whereItAppears,
+  type BeatId,
   type CharacterCategoryId,
   type CharacterId,
   type CharacterTrait,
   type CharacterTraitId,
+  type CharacterizationItemId,
   type CharacterizationRow,
+  type ManuscriptElementId,
   type ProjectFile,
   type TraitTone,
   type UsageColour,
@@ -49,6 +58,12 @@ interface CharacterCreatorProps {
   file: ProjectFile;
   characterId: CharacterId;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  /**
+   * The beat being written, when there is one — the same fact the research
+   * shelf uses to mark material used where it landed. It makes the common pin
+   * one click, since most of the time somebody is pinning what they just wrote.
+   */
+  currentBeatId: BeatId | null;
   /** Back to the cast list this was opened from. */
   onBack(): void;
 }
@@ -64,7 +79,13 @@ const DOT_CLASS: Record<UsageColour, string> = {
   grey: 'is-aside',
 };
 
-export function CharacterCreator({ file, characterId, onUpdate, onBack }: CharacterCreatorProps) {
+export function CharacterCreator({
+  file,
+  characterId,
+  currentBeatId,
+  onUpdate,
+  onBack,
+}: CharacterCreatorProps) {
   const person = file.characters.find((one) => one.id === characterId) ?? null;
   const [tab, setTab] = useState<Tab>('overview');
   const [shelf, setShelf] = useState<Shelf | null>(null);
@@ -142,6 +163,7 @@ export function CharacterCreator({ file, characterId, onUpdate, onBack }: Charac
             trait={openTrait?.trait ?? null}
             unfiled={chosen.kind === 'unfiled'}
             rows={rows}
+            currentBeatId={currentBeatId}
             onUpdate={onUpdate}
           />
         </div>
@@ -408,6 +430,7 @@ function Shown({
   trait,
   unfiled,
   rows,
+  currentBeatId,
   onUpdate,
 }: {
   file: ProjectFile;
@@ -415,9 +438,12 @@ function Shown({
   trait: CharacterTrait | null;
   unfiled: boolean;
   rows: CharacterizationRow[];
+  currentBeatId: BeatId | null;
   onUpdate: CharacterCreatorProps['onUpdate'];
 }) {
   const [adding, setAdding] = useState('');
+  /** Which row has its *where* open. One at a time: this is a detour, not a column. */
+  const [open, setOpen] = useState<CharacterizationItemId | null>(null);
   const traits = file.characterTraits.filter(
     (one) => (one.characterId as string) === (characterId as string) && !one.archived,
   );
@@ -533,6 +559,7 @@ function Shown({
         <ul className="creator-items">
           {rows.map((row) => (
             <li key={row.item.id} className={`creator-item ${DOT_CLASS[row.colour]}`}>
+              <div className="creator-item-row">
               <i className={`creator-dot ${DOT_CLASS[row.colour]}`} title={USAGE_WORDS[row.colour]} />
               <InlineText
                 value={row.item.text}
@@ -542,7 +569,17 @@ function Shown({
                   onUpdate((current) => updateCharacterization(current, row.item.id, { text }))
                 }
               />
-              <span className="creator-item-state muted small">{USAGE_WORDS[row.colour]}</span>
+              {/* The state is the way in to where it landed: the question a
+                  colour raises is *where*, so the colour answers it. */}
+              <button
+                type="button"
+                className={open === row.item.id ? 'creator-item-state open' : 'creator-item-state'}
+                aria-expanded={open === row.item.id}
+                title="Where it turns up in the script"
+                onClick={() => setOpen(open === row.item.id ? null : row.item.id)}
+              >
+                {USAGE_WORDS[row.colour]}
+              </button>
               <select
                 aria-label={`File ${row.item.text}`}
                 value={(row.item.traitId as string) ?? ''}
@@ -591,6 +628,16 @@ function Shown({
               >
                 ×
               </button>
+              </div>
+
+              {open === row.item.id ? (
+                <Where
+                  file={file}
+                  itemId={row.item.id}
+                  currentBeatId={currentBeatId}
+                  onUpdate={onUpdate}
+                />
+              ) : null}
             </li>
           ))}
         </ul>
@@ -614,5 +661,155 @@ function Shown({
         </button>
       </form>
     </section>
+  );
+}
+
+// ------------------------------------------------------- where it turned up
+
+/**
+ * Where one piece of characterization appears, and how to say where it landed
+ * (addendum 08 §6, stage 3 — plan → story).
+ *
+ * **Pinning is the act that turns something green**, and the colour is only
+ * honest because this is the only way to do it: there is no "mark as used"
+ * anywhere in the module, because a flag somebody sets is a flag somebody sets
+ * wrongly. You say *where*, and the colour follows from the manuscript.
+ *
+ * A pin to writing that has since gone keeps its row rather than vanishing. The
+ * item has already gone red by itself; a writer looking at that wants to know
+ * why, and "that writing is no longer there" is the answer plus the tidy-up.
+ */
+function Where({
+  file,
+  itemId,
+  currentBeatId,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  itemId: CharacterizationItemId;
+  currentBeatId: BeatId | null;
+  onUpdate: CharacterCreatorProps['onUpdate'];
+}) {
+  const places = useMemo(() => placesToPin(file), [file]);
+  const seen = useMemo(
+    () => whereItAppears({ owner: { kind: 'characterization', id: itemId as string }, file }),
+    [file, itemId],
+  );
+
+  const [beatId, setBeatId] = useState<BeatId | ''>('');
+  const [lineId, setLineId] = useState<string>('');
+  const lines = beatId === '' ? [] : quotableLines(file, beatId);
+
+  const pin = (toBeat: BeatId, toLine: ManuscriptElementId | null) => {
+    onUpdate((current) =>
+      pinUsage(current, {
+        ownerKind: 'characterization',
+        ownerId: itemId as string,
+        beatId: toBeat,
+        elementId: toLine,
+      }).file,
+    );
+    // The picker goes back to empty: leaving a place selected that is now
+    // already pinned invites pressing Pin it again and wondering why nothing
+    // happened.
+    setBeatId('');
+    setLineId('');
+  };
+
+  // The beat being written, when there is one. The fast path: most of the time
+  // a writer is pinning what they have just put on the page.
+  const writingNow = currentBeatId
+    ? (file.beats.find((beat) => beat.id === currentBeatId) ?? null)
+    : null;
+
+  return (
+    <div className="creator-where">
+      {seen.length === 0 ? (
+        <p className="muted small">Not in the writing yet. Say where it lands and it turns green.</p>
+      ) : (
+        <ul className="creator-where-list">
+          {seen.map((one) => (
+            <li key={one.link.id} className={one.standing === 'gone' ? 'is-gone' : ''}>
+              <span className="creator-where-place">
+                {one.unitTitle}
+                {one.beatTitle ? ` · ${one.beatTitle}` : ''}
+              </span>
+              <span className="muted small">{USAGE_STANDING_WORDS[one.standing]}</span>
+              {one.quote ? <span className="creator-where-quote muted">“{one.quote}”</span> : null}
+              <button
+                type="button"
+                className="ghost small"
+                aria-label="Unpin it from here"
+                title="Takes the pin. The writing itself is not touched."
+                onClick={() => onUpdate((current) => unpinUsage(current, one.link.id))}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="creator-pin">
+        {writingNow ? (
+          <button
+            type="button"
+            className="ghost small"
+            onClick={() => pin(writingNow.id, null)}
+          >
+            + Pin to the beat I am writing
+          </button>
+        ) : null}
+
+        <select
+          aria-label="Scene and beat"
+          value={beatId as string}
+          onChange={(event) => {
+            setBeatId(event.target.value as BeatId | '');
+            setLineId('');
+          }}
+        >
+          <option value="">Where does it land…</option>
+          {places.map((place) => (
+            <optgroup
+              key={place.unit.id}
+              label={`${place.unit.sequenceLabel} ${place.unit.title || 'Untitled scene'}`.trim()}
+            >
+              {place.beats.map((beat) => (
+                <option key={beat.id} value={beat.id}>
+                  {beat.title || 'Untitled beat'}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+
+        {/* Pointing at a line is optional and always has been: the whole beat is
+            a perfectly good answer, and the line is for when somebody wants the
+            row to read without opening the scene (§3.2). */}
+        {lines.length > 0 ? (
+          <select aria-label="A line, or the whole beat" value={lineId} onChange={(event) => setLineId(event.target.value)}>
+            <option value="">The whole beat</option>
+            {lines.map((one) => (
+              <option key={one.id} value={one.id}>
+                {one.text.length > 70 ? `${one.text.slice(0, 70)}…` : one.text}
+              </option>
+            ))}
+          </select>
+        ) : null}
+
+        <button
+          type="button"
+          className="ghost small"
+          disabled={beatId === ''}
+          onClick={() => {
+            if (beatId === '') return;
+            pin(beatId, lineId === '' ? null : (lineId as ManuscriptElementId));
+          }}
+        >
+          Pin it
+        </button>
+      </div>
+    </div>
   );
 }

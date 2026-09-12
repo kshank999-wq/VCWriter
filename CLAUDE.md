@@ -136,7 +136,7 @@ push live; the build takes a minute or two.
   0038 is the owner's switch.
   §19 says what each built stage does; §15 is the build order.
   `addendum-08-character-creator.md` is the Character Creator, the first module
-  of the Research room, from Ken's own dev spec. **Stages 0–2 built** —
+  of the Research room, from Ken's own dev spec. **Stages 0–3 built** —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
   so the unit of work is the characterization item and a trait is a folder for
@@ -159,7 +159,14 @@ push live; the build takes a minute or two.
   the component — `characterBoard` reads it off the usage links, so cutting the
   beat turns it red with nothing running. Migration 0040 adds `tags` to a
   character: §5's Overview asked for it and it was the only field with nowhere
-  to live. §3 says what already exists and is only being widened; §8 is the
+  to live. Stage 3 is pinning (`pinUsage`, `whereItAppears`, and the **Where**
+  panel the state on a row opens): **there is no "mark as used" anywhere in the
+  module and there never will be** — a writer says *where* something landed and
+  the colour follows from the manuscript, which is §2 made operational. The
+  scene is worked out from the beat rather than asked for, naming a line is
+  optional and copies it as the quote, and a pin to writing that has gone keeps
+  its row struck through, because the red needs an explanation. §3 says what
+  already exists and is only being widened; §8 is the
   build order; §3.4 says why there is deliberately no module framework yet; §10
   says what each built stage does.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in

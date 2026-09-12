@@ -327,6 +327,7 @@ export function ResearchBody({
             <CharacterCreator
               file={file}
               characterId={creator.id}
+              currentBeatId={currentBeatId}
               onUpdate={onUpdate}
               onBack={() => setCreatorFor(null)}
             />

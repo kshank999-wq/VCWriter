@@ -792,3 +792,175 @@ export const removeCharacterization = (
     (link) => !(link.ownerKind === 'characterization' && link.ownerId === (itemId as string)),
   ),
 });
+
+// -------------------------------------------------------- plan -> story
+
+/**
+ * Where a piece of character work has turned up, read against the manuscript
+ * now.
+ *
+ * `gone` links are **kept in this list** rather than filtered out of it. The
+ * item has already gone red by itself (§2), and a writer who sees that wants to
+ * know *why* — a row saying the scene it was in is no longer there answers the
+ * question, and offers them the tidy-up. Silently dropping the row would leave
+ * them with a colour and no explanation.
+ */
+export interface UsageAppearance {
+  link: UsageLink;
+  standing: UsageStanding;
+  /** The scene, for reading and for getting back to it. */
+  unitTitle: string;
+  beatTitle: string;
+  /** The words, where the writer pointed at a line rather than the whole beat. */
+  quote: string;
+}
+
+export const USAGE_STANDING_WORDS: Record<UsageStanding, string> = {
+  used: 'In the writing',
+  // §3.2: the quote and the manuscript diverge the moment somebody improves the
+  // sentence. Still linked, still green — the row just says so.
+  rewritten: 'The line has changed since',
+  gone: 'That writing is no longer there',
+};
+
+export const whereItAppears = (input: {
+  owner: { kind: UsageLink['ownerKind']; id: string };
+  file: ProjectFile;
+}): UsageAppearance[] => {
+  const { file } = input;
+  const order = new Map(
+    [...file.units]
+      .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))
+      .map((unit, index) => [unit.id as string, index] as const),
+  );
+
+  return file.usageLinks
+    .filter((link) => link.ownerKind === input.owner.kind && link.ownerId === input.owner.id)
+    .map((link): UsageAppearance => {
+      const beat = file.beats.find((one) => (one.id as string) === (link.beatId as string));
+      const unit = beat ? file.units.find((one) => (one.id as string) === (beat.unitId as string)) : undefined;
+      return {
+        link,
+        standing: usageStanding(link, file),
+        unitTitle: unit ? `${unit.sequenceLabel} ${unit.title}`.trim() || 'Untitled scene' : '',
+        beatTitle: beat ? beat.title : '',
+        quote: link.quote,
+      };
+    })
+    .sort((a, b) => {
+      const left = order.get(
+        (file.beats.find((one) => (one.id as string) === (a.link.beatId as string))?.unitId as string) ?? '',
+      );
+      const right = order.get(
+        (file.beats.find((one) => (one.id as string) === (b.link.beatId as string))?.unitId as string) ?? '',
+      );
+      // Whatever is still in the story comes first, in the story's own order;
+      // links to writing that has gone fall to the bottom.
+      if (left === undefined && right === undefined) return 0;
+      if (left === undefined) return 1;
+      if (right === undefined) return -1;
+      return left - right;
+    });
+};
+
+/** The scenes and their beats, in story order, for a picker. */
+export const placesToPin = (
+  file: ProjectFile,
+): { unit: ProjectFile['units'][number]; beats: ProjectFile['beats'] }[] =>
+  [...file.units]
+    .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))
+    .map((unit) => ({
+      unit,
+      beats: file.beats
+        .filter((beat) => (beat.unitId as string) === (unit.id as string))
+        .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1)),
+    }));
+
+/**
+ * The lines in a beat a writer could point at.
+ *
+ * Empty ones are left out: the quote is what makes the row readable without
+ * opening the scene (§3.2), and pointing at a blank line gives a row that says
+ * nothing. Pinning to the whole beat is always available instead.
+ */
+export const quotableLines = (
+  file: ProjectFile,
+  beatId: BeatId,
+): { id: ManuscriptElementId; kind: string; text: string }[] => {
+  const beat = file.beats.find((one) => (one.id as string) === (beatId as string));
+  if (!beat) return [];
+  return beat.manuscript.elements
+    .filter((element) => element.text.trim().length > 0)
+    .map((element) => ({ id: element.id, kind: element.type, text: element.text }));
+};
+
+/**
+ * Pin a piece of character work to a place in the manuscript — the act that
+ * turns it green (§6).
+ *
+ * **The scene is worked out from the beat rather than asked for**, because a
+ * link naming a beat in one scene and a scene it is not in would be a link that
+ * navigates somewhere wrong, and there is no reason to let a caller make one.
+ *
+ * The quote is copied from the line when a line is named, and is empty when the
+ * whole beat is. It is written once, here, and never read as the anchor.
+ *
+ * Pinning the same thing to the same place twice does nothing and returns the
+ * link that is already there — the same rule as the database's unique, so the
+ * two cannot disagree.
+ */
+export const pinUsage = (
+  file: ProjectFile,
+  input: {
+    ownerKind: UsageLink['ownerKind'];
+    ownerId: string;
+    beatId: BeatId;
+    elementId?: ManuscriptElementId | null;
+  },
+): { file: ProjectFile; link: UsageLink | null } => {
+  const beat = file.beats.find((one) => (one.id as string) === (input.beatId as string));
+  if (!beat) return { file, link: null };
+
+  const elementId = input.elementId ?? null;
+  const element = elementId
+    ? beat.manuscript.elements.find((one) => one.id === elementId)
+    : undefined;
+  if (elementId && !element) return { file, link: null };
+
+  const already = file.usageLinks.find(
+    (link) =>
+      link.ownerKind === input.ownerKind &&
+      link.ownerId === input.ownerId &&
+      (link.beatId as string) === (input.beatId as string) &&
+      (link.elementId as string | null) === (elementId as string | null),
+  );
+  if (already) return { file, link: already };
+
+  const at = nowIso();
+  const link = usageLinkSchema.parse({
+    id: newId<UsageLinkId>(),
+    projectId: file.project.id,
+    ownerKind: input.ownerKind,
+    ownerId: input.ownerId,
+    unitId: beat.unitId,
+    beatId: input.beatId,
+    elementId,
+    quote: element ? element.text : '',
+    createdAt: at,
+    updatedAt: at,
+  });
+
+  return { file: { ...file, usageLinks: [...file.usageLinks, link] }, link };
+};
+
+/**
+ * Take a pin out.
+ *
+ * **Nothing in the manuscript is touched.** Unpinning says *this is not where
+ * that idea landed after all*; the writing stays exactly as it is, and the item
+ * goes back on deck if that was its only place.
+ */
+export const unpinUsage = (file: ProjectFile, linkId: UsageLinkId): ProjectFile => ({
+  ...file,
+  usageLinks: file.usageLinks.filter((link) => (link.id as string) !== (linkId as string)),
+});
