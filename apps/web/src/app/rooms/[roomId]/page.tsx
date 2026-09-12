@@ -3,11 +3,15 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   OPENS_LABEL,
+  assignableThings,
+  assignmentsFor,
+  canAssign,
   canReview,
   describeSeats,
   filingChoices,
   ideaBoxes,
   ideasIn,
+  owedBySeat,
   parseProjectFile,
   describeVersion,
   desksIn,
@@ -23,10 +27,12 @@ import { branchesIn, versionsFor } from '@/lib/branches';
 import { submissionsIn } from '@/lib/submissions';
 import { versionWithDocument } from '@/lib/branches';
 import { projectDocument } from '@/lib/project-document';
+import { assignmentsIn } from '@/lib/assignments';
 import { Seats } from './seats';
 import { Desks } from './desks';
 import { Queue } from './queue';
 import { Ideas } from './ideas';
+import { WhoOwesWhat, YourAsks } from './assignments';
 
 export const metadata: Metadata = { title: 'The room' };
 export const dynamic = 'force-dynamic';
@@ -67,10 +73,11 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
   // The room's lines and the points recorded on them, read as this visitor —
   // so what comes back is what they may see, and the dashboard says the rest
   // in words (§7).
-  const [branches, versions, submissions] = await Promise.all([
+  const [branches, versions, submissions, assignments] = await Promise.all([
     branchesIn(view.room.id),
     versionsFor(view.room.id),
     submissionsIn(view.room.id),
+    assignmentsIn(view.room.id),
   ]);
   const desks = desksIn({ seats: view.seats, branches, versions, viewer: { userId: user.id } });
   const master = masterVersion(versions);
@@ -103,6 +110,17 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
   // the ideas are still worth looking at.
   const project = await projectDocument(view.room.projectId).catch(() => null);
   const headings = project ? filingChoices(project) : [];
+
+  // Assignments (§8), which are one fact seen from two angles on this page and
+  // a third in the writing program. `today` is settled here, on the server, so
+  // every row on the page agrees about what *late* means.
+  const today = new Date().toISOString().slice(0, 10);
+  const giving = canAssign(view.role);
+  const yours = assignmentsFor(assignments, user.id);
+  const owed = giving ? owedBySeat({ assignments, seats: view.seats, today }) : [];
+  // What there is to point the Assign menu at, read out of the project itself
+  // — the room holds people, and the story is the project's.
+  const things = giving && project ? assignableThings(project) : [];
 
   return (
     <>
@@ -185,6 +203,25 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
           ) : null}
         </div>
       </section>
+
+      <section>
+        <h2>What you are being asked for</h2>
+        <YourAsks roomId={view.room.id} assignments={yours} today={today} />
+      </section>
+
+      {giving ? (
+        <section>
+          <h2>Who owes what</h2>
+          <WhoOwesWhat
+            roomId={view.room.id}
+            rows={owed}
+            assignments={assignments}
+            seats={view.seats}
+            things={things}
+            today={today}
+          />
+        </section>
+      ) : null}
 
       <section>
         <h2>

@@ -1062,3 +1062,119 @@ p.room-stamp {
 .queue-acts input {
   min-width: 160px;
 }
+
+/* --------------------------------------- assignments (addendum 07 §8)
+
+   One fact seen from two angles on this page: what you are being asked for,
+   and who owes what. Neither is a lock — the words say so, and so does the
+   schema. */
+
+.asks {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.ask-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ask-row:last-child {
+  border-bottom: 0;
+}
+
+/* Past its date. A line down the edge rather than red type: it is late, not
+   wrong, and the room can see which without the page shouting. */
+.ask-row.late {
+  border-left: 3px solid var(--accent, #a16207);
+}
+
+.ask-what {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ask-what .block {
+  display: block;
+}
+
+.ask-acts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.owed {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.owed-seat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--panel);
+}
+
+.owed-seat header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.owed-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.owed-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+
+.owed-list li.late {
+  border-left-color: var(--accent, #a16207);
+}
+
+.owed-list li button {
+  align-self: flex-start;
+}
+
+.assign {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  align-items: end;
+  margin: 12px 0 16px;
+}
+
+.assign .field.wide {
+  grid-column: 1 / -1;
+}
+
+.assign select,
+.assign input {
+  width: 100%;
+  min-width: 0;
+}

@@ -1,8 +1,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
+  assignmentsOn,
   attributionsOf,
   isSigned,
   stampFor,
+  type Assignment,
+  type AssignmentTarget,
   type Attribution,
   type PageStamp,
 } from '@vcwriter/domain';
@@ -55,6 +58,14 @@ export interface RoomState {
   signed: boolean;
   /** What goes in the corner of a printed page, where this draft is signed. */
   stamp: PageStamp | null;
+  /**
+   * What the room has asked of whom (§8).
+   *
+   * **Read and drawn, never consulted before a write.** An assignment is not a
+   * lock: it says who is expected to write something, and a room where two
+   * writers took a run at the same scene is a room working properly.
+   */
+  assignments: readonly Assignment[];
 }
 
 const EMPTY: ReadonlyMap<string, Attribution> = new Map();
@@ -71,6 +82,7 @@ const NOBODY: RoomState = {
   setCleanReading: () => undefined,
   signed: false,
   stamp: null,
+  assignments: [],
 };
 
 const RoomContext = createContext<RoomState>(NOBODY);
@@ -122,6 +134,7 @@ export const RoomProvider = ({ children }: { children: React.ReactNode }): React
       setCleanReading,
       signed,
       stamp: signed ? stampFor(author) : null,
+      assignments: identity?.assignments ?? [],
     }),
     [identity, byAuthor, you, author, only, cleanReading, signed],
   );
@@ -146,5 +159,37 @@ export const useMark = (): ((origin: { authorId: string } | null | undefined) =>
       return byAuthor.get(origin.authorId) ?? null;
     },
     [byAuthor, signed, only],
+  );
+};
+
+/**
+ * What the room has asked of somebody, on this record (§8).
+ *
+ * The third angle on the same row: the writer's landing page says what they
+ * are being asked for, the dashboard says who owes what, and this puts it
+ * beside the scene — where a writer is actually standing when the question
+ * *is anybody already doing this?* occurs to them.
+ *
+ * **It never refuses anything.** Nothing calls this before an edit, and nothing
+ * should: an assignment is not a lock (§8), and seeing who is expected to write
+ * a scene is the information that makes a lock unnecessary rather than a
+ * softer version of one.
+ */
+export const useAsk = (): ((
+  target: { kind: AssignmentTarget; id: string } | null | undefined,
+) => { assignment: Assignment; who: Attribution | null } | null) => {
+  const { assignments, byAuthor } = useRoom();
+  return useCallback(
+    (target) => {
+      if (!target || assignments.length === 0) return null;
+      // The one still owed, where there is one; otherwise the most recent
+      // thing said about it, so a finished ask still reads rather than
+      // vanishing the moment somebody marks it done.
+      const on = assignmentsOn(assignments, target);
+      const found = on.find((one) => one.state !== 'done') ?? on[0];
+      if (!found) return null;
+      return { assignment: found, who: byAuthor.get(found.assigneeId) ?? null };
+    },
+    [assignments, byAuthor],
   );
 };

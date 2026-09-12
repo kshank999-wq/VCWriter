@@ -1,6 +1,6 @@
 # Addendum 07 — Writers Room
 
-Status: specified; **stages 0–7 built**, September 2026. From Ken's *VC Writer Writers
+Status: specified; **stages 0–8 built**, September 2026. From Ken's *VC Writer Writers
 Room Development Specification v1.0* of 11 September, and his elaboration of
 the same day — **the showrunner's dashboard is the front door, everyone has a
 login, and everyone submits.** Extends §12 (commerce), §14 (sync) and §15 (no
@@ -495,7 +495,7 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
    open at once (§10, §3.4, §19).
 6. **Built.** Submitting, and the review queue (§10, §19).
 7. **Built.** The brainstorming room (§11, §19).
-8. Assignments and the Assign menu (§8).
+8. **Built.** Assignments and the Assign menu (§8, §19).
 9. The Curation Tray and the non-destructive master merge (§12).
 10. Comments, notifications and activity history.
 11. Desktop synchronisation, and export/backup of a whole room.
@@ -991,3 +991,72 @@ shelf reached both without either being taught anything: an item on the shelf
 wears its author's colour down the edge, carries their initials, and names them
 in the tooltip. An item nobody signed stays plain, which is right — most
 research has no author and inventing one would be worse than saying nothing.
+
+### Stage 8 — assignments, and the Assign menu
+
+**An assignment is not a lock**, and that is the sentence the whole stage was
+built around rather than a caveat added to it. Nothing consults an assignment
+before letting anybody write: not a policy, not the data layer, not the
+renderer. It records who is *expected* to write something, which is a different
+fact, and §1 is why — two writers taking a run at the same scene is a room
+working properly, and both runs survive. Proved rather than asserted: in the
+preview, Jo types straight into a scene assigned to Mara and nothing objects.
+
+**One row, three angles.** The writer's landing page says what is being asked
+of them; the dashboard says who owes what; and a badge stands beside the scene
+itself, which is where a writer actually is when the question *is somebody
+already doing this?* occurs to them. Three readings of one row rather than
+three places keeping their own copy — the same argument §6 made for colour.
+
+**Drawn so it does not look like a lock.** The badge is hollow where the
+contributor's mark beside it is solid: that one says who *wrote* this, and this
+says who is *expected to*, and the pair reads as two questions rather than one
+emphasis. A heavier badge on a scene is exactly where somebody would otherwise
+assume they must not touch it, so the tooltip says so in words as well.
+
+**A target with no foreign key, deliberately.** The record an assignment names
+lives in the project *document*, and every branch carries its own copy of the
+master's scenes under the same ids — which is precisely what lets one
+assignment mean the same thing on four writers' lines at once. A foreign key
+would tie it to the master's row and quietly stop being true the moment
+somebody worked on a branch. The label is copied onto the row as well, so it
+still reads after a rename and for a reader who cannot open the scene.
+
+**And a target is optional**, which matters as much as the four kinds §8 names.
+An assignment with no target is a task — *write the cold open* — and that is
+what Ken asked for when he said *assign tasks*. A room gives out work that has
+not been written yet; insisting every assignment name an existing record would
+be insisting the work exist before it is asked for.
+
+**Two people may touch the row and they may say different things about it**,
+which is where this parts company with a submission. Stage 6 refused to share
+the update at all, because row-level security is row-level and a note-editing
+policy would have let a writer approve themselves. Here the writer genuinely
+has something to say — how their own work is going — so the *column* question
+gets a column answer: a `before update` trigger lets a non-curator change the
+state and nothing else, and only into *accepted*, *being written* or *done*.
+Calling it off is the showrunner unasking for it; picking a called-off ask back
+up is the showrunner asking again. Twelve claims on the live database, in one
+transaction and rolled back: Ken assigns and Jo cannot; Ken cannot assign to a
+seat he took out of the room; Jo says she is writing it; Jo cannot rewrite what
+was asked, hand it to Mara, or call it off; Mara sees what the room owes and a
+stranger sees nothing; nobody deletes one, Ken included.
+
+**Wider reading than a submission, on purpose.** Everybody in the room sees
+every assignment. Who owes what is not a secret from a room, and a writer who
+cannot see that a scene is already asked of somebody is a writer about to
+duplicate it by accident — it is the information that makes a lock unnecessary
+rather than a softer kind of one.
+
+**The dashboard lists everybody, including whoever owes nothing**, because *who
+is free* is the other half of the question a showrunner is asking when they look
+at it, and a column that only listed people with work could not answer it.
+
+**A trigger function that nobody can call.** The advisor flagged
+`assignment_guard` alongside the eight policy helpers, and unlike them it could
+actually be closed: a policy expression is evaluated as the calling role and
+would stop working, but a trigger function's `execute` is checked when the
+trigger is *created* and never again when it fires. So it is revoked from
+`authenticated` as well — no REST caller can reach it, and it still guards every
+update. Re-proved after the revoke, because a security fix that quietly
+disables the thing it protects is worse than the finding.

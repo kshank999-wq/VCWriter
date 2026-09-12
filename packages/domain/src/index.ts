@@ -65,6 +65,7 @@ export * from './branch.js';
 export * from './desk.js';
 export * from './submission.js';
 export * from './ideas.js';
+export * from './assignment.js';
 export * from './attribution.js';
 export * from './activation.js';
 export * from './error-report.js';

@@ -8295,6 +8295,54 @@ dialog.preferences .field {
   margin-left: 0;
 }
 
+/* Who the room is expecting it from (addendum 07 §8).
+
+   **Hollow where the contributor's mark is solid**, and that is the whole of
+   the drawing decision: the one beside it says who *wrote* this, and this says
+   who is *expected to*. Making them look alike would make an assignment read
+   as authorship, and making this one heavier would make it read as a lock,
+   which it is not — anyone may write a scene whoever it is asked of. */
+.assigned-mark {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 15px;
+  padding: 0 4px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+  background: transparent;
+  color: var(--room-colour, #666);
+  border: 1px dashed var(--room-colour, #666);
+  opacity: 0.85;
+}
+
+/* Past its date. A solid edge rather than a colour of its own: the room's
+   colours mean people, and a second meaning for red would cost that. */
+.assigned-mark.late {
+  border-style: solid;
+}
+
+/* Beside the contributor's mark, not under it — the pair reads as one answer
+   to "whose is this, and who is it for". */
+.contributor-mark + .assigned-mark {
+  margin-left: 4px;
+}
+
+/* And on a beat, just inside where the contributor's mark sits. */
+.beat-block > .assigned-mark {
+  position: absolute;
+  top: 0;
+  right: max(0px, calc(50% - 46ch + 28px));
+  z-index: 1;
+  margin-left: 0;
+}
+
+/* Where there is no contributor mark to sit beside — the master, clean
+   reading, a scene nobody has signed — it still goes to the end of the row. */
+.scene-name > .assigned-mark {
+  margin-left: auto;
+}
+
 /* A window opened on a recorded version rather than on a desk (§13). The bar
    says so before anybody types, because the refusal otherwise arrives from
    autosave a minute later. */

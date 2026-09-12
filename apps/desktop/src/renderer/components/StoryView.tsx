@@ -16,7 +16,8 @@ import {
 import { BeatBody } from './BeatBody';
 import { DEFAULT_PAGE_STYLE, ScriptOptions, type PageStyle } from './ScriptOptions';
 import { ManuscriptDataLists } from './ManuscriptDataLists';
-import { useMark } from '../room';
+import { useAsk, useMark } from '../room';
+import { AssignedMark } from './AssignedMark';
 import { ContributorMark } from './ContributorMark';
 
 /** What the Script shows besides the manuscript itself (addendum 02 §6). */
@@ -204,6 +205,9 @@ export function StoryView({
   // Whose work a record is, where this window is in a Writers Room and is
   // drawing colour at all; nothing outside one (addendum 07 §6).
   const mark = useMark();
+  // And who the room is *expecting* it from, which is a different question
+  // from whose it is — and never a lock (addendum 07 §8).
+  const ask = useAsk();
 
   const noun = prose ? 'Chapter' : 'Scene';
   const toggle = (key: keyof ScriptDisplay) => setDisplay({ ...display, [key]: !display[key] });
@@ -243,6 +247,7 @@ export function StoryView({
         onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { title: event.target.value }))}
       />
       <ContributorMark who={mark(unit.origin)} />
+      <AssignedMark {...(ask({ kind: 'scene', id: unit.id as string }) ?? { assignment: null, who: null })} />
     </header>
   );
 
@@ -281,6 +286,9 @@ export function StoryView({
           annotation the writer turns off, and whose words these are is not.
           It sits opposite the ✎, outside the page's own column. */}
       {lead ? <ContributorMark who={mark(beat.origin)} /> : null}
+      {lead ? (
+        <AssignedMark {...(ask({ kind: 'beat', id: beat.id as string }) ?? { assignment: null, who: null })} />
+      ) : null}
       {onOpenBeat && lead ? (
         <button
           type="button"

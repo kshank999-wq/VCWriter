@@ -1,10 +1,12 @@
 import {
+  assignmentSchema,
   describeVersion,
   knownRecords,
   parseProjectFile,
   seatSchema,
   signNewWork,
   versionSchema,
+  type Assignment,
   type ProjectFile,
   type Seat,
   type Version,
@@ -112,8 +114,30 @@ export const createCloudBridge = (roomId: string, versionId: string | null = nul
       showing: body.showing === 'master' ? 'master' : 'contribution',
       readOnly: versionId !== null,
       label: body.roomName ?? '',
+      assignments: [],
     };
     me = identity.you?.userId ?? null;
+
+    // What the room has asked of whom (§8), alongside the seats rather than
+    // instead of them: a badge on a scene needs both to draw one thing. A
+    // failure here costs the badge and nothing else — **it is not a lock**, so
+    // a draft that could not read them is a draft with no badges on it, not a
+    // draft anybody is kept out of.
+    try {
+      const asks = await fetch(`/api/rooms/${roomId}/assignments`, { headers: { accept: 'application/json' } });
+      if (asks.ok) {
+        const carried = (await asks.json()) as { assignments?: unknown[] };
+        identity = {
+          ...identity,
+          assignments: (carried.assignments ?? [])
+            .map((row) => assignmentSchema.safeParse(row))
+            .filter((parsed): parsed is { success: true; data: Assignment } => parsed.success)
+            .map((parsed) => parsed.data),
+        };
+      }
+    } catch {
+      // Left empty on purpose. See above.
+    }
   };
 
   /**

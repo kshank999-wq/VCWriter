@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
+  Assignment,
   CaptureItem,
   MergeResult,
   PrintOptions,
@@ -77,6 +78,17 @@ export interface RoomIdentity {
   readOnly: boolean;
   /** What this window is, in words — *Jo Calder — First pass* (§3.4). */
   label: string;
+  /**
+   * What the room has asked of whom (addendum 07 §8).
+   *
+   * Carried with the identity rather than fetched on its own, for the same
+   * reason the seats are: a badge beside a scene needs the room's colours *and*
+   * the room's asks to draw one thing, and two requests would draw it twice.
+   *
+   * **Never a lock.** Nothing in the renderer refuses an edit on the strength
+   * of one; it is drawn, and that is all.
+   */
+  assignments: Assignment[];
 }
 
 export interface VcWriterApi {

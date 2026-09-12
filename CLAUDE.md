@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0032.
+  reads like it does. Applied through 0033.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
@@ -58,7 +58,7 @@ push live; the build takes a minute or two.
   `addendum-07-writers-room.md` is Writers Room, the cloud collaboration
   module: the showrunner's dashboard as the front door, logins, assignments,
   submitting, the brainstorming room, curation and a non-destructive master
-  merge. **Specified; stages 0–7 built.** §1 and §2 are the rules it all hangs
+  merge. **Specified; stages 0–8 built.** §1 and §2 are the rules it all hangs
   off — one writer's work is never destroyed by another's, and a collaborator
   gets the whole program rather than a web editor. §3 says how much of it the
   product already has (the Room is `/preview` grown up; membership widens
@@ -93,6 +93,13 @@ push live; the build takes a minute or two.
   migration 0032 puts `author` on a research item (*not* `origin`, which there
   already means how it got into the project). Colourising the Research shelf
   reached the Sculptor and the Outliner for free, since both already hold one.
+  Stage 8 is assignments: `packages/domain/assignment.ts`, and the rule that
+  shapes all of it is that **an assignment is not a lock** — nothing consults
+  one before letting anybody write. One row read from three angles (the
+  writer's page, the dashboard column, a hollow badge beside the scene), and
+  migration 0033 answers the *column* question RLS cannot with a trigger: a
+  writer may change the state and nothing else, and only into the three states
+  that say how their own work is going.
   §19 says what each built stage does; §15 is the build order.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
