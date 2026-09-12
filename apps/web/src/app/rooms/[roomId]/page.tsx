@@ -5,6 +5,10 @@ import {
   OPENS_LABEL,
   canReview,
   describeSeats,
+  filingChoices,
+  ideaBoxes,
+  ideasIn,
+  parseProjectFile,
   describeVersion,
   desksIn,
   masterVersion,
@@ -17,9 +21,12 @@ import { currentUser } from '@/lib/supabase';
 import { loadRoomById } from '@/lib/rooms';
 import { branchesIn, versionsFor } from '@/lib/branches';
 import { submissionsIn } from '@/lib/submissions';
+import { versionWithDocument } from '@/lib/branches';
+import { projectDocument } from '@/lib/project-document';
 import { Seats } from './seats';
 import { Desks } from './desks';
 import { Queue } from './queue';
+import { Ideas } from './ideas';
 
 export const metadata: Metadata = { title: 'The room' };
 export const dynamic = 'force-dynamic';
@@ -72,8 +79,30 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
   // writer, all of it if they run the room. The filtering was the database's
   // (§10); this only decides whether the decision buttons are drawn.
   const deciding = canReview(view.role);
-  const queue = queueOf({ submissions, seats: view.seats, versions });
-  const waiting = waitingCount(submissions);
+  const queue = queueOf({ submissions, seats: view.seats, versions, kind: 'script' });
+  const waiting = waitingCount(submissions, 'script');
+
+  // The room's ideas (§11). Each box's contents are read out of the version it
+  // was taken from — a submission references a version and copies nothing, so
+  // this is where the reading happens rather than at submission time.
+  const research = submissions.filter((one) => one.kind === 'research');
+  const carried = await Promise.all(
+    research.map(async (submission) => {
+      const found = await versionWithDocument(submission.versionId);
+      return [submission.id, found ? ideasIn(parseProjectFile(found.document)) : []] as const;
+    }),
+  );
+  const bySubmission = new Map(carried);
+  const boxes = ideaBoxes({
+    submissions,
+    seats: view.seats,
+    itemsFor: (submission) => bySubmission.get(submission.id) ?? [],
+  });
+  // The headings a box can be filed under: the project's own, in its own
+  // order. A project that cannot be read offers none rather than an error —
+  // the ideas are still worth looking at.
+  const project = await projectDocument(view.room.projectId).catch(() => null);
+  const headings = project ? filingChoices(project) : [];
 
   return (
     <>
@@ -169,6 +198,11 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
             deletes anything — a decision can be unmade, and the writer’s own line is never touched.
           </p>
         ) : null}
+      </section>
+
+      <section>
+        <h2>The room’s ideas</h2>
+        <Ideas roomId={view.room.id} boxes={boxes} categories={headings} canFile={deciding} />
       </section>
 
       <section>

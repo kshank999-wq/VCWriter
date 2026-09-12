@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { id, isoDateTime, orderKey, timestamps } from './common.js';
+import { originSchema } from './structure.js';
 import type { BeatId, ProjectId, ResearchCategoryId, ResearchItemId } from '../ids.js';
 
 /**
@@ -67,6 +68,18 @@ export const researchItemSchema = z.object({
   archived: z.boolean().default(false),
   orderKey: orderKey(),
   origin: z.enum(['desktop', 'mobile_capture', 'import']).default('desktop'),
+  /**
+   * Who wrote it, in a room (addendum 07 §11).
+   *
+   * **Called `author` rather than `origin`** because `origin` above already
+   * means something else here and has since 0001 — *how it got into the
+   * project*, which is a different question from *whose it is*. A scene and a
+   * beat carry the same fact under the name `origin`, since neither of them
+   * has a provenance field to be confused with.
+   *
+   * Null for everything written outside a room, which is most research.
+   */
+  author: originSchema.nullable().default(null),
   ...timestamps,
 });
 export type ResearchItem = z.infer<typeof researchItemSchema>;

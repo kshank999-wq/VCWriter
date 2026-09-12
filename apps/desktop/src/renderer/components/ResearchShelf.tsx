@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useMark } from '../room';
+import { ContributorMark } from './ContributorMark';
 import {
   blocksOf,
   boardsOf,
@@ -63,6 +65,8 @@ export function ResearchShelf({ file, from, reveal, onCarry }: ResearchShelfProp
   const [open, setOpen] = useState(true);
   /** Research, or the other plan. One shelf, two things to drag off it. */
   const [showing, setShowing] = useState<'research' | 'other'>('research');
+  /** Whose an idea is, in a room; nothing at all outside one (§11). */
+  const mark = useMark();
 
   const folders = useMemo(() => researchTree(file), [file]);
 
@@ -111,13 +115,26 @@ export function ResearchShelf({ file, from, reveal, onCarry }: ResearchShelfProp
     );
   }
 
-  const draggable = (item: { id: ResearchItemId; title: string; body: string; usage: string }) => (
+  const draggable = (item: {
+    id: ResearchItemId;
+    title: string;
+    body: string;
+    usage: string;
+    author?: { authorId: string } | null;
+  }) => {
+    // Whose idea it is, in a room (addendum 07 §11). The shelf lives inside
+    // the Sculptor and the Outliner, so colouring it here reaches both without
+    // either of them being taught anything — which is the consequence §11
+    // said would fall out for free.
+    const who = mark(item.author ?? null);
+    return (
     <div
       key={item.id as string}
       className={['shelf-item', revealed?.id === item.id ? 'revealed' : '', item.usage === 'used' ? 'used' : '']
         .filter(Boolean)
         .join(' ')}
-      title={item.body.slice(0, 300) || item.title}
+      style={who ? ({ '--room-colour': who.colour } as React.CSSProperties) : undefined}
+      title={who ? `${item.body.slice(0, 300) || item.title} — ${who.name}` : item.body.slice(0, 300) || item.title}
       draggable
       onDragStart={(event) => {
         // Something has to be set or the drag never begins; what the handlers
@@ -131,8 +148,10 @@ export function ResearchShelf({ file, from, reveal, onCarry }: ResearchShelfProp
       onDragEnd={() => onCarry(null)}
     >
       {item.title}
+      {who ? <ContributorMark who={who} /> : null}
     </div>
-  );
+    );
+  };
 
   return (
     <aside className="research-shelf" aria-label="Research">

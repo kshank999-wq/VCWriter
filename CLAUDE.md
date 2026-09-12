@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0031.
+  reads like it does. Applied through 0032.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
@@ -58,7 +58,7 @@ push live; the build takes a minute or two.
   `addendum-07-writers-room.md` is Writers Room, the cloud collaboration
   module: the showrunner's dashboard as the front door, logins, assignments,
   submitting, the brainstorming room, curation and a non-destructive master
-  merge. **Specified; stages 0–6 built.** §1 and §2 are the rules it all hangs
+  merge. **Specified; stages 0–7 built.** §1 and §2 are the rules it all hangs
   off — one writer's work is never destroyed by another's, and a collaborator
   gets the whole program rather than a web editor. §3 says how much of it the
   product already has (the Room is `/preview` grown up; membership widens
@@ -86,8 +86,14 @@ push live; the build takes a minute or two.
   `packages/domain/submission.ts` holds the states and the queue,
   `apps/web/src/lib/submissions.ts` the data layer, and migration 0031 widens
   `versions_read` for the first time — a submitted version is readable by
-  whoever curates the room, and an unsubmitted one still is not. §19 says what
-  each built stage does; §15 is the build order.
+  whoever curates the room, and an unsubmitted one still is not. Stage 7 is the
+  brainstorming room: `packages/domain/ideas.ts` says what a box is and what
+  filing does — **it copies, it never moves**, and the copy keeps whose idea it
+  was — `/rooms/[roomId]` draws the boxes in their writers' colours, and
+  migration 0032 puts `author` on a research item (*not* `origin`, which there
+  already means how it got into the project). Colourising the Research shelf
+  reached the Sculptor and the Outliner for free, since both already hold one.
+  §19 says what each built stage does; §15 is the build order.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

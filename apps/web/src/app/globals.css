@@ -923,3 +923,142 @@ p.room-stamp {
   justify-content: flex-end;
   flex: 0 1 auto;
 }
+
+/* ------------------------------------- the room's ideas (addendum 07 §11)
+
+   Ken: "you can see whose ideas are what, because they're colorized and the
+   boxes are colorized." So the box is the unit and the box wears its writer's
+   colour — a screenful says at a glance whose room this is. */
+.ideas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.idea-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  /* The colour, down the edge where it cannot be mistaken for a highlight on
+     the words themselves. */
+  border-left: 4px solid var(--idea-colour, var(--border));
+  border-radius: 3px;
+  background: var(--panel);
+}
+
+/* Taken up — and still here, which is the promise §11 makes.
+
+   Deliberately **not** faded. A box the room has filed is still that writer's
+   idea and still worth reading; dimming it would say the opposite of §1 in the
+   one place the page is meant to say it. So the mark is a quiet tick in the
+   header and a slightly warmer ground, and every word stays at full strength. */
+.idea-box.filed {
+  background: color-mix(in srgb, var(--idea-colour, var(--border)) 7%, var(--panel));
+}
+
+.idea-filed {
+  margin-left: auto;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.idea-box header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.idea-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.idea-items .block {
+  display: block;
+}
+
+/* The note above the buttons rather than beside them: at three boxes across,
+   side by side leaves the note on one line and the controls broken over two. */
+.idea-box footer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.idea-acts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* The heading to file under, across the box: it is the choice being made, and
+   putting it in the button row breaks the two buttons apart at three boxes
+   across. */
+.idea-where {
+  width: 100%;
+}
+
+/* ------------------------------------------- the review queue (§10) */
+.queue {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.queue-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.queue-row:last-child {
+  border-bottom: 0;
+}
+
+/* Still waiting on somebody: the row that is somebody's turn. */
+.queue-row.waiting {
+  background: var(--panel-2, transparent);
+}
+
+.queue-what {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.queue-what .block {
+  display: block;
+}
+
+.queue-acts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+}
+
+.queue-acts input {
+  min-width: 160px;
+}

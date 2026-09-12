@@ -1,6 +1,6 @@
 # Addendum 07 — Writers Room
 
-Status: specified; **stages 0–3 built and live**, September 2026. From Ken's *VC Writer Writers
+Status: specified; **stages 0–7 built**, September 2026. From Ken's *VC Writer Writers
 Room Development Specification v1.0* of 11 September, and his elaboration of
 the same day — **the showrunner's dashboard is the front door, everyone has a
 login, and everyone submits.** Extends §12 (commerce), §14 (sync) and §15 (no
@@ -494,7 +494,7 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
 5. **Built.** The showrunner dashboard, loading a version, and several of them
    open at once (§10, §3.4, §19).
 6. **Built.** Submitting, and the review queue (§10, §19).
-7. The brainstorming room (§11).
+7. **Built.** The brainstorming room (§11, §19).
 8. Assignments and the Assign menu (§8).
 9. The Curation Tray and the non-destructive master merge (§12).
 10. Comments, notifications and activity history.
@@ -940,3 +940,54 @@ warns about all eight for the same reason and the answer is the same: a policy
 expression runs as the calling role, so `authenticated` must be able to execute
 them or row-level security stops working. Each answers one true-or-false
 question *about the caller* and leaks nothing else.
+### Stage 7 — the brainstorming room
+
+**One rule carries the stage and it is the easy one to break by accident:
+filing does not consume it.** A submission the showrunner takes into the
+project's research is still a submission — still in the room, still in its
+writer's colour, still openable. `fileIdeas` in `packages/domain/src/ideas.ts`
+*copies*: it returns a project with the chosen items added and says nothing at
+all about the submission. Marking it taken up is a separate act, and a separate
+sentence, because it is a fact about the **room** rather than about the
+research. The page says both at once — *Taken into the project's research.
+Still here, still theirs.*
+
+**Every copy keeps its own author, not whoever filed it.** An item that already
+says whose it is keeps saying so; only an item that says nothing is credited to
+whoever sent it, and a showrunner filing somebody's idea is agreeing with it,
+not taking it. That is what makes the box keep its colour after it has been
+filed, in a project nobody submitted.
+
+**A new id every time.** The filed item is the project's and the submitted one
+is still the writer's; sharing an id would make editing one silently edit the
+other, which is §1 broken in the quietest possible way.
+
+**`author`, not `origin`, on a research item.** A scene and a beat carry whose
+work they are under the name `origin` (stage 4), but `research_items.origin`
+has meant *how it got into the project* — desktop, mobile capture, import —
+since 0001. Two different questions, so two different names; migration 0032
+adds the column and `sync-mapping.ts` carries it both ways.
+
+**A box, not an item, is the unit.** Ken: *you can see whose ideas are what,
+because they're colorized and the boxes are colorized.* So a submission draws
+as one card in its writer's colour, down the left edge where it cannot be
+mistaken for a highlight, and the items sit inside it. A filed box is
+deliberately **not** faded: it keeps every word at full strength and takes a
+quiet ✓ Filed in its header, because dimming it would say the opposite of §1 in
+the one place the page is meant to say it.
+
+**Filing is the showrunner's, and the route says so rather than failing
+silently.** Writing into the project's own research is `may_write_project`,
+which is the owner's; `canReview` draws the control and the route checks it
+before `writeResearch` goes in as the server — the same arrangement `rooms.ts`
+uses for seats, and for the same reason (a co-showrunner holds the room's owner
+seat without owning the project). Only the research rows are written back: the
+rest of the document came out of the database a moment ago and putting it all
+back would be a merge nobody asked for.
+
+**And §11's free consequence collected itself.** The Research shelf already
+lives inside the Sculptor and the Outliner (addendum 06 §3), so colourising the
+shelf reached both without either being taught anything: an item on the shelf
+wears its author's colour down the edge, carries their initials, and names them
+in the tooltip. An item nobody signed stays plain, which is right — most
+research has no author and inventing one would be worse than saying nothing.

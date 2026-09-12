@@ -8616,3 +8616,13 @@ dialog.projects-dialog {
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* An idea somebody in the room wrote (addendum 07 §11). The shelf lives inside
+   the Sculptor and the Outliner, so this reaches both. */
+.shelf-item .contributor-mark {
+  margin-left: 6px;
+}
+
+.shelf-item[style*='--room-colour'] {
+  box-shadow: inset 2px 0 0 var(--room-colour);
+}
