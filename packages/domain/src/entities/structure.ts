@@ -188,6 +188,18 @@ export const originSchema = z.object({
   /** The profile that made it. Resolved to a name and a colour by the room. */
   authorId: z.string(),
   at: z.string(),
+  /**
+   * Made with the room's AI helping (addendum 07 §14, stage 12).
+   *
+   * **Attributed to the person, and labelled.** Not to the machine: a room is
+   * people, and a badge naming an AI as a contributor would be a lie about who
+   * is responsible for the words. So this is one more true thing said about an
+   * ordinary origin rather than a second kind of authorship — which is also why
+   * it needed no new column anywhere, since `origin` already travels as JSON.
+   *
+   * False on everything written without help, which is nearly everything.
+   */
+  assisted: z.boolean().default(false),
 });
 export type Origin = z.infer<typeof originSchema>;
 

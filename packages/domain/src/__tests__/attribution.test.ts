@@ -223,7 +223,13 @@ describe('signing what a writer made', () => {
     const made = addUnit(opened, { laneId: opened.lanes[0]!.id, title: 'INT. CAR - DAY' });
     const signed = signNewWork(made.file, { authorId: 'mara', known, at: AT });
 
-    expect(signed.units.find((unit) => unit.id === made.unit.id)?.origin).toEqual({ authorId: 'mara', at: AT });
+    expect(signed.units.find((unit) => unit.id === made.unit.id)?.origin).toEqual({
+      authorId: 'mara',
+      at: AT,
+      // Ordinary writing, said out loud: `assisted` is a fact about *how* a
+      // record was made (§14), and false is the answer for nearly everything.
+      assisted: false,
+    });
     // Jo's scene was in the document when the branch opened; it stays Jo's.
     const theirs = signed.units.find((unit) => unit.id !== made.unit.id);
     expect(theirs?.origin?.authorId).toBe('jo');

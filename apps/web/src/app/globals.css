@@ -1495,3 +1495,64 @@ p.room-stamp {
   flex: 1 1 auto;
   min-width: 0;
 }
+
+/* ------------------------------ the room's AI (addendum 07 §14)
+
+   A reading, shown. Deliberately not styled like the room's own work: the
+   threads and the tray are people talking, and this is a machine's account of
+   what they said — near enough to be useful, distinct enough that nobody
+   mistakes one for the other. */
+
+.reading {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold-deep);
+  border-radius: 3px;
+  padding: 14px 16px;
+  margin-top: 16px;
+  background: var(--bg-raised);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reading > .lede {
+  margin: 0;
+}
+
+.reading-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reading-points li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+
+.reading-points .block {
+  display: block;
+}
+
+.reading-points em {
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+.reading-only {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.reading-only p {
+  margin: 0;
+}

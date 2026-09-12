@@ -41,6 +41,7 @@ interface RoomRow {
   project_id: string;
   name: string;
   included_seats: number;
+  ai_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -69,6 +70,7 @@ const roomFromRow = (row: RoomRow): Room =>
     projectId: row.project_id,
     name: row.name,
     includedSeats: row.included_seats,
+    aiEnabled: row.ai_enabled ?? true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   });

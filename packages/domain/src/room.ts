@@ -130,6 +130,15 @@ export const roomSchema = z.object({
   name: z.string().default(''),
   /** How many seats the subscription covers before another is billed (§14). */
   includedSeats: z.number().int().min(1).default(1),
+  /**
+   * Whether this room may ask the AI for readings (addendum 07 §14, stage 12).
+   *
+   * The owner's switch, on by default — the usage control that can be honoured
+   * completely, so it is the one that exists. A *spending cap* is a larger
+   * promise needing metering per room, and a limit that silently does not hold
+   * would be worse than none.
+   */
+  aiEnabled: z.boolean().default(true),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

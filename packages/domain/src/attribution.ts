@@ -64,10 +64,17 @@ export const authorOf = (
   byAuthor: ReadonlyMap<string, Attribution>,
 ): Attribution | null => (origin ? (byAuthor.get(origin.authorId) ?? null) : null);
 
-/** Stamping a record as this writer's, at this moment. */
+/**
+ * Stamping a record as this writer's, at this moment.
+ *
+ * Unassisted, because ordinary writing is. Work the room's AI helped with is
+ * stamped by `assistedBy` instead, which says the same thing plus one more —
+ * and says it about the *person*, never about the machine (§14).
+ */
 export const originNow = (authorId: string, at: string = new Date().toISOString()): Origin => ({
   authorId,
   at,
+  assisted: false,
 });
 
 // ------------------------------------------------------- signing new work

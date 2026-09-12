@@ -1,6 +1,6 @@
 # Addendum 07 — Writers Room
 
-Status: specified; **stages 0–11 built**, September 2026. From Ken's *VC Writer Writers
+Status: specified; **all twelve stages built**, September 2026. From Ken's *VC Writer Writers
 Room Development Specification v1.0* of 11 September, and his elaboration of
 the same day — **the showrunner's dashboard is the front door, everyone has a
 login, and everyone submits.** Extends §12 (commerce), §14 (sync) and §15 (no
@@ -499,7 +499,7 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
 9. **Built.** The Curation Tray and the non-destructive master merge (§12, §19).
 10. **Built.** Comments, notifications and activity history (§14, §9, §19).
 11. **Built.** Desktop synchronisation, and export/backup of a whole room (§14, §19).
-12. AI comparison and summarisation, and the advanced collaboration features.
+12. **Built.** AI comparison and summarisation (§14, §19).
 
 Stage 9 is the point of the module, the way promotion is the point of the
 Outliner: everything before it is making it possible to see what the room
@@ -1261,9 +1261,64 @@ but not run, because this environment has no desktop to run it in. The rules
 those doors call are tested, and the database side is proved on the live
 project; what remains unexercised is the wiring between them.
 
-### Stage 12 — AI comparison and summarisation
+### Stage 12 — the room's AI
 
-Not built. §14's three rules stand: AI respects room permissions and never
-merges or rewrites another writer's work, anything it makes is labelled
-AI-assisted and attributed to whoever asked for it, and usage controls are the
-owner's.
+§14 gives three rules and every one is a consequence of §1. **Two of them are
+enforced by the shape of what comes back rather than by asking the model
+nicely**, which is the whole design of the stage.
+
+**It never rewrites another writer's work — and it cannot.** A prompt saying
+*do not rewrite* is a request; an output schema with nowhere to put a rewrite is
+a fact. Every reading returns observations, quotes and groupings, and there is
+no field anywhere in it that can hold replacement prose. A model that decided to
+hand back a draft has nowhere to put it and the parse drops it — which is a
+test, so a schema that later grew a `suggestion` field would fail it. Nothing a
+reading returns is written into a document by anything in the codebase: it is
+shown, and a person decides.
+
+**What it helps make is attributed to the person and labelled.** `assisted` on
+the `origin` a record already carries — so a scene written with help is a
+contribution like any other, with a writer's name on it and a mark saying how it
+was made. Never to the machine: a room is people, and a badge naming an AI as a
+contributor would be a lie about who is responsible for the words. It needed no
+new column anywhere, because `origin` already travels as JSON.
+
+**Who may ask is tied to a right rather than to a role list.** `canAssist` reads
+`readAllContributions`, and the reason is not tidiness: the useful readings are
+*about* several writers' work at once, so somebody who may not read the
+contributions must not be able to get them summarised instead. An Editor has
+that right and so does the Owner; a Writer has their own line and a Viewer has
+the master, and neither has anything to compare.
+
+**The room's switch is the owner's** (migration 0038), and it is the usage
+control that can be honoured completely, so it is the one that ships. A spending
+cap is deliberately absent: it needs metering per room, a decision about what
+happens when the number is reached, and somewhere to show the running total —
+and a limit that silently does not hold is worse than no limit at all. What
+exists meanwhile is the per-account rate limit every AI call in the product goes
+through, which is a spending limit wearing a different name.
+
+**Three gates before anything costs money**, asked in the order they matter:
+whether the deployment has AI at all, whether this room has it on, whether this
+person may read all of it. The page asks the same question the route does, so
+the control is absent for the same reason the call would have been refused — and
+says which reason, rather than the button simply not being there.
+
+**And it uses the AI service the product already has** (§14), not a second stack
+grown beside it: one vendor, one key, one place it can be rotated and metered.
+What leaves the room is what is being compared — the two scenes' own words and
+the writers' names, not the rest of anybody's draft, not the comments, not who
+is assigned what.
+
+Two readings exist: comparing two passes at one scene, and finding ideas the
+room has had twice. Both were chosen because §14 names them and because both are
+*readings* — the shape of the feature, not a limitation of it.
+
+## 20. Where this leaves the module
+
+**All twelve stages of §15 are built.** What §14 still describes and nobody has
+built is named rather than left to be discovered: email notification (the Room
+notifies in the Room; Resend carries the transactional mail and is not wired to
+this), recurring billing for seats (Stripe carries the flag and the entitlement
+is data, but the subscription itself is not built), and a per-room AI spending
+cap. Everything else in this addendum exists.

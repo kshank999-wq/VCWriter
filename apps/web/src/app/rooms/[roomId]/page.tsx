@@ -7,6 +7,7 @@ import {
   applyTray,
   assignableThings,
   assignmentsFor,
+  canAskHere,
   canAssign,
   canComment,
   canCurate,
@@ -48,6 +49,9 @@ import { Ideas } from './ideas';
 import { WhoOwesWhat, YourAsks } from './assignments';
 import { Tray } from './tray';
 import { Talk, Trail, WhatIsNew } from './talk';
+import { Assist } from './assist';
+import { assistRefusalText } from '@vcwriter/domain';
+import { isAiConfigured } from '@/lib/ai-room';
 
 export const metadata: Metadata = { title: 'The room' };
 export const dynamic = 'force-dynamic';
@@ -197,6 +201,27 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
   // news it was about to show already marked read.
   await markRead(view.room.id, user.id);
 
+  // The room's AI (§14, stage 12). Three gates, and the page asks the same
+  // question the route does — so the control is absent for the same reason the
+  // call would have been refused, and says which reason.
+  const mayAsk = canAskHere({
+    role: view.role,
+    roomEnabled: view.room.aiEnabled,
+    configured: isAiConfigured(),
+  });
+  const passes = curating ? submissions.filter((one) => one.kind === 'script') : [];
+  const scenesIn: Record<string, Curatable[]> = {};
+  if (curating) {
+    await Promise.all(
+      passes.map(async (submission) => {
+        const found = await versionWithDocument(submission.versionId);
+        scenesIn[submission.id] = found
+          ? curatableFrom(parseProjectFile(found.document)).filter((one) => one.kind === 'scene')
+          : [];
+      }),
+    );
+  }
+
   return (
     <>
       <div className="hero">
@@ -330,6 +355,28 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
             seats={view.seats}
             sequence={sequence}
             refusal={mergeRefusal}
+          />
+        </section>
+      ) : null}
+
+      {curating ? (
+        <section>
+          <h2>Read it with AI</h2>
+          <p className="lede">
+            A reading, not a decision. It says what differs between two passes and what each does
+            better, and where the room has had the same idea twice — it never writes anything, never
+            merges anybody’s work, and nothing it says changes a draft.
+          </p>
+          <Assist
+            roomId={view.room.id}
+            available={mayAsk === true}
+            reason={mayAsk === true ? null : assistRefusalText(mayAsk)}
+            passes={passes}
+            scenes={scenesIn}
+            nameOf={(userId) => {
+              const seat = view.seats.find((one) => one.userId === userId);
+              return seat ? seatName(seat) : 'Somebody no longer in the room';
+            }}
           />
         </section>
       ) : null}
