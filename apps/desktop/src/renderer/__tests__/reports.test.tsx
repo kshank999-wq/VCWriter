@@ -166,6 +166,7 @@ describe('the opening screen', () => {
         onCreate={(input) => created.push(input.format)}
         onOpen={() => {}}
         onImport={() => {}}
+        onProjects={() => {}}
         onOpenPath={() => {}}
         error={null}
       />,

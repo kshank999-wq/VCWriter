@@ -22,6 +22,7 @@ export type CommandId =
   | 'file.new.episode'
   | 'file.open'
   | 'file.import'
+  | 'file.projects'
   | 'file.save'
   | 'file.saveAs'
   | 'file.titlePage'
@@ -100,6 +101,7 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       null,
       { command: 'file.open', label: 'Open…', accelerator: 'CmdOrCtrl+O' },
       { command: 'file.import', label: 'Import a script…' },
+      { command: 'file.projects', label: 'Delete a project…' },
       null,
       { command: 'file.save', label: 'Save', accelerator: 'CmdOrCtrl+S' },
       { command: 'file.saveAs', label: 'Save a copy…', accelerator: 'CmdOrCtrl+Shift+S' },

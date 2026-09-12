@@ -10,6 +10,20 @@ interface WelcomeProps {
   onOpen(): void;
   /** Somebody else's script: Final Draft or a PDF (addendum 02 §18). */
   onImport(): void;
+  /**
+   * The project list, and deleting from it (spec §4).
+   *
+   * Offered here as well as in the File menu, because the menu belongs to a
+   * window with a project open and this is the screen a writer is on when
+   * they have decided they have too many of them.
+   */
+  onProjects(): void;
+  /**
+   * Bumped when the project list changes underneath this screen — a delete,
+   * usually. The recents are read from the same store, and a list still
+   * offering a project that has just been deleted is a list nobody trusts.
+   */
+  projectsChanged?: number;
   onOpenPath(path: string): void;
   /** Set when a project is already open, so this screen can be left again. */
   onCancel?(): void;
@@ -27,7 +41,17 @@ const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string; detail: stri
   { value: 'short_form', label: 'Short form', detail: 'Commercials, web video, social' },
 ];
 
-export function Welcome({ onCreate, onOpen, onImport, onOpenPath, onCancel, openTitle, error }: WelcomeProps) {
+export function Welcome({
+  onCreate,
+  onOpen,
+  onImport,
+  onProjects,
+  projectsChanged = 0,
+  onOpenPath,
+  onCancel,
+  openTitle,
+  error,
+}: WelcomeProps) {
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [format, setFormat] = useState<ProjectFormat>('screenplay');
@@ -37,7 +61,7 @@ export function Welcome({ onCreate, onOpen, onImport, onOpenPath, onCancel, open
     void window.vcwriter.recentProjects().then((result) => {
       if (result.ok && result.data) setRecents(result.data);
     });
-  }, []);
+  }, [projectsChanged]);
 
   return (
     <div className="welcome">
@@ -97,6 +121,9 @@ export function Welcome({ onCreate, onOpen, onImport, onOpenPath, onCancel, open
         </button>
         <button type="button" onClick={onImport}>
           Import a script — Final Draft or PDF…
+        </button>
+        <button type="button" onClick={onProjects}>
+          Projects on this machine…
         </button>
         {recents.length > 0 ? (
           <ul className="recents">

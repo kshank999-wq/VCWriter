@@ -990,7 +990,7 @@ does lives in the workspace, which is the only place that knows what is open.
 
 | Menu | What is in it |
 | --- | --- |
-| **File** | **New project** (one item, `Ctrl/Cmd+N`), **New episode** *in a series only*, Open, **Import a script**, Save, Save a copy, **Title page** (§6.1), **Page setup**, Print, Export PDF, Preferences, Close project |
+| **File** | **New project** (one item, `Ctrl/Cmd+N`), **New episode** *in a series only*, Open, **Import a script**, **Delete a project** (§13.1), Save, Save a copy, **Title page** (§6.1), **Page setup**, Print, Export PDF, Preferences, Close project |
 | **Editor** | Find, Find next, Find and replace, Reformat pasted text, and the two editors of spec §8 — Daily and Final — plus Read back |
 | **Reports** | Writing log, Story statistics (§15) |
 | **Window** | The episode rail; each section, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
@@ -1000,6 +1000,43 @@ It is called **Editor**, not Edit, because the clipboard is not what it is
 for. On macOS the clipboard roles are added to the native menu regardless —
 an Electron application with no menu loses ⌘C, ⌘V and ⌘A entirely, because
 on a Mac those live on the menu and nowhere else.
+
+### 13.1 The projects on this machine, and taking one away
+
+A writer accumulates projects: one real, three false starts, a script somebody
+sent them, two imports of the same PDF. Until now the only way to be rid of one
+was to leave the application and go and find the file, so **Delete a project…**
+opens the list — the projects this machine has, newest first, each with its own
+title, when it was last written and how big it is. Never the path: that is how
+a list of projects becomes a list of directories.
+
+It is offered on the **opening screen** as well as in the File menu. The menu
+belongs to a window with a project open in it, and the screen a writer is on
+when they have decided they have too many projects is the other one.
+
+**Deleting is the only thing in the application that cannot be undone, so it
+is the only thing that asks twice.** The row's Delete opens a question that
+**names the project** — nobody can answer *are you sure?* about a thing they
+cannot see the name of — and the confirming button is deliberately not where
+the row's Delete was, so the second click cannot be the first one repeated.
+
+Three things the question says, because each of them changes the answer:
+
+- **Where it goes.** On the desktop the file goes to the platform's own bin —
+  Trash, Recycle Bin — and is named as such, because a writer told their work
+  is in the Trash knows exactly where to look and one told it was "removed"
+  does not. In the browser there is no bin, and it says so rather than
+  reassuring anybody.
+- **When there is nothing to delete.** A file moved or deleted outside the
+  application stays in the list, marked missing, because the row is the only
+  way left to take it off — and the question says the file has already gone.
+- **What it will not do.** The project this window has open cannot be deleted
+  here at all: deleting the file under an open document leaves a window whose
+  every save fails, so the row says *close it first* and the button is off.
+
+A room's project is not in this list. A Writers Room script belongs to the
+room, and taking it away is a decision made there by somebody who may not be
+whoever happens to have this window open (addendum 07 §7).
 
 **New project is one item, not six.** What kind of thing this is going to be
 is the first decision of the work, and it is made on the project screen —

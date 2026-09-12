@@ -8480,3 +8480,84 @@ dialog.preferences .field {
   border-color: var(--gold);
   color: var(--gold);
 }
+
+/* ----------------------------------------- the projects on this machine (§3)
+
+   A list somebody deletes from, so each row says what the project *is* — its
+   own title, when it was last written, how big it is — rather than a path. */
+.projects-body {
+  padding: 12px 14px;
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+}
+
+.projects-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.project-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.project-row:last-child {
+  border-bottom: 0;
+}
+
+/* A file that has been moved or deleted outside the application: still here,
+   because the row is the only way left to take it off the list. */
+.project-row.missing strong {
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
+}
+
+.project-who {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.project-who .block {
+  display: block;
+}
+
+.project-row .danger {
+  color: var(--danger);
+  flex: 0 0 auto;
+}
+
+.project-row .danger:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.projects-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* The question, over the list rather than beside it. */
+.projects-sure {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--ink) 78%, transparent);
+}
+
+dialog.projects-dialog {
+  position: fixed;
+  overflow: visible;
+}

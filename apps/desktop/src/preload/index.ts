@@ -3,6 +3,7 @@ import type {
   CaptureItem,
   MergeResult,
   PrintOptions,
+  ProjectEntry,
   ProjectFile,
   ProjectFormat,
   RoomRole,
@@ -94,6 +95,22 @@ export interface VcWriterApi {
     snapshot?: boolean;
   }): Promise<DesktopApiResult<{ contentHash: string; written: boolean }>>;
   recentProjects(): Promise<DesktopApiResult<string[]>>;
+  /**
+   * Every project this machine has, with enough about each to choose between
+   * them: the title, when it was last written, how big it is (spec §4).
+   *
+   * Not `recentProjects`, which is a list of paths and right for what it does.
+   * A list somebody deletes from has to say what each one *is*.
+   */
+  listProjects(): Promise<DesktopApiResult<ProjectEntry[]>>;
+  /**
+   * Take one away. The only thing in the application that cannot be undone,
+   * which is why the interface asks first and this does not.
+   *
+   * `recoverable` says what happened: on the desktop the file goes to the
+   * platform's bin and can be put back, so the writer is told where to look.
+   */
+  deleteProject(path: string): Promise<DesktopApiResult<{ deleted: boolean; recoverable: boolean }>>;
   listSnapshots(path: string): Promise<DesktopApiResult<SnapshotSummary[]>>;
   restoreSnapshot(input: { path: string; snapshotId: string }): Promise<DesktopApiResult<OpenResult>>;
   /** Returns null when the writer cancelled the save dialog. */
@@ -250,6 +267,8 @@ const api: VcWriterApi = {
   openProjectAtPath: (path) => ipcRenderer.invoke('project:openPath', path),
   saveProject: (input) => ipcRenderer.invoke('project:save', input),
   recentProjects: () => ipcRenderer.invoke('project:recents'),
+  listProjects: () => ipcRenderer.invoke('project:list'),
+  deleteProject: (path: string) => ipcRenderer.invoke('project:delete', path),
   listSnapshots: (path) => ipcRenderer.invoke('project:snapshots', path),
   restoreSnapshot: (input) => ipcRenderer.invoke('project:restoreSnapshot', input),
   exportPdf: (input) => ipcRenderer.invoke('project:exportPdf', input),

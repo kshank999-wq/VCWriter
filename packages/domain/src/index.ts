@@ -22,6 +22,7 @@ export * from './entities/outline.js';
 export * from './entities/revision.js';
 export * from './entities/commerce.js';
 export * from './project-file.js';
+export * from './projects.js';
 export * from './selectors.js';
 export * from './find.js';
 export * from './sessions.js';

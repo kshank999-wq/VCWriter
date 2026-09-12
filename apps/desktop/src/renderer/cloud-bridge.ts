@@ -282,6 +282,18 @@ export const createCloudBridge = (roomId: string, versionId: string | null = nul
     recentProjects: async () => ok(branchId ? [branchId] : []),
 
     /**
+     * A room has one project and it is not this window's to manage.
+     *
+     * The list is deliberately empty rather than showing the room's project
+     * with a Delete beside it: a room's script belongs to the room, and taking
+     * it away is a decision made there, by somebody who may not be whoever
+     * happens to have this window open (addendum 07 §7).
+     */
+    listProjects: async () => ok([]),
+    deleteProject: async () =>
+      fail('A room’s project is deleted from the room, not from here.'),
+
+    /**
      * The versions this writer may see, as the snapshots the renderer already
      * draws. A version is not quite a snapshot — it is the room's record rather
      * than a local recovery point — but it is the same list in the same place,

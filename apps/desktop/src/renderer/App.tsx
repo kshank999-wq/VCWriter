@@ -61,6 +61,7 @@ import { TitlePageDialog } from './components/TitlePageDialog';
 import { Reports, type ReportTab } from './components/Reports';
 import { EpisodeRail } from './components/EpisodeRail';
 import { ImportDialog } from './components/ImportDialog';
+import { ProjectsDialog } from './components/ProjectsDialog';
 import { NewEpisodeDialog } from './components/NewEpisodeDialog';
 import { useWritingClock } from './use-writing-clock';
 import { FindPanel } from './components/FindPanel';
@@ -78,6 +79,18 @@ import type { AccountStatus, VcWriterApi } from '../preload/index';
 
 /** Which document a print or an export is asking for. The bridge decides. */
 type PrintKind = NonNullable<Parameters<VcWriterApi['print']>[0]['kind']>;
+
+/**
+ * What this machine does with a deleted project, in its own words (spec §4).
+ *
+ * A writer told their work went to the Trash knows exactly where to look; one
+ * told it was "removed" does not. A browser has no bin at all, and saying so
+ * before the question is asked is the honest version of a confirmation.
+ */
+const binFor = (platform: string): { name: string; recoverable: boolean } =>
+  platform === 'browser'
+    ? { name: 'browser', recoverable: false }
+    : { name: platform === 'win32' ? 'Recycle Bin' : 'Trash', recoverable: true };
 
 export default function App() {
   const project = useProject();
@@ -165,6 +178,10 @@ export default function App() {
   const [finding, setFinding] = useState<'off' | 'find' | 'replace'>('off');
   const [findStep, setFindStep] = useState(0);
   const [platform, setPlatform] = useState('');
+  /** The list of projects on this machine, while it is open (spec §4). */
+  const [projectsOpen, setProjectsOpen] = useState(false);
+  /** Bumped when a project is deleted, so the recents are read again. */
+  const [projectsChanged, setProjectsChanged] = useState(0);
   // The Edit-page proportions (addendum 02 §3): a quarter for the script,
   // and of the rest, just under half for the viewport above the lanes.
   const columns = useSplit({ key: 'leftWidth', initial: 0.25, min: 300, reserve: 640, axis: 'x' });
@@ -514,6 +531,8 @@ export default function App() {
           return void project.openProject();
         case 'file.import':
           return setImportOpen(true);
+        case 'file.projects':
+          return setProjectsOpen(true);
         case 'file.save':
           return void project.saveNow();
         case 'file.saveAs':
@@ -662,6 +681,8 @@ export default function App() {
             void project.openProject();
           }}
           onImport={() => setImportOpen(true)}
+          onProjects={() => setProjectsOpen(true)}
+          projectsChanged={projectsChanged}
           onOpenPath={(path) => {
             setStartingNew(false);
             void project.openProjectAtPath(path);
@@ -675,6 +696,14 @@ export default function App() {
           open={importOpen}
           onClose={() => setImportOpen(false)}
           onImported={(imported) => project.replace(imported)}
+        />
+
+        <ProjectsDialog
+          open={projectsOpen}
+          onClose={() => setProjectsOpen(false)}
+          onChanged={() => setProjectsChanged((count) => count + 1)}
+          openPath={project.path}
+          bin={binFor(platform)}
         />
       </>
     );
@@ -1120,6 +1149,14 @@ export default function App() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         onImported={(imported) => project.replace(imported)}
+      />
+
+      <ProjectsDialog
+        open={projectsOpen}
+        onClose={() => setProjectsOpen(false)}
+        onChanged={() => setProjectsChanged((count) => count + 1)}
+        openPath={project.path}
+        bin={binFor(platform)}
       />
 
       <Reports

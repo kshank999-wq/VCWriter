@@ -2,6 +2,7 @@ import {
   createProjectFile,
   parseProjectFile,
   printedPageCount,
+  projectsNewestFirst,
   renderBoardDocumentHtml,
   renderGridDocumentHtml,
   renderOutlineDocumentHtml,
@@ -65,6 +66,7 @@ const withStore = async <T>(mode: IDBTransactionMode, run: (store: IDBObjectStor
 };
 
 const readAll = () => withStore<StoredProject[]>('readonly', (store) => store.getAll() as IDBRequest<StoredProject[]>);
+const remove = (path: string) => withStore<undefined>('readwrite', (store) => store.delete(path) as IDBRequest<undefined>);
 const read = (path: string) =>
   withStore<StoredProject | undefined>('readonly', (store) => store.get(path) as IDBRequest<StoredProject | undefined>);
 const write = (record: StoredProject) => withStore<IDBValidKey>('readwrite', (store) => store.put(record));
@@ -298,6 +300,49 @@ export const createBrowserBridge = (): BrowserBridge => {
         const records = await readAll();
         records.sort((a, b) => (a.savedAt < b.savedAt ? 1 : -1));
         return ok(records.map((record) => record.path));
+      } catch (error) {
+        return fail((error as Error).message);
+      }
+    },
+
+    /**
+     * The projects in this browser, as the list a writer deletes from (§3).
+     *
+     * A size in bytes is a question this store cannot answer without reading
+     * every project back out, so it does not pretend to: the row says what it
+     * is and when it was written, and nothing about how big it is.
+     */
+    async listProjects() {
+      try {
+        const records = await readAll();
+        return ok(
+          projectsNewestFirst(
+            records.map((record) => ({
+              path: record.path,
+              title: record.file.project.title,
+              savedAt: record.savedAt,
+              sizeBytes: null,
+              missing: false,
+            })),
+          ),
+        );
+      } catch (error) {
+        return fail((error as Error).message);
+      }
+    },
+
+    /**
+     * Out of the browser's store for good.
+     *
+     * A browser has no bin to put it in, so this one really is final — which
+     * is why `recoverable` is false and the question says so before it is
+     * asked rather than after it is answered.
+     */
+    async deleteProject(path) {
+      try {
+        await remove(path);
+        if (current?.path === path) current = null;
+        return ok({ deleted: true, recoverable: false });
       } catch (error) {
         return fail((error as Error).message);
       }

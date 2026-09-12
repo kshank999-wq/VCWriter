@@ -1,11 +1,13 @@
-import { app, dialog, ipcMain, type BrowserWindow } from 'electron';
+import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import { join } from 'node:path';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, stat, writeFile } from 'node:fs/promises';
 import {
   createProjectFile,
   parseProjectFile,
+  projectsNewestFirst,
   type CaptureItem,
   type PrintOptions,
+  type ProjectEntry,
   type SceneVerdict,
   type ProjectFile,
   type ProjectFormat,
@@ -66,20 +68,83 @@ export interface DesktopApiResult<T> {
 const RECENTS_LIMIT = 10;
 const recentsPath = () => join(app.getPath('userData'), 'recent-projects.json');
 
-const readRecents = async (): Promise<string[]> => {
+/**
+ * What the machine remembers about a project it has seen.
+ *
+ * The title is kept beside the path deliberately. A list somebody deletes from
+ * has to say what each project *is*, and opening ten whole project files to
+ * read ten titles is a slow answer to a question the machine already knew.
+ */
+interface RecentProject {
+  path: string;
+  title: string;
+}
+
+/** Reads both shapes: the old file was an array of paths and may still be. */
+const readRecentRecords = async (): Promise<RecentProject[]> => {
   try {
     const parsed: unknown = JSON.parse(await readFile(recentsPath(), 'utf8'));
-    return Array.isArray(parsed) ? parsed.filter((entry): entry is string => typeof entry === 'string') : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((entry): RecentProject[] => {
+      if (typeof entry === 'string') return [{ path: entry, title: '' }];
+      if (entry && typeof entry === 'object' && typeof (entry as RecentProject).path === 'string') {
+        const record = entry as RecentProject;
+        return [{ path: record.path, title: typeof record.title === 'string' ? record.title : '' }];
+      }
+      return [];
+    });
   } catch {
     return [];
   }
 };
 
-const rememberRecent = async (path: string): Promise<void> => {
-  const recents = await readRecents();
-  const next = [path, ...recents.filter((entry) => entry !== path)].slice(0, RECENTS_LIMIT);
-  await writeFile(recentsPath(), JSON.stringify(next), 'utf8').catch(() => undefined);
+const readRecents = async (): Promise<string[]> => (await readRecentRecords()).map((record) => record.path);
+
+const writeRecents = async (records: RecentProject[]): Promise<void> => {
+  await writeFile(recentsPath(), JSON.stringify(records), 'utf8').catch(() => undefined);
+};
+
+const rememberRecent = async (path: string, title = ''): Promise<void> => {
+  const records = await readRecentRecords();
+  const kept = records.filter((record) => record.path !== path);
+  // A remembered title is not lost by an operation that did not carry one.
+  const known = records.find((record) => record.path === path)?.title ?? '';
+  await writeRecents([{ path, title: title.trim() || known }, ...kept].slice(0, RECENTS_LIMIT));
   app.addRecentDocument(path);
+};
+
+const forgetRecent = async (path: string): Promise<void> => {
+  const records = await readRecentRecords();
+  await writeRecents(records.filter((record) => record.path !== path));
+};
+
+/**
+ * Every project this machine has, as the list a writer chooses from (spec §4).
+ *
+ * A file that has been moved or deleted outside the application is **kept in
+ * the list and marked missing** rather than quietly dropped: the row is the
+ * only way left to take it off, and a list that tidied itself would leave a
+ * writer wondering whether they imagined the project.
+ */
+const listProjects = async (): Promise<ProjectEntry[]> => {
+  const records = await readRecentRecords();
+  const entries = await Promise.all(
+    records.map(async (record): Promise<ProjectEntry> => {
+      try {
+        const info = await stat(record.path);
+        return {
+          path: record.path,
+          title: record.title,
+          savedAt: info.mtime.toISOString(),
+          sizeBytes: info.size,
+          missing: false,
+        };
+      } catch {
+        return { path: record.path, title: record.title, savedAt: null, sizeBytes: null, missing: true };
+      }
+    }),
+  );
+  return projectsNewestFirst(entries);
 };
 
 const ok = <T>(data: T): DesktopApiResult<T> => ({ ok: true, data });
@@ -179,7 +244,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
 
         const file = createProjectFile(input);
         const saved = await saveProject(choice.filePath, file);
-        await rememberRecent(saved.path);
+        await rememberRecent(saved.path, file.project.title);
         return ok({ path: saved.path, file, contentHash: saved.contentHash });
       } catch (cause) {
         return fail(cause);
@@ -197,7 +262,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
       if (choice.canceled || !path) return fail(new Error('Open cancelled'));
 
       const loaded = await loadProject(path);
-      await rememberRecent(loaded.path);
+      await rememberRecent(loaded.path, loaded.file.project.title);
       return ok(toOpenResult(loaded));
     } catch (cause) {
       return fail(cause);
@@ -207,7 +272,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
   ipcMain.handle('project:openPath', async (_event, path: string): Promise<DesktopApiResult<OpenResult>> => {
     try {
       const loaded = await loadProject(path);
-      await rememberRecent(loaded.path);
+      await rememberRecent(loaded.path, loaded.file.project.title);
       return ok(toOpenResult(loaded));
     } catch (cause) {
       return fail(cause);
@@ -242,6 +307,48 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
       return fail(cause);
     }
   });
+
+  ipcMain.handle('project:list', async (): Promise<DesktopApiResult<ProjectEntry[]>> => {
+    try {
+      return ok(await listProjects());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  /**
+   * Taking a project away (spec §4).
+   *
+   * **To the platform's bin, never unlinked.** `shell.trashItem` is the one
+   * delete a writer can undo without us, and a project is somebody's months of
+   * work: an application that removed the file outright would be asking them
+   * to trust a confirmation dialog with everything. Where the file has already
+   * gone, this only takes the row off the list, which is still worth doing.
+   *
+   * The asking happens in the interface, where the writer can see what they
+   * are being asked about. By the time it reaches here the answer is yes.
+   */
+  ipcMain.handle(
+    'project:delete',
+    async (_event, path: string): Promise<DesktopApiResult<{ deleted: boolean; recoverable: boolean }>> => {
+      try {
+        let deleted = false;
+        try {
+          await stat(path);
+          await shell.trashItem(path);
+          deleted = true;
+        } catch {
+          // Already gone, or the platform refused the bin. Either way the row
+          // is what is left to remove, and the writer is told which happened.
+          deleted = false;
+        }
+        await forgetRecent(path);
+        return ok({ deleted, recoverable: deleted });
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
 
   ipcMain.handle('project:snapshots', async (_event, path: string): Promise<DesktopApiResult<SnapshotSummary[]>> => {
     try {
