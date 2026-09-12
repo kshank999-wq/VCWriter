@@ -1,6 +1,8 @@
 import { z } from 'zod';
-import { id, orderKey, timestamps } from './entities/common.js';
+import { id, nowIso, orderKey, timestamps } from './entities/common.js';
 import { storyEntityRefSchema } from './entities/links.js';
+import { orderKeyBetween } from './ordering.js';
+import { newId } from './ids.js';
 import type {
   ArcPointId,
   BeatId,
@@ -38,6 +40,20 @@ import type { ProjectFile } from './project-file.js';
 export const TRAIT_TONES = ['positive', 'negative', 'neutral', 'unsaid'] as const;
 export const traitToneSchema = z.enum(TRAIT_TONES);
 export type TraitTone = (typeof TRAIT_TONES)[number];
+
+/**
+ * The tones, as they are offered to the writer.
+ *
+ * `unsaid` is first in the list the interface shows and is the default, so
+ * choosing a reading is something somebody does on purpose rather than
+ * something they fail to avoid (§4).
+ */
+export const TRAIT_TONE_WORDS: Record<TraitTone, string> = {
+  unsaid: 'Not saying',
+  positive: 'A virtue',
+  negative: 'A flaw',
+  neutral: 'Neither',
+};
 
 /**
  * A quality, and how much of the character it is.
@@ -339,6 +355,20 @@ export const USAGE_WORDS: Record<UsageColour, string> = {
 
 // ---------------------------------------------------------- reading it back
 
+/**
+ * How much of the character a trait is, said in words.
+ *
+ * **Not a score of the character**, which is why none of these is a number the
+ * writer could add up: a defining flaw and a defining virtue are both 5.
+ */
+export const PROMINENCE_WORDS: Record<number, string> = {
+  1: 'Barely',
+  2: 'Sometimes',
+  3: 'Often',
+  4: 'Strongly',
+  5: 'Defining',
+};
+
 /** A trait with the ways it gets shown, which is the way round §1 asks for. */
 export interface TraitWithItems {
   trait: CharacterTrait;
@@ -500,3 +530,265 @@ export const arcInStoryOrder = (input: {
       return a.where - b.where;
     });
 };
+
+// ------------------------------------------------------------- the screen
+
+/** One piece of characterization, with the colour it is drawn in. */
+export interface CharacterizationRow {
+  item: CharacterizationItem;
+  used: boolean;
+  colour: UsageColour;
+}
+
+/**
+ * Everything the Creator's Traits tab draws for one person, in one reading.
+ *
+ * The colour rule lives here rather than in the component for the reason the
+ * whole module does: red and green are a *claim about the manuscript* (§2), and
+ * a claim made in two places eventually gets made two different ways.
+ */
+export interface CharacterBoard {
+  traits: TraitWithItems[];
+  /** Noticed before it was filed — the right-click path's landing place (§7). */
+  unfiled: CharacterizationRow[];
+  counts: { shown: number; onDeck: number; setAside: number };
+}
+
+export const characterBoard = (input: {
+  characterId: string;
+  file: ProjectFile;
+}): CharacterBoard => {
+  const { file } = input;
+  const traits = characterizationOf({
+    characterId: input.characterId,
+    traits: file.characterTraits,
+    items: file.characterizationItems,
+    links: file.usageLinks,
+    file,
+  });
+
+  const unfiled = unfiledItems({ characterId: input.characterId, items: file.characterizationItems }).map(
+    (item): CharacterizationRow => {
+      const used = isUsed({ kind: 'characterization', id: item.id as string }, file.usageLinks, file);
+      return { item, used, colour: usageColour({ retired: item.retired, used }) };
+    },
+  );
+
+  const every = [...traits.flatMap((entry) => entry.items), ...unfiled];
+  return {
+    traits,
+    unfiled,
+    counts: {
+      shown: every.filter((row) => row.colour === 'green').length,
+      onDeck: every.filter((row) => row.colour === 'red').length,
+      setAside: every.filter((row) => row.colour === 'grey').length,
+    },
+  };
+};
+
+/**
+ * What the Overview says about how far along somebody is.
+ *
+ * **A count and never a verdict.** §7 narrows §10's *optional warnings* to the
+ * one form that is information rather than pressure, and a character with
+ * nothing written yet is at the start of the work rather than behind on it.
+ */
+export const characterStanding = (board: CharacterBoard): string => {
+  const { shown, onDeck, setAside } = board.counts;
+  if (shown + onDeck + setAside === 0) return 'Nothing written down for them yet.';
+  const parts = [
+    shown > 0 ? `${shown} in the writing` : '',
+    onDeck > 0 ? `${onDeck} on deck` : '',
+    setAside > 0 ? `${setAside} set aside` : '',
+  ].filter(Boolean);
+  return `${parts.join(', ')}.`;
+};
+
+// --------------------------------------------------------------- the edits
+
+const stamp = <T extends { updatedAt: string }>(record: T): T => ({ ...record, updatedAt: nowIso() });
+
+/** The key that puts a new record after everything already in a list. */
+const lastKey = (existing: readonly { orderKey: string }[]): string => {
+  const sorted = [...existing].sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1));
+  return orderKeyBetween(sorted[sorted.length - 1]?.orderKey ?? null, null);
+};
+
+export const addTrait = (
+  file: ProjectFile,
+  input: {
+    characterId: CharacterId;
+    name: string;
+    kind?: string;
+    prominence?: number;
+    tone?: TraitTone;
+    notes?: string;
+  },
+): { file: ProjectFile; trait: CharacterTrait | null } => {
+  const name = input.name.trim();
+  if (name.length === 0) return { file, trait: null };
+  if (!file.characters.some((person) => (person.id as string) === (input.characterId as string))) {
+    return { file, trait: null };
+  }
+
+  const at = nowIso();
+  const trait = characterTraitSchema.parse({
+    id: newId<CharacterTraitId>(),
+    projectId: file.project.id,
+    characterId: input.characterId,
+    name,
+    kind: input.kind ?? '',
+    prominence: input.prominence ?? 3,
+    tone: input.tone ?? 'unsaid',
+    notes: input.notes ?? '',
+    orderKey: lastKey(
+      file.characterTraits.filter((one) => (one.characterId as string) === (input.characterId as string)),
+    ),
+    createdAt: at,
+    updatedAt: at,
+  });
+
+  return { file: { ...file, characterTraits: [...file.characterTraits, trait] }, trait };
+};
+
+export const updateTrait = (
+  file: ProjectFile,
+  traitId: CharacterTraitId,
+  patch: Partial<Pick<CharacterTrait, 'name' | 'kind' | 'prominence' | 'tone' | 'notes' | 'archived'>>,
+): ProjectFile => ({
+  ...file,
+  characterTraits: file.characterTraits.map((trait) =>
+    (trait.id as string) === (traitId as string) ? stamp({ ...trait, ...patch }) : trait,
+  ),
+});
+
+/**
+ * A trait taken away — **and its characterization kept**.
+ *
+ * The folder goes; the writing in it is unfiled, not deleted, which is the
+ * database's `on delete set null` said in the document (addendum 08 §10). A
+ * writer who decides *greedy* was the wrong word for it has not decided that
+ * the small tip was a bad idea, and unfiled is somewhere those ideas already
+ * live because the right-click path (§7) puts them there.
+ */
+export const removeTrait = (file: ProjectFile, traitId: CharacterTraitId): ProjectFile => ({
+  ...file,
+  characterTraits: file.characterTraits.filter((trait) => (trait.id as string) !== (traitId as string)),
+  characterizationItems: file.characterizationItems.map((item) =>
+    (item.traitId as string | null) === (traitId as string) ? stamp({ ...item, traitId: null }) : item,
+  ),
+});
+
+export const addCharacterization = (
+  file: ProjectFile,
+  input: {
+    characterId: CharacterId;
+    traitId?: CharacterTraitId | null;
+    text: string;
+    notes?: string;
+  },
+): { file: ProjectFile; item: CharacterizationItem | null } => {
+  const text = input.text.trim();
+  if (text.length === 0) return { file, item: null };
+  if (!file.characters.some((person) => (person.id as string) === (input.characterId as string))) {
+    return { file, item: null };
+  }
+
+  // A trait that is not this person's is not a folder for this person's work.
+  const traitId =
+    input.traitId &&
+    file.characterTraits.some(
+      (trait) =>
+        (trait.id as string) === (input.traitId as string) &&
+        (trait.characterId as string) === (input.characterId as string),
+    )
+      ? input.traitId
+      : null;
+
+  const at = nowIso();
+  const item = characterizationItemSchema.parse({
+    id: newId<CharacterizationItemId>(),
+    projectId: file.project.id,
+    characterId: input.characterId,
+    traitId,
+    text,
+    notes: input.notes ?? '',
+    orderKey: lastKey(
+      file.characterizationItems.filter(
+        (one) => (one.traitId as string | null) === (traitId as string | null),
+      ),
+    ),
+    createdAt: at,
+    updatedAt: at,
+  });
+
+  return { file: { ...file, characterizationItems: [...file.characterizationItems, item] }, item };
+};
+
+export const updateCharacterization = (
+  file: ProjectFile,
+  itemId: CharacterizationItemId,
+  patch: Partial<Pick<CharacterizationItem, 'text' | 'notes' | 'retired'>>,
+): ProjectFile => ({
+  ...file,
+  characterizationItems: file.characterizationItems.map((item) =>
+    (item.id as string) === (itemId as string) ? stamp({ ...item, ...patch }) : item,
+  ),
+});
+
+/** Move a piece of characterization into a trait, or back out of one. */
+export const fileCharacterization = (
+  file: ProjectFile,
+  itemId: CharacterizationItemId,
+  traitId: CharacterTraitId | null,
+): ProjectFile => {
+  const item = file.characterizationItems.find((one) => (one.id as string) === (itemId as string));
+  if (!item) return file;
+  if (
+    traitId !== null &&
+    !file.characterTraits.some(
+      (trait) =>
+        (trait.id as string) === (traitId as string) &&
+        (trait.characterId as string) === (item.characterId as string),
+    )
+  ) {
+    return file;
+  }
+
+  return {
+    ...file,
+    characterizationItems: file.characterizationItems.map((one) =>
+      (one.id as string) === (itemId as string)
+        ? stamp({ ...one, traitId, orderKey: lastKey(
+            file.characterizationItems.filter(
+              (other) =>
+                (other.id as string) !== (itemId as string) &&
+                (other.traitId as string | null) === (traitId as string | null),
+            ),
+          ) })
+        : one,
+    ),
+  };
+};
+
+/**
+ * A piece of characterization deleted outright, and its usage links with it.
+ *
+ * Deleting is not the same as setting aside, and the module offers both: this
+ * is for something written by mistake, and `retired` is for an idea decided
+ * against but worth keeping (§17). The links go because a link with no owner is
+ * not a record of anything — which is the one direction the cascade runs, since
+ * deleting the *writing* must never take the idea (§9).
+ */
+export const removeCharacterization = (
+  file: ProjectFile,
+  itemId: CharacterizationItemId,
+): ProjectFile => ({
+  ...file,
+  characterizationItems: file.characterizationItems.filter(
+    (item) => (item.id as string) !== (itemId as string),
+  ),
+  usageLinks: file.usageLinks.filter(
+    (link) => !(link.ownerKind === 'characterization' && link.ownerId === (itemId as string)),
+  ),
+});

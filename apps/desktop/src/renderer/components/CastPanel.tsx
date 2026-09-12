@@ -10,6 +10,7 @@ import {
   updateCharacter,
   type Character,
   type CharacterCategoryId,
+  type CharacterId,
   type ProjectFile,
 } from '@vcwriter/domain';
 import { InlineText } from './InlineText';
@@ -32,9 +33,11 @@ import { InlineText } from './InlineText';
 interface CastPanelProps {
   file: ProjectFile;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  /** Open somebody in the Character Creator (addendum 08 §5). */
+  onOpenCreator?(characterId: CharacterId): void;
 }
 
-export function CastPanel({ file, onUpdate }: CastPanelProps) {
+export function CastPanel({ file, onUpdate, onOpenCreator }: CastPanelProps) {
   const [adding, setAdding] = useState('');
   const [addingTo, setAddingTo] = useState<CharacterCategoryId | null>(null);
   const groups = castByCategory(file);
@@ -119,6 +122,7 @@ export function CastPanel({ file, onUpdate }: CastPanelProps) {
                   person={person}
                   headings={headings}
                   onUpdate={onUpdate}
+                  {...(onOpenCreator ? { onOpenCreator } : {})}
                 />
               ))}
             </ul>
@@ -150,10 +154,12 @@ function CastRow({
   person,
   headings,
   onUpdate,
+  onOpenCreator,
 }: {
   person: Character;
   headings: ReturnType<typeof characterCategoriesInOrder>;
   onUpdate: CastPanelProps['onUpdate'];
+  onOpenCreator?(characterId: CharacterId): void;
 }) {
   return (
     <li className="cast-row">
@@ -190,6 +196,17 @@ function CastRow({
           onUpdate((current) => updateCharacter(current, person.id, { description: event.target.value }))
         }
       />
+      {onOpenCreator ? (
+        <button
+          type="button"
+          className="ghost small"
+          aria-label={`Build ${person.name}`}
+          title="Traits, how they show, and what is still on deck"
+          onClick={() => onOpenCreator(person.id)}
+        >
+          Build
+        </button>
+      ) : null}
       <button
         type="button"
         className="ghost small"

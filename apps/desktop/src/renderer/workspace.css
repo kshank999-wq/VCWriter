@@ -8715,3 +8715,306 @@ dialog.projects-dialog {
 .shelf-item[style*='--room-colour'] {
   box-shadow: inset 2px 0 0 var(--room-colour);
 }
+
+/* The Creator takes the detail pane's room as well as its own: it has its own
+   two columns inside, and a third empty one beside them would be a third of
+   the screen saying nothing. */
+.research-body.creating {
+  grid-template-columns: 260px minmax(0, 1fr);
+}
+
+.research-body.creating .research-detail {
+  display: none;
+}
+
+/* ------------------------------------------------- the Character Creator */
+/* Addendum 08 §5. Traits down the side, and the middle of the screen is the
+   ways one of them gets shown — because the characterization is the work and
+   the trait is only the folder it is in (§1). */
+
+.creator {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.creator-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 18px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.creator-name {
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+
+.creator-standing {
+  margin-left: auto;
+}
+
+.creator-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.creator-tab {
+  background: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  color: var(--muted);
+  padding: 5px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.creator-tab.selected {
+  color: var(--gold);
+  border-color: var(--border);
+  background: var(--panel);
+}
+
+.creator-overview {
+  padding: 14px 18px 32px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  overflow-y: auto;
+  max-width: 640px;
+}
+
+.creator-overview .field {
+  display: grid;
+  gap: 4px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.creator-overview input,
+.creator-overview select,
+.creator-overview textarea {
+  font-size: 12.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 5px 8px;
+  width: 100%;
+  background: var(--ink);
+}
+
+.creator-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.creator-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+.creator-tags form {
+  flex: 1 1 160px;
+}
+
+.creator-traits {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 0;
+  flex: 1;
+}
+
+.creator-side {
+  border-right: 1px solid var(--border);
+  padding: 12px 10px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.creator-side h4 {
+  margin: 6px 0 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.creator-trait-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.creator-add {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.creator-add input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  padding: 4px 7px;
+  background: var(--ink);
+}
+
+.creator-add.wide {
+  padding: 4px 0 0;
+}
+
+.creator-legend {
+  margin-top: auto;
+  padding-top: 12px;
+  display: grid;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.creator-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.creator-legend p {
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+
+/* Filled is in the script; hollow is still to place. On deck being a ring
+   rather than a blob is the point — there is nothing in it yet, and that is
+   the ordinary state rather than a fault (§7). */
+.creator-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  display: inline-block;
+  box-sizing: border-box;
+}
+
+.creator-dot.is-in {
+  background: var(--gold);
+  border: 1px solid var(--gold);
+}
+
+.creator-dot.is-deck {
+  background: none;
+  border: 1.5px solid var(--red);
+}
+
+.creator-dot.is-aside {
+  background: none;
+  border: 1.5px dashed var(--muted);
+}
+
+.creator-shown {
+  padding: 12px 18px 32px;
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  /* A line of characterization is a sentence, so it is set to a sentence's
+     width rather than stretched across a wide monitor. */
+  max-width: 980px;
+}
+
+.creator-trait-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.creator-trait-name {
+  font-size: 13.5px;
+  color: var(--gold);
+}
+
+.creator-inline-field {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.creator-inline-field input,
+.creator-inline-field select {
+  font-size: 12px;
+  padding: 3px 6px;
+  background: var(--ink);
+}
+
+.creator-inline-field input {
+  width: 150px;
+}
+
+.creator-why {
+  font-size: 12.5px;
+  padding: 5px 8px;
+  background: var(--ink);
+  width: 100%;
+}
+
+.creator-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.creator-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto auto;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.creator-item-text {
+  font-size: 12.5px;
+  min-width: 0;
+}
+
+/* Set aside stays legible — it is a decision, not a deletion — but stops
+   asking for attention. */
+.creator-item.is-aside .creator-item-text {
+  color: var(--muted);
+}
+
+.creator-item-state {
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 9.5px;
+}
+
+.creator-item select {
+  font-size: 11px;
+  padding: 2px 5px;
+  background: var(--ink);
+  max-width: 130px;
+}

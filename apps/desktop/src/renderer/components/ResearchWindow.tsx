@@ -17,6 +17,7 @@ import {
   updateResearchCategory,
   updateResearchItem,
   type BeatId,
+  type CharacterId,
   type ProjectFile,
   type ResearchCategoryId,
   type ResearchFolder,
@@ -28,6 +29,7 @@ import { InlineText } from './InlineText';
 import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
 import { CastPanel } from './CastPanel';
+import { CharacterCreator } from './CharacterCreator';
 import { useModal } from '../use-modal';
 
 interface ResearchWindowProps {
@@ -130,6 +132,14 @@ export function ResearchBody({
     if (openOn) setSelection({ kind: 'view', view: openOn });
   }, [openOn]);
   const [selectedItemId, setSelectedItemId] = useState<ResearchItemId | null>(null);
+  /**
+   * Somebody opened in the Character Creator (addendum 08 §5).
+   *
+   * It takes over the contents pane rather than opening a window on top of a
+   * window: the Creator *is* what the Characters folder is for, and the folders
+   * stay down the left so leaving it is one click.
+   */
+  const [creatorFor, setCreatorFor] = useState<CharacterId | null>(null);
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [dragging, setDragging] = useState<{ kind: 'item' | 'folder'; id: string } | null>(null);
@@ -179,6 +189,16 @@ export function ResearchBody({
     }
     setDragging(null);
   };
+
+  const creator = creatorFor
+    ? (file.characters.find((person) => person.id === creatorFor) ?? null)
+    : null;
+
+  // Choosing anything in the side menu leaves the Creator: the folders are the
+  // way out of it, so they have to behave like one.
+  useEffect(() => {
+    setCreatorFor(null);
+  }, [selection]);
 
   // The system Characters folder: the one the cast is shown in.
   const isCastFolder =
@@ -230,7 +250,7 @@ export function ResearchBody({
         </button>
       </header>
 
-      <div className="research-body">
+      <div className={creator ? 'research-body creating' : 'research-body'}>
         {/* The side menu: what is not a place, then the folders. */}
         <nav className="research-side" aria-label="Research folders">
           <h4>Everything</h4>
@@ -301,8 +321,17 @@ export function ResearchBody({
           </ul>
         </nav>
 
-        {/* What is in it. */}
-        <section className="research-contents" aria-label={title}>
+        {/* What is in it — or, when somebody is being built, them. */}
+        <section className="research-contents" aria-label={creator ? creator.name : title}>
+          {creator ? (
+            <CharacterCreator
+              file={file}
+              characterId={creator.id}
+              onUpdate={onUpdate}
+              onBack={() => setCreatorFor(null)}
+            />
+          ) : (
+            <>
           <header className="research-contents-head">
             <h3>{title}</h3>
             {selection.kind === 'plots' || selection.kind === 'setups' ? null : (
@@ -319,7 +348,7 @@ export function ResearchBody({
               folder rather than two folders both called Characters. */}
           {isCastFolder ? (
             <div className="research-embedded">
-              <CastPanel file={file} onUpdate={onUpdate} />
+              <CastPanel file={file} onUpdate={onUpdate} onOpenCreator={setCreatorFor} />
             </div>
           ) : null}
 
@@ -370,10 +399,13 @@ export function ResearchBody({
               ))}
             </ul>
           )}
+            </>
+          )}
         </section>
 
-        {/* The thing itself. */}
-        <aside className="research-detail" aria-label="Detail">
+        {/* The thing itself. The Creator has the whole pane, so there is no
+            second selection to show beside it. */}
+        <aside className="research-detail" aria-label="Detail" hidden={creator !== null}>
           {selectedItem ? (
             <Detail
               file={file}

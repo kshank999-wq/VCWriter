@@ -716,7 +716,9 @@ export const notedCast = (file: ProjectFile): ProjectFile => {
 export const updateCharacter = (
   file: ProjectFile,
   characterId: CharacterId,
-  patch: Partial<Pick<Character, 'name' | 'description' | 'arcNotes' | 'aliases' | 'categoryId' | 'archived'>>,
+  patch: Partial<
+    Pick<Character, 'name' | 'description' | 'arcNotes' | 'aliases' | 'tags' | 'categoryId' | 'archived'>
+  >,
 ): ProjectFile => {
   if (!file.characters.some((character) => character.id === characterId)) {
     throw new DomainError(`Character ${characterId} does not exist`);

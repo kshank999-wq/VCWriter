@@ -35,6 +35,16 @@ export const characterSchema = z.object({
   aliases: z.array(z.string()).default([]),
   description: z.string().default(''),
   arcNotes: z.string().default(''),
+  /**
+   * The writer's own words for who this is — *antagonist*, *comic relief*,
+   * *the one who knows* (addendum 08 §5).
+   *
+   * Not the heading they are filed under, which is about how much of the story
+   * they are in, and not a trait, which is about what they are like. A research
+   * item has carried tags since the beginning; this is the same idea about a
+   * person, and it stays free text because the vocabulary is the writer's.
+   */
+  tags: z.array(z.string()).default([]),
   /** Optional backing research card, when the writer keeps one. */
   researchItemId: id<ResearchItemId>().nullable().default(null),
   /** Which heading they are filed under; null until the writer files them. */

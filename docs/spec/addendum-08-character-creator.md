@@ -1,6 +1,6 @@
 # Addendum 08 — Character Creator
 
-Status: specified; **stage 0 built**, September 2026. From Ken's *VC Writer
+Status: specified; **stages 0–2 built**, September 2026. From Ken's *VC Writer
 Character Creator Development Specification* — the first module of the Research
 room. Extends §7 (research), §8 (structure) and §19 of the master specification,
 and uses the typed link system §7.4 already built.
@@ -195,7 +195,8 @@ interrupts writing to say a character is underdeveloped.
 0. **Built.** The vocabulary: the records, the used/unused rule, and the
    arc kinds, in the domain with tests (§16, §17, §19).
 1. **Built.** The tables, the sync mapping, and the round trip.
-2. The Character Creator screen: Overview, Traits, Characterization, red/green.
+2. **Built.** The Character Creator screen: Overview, Traits, Characterization,
+   red/green.
 3. Linking an item to a scene or beat from the Creator (plan → story).
 4. The right-click workflow in the editor (story → plan) (§7).
 5. The Arc Builder, with opportunity, refusal and doubling down (§8, §9).
@@ -290,3 +291,47 @@ transaction, rolled back: a second writer cannot read or add to somebody else's
 character; cutting a beat takes the usage links and leaves the characterization;
 deleting a trait leaves its items unfiled; nobody is in a relationship with
 themselves; and a character gets one arc.
+
+### Stage 2 — the screen, and the colour
+
+`apps/desktop/src/renderer/components/CharacterCreator.tsx`, reached from the
+**Build** button beside somebody in the Characters folder, plus the edits in
+`character-creator.ts` and migration `0040_character_tags.sql`.
+
+**The layout is the argument.** Traits sit in a narrow column down the side and
+the middle of the screen is the ways one of them gets shown, because the
+characterization is the work and the trait is only the folder it is in (§1). A
+screen that put the traits in the middle would be a screen about adjectives.
+
+**Deleting the folder keeps the writing**, which is the one behaviour a writer
+would feel as a loss. `removeTrait` unfiles its characterization rather than
+taking it, which is the database's `on delete set null` said again in the
+document — and unfiled is somewhere those ideas already live, since §7's
+right-click path puts them there. Driving the real interface proves it: take
+*Greedy* away and its three items are in **Noticed, not filed**, the one that
+was in the writing is still green, and the line at the top has not moved.
+
+**Setting aside and deleting are different things, and both are offered.**
+`retired` is an idea decided against and worth keeping, so it goes grey and
+stops counting as work outstanding; the × is for something typed by mistake, and
+takes its usage links with it. The cascade runs that way only — deleting the
+*writing* never takes the idea (§9).
+
+**On deck is drawn as a ring rather than a blob.** Filled gold is in the script,
+a red ring is still to place, a dashed grey ring is set aside — and the hollow
+one is right, because there is nothing in it yet. The legend says in words that
+this is the ordinary state, since a red dot with no explanation reads as an
+error and §7 rules out anything that nags.
+
+**The colour is never computed here.** `characterBoard` reads it off the usage
+links every time, so the component cannot get it wrong — only draw it. Cut the
+beat and the green one goes red with nothing running.
+
+**`tags` is the one thing §5's Overview asked for that had nowhere to live**
+(migration 0040). Not the heading a character is filed under, which says how
+much of the story they are in, and not a trait, which says what they are like:
+it is the writer's own shorthand for *who somebody is* — *antagonist*, *the one
+who knows*. A research item has carried exactly this since 0001.
+
+Two of §5's six tabs exist. Arc, Relationships, Connections and Usage arrive
+with stages 5, 7, 8 and 10, and are not drawn as empty tabs in the meantime.
