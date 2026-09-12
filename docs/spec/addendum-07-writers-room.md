@@ -1,6 +1,6 @@
 # Addendum 07 — Writers Room
 
-Status: specified; **stages 0–10 built**, September 2026. From Ken's *VC Writer Writers
+Status: specified; **stages 0–11 built**, September 2026. From Ken's *VC Writer Writers
 Room Development Specification v1.0* of 11 September, and his elaboration of
 the same day — **the showrunner's dashboard is the front door, everyone has a
 login, and everyone submits.** Extends §12 (commerce), §14 (sync) and §15 (no
@@ -498,7 +498,7 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
 8. **Built.** Assignments and the Assign menu (§8, §19).
 9. **Built.** The Curation Tray and the non-destructive master merge (§12, §19).
 10. **Built.** Comments, notifications and activity history (§14, §9, §19).
-11. Desktop synchronisation, and export/backup of a whole room.
+11. **Built.** Desktop synchronisation, and export/backup of a whole room (§14, §19).
 12. AI comparison and summarisation, and the advanced collaboration features.
 
 Stage 9 is the point of the module, the way promotion is the point of the
@@ -1197,3 +1197,73 @@ in somebody else's name; the author corrects their own and the showrunner
 settles a thread while a viewer cannot; nobody deletes a comment, the showrunner
 included; a comment on the room may not also name a record; and a read-mark is
 visible only to the person it belongs to.
+
+### Stage 11 — the desktop, and taking a room out
+
+**Four words, and an honest fifth.** §14 asks the desktop to say whether a local
+project is *current, ahead, behind or diverged* from the cloud master, and those
+are the right four because they are what a writer wants to know before deciding
+whether to send anything. `unmoored` is added for a file that has never been in
+this room: calling that *diverged* would be a lie about a project that has
+simply never met the room.
+
+**The rule lives in the domain and the room reports facts.** `/master` returns
+which version is the master and what it hashes to, and `standingOfProject`
+decides — one comparison, in one place, giving the same answer on the desktop as
+in the browser. A server that returned the *verdict* would be a second copy of
+that rule, and it would drift.
+
+**Which needs one fact nobody had written down**: a **mooring** — which master
+version this document descends from, and what it hashed to then. Without an
+ancestor, a file that differs from the master could equally be ahead of it or
+behind it, and the room would have to guess. It sits on the *project* rather
+than in a per-device setting, because it is a fact about the content: two copies
+of one file descend from the same master. Migration 0036, and it round-trips
+through `sync-mapping` — a mooring that did not sync would make every second
+machine think it had never been in the room.
+
+**Both sides must hash the same bytes or *current* is a coin toss.** The digest
+is each side's own business — node's crypto here, the server's there — but what
+goes into it is `bytesToHash` in the domain rather than a `JSON.stringify`
+written out twice. A parsed document always, so the key order is the schema's
+rather than whatever order the bytes happened to arrive in.
+
+**Uploading creates a contribution. It never overwrites the master**, which is
+§14 word for word. What arrives is a version and a submission — the same pair
+pressing *Submit* in the browser makes — so it lands in the review queue, the
+showrunner curates it in the tray, and the master changes only when somebody
+decides it should. **Nothing new was needed for that**, which is the third time
+the Room has paid for having one vocabulary: the desktop is another door onto an
+act that already existed. Proved on the live database: a writer's upload lands
+as a contribution, the same upload labelled `master` is refused, pointing the
+room at their own draft changes nothing, and the master is untouched by all of
+it.
+
+**And fetching does not overwrite either.** `fetchRoomMaster` returns the agreed
+draft and moors the copy to it, leaving what to do with it to the writer — a
+fetch that silently replaced the file on disk would be the same overwrite in the
+other direction, and §3.3 is why neither happens automatically.
+
+**Taking a room out** carries everything it recorded and the master as a
+readable document; the other versions are *named* but their documents are left
+out. A room with twenty writers and a year of snapshots would produce a file
+nobody could open, and what a backup is for — proving who wrote what, and
+getting the script back — is answered by the master plus the trail. A full
+archive of every draft is a larger promise, and saying so is better than
+shipping half of it quietly. It is read as the visitor, so the bundle holds
+exactly what that person could have read a page at a time: an export is not a
+way round §7, and email addresses are left out because a record of a room's work
+does not need a list of everyone's contact details.
+
+**What is not verified here** is worth stating: the Electron path — the three
+IPC doors and the main-process functions behind them — is typechecked and built
+but not run, because this environment has no desktop to run it in. The rules
+those doors call are tested, and the database side is proved on the live
+project; what remains unexercised is the wiring between them.
+
+### Stage 12 — AI comparison and summarisation
+
+Not built. §14's three rules stand: AI respects room permissions and never
+merges or rewrites another writer's work, anything it makes is labelled
+AI-assisted and attributed to whoever asked for it, and usage controls are the
+owner's.

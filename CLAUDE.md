@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0035.
+  reads like it does. Applied through 0037.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
@@ -58,7 +58,7 @@ push live; the build takes a minute or two.
   `addendum-07-writers-room.md` is Writers Room, the cloud collaboration
   module: the showrunner's dashboard as the front door, logins, assignments,
   submitting, the brainstorming room, curation and a non-destructive master
-  merge. **Specified; stages 0–10 built.** §1 and §2 are the rules it all hangs
+  merge. **Specified; stages 0–11 built; only stage 12 (AI) is left.** §1 and §2 are the rules it all hangs
   off — one writer's work is never destroyed by another's, and a collaborator
   gets the whole program rather than a web editor. §3 says how much of it the
   product already has (the Room is `/preview` grown up; membership widens
@@ -117,6 +117,16 @@ push live; the build takes a minute or two.
   no log table to drift. *What is new* is computed the same way; the only thing
   recorded is when each person last looked. A comment is speech about the work,
   so it can be edited and never deleted (withdrawing is a state). Migration 0035.
+  Stage 11 is the desktop: `packages/domain/standing.ts` answers §14's four
+  words — current, ahead, behind, diverged — plus an honest fifth, `unmoored`,
+  and the rule lives there rather than on a server so the desktop and the
+  browser cannot disagree. It needs a **mooring** on the project (migration
+  0036): which master version this copy descends from, without which *behind*
+  and *ahead* are indistinguishable. Both sides hash `bytesToHash` from the
+  domain, or *current* would be a coin toss. Sending desktop work up makes a
+  version and a submission — a contribution, never the master — which needed no
+  new machinery at all. The Electron wiring is typechecked and built but not
+  run here; the rules behind it are tested and the database side is proved.
   §19 says what each built stage does; §15 is the build order.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two

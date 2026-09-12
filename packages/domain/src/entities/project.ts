@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { id, isoDateTime, timestamps } from './common.js';
 import { titlePageSchema } from './title-page.js';
+import { mooringSchema } from '../standing.js';
 import type { AssetId, ProjectId, UserId } from '../ids.js';
 
 /** Spec §4: a project is created as a screenplay, a novel, or another format. */
@@ -173,6 +174,19 @@ export const projectSchema = z.object({
   /** Poster / key art for the project home and one-sheet (§4). */
   posterAssetId: id<AssetId>().nullable().default(null),
   lastOpenedAt: isoDateTime().nullable().default(null),
+  /**
+   * Where this copy stands against a Writers Room's master (addendum 07 §14).
+   *
+   * On the **document** rather than in a per-device setting, because it is a
+   * fact about the content: two copies of the same file descend from the same
+   * master version. It is also what makes *behind* knowable — without an
+   * ancestor, a file that differs from the master could equally be ahead of it
+   * or behind it, and the room would have to guess.
+   *
+   * Null everywhere but a project that has been in a room, which is nearly
+   * every project: a script written alone has no room to stand against.
+   */
+  mooring: mooringSchema.nullable().default(null),
   ...timestamps,
 });
 export type Project = z.infer<typeof projectSchema>;

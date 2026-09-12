@@ -103,6 +103,10 @@ export const projectToRow = (file: ProjectFile): Row => ({
   settings: file.settings,
   format_version: PROJECT_FORMAT_VERSION,
   last_opened_at: file.project.lastOpenedAt,
+  // Where this copy stands against a room's master (addendum 07 §14). A fact
+  // about the content, so it rides with the document rather than sitting in a
+  // per-device setting.
+  mooring: file.project.mooring,
   created_at: file.project.createdAt,
   updated_at: file.project.updatedAt,
 });
@@ -708,6 +712,7 @@ export const projectFromRow = (row: Row): Project =>
     status: row['status'],
     posterAssetId: nullableText(row['poster_asset_path']),
     lastOpenedAt: nullableText(row['last_opened_at']),
+    mooring: row['mooring'] ?? null,
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });

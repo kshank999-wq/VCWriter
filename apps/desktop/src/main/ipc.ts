@@ -25,6 +25,9 @@ import {
   sceneReviewStatus,
   signOut,
   syncProject,
+  roomStanding,
+  contributeToRoom,
+  fetchRoomMaster,
   verifySignInCode,
   type AccountStatus,
   type ActivationResult,
@@ -446,6 +449,41 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
       }
     },
   );
+
+  // The Writers Room, from the desktop (addendum 07 §14, stage 11).
+  //
+  // Three doors and none of them is an overwrite: where this copy stands, work
+  // sent up as a *contribution*, and the master fetched down as a document the
+  // writer decides what to do with.
+  ipcMain.handle(
+    'room:standing',
+    async (_event, input: { roomId: string; file: unknown }) => {
+      try {
+        return ok(await roomStanding(input));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    'room:contribute',
+    async (_event, input: { roomId: string; file: unknown; note?: string }) => {
+      try {
+        return ok(await contributeToRoom(input));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  ipcMain.handle('room:fetchMaster', async (_event, input: { roomId: string }) => {
+    try {
+      return ok(await fetchRoomMaster(input));
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
 
   ipcMain.handle(
     'cloud:captures',

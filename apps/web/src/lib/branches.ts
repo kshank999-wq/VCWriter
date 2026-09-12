@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { bytesToHash } from '@vcwriter/domain';
 import {
   branchNameFor,
   branchSchema,
@@ -83,8 +84,16 @@ const versionFromRow = (row: VersionRow): Version =>
  * nobody has touched. Over the whole document rather than a field of it,
  * because a hash that misses a change is worse than no hash.
  */
+/**
+ * What a document hashes to.
+ *
+ * **What goes in is `bytesToHash` in the domain**, not `JSON.stringify` written
+ * out here, because the desktop computes the same hash in its own process and
+ * the two are compared against each other (addendum 07 §14). The digest is this
+ * side's business; the bytes are shared, or *current* would be a coin toss.
+ */
 export const hashDocument = (document: unknown): string =>
-  createHash('sha256').update(JSON.stringify(document)).digest('hex');
+  createHash('sha256').update(bytesToHash(document)).digest('hex');
 
 // ------------------------------------------------------------ the branch
 

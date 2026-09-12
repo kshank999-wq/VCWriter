@@ -8,9 +8,11 @@ import type {
   ProjectEntry,
   ProjectFile,
   ProjectFormat,
+  RoomMaster,
   RoomRole,
   SceneVerdict,
   Seat,
+  Standing,
   UpdateDecision,
 } from '@vcwriter/domain';
 
@@ -207,6 +209,29 @@ export interface VcWriterApi {
   verifySignInCode(input: { email: string; code: string }): Promise<DesktopApiResult<AccountStatus>>;
   signOut(): Promise<DesktopApiResult<true>>;
   syncProject(input: { file: ProjectFile; path?: string }): Promise<DesktopApiResult<SyncOutcome>>;
+  /**
+   * The Writers Room, from the desktop (addendum 07 §14).
+   *
+   * **Three doors, and none of them is an overwrite.** `roomStanding` says
+   * where this copy is against the room's master in §14's own four words;
+   * `contributeToRoom` sends work up, where it arrives as a contribution the
+   * showrunner curates rather than as the master; `fetchRoomMaster` brings the
+   * agreed draft down and *returns* it, leaving what to do with it to the
+   * writer, because a fetch that silently replaced the file on disk would be
+   * the same overwrite in the other direction.
+   */
+  roomStanding(input: {
+    roomId: string;
+    file: ProjectFile;
+  }): Promise<DesktopApiResult<{ standing: Standing; master: RoomMaster; advice: string }>>;
+  contributeToRoom(input: {
+    roomId: string;
+    file: ProjectFile;
+    note?: string;
+  }): Promise<DesktopApiResult<{ label: string; at: string }>>;
+  fetchRoomMaster(input: {
+    roomId: string;
+  }): Promise<DesktopApiResult<{ file: ProjectFile; versionId: string | null; label: string }>>;
   listCaptures(projectId: string | null): Promise<DesktopApiResult<CaptureItem[]>>;
   resolveCapture(capture: CaptureItem): Promise<DesktopApiResult<true>>;
   reviewScene(input: {
@@ -315,6 +340,9 @@ const api: VcWriterApi = {
   verifySignInCode: (input) => ipcRenderer.invoke('cloud:verifyCode', input),
   signOut: () => ipcRenderer.invoke('cloud:signOut'),
   syncProject: (input) => ipcRenderer.invoke('cloud:sync', input),
+  roomStanding: (input) => ipcRenderer.invoke('room:standing', input),
+  contributeToRoom: (input) => ipcRenderer.invoke('room:contribute', input),
+  fetchRoomMaster: (input) => ipcRenderer.invoke('room:fetchMaster', input),
   listCaptures: (projectId) => ipcRenderer.invoke('cloud:captures', projectId),
   resolveCapture: (capture) => ipcRenderer.invoke('cloud:resolveCapture', capture),
   reviewScene: (input) => ipcRenderer.invoke('cloud:reviewScene', input),

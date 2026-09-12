@@ -370,6 +370,13 @@ export const createBrowserBridge = (): BrowserBridge => {
     verifySignInCode: async () => fail(NOT_HERE),
     signOut: async () => ok(true as const),
     syncProject: async () => fail(NOT_HERE),
+    // The Writers Room from the *desktop* (addendum 07 §14). Refused here, and
+    // the refusal is the honest answer rather than a gap: a project open in the
+    // browser already lives where the room does, so there is no local copy to
+    // be ahead or behind of, nothing to send up and nothing to fetch down.
+    roomStanding: async () => fail('This project is already in the room.'),
+    contributeToRoom: async () => fail('Use Submit — this project is already in the room.'),
+    fetchRoomMaster: async () => fail('This project is already in the room.'),
     listCaptures: async () => ok([]),
     resolveCapture: async () => fail(NOT_HERE),
     /**

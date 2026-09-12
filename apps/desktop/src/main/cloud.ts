@@ -1,23 +1,30 @@
 import { app, safeStorage } from 'electron';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { createClient, type SupabaseClient, type Session } from '@supabase/supabase-js';
 import { writeSnapshot } from './project-store';
 import {
   SYNC_TABLES,
   captureFromRow,
   captureReviewToRow,
+  bytesToHash,
   fromRows,
   mergeProjects,
+  moorTo,
   parseProjectFile,
   projectToRow,
   serializeProjectFile,
+  standingOfProject,
   toRows,
+  whatToDo,
   type CaptureItem,
   type MergeResult,
   type ProjectFile,
+  type RoomMaster,
   type Row,
   type SceneVerdict,
+  type Standing,
 } from '@vcwriter/domain';
 
 /**
@@ -474,4 +481,144 @@ export const resolveCapture = async (capture: CaptureItem): Promise<void> => {
     .eq('id', capture.id)
     .eq('user_id', userId);
   if (error) throw new CloudError(error.message);
+};
+
+// ---------------------------------------------------------------------------
+// Writers Room: where this copy stands, and sending work up (addendum 07 §14)
+// ---------------------------------------------------------------------------
+
+/**
+ * What this copy hashes to, the way the room hashes it.
+ *
+ * The same digest over the same bytes as `apps/web/src/lib/branches.ts`, which
+ * is the whole point: the standing is a comparison between a number computed
+ * here and a number computed there, and it means nothing unless both were taken
+ * the same way. What goes in is `bytesToHash` in the domain rather than a
+ * `JSON.stringify` written out in each place, so the two cannot drift apart.
+ */
+const hashLocal = (parsed: unknown): string =>
+  createHash('sha256').update(bytesToHash(parsed)).digest('hex');
+
+/**
+ * What the room has agreed on, and where this file stands against it.
+ *
+ * **The room reports two facts and the domain decides.** `standingOfProject` is
+ * one comparison and it must give the same answer on the desktop as it does in
+ * the browser, so the verdict is computed here from what the room said rather
+ * than asked for — a server that returned the verdict would be a second copy of
+ * that rule, and it would drift.
+ */
+export const roomStanding = async (input: {
+  roomId: string;
+  file: unknown;
+}): Promise<{ standing: Standing; master: RoomMaster; advice: string }> => {
+  const local = parseProjectFile(input.file);
+  const token = await accessToken();
+
+  const response = await fetch(`${SITE_URL}/api/rooms/${input.roomId}/master`, {
+    headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+  });
+  if (!response.ok) throw new CloudError('The room did not answer.');
+
+  const said = (await response.json()) as { versionId: string | null; contentHash: string; label?: string };
+  const master: RoomMaster = {
+    versionId: said.versionId,
+    contentHash: said.contentHash,
+    label: said.label ?? '',
+  };
+
+  const standing = standingOfProject({
+    mooring: local.project.mooring,
+    localHash: hashLocal(local),
+    master,
+    roomId: input.roomId,
+  });
+
+  return { standing, master, advice: whatToDo(standing, master) };
+};
+
+/**
+ * Send this project to the room.
+ *
+ * **It arrives as a contribution and never as the master** (§14) — the route
+ * makes a version and a submission, exactly as pressing Submit in the browser
+ * does, so it lands in the review queue and the showrunner decides what the
+ * master carries. Nothing here can change the room's draft.
+ *
+ * The file is *not* moored afterwards, deliberately: mooring a copy to its own
+ * contribution would call it current when the room has not agreed to anything.
+ * A desktop copy becomes current by fetching what the room agreed.
+ */
+export const contributeToRoom = async (input: {
+  roomId: string;
+  file: unknown;
+  note?: string;
+}): Promise<{ label: string; at: string }> => {
+  const local = parseProjectFile(input.file);
+  const token = await accessToken();
+
+  const response = await fetch(`${SITE_URL}/api/rooms/${input.roomId}/contributions`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+      'content-type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify({ file: local, note: input.note ?? '' }),
+  });
+
+  const body = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    version?: { label: string; createdAt: string };
+  };
+  if (!response.ok || !body.version) {
+    throw new CloudError(body.error ?? 'The room would not take it.');
+  }
+
+  return { label: body.version.label, at: body.version.createdAt };
+};
+
+/**
+ * Fetch what the room agreed on, and moor this copy to it.
+ *
+ * **It returns the master rather than writing it anywhere.** What the writer
+ * does with it — open it, keep both, look at it beside their own — is theirs to
+ * decide, and a fetch that silently replaced the file on disk would be the
+ * overwrite §14 forbids in the other direction.
+ */
+export const fetchRoomMaster = async (input: {
+  roomId: string;
+}): Promise<{ file: ProjectFile; versionId: string | null; label: string }> => {
+  const token = await accessToken();
+  const response = await fetch(`${SITE_URL}/api/rooms/${input.roomId}/master?with=document`, {
+    headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+  });
+  if (!response.ok) throw new CloudError('The room did not answer.');
+
+  const said = (await response.json()) as {
+    versionId: string | null;
+    contentHash: string;
+    label?: string;
+    document: unknown;
+  };
+  const file = parseProjectFile(said.document);
+
+  // Moored on the way in: this copy now descends from that master, which is
+  // what makes *behind* knowable the next time somebody asks.
+  const moored: ProjectFile = said.versionId
+    ? {
+        ...file,
+        project: {
+          ...file.project,
+          mooring: moorTo({
+            roomId: input.roomId,
+            versionId: said.versionId,
+            contentHash: said.contentHash,
+            at: new Date().toISOString(),
+          }),
+        },
+      }
+    : file;
+
+  return { file: moored, versionId: said.versionId, label: said.label ?? '' };
 };

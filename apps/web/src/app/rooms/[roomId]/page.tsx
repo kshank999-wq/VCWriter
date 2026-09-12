@@ -383,6 +383,17 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
       <section>
         <h2>What has happened</h2>
         <Trail roomId={view.room.id} events={trail} />
+        {curating ? (
+          <p className="small" style={{ marginTop: 16 }}>
+            {/* A plain link rather than a button: it is a download, and the
+                browser already knows how to do those. */}
+            <a className="button small secondary" href={`/api/rooms/${view.room.id}/export`}>
+              Take the whole room out
+            </a>{' '}
+            — the room, its seats, every version’s record, the submissions, the assignments, the
+            threads, and the master itself as a readable document.
+          </p>
+        ) : null}
       </section>
 
       {landing.sections.includes('seats') ? (
