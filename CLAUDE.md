@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0038.
+  reads like it does. Applied through 0039.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
@@ -136,16 +136,23 @@ push live; the build takes a minute or two.
   0038 is the owner's switch.
   §19 says what each built stage does; §15 is the build order.
   `addendum-08-character-creator.md` is the Character Creator, the first module
-  of the Research room, from Ken's own dev spec. **Specified; stage 0 built** —
+  of the Research room, from Ken's own dev spec. **Stages 0–1 built** —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
   so the unit of work is the characterization item and a trait is a folder for
   them), and **used is a reading, never a stored flag** — derived from usage
   links every time, so deleting a beat turns an item red by itself and moving a
   scene changes nothing. `retired` is stored because it is an intention no
-  reading can discover. §3 says what already exists and is only being widened;
-  §8 is the build order; §3.4 says why there is deliberately no module framework
-  yet.
+  reading can discover. Stage 1 is the six tables (migration 0039, with **no
+  `used` column anywhere** — the absence is load-bearing) and the round trip
+  through `sync-mapping.ts`; the test that matters is that an item stays green
+  on the second machine, since the claim the module makes to a writer is a
+  colour. `ProjectRows` is now **derived** from `SYNC_TABLES` and `gatherRows`
+  assembles a fetch, so a new module's collections cannot be named in one list
+  and forgotten in another — which read back as nothing, after which the push
+  took nothing for the truth and deleted the server's rows. §3 says what already
+  exists and is only being widened; §8 is the build order; §3.4 says why there is
+  deliberately no module framework yet; §10 says what each built stage does.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

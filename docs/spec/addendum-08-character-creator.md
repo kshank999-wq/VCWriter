@@ -194,7 +194,7 @@ interrupts writing to say a character is underdeveloped.
 
 0. **Built.** The vocabulary: the records, the used/unused rule, and the
    arc kinds, in the domain with tests (§16, §17, §19).
-1. The tables, the sync mapping, and the round trip.
+1. **Built.** The tables, the sync mapping, and the round trip.
 2. The Character Creator screen: Overview, Traits, Characterization, red/green.
 3. Linking an item to a scene or beat from the Creator (plan → story).
 4. The right-click workflow in the editor (story → plan) (§7).
@@ -246,3 +246,47 @@ exists is `gone`, and only `gone` takes the green away.
 redemption are built with one tool (§3.3), and `arcShape` reads a finished arc
 back as `positive`, `negative`, `flat` or `refused` rather than asking the
 writer to declare it in advance.
+
+### Stage 1 — the tables, and the journey there and back
+
+Migration `0039_character_creator.sql`, the six collections on the project file,
+and `characterCreatorRows`/`characterCreatorFromRows` in `sync-mapping.ts`.
+
+**Flat in the database, for the reason every other collection here is flat.**
+The per-record sync merge compares *records*, so a character carrying its traits
+carrying their characterization would be one record as far as the merge is
+concerned — and two writers touching two different traits of the same person
+would collide over work that never overlapped.
+
+**There is no `used` column anywhere, and the absence is load-bearing** (§2).
+The migration says so in a table comment, because a column called `used` is the
+obvious thing for somebody to add later and it would break the module quietly:
+the flag would be right on the machine that wrote it and wrong everywhere else.
+
+**Deleting costs the filing, never the idea.** A trait's items are
+`on delete set null`, not cascade, so removing a folder leaves the writing
+unfiled rather than gone — and unfiled is a state the module already has, since
+§7's right-click makes an item in a second without asking for a trait. A usage
+link, by contrast, is `on delete cascade` on the beat: a link to writing that no
+longer exists is not a link, and the item simply goes red again, which is §17
+happening without anything running.
+
+**The round trip is the test that matters**, because the claim the module makes
+to a writer is a colour. `sync-character-creator.test.ts` proves an item stays
+green on the second machine: a usage link that did not survive the journey would
+tell somebody their work is not in the script when it is, and they would write
+it again.
+
+**One list of collections rather than two.** Building this out found the drift
+waiting to happen: both readers of a project out of the database walked
+`SYNC_TABLES` to fetch and then re-listed every collection by hand, so a new
+module had to be remembered in three places, and forgetting one reads back as
+nothing — after which the push takes nothing for the truth and deletes the rows
+on the server. `ProjectRows` is now derived from `SYNC_TABLES` and `gatherRows`
+does the assembling, so the compiler asks the question instead of a person.
+
+**Proved against the live database, not just in tests.** Eight claims, in one
+transaction, rolled back: a second writer cannot read or add to somebody else's
+character; cutting a beat takes the usage links and leaves the characterization;
+deleting a trait leaves its items unfiled; nobody is in a relationship with
+themselves; and a character gets one arc.

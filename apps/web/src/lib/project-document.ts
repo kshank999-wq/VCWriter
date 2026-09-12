@@ -1,4 +1,10 @@
-import { SYNC_TABLES, fromRows, type ProjectFile } from '@vcwriter/domain';
+import {
+  SYNC_TABLES,
+  fromRows,
+  gatherRows,
+  type ProjectFile,
+  type SyncCollection,
+} from '@vcwriter/domain';
 import { adminClient } from './supabase';
 
 type Row = Record<string, unknown>;
@@ -30,24 +36,6 @@ export const projectDocument = async (projectId: string): Promise<ProjectFile> =
     }),
   );
 
-  const rows = Object.fromEntries(collections) as Record<string, Row[]>;
-  return fromRows({
-    project: project as Row,
-    lanes: rows['lanes'] ?? [],
-    units: rows['units'] ?? [],
-    beats: rows['beats'] ?? [],
-    markers: rows['markers'] ?? [],
-    sessions: rows['sessions'] ?? [],
-    researchCategories: rows['researchCategories'] ?? [],
-    researchItems: rows['researchItems'] ?? [],
-    characters: rows['characters'] ?? [],
-    characterCategories: rows['characterCategories'] ?? [],
-    links: rows['links'] ?? [],
-    setupsPayoffs: rows['setupsPayoffs'] ?? [],
-    boards: rows['boards'] ?? [],
-    sculptorNodes: rows['sculptorNodes'] ?? [],
-    sculptorLinks: rows['sculptorLinks'] ?? [],
-    outlines: rows['outlines'] ?? [],
-    outlineItems: rows['outlineItems'] ?? [],
-  });
+  const rows = Object.fromEntries(collections) as Partial<Record<SyncCollection, Row[]>>;
+  return fromRows(gatherRows(project as Row, rows));
 };

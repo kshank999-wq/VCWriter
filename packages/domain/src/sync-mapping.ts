@@ -3,6 +3,14 @@ import { captureItemSchema, type CaptureItem } from './entities/capture.js';
 import { outlineItemSchema, outlineSchema } from './entities/outline.js';
 import { characterCategorySchema, characterSchema } from './entities/character.js';
 import { storyLinkSchema } from './entities/links.js';
+import {
+  arcPointSchema,
+  characterArcSchema,
+  characterRelationshipSchema,
+  characterTraitSchema,
+  characterizationItemSchema,
+  usageLinkSchema,
+} from './character-creator.js';
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
 import { setupPayoffSchema } from './entities/setups.js';
 import { projectSchema, projectSettingsSchema } from './entities/project.js';
@@ -32,26 +40,6 @@ import type { BoardId, OutlineId, ProjectId } from './ids.js';
 
 export type Row = Record<string, unknown>;
 
-export interface ProjectRows {
-  project: Row;
-  lanes: Row[];
-  units: Row[];
-  beats: Row[];
-  markers: Row[];
-  sessions: Row[];
-  researchCategories: Row[];
-  researchItems: Row[];
-  characters: Row[];
-  characterCategories: Row[];
-  links: Row[];
-  setupsPayoffs: Row[];
-  boards: Row[];
-  sculptorNodes: Row[];
-  sculptorLinks: Row[];
-  outlines: Row[];
-  outlineItems: Row[];
-}
-
 /** Table each collection lives in, so callers do not hard-code names. */
 export const SYNC_TABLES = {
   lanes: 'lanes',
@@ -72,10 +60,50 @@ export const SYNC_TABLES = {
   sculptorLinks: 'sculptor_links',
   outlines: 'outlines',
   outlineItems: 'outline_items',
+  // The Character Creator (addendum 08). Order matters here for the same
+  // reason it does above: an item needs its trait, a point needs its arc, and
+  // a usage link needs whichever of the two it belongs to.
+  characterTraits: 'character_traits',
+  characterizationItems: 'characterization_items',
+  characterArcs: 'character_arcs',
+  arcPoints: 'arc_points',
+  usageLinks: 'usage_links',
+  characterRelationships: 'character_relationships',
 } as const;
 
 export type SyncCollection = keyof typeof SYNC_TABLES;
 export const SYNC_COLLECTIONS = Object.keys(SYNC_TABLES) as SyncCollection[];
+
+/**
+ * A project as rows: the project itself, and every collection `SYNC_TABLES`
+ * names.
+ *
+ * **Derived from that list rather than written beside it**, so the two cannot
+ * drift. They did drift, briefly, when this module gained the Character
+ * Creator's six collections (addendum 08 stage 1): a collection named in one
+ * list and forgotten in the other reads back as nothing, and `pushRows`
+ * then takes *nothing* for the truth and deletes the rows on the server. The
+ * compiler catches the omission now because there is only one list to forget.
+ */
+export type ProjectRows = { project: Row } & Record<SyncCollection, Row[]>;
+
+/**
+ * Rows fetched per collection, assembled into a `ProjectRows`.
+ *
+ * Both callers that read a project out of the database walk `SYNC_TABLES` to
+ * fetch, and then used to re-list every collection by hand to hand it to
+ * `fromRows` — which is the drift above waiting to happen, twice. A collection
+ * simply absent from the fetch becomes an empty list, which is what a project
+ * written before a module existed genuinely has.
+ */
+export const gatherRows = (
+  project: Row,
+  fetched: Partial<Record<SyncCollection, Row[]>>,
+): ProjectRows => {
+  const rows = { project } as ProjectRows;
+  for (const collection of SYNC_COLLECTIONS) rows[collection] = fetched[collection] ?? [];
+  return rows;
+};
 
 const text = (value: unknown, fallback = ''): string => (typeof value === 'string' ? value : fallback);
 const flag = (value: unknown, fallback = false): boolean => (typeof value === 'boolean' ? value : fallback);
@@ -498,6 +526,104 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
   links: file.links.map(linkToRow),
   setupsPayoffs: file.setupsPayoffs.map(setupPayoffToRow),
   ...planRows(file),
+  ...characterCreatorRows(file),
+});
+
+/**
+ * The Character Creator's collections, as rows (addendum 08 §4).
+ *
+ * Flat both sides, so there is nothing to nest and nothing to unpick — unlike
+ * the plans above, whose boards carry their nodes in the document and not in
+ * the database. Six straight mappings, and the only thing worth saying about
+ * them is what is **not** here: no `used` column on a characterization item or
+ * an arc point, because that is derived from the usage links every time it is
+ * asked and a column would be a second copy that could disagree.
+ */
+const characterCreatorRows = (
+  file: ProjectFile,
+): Pick<
+  ProjectRows,
+  | 'characterTraits'
+  | 'characterizationItems'
+  | 'characterArcs'
+  | 'arcPoints'
+  | 'usageLinks'
+  | 'characterRelationships'
+> => ({
+  characterTraits: (file.characterTraits ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    character_id: one.characterId,
+    name: one.name,
+    kind: one.kind,
+    prominence: one.prominence,
+    tone: one.tone,
+    notes: one.notes,
+    order_key: one.orderKey,
+    archived: one.archived,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+  characterizationItems: (file.characterizationItems ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    character_id: one.characterId,
+    trait_id: one.traitId,
+    text: one.text,
+    notes: one.notes,
+    retired: one.retired,
+    order_key: one.orderKey,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+  characterArcs: (file.characterArcs ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    character_id: one.characterId,
+    beginning: one.beginning,
+    need: one.need,
+    ending: one.ending,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+  arcPoints: (file.arcPoints ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    arc_id: one.arcId,
+    character_id: one.characterId,
+    kind: one.kind,
+    text: one.text,
+    notes: one.notes,
+    retired: one.retired,
+    order_key: one.orderKey,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+  usageLinks: (file.usageLinks ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    owner_kind: one.ownerKind,
+    owner_id: one.ownerId,
+    unit_id: one.unitId,
+    beat_id: one.beatId,
+    element_id: one.elementId,
+    quote: one.quote,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+  characterRelationships: (file.characterRelationships ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    from_character_id: one.fromCharacterId,
+    to_character_id: one.toCharacterId,
+    kind: one.kind,
+    label: one.label,
+    description: one.description,
+    state: one.state,
+    evolution: one.evolution,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
 });
 
 /**
@@ -804,6 +930,112 @@ const outlineItemFromRow = (row: Row): OutlineItem =>
   });
 
 /** The five plan collections, read back and put together again. */
+/**
+ * The Character Creator's collections, back out of rows (addendum 08 §4).
+ *
+ * Parsed through the schemas rather than trusted, like everything else here: a
+ * row that predates a column comes back with the schema's default, which is how
+ * a project written before this module opens without a migration of its own.
+ */
+const characterCreatorFromRows = (
+  rows: ProjectRows,
+): Pick<
+  ProjectFile,
+  | 'characterTraits'
+  | 'characterizationItems'
+  | 'characterArcs'
+  | 'arcPoints'
+  | 'usageLinks'
+  | 'characterRelationships'
+> => ({
+  characterTraits: (rows.characterTraits ?? []).map((row) =>
+    characterTraitSchema.parse({
+      id: row['id'],
+      projectId: row['project_id'],
+      characterId: row['character_id'],
+      name: text(row['name'], 'Untitled'),
+      kind: text(row['kind']),
+      prominence: typeof row['prominence'] === 'number' ? row['prominence'] : 3,
+      tone: row['tone'] ?? 'unsaid',
+      notes: text(row['notes']),
+      orderKey: row['order_key'],
+      archived: flag(row['archived']),
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
+  characterizationItems: (rows.characterizationItems ?? []).map((row) =>
+    characterizationItemSchema.parse({
+      id: row['id'],
+      projectId: row['project_id'],
+      characterId: row['character_id'],
+      traitId: nullableText(row['trait_id']),
+      text: text(row['text'], '—'),
+      notes: text(row['notes']),
+      retired: flag(row['retired']),
+      orderKey: row['order_key'],
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
+  characterArcs: (rows.characterArcs ?? []).map((row) =>
+    characterArcSchema.parse({
+      id: row['id'],
+      projectId: row['project_id'],
+      characterId: row['character_id'],
+      beginning: text(row['beginning']),
+      need: text(row['need']),
+      ending: text(row['ending']),
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
+  arcPoints: (rows.arcPoints ?? []).map((row) =>
+    arcPointSchema.parse({
+      id: row['id'],
+      projectId: row['project_id'],
+      arcId: row['arc_id'],
+      characterId: row['character_id'],
+      kind: row['kind'] ?? 'movement',
+      text: text(row['text'], '—'),
+      notes: text(row['notes']),
+      retired: flag(row['retired']),
+      orderKey: row['order_key'],
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
+  usageLinks: (rows.usageLinks ?? []).map((row) =>
+    usageLinkSchema.parse({
+      id: row['id'],
+      projectId: row['project_id'],
+      ownerKind: row['owner_kind'],
+      ownerId: row['owner_id'],
+      unitId: nullableText(row['unit_id']),
+      beatId: row['beat_id'],
+      elementId: nullableText(row['element_id']),
+      quote: text(row['quote']),
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
+  characterRelationships: (rows.characterRelationships ?? []).map((row) =>
+    characterRelationshipSchema.parse({
+      id: row['id'],
+      projectId: row['project_id'],
+      fromCharacterId: row['from_character_id'],
+      toCharacterId: row['to_character_id'],
+      kind: row['kind'] ?? 'custom',
+      label: text(row['label']),
+      description: text(row['description']),
+      state: text(row['state']),
+      evolution: text(row['evolution']),
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
+});
+
 const plansFromRows = (rows: ProjectRows): Pick<ProjectFile, 'boards' | 'outlines'> => {
   const nodes = rows.sculptorNodes.map(sculptorNodeFromRow);
   const links = rows.sculptorLinks.map(sculptorLinkFromRow);
@@ -856,6 +1088,7 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     links: rows.links.map(linkFromRow),
     setupsPayoffs: rows.setupsPayoffs.map(setupPayoffFromRow),
     ...plansFromRows(rows),
+    ...characterCreatorFromRows(rows),
     // Snapshots are local recovery points, not shared state; they stay on disk.
     snapshots: [],
   });

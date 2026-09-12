@@ -10,6 +10,7 @@ import {
   captureReviewToRow,
   bytesToHash,
   fromRows,
+  gatherRows,
   mergeProjects,
   moorTo,
   parseProjectFile,
@@ -25,6 +26,7 @@ import {
   type Row,
   type SceneVerdict,
   type Standing,
+  type SyncCollection,
 } from '@vcwriter/domain';
 
 /**
@@ -201,28 +203,12 @@ const pullRows = async (projectId: string): Promise<ProjectFile | null> => {
     }),
   );
 
-  const rows = Object.fromEntries(collections) as Record<string, Row[]>;
-  return fromRows({
-    project: projectRow as Row,
-    lanes: rows['lanes'] ?? [],
-    units: rows['units'] ?? [],
-    beats: rows['beats'] ?? [],
-    markers: rows['markers'] ?? [],
-    sessions: rows['sessions'] ?? [],
-    researchCategories: rows['researchCategories'] ?? [],
-    researchItems: rows['researchItems'] ?? [],
-    characters: rows['characters'] ?? [],
-    characterCategories: rows['characterCategories'] ?? [],
-    links: rows['links'] ?? [],
-    setupsPayoffs: rows['setupsPayoffs'] ?? [],
-    // The plans (addendum 07 §4). `fromRows` puts the nodes back on their
-    // board and the rows back in their outline.
-    boards: rows['boards'] ?? [],
-    sculptorNodes: rows['sculptorNodes'] ?? [],
-    sculptorLinks: rows['sculptorLinks'] ?? [],
-    outlines: rows['outlines'] ?? [],
-    outlineItems: rows['outlineItems'] ?? [],
-  });
+  // `fromRows` puts the nested collections back where they belong — the plans
+  // on their board and in their outline (addendum 07 §4) — and `gatherRows`
+  // fills in every collection `SYNC_TABLES` names, so a module added later
+  // arrives here without anybody remembering to edit this line.
+  const rows = Object.fromEntries(collections) as Partial<Record<SyncCollection, Row[]>>;
+  return fromRows(gatherRows(projectRow as Row, rows));
 };
 
 const pushRows = async (file: ProjectFile, remote: ProjectFile | null): Promise<void> => {

@@ -6,6 +6,14 @@ import { characterCategorySchema, characterSchema } from './entities/character.j
 import { defaultCharacterCategories } from './characters.js';
 import { storyLinkSchema } from './entities/links.js';
 import {
+  arcPointSchema,
+  characterArcSchema,
+  characterRelationshipSchema,
+  characterTraitSchema,
+  characterizationItemSchema,
+  usageLinkSchema,
+} from './character-creator.js';
+import {
   DEFAULT_RESEARCH_CATEGORIES,
   researchCategorySchema,
   researchItemSchema,
@@ -71,6 +79,22 @@ export const projectFileSchema = z.object({
   characters: z.array(characterSchema).default([]),
   /** The headings the cast is filed under (addendum 02 §16). */
   characterCategories: z.array(characterCategorySchema).default([]),
+  /**
+   * The Character Creator (addendum 08). Empty in every file that predates it
+   * and in every project whose writer has not opened one — which, like the
+   * boards and the outlines, is most of them for a while.
+   *
+   * Six collections rather than a nested tree, for the reason every other
+   * collection here is flat: a per-record sync merge compares records, and a
+   * character carrying its traits carrying their characterization would be one
+   * record as far as the merge is concerned.
+   */
+  characterTraits: z.array(characterTraitSchema).default([]),
+  characterizationItems: z.array(characterizationItemSchema).default([]),
+  usageLinks: z.array(usageLinkSchema).default([]),
+  characterArcs: z.array(characterArcSchema).default([]),
+  arcPoints: z.array(arcPointSchema).default([]),
+  characterRelationships: z.array(characterRelationshipSchema).default([]),
   links: z.array(storyLinkSchema).default([]),
   setupsPayoffs: z.array(setupPayoffSchema).default([]),
   snapshots: z.array(snapshotSchema).default([]),
