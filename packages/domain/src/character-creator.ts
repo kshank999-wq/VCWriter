@@ -964,3 +964,102 @@ export const unpinUsage = (file: ProjectFile, linkId: UsageLinkId): ProjectFile 
   ...file,
   usageLinks: file.usageLinks.filter((link) => (link.id as string) !== (linkId as string)),
 });
+
+// -------------------------------------------------------- story -> plan
+
+/**
+ * Who is in a beat, as ids, for offering the likely person first.
+ *
+ * Matched off the cues the way the episode cast already is, and a *guess about
+ * ordering, never a filter*: somebody can be characterized in a beat they never
+ * speak in — an action line about what they left behind is characterization —
+ * so everybody stays offered and these just come first.
+ */
+export const peopleInBeat = (file: ProjectFile, beatId: BeatId): CharacterId[] => {
+  const beat = file.beats.find((one) => (one.id as string) === (beatId as string));
+  if (!beat) return [];
+  const spoken = beat.manuscript.elements
+    .filter((element) => element.type === 'character')
+    .map((element) => element.text.trim().toUpperCase());
+  if (spoken.length === 0) return [];
+
+  return file.characters
+    .filter(
+      (character) =>
+        !character.archived &&
+        [character.name, ...character.aliases].some((name) =>
+          spoken.some((cue) => name.trim().length > 0 && cue.startsWith(name.trim().toUpperCase())),
+        ),
+    )
+    .map((character) => character.id);
+};
+
+/**
+ * Characterization caught while writing: made, filed and pinned in one go
+ * (addendum 08 §6, §7 — story → plan).
+ *
+ * **An item made this way is green the moment it exists**, and that is the
+ * point rather than a convenience. The writer is not recording a plan; they are
+ * noticing that what they have just written *is* characterization, and a module
+ * that made them write it down and then go and say where it was would be asking
+ * them to file their own work.
+ *
+ * A trait can be named here and is made if it is new, because §7 is explicit
+ * that the fast path must not stop to make somebody choose a folder first — and
+ * no trait at all is fine too, since unfiled is a real place (§1).
+ *
+ * **The text and the quote are different things on purpose.** The item is what
+ * the writer says the behaviour is, which is often a generalisation of the
+ * line — *leaves a small tip* from *she counts out four coins* — while the quote
+ * is the line as it stands. Forcing them to be the same would either put stage
+ * directions in the plan or stop somebody from thinking while they file.
+ */
+export const captureFromScript = (
+  file: ProjectFile,
+  input: {
+    characterId: CharacterId;
+    /** File it under one that exists… */
+    traitId?: CharacterTraitId | null;
+    /** …or name one, made here and now. Ignored when `traitId` is given. */
+    newTraitName?: string;
+    text: string;
+    beatId: BeatId;
+    elementId?: ManuscriptElementId | null;
+  },
+): { file: ProjectFile; item: CharacterizationItem | null } => {
+  const text = input.text.trim();
+  if (text.length === 0) return { file, item: null };
+  if (!file.beats.some((beat) => (beat.id as string) === (input.beatId as string))) {
+    return { file, item: null };
+  }
+
+  let next = file;
+  let traitId = input.traitId ?? null;
+
+  if (!traitId && (input.newTraitName ?? '').trim().length > 0) {
+    const made = addTrait(next, { characterId: input.characterId, name: input.newTraitName! });
+    next = made.file;
+    traitId = made.trait?.id ?? null;
+  }
+
+  const added = addCharacterization(next, {
+    characterId: input.characterId,
+    traitId,
+    text,
+  });
+  if (!added.item) return { file, item: null };
+
+  const pinned = pinUsage(added.file, {
+    ownerKind: 'characterization',
+    ownerId: added.item.id as string,
+    beatId: input.beatId,
+    elementId: input.elementId ?? null,
+  });
+
+  // The pin is the whole reason this path exists. If it could not be made the
+  // item would be born on deck, in a beat the writer is looking at, which is
+  // the one confusing outcome — so nothing is kept at all.
+  if (!pinned.link) return { file, item: null };
+
+  return { file: pinned.file, item: added.item };
+};

@@ -136,7 +136,7 @@ push live; the build takes a minute or two.
   0038 is the owner's switch.
   §19 says what each built stage does; §15 is the build order.
   `addendum-08-character-creator.md` is the Character Creator, the first module
-  of the Research room, from Ken's own dev spec. **Stages 0–3 built** —
+  of the Research room, from Ken's own dev spec. **Stages 0–4 built** —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
   so the unit of work is the characterization item and a trait is a folder for
@@ -165,8 +165,14 @@ push live; the build takes a minute or two.
   the colour follows from the manuscript, which is §2 made operational. The
   scene is worked out from the beat rather than asked for, naming a line is
   optional and copies it as the quote, and a pin to writing that has gone keeps
-  its row struck through, because the red needs an explanation. §3 says what
-  already exists and is only being widened; §8 is the
+  its row struck through, because the red needs an explanation. Stage 4 is §8's
+  one to protect — the right-click in `BeatBody.tsx`, so it works everywhere the
+  manuscript is edited: `captureFromScript` makes the trait if one was named,
+  adds the item and pins it in one call, **and keeps nothing at all if the pin
+  cannot be made**, since something born on deck in the beat the writer is
+  looking at is the one confusing outcome. The passage arrives editable because
+  the item keeps the writer's reading and the pin keeps the page's words. §3
+  says what already exists and is only being widened; §8 is the
   build order; §3.4 says why there is deliberately no module framework yet; §10
   says what each built stage does.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in

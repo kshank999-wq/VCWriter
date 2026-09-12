@@ -9093,3 +9093,89 @@ dialog.projects-dialog {
   background: var(--ink);
   max-width: 130px;
 }
+
+/* ------------------------------------- caught off the page (addendum 08 §7) */
+/* Right-click the writing and it becomes characterization. The menu is fixed
+   to where the pointer was, so it is positioned against the viewport rather
+   than against a line that scrolls away under it. */
+
+.caught-menu {
+  position: fixed;
+  z-index: 70;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--gold-deep, var(--border));
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.caught-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 12.5px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.caught-item:hover,
+.caught-item:focus-visible {
+  background: var(--panel-2);
+  color: var(--gold);
+}
+
+/* The dialog sits over the middle of the screen rather than at the pointer:
+   it is a form to fill in, not a menu to flick through. */
+.caught-dialog {
+  position: fixed;
+  z-index: 71;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, 92vw);
+  padding: 16px 18px;
+  background: var(--panel);
+  border: 1px solid var(--gold-deep, var(--border));
+  border-radius: 8px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  display: grid;
+  gap: 10px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.caught-dialog .field {
+  display: grid;
+  gap: 4px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.caught-dialog input,
+.caught-dialog select,
+.caught-dialog textarea {
+  font-size: 12.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 5px 8px;
+  width: 100%;
+  background: var(--ink);
+}
+
+.caught-dialog p {
+  margin: 0;
+}
+
+.caught-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

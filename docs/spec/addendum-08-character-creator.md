@@ -1,6 +1,6 @@
 # Addendum 08 — Character Creator
 
-Status: specified; **stages 0–3 built**, September 2026. From Ken's *VC Writer
+Status: specified; **stages 0–4 built**, September 2026. From Ken's *VC Writer
 Character Creator Development Specification* — the first module of the Research
 room. Extends §7 (research), §8 (structure) and §19 of the master specification,
 and uses the typed link system §7.4 already built.
@@ -198,7 +198,7 @@ interrupts writing to say a character is underdeveloped.
 2. **Built.** The Character Creator screen: Overview, Traits, Characterization,
    red/green.
 3. **Built.** Linking an item to a scene or beat from the Creator (plan → story).
-4. The right-click workflow in the editor (story → plan) (§7).
+4. **Built.** The right-click workflow in the editor (story → plan) (§7).
 5. The Arc Builder, with opportunity, refusal and doubling down (§8, §9).
 6. Arc-to-plot: the on-deck queue, assignment, and the Related Elements box (§10).
 7. Relationships (§11).
@@ -379,3 +379,49 @@ Driven in the real interface: open the Where on an item on deck, choose the
 beat and the line, press Pin it — the dot fills, the row reads *In the writing*,
 and the line at the top goes from *1 in the writing, 2 on deck* to *2 in the
 writing, 1 on deck*.
+
+### Stage 4 — caught while writing
+
+`captureFromScript` and `peopleInBeat` in the domain; the context menu and the
+filing dialog in `BeatBody.tsx`, so it works everywhere the manuscript is
+edited rather than in one screen.
+
+This is §6's *both directions* finished, and §8 called it the stage to protect:
+it is small in code and it is what makes the module usable by somebody who does
+not outline. Right-click a line, choose *Add to a character's
+characterization…*, and it is filed without leaving the page.
+
+**An item made this way is green the moment it exists.** That is the point
+rather than a convenience. The writer is not recording a plan; they are noticing
+that what they have just written *is* characterization, and a path that made the
+item and left it on deck would be asking them to go and file their own work.
+`captureFromScript` makes the trait if one was named, adds the item and pins it
+in one call — and **keeps nothing at all if the pin cannot be made**, because
+half of it would be the one confusing outcome: something born on deck in a beat
+the writer is looking at.
+
+**The text and the quote are different things on purpose.** The passage arrives
+in the box already, and editable, because what somebody wants to file is usually
+a reading of the line rather than the line: *squares the coins before she lets
+go of them* from *MARA counts out four coins and sets them down, squared*. The
+item keeps their words; the pin keeps the page's.
+
+**Naming a trait is done here or not at all.** §7 is explicit that the fast path
+must not stop to send somebody off to make a folder first, so the dialog takes a
+new trait's name — and *Not filed yet* is a real answer, since unfiled is a real
+place (§1).
+
+**Who speaks in the beat comes first in the list, and nothing is filtered.** An
+action line about what somebody left behind is characterization and they never
+said a word in it, so `peopleInBeat` is an ordering and never a gate.
+
+**Nothing is taken away by suppressing the native menu.** Electron gives a
+renderer no context menu of its own, so today right-click does nothing at all in
+the app; this is the first thing on it. The menu has one item and will grow only
+when something else genuinely belongs on the writing — reimplementing
+cut/copy/paste badly is not that.
+
+Driven in the real interface: right-click the action line in *The bill*, name
+the trait *Counts everything*, type the reading, press Add it — and the Creator
+shows a new trait holding one green item, pinned to INT. DINER - NIGHT · The
+bill with the original line as its quote.

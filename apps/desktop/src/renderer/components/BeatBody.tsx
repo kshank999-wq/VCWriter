@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   autoType,
   CHARACTER_EXTENSIONS,
+  captureFromScript,
   EXTENSIONS,
   EXTENSION_GROUPS,
   castNamesForBeat,
@@ -18,6 +19,7 @@ import {
   newId,
   onEnter,
   onTab,
+  peopleInBeat,
   retype,
   parseInlineMarks,
   reformatText,
@@ -26,6 +28,8 @@ import {
   toggleInline,
   updateBeat,
   type Beat,
+  type CharacterId,
+  type CharacterTraitId,
   type InlineMark,
   type InlineSpan,
   type ManuscriptElement,
@@ -117,6 +121,19 @@ export function BeatBody({
   const [focusId, setFocusId] = useState<ManuscriptElementId | null>(null);
   const [selection, setSelection] = useState<{ id: ManuscriptElementId; start: number; end: number } | null>(null);
   const inputs = useRef(new Map<ManuscriptElementId, HTMLTextAreaElement>());
+
+  /**
+   * Right-clicked writing, waiting to be made into characterization (addendum
+   * 08 §7). The passage is taken at the moment of the click, because the menu
+   * takes focus off the line and the selection with it.
+   */
+  const [caught, setCaught] = useState<{
+    x: number;
+    y: number;
+    elementId: ManuscriptElementId;
+    text: string;
+  } | null>(null);
+  const [filing, setFiling] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
 
   useEffect(() => {
     if (!focusId) return;
@@ -449,6 +466,18 @@ export function BeatBody({
               onChange={(event) => writeText(element, event.target.value)}
               onPaste={(event) => handlePaste(event, element, index)}
               onKeyDown={(event) => handleKeyDown(event, element, index)}
+              // Story → plan (addendum 08 §7): right-click the writing and it
+              // becomes characterization, without leaving the page. The
+              // selection is read here because opening the menu loses it.
+              onContextMenu={(event) => {
+                if (readOnly) return;
+                const input = event.currentTarget;
+                const picked = input.value.slice(input.selectionStart, input.selectionEnd).trim();
+                const text = picked.length > 0 ? picked : element.text.trim();
+                if (text.length === 0) return;
+                event.preventDefault();
+                setCaught({ x: event.clientX, y: event.clientY, elementId: element.id, text });
+              }}
             />
           </div>
 
@@ -514,6 +543,29 @@ export function BeatBody({
         >
           {emptyLabel}
         </button>
+      ) : null}
+
+      {caught ? (
+        <CaughtMenu
+          x={caught.x}
+          y={caught.y}
+          onPick={() => {
+            setFiling({ elementId: caught.elementId, text: caught.text });
+            setCaught(null);
+          }}
+          onClose={() => setCaught(null)}
+        />
+      ) : null}
+
+      {filing ? (
+        <FileAsCharacterization
+          file={file}
+          beat={beat}
+          elementId={filing.elementId}
+          passage={filing.text}
+          onUpdate={onUpdate}
+          onClose={() => setFiling(null)}
+        />
       ) : null}
     </div>
   );
@@ -600,6 +652,223 @@ function ExtensionMenu({ onPick, onClose }: { onPick(mark: string): void; onClos
         <span className="extension-mark">—</span>
         <span className="extension-term">No extension</span>
       </button>
+    </div>
+  );
+}
+
+/**
+ * The menu the right-click opens on a line of the manuscript.
+ *
+ * One item today, and it is deliberately the *only* one: Electron gives a
+ * renderer no context menu of its own, so nothing is being taken away here, and
+ * a menu that grew Cut/Copy/Paste would be reimplementing the platform badly.
+ * When something else genuinely belongs on the writing, it joins this list.
+ */
+function CaughtMenu({
+  x,
+  y,
+  onPick,
+  onClose,
+}: {
+  x: number;
+  y: number;
+  onPick(): void;
+  onClose(): void;
+}) {
+  const panel = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    panel.current?.querySelector('button')?.focus();
+    const away = () => onClose();
+    // Any click elsewhere, and any scroll, closes it: a menu pinned to a
+    // position on screen is wrong the moment the page moves under it.
+    window.addEventListener('pointerdown', away);
+    window.addEventListener('scroll', away, true);
+    return () => {
+      window.removeEventListener('pointerdown', away);
+      window.removeEventListener('scroll', away, true);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={panel}
+      className="caught-menu"
+      role="menu"
+      aria-label="What to do with this writing"
+      style={{ left: x, top: y }}
+      onPointerDown={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
+      <button type="button" role="menuitem" className="caught-item" onClick={onPick}>
+        Add to a character’s characterization…
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Turning a passage into characterization without leaving the page (addendum 08
+ * §7, stage 4).
+ *
+ * **Nothing here is a decision the writer has to make twice.** The people who
+ * speak in the beat come first in the list, the trait can be named rather than
+ * chosen, and the passage arrives already in the box and editable — because what
+ * a writer wants to file is usually a *reading* of the line rather than the line
+ * itself: *leaves a small tip* from *she counts out four coins*.
+ *
+ * What comes out is green immediately: `captureFromScript` makes the item and
+ * pins it here in one go, so the writer is never asked to go and say where the
+ * thing they were just looking at was.
+ */
+function FileAsCharacterization({
+  file,
+  beat,
+  elementId,
+  passage,
+  onUpdate,
+  onClose,
+}: {
+  file: ProjectFile;
+  beat: Beat;
+  elementId: ManuscriptElementId;
+  passage: string;
+  onUpdate: BeatBodyProps['onUpdate'];
+  onClose(): void;
+}) {
+  const here = useMemo(() => new Set(peopleInBeat(file, beat.id).map((id) => id as string)), [file, beat.id]);
+  const cast = useMemo(
+    () =>
+      file.characters
+        .filter((person) => !person.archived)
+        // Whoever speaks in this beat first: a guess about what is likely, and
+        // never a filter, since a beat can characterize somebody silent in it.
+        .sort((a, b) => Number(here.has(b.id as string)) - Number(here.has(a.id as string))),
+    [file.characters, here],
+  );
+
+  const [characterId, setCharacterId] = useState<CharacterId | ''>(cast[0]?.id ?? '');
+  const [traitId, setTraitId] = useState<string>('');
+  const [newTrait, setNewTrait] = useState('');
+  const [text, setText] = useState(passage);
+
+  const traits = file.characterTraits.filter(
+    (trait) => (trait.characterId as string) === (characterId as string) && !trait.archived,
+  );
+
+  const save = () => {
+    if (characterId === '' || text.trim().length === 0) return;
+    onUpdate((current) =>
+      captureFromScript(current, {
+        characterId,
+        traitId: traitId === '' ? null : (traitId as CharacterTraitId),
+        ...(traitId === '' && newTrait.trim().length > 0 ? { newTraitName: newTrait.trim() } : {}),
+        text,
+        beatId: beat.id,
+        elementId,
+      }).file,
+    );
+    onClose();
+  };
+
+  if (cast.length === 0) {
+    return (
+      <div className="caught-dialog" role="dialog" aria-label="Add to characterization">
+        <p className="muted small">Nobody is in the cast yet — add a character and this has somewhere to go.</p>
+        <div className="caught-actions">
+          <button type="button" className="ghost small" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="caught-dialog"
+      role="dialog"
+      aria-label="Add to characterization"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
+      <label className="field">
+        <span>Who this shows</span>
+        <select
+          autoFocus
+          aria-label="Character"
+          value={characterId as string}
+          onChange={(event) => {
+            setCharacterId(event.target.value as CharacterId);
+            setTraitId('');
+          }}
+        >
+          {cast.map((person) => (
+            <option key={person.id} value={person.id}>
+              {person.name}
+              {here.has(person.id as string) ? ' — in this beat' : ''}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="field">
+        <span>What it is an example of</span>
+        <select aria-label="Trait" value={traitId} onChange={(event) => setTraitId(event.target.value)}>
+          <option value="">Not filed yet</option>
+          {traits.map((trait) => (
+            <option key={trait.id} value={trait.id}>
+              {trait.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {/* Naming a new trait here is §7's requirement: the fast path must not
+          stop to send somebody off to make a folder first. */}
+      {traitId === '' ? (
+        <label className="field">
+          <span>Or name a new trait</span>
+          <input
+            aria-label="New trait"
+            placeholder="Greedy, never asks for help"
+            value={newTrait}
+            onChange={(event) => setNewTrait(event.target.value)}
+          />
+        </label>
+      ) : null}
+
+      <label className="field">
+        <span>How it shows — in your words</span>
+        <textarea
+          aria-label="How it shows"
+          rows={3}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+        />
+      </label>
+
+      <p className="muted small">
+        The line stays as it is. This goes in green, pinned here.
+      </p>
+
+      <div className="caught-actions">
+        <button type="button" className="ghost small" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="ghost small" disabled={text.trim().length === 0} onClick={save}>
+          Add it
+        </button>
+      </div>
     </div>
   );
 }
