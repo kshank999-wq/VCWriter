@@ -8313,3 +8313,170 @@ dialog.preferences .field {
   color: var(--muted);
   flex: 0 0 auto;
 }
+
+/* ------------------------------------------ the Sculptor's card (addendum 03 §5)
+
+   A ↑, a ↓ and a × the size of a full stop are a mis-click waiting to happen,
+   and the mis-click that costs something is the ×. So the controls are bigger
+   than they were, and the × is set apart from the rest by a gap it has to be
+   crossed to reach. */
+.sculpt-tools .card-tool {
+  min-width: 24px;
+  height: 22px;
+  padding: 0 6px;
+  font-size: 13px;
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+.sculpt-node:hover .card-tool,
+.card-tool:focus-visible {
+  border-color: var(--border);
+}
+
+.sculpt-tools .card-tool:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* The one that deletes: pushed clear of the arrows beside it, and red where
+   the hand is already on it. */
+.sculpt-tools .card-tool.remove {
+  margin-left: 10px;
+}
+
+.sculpt-tools .card-tool.remove:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* The card, opened. Big enough to write a note in, which the strip beside the
+   canvas never was. */
+.sculpt-card-veil {
+  /* Over the whole Sculptor, which is itself fixed to the window. */
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.sculpt-card-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 100%);
+  max-height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+}
+
+.sculpt-card-dialog header,
+.sculpt-card-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  flex: 0 0 auto;
+}
+
+.sculpt-card-dialog header {
+  border-bottom: 1px solid var(--border);
+}
+
+.sculpt-card-dialog footer {
+  border-top: 1px solid var(--border);
+  justify-content: flex-end;
+}
+
+.sculpt-card-dialog h3 {
+  margin: 0;
+  font-size: var(--ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.sculpt-card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Who is in it: the project's own cast, ticked. */
+.sculpt-cast-group {
+  margin-top: 6px;
+}
+
+.sculpt-cast-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+}
+
+.sculpt-cast-tick {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--ui);
+}
+
+.sculpt-cast-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sculpt-cast-add input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The question asked before a card goes. */
+.sculpt-sure-dialog {
+  width: min(440px, 100%);
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+}
+
+.sculpt-sure-dialog h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.sculpt-sure-dialog .sculpt-sure-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.sculpt-sure-dialog .danger {
+  color: var(--danger);
+}
+
+/* The shelf, folded out. It takes its width from the board rather than being
+   a permanent strip, so what is on it can be read. */
+.sculptor-body.with-shelf .research-shelf {
+  flex: 0 0 clamp(260px, 30%, 420px);
+}
+
+.sculptor-bar .tool.on {
+  border-color: var(--gold);
+  color: var(--gold);
+}

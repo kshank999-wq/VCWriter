@@ -13,8 +13,10 @@ import {
 } from './entities/sculptor.js';
 import { retitleScript } from './planning.js';
 import type { ProjectFile } from './project-file.js';
+import type { Character } from './entities/character.js';
 import type {
   BoardId,
+  CharacterId,
   SculptorColumnId,
   SculptorFieldId,
   SculptorLinkId,
@@ -70,6 +72,7 @@ export const createBoard = (file: ProjectFile, input: { name?: string } = {}): {
     boardId,
     columnId: structure.id,
     parentId: null,
+    characterIds: [],
     orderKey: endKeys[index] as string,
     title: end === 'beginning' ? 'Beginning' : 'End',
     note: '',
@@ -281,6 +284,7 @@ const madeNode = (input: {
     boardId: input.boardId,
     columnId: input.columnId,
     parentId: input.parentId,
+    characterIds: [],
     orderKey: input.orderKey,
     title: input.title,
     note: '',
@@ -400,7 +404,7 @@ export const updateNode = (
   file: ProjectFile,
   boardId: BoardId,
   nodeId: SculptorNodeId,
-  patch: Partial<Pick<SculptorNode, 'title' | 'note' | 'kind' | 'colour' | 'collapsed'>>,
+  patch: Partial<Pick<SculptorNode, 'title' | 'note' | 'kind' | 'colour' | 'collapsed' | 'characterIds'>>,
 ): ProjectFile => {
   const board = findBoard(file, boardId);
   const before = board ? findNode(board, nodeId) : null;
@@ -412,6 +416,121 @@ export const updateNode = (
   if (before.boundUnitId !== null) return retitleScript(next, { unitId: before.boundUnitId }, patch.title);
   if (before.boundBeatId !== null) return retitleScript(next, { beatId: before.boundBeatId }, patch.title);
   return next;
+};
+
+/**
+ * Who is on this card, and who is not yet (addendum 03 §5).
+ *
+ * Read through the project's cast rather than copied onto the node, for the
+ * same reason a contributor's colour is read through their seat: a character
+ * renamed once is renamed on every card that names them.
+ */
+export const castOnNode = (file: ProjectFile, node: SculptorNode): Character[] => {
+  const wanted = new Set(node.characterIds as string[]);
+  return file.characters.filter((character) => wanted.has(character.id as string));
+};
+
+/** Put somebody on a card, or take them off it. Idempotent either way. */
+export const setNodeCast = (
+  file: ProjectFile,
+  boardId: BoardId,
+  nodeId: SculptorNodeId,
+  characterId: CharacterId,
+  on: boolean,
+): ProjectFile => {
+  const board = findBoard(file, boardId);
+  const node = board ? findNode(board, nodeId) : null;
+  if (!node) return file;
+
+  const has = (node.characterIds as string[]).includes(characterId as string);
+  if (has === on) return file;
+
+  return updateNode(file, boardId, nodeId, {
+    characterIds: on
+      ? [...node.characterIds, characterId]
+      : node.characterIds.filter((one) => one !== characterId),
+  });
+};
+
+/**
+ * What removing this card would actually take with it (addendum 03 §5).
+ *
+ * Asked **before** the card goes, because the honest question is not "delete
+ * this?" but "delete these seven?" — a card near the top of a board carries
+ * everything hanging off it, and a writer who has just clicked the wrong ×
+ * cannot be expected to know that. Ken lost work to exactly this twice.
+ *
+ * `bound` is the part that is *not* lost: a bound card's scene stays in the
+ * script whatever happens here, and saying so is what stops the question
+ * being frightening.
+ */
+export interface WhatGoes {
+  /** Cards, this one included. */
+  cards: number;
+  /** Of those, how many stand for a real scene or beat, which stays. */
+  bound: number;
+  /** Observations the writer drew, which have nothing to be drawn between. */
+  links: number;
+  /** Whether it can go at all: Beginning and End cannot (§2). */
+  removable: boolean;
+}
+
+export const whatGoesWith = (file: ProjectFile, boardId: BoardId, nodeId: SculptorNodeId): WhatGoes => {
+  const board = findBoard(file, boardId);
+  const node = board ? findNode(board, nodeId) : null;
+  if (!board || !node) return { cards: 0, bound: 0, links: 0, removable: false };
+
+  const doomed = new Set<string>([nodeId as string]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const candidate of board.nodes) {
+      if (candidate.parentId !== null && doomed.has(candidate.parentId as string) && !doomed.has(candidate.id as string)) {
+        doomed.add(candidate.id as string);
+        grew = true;
+      }
+    }
+  }
+
+  const going = board.nodes.filter((candidate) => doomed.has(candidate.id as string));
+  return {
+    cards: going.length,
+    bound: going.filter((candidate) => candidate.boundUnitId !== null || candidate.boundBeatId !== null).length,
+    links: linksOf(board).filter(
+      (link) => doomed.has(link.fromId as string) || doomed.has(link.toId as string),
+    ).length,
+    removable: node.end === null,
+  };
+};
+
+/**
+ * What to ask before a card goes, in the room's own words.
+ *
+ * One sentence, and it names what is at stake rather than asking a question
+ * nobody can answer from the words in it.
+ */
+export const removalQuestion = (going: WhatGoes, title: string): string => {
+  const what = title.trim().length > 0 ? `“${title.trim()}”` : 'this card';
+  if (going.cards <= 1) return `Delete ${what}?`;
+  return `Delete ${what} and the ${going.cards - 1} ${going.cards === 2 ? 'card' : 'cards'} under it?`;
+};
+
+/** The reassurance that goes under the question, where there is one to give. */
+export const removalComfort = (going: WhatGoes): string => {
+  const parts: string[] = [];
+  if (going.bound > 0) {
+    parts.push(
+      going.bound === 1
+        ? 'One of them is a scene in the script. The scene stays; only the card goes.'
+        : `${going.bound} of them are scenes in the script. The scenes stay; only the cards go.`,
+    );
+  }
+  if (going.links > 0) {
+    parts.push(
+      `${going.links} ${going.links === 1 ? 'connection' : 'connections'} you drew ${going.links === 1 ? 'goes' : 'go'} with ${going.cards === 1 ? 'it' : 'them'}.`,
+    );
+  }
+  return parts.join(' ');
 };
 
 /**

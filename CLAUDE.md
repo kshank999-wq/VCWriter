@@ -32,14 +32,17 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0029.
+  reads like it does. Applied through 0030.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
   1–7 (the board and its two nodes, the structure column, the layout rule
   with scenes, beats, the columns the writer defines, binding a node to a real
   scene, and the writer's own labelled connections) are built — §16 says what
-  they do — and §14.4 lists what is left: folding, focus, filters, search and
+  they do — plus the card revision: a card opens as a dialog with its notes and
+  who is in it, the × asks before anything goes (`whatGoesWith` in
+  `sculptor.ts` says what would), and the research shelf folds out from the
+  left (§5, §9) — and §14.4 lists what is left: folding, focus, filters, search and
   a mini-map, then Writers Room. §8, the export as an outline, is **withdrawn**
   — the Sculptor does not make outlines. §14 says why the first draft was
   wrong.

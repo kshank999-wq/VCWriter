@@ -5,10 +5,13 @@ import {
   addBlock,
   addChild,
   addColumn,
+  addCharacter,
   addColumnField,
   addResearchRow,
   canCarryToBoard,
   carryRowToBoard,
+  castByCategory,
+  castOnNode,
   bindKindOf,
   bindNode,
   bindableBeats,
@@ -36,14 +39,19 @@ import {
   removeColumn,
   removeColumnField,
   relabelLink,
+  knowsCharacter,
+  removalComfort,
+  removalQuestion,
   removeNode,
   renameColumn,
   renameColumnField,
+  setNodeCast,
   setNodeField,
   standingFor,
   unbindNode,
   unlinkNodes,
   updateNode,
+  whatGoesWith,
   type BeatId,
   type Board,
   type LaidNode,
@@ -162,6 +170,17 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 40, y: 24 });
   const [selected, setSelected] = useState<SculptorNodeId | null>(null);
+  /** The card whose own dialog is open, where one is (§5). */
+  const [openCard, setOpenCard] = useState<SculptorNodeId | null>(null);
+  /**
+   * The card the writer has asked to delete, while the board asks them back.
+   *
+   * One dialog for the board rather than one on every card: the question is
+   * about what goes with it, and only the board knows that.
+   */
+  const [removing, setRemoving] = useState<SculptorNodeId | null>(null);
+  /** The shelf, folded out over the canvas rather than beside it (§5). */
+  const [shelfOpen, setShelfOpen] = useState(false);
   /** The node a connection is being drawn from, while one is (§7). */
   const [linking, setLinking] = useState<SculptorNodeId | null>(null);
   /**
@@ -228,6 +247,15 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
   const chosen = board && selected ? board.nodes.find((node) => node.id === selected) ?? null : null;
   const column = board && chosen ? columnOf(board, chosen) : null;
 
+  const opened = board && openCard ? board.nodes.find((node) => node.id === openCard) ?? null : null;
+  const openedColumn = board && opened ? columnOf(board, opened) : null;
+
+  // What deleting would actually take, asked of the board before the writer
+  // is asked anything (§5). A card near the top carries everything under it,
+  // and the question has to say so.
+  const doomed = board && removing ? board.nodes.find((node) => node.id === removing) ?? null : null;
+  const going = board && removing ? whatGoesWith(file, board.id, removing) : null;
+
   // Each of the writer's own connections, measured once: a link whose ends
   // are both inside one fold has nothing to say while it is folded, because
   // the card standing in for them would be pointing at itself.
@@ -254,6 +282,18 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
       <header className="sculptor-bar">
         <h2>Story Sculptor</h2>
         {board ? <span className="muted small">{board.name}</span> : null}
+
+        {/* The shelf is a place, not a strip: it opens from the left and moves
+            the board across, so what is on it can actually be read (§5). */}
+        <button
+          type="button"
+          className={shelfOpen ? 'tool on' : 'tool'}
+          aria-pressed={shelfOpen}
+          title={shelfOpen ? 'Close the research shelf' : 'Open the research shelf beside the board'}
+          onClick={() => setShelfOpen(!shelfOpen)}
+        >
+          {shelfOpen ? '◧ Research' : '▤ Research'}
+        </button>
 
         <span className="toolbar-spacer" />
 
@@ -351,19 +391,26 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
         </button>
       </header>
 
-      <div className="sculptor-body">
+      <div className={shelfOpen ? 'sculptor-body with-shelf' : 'sculptor-body'}>
         {/* The shelf the Outliner has, for the same reason (addendum 06 §3),
-            and with the outline on it to drag across from (§2). */}
-        <ResearchShelf
-          file={file}
-          from="board"
-          reveal={null}
-          onCarry={(held) => {
-            carrying.current = held;
-            setCarryingAny(held !== null);
-            if (held === null) setOverNode(null);
-          }}
-        />
+            and with the outline on it to drag across from (§2).
+
+            **Behind a button, and wide when it is open.** A 210px strip is
+            enough to drag a row out of and not enough to read anything in, so
+            it folds out from the left and moves the board across rather than
+            sitting beside it costing a column of canvas all day. */}
+        {shelfOpen ? (
+          <ResearchShelf
+            file={file}
+            from="board"
+            reveal={null}
+            onCarry={(held) => {
+              carrying.current = held;
+              setCarryingAny(held !== null);
+              if (held === null) setOverNode(null);
+            }}
+          />
+        ) : null}
 
         <div
           className={carryingAny ? 'sculpt-canvas carrying' : 'sculpt-canvas'}
@@ -482,6 +529,10 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
                     }
                     setSelected(laid.node.id);
                   }}
+                  onOpen={() => {
+                    setSelected(laid.node.id);
+                    setOpenCard(laid.node.id);
+                  }}
                   onTitle={(title) => write((current, id) => updateNode(current, id, laid.node.id, { title }))}
                   onFold={() =>
                     write((current, id) =>
@@ -489,11 +540,7 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
                     )
                   }
                   onMove={(direction) => write((current, id) => moveNode(current, id, laid.node.id, direction))}
-                  onRemove={() => {
-                    setSelected(null);
-                    write((current, id) => removeNode(current, id, laid.node.id));
-                  }}
-                  onUnbind={() => write((current, id) => unbindNode(current, id, laid.node.id))}
+                  onAskRemove={() => setRemoving(laid.node.id)}
                   onAddChild={() => write((current, id) => addChild(current, id, laid.node.id).file)}
                   landing={overNode === laid.node.id}
                   onCarryOver={() => {
@@ -663,7 +710,225 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
           )}
         </aside>
       </div>
+
+      {/* The card, opened (§5). The same fields the panel beside the canvas
+          has, with room to write in them — and who is in it, which is the one
+          thing a card could not say before. */}
+      {opened && board ? (
+        <div className="sculpt-card-veil" role="presentation" onClick={() => setOpenCard(null)}>
+          <div
+            className="sculpt-card-dialog"
+            role="dialog"
+            aria-label={`Card: ${opened.title.trim() || 'untitled'}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <h3>{opened.end ? (opened.end === 'beginning' ? 'Beginning' : 'End') : 'Card'}</h3>
+              <button type="button" className="ghost" onClick={() => setOpenCard(null)} aria-label="Close the card">
+                ×
+              </button>
+            </header>
+
+            <div className="sculpt-card-body">
+              <label className="field">
+                <span>Title</span>
+                <input
+                  aria-label="The card's title"
+                  value={opened.title}
+                  onChange={(event) =>
+                    write((current, id) => updateNode(current, id, opened.id, { title: event.target.value }))
+                  }
+                />
+              </label>
+
+              <label className="field">
+                <span>Notes</span>
+                <textarea
+                  aria-label="The card's notes"
+                  rows={10}
+                  value={opened.note}
+                  onChange={(event) =>
+                    write((current, id) => updateNode(current, id, opened.id, { note: event.target.value }))
+                  }
+                />
+              </label>
+
+              <NodeCast file={file} node={opened} onWrite={write} />
+
+              <ColumnFields
+                column={openedColumn}
+                node={opened}
+                onSet={(fieldId, value) =>
+                  write((current, id) => setNodeField(current, id, opened.id, fieldId, value))
+                }
+                onAdd={() => {
+                  if (openedColumn) write((current, id) => addColumnField(current, id, openedColumn.id).file);
+                }}
+                onRename={(fieldId, name) => {
+                  if (openedColumn) write((current, id) => renameColumnField(current, id, openedColumn.id, fieldId, name));
+                }}
+                onRemove={(fieldId) => {
+                  if (openedColumn) write((current, id) => removeColumnField(current, id, openedColumn.id, fieldId));
+                }}
+              />
+
+              <Connections
+                board={board}
+                node={opened}
+                onGo={(nodeId) => {
+                  setSelected(nodeId);
+                  setOpenCard(nodeId);
+                }}
+                onWrite={write}
+              />
+
+              <Binding file={file} board={board} node={opened} onWrite={write} />
+            </div>
+
+            <footer>
+              <button type="button" className="button" onClick={() => setOpenCard(null)}>
+                Done
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Asked before anything goes (§5). Ken lost work to a × the size of a
+          full stop twice; the question names what would actually go, and what
+          would not. */}
+      {doomed && going ? (
+        <div className="sculpt-card-veil" role="presentation" onClick={() => setRemoving(null)}>
+          <div
+            className="sculpt-sure-dialog"
+            role="alertdialog"
+            aria-label={removalQuestion(going, doomed.title)}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3>{removalQuestion(going, doomed.title)}</h3>
+            {removalComfort(going) ? <p className="muted small">{removalComfort(going)}</p> : null}
+            <div className="sculpt-sure-row">
+              <button type="button" className="button" onClick={() => setRemoving(null)}>
+                Keep it
+              </button>
+              {going.bound > 0 && isBound(doomed) ? (
+                <button
+                  type="button"
+                  className="ghost"
+                  title="Leave the card where it is and let go of the scene it stands for"
+                  onClick={() => {
+                    write((current, id) => unbindNode(current, id, doomed.id));
+                    setRemoving(null);
+                  }}
+                >
+                  Just unbind it
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="ghost danger"
+                onClick={() => {
+                  if (openCard === doomed.id) setOpenCard(null);
+                  if (selected === doomed.id) setSelected(null);
+                  write((current, id) => removeNode(current, id, doomed.id));
+                  setRemoving(null);
+                }}
+              >
+                {going.cards > 1 ? `Delete all ${going.cards}` : 'Delete it'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * Who is in this card (addendum 03 §5).
+ *
+ * The project's own cast, ticked — never a list of names typed onto the card.
+ * A character renamed once is renamed on every card that names them, and a
+ * board can no more invent a person than a scene can.
+ *
+ * A name that is not in the cast yet is added to the project *and* put on the
+ * card, because a board is exactly where a writer meets somebody for the first
+ * time and making them go elsewhere to enter them would be the wrong way round.
+ */
+function NodeCast({
+  file,
+  node,
+  onWrite,
+}: {
+  file: ProjectFile;
+  node: SculptorNode;
+  onWrite(mutate: (current: ProjectFile, id: Board['id']) => ProjectFile): void;
+}) {
+  const [adding, setAdding] = useState('');
+  const groups = castByCategory(file);
+  const on = new Set(castOnNode(file, node).map((person) => person.id as string));
+
+  const add = () => {
+    const name = adding.trim();
+    if (name.length === 0) return;
+    setAdding('');
+    onWrite((current, id) => {
+      const known = knowsCharacter(current, name);
+      const withThem = known ? current : addCharacter(current, { name });
+      const person = known ?? knowsCharacter(withThem, name);
+      return person ? setNodeCast(withThem, id, node.id, person.id, true) : withThem;
+    });
+  };
+
+  return (
+    <section className="sculpt-cast">
+      <h4>Who is in it</h4>
+      {groups.every((group) => group.characters.length === 0) ? (
+        <p className="muted small">
+          Nobody in the cast yet. Type a name and they join the project’s cast as well as this card.
+        </p>
+      ) : (
+        groups
+          .filter((group) => group.characters.length > 0)
+          .map((group) => (
+            <div key={group.category?.id ?? 'unfiled'} className="sculpt-cast-group">
+              <span className="muted small">{group.name}</span>
+              <div className="sculpt-cast-row">
+                {group.characters.map((person) => (
+                  <label key={person.id as string} className="sculpt-cast-tick">
+                    <input
+                      type="checkbox"
+                      checked={on.has(person.id as string)}
+                      onChange={(event) =>
+                        onWrite((current, id) => setNodeCast(current, id, node.id, person.id, event.target.checked))
+                      }
+                    />
+                    <span>{person.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))
+      )}
+
+      <div className="sculpt-cast-add">
+        <input
+          aria-label="Somebody else in this card"
+          placeholder="Somebody else…"
+          value={adding}
+          onChange={(event) => setAdding(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              add();
+            }
+          }}
+        />
+        <button type="button" className="ghost" onClick={add} disabled={adding.trim().length === 0}>
+          Add
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -971,11 +1236,11 @@ function Node({
   linking,
   linkingFrom,
   onSelect,
+  onOpen,
   onTitle,
   onFold,
   onMove,
-  onRemove,
-  onUnbind,
+  onAskRemove,
   onAddChild,
   landing,
   onCarryOver,
@@ -989,11 +1254,13 @@ function Node({
   linking: boolean;
   linkingFrom: boolean;
   onSelect(): void;
+  /** Open the card's own dialog — its note, who is in it, and the rest (§5). */
+  onOpen(): void;
   onTitle(title: string): void;
   onFold(): void;
   onMove(direction: -1 | 1): void;
-  onRemove(): void;
-  onUnbind(): void;
+  /** Ask before anything goes. The question is the window's, not the card's. */
+  onAskRemove(): void;
   onAddChild(): void;
   /** Something off the shelf is over this card. */
   landing: boolean;
@@ -1005,9 +1272,6 @@ function Node({
   const { node } = laid;
   const end = node.end !== null;
   const bound = isBound(node);
-  // §11: deleting a bound node offers to unbind rather than to delete the
-  // scene. The writing is never what a × on a card is allowed to cost.
-  const [asking, setAsking] = useState(false);
   return (
     <div
       className={[
@@ -1016,7 +1280,6 @@ function Node({
         selected ? 'selected' : '',
         node.collapsed ? 'folded' : '',
         bound ? 'bound' : 'idea',
-        asking ? 'asking' : '',
         linking && !linkingFrom ? 'landable' : '',
         linkingFrom ? 'linking-from' : '',
         landing ? 'landing' : '',
@@ -1030,6 +1293,15 @@ function Node({
         height: `${laid.headHeight * UNIT * zoom}px`,
       }}
       onPointerDown={onSelect}
+      // Clicking a card opens it. Double rather than single, because a single
+      // click is how a card is picked up and moved, and because the title is
+      // typed straight on the card — so a double-click inside the title is
+      // still a double-click inside the title.
+      onDoubleClick={(event) => {
+        if ((event.target as HTMLElement).tagName === 'INPUT') return;
+        event.stopPropagation();
+        onOpen();
+      }}
       onDragOver={(event) => {
         const effect = onCarryOver();
         if (!effect) return;
@@ -1060,42 +1332,23 @@ function Node({
         onChange={(event) => onTitle(event.target.value)}
       />
 
-      {asking ? (
-        <span className="sculpt-sure" role="alertdialog" aria-label={`Remove ${node.title || 'this node'}?`}>
-          <span className="muted small">This is a scene in the script. Taking the card off leaves the scene there.</span>
-          <span className="sculpt-sure-row">
-            <button
-              type="button"
-              className="ghost small"
-              onClick={() => {
-                setAsking(false);
-                onUnbind();
-              }}
-            >
-              Unbind it
-            </button>
-            <button
-              type="button"
-              className="ghost small danger"
-              onClick={() => {
-                setAsking(false);
-                onRemove();
-              }}
-            >
-              Remove the card
-            </button>
-            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
-              Keep it
-            </button>
-          </span>
-        </span>
-      ) : null}
-
+      {/* The card's controls. Bigger than they were, because a ↑ and a × the
+          size of a full stop are a mis-click waiting to happen — and the ×
+          sits apart from the rest for the same reason. */}
       <div className="sculpt-tools">
+        <button
+          type="button"
+          className="ghost card-tool"
+          aria-label={`Open ${node.title || 'this card'}`}
+          title="Open this card — its note, who is in it, and the rest"
+          onClick={onOpen}
+        >
+          ⋯
+        </button>
         {laid.childCount > 0 ? (
           <button
             type="button"
-            className="ghost small"
+            className="ghost card-tool"
             aria-label={node.collapsed ? `Unfold ${node.title || 'this node'}` : `Fold ${node.title || 'this node'}`}
             title={node.collapsed ? `${laid.childCount} folded away` : 'Fold what hangs off it'}
             onClick={onFold}
@@ -1103,22 +1356,41 @@ function Node({
             {node.collapsed ? `▸ ${laid.childCount}` : '▾'}
           </button>
         ) : null}
-        <button type="button" className="ghost small" aria-label={`Add under ${node.title || 'this node'}`} onClick={onAddChild}>
+        <button
+          type="button"
+          className="ghost card-tool"
+          aria-label={`Add under ${node.title || 'this node'}`}
+          title="Add a card under this one"
+          onClick={onAddChild}
+        >
           +
         </button>
         {end ? null : (
           <>
-            <button type="button" className="ghost small" aria-label={`Move ${node.title || 'this node'} up`} onClick={() => onMove(-1)}>
+            <button
+              type="button"
+              className="ghost card-tool"
+              aria-label={`Move ${node.title || 'this node'} up`}
+              title="Move it earlier"
+              onClick={() => onMove(-1)}
+            >
               ↑
             </button>
-            <button type="button" className="ghost small" aria-label={`Move ${node.title || 'this node'} down`} onClick={() => onMove(1)}>
+            <button
+              type="button"
+              className="ghost card-tool"
+              aria-label={`Move ${node.title || 'this node'} down`}
+              title="Move it later"
+              onClick={() => onMove(1)}
+            >
               ↓
             </button>
             <button
               type="button"
-              className="ghost small"
-              aria-label={`Remove ${node.title || 'this node'}`}
-              onClick={() => (bound ? setAsking(true) : onRemove())}
+              className="ghost card-tool remove"
+              aria-label={`Delete ${node.title || 'this node'}`}
+              title="Delete this card"
+              onClick={onAskRemove}
             >
               ×
             </button>

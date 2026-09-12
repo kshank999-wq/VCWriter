@@ -427,6 +427,9 @@ const sculptorNodeToRow = (node: SculptorNode, projectId: ProjectId): Row => ({
   kind: node.kind,
   colour: node.colour,
   fields: node.fields,
+  // Who is on the card (addendum 03 §5), by id. Flat like the fields beside
+  // it: the database holds what the document holds, or the journey loses it.
+  character_ids: node.characterIds,
   // `end` is a reserved word in SQL, hence the column's own name.
   node_end: node.end,
   collapsed: node.collapsed,
@@ -752,6 +755,7 @@ const sculptorNodeFromRow = (row: Row): SculptorNode =>
     kind: text(row['kind']),
     colour: text(row['colour']),
     fields: row['fields'] ?? {},
+    characterIds: row['character_ids'] ?? [],
     end: nullableText(row['node_end']),
     collapsed: flag(row['collapsed']),
     boundUnitId: nullableText(row['bound_unit_id']),

@@ -3,6 +3,7 @@ import { id, orderKey, timestamps } from './common.js';
 import type {
   BeatId,
   BoardId,
+  CharacterId,
   ProjectId,
   SculptorColumnId,
   SculptorFieldId,
@@ -100,6 +101,15 @@ export const sculptorNodeSchema = z.object({
    * something is typed, and a node whose column has no fields never has any.
    */
   fields: z.record(z.string()).default({}),
+  /**
+   * Who is in it (addendum 03 §5).
+   *
+   * The project's own cast, by id, so a character renamed once is renamed on
+   * every card that names them. A card may name somebody the script has not
+   * met yet — that is what a board is for — and the cast is where they are
+   * added, so a board never invents a person the project does not have.
+   */
+  characterIds: z.array(id<CharacterId>()).default([]),
   /** Beginning, End, or an ordinary node. */
   end: sculptorEndSchema.nullable().default(null),
   /** Folded: its children compressed, their order kept (§4, §10). */

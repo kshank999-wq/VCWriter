@@ -99,8 +99,15 @@ a form to fill in.
 | **Note** | Anything else, in the detail panel |
 | **Kind** | Its column's kind by default, changeable |
 | **Colour** | Optional, the writer's own |
+| **Who is in it** | The project's own cast, ticked. Never names typed onto the card |
 | **Links** | Free connections to any other node (§7) |
 | **Bound to** | A real scene or beat in the script, where the writer has said so (§6) |
+
+**Who is in it is read through the cast, never copied onto the card.** A
+character renamed once is renamed on every card that names them, and a board
+can no more invent a person than a scene can — so a name that is not in the
+cast yet joins the project's cast as it joins the card. Typing it on the board
+is right; making the writer go somewhere else to enter them would not be.
 
 Everything beyond that — a scene's POV, its conflict, a character arc's
 before-and-after state — is a **field of its column**, defined when the
@@ -171,12 +178,44 @@ outline is addendum 06 §12 stage 9. What the board might still want one day is
 a way to print **the board** — the diagram, as a diagram — which is a different
 thing and is not specified here.
 
-## 9. The detail panel
+## 9. The detail panel, and the card
 
 Clicking a node opens its detail beside the canvas, without losing the map:
 its title, its note, its kind and colour, what it is bound to, what it is
 linked to, and whatever fields its column defines. A bound beat offers a way
 straight into the Beat Editor.
+
+**And the card opens.** The panel beside the canvas is a strip, and a strip is
+somewhere to glance at a note rather than somewhere to write one. Double-click
+a card — or press the ⋯ on it — and the same things open as a dialog with room
+in it: the title, the notes, who is in it, the questions its column asks, what
+it is bound to, and what it is connected to. The two are one component, so
+they can never come to say different things.
+
+### The × asks first
+
+A ↑, a ↓ and a × the size of a full stop are a mis-click waiting to happen, and
+only one of those three costs anything. So the controls are bigger, the × is
+set apart from the arrows by a gap that has to be crossed to reach it, and
+**it asks before anything goes**.
+
+The question names what is actually at stake, which is the part nobody can see:
+a card near the top of a board carries everything hanging off it, so it asks
+*delete this and the six cards under it?* rather than *are you sure?* — and it
+says what is **not** lost, because a bound card's scene stays in the script
+whatever happens on the board. Where there is a scene behind the card, *Just
+unbind it* is offered beside *Delete*, which is almost always what was meant.
+
+### The research shelf, folded out
+
+The shelf the Outliner has is on the board too, and it was a 210px strip down
+the left — wide enough to drag a row out of, not wide enough to read anything
+in, and costing a column of canvas all day whether or not it was being used.
+
+It is a **button** now. Pressed, it opens from the left and moves the board
+across rather than sitting on top of it, and it takes a third of the width
+rather than a sliver, so what is on it can be read. Pressed again it folds
+away and the board has the window back.
 
 ## 10. Views
 
