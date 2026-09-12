@@ -7,7 +7,7 @@ import { researchItemSchema } from './entities/research.js';
 import { manuscriptElementSchema } from './entities/manuscript.js';
 import { createProjectFile } from './project-file.js';
 import { characterCategoriesInOrder } from './characters.js';
-import type { ImportedScript } from './importing.js';
+import { bareCue, type ImportedScript } from './importing.js';
 import type { ProjectFile } from './project-file.js';
 import type { ProjectFormat } from './entities/project.js';
 import type { Beat, StructuralUnit } from './entities/structure.js';
@@ -72,6 +72,9 @@ const wordsIn = (text: string): number => text.trim().split(/\s+/).filter(Boolea
  * do not. Everything is a proposal — the writer refiles anyone in a click.
  */
 const headingFor = (speeches: number, busiest: number, mainAtLeast: number, headings: number): number => {
+  // Named in the action and never given a line: a minor part by the only
+  // evidence the script offers, whoever else is in it.
+  if (speeches === 0) return Math.max(0, headings - 1);
   if (speeches >= mainAtLeast || speeches >= busiest * 0.4) return 0;
   // Three headings (a series) puts the middle band under "recurring".
   if (headings > 2 && speeches >= busiest * 0.12) return 1;
@@ -98,6 +101,13 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
   // ------------------------------------------------------------- the cast
   const headings = characterCategoriesInOrder(base);
   const busiest = script.characters[0]?.speeches ?? 0;
+  const describe = (person: { speeches: number; scenes: number }): string =>
+    person.speeches === 0
+      ? // Named in the action and never given a line. Said plainly, because a
+        // writer looking down the cast list should be able to see at a glance
+        // which of these the script actually hands a speech to.
+        `Named in the action, with no lines. ${person.scenes} ${person.scenes === 1 ? 'scene' : 'scenes'}.`
+      : `${person.speeches} ${person.speeches === 1 ? 'speech' : 'speeches'} across ${person.scenes} ${person.scenes === 1 ? 'scene' : 'scenes'}.`;
   const mainAtLeast = options.mainAtLeast ?? 12;
   const byName = new Map<string, CharacterId>();
 
@@ -113,8 +123,11 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
       id,
       projectId,
       name: person.name,
+      // The fuller name the action introduced them by. An alias rather than
+      // the name, because the name has to stay what the manuscript cues with.
+      aliases: person.aliases ?? [],
       // What the script itself says about them: how much they carry.
-      description: `${person.speeches} ${person.speeches === 1 ? 'speech' : 'speeches'} across ${person.scenes} ${person.scenes === 1 ? 'scene' : 'scenes'}.`,
+      description: describe(person),
       categoryId: heading,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -168,7 +181,10 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
           type: element.type,
           text: element.text,
           // Bound to the character so read-back can voice it (§10).
-          characterId: element.type === 'character' ? (byName.get(element.text.trim().toUpperCase()) ?? null) : null,
+          // Through the bare cue: MAEVE, MAEVE (V.O.) and MAEVE (CONT'D) are
+          // one person, and binding on the text as typed left every extended
+          // cue in the script attached to nobody.
+          characterId: element.type === 'character' ? (byName.get(bareCue(element.text)) ?? null) : null,
           attributes: {
             ...(element.dual ? { dual: true } : {}),
             // Marked so the writer can be shown what to look at, and so a

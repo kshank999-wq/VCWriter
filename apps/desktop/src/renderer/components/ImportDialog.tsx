@@ -225,8 +225,13 @@ function Found({ script }: { script: ImportedScript }) {
               <li key={person.name}>
                 <span>{person.name}</span>
                 <span className="muted">
-                  {person.speeches} {person.speeches === 1 ? 'speech' : 'speeches'} · {person.scenes}{' '}
-                  {person.scenes === 1 ? 'scene' : 'scenes'}
+                  {/* Somebody the action names and never gives a line to is in
+                      the cast on purpose (§18); "0 speeches" reads like the
+                      reader failed to find their lines. */}
+                  {person.speeches === 0
+                    ? 'named in the action'
+                    : `${person.speeches} ${person.speeches === 1 ? 'speech' : 'speeches'}`}{' '}
+                  · {person.scenes} {person.scenes === 1 ? 'scene' : 'scenes'}
                 </span>
               </li>
             ))}

@@ -1357,8 +1357,30 @@ writer is told what to check rather than finding it mid-draft.
 | --- | --- |
 | Each slugline | A scene, titled with the slugline, with one beat holding the text |
 | Each character cue | A character, filed by how much they speak, bound to their speeches so read-back can voice them |
+| Each name the action introduces | A character too — with no lines, where the script never gives them one |
 | Each slugline's place | A note under Research → Locations, with how many scenes and whether it is interior or exterior |
 | The title page | The project's title and author |
+
+**A cast read only from the cues is a list of speakers, not a cast**, and for
+a while that is all this made. Every screenplay capitalises a character where
+the action introduces them — and the ones with no lines at all are exactly the
+people the convention exists for, so a silent character was not in the script
+as far as the project was concerned.
+
+So the action is read as well, and the risk runs the other way: a script
+shouts at sounds and camera moves too. A run of capitals has to be no camera
+direction, and then **one** of — a full name of two words or more, set off by
+commas the way a script introduces somebody, or named in more than one scene.
+A dog that BARKS once fails all three. The leading article is dropped before
+any of that is asked, because *A* is a capital letter and "A SIREN" would
+otherwise read as a two-word name — which it did, on the first real PDF it was
+tried against.
+
+Where the action introduces somebody in full and the cues shorten them —
+*MARA OKONJO* cued as MARA, *DET. SGT. ANNE PARRISH* as PARRISH — they are one
+person. The **cue stays the name**, because that is what the manuscript says
+and what cue completion and read-back look for; the full name is kept as an
+alias, which is what the cast already has for exactly this.
 
 Who is a main character is decided by **speeches**, because that is the only
 evidence a script offers: at least a dozen, or two-fifths of what the

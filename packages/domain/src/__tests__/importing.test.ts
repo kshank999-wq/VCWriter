@@ -5,6 +5,7 @@ import {
   castByCategory,
   gatherCast,
   marginOf,
+  namesInAction,
   readFinalDraft,
   charWidthOf,
   readLaidOutLines,
@@ -474,5 +475,162 @@ describe('a PDF that has been scaled', () => {
     ];
     // Two of them at one edge is not three, so the cues still answer.
     expect(charWidthOf(strays, marginOf(strays))).toBeCloseTo(7.2, 1);
+  });
+});
+
+/**
+ * The cast a script has, rather than the list of who speaks (addendum 02 §18).
+ *
+ * Every screenplay capitalises a character where the action introduces them,
+ * and the ones with no lines at all are exactly the people that convention
+ * exists for. Read from the cues alone, a silent character is not in the
+ * script as far as the project is concerned — which is what Ken hit: the list
+ * came back short.
+ *
+ * The risk in reading the action is the other way round, so both halves are
+ * tested: the people who are found, and the shouting that is not a person.
+ */
+describe('the people a script names in its action', () => {
+  const scene = (heading: string, ...action: string[]) => ({
+    heading,
+    elements: action.map((text) => ({ type: 'action' as const, text })),
+  });
+
+  it('finds somebody who is named and never given a line', () => {
+    const cast = gatherCast([scene('INT. WAREHOUSE - NIGHT', 'A guard, HOLLIS, watches from the mezzanine.')]);
+    expect(cast.map((person) => [person.name, person.speeches])).toEqual([['HOLLIS', 0]]);
+  });
+
+  it('keeps the cue as the name and the full name as an alias', () => {
+    const cast = gatherCast([
+      {
+        heading: 'INT. WAREHOUSE - NIGHT',
+        elements: [
+          { type: 'action', text: 'MARA OKONJO, forty, steps through the roller door.' },
+          { type: 'character', text: 'MARA' },
+          { type: 'dialogue', text: 'Put it down.' },
+        ],
+      },
+    ]);
+    // The name has to stay what the manuscript cues with, or cue completion
+    // and read-back stop finding her.
+    expect(cast[0]?.name).toBe('MARA');
+    expect(cast[0]?.aliases).toEqual(['MARA OKONJO']);
+    expect(cast).toHaveLength(1);
+  });
+
+  it('matches a full name to the part the script cues with, wherever it sits', () => {
+    const cast = gatherCast([
+      {
+        heading: 'EXT. DOCKS - LATER',
+        elements: [
+          { type: 'action', text: 'DET. SGT. ANNE PARRISH gets out, coat over her head.' },
+          { type: 'character', text: 'PARRISH (O.S.)' },
+          { type: 'dialogue', text: 'Nobody move.' },
+        ],
+      },
+    ]);
+    expect(cast.map((person) => person.name)).toEqual(['PARRISH']);
+    expect(cast[0]?.aliases).toEqual(['DET. SGT. ANNE PARRISH']);
+  });
+
+  it('does not take a dog that BARKS once for a member of the cast', () => {
+    expect(
+      namesInAction([scene('INT. YARD - NIGHT', 'A dog BARKS. Somewhere a SIREN winds up.')]),
+    ).toEqual([]);
+  });
+
+  it('does not let the article make a name out of a noise', () => {
+    // "A" is a capital letter, so "A SIREN" reads as a two-word run — and two
+    // words is one of the things that makes a name believable. Caught on a
+    // real PDF, where A SIREN came back as a member of the cast.
+    expect(namesInAction([scene('EXT. DOCKS - NIGHT', 'A SIREN winds up and dies away.')])).toEqual([]);
+  });
+
+  it('leaves the camera and the cutting room out of the cast', () => {
+    expect(
+      namesInAction([
+        scene('INT. ROOM - DAY', 'ANGLE ON the door. SMASH CUT TO:', 'SUPER: SIX MONTHS EARLIER'),
+      ]).map((found) => found.name),
+    ).toEqual([]);
+  });
+
+  it('believes a name the action uses in more than one scene', () => {
+    const found = namesInAction([
+      scene('INT. A - DAY', 'The lift doors open and WENDELL steps out.'),
+      scene('INT. B - DAY', 'WENDELL is already waiting.'),
+    ]);
+    expect(found.map((one) => [one.name, one.scenes])).toEqual([['WENDELL', 2]]);
+  });
+
+  it('reads nothing out of an action line typed entirely in capitals', () => {
+    // Nothing in it says which word is a name, so every word would be one.
+    expect(namesInAction([scene('INT. A - DAY', 'THE TRAIN PULLS OUT AND THE PLATFORM EMPTIES.')])).toEqual([]);
+  });
+
+  it('puts the silent ones last, after everyone the script gives a line', () => {
+    const cast = gatherCast([
+      {
+        heading: 'INT. WAREHOUSE - NIGHT',
+        elements: [
+          { type: 'action', text: 'A guard, HOLLIS, watches.' },
+          { type: 'character', text: 'MARA' },
+          { type: 'dialogue', text: 'Put it down.' },
+        ],
+      },
+    ]);
+    expect(cast.map((person) => person.name)).toEqual(['MARA', 'HOLLIS']);
+  });
+
+  it('files a silent character as a minor part, and says why', () => {
+    const built = buildProjectFromImport({
+      title: 'Blackout',
+      author: '',
+      source: 'pdf',
+      warnings: [],
+      locations: [],
+      characters: gatherCast([
+        {
+          heading: 'INT. WAREHOUSE - NIGHT',
+          elements: [
+            { type: 'action', text: 'A guard, HOLLIS, watches.' },
+            { type: 'character', text: 'MARA' },
+            { type: 'dialogue', text: 'Put it down.' },
+          ],
+        },
+      ]),
+      scenes: [],
+    });
+
+    const hollis = built.file.characters.find((person) => person.name === 'HOLLIS');
+    expect(hollis?.description).toContain('no lines');
+    const minor = castByCategory(built.file).find((group) => group.name === 'Minor characters');
+    expect(minor?.characters.map((person) => person.name)).toEqual(['HOLLIS']);
+  });
+
+  it('binds an extended cue to the person it names', () => {
+    // MAEVE, MAEVE (V.O.) and MAEVE (CONT'D) are one person; binding on the
+    // text as typed left every extended cue in the script attached to nobody.
+    const built = buildProjectFromImport({
+      title: 'The Lighthouse',
+      author: '',
+      source: 'pdf',
+      warnings: [],
+      locations: [],
+      characters: [{ name: 'MAEVE', speeches: 2, scenes: 1 }],
+      scenes: [
+        {
+          heading: 'INT. LAMP ROOM - NIGHT',
+          elements: [
+            { type: 'character', text: 'MAEVE (V.O.)' },
+            { type: 'dialogue', text: 'The light goes out at four.' },
+          ],
+        },
+      ],
+    });
+
+    const maeve = built.file.characters.find((person) => person.name === 'MAEVE');
+    const cue = built.file.beats[0]?.manuscript.elements.find((element) => element.type === 'character');
+    expect(cue?.characterId).toBe(maeve?.id);
   });
 });
