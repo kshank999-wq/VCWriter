@@ -3,6 +3,7 @@ import { isProseFormat } from './editing.js';
 import { titlePageOf } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
 import type { ContentsPage } from './markers.js';
+import type { PageStamp } from './attribution.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -38,6 +39,17 @@ export interface PrintOptions extends ManuscriptOptions {
    * and a writer who wants it can ask for it.
    */
   includePrintedAt?: boolean;
+  /**
+   * Whose draft this is (addendum 07 §6.1), in the top-left corner of every
+   * page including the first.
+   *
+   * Absent on the master and on every script printed outside a room, which is
+   * the whole rule: **the master is clean and a contribution is signed**
+   * (§6.3). Attribution belongs to the room, not to the script that leaves it
+   * — but a writer's own draft circulating *inside* the room is supposed to
+   * say whose it is.
+   */
+  stamp?: PageStamp;
 }
 
 const escapeHtml = (value: string): string =>
@@ -85,7 +97,27 @@ const renderPage = (page: Page, isProse: boolean, options: PrintOptions): string
       return `<div class="line ${line.type}" style="padding-left:${line.indent}ch">${mark}${renderSpans(line)}</div>`;
     })
     .join('\n');
-  return `<section class="page${isProse ? ' prose' : ''}">${pageNumber(page, options)}${printedAt(options)}\n${lines}\n</section>`;
+  return `<section class="page${isProse ? ' prose' : ''}">${stampOf(page, options)}${pageNumber(page, options)}${printedAt(options)}\n${lines}\n</section>`;
+};
+
+/**
+ * Whose draft this is, top left (addendum 07 §6.1).
+ *
+ * On **every** page including the first, because the page it is most needed on
+ * is the one somebody is handed. The name is spelled out on page one, where
+ * there is room to learn it, and the initials carry it after that — three
+ * writers' drafts of one scene are indistinguishable without them.
+ *
+ * Top left because the page number is already top right from page two, and two
+ * things in one corner is a choice between them.
+ */
+const stampOf = (page: Page, options: PrintOptions): string => {
+  const stamp = options.stamp;
+  if (!stamp) return '';
+  const said = page.number <= 1 && stamp.name.trim().length > 0
+    ? `${escapeHtml(stamp.initials)} <span class="stamp-name">${escapeHtml(stamp.name)}</span>`
+    : escapeHtml(stamp.initials);
+  return `<div class="page-stamp" style="color:${escapeHtml(stamp.colour)}">${said}</div>`;
 };
 
 /** Page numbers sit top right from page two, as scripts and manuscripts do. */
@@ -171,7 +203,7 @@ const renderChapterPage = (page: Page, isProse: boolean, options: PrintOptions):
   if (chapter.epigraph.trim().length > 0) {
     parts.push(`<p class="chapter-epigraph">${escapeHtml(chapter.epigraph)}</p>`);
   }
-  return `<section class="page chapter-page${isProse ? ' prose' : ''}" style="text-align:${chapter.align}">${pageNumber(page, options)}
+  return `<section class="page chapter-page${isProse ? ' prose' : ''}" style="text-align:${chapter.align}">${stampOf(page, options)}${pageNumber(page, options)}
   <div class="chapter-block">${parts.join('\n')}</div>
 </section>`;
 };
@@ -321,6 +353,11 @@ const STYLES = `
   }
   .line { min-height: 12pt; }
   .page-number { position: absolute; top: 0.5in; right: 1in; }
+  /* Whose draft this is (addendum 07 §6.1). Top left, because the page number
+     is already top right — and in the seat's own colour, which is the fastest
+     fact on the page and the whole reason it is here. */
+  .page-stamp { position: absolute; top: 0.5in; left: 1.5in; font-weight: bold; letter-spacing: 0.06em; }
+  .page-stamp .stamp-name { font-weight: normal; letter-spacing: 0; }
   /* In the margins at both edges, out of the text's sixty characters. */
   .scene-number { position: absolute; }
   .scene-number.left { left: 0.75in; }

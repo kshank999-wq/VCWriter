@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import Satellite from './Satellite';
+import { RoomProvider } from './room';
 import type { PaneKey } from './panes';
 import './styles.css';
 import './workspace.css';
@@ -40,5 +41,9 @@ window.addEventListener('unhandledrejection', (event) => {
 const pane = new URLSearchParams(window.location.search).get('pane');
 
 createRoot(container).render(
-  <React.StrictMode>{pane ? <Satellite pane={pane as PaneKey} /> : <App />}</React.StrictMode>,
+  // The room wraps both kinds of window: a section pushed onto a second
+  // monitor draws the same colours as the workspace it came from.
+  <React.StrictMode>
+    <RoomProvider>{pane ? <Satellite pane={pane as PaneKey} /> : <App />}</RoomProvider>
+  </React.StrictMode>,
 );

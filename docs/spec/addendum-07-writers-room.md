@@ -489,8 +489,8 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
    the editor from it (§19).
 3. **Built.** Cloud projects with branches, autosave, snapshots and immutable
    version history — the third bridge behind the renderer (§3.1, §19).
-4. Contributor colour end to end: the page stamp, the identity bar, beat
-   badges, and the filters that use them (§6).
+4. **Built.** Contributor colour end to end: the page stamp, the identity bar,
+   beat badges, and the filters that use them (§6, §19).
 5. The showrunner dashboard, loading a writer's version, and several versions
    open at once (§10, §3.4).
 6. Submitting, and the review queue (§10).
@@ -776,3 +776,64 @@ after the migration was applied, and corrected in 0027. Every other function in
 the schema pins it, and a trigger is the one place it matters most: it runs on
 every write to `versions`, under whatever search path the caller happens to
 have.
+
+### Stage 4 — colour, end to end
+
+**A record names a person and nothing else.** `origin` on a scene and on a beat
+is `{ authorId, at }` — no colour, no initials, no name. Every one of those is
+read through the seat when it is drawn, so a showrunner who recolours a writer
+has recoloured every page that writer wrote, rather than leaving a hundred
+stale copies of last week's colour scattered through the document. Migration
+`0028` gave the two tables the column, and `sync-mapping.ts` carries it both
+ways; without that the origin would have been dropped on the journey to the
+database and silently lost.
+
+**Signing is one seam, not a dozen.** A room has a dozen controls that can make
+a scene and there will be more, and threading an author through each of them
+would put a fact about the room into components that have no business knowing
+there is one. Instead the bridge signs: `signWork` on the cloud bridge is
+called on every edit, and `signNewWork` in the domain marks what this writer
+made. It is right for a reason worth keeping — **what was in the draft when it
+opened is not this writer's**. A branch carries the master's scenes, and a
+bridge that signed everything it could see would hand one writer the credit for
+the whole room's script. So the baseline is taken at open, and a record that is
+already signed is never re-signed.
+
+**The master is clean and a contribution is signed** (§6.3). This is where §5's
+first draft was wrong, and stage 4 is where the correction becomes code. Three
+things follow from one predicate, `isSigned`: the stamp in the corner of the
+printed page, the marks on the records, and the contributor filter all appear
+together on a writer's own draft and all vanish together on the master — and
+**clean reading** is the same switch, for reading a draft the way it will be
+read outside the room.
+
+**Picking a contributor marks their work; it never hides anyone else's.** A
+script with the other three writers' scenes taken out of it is not a script,
+it is a pile of fragments — the same reasoning addendum 06 §8 gives for
+bringing a match's parents with it. The bar's initials are toggles, and the
+same press again is how a writer stops picking somebody out.
+
+**The mark went on the block, not on the name row.** It was on the beat's name
+header first, which was wrong the moment the screen was looked at: beat names
+are an authoring annotation the writer switches off, and whose words these are
+is not. It sits on the beat block itself, opposite the ✎ and outside the page's
+own column, so it never crowds the manuscript it describes.
+
+**Where colour is refused.** The stamp is on the printed page and the PDF; the
+screen carries the identity bar and the marks. Nothing colours a lane — a lane
+is a thread of the story and a contributor colour is a fact about who wrote a
+line, and two colour languages on one page is neither (§6.2).
+
+**Addresses stay in the room.** `/api/rooms/[roomId]/identity` returns the
+seats as row-level security gives them to the caller, with every email but the
+caller's own blanked: a badge needs a name and a colour, and a script window
+has no use for the room's address book.
+
+**And two things 0026 shipped that the linter caught.** `versions` had a
+policy for *it is mine* and a second for *it is the room's master*, both
+permissive and both evaluated on every read — one question with two true
+answers, which is what `or` is for; and `branches.owner_id`, the column
+`owns_branch` reads on every save, had no covering index. Corrected in `0029`,
+and neither changes who may read what. This is the third time the advisors
+have found something the SQL read as though it did correctly, which is why
+CLAUDE.md now says to run them as part of the change.

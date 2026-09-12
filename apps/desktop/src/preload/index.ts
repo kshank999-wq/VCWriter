@@ -5,7 +5,9 @@ import type {
   PrintOptions,
   ProjectFile,
   ProjectFormat,
+  RoomRole,
   SceneVerdict,
+  Seat,
   UpdateDecision,
 } from '@vcwriter/domain';
 
@@ -45,6 +47,24 @@ export interface SnapshotSummary {
    * one thing a writer will actually look for in the list.
    */
   label?: string;
+}
+
+/**
+ * The room this window is working in (addendum 07 §6).
+ *
+ * The seats are the whole of it: a record in the document names an author and
+ * nothing else, and the colour, the name and the initials are read through
+ * here every time they are drawn.
+ */
+export interface RoomIdentity {
+  roomId: string;
+  roomName: string;
+  role: RoomRole | null;
+  /** This writer's own seat, which is what the page is signed with. */
+  you: Seat | null;
+  seats: Seat[];
+  /** Whether this window holds the room's master or somebody's own draft. */
+  showing: 'master' | 'contribution';
 }
 
 export interface VcWriterApi {
@@ -96,6 +116,25 @@ export interface VcWriterApi {
    * files and choosing between them is the first thing they do.
    */
   autoOpen?(): boolean;
+
+  /**
+   * Who is in this room, where this window is in one (addendum 07 §6).
+   *
+   * Absent on the desktop and in the plain preview, which is the honest answer
+   * rather than an empty room: a script written alone has no contributors and
+   * nothing to colour.
+   */
+  roomIdentity?(): Promise<DesktopApiResult<RoomIdentity>>;
+
+  /**
+   * This writer's name on the work they have just made (addendum 07 §6).
+   *
+   * Called on every edit, and absent everywhere but a room — a script written
+   * alone has one author and nothing to attribute. Only records that were not
+   * in the draft when it opened are touched, and a record that is already
+   * signed is never re-signed.
+   */
+  signWork?(file: ProjectFile): ProjectFile;
 
   // Sync is optional: a writer who never signs in has a fully working desktop
   // application whose projects live in files.

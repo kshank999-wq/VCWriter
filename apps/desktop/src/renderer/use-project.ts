@@ -153,7 +153,12 @@ export const useProject = (): UseProjectResult => {
   const update = useCallback((mutate: (current: ProjectFile) => ProjectFile) => {
     const current = fileRef.current;
     if (!current) return;
-    const next = mutate(current);
+    // In a Writers Room the bridge puts this writer's name on whatever they
+    // have just made (addendum 07 §6). Everywhere else there is no such method
+    // and this line does nothing, which is the right answer for a script with
+    // one author.
+    const edited = mutate(current);
+    const next = window.vcwriter.signWork?.(edited) ?? edited;
     fileRef.current = next;
     dirtyRef.current = true;
     setFile(next);

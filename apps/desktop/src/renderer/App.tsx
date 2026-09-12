@@ -23,6 +23,7 @@ import {
   type SyncConflict,
 } from '@vcwriter/domain';
 import { useProject } from './use-project';
+import { useRoom } from './room';
 import { usePreference, useSplit } from './use-split';
 import { createHub, createTransport, everyFew, type DocumentHub } from './link';
 import { addBeatAfter, addSceneAfter } from './structure';
@@ -64,6 +65,7 @@ import { NewEpisodeDialog } from './components/NewEpisodeDialog';
 import { useWritingClock } from './use-writing-clock';
 import { FindPanel } from './components/FindPanel';
 import { MenuBar } from './components/MenuBar';
+import { RoomBar } from './components/RoomBar';
 import { menusFor, type CommandId } from './menus';
 import { AccountPanel } from './components/AccountPanel';
 import { CapturesPanel } from './components/CapturesPanel';
@@ -198,6 +200,8 @@ export default function App() {
     : chosenArrangement;
 
   const file = project.file;
+  // The room this window is in, where it is in one (addendum 07 §6).
+  const room = useRoom();
   const beats = useMemo(() => (file ? beatsInStoryOrder(file) : []), [file]);
   const selectedBeat = beats.find((beat) => beat.id === selectedBeatId) ?? beats[0] ?? null;
   const stats = file ? projectStats(file) : null;
@@ -227,8 +231,12 @@ export default function App() {
       includeSceneLinks: setup.includeSceneLinks,
       includePrintedAt: setup.includePrintedAt,
       ...(setup.watermark ? { watermark: setup.watermark } : {}),
+      // Whose draft this is, in the corner of every page (addendum 07 §6.1).
+      // Absent on the master and on every script printed outside a room: the
+      // master is clean and a contribution is signed (§6.3).
+      ...(room.stamp ? { stamp: room.stamp } : {}),
     }),
-    [setup],
+    [setup, room.stamp],
   );
 
   const clearTitleFocus = useCallback(() => setFocusTitleBeatId(null), []);
@@ -840,6 +848,9 @@ export default function App() {
         onCloseProject={project.closeProject}
         onPreferences={() => setPreferencesOpen(true)}
       />
+
+      {/* Whose draft this is, in a Writers Room; nothing at all outside one. */}
+      <RoomBar file={file} />
 
       <Preferences
         open={preferencesOpen}

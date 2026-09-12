@@ -1,0 +1,136 @@
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  attributionsOf,
+  isSigned,
+  stampFor,
+  type Attribution,
+  type PageStamp,
+} from '@vcwriter/domain';
+import type { RoomIdentity } from '../preload/index';
+
+/**
+ * The room, as the interface reads it (addendum 07 §6).
+ *
+ * A context rather than a prop, for one reason: **a colour is a fact about the
+ * room, not about a scene**. Threading an author's colour down through the
+ * workspace, the script, the lanes and the inspector would put a room into
+ * every component that draws a beat, and every one of them would have to keep
+ * passing it on to the next. Nothing here knows there is a room until it wants
+ * to draw a colour, and outside a room the context is empty and every one of
+ * these answers is the quiet one.
+ *
+ * **Read through, never copied across.** `byAuthor` is rebuilt from the seats,
+ * so the colour a badge draws is the colour the seat has now.
+ */
+
+export interface RoomState {
+  /** Null everywhere but a Writers Room — on the desktop, and in the plain preview. */
+  identity: RoomIdentity | null;
+  /** The seats, as the one map every badge, bar and stamp reads through. */
+  byAuthor: ReadonlyMap<string, Attribution>;
+  /** This writer, where the room knows them. */
+  you: Attribution | null;
+  /**
+   * Whose work is being picked out, or null for everybody's.
+   *
+   * A choice of one contributor **marks** their work rather than hiding the
+   * rest: a script with four writers' scenes taken out of it is not a script.
+   */
+  only: string | null;
+  setOnly(authorId: string | null): void;
+  /** Reading the draft as it will be read outside the room: no colour at all. */
+  cleanReading: boolean;
+  setCleanReading(on: boolean): void;
+  /** Whether this window draws attribution at all (§6.3). */
+  signed: boolean;
+  /** What goes in the corner of a printed page, where this draft is signed. */
+  stamp: PageStamp | null;
+}
+
+const EMPTY: ReadonlyMap<string, Attribution> = new Map();
+
+const NOBODY: RoomState = {
+  identity: null,
+  byAuthor: EMPTY,
+  you: null,
+  only: null,
+  setOnly: () => undefined,
+  cleanReading: false,
+  setCleanReading: () => undefined,
+  signed: false,
+  stamp: null,
+};
+
+const RoomContext = createContext<RoomState>(NOBODY);
+
+export const useRoom = (): RoomState => useContext(RoomContext);
+
+export const RoomProvider = ({ children }: { children: React.ReactNode }): React.ReactElement => {
+  const [identity, setIdentity] = useState<RoomIdentity | null>(null);
+  const [only, setOnly] = useState<string | null>(null);
+  const [cleanReading, setCleanReading] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    const ask = window.vcwriter?.roomIdentity;
+    if (!ask) return undefined;
+
+    void ask
+      .call(window.vcwriter)
+      .then((result) => {
+        if (live && result.ok && result.data) setIdentity(result.data);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const byAuthor = useMemo(() => (identity ? attributionsOf(identity.seats) : EMPTY), [identity]);
+  const you = useMemo(
+    () => (identity?.you?.userId ? (byAuthor.get(identity.you.userId) ?? null) : null),
+    [identity, byAuthor],
+  );
+
+  // The master is clean and a contribution is signed (§6.3). Clean reading
+  // takes the signature off a contribution; nothing puts one on the master.
+  const signed = identity ? isSigned({ showing: identity.showing, cleanReading }) : false;
+
+  const value = useMemo<RoomState>(
+    () => ({
+      identity,
+      byAuthor,
+      you,
+      only: signed ? only : null,
+      setOnly,
+      cleanReading,
+      setCleanReading,
+      signed,
+      stamp: signed ? stampFor(you) : null,
+    }),
+    [identity, byAuthor, you, only, cleanReading, signed],
+  );
+
+  return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>;
+};
+
+/**
+ * The colour to mark a record with, or nothing.
+ *
+ * One function so that every badge in the application agrees on when a colour
+ * is drawn: never in clean reading, never on the master, never for an author
+ * this room does not know, and — when a contributor is being picked out —
+ * never for anyone else.
+ */
+export const useMark = (): ((origin: { authorId: string } | null | undefined) => Attribution | null) => {
+  const { byAuthor, signed, only } = useRoom();
+  return useCallback(
+    (origin) => {
+      if (!signed || !origin) return null;
+      if (only && origin.authorId !== only) return null;
+      return byAuthor.get(origin.authorId) ?? null;
+    },
+    [byAuthor, signed, only],
+  );
+};

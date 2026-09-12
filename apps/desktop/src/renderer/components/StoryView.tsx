@@ -16,6 +16,8 @@ import {
 import { BeatBody } from './BeatBody';
 import { DEFAULT_PAGE_STYLE, ScriptOptions, type PageStyle } from './ScriptOptions';
 import { ManuscriptDataLists } from './ManuscriptDataLists';
+import { useMark } from '../room';
+import { ContributorMark } from './ContributorMark';
 
 /** What the Script shows besides the manuscript itself (addendum 02 §6). */
 export interface ScriptDisplay {
@@ -199,6 +201,10 @@ export function StoryView({
     onTitleFocused();
   }, [focusTitleBeatId, onTitleFocused, display.beatNames]);
 
+  // Whose work a record is, where this window is in a Writers Room and is
+  // drawing colour at all; nothing outside one (addendum 07 §6).
+  const mark = useMark();
+
   const noun = prose ? 'Chapter' : 'Scene';
   const toggle = (key: keyof ScriptDisplay) => setDisplay({ ...display, [key]: !display[key] });
 
@@ -236,6 +242,7 @@ export function StoryView({
         value={unit.title}
         onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { title: event.target.value }))}
       />
+      <ContributorMark who={mark(unit.origin)} />
     </header>
   );
 
@@ -269,6 +276,11 @@ export function StoryView({
       {/* The writing is done here as well as in the beat's own screen; this
           is the way to that screen without taking double-click away from
           selecting a word. */}
+      {/* Whose beat this is, in a room (addendum 07 §6.2), on the block
+          itself rather than on the name row — the names are an authoring
+          annotation the writer turns off, and whose words these are is not.
+          It sits opposite the ✎, outside the page's own column. */}
+      {lead ? <ContributorMark who={mark(beat.origin)} /> : null}
       {onOpenBeat && lead ? (
         <button
           type="button"

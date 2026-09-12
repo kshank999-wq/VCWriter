@@ -1,6 +1,16 @@
-import { describeVersion, parseProjectFile, versionSchema, type Version } from '@vcwriter/domain';
+import {
+  describeVersion,
+  knownRecords,
+  parseProjectFile,
+  seatSchema,
+  signNewWork,
+  versionSchema,
+  type ProjectFile,
+  type Seat,
+  type Version,
+} from '@vcwriter/domain';
 import { createBrowserBridge, type BrowserBridge } from './browser-bridge';
-import type { DesktopApiResult } from '../preload/index';
+import type { DesktopApiResult, RoomIdentity } from '../preload/index';
 
 /**
  * The third bridge: the renderer over a Writers Room (addendum 07 §3.1).
@@ -48,8 +58,48 @@ export const createCloudBridge = (roomId: string): BrowserBridge => {
   let branchId: string | null = null;
   let current: { path: string; file: unknown } | null = null;
 
+  /**
+   * Who this writer is, and everything that was in the draft when they opened
+   * it. Together they are all that signing needs (§6): on this branch, nobody
+   * else can have made what was not there at the start.
+   */
+  let me: string | null = null;
+  let known = new Set<string>();
+  let identity: RoomIdentity | null = null;
+
+  /**
+   * The room's seats, fetched once when the draft opens.
+   *
+   * Every badge, bar and stamp reads through this; a failure here costs the
+   * colour and nothing else, so it never keeps a writer out of their own draft.
+   */
+  const loadIdentity = async (): Promise<void> => {
+    const response = await fetch(`/api/rooms/${roomId}/identity`, { headers: { accept: 'application/json' } });
+    if (!response.ok) return;
+
+    const body = (await response.json()) as RoomIdentity & { seats: unknown[]; you: unknown };
+    const seats = body.seats
+      .map((row) => seatSchema.safeParse(row))
+      .filter((parsed): parsed is { success: true; data: Seat } => parsed.success)
+      .map((parsed) => parsed.data);
+    const you = seatSchema.safeParse(body.you);
+
+    identity = {
+      roomId: body.roomId,
+      roomName: body.roomName ?? '',
+      role: body.role ?? null,
+      you: you.success ? you.data : null,
+      seats,
+      showing: body.showing === 'master' ? 'master' : 'contribution',
+    };
+    me = identity.you?.userId ?? null;
+  };
+
   const open = async (): Promise<DesktopApiResult<{ path: string; file: never; contentHash: string }>> => {
-    const response = await fetch(api, { headers: { accept: 'application/json' } });
+    const [response] = await Promise.all([
+      fetch(api, { headers: { accept: 'application/json' } }),
+      identity ? Promise.resolve() : loadIdentity().catch(() => undefined),
+    ]);
     if (!response.ok) return fail(await asError(response));
 
     const body = (await response.json()) as OpenedBranch;
@@ -57,6 +107,7 @@ export const createCloudBridge = (roomId: string): BrowserBridge => {
     // file holds, and it goes through the same migration and the same schema.
     const file = parseProjectFile(body.file);
     branchId = body.branch.id;
+    known = knownRecords(file);
     current = { path: body.branch.id, file };
     return ok({ path: body.branch.id, file: file as never, contentHash: body.contentHash });
   };
@@ -69,20 +120,44 @@ export const createCloudBridge = (roomId: string): BrowserBridge => {
     // is what `autoOpen` tells the application, so no Welcome screen asks a
     // question that has already been answered.
     autoOpen: () => true,
+
+    async roomIdentity() {
+      if (!identity) await loadIdentity().catch(() => undefined);
+      return identity ? ok(identity) : fail<RoomIdentity>('The room did not say who is in it.');
+    },
+
+    /**
+     * The writer's name on their own work, as they make it.
+     *
+     * The renderer calls this on every edit without knowing what it is for:
+     * outside a room there is no such method and nothing happens, which is the
+     * right answer for a script written alone.
+     */
+    signWork: (file) => (me ? signNewWork(file as ProjectFile, { authorId: me, known }) : file),
+
     createProject: open,
     openProject: open,
     openProjectAtPath: open,
 
+    /**
+     * Autosave, and the one place the writer's name is put on their work.
+     *
+     * Signing here rather than at every control that can make a scene: there
+     * are a dozen of those and there will be more, and none of them should
+     * have to know there is a room. What leaves this branch is signed; what
+     * was already in it when the branch opened is left alone.
+     */
     async saveProject(input) {
       if (!branchId) return fail('Open the draft first.');
-      current = { path: input.path, file: input.file };
+      const file = me ? signNewWork(input.file as ProjectFile, { authorId: me, known }) : input.file;
+      current = { path: input.path, file };
 
       const response = await fetch(api, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           branchId,
-          file: input.file,
+          file,
           previousHash: input.previousHash,
         }),
       });

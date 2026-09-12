@@ -8183,3 +8183,114 @@ dialog.preferences .field {
 .outline-bulk .danger {
   color: var(--danger);
 }
+
+/* ------------------------------------------------------ the room (addendum 07 §6)
+
+   Colour is the fastest fact on a page, and it is used in exactly the places
+   §6.2 allows: the bar above a writer's draft, the mark on a record they wrote,
+   and the stamp in the corner of the printed page. Never on a lane — a lane is
+   a thread of the story, and two colour languages on one page is neither. */
+
+.room-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 4px 12px;
+  font-size: var(--ui);
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+  /* The writer's own colour, along the edge nearest their work: enough to
+     tell four identical windows apart at a glance, and not enough to be
+     read as a highlight on the script itself. */
+  box-shadow: inset 3px 0 0 var(--room-colour, transparent);
+}
+
+.room-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.room-who strong {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.room-who .muted {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.room-chip,
+.contributor-mark {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 15px;
+  padding: 0 5px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+  color: #fff;
+  background: var(--room-colour, #666);
+}
+
+/* On a record, the mark sits at the end of the row and gives way to the
+   text: it says whose this is, and it is never the thing being read. */
+.contributor-mark {
+  margin-left: auto;
+  opacity: 0.85;
+}
+
+.room-people {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.room-person {
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 15px;
+  padding: 0 5px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  color: #fff;
+  background: var(--room-colour, #666);
+  opacity: 0.45;
+}
+
+.room-person:hover {
+  opacity: 0.8;
+}
+
+/* Picked out, rather than everyone else hidden: the work stays where it is
+   and this one is the one wearing its colour. */
+.room-person.picked {
+  opacity: 1;
+  border-color: var(--text);
+}
+
+.room-clean {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* On a beat the mark sits opposite the ✎ — outside the page's own column, so
+   it never crowds the manuscript it is describing. */
+.beat-block > .contributor-mark {
+  position: absolute;
+  top: 0;
+  right: max(0px, calc(50% - 46ch));
+  z-index: 1;
+  margin-left: 0;
+}

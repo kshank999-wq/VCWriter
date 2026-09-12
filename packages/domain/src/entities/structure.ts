@@ -171,6 +171,26 @@ export const sceneReadSchema = z.object({
 });
 export type SceneRead = z.infer<typeof sceneReadSchema>;
 
+
+/**
+ * Who first made this, and when (addendum 07 §6.3).
+ *
+ * **Origin is immutable**: it survives a merge into the master draft, which is
+ * what makes §1's promise auditable rather than merely intended. It names a
+ * person and nothing else — no colour and no initials — because those belong to
+ * the seat and are read through it (the module's rule since addendum 06 §5:
+ * read through rather than copy across). A writer who changes their colour has
+ * changed every page they wrote, not a hundred stale copies.
+ *
+ * Null on everything written outside a room, which is most writing.
+ */
+export const originSchema = z.object({
+  /** The profile that made it. Resolved to a name and a colour by the room. */
+  authorId: z.string(),
+  at: z.string(),
+});
+export type Origin = z.infer<typeof originSchema>;
+
 export const structuralUnitSchema = z.object({
   id: id<StructuralUnitId>(),
   projectId: id<ProjectId>(),
@@ -195,6 +215,8 @@ export const structuralUnitSchema = z.object({
   grid: sceneGridSchema.default({}),
   /** The last AI read of this scene, if one has been asked for. */
   aiRead: sceneReadSchema.nullable().default(null),
+  /** Who first made it, in a room (addendum 07 §6.3). Null everywhere else. */
+  origin: originSchema.nullable().default(null),
   ...timestamps,
 });
 export type StructuralUnit = z.infer<typeof structuralUnitSchema>;
@@ -269,6 +291,12 @@ export const beatSchema = z.object({
    */
   headSeconds: z.number().int().min(0).default(0),
   tailSeconds: z.number().int().min(0).default(0),
+  /**
+   * Who first wrote it, in a room (addendum 07 §6.3). Null everywhere else —
+   * which is most writing, and the reason this needs no format migration: an
+   * older document parses with none and loses nothing.
+   */
+  origin: originSchema.nullable().default(null),
   ...timestamps,
 });
 export type Beat = z.infer<typeof beatSchema>;

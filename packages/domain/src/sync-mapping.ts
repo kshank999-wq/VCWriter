@@ -140,6 +140,8 @@ const unitToRow = (unit: StructuralUnit): Row => ({
   // The AI's proposed reading, kept beside the writer's own so a scene read
   // on one machine is already read on the next.
   ai_read: unit.aiRead,
+  // Who first made it, in a room (addendum 07 §6.3). Null outside one.
+  origin: unit.origin,
   created_at: unit.createdAt,
   updated_at: unit.updatedAt,
 });
@@ -160,6 +162,7 @@ const beatToRow = (beat: Beat): Row => ({
   // Denormalised so the dashboard and admin views can count without loading
   // every manuscript; the document stays the source of truth.
   word_count: countWords(beat.manuscript),
+  origin: beat.origin,
   created_at: beat.createdAt,
   updated_at: beat.updatedAt,
 });
@@ -544,6 +547,7 @@ const unitFromRow = (row: Row): StructuralUnit =>
     // Absent in a row written before the grid existed; the schema fills it.
     grid: row['grid'] ?? undefined,
     aiRead: row['ai_read'] ?? null,
+    origin: row['origin'] ?? null,
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });
@@ -561,6 +565,7 @@ const beatFromRow = (row: Row): Beat =>
     manuscript: row['manuscript'] ?? { elements: [] },
     revisionName: text(row['revision_name'], 'Draft 1'),
     revisions: row['revisions'] ?? [],
+    origin: row['origin'] ?? null,
     color: row['color'] ?? null,
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
