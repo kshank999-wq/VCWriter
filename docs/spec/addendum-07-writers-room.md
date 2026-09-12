@@ -491,8 +491,8 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
    version history — the third bridge behind the renderer (§3.1, §19).
 4. **Built.** Contributor colour end to end: the page stamp, the identity bar,
    beat badges, and the filters that use them (§6, §19).
-5. The showrunner dashboard, loading a writer's version, and several versions
-   open at once (§10, §3.4).
+5. **Built.** The showrunner dashboard, loading a version, and several of them
+   open at once (§10, §3.4, §19).
 6. Submitting, and the review queue (§10).
 7. The brainstorming room (§11).
 8. Assignments and the Assign menu (§8).
@@ -837,3 +837,42 @@ answers, which is what `or` is for; and `branches.owner_id`, the column
 and neither changes who may read what. This is the third time the advisors
 have found something the SQL read as though it did correctly, which is why
 CLAUDE.md now says to run them as part of the change.
+
+### Stage 5 — the dashboard, and a version in a window of its own
+
+**The dashboard's real content is a refusal, and it says so out loud.** A
+showrunner opening the room sees a row per seat: who is in it, who has a
+working line, and — for everybody but themselves — *Working. What is on their
+desk is theirs until they submit it.* That is not a gap waiting for stage 6 to
+fill; it is §7, and a dashboard that quietly showed an empty column would have
+made the promise look like a fault. `desksIn` in `packages/domain/desk.ts`
+decides what a reader is offered, and `mayReadVersion` states the rule in the
+same words the database's own policy uses — this decides what to *offer*, and
+a link it wrongly offered would still be refused on the way through.
+
+**A version opens in a window of its own.** `/preview?room=…&version=…` is one
+point in the room's history rather than anybody's desk: the master, or a
+recorded point somebody may read. Several sit side by side, which is what §3.4
+asked for and what the pane windowing already made possible — the new part is
+*what gets opened*.
+
+**The window wears the author's name, not the reader's.** This is the one
+mistake §3.4 exists to prevent, and it very nearly shipped: the bar drew the
+reader's seat because the interface asked who was in the room before the window
+knew whose version it held. Both now wait on the same answer. A page of Mara's
+draft is stamped MO whoever is looking at it, so `RoomIdentity` carries `you`
+(who is reading) and `author` (whose this is) as two different facts, and the
+stamp and the bar read the second.
+
+**A recorded version cannot be changed, and the window says so first.** The
+database refuses it with a trigger — it refuses the service role (§19, stage 3)
+— but a writer should not learn that from autosave a minute after they typed.
+The bar carries *Read only* from the moment it draws, the bridge refuses the
+save in the same words, and nothing is signed in a window where nobody is
+writing.
+
+**What stage 5 does not do.** A read-only window still lets a reader type; the
+edit simply never lands, and the refusal is explicit rather than silent. Making
+every control inert is a larger change than this stage needs, and the honest
+version of it belongs with submitting (stage 6), where a reader has a reason to
+want a copy of what they are reading rather than an edit of it.

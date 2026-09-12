@@ -1,5 +1,5 @@
 import { createBrowserBridge } from './browser-bridge';
-import { createCloudBridge, roomFromLocation } from './cloud-bridge';
+import { createCloudBridge, roomFromLocation, versionFromLocation } from './cloud-bridge';
 
 /**
  * Entry point for the browser preview. Installs a bridge where the preload
@@ -14,7 +14,8 @@ import { createCloudBridge, roomFromLocation } from './cloud-bridge';
  * the entire point of the interface.
  */
 const room = roomFromLocation(window.location.search);
-const bridge = room ? createCloudBridge(room) : createBrowserBridge();
+const version = versionFromLocation(window.location.search);
+const bridge = room ? createCloudBridge(room, version) : createBrowserBridge();
 window.vcwriter = bridge;
 
 declare const __PREVIEW_BUILD__: string;
@@ -27,7 +28,7 @@ declare const __PREVIEW_BUILD__: string;
 if (!new URLSearchParams(window.location.search).get('pane')) {
   const strip = document.createElement('div');
   strip.className = 'preview-strip';
-  strip.innerHTML = `<span>${room ? 'Writers Room' : 'Preview build'} ${__PREVIEW_BUILD__}</span>`;
+  strip.innerHTML = `<span>${room ? (version ? 'Writers Room · a recorded version' : 'Writers Room') : 'Preview build'} ${__PREVIEW_BUILD__}</span>`;
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = 'Download .vcw';

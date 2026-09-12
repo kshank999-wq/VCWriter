@@ -33,10 +33,26 @@ import type { DesktopApiResult, RoomIdentity } from '../preload/index';
 const ok = <T>(data: T): DesktopApiResult<T> => ({ ok: true, data });
 const fail = <T>(error: string): DesktopApiResult<T> => ({ ok: false, error });
 
+const UUID = /^[0-9a-f-]{36}$/i;
+
 /** Which room this window is in, if it is in one. */
 export const roomFromLocation = (search: string): string | null => {
   const roomId = new URLSearchParams(search).get('room');
-  return roomId && /^[0-9a-f-]{36}$/i.test(roomId) ? roomId : null;
+  return roomId && UUID.test(roomId) ? roomId : null;
+};
+
+/**
+ * Which recorded version this window is holding, if it is holding one
+ * (addendum 07 §13, stage 5).
+ *
+ * Without it the window is the writer's own desk, which is what a room opens
+ * by default. With it the window is a *reading* of one point in the room's
+ * history — this writer's, that writer's, or the master — and several of them
+ * sit side by side (§3.4).
+ */
+export const versionFromLocation = (search: string): string | null => {
+  const versionId = new URLSearchParams(search).get('version');
+  return versionId && UUID.test(versionId) ? versionId : null;
 };
 
 interface OpenedBranch {
@@ -50,7 +66,7 @@ const asError = async (response: Response): Promise<string> => {
   return body.error ?? 'The room did not answer.';
 };
 
-export const createCloudBridge = (roomId: string): BrowserBridge => {
+export const createCloudBridge = (roomId: string, versionId: string | null = null): BrowserBridge => {
   const base = createBrowserBridge();
   const api = `/api/rooms/${roomId}/branch`;
 
@@ -73,7 +89,7 @@ export const createCloudBridge = (roomId: string): BrowserBridge => {
    * Every badge, bar and stamp reads through this; a failure here costs the
    * colour and nothing else, so it never keeps a writer out of their own draft.
    */
-  const loadIdentity = async (): Promise<void> => {
+  const readIdentity = async (): Promise<void> => {
     const response = await fetch(`/api/rooms/${roomId}/identity`, { headers: { accept: 'application/json' } });
     if (!response.ok) return;
 
@@ -89,16 +105,85 @@ export const createCloudBridge = (roomId: string): BrowserBridge => {
       roomName: body.roomName ?? '',
       role: body.role ?? null,
       you: you.success ? you.data : null,
+      // On a desk the reader and the author are the same person. A version
+      // window says otherwise below, once it knows whose it is.
+      author: you.success ? you.data : null,
       seats,
       showing: body.showing === 'master' ? 'master' : 'contribution',
+      readOnly: versionId !== null,
+      label: body.roomName ?? '',
     };
     me = identity.you?.userId ?? null;
   };
 
-  const open = async (): Promise<DesktopApiResult<{ path: string; file: never; contentHash: string }>> => {
+  /**
+   * The version this window holds, fetched once (§13, stage 5).
+   *
+   * Memoised rather than fetched per caller, because two things want it and
+   * they race: the application opens the project, and the interface asks who
+   * is in the room. A bar that drew the reader's name because it asked first
+   * would be the one mistake §3.4 exists to prevent — so both wait on the same
+   * answer, and neither has to know about the other.
+   */
+  interface ReadVersion {
+    version: Version | null;
+    author: Seat | null;
+    title: string;
+    file: unknown;
+    error: string | null;
+  }
+
+  let versionOnce: Promise<ReadVersion> | null = null;
+  const fetchVersion = async (): Promise<ReadVersion> => {
+    const response = await fetch(`/api/rooms/${roomId}/versions/${versionId}`, {
+      headers: { accept: 'application/json' },
+    });
+    if (!response.ok) {
+      return { version: null, author: null, title: '', file: null, error: await asError(response) };
+    }
+
+    const body = (await response.json()) as { version: unknown; file: unknown; author: unknown; title?: string };
+    const version = versionSchema.safeParse(body.version);
+    const author = seatSchema.safeParse(body.author);
+    return {
+      version: version.success ? version.data : null,
+      author: author.success ? author.data : null,
+      title: body.title ?? (version.success ? describeVersion(version.data) : ''),
+      file: body.file,
+      error: null,
+    };
+  };
+
+  const readVersion = async (): Promise<ReadVersion> => {
+    versionOnce ??= fetchVersion();
+    const read = await versionOnce;
+
+    if (identity && !read.error) {
+      identity = {
+        ...identity,
+        // Whose draft this is, which is the reader's only where they are also
+        // the author. The stamp and the bar follow this, never `you`.
+        author: read.author,
+        showing: read.version?.kind === 'master' ? 'master' : 'contribution',
+        readOnly: true,
+        label: read.title,
+      };
+    }
+
+    return read;
+  };
+
+  /** Everything the window needs about the room before it draws anything. */
+  const settle = async (): Promise<void> => {
+    if (!identity) await readIdentity().catch(() => undefined);
+    if (versionId) await readVersion().catch(() => undefined);
+  };
+
+  /** The writer's own desk: the branch, made from the master the first time. */
+  const openDesk = async (): Promise<DesktopApiResult<{ path: string; file: never; contentHash: string }>> => {
     const [response] = await Promise.all([
       fetch(api, { headers: { accept: 'application/json' } }),
-      identity ? Promise.resolve() : loadIdentity().catch(() => undefined),
+      identity ? Promise.resolve() : readIdentity().catch(() => undefined),
     ]);
     if (!response.ok) return fail(await asError(response));
 
@@ -112,6 +197,31 @@ export const createCloudBridge = (roomId: string): BrowserBridge => {
     return ok({ path: body.branch.id, file: file as never, contentHash: body.contentHash });
   };
 
+  /**
+   * A recorded version, opened to read (§13, stage 5).
+   *
+   * Nothing is made and nothing is written: this is one point in the room's
+   * history, and a version cannot be changed once it exists (§9) — the
+   * database says so with a trigger, and this window says so before the reader
+   * types anything. The `path` is the version's id, so a save that somehow got
+   * through would still not be addressing anybody's desk.
+   */
+  const openVersion = async (): Promise<DesktopApiResult<{ path: string; file: never; contentHash: string }>> => {
+    if (!identity) await readIdentity().catch(() => undefined);
+    const read = await readVersion();
+    if (read.error) return fail(read.error);
+
+    const file = parseProjectFile(read.file);
+    current = { path: versionId as string, file };
+    return ok({
+      path: versionId as string,
+      file: file as never,
+      contentHash: read.version?.contentHash ?? '',
+    });
+  };
+
+  const open = versionId ? openVersion : openDesk;
+
   return {
     ...base,
 
@@ -122,7 +232,7 @@ export const createCloudBridge = (roomId: string): BrowserBridge => {
     autoOpen: () => true,
 
     async roomIdentity() {
-      if (!identity) await loadIdentity().catch(() => undefined);
+      await settle();
       return identity ? ok(identity) : fail<RoomIdentity>('The room did not say who is in it.');
     },
 
@@ -133,7 +243,7 @@ export const createCloudBridge = (roomId: string): BrowserBridge => {
      * outside a room there is no such method and nothing happens, which is the
      * right answer for a script written alone.
      */
-    signWork: (file) => (me ? signNewWork(file as ProjectFile, { authorId: me, known }) : file),
+    signWork: (file) => (me && !versionId ? signNewWork(file as ProjectFile, { authorId: me, known }) : file),
 
     createProject: open,
     openProject: open,
@@ -148,6 +258,9 @@ export const createCloudBridge = (roomId: string): BrowserBridge => {
      * was already in it when the branch opened is left alone.
      */
     async saveProject(input) {
+      // A version is a record, not a desk. Refused here in the same words the
+      // database uses, rather than letting autosave discover it (§9).
+      if (versionId) return fail('This is a recorded version. It cannot be changed once it exists.');
       if (!branchId) return fail('Open the draft first.');
       const file = me ? signNewWork(input.file as ProjectFile, { authorId: me, known }) : input.file;
       current = { path: input.path, file };
@@ -199,6 +312,9 @@ export const createCloudBridge = (roomId: string): BrowserBridge => {
     },
 
     async restoreSnapshot(input) {
+      // Restoring puts a version back on a *desk*, and a version window has
+      // none. The writer's own window is where that belongs.
+      if (versionId) return fail('Open your own draft to put a version back on the desk.');
       if (!branchId) return fail('Open the draft first.');
 
       const response = await fetch(`${api}/versions`, {

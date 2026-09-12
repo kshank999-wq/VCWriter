@@ -21,7 +21,7 @@ import { useRoom } from '../room';
  */
 export const RoomBar = ({ file }: { file: ProjectFile | null }): React.ReactElement | null => {
   const room = useRoom();
-  const { identity, byAuthor, you, only, setOnly, cleanReading, setCleanReading } = room;
+  const { identity, byAuthor, you, author, readOnly, only, setOnly, cleanReading, setCleanReading } = room;
 
   const contributors = useMemo(
     () => (file ? contributorsIn(file, byAuthor) : []),
@@ -30,15 +30,30 @@ export const RoomBar = ({ file }: { file: ProjectFile | null }): React.ReactElem
 
   if (!identity) return null;
 
-  const mine = identity.showing === 'contribution';
+  // Whose this is. On a desk that is the reader; in a window opened on a
+  // recorded version it is whoever wrote it, and saying otherwise would be the
+  // one mistake §3.4 exists to prevent.
+  const master = identity.showing === 'master';
+  const whose = master ? 'The master' : author ? `${author.name}’s draft` : 'A draft';
 
   return (
-    <div className="room-bar" style={you ? ({ '--room-colour': you.colour } as React.CSSProperties) : undefined}>
+    <div
+      className={`room-bar${readOnly ? ' reading' : ''}`}
+      style={author ? ({ '--room-colour': author.colour } as React.CSSProperties) : undefined}
+    >
       <span className="room-who">
-        {you ? <span className="room-chip">{you.initials}</span> : null}
-        <strong>{mine ? (you ? `${you.name}’s draft` : 'Your draft') : 'The master'}</strong>
-        {you?.title ? <span className="muted">{you.title}</span> : null}
-        <span className="muted">{identity.roomName}</span>
+        {author && !master ? <span className="room-chip">{author.initials}</span> : null}
+        <strong>{whose}</strong>
+        {author?.title && !master ? <span className="muted">{author.title}</span> : null}
+        <span className="muted">{identity.label || identity.roomName}</span>
+        {readOnly ? (
+          <span className="room-reading" title="A version cannot be changed once it exists">
+            Read only
+          </span>
+        ) : null}
+        {readOnly && you && author && you.authorId !== author.authorId ? (
+          <span className="muted">Reading as {you.name}</span>
+        ) : null}
       </span>
 
       {contributors.length > 0 ? (

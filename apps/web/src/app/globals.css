@@ -878,3 +878,48 @@ p.room-stamp {
     grid-template-columns: 1fr;
   }
 }
+
+/* ------------------------------------------------ the room, desk by desk (§10)
+
+   A row per seat, and the note under each name is the part that matters: it
+   says *working* for somebody else's line rather than showing an empty column
+   that looks like a fault. A writer's unsubmitted draft is not the
+   showrunner's to read (§7), and the dashboard is where that promise is
+   either kept plainly or discovered later. */
+.desks {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.desk {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.desk:last-child {
+  border-bottom: 0;
+}
+
+.desk-who {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.desk-who .block {
+  display: block;
+}
+
+/* Each point opens in a window of its own, so two of them sit side by side. */
+.desk-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+}

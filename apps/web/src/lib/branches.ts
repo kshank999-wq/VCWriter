@@ -240,6 +240,47 @@ export const versionsFor = async (roomId: string): Promise<Version[]> => {
 };
 
 /**
+ * Who in this room has a working line (addendum 07 §10, stage 5).
+ *
+ * Read as the visitor, so what comes back is what the room lets them see: that
+ * a writer *has* a branch, and nothing whatever of what is on it. The desk
+ * itself — `branch_heads` — is its owner's alone, and no query here asks for
+ * it. §7 is enforced by the database, and the dashboard's job is to say so
+ * rather than to leave a row looking broken.
+ */
+export const branchesIn = async (roomId: string): Promise<Branch[]> => {
+  const { data } = await serverClient()
+    .from('branches')
+    .select('id, room_id, owner_id, name, base_version_id, created_at, updated_at')
+    .eq('room_id', roomId)
+    .order('created_at', { ascending: true });
+  return ((data ?? []) as BranchRow[]).map(branchFromRow);
+};
+
+/**
+ * One version, with the document on it.
+ *
+ * The only route to a whole script that somebody else recorded, and it asks as
+ * the visitor: a version they may not read comes back as nothing at all, which
+ * is a refusal the database made rather than one this function checked.
+ */
+export const versionWithDocument = async (
+  versionId: string,
+): Promise<{ version: Version; document: unknown } | null> => {
+  const { data } = await serverClient()
+    .from('versions')
+    .select(
+      'id, room_id, branch_id, author_id, parent_version_id, kind, label, summary, content_hash, created_at, document',
+    )
+    .eq('id', versionId)
+    .maybeSingle();
+  if (!data) return null;
+
+  const row = data as VersionRow & { document: unknown };
+  return { version: versionFromRow(row), document: row.document };
+};
+
+/**
  * A point on the branch, kept for good.
  *
  * The head is copied into a version rather than moved: the writer carries on

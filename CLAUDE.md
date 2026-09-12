@@ -55,7 +55,7 @@ push live; the build takes a minute or two.
   `addendum-07-writers-room.md` is Writers Room, the cloud collaboration
   module: the showrunner's dashboard as the front door, logins, assignments,
   submitting, the brainstorming room, curation and a non-destructive master
-  merge. **Specified; stages 0–4 built.** §1 and §2 are the rules it all hangs
+  merge. **Specified; stages 0–5 built.** §1 and §2 are the rules it all hangs
   off — one writer's work is never destroyed by another's, and a collaborator
   gets the whole program rather than a web editor. §3 says how much of it the
   product already has (the Room is `/preview` grown up; membership widens
@@ -76,7 +76,11 @@ push live; the build takes a minute or two.
   a beat names a person and nothing else, and the colour is read through the
   seat in `packages/domain/attribution.ts`; the bridge signs new work in one
   place (`signWork`), and `apps/desktop/src/renderer/room.tsx` is the context
-  every badge, bar and stamp reads. §19 says what each built stage does; §15 is the build
+  every badge, bar and stamp reads. Stage 5 is the dashboard and the version
+  window: `packages/domain/desk.ts` says what a reader may be offered,
+  `/preview?room=…&version=…` opens one recorded version read-only, and the bar
+  wears the *author's* name rather than the reader's. §19 says what each built
+  stage does; §15 is the build
   order.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two

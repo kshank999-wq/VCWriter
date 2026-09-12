@@ -51,7 +51,15 @@ const script = (): ProjectFile => {
   });
 };
 
-const inARoom = (over: Partial<{ showing: 'master' | 'contribution'; seats: Seat[] }> = {}): void => {
+const inARoom = (
+  over: Partial<{
+    showing: 'master' | 'contribution';
+    seats: Seat[];
+    author: Seat | null;
+    readOnly: boolean;
+    label: string;
+  }> = {},
+): void => {
   (window as unknown as { vcwriter: unknown }).vcwriter = {
     roomIdentity: vi.fn().mockResolvedValue({
       ok: true,
@@ -60,8 +68,13 @@ const inARoom = (over: Partial<{ showing: 'master' | 'contribution'; seats: Seat
         roomName: 'Blackout',
         role: 'writer',
         you: JO,
+        // Whose draft the window holds. The reader's own, unless a version
+        // window says otherwise.
+        author: over.author === undefined ? JO : over.author,
         seats: over.seats ?? [JO, MARA],
         showing: over.showing ?? 'contribution',
+        readOnly: over.readOnly ?? false,
+        label: over.label ?? 'Blackout',
       },
     }),
   };
@@ -159,5 +172,33 @@ describe('whose work this is', () => {
     await waitFor(() => expect(screen.getByTestId('stamp').textContent).toBe('none'));
     expect(document.querySelector('.room-bar')).toBeNull();
     expect(document.querySelectorAll('.contributor-mark').length).toBe(0);
+  });
+});
+
+describe('a window opened on somebody else’s version (§3.4)', () => {
+  it('wears the author’s name and colour, not the reader’s', async () => {
+    inARoom({ author: MARA, readOnly: true, label: 'Docks rewrite' });
+    show(script());
+
+    expect(await screen.findByText('Mara Okonjo’s draft')).toBeTruthy();
+    // The stamp on the page is the author's: a page of Mara's draft is
+    // stamped MO whoever is looking at it.
+    expect(screen.getByTestId('stamp').textContent).toBe(`MO ${ROOM_COLOURS[2]}`);
+  });
+
+  it('says it cannot be changed before anybody types', async () => {
+    inARoom({ author: MARA, readOnly: true });
+    show(script());
+
+    expect(await screen.findByText('Read only')).toBeTruthy();
+    expect(screen.getByText('Reading as Jo Calder')).toBeTruthy();
+  });
+
+  it('says nothing about who is reading when the version is their own', async () => {
+    inARoom({ author: JO, readOnly: true });
+    show(script());
+
+    expect(await screen.findByText('Jo Calder’s draft')).toBeTruthy();
+    expect(screen.queryByText(/Reading as/)).toBeNull();
   });
 });

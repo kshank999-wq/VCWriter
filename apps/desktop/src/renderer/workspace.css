@@ -8294,3 +8294,22 @@ dialog.preferences .field {
   z-index: 1;
   margin-left: 0;
 }
+
+/* A window opened on a recorded version rather than on a desk (§13). The bar
+   says so before anybody types, because the refusal otherwise arrives from
+   autosave a minute later. */
+.room-bar.reading {
+  background: var(--panel);
+}
+
+.room-reading {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--muted);
+  flex: 0 0 auto;
+}

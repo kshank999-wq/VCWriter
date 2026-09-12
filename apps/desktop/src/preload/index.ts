@@ -60,11 +60,22 @@ export interface RoomIdentity {
   roomId: string;
   roomName: string;
   role: RoomRole | null;
-  /** This writer's own seat, which is what the page is signed with. */
+  /** This writer's own seat — who is *reading*. */
   you: Seat | null;
+  /**
+   * Whose draft this window holds, which is not always the reader's.
+   *
+   * A page of Jo's draft is stamped JC whoever is looking at it (§6.1), so the
+   * stamp and the bar read this and never `you`.
+   */
+  author: Seat | null;
   seats: Seat[];
   /** Whether this window holds the room's master or somebody's own draft. */
   showing: 'master' | 'contribution';
+  /** A recorded version is read-only: it cannot be changed once it exists (§9). */
+  readOnly: boolean;
+  /** What this window is, in words — *Jo Calder — First pass* (§3.4). */
+  label: string;
 }
 
 export interface VcWriterApi {

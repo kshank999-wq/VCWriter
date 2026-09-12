@@ -1,10 +1,20 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { OPENS_LABEL, describeSeats, seatInitials, seatName } from '@vcwriter/domain';
+import {
+  OPENS_LABEL,
+  describeSeats,
+  describeVersion,
+  desksIn,
+  masterVersion,
+  seatInitials,
+  seatName,
+} from '@vcwriter/domain';
 import { currentUser } from '@/lib/supabase';
 import { loadRoomById } from '@/lib/rooms';
+import { branchesIn, versionsFor } from '@/lib/branches';
 import { Seats } from './seats';
+import { Desks } from './desks';
 
 export const metadata: Metadata = { title: 'The room' };
 export const dynamic = 'force-dynamic';
@@ -41,6 +51,13 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
 
   const { landing, you } = view;
   const stamp = you ? seatInitials(you) : '';
+
+  // The room's lines and the points recorded on them, read as this visitor —
+  // so what comes back is what they may see, and the dashboard says the rest
+  // in words (§7).
+  const [branches, versions] = await Promise.all([branchesIn(view.room.id), versionsFor(view.room.id)]);
+  const desks = desksIn({ seats: view.seats, branches, versions, viewer: { userId: user.id } });
+  const master = masterVersion(versions);
 
   return (
     <>
@@ -122,6 +139,30 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
             </article>
           ) : null}
         </div>
+      </section>
+
+      <section>
+        <h2>The room, desk by desk</h2>
+        {master ? (
+          <p className="lede">
+            The room agreed on{' '}
+            <a href={`/preview?room=${view.room.id}&version=${master.id}`} target="_blank" rel="noreferrer">
+              {describeVersion(master)}
+            </a>
+            . Every draft here was taken from it.
+          </p>
+        ) : (
+          <p className="lede">
+            The room has not agreed on a draft yet. Until it does, every writer's line starts from
+            the project as it stands.
+          </p>
+        )}
+        <Desks roomId={view.room.id} desks={desks} />
+        <p className="small">
+          A point opens in a window of its own, so two of them sit side by side. Each one wears its
+          writer's colour and name — three windows showing the same scene are otherwise the same
+          window three times.
+        </p>
       </section>
 
       {landing.sections.includes('seats') ? (

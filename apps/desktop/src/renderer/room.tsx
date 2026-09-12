@@ -28,8 +28,18 @@ export interface RoomState {
   identity: RoomIdentity | null;
   /** The seats, as the one map every badge, bar and stamp reads through. */
   byAuthor: ReadonlyMap<string, Attribution>;
-  /** This writer, where the room knows them. */
+  /** The reader — this writer, where the room knows them. */
   you: Attribution | null;
+  /**
+   * Whose draft this window holds.
+   *
+   * The reader's own on their desk, and somebody else's in a window opened on
+   * a recorded version (§3.4). The stamp and the bar read this, never `you`: a
+   * page of Jo's draft is stamped JC whoever is looking at it (§6.1).
+   */
+  author: Attribution | null;
+  /** A recorded version cannot be changed; the bar says so before anyone types. */
+  readOnly: boolean;
   /**
    * Whose work is being picked out, or null for everybody's.
    *
@@ -53,6 +63,8 @@ const NOBODY: RoomState = {
   identity: null,
   byAuthor: EMPTY,
   you: null,
+  author: null,
+  readOnly: false,
   only: null,
   setOnly: () => undefined,
   cleanReading: false,
@@ -88,10 +100,10 @@ export const RoomProvider = ({ children }: { children: React.ReactNode }): React
   }, []);
 
   const byAuthor = useMemo(() => (identity ? attributionsOf(identity.seats) : EMPTY), [identity]);
-  const you = useMemo(
-    () => (identity?.you?.userId ? (byAuthor.get(identity.you.userId) ?? null) : null),
-    [identity, byAuthor],
-  );
+  const attributionOf = (userId: string | null | undefined): Attribution | null =>
+    userId ? (byAuthor.get(userId) ?? null) : null;
+  const you = useMemo(() => attributionOf(identity?.you?.userId), [identity, byAuthor]);
+  const author = useMemo(() => attributionOf(identity?.author?.userId), [identity, byAuthor]);
 
   // The master is clean and a contribution is signed (§6.3). Clean reading
   // takes the signature off a contribution; nothing puts one on the master.
@@ -102,14 +114,16 @@ export const RoomProvider = ({ children }: { children: React.ReactNode }): React
       identity,
       byAuthor,
       you,
+      author,
+      readOnly: identity?.readOnly ?? false,
       only: signed ? only : null,
       setOnly,
       cleanReading,
       setCleanReading,
       signed,
-      stamp: signed ? stampFor(you) : null,
+      stamp: signed ? stampFor(author) : null,
     }),
-    [identity, byAuthor, you, only, cleanReading, signed],
+    [identity, byAuthor, you, author, only, cleanReading, signed],
   );
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>;
