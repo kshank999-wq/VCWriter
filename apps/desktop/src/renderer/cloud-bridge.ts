@@ -289,6 +289,42 @@ export const createCloudBridge = (roomId: string, versionId: string | null = nul
      * it away is a decision made there, by somebody who may not be whoever
      * happens to have this window open (addendum 07 §7).
      */
+    /**
+     * The one button (§10).
+     *
+     * Autosave first, so what is sent is what is on the screen — a writer who
+     * presses Submit means *this*, not what the timer last happened to write.
+     * The room takes the point on the line itself; nothing here copies the
+     * draft anywhere.
+     */
+    async submitWork(input) {
+      if (!branchId) return fail('Open your draft first.');
+      if (versionId) return fail('This is a recorded version. Submit from your own draft.');
+
+      const held = current?.file;
+      if (held) {
+        const saved = await fetch(api, {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ branchId, file: held }),
+        });
+        if (!saved.ok) return fail(await asError(saved));
+      }
+
+      const response = await fetch(`/api/rooms/${roomId}/submissions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ kind: input.kind, note: input.note }),
+      });
+      if (!response.ok) return fail(await asError(response));
+
+      const body = (await response.json()) as { version?: { label?: string; createdAt?: string } };
+      return ok({
+        label: body.version?.label ?? input.note,
+        at: body.version?.createdAt ?? new Date().toISOString(),
+      });
+    },
+
     listProjects: async () => ok([]),
     deleteProject: async () =>
       fail('A room’s project is deleted from the room, not from here.'),

@@ -63,6 +63,7 @@ export * from './release.js';
 export * from './room.js';
 export * from './branch.js';
 export * from './desk.js';
+export * from './submission.js';
 export * from './attribution.js';
 export * from './activation.js';
 export * from './error-report.js';

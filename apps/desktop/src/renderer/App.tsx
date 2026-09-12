@@ -878,8 +878,14 @@ export default function App() {
         onPreferences={() => setPreferencesOpen(true)}
       />
 
-      {/* Whose draft this is, in a Writers Room; nothing at all outside one. */}
-      <RoomBar file={file} />
+      {/* Whose draft this is, in a Writers Room; nothing at all outside one.
+          What is open decides where a submission goes (addendum 07 §10): the
+          Script is a pass on the script, and Research, the Sculptor and the
+          Outliner are ideas. */}
+      <RoomBar
+        file={file}
+        looking={researchOpen || sculptorOpen || outlinerOpen ? 'research' : 'script'}
+      />
 
       <Preferences
         open={preferencesOpen}

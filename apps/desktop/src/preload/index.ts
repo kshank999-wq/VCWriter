@@ -164,6 +164,21 @@ export interface VcWriterApi {
    */
   signWork?(file: ProjectFile): ProjectFile;
 
+  /**
+   * Send this draft for review (addendum 07 §10).
+   *
+   * **One button, and what you are looking at decides where it goes**: the
+   * Script to the review queue, research and ideas to the brainstorming room.
+   * A point on the line is recorded and *that* is what goes — nothing is
+   * copied out of the writer's draft, and their desk is untouched.
+   *
+   * Absent outside a room, where there is nobody to submit to.
+   */
+  submitWork?(input: {
+    kind: 'script' | 'research';
+    note: string;
+  }): Promise<DesktopApiResult<{ label: string; at: string }>>;
+
   // Sync is optional: a writer who never signs in has a fully working desktop
   // application whose projects live in files.
   accountStatus(): Promise<DesktopApiResult<AccountStatus>>;

@@ -493,7 +493,7 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
    beat badges, and the filters that use them (§6, §19).
 5. **Built.** The showrunner dashboard, loading a version, and several of them
    open at once (§10, §3.4, §19).
-6. Submitting, and the review queue (§10).
+6. **Built.** Submitting, and the review queue (§10, §19).
 7. The brainstorming room (§11).
 8. Assignments and the Assign menu (§8).
 9. The Curation Tray and the non-destructive master merge (§12).
@@ -876,3 +876,67 @@ edit simply never lands, and the refusal is explicit rather than silent. Making
 every control inert is a larger change than this stage needs, and the honest
 version of it belongs with submitting (stage 6), where a reader has a reason to
 want a copy of what they are reading rather than an edit of it.
+
+### Stage 6 — submitting, and the queue
+
+**This is where reading widens for the first time, and the widening is the
+whole stage.** Until now a version was readable by its author or, as the
+master, by the room. Now a version that has been *submitted* is also readable
+by whoever curates the room it went to — and §7 still holds exactly as it did,
+because an unsubmitted draft is nobody else's. Submitting is the act that
+changes that, which is what §7 said it would be.
+
+Proved on the live database rather than in a test, ten claims in one
+transaction and rolled back afterwards: Jo submits her own version; Jo cannot
+submit **Mara's** version; Jo cannot approve her own submission; Mara cannot
+read Jo's submission *or* the version behind it; Ken reads both; Ken **cannot**
+read Mara's unsubmitted point; Ken can move it along; and nobody, Ken included,
+can delete a submission.
+
+**A submission copies nothing.** It references the version it was taken from,
+and a version cannot be changed once it exists (the trigger from stage 3
+refuses even the service role), so the writer carries straight on and what the
+showrunner is reading cannot move under them. Pressing Submit records the point
+on the line and sends *that* — a writer submitting never has to know what a
+version is.
+
+**Deciding is the showrunner's alone, and that is a schema decision rather than
+a careful one.** It was tempting to let a writer edit their own note, but
+row-level security is row-level: the same policy would have let them set their
+own state to `approved`. A writer who wants to say something else sends another
+submission, which is the more truthful record anyway.
+
+**No state deletes anything** (§1), and the transitions say so out loud: a
+decision can be unmade — `rejected` goes back to `in_review`, `approved` back
+to `revision_requested` — because a showrunner who rejected the wrong scene at
+midnight should not have to ask a writer to send it again. Exactly one door is
+one-way: `incorporated`, because unsaying *the master carries this* is a change
+to the master rather than to a row.
+
+**The queue is oldest first**, which is the opposite of everywhere else in the
+product. A version history is newest-first because the newest is the one you
+want; a queue is oldest-first because the oldest is who has been waiting
+longest, and a queue that buried it under this morning's would quietly punish
+whoever submitted first.
+
+**One button, and what is open decides where it goes.** Ken's mechanism, and it
+needed no machinery: the Script is a pass on the script and goes to the review
+queue; Research, the Sculptor and the Outliner are ideas and go to the room's
+ideas (§11, stage 7). The control still shows which, because the writer is the
+one who knows what they meant — but it is already right.
+
+**It says what it did.** Submitting is otherwise invisible: the draft does not
+change, the writer stays where they are, and without a sentence back the only
+evidence would be a page on somebody else's screen. So it says *Sent for
+review. Your draft is untouched — carry on.*
+
+Reading a submission opens the version it references in a window of its own —
+the same read-only window stage 5 built, reached the same way. Nothing new was
+needed for that, which is the second time §3.4's windowing has paid.
+
+**Two more `SECURITY DEFINER` helpers**, `curates_room` and
+`version_submitted_to_me`, joining the six that were already there. The linter
+warns about all eight for the same reason and the answer is the same: a policy
+expression runs as the calling role, so `authenticated` must be able to execute
+them or row-level security stops working. Each answers one true-or-false
+question *about the caller* and leaks nothing else.

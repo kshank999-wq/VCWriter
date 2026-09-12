@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { contributorsIn, type ProjectFile } from '@vcwriter/domain';
 import { useRoom } from '../room';
 
@@ -19,7 +19,18 @@ import { useRoom } from '../room';
  * Nothing here when there is no room, which is the desktop and the plain
  * preview: a script with one author has nothing to attribute.
  */
-export const RoomBar = ({ file }: { file: ProjectFile | null }): React.ReactElement | null => {
+export const RoomBar = ({
+  file,
+  looking,
+}: {
+  file: ProjectFile | null;
+  /**
+   * What the writer is looking at, which is what decides where a submission
+   * goes (§10). The Script is a pass on the script; Research, the Sculptor and
+   * the Outliner are ideas. The button reads this rather than asking.
+   */
+  looking: 'script' | 'research';
+}): React.ReactElement | null => {
   const room = useRoom();
   const { identity, byAuthor, you, author, readOnly, only, setOnly, cleanReading, setCleanReading } = room;
 
@@ -76,6 +87,8 @@ export const RoomBar = ({ file }: { file: ProjectFile | null }): React.ReactElem
         </span>
       ) : null}
 
+      <SubmitWork readOnly={readOnly} looking={looking} />
+
       <label className="room-clean">
         <input type="checkbox" checked={cleanReading} onChange={(event) => setCleanReading(event.target.checked)} />
         Clean reading
@@ -85,3 +98,112 @@ export const RoomBar = ({ file }: { file: ProjectFile | null }): React.ReactElem
 };
 
 export default RoomBar;
+
+/**
+ * The one button (addendum 07 §10).
+ *
+ * **What you are looking at decides where it goes**, so the button asks for a
+ * word and nothing else: the Script goes to the review queue, research and
+ * ideas to the brainstorming room. A writer choosing between two destinations
+ * from a menu would be doing the machine's job.
+ *
+ * It says what it did, because submitting is invisible otherwise — the draft
+ * does not change, the writer stays where they are, and without a sentence
+ * back the only evidence would be a page on somebody else's screen.
+ */
+function SubmitWork({
+  readOnly,
+  looking,
+}: {
+  readOnly: boolean;
+  looking: 'script' | 'research';
+}): React.ReactElement | null {
+  const [open, setOpen] = useState(false);
+  // What is open decides it. Still a control rather than a silent choice,
+  // because the writer is the one who knows what they meant — but it is
+  // already right, which is the whole of Ken's mechanism.
+  const [kind, setKind] = useState<'script' | 'research'>(looking);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [said, setSaid] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const send = window.vcwriter?.submitWork;
+  // A recorded version is somebody's past, not a draft: there is nothing here
+  // to send, and the reader is very often not its author.
+  if (!send || readOnly) return null;
+
+  const submit = async () => {
+    setBusy(true);
+    setError(null);
+    const result = await send.call(window.vcwriter, { kind, note: note.trim() });
+    setBusy(false);
+
+    if (!result.ok) {
+      setError(result.error ?? 'It could not be sent.');
+      return;
+    }
+    setOpen(false);
+    setNote('');
+    setSaid(
+      kind === 'research'
+        ? 'Sent to the room’s ideas. Your draft is untouched.'
+        : 'Sent for review. Your draft is untouched — carry on.',
+    );
+  };
+
+  return (
+    <span className="room-submit">
+      {said ? (
+        <span className="room-sent" role="status" onAnimationEnd={() => setSaid(null)}>
+          {said}
+        </span>
+      ) : null}
+
+      <button
+        type="button"
+        className="room-send"
+        title="Send this draft for review. Nothing is copied out of it and nothing on your desk changes."
+        onClick={() => {
+          if (!open) setKind(looking);
+          setOpen(!open);
+        }}
+      >
+        Submit
+      </button>
+
+      {open ? (
+        <span className="room-submit-pop" role="dialog" aria-label="Submit this draft">
+          <label className="field">
+            <span>What is it?</span>
+            <select value={kind} onChange={(event) => setKind(event.target.value as 'script' | 'research')}>
+              <option value="script">A pass on the script — to the review queue</option>
+              <option value="research">Research and ideas — to the room’s ideas</option>
+            </select>
+          </label>
+          <input
+            aria-label="What to call it"
+            placeholder="What is this pass? (optional)"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                void submit();
+              }
+            }}
+          />
+          {error ? <span className="error small">{error}</span> : null}
+          <span className="room-submit-row">
+            <button type="button" className="ghost small" onClick={() => setOpen(false)} disabled={busy}>
+              Not yet
+            </button>
+            <button type="button" className="button small" onClick={() => void submit()} disabled={busy}>
+              {busy ? 'Sending…' : 'Send it'}
+            </button>
+          </span>
+        </span>
+      ) : null}
+    </span>
+  );
+}

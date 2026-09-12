@@ -51,6 +51,16 @@ const script = (): ProjectFile => {
   });
 };
 
+/** A room where submitting works, and a record of what was sent. */
+const sending = (sent: { note?: string; kind?: string }[] = []) => {
+  const vcwriter = (window as unknown as { vcwriter: Record<string, unknown> }).vcwriter;
+  vcwriter['submitWork'] = vi.fn(async (input: { kind: string; note: string }) => {
+    sent.push(input);
+    return { ok: true, data: { label: input.note, at: AT } };
+  });
+  return sent;
+};
+
 const inARoom = (
   over: Partial<{
     showing: 'master' | 'contribution';
@@ -99,10 +109,10 @@ function Stamp() {
   return <p data-testid="stamp">{stamp ? `${stamp.initials} ${stamp.colour}` : 'none'}</p>;
 }
 
-const show = (file: ProjectFile) =>
+const show = (file: ProjectFile, looking: 'script' | 'research' = 'script') =>
   render(
     <RoomProvider>
-      <RoomBar file={file} />
+      <RoomBar file={file} looking={looking} />
       <Marks file={file} />
       <Stamp />
     </RoomProvider>,
@@ -200,5 +210,71 @@ describe('a window opened on somebody else’s version (§3.4)', () => {
 
     expect(await screen.findByText('Jo Calder’s draft')).toBeTruthy();
     expect(screen.queryByText(/Reading as/)).toBeNull();
+  });
+});
+
+describe('the one button (§10)', () => {
+  it('is not offered outside a room', async () => {
+    (window as unknown as { vcwriter: unknown }).vcwriter = {};
+    show(script());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Submit' })).toBeNull());
+  });
+
+  it('is not offered on a recorded version, which is somebody’s past', async () => {
+    inARoom({ author: MARA, readOnly: true });
+    sending();
+    show(script());
+
+    expect(await screen.findByText('Read only')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Submit' })).toBeNull();
+  });
+
+  it('asks what it is, and sends it where that says', async () => {
+    inARoom();
+    const sent = sending();
+    show(script());
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    fireEvent.change(screen.getByLabelText('What to call it'), { target: { value: 'The docks rewrite' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send it' }));
+
+    await waitFor(() => expect(sent).toEqual([{ kind: 'script', note: 'The docks rewrite' }]));
+  });
+
+  it('says what it did, because submitting is otherwise invisible', async () => {
+    inARoom();
+    sending();
+    show(script());
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send it' }));
+
+    // And says the thing a writer actually needs to hear.
+    expect(await screen.findByText(/Your draft is untouched/)).toBeTruthy();
+  });
+
+  it('takes research to the other destination', async () => {
+    inARoom();
+    const sent = sending();
+    show(script());
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    fireEvent.change(screen.getByLabelText('What is it?'), { target: { value: 'research' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send it' }));
+
+    await waitFor(() => expect(sent[0]?.kind).toBe('research'));
+  });
+
+  it('already knows where it goes, because of what is open (§10)', async () => {
+    inARoom();
+    const sent = sending();
+    // The Sculptor, the Outliner or Research open: this is an idea, and the
+    // writer does not have to say so.
+    show(script(), 'research');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send it' }));
+
+    await waitFor(() => expect(sent[0]?.kind).toBe('research'));
   });
 });

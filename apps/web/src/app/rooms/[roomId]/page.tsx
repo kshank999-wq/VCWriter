@@ -3,18 +3,23 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   OPENS_LABEL,
+  canReview,
   describeSeats,
   describeVersion,
   desksIn,
   masterVersion,
+  queueOf,
   seatInitials,
   seatName,
+  waitingCount,
 } from '@vcwriter/domain';
 import { currentUser } from '@/lib/supabase';
 import { loadRoomById } from '@/lib/rooms';
 import { branchesIn, versionsFor } from '@/lib/branches';
+import { submissionsIn } from '@/lib/submissions';
 import { Seats } from './seats';
 import { Desks } from './desks';
+import { Queue } from './queue';
 
 export const metadata: Metadata = { title: 'The room' };
 export const dynamic = 'force-dynamic';
@@ -55,9 +60,20 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
   // The room's lines and the points recorded on them, read as this visitor —
   // so what comes back is what they may see, and the dashboard says the rest
   // in words (§7).
-  const [branches, versions] = await Promise.all([branchesIn(view.room.id), versionsFor(view.room.id)]);
+  const [branches, versions, submissions] = await Promise.all([
+    branchesIn(view.room.id),
+    versionsFor(view.room.id),
+    submissionsIn(view.room.id),
+  ]);
   const desks = desksIn({ seats: view.seats, branches, versions, viewer: { userId: user.id } });
   const master = masterVersion(versions);
+
+  // The queue as this visitor may see it — their own work if they are a
+  // writer, all of it if they run the room. The filtering was the database's
+  // (§10); this only decides whether the decision buttons are drawn.
+  const deciding = canReview(view.role);
+  const queue = queueOf({ submissions, seats: view.seats, versions });
+  const waiting = waitingCount(submissions);
 
   return (
     <>
@@ -139,6 +155,20 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
             </article>
           ) : null}
         </div>
+      </section>
+
+      <section>
+        <h2>
+          {deciding ? 'The review queue' : 'What you have sent'}
+          {deciding && waiting > 0 ? <span className="pill">{waiting} waiting</span> : null}
+        </h2>
+        <Queue roomId={view.room.id} rows={queue} canDecide={deciding} />
+        {deciding ? (
+          <p className="small">
+            Reading a submission opens the version it was taken from, in a window of its own. Nothing here
+            deletes anything — a decision can be unmade, and the writer’s own line is never touched.
+          </p>
+        ) : null}
       </section>
 
       <section>
