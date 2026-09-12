@@ -5,7 +5,7 @@ import {
   addLane,
   addMarker,
   addUnit,
-  characterArcs,
+  characterPresence,
   createProjectFile,
   fromRows,
   runFinalEditor,
@@ -157,7 +157,7 @@ describe('threads and arcs', () => {
       who: index === 0 || index === 3 ? ['MAEVE', 'THE KEEPER'] : ['MAEVE'],
     }));
 
-    const arcs = characterArcs(file);
+    const arcs = characterPresence(file);
     expect(arcs.map((arc) => arc.name)).toEqual(['MAEVE', 'THE KEEPER']);
     expect(arcs[0]?.appearances).toHaveLength(4);
     expect(arcs[1]?.first).toBe(1);

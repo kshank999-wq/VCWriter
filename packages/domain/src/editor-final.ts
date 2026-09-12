@@ -203,7 +203,16 @@ export interface Appearance {
   speaks: boolean;
 }
 
-export interface CharacterArc {
+/**
+ * Where a character is on the page, across the whole script.
+ *
+ * **`CharacterPresence`, not `CharacterArc`** — which is what this was called
+ * until the Character Creator (addendum 08) built a real one. Nothing here is
+ * an arc: it is appearances, a first and a last, and the longest gap between
+ * them. A writer reading *arc* and finding a gap report would reasonably think
+ * the software did not know what an arc is.
+ */
+export interface CharacterPresence {
   characterId: CharacterId | null;
   name: string;
   appearances: Appearance[];
@@ -222,15 +231,15 @@ export interface CharacterArc {
  * doing it on purpose, and the only useful thing to do is show the shape and
  * let the writer look at it.
  */
-export const characterArcs = (file: ProjectFile): CharacterArc[] => {
+export const characterPresence = (file: ProjectFile): CharacterPresence[] => {
   const scenes = reviewScenes(file);
-  const byName = new Map<string, CharacterArc>();
+  const byName = new Map<string, CharacterPresence>();
 
-  const seen = (name: string): CharacterArc => {
+  const seen = (name: string): CharacterPresence => {
     const existing = byName.get(name);
     if (existing) return existing;
     const character = file.characters.find((candidate) => candidate.name.trim().toUpperCase() === name);
-    const arc: CharacterArc = {
+    const arc: CharacterPresence = {
       characterId: character?.id ?? null,
       name,
       appearances: [],
@@ -354,7 +363,7 @@ export interface FinalEditorReport {
   scenes: SceneReview[];
   findings: StoryFinding[];
   /** Where each character is across the story (§8.2). */
-  arcs: CharacterArc[];
+  arcs: CharacterPresence[];
   /** Where each plot thread runs. */
   threads: ThreadRun[];
   /** What the acts enclose, as a share of the pages. */
@@ -615,7 +624,7 @@ export const runFinalEditor = (file: ProjectFile, options: FinalEditorOptions = 
     }
   }
 
-  const arcs = characterArcs(file);
+  const arcs = characterPresence(file);
   for (const arc of arcs) {
     // Already covered by `character_absent` where that fires; this is the
     // arc's own shape, and it names where to look.

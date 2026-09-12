@@ -21,6 +21,13 @@ export type ResearchCategoryId = Id<'ResearchCategory'>;
 export type ResearchItemId = Id<'ResearchItem'>;
 export type CharacterId = Id<'Character'>;
 export type CharacterCategoryId = Id<'CharacterCategory'>;
+/* The Character Creator (addendum 08). */
+export type CharacterTraitId = Id<'CharacterTrait'>;
+export type CharacterizationItemId = Id<'CharacterizationItem'>;
+export type UsageLinkId = Id<'UsageLink'>;
+export type CharacterArcId = Id<'CharacterArc'>;
+export type ArcPointId = Id<'ArcPoint'>;
+export type CharacterRelationshipId = Id<'CharacterRelationship'>;
 export type StoryLinkId = Id<'StoryLink'>;
 export type SetupPayoffId = Id<'SetupPayoff'>;
 export type SetupPointId = Id<'SetupPoint'>;

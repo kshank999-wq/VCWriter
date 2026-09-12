@@ -71,6 +71,7 @@ export * from './comments.js';
 export * from './activity.js';
 export * from './standing.js';
 export * from './assist.js';
+export * from './character-creator.js';
 export * from './attribution.js';
 export * from './activation.js';
 export * from './error-report.js';

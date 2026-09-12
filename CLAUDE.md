@@ -135,6 +135,17 @@ push live; the build takes a minute or two.
   existing `origin`, attributed to the person and never the machine. Migration
   0038 is the owner's switch.
   §19 says what each built stage does; §15 is the build order.
+  `addendum-08-character-creator.md` is the Character Creator, the first module
+  of the Research room, from Ken's own dev spec. **Specified; stage 0 built** —
+  `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
+  not characterization** (*greedy* is telling, *leaves a small tip* is showing,
+  so the unit of work is the characterization item and a trait is a folder for
+  them), and **used is a reading, never a stored flag** — derived from usage
+  links every time, so deleting a beat turns an item red by itself and moving a
+  scene changes nothing. `retired` is stored because it is an intention no
+  reading can discover. §3 says what already exists and is only being widened;
+  §8 is the build order; §3.4 says why there is deliberately no module framework
+  yet.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
