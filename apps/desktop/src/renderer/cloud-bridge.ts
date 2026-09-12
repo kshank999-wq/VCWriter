@@ -1,5 +1,6 @@
 import {
   assignmentSchema,
+  commentSchema,
   describeVersion,
   knownRecords,
   parseProjectFile,
@@ -7,6 +8,7 @@ import {
   signNewWork,
   versionSchema,
   type Assignment,
+  type Comment,
   type ProjectFile,
   type Seat,
   type Version,
@@ -115,29 +117,38 @@ export const createCloudBridge = (roomId: string, versionId: string | null = nul
       readOnly: versionId !== null,
       label: body.roomName ?? '',
       assignments: [],
+      comments: [],
     };
     me = identity.you?.userId ?? null;
 
-    // What the room has asked of whom (§8), alongside the seats rather than
-    // instead of them: a badge on a scene needs both to draw one thing. A
-    // failure here costs the badge and nothing else — **it is not a lock**, so
-    // a draft that could not read them is a draft with no badges on it, not a
-    // draft anybody is kept out of.
-    try {
-      const asks = await fetch(`/api/rooms/${roomId}/assignments`, { headers: { accept: 'application/json' } });
-      if (asks.ok) {
-        const carried = (await asks.json()) as { assignments?: unknown[] };
-        identity = {
-          ...identity,
-          assignments: (carried.assignments ?? [])
-            .map((row) => assignmentSchema.safeParse(row))
-            .filter((parsed): parsed is { success: true; data: Assignment } => parsed.success)
-            .map((parsed) => parsed.data),
-        };
+    // What the room has asked of whom (§8) and what it has said (§14),
+    // alongside the seats rather than instead of them: a badge on a scene needs
+    // all three to draw one row. A failure here costs the badge and nothing
+    // else — **neither is a lock**, so a draft that could not read them is a
+    // draft with no badges on it, not a draft anybody is kept out of.
+    const alongside = async <T,>(
+      path: string,
+      key: string,
+      parse: (row: unknown) => { success: true; data: T } | { success: false },
+    ): Promise<T[]> => {
+      try {
+        const response = await fetch(`/api/rooms/${roomId}/${path}`, { headers: { accept: 'application/json' } });
+        if (!response.ok) return [];
+        const carried = (await response.json()) as Record<string, unknown[]>;
+        return (carried[key] ?? [])
+          .map(parse)
+          .filter((parsed): parsed is { success: true; data: T } => parsed.success)
+          .map((parsed) => parsed.data);
+      } catch {
+        return [];
       }
-    } catch {
-      // Left empty on purpose. See above.
-    }
+    };
+
+    const [assignments, comments] = await Promise.all([
+      alongside<Assignment>('assignments', 'assignments', (row) => assignmentSchema.safeParse(row)),
+      alongside<Comment>('comments', 'comments', (row) => commentSchema.safeParse(row)),
+    ]);
+    identity = { ...identity, assignments, comments };
   };
 
   /**

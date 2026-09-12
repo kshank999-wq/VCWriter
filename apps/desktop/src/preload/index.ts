@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type {
   Assignment,
   CaptureItem,
+  Comment,
   MergeResult,
   PrintOptions,
   ProjectEntry,
@@ -89,6 +90,14 @@ export interface RoomIdentity {
    * of one; it is drawn, and that is all.
    */
   assignments: Assignment[];
+  /**
+   * What the room has said, and about what (addendum 07 §14).
+   *
+   * Carried with the identity for the third time and the same reason as the
+   * seats and the assignments: a badge beside a scene needs all three to draw
+   * one row, and three requests would draw it three times.
+   */
+  comments: Comment[];
 }
 
 export interface VcWriterApi {

@@ -215,6 +215,20 @@ export const describeAssignment = (assignment: Assignment): string => {
   return note.length > 0 ? note : 'A task with nothing said about it.';
 };
 
+/**
+ * The short name of an ask: the record, or the task itself.
+ *
+ * `describeAssignment` carries the note as well, which is right on a card and
+ * wrong in a running sentence — *asked Mara for Act Two: find where it turns..*
+ * ends with two full stops because the note brought its own.
+ */
+export const askTitle = (assignment: Assignment): string => {
+  const label = assignment.targetLabel.trim();
+  if (label.length > 0 && assignment.targetKind) return `${TARGET_NAMES[assignment.targetKind]} — ${label}`;
+  const note = assignment.note.trim();
+  return note.length > 0 ? note.replace(/[.!?]+$/, '') : 'a task';
+};
+
 /** Who it is being asked of, for a row on the dashboard. */
 export const assigneeName = (assignment: Assignment, seats: readonly Seat[]): string => {
   const seat = seats.find((one) => one.userId === assignment.assigneeId);

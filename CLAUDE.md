@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0034.
+  reads like it does. Applied through 0035.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
@@ -58,7 +58,7 @@ push live; the build takes a minute or two.
   `addendum-07-writers-room.md` is Writers Room, the cloud collaboration
   module: the showrunner's dashboard as the front door, logins, assignments,
   submitting, the brainstorming room, curation and a non-destructive master
-  merge. **Specified; stages 0–9 built.** §1 and §2 are the rules it all hangs
+  merge. **Specified; stages 0–10 built.** §1 and §2 are the rules it all hangs
   off — one writer's work is never destroyed by another's, and a collaborator
   gets the whole program rather than a web editor. §3 says how much of it the
   product already has (the Room is `/preview` grown up; membership widens
@@ -110,6 +110,13 @@ push live; the build takes a minute or two.
   preview draws both. Migration 0034 is the tray, the merge record on the
   version, and a hole 0026 left — anybody in the room could insert a
   `master`-kind version, which is readable by everybody.
+  Stage 10 is comments, mentions and the trail: `packages/domain/comments.ts`
+  and `activity.ts`, and the decision worth keeping is that **the trail is a
+  reading, not a second recording** — every event in it comes off a version, a
+  submission, an assignment or a seat that already carried the fact, so there is
+  no log table to drift. *What is new* is computed the same way; the only thing
+  recorded is when each person last looked. A comment is speech about the work,
+  so it can be edited and never deleted (withdrawing is a state). Migration 0035.
   §19 says what each built stage does; §15 is the build order.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two

@@ -1,6 +1,6 @@
 # Addendum 07 — Writers Room
 
-Status: specified; **stages 0–9 built**, September 2026. From Ken's *VC Writer Writers
+Status: specified; **stages 0–10 built**, September 2026. From Ken's *VC Writer Writers
 Room Development Specification v1.0* of 11 September, and his elaboration of
 the same day — **the showrunner's dashboard is the front door, everyone has a
 login, and everyone submits.** Extends §12 (commerce), §14 (sync) and §15 (no
@@ -497,7 +497,7 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
 7. **Built.** The brainstorming room (§11, §19).
 8. **Built.** Assignments and the Assign menu (§8, §19).
 9. **Built.** The Curation Tray and the non-destructive master merge (§12, §19).
-10. Comments, notifications and activity history.
+10. **Built.** Comments, notifications and activity history (§14, §9, §19).
 11. Desktop synchronisation, and export/backup of a whole room.
 12. AI comparison and summarisation, and the advanced collaboration features.
 
@@ -1133,3 +1133,67 @@ transaction: Jo cannot publish herself as the master, cannot put anything in the
 tray and cannot read it; the same piece cannot be taken twice; Ken commits a
 master with its record and Mara can read it; nobody can rewrite the version it
 drew from — not Ken, not its author, not the service role.
+
+### Stage 10 — comments, mentions, and the trail
+
+**A comment is speech about the work, not the work**, and that one distinction
+settles nearly every decision in the stage. It is why a comment *can* be edited
+— somebody correcting their own typo is not rewriting anybody's script — and why
+it still cannot be **deleted**: a thread with a hole in it is a conversation
+nobody can follow, and §1's *no state means gone* covers the record of a room as
+much as its pages. Withdrawing is a state, and the thread still reads.
+
+One line was drawn inside that rule rather than against it: a withdrawn thread
+**with nothing built on it** is not shown. Nobody answered it, so there is no
+conversation left to keep readable, and an empty *withdrawn by the person who
+said it* is clutter rather than record. One with replies always stays, because
+taking it away would orphan them — which is the hole the rule refuses.
+
+**The audit trail is a reading, not a second recording**, and this is the best
+thing in the stage. §9 asks for a record of who created, submitted, accepted,
+rejected, moved or modified collaborative material — and every one of those
+facts is *already written down*: a version carries its author and its moment, a
+submission its state and who decided it, an assignment both, a seat its dates.
+A log table beside them would be a second copy of the same events, and a second
+copy drifts, which is the one thing an audit trail must never do. So `activityIn`
+reads the records and orders them, and there is no table at all. What that costs
+is said out loud in the file: the trail shows a submission's *current* standing
+rather than every state it passed through, and keeping every step is a real
+feature to build deliberately rather than a side effect to leave half-done.
+
+**Notifications are computed for the same reason.** A mention is a comment that
+names you; a reply is a comment in a thread you are in. Both are already
+written, so *what is new* is a reading of the comments rather than a
+notification row per event. The only thing recorded is when each person last
+looked — one small table, private to them in every direction, because when
+somebody last opened a room is nobody else's business.
+
+**One person per `@`, walking the text.** Asking each name whether it appears
+anywhere looks equivalent and is not: `@Jo Calder` *contains* `@Jo`, so a room
+with a Jo Calder and a Jo would quietly address both from one mention. The
+walk was written first the wrong way and the test caught it, which is what that
+test was for. Mentions are then **stored resolved**, like an assignment's label:
+a mention is a fact about a moment, and renaming somebody two weeks later must
+not silently re-address what was already said.
+
+**A ninth `SECURITY DEFINER` helper was avoided**, and the reason is worth
+keeping. The eight that exist are definers because the caller usually cannot
+read the table the question is about. Here they can — `room_seats_member_read`
+already lets a member see the room's seats — so *may this person speak* is a
+plain subquery evaluated under the caller's own rights, and the advisor's list
+did not grow.
+
+**Where the conversation lives.** The writing program shows a **count** beside a
+scene and nothing more: quieter again than the assignment badge, which is
+quieter than the contributor's mark, because that is the order of their
+importance to somebody about to type — whose this is, who it is asked of,
+whether there is something to read first. The threads themselves are read and
+answered on the room page, where a discussion has room to be one, rather than
+turning the script into a comment client.
+
+Eleven claims proved on the live database and rolled back: a writer comments and
+a viewer cannot, though a viewer reads; a stranger sees nothing; nobody comments
+in somebody else's name; the author corrects their own and the showrunner
+settles a thread while a viewer cannot; nobody deletes a comment, the showrunner
+included; a comment on the room may not also name a record; and a read-mark is
+visible only to the person it belongs to.

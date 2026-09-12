@@ -1335,3 +1335,163 @@ p.room-stamp {
   flex-wrap: wrap;
   margin: 20px 0 12px;
 }
+
+/* ------------------------- what the room says (addendum 07 §14, §9)
+
+   Three readings of rows that already exist: what is new, the threads, and the
+   trail. None is a second copy of an event. */
+
+.news {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: 3px;
+  padding: 12px 14px;
+  margin: 24px 0 0;
+  background: var(--bg-raised);
+}
+
+.news ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.say {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+
+.say .field {
+  flex: 1 1 320px;
+}
+
+.say textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.threads {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.thread {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 12px 14px;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Settled, and still readable — the thread is the record of how the room got
+   where it is, and a settled one is not a deleted one (§1). */
+.thread.settled {
+  background: color-mix(in srgb, var(--gold-deep) 6%, var(--panel));
+}
+
+.thread-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.thread-what {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.thread-acts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.thread-body {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.thread-replies {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 12px;
+  border-left: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.thread-replies li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.thread-replies .block {
+  display: block;
+  white-space: pre-wrap;
+}
+
+.thread-say {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.thread-say input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.trail {
+  list-style: none;
+  margin: 16px 0 12px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.trail-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.trail-row:last-child {
+  border-bottom: 0;
+}
+
+/* The date holds its own column so the lines read down the page rather than
+   starting wherever the timestamp before them happened to end. */
+.trail-when {
+  flex: 0 0 128px;
+}
+
+.trail-line {
+  flex: 1 1 auto;
+  min-width: 0;
+}

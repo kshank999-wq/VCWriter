@@ -8343,6 +8343,47 @@ dialog.preferences .field {
   margin-left: auto;
 }
 
+/* The room is talking about this (addendum 07 §14).
+
+   Quieter again than the assignment badge, which is quieter than the
+   contributor's mark — three marks in a row on one scene heading would compete
+   for the same glance, and their importance to somebody about to type is in
+   that order: whose this is, who it is asked of, and whether there is a
+   conversation to read first. */
+.talk-mark {
+  font-size: 10px;
+  line-height: 15px;
+  padding: 0 4px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+  color: var(--muted);
+  background: transparent;
+  text-decoration: none;
+  opacity: 0.75;
+}
+
+a.talk-mark:hover {
+  color: var(--text);
+  opacity: 1;
+}
+
+.contributor-mark + .talk-mark,
+.assigned-mark + .talk-mark {
+  margin-left: 3px;
+}
+
+.scene-name > .talk-mark:first-of-type:not(.assigned-mark + .talk-mark) {
+  margin-left: auto;
+}
+
+/* On a beat, inside where the assignment badge sits. */
+.beat-block > .talk-mark {
+  position: absolute;
+  top: 0;
+  right: max(0px, calc(50% - 46ch + 56px));
+  z-index: 1;
+}
+
 /* A window opened on a recorded version rather than on a desk (§13). The bar
    says so before anybody types, because the refusal otherwise arrives from
    autosave a minute later. */

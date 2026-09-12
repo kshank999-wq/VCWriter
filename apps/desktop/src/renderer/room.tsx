@@ -3,10 +3,13 @@ import {
   assignmentsOn,
   attributionsOf,
   isSigned,
+  openThreadsOn,
   stampFor,
   type Assignment,
   type AssignmentTarget,
   type Attribution,
+  type Comment,
+  type CommentTarget,
   type PageStamp,
 } from '@vcwriter/domain';
 import type { RoomIdentity } from '../preload/index';
@@ -66,6 +69,15 @@ export interface RoomState {
    * writers took a run at the same scene is a room working properly.
    */
   assignments: readonly Assignment[];
+  /**
+   * What the room has said, and about what (§14).
+   *
+   * Read and drawn, like the assignments and for the same reason: a
+   * conversation about a scene is not permission to write it or a bar to
+   * writing it. The writing program says a thread *exists*; the room page is
+   * where it is read and answered.
+   */
+  comments: readonly Comment[];
 }
 
 const EMPTY: ReadonlyMap<string, Attribution> = new Map();
@@ -83,6 +95,7 @@ const NOBODY: RoomState = {
   signed: false,
   stamp: null,
   assignments: [],
+  comments: [],
 };
 
 const RoomContext = createContext<RoomState>(NOBODY);
@@ -135,6 +148,7 @@ export const RoomProvider = ({ children }: { children: React.ReactNode }): React
       signed,
       stamp: signed ? stampFor(author) : null,
       assignments: identity?.assignments ?? [],
+      comments: identity?.comments ?? [],
     }),
     [identity, byAuthor, you, author, only, cleanReading, signed],
   );
@@ -191,5 +205,21 @@ export const useAsk = (): ((
       return { assignment: found, who: byAuthor.get(found.assigneeId) ?? null };
     },
     [assignments, byAuthor],
+  );
+};
+
+/**
+ * Whether the room is talking about this record, and how much (§14).
+ *
+ * **A count, not the conversation.** The threads are read and answered on the
+ * room page, where there is room for them; here the question is only *is there
+ * something I should know about this scene before I rewrite it*, and a number
+ * answers it without turning the script into a comment client.
+ */
+export const useTalk = (): ((target: { kind: CommentTarget; id: string } | null | undefined) => number) => {
+  const { comments } = useRoom();
+  return useCallback(
+    (target) => (!target || comments.length === 0 ? 0 : openThreadsOn(comments, target)),
+    [comments],
   );
 };

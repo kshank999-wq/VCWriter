@@ -16,9 +16,10 @@ import {
 import { BeatBody } from './BeatBody';
 import { DEFAULT_PAGE_STYLE, ScriptOptions, type PageStyle } from './ScriptOptions';
 import { ManuscriptDataLists } from './ManuscriptDataLists';
-import { useAsk, useMark } from '../room';
+import { useAsk, useMark, useRoom, useTalk } from '../room';
 import { AssignedMark } from './AssignedMark';
 import { ContributorMark } from './ContributorMark';
+import { TalkMark } from './TalkMark';
 
 /** What the Script shows besides the manuscript itself (addendum 02 §6). */
 export interface ScriptDisplay {
@@ -208,6 +209,10 @@ export function StoryView({
   // And who the room is *expecting* it from, which is a different question
   // from whose it is — and never a lock (addendum 07 §8).
   const ask = useAsk();
+  // And whether the room is talking about it, which is neither of those and
+  // also not a bar to writing (addendum 07 §14).
+  const talk = useTalk();
+  const roomId = useRoom().identity?.roomId ?? null;
 
   const noun = prose ? 'Chapter' : 'Scene';
   const toggle = (key: keyof ScriptDisplay) => setDisplay({ ...display, [key]: !display[key] });
@@ -248,6 +253,7 @@ export function StoryView({
       />
       <ContributorMark who={mark(unit.origin)} />
       <AssignedMark {...(ask({ kind: 'scene', id: unit.id as string }) ?? { assignment: null, who: null })} />
+      <TalkMark count={talk({ kind: 'scene', id: unit.id as string })} roomId={roomId} />
     </header>
   );
 
@@ -289,6 +295,7 @@ export function StoryView({
       {lead ? (
         <AssignedMark {...(ask({ kind: 'beat', id: beat.id as string }) ?? { assignment: null, who: null })} />
       ) : null}
+      {lead ? <TalkMark count={talk({ kind: 'beat', id: beat.id as string })} roomId={roomId} /> : null}
       {onOpenBeat && lead ? (
         <button
           type="button"

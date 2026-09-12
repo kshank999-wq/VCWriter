@@ -3,10 +3,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   OPENS_LABEL,
+  activityIn,
   applyTray,
   assignableThings,
   assignmentsFor,
   canAssign,
+  canComment,
   canCurate,
   canReview,
   curatableFrom,
@@ -16,6 +18,7 @@ import {
   filingChoices,
   ideaBoxes,
   ideasIn,
+  newsFor,
   owedBySeat,
   parseProjectFile,
   sequenceOf,
@@ -25,6 +28,7 @@ import {
   queueOf,
   seatInitials,
   seatName,
+  threadsIn,
   waitingCount,
   type Curatable,
 } from '@vcwriter/domain';
@@ -36,12 +40,14 @@ import { versionWithDocument } from '@/lib/branches';
 import { projectDocument } from '@/lib/project-document';
 import { assignmentsIn } from '@/lib/assignments';
 import { masterNow, piecesFor, trayIn } from '@/lib/curation';
+import { commentsIn, lastReadAt, markRead } from '@/lib/comments';
 import { Seats } from './seats';
 import { Desks } from './desks';
 import { Queue } from './queue';
 import { Ideas } from './ideas';
 import { WhoOwesWhat, YourAsks } from './assignments';
 import { Tray } from './tray';
+import { Talk, Trail, WhatIsNew } from './talk';
 
 export const metadata: Metadata = { title: 'The room' };
 export const dynamic = 'force-dynamic';
@@ -82,11 +88,13 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
   // The room's lines and the points recorded on them, read as this visitor —
   // so what comes back is what they may see, and the dashboard says the rest
   // in words (§7).
-  const [branches, versions, submissions, assignments] = await Promise.all([
+  const [branches, versions, submissions, assignments, comments, since] = await Promise.all([
     branchesIn(view.room.id),
     versionsFor(view.room.id),
     submissionsIn(view.room.id),
     assignmentsIn(view.room.id),
+    commentsIn(view.room.id),
+    lastReadAt(view.room.id, user.id),
   ]);
   const desks = desksIn({ seats: view.seats, branches, versions, viewer: { userId: user.id } });
   const master = masterVersion(versions);
@@ -168,12 +176,35 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
     );
   }
 
+  // What the room is saying, and what has happened in it (§14, §9, stage 10).
+  //
+  // **All three are readings of rows that already exist.** What is new comes
+  // off the comments, and the trail comes off the versions, submissions,
+  // assignments and seats — nothing here is a second copy of an event, because
+  // a second copy is the one thing an audit trail must never be.
+  const news = newsFor({ comments, userId: user.id, since });
+  const threads = threadsIn({ comments, seats: view.seats, target: { kind: 'room', id: null } });
+  const trail = activityIn({
+    seats: view.seats,
+    versions,
+    submissions,
+    assignments,
+    comments,
+  });
+
+  // They are looking at it now, so nothing already here is new next time. Done
+  // after the reading rather than before it, or the page would open with the
+  // news it was about to show already marked read.
+  await markRead(view.room.id, user.id);
+
   return (
     <>
       <div className="hero">
         <h1>{view.room.name || view.projectTitle || 'The room'}</h1>
         <p>{landing.standing}</p>
       </div>
+
+      <WhatIsNew news={news} seats={view.seats} />
 
       <section>
         <h2>Your part in it</h2>
@@ -330,6 +361,28 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
           writer's colour and name — three windows showing the same scene are otherwise the same
           window three times.
         </p>
+      </section>
+
+      <section>
+        <h2>The room</h2>
+        <p className="lede">
+          Threads about the room itself — an idea that is not in the script yet, a question nobody has
+          an answer to. Nothing said here is ever deleted: taking something back leaves the thread
+          readable and says who took it back.
+        </p>
+        <Talk
+          roomId={view.room.id}
+          threads={threads}
+          seats={view.seats}
+          you={user.id}
+          role={view.role}
+          mayComment={canComment(view.role)}
+        />
+      </section>
+
+      <section>
+        <h2>What has happened</h2>
+        <Trail roomId={view.room.id} events={trail} />
       </section>
 
       {landing.sections.includes('seats') ? (
