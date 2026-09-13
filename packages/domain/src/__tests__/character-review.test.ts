@@ -15,6 +15,9 @@ import {
   ref,
   relate,
   reviewRows,
+  castNeverSpoken,
+  cuesWithoutCharacter,
+  scriptPresence,
   unusedCharacterMaterial,
   updateBeat,
   updateCharacterization,
@@ -259,5 +262,115 @@ describe('the arc continuity review', () => {
       'Stops covering for her.',
     ]);
     expect(describeRow(review.inOrder[0]!)).toBe('Refuses it: Takes the money anyway.');
+  });
+});
+
+/**
+ * What the script says by itself (addendum 08, stage 13).
+ *
+ * The review, like the map before it, showed only what somebody had written
+ * down — so on a finished screenplay with no Creator records it said *nothing
+ * matches that*, which was true and useless. The manuscript can answer a real
+ * question: **where is this person across the story.**
+ *
+ * Every number here is countable. Whether a fifteen-scene absence is a problem
+ * is the writer's to decide, which is why these are reports and not warnings.
+ */
+describe('the review reading the script', () => {
+  const cue = (text: string) => ({
+    id: crypto.randomUUID(),
+    type: 'character' as const,
+    text,
+    characterId: null,
+    attributes: {},
+  });
+
+  /** A screenplay whose scenes are named by who speaks in them. */
+  const screenplay = (scenes: string[][]) => {
+    let file: ProjectFile = createProjectFile({ title: 'Blackout', format: 'screenplay' });
+    for (const name of ['MARA', 'DEAKINS', 'SAL']) file = addCharacter(file, { name });
+
+    scenes.forEach((cues, index) => {
+      const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: `SCENE ${index + 1}` });
+      const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'A beat' });
+      file = updateBeat(beat.file, beat.beat.id, { manuscript: { elements: cues.map(cue) } });
+    });
+    return file;
+  };
+
+  it('says how many scenes and how many speeches, with nothing written down', () => {
+    const file = screenplay([['MARA', 'MARA', 'DEAKINS'], ['MARA']]);
+    const rows = scriptPresence(file);
+
+    const mara = rows.find((row) => row.characterName === 'MARA')!;
+    expect(mara.scenes).toBe(2);
+    expect(mara.speeches).toBe(3);
+    expect(mara.appearances.map((one) => one.speeches)).toEqual([2, 1]);
+    // Busiest first, because that is the order the question is usually asked in.
+    expect(rows[0]!.characterName).toBe('MARA');
+  });
+
+  it('names the longest stretch somebody is away, between two appearances', () => {
+    const file = screenplay([['MARA'], ['DEAKINS'], ['DEAKINS'], ['DEAKINS'], ['MARA']]);
+    const mara = scriptPresence(file).find((row) => row.characterName === 'MARA')!;
+
+    expect(mara.gap!.scenes).toBe(3);
+    expect(mara.gap!.after.unitTitle).toContain('SCENE 1');
+    expect(mara.gap!.before.unitTitle).toContain('SCENE 5');
+  });
+
+  it('does not call arriving late or leaving early a gap', () => {
+    // A character who comes in at scene 4 and stays has not been away from
+    // anything; saying so would be the software inventing a problem.
+    const file = screenplay([['MARA'], ['MARA'], ['MARA'], ['SAL'], ['SAL']]);
+    const rows = scriptPresence(file);
+
+    expect(rows.find((row) => row.characterName === 'SAL')!.gap).toBeNull();
+    expect(rows.find((row) => row.characterName === 'MARA')!.gap).toBeNull();
+  });
+
+  it('reads a cue with its extension as the same person', () => {
+    const file = screenplay([['MARA'], ['MARA (V.O.)'], ["MARA (CONT'D)"]]);
+    const mara = scriptPresence(file).find((row) => row.characterName === 'MARA')!;
+    expect(mara.scenes).toBe(3);
+  });
+
+  it('does not read MARABEL as MARA, which the old rule did', () => {
+    const file = screenplay([['MARABEL'], ['MARABEL']]);
+    expect(scriptPresence(file).find((row) => row.characterName === 'MARA')).toBeUndefined();
+  });
+
+  it('reports a cue that matches nobody, and where it first speaks', () => {
+    const file = screenplay([['MARA'], ['MAEVE'], ['MAEVE (V.O.)']]);
+    const unknown = cuesWithoutCharacter(file);
+
+    expect(unknown).toHaveLength(1);
+    expect(unknown[0]!.cue).toBe('MAEVE');
+    // The extension is stripped, so one person is one row rather than two.
+    expect(unknown[0]!.speeches).toBe(2);
+    expect(unknown[0]!.firstUnitTitle).toContain('SCENE 2');
+  });
+
+  it('says who is in the cast and never speaks, rather than leaving them out', () => {
+    const file = screenplay([['MARA'], ['DEAKINS']]);
+    const silent = castNeverSpoken(file);
+
+    expect(silent).toHaveLength(1);
+    expect(file.characters.find((one) => one.id === silent[0])!.name).toBe('SAL');
+  });
+
+  it('narrows to one person, and to one plot', () => {
+    const file = screenplay([['MARA', 'DEAKINS']]);
+    const mara = file.characters.find((one) => one.name === 'MARA')!;
+
+    expect(scriptPresence(file, { characterId: mara.id })).toHaveLength(1);
+    expect(scriptPresence(file, { laneId: file.lanes[0]!.id }).length).toBeGreaterThan(0);
+    expect(scriptPresence(file, { query: 'deak' }).map((row) => row.characterName)).toEqual(['DEAKINS']);
+  });
+
+  it('empties when the writing goes, because nothing was stored', () => {
+    const file = screenplay([['MARA', 'DEAKINS']]);
+    expect(scriptPresence(file).length).toBe(2);
+    expect(scriptPresence({ ...file, beats: [] })).toHaveLength(0);
   });
 });

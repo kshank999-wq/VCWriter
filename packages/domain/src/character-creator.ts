@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { id, nowIso, orderKey, timestamps } from './entities/common.js';
 import { storyEntityRefSchema } from './entities/links.js';
+import { charactersCalled } from './characters.js';
 import { orderKeyBetween } from './ordering.js';
 import { newId } from './ids.js';
 import type {
@@ -989,20 +990,17 @@ export const peopleInBeat = (file: ProjectFile, beatId: BeatId): CharacterId[] =
  * there is still only **one rule** for who counts as speaking in a beat.
  */
 export const peopleSpeakingIn = (file: ProjectFile, beat: Beat): CharacterId[] => {
-  const spoken = beat.manuscript.elements
-    .filter((element) => element.type === 'character')
-    .map((element) => element.text.trim().toUpperCase());
-  if (spoken.length === 0) return [];
-
-  return file.characters
-    .filter(
-      (character) =>
-        !character.archived &&
-        [character.name, ...character.aliases].some((name) =>
-          spoken.some((cue) => name.trim().length > 0 && cue.startsWith(name.trim().toUpperCase())),
-        ),
-    )
-    .map((character) => character.id);
+  const found: CharacterId[] = [];
+  for (const element of beat.manuscript.elements) {
+    if (element.type !== 'character') continue;
+    // `charactersCalled` is the cast list's own rule — extensions and the dual
+    // caret stripped, then matched whole. Matching a cue by its opening letters
+    // would put MARABEL's lines in MARA's scene.
+    for (const person of charactersCalled(file, element.text)) {
+      if (!person.archived && !found.includes(person.id)) found.push(person.id);
+    }
+  }
+  return found;
 };
 
 /**

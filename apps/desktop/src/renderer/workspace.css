@@ -9867,3 +9867,42 @@ dialog.projects-dialog {
 .review-note-none {
   margin: 0 0 12px;
 }
+
+/* "In the script": who is in the manuscript, counted every time (§18, stage
+   13). A flex row rather than a grid, because the away-for line is optional
+   and a fixed column would leave a hole on everybody who has no gap. */
+.presence-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+
+.presence-counts {
+  white-space: nowrap;
+}
+
+.presence-span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Said in the same voice as everything else on the row: it is a count, not a
+   complaint, so it gets no warning colour. */
+.presence-gap {
+  white-space: nowrap;
+  font-style: italic;
+}
+
+/* A cue with nobody behind it has no Creator to open, so it is text where the
+   others have a button — and has to line up with them anyway. */
+.review-who.as-text {
+  color: var(--text);
+  font-weight: 600;
+}

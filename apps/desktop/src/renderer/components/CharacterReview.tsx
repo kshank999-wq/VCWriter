@@ -4,9 +4,12 @@ import {
   WORK_STANDING_WORDS,
   arcContinuity,
   arcKindsPresent,
+  castNeverSpoken,
+  cuesWithoutCharacter,
   describeRow,
   lanesInOrder,
   reviewRows,
+  scriptPresence,
   unitsInStoryOrder,
   unusedCharacterMaterial,
   type ArcPointKind,
@@ -33,6 +36,12 @@ import {
  * continuity notes are checkable rather than opinions: a cause written after its
  * effect either is or is not, and *this character is thin* is not something
  * software gets to say (§7).
+ *
+ * **In the script** (stage 13) is the fourth reading, and the one that works
+ * before anybody has written anything down: who is in the manuscript, in how
+ * many scenes, how often they speak, and the longest stretch they are away.
+ * Counted every time, never stored — so it is first, because on most projects
+ * it is the only one with anything in it.
  */
 
 interface CharacterReviewProps {
@@ -40,7 +49,7 @@ interface CharacterReviewProps {
   onOpenCreator(characterId: CharacterId): void;
 }
 
-type Mode = 'story' | 'deck' | 'continuity';
+type Mode = 'script' | 'story' | 'deck' | 'continuity';
 
 const DOT_CLASS: Record<UsageColour, string> = {
   green: 'is-in',
@@ -51,7 +60,9 @@ const DOT_CLASS: Record<UsageColour, string> = {
 const STANDINGS: ReadonlyArray<WorkStanding> = ['in_the_writing', 'on_deck', 'set_aside'];
 
 export function CharacterReview({ file, onOpenCreator }: CharacterReviewProps) {
-  const [mode, setMode] = useState<Mode>('story');
+  // Opens on the script, which is the reading that has something in it before
+  // anybody has written a trait down — and on most projects that is all of them.
+  const [mode, setMode] = useState<Mode>('script');
   const [query, setQuery] = useState('');
   const [characterId, setCharacterId] = useState<CharacterId | ''>('');
   const [traitId, setTraitId] = useState<CharacterTraitId | ''>('');
@@ -84,6 +95,15 @@ export function CharacterReview({ file, onOpenCreator }: CharacterReviewProps) {
   );
 
   const rows = useMemo(() => reviewRows(file, filter), [file, filter]);
+  const presence = useMemo(() => scriptPresence(file, filter), [file, filter]);
+  const unknownCues = useMemo(() => cuesWithoutCharacter(file), [file]);
+  const silent = useMemo(
+    () =>
+      castNeverSpoken(file).map(
+        (id) => file.characters.find((one) => (one.id as string) === (id as string))!,
+      ),
+    [file],
+  );
   const report = useMemo(() => unusedCharacterMaterial(file, filter), [file, filter]);
   const continuity = useMemo(
     () => arcContinuity(file, characterId === '' ? null : characterId),
@@ -222,6 +242,7 @@ export function CharacterReview({ file, onOpenCreator }: CharacterReviewProps) {
       <nav className="review-modes" aria-label="Review">
         {(
           [
+            ['script', 'In the script'],
             ['story', 'In story order'],
             ['deck', 'Still on deck'],
             ['continuity', 'Arc continuity'],
@@ -240,7 +261,14 @@ export function CharacterReview({ file, onOpenCreator }: CharacterReviewProps) {
       </nav>
 
       <div className="review-body">
-        {mode === 'story' ? (
+        {mode === 'script' ? (
+          <ScriptPresence
+            presence={presence}
+            unknownCues={unknownCues}
+            silent={silent}
+            onOpenCreator={onOpenCreator}
+          />
+        ) : mode === 'story' ? (
           rows.length === 0 ? (
             <p className="muted empty-state">Nothing matches that.</p>
           ) : (
@@ -288,5 +316,116 @@ export function CharacterReview({ file, onOpenCreator }: CharacterReviewProps) {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Who is in the manuscript, read off the cues (addendum 08 §18, stage 13).
+ *
+ * **Counted, never stored**, like the colour and like the map's lines: cut a
+ * scene and the numbers move with nothing running.
+ *
+ * The line it holds is the module's standing one. *Fourteen speeches across
+ * nine scenes* is a fact, and *absent for eleven scenes* is a fact. Whether
+ * either is a problem is the writer's to say, so there is no warning colour
+ * anywhere here and nothing is called a gap that is really just somebody
+ * arriving late.
+ */
+function ScriptPresence({
+  presence,
+  unknownCues,
+  silent,
+  onOpenCreator,
+}: {
+  presence: ReturnType<typeof scriptPresence>;
+  unknownCues: ReturnType<typeof cuesWithoutCharacter>;
+  silent: ProjectFile['characters'];
+  onOpenCreator(characterId: CharacterId): void;
+}) {
+  if (presence.length === 0 && unknownCues.length === 0 && silent.length === 0) {
+    return <p className="muted empty-state">Nobody speaks in the script yet.</p>;
+  }
+
+  return (
+    <>
+      {presence.length === 0 ? null : (
+        <ul className="review-list presence-list">
+          {presence.map((row) => (
+            <li key={row.characterId} className="presence-row">
+              <button
+                type="button"
+                className="review-who"
+                title={`Open ${row.characterName}`}
+                onClick={() => onOpenCreator(row.characterId)}
+              >
+                {row.characterName}
+              </button>
+              <span className="presence-counts muted small">
+                {row.scenes === 1 ? '1 scene' : `${row.scenes} scenes`} ·{' '}
+                {row.speeches === 1 ? '1 speech' : `${row.speeches} speeches`}
+              </span>
+              <span className="presence-span muted small">
+                {row.appearances[0]!.unitTitle}
+                {row.appearances.length > 1 ? ` → ${row.appearances.at(-1)!.unitTitle}` : ''}
+              </span>
+              {/* Said as the two scenes it sits between, so it can be checked
+                  rather than taken on trust. */}
+              {row.gap ? (
+                <span className="presence-gap muted small">
+                  away for {row.gap.scenes === 1 ? '1 scene' : `${row.gap.scenes} scenes`} after{' '}
+                  {row.gap.after.unitTitle}
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Both of these are ordinary rather than wrong — somebody typed straight
+          into the script and never filed, a background character with no
+          lines — so they are stated and not flagged. */}
+      {unknownCues.length === 0 ? null : (
+        <section className="review-group">
+          <h4>
+            Speaking, but not in the cast
+            <span className="count muted">{unknownCues.length}</span>
+          </h4>
+          <ul className="review-list">
+            {unknownCues.map((one) => (
+              <li key={one.cue} className="presence-row">
+                <span className="review-who as-text">{one.cue}</span>
+                <span className="presence-counts muted small">
+                  {one.speeches === 1 ? '1 speech' : `${one.speeches} speeches`}
+                </span>
+                <span className="presence-span muted small">from {one.firstUnitTitle}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {silent.length === 0 ? null : (
+        <section className="review-group">
+          <h4>
+            In the cast, not yet speaking
+            <span className="count muted">{silent.length}</span>
+          </h4>
+          <ul className="review-list">
+            {silent.map((person) => (
+              <li key={person.id} className="presence-row">
+                <button
+                  type="button"
+                  className="review-who"
+                  title={`Open ${person.name}`}
+                  onClick={() => onOpenCreator(person.id)}
+                >
+                  {person.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
   );
 }

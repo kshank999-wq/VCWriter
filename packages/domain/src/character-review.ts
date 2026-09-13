@@ -10,6 +10,7 @@ import {
   type CharacterWork,
   type UsageColour,
 } from './character-creator.js';
+import { charactersCalled } from './characters.js';
 import type {
   CharacterId,
   CharacterTraitId,
@@ -327,6 +328,186 @@ export const arcContinuity = (
   }
 
   return { inOrder: rows, notes };
+};
+
+// --------------------------------------------------- what the script says
+
+/**
+ * A character's presence in the manuscript (stage 13).
+ *
+ * The review, like the map before it, only ever showed what somebody had
+ * written down — so on a finished screenplay with no Creator records it said
+ * *nothing matches that*, which was true and useless. The manuscript can
+ * already answer a real question: **where is this person, across the story.**
+ *
+ * Every number here is countable and none of them is an opinion. How many
+ * scenes, how many speeches, where they come in, where they go out, and the
+ * longest stretch in between. Whether any of that is a problem is the writer's
+ * to decide, which is why this reads as a report and never as a warning.
+ */
+export interface SceneAppearance {
+  // Named apart from `editor-final.ts`'s Appearance, which is about how a line
+  // looks on the page rather than who is in a scene.
+  unitId: StructuralUnitId;
+  unitTitle: string;
+  /** Where in the story, counting scenes from zero. */
+  where: number;
+  /** How many times they speak in it. */
+  speeches: number;
+}
+
+export interface PresenceRow {
+  characterId: CharacterId;
+  characterName: string;
+  appearances: SceneAppearance[];
+  scenes: number;
+  speeches: number;
+  /**
+   * The longest run of scenes they are absent from **between** two appearances.
+   *
+   * Before the first and after the last are not gaps — they are when the
+   * character arrives and when they leave, which is not the same fact at all.
+   */
+  gap: { after: SceneAppearance; before: SceneAppearance; scenes: number } | null;
+}
+
+/**
+ * Who is in the script, where, read off the cues.
+ *
+ * Honours the review's own filters where they mean something here: a person, a
+ * plot lane, a scene, and the search — matched against the name, since a name
+ * is all a presence row has to search.
+ */
+export const scriptPresence = (file: ProjectFile, filter: WorkFilter = {}): PresenceRow[] => {
+  const units = [...file.units].sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1));
+  const place = new Map(units.map((unit, index) => [unit.id as string, index] as const));
+  const titleOf = (unitId: string) => {
+    const unit = units.find((one) => (one.id as string) === unitId);
+    return unit ? `${unit.sequenceLabel} ${unit.title}`.trim() || 'Untitled scene' : 'Untitled scene';
+  };
+
+  const wanted = (unitId: string): boolean => {
+    const unit = units.find((one) => (one.id as string) === unitId);
+    if (!unit) return false;
+    if (filter.unitId && (unit.id as string) !== (filter.unitId as string)) return false;
+    if (filter.laneId && (unit.laneId as string) !== (filter.laneId as string)) return false;
+    return true;
+  };
+
+  /** characterId -> unitId -> speeches */
+  const tally = new Map<string, Map<string, number>>();
+  for (const beat of file.beats) {
+    const unitId = beat.unitId as string;
+    if (!wanted(unitId)) continue;
+    for (const element of beat.manuscript.elements) {
+      if (element.type !== 'character') continue;
+      for (const person of charactersCalled(file, element.text)) {
+        if (person.archived) continue;
+        const key = person.id as string;
+        if (!tally.has(key)) tally.set(key, new Map());
+        const scenes = tally.get(key)!;
+        scenes.set(unitId, (scenes.get(unitId) ?? 0) + 1);
+      }
+    }
+  }
+
+  const needle = (filter.query ?? '').trim().toLowerCase();
+
+  return file.characters
+    .filter((person) => !person.archived && tally.has(person.id as string))
+    .filter((person) => !filter.characterId || (person.id as string) === (filter.characterId as string))
+    .filter((person) => needle.length === 0 || person.name.toLowerCase().includes(needle))
+    .map((person) => {
+      const appearances: SceneAppearance[] = [...tally.get(person.id as string)!.entries()]
+        .map(([unitId, speeches]) => ({
+          unitId: unitId as StructuralUnitId,
+          unitTitle: titleOf(unitId),
+          where: place.get(unitId) ?? 0,
+          speeches,
+        }))
+        .sort((a, b) => a.where - b.where);
+
+      let gap: PresenceRow['gap'] = null;
+      for (let i = 1; i < appearances.length; i += 1) {
+        const between = appearances[i]!.where - appearances[i - 1]!.where - 1;
+        if (between > (gap?.scenes ?? 0)) {
+          gap = { after: appearances[i - 1]!, before: appearances[i]!, scenes: between };
+        }
+      }
+
+      return {
+        characterId: person.id,
+        characterName: person.name,
+        appearances,
+        scenes: appearances.length,
+        speeches: appearances.reduce((total, one) => total + one.speeches, 0),
+        gap,
+      };
+    })
+    .sort((a, b) => b.speeches - a.speeches || a.characterName.localeCompare(b.characterName));
+};
+
+/**
+ * A cue in the manuscript that matches nobody in the cast (stage 13).
+ *
+ * Checkable, and usually one of two things: a character who was typed straight
+ * into the script and never filed, or a typo in a name. Both are worth seeing
+ * and neither is a judgement, so it is a row in a report rather than a warning
+ * on the page.
+ */
+export interface UnknownCue {
+  /** The cue as the manuscript has it, extensions stripped. */
+  cue: string;
+  speeches: number;
+  /** Where they first speak, so the writer can go and look. */
+  firstUnitTitle: string;
+  firstWhere: number;
+}
+
+export const cuesWithoutCharacter = (file: ProjectFile): UnknownCue[] => {
+  const units = [...file.units].sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1));
+  const place = new Map(units.map((unit, index) => [unit.id as string, index] as const));
+
+  const found = new Map<string, UnknownCue>();
+  for (const beat of file.beats) {
+    const where = place.get(beat.unitId as string);
+    if (where === undefined) continue;
+    const unit = units[where]!;
+    for (const element of beat.manuscript.elements) {
+      if (element.type !== 'character') continue;
+      if (charactersCalled(file, element.text).length > 0) continue;
+      // The same normalising the cast list does, so MAEVE and MAEVE (V.O.) are
+      // one unknown person rather than two.
+      const cue = element.text.replace(/\s*\((?:[^)]*)\)\s*$/, '').replace(/\s*\^\s*$/, '').trim();
+      if (cue.length === 0) continue;
+      const already = found.get(cue.toUpperCase());
+      if (already) already.speeches += 1;
+      else
+        found.set(cue.toUpperCase(), {
+          cue,
+          speeches: 1,
+          firstUnitTitle: `${unit.sequenceLabel} ${unit.title}`.trim() || 'Untitled scene',
+          firstWhere: where,
+        });
+    }
+  }
+
+  return [...found.values()].sort((a, b) => a.firstWhere - b.firstWhere);
+};
+
+/**
+ * Somebody in the cast who never speaks (stage 13).
+ *
+ * Not a fault — a background character with no lines is a perfectly ordinary
+ * thing, and so is somebody written down before they have been written in. It
+ * is here because the presence report would otherwise silently omit them, and a
+ * report that leaves people out without saying so is a report you cannot trust.
+ */
+export const castNeverSpoken = (file: ProjectFile): CharacterId[] => {
+  const speaks = new Set(scriptPresence(file).map((row) => row.characterId as string));
+  return file.characters
+    .filter((person) => !person.archived && !speaks.has(person.id as string))
+    .map((person) => person.id);
 };
 
 /** How a review row reads on one line, wherever it is listed. */

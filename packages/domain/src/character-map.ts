@@ -135,26 +135,16 @@ export const charactersInLane = (file: ProjectFile, laneId: LaneId): CharacterId
   const units = new Set(
     file.units.filter((unit) => (unit.laneId as string) === (laneId as string)).map((unit) => unit.id as string),
   );
-  const spoken = new Set(
-    file.beats
-      .filter((beat) => units.has(beat.unitId as string))
-      .flatMap((beat) =>
-        beat.manuscript.elements
-          .filter((element) => element.type === 'character')
-          .map((element) => element.text.trim().toUpperCase()),
-      ),
-  );
-  if (spoken.size === 0) return [];
-
-  return file.characters
-    .filter(
-      (character) =>
-        !character.archived &&
-        [character.name, ...character.aliases].some((name) =>
-          [...spoken].some((cue) => name.trim().length > 0 && cue.startsWith(name.trim().toUpperCase())),
-        ),
-    )
-    .map((character) => character.id);
+  const found: CharacterId[] = [];
+  for (const beat of file.beats) {
+    if (!units.has(beat.unitId as string)) continue;
+    for (const person of peopleSpeakingIn(file, beat)) {
+      if (!found.includes(person)) found.push(person);
+    }
+  }
+  // In cast order rather than the order the scenes happen to speak them, which
+  // is what the filter's callers already assume.
+  return file.characters.filter((character) => found.includes(character.id)).map((one) => one.id);
 };
 
 /**

@@ -116,6 +116,25 @@ const cueKey = (name: string): string =>
     .trim()
     .toUpperCase();
 
+/**
+ * Everybody a cue could be: matched whole, by name or by an alias.
+ *
+ * Usually one person. It is a list because an alias may collide with somebody
+ * else's name, and picking one of them silently would put a speech in the wrong
+ * character's scene — better to say the cue is both and let the caller decide.
+ *
+ * **Matched whole rather than by opening letters**, which is the difference
+ * between this and the rule three modules used to carry: `MARABEL` is not
+ * `MARA`.
+ */
+export const charactersCalled = (file: ProjectFile, cue: string): Character[] => {
+  const key = cueKey(cue);
+  if (key.length === 0) return [];
+  return file.characters.filter((character) =>
+    [character.name, ...character.aliases].some((name) => cueKey(name) === key),
+  );
+};
+
 /** Whether the project already knows this person, by name or by an alias. */
 export const knowsCharacter = (file: ProjectFile, name: string): Character | null => {
   const key = cueKey(name);

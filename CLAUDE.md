@@ -137,8 +137,8 @@ push live; the build takes a minute or two.
   §19 says what each built stage does; §15 is the build order.
   `addendum-08-character-creator.md` is the Character Creator, the first module
   of the Research room, from Ken's own dev spec. **Complete: all ten stages
-  built, plus stage 11 (the way in) and stage 12 (the map reading the
-  script)** (0–5 were his MVP) —
+  built, plus stages 11–13 — the way in, and the map and the review reading
+  the script** (0–5 were his MVP) —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
   so the unit of work is the characterization item and a trait is a folder for
@@ -236,7 +236,17 @@ push live; the build takes a minute or two.
   written relationships down); asking for a *kind* drops them, an unnamed line
   not being one. Sharing is *who speaks*, so a silent presence does not
   count — matching names in prose would as often find somebody being talked
-  about. §3
+  about. Stage 13 does the same to the **review**, which opened on *In story
+  order* and said *nothing matches that*: `scriptPresence` is a fourth reading
+  and the one it now opens on — scenes, speeches, where somebody comes in and
+  goes out, and the longest stretch they are away, all countable and none of it
+  a warning, and **arriving late is not a gap**. `cuesWithoutCharacter` and
+  `castNeverSpoken` fall out of the same walk. It carried a correctness fix:
+  three modules asked *is this cue this character* with **startsWith**, which
+  made MARABEL speak as MARA, so `charactersCalled` in `characters.ts` is now
+  the one rule (strip the extension, match whole) and returns a *list*, an alias
+  being allowed to collide with a name. `castOf` in `episodes.ts` still carries
+  the old rule. §3
   says what already exists and is only being widened; §8 is the
   build order; §3.4 says why there is deliberately no module framework yet; §10
   says what each built stage does; §11 names the two things deliberately left

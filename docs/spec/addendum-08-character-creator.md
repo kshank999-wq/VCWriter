@@ -1,7 +1,7 @@
 # Addendum 08 — Character Creator
 
-Status: **complete — all ten stages built, plus stage 11 (the way in) and
-stage 12 (the map reading the script)**
+Status: **complete — all ten stages built, plus stages 11–13: the way in,
+and the map and the review reading the script**
 (0–5 were Ken's MVP), September 2026. From his
 *VC Writer Character Creator Development Specification* — the first module of
 the Research room. Extends §7 (research), §8 (structure) and §19 of the master specification,
@@ -744,6 +744,48 @@ thick, three single-scene lines around it, and the panel on one reads *They spea
 in 3 scenes together, across 3 beats* above two empty readings. The count sits
 just off each line's midpoint, because two lines that cross do it at their
 midpoints and two counts on the same spot read as one.
+
+### Stage 13 — the review reads the script
+
+`scriptPresence`, `cuesWithoutCharacter` and `castNeverSpoken` in
+`character-review.ts`, the **In the script** reading in `CharacterReview.tsx`,
+and `charactersCalled` in `characters.ts`. No record, no migration — stage 12's
+argument applied to the second screen.
+
+**The review opened on *In story order*, which said *nothing matches that*.**
+True, and useless, because on a project with a hundred and ten pages and no
+Creator records there is nothing in any of the three readings. So there is a
+fourth, and it is the one the screen opens on: who is in the manuscript, in how
+many scenes, how often they speak, where they come in and where they go out,
+and the longest stretch they are away.
+
+**Countable, and nothing more.** *Fourteen speeches across nine scenes* is a
+fact; *absent for eleven scenes* is a fact; whether either matters is the
+writer's, so no row wears a warning colour. And **arriving late is not a gap** —
+a character who enters at scene 40 has not been away from anything, and calling
+it an absence would be the software inventing a problem to report.
+
+Two more facts fall out of the same walk, and both are ordinary rather than
+wrong, so they are stated and not flagged: **a cue nobody in the cast is
+behind** (somebody typed straight into the script and never filed, or a name
+mistyped — and the extension is stripped, so `MAEVE` and `MAEVE (V.O.)` are one
+row), and **somebody in the cast with no lines yet**, which is here because a
+presence report that silently omitted them would be a report you cannot trust.
+
+**A correctness fix came with it.** Three modules asked *is this cue this
+character* by testing whether the cue **starts with** the name, which quietly
+made `MARABEL` speak as `MARA`. The cast list already had the right rule —
+strip the extension and the dual caret, then match whole — so it is now one
+function, `charactersCalled`, and `peopleSpeakingIn` and `charactersInLane` both
+use it. It returns a *list* because an alias may collide with somebody else's
+name, and silently picking one of the two would put a speech in the wrong
+character's scene. (`castOf` in `episodes.ts` still carries the old rule; it is
+the same defect in a module this change did not touch.)
+
+Driven in the real interface: a seven-scene fixture opens on **In the script**
+with Mara at *4 scenes · 5 speeches*, her span, and *away for 3 scenes after
+Sc. 1 EXT. LOT - LATER*, with **MAEVE** below under *Speaking, but not in the
+cast*.
 
 ## 11. What is left
 
