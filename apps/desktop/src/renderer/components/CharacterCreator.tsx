@@ -1,26 +1,40 @@
 import { useMemo, useState } from 'react';
 import {
+  ARC_POINT_KINDS,
+  ARC_POINT_NAMES,
+  ARC_SHAPE_WORDS,
   PROMINENCE_WORDS,
   TRAIT_TONES,
   TRAIT_TONE_WORDS,
   USAGE_STANDING_WORDS,
   USAGE_WORDS,
+  addArcPoint,
   addCharacterization,
   addTrait,
+  arcBoard,
+  beginArc,
   characterBoard,
   characterCategoriesInOrder,
   characterStanding,
   fileCharacterization,
+  isDecisive,
+  moveArcPoint,
   pinUsage,
   placesToPin,
   quotableLines,
+  removeArc,
+  removeArcPoint,
   removeCharacterization,
   removeTrait,
   unpinUsage,
+  updateArc,
+  updateArcPoint,
   updateCharacter,
   updateCharacterization,
   updateTrait,
   whereItAppears,
+  type ArcPointId,
+  type ArcPointKind,
   type BeatId,
   type CharacterCategoryId,
   type CharacterId,
@@ -68,7 +82,7 @@ interface CharacterCreatorProps {
   onBack(): void;
 }
 
-type Tab = 'overview' | 'traits';
+type Tab = 'overview' | 'traits' | 'arc';
 
 /** Which trait's characterization is being looked at. */
 type Shelf = { kind: 'trait'; id: CharacterTraitId } | { kind: 'unfiled' };
@@ -131,6 +145,7 @@ export function CharacterCreator({
           [
             ['overview', 'Overview'],
             ['traits', 'Traits'],
+            ['arc', 'Arc'],
           ] as ReadonlyArray<[Tab, string]>
         ).map(([key, label]) => (
           <button
@@ -147,6 +162,13 @@ export function CharacterCreator({
 
       {tab === 'overview' ? (
         <Overview file={file} characterId={characterId} onUpdate={onUpdate} />
+      ) : tab === 'arc' ? (
+        <Arc
+          file={file}
+          characterId={characterId}
+          currentBeatId={currentBeatId}
+          onUpdate={onUpdate}
+        />
       ) : (
         <div className="creator-traits">
           <Traits
@@ -633,7 +655,7 @@ function Shown({
               {open === row.item.id ? (
                 <Where
                   file={file}
-                  itemId={row.item.id}
+                  owner={{ kind: 'characterization', id: row.item.id as string }}
                   currentBeatId={currentBeatId}
                   onUpdate={onUpdate}
                 />
@@ -667,8 +689,12 @@ function Shown({
 // ------------------------------------------------------- where it turned up
 
 /**
- * Where one piece of characterization appears, and how to say where it landed
+ * Where one piece of character work appears, and how to say where it landed
  * (addendum 08 §6, stage 3 — plan → story).
+ *
+ * It takes an *owner* rather than an item, so an arc point is placed by exactly
+ * the same panel as a characterization: they are the same act, and two versions
+ * of it would eventually disagree about what pinning means.
  *
  * **Pinning is the act that turns something green**, and the colour is only
  * honest because this is the only way to do it: there is no "mark as used"
@@ -681,20 +707,18 @@ function Shown({
  */
 function Where({
   file,
-  itemId,
+  owner,
   currentBeatId,
   onUpdate,
 }: {
   file: ProjectFile;
-  itemId: CharacterizationItemId;
+  /** What is being placed: a piece of characterization, or an arc point. */
+  owner: { kind: 'characterization' | 'arc_point'; id: string };
   currentBeatId: BeatId | null;
   onUpdate: CharacterCreatorProps['onUpdate'];
 }) {
   const places = useMemo(() => placesToPin(file), [file]);
-  const seen = useMemo(
-    () => whereItAppears({ owner: { kind: 'characterization', id: itemId as string }, file }),
-    [file, itemId],
-  );
+  const seen = useMemo(() => whereItAppears({ owner, file }), [file, owner]);
 
   const [beatId, setBeatId] = useState<BeatId | ''>('');
   const [lineId, setLineId] = useState<string>('');
@@ -703,8 +727,8 @@ function Where({
   const pin = (toBeat: BeatId, toLine: ManuscriptElementId | null) => {
     onUpdate((current) =>
       pinUsage(current, {
-        ownerKind: 'characterization',
-        ownerId: itemId as string,
+        ownerKind: owner.kind,
+        ownerId: owner.id,
         beatId: toBeat,
         elementId: toLine,
       }).file,
@@ -810,6 +834,269 @@ function Where({
           Pin it
         </button>
       </div>
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------- arc
+
+/**
+ * The Arc Builder (addendum 08 §8, §9 — stage 5).
+ *
+ * **A spine, read top to bottom**: who they are, what they need, what happens,
+ * who they become. §8 asks the view to show progression from beginning to end,
+ * and the way to do that is to put it in that order and get out of the way.
+ *
+ * **It does not assume anybody improves.** A chance to change, a refusal and a
+ * doubling-down are kinds of point in the same list as a discovery, so a
+ * Scrooge and an antagonist are built with one tool — and the shape at the top
+ * is *read back* from the points rather than declared in advance, because asking
+ * a writer to label an arc positive before writing it is asking them to decide
+ * the ending first.
+ *
+ * **What is written sits where the story puts it.** The points split into what
+ * is in the manuscript, in the manuscript's order, and what is still on deck, in
+ * the writer's — and the arrows are only on the second group, because an arrow
+ * on a placed point would be a control that lies.
+ */
+function Arc({
+  file,
+  characterId,
+  currentBeatId,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  characterId: CharacterId;
+  currentBeatId: BeatId | null;
+  onUpdate: CharacterCreatorProps['onUpdate'];
+}) {
+  const board = useMemo(() => arcBoard({ characterId: characterId as string, file }), [characterId, file]);
+  const [adding, setAdding] = useState('');
+  const [addingKind, setAddingKind] = useState<ArcPointKind>('movement');
+  const [open, setOpen] = useState<ArcPointId | null>(null);
+
+  if (!board.arc) {
+    return (
+      <div className="creator-arc empty">
+        {/* §9: never require an arc. Most characters in most scripts do not
+            have one, and saying so is kinder than an empty form. */}
+        <p className="muted">
+          No arc for them yet. Most characters do not need one — an arc is for somebody the story
+          changes, or offers a change and watches refuse it.
+        </p>
+        <button
+          type="button"
+          className="ghost small"
+          onClick={() => onUpdate((current) => beginArc(current, characterId).file)}
+        >
+          Start an arc
+        </button>
+      </div>
+    );
+  }
+
+  const arc = board.arc;
+
+  const add = () => {
+    const text = adding.trim();
+    if (text.length === 0) return;
+    onUpdate((current) => addArcPoint(current, { arcId: arc.id, kind: addingKind, text }).file);
+    setAdding('');
+  };
+
+  const pointRow = (row: (typeof board.placed)[number], movable: boolean) => (
+    <li key={row.point.id} className={`arc-point ${DOT_CLASS[row.colour]}${isDecisive(row.point.kind) ? ' decisive' : ''}`}>
+      <div className="arc-point-row">
+        <i className={`creator-dot ${DOT_CLASS[row.colour]}`} title={USAGE_WORDS[row.colour]} />
+        <select
+          aria-label="What kind of moment"
+          className="arc-kind"
+          value={row.point.kind}
+          onChange={(event) =>
+            onUpdate((current) =>
+              updateArcPoint(current, row.point.id, { kind: event.target.value as ArcPointKind }),
+            )
+          }
+        >
+          {ARC_POINT_KINDS.map((kind) => (
+            <option key={kind} value={kind}>
+              {ARC_POINT_NAMES[kind]}
+            </option>
+          ))}
+        </select>
+        <InlineText
+          value={row.point.text}
+          ariaLabel="What happens"
+          className="arc-point-text"
+          onCommit={(text) => onUpdate((current) => updateArcPoint(current, row.point.id, { text }))}
+        />
+        {row.unitTitle ? <span className="arc-where muted small">{row.unitTitle}</span> : null}
+        <button
+          type="button"
+          className={open === row.point.id ? 'creator-item-state open' : 'creator-item-state'}
+          aria-expanded={open === row.point.id}
+          title="Where it turns up in the script"
+          onClick={() => setOpen(open === row.point.id ? null : row.point.id)}
+        >
+          {USAGE_WORDS[row.colour]}
+        </button>
+        {movable ? (
+          <>
+            <button
+              type="button"
+              className="ghost small"
+              aria-label="Move it earlier"
+              onClick={() => onUpdate((current) => moveArcPoint(current, row.point.id, 'up'))}
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              className="ghost small"
+              aria-label="Move it later"
+              onClick={() => onUpdate((current) => moveArcPoint(current, row.point.id, 'down'))}
+            >
+              ↓
+            </button>
+          </>
+        ) : null}
+        <button
+          type="button"
+          className="ghost small"
+          aria-label={row.point.retired ? 'Put it back on deck' : 'Set it aside'}
+          title={
+            row.point.retired
+              ? 'Back on deck — still to place.'
+              : 'Set aside: kept, but no longer counted as work outstanding.'
+          }
+          onClick={() =>
+            onUpdate((current) => updateArcPoint(current, row.point.id, { retired: !row.point.retired }))
+          }
+        >
+          {row.point.retired ? '↩' : '⌄'}
+        </button>
+        <button
+          type="button"
+          className="ghost small"
+          aria-label="Delete this point"
+          onClick={() => onUpdate((current) => removeArcPoint(current, row.point.id))}
+        >
+          ×
+        </button>
+      </div>
+
+      {open === row.point.id ? (
+        <Where
+          file={file}
+          owner={{ kind: 'arc_point', id: row.point.id as string }}
+          currentBeatId={currentBeatId}
+          onUpdate={onUpdate}
+        />
+      ) : null}
+    </li>
+  );
+
+  return (
+    <div className="creator-arc">
+      <header className="arc-head">
+        <span className="arc-shape">{ARC_SHAPE_WORDS[board.shape]}</span>
+        {/* §9: whether they were ever really given the chance is the question
+            that separates a tragedy from somebody who was simply never asked.
+            Said only when the shape has not already said it. */}
+        {board.shape === 'refused' ? null : (
+          <span className="muted small">
+            {board.offered ? 'Offered the change.' : 'Never offered the change.'}
+          </span>
+        )}
+        <button
+          type="button"
+          className="ghost small arc-drop"
+          aria-label="Remove the arc"
+          title="Removes the arc and its points. The writing is not touched."
+          onClick={() => onUpdate((current) => removeArc(current, arc.id))}
+        >
+          ×
+        </button>
+      </header>
+
+      <label className="field">
+        <span>Who they are at the start</span>
+        <textarea
+          aria-label="Beginning"
+          rows={2}
+          placeholder="Keeps score. Money is the only measure she trusts."
+          value={arc.beginning}
+          onChange={(event) => onUpdate((current) => updateArc(current, arc.id, { beginning: event.target.value }))}
+        />
+      </label>
+
+      <label className="field">
+        <span>What they need to learn, confront, accept, reject or become</span>
+        <textarea
+          aria-label="Need"
+          rows={2}
+          placeholder="To stop counting."
+          value={arc.need}
+          onChange={(event) => onUpdate((current) => updateArc(current, arc.id, { need: event.target.value }))}
+        />
+      </label>
+
+      <section className="arc-spine">
+        <h4>In the writing</h4>
+        {board.placed.length === 0 ? (
+          <p className="muted small">Nothing of the arc is on the page yet.</p>
+        ) : (
+          <ul className="arc-points">{board.placed.map((row) => pointRow(row, false))}</ul>
+        )}
+
+        <h4>Still to place</h4>
+        {board.onDeck.length === 0 ? (
+          <p className="muted small">Nothing waiting.</p>
+        ) : (
+          <ul className="arc-points">{board.onDeck.map((row) => pointRow(row, true))}</ul>
+        )}
+
+        <form
+          className="creator-add wide"
+          onSubmit={(event) => {
+            event.preventDefault();
+            add();
+          }}
+        >
+          <select
+            aria-label="Kind of the new point"
+            className="arc-kind"
+            value={addingKind}
+            onChange={(event) => setAddingKind(event.target.value as ArcPointKind)}
+          >
+            {ARC_POINT_KINDS.map((kind) => (
+              <option key={kind} value={kind}>
+                {ARC_POINT_NAMES[kind]}
+              </option>
+            ))}
+          </select>
+          <input
+            aria-label="What happens"
+            placeholder="She is offered the money back"
+            value={adding}
+            onChange={(event) => setAdding(event.target.value)}
+          />
+          <button type="submit" className="ghost small">
+            + Point
+          </button>
+        </form>
+      </section>
+
+      <label className="field">
+        <span>Who they have become — or refused to become</span>
+        <textarea
+          aria-label="Ending"
+          rows={2}
+          placeholder="Counts faster."
+          value={arc.ending}
+          onChange={(event) => onUpdate((current) => updateArc(current, arc.id, { ending: event.target.value }))}
+        />
+      </label>
     </div>
   );
 }

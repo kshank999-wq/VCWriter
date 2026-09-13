@@ -1063,3 +1063,235 @@ export const captureFromScript = (
 
   return { file: pinned.file, item: added.item };
 };
+
+// ------------------------------------------------------------- the arc, built
+
+/**
+ * The points that carry the weight, drawn heavier than the rest.
+ *
+ * A turning point is §8's; the other three are §9's refusal spine. They are
+ * marked here rather than in a component because *which moments are decisive*
+ * is a statement about drama, not about styling.
+ */
+export const DECISIVE_KINDS: readonly ArcPointKind[] = [
+  'turning_point',
+  'opportunity',
+  'refusal',
+  'doubling_down',
+];
+
+export const isDecisive = (kind: ArcPointKind): boolean => DECISIVE_KINDS.includes(kind);
+
+/** One point of an arc, with where it stands against the manuscript. */
+export interface ArcPointRow {
+  point: ArcPoint;
+  used: boolean;
+  colour: UsageColour;
+  /** The scene it is in, when it is in one. */
+  unitTitle: string | null;
+}
+
+/**
+ * A character's arc, ready to draw (addendum 08 §8).
+ *
+ * **Two groups, and the split is the honest one**: what is in the story sits in
+ * the *story's* order, and what is still on deck sits in the writer's. Once a
+ * point is written, the manuscript decides where it falls — an arc read in the
+ * order somebody thought of the points is not a reading of the story — so
+ * moving a placed point up and down would be a control that lies. What is not
+ * written yet is theirs to order, and that is where the arrows are.
+ */
+export interface ArcBoard {
+  arc: CharacterArc | null;
+  placed: ArcPointRow[];
+  onDeck: ArcPointRow[];
+  shape: ArcShape;
+  /** §9: was this character ever given a real chance to change? */
+  offered: boolean;
+}
+
+export const arcBoard = (input: { characterId: string; file: ProjectFile }): ArcBoard => {
+  const { file } = input;
+  const arc =
+    file.characterArcs.find((one) => (one.characterId as string) === input.characterId) ?? null;
+  const points = file.arcPoints.filter(
+    (point) => (point.characterId as string) === input.characterId,
+  );
+
+  const rows = arcInStoryOrder({ points, links: file.usageLinks, file }).map((entry) => {
+    const used = isUsed({ kind: 'arc_point', id: entry.point.id as string }, file.usageLinks, file);
+    const unit = entry.unitId ? file.units.find((one) => (one.id as string) === entry.unitId) : undefined;
+    return {
+      point: entry.point,
+      used,
+      colour: usageColour({ retired: entry.point.retired, used }),
+      unitTitle: unit ? `${unit.sequenceLabel} ${unit.title}`.trim() || 'Untitled scene' : null,
+      where: entry.where,
+    };
+  });
+
+  return {
+    arc,
+    placed: rows.filter((row) => row.where !== null).map(({ where: _where, ...row }) => row),
+    onDeck: rows.filter((row) => row.where === null).map(({ where: _where, ...row }) => row),
+    shape: arcShape({ arc, points }),
+    offered: wasOffered(points),
+  };
+};
+
+/**
+ * Start somebody's arc. One per character, and asking twice returns the one
+ * they have rather than making a second.
+ *
+ * **Nothing requires this** (§9): most characters in most scripts have no arc,
+ * and a module that made one for everybody would fill the screen with empty
+ * journeys nobody asked for.
+ */
+export const beginArc = (
+  file: ProjectFile,
+  characterId: CharacterId,
+): { file: ProjectFile; arc: CharacterArc | null } => {
+  if (!file.characters.some((person) => (person.id as string) === (characterId as string))) {
+    return { file, arc: null };
+  }
+  const already = file.characterArcs.find(
+    (one) => (one.characterId as string) === (characterId as string),
+  );
+  if (already) return { file, arc: already };
+
+  const at = nowIso();
+  const arc = characterArcSchema.parse({
+    id: newId<CharacterArcId>(),
+    projectId: file.project.id,
+    characterId,
+    createdAt: at,
+    updatedAt: at,
+  });
+  return { file: { ...file, characterArcs: [...file.characterArcs, arc] }, arc };
+};
+
+export const updateArc = (
+  file: ProjectFile,
+  arcId: CharacterArcId,
+  patch: Partial<Pick<CharacterArc, 'beginning' | 'need' | 'ending'>>,
+): ProjectFile => ({
+  ...file,
+  characterArcs: file.characterArcs.map((arc) =>
+    (arc.id as string) === (arcId as string) ? stamp({ ...arc, ...patch }) : arc,
+  ),
+});
+
+/**
+ * The arc taken away, and its points with it.
+ *
+ * Unlike a trait, whose characterization survives it (§1), a point has no
+ * meaning without the journey it is a point of — *she is offered the money back
+ * and takes it anyway* is a sentence about an arc. This matches the database,
+ * where `arc_points` cascades from `character_arcs`.
+ */
+export const removeArc = (file: ProjectFile, arcId: CharacterArcId): ProjectFile => {
+  const doomed = new Set(
+    file.arcPoints
+      .filter((point) => (point.arcId as string) === (arcId as string))
+      .map((point) => point.id as string),
+  );
+  return {
+    ...file,
+    characterArcs: file.characterArcs.filter((arc) => (arc.id as string) !== (arcId as string)),
+    arcPoints: file.arcPoints.filter((point) => !doomed.has(point.id as string)),
+    usageLinks: file.usageLinks.filter(
+      (link) => !(link.ownerKind === 'arc_point' && doomed.has(link.ownerId)),
+    ),
+  };
+};
+
+export const addArcPoint = (
+  file: ProjectFile,
+  input: { arcId: CharacterArcId; kind?: ArcPointKind; text: string; notes?: string },
+): { file: ProjectFile; point: ArcPoint | null } => {
+  const text = input.text.trim();
+  if (text.length === 0) return { file, point: null };
+  const arc = file.characterArcs.find((one) => (one.id as string) === (input.arcId as string));
+  if (!arc) return { file, point: null };
+
+  const at = nowIso();
+  const point = arcPointSchema.parse({
+    id: newId<ArcPointId>(),
+    projectId: file.project.id,
+    arcId: arc.id,
+    // Carried as well as the arc, because nearly every reading of a point
+    // starts from the character rather than from their journey.
+    characterId: arc.characterId,
+    kind: input.kind ?? 'movement',
+    text,
+    notes: input.notes ?? '',
+    orderKey: lastKey(file.arcPoints.filter((one) => (one.arcId as string) === (arc.id as string))),
+    createdAt: at,
+    updatedAt: at,
+  });
+
+  return { file: { ...file, arcPoints: [...file.arcPoints, point] }, point };
+};
+
+export const updateArcPoint = (
+  file: ProjectFile,
+  pointId: ArcPointId,
+  patch: Partial<Pick<ArcPoint, 'kind' | 'text' | 'notes' | 'retired'>>,
+): ProjectFile => ({
+  ...file,
+  arcPoints: file.arcPoints.map((point) =>
+    (point.id as string) === (pointId as string) ? stamp({ ...point, ...patch }) : point,
+  ),
+});
+
+export const removeArcPoint = (file: ProjectFile, pointId: ArcPointId): ProjectFile => ({
+  ...file,
+  arcPoints: file.arcPoints.filter((point) => (point.id as string) !== (pointId as string)),
+  usageLinks: file.usageLinks.filter(
+    (link) => !(link.ownerKind === 'arc_point' && link.ownerId === (pointId as string)),
+  ),
+});
+
+/**
+ * Move a point that is not in the story yet, one place either way.
+ *
+ * **Only the unplaced ones move**, and the refusal is the point rather than a
+ * limitation: a point that is written sits where the scene it is in sits, and
+ * an arrow that pretended otherwise would put the arc in an order the script
+ * does not have.
+ */
+export const moveArcPoint = (
+  file: ProjectFile,
+  pointId: ArcPointId,
+  direction: 'up' | 'down',
+): ProjectFile => {
+  const point = file.arcPoints.find((one) => (one.id as string) === (pointId as string));
+  if (!point) return file;
+  if (isUsed({ kind: 'arc_point', id: pointId as string }, file.usageLinks, file)) return file;
+
+  // Its neighbours are the other unplaced points of the same arc, in the
+  // writer's own order — the placed ones are not in this queue at all.
+  const queue = file.arcPoints
+    .filter(
+      (one) =>
+        (one.arcId as string) === (point.arcId as string) &&
+        !isUsed({ kind: 'arc_point', id: one.id as string }, file.usageLinks, file),
+    )
+    .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1));
+
+  const at = queue.findIndex((one) => (one.id as string) === (pointId as string));
+  const to = direction === 'up' ? at - 1 : at + 1;
+  if (at < 0 || to < 0 || to >= queue.length) return file;
+
+  const before = direction === 'up' ? (queue[to - 1]?.orderKey ?? null) : queue[to]!.orderKey;
+  const after = direction === 'up' ? queue[to]!.orderKey : (queue[to + 1]?.orderKey ?? null);
+
+  return {
+    ...file,
+    arcPoints: file.arcPoints.map((one) =>
+      (one.id as string) === (pointId as string)
+        ? stamp({ ...one, orderKey: orderKeyBetween(before, after) })
+        : one,
+    ),
+  };
+};

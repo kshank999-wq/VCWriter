@@ -136,7 +136,8 @@ push live; the build takes a minute or two.
   0038 is the owner's switch.
   §19 says what each built stage does; §15 is the build order.
   `addendum-08-character-creator.md` is the Character Creator, the first module
-  of the Research room, from Ken's own dev spec. **Stages 0–4 built** —
+  of the Research room, from Ken's own dev spec. **Stages 0–5 built — his MVP
+  is complete** —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
   so the unit of work is the characterization item and a trait is a folder for
@@ -171,7 +172,15 @@ push live; the build takes a minute or two.
   adds the item and pins it in one call, **and keeps nothing at all if the pin
   cannot be made**, since something born on deck in the beat the writer is
   looking at is the one confusing outcome. The passage arrives editable because
-  the item keeps the writer's reading and the pin keeps the page's words. §3
+  the item keeps the writer's reading and the pin keeps the page's words. Stage
+  5 is the Arc Builder (`arcBoard`, `beginArc`, `moveArcPoint`, and the **Arc**
+  tab): a spine read top to bottom, whose **shape is read back rather than
+  declared** — a refusal makes it *refused* whatever else is there — and whose
+  points split into what is in the manuscript, in the manuscript's order, and
+  what is on deck, in the writer's. **The arrows are only on the second group**,
+  because reordering something already written would be a control that lies.
+  Pinning an arc point turned out to be the same act as pinning
+  characterization, so the Where panel took an *owner* and worked unchanged. §3
   says what already exists and is only being widened; §8 is the
   build order; §3.4 says why there is deliberately no module framework yet; §10
   says what each built stage does.

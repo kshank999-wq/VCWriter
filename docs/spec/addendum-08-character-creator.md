@@ -1,8 +1,8 @@
 # Addendum 08 — Character Creator
 
-Status: specified; **stages 0–4 built**, September 2026. From Ken's *VC Writer
-Character Creator Development Specification* — the first module of the Research
-room. Extends §7 (research), §8 (structure) and §19 of the master specification,
+Status: **stages 0–5 built — Ken's MVP is complete**, September 2026. From his
+*VC Writer Character Creator Development Specification* — the first module of
+the Research room. Extends §7 (research), §8 (structure) and §19 of the master specification,
 and uses the typed link system §7.4 already built.
 
 The Character Creator builds characters **through observable behaviour** —
@@ -199,7 +199,7 @@ interrupts writing to say a character is underdeveloped.
    red/green.
 3. **Built.** Linking an item to a scene or beat from the Creator (plan → story).
 4. **Built.** The right-click workflow in the editor (story → plan) (§7).
-5. The Arc Builder, with opportunity, refusal and doubling down (§8, §9).
+5. **Built.** The Arc Builder, with opportunity, refusal and doubling down (§8, §9).
 6. Arc-to-plot: the on-deck queue, assignment, and the Related Elements box (§10).
 7. Relationships (§11).
 8. The relationship mind map (§12).
@@ -207,8 +207,9 @@ interrupts writing to say a character is underdeveloped.
 10. Search, filters, the review modes and the Unused Character Material
     report (§18).
 
-Stages 0–5 are Ken's MVP (§19) in his order. Stage 4 is the one to protect: it
-is small in code and it is what makes the module usable by half its audience.
+Stages 0–5 are Ken's MVP (§19) in his order, and **all of them are built**.
+Stage 4 was the one to protect: small in code, and what makes the module usable
+by half its audience.
 
 ## 9. What it must never do
 
@@ -425,3 +426,46 @@ Driven in the real interface: right-click the action line in *The bill*, name
 the trait *Counts everything*, type the reading, press Add it — and the Creator
 shows a new trait holding one green item, pinned to INT. DINER - NIGHT · The
 bill with the original line as its quote.
+
+### Stage 5 — the Arc Builder
+
+`arcBoard`, `beginArc`, `addArcPoint`, `moveArcPoint` and the rest in the
+domain; the **Arc** tab in the Creator. This finishes §19's MVP.
+
+**A spine, read top to bottom**: who they are, what they need, what happens,
+who they become. §8 asks the view to show progression from beginning to end, and
+the way to do that is to put it in that order and get out of the way.
+
+**It does not assume anybody improves** (§9). A chance to change, a refusal and a
+doubling-down are kinds of point in the same list as a discovery, so a Scrooge
+and an antagonist are built with one tool — and the four decisive kinds are named
+in the domain (`DECISIVE_KINDS`) rather than in a stylesheet, because *which
+moments carry the drama* is a statement about writing.
+
+**The shape is read back, never declared.** `arcShape` calls it *refused* the
+moment a refusal exists, whatever else is there, because that is the defining
+event once it happens. Asking a writer to label an arc positive before writing it
+would be asking them to decide the ending first.
+
+**What is written sits where the story puts it.** The points split in two: what
+is in the manuscript, in the manuscript's order, and what is still on deck, in
+the writer's. The arrows are only on the second group — `moveArcPoint` refuses a
+placed point outright — because an arrow that reordered something already written
+would be a control that lies about where the scene is.
+
+**Pinning an arc point is the same act as pinning characterization**, so it is
+the same panel: the Where panel from stage 3 took an *owner* instead of an item
+and worked unchanged. Two versions of it would eventually disagree about what
+pinning means.
+
+**Nothing requires an arc.** A character without one gets a sentence saying most
+characters do not need one, rather than an empty form implying they are behind.
+Removing an arc takes its points with it — unlike a trait, whose characterization
+survives (§1), because a point has no meaning without the journey it is a point
+of, and that matches the database's cascade.
+
+Driven in the real interface: start an arc, write the beginning and the need,
+add a discovery, a chance to change, a refusal and a doubling-down, and the
+header reads *Is offered the change and refuses it*. Pin the discovery to a beat
+and it moves from **Still to place** into **In the writing**, wearing the scene's
+name.
