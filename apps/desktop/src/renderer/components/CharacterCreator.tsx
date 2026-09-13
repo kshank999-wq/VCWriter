@@ -4,6 +4,8 @@ import {
   ARC_POINT_NAMES,
   ARC_SHAPE_WORDS,
   PROMINENCE_WORDS,
+  RELATIONSHIP_KINDS,
+  RELATIONSHIP_KIND_NAMES,
   TRAIT_TONES,
   TRAIT_TONE_WORDS,
   USAGE_STANDING_WORDS,
@@ -11,6 +13,7 @@ import {
   addArcPoint,
   addCharacterization,
   addTrait,
+  answerRelationship,
   arcBoard,
   beginArc,
   characterBoard,
@@ -21,16 +24,20 @@ import {
   moveArcPoint,
   pinUsage,
   placesToPin,
+  relate,
+  relationshipsOf,
   quotableLines,
   removeArc,
   removeArcPoint,
   removeCharacterization,
+  removeRelationship,
   removeTrait,
   unpinUsage,
   updateArc,
   updateArcPoint,
   updateCharacter,
   updateCharacterization,
+  updateRelationship,
   updateTrait,
   whereItAppears,
   type ArcPointId,
@@ -39,11 +46,14 @@ import {
   type CharacterCategoryId,
   type CharacterId,
   type CharacterTrait,
+  type CharacterRelationshipId,
   type CharacterTraitId,
   type CharacterizationItemId,
   type CharacterizationRow,
   type ManuscriptElementId,
   type ProjectFile,
+  type RelationshipKind,
+  type RelationshipRow,
   type TraitTone,
   type UsageColour,
 } from '@vcwriter/domain';
@@ -82,7 +92,7 @@ interface CharacterCreatorProps {
   onBack(): void;
 }
 
-type Tab = 'overview' | 'traits' | 'arc';
+type Tab = 'overview' | 'traits' | 'arc' | 'relationships';
 
 /** Which trait's characterization is being looked at. */
 type Shelf = { kind: 'trait'; id: CharacterTraitId } | { kind: 'unfiled' };
@@ -146,6 +156,7 @@ export function CharacterCreator({
             ['overview', 'Overview'],
             ['traits', 'Traits'],
             ['arc', 'Arc'],
+            ['relationships', 'Relationships'],
           ] as ReadonlyArray<[Tab, string]>
         ).map(([key, label]) => (
           <button
@@ -162,6 +173,8 @@ export function CharacterCreator({
 
       {tab === 'overview' ? (
         <Overview file={file} characterId={characterId} onUpdate={onUpdate} />
+      ) : tab === 'relationships' ? (
+        <Relationships file={file} characterId={characterId} onUpdate={onUpdate} />
       ) : tab === 'arc' ? (
         <Arc
           file={file}
@@ -1097,6 +1110,232 @@ function Arc({
           onChange={(event) => onUpdate((current) => updateArc(current, arc.id, { ending: event.target.value }))}
         />
       </label>
+    </div>
+  );
+}
+
+// ----------------------------------------------------------- relationships
+
+/**
+ * How somebody stands towards other people (addendum 08 §11, stage 7).
+ *
+ * **Two lists, because the two directions are allowed to disagree.** *She trusts
+ * him* and *he is working her* are both true and they are different records —
+ * a screen that merged them into one row per pair would have to choose which
+ * sentence to keep, and the drama is the difference between them. So: what they
+ * think of other people, and what other people think of them, one above the
+ * other.
+ *
+ * When a reading has not been answered the row offers to open the other one —
+ * **empty, never copied**, since putting the first person's words in the second
+ * person's mouth is exactly the mistake the two records exist to avoid. It is an
+ * offer and never a warning: plenty of relationships are only worth writing down
+ * from one side.
+ */
+function Relationships({
+  file,
+  characterId,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  characterId: CharacterId;
+  onUpdate: CharacterCreatorProps['onUpdate'];
+}) {
+  const rows = useMemo(
+    () => relationshipsOf({ characterId: characterId as string, file }),
+    [characterId, file],
+  );
+  const others = file.characters.filter(
+    (person) => !person.archived && (person.id as string) !== (characterId as string),
+  );
+
+  const [toId, setToId] = useState<CharacterId | ''>('');
+  const [kind, setKind] = useState<RelationshipKind>('friend');
+  const [open, setOpen] = useState<CharacterRelationshipId | null>(null);
+
+  const add = () => {
+    if (toId === '') return;
+    onUpdate((current) => relate(current, { fromCharacterId: characterId, toCharacterId: toId, kind }).file);
+    setToId('');
+  };
+
+  if (others.length === 0) {
+    return (
+      <div className="creator-relationships">
+        <p className="muted empty-state">
+          Nobody else in the cast yet. A relationship links two character records, never a name typed
+          twice.
+        </p>
+      </div>
+    );
+  }
+
+  const row = (entry: RelationshipRow, outward: boolean) => {
+    const rel = entry.relationship;
+    return (
+      <li key={rel.id} className="rel">
+        <div className="rel-row">
+          <span className="rel-arrow muted" aria-hidden="true">
+            {outward ? '→' : '←'}
+          </span>
+          <span className="rel-who">{entry.otherName}</span>
+          <select
+            aria-label="What kind"
+            className="rel-kind"
+            value={rel.kind}
+            onChange={(event) =>
+              onUpdate((current) =>
+                updateRelationship(current, rel.id, { kind: event.target.value as RelationshipKind }),
+              )
+            }
+          >
+            {RELATIONSHIP_KINDS.map((one) => (
+              <option key={one} value={one}>
+                {RELATIONSHIP_KIND_NAMES[one]}
+              </option>
+            ))}
+          </select>
+          <input
+            className="rel-label"
+            aria-label="What you call it"
+            placeholder={RELATIONSHIP_KIND_NAMES[rel.kind]}
+            value={rel.label}
+            onChange={(event) =>
+              onUpdate((current) => updateRelationship(current, rel.id, { label: event.target.value }))
+            }
+          />
+          <button
+            type="button"
+            className={open === rel.id ? 'creator-item-state open' : 'creator-item-state'}
+            aria-expanded={open === rel.id}
+            title="The history, where it stands, and how it changes"
+            onClick={() => setOpen(open === rel.id ? null : rel.id)}
+          >
+            {rel.state.trim().length > 0 ? 'Has a state' : 'Say more'}
+          </button>
+          {outward && !entry.answered ? (
+            <button
+              type="button"
+              className="ghost small"
+              title="Opens an empty reading the other way round. It is not a copy of this one."
+              onClick={() => onUpdate((current) => answerRelationship(current, rel.id).file)}
+            >
+              + The other way
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="ghost small"
+            aria-label={`Remove how ${outward ? 'they see' : 'they are seen by'} ${entry.otherName}`}
+            title="Removes this reading only. The other direction is untouched."
+            onClick={() => onUpdate((current) => removeRelationship(current, rel.id))}
+          >
+            ×
+          </button>
+        </div>
+
+        {open === rel.id ? (
+          <div className="rel-more">
+            <label className="field">
+              <span>History</span>
+              <textarea
+                aria-label="History"
+                rows={2}
+                placeholder="They came up together on the night shift."
+                value={rel.description}
+                onChange={(event) =>
+                  onUpdate((current) => updateRelationship(current, rel.id, { description: event.target.value }))
+                }
+              />
+            </label>
+            <label className="field">
+              <span>Where it stands now</span>
+              <textarea
+                aria-label="Where it stands now"
+                rows={2}
+                placeholder="Cold since the audit."
+                value={rel.state}
+                onChange={(event) =>
+                  onUpdate((current) => updateRelationship(current, rel.id, { state: event.target.value }))
+                }
+              />
+            </label>
+            {/* §11 calls the evolution optional, and it stays optional: most
+                relationships in most scripts do not move. */}
+            <label className="field">
+              <span>How it changes across the story — if it does</span>
+              <textarea
+                aria-label="How it changes"
+                rows={2}
+                value={rel.evolution}
+                onChange={(event) =>
+                  onUpdate((current) => updateRelationship(current, rel.id, { evolution: event.target.value }))
+                }
+              />
+            </label>
+          </div>
+        ) : null}
+      </li>
+    );
+  };
+
+  return (
+    <div className="creator-relationships">
+      <section>
+        <h4>How they see other people</h4>
+        {rows.outward.length === 0 ? (
+          <p className="muted small">Nothing written down yet.</p>
+        ) : (
+          <ul className="rel-list">{rows.outward.map((entry) => row(entry, true))}</ul>
+        )}
+
+        <form
+          className="creator-add wide"
+          onSubmit={(event) => {
+            event.preventDefault();
+            add();
+          }}
+        >
+          <select
+            aria-label="Who"
+            value={toId as string}
+            onChange={(event) => setToId(event.target.value as CharacterId)}
+          >
+            <option value="">Towards whom…</option>
+            {others.map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.name}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Kind"
+            className="rel-kind"
+            value={kind}
+            onChange={(event) => setKind(event.target.value as RelationshipKind)}
+          >
+            {RELATIONSHIP_KINDS.map((one) => (
+              <option key={one} value={one}>
+                {RELATIONSHIP_KIND_NAMES[one]}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className="ghost small" disabled={toId === ''}>
+            + Relationship
+          </button>
+        </form>
+      </section>
+
+      {/* The other half of §11: what everybody else makes of them, which is
+          not the same thing and is not derived from it. */}
+      <section>
+        <h4>How other people see them</h4>
+        {rows.inward.length === 0 ? (
+          <p className="muted small">Nobody has a reading of them yet.</p>
+        ) : (
+          <ul className="rel-list">{rows.inward.map((entry) => row(entry, false))}</ul>
+        )}
+      </section>
     </div>
   );
 }

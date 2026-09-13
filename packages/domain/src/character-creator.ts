@@ -1417,3 +1417,196 @@ export const describeWork = (work: CharacterWork): string =>
     : work.traitName
       ? `${work.traitName} — ${work.text}`
       : work.text;
+
+// ------------------------------------------------------- relationships (§11)
+
+export const RELATIONSHIP_KIND_NAMES: Record<RelationshipKind, string> = {
+  family: 'Family',
+  romantic: 'Romantic',
+  friend: 'Friend',
+  mentor: 'Mentor',
+  rival: 'Rival',
+  enemy: 'Enemy',
+  professional: 'Professional',
+  alliance: 'Alliance',
+  dependency: 'Dependency',
+  custom: 'Something else',
+};
+
+/** What to call it: the writer's own label wins over the kind (§11). */
+export const relationshipName = (relationship: CharacterRelationship): string =>
+  relationship.label.trim().length > 0
+    ? relationship.label.trim()
+    : RELATIONSHIP_KIND_NAMES[relationship.kind];
+
+/** One relationship, with the person at the other end of it. */
+export interface RelationshipRow {
+  relationship: CharacterRelationship;
+  otherId: CharacterId;
+  otherName: string;
+  /** Whether the person at the other end has a reading of their own. */
+  answered: boolean;
+}
+
+/**
+ * How somebody stands towards other people, and how they stand towards them.
+ *
+ * **Two lists rather than one**, because §11's requirement is that the two
+ * directions can disagree: *A trusts B while B is manipulating A* is two
+ * records, and a screen that merged them would have to pick one to show and
+ * lose the drama in the difference.
+ *
+ * `answered` marks an outgoing reading the other person has not returned. It is
+ * **an offer and never a warning** — plenty of relationships are only worth
+ * writing down from one side, and the module does not nag (§7).
+ */
+export const relationshipsOf = (input: {
+  characterId: string;
+  file: ProjectFile;
+}): { outward: RelationshipRow[]; inward: RelationshipRow[] } => {
+  const { file } = input;
+  const nameOf = (id: string): string =>
+    file.characters.find((one) => (one.id as string) === id)?.name ?? 'Somebody';
+
+  const reverseExists = (from: string, to: string): boolean =>
+    file.characterRelationships.some(
+      (one) => (one.fromCharacterId as string) === to && (one.toCharacterId as string) === from,
+    );
+
+  const mine = file.characterRelationships.filter(
+    (one) =>
+      (one.fromCharacterId as string) === input.characterId ||
+      (one.toCharacterId as string) === input.characterId,
+  );
+
+  const row = (relationship: CharacterRelationship, outward: boolean): RelationshipRow => {
+    const otherId = outward ? relationship.toCharacterId : relationship.fromCharacterId;
+    return {
+      relationship,
+      otherId,
+      otherName: nameOf(otherId as string),
+      answered: reverseExists(
+        relationship.fromCharacterId as string,
+        relationship.toCharacterId as string,
+      ),
+    };
+  };
+
+  const by = (a: RelationshipRow, b: RelationshipRow) => a.otherName.localeCompare(b.otherName);
+
+  return {
+    outward: mine
+      .filter((one) => (one.fromCharacterId as string) === input.characterId)
+      .map((one) => row(one, true))
+      .sort(by),
+    inward: mine
+      .filter((one) => (one.toCharacterId as string) === input.characterId)
+      .map((one) => row(one, false))
+      .sort(by),
+  };
+};
+
+/**
+ * A reading of one person by another.
+ *
+ * **Directional, and the same pair may be read twice** — once each way — so the
+ * only thing refused is a second identical reading, which is the database's
+ * unique said again here. Nobody is in a relationship with themselves.
+ */
+export const relate = (
+  file: ProjectFile,
+  input: {
+    fromCharacterId: CharacterId;
+    toCharacterId: CharacterId;
+    kind?: RelationshipKind;
+    label?: string;
+    description?: string;
+    state?: string;
+    evolution?: string;
+  },
+): { file: ProjectFile; relationship: CharacterRelationship | null } => {
+  const from = input.fromCharacterId as string;
+  const to = input.toCharacterId as string;
+  if (from === to) return { file, relationship: null };
+  const known = new Set(file.characters.map((person) => person.id as string));
+  if (!known.has(from) || !known.has(to)) return { file, relationship: null };
+
+  const kind = input.kind ?? 'custom';
+  const label = (input.label ?? '').trim();
+  const already = file.characterRelationships.find(
+    (one) =>
+      (one.fromCharacterId as string) === from &&
+      (one.toCharacterId as string) === to &&
+      one.kind === kind &&
+      one.label.trim() === label,
+  );
+  if (already) return { file, relationship: already };
+
+  const at = nowIso();
+  const relationship = characterRelationshipSchema.parse({
+    id: newId<CharacterRelationshipId>(),
+    projectId: file.project.id,
+    fromCharacterId: input.fromCharacterId,
+    toCharacterId: input.toCharacterId,
+    kind,
+    label,
+    description: input.description ?? '',
+    state: input.state ?? '',
+    evolution: input.evolution ?? '',
+    createdAt: at,
+    updatedAt: at,
+  });
+
+  return {
+    file: { ...file, characterRelationships: [...file.characterRelationships, relationship] },
+    relationship,
+  };
+};
+
+export const updateRelationship = (
+  file: ProjectFile,
+  relationshipId: CharacterRelationshipId,
+  patch: Partial<Pick<CharacterRelationship, 'kind' | 'label' | 'description' | 'state' | 'evolution'>>,
+): ProjectFile => ({
+  ...file,
+  characterRelationships: file.characterRelationships.map((one) =>
+    (one.id as string) === (relationshipId as string) ? stamp({ ...one, ...patch }) : one,
+  ),
+});
+
+/**
+ * One reading removed, and **only that one**: taking away how A sees B says
+ * nothing about how B sees A, which is the whole reason these are two records.
+ */
+export const removeRelationship = (
+  file: ProjectFile,
+  relationshipId: CharacterRelationshipId,
+): ProjectFile => ({
+  ...file,
+  characterRelationships: file.characterRelationships.filter(
+    (one) => (one.id as string) !== (relationshipId as string),
+  ),
+});
+
+/**
+ * The same pair, read back the other way — an empty reading for the other
+ * person to fill in, not a copy of this one.
+ *
+ * Copying the description across would be the module putting words in somebody
+ * else's mouth, and the point of the second row is that it may say something
+ * completely different.
+ */
+export const answerRelationship = (
+  file: ProjectFile,
+  relationshipId: CharacterRelationshipId,
+): { file: ProjectFile; relationship: CharacterRelationship | null } => {
+  const one = file.characterRelationships.find(
+    (candidate) => (candidate.id as string) === (relationshipId as string),
+  );
+  if (!one) return { file, relationship: null };
+  return relate(file, {
+    fromCharacterId: one.toCharacterId,
+    toCharacterId: one.fromCharacterId,
+    kind: one.kind,
+  });
+};

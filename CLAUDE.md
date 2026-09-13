@@ -136,7 +136,7 @@ push live; the build takes a minute or two.
   0038 is the owner's switch.
   §19 says what each built stage does; §15 is the build order.
   `addendum-08-character-creator.md` is the Character Creator, the first module
-  of the Research room, from Ken's own dev spec. **Stages 0–6 built** (0–5 were
+  of the Research room, from Ken's own dev spec. **Stages 0–7 built** (0–5 were
   his MVP) —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
@@ -187,7 +187,14 @@ push live; the build takes a minute or two.
   direction of travel — a writer in a beat asks *what is this carrying*, which
   is the same rows read backwards. **The on-deck queue belongs where the
   opportunity appears**, so what is waiting is offered in the Inspector with a
-  press that runs the same `pinUsage` as everywhere else. §3
+  press that runs the same `pinUsage` as everywhere else. Stage 7 is
+  relationships (`relate`, `relationshipsOf`, `answerRelationship`, and the
+  **Relationships** tab): **two lists rather than one**, because §11's
+  requirement is that the directions may disagree — *A trusts B while B is
+  manipulating A* — and a row per pair would have to pick a sentence. An
+  unanswered reading offers *+ The other way*, which opens the reverse **empty**,
+  since copying the description across would put the first person's words in the
+  second person's mouth. §3
   says what already exists and is only being widened; §8 is the
   build order; §3.4 says why there is deliberately no module framework yet; §10
   says what each built stage does.

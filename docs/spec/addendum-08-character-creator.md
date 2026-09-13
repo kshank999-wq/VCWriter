@@ -1,6 +1,6 @@
 # Addendum 08 — Character Creator
 
-Status: **stages 0–6 built** (0–5 were Ken's MVP), September 2026. From his
+Status: **stages 0–7 built** (0–5 were Ken's MVP), September 2026. From his
 *VC Writer Character Creator Development Specification* — the first module of
 the Research room. Extends §7 (research), §8 (structure) and §19 of the master specification,
 and uses the typed link system §7.4 already built.
@@ -202,7 +202,7 @@ interrupts writing to say a character is underdeveloped.
 5. **Built.** The Arc Builder, with opportunity, refusal and doubling down (§8, §9).
 6. **Built.** Arc-to-plot: the on-deck queue, assignment, and the Related
    Elements box (§10).
-7. Relationships (§11).
+7. **Built.** Relationships (§11).
 8. The relationship mind map (§12).
 9. Cross-character arc links (§13).
 10. Search, filters, the review modes and the Unused Character Material
@@ -506,3 +506,41 @@ that says where something lands is the same act with fewer ways to miss.
 Driven in the real interface: select the beat, open **On deck (2)**, press
 **+ Here** on a piece of characterization — it moves up into what the beat is
 carrying, and the queue below is one shorter.
+
+### Stage 7 — relationships
+
+`relate`, `relationshipsOf`, `answerRelationship` and the rest in the domain;
+the **Relationships** tab in the Creator.
+
+**Two lists, one above the other**: how they see other people, and how other
+people see them. §11's requirement is that the two directions can disagree —
+*A trusts B while B is manipulating A* — so a screen with one row per pair would
+have to choose which of those sentences to keep, and the drama is the difference
+between them. The tab draws both because the records are both.
+
+**A relationship links two character records**, never a name typed twice, which
+is §11's opening line and the reason this is not free text on the Overview.
+
+**The other way round is offered, and arrives empty.** A row whose reading has
+not been answered carries *+ The other way*, which opens the reverse with the
+same kind and nothing else — copying the description across would be the module
+putting the first person's words in the second person's mouth, and the point of
+the second record is that it may say something completely different. It is an
+offer and never a warning: plenty of relationships are only worth writing down
+from one side, and §7 rules out nagging.
+
+**Removing one reading leaves the other standing**, which is the same rule read
+from the other end.
+
+**The same pair may be read twice, differently.** Rivals at work and family at
+home is two rows; what is refused is a second *identical* reading, which is the
+database's unique said again in the document so the two cannot disagree.
+
+The writer's own label wins over the kind wherever the relationship is named
+(`relationshipName`), so *owes him for the Tulsa thing* survives being filed
+under **Something else**.
+
+Driven in the real interface, and the driver's DOM dump is the proof that
+matters: Mara → Deakins reads **Friend**, *trusts him completely*; the answered
+reverse reads **Dependency**, *working her, carefully*, with its history still
+empty. Two records, two sentences, no merging.
