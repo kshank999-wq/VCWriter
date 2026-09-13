@@ -360,11 +360,22 @@ back, short enough to keep the microphone on it, and still draggable. Dictate is
 now above the fold on every capture screen, checked by measuring it rather than
 by looking.
 
+**A phone is operated with a thumb, on a train.** Apple asks for 44pt, and a
+note taken one-handed is exactly the case that number exists for. A sweep of
+every control on every current iPhone size found fourteen that were not: the
+way back at 26px, *Correct* and *Delete* on a note at 29, the Review filters at
+35. All of them are 44 now. It is worth saying how they were found — **measured,
+not looked at**: each of them was legible, none of them looked wrong in a
+screenshot, and the audit that reads every control's height on four viewports
+took less time than squinting at one.
+
 Driven at phone width with a stubbed recogniser, so the whole path runs for
 real: *Character, Mara — she never lets anyone else drive* set the category, the
 name and the note from one utterance; *Correction. …* replaced the wording and
-raised the undo. Then again at iPhone 13 size with a recogniser that ends after
-each utterance, which is what found both of the above.
+raised the undo. Then at iPhone SE, 13, Pro Max and landscape, on all four
+screens — the project list, capture, review and starting a project — with a
+recogniser that ends after each utterance, which is what found all of the
+above.
 
 ### Stage 5 — the project page
 

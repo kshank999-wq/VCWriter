@@ -1603,7 +1603,8 @@ p.room-stamp {
 }
 
 .notes-chip {
-  padding: 6px 11px;
+  min-height: 44px;
+  padding: 6px 14px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: transparent;
@@ -1660,7 +1661,8 @@ p.room-stamp {
 }
 
 .notes-item-actions .button {
-  padding: 6px 12px;
+  min-height: 44px;
+  padding: 6px 16px;
   font-size: 13px;
 }
 
@@ -1668,6 +1670,18 @@ p.room-stamp {
   border-color: var(--red);
   color: var(--gold-bright);
   background: var(--red);
+}
+
+/* **A phone is operated with a thumb, on a train.** Apple asks for 44pt, and a
+   note taken one-handed is exactly the case the number exists for, so nothing
+   in the app is smaller — checked by measuring every control on every iPhone
+   size rather than by eye. */
+.notes .button,
+.notes-tab,
+.notes-project,
+.notes .field select,
+.notes .field input {
+  min-height: 44px;
 }
 
 /* The Project Page (addendum 09 §3.1): where the app opens, every time. */
@@ -1724,9 +1738,13 @@ p.room-stamp {
 }
 
 .notes-back {
+  /* Left-aligned with the heading above it, so the padding that makes it
+     thumb-sized is pulled back out on the left rather than indenting it. */
+  margin-left: -10px;
+  min-height: 44px;
+  padding: 0 10px;
   background: none;
   border: none;
-  padding: 0;
   color: var(--gold);
   font: inherit;
   cursor: pointer;
