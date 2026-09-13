@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { parsePlatform } from '@/lib/fulfillment';
 import { stripe } from '@/lib/stripe';
 import { adminClient } from '@/lib/supabase';
-import { DownloadButton } from '@/app/account/download-button';
+import { DownloadButton } from '@/app/(site)/account/download-button';
 
 export const metadata: Metadata = { title: 'Purchase complete' };
 export const dynamic = 'force-dynamic';

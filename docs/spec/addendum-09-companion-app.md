@@ -345,11 +345,26 @@ lit, which looks exactly like listening and is not. On a browser that honours
 `continuous` none of it fires. `dictation.test.ts` holds both halves — that it
 keeps going, and that it knows when to stop.
 
+**The phone app is not a page of the site.** The same iPhone run found the
+microphone below the fold: the marketing header — the wordmark and five nav
+links — took the top half of a 664pt screen, and under it sat the tabs, both
+pickers and a note box asking for 44vh, so the button a voice notebook exists
+for needed a scroll before the writer had done anything. `/notes` now sits
+outside a `(site)` route group that owns the header and the footer, so what a
+page wears is decided by **where it is in the tree** rather than by a condition
+somebody has to remember to keep true. No address changed; `not-found.tsx` sits
+outside the group too and asks for the chrome itself, since an address that
+matched nothing could have been meant as any page of the site. The note box is
+sized to the screen rather than to a row count — tall enough to read a note
+back, short enough to keep the microphone on it, and still draggable. Dictate is
+now above the fold on every capture screen, checked by measuring it rather than
+by looking.
+
 Driven at phone width with a stubbed recogniser, so the whole path runs for
 real: *Character, Mara — she never lets anyone else drive* set the category, the
 name and the note from one utterance; *Correction. …* replaced the wording and
 raised the undo. Then again at iPhone 13 size with a recogniser that ends after
-each utterance, which is what found the above.
+each utterance, which is what found both of the above.
 
 ### Stage 5 — the project page
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupErrorReports, type ErrorReportRow } from '@/app/admin/errors/grouping';
+import { groupErrorReports, type ErrorReportRow } from '@/app/(site)/admin/errors/grouping';
 
 const row = (overrides: Partial<ErrorReportRow> = {}): ErrorReportRow => ({
   id: crypto.randomUUID(),

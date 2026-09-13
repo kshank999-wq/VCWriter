@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Emblem } from './wordmark';
+import { Emblem } from '../wordmark';
 
 const FEATURES = [
   {

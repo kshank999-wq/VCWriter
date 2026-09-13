@@ -18,11 +18,19 @@ export const viewport: Viewport = {
   themeColor: '#0b0b0d',
 };
 
+/**
+ * No header, no footer, no nav.
+ *
+ * The phone app sits outside the `(site)` route group on purpose: installed to
+ * a home screen it is the only thing on the screen, and the marketing chrome
+ * cost half an iPhone's height — the Dictate button, which is what a voice
+ * notebook is *for*, was below the fold before a writer had done anything.
+ */
 export default function NotesLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <ServiceWorker />
-      {children}
+      <main>{children}</main>
     </>
   );
 }
