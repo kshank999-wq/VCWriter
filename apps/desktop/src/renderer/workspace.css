@@ -7101,6 +7101,97 @@ dialog.preferences .field {
   background: var(--panel);
 }
 
+/* The views row (§10): how the board is being read, under the toolbar that
+   says what is being made. */
+.sculpt-views {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.sculpt-view {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sculpt-view select,
+.sculpt-view input {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 3px 6px;
+}
+
+.sculpt-search {
+  position: relative;
+}
+
+.sculpt-search input {
+  width: 200px;
+}
+
+.sculpt-hits {
+  margin-left: -4px;
+}
+
+/* The jump-to list, over the canvas rather than pushing it down: it is open
+   for as long as it takes to pick one. */
+.sculpt-found {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 40px;
+  z-index: 30;
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 4px;
+  min-width: 260px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+}
+
+.sculpt-found button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sculpt-found button:hover {
+  background: var(--panel);
+  border-color: var(--border);
+}
+
+.sculpt-found-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 .sculptor-bar h2 {
   margin: 0;
   font-family: var(--display);
@@ -7215,6 +7306,18 @@ dialog.preferences .field {
 
 .sculpt-node.folded {
   border-right-width: 3px;
+}
+
+/* Outside what the writer asked to see (§10). Faint rather than hidden, and
+   still clickable: focus dims the rest so the shape of the whole board is
+   still legible around the part being read. */
+.sculpt-node.dimmed {
+  opacity: 0.28;
+}
+
+/* Whatever is lit wins the eye back when something *is* selected in it. */
+.sculpt-node.dimmed.selected {
+  opacity: 0.6;
 }
 
 .sculpt-title {

@@ -217,16 +217,24 @@ export interface BoardLayout {
  *
  * A folded node is one row tall and its children are not laid out at all,
  * which compresses them and keeps their order (§4).
+ *
+ * A **depth** does the same thing to a whole level: asked for one column, the
+ * board is measured as though every block were folded, which is §10's *macro
+ * shape*. It is the one view that changes the shape rather than the lighting,
+ * and it costs nothing to honour here — fewer nodes go in, and the rule that
+ * nothing overlaps holds for the same reason it always does.
  */
-export const boardLayout = (board: Board): BoardLayout => {
+export const boardLayout = (board: Board, view: BoardView = WHOLE_BOARD): BoardLayout => {
   const columns = columnsOf(board);
+  const deepest = view.depth === null ? Number.POSITIVE_INFINITY : Math.max(1, view.depth) - 1;
   const laid: LaidNode[] = [];
 
   const xOf = (index: number) => index * (COLUMN_WIDTH + COLUMN_GAP);
 
   /** Lay a node and its subtree out from `top`, and answer how tall it came to. */
   const place = (node: SculptorNode, columnIndex: number, top: number): number => {
-    const children = node.collapsed ? [] : childrenOf(board, node.id);
+    const children =
+      node.collapsed || columnIndex >= deepest ? [] : childrenOf(board, node.id);
 
     let below = top;
     for (const [index, child] of children.entries()) {
@@ -255,15 +263,20 @@ export const boardLayout = (board: Board): BoardLayout => {
     top += place(block, 0, top);
   }
 
+  // The strip of column names stops where the columns do: a board filtered to
+  // its structure that still drew five named lanes across an empty canvas
+  // would be saying the filter had not worked.
+  const shown = view.depth === null ? columns : columns.slice(0, Math.max(1, view.depth));
+
   return {
     nodes: laid,
-    columns: columns.map((column, index) => ({
+    columns: shown.map((column, index) => ({
       column,
       index,
       x: xOf(index),
       width: COLUMN_WIDTH,
     })),
-    width: columns.length === 0 ? 0 : xOf(columns.length - 1) + COLUMN_WIDTH,
+    width: shown.length === 0 ? 0 : xOf(shown.length - 1) + COLUMN_WIDTH,
     height: top,
   };
 };
@@ -897,4 +910,136 @@ export const standingFor = (board: Board, layout: BoardLayout, nodeId: SculptorN
     node = node.parentId ? findNode(board, node.parentId) : null;
   }
   return null;
+};
+
+// ------------------------------------------------------------------ the views
+
+/**
+ * What the writer has asked to see (§10, build order stage 9).
+ *
+ * Four questions, and only one of them changes the *shape* of the board. That
+ * split is the design:
+ *
+ * - **Depth** genuinely hides, because a column is a level of detail and
+ *   hiding one hides everything under it. The board is re-measured with fewer
+ *   nodes and still cannot overlap, since §4 measures rather than positions.
+ * - **Focus**, **unbound only** and **search** never hide anything. They *dim*,
+ *   which is what §10 asks of focus and what the other two have to do as well:
+ *   this is a tree, and hiding a parent would orphan its children — a beat
+ *   drawn with no scene to hang off is worse than a bound scene shown grey.
+ *
+ * One lit set serves all three, so a writer using two at once gets the
+ * intersection they would expect rather than two fights over the same pixel.
+ */
+export interface BoardView {
+  /**
+   * How many columns to draw, from the structure column outwards. Null draws
+   * all of them.
+   *
+   * §10 says *any subset*, and a subset is what this is — but a **prefix** of
+   * one, because the columns are depths of a tree rather than independent
+   * layers. Drawing column three without column two would put beats on the
+   * canvas with no scene above them, which is not a view of anything. *One,*
+   * which §10 calls the macro shape, is the case that matters and it works.
+   */
+  depth: number | null;
+  /** Light what is still an idea, and dim what is already in the script. */
+  unboundOnly: boolean;
+  /** One node's subtree lit, the rest dimmed (§10). */
+  focusId: SculptorNodeId | null;
+  /** Title, note and kind (§10). */
+  search: string;
+}
+
+export const WHOLE_BOARD: BoardView = {
+  depth: null,
+  unboundOnly: false,
+  focusId: null,
+  search: '',
+};
+
+/** Whether any of it is actually asking for something. */
+export const isFiltered = (view: BoardView): boolean =>
+  view.depth !== null || view.unboundOnly || view.focusId !== null || view.search.trim().length > 0;
+
+/**
+ * Bound to a scene or a beat in the script.
+ *
+ * Local rather than exported: `isBound` is already `sculptor-binding.ts`'s,
+ * and that module imports this one, so the name has to stay there.
+ */
+const boundToScript = (node: SculptorNode): boolean =>
+  node.boundUnitId !== null || node.boundBeatId !== null;
+
+/** A node and everything hanging off it, however deep. */
+export const subtreeOf = (board: Board, nodeId: SculptorNodeId): SculptorNodeId[] => {
+  const found: SculptorNodeId[] = [];
+  const walk = (id: SculptorNodeId) => {
+    found.push(id);
+    for (const child of childrenOf(board, id)) walk(child.id);
+  };
+  walk(nodeId);
+  return found;
+};
+
+/**
+ * Whether what was typed turns up in a node.
+ *
+ * Title, note and kind, as §10 names them — and nothing else. The fields a
+ * writer defines on a column are deliberately not searched: they hold short
+ * values like *B* or *3*, and a search for "a" that lit half the board would
+ * make the whole control useless.
+ */
+export const nodeMatches = (node: SculptorNode, search: string): boolean => {
+  const wanted = search.trim().toLowerCase();
+  if (wanted.length === 0) return false;
+  return [node.title, node.note, node.kind].some((text) => text.toLowerCase().includes(wanted));
+};
+
+export interface BoardReading {
+  /** Ids drawn lit. Dimmed is simply not being in here. */
+  lit: Set<string>;
+  /** Whether anything is dimmed at all — nothing is dimmed by default. */
+  dimming: boolean;
+  /** What the search found, in the board's own order, for the jump-to list. */
+  hits: SculptorNode[];
+}
+
+/**
+ * Read a board through a view.
+ *
+ * Depth is not handled here: it changes the layout rather than the lighting,
+ * so `boardLayout` takes the view too and simply lays out fewer nodes.
+ */
+export const readBoard = (board: Board, view: BoardView): BoardReading => {
+  const search = view.search.trim();
+  const hits = search.length === 0 ? [] : board.nodes.filter((node) => nodeMatches(node, search));
+
+  const wants: Array<Set<string>> = [];
+
+  if (view.focusId !== null) {
+    wants.push(new Set(subtreeOf(board, view.focusId).map((id) => id as string)));
+  }
+  if (view.unboundOnly) {
+    wants.push(new Set(board.nodes.filter((node) => !boundToScript(node)).map((node) => node.id as string)));
+  }
+  if (search.length > 0) {
+    wants.push(new Set(hits.map((node) => node.id as string)));
+  }
+
+  if (wants.length === 0) {
+    // Nothing asked for: everything is lit, which is the same as nothing being
+    // dimmed. Said this way round so the renderer has one rule rather than two.
+    return { lit: new Set(board.nodes.map((node) => node.id as string)), dimming: false, hits };
+  }
+
+  // Two views at once mean the intersection: a writer asking for *ideas* and
+  // for *"diner"* wants the ideas with diner in them, not either.
+  const lit = new Set(
+    board.nodes
+      .map((node) => node.id as string)
+      .filter((id) => wants.every((wanted) => wanted.has(id))),
+  );
+
+  return { lit, dimming: true, hits };
 };

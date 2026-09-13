@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
+import { usePreference } from '../use-split';
 import {
   COLUMN_WIDTH,
   addBlock,
@@ -18,6 +19,8 @@ import {
   bindableUnits,
   blocksOf,
   boardLayout,
+  isFiltered,
+  readBoard,
   boardsOf,
   boundOf,
   columnOf,
@@ -58,6 +61,7 @@ import {
   type ProjectFile,
   type SculptorColumn,
   type SculptorNode,
+  type BoardView,
   type SculptorNodeId,
   type StructuralUnitId,
 } from '@vcwriter/domain';
@@ -181,6 +185,23 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
   const [removing, setRemoving] = useState<SculptorNodeId | null>(null);
   /** The shelf, folded out over the canvas rather than beside it (§5). */
   const [shelfOpen, setShelfOpen] = useState(false);
+
+  /**
+   * What the writer has asked to see (§10). Per machine rather than in the
+   * document: a filter is how somebody is reading the board this afternoon,
+   * not something about the story, and a collaborator opening it should not
+   * inherit somebody else's search.
+   */
+  const [depth, setDepth] = usePreference<number | null>('sculptor.depth', null);
+  const [unboundOnly, setUnboundOnly] = usePreference('sculptor.unbound', false);
+  const [focusId, setFocusId] = useState<SculptorNodeId | null>(null);
+  const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const boardView: BoardView = useMemo(
+    () => ({ depth, unboundOnly, focusId, search }),
+    [depth, unboundOnly, focusId, search],
+  );
   /** The node a connection is being drawn from, while one is (§7). */
   const [linking, setLinking] = useState<SculptorNodeId | null>(null);
   /**
@@ -217,7 +238,27 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
     if (open && boards.length === 0) onUpdate((current) => createBoard(current).file);
   }, [open, boards.length, onUpdate]);
 
-  const layout = useMemo(() => (board ? boardLayout(board) : null), [board]);
+  const layout = useMemo(() => (board ? boardLayout(board, boardView) : null), [board, boardView]);
+  const reading = useMemo(() => (board ? readBoard(board, boardView) : null), [board, boardView]);
+
+  const canvas = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * Put a node in the middle of the window (§10's *jump-to*).
+   *
+   * The pan is the sheet's offset inside the canvas, so centring is the node's
+   * own position negated and pushed back by half the window. A hit lit
+   * somewhere off the edge has not been found until the canvas has gone to it.
+   */
+  const goTo = (nodeId: SculptorNodeId) => {
+    const found = layout?.nodes.find((laid) => laid.node.id === nodeId);
+    const frame = canvas.current;
+    if (!found || !frame) return;
+    setPan({
+      x: frame.clientWidth / 2 - (found.x + COLUMN_WIDTH / 2) * UNIT * zoom,
+      y: frame.clientHeight / 2 - (found.y + found.headHeight / 2) * UNIT * zoom,
+    });
+  };
 
   const onPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     // Only the canvas itself pans; a node keeps its own clicks.
@@ -391,6 +432,134 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
         </button>
       </header>
 
+      {/* The views (§10), on a row of their own rather than crowded into the
+          toolbar above: these say how the board is being *read*, and the
+          toolbar says what is being *made*. */}
+      {board && layout ? (
+        <div className="sculpt-views">
+          <label className="sculpt-view">
+            <span className="muted small">Show</span>
+            <select
+              aria-label="How many columns to show"
+              value={depth === null ? 'all' : String(depth)}
+              onChange={(event) =>
+                setDepth(event.target.value === 'all' ? null : Number(event.target.value))
+              }
+            >
+              <option value="all">Everything</option>
+              {columnsOf(board).map((column, index) => (
+                <option key={column.id as string} value={index + 1}>
+                  {index === 0
+                    ? `${column.name || 'Structure'} alone`
+                    : `Down to ${column.name || `column ${index + 1}`}`}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button
+            type="button"
+            className={unboundOnly ? 'tool on' : 'tool'}
+            aria-pressed={unboundOnly}
+            title="Light what is still an idea, and dim what is already a scene in the script"
+            onClick={() => setUnboundOnly(!unboundOnly)}
+          >
+            Ideas only
+          </button>
+
+          {/* §10 calls this **Focus**, and the control cannot be: the
+              workspace's title bar already owns that word for its writing
+              mode, and two buttons reading *Focus* on one screen meaning
+              different things is worse than a plainer name. It is the
+              selected node's, because choosing one is how a writer says which
+              part of the story they mean. */}
+          <button
+            type="button"
+            className={focusId ? 'tool on' : 'tool'}
+            aria-pressed={focusId !== null}
+            disabled={!chosen && focusId === null}
+            title={
+              focusId
+                ? 'Light the whole board again'
+                : chosen
+                  ? `Light ${chosen.title || 'this node'} and everything under it, and dim the rest`
+                  : 'Choose a node to focus on'
+            }
+            onClick={() => setFocusId(focusId ? null : chosen?.id ?? null)}
+          >
+            {focusId ? 'Just this ✓' : 'Just this'}
+          </button>
+
+          <div className="sculpt-view sculpt-search">
+            <label className="muted small" htmlFor="sculpt-find">
+              Find
+            </label>
+            <input
+              id="sculpt-find"
+              value={search}
+              aria-label="Find a node by its title, note or kind"
+              placeholder="title, note or kind"
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setSearchOpen(true);
+              }}
+              onFocus={() => setSearchOpen(true)}
+            />
+
+            {/* Jump-to (§10): the hits as a list under the box they came from,
+                because a lit card somewhere off the canvas is not found until
+                the canvas has gone to it. */}
+            {searchOpen && reading && reading.hits.length > 0 ? (
+              <ul className="sculpt-found">
+                {reading.hits.slice(0, 12).map((node) => (
+                  <li key={node.id as string}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelected(node.id);
+                        goTo(node.id);
+                        setSearchOpen(false);
+                      }}
+                    >
+                      <span className="sculpt-found-title">{node.title.trim() || 'Untitled'}</span>
+                      <span className="muted small">{node.kind}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+
+          {reading && search.trim().length > 0 ? (
+            <span className="muted small sculpt-hits">
+              {reading.hits.length === 0
+                ? 'nothing'
+                : `${reading.hits.length} ${reading.hits.length === 1 ? 'node' : 'nodes'}`}
+            </span>
+          ) : null}
+
+          {/* One way out of all of it, because four controls left on is how a
+              writer ends up convinced the board has lost their work. */}
+          {isFiltered(boardView) ? (
+            <button
+              type="button"
+              className="ghost small"
+              title="Show the whole board again"
+              onClick={() => {
+                setDepth(null);
+                setUnboundOnly(false);
+                setFocusId(null);
+                setSearch('');
+                setSearchOpen(false);
+              }}
+            >
+              Clear
+            </button>
+          ) : null}
+
+        </div>
+      ) : null}
+
       <div className={shelfOpen ? 'sculptor-body with-shelf' : 'sculptor-body'}>
         {/* The shelf the Outliner has, for the same reason (addendum 06 §3),
             and with the outline on it to drag across from (§2).
@@ -413,6 +582,7 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
         ) : null}
 
         <div
+          ref={canvas}
           className={carryingAny ? 'sculpt-canvas carrying' : 'sculpt-canvas'}
           // The grid is a texture, so it zooms with what it is behind.
           style={{ backgroundSize: `${UNIT * zoom}px ${UNIT * zoom}px` }}
@@ -518,6 +688,9 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
                   laid={laid}
                   zoom={zoom}
                   selected={selected === laid.node.id}
+                  // Dimmed is the absence of being lit, and only ever when
+                  // something is actually being asked for (§10).
+                  dimmed={reading !== null && reading.dimming && !reading.lit.has(laid.node.id as string)}
                   linking={linking !== null}
                   linkingFrom={linking === laid.node.id}
                   onSelect={() => {
@@ -1233,6 +1406,7 @@ function Node({
   laid,
   zoom,
   selected,
+  dimmed,
   linking,
   linkingFrom,
   onSelect,
@@ -1250,6 +1424,8 @@ function Node({
   laid: LaidNode;
   zoom: number;
   selected: boolean;
+  /** Outside what the writer asked to see: drawn faint, never hidden (§10). */
+  dimmed: boolean;
   /** A connection is being drawn: every card is a place it could land (§7). */
   linking: boolean;
   linkingFrom: boolean;
@@ -1278,6 +1454,7 @@ function Node({
         'sculpt-node',
         end ? 'end' : '',
         selected ? 'selected' : '',
+        dimmed ? 'dimmed' : '',
         node.collapsed ? 'folded' : '',
         bound ? 'bound' : 'idea',
         linking && !linkingFrom ? 'landable' : '',

@@ -42,8 +42,19 @@ push live; the build takes a minute or two.
   they do — plus the card revision: a card opens as a dialog with its notes and
   who is in it, the × asks before anything goes (`whatGoesWith` in
   `sculptor.ts` says what would), and the research shelf folds out from the
-  left (§5, §9) — and §14.4 lists what is left: folding, focus, filters, search and
-  a mini-map, then Writers Room. §8, the export as an outline, is **withdrawn**
+  left (§5, §9) — and stage 9, **the views**, is built but for the mini-map: §17
+  says what it does. Folding was already in the layout (`boardLayout` has
+  honoured `collapsed` since stage 4, and a line into a fold already drew to
+  the folded card), so the new work is focus, filters and search — and the
+  design is one split: **depth hides, everything else dims**. A column is a
+  depth, so hiding one hides what is under it and the board is re-measured;
+  focus, *ideas only* and search never hide, because this is a tree and hiding
+  a parent would orphan its children. One lit set serves all three, so two at
+  once give the intersection. §10's *any subset* of columns is built as a
+  **prefix** of one, a tree having no coherent way to draw beats with no
+  scenes above them, and §10's **Focus** is labelled **Just this** because the
+  workspace's title bar already owns that word. Filters are per machine;
+  folding stays on the node. What is left is the mini-map, then Writers Room. §8, the export as an outline, is **withdrawn**
   — the Sculptor does not make outlines. §14 says why the first draft was
   wrong.
   `addendum-04-story-grid.md` is the Story Grid, the third tab of the

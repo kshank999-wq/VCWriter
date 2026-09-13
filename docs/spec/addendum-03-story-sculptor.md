@@ -326,7 +326,8 @@ it worth opening.
 7. **Built.** The writer's own connections, labelled.
 8. ~~Export as an outline~~ — **withdrawn** (§8). The Outliner is where a
    story becomes an outline, and material reaches it by being carried across.
-9. Folding, focus, filters, search, mini-map.
+9. **Built, except the mini-map.** Folding was already in the layout; focus,
+   filters and search are §17.
 10. Writers Room attribution and alternate boards (addendum 07). A board now
     syncs — addendum 07 §4, stage 0 — so what is left is Writers Room itself,
     which is specified and, past that stage, unbuilt.
@@ -519,3 +520,58 @@ observation and not one thing more. A line whose card is deleted goes with it,
 and so does one drawn into a column that is removed. A line into a **fold** is
 drawn to the folded card standing in for what is hidden, rather than
 disappearing, because folding should not look like losing something.
+
+## 17. The views (stage 9)
+
+`BoardView`, `readBoard` and `boardLayout`'s second argument in the domain;
+the row under the toolbar in `SculptorWindow.tsx`.
+
+**Folding was already built.** `boardLayout` has honoured `collapsed` since
+stage 4 — a folded node is one row tall and its children are not laid out at
+all — the fold control is on the card, and `standingFor` already draws a line
+into a fold to the folded card rather than letting it vanish (§4). Nothing was
+owed there.
+
+What is new is the other three, and the design is the split between them:
+
+- **Depth** genuinely hides, and is the only one that does. A column is a level
+  of detail, so hiding one hides everything under it; the board is re-measured
+  with fewer nodes and still cannot overlap, because §4 measures rather than
+  positions. *Structure alone* is §10's macro shape and it works.
+- **Focus**, **ideas only** and **search** never hide. They **dim**, which is
+  what §10 asks of focus and what the other two have to do as well: this is a
+  tree, and hiding a parent would orphan its children. A beat drawn with no
+  scene above it is worse than a bound scene drawn grey.
+
+One lit set serves all three, so two views at once give the **intersection** a
+writer would expect rather than two fights over the same card.
+
+§10 says *any subset* of columns. What is built is a **prefix** of one, because
+the columns are depths of a tree rather than independent layers: drawing column
+three without column two would put beats on the canvas with nothing above them,
+which is not a view of anything.
+
+**Search reads title, note and kind**, as §10 names them, and deliberately not
+the fields a writer defines on a column — those hold values like *B* or *3*,
+and a search for "a" that lit half the board would make the control useless.
+Its hits are a list under the box, because a card lit somewhere off the canvas
+is not found until the canvas has gone to it.
+
+The control §10 calls **Focus** is labelled **Just this**. The workspace's own
+title bar already owns the word *Focus* for its writing mode, and two buttons
+reading the same word on one screen meaning different things is worse than a
+plainer name. The concept is unchanged.
+
+Filters are remembered **per machine** (§12) rather than in the document: a
+filter is how somebody is reading the board this afternoon, not a fact about
+the story, and a collaborator opening it should not inherit somebody else's
+search. Folding stays on the node, where it already was — it changes the
+shape, and two people should see the same board.
+
+Driven in the built renderer: focus lit *The diner* and *The bill* and dimmed
+the rest; *Structure alone* drew one column and three blocks; *bill* lit one
+node and offered one place to jump to; **Clear** put all of it back.
+
+**The mini-map is not built.** It is the one part of stage 9 still owed, and
+the only one of the five that is about a board too big for the window rather
+than about reading the one in front of you.
