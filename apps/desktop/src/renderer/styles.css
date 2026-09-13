@@ -12,6 +12,11 @@
   --gold-deep: #8a6f2f;
   --red: #8b1c1c;
   --red-deep: #4d0f0f;
+  /* Used / not used in the Character Creator. Red and green because that is
+     what the reading is called and what a writer reads it as; a gold dot on a
+     gold screen said "done" to nobody. */
+  --green: #6f9e5a;
+  --green-bright: #8fc177;
   --text: #f1e7cf;
   --muted: #a3946f;
   --accent: var(--gold);

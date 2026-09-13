@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ARC_LINK_VERBS,
   ARC_LINK_VERB_NAMES,
@@ -20,6 +20,8 @@ import {
   arcBoard,
   beginArc,
   characterBoard,
+  characterRail,
+  railStanding,
   characterCategoriesInOrder,
   characterStanding,
   fileCharacterization,
@@ -62,6 +64,8 @@ import {
   type CharacterizationRow,
   type ManuscriptElementId,
   type ProjectFile,
+  type RailBlock,
+  type RailRow,
   type RelationshipKind,
   type RelationshipRow,
   type StoryLinkId,
@@ -147,8 +151,22 @@ export function CharacterCreator({
   };
   const [shelf, setShelf] = useState<Shelf | null>(null);
 
+  /**
+   * What the rail asked to open, and the whole of why clicking a red row is
+   * the same act as marking it used: it takes the writer to that piece of work
+   * with the **Where** panel already open, so saying where it landed is the
+   * next thing they see rather than something to go and find.
+   */
+  const [reveal, setReveal] = useState<{ kind: 'characterization' | 'arc_point'; id: string } | null>(
+    null,
+  );
+
   const board = useMemo(
     () => characterBoard({ characterId: characterId as string, file }),
+    [characterId, file],
+  );
+  const rail = useMemo(
+    () => characterRail({ characterId: characterId as string, file }),
     [characterId, file],
   );
 
@@ -204,39 +222,166 @@ export function CharacterCreator({
         ))}
       </nav>
 
-      {tab === 'overview' ? (
-        <Overview file={file} characterId={characterId} onUpdate={onUpdate} />
-      ) : tab === 'relationships' ? (
-        <Relationships file={file} characterId={characterId} onUpdate={onUpdate} />
-      ) : tab === 'arc' ? (
-        <Arc
-          file={file}
-          characterId={characterId}
-          currentBeatId={currentBeatId}
-          onUpdate={onUpdate}
-        />
-      ) : (
-        <div className="creator-traits">
-          <Traits
-            file={file}
-            characterId={characterId}
-            board={board}
-            chosen={chosen}
-            onChoose={setShelf}
-            onUpdate={onUpdate}
-          />
-          <Shown
-            file={file}
-            characterId={characterId}
-            trait={openTrait?.trait ?? null}
-            unfiled={chosen.kind === 'unfiled'}
-            rows={rows}
-            currentBeatId={currentBeatId}
-            onUpdate={onUpdate}
-          />
+      <div className="creator-body">
+        <div className="creator-main">
+          {tab === 'overview' ? (
+            <Overview file={file} characterId={characterId} onUpdate={onUpdate} />
+          ) : tab === 'relationships' ? (
+            <Relationships file={file} characterId={characterId} onUpdate={onUpdate} />
+          ) : tab === 'arc' ? (
+            <Arc
+              file={file}
+              characterId={characterId}
+              currentBeatId={currentBeatId}
+              reveal={reveal?.kind === 'arc_point' ? (reveal.id as ArcPointId) : null}
+              onRevealed={() => setReveal(null)}
+              onUpdate={onUpdate}
+            />
+          ) : (
+            <div className="creator-traits">
+              <Traits
+                file={file}
+                characterId={characterId}
+                board={board}
+                chosen={chosen}
+                onChoose={setShelf}
+                onUpdate={onUpdate}
+              />
+              <Shown
+                file={file}
+                characterId={characterId}
+                trait={openTrait?.trait ?? null}
+                unfiled={chosen.kind === 'unfiled'}
+                rows={rows}
+                currentBeatId={currentBeatId}
+                reveal={
+                  reveal?.kind === 'characterization' ? (reveal.id as CharacterizationItemId) : null
+                }
+                onRevealed={() => setReveal(null)}
+                onUpdate={onUpdate}
+              />
+            </div>
+          )}
         </div>
-      )}
+
+        <Rail
+          blocks={rail}
+          onOpen={(row) => {
+            if (!row.owner) return;
+            if (row.owner.kind === 'arc_point') {
+              setTab('arc');
+              setReveal({ kind: 'arc_point', id: row.owner.id });
+              return;
+            }
+            // Put the right trait on the shelf first, or the item would be
+            // opened on a tab that is not showing it.
+            const item = file.characterizationItems.find((one) => (one.id as string) === row.owner!.id);
+            setShelf(
+              item?.traitId ? { kind: 'trait', id: item.traitId } : { kind: 'unfiled' },
+            );
+            setTab('traits');
+            setReveal({ kind: 'characterization', id: row.owner.id });
+          }}
+        />
+      </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- the rail
+
+/**
+ * Everything this character has, down the side, each row red or green
+ * (addendum 08 §12).
+ *
+ * The Creator answers *what is this person like* one tab at a time. The rail
+ * answers the other question a writer has — **what have I made for them, and
+ * what is still owed** — without making them look in three places for it.
+ *
+ * There is no "mark as used" here, and that is the module's oldest rule rather
+ * than an omission (§2): green means the manuscript contains it, read off the
+ * usage links every time, so cutting the scene turns a row red by itself. What
+ * a click does instead is open the work with **Where** already showing, which
+ * is the same gesture and one press — and leaves the colour meaning something.
+ */
+function Rail({
+  blocks,
+  onOpen,
+}: {
+  blocks: RailBlock[];
+  onOpen(row: RailRow): void;
+}) {
+  return (
+    <aside className="creator-rail" aria-label="Everything for this character">
+      <header className="creator-rail-head">
+        <h4>Made for them</h4>
+        <span className="muted small">{railStanding(blocks)}</span>
+      </header>
+
+      {blocks.length === 0 ? (
+        <p className="muted small creator-rail-empty">
+          Nothing yet. A trait, an arc point or a note will turn up here.
+        </p>
+      ) : null}
+
+      {blocks.map((block) => (
+        <section key={block.key} className="creator-rail-block">
+          <h5>
+            <span>{block.title}</span>
+            {/* What it owes, not how much is in it: a count of rows says
+                nothing a writer is short of. */}
+            {block.onDeck > 0 ? (
+              <span className="creator-rail-owed" title="Still on deck">
+                {block.onDeck}
+              </span>
+            ) : null}
+          </h5>
+
+          {block.empty ? (
+            <p className="muted small">Nothing shows it yet.</p>
+          ) : (
+            <ul>
+              {block.rows.map((row, position) => {
+                const label = row.label.length > 0 ? row.label : 'Untitled';
+                if (!row.owner) {
+                  // A note: listed because it is theirs, and not a button
+                  // because there is nowhere in the Creator for it to go.
+                  return (
+                    <li key={`${block.key}:note:${row.noteId ?? position}`} className="creator-rail-note">
+                      <span className="creator-rail-label">{label}</span>
+                    </li>
+                  );
+                }
+                return (
+                  <li key={row.owner.id}>
+                    <button
+                      type="button"
+                      className="creator-rail-row"
+                      // The colour is the whole information here, so it is in
+                      // the name as well as in the dot — a dot alone says
+                      // nothing to somebody not looking at it.
+                      aria-label={`${label} — ${USAGE_WORDS[row.colour ?? 'red']}`}
+                      title={
+                        row.colour === 'green'
+                          ? 'In the writing — open it to see where'
+                          : 'On deck — open it and say where it landed'
+                      }
+                      onClick={() => onOpen(row)}
+                    >
+                      <span
+                        className={`creator-dot ${DOT_CLASS[row.colour ?? 'red']}`}
+                        aria-hidden="true"
+                      />
+                      <span className="creator-rail-label">{label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      ))}
+    </aside>
   );
 }
 
@@ -499,6 +644,8 @@ function Shown({
   unfiled,
   rows,
   currentBeatId,
+  reveal,
+  onRevealed,
   onUpdate,
 }: {
   file: ProjectFile;
@@ -507,11 +654,22 @@ function Shown({
   unfiled: boolean;
   rows: CharacterizationRow[];
   currentBeatId: BeatId | null;
+  /** Opened from the rail: show this one's *where* on arrival. */
+  reveal: CharacterizationItemId | null;
+  onRevealed(): void;
   onUpdate: CharacterCreatorProps['onUpdate'];
 }) {
   const [adding, setAdding] = useState('');
   /** Which row has its *where* open. One at a time: this is a detour, not a column. */
   const [open, setOpen] = useState<CharacterizationItemId | null>(null);
+
+  // The rail asked for one. Cleared as soon as it is honoured, so closing the
+  // panel by hand does not fight a prop that keeps re-opening it.
+  useEffect(() => {
+    if (!reveal) return;
+    setOpen(reveal);
+    onRevealed();
+  }, [reveal, onRevealed]);
   const traits = file.characterTraits.filter(
     (one) => (one.characterId as string) === (characterId as string) && !one.archived,
   );
@@ -909,17 +1067,28 @@ function Arc({
   file,
   characterId,
   currentBeatId,
+  reveal,
+  onRevealed,
   onUpdate,
 }: {
   file: ProjectFile;
   characterId: CharacterId;
   currentBeatId: BeatId | null;
+  /** Opened from the rail: show this point's *where* on arrival. */
+  reveal: ArcPointId | null;
+  onRevealed(): void;
   onUpdate: CharacterCreatorProps['onUpdate'];
 }) {
   const board = useMemo(() => arcBoard({ characterId: characterId as string, file }), [characterId, file]);
   const [adding, setAdding] = useState('');
   const [addingKind, setAddingKind] = useState<ArcPointKind>('movement');
   const [open, setOpen] = useState<ArcPointId | null>(null);
+
+  useEffect(() => {
+    if (!reveal) return;
+    setOpen(reveal);
+    onRevealed();
+  }, [reveal, onRevealed]);
   /** Which point has its cross-arc links open (§13). */
   const [affects, setAffects] = useState<ArcPointId | null>(null);
 

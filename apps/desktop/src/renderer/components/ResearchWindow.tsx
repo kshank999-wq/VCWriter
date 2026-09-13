@@ -435,39 +435,15 @@ export function ResearchBody({
             ))}
           </ul>
 
-          <h4>Folders</h4>
-          <ul className="research-tree">
-            {tree.map((folder) => (
-              <FolderNode
-                key={folder.category.id}
-                folder={folder}
-                selection={selection}
-                collapsed={collapsed}
-                onToggle={(id) =>
-                  setCollapsed((current) => {
-                    const next = new Set(current);
-                    if (next.has(id)) next.delete(id);
-                    else next.add(id);
-                    return next;
-                  })
-                }
-                onSelect={(id) => setSelection({ kind: 'folder', id })}
-                onUpdate={onUpdate}
-                dragging={dragging}
-                onDragStart={(id) => setDragging({ kind: 'folder', id })}
-                onDragEnd={() => setDragging(null)}
-                onDrop={dropOn}
-              />
-            ))}
-          </ul>
-
-          {/* The cast, by name, because the Creator is what a writer comes
-              here for and hunting through a folder for a button is not
-              finding it. The order is the order names are offered while a cue
-              is being typed: main characters first. */}
+          {/* The Character Creator, by the people in it. It is named rather
+              than called "Cast" because it is a thing the product *does* —
+              build a character — and a menu that says what a feature is called
+              is how somebody finds it after reading about it. The order is the
+              order names are offered while a cue is being typed: main
+              characters first. */}
           {cast.length > 0 ? (
             <>
-              <h4>Cast</h4>
+              <h4>Character Creator</h4>
               <ul className="research-views research-cast">
                 {cast.map((person) => (
                   <li key={person.id}>
@@ -566,6 +542,35 @@ export function ResearchBody({
                 </span>
               </button>
             </li>
+          </ul>
+
+          {/* Last, because they are the least of it. The research a writer
+              actually opens this window for has a name higher up the menu; the
+              folders are where the rest goes. */}
+          <h4>Folders</h4>
+          <ul className="research-tree">
+            {tree.map((folder) => (
+              <FolderNode
+                key={folder.category.id}
+                folder={folder}
+                selection={selection}
+                collapsed={collapsed}
+                onToggle={(id) =>
+                  setCollapsed((current) => {
+                    const next = new Set(current);
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                    return next;
+                  })
+                }
+                onSelect={(id) => setSelection({ kind: 'folder', id })}
+                onUpdate={onUpdate}
+                dragging={dragging}
+                onDragStart={(id) => setDragging({ kind: 'folder', id })}
+                onDragEnd={() => setDragging(null)}
+                onDrop={dropOn}
+              />
+            ))}
           </ul>
         </nav>
 

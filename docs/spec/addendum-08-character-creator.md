@@ -789,6 +789,49 @@ with Mara at *4 scenes · 5 speeches*, her span, and *away for 3 scenes after
 Sc. 1 EXT. LOT - LATER*, with **MAEVE** below under *Speaking, but not in the
 cast*.
 
+### Stage 14 — the rail, and the module by name
+
+`characterRail` / `railStanding` in the domain, `Rail` in `CharacterCreator.tsx`,
+and three changes to the research side menu.
+
+**The menu says what the feature is called.** *Cast* is a noun for a list of
+people; **Character Creator** is the thing the product does, and a writer who
+has read about it needs to find that word in the menu. The folders moved to the
+bottom of the menu in the same pass — they are the least of what this window is
+opened for, and they were sitting above the part that is.
+
+**The rail answers the other question.** The Creator says *what is this person
+like*, one tab at a time. What it could not say is **what have I made for them,
+and what is still owed** — that was spread across the Traits tab, the Arc tab
+and their notes, and a writer had to visit three places to total it up. The rail
+is one reading over all of it: a block per trait, a block for the arc, a block
+for the notes, every row red or green, and what each block still owes in its
+heading.
+
+**There is still no "mark as used", and there is still never going to be.** Ken
+asked for one, and the reason it is not here is §2: green means the manuscript
+contains it, read off the usage links every time, which is why cutting a scene
+turns a row red on its own with nothing running. A stored flag would let
+somebody mark a trait used that appears nowhere, and nothing would ever correct
+it — the colour would stop being a fact about the script and become a fact
+about who last clicked. So clicking a red row does what marking it used was
+*for*: it opens that piece of work with the **Where** panel already showing, so
+saying where it landed is the next thing on screen. One press, same gesture, and
+the colour still means something.
+
+**A note gets no dot**, and that is the same rule pointed the other way. A note
+is something the writer knows about the person, not something *shown* in a
+scene, so there is no claim about the manuscript to make about it. Inventing a
+colour there would teach a writer to distrust the colour everywhere else.
+
+The dots are now actually red and green. They were gold-for-used, which is the
+brand's colour for everything and therefore said *done* to nobody.
+
+Driven in the built renderer: the menu reads Everything · Character Creator ·
+Also · Folders; MARA's rail shows *2 still on deck*, Greedy owing one, a green
+row, a red row, a set-aside row and the unfiled pile; and clicking a row landed
+on the Traits tab with that trait chosen and **Where** open on *Pin it*.
+
 ## 11. What is left
 
 Nothing in §8. Two things §18 and §12 name are deliberately not built, and both

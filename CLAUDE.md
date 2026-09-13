@@ -137,8 +137,8 @@ push live; the build takes a minute or two.
   §19 says what each built stage does; §15 is the build order.
   `addendum-08-character-creator.md` is the Character Creator, the first module
   of the Research room, from Ken's own dev spec. **Complete: all ten stages
-  built, plus stages 11–13 — the way in, and the map and the review reading
-  the script** (0–5 were his MVP) —
+  built, plus stages 11–14 — the way in, the map and the review reading
+  the script, and the rail** (0–5 were his MVP) —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
   so the unit of work is the characterization item and a trait is a folder for
@@ -247,7 +247,22 @@ push live; the build takes a minute or two.
   the one rule (strip the extension, match whole) and returns a *list*, an alias
   being allowed to collide with a name — `castForNewEpisode`'s *carry whoever
   spoke* was the fourth copy and now asks it too, so there is no loose cue match
-  left in the domain. §3
+  left in the domain. Stage 14 is the **rail** and the module by
+  name: the research menu now says **Character Creator** rather than *Cast*
+  (the feature's name is what somebody looks for after reading about it) with
+  the folders moved to the bottom, and `characterRail` is one reading over
+  everything a person has — a block per trait, one for the arc, one for the
+  notes, every row red or green, each block's heading saying what it still
+  owes. Ken asked for a **mark as used** and it is still not there, for §2's
+  reason: green is read off the usage links, so cutting the scene turns a row
+  red by itself, and a stored flag would make the colour a fact about who last
+  clicked rather than about the script. Clicking a red row instead opens that
+  work with **Where** already showing, which is what marking it used was *for* —
+  one press, and the colour still means something. **A note gets no dot**, the
+  same rule pointed the other way: there is no manuscript claim to make about
+  something the writer merely knows. The dots are now actually red and green,
+  gold-for-used having been the brand's colour for everything and so said
+  *done* to nobody. §3
   says what already exists and is only being widened; §8 is the
   build order; §3.4 says why there is deliberately no module framework yet; §10
   says what each built stage does; §11 names the two things deliberately left

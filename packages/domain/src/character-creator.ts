@@ -1778,3 +1778,147 @@ export const otherArcPoints = (
         .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1)),
     }))
     .filter((entry) => entry.points.length > 0);
+
+// ------------------------------------------------------------------- the rail
+
+/**
+ * Everything one character has, as blocks, for the rail down the side of the
+ * Creator (addendum 08 §12).
+ *
+ * The rail exists because the Creator answers *what is this person like* one
+ * tab at a time, and a writer also needs the other question — **what have I
+ * made for them, and what is still owed** — without going and looking in three
+ * places. So this is one reading over all of it: traits and what shows them,
+ * the arc, and the notes filed about them.
+ *
+ * **The colour is still a reading.** Every row's red or green comes from
+ * `isUsed` over the usage links, exactly as the Traits tab's does, so cutting
+ * the scene turns a row red here with nothing running and nothing to keep in
+ * step. There is no stored flag behind any of it, which is §2 of this addendum
+ * and the reason the colour can be believed at all.
+ */
+
+/** One thing the writer made, and whether the manuscript contains it. */
+export interface RailRow {
+  /** What to pin, for the rows that can be pinned. Null for a note. */
+  owner: { kind: 'characterization' | 'arc_point'; id: string } | null;
+  /** The research note this row stands for, when it is one. */
+  noteId: string | null;
+  label: string;
+  /**
+   * Null for a note, and deliberately.
+   *
+   * A note is something the writer knows about the person, not something that
+   * gets *shown* in a scene, so there is no manuscript claim to make about it.
+   * Giving it a dot would mean inventing one, and a colour that means nothing
+   * in one block teaches the writer to distrust it in the others.
+   */
+  colour: UsageColour | null;
+}
+
+export interface RailBlock {
+  key: string;
+  title: string;
+  kind: 'trait' | 'unfiled' | 'arc' | 'notes';
+  /** The trait this block stands for, for opening it. Null for the rest. */
+  traitId: string | null;
+  rows: RailRow[];
+  /** Rows not in the writing yet — what this block still owes. */
+  onDeck: number;
+  /** Nothing under it at all: a thought started and not finished (§1). */
+  empty: boolean;
+}
+
+/** Notes filed about somebody, read off the story links either way round. */
+const notesAbout = (characterId: string, file: ProjectFile): RailRow[] => {
+  const wanted = file.links.filter((link) => {
+    const [note, person] =
+      link.from.type === 'research_item' ? [link.from, link.to] : [link.to, link.from];
+    return note.type === 'research_item' && person.type === 'character' && person.id === characterId;
+  });
+
+  const rows: RailRow[] = [];
+  for (const link of wanted) {
+    const noteId = link.from.type === 'research_item' ? link.from.id : link.to.id;
+    const item = file.researchItems.find((one) => (one.id as string) === noteId);
+    if (item) rows.push({ owner: null, noteId, label: item.title, colour: null });
+  }
+  return rows;
+};
+
+export const characterRail = (input: {
+  characterId: string;
+  file: ProjectFile;
+}): RailBlock[] => {
+  const { file, characterId } = input;
+  const board = characterBoard({ characterId, file });
+  const arc = arcBoard({ characterId, file });
+
+  const rowsOf = (items: CharacterizationRow[]): RailRow[] =>
+    items.map((row) => ({
+      owner: { kind: 'characterization' as const, id: row.item.id as string },
+      noteId: null,
+      label: row.item.text,
+      colour: row.colour,
+    }));
+
+  const owing = (rows: RailRow[]) => rows.filter((row) => row.colour === 'red').length;
+
+  const blocks: RailBlock[] = board.traits.map((entry) => {
+    const rows = rowsOf(entry.items);
+    return {
+      key: `trait:${entry.trait.id as string}`,
+      title: entry.trait.name,
+      kind: 'trait' as const,
+      traitId: entry.trait.id as string,
+      rows,
+      onDeck: owing(rows),
+      empty: entry.unshown,
+    };
+  });
+
+  if (board.unfiled.length > 0) {
+    const rows = rowsOf(board.unfiled);
+    blocks.push({
+      key: 'unfiled',
+      title: 'Noticed, not filed',
+      kind: 'unfiled',
+      traitId: null,
+      rows,
+      onDeck: owing(rows),
+      empty: false,
+    });
+  }
+
+  const arcRows: RailRow[] = [...arc.placed, ...arc.onDeck].map((row) => ({
+    owner: { kind: 'arc_point' as const, id: row.point.id as string },
+    noteId: null,
+    label: row.point.text,
+    colour: row.colour,
+  }));
+  if (arcRows.length > 0) {
+    blocks.push({
+      key: 'arc',
+      title: 'Arc',
+      kind: 'arc',
+      traitId: null,
+      rows: arcRows,
+      onDeck: owing(arcRows),
+      empty: false,
+    });
+  }
+
+  const notes = notesAbout(characterId, file);
+  if (notes.length > 0) {
+    blocks.push({ key: 'notes', title: 'Notes', kind: 'notes', traitId: null, rows: notes, onDeck: 0, empty: false });
+  }
+
+  return blocks;
+};
+
+/** What the rail owes, in one line, for the head of it. */
+export const railStanding = (blocks: readonly RailBlock[]): string => {
+  const owed = blocks.reduce((total, block) => total + block.onDeck, 0);
+  if (blocks.length === 0) return 'Nothing made for them yet';
+  return owed === 0 ? 'All of it is in the writing' : `${owed} still on deck`;
+};
