@@ -11,11 +11,12 @@ import { bareCue, type ImportedScript } from './importing.js';
 import type { ProjectFile } from './project-file.js';
 import type { ProjectFormat } from './entities/project.js';
 import type { Beat, StructuralUnit } from './entities/structure.js';
-import type { Character } from './entities/character.js';
+import type { Character, CharacterCategory } from './entities/character.js';
 import type { ResearchItem } from './entities/research.js';
 import type { ManuscriptElement } from './entities/manuscript.js';
 import type {
   BeatId,
+  CharacterCategoryId,
   CharacterId,
   LaneId,
   ManuscriptElementId,
@@ -71,14 +72,37 @@ const wordsIn = (text: string): number => text.trim().split(/\s+/).filter(Boolea
  * leads speak in the same order of magnitude as the busiest, the minor parts
  * do not. Everything is a proposal — the writer refiles anyone in a click.
  */
-const headingFor = (speeches: number, busiest: number, mainAtLeast: number, headings: number): number => {
-  // Named in the action and never given a line: a minor part by the only
-  // evidence the script offers, whoever else is in it.
-  if (speeches === 0) return Math.max(0, headings - 1);
-  if (speeches >= mainAtLeast || speeches >= busiest * 0.4) return 0;
-  // Three headings (a series) puts the middle band under "recurring".
-  if (headings > 2 && speeches >= busiest * 0.12) return 1;
-  return headings - 1;
+const headingFor = (speeches: number, busiest: number, mainAtLeast: number): string[] => {
+  // Named in the action and never given a line: background, by the only
+  // evidence the script offers. Somebody who never speaks is precisely who a
+  // writer does not need to flesh out.
+  if (speeches === 0) return ['Background characters', 'Minor characters'];
+  if (speeches >= mainAtLeast || speeches >= busiest * 0.4) return ['Main characters'];
+  // The band between the leads and the small parts is *recurring* in a series,
+  // which is the distinction a series actually makes — and simply minor
+  // anywhere else, which is why the fallback is named rather than positional.
+  if (speeches >= busiest * 0.12) return ['Recurring characters', 'Minor characters'];
+  return ['Minor characters'];
+};
+
+/**
+ * The first of those headings the project actually has.
+ *
+ * **Asked for by name rather than by position.** The headings are a list that
+ * grows — background arrived that way — and arithmetic on *how many* there are
+ * silently refiles a whole tier the day one more appears. Each band names its
+ * second choice too, because a screenplay has no *recurring* heading and the
+ * band below the leads is plainly minor there, not background.
+ */
+const namedHeading = (
+  headings: readonly CharacterCategory[],
+  names: readonly string[],
+): CharacterCategoryId | null => {
+  for (const name of names) {
+    const found = headings.find((heading) => heading.name === name);
+    if (found) return found.id;
+  }
+  return headings.at(-1)?.id ?? null;
 };
 
 /**
@@ -118,7 +142,7 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
     const heading =
       options.fileCast === false
         ? null
-        : (headings[headingFor(person.speeches, busiest, mainAtLeast, headings.length)]?.id ?? null);
+        : (namedHeading(headings, headingFor(person.speeches, busiest, mainAtLeast)) ?? null);
     return characterSchema.parse({
       id,
       projectId,

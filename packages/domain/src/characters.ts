@@ -8,10 +8,10 @@ import type { CharacterCategoryId } from './ids.js';
 /**
  * The cast, and how it is filed (addendum 02 §16).
  *
- * Every project keeps its people under headings: **main** characters and
- * **minor** ones, and a series has **recurring** ones in between — the
- * distinction a series actually makes, and the one that decides who carries
- * over into the next episode.
+ * Every project keeps its people under headings: **main** characters, **minor**
+ * ones and **background** ones, and a series has **recurring** characters in
+ * between the first two — the distinction a series actually makes, and the one
+ * that decides who carries over into the next episode.
  *
  * The headings are data. A writer can rename them, reorder them or add their
  * own ("The family", "The precinct"), and a character filed under none is
@@ -22,11 +22,24 @@ import type { CharacterCategoryId } from './ids.js';
  * they are who you are usually about to type.
  */
 
-/** The headings a new project starts with. A series makes one more distinction. */
+/**
+ * The headings a new project starts with. A series makes one more distinction.
+ *
+ * **Background last, and that is what it is for.** These headings order the
+ * names offered while a cue is being typed, so the waitress who says one line
+ * belongs at the bottom of that list rather than competing with the lead. It is
+ * also the tier a writer will want to leave alone — somebody with one line
+ * needs no trait, no arc and no attention from the Character Creator.
+ *
+ * Only new projects get these. An existing one keeps the headings it has, which
+ * is right: they are the writer's, and a heading appearing in a finished script
+ * because the software changed its mind would be the software rearranging
+ * somebody's cast.
+ */
 export const defaultCharacterCategories = (format: ProjectFormat): string[] =>
   format === 'series'
-    ? ['Main characters', 'Recurring characters', 'Minor characters']
-    : ['Main characters', 'Minor characters'];
+    ? ['Main characters', 'Recurring characters', 'Minor characters', 'Background characters']
+    : ['Main characters', 'Minor characters', 'Background characters'];
 
 export const characterCategoriesInOrder = (file: ProjectFile): CharacterCategory[] =>
   sortByOrderKey(file.characterCategories ?? []);

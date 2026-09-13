@@ -582,7 +582,7 @@ describe('the people a script names in its action', () => {
     expect(cast.map((person) => person.name)).toEqual(['MARA', 'HOLLIS']);
   });
 
-  it('files a silent character as a minor part, and says why', () => {
+  it('files a silent character as background, and says why', () => {
     const built = buildProjectFromImport({
       title: 'Blackout',
       author: '',
@@ -604,8 +604,13 @@ describe('the people a script names in its action', () => {
 
     const hollis = built.file.characters.find((person) => person.name === 'HOLLIS');
     expect(hollis?.description).toContain('no lines');
-    const minor = castByCategory(built.file).find((group) => group.name === 'Minor characters');
-    expect(minor?.characters.map((person) => person.name)).toEqual(['HOLLIS']);
+    // Named in the action and never given a line: background, by the only
+    // evidence the script offers — and precisely the person a writer does not
+    // need to flesh out.
+    const background = castByCategory(built.file).find(
+      (group) => group.name === 'Background characters',
+    );
+    expect(background?.characters.map((person) => person.name)).toEqual(['HOLLIS']);
   });
 
   it('binds an extended cue to the person it names', () => {

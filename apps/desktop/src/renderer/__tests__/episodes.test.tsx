@@ -187,13 +187,19 @@ describe('starting an episode', () => {
 });
 
 describe('the cast under its headings', () => {
-  it('shows a series’ three headings, and the unfiled last', () => {
+  it('shows a series’ four headings, and the unfiled last', () => {
     let file = cast(series(), 'MAEVE', 'Main characters');
     file = addCharacter(file, { name: 'PORTER' });
 
     render(<CastPanel file={file} onUpdate={() => {}} />);
     const headings = [...document.querySelectorAll('.cast-group-name')].map((node) => node.textContent);
-    expect(headings).toEqual(['Main characters', 'Recurring characters', 'Minor characters', 'Not filed']);
+    expect(headings).toEqual([
+      'Main characters',
+      'Recurring characters',
+      'Minor characters',
+      'Background characters',
+      'Not filed',
+    ]);
   });
 
   it('files someone under another heading, and keeps them when a heading goes', () => {

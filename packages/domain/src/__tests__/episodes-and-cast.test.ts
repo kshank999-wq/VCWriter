@@ -62,8 +62,17 @@ describe('the headings the cast is filed under', () => {
       'Main characters',
       'Recurring characters',
       'Minor characters',
+      'Background characters',
     ]);
-    expect(defaultCharacterCategories('screenplay')).toEqual(['Main characters', 'Minor characters']);
+    expect(defaultCharacterCategories('screenplay')).toEqual([
+      'Main characters',
+      'Minor characters',
+      'Background characters',
+    ]);
+    // Background is last on purpose: the headings order the names offered
+    // while a cue is being typed, and somebody with one line should not be
+    // competing with the lead.
+    expect(defaultCharacterCategories('screenplay').at(-1)).toBe('Background characters');
     expect(characterCategoriesInOrder(series()).map((entry) => entry.name)).toEqual(
       defaultCharacterCategories('series'),
     );
@@ -88,6 +97,7 @@ describe('the headings the cast is filed under', () => {
       'Main characters',
       'Recurring characters',
       'Minor characters',
+      'Background characters',
       'Not filed',
     ]);
     expect(groups[0]?.characters.map((person) => person.name)).toEqual(['MAEVE']);
