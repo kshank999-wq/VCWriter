@@ -181,6 +181,34 @@ describe('an episode', () => {
     expect(castOf(next, episode).map((person) => person.name)).toEqual(['THE FERRYMAN']);
   });
 
+  it('carries the person who spoke and not somebody whose name merely starts the same', () => {
+    // The rule used to be *does the cue start with this name*, which carried
+    // MAEVE into the next episode because MAEVENA spoke in this one.
+    let file = cast(series(), 'MAEVENA', 'Minor characters');
+    file = addEpisode(file, {
+      title: 'Pilot',
+      carry: { castFrom: [], castWhoSpoke: false, lanes: 'series', openSetups: false },
+    }).file;
+    file = speaks(file, episodes(file)[0]!.beats[0]!.id, 'MAEVENA');
+
+    const carry = { castFrom: [], castWhoSpoke: true, lanes: 'series' as const, openSetups: false };
+    const { file: next, episode } = addEpisode(file, { title: 'The Wreck', carry });
+    expect(castOf(next, episode).map((person) => person.name)).toEqual(['MAEVENA']);
+  });
+
+  it('still carries somebody whose cue wears an extension', () => {
+    let file = cast(series(), 'THE FERRYMAN', 'Minor characters');
+    file = addEpisode(file, {
+      title: 'Pilot',
+      carry: { castFrom: [], castWhoSpoke: false, lanes: 'series', openSetups: false },
+    }).file;
+    file = speaks(file, episodes(file)[0]!.beats[0]!.id, 'THE FERRYMAN (V.O.)');
+
+    const carry = { castFrom: [], castWhoSpoke: true, lanes: 'series' as const, openSetups: false };
+    const { file: next, episode } = addEpisode(file, { title: 'The Wreck', carry });
+    expect(castOf(next, episode).map((person) => person.name)).toEqual(['THE FERRYMAN']);
+  });
+
   it('plots on the series’ lanes, or starts a fresh one when asked', () => {
     const file = series();
     expect(addEpisode(file, { title: 'A', carry: { ...defaultEpisodeCarry(file), lanes: 'series' } }).file.lanes)

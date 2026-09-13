@@ -8,7 +8,7 @@ import type { TitlePage } from './entities/title-page.js';
 import { countWords } from './entities/manuscript.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { markerNumber, markerNoun, markerNumbering as numberingOf } from './markers.js';
-import { castByCategory, castInCueOrder, charactersIn } from './characters.js';
+import { castByCategory, castInCueOrder, charactersCalled, charactersIn } from './characters.js';
 import type { ProjectFile } from './project-file.js';
 import type { Beat, Lane, StructuralUnit, StoryMarker } from './entities/structure.js';
 import type { Character } from './entities/character.js';
@@ -223,19 +223,17 @@ export const castForNewEpisode = (file: ProjectFile, carry: EpisodeCarry): Chara
 
   if (carry.castWhoSpoke) {
     const last = episodes(file).at(-1);
-    const spoken = new Set(
-      (last?.beats ?? []).flatMap((beat) =>
-        beat.manuscript.elements
-          .filter((element) => element.type === 'character')
-          .map((element) => element.text.trim().toUpperCase()),
-      ),
-    );
-    for (const character of file.characters) {
-      if (character.archived) continue;
-      const named = [character.name, ...character.aliases].some((name) =>
-        [...spoken].some((cue) => cue.startsWith(name.trim().toUpperCase())),
-      );
-      if (named) cast.set(character.id as string, character.id);
+    for (const beat of last?.beats ?? []) {
+      for (const element of beat.manuscript.elements) {
+        if (element.type !== 'character') continue;
+        // The cast list's own rule: extensions and the dual caret stripped,
+        // then matched whole. Testing whether a cue *starts with* the name
+        // would carry MARA into the next episode because MARABEL spoke in
+        // this one.
+        for (const person of charactersCalled(file, element.text)) {
+          if (!person.archived) cast.set(person.id as string, person.id);
+        }
+      }
     }
   }
   return [...cast.values()];

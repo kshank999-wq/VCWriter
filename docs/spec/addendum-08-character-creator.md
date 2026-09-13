@@ -779,8 +779,10 @@ strip the extension and the dual caret, then match whole — so it is now one
 function, `charactersCalled`, and `peopleSpeakingIn` and `charactersInLane` both
 use it. It returns a *list* because an alias may collide with somebody else's
 name, and silently picking one of the two would put a speech in the wrong
-character's scene. (`castOf` in `episodes.ts` still carries the old rule; it is
-the same defect in a module this change did not touch.)
+character's scene. `castForNewEpisode`'s *carry whoever spoke* in `episodes.ts`
+carried the fourth copy of the same defect — a series would have pulled MAEVE
+into the next episode because MAEVENA spoke in this one — and now asks the same
+function. There is no loose cue match left in the domain.
 
 Driven in the real interface: a seven-scene fixture opens on **In the script**
 with Mara at *4 scenes · 5 speeches*, her span, and *away for 3 scenes after
