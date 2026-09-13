@@ -30,6 +30,7 @@ import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
 import { CastPanel } from './CastPanel';
 import { CharacterCreator } from './CharacterCreator';
+import { CharacterMap } from './CharacterMap';
 import { useModal } from '../use-modal';
 
 interface ResearchWindowProps {
@@ -50,7 +51,9 @@ type Selection =
   | { kind: 'view'; view: ResearchView }
   | { kind: 'folder'; id: ResearchCategoryId }
   | { kind: 'plots' }
-  | { kind: 'setups' };
+  | { kind: 'setups' }
+  /** The relationship mind map (addendum 08 §12) — a view of the whole cast. */
+  | { kind: 'charmap' };
 
 const VIEWS: ReadonlyArray<{ view: ResearchView; label: string }> = [
   { view: 'all', label: 'All research' },
@@ -210,7 +213,9 @@ export function ResearchBody({
   const title =
     selection.kind === 'view'
       ? (VIEWS.find((entry) => entry.view === selection.view)?.label ?? 'Research')
-      : selection.kind === 'plots'
+      : selection.kind === 'charmap'
+        ? 'Character map'
+        : selection.kind === 'plots'
         ? 'Plots'
         : selection.kind === 'setups'
           ? 'Setups & payoffs'
@@ -250,7 +255,13 @@ export function ResearchBody({
         </button>
       </header>
 
-      <div className={creator ? 'research-body creating' : 'research-body'}>
+      {/* The Creator and the map both want the detail pane's room as well as
+          their own: each has its own second column inside it. */}
+      <div
+        className={
+          creator || selection.kind === 'charmap' ? 'research-body creating' : 'research-body'
+        }
+      >
         {/* The side menu: what is not a place, then the folders. */}
         <nav className="research-side" aria-label="Research folders">
           <h4>Everything</h4>
@@ -318,6 +329,16 @@ export function ResearchBody({
                 <span className="count muted">{file.setupsPayoffs.filter((record) => !record.archived).length}</span>
               </button>
             </li>
+            <li>
+              <button
+                type="button"
+                className={selection.kind === 'charmap' ? 'folder-row selected' : 'folder-row'}
+                onClick={() => setSelection({ kind: 'charmap' })}
+              >
+                <span className="folder-name">Character map</span>
+                <span className="count muted">{file.characterRelationships.length}</span>
+              </button>
+            </li>
           </ul>
         </nav>
 
@@ -328,6 +349,7 @@ export function ResearchBody({
               file={file}
               characterId={creator.id}
               currentBeatId={currentBeatId}
+              backLabel={selection.kind === 'charmap' ? 'Map' : 'Cast'}
               onUpdate={onUpdate}
               onBack={() => setCreatorFor(null)}
             />
@@ -335,7 +357,7 @@ export function ResearchBody({
             <>
           <header className="research-contents-head">
             <h3>{title}</h3>
-            {selection.kind === 'plots' || selection.kind === 'setups' ? null : (
+            {selection.kind === 'plots' || selection.kind === 'setups' || selection.kind === 'charmap' ? null : (
               <span className="muted">
                 {items.length} {items.length === 1 ? 'note' : 'notes'}
                 {query.length > 0 ? ' found' : ''}
@@ -353,7 +375,18 @@ export function ResearchBody({
             </div>
           ) : null}
 
-          {selection.kind === 'plots' ? (
+          {selection.kind === 'charmap' ? (
+            <CharacterMap
+              file={file}
+              onUpdate={onUpdate}
+              // Opening somebody from the map leaves the selection alone: the
+              // Creator takes the pane whatever the menu is pointed at, and
+              // changing the selection here would trip the effect that closes
+              // it. Pressing back returns to the map, which is where they came
+              // from.
+              onOpenCreator={setCreatorFor}
+            />
+          ) : selection.kind === 'plots' ? (
             <Plots file={file} onUpdate={onUpdate} />
           ) : selection.kind === 'setups' ? (
             <div className="research-embedded">
@@ -406,7 +439,11 @@ export function ResearchBody({
 
         {/* The thing itself. The Creator has the whole pane, so there is no
             second selection to show beside it. */}
-        <aside className="research-detail" aria-label="Detail" hidden={creator !== null}>
+        <aside
+          className="research-detail"
+          aria-label="Detail"
+          hidden={creator !== null || selection.kind === 'charmap'}
+        >
           {selectedItem ? (
             <Detail
               file={file}

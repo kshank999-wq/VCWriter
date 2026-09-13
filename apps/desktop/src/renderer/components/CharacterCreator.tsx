@@ -88,7 +88,9 @@ interface CharacterCreatorProps {
    * one click, since most of the time somebody is pinning what they just wrote.
    */
   currentBeatId: BeatId | null;
-  /** Back to the cast list this was opened from. */
+  /** What to call the way out — the cast list, or the map it was opened from. */
+  backLabel?: string;
+  /** Back to wherever this was opened from. */
   onBack(): void;
 }
 
@@ -107,6 +109,7 @@ export function CharacterCreator({
   file,
   characterId,
   currentBeatId,
+  backLabel = 'Cast',
   onUpdate,
   onBack,
 }: CharacterCreatorProps) {
@@ -139,7 +142,7 @@ export function CharacterCreator({
     <div className="creator">
       <header className="creator-head">
         <button type="button" className="ghost small" onClick={onBack}>
-          ‹ Cast
+          ‹ {backLabel}
         </button>
         <InlineText
           value={person.name}

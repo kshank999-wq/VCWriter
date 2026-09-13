@@ -136,7 +136,7 @@ push live; the build takes a minute or two.
   0038 is the owner's switch.
   §19 says what each built stage does; §15 is the build order.
   `addendum-08-character-creator.md` is the Character Creator, the first module
-  of the Research room, from Ken's own dev spec. **Stages 0–7 built** (0–5 were
+  of the Research room, from Ken's own dev spec. **Stages 0–8 built** (0–5 were
   his MVP) —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
@@ -194,7 +194,15 @@ push live; the build takes a minute or two.
   manipulating A* — and a row per pair would have to pick a sentence. An
   unanswered reading offers *+ The other way*, which opens the reverse **empty**,
   since copying the description across would put the first person's words in the
-  second person's mouth. §3
+  second person's mouth. Stage 8 is the mind map
+  (`packages/domain/character-map.ts`, `CharacterMap.tsx`, reached from
+  **Character map** in the Research menu): **nothing about the picture is
+  stored** — the Sculptor's board keeps x and y because arranging it is the
+  work, while this is a reading of the relationships, so the layout is computed
+  every time and a new character appears without anybody dragging one. One line
+  per pair with a label at each end (the promise §3.1 made), and clicking the
+  line is the only place in the product where both readings can be edited side
+  by side. §3
   says what already exists and is only being widened; §8 is the
   build order; §3.4 says why there is deliberately no module framework yet; §10
   says what each built stage does.

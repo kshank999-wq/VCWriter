@@ -1,6 +1,6 @@
 # Addendum 08 — Character Creator
 
-Status: **stages 0–7 built** (0–5 were Ken's MVP), September 2026. From his
+Status: **stages 0–8 built** (0–5 were Ken's MVP), September 2026. From his
 *VC Writer Character Creator Development Specification* — the first module of
 the Research room. Extends §7 (research), §8 (structure) and §19 of the master specification,
 and uses the typed link system §7.4 already built.
@@ -203,7 +203,7 @@ interrupts writing to say a character is underdeveloped.
 6. **Built.** Arc-to-plot: the on-deck queue, assignment, and the Related
    Elements box (§10).
 7. **Built.** Relationships (§11).
-8. The relationship mind map (§12).
+8. **Built.** The relationship mind map (§12).
 9. Cross-character arc links (§13).
 10. Search, filters, the review modes and the Unused Character Material
     report (§18).
@@ -544,3 +544,47 @@ Driven in the real interface, and the driver's DOM dump is the proof that
 matters: Mara → Deakins reads **Friend**, *trusts him completely*; the answered
 reverse reads **Dependency**, *working her, carefully*, with its history still
 empty. Two records, two sentences, no merging.
+
+### Stage 8 — the mind map
+
+`packages/domain/src/character-map.ts`, and `CharacterMap.tsx` reached from
+**Character map** in the Research window's menu, beside Plots and Setups.
+
+**Nothing about the picture is stored, and that is the decision.** The Story
+Sculptor's board keeps x and y because arranging it *is* the work; this is a
+reading of the relationships, so the layout is computed every time. A new
+character appears without anybody dragging one, a deleted relationship closes
+the gap by itself, and there is no second copy of the cast to drift out of step
+with the first. If somebody later wants to arrange it by hand, that is a
+different feature and it will need the Sculptor's machinery, not this.
+
+**One line per pair, with a label at each end** — which §3.1 promised a stage
+ago. Two people may read each other differently, so two overlapping lines
+carrying contradictory labels would hide the very thing the two records exist to
+show. The label sits a third of the way along from the person whose reading it
+is, so it is obvious which sentence belongs to whom.
+
+**Clicking a line opens both readings at once**, and that panel is the only
+place in the product where the two directions can be edited side by side —
+*she trusts him* above *he is working her* is the thing a map is opened to see.
+Clicking a name opens the Creator on that person, and the way out then says
+**‹ Map**, because that is where they came from.
+
+**Focus is a reading of the graph, not a filter on the cast** (§12's *expand
+outward*): the person in the middle, whoever they are joined to around them, and
+at depth 2 whoever *those* people are joined to. The graph is walked in both
+directions — being read by somebody connects you to them as much as reading them
+does.
+
+**A lane filter counts somebody as in a plot because they speak there**
+(`charactersInLane`), the same way the rest of the module works out who is in a
+beat, rather than because anybody filed them under it. §12's scene-range filter
+is not built: the lane answers the same question for the way this product is
+organised, and a range would need a second control for a rarer question.
+
+**A character nothing joins to is still drawn**, because a person no line
+reaches is a fact about the story worth seeing. A large cast can turn them off
+with one tick.
+
+A 1.5px line is hard to hit with a pointer, so a fat transparent line sits under
+each edge and takes the clicks.
