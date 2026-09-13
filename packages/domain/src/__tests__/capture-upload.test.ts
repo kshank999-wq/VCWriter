@@ -5,6 +5,8 @@ import {
   mayStillEdit,
   uploadToRow,
 } from '../capture-upload.js';
+import { SYNC_TABLES, toRows } from '../sync-mapping.js';
+import { createProjectFile } from '../project-file.js';
 
 /**
  * The upload contract (addendum 09 §6, stage 2).
@@ -109,5 +111,53 @@ describe('whether the phone may still change a note', () => {
     // nothing about the project and everything about where the work came from.
     expect(mayStillEdit('approved')).toBe(false);
     expect(mayStillEdit('rejected')).toBe(false);
+  });
+});
+
+/**
+ * Starting a project from the phone (addendum 09 §3.1, stage 5).
+ *
+ * The route runs `createProjectFile` and writes `toRows`, which is the same
+ * pair the desktop's push uses. What these hold is why that matters: a phone
+ * that wrote a bare `projects` row would have its own thinner idea of what a
+ * project is, and the difference would only surface the first time somebody
+ * opened it at a desk and found no folders in it.
+ */
+describe('a project started on the phone', () => {
+  const owner = '5dfae143-9962-401f-9a36-b397fbbcb3d9';
+  const started = () =>
+    toRows(createProjectFile({ title: 'The Wreck', format: 'screenplay', ownerId: owner as never }));
+
+  it('arrives with everything a desktop expects to find', () => {
+    const rows = started();
+
+    // A scene to write in, the beat inside it, and the lane it sits on.
+    expect(rows.units.length).toBeGreaterThan(0);
+    expect(rows.beats.length).toBeGreaterThan(0);
+    expect(rows.lanes.length).toBeGreaterThan(0);
+    // The research folders and the cast headings, which is what the Mobile App
+    // inbox drops notes into.
+    expect(rows.researchCategories.length).toBeGreaterThan(0);
+    expect(rows.characterCategories.length).toBeGreaterThan(0);
+  });
+
+  it('writes a row for every collection the sync knows about', () => {
+    // Not that each is full — a new project has no characters — but that the
+    // shape is the whole shape, so nothing is silently missing.
+    const rows = started();
+    for (const key of Object.keys(SYNC_TABLES)) {
+      expect(Array.isArray(rows[key as keyof typeof SYNC_TABLES])).toBe(true);
+    }
+  });
+
+  it('belongs to whoever asked for it', () => {
+    expect(started().project['owner_id']).toBe(owner);
+  });
+
+  it('has the research folders the five categories file into', () => {
+    const keys = started().researchCategories.map((row) => row['system_key']);
+    for (const key of ['characters', 'ideas', 'plot_points', 'themes']) {
+      expect(keys).toContain(key);
+    }
   });
 });

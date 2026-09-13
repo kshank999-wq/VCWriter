@@ -1,7 +1,7 @@
 # Addendum 09 — The Companion App
 
-Status: **stages 0–3 built** — the two fields, the desktop Mobile App area with
-drag-and-drop, the upload contract, and review on the phone. September 2026. From Ken's *VC Writer
+Status: **stages 0–3 and 5 built.** Only stage 4 — voice — is left, and it is
+the one waiting on §5's decision. September 2026. From Ken's *VC Writer
 Companion App — Simplified Development Specification v1.0*, written as a
 coding/quoting handoff. Extends spec §9 and §11 (capture and sync), and the
 Mobile App area it asks for is a new part of the desktop.
@@ -157,10 +157,10 @@ screen itself is built.
 3. ✅ **Review on the phone** — see §7.
 4. **Voice capture** — §5 and §6: the category command, the live transcription,
    the read-back, the correction loop. **Needs §5's decision.**
-5. **Project page** — §3.1, including *create a new project* from the phone.
+5. ✅ **Project page** — see §7.
 
-§13's acceptance criteria are met at the end of 5, not before — stage 3 gives a
-working typed-capture product, which is worth having on its own and is what a
+§13's acceptance criteria are met once stage 4 lands; everything else on the
+list is standing. Typed capture is a working product on its own, and is what a
 first release can be if the platform decision takes a while.
 
 ## 7. What stages 0 and 1 built
@@ -270,6 +270,39 @@ Driven at phone width: the capture screen asks *Project*, *This is a* and
 change it there*. Looking at it caught two things the tests could not: the name
 field had no box (only `select` and the textarea were styled) and the chips had
 no outline, because the variable I reached for does not exist in this theme.
+
+### Stage 5 — the project page
+
+`project-page.tsx`, and `GET`/`POST /api/notes/projects`.
+
+**The app opens here, always.** Ken's §2 puts *project first* at the top of the
+UX principles, and building it as a picker above the microphone quietly broke
+that: a writer could dictate for a minute into whichever script was selected
+last. It is now the first screen, and past it every screen carries the project's
+name and the way back — because project-first is a promise, not a first step.
+
+The one they last captured into is **marked rather than pre-opened**. Skipping
+the question would put the picker back where it was, in effect if not in
+pixels.
+
+**A new project is made by the same function that makes one on the desktop.**
+`createProjectFile` builds the whole document — the opening scene, its beat, the
+plot lane, the research folders, the cast headings — and `toRows` says what that
+is in the database, written in `SYNC_TABLES` declaration order for the same
+reason the desktop's push uses it. A route that wrote a bare `projects` row
+instead would give the phone a second, thinner idea of what a project is, and
+the difference would surface the first time somebody opened it at a desk and
+found no folders in it. If any collection fails to insert, the project row is
+deleted and its children go with it on the cascades: half a project is worse
+than none.
+
+One thing went with the picker: the phone can no longer file a note under **no
+project**. The column still allows it and the desktop still routes such a note,
+but §3.1 is explicit that every captured note belongs to a selected project, so
+the phone no longer offers the state.
+
+Driven at phone width: the list, the name-and-format form, and the capture
+screen behind *‹ Projects · Blackout*.
 
 ## 8. What this addendum deliberately does not do
 

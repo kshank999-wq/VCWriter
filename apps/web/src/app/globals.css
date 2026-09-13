@@ -388,9 +388,11 @@ button {
   letter-spacing: -0.02em;
 }
 
+/* One field per row since the Project picker moved out to its own screen
+   (addendum 09 §3.1): a spoken name is the one thing here that must not be
+   truncated, and half a phone is where THE FERRYMAN becomes THE FERR. */
 .notes-pickers {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
@@ -1580,12 +1582,6 @@ p.room-stamp {
   font-weight: 600;
 }
 
-/* The spoken name gets the full width: it is a name, and truncating one to
-   half a phone is how MARISOL becomes MARIS. */
-.notes-pickers .field:last-child {
-  grid-column: 1 / -1;
-}
-
 .notes-review {
   display: grid;
   gap: 14px;
@@ -1663,4 +1659,66 @@ p.room-stamp {
   border-color: var(--red);
   color: var(--gold-bright);
   background: var(--red);
+}
+
+/* The Project Page (addendum 09 §3.1): where the app opens, every time. */
+.notes-projects {
+  display: grid;
+  gap: 12px;
+}
+
+.notes-project-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.notes-project {
+  width: 100%;
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The one they were last capturing into. Marked rather than pre-opened: the
+   writer should always see which script they are about to talk into. */
+.notes-project.chosen {
+  border-color: var(--gold);
+}
+
+.notes-project-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.notes-new-project {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+}
+
+/* Which script this is, and the way back — carried on every screen past the
+   list, because project-first is a promise rather than a first step. */
+.notes-chosen {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.notes-back {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--gold);
+  font: inherit;
+  cursor: pointer;
 }

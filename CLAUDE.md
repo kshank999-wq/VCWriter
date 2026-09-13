@@ -253,7 +253,7 @@ push live; the build takes a minute or two.
   says what each built stage does; §11 names the two things deliberately left
   out (a scene-range filter on the map, and drag-and-drop for assigning).
   `addendum-09-companion-app.md` is the phone, from Ken's own *Companion App —
-  Simplified Development Specification v1.0*. **Stages 0–3 built.**
+  Simplified Development Specification v1.0*. **Stages 0–3 and 5 built; only stage 4, voice, is left.**
   §1 is the rule the whole thing hangs off — **the phone captures and the
   desktop places** — which is his §12 said from the phone's end, and is what
   lets the app stay a voice notebook: an app that never decides where a thought
@@ -301,7 +301,16 @@ push live; the build takes a minute or two.
   person a sentence, and RLS refuses underneath both. Reading is untouched, so
   §9's reviewable copy survives. Proved live and rolled back: a waiting note
   could be corrected and deleted and still approved by the desktop; a placed one
-  could be neither, and stayed readable.
+  could be neither, and stayed readable. Stage 5 is `project-page.tsx` and
+  `/api/notes/projects`: **the app opens on the project list, always**, because
+  his §2's *project first* was quietly broken by building it as a picker above
+  the microphone — a writer could dictate a minute into whatever was selected
+  last. The last-used one is **marked rather than pre-opened**. A new project is
+  made by `createProjectFile` + `toRows`, the same pair the desktop's push
+  uses, so the phone cannot grow a second thinner idea of what a project is; a
+  failed insert deletes the project row and the cascades take the rest, since
+  half a project is worse than none. The phone no longer offers **no project**,
+  which the column still allows and the desktop still routes.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

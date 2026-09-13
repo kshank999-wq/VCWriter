@@ -14,6 +14,7 @@ import {
 } from '@/lib/capture-queue';
 import { isDictationSupported, startDictation, type DictationSession } from '@/lib/dictation';
 import { NotesReview } from './notes-review';
+import { ProjectPage, type ProjectSummary } from './project-page';
 import {
   CAPTURE_CATEGORIES,
   CAPTURE_CATEGORY_NAMES,
@@ -36,21 +37,25 @@ import {
  * the words.
  */
 
-interface ProjectSummary {
-  id: string;
-  title: string;
-}
+type Screen = 'projects' | 'capture' | 'review';
 
-type Screen = 'capture' | 'review';
+/**
+ * The project they were last capturing into (addendum 09 §3.1).
+ *
+ * Remembered so the Project Page can *mark* it, never so the app can skip
+ * asking: §2's **project first** means a writer sees which script they are
+ * about to talk into, every time.
+ */
+const LAST_PROJECT = 'vcwriter-notes-project';
 
 export default function CaptureApp() {
   const supabase = useRef(browserClient()).current;
 
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [projectId, setProjectId] = useState<string | null>(null);
-  const [screen, setScreen] = useState<Screen>('capture');
+  const [project, setProject] = useState<ProjectSummary | null>(null);
+  const [lastProjectId, setLastProjectId] = useState<string | null>(null);
+  const [screen, setScreen] = useState<Screen>('projects');
   const [category, setCategory] = useState<CaptureCategory>('idea');
   const [subjectName, setSubjectName] = useState('');
 
@@ -113,15 +118,10 @@ export default function CaptureApp() {
       } = await supabase.auth.getUser();
       if (!active) return;
       setEmail(user?.email ?? null);
-
-      if (user) {
-        const { data } = await supabase.from('projects').select('id, title').order('updated_at', {
-          ascending: false,
-        });
-        if (!active) return;
-        const rows = (data ?? []) as ProjectSummary[];
-        setProjects(rows);
-        setProjectId((current) => current ?? rows[0]?.id ?? null);
+      try {
+        setLastProjectId(localStorage.getItem(LAST_PROJECT));
+      } catch {
+        // A locked-down browser is not a reason to fail to open.
       }
 
       await refreshQueue();
@@ -180,7 +180,7 @@ export default function CaptureApp() {
     session.current?.stop();
     const capture: QueuedCapture = {
       clientCaptureId: newClientCaptureId(),
-      projectId,
+      projectId: project?.id ?? null,
       rawText: content,
       source: dictating ? 'mobile_voice' : 'mobile_text',
       capturedAt: new Date().toISOString(),
@@ -228,46 +228,64 @@ export default function CaptureApp() {
   return (
     <div className="notes">
       <header className="notes-header">
-        <h1>{screen === 'capture' ? 'Capture' : 'Your notes'}</h1>
+        <h1>
+          {screen === 'projects' ? 'Projects' : screen === 'capture' ? 'Capture' : 'Your notes'}
+        </h1>
         <span className="muted">{email}</span>
       </header>
 
-      <nav className="notes-tabs" aria-label="Notes">
-        <button
-          type="button"
-          className={screen === 'capture' ? 'notes-tab selected' : 'notes-tab'}
-          aria-current={screen === 'capture' ? 'page' : undefined}
-          onClick={() => setScreen('capture')}
-        >
-          Capture
-        </button>
-        <button
-          type="button"
-          className={screen === 'review' ? 'notes-tab selected' : 'notes-tab'}
-          aria-current={screen === 'review' ? 'page' : undefined}
-          onClick={() => setScreen('review')}
-        >
-          Review
-        </button>
-      </nav>
+      {/* Which script this is, and the way back to the list. Always visible
+          once one is chosen, because §2's project-first is a promise that the
+          writer can always see what they are about to talk into. */}
+      {screen !== 'projects' && project ? (
+        <div className="notes-chosen">
+          <button type="button" className="notes-back" onClick={() => setScreen('projects')}>
+            ‹ Projects
+          </button>
+          <strong>{project.title || 'Untitled'}</strong>
+        </div>
+      ) : null}
 
-      {screen === 'review' ? <NotesReview projectId={projectId} /> : null}
+      {screen === 'projects' ? (
+        <ProjectPage
+          chosenId={lastProjectId}
+          onChoose={(chosen) => {
+            setProject(chosen);
+            setLastProjectId(chosen.id);
+            try {
+              localStorage.setItem(LAST_PROJECT, chosen.id);
+            } catch {
+              // Remembering is a convenience; not remembering is not a failure.
+            }
+            setScreen('capture');
+          }}
+        />
+      ) : (
+        <nav className="notes-tabs" aria-label="Notes">
+          <button
+            type="button"
+            className={screen === 'capture' ? 'notes-tab selected' : 'notes-tab'}
+            aria-current={screen === 'capture' ? 'page' : undefined}
+            onClick={() => setScreen('capture')}
+          >
+            Capture
+          </button>
+          <button
+            type="button"
+            className={screen === 'review' ? 'notes-tab selected' : 'notes-tab'}
+            aria-current={screen === 'review' ? 'page' : undefined}
+            onClick={() => setScreen('review')}
+          >
+            Review
+          </button>
+        </nav>
+      )}
+
+      {screen === 'review' ? <NotesReview projectId={project?.id ?? null} /> : null}
 
       {screen === 'capture' ? (
         <>
       <div className="notes-pickers">
-          <label className="field">
-            <span>Project</span>
-            <select value={projectId ?? ''} onChange={(event) => setProjectId(event.target.value || null)}>
-              <option value="">Unassigned — decide later</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
-            </select>
-          </label>
-  
           <label className="field">
             <span>This is a</span>
             <select value={category} onChange={(event) => setCategory(event.target.value as CaptureCategory)}>
