@@ -325,7 +325,24 @@ push live; the build takes a minute or two.
   old wording back, because a model choosing between replacing and appending
   will one day throw a sentence away silently. The screen's largest type is now
   what is about to be filed, **Read it back** speaks it exactly as it stands,
-  and the line under the buttons names the five commands.
+  and the line under the buttons names the five commands. §8 is **dictation at
+  the desk** — spec §9's first bullet, built here because it shares the reading:
+  `packages/domain/src/spoken-script.ts`, and the fact that makes it necessary
+  is that **Return and Tab are handled on keydown and dictated text never
+  presses a key**, so without it a spoken scene lands as one action paragraph
+  with the newlines buried in it. The clipboard has had the answer since the
+  reformat tool — text arriving in bulk becomes typed elements — and dictation
+  is a paste through a different door. **A command is a sentence of its own**,
+  so *Scene heading* starts one and *the action was over by then* does not; a
+  cue is the one thing edited rather than transcribed, because the cast is noted
+  from cues and *Mara.* would file a second, punctuated person. **Which
+  recogniser there is gets answered by trying**: the API is present in Electron
+  and does not work there, `window.vcwriter` is deliberately identical in both
+  so it may not be sniffed to guess the platform, and the first network failure
+  is the answer — after it the app names the system's dictation, on which *new
+  line* works and naming a style aloud cannot, and the interface says so. The
+  control is opt-in per surface (`dictation` on `BeatBody`), the Script drawing
+  every beat with one having put nine of them down a short script.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

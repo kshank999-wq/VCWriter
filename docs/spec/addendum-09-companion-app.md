@@ -1,7 +1,8 @@
 # Addendum 09 — The Companion App
 
-Status: **stages 0–3 and 5 built.** Only stage 4 — voice — is left, and it is
-the one waiting on §5's decision. September 2026. From Ken's *VC Writer
+Status: **all six stages built**, and §8 besides — dictation at the desk, which
+is spec §9's first bullet rather than this app's, built here because it shares
+the reading. September 2026. From Ken's *VC Writer
 Companion App — Simplified Development Specification v1.0*, written as a
 coding/quoting handoff. Extends spec §9 and §11 (capture and sync), and the
 Mobile App area it asks for is a new part of the desktop.
@@ -164,13 +165,15 @@ identical.
 
 0. ✅ **The two fields** — migration 0041 (`category`, `subject_name`), the
    domain schema, the round trip. Nothing visible.
-1. ✅ **The desktop Mobile App area** — see §8.
+1. ✅ **The desktop Mobile App area** — see §7.
 2. ✅ **The upload contract** — see §7.
 3. ✅ **Review on the phone** — see §7.
 4. ✅ **Voice capture** — see §7.
 5. ✅ **Project page** — see §7.
 
-**All six stages are built.** §13's acceptance criteria are met.
+**All six stages are built.** §13's acceptance criteria are met. §8 is the
+desk's own dictation, which the phone's stage 4 made possible but which belongs
+to spec §9 rather than to this app.
 
 ## 7. What each stage built
 
@@ -410,7 +413,69 @@ the phone no longer offers the state.
 Driven at phone width: the list, the name-and-format form, and the capture
 screen behind *‹ Projects · Blackout*.
 
-## 8. What this addendum deliberately does not do
+## 8. Dictation at the desk
+
+The phone's stage 4 finished the *phone*. Spec §9's first bullet — **desktop
+writing areas support dictation as an alternative to typing** — is a different
+thing, and this is where it was built, because it shares the reading.
+
+`packages/domain/src/spoken-script.ts` is that reading, and the reason it has to
+exist is a fact about where the writing rules live: **Return and Tab are handled
+on keydown, and dictated text never presses a key.** It arrives as an edit to
+the field. Without this, a scene spoken into the app lands as one action
+paragraph with the newlines buried inside it — every slugline, cue and speech
+in it flattened into a single element. The clipboard has had the answer since
+the reformat tool: text arriving in bulk becomes *typed elements*. Dictation is
+a paste coming through a different door.
+
+**A command is a sentence of its own.** *Scene heading*, *Action*, *Character*,
+*Dialogue*, *Parenthetical*, *Transition*, *Shot* — and the words a writer
+actually uses, *slug line*, *wryly*, *cue* — start an element when they open a
+sentence and close it, which is what a pause sounds like to a recogniser. *The
+action was over by the time she got there* is prose and stays prose. When the
+test fails nothing is taken and the words stay in the manuscript where they can
+be seen, which is the trade §2 of this addendum already made about a spoken
+name: a wrong guess is worse than no guess, because a guess that goes unnoticed
+is a line of somebody's screenplay quietly turned into a heading.
+
+One thing is edited rather than transcribed, and only one: **a cue is a name**,
+so the full stop a recogniser puts after *Mara.* comes off. Not for how it
+reads — the cast is noted from cues, so leaving it on would put a second,
+punctuated person in the character list beside the real one.
+
+**Which recogniser is answered by trying, not by guessing.** The API is present
+in both places the renderer runs and works in one: in the browser preview the
+page is real Chrome; in Electron the constructor exists but Chromium's
+recogniser is a client for a Google speech service reached with a key only
+official Chrome builds carry, so the session dies with a network error. Nor may
+it be settled by sniffing `window.vcwriter`, which is deliberately the same
+interface in both — *the application above does not know the difference, and
+that is the entire point of the interface*. So the button is offered, and **the
+first failure is the answer**: after a network error the app names the operating
+system's dictation instead, for the run. It costs one press to find out, it is
+honest about what happened rather than about what was predicted, and it needs no
+revisiting if Electron ever gains a service.
+
+The system's dictation is the better tool anyway — installed, trained,
+permitted, and it types into whatever field has focus, which the writing areas
+are. What does **not** work on that path is naming a style aloud, and the
+interface says so rather than implying otherwise: the system types into the
+field, and the app cannot tell those words from the same words typed by hand,
+so it must not act on them. Saying *new line* does reach it, a line break in a
+field never having been a keypress, and that is what is offered there.
+
+The control is opt-in per writing surface (`dictation` on `BeatBody`) because
+the Script draws every beat in the manuscript with one — rendered
+unconditionally it appeared nine times down a short script, each with its own
+copy of the help. It belongs where one beat is being written.
+
+Driven in the built renderer: *Scene heading. Interior kitchen, night. Action.
+She opens the fridge. Character. Mara. Dialogue. There is nothing in here.*
+spoken in one breath arrived as four correctly typed, correctly indented
+elements, and a network failure flipped the same control to naming the system
+key.
+
+## 9. What this addendum deliberately does not do
 
 - It does not restate §12's nine exclusions. They are Ken's, they are clear, and
   §1 is the rule that makes them hold.

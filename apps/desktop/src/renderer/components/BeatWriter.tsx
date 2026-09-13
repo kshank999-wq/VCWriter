@@ -259,6 +259,8 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut }
             breaks={breaks}
             onUpdate={onUpdate}
             onActivate={() => onSelect?.(beat.id)}
+            // One beat, being written: the place dictation belongs (spec §9).
+            dictation
           />
         </div>
 

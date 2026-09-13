@@ -2333,6 +2333,39 @@ input[type='color'].swatch {
   color: var(--gold-deep);
 }
 
+/* Dictation (spec §9), under the beat rather than over it: the writing is the
+   page and this is a tool beside it. */
+.dictation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 14px;
+  /* It sits inside the page column, which is set at the manuscript's own type
+     size — without this the help line is as large as the screenplay. */
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 62ch;
+}
+
+.dictation .muted {
+  font-size: 12px;
+}
+
+.dictation .listening {
+  color: var(--gold-bright);
+  border-color: var(--gold);
+}
+
+/* What the recogniser has not committed to yet, greyed the way the phone
+   shows it — visible, and plainly not written down yet. */
+.dictation-heard {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--muted);
+}
+
 /* On the page, the column is centred and the type gutter overlays the
    left margin, where there is nothing to hide. */
 .script-sheet .page-column,

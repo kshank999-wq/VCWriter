@@ -1,10 +1,17 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  dictationKind,
+  startDictation,
+  systemDictationKey,
+  type DictationSession,
+} from '../dictation';
+import {
   autoType,
   CHARACTER_EXTENSIONS,
   captureFromScript,
   EXTENSIONS,
   EXTENSION_GROUPS,
+  carriesStructure,
   castNamesForBeat,
   cueSuggestions,
   notedCast,
@@ -20,6 +27,7 @@ import {
   onEnter,
   onTab,
   peopleInBeat,
+  readDictatedScript,
   retype,
   parseInlineMarks,
   reformatText,
@@ -74,6 +82,17 @@ interface BeatBodyProps {
    * beat — only the drawing is divided.
    */
   only?: ReadonlySet<number> | null;
+  /**
+   * Whether to offer dictation here (spec §9).
+   *
+   * Off by default, and that is the whole of the reason it is a prop: the
+   * Script draws every beat in the manuscript with one of these, so a control
+   * rendered unconditionally appeared nine times down a short script, each
+   * with its own copy of the spoken-command help. It belongs where **one**
+   * beat is being written — the beat writer — and the Script says the key once
+   * in its own footer instead.
+   */
+  dictation?: boolean;
 }
 
 const MARK_KEYS: Record<string, InlineMark> = { b: 'bold', i: 'italic', u: 'underline' };
@@ -112,6 +131,7 @@ export function BeatBody({
   emptyLabel = 'Start writing this beat',
   only = null,
   readOnly = false,
+  dictation = false,
 }: BeatBodyProps) {
   const format = file.project.format;
   const layout = layoutForFile(file);
@@ -134,6 +154,29 @@ export function BeatBody({
     text: string;
   } | null>(null);
   const [filing, setFiling] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
+
+  /**
+   * Dictation (spec §9), and *which* dictation depends on where this is
+   * running — see `dictation.ts`. In Electron the recogniser is the operating
+   * system's, so there is no session to hold and the button is a reminder of
+   * the key; in the browser preview the page drives one itself.
+   */
+  const listening = useRef<DictationSession | null>(null);
+  const [dictating, setDictating] = useState(false);
+  const [heard, setHeard] = useState('');
+  const [voiceNote, setVoiceNote] = useState<string | null>(null);
+  /** Where dictated words are going: the line that had focus when it started. */
+  const spokenInto = useRef<ManuscriptElementId | null>(null);
+  const kind = dictationKind();
+
+  // Nothing should still be listening after the writer has left the beat.
+  useEffect(
+    () => () => {
+      listening.current?.stop();
+      listening.current = null;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!focusId) return;
@@ -158,6 +201,17 @@ export function BeatBody({
 
   const elements = beat.manuscript.elements;
   const items = useMemo(() => groupManuscript(elements), [elements]);
+
+  /**
+   * The manuscript as it stands *right now*.
+   *
+   * A recogniser's handlers are registered once, when listening starts, so
+   * everything they close over is frozen at that render — and a writer speaks
+   * more than one sentence. Reading through this rather than the captured
+   * `elements` is what stops the second utterance overwriting the first.
+   */
+  const latest = useRef(elements);
+  latest.current = elements;
 
   /**
    * Who to offer while a cue is being typed: the beat's own speakers first,
@@ -190,7 +244,10 @@ export function BeatBody({
   };
 
   const updateElement = (id: ManuscriptElementId, patch: Partial<ManuscriptElement>) => {
-    setElements(elements.map((element) => (element.id === id ? { ...element, ...patch } : element)));
+    // Through `latest` rather than the captured list, because dictation reaches
+    // here from handlers registered a render ago: mapping over the manuscript
+    // as it was would drop every element spoken into being since.
+    setElements(latest.current.map((element) => (element.id === id ? { ...element, ...patch } : element)));
   };
 
   const makeElement = (type: ManuscriptElementType): ManuscriptElement => ({
@@ -242,8 +299,78 @@ export function BeatBody({
 
   /** Text as it is typed, and the style the line turns out to be. */
   const writeText = (element: ManuscriptElement, text: string) => {
+    // A line break that arrives *in* the text was never a keypress: the system's
+    // dictation typing "new line" into the field, rather than Return, which is
+    // handled on keydown and never fires here. Left alone it would bury a whole
+    // scene inside one action paragraph, so it goes the way a paste goes.
+    if (text.includes('\n')) {
+      const index = latest.current.findIndex((one) => one.id === element.id);
+      if (index >= 0 && layIn(element, index, text)) return;
+    }
+
     const become = autoType(format, element.type, text, { detectShots });
     updateElement(element.id, become ? { text, type: become } : { text });
+  };
+
+  /** Dictated words added to the line being written, with a space between. */
+  const join = (current: string, spoken: string): string => {
+    const words = spoken.trim();
+    if (words.length === 0) return current;
+    if (current.length === 0) return words;
+    return `${current}${current.endsWith(' ') ? '' : ' '}${words}`;
+  };
+
+  /**
+   * Dictation becoming typed elements (spec §9).
+   *
+   * `readDictatedScript` in the domain decides what was said; this only lays it
+   * out. The first run continues the line being written — dictation is mostly
+   * words, not commands — and every style the writer names after that starts a
+   * new element, so a scene spoken in one breath arrives as a slugline, action,
+   * a cue and a speech rather than as one paragraph.
+   *
+   * Returns false when there was nothing structural in it, so the caller can
+   * treat it as the ordinary edit it is.
+   */
+  const layIn = (element: ManuscriptElement, index: number, spoken: string): boolean => {
+    if (!carriesStructure(spoken, format)) return false;
+
+    const parts = readDictatedScript(spoken, format);
+    if (parts.length === 0) return false;
+
+    const next = [...latest.current];
+    let at = index;
+    let carry: ManuscriptElementType = element.type;
+    let last: ManuscriptElementId = element.id;
+
+    parts.forEach((part, position) => {
+      const type = part.type ?? carry;
+      carry = type;
+
+      // The first run belongs to the line already open — either because it was
+      // spoken straight into it, or because that line is empty and waiting for
+      // whatever style was named.
+      const continues = position === 0 && (!part.starts || element.text.trim().length === 0);
+
+      if (continues) {
+        const words = part.starts ? part.text : join(element.text, part.text);
+        next[at] = { ...element, type, text: retype(words, element.type, type).text };
+        return;
+      }
+
+      const made = { ...makeElement(type), text: retype(part.text, type, type).text };
+      at += 1;
+      next.splice(at, 0, made);
+      last = made.id;
+    });
+
+    setElements(next);
+    setFocusId(last);
+    // Dictation carries on into the line it just made, not back into the one
+    // the writer started from — otherwise the second half of a scene lands on
+    // top of the first.
+    spokenInto.current = last;
+    return true;
   };
 
   /**
@@ -275,6 +402,72 @@ export function BeatBody({
     setElements(next);
     const last = made[made.length - 1];
     if (last) setFocusId(last.id);
+  };
+
+  /**
+   * Where dictated words land: the line the writer left the cursor in, or the
+   * last line of the beat. Never a line chosen for them silently — if the beat
+   * is empty, one is made first, so there is always somewhere visible for the
+   * words to appear.
+   */
+  const speakingInto = (): { element: ManuscriptElement; index: number } | null => {
+    const now = latest.current;
+    const wanted = spokenInto.current;
+    const at = wanted ? now.findIndex((one) => one.id === wanted) : -1;
+    if (at >= 0) return { element: now[at] as ManuscriptElement, index: at };
+    if (now.length === 0) return null;
+    return { element: now[now.length - 1] as ManuscriptElement, index: now.length - 1 };
+  };
+
+  const hearWords = (spoken: string) => {
+    const target = speakingInto();
+    if (!target) return;
+    if (layIn(target.element, target.index, spoken)) return;
+    writeText(target.element, join(target.element.text, spoken));
+  };
+
+  const toggleDictation = () => {
+    if (dictating) {
+      listening.current?.stop();
+      listening.current = null;
+      setDictating(false);
+      setHeard('');
+      return;
+    }
+
+    // Somewhere for the words to go before any are heard.
+    if (elements.length === 0) {
+      insertAfter(-1, defaultElementType(format));
+      setVoiceNote('Start again once the first line is there.');
+      return;
+    }
+
+    const focused = [...inputs.current.entries()].find(([, node]) => node === document.activeElement);
+    spokenInto.current = focused?.[0] ?? null;
+
+    const started = startDictation({
+      onFinal: (chunk) => {
+        setHeard('');
+        hearWords(chunk);
+      },
+      onInterim: setHeard,
+      onError: (message) => {
+        setVoiceNote(message);
+        setDictating(false);
+      },
+      onEnd: () => {
+        setHeard('');
+        setDictating(false);
+      },
+    });
+
+    if (!started) {
+      setVoiceNote(`No speech service in this build — ${systemDictationKey()} and dictate into the line.`);
+      return;
+    }
+    listening.current = started;
+    setVoiceNote(null);
+    setDictating(true);
   };
 
   /** The character cue the given element speaks under, if it is in a speech. */
@@ -543,6 +736,51 @@ export function BeatBody({
         >
           {emptyLabel}
         </button>
+      ) : null}
+
+      {/* Dictation (spec §9). The button is offered until a session proves
+          there is no speech service behind it, after which the system's own
+          dictation is named instead — see `dictation.ts` for why this is
+          settled by trying rather than by guessing the platform. */}
+      {dictation && !readOnly ? (
+        <div className="dictation">
+          {kind === 'offer' ? (
+            <button
+              type="button"
+              className={dictating ? 'ghost small listening' : 'ghost small'}
+              aria-pressed={dictating}
+              onClick={toggleDictation}
+            >
+              {dictating ? '● Listening — click to stop' : 'Dictate'}
+            </button>
+          ) : (
+            <span className="muted small">
+              To dictate, put the cursor in a line and {systemDictationKey()}.
+            </span>
+          )}
+
+          {kind === 'offer' ? (
+            <span className="muted small">
+              Say <strong>Scene heading</strong>, <strong>Action</strong>, <strong>Character</strong>,{' '}
+              <strong>Dialogue</strong> or <strong>Parenthetical</strong> — as a sentence of its own — to
+              start that kind of line.
+            </span>
+          ) : (
+            /* Naming a style aloud cannot work on this path, and implying it
+               could would be worse than saying nothing: the system types into
+               the field, and the app has no way to tell those words from the
+               same words typed by hand — so it must not act on them. Saying
+               "new line" does reach it, a line break in a field never having
+               been a keypress, and that is what is offered. */
+            <span className="muted small">
+              Say <strong>new line</strong> to start the next element; <strong>Tab</strong> changes what kind
+              it is.
+            </span>
+          )}
+
+          {heard.length > 0 ? <span className="dictation-heard">{heard}</span> : null}
+          {voiceNote ? <span className="error small">{voiceNote}</span> : null}
+        </div>
       ) : null}
 
       {caught ? (

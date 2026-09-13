@@ -61,6 +61,7 @@ export * from './sync-recovery.js';
 export * from './capture-approval.js';
 export * from './capture-upload.js';
 export * from './capture-voice.js';
+export * from './spoken-script.js';
 export * from './release.js';
 export * from './room.js';
 export * from './branch.js';
