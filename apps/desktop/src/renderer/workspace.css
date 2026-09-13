@@ -2223,22 +2223,19 @@ input[type='color'].swatch {
   background: color-mix(in srgb, var(--gold) 40%, transparent);
 }
 
-/* No box around the writing (addendum 02 §19). A rectangle that follows the
-   cursor down the page is the thing you end up looking at instead of the
-   sentence. The caret says where you are; a hairline under the line being
-   written says which line that is, and nothing else moves. */
-.element textarea:hover {
-  border-color: transparent;
-}
-
+/* **Nothing is drawn on the line being written** (addendum 02 §19). Not a box,
+   not a background, and not a hairline under it either: anything that follows
+   the cursor down the page is a thing in the writer's eye that is not their
+   sentence, and it is in their eye all day. The caret says where they are,
+   which is what a caret is for, and the style name in the left margin says
+   what they are writing — both of those sit beside the words rather than on
+   them. There is deliberately no `:focus` or `:focus-within` rule here for the
+   writing itself; if one appears again, this is the comment it has to argue
+   with. */
+.element textarea:hover,
 .element textarea:focus {
   border-color: transparent;
   outline: none;
-}
-
-.element:focus-within .ink {
-  background: transparent;
-  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--gold) 22%, transparent);
 }
 
 /* The emphasis marks themselves: present, and out of the way. */
@@ -2494,9 +2491,9 @@ input[type='color'].swatch {
   border: 0;
 }
 
-/* The same rule on the paged Script: the caret says where you are, and the
-   hairline under the line says which line (§19). An outline here would be a
-   box that follows the cursor down the page. */
+/* The same on the paged Script: the caret says where you are and nothing else
+   does (§19). An outline here would be a box that follows the cursor down the
+   page. */
 .script-pages .element textarea:focus {
   outline: none;
 }
@@ -3002,15 +2999,6 @@ dialog.writer-dialog::backdrop {
 .workspace.script-paper .writer-sheet .element textarea:focus {
   border-color: transparent;
   outline: none;
-}
-
-/* A hairline under the line being written, and nothing else moves. Paper
-   draws it in ink rather than gold, and no band behind the words. */
-.workspace.script-paper .script-sheet .element:focus-within .ink,
-.workspace.script-paper .page-sheet .element:focus-within .ink,
-.workspace.script-paper .writer-sheet .element:focus-within .ink {
-  background: transparent;
-  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--paper-ink) 28%, transparent);
 }
 
 .workspace.script-paper .script-sheet .element-type,

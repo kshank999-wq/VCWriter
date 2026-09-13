@@ -1457,12 +1457,20 @@ The right-hand page is **read-only**, deliberately. Two live editors of the
 same scene is a way to lose an afternoon's work, and what the second column
 is for is judging one against the other, not editing both.
 
-### No box around the writing
+### Nothing on the line being written
 
-There is no rectangle around the line being typed. A box that follows the
-cursor down the page is the thing you end up looking at instead of the
-sentence. The caret says where you are; a hairline under the line being
-written says which line that is; nothing else moves.
+There is no rectangle around the line being typed, no band behind it, and no
+hairline under it. Anything that follows the cursor down the page is the thing
+you end up looking at instead of the sentence — and it is in your eye all day.
+
+The hairline was the last of them to go, and it went because Ken read a build
+with one and called it distracting. It had a case: it said which line was
+live. But the **caret** already says that, which is the whole job of a caret,
+and the **style name in the left margin** says what is being written. Both of
+those sit beside the words rather than on them, which is the difference.
+
+The margin label stays. It is the one piece of furniture on the page that is
+not drawn on the writing.
 
 ### The two keys
 
