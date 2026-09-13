@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   addResearchCategory,
   addResearchItem,
+  approveCapture,
   castByCategory,
   characterBoard,
+  inboxGroups,
+  rejectCapture,
+  suggestRouting,
   laneKindSchema,
   lanesInOrder,
   markResearchUsed,
@@ -18,7 +22,9 @@ import {
   updateLane,
   updateResearchCategory,
   updateResearchItem,
+  type ApprovalDecision,
   type BeatId,
+  type CaptureItem,
   type CharacterId,
   type ProjectFile,
   type ResearchCategoryId,
@@ -33,6 +39,7 @@ import { SetupsPanel } from './SetupsPanel';
 import { CastPanel } from './CastPanel';
 import { CharacterCreator, type CreatorTab } from './CharacterCreator';
 import { CharacterMap } from './CharacterMap';
+import { MobileInbox } from './MobileInbox';
 import { CharacterReview } from './CharacterReview';
 import { useModal } from '../use-modal';
 
@@ -59,6 +66,8 @@ type Selection =
   | { kind: 'charmap' }
   /** Search, filters and the review modes (addendum 08 §18). */
   | { kind: 'review' }
+  /** What the phone caught, waiting to be placed (addendum 09 §9). */
+  | { kind: 'mobile' }
   /**
    * Somebody open in the Character Creator (addendum 08 §5).
    *
@@ -165,7 +174,40 @@ export function ResearchBody({
   const [tabFor, setTabFor] = useState<Readonly<Record<string, CreatorTab>>>({});
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
-  const [dragging, setDragging] = useState<{ kind: 'item' | 'folder'; id: string } | null>(null);
+  const [dragging, setDragging] = useState<{ kind: 'item' | 'folder' | 'capture'; id: string } | null>(null);
+  /**
+   * What the phone has sent and nobody has placed (addendum 09 §9).
+   *
+   * Read here rather than inside the inbox because the *drops* happen out in
+   * the side menu, on folders and on the cast — so the list and the thing that
+   * removes from it have to be the same piece of state.
+   */
+  const [captures, setCaptures] = useState<CaptureItem[]>([]);
+  const [capturesLoading, setCapturesLoading] = useState(false);
+  const [capturesError, setCapturesError] = useState<string | null>(null);
+
+  const loadCaptures = useCallback(async () => {
+    setCapturesLoading(true);
+    setCapturesError(null);
+    const result = await window.vcwriter.listCaptures(file.project.id);
+    setCapturesLoading(false);
+    if (!result.ok || !result.data) {
+      setCapturesError(result.error ?? 'The phone\u2019s notes could not be read');
+      return;
+    }
+    setCaptures(result.data);
+  }, [file.project.id]);
+
+  // Fetched once the window is open rather than when Mobile App is chosen, so
+  // the count beside it is true before anybody clicks it.
+  useEffect(() => {
+    void loadCaptures();
+  }, [loadCaptures]);
+
+  const waiting = useMemo(
+    () => inboxGroups(captures).reduce((total, group) => total + group.captures.length, 0),
+    [captures],
+  );
 
   const tree = useMemo(() => researchTree(file), [file]);
   const folders = useMemo(() => flatten(tree), [tree]);
@@ -219,9 +261,59 @@ export function ResearchBody({
     onUpdate((current) => addResearchCategory(current, { name: 'New folder', parentId }).file);
   };
 
+  /**
+   * Place a note from the phone (addendum 09 §1).
+   *
+   * **One function for every way of doing it** — the drag, the button under the
+   * suggestion, all of it — because placing a note has two halves that must not
+   * come apart: the project gains something, and the capture stops waiting. A
+   * second copy of this would eventually do one without the other.
+   */
+  const placeCapture = async (capture: CaptureItem, decision: ApprovalDecision) => {
+    setCapturesError(null);
+    try {
+      // Worked out before the updater runs: an updater can run twice in
+      // StrictMode, and reading the result from inside it would double the note.
+      const result = approveCapture(file, capture, decision);
+      onUpdate(() => result.file);
+
+      const written = await window.vcwriter.resolveCapture(result.capture);
+      if (!written.ok) {
+        // The note is in the project; only the queue entry failed to update. Say
+        // that, rather than pretending nothing happened.
+        setCapturesError(written.error ?? 'The note was filed, but the phone\u2019s copy could not be marked done');
+        return;
+      }
+      setCaptures((current) => current.filter((one) => one.id !== capture.id));
+    } catch (cause) {
+      setCapturesError(cause instanceof Error ? cause.message : 'That note could not be filed');
+    }
+  };
+
+  const discardCapture = async (capture: CaptureItem) => {
+    const written = await window.vcwriter.resolveCapture(rejectCapture(capture));
+    if (!written.ok) {
+      setCapturesError(written.error ?? 'That note could not be set aside');
+      return;
+    }
+    setCaptures((current) => current.filter((one) => one.id !== capture.id));
+  };
+
+  /** The note being dragged, when one is. */
+  const draggedCapture = (): CaptureItem | null =>
+    dragging?.kind === 'capture'
+      ? (captures.find((one) => (one.id as string) === dragging.id) ?? null)
+      : null;
+
   /** A note or a folder dropped on a folder is filed there. */
   const dropOn = (categoryId: ResearchCategoryId) => {
     if (!dragging) return;
+    if (dragging.kind === 'capture') {
+      const capture = draggedCapture();
+      setDragging(null);
+      if (capture) void placeCapture(capture, { kind: 'research', categoryId });
+      return;
+    }
     if (dragging.kind === 'item') {
       onUpdate((current) =>
         moveResearchItem(current, { itemId: dragging.id as ResearchItemId, toCategoryId: categoryId, index: 0 }),
@@ -261,6 +353,8 @@ export function ResearchBody({
       ? (creator?.name ?? 'Character')
       : selection.kind === 'view'
       ? (VIEWS.find((entry) => entry.view === selection.view)?.label ?? 'Research')
+      : selection.kind === 'mobile'
+      ? 'Mobile App'
       : selection.kind === 'charmap'
         ? 'Character map'
         : selection.kind === 'review'
@@ -309,7 +403,10 @@ export function ResearchBody({
           their own: each has its own second column inside it. */}
       <div
         className={
-          creator || selection.kind === 'charmap' || selection.kind === 'review'
+          creator ||
+          selection.kind === 'charmap' ||
+          selection.kind === 'review' ||
+          selection.kind === 'mobile'
             ? 'research-body creating'
             : 'research-body'
         }
@@ -371,6 +468,18 @@ export function ResearchBody({
                   <li key={person.id}>
                     <button
                       type="button"
+                      // A note from the phone dropped here is filed *about*
+                      // them — never as a second person of the same name.
+                      onDragOver={(event) => {
+                        if (dragging?.kind === 'capture') event.preventDefault();
+                      }}
+                      onDrop={() => {
+                        const capture = draggedCapture();
+                        setDragging(null);
+                        if (capture) {
+                          void placeCapture(capture, { kind: 'about_character', characterId: person.id });
+                        }
+                      }}
                       className={
                         selection.kind === 'creator' && selection.id === person.id
                           ? 'folder-row selected'
@@ -417,6 +526,17 @@ export function ResearchBody({
               >
                 <span className="folder-name">Setups &amp; payoffs</span>
                 <span className="count muted">{file.setupsPayoffs.filter((record) => !record.archived).length}</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className={selection.kind === 'mobile' ? 'folder-row selected' : 'folder-row'}
+                title="What the phone caught, waiting to be put somewhere"
+                onClick={() => setSelection({ kind: 'mobile' })}
+              >
+                <span className="folder-name">Mobile App</span>
+                {waiting > 0 ? <span className="count muted">{waiting}</span> : null}
               </button>
             </li>
             <li>
@@ -474,7 +594,8 @@ export function ResearchBody({
             {selection.kind === 'plots' ||
             selection.kind === 'setups' ||
             selection.kind === 'charmap' ||
-            selection.kind === 'review' ? null : (
+            selection.kind === 'review' ||
+            selection.kind === 'mobile' ? null : (
               <span className="muted">
                 {items.length} {items.length === 1 ? 'note' : 'notes'}
                 {query.length > 0 ? ' found' : ''}
@@ -492,7 +613,23 @@ export function ResearchBody({
             </div>
           ) : null}
 
-          {selection.kind === 'review' ? (
+          {selection.kind === 'mobile' ? (
+            <MobileInbox
+              file={file}
+              captures={captures}
+              loading={capturesLoading}
+              error={capturesError}
+              draggingId={dragging?.kind === 'capture' ? dragging.id : null}
+              onDragStart={(capture) => setDragging({ kind: 'capture', id: capture.id as string })}
+              onDragEnd={() => setDragging(null)}
+              onAcceptSuggestion={(capture) => {
+                const decision = suggestRouting(file, capture).decision;
+                if (decision) void placeCapture(capture, decision);
+              }}
+              onReject={(capture) => void discardCapture(capture)}
+              onRefresh={() => void loadCaptures()}
+            />
+          ) : selection.kind === 'review' ? (
             <CharacterReview file={file} onOpenCreator={openCreator} />
           ) : selection.kind === 'charmap' ? (
             <CharacterMap
@@ -598,7 +735,7 @@ function FolderNode({
   onToggle(id: string): void;
   onSelect(id: ResearchCategoryId): void;
   onUpdate: ResearchWindowProps['onUpdate'];
-  dragging: { kind: 'item' | 'folder'; id: string } | null;
+  dragging: { kind: 'item' | 'folder' | 'capture'; id: string } | null;
   onDragStart(id: string): void;
   onDragEnd(): void;
   onDrop(id: ResearchCategoryId): void;

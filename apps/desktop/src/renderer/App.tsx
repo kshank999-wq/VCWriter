@@ -69,7 +69,6 @@ import { MenuBar } from './components/MenuBar';
 import { RoomBar } from './components/RoomBar';
 import { menusFor, type CommandId } from './menus';
 import { AccountPanel } from './components/AccountPanel';
-import { CapturesPanel } from './components/CapturesPanel';
 import { EditorPanel } from './components/EditorPanel';
 import { ReadBackPanel } from './components/ReadBackPanel';
 import { RecoveryPanel } from './components/RecoveryPanel';
@@ -871,7 +870,7 @@ export default function App() {
         onBringBack={closePane}
         account={account}
         syncing={syncing}
-        onSync={() => (account.signedIn ? void sync() : setView('captures'))}
+        onSync={() => (account.signedIn ? void sync() : setView('account'))}
         saveState={project.saveState}
         onSaveNow={() => void project.saveNow()}
         onCloseProject={project.closeProject}
@@ -1102,9 +1101,12 @@ export default function App() {
             ) : (
               <p className="muted empty-state">Save the project to a file to keep recovery points.</p>
             )
-          ) : account.signedIn ? (
-            <CapturesPanel file={file} onUpdate={project.update} />
           ) : (
+            /* Notes from the phone used to be this page. They live in
+               Research → Mobile App now, where a note can actually be dragged
+               onto the folder or the person it belongs to (addendum 09 §9) —
+               and a signed-in writer can reach their own account again, which
+               the capture queue standing here used to prevent. */
             <AccountPanel
               status={account}
               onSignedIn={setAccount}

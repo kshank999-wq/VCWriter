@@ -9906,3 +9906,90 @@ dialog.projects-dialog {
   color: var(--text);
   font-weight: 600;
 }
+
+/* The Mobile App inbox (addendum 09 §9): what the phone caught, waiting to be
+   dragged somewhere. */
+.mobile-inbox {
+  padding: 0 14px 20px;
+  overflow-y: auto;
+}
+
+.mobile-inbox-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0 12px;
+}
+
+.mobile-inbox-head p {
+  flex: 1;
+  margin: 0;
+}
+
+.mobile-inbox-error {
+  color: var(--warn, var(--gold));
+  margin: 0 0 10px;
+}
+
+.mobile-list {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+/* A card rather than a row: it is a thought somebody spoke, and it has to look
+   like something you can pick up. */
+.mobile-note {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold-deep);
+  background: var(--panel-2);
+  padding: 8px 10px;
+  cursor: grab;
+}
+
+.mobile-note:active {
+  cursor: grabbing;
+}
+
+/* Faded while it is in the air, so it is obvious which one is being carried. */
+.mobile-note.lifted {
+  opacity: 0.45;
+}
+
+.mobile-note-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.mobile-subject {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+}
+
+.mobile-text {
+  margin: 5px 0 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.mobile-note-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The proposal, said with its reason. It wraps rather than truncating, because
+   half a reason is worse than none. */
+.mobile-suggestion {
+  flex: 1;
+  min-width: 0;
+}

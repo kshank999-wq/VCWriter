@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0040.
+  reads like it does. Applied through 0041.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
@@ -253,7 +253,7 @@ push live; the build takes a minute or two.
   says what each built stage does; §11 names the two things deliberately left
   out (a scene-range filter on the map, and drag-and-drop for assigning).
   `addendum-09-companion-app.md` is the phone, from Ken's own *Companion App —
-  Simplified Development Specification v1.0*. **Specified, nothing built yet.**
+  Simplified Development Specification v1.0*. **Stages 0 and 1 built.**
   §1 is the rule the whole thing hangs off — **the phone captures and the
   desktop places** — which is his §12 said from the phone's end, and is what
   lets the app stay a voice notebook: an app that never decides where a thought
@@ -274,7 +274,18 @@ push live; the build takes a minute or two.
   door. §5 is **the open decision**: native or the web app grown, which
   `dictation.ts` already has the finding for (iOS Safari is the problem), and
   the build order in §6 is arranged so everything before stage 4 is the same
-  either way.
+  either way. §7 says what stages 0 and 1 built: migration 0041's two nullable
+  columns, and the **Mobile App** entry in the research side menu —
+  `MobileInbox.tsx`, grouped by the five categories, every note draggable. It
+  lives *inside* the Research window because that is the only place the drag has
+  somewhere real to land (the folders and the cast are already down the left); a
+  dialog would have grown its own destination list, which is a menu pretending
+  to be a drag. A note dropped on somebody in the cast becomes
+  `about_character` — a research note linked to them, **never a second person
+  of the same name**, and never a characterization item. The old **Captures**
+  page and `CapturesPanel` are retired: two inboxes onto one queue is a bug
+  waiting to happen, and that page could not drag anywhere; its slot now shows
+  the account panel, which a signed-in writer could not previously reach.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

@@ -1,10 +1,16 @@
 import { nowIso } from './entities/common.js';
 import { ref, type StoryEntityRef } from './entities/links.js';
-import { addBeat, addCharacter, addResearchItem, DomainError } from './mutations.js';
+import { addBeat, addCharacter, addResearchItem, linkEntities, DomainError } from './mutations.js';
 import { researchCategoriesInOrder } from './selectors.js';
-import type { CaptureItem } from './entities/capture.js';
+import { knowsCharacter } from './characters.js';
+import {
+  CAPTURE_CATEGORIES,
+  CAPTURE_CATEGORY_NAMES,
+  type CaptureCategory,
+  type CaptureItem,
+} from './entities/capture.js';
 import type { ProjectFile } from './project-file.js';
-import type { ResearchCategoryId, StructuralUnitId } from './ids.js';
+import type { CharacterId, ResearchCategoryId, StructuralUnitId } from './ids.js';
 
 /**
  * Turning captured material into project data (spec §9, §11).
@@ -18,7 +24,21 @@ import type { ResearchCategoryId, StructuralUnitId } from './ids.js';
 export type ApprovalDecision =
   | { kind: 'research'; categoryId: ResearchCategoryId; title?: string }
   | { kind: 'beat'; unitId: StructuralUnitId; title?: string }
-  | { kind: 'character'; name?: string };
+  /** A new person in the cast. */
+  | { kind: 'character'; name?: string }
+  /**
+   * A note **about** somebody already in the cast (addendum 09 §4).
+   *
+   * Deliberately not the same decision as `character`, which makes one. A
+   * writer dragging a mobile note onto Mara wants it filed against Mara, and a
+   * second Mara is the one outcome that would be worse than doing nothing.
+   *
+   * What it becomes is a research note linked to them, which is where notes
+   * about people already live — and not a characterization item, since whether
+   * a thought about somebody *is* characterization is the Character Creator's
+   * question and the writer's to answer (addendum 09 §3.2).
+   */
+  | { kind: 'about_character'; characterId: CharacterId; title?: string };
 
 export interface RoutingSuggestion {
   decision: ApprovalDecision | null;
@@ -38,6 +58,65 @@ export const captureTitle = (capture: CaptureItem): string => {
   if (named && named.length > 0) return named;
   const line = firstLine(capture.rawText);
   return line.length > 0 ? line : 'Untitled capture';
+};
+
+/** The research folder a spoken category ordinarily reads as. */
+const FOLDER_FOR: Partial<Record<CaptureCategory, string>> = {
+  character: 'characters',
+  plot_point: 'plot_points',
+  idea: 'ideas',
+  theme: 'themes',
+  // `arc` has no folder of its own and is not getting one: an arc note with
+  // nobody named is a general thought, and Ideas is where those go.
+  arc: 'ideas',
+};
+
+/**
+ * What the category the writer spoke reads as, if they spoke one.
+ *
+ * **Two of the five point at a person.** A Character or an Arc note that names
+ * somebody already in the cast is about *them*, which is mechanical rather than
+ * a guess — the name was said, and either it matches the cast list or it does
+ * not. A Character note naming somebody new offers to make them; every other
+ * case is a folder.
+ */
+const spokenSuggestion = (file: ProjectFile, capture: CaptureItem): RoutingSuggestion | null => {
+  const category = capture.category;
+  if (!category) return null;
+  const name = capture.subjectName?.trim() ?? '';
+
+  if (name.length > 0 && (category === 'character' || category === 'arc')) {
+    const known = knowsCharacter(file, name);
+    if (known) {
+      return {
+        decision: { kind: 'about_character', characterId: known.id },
+        confidence: 1,
+        reason: `You said ${CAPTURE_CATEGORY_NAMES[category]} — ${known.name}, who is already in the cast`,
+      };
+    }
+    if (category === 'character') {
+      return {
+        decision: { kind: 'character', name },
+        confidence: 1,
+        reason: `You said Character — ${name}, who is not in the cast yet`,
+      };
+    }
+  }
+
+  const key = FOLDER_FOR[category];
+  const folder = key
+    ? researchCategoriesInOrder(file).find((candidate) => candidate.systemKey === key)
+    : undefined;
+  if (!folder) return null;
+
+  return {
+    decision: { kind: 'research', categoryId: folder.id },
+    confidence: 1,
+    reason:
+      category === 'arc'
+        ? 'An arc note with nobody named — Ideas until you say otherwise'
+        : `You said ${CAPTURE_CATEGORY_NAMES[category]}`,
+  };
 };
 
 /**
@@ -72,6 +151,14 @@ export const suggestRouting = (file: ProjectFile, capture: CaptureItem): Routing
       }
     }
   }
+
+  // What the writer said out loud on the phone. Below a destination they
+  // actually chose, above anything a classifier guessed — it is testimony, and
+  // the whole of §2 is that it says *what kind of thought this is* rather than
+  // where it goes, so what follows is the ordinary reading of each kind and
+  // never more than a proposal.
+  const spoken = spokenSuggestion(file, capture);
+  if (spoken) return spoken;
 
   if (inference?.categoryKey === 'characters') {
     return {
@@ -148,6 +235,27 @@ export const approveCapture = (
     });
     next = added.file;
     resultRef = ref('beat', added.beat.id);
+  } else if (decision.kind === 'about_character') {
+    const person = file.characters.find((one) => (one.id as string) === (decision.characterId as string));
+    if (!person) throw new DomainError('That character is not in the project');
+
+    // Filed where notes about people already live, and linked to them, so it
+    // turns up in their Related Elements without the Creator being involved.
+    const folder =
+      researchCategoriesInOrder(file).find((category) => category.systemKey === 'characters') ??
+      researchCategoriesInOrder(file)[0];
+    if (!folder) throw new DomainError('There is nowhere to file this note');
+
+    next = addResearchItem(file, {
+      categoryId: folder.id,
+      title: decision.title ?? captureTitle(capture),
+      body: capture.rawText,
+      origin: 'mobile_capture',
+    });
+    const created = next.researchItems[next.researchItems.length - 1];
+    if (!created) throw new DomainError('The research note could not be created');
+    next = linkEntities(next, { from: ref('research_item', created.id), to: ref('character', person.id) });
+    resultRef = ref('research_item', created.id);
   } else {
     next = addCharacter(file, {
       name: decision.name ?? captureTitle(capture),
@@ -177,3 +285,45 @@ export const deferCapture = (capture: CaptureItem): CaptureItem => ({
   ...capture,
   status: 'needs_review',
 });
+
+// ------------------------------------------------- the Mobile App inbox
+
+/**
+ * One group of the desktop Mobile App inbox (addendum 09 §4, stage 1).
+ *
+ * The five categories in the order the app offers them, plus whatever named no
+ * category — old captures, and anything typed rather than spoken. **The last
+ * group is never hidden**: an inbox that quietly dropped notes it could not
+ * file would be an inbox nobody can trust.
+ */
+export interface InboxGroup {
+  category: CaptureCategory | null;
+  name: string;
+  captures: CaptureItem[];
+}
+
+/**
+ * The project's captures, grouped by what the writer said they were, newest
+ * first inside each group.
+ *
+ * Approved and rejected captures are left out: this is the tray of what is
+ * still waiting to be placed, and a decision already made is not waiting. The
+ * rows themselves are never deleted, so nothing here is destructive.
+ */
+export const inboxGroups = (captures: readonly CaptureItem[]): InboxGroup[] => {
+  const waiting = [...captures]
+    .filter((one) => one.status === 'pending' || one.status === 'needs_review')
+    .sort((a, b) => (a.capturedAt < b.capturedAt ? 1 : -1));
+
+  const groups: InboxGroup[] = CAPTURE_CATEGORIES.map((category) => ({
+    category,
+    name: CAPTURE_CATEGORY_NAMES[category],
+    captures: waiting.filter((one) => one.category === category),
+  })).filter((group) => group.captures.length > 0);
+
+  const uncategorised = waiting.filter((one) => one.category === null);
+  if (uncategorised.length > 0) {
+    groups.push({ category: null, name: 'No category', captures: uncategorised });
+  }
+  return groups;
+};

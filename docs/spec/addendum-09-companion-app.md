@@ -1,6 +1,7 @@
 # Addendum 09 — The Companion App
 
-Status: **specified, nothing built yet**, September 2026. From Ken's *VC Writer
+Status: **stages 0 and 1 built** — the two fields, and the desktop Mobile App
+area with drag-and-drop. September 2026. From Ken's *VC Writer
 Companion App — Simplified Development Specification v1.0*, written as a
 coding/quoting handoff. Extends spec §9 and §11 (capture and sync), and the
 Mobile App area it asks for is a new part of the desktop.
@@ -59,7 +60,7 @@ More than the spec assumes. Naming it decides how much of this is new work.
 | Sync status and retry | `syncedAt` / `lastError` on the queued row | `capture-queue.ts` |
 | Project list for the signed-in user | Project picker on `/notes` | `capture-app.tsx` |
 | Dictation | Web Speech API, with its limits already written down | `dictation.ts` |
-| A desktop inbox that does not auto-place | `CapturesPanel`, approve / defer / reject | `CapturesPanel.tsx` |
+| A desktop inbox that does not auto-place | an approval queue, approve / defer / reject | `CapturesPanel.tsx`, retired in stage 1 |
 | The destination chosen by a person | `requested_routing`, which **outranks** inference | 0006 |
 
 What is genuinely missing is smaller than it looks, and it is almost all
@@ -103,10 +104,10 @@ anything else; the note is the note.
 §9 asks for a dedicated area named **Mobile App** where synced notes for the
 active project appear, opened as a dialog, with drag-and-drop into place.
 
-`CapturesPanel` is most of this already, but it is in neither the right place
-nor the right shape: it sits in a side slot of the workspace rather than being
-opened by name, and its verbs are *approve / defer / reject* with a destination
-dropdown rather than a drag.
+`CapturesPanel` was most of this already, but in neither the right place nor
+the right shape: it sat behind a **Captures** page in the page bar rather than
+being opened by name, and its verbs were *approve / defer / reject* with a
+destination dropdown rather than a drag. Stage 1 retired it.
 
 The change is to make the drag the primary act and keep the dropdown as the
 second way, because **a drag needs somewhere to drop and a keyboard needs a
@@ -149,11 +150,9 @@ screen itself is built.
 
 ## 6. Build order
 
-0. **The two fields** — migration 0041 (`category`, `subject_name`), the domain
-   schema, the round trip. Nothing visible.
-1. **The desktop Mobile App area** — rename, open it by name, group by the five
-   categories, and make drag-and-drop the way a note is placed. Independent of
-   the phone entirely, and it is the half of §9 that a writer feels first.
+0. ✅ **The two fields** — migration 0041 (`category`, `subject_name`), the
+   domain schema, the round trip. Nothing visible.
+1. ✅ **The desktop Mobile App area** — see §8.
 2. **The upload contract** — the endpoint the phone posts to, carrying category
    and subject name, idempotent on `client_capture_id` as it already is.
 3. **Review on the phone** — §7: the notes for the project, filtered by the five
@@ -167,7 +166,55 @@ screen itself is built.
 working typed-capture product, which is worth having on its own and is what a
 first release can be if the platform decision takes a while.
 
-## 7. What this addendum deliberately does not do
+## 7. What stages 0 and 1 built
+
+### Stage 0 — the two fields
+
+Migration 0041, `captureCategorySchema` in `entities/capture.ts`, and the two
+lines in `captureFromRow`. Both columns are nullable and the tests say why: a
+capture taken before the companion app existed has neither, and a note where
+nobody named a category is an ordinary note rather than a broken row.
+
+The test that matters is the one asserting `category` and `requestedRouting`
+may **disagree** — a Character note filed into Ideas — because that is §2 made
+into something that fails if anybody later collapses the two.
+
+### Stage 1 — the Mobile App area
+
+`inboxGroups` and `spokenSuggestion` in `capture-approval.ts`,
+`MobileInbox.tsx`, and the drops in `ResearchWindow.tsx`.
+
+**It lives inside the Research window, and that is the whole reason the drag
+works.** The folders and the cast are already down the left there, so *drag the
+note where it belongs* has somewhere real to land. A dialog over the top would
+have had to grow its own list of destinations, which is a menu pretending to be
+a drag.
+
+**A note dropped on somebody already in the cast becomes a note about them** —
+`about_character`, a research note in the Characters folder linked to that
+person — and **never a second character of the same name**, which is the one
+outcome worse than doing nothing. It does not become a characterization item
+either: whether a thought about somebody *is* characterization is the Character
+Creator's question and the writer's to answer (§3.2).
+
+**The spoken category ranks between the two things that already existed**: below
+a destination the writer actually chose, above anything a classifier guessed,
+because it is testimony. It buys an opening proposal — *You said Plot Point*,
+*You said Character — MARA, who is already in the cast* — and never a placement.
+
+One thing was retired rather than built: the **Captures** page in the page bar
+is gone, and `CapturesPanel` with it. Two inboxes onto one queue is a bug
+waiting to happen, and that page could not do the drag because the destinations
+were not on screen. Its slot now shows the account panel, which a signed-in
+writer previously could not reach at all.
+
+Driven in the real interface: six notes group under Character, Plot Point,
+Theme, Arc and *No category*; the count sits beside **Mobile App** before
+anybody opens it; and dragging one onto **Props** or onto **MARA** files it
+there. Looking at it caught a defect the tests had not — a note with no spoken
+name printed its own first line as a heading and then again as the body.
+
+## 8. What this addendum deliberately does not do
 
 - It does not restate §12's nine exclusions. They are Ken's, they are clear, and
   §1 is the rule that makes them hold.

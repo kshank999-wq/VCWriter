@@ -1,4 +1,4 @@
-export type View = 'write' | 'preview' | 'editor' | 'readback' | 'captures' | 'recovery';
+export type View = 'write' | 'preview' | 'editor' | 'readback' | 'account' | 'recovery';
 
 /** Research and setups are tabs of the master panel now (addendum 02 §6). */
 export const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
@@ -6,7 +6,7 @@ export const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
   { id: 'preview', label: 'Preview' },
   { id: 'editor', label: 'Editors' },
   { id: 'readback', label: 'Read back' },
-  { id: 'captures', label: 'Captures' },
+  { id: 'account', label: 'Account' },
   { id: 'recovery', label: 'Recovery' },
 ];
 

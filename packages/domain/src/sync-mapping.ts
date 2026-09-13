@@ -861,6 +861,8 @@ export const captureFromRow = (row: Row): CaptureItem =>
     transcriptConfidence: typeof row['transcript_confidence'] === 'number' ? row['transcript_confidence'] : null,
     inference: row['inference'] ?? null,
     requestedRouting: row['requested_routing'] ?? null,
+    category: nullableText(row['category']),
+    subjectName: nullableText(row['subject_name']),
     status: row['status'],
     reviewedAt: nullableText(row['reviewed_at']),
     resultRef:
