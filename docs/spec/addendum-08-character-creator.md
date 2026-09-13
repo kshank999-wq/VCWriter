@@ -1,6 +1,7 @@
 # Addendum 08 — Character Creator
 
-Status: **complete — all ten stages built, plus stage 11, the way in**
+Status: **complete — all ten stages built, plus stage 11 (the way in) and
+stage 12 (the map reading the script)**
 (0–5 were Ken's MVP), September 2026. From his
 *VC Writer Character Creator Development Specification* — the first module of
 the Research room. Extends §7 (research), §8 (structure) and §19 of the master specification,
@@ -700,6 +701,49 @@ Driven in the real interface: **Cast** lists Deakins and Mara with *2* beside
 Mara, opening her and choosing **Arc**, going to Plots and coming back lands on
 her Arc with her name still lit in the menu, and a right-click on a cast row
 opens that person.
+
+### Stage 12 — the lines the script draws
+
+`togetherInScript` in `character-map.ts`, `peopleSpeakingIn` in
+`character-creator.ts`, and the drawing in `CharacterMap.tsx`. No new record and
+no migration, which is the tell that this is a reading rather than a feature.
+
+**A map that opens empty on a finished screenplay has not read the
+screenplay.** Stage 8 drew only what somebody had written down, so the one
+project guaranteed to have nothing on the map was the one with a hundred and ten
+pages behind it. The manuscript already knows who keeps turning up together.
+
+**So it is counted, never stored.** For every pair who speak in the same scene:
+how many scenes, and how many beats inside them. Cut the scene and the line
+thins by itself; write another and it thickens. There is no *rebuild the map*
+anywhere, because there is nothing to rebuild — §2's rule, applied to a second
+question.
+
+**And it stops at the count.** Nine scenes together is a fact. *Rivals* is not,
+and the script has no way to know it, so a line the manuscript drew is dashed,
+faint, thickening with its scenes, and labelled `9 scenes` and nothing else.
+Clicking it offers the writer the sentence, one direction at a time — §11's
+point being that the two directions may disagree — and naming it turns the line
+solid. The script raises the question; the person answers it.
+
+Two consequences worth stating. **Focus now expands through script lines**,
+without which *who they know* was useless until somebody had written
+relationships down — the state every real project starts in. And **asking for a
+kind drops them**: *show me the rivals* is a question about readings that have
+been named, and an unnamed line is not one.
+
+The limit is deliberate and named in the tests: sharing is worked out from **who
+speaks**, the same rule the module already uses for who is in a beat, so
+somebody standing silently in the room does not count. Finding them means
+matching names in prose, where a name in an action line is as often somebody
+being *talked about* as somebody being there — and a map that guessed wrong
+would be worse than one that under-reports.
+
+Driven in the real interface: a four-hander draws Mara–Deakins at **3 scenes**
+thick, three single-scene lines around it, and the panel on one reads *They speak
+in 3 scenes together, across 3 beats* above two empty readings. The count sits
+just off each line's midpoint, because two lines that cross do it at their
+midpoints and two counts on the same spot read as one.
 
 ## 11. What is left
 

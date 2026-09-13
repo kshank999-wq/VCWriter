@@ -8,6 +8,7 @@ import {
   createProjectFile,
   edgeLabel,
   relate,
+  togetherInScript,
   updateBeat,
   type CharacterId,
   type ProjectFile,
@@ -184,5 +185,126 @@ describe('filtering by a plot lane', () => {
 
     const map = characterMap({ file: written, among: inLane });
     expect(map.nodes.map((node) => node.name)).toEqual(['MARA']);
+  });
+});
+
+/**
+ * What the script says by itself (addendum 08, stage 12).
+ *
+ * The map used to open empty on a finished screenplay, because it drew only
+ * what somebody had written down. The manuscript already knows who keeps
+ * turning up together, and **that** is a reading like every other one in this
+ * module: stored nowhere, so cutting the scene thins the line with nothing
+ * running.
+ *
+ * The line it must not cross is naming what it found. Nine scenes together is
+ * a fact; *rivals* is the writer's.
+ */
+describe('the lines the script draws', () => {
+  /** A scene, with one beat per set of cues given. */
+  const scened = (file: ProjectFile, title: string, beats: string[][]) => {
+    const scene = addUnit(file, { laneId: file.lanes[0]!.id, title });
+    let next = scene.file;
+    for (const cues of beats) {
+      const beat = addBeat(next, { unitId: scene.unit.id, title: 'A beat' });
+      next = updateBeat(beat.file, beat.beat.id, {
+        manuscript: { elements: cues.map((cue) => line('character', cue)) },
+      });
+    }
+    return next;
+  };
+
+  it('counts the scenes two people speak in, and the beats inside them', () => {
+    const { file, ids } = company();
+    const written = scened(scened(file, 'INT. DINER - NIGHT', [['MARA', 'DEAKINS'], ['MARA', 'DEAKINS']]), 'EXT. LOT - LATER', [
+      ['MARA', 'DEAKINS'],
+    ]);
+
+    const pairs = togetherInScript(written);
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0]!.scenes).toBe(2);
+    expect(pairs[0]!.beats).toBe(3);
+    expect([pairs[0]!.a as string, pairs[0]!.b as string].sort()).toEqual(
+      [ids['MARA'] as string, ids['DEAKINS'] as string].sort(),
+    );
+  });
+
+  it('does not count somebody who is only named in the action, and that is deliberate', () => {
+    // Finding them would mean matching names in prose, where a name is as often
+    // somebody being talked about as somebody being there.
+    const { file } = company();
+    const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. DINER - NIGHT' });
+    const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'The bill' });
+    const written = updateBeat(beat.file, beat.beat.id, {
+      manuscript: { elements: [line('character', 'MARA'), line('action', 'DEAKINS watches from the booth.')] },
+    });
+
+    expect(togetherInScript(written)).toHaveLength(0);
+  });
+
+  it('draws a line for a pair nobody has written a relationship for', () => {
+    const { file } = company();
+    const written = scened(file, 'INT. DINER - NIGHT', [['MARA', 'DEAKINS']]);
+    const map = characterMap({ file: written });
+
+    const edge = map.edges.find((one) => one.together !== null)!;
+    expect(edge.together!.scenes).toBe(1);
+    // And it says nothing about what the relationship is, because it cannot know.
+    expect(edge.forward).toHaveLength(0);
+    expect(edge.back).toHaveLength(0);
+  });
+
+  it('thins by itself when the writing goes, because nothing was stored', () => {
+    const { file } = company();
+    const written = scened(file, 'INT. DINER - NIGHT', [['MARA', 'DEAKINS']]);
+    expect(characterMap({ file: written }).edges).toHaveLength(1);
+
+    const cut: ProjectFile = { ...written, beats: [] };
+    expect(characterMap({ file: cut }).edges).toHaveLength(0);
+  });
+
+  it('keeps one line for a pair who are both written down and in scenes together', () => {
+    const { file, ids } = company();
+    const written = scened(file, 'INT. DINER - NIGHT', [['MARA', 'DEAKINS']]);
+    const joined = relate(written, {
+      fromCharacterId: ids['MARA']!,
+      toCharacterId: ids['DEAKINS']!,
+      kind: 'rival',
+    });
+
+    const map = characterMap({ file: joined.file });
+    expect(map.edges).toHaveLength(1);
+    expect(map.edges[0]!.together!.scenes).toBe(1);
+    expect(edgeLabel(map.edges[0]!.forward) + edgeLabel(map.edges[0]!.back)).toContain('Rival');
+  });
+
+  it('drops the script lines when a kind is asked for, since an unnamed line is not one', () => {
+    const { file, ids } = company();
+    const written = scened(file, 'INT. DINER - NIGHT', [['MARA', 'DEAKINS'], ['ROURKE', 'SAL']]);
+    const joined = relate(written, {
+      fromCharacterId: ids['MARA']!,
+      toCharacterId: ids['DEAKINS']!,
+      kind: 'rival',
+    });
+
+    const map = characterMap({ file: joined.file, kinds: ['rival'] });
+    expect(map.edges).toHaveLength(1);
+    expect(map.edges[0]!.together).toBeNull();
+  });
+
+  it('can be turned off, for a script where every line is noise', () => {
+    const { file } = company();
+    const written = scened(file, 'INT. DINER - NIGHT', [['MARA', 'DEAKINS']]);
+    expect(characterMap({ file: written, fromScript: false }).edges).toHaveLength(0);
+  });
+
+  it('lets focus expand through a line the script drew', () => {
+    // Otherwise focus is useless until somebody has written relationships down,
+    // which is the state every real project starts in.
+    const { file, ids } = company();
+    const written = scened(file, 'INT. DINER - NIGHT', [['MARA', 'DEAKINS']]);
+    const map = characterMap({ file: written, focusId: ids['MARA']!, depth: 1 });
+
+    expect(map.nodes.map((node) => node.name).sort()).toEqual(['DEAKINS', 'MARA']);
   });
 });

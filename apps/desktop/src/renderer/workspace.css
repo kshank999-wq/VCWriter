@@ -9545,6 +9545,44 @@ dialog.projects-dialog {
   fill: var(--gold);
 }
 
+/* A line the script drew and nobody has named: dashed and faint, so it reads
+   as a question. It thickens with the scenes behind it — the only thing the
+   manuscript is allowed to say about the pair. */
+.charmap-edge.unnamed line:not(.charmap-hit) {
+  stroke-width: var(--edge-weight, 1.5);
+  stroke-dasharray: 7 7;
+  opacity: 0.5;
+}
+
+.charmap-edge.unnamed:hover line:not(.charmap-hit),
+.charmap-edge.unnamed.open line:not(.charmap-hit) {
+  stroke-width: var(--edge-weight, 1.5);
+  opacity: 1;
+}
+
+.charmap-edge .charmap-count {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.charmap-together {
+  margin: 0 0 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.charmap-name-it {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.charmap-name-it select {
+  flex: 1;
+  min-width: 0;
+}
+
 .charmap-node circle {
   fill: var(--panel-2);
   stroke: var(--gold-deep);

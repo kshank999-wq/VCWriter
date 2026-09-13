@@ -1,4 +1,10 @@
-import { relationshipName, type CharacterRelationship, type RelationshipKind } from './character-creator.js';
+import {
+  peopleSpeakingIn,
+  relationshipName,
+  type CharacterRelationship,
+  type RelationshipKind,
+} from './character-creator.js';
+import { beatsInStoryOrder } from './selectors.js';
 import type { CharacterId, LaneId } from './ids.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -37,6 +43,32 @@ export interface MapEdge {
   /** How `a` reads `b`, and how `b` reads `a`. Either may be empty. */
   forward: CharacterRelationship[];
   back: CharacterRelationship[];
+  /**
+   * What the *script* says about the pair, or null if they never share a scene.
+   *
+   * An edge with this and no readings is a line the manuscript drew by itself:
+   * these two keep turning up together, and nobody has said what that is yet.
+   */
+  together: ScriptPairing | null;
+}
+
+/**
+ * Two people who speak in the same scene, and how often.
+ *
+ * **This is all the script is allowed to say.** It can count that Mara and
+ * Deakins are in nine scenes together; it cannot say they are rivals, and it
+ * must not guess. Naming it is the writer's, and the map's job is to put the
+ * question in front of them rather than answer it — which is the same line the
+ * rest of the module holds, where *used* is read off the manuscript and *what
+ * it means* never is.
+ */
+export interface ScriptPairing {
+  a: CharacterId;
+  b: CharacterId;
+  /** Scenes both of them speak in. The number worth saying out loud. */
+  scenes: number;
+  /** Beats both of them speak in — the finer count, for a tooltip. */
+  beats: number;
 }
 
 export interface CharacterMap {
@@ -49,6 +81,48 @@ export const edgeLabel = (rows: readonly CharacterRelationship[]): string =>
   rows.map(relationshipName).join(', ');
 
 const pairKey = (one: string, two: string): string => (one < two ? `${one}:${two}` : `${two}:${one}`);
+
+/**
+ * Who shares scenes with whom, read straight off the manuscript.
+ *
+ * **Stored nowhere, like everything else the manuscript answers.** Cut the
+ * scene and the line thins by itself; write another one and it thickens. There
+ * is no *rebuild the map* anywhere, because there is nothing to rebuild.
+ *
+ * Sharing is worked out from **who speaks**, the one rule the module already
+ * uses for who is in a beat (`peopleSpeakingIn`). So somebody standing silently
+ * in the room does not count — which is a real limit and the honest one:
+ * finding them means matching names in prose, and a name in an action line is
+ * as often somebody being *talked about* as somebody being there.
+ */
+export const togetherInScript = (file: ProjectFile): ScriptPairing[] => {
+  const byPair = new Map<string, { a: CharacterId; b: CharacterId; units: Set<string>; beats: number }>();
+
+  const note = (one: CharacterId, two: CharacterId, unitId: string) => {
+    const key = pairKey(one as string, two as string);
+    const entry =
+      byPair.get(key) ??
+      ((one as string) < (two as string)
+        ? { a: one, b: two, units: new Set<string>(), beats: 0 }
+        : { a: two, b: one, units: new Set<string>(), beats: 0 });
+    entry.units.add(unitId);
+    entry.beats += 1;
+    byPair.set(key, entry);
+  };
+
+  for (const beat of beatsInStoryOrder(file)) {
+    const here = peopleSpeakingIn(file, beat);
+    if (here.length < 2) continue;
+    const unitId = beat.unitId as string;
+    for (let i = 0; i < here.length; i += 1) {
+      for (let j = i + 1; j < here.length; j += 1) note(here[i]!, here[j]!, unitId);
+    }
+  }
+
+  return [...byPair.values()]
+    .map((entry) => ({ a: entry.a, b: entry.b, scenes: entry.units.size, beats: entry.beats }))
+    .sort((one, two) => two.scenes - one.scenes || two.beats - one.beats);
+};
 
 /**
  * Who appears in a plot lane, for §12's filter.
@@ -102,6 +176,15 @@ export const characterMap = (input: {
   /** How far out from the focus to go. Ignored when there is no focus. */
   depth?: number;
   /**
+   * Whether the script draws lines of its own, for pairs nobody has written a
+   * relationship for. True by default: a map that starts empty on a finished
+   * screenplay is a map that has not read the screenplay.
+   *
+   * Ignored when `kinds` is set — asking for *rivals* is asking for relationships
+   * that have been named, and a line with no name is not one of them.
+   */
+  fromScript?: boolean;
+  /**
    * Whether to draw somebody nothing joins to.
    *
    * True by default: a character no line reaches is a fact about the story
@@ -136,10 +219,30 @@ export const characterMap = (input: {
       b: (from < to ? row.toCharacterId : row.fromCharacterId) as CharacterId,
       forward: [],
       back: [],
+      together: null,
     };
     if ((edge.a as string) === from) edge.forward.push(row);
     else edge.back.push(row);
     pairs.set(key, edge);
+  }
+
+  // What the manuscript says about the same pairs — and about pairs nobody has
+  // written anything for, which is the point: the script draws the line and the
+  // writer decides what it is.
+  if (kinds === null && input.fromScript !== false) {
+    for (const pairing of togetherInScript(file)) {
+      if (!present.has(pairing.a as string) || !present.has(pairing.b as string)) continue;
+      const key = pairKey(pairing.a as string, pairing.b as string);
+      const edge = pairs.get(key) ?? {
+        a: pairing.a,
+        b: pairing.b,
+        forward: [],
+        back: [],
+        together: null,
+      };
+      edge.together = pairing;
+      pairs.set(key, edge);
+    }
   }
 
   const neighbours = new Map<string, Set<string>>();

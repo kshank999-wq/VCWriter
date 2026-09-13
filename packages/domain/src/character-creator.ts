@@ -16,6 +16,7 @@ import type {
   StructuralUnitId,
   UsageLinkId,
 } from './ids.js';
+import type { Beat } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -977,7 +978,17 @@ export const unpinUsage = (file: ProjectFile, linkId: UsageLinkId): ProjectFile 
  */
 export const peopleInBeat = (file: ProjectFile, beatId: BeatId): CharacterId[] => {
   const beat = file.beats.find((one) => (one.id as string) === (beatId as string));
-  if (!beat) return [];
+  return beat ? peopleSpeakingIn(file, beat) : [];
+};
+
+/**
+ * The same reading, given the beat rather than its id.
+ *
+ * Exists so anything walking the whole manuscript — the map's *who shares
+ * scenes*, say — does not look every beat up again inside its own loop, and so
+ * there is still only **one rule** for who counts as speaking in a beat.
+ */
+export const peopleSpeakingIn = (file: ProjectFile, beat: Beat): CharacterId[] => {
   const spoken = beat.manuscript.elements
     .filter((element) => element.type === 'character')
     .map((element) => element.text.trim().toUpperCase());

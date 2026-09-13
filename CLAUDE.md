@@ -137,7 +137,8 @@ push live; the build takes a minute or two.
   §19 says what each built stage does; §15 is the build order.
   `addendum-08-character-creator.md` is the Character Creator, the first module
   of the Research room, from Ken's own dev spec. **Complete: all ten stages
-  built, plus stage 11, the way in** (0–5 were his MVP) —
+  built, plus stage 11 (the way in) and stage 12 (the map reading the
+  script)** (0–5 were his MVP) —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
   so the unit of work is the characterization item and a trait is a folder for
@@ -224,7 +225,18 @@ push live; the build takes a minute or two.
   is a **selection** rather than a layer over one — which is the whole of why
   it stays with somebody: pointing the menu at a person is the same act as
   pointing it at a folder, so leaving is clicking something else and coming
-  back is clicking them again, on the tab they were left on. §3
+  back is clicking them again, on the tab they were left on. Stage 12 is the
+  map **reading the script**: a map that opens empty on a finished screenplay
+  has not read the screenplay, so `togetherInScript` counts who speaks in the
+  same scenes — **counted, never stored**, so cutting the scene thins the line
+  by itself — and draws a dashed line labelled with the count **and nothing
+  else**, because *nine scenes together* is a fact and *rivals* is the
+  writer's. Clicking one is how they answer, a direction at a time. Focus now
+  expands through those lines (without which it was useless until somebody had
+  written relationships down); asking for a *kind* drops them, an unnamed line
+  not being one. Sharing is *who speaks*, so a silent presence does not
+  count — matching names in prose would as often find somebody being talked
+  about. §3
   says what already exists and is only being widened; §8 is the
   build order; §3.4 says why there is deliberately no module framework yet; §10
   says what each built stage does; §11 names the two things deliberately left

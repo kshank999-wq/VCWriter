@@ -6,6 +6,7 @@ import {
   charactersInLane,
   edgeLabel,
   lanesInOrder,
+  relate,
   relationshipName,
   removeRelationship,
   updateRelationship,
@@ -32,6 +33,12 @@ import {
  * Clicking a name opens the Creator on them; clicking a line opens the
  * relationship itself, both readings at once, which is the one place in the
  * product where they can be edited side by side.
+ *
+ * **The script draws lines of its own** (stage 12). A pair who keep speaking in
+ * the same scenes get a faint one, thickening with the number of scenes, and it
+ * is labelled with that count and nothing else — the manuscript can say they are
+ * in nine scenes together and must not say what that *is*. Clicking one is how
+ * the writer answers: naming it makes the relationship, and the line goes solid.
  */
 
 interface CharacterMapProps {
@@ -52,6 +59,7 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
   const [kind, setKind] = useState<RelationshipKind | ''>('');
   const [laneId, setLaneId] = useState<LaneId | ''>('');
   const [connectedOnly, setConnectedOnly] = useState(false);
+  const [fromScript, setFromScript] = useState(true);
   const [openPair, setOpenPair] = useState<string | null>(null);
 
   const lanes = lanesInOrder(file);
@@ -68,8 +76,9 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
         ...(kind === '' ? {} : { kinds: [kind] }),
         ...(focusId === '' ? {} : { focusId, depth }),
         includeUnconnected: !connectedOnly,
+        fromScript,
       }),
-    [file, among, kind, focusId, depth, connectedOnly],
+    [file, among, kind, focusId, depth, connectedOnly, fromScript],
   );
 
   const where = new Map(map.nodes.map((node) => [node.characterId as string, node]));
@@ -147,6 +156,17 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
           />
           <span className="muted small">Only people with relationships</span>
         </label>
+
+        <label className="charmap-check">
+          <input
+            type="checkbox"
+            checked={fromScript}
+            onChange={(event) => setFromScript(event.target.checked)}
+          />
+          <span className="muted small" title="A faint line for two people who keep speaking in the same scenes">
+            Lines from the script
+          </span>
+        </label>
       </header>
 
       {map.nodes.length === 0 ? (
@@ -167,10 +187,20 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
             const y1 = at(a.y);
             const x2 = at(b.x);
             const y2 = at(b.y);
+            // A line nobody has named is the script's own: dashed and faint, so
+            // it reads as a question rather than an answer. It thickens with the
+            // scenes behind it, which is the only thing the manuscript can say.
+            const named = edge.forward.length > 0 || edge.back.length > 0;
+            const scenes = edge.together?.scenes ?? 0;
             return (
               <g
                 key={key}
-                className={openPair === key ? 'charmap-edge open' : 'charmap-edge'}
+                className={
+                  `charmap-edge${named ? '' : ' unnamed'}${openPair === key ? ' open' : ''}`
+                }
+                // Carried as a custom property rather than a stroke-width
+                // attribute, which the stylesheet's own rule would win against.
+                style={{ ['--edge-weight' as string]: `${Math.min(1 + scenes * 0.6, 5)}` }}
                 onClick={() => setOpenPair(openPair === key ? null : key)}
               >
                 {/* A 1.5px line is a hard thing to hit with a pointer, so a
@@ -190,6 +220,21 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
                     {edgeLabel(edge.back)}
                   </text>
                 ) : null}
+                {/* The count, and only when nothing has been named — once there
+                    is a reading, the reading is what the line is about. */}
+                {named || scenes === 0 ? null : (
+                  // Just off centre, because two lines that cross do it at
+                  // their midpoints and two counts stacked on the same spot
+                  // read as one.
+                  <text
+                    className="charmap-count"
+                    x={x1 + (x2 - x1) * 0.45}
+                    y={y1 + (y2 - y1) * 0.45 - 6}
+                    textAnchor="middle"
+                  >
+                    {scenes === 1 ? '1 scene' : `${scenes} scenes`}
+                  </text>
+                )}
               </g>
             );
           })}
@@ -255,7 +300,23 @@ function EdgeDetail({
         {nameOf(from)} <span className="muted">→</span> {nameOf(to)}
       </h5>
       {rows.length === 0 ? (
-        <p className="muted small">No reading this way.</p>
+        <>
+          <p className="muted small">No reading this way.</p>
+          <NameIt
+            fromName={nameOf(from)}
+            toName={nameOf(to)}
+            onName={(kind) =>
+              onUpdate(
+                (current) =>
+                  relate(current, {
+                    fromCharacterId: from as CharacterId,
+                    toCharacterId: to as CharacterId,
+                    kind,
+                  }).file,
+              )
+            }
+          />
+        </>
       ) : (
         rows.map((one) => (
           <div key={one.id} className="charmap-reading">
@@ -294,8 +355,60 @@ function EdgeDetail({
           ×
         </button>
       </header>
+
+      {/* What the script found, said as a count and nothing more. It sits above
+          both readings because on an unnamed line it is the only thing there. */}
+      {edge.together ? (
+        <p className="charmap-together muted small">
+          They speak in{' '}
+          <strong>
+            {edge.together.scenes === 1 ? '1 scene' : `${edge.together.scenes} scenes`}
+          </strong>{' '}
+          together, across{' '}
+          {edge.together.beats === 1 ? '1 beat' : `${edge.together.beats} beats`}.
+        </p>
+      ) : null}
+
       {side(edge.forward, edge.a as string, edge.b as string)}
       {side(edge.back, edge.b as string, edge.a as string)}
     </aside>
+  );
+}
+
+/**
+ * Naming a line the script drew.
+ *
+ * This is the only answer to a script line the module offers, and it is
+ * deliberately the writer's: the manuscript raised the question — these two
+ * keep turning up together — and what it *is* gets typed by a person. One
+ * direction at a time, because §11's whole point is that the two may disagree.
+ */
+function NameIt({
+  fromName,
+  toName,
+  onName,
+}: {
+  fromName: string;
+  toName: string;
+  onName(kind: RelationshipKind): void;
+}) {
+  const [kind, setKind] = useState<RelationshipKind>('friend');
+  return (
+    <div className="charmap-name-it">
+      <select
+        aria-label={`What ${fromName} is to ${toName}`}
+        value={kind}
+        onChange={(event) => setKind(event.target.value as RelationshipKind)}
+      >
+        {RELATIONSHIP_KINDS.map((one) => (
+          <option key={one} value={one}>
+            {RELATIONSHIP_KIND_NAMES[one]}
+          </option>
+        ))}
+      </select>
+      <button type="button" className="ghost small" onClick={() => onName(kind)}>
+        Say so
+      </button>
+    </div>
   );
 }
