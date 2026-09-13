@@ -28,6 +28,7 @@ import {
   type StructuralUnit,
 } from '@vcwriter/domain';
 import { RelatedPanel } from './RelatedPanel';
+import { CharacterWorkPanel } from './CharacterWorkPanel';
 import { BEAT_STATUSES } from './status';
 
 interface InspectorProps {
@@ -165,6 +166,9 @@ function BeatSection({
         <dd>{speakers.length > 0 ? speakers.join(', ') : <span className="muted">No dialogue yet</span>}</dd>
       </dl>
       <RelatedPanel file={file} target={ref('beat', beat.id)} onUpdate={onUpdate} />
+      {/* What the Character Creator has landed here, and what is waiting for
+          the people in it (addendum 08 §10). */}
+      <CharacterWorkPanel file={file} beatId={beat.id} onUpdate={onUpdate} />
     </Section>
   );
 }

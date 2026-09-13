@@ -9310,3 +9310,55 @@ dialog.projects-dialog {
   text-overflow: ellipsis;
   max-width: 190px;
 }
+
+/* ------------------------------- character work on a beat (addendum 08 §10) */
+
+.work-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 4px;
+  display: grid;
+  gap: 3px;
+}
+
+.work-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11.5px;
+  padding: 2px 0;
+}
+
+.work-who {
+  color: var(--gold);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* The inspector is a narrow column, so these wrap rather than truncate: half
+   a line of characterization is not enough to recognise it by. */
+.work-what {
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.work-deck {
+  display: grid;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+/* Still to place: drawn quieter than what has landed, since it is an offer
+   rather than a fact about this beat. */
+.work-list.deck .work-what {
+  color: var(--muted);
+}
+
+/* Somebody who actually speaks here — the likeliest home for their work. */
+.work-list.deck li.in-beat .work-what {
+  color: var(--text);
+}

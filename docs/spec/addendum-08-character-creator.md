@@ -1,6 +1,6 @@
 # Addendum 08 — Character Creator
 
-Status: **stages 0–5 built — Ken's MVP is complete**, September 2026. From his
+Status: **stages 0–6 built** (0–5 were Ken's MVP), September 2026. From his
 *VC Writer Character Creator Development Specification* — the first module of
 the Research room. Extends §7 (research), §8 (structure) and §19 of the master specification,
 and uses the typed link system §7.4 already built.
@@ -200,7 +200,8 @@ interrupts writing to say a character is underdeveloped.
 3. **Built.** Linking an item to a scene or beat from the Creator (plan → story).
 4. **Built.** The right-click workflow in the editor (story → plan) (§7).
 5. **Built.** The Arc Builder, with opportunity, refusal and doubling down (§8, §9).
-6. Arc-to-plot: the on-deck queue, assignment, and the Related Elements box (§10).
+6. **Built.** Arc-to-plot: the on-deck queue, assignment, and the Related
+   Elements box (§10).
 7. Relationships (§11).
 8. The relationship mind map (§12).
 9. Cross-character arc links (§13).
@@ -469,3 +470,39 @@ add a discovery, a chance to change, a refusal and a doubling-down, and the
 header reads *Is offered the change and refuses it*. Pin the discovery to a beat
 and it moves from **Still to place** into **In the writing**, wearing the scene's
 name.
+
+### Stage 6 — the module read from the scene
+
+`characterWorkIn`, `onDeckForBeat` and `describeWork` in the domain;
+`CharacterWorkPanel.tsx` under Related Elements in the Inspector.
+
+**Three of §10's five bullets were already standing** when this stage began, and
+saying so is more useful than building them twice: the unassigned queue is the
+Arc's *Still to place*, assigning a point is stage 3's Where panel, and *which
+arc points are already represented* is the Arc's *In the writing*. The fifth —
+warnings about important points left unused — is §7's narrowed report, and waits
+for stage 10.
+
+**What was missing is the direction of travel.** Everything else in the module
+starts from a person and asks where their work landed. A writer in a scene has
+the opposite question — *what is this beat carrying?* — and it is the same rows
+read backwards, so nothing new is stored to answer it. The panel empties itself
+when a pin goes, because it is a reading rather than a list.
+
+**The queue belongs where the opportunity appears.** §10 asks for future arc
+moments kept on deck and assigned *when the plot creates an opportunity*, and
+that moment is somebody writing the scene — not somebody three screens away in
+the Creator. So what is waiting is offered in the Inspector, one press from being
+in the writing, and **+ Here** runs the same `pinUsage` as everywhere else.
+
+**Whoever speaks in the beat comes first and nobody is filtered out**, for the
+reason §7's list is ordered that way: a scene can carry work belonging to
+somebody who never says a word in it. Retired work is left out entirely — that
+decision is already made, and offering it again is the nagging §7 rules out.
+
+**Drag and drop is not built.** §10 says *drag/drop **or** assign*, and a press
+that says where something lands is the same act with fewer ways to miss.
+
+Driven in the real interface: select the beat, open **On deck (2)**, press
+**+ Here** on a piece of characterization — it moves up into what the beat is
+carrying, and the queue below is one shorter.

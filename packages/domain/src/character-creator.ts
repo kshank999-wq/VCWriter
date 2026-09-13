@@ -1295,3 +1295,125 @@ export const moveArcPoint = (
     ),
   };
 };
+
+// -------------------------------------------------------- arc to plot (§10)
+
+/** One piece of character work, seen from the scene rather than the character. */
+export interface CharacterWork {
+  kind: UsageLink['ownerKind'];
+  id: string;
+  characterId: CharacterId;
+  characterName: string;
+  /** What it says: the characterization, or the arc point. */
+  text: string;
+  /** For an arc point, what kind of moment it is. */
+  pointKind: ArcPointKind | null;
+  /** A trait's name, for a characterization filed under one. */
+  traitName: string | null;
+}
+
+const workFromRecords = (
+  file: ProjectFile,
+  owner: { kind: UsageLink['ownerKind']; id: string },
+): CharacterWork | null => {
+  if (owner.kind === 'characterization') {
+    const item = file.characterizationItems.find((one) => (one.id as string) === owner.id);
+    if (!item) return null;
+    const person = file.characters.find((one) => (one.id as string) === (item.characterId as string));
+    const trait = file.characterTraits.find((one) => (one.id as string) === (item.traitId as string | null));
+    return {
+      kind: 'characterization',
+      id: owner.id,
+      characterId: item.characterId,
+      characterName: person?.name ?? '',
+      text: item.text,
+      pointKind: null,
+      traitName: trait?.name ?? null,
+    };
+  }
+
+  const point = file.arcPoints.find((one) => (one.id as string) === owner.id);
+  if (!point) return null;
+  const person = file.characters.find((one) => (one.id as string) === (point.characterId as string));
+  return {
+    kind: 'arc_point',
+    id: owner.id,
+    characterId: point.characterId,
+    characterName: person?.name ?? '',
+    text: point.text,
+    pointKind: point.kind,
+    traitName: null,
+  };
+};
+
+/**
+ * The character work pinned to one beat (§10: *the related-elements panel
+ * displays linked character arc points*).
+ *
+ * This is the module read from the other end. Everything else in the Creator
+ * starts from a person and asks where their work landed; the writer in a scene
+ * has the opposite question — *what is this beat carrying?* — and it is the same
+ * rows read backwards, so there is nothing new stored to answer it.
+ */
+export const characterWorkIn = (file: ProjectFile, beatId: BeatId): CharacterWork[] =>
+  file.usageLinks
+    .filter((link) => (link.beatId as string) === (beatId as string))
+    .map((link) => workFromRecords(file, { kind: link.ownerKind, id: link.ownerId }))
+    .filter((work): work is CharacterWork => work !== null)
+    .sort((a, b) =>
+      a.characterName === b.characterName
+        ? a.text.localeCompare(b.text)
+        : a.characterName.localeCompare(b.characterName),
+    );
+
+/**
+ * What is still on deck for the people in a beat — §10's *unassigned queue*,
+ * offered where the plot has just made an opportunity.
+ *
+ * **Whoever speaks here first, and then everybody**, for the same reason the
+ * right-click orders its list that way (§7): a beat can be the right home for
+ * work belonging to somebody who never says a word in it, so this sorts and
+ * never filters. Retired work is left out, because it is a decision already
+ * made and offering it again is the nagging §7 rules out.
+ */
+export const onDeckForBeat = (
+  file: ProjectFile,
+  beatId: BeatId,
+): { here: CharacterWork[]; rest: CharacterWork[] } => {
+  const speaking = new Set(peopleInBeat(file, beatId).map((id) => id as string));
+
+  const waiting: CharacterWork[] = [
+    ...file.characterizationItems
+      .filter(
+        (item) =>
+          !item.retired &&
+          !isUsed({ kind: 'characterization', id: item.id as string }, file.usageLinks, file),
+      )
+      .map((item) => workFromRecords(file, { kind: 'characterization', id: item.id as string })),
+    ...file.arcPoints
+      .filter(
+        (point) =>
+          !point.retired &&
+          !isUsed({ kind: 'arc_point', id: point.id as string }, file.usageLinks, file),
+      )
+      .map((point) => workFromRecords(file, { kind: 'arc_point', id: point.id as string })),
+  ].filter((work): work is CharacterWork => work !== null);
+
+  const byName = (a: CharacterWork, b: CharacterWork) =>
+    a.characterName === b.characterName
+      ? a.text.localeCompare(b.text)
+      : a.characterName.localeCompare(b.characterName);
+
+  return {
+    here: waiting.filter((work) => speaking.has(work.characterId as string)).sort(byName),
+    rest: waiting.filter((work) => !speaking.has(work.characterId as string)).sort(byName),
+  };
+};
+
+/** How a piece of work reads in a list that is not about one character. */
+export const describeWork = (work: CharacterWork): string =>
+  work.kind === 'arc_point'
+    ? `${ARC_POINT_NAMES[work.pointKind ?? 'movement']}: ${work.text}`
+    : work.traitName
+      ? `${work.traitName} — ${work.text}`
+      : work.text;
