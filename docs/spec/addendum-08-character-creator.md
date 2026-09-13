@@ -1,6 +1,6 @@
 # Addendum 08 — Character Creator
 
-Status: **stages 0–9 built** (0–5 were Ken's MVP), September 2026. From his
+Status: **complete — all ten stages built** (0–5 were Ken's MVP), September 2026. From his
 *VC Writer Character Creator Development Specification* — the first module of
 the Research room. Extends §7 (research), §8 (structure) and §19 of the master specification,
 and uses the typed link system §7.4 already built.
@@ -205,8 +205,8 @@ interrupts writing to say a character is underdeveloped.
 7. **Built.** Relationships (§11).
 8. **Built.** The relationship mind map (§12).
 9. **Built.** Cross-character arc links (§13).
-10. Search, filters, the review modes and the Unused Character Material
-    report (§18).
+10. **Built.** Search, filters, the review modes and the Unused Character
+    Material report (§18).
 
 Stages 0–5 are Ken's MVP (§19) in his order, and **all of them are built**.
 Stage 4 was the one to protect: small in code, and what makes the module usable
@@ -625,3 +625,57 @@ made visible where it happens.
 Driven in the real interface: Mara's *takes the money anyway* **causes**
 Deakins' *stops covering for her*; her point reads `causes → DEAKINS`, his reads
 `← causes MARA`, and his row counts it without anybody telling it to.
+
+### Stage 10 — search, filters and the three reviews
+
+`packages/domain/src/character-review.ts`, and **Character review** in the
+Research menu. This finishes §8's build order.
+
+**One screen rather than five.** §18 asks for a search, seven filters, a
+character review in story order, a report of what is on deck, and an arc
+continuity check. That reads as five features and is one question asked three
+ways: *choose some of this character work, and read it in the order the story
+tells it*. So there is one filter (`reviewRows`) and three readings on top of it
+— written as five they would drift five ways, and the filters would end up
+meaning something slightly different in each.
+
+**Story order, because that is how an audience meets somebody.** Placed work
+comes first in the manuscript's order; what is not written yet follows, in the
+writer's. Reading a character in the order the ideas were typed is not reading a
+character.
+
+**The search looks at the trait's name as well as the work**, because somebody
+searching *greedy* wants what it makes her do — and the trait is the only place
+that word appears, since the whole module's point is that the item says *leaves
+a small tip* instead.
+
+**The report leaves out what was set aside.** That is a decision already made,
+and a list that kept raising it is exactly the nagging §7 forbids.
+
+**The two continuity notes are checkable, never opinions.** A cause written
+after its effect either is or is not — the writer said this moment causes that
+one and the scenes are the other way round — and a refusal in an arc that never
+offers a change is §9's own logic, not a verdict on the writing. *This character
+is thin* is not a thing software gets to say, so it is not said. Both notes may
+also describe something deliberate, which is why they are notes under a mode the
+writer opened, and not warnings that arrive uninvited.
+
+Driven in the real interface: the review lists Mara's work in story order, the
+search narrows it to the three filed under *Greedy*, **Still on deck** groups
+what is waiting under her name, and **Arc continuity** says *MARA refuses a
+change their arc never offers* — which was true, and stopped being true the
+moment she was given the chance.
+
+## 11. What is left
+
+Nothing in §8. Two things §18 and §12 name are deliberately not built, and both
+are recorded where the stage describes them: a **scene-range filter** on the map
+(the lane filter answers the same question for the way this product is
+organised) and **drag and drop** for assigning arc points (the specification says
+*drag/drop or assign*, and a press has fewer ways to miss).
+
+What would come next is not more of this module but the **second** one — and
+§3.4 is the reason to wait: the pattern this establishes is a research category
+that opens a screen of its own, with its records in the document and its links in
+the existing link system. If three modules end up sharing machinery, that
+machinery gets extracted then, from three real examples rather than one guess.

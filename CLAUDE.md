@@ -136,8 +136,8 @@ push live; the build takes a minute or two.
   0038 is the owner's switch.
   §19 says what each built stage does; §15 is the build order.
   `addendum-08-character-creator.md` is the Character Creator, the first module
-  of the Research room, from Ken's own dev spec. **Stages 0–9 built** (0–5 were
-  his MVP) —
+  of the Research room, from Ken's own dev spec. **Complete: all ten stages
+  built** (0–5 were his MVP) —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
   so the unit of work is the characterization item and a trait is a folder for
@@ -210,10 +210,18 @@ push live; the build takes a minute or two.
   always text. The Related Elements box then shows a cross-arc link without
   being told arcs exist, which is the proof the promise held. `arcEffectsOf`
   reads both directions and `arcsTurningIn` wants **both ends in one beat**,
-  since that is what makes it one dramatic event. §3
+  since that is what makes it one dramatic event. Stage 10 is
+  `packages/domain/character-review.ts` and **Character review** in the Research
+  menu: **one filter and three readings on top of it**, because §18's search,
+  seven filters, story-order review, on-deck report and continuity check are one
+  question asked three ways. The two continuity notes are **checkable rather
+  than opinions** — a cause written after its effect, and a refusal in an arc
+  that never offers a change — because *this character is thin* is not a thing
+  software gets to say. §3
   says what already exists and is only being widened; §8 is the
   build order; §3.4 says why there is deliberately no module framework yet; §10
-  says what each built stage does.
+  says what each built stage does; §11 names the two things deliberately left
+  out (a scene-range filter on the map, and drag-and-drop for assigning).
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

@@ -31,6 +31,7 @@ import { SetupsPanel } from './SetupsPanel';
 import { CastPanel } from './CastPanel';
 import { CharacterCreator } from './CharacterCreator';
 import { CharacterMap } from './CharacterMap';
+import { CharacterReview } from './CharacterReview';
 import { useModal } from '../use-modal';
 
 interface ResearchWindowProps {
@@ -53,7 +54,9 @@ type Selection =
   | { kind: 'plots' }
   | { kind: 'setups' }
   /** The relationship mind map (addendum 08 §12) — a view of the whole cast. */
-  | { kind: 'charmap' };
+  | { kind: 'charmap' }
+  /** Search, filters and the review modes (addendum 08 §18). */
+  | { kind: 'review' };
 
 const VIEWS: ReadonlyArray<{ view: ResearchView; label: string }> = [
   { view: 'all', label: 'All research' },
@@ -215,6 +218,8 @@ export function ResearchBody({
       ? (VIEWS.find((entry) => entry.view === selection.view)?.label ?? 'Research')
       : selection.kind === 'charmap'
         ? 'Character map'
+        : selection.kind === 'review'
+        ? 'Character review'
         : selection.kind === 'plots'
         ? 'Plots'
         : selection.kind === 'setups'
@@ -259,7 +264,9 @@ export function ResearchBody({
           their own: each has its own second column inside it. */}
       <div
         className={
-          creator || selection.kind === 'charmap' ? 'research-body creating' : 'research-body'
+          creator || selection.kind === 'charmap' || selection.kind === 'review'
+            ? 'research-body creating'
+            : 'research-body'
         }
       >
         {/* The side menu: what is not a place, then the folders. */}
@@ -339,6 +346,18 @@ export function ResearchBody({
                 <span className="count muted">{file.characterRelationships.length}</span>
               </button>
             </li>
+            <li>
+              <button
+                type="button"
+                className={selection.kind === 'review' ? 'folder-row selected' : 'folder-row'}
+                onClick={() => setSelection({ kind: 'review' })}
+              >
+                <span className="folder-name">Character review</span>
+                <span className="count muted">
+                  {file.characterizationItems.length + file.arcPoints.length}
+                </span>
+              </button>
+            </li>
           </ul>
         </nav>
 
@@ -349,7 +368,13 @@ export function ResearchBody({
               file={file}
               characterId={creator.id}
               currentBeatId={currentBeatId}
-              backLabel={selection.kind === 'charmap' ? 'Map' : 'Cast'}
+              backLabel={
+                selection.kind === 'charmap'
+                  ? 'Map'
+                  : selection.kind === 'review'
+                    ? 'Review'
+                    : 'Cast'
+              }
               onUpdate={onUpdate}
               onBack={() => setCreatorFor(null)}
             />
@@ -357,7 +382,10 @@ export function ResearchBody({
             <>
           <header className="research-contents-head">
             <h3>{title}</h3>
-            {selection.kind === 'plots' || selection.kind === 'setups' || selection.kind === 'charmap' ? null : (
+            {selection.kind === 'plots' ||
+            selection.kind === 'setups' ||
+            selection.kind === 'charmap' ||
+            selection.kind === 'review' ? null : (
               <span className="muted">
                 {items.length} {items.length === 1 ? 'note' : 'notes'}
                 {query.length > 0 ? ' found' : ''}
@@ -375,7 +403,9 @@ export function ResearchBody({
             </div>
           ) : null}
 
-          {selection.kind === 'charmap' ? (
+          {selection.kind === 'review' ? (
+            <CharacterReview file={file} onOpenCreator={setCreatorFor} />
+          ) : selection.kind === 'charmap' ? (
             <CharacterMap
               file={file}
               onUpdate={onUpdate}
@@ -442,7 +472,7 @@ export function ResearchBody({
         <aside
           className="research-detail"
           aria-label="Detail"
-          hidden={creator !== null || selection.kind === 'charmap'}
+          hidden={creator !== null || selection.kind === 'charmap' || selection.kind === 'review'}
         >
           {selectedItem ? (
             <Detail
