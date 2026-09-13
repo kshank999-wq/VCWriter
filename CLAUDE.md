@@ -252,6 +252,29 @@ push live; the build takes a minute or two.
   build order; §3.4 says why there is deliberately no module framework yet; §10
   says what each built stage does; §11 names the two things deliberately left
   out (a scene-range filter on the map, and drag-and-drop for assigning).
+  `addendum-09-companion-app.md` is the phone, from Ken's own *Companion App —
+  Simplified Development Specification v1.0*. **Specified, nothing built yet.**
+  §1 is the rule the whole thing hangs off — **the phone captures and the
+  desktop places** — which is his §12 said from the phone's end, and is what
+  lets the app stay a voice notebook: an app that never decides where a thought
+  goes needs no folder tree, no cast list and no taxonomy. §2 is the trap:
+  **a category is not a destination**. His five (Character, Plot Point, Idea,
+  Theme, Arc) are *kinds of thought* said out loud on the phone; the built
+  `requested_routing` is *where it goes*, chosen on the desktop — one word, two
+  questions, and conflating them puts a folder picker back on the phone. §3 is
+  how much already exists, which is most of the plumbing: `capture_items`
+  (0003) has eight of his ten fields, `client_capture_id` already makes sync
+  idempotent, `capture-queue.ts` writes to IndexedDB *before* sending, and
+  `CapturesPanel` is an inbox that does not auto-place. What is missing is
+  nearly all *interaction*. §3.1 names the two real fields — `category` and
+  `subject_name`, the latter because a spoken name is testimony and `inference`
+  is for guesses — and says why `sync_status` stays on the device rather than
+  sitting next to the approval `status`. §3.2 refuses to turn an Arc note into
+  an arc point, since that is the Character Creator arriving through the back
+  door. §5 is **the open decision**: native or the web app grown, which
+  `dictation.ts` already has the finding for (iOS Safari is the problem), and
+  the build order in §6 is arranged so everything before stage 4 is the same
+  either way.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
