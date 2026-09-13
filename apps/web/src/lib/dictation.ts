@@ -50,6 +50,18 @@ export interface DictationSession {
   stop(): void;
 }
 
+/**
+ * How many times a session may restart itself having heard nothing at all
+ * before it gives up.
+ *
+ * The restart below is what makes listening continuous on iOS; the counter is
+ * what stops it becoming a loop. A recogniser that ends immediately and
+ * repeatedly — a microphone taken by another app, a tab sent to the background
+ * — would otherwise be restarted forever with the button still lit, which
+ * looks exactly like listening and is not.
+ */
+const FUTILE_RESTARTS = 3;
+
 export const startDictation = (handlers: DictationHandlers): DictationSession | null => {
   const Recognition = constructorFor();
   if (!Recognition) return null;
@@ -60,7 +72,13 @@ export const startDictation = (handlers: DictationHandlers): DictationSession | 
   recognition.continuous = true;
   recognition.interimResults = true;
 
+  /** Set by `stop()`. The only thing that ends a session on purpose. */
+  let finished = false;
+  /** Cleared by every result, so the count is of *fruitless* restarts in a row. */
+  let futile = 0;
+
   recognition.onresult = (event) => {
+    futile = 0;
     let interim = '';
     for (let index = event.resultIndex; index < event.results.length; index += 1) {
       const result = event.results[index];
@@ -74,16 +92,49 @@ export const startDictation = (handlers: DictationHandlers): DictationSession | 
 
   recognition.onerror = (event) => {
     const code = event.error ?? 'unknown';
+
+    // A pause long enough to time out is not a problem on a phone in a pocket:
+    // the restart below picks the session straight back up, and telling the
+    // writer their silence was an error would be a lie about what happened.
+    if (code === 'no-speech' || code === 'aborted') return;
+
+    // Anything else ends the session rather than being restarted into.
+    finished = true;
     handlers.onError(
       code === 'not-allowed'
         ? 'Microphone access was denied. Allow it in your browser settings to dictate.'
-        : code === 'no-speech'
-          ? 'Nothing was heard. Try again.'
-          : `Dictation stopped: ${code}`,
+        : `Dictation stopped: ${code}`,
     );
   };
 
-  recognition.onend = () => handlers.onEnd();
+  /**
+   * **`continuous` is a request, not a promise** — iOS Safari ends a session
+   * after each utterance whatever it is set to, which turns *tap once and
+   * talk* into *tap after every sentence*. So a session that nobody stopped
+   * starts itself again, and the writer's tap on **Dictate** means listening
+   * until they tap it a second time. On a browser that honours `continuous`
+   * this never fires and costs nothing.
+   */
+  recognition.onend = () => {
+    if (finished) {
+      handlers.onEnd();
+      return;
+    }
+
+    futile += 1;
+    if (futile > FUTILE_RESTARTS) {
+      handlers.onEnd();
+      return;
+    }
+
+    try {
+      recognition.start();
+    } catch {
+      // Some engines refuse a restart that arrives too soon after the end. That
+      // is the end of the session rather than something to retry into.
+      handlers.onEnd();
+    }
+  };
 
   try {
     recognition.start();
@@ -91,7 +142,12 @@ export const startDictation = (handlers: DictationHandlers): DictationSession | 
     return null;
   }
 
-  return { stop: () => recognition.stop() };
+  return {
+    stop: () => {
+      finished = true;
+      recognition.stop();
+    },
+  };
 };
 
 /**

@@ -331,10 +331,25 @@ gesture it needs), saying the category and the name first and then the note
 something other than what would be saved. And the line under the buttons names
 the five spoken commands, because a command nobody knows about is not a feature.
 
+**`continuous` is a request, not a promise.** Driven at iPhone size, the first
+version of this stage failed the platform it was chosen for: iOS Safari ends a
+recognition session after every utterance whatever the flag says, so the button
+went back to reading *Dictate* after one sentence and the writer had to tap
+again for the next — *tap once and talk* quietly becoming *tap after every
+sentence*. `startDictation` now restarts a session nobody stopped, so the tap on
+**Dictate** means listening until it is tapped a second time, and a silence long
+enough to time out is not reported as an error, because a writer thinking is the
+normal case. Three fruitless restarts in a row end it instead: a microphone
+another app has taken would otherwise be restarted for ever with the button
+lit, which looks exactly like listening and is not. On a browser that honours
+`continuous` none of it fires. `dictation.test.ts` holds both halves — that it
+keeps going, and that it knows when to stop.
+
 Driven at phone width with a stubbed recogniser, so the whole path runs for
 real: *Character, Mara — she never lets anyone else drive* set the category, the
 name and the note from one utterance; *Correction. …* replaced the wording and
-raised the undo.
+raised the undo. Then again at iPhone 13 size with a recogniser that ends after
+each utterance, which is what found the above.
 
 ### Stage 5 — the project page
 
