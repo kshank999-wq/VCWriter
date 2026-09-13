@@ -137,7 +137,11 @@ push live; the build takes a minute or two.
   §19 says what each built stage does; §15 is the build order.
   `addendum-08-character-creator.md` is the Character Creator, the first module
   of the Research room, from Ken's own dev spec. **Complete: all ten stages
-  built** (0–5 were his MVP) —
+  built, plus stage 11, the way in** (0–5 were his MVP) —
+  the Creator is reached from the **Cast** section of the research side menu
+  (every name, one click) or a right-click on a cast row, and it is a
+  *selection* rather than a layer over one, which is what makes it stay with
+  that person — leaving and coming back lands on the tab they were left on —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
   so the unit of work is the characterization item and a trait is a folder for

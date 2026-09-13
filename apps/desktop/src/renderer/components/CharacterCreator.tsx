@@ -101,11 +101,22 @@ interface CharacterCreatorProps {
   currentBeatId: BeatId | null;
   /** What to call the way out — the cast list, or the map it was opened from. */
   backLabel?: string;
+  /**
+   * Which tab is open, held by whoever owns the Creator.
+   *
+   * Controlled rather than kept in here because this component is unmounted
+   * every time the writer glances at a folder; keeping it would mean coming
+   * back to somebody always landing on Overview, however deep into their arc
+   * the work had got.
+   */
+  tab?: CreatorTab;
+  onTab?(tab: CreatorTab): void;
   /** Back to wherever this was opened from. */
   onBack(): void;
 }
 
-type Tab = 'overview' | 'traits' | 'arc' | 'relationships';
+export type CreatorTab = 'overview' | 'traits' | 'arc' | 'relationships';
+type Tab = CreatorTab;
 
 /** Which trait's characterization is being looked at. */
 type Shelf = { kind: 'trait'; id: CharacterTraitId } | { kind: 'unfiled' };
@@ -121,11 +132,19 @@ export function CharacterCreator({
   characterId,
   currentBeatId,
   backLabel = 'Cast',
+  tab: tabFromOwner,
+  onTab,
   onUpdate,
   onBack,
 }: CharacterCreatorProps) {
   const person = file.characters.find((one) => one.id === characterId) ?? null;
-  const [tab, setTab] = useState<Tab>('overview');
+  // Uncontrolled is still allowed, for a caller with nowhere to keep it.
+  const [ownTab, setOwnTab] = useState<Tab>('overview');
+  const tab = tabFromOwner ?? ownTab;
+  const setTab = (next: Tab) => {
+    setOwnTab(next);
+    onTab?.(next);
+  };
   const [shelf, setShelf] = useState<Shelf | null>(null);
 
   const board = useMemo(

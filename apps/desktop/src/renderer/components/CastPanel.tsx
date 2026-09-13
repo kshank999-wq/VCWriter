@@ -162,7 +162,19 @@ function CastRow({
   onOpenCreator?(characterId: CharacterId): void;
 }) {
   return (
-    <li className="cast-row">
+    <li
+      className="cast-row"
+      // Right-click anywhere on the row opens them. The name itself cannot be
+      // the way in — it is editable, and a click there has to mean rename.
+      onContextMenu={
+        onOpenCreator
+          ? (event) => {
+              event.preventDefault();
+              onOpenCreator(person.id);
+            }
+          : undefined
+      }
+    >
       <InlineText
         value={person.name}
         ariaLabel="Character name"

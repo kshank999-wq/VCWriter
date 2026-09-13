@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   addResearchCategory,
   addResearchItem,
+  castByCategory,
+  characterBoard,
   laneKindSchema,
   lanesInOrder,
   markResearchUsed,
@@ -29,7 +31,7 @@ import { InlineText } from './InlineText';
 import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
 import { CastPanel } from './CastPanel';
-import { CharacterCreator } from './CharacterCreator';
+import { CharacterCreator, type CreatorTab } from './CharacterCreator';
 import { CharacterMap } from './CharacterMap';
 import { CharacterReview } from './CharacterReview';
 import { useModal } from '../use-modal';
@@ -56,7 +58,16 @@ type Selection =
   /** The relationship mind map (addendum 08 §12) — a view of the whole cast. */
   | { kind: 'charmap' }
   /** Search, filters and the review modes (addendum 08 §18). */
-  | { kind: 'review' };
+  | { kind: 'review' }
+  /**
+   * Somebody open in the Character Creator (addendum 08 §5).
+   *
+   * The Creator is a **selection** rather than a thing laid over one, and that
+   * is the whole of why it stays put: the side menu can be pointed at a person
+   * the same way it is pointed at a folder, so leaving them is clicking
+   * something else and coming back is clicking them again.
+   */
+  | { kind: 'creator'; id: CharacterId };
 
 const VIEWS: ReadonlyArray<{ view: ResearchView; label: string }> = [
   { view: 'all', label: 'All research' },
@@ -139,19 +150,44 @@ export function ResearchBody({
   }, [openOn]);
   const [selectedItemId, setSelectedItemId] = useState<ResearchItemId | null>(null);
   /**
-   * Somebody opened in the Character Creator (addendum 08 §5).
-   *
-   * It takes over the contents pane rather than opening a window on top of a
-   * window: the Creator *is* what the Characters folder is for, and the folders
-   * stay down the left so leaving it is one click.
+   * Where opening somebody came from, so **Back** goes there rather than
+   * somewhere plausible. Opening from the map should return to the map.
    */
-  const [creatorFor, setCreatorFor] = useState<CharacterId | null>(null);
+  const [cameFrom, setCameFrom] = useState<Selection | null>(null);
+  /**
+   * The tab each person was last left on.
+   *
+   * Kept out here rather than inside the Creator because the Creator is
+   * unmounted the moment the writer looks at a folder. Coming back to somebody
+   * mid-way through their arc and landing on Overview would make the module
+   * feel like it had forgotten them.
+   */
+  const [tabFor, setTabFor] = useState<Readonly<Record<string, CreatorTab>>>({});
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [dragging, setDragging] = useState<{ kind: 'item' | 'folder'; id: string } | null>(null);
 
   const tree = useMemo(() => researchTree(file), [file]);
   const folders = useMemo(() => flatten(tree), [tree]);
+
+  /** The cast in the order it is offered while typing: main characters first. */
+  const cast = useMemo(
+    () => castByCategory(file).flatMap((group) => group.characters),
+    [file],
+  );
+
+  /**
+   * How much is waiting on each of them, read off the usage links like
+   * everywhere else — never a count kept on the character, which would be a
+   * second place for the truth to live.
+   */
+  const onDeck = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const person of cast) {
+      counts[person.id as string] = characterBoard({ characterId: person.id as string, file }).counts.onDeck;
+    }
+    return counts;
+  }, [cast, file]);
 
   const items = useMemo(() => {
     if (selection.kind === 'folder') return researchItemsIn(file, { categoryId: selection.id }, { query });
@@ -196,15 +232,22 @@ export function ResearchBody({
     setDragging(null);
   };
 
-  const creator = creatorFor
-    ? (file.characters.find((person) => person.id === creatorFor) ?? null)
-    : null;
+  const creator =
+    selection.kind === 'creator'
+      ? (file.characters.find((person) => person.id === selection.id) ?? null)
+      : null;
 
-  // Choosing anything in the side menu leaves the Creator: the folders are the
-  // way out of it, so they have to behave like one.
-  useEffect(() => {
-    setCreatorFor(null);
-  }, [selection]);
+  /**
+   * Open somebody, remembering where the writer was. Called from the cast in
+   * the side menu, from a cast row's right-click, from the map and from the
+   * review — every one of them the same act, so every one of them comes here.
+   */
+  const openCreator = (characterId: CharacterId) => {
+    setSelection((current) => {
+      if (current.kind !== 'creator') setCameFrom(current);
+      return { kind: 'creator', id: characterId };
+    });
+  };
 
   // The system Characters folder: the one the cast is shown in.
   const isCastFolder =
@@ -214,7 +257,9 @@ export function ResearchBody({
     );
 
   const title =
-    selection.kind === 'view'
+    selection.kind === 'creator'
+      ? (creator?.name ?? 'Character')
+      : selection.kind === 'view'
       ? (VIEWS.find((entry) => entry.view === selection.view)?.label ?? 'Research')
       : selection.kind === 'charmap'
         ? 'Character map'
@@ -314,6 +359,44 @@ export function ResearchBody({
             ))}
           </ul>
 
+          {/* The cast, by name, because the Creator is what a writer comes
+              here for and hunting through a folder for a button is not
+              finding it. The order is the order names are offered while a cue
+              is being typed: main characters first. */}
+          {cast.length > 0 ? (
+            <>
+              <h4>Cast</h4>
+              <ul className="research-views research-cast">
+                {cast.map((person) => (
+                  <li key={person.id}>
+                    <button
+                      type="button"
+                      className={
+                        selection.kind === 'creator' && selection.id === person.id
+                          ? 'folder-row selected'
+                          : 'folder-row'
+                      }
+                      aria-current={
+                        selection.kind === 'creator' && selection.id === person.id ? 'true' : undefined
+                      }
+                      title={`Build ${person.name}: traits, how they show, and what is still on deck`}
+                      onClick={() => openCreator(person.id)}
+                    >
+                      <span className="folder-name">{person.name}</span>
+                      {/* Nothing waiting is not worth a nought beside every
+                          name; something waiting is worth saying. */}
+                      {(onDeck[person.id as string] ?? 0) > 0 ? (
+                        <span className="count muted" title="Waiting to be shown">
+                          {onDeck[person.id as string]}
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+
           <h4>Also</h4>
           <ul className="research-views">
             <li>
@@ -365,18 +448,24 @@ export function ResearchBody({
         <section className="research-contents" aria-label={creator ? creator.name : title}>
           {creator ? (
             <CharacterCreator
+              // Keyed on the person so switching between two of them starts
+              // clean: the open trait belongs to whoever was being read, and
+              // carrying it across would show the next person an empty shelf.
+              key={creator.id}
               file={file}
               characterId={creator.id}
               currentBeatId={currentBeatId}
               backLabel={
-                selection.kind === 'charmap'
+                cameFrom?.kind === 'charmap'
                   ? 'Map'
-                  : selection.kind === 'review'
+                  : cameFrom?.kind === 'review'
                     ? 'Review'
-                    : 'Cast'
+                    : 'Research'
               }
+              tab={tabFor[creator.id as string] ?? 'overview'}
+              onTab={(next) => setTabFor((current) => ({ ...current, [creator.id as string]: next }))}
               onUpdate={onUpdate}
-              onBack={() => setCreatorFor(null)}
+              onBack={() => setSelection(cameFrom ?? { kind: 'view', view: 'all' })}
             />
           ) : (
             <>
@@ -399,22 +488,19 @@ export function ResearchBody({
               folder rather than two folders both called Characters. */}
           {isCastFolder ? (
             <div className="research-embedded">
-              <CastPanel file={file} onUpdate={onUpdate} onOpenCreator={setCreatorFor} />
+              <CastPanel file={file} onUpdate={onUpdate} onOpenCreator={openCreator} />
             </div>
           ) : null}
 
           {selection.kind === 'review' ? (
-            <CharacterReview file={file} onOpenCreator={setCreatorFor} />
+            <CharacterReview file={file} onOpenCreator={openCreator} />
           ) : selection.kind === 'charmap' ? (
             <CharacterMap
               file={file}
               onUpdate={onUpdate}
-              // Opening somebody from the map leaves the selection alone: the
-              // Creator takes the pane whatever the menu is pointed at, and
-              // changing the selection here would trip the effect that closes
-              // it. Pressing back returns to the map, which is where they came
-              // from.
-              onOpenCreator={setCreatorFor}
+              // Back from here returns to the map, because that is where
+              // they came from — openCreator remembers it.
+              onOpenCreator={openCreator}
             />
           ) : selection.kind === 'plots' ? (
             <Plots file={file} onUpdate={onUpdate} />

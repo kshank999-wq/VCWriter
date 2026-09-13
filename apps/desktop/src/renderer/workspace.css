@@ -3145,6 +3145,17 @@ dialog.research-window::backdrop {
   font-size: 12px;
 }
 
+/* The cast in the side menu: one click into the Character Creator. A long
+   cast scrolls on its own rather than pushing the rest of the menu off. */
+.research-cast {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.research-cast .folder-name {
+  letter-spacing: 0.02em;
+}
+
 .folder-dot {
   width: 8px;
   height: 8px;

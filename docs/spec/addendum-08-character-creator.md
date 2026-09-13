@@ -1,6 +1,7 @@
 # Addendum 08 — Character Creator
 
-Status: **complete — all ten stages built** (0–5 were Ken's MVP), September 2026. From his
+Status: **complete — all ten stages built, plus stage 11, the way in**
+(0–5 were Ken's MVP), September 2026. From his
 *VC Writer Character Creator Development Specification* — the first module of
 the Research room. Extends §7 (research), §8 (structure) and §19 of the master specification,
 and uses the typed link system §7.4 already built.
@@ -297,8 +298,10 @@ themselves; and a character gets one arc.
 ### Stage 2 — the screen, and the colour
 
 `apps/desktop/src/renderer/components/CharacterCreator.tsx`, reached from the
-**Build** button beside somebody in the Characters folder, plus the edits in
-`character-creator.ts` and migration `0040_character_tags.sql`.
+**Cast** section of the research side menu — every name in the project, one
+click in — plus the edits in `character-creator.ts` and migration
+`0040_character_tags.sql`. See stage 11 for why the side menu, and not the
+button this stage first shipped.
 
 **The layout is the argument.** Traits sit in a narrow column down the side and
 the middle of the screen is the ways one of them gets shown, because the
@@ -665,6 +668,38 @@ search narrows it to the three filed under *Greedy*, **Still on deck** groups
 what is waiting under her name, and **Arc continuity** says *MARA refuses a
 change their arc never offers* — which was true, and stopped being true the
 moment she was given the chance.
+
+### Stage 11 — being able to find it
+
+`ResearchWindow.tsx`, `CastPanel.tsx`, `CharacterCreator.tsx`. No domain change
+and no migration: everything below is about reaching what the ten stages above
+already built.
+
+**A module nobody can find is a module nobody has.** The Creator shipped behind
+a small **Build** button on a row, inside the one folder that shows the cast —
+so a writer who opened Research, clicked a character folder of their own making
+and looked around correctly concluded it was not there. The fix is that the
+**cast is in the side menu**, by name, in the order names are offered while a
+cue is being typed, with the number of things waiting on each person beside
+them. One click is the whole route.
+
+**The Creator is a selection, not a layer over one**, and that is what makes it
+stay. It used to be a separate piece of state that any click in the side menu
+threw away, which meant the module could not be left and returned to — the one
+thing a writer does constantly, because the reason to open the Creator is
+usually something they just noticed somewhere else. Now pointing the menu at a
+person is the same act as pointing it at a folder, so leaving is clicking
+something else and coming back is clicking them again. The tab each person was
+last left on is remembered per person, because arriving back on Overview when
+the work was three items into their arc is the software forgetting them.
+
+**Right-click opens a cast row**, since the name on it is editable and a click
+there has to keep meaning rename.
+
+Driven in the real interface: **Cast** lists Deakins and Mara with *2* beside
+Mara, opening her and choosing **Arc**, going to Plots and coming back lands on
+her Arc with her name still lit in the menu, and a right-click on a cast row
+opens that person.
 
 ## 11. What is left
 

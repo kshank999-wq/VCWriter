@@ -2,7 +2,13 @@
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { addResearchCategory, addResearchItem, createProjectFile, type ProjectFile } from '@vcwriter/domain';
+import {
+  addCharacter,
+  addResearchCategory,
+  addResearchItem,
+  createProjectFile,
+  type ProjectFile,
+} from '@vcwriter/domain';
 import { ResearchWindow } from '../components/ResearchWindow';
 import { TitleBar } from '../components/TitleBar';
 
@@ -155,5 +161,74 @@ describe('the research window', () => {
     expect(screen.getByLabelText('Kind of Main Plot')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: /^Setups & payoffs/ }));
     expect(screen.getByRole('heading', { name: /setups/i })).toBeDefined();
+  });
+});
+
+/**
+ * Getting into the Character Creator (addendum 08 §5).
+ *
+ * The module was built and then could not be found: it lived behind a small
+ * button on a row inside one folder, and any click in the side menu threw it
+ * away. Both of those are what these tests are about.
+ */
+describe('the cast in the side menu', () => {
+  const withCast = () => {
+    let file = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
+    file = addCharacter(file, { name: 'MARA' });
+    file = addCharacter(file, { name: 'DEAKINS' });
+    return file;
+  };
+
+  it('lists the cast, so the Creator is one click rather than a hunt', () => {
+    render(<Harness initial={withCast()} />);
+    const side = within(screen.getByLabelText('Research folders'));
+
+    fireEvent.click(side.getByRole('button', { name: /^MARA/ }));
+    expect(screen.getByRole('navigation', { name: 'Character' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Character name: MARA' })).toBeDefined();
+  });
+
+  it('stays with that character: leaving and coming back is the same person, on the same tab', () => {
+    render(<Harness initial={withCast()} />);
+    const side = within(screen.getByLabelText('Research folders'));
+
+    fireEvent.click(side.getByRole('button', { name: /^MARA/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Arc' }));
+    expect(screen.getByRole('button', { name: 'Arc' }).getAttribute('aria-current')).toBe('page');
+
+    // Off to look at something else, which is the move that used to lose her.
+    fireEvent.click(side.getByRole('button', { name: /^Plots/ }));
+    expect(screen.queryByRole('navigation', { name: 'Character' })).toBeNull();
+
+    fireEvent.click(side.getByRole('button', { name: /^MARA/ }));
+    expect(screen.getByRole('button', { name: 'Character name: MARA' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Arc' }).getAttribute('aria-current')).toBe('page');
+  });
+
+  it('gives each of them their own place, rather than one Creator that follows the last click', () => {
+    render(<Harness initial={withCast()} />);
+    const side = within(screen.getByLabelText('Research folders'));
+
+    fireEvent.click(side.getByRole('button', { name: /^MARA/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Relationships' }));
+    fireEvent.click(side.getByRole('button', { name: /^DEAKINS/ }));
+
+    // Deakins opens where he was left, which is the beginning — not on her tab.
+    expect(screen.getByRole('button', { name: 'Character name: DEAKINS' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Overview' }).getAttribute('aria-current')).toBe('page');
+
+    fireEvent.click(side.getByRole('button', { name: /^MARA/ }));
+    expect(screen.getByRole('button', { name: 'Relationships' }).getAttribute('aria-current')).toBe('page');
+  });
+
+  it('opens somebody from a right-click on their row in the cast', () => {
+    render(<Harness initial={withCast()} />);
+    const side = within(screen.getByLabelText('Research folders'));
+    fireEvent.click(side.getByRole('button', { name: /^Characters/ }));
+
+    const row = screen.getByLabelText('Heading for MARA').closest('li')!;
+    fireEvent.contextMenu(row);
+    expect(screen.getByRole('navigation', { name: 'Character' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Character name: MARA' })).toBeDefined();
   });
 });
