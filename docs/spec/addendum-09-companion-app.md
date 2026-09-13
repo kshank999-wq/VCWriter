@@ -122,10 +122,14 @@ What a note can be dropped on, in this version:
 
 Each of those is a destination `approveCapture` already understands.
 
-## 5. The open decision: what the app is built as
+## 5. The decision: what the app is built as
 
-This is the one thing the code cannot answer, and it changes the shape of the
-work rather than the amount.
+**Decided: the web app, grown.** Ken chose it when stage 4 came up, and stage 4
+is built on it. What follows is the reasoning that was on the table, kept
+because it is also the list of what an iPhone user gets less of.
+
+This was the one thing the code could not answer, and it changed the shape of
+the work rather than the amount.
 
 `dictation.ts` already carries the finding, written before this spec existed:
 the Web Speech API is *a real capability on Android Chrome and a limited one on
@@ -143,10 +147,18 @@ So:
   today, and would have to tell an iPhone user to use the keyboard's dictation
   button — which is a worse product than the spec describes, honestly labelled.
 
-The stages below are written so that **everything before stage 4 is the same
+The stages below were written so that **everything before stage 4 is the same
 either way**: the data model, the sync contract and the desktop inbox do not
-know what the phone is written in. The decision is only needed when the capture
-screen itself is built.
+know what the phone is written in. That held — stage 4 changed nothing before
+it, and a native app later would inherit the whole of stages 0–3 and 5 as they
+stand, plus `capture-voice.ts`, which is where the rules went precisely so they
+would not be trapped in a React component.
+
+What the choice costs is named on the screen rather than hidden: where the
+browser has no recogniser, the Dictate button is disabled and the line beneath
+it says to use the keyboard's microphone key. The note is typed instead, and
+everything else about it — the category, the name, the queue, the review — is
+identical.
 
 ## 6. Build order
 
@@ -155,15 +167,12 @@ screen itself is built.
 1. ✅ **The desktop Mobile App area** — see §8.
 2. ✅ **The upload contract** — see §7.
 3. ✅ **Review on the phone** — see §7.
-4. **Voice capture** — §5 and §6: the category command, the live transcription,
-   the read-back, the correction loop. **Needs §5's decision.**
+4. ✅ **Voice capture** — see §7.
 5. ✅ **Project page** — see §7.
 
-§13's acceptance criteria are met once stage 4 lands; everything else on the
-list is standing. Typed capture is a working product on its own, and is what a
-first release can be if the platform decision takes a while.
+**All six stages are built.** §13's acceptance criteria are met.
 
-## 7. What stages 0 and 1 built
+## 7. What each stage built
 
 ### Stage 0 — the two fields
 
@@ -270,6 +279,62 @@ Driven at phone width: the capture screen asks *Project*, *This is a* and
 change it there*. Looking at it caught two things the tests could not: the name
 field had no box (only `select` and the textarea were styled) and the chips had
 no outline, because the variable I reached for does not exist in this theme.
+
+### Stage 4 — voice capture
+
+`packages/domain/src/capture-voice.ts`, `isReadBackSupported` / `readAloud` in
+`apps/web/src/lib/dictation.ts`, and the capture screen around them.
+
+**The browser hears; the domain decides what was meant.** A recogniser hands
+back a string, and every question after that — was a category named, was a
+person named, is this a correction — is a rule about text. `readSpoken` is that
+rule, in the domain where it can be tested, rather than in a component where it
+can only be demonstrated. The file is named `capture-voice.ts` because
+`voice.ts` was already taken by the read-back voices of spec §10: a *voice*
+there is a synthesised speaker, and here it is what somebody said.
+
+Three things it refuses to do, each for the same reason — **a wrong guess is
+worse than no guess, because on a phone in a pocket nobody sees it happen**:
+
+- **Only the opening of an utterance is a command.** A writer who says *the idea
+  is that she never drives* is dictating, not filing. A parser that hunted for
+  keywords anywhere would quietly file half their notes for them.
+- **A name needs a pause after it.** A recogniser writes a pause as a comma or a
+  dash, and without one there is no way to tell *Marisol never trusts him* from
+  a name followed by a note. With no pause nothing is taken and the whole thing
+  becomes the note — visible, and one tap to fix. Capped at four words, since a
+  pause also falls mid-sentence and *the audit lands the same week* is not
+  somebody's name.
+- **Whole words only.** *Arc* must not match *architecture* — the same mistake
+  `charactersCalled` was built to stop the rest of the product making about
+  character cues.
+
+Only **Character** and **Arc** take a name, because those are the two of the
+five that are about a person. *Idea, the audit lands the same week* has a pause
+in it and nobody in it.
+
+**A correction replaces.** His §6 allows a correction to be a clarification
+instead, and an interpretation layer could try to tell the two apart — but a
+model deciding whether to replace or append is a model that will sometimes throw
+a sentence away silently, in a room where the writer cannot see the screen. So
+it replaces, the previous wording is handed back, and **Undo correction** puts
+it back in one press.
+
+The screen gained three things and lost none. The largest type on it is now
+**what is about to be filed** — the category and the name, which are the two
+facts a writer cannot check by glancing and the two a recogniser most often gets
+wrong — with *Heard: …* under it whenever an utterance was read as a command.
+**Read it back** speaks the note through `speechSynthesis` (far better supported
+than recognition, iOS included, and the tap that stopped dictation is the
+gesture it needs), saying the category and the name first and then the note
+*exactly as it stands*: a read-back that tidied the words would be confirming
+something other than what would be saved. And the line under the buttons names
+the five spoken commands, because a command nobody knows about is not a feature.
+
+Driven at phone width with a stubbed recogniser, so the whole path runs for
+real: *Character, Mara — she never lets anyone else drive* set the category, the
+name and the note from one utterance; *Correction. …* replaced the wording and
+raised the undo.
 
 ### Stage 5 — the project page
 

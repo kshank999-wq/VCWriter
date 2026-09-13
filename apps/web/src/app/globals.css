@@ -1722,3 +1722,23 @@ p.room-stamp {
   font: inherit;
   cursor: pointer;
 }
+
+/* The spoken category, made the screen's own title (addendum 09 §5.4): a
+   writer whose phone is in their hand needs to see the command landed without
+   hunting for it in a form. */
+.notes-spoken {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 26px;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}
+
+.notes-spoken-who {
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.notes-heard {
+  margin: -10px 0 0;
+}

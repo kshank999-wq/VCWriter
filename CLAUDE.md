@@ -253,7 +253,7 @@ push live; the build takes a minute or two.
   says what each built stage does; §11 names the two things deliberately left
   out (a scene-range filter on the map, and drag-and-drop for assigning).
   `addendum-09-companion-app.md` is the phone, from Ken's own *Companion App —
-  Simplified Development Specification v1.0*. **Stages 0–3 and 5 built; only stage 4, voice, is left.**
+  Simplified Development Specification v1.0*. **All six stages are built.**
   §1 is the rule the whole thing hangs off — **the phone captures and the
   desktop places** — which is his §12 said from the phone's end, and is what
   lets the app stay a voice notebook: an app that never decides where a thought
@@ -271,10 +271,11 @@ push live; the build takes a minute or two.
   is for guesses — and says why `sync_status` stays on the device rather than
   sitting next to the approval `status`. §3.2 refuses to turn an Arc note into
   an arc point, since that is the Character Creator arriving through the back
-  door. §5 is **the open decision**: native or the web app grown, which
-  `dictation.ts` already has the finding for (iOS Safari is the problem), and
-  the build order in §6 is arranged so everything before stage 4 is the same
-  either way. §7 says what stages 0 and 1 built: migration 0041's two nullable
+  door. §5 was the open decision — native or the web app grown — and Ken made
+  it: **the web app**. It cost only what it says on the screen, since the build
+  order in §6 had been arranged so everything before stage 4 was the same either
+  way, and it held: a native app later inherits every other stage untouched.
+  §7 says what each stage built: migration 0041's two nullable
   columns, and the **Mobile App** entry in the research side menu —
   `MobileInbox.tsx`, grouped by the five categories, every note draggable. It
   lives *inside* the Research window because that is the only place the drag has
@@ -310,7 +311,21 @@ push live; the build takes a minute or two.
   uses, so the phone cannot grow a second thinner idea of what a project is; a
   failed insert deletes the project row and the cascades take the rest, since
   half a project is worse than none. The phone no longer offers **no project**,
-  which the column still allows and the desktop still routes.
+  which the column still allows and the desktop still routes. Stage 4 is voice:
+  `packages/domain/src/capture-voice.ts` — named that because `voice.ts` was
+  already the read-back *voices* of spec §10, a synthesised speaker there and
+  what somebody said here. **The browser hears and the domain decides what was
+  meant**, so `readSpoken` is testable rather than merely demonstrable, and it
+  refuses three things for one reason — a wrong guess is worse than no guess
+  when nobody is looking at the screen: only the **opening** of an utterance is
+  a command (*the idea is that she never drives* is dictation), a name needs the
+  **pause** a recogniser writes as a comma (without one nothing is taken and it
+  all becomes the note), and matching is **whole-word**, which is the mistake
+  `charactersCalled` was built to stop. A correction **replaces** and hands the
+  old wording back, because a model choosing between replacing and appending
+  will one day throw a sentence away silently. The screen's largest type is now
+  what is about to be filed, **Read it back** speaks it exactly as it stands,
+  and the line under the buttons names the five commands.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

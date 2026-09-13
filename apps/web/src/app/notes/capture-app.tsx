@@ -12,12 +12,21 @@ import {
   pruneSynced,
   type QueuedCapture,
 } from '@/lib/capture-queue';
-import { isDictationSupported, startDictation, type DictationSession } from '@/lib/dictation';
+import {
+  isDictationSupported,
+  isReadBackSupported,
+  readAloud,
+  startDictation,
+  type DictationSession,
+} from '@/lib/dictation';
 import { NotesReview } from './notes-review';
 import { ProjectPage, type ProjectSummary } from './project-page';
 import {
   CAPTURE_CATEGORIES,
   CAPTURE_CATEGORY_NAMES,
+  applyCorrection,
+  readSpoken,
+  sayBack,
   type CaptureCategory,
 } from '@vcwriter/domain';
 
@@ -63,6 +72,15 @@ export default function CaptureApp() {
   const [interim, setInterim] = useState('');
   const [dictating, setDictating] = useState(false);
   const session = useRef<DictationSession | null>(null);
+  /**
+   * The wording a correction replaced, so putting it back is one press (§6).
+   *
+   * Null means nothing has been corrected. Cleared when the note is saved: a
+   * note that has gone has nothing to undo.
+   */
+  const [beforeCorrection, setBeforeCorrection] = useState<string | null>(null);
+  /** Whether the last utterance was heard as a command, for the line under it. */
+  const [heard, setHeard] = useState<string | null>(null);
 
   const [queue, setQueue] = useState<QueuedCapture[]>([]);
   const [status, setStatus] = useState<string | null>(null);
@@ -148,13 +166,64 @@ export default function CaptureApp() {
     };
   }, [flushQueue]);
 
+  /**
+   * One utterance, read for what it meant (his §5 and §6).
+   *
+   * `readSpoken` in the domain decides; this only does what it says. The three
+   * outcomes are the three the spec names: a category was called, a correction
+   * was called, or it was dictation — and in every one of them the words a
+   * writer spoke end up on the screen where they can see them (§2's *visible
+   * confirmation*).
+   */
+  const heardIt = (chunk: string) => {
+    const command = readSpoken(chunk);
+
+    if (command.kind === 'category') {
+      setCategory(command.category);
+      if (command.subjectName) setSubjectName(command.subjectName);
+      setHeard(
+        command.subjectName
+          ? `${CAPTURE_CATEGORY_NAMES[command.category]} — ${command.subjectName}`
+          : CAPTURE_CATEGORY_NAMES[command.category],
+      );
+      if (command.text.length > 0) append(command.text);
+      return;
+    }
+
+    if (command.kind === 'correction') {
+      // Replaces, and keeps what was there so a press puts it back (§6).
+      setText((current) => {
+        const after = applyCorrection(current, command.text);
+        setBeforeCorrection(after.previous);
+        return after.text;
+      });
+      setHeard('Correction');
+      return;
+    }
+
+    append(command.text);
+  };
+
+  const append = (chunk: string) => {
+    const words = chunk.trim();
+    if (words.length === 0) return;
+    setText((current) => `${current}${current.length > 0 && !current.endsWith(' ') ? ' ' : ''}${words}`);
+  };
+
+  /** Say the note back, so it can be checked without looking (his §5.7). */
+  const sayItBack = () => {
+    readAloud(sayBack({ category, subjectName: subjectName.trim() || null, text }), {
+      onError: setStatus,
+    });
+  };
+
   const toggleDictation = () => {
     if (dictating) {
       session.current?.stop();
       return;
     }
     const started = startDictation({
-      onFinal: (chunk) => setText((current) => `${current}${current.length > 0 && !current.endsWith(' ') ? ' ' : ''}${chunk.trim()}`),
+      onFinal: (chunk) => heardIt(chunk),
       onInterim: setInterim,
       onError: (message) => {
         setStatus(message);
@@ -200,6 +269,8 @@ export default function CaptureApp() {
     // The name goes with the note; the category stays, because a writer
     // catching three thoughts about the same person should say it once.
     setSubjectName('');
+    setBeforeCorrection(null);
+    setHeard(null);
     await refreshQueue();
     setStatus(navigator.onLine ? 'Saved' : 'Saved on this device — it will sync when you are back online');
     await flushQueue();
@@ -285,91 +356,139 @@ export default function CaptureApp() {
 
       {screen === 'capture' ? (
         <>
-      <div className="notes-pickers">
-          <label className="field">
-            <span>This is a</span>
-            <select value={category} onChange={(event) => setCategory(event.target.value as CaptureCategory)}>
-              {CAPTURE_CATEGORIES.map((one) => (
-                <option key={one} value={one}>
-                  {CAPTURE_CATEGORY_NAMES[one]}
-                </option>
-              ))}
-            </select>
-          </label>
-  
-          {/* Optional for all five: a character's name for a Character or an Arc
-              note, a short label for the rest. */}
-          <label className="field">
-            <span>{category === 'character' || category === 'arc' ? 'Who' : 'About'}</span>
-            <input
-              value={subjectName}
-              onChange={(event) => setSubjectName(event.target.value)}
-              placeholder={category === 'character' || category === 'arc' ? 'MARA' : 'Optional'}
-              autoComplete="off"
-            />
-          </label>
-        </div>
-  
-        <textarea
-          className="notes-input"
-          value={interim.length > 0 ? `${text}${text.length > 0 ? ' ' : ''}${interim}` : text}
-          onChange={(event) => setText(event.target.value)}
-          placeholder="What just occurred to you?"
-          rows={10}
-          autoFocus
-        />
-  
-        <div className="notes-actions">
-          <button
-            type="button"
-            className={dictating ? 'button recording' : 'button secondary'}
-            onClick={toggleDictation}
-            disabled={!isDictationSupported()}
-            title={isDictationSupported() ? 'Dictate' : 'Your browser does not offer dictation'}
-          >
-            {dictating ? '● Listening — tap to stop' : 'Dictate'}
-          </button>
-          <button type="button" className="button" onClick={() => void save()} disabled={text.trim().length === 0}>
-            Save note
-          </button>
-        </div>
-  
-        {!isDictationSupported() ? (
-          <p className="muted small">
-            This browser has no dictation API. On iPhone, use the microphone key on the keyboard.
+          {/* What the app currently thinks it is filing, in the largest type on
+              the screen. A writer dictating hands-free glances rather than
+              reads, and the two things they cannot otherwise check — the
+              category and the name — are the two a recogniser most often gets
+              wrong (his §5.7). */}
+          <p className="notes-spoken">
+            {CAPTURE_CATEGORY_NAMES[category]}
+            {subjectName.trim().length > 0 ? (
+              <span className="notes-spoken-who"> · {subjectName.trim()}</span>
+            ) : null}
           </p>
-        ) : null}
-  
-        {status ? <p className="notice">{status}</p> : null}
-  
-        <section className="notes-queue">
-          <h2>
-            {queue.length === 0
-              ? online
-                ? 'Everything is synced'
-                : 'Offline — nothing waiting'
-              : `${queue.length} waiting to sync`}
-          </h2>
-          {queue.length > 0 ? (
-            <>
-              <ul>
-                {queue.map((capture) => (
-                  <li key={capture.clientCaptureId}>
-                    <span className="queue-text">{capture.rawText.slice(0, 90)}</span>
-                    {capture.lastError ? <span className="error small">{capture.lastError}</span> : null}
-                  </li>
+          {heard ? <p className="notes-heard muted small">Heard: {heard}</p> : null}
+
+          <div className="notes-pickers">
+            <label className="field">
+              <span>This is a</span>
+              <select value={category} onChange={(event) => setCategory(event.target.value as CaptureCategory)}>
+                {CAPTURE_CATEGORIES.map((one) => (
+                  <option key={one} value={one}>
+                    {CAPTURE_CATEGORY_NAMES[one]}
+                  </option>
                 ))}
-              </ul>
-              <button type="button" className="button secondary" onClick={() => void flushQueue()} disabled={!online}>
-                Sync now
+              </select>
+            </label>
+
+            {/* Optional for all five: a character's name for a Character or an
+                Arc note, a short label for the rest. */}
+            <label className="field">
+              <span>{category === 'character' || category === 'arc' ? 'Who' : 'About'}</span>
+              <input
+                value={subjectName}
+                onChange={(event) => setSubjectName(event.target.value)}
+                placeholder={category === 'character' || category === 'arc' ? 'MARA' : 'Optional'}
+                autoComplete="off"
+              />
+            </label>
+          </div>
+
+          <textarea
+            className="notes-input"
+            value={interim.length > 0 ? `${text}${text.length > 0 ? ' ' : ''}${interim}` : text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder="What just occurred to you?"
+            rows={10}
+            autoFocus
+          />
+
+          <div className="notes-actions">
+            <button
+              type="button"
+              className={dictating ? 'button recording' : 'button secondary'}
+              onClick={toggleDictation}
+              disabled={!isDictationSupported()}
+              title={isDictationSupported() ? 'Dictate' : 'Your browser does not offer dictation'}
+            >
+              {dictating ? '● Listening — tap to stop' : 'Dictate'}
+            </button>
+            <button type="button" className="button" onClick={() => void save()} disabled={text.trim().length === 0}>
+              Save note
+            </button>
+          </div>
+
+          <div className="notes-actions">
+            {isReadBackSupported() ? (
+              <button
+                type="button"
+                className="button secondary"
+                onClick={sayItBack}
+                disabled={text.trim().length === 0}
+              >
+                Read it back
               </button>
-            </>
-          ) : null}
-          <p className="muted small">
-            Notes wait here until you review them in VC Writer on your desktop — nothing is added to a project
-            automatically.
-          </p>
-        </section>
+            ) : null}
+            {/* A correction replaces, so the wording it replaced is kept and
+                putting it back is one press (§6) — never a second guess about
+                what the writer meant. */}
+            {beforeCorrection !== null ? (
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => {
+                  setText(beforeCorrection);
+                  setBeforeCorrection(null);
+                  setHeard(null);
+                }}
+              >
+                Undo correction
+              </button>
+            ) : null}
+          </div>
+
+          {isDictationSupported() ? (
+            <p className="muted small">
+              Say <strong>Character</strong>, <strong>Plot point</strong>, <strong>Idea</strong>,{' '}
+              <strong>Theme</strong> or <strong>Arc</strong> to set what this is — “Character, Mara — she never
+              lets anyone drive” names her too. Say <strong>Correction</strong> and the rest replaces the note.
+            </p>
+          ) : (
+            <p className="muted small">
+              This browser has no dictation API. On iPhone, use the microphone key on the keyboard.
+            </p>
+          )}
+
+          {status ? <p className="notice">{status}</p> : null}
+
+          <section className="notes-queue">
+            <h2>
+              {queue.length === 0
+                ? online
+                  ? 'Everything is synced'
+                  : 'Offline — nothing waiting'
+                : `${queue.length} waiting to sync`}
+            </h2>
+            {queue.length > 0 ? (
+              <>
+                <ul>
+                  {queue.map((capture) => (
+                    <li key={capture.clientCaptureId}>
+                      <span className="queue-text">{capture.rawText.slice(0, 90)}</span>
+                      {capture.lastError ? <span className="error small">{capture.lastError}</span> : null}
+                    </li>
+                  ))}
+                </ul>
+                <button type="button" className="button secondary" onClick={() => void flushQueue()} disabled={!online}>
+                  Sync now
+                </button>
+              </>
+            ) : null}
+            <p className="muted small">
+              Notes wait here until you review them in VC Writer on your desktop — nothing is added to a project
+              automatically.
+            </p>
+          </section>
         </>
       ) : null}
     </div>

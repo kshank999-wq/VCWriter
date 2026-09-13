@@ -187,6 +187,11 @@ export function ResearchBody({
   const [capturesError, setCapturesError] = useState<string | null>(null);
 
   const loadCaptures = useCallback(async () => {
+    // The browser preview and the tests run this component without the
+    // Electron bridge behind it. No bridge means no phone, which is an empty
+    // inbox rather than an error a writer would have to read.
+    if (typeof window.vcwriter?.listCaptures !== 'function') return;
+
     setCapturesLoading(true);
     setCapturesError(null);
     const result = await window.vcwriter.listCaptures(file.project.id);

@@ -93,3 +93,44 @@ export const startDictation = (handlers: DictationHandlers): DictationSession | 
 
   return { stop: () => recognition.stop() };
 };
+
+/**
+ * Reading a note back out loud (his §5.7, stage 4).
+ *
+ * The point is that a writer can **verify without looking** — the phone is in a
+ * hand at a bus stop, and the one thing a recogniser gets wrong is the thing
+ * they will not notice on a screen they are not watching.
+ *
+ * `speechSynthesis` is far better supported than recognition, including on
+ * iOS — but it needs the page to have been touched first, which it always has
+ * here: the tap that stopped dictation is the gesture.
+ */
+
+export const isReadBackSupported = (): boolean =>
+  typeof window !== 'undefined' && 'speechSynthesis' in window;
+
+export interface ReadBack {
+  stop(): void;
+}
+
+export const readAloud = (
+  text: string,
+  handlers: { onEnd?: () => void; onError?: (message: string) => void } = {},
+): ReadBack | null => {
+  if (!isReadBackSupported() || text.trim().length === 0) return null;
+
+  // Anything still being said is stale the moment there is something new to
+  // say: two voices over each other is worse than none.
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = navigator.language || 'en-US';
+  // A shade under conversational. A note read at speaking pace is hard to check
+  // a name in, which is the whole reason for reading it.
+  utterance.rate = 0.95;
+  utterance.onend = () => handlers.onEnd?.();
+  utterance.onerror = () => handlers.onError?.('That could not be read back.');
+
+  window.speechSynthesis.speak(utterance);
+  return { stop: () => window.speechSynthesis.cancel() };
+};
