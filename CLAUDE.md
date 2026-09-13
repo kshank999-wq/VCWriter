@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0041.
+  reads like it does. Applied through 0042.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
@@ -253,7 +253,7 @@ push live; the build takes a minute or two.
   says what each built stage does; §11 names the two things deliberately left
   out (a scene-range filter on the map, and drag-and-drop for assigning).
   `addendum-09-companion-app.md` is the phone, from Ken's own *Companion App —
-  Simplified Development Specification v1.0*. **Stages 0 and 1 built.**
+  Simplified Development Specification v1.0*. **Stages 0–3 built.**
   §1 is the rule the whole thing hangs off — **the phone captures and the
   desktop places** — which is his §12 said from the phone's end, and is what
   lets the app stay a voice notebook: an app that never decides where a thought
@@ -286,6 +286,22 @@ push live; the build takes a minute or two.
   page and `CapturesPanel` are retired: two inboxes onto one queue is a bug
   waiting to happen, and that page could not drag anywhere; its slot now shows
   the account panel, which a signed-in writer could not previously reach.
+  Stage 2 is `capture-upload.ts` and `POST /api/notes`, where **the shape is the
+  permission**: the payload has no field for `status`, `inference` or what a
+  note became, so a client that tried has nowhere to try — `uploadToRow` writes
+  `pending` itself. The route is thin and the web page still writes to the
+  database directly; it exists because §14 asks and because another developer's
+  app should not need this project's RLS in its head. Idempotence needed
+  nothing: `client_capture_id` has been unique per user since 0003. The capture
+  screen lost its **destination** picker and gained a **category** one, which is
+  §2 arriving in the interface. Stage 3 is `notes-review.tsx` and migration
+  0042: the phone reviews, corrects and deletes **only while a note is still
+  waiting** — once the desktop has filed it, it is the trail behind a real
+  research item, so `mayStillEdit` decides in the domain, the route gives a
+  person a sentence, and RLS refuses underneath both. Reading is untouched, so
+  §9's reviewable copy survives. Proved live and rolled back: a waiting note
+  could be corrected and deleted and still approved by the desktop; a placed one
+  could be neither, and stayed readable.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

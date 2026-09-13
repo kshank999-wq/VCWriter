@@ -402,6 +402,7 @@ button {
 }
 
 .field select,
+.field input,
 .notes-input {
   width: 100%;
   padding: 11px 12px;
@@ -1555,4 +1556,111 @@ p.room-stamp {
 
 .reading-only p {
   margin: 0;
+}
+
+/* VC Writer Notes: the two screens, and reviewing what was caught
+   (addendum 09 §7, stage 3). */
+.notes-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.notes-tab {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.notes-tab.selected {
+  border-color: currentColor;
+  font-weight: 600;
+}
+
+/* The spoken name gets the full width: it is a name, and truncating one to
+   half a phone is how MARISOL becomes MARIS. */
+.notes-pickers .field:last-child {
+  grid-column: 1 / -1;
+}
+
+.notes-review {
+  display: grid;
+  gap: 14px;
+}
+
+.notes-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.notes-chip {
+  padding: 6px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.notes-chip.selected {
+  border-color: currentColor;
+  font-weight: 600;
+}
+
+.notes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.notes-item {
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+/* A note already filed in VC Writer is here to be read, not changed — it is
+   the trail behind something real now. */
+.notes-item.filed {
+  opacity: 0.72;
+}
+
+.notes-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notes-item-text {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.notes-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.notes-item-actions .button {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.button.danger {
+  border-color: var(--red);
+  color: var(--gold-bright);
+  background: var(--red);
 }

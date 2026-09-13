@@ -1,7 +1,7 @@
 # Addendum 09 — The Companion App
 
-Status: **stages 0 and 1 built** — the two fields, and the desktop Mobile App
-area with drag-and-drop. September 2026. From Ken's *VC Writer
+Status: **stages 0–3 built** — the two fields, the desktop Mobile App area with
+drag-and-drop, the upload contract, and review on the phone. September 2026. From Ken's *VC Writer
 Companion App — Simplified Development Specification v1.0*, written as a
 coding/quoting handoff. Extends spec §9 and §11 (capture and sync), and the
 Mobile App area it asks for is a new part of the desktop.
@@ -153,11 +153,8 @@ screen itself is built.
 0. ✅ **The two fields** — migration 0041 (`category`, `subject_name`), the
    domain schema, the round trip. Nothing visible.
 1. ✅ **The desktop Mobile App area** — see §8.
-2. **The upload contract** — the endpoint the phone posts to, carrying category
-   and subject name, idempotent on `client_capture_id` as it already is.
-3. **Review on the phone** — §7: the notes for the project, filtered by the five
-   categories, editable, deletable. Works with typed capture alone, so it does
-   not wait on stage 4.
+2. ✅ **The upload contract** — see §7.
+3. ✅ **Review on the phone** — see §7.
 4. **Voice capture** — §5 and §6: the category command, the live transcription,
    the read-back, the correction loop. **Needs §5's decision.**
 5. **Project page** — §3.1, including *create a new project* from the phone.
@@ -213,6 +210,66 @@ Theme, Arc and *No category*; the count sits beside **Mobile App** before
 anybody opens it; and dragging one onto **Props** or onto **MARA** files it
 there. Looking at it caught a defect the tests had not — a note with no spoken
 name printed its own first line as a heading and then again as the body.
+
+### Stage 2 — the upload contract
+
+`capture-upload.ts` in the domain, and `POST /api/notes`.
+
+**The shape is the permission.** A capture row carries fields that belong to the
+desktop — `status`, `inference`, what the note was turned into — and the phone
+has no business setting any of them. Rather than checking that on the way in,
+the payload simply has nowhere to put them: a client that tried has no field to
+try with, and `uploadToRow` writes `status: 'pending'` itself. That is the same
+trick addendum 07 §12 used for the room's AI, for the same reason — a rule
+enforced by the shape of the data cannot be forgotten by the next person to
+touch the endpoint.
+
+The route is deliberately thin, and the web capture page still writes to the
+database directly. It exists because §14 asks for one, and because a companion
+app built by somebody else should not need this project's row-level-security
+rules in its head to send a note. **One** definition of the payload, in the
+domain, used by both.
+
+Idempotence needed nothing new: `client_capture_id` has been unique per user
+since migration 0003, so a retried Sync upserts the same row. The response
+returns the ids that landed, so a client marks exactly those synced rather than
+assuming the whole batch went through.
+
+The capture screen changed with it: the **destination** picker is gone and a
+**category** picker stands where it was, with an optional name beside it. That
+is §2 arriving in the interface — asking a phone *where* is how a voice notebook
+grows a folder tree.
+
+### Stage 3 — review on the phone
+
+`notes-review.tsx`, `GET /api/notes`, `PATCH`/`DELETE /api/notes/[noteId]`, and
+migration 0042.
+
+§7's list and its restraint: the project's notes, filtered by the five
+categories, correctable, deletable with a confirmation, and **no research
+hierarchy** — which §1 is what makes affordable, since deciding where a note
+goes happens at the desk.
+
+**A note the desktop has already filed is shown and not edited.** It is the
+trail behind a real research item by then; rewriting the capture would change
+nothing about the project and everything about the record of where that work
+came from. `mayStillEdit` decides in the domain, the route answers a person with
+a sentence rather than a silent no-op, and **migration 0042 refuses underneath
+both** — because a rule that lives only in a screen is a rule the next client
+will not know about. Reading is untouched: §9 wants the phone to keep a
+reviewable copy after syncing rather than appearing to lose it.
+
+Proved against the live database, in a transaction and rolled back: a waiting
+note could be corrected and thrown away, the desktop could still move it from
+`pending` to `approved`, and a placed note was neither edited nor deleted while
+staying readable.
+
+Driven at phone width: the capture screen asks *Project*, *This is a* and
+*Who*; Review lists the notes under filter chips with **Correct** and
+**Delete**, and the filed one faded, uneditable, saying *Filed in VC Writer —
+change it there*. Looking at it caught two things the tests could not: the name
+field had no box (only `select` and the textarea were styled) and the chips had
+no outline, because the variable I reached for does not exist in this theme.
 
 ## 8. What this addendum deliberately does not do
 

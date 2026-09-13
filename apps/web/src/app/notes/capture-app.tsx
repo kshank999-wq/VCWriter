@@ -13,15 +13,27 @@ import {
   type QueuedCapture,
 } from '@/lib/capture-queue';
 import { isDictationSupported, startDictation, type DictationSession } from '@/lib/dictation';
+import { NotesReview } from './notes-review';
+import {
+  CAPTURE_CATEGORIES,
+  CAPTURE_CATEGORY_NAMES,
+  type CaptureCategory,
+} from '@vcwriter/domain';
 
 /**
- * VC Writer Notes — capture away from the desk (spec §11).
+ * VC Writer Notes — capture away from the desk (spec §11, addendum 09).
  *
  * The order of operations is the feature: type or dictate, and the note is in
  * IndexedDB before anything is sent. Sending is a retry that happens when there
  * is signal. Nothing here writes to the project — captures land in a queue the
  * writer reviews on the desktop, because AI or not, classification is a
  * proposal until a person confirms it (§9).
+ *
+ * **What this screen asks for is what kind of thought it is, never where it
+ * goes** (addendum 09 §2). The destination picker that used to sit here is
+ * gone: deciding *where* is the desktop's job, and asking it on a phone is how
+ * a voice notebook grows a folder tree. Five categories, one optional name, and
+ * the words.
  */
 
 interface ProjectSummary {
@@ -29,13 +41,7 @@ interface ProjectSummary {
   title: string;
 }
 
-interface CategorySummary {
-  id: string;
-  name: string;
-  system_key: string | null;
-}
-
-type Destination = { kind: 'research'; categoryKey: string | null } | { kind: 'character' } | { kind: 'beat' };
+type Screen = 'capture' | 'review';
 
 export default function CaptureApp() {
   const supabase = useRef(browserClient()).current;
@@ -44,8 +50,9 @@ export default function CaptureApp() {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
-  const [categories, setCategories] = useState<CategorySummary[]>([]);
-  const [destination, setDestination] = useState<Destination>({ kind: 'research', categoryKey: 'ideas' });
+  const [screen, setScreen] = useState<Screen>('capture');
+  const [category, setCategory] = useState<CaptureCategory>('idea');
+  const [subjectName, setSubjectName] = useState('');
 
   const [text, setText] = useState('');
   const [interim, setInterim] = useState('');
@@ -79,6 +86,8 @@ export default function CaptureApp() {
           captured_at: capture.capturedAt,
           raw_text: capture.rawText,
           requested_routing: capture.requestedRouting,
+          category: capture.category,
+          subject_name: capture.subjectName,
           client_capture_id: capture.clientCaptureId,
           synced_at: new Date().toISOString(),
           status: 'pending',
@@ -123,19 +132,6 @@ export default function CaptureApp() {
       active = false;
     };
   }, [supabase, refreshQueue]);
-
-  useEffect(() => {
-    if (!projectId) return;
-    void (async () => {
-      const { data } = await supabase
-        .from('research_categories')
-        .select('id, name, system_key')
-        .eq('project_id', projectId)
-        .eq('archived', false)
-        .order('order_key');
-      setCategories((data ?? []) as CategorySummary[]);
-    })();
-  }, [supabase, projectId]);
 
   // Send whatever is waiting as soon as there is a connection again.
   useEffect(() => {
@@ -188,10 +184,9 @@ export default function CaptureApp() {
       rawText: content,
       source: dictating ? 'mobile_voice' : 'mobile_text',
       capturedAt: new Date().toISOString(),
-      requestedRouting:
-        destination.kind === 'research'
-          ? { kind: 'research', categoryKey: destination.categoryKey }
-          : { kind: destination.kind, categoryKey: null },
+      requestedRouting: null,
+      category,
+      subjectName: subjectName.trim().length > 0 ? subjectName.trim() : null,
       syncedAt: null,
       lastError: null,
       attempts: 0,
@@ -202,6 +197,9 @@ export default function CaptureApp() {
     await enqueue(capture);
     setText('');
     setInterim('');
+    // The name goes with the note; the category stays, because a writer
+    // catching three thoughts about the same person should say it once.
+    setSubjectName('');
     await refreshQueue();
     setStatus(navigator.onLine ? 'Saved' : 'Saved on this device — it will sync when you are back online');
     await flushQueue();
@@ -230,105 +228,132 @@ export default function CaptureApp() {
   return (
     <div className="notes">
       <header className="notes-header">
-        <h1>Capture</h1>
+        <h1>{screen === 'capture' ? 'Capture' : 'Your notes'}</h1>
         <span className="muted">{email}</span>
       </header>
 
-      <div className="notes-pickers">
-        <label className="field">
-          <span>Project</span>
-          <select value={projectId ?? ''} onChange={(event) => setProjectId(event.target.value || null)}>
-            <option value="">Unassigned — decide later</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.title}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="field">
-          <span>Goes to</span>
-          <select
-            value={destination.kind === 'research' ? `research:${destination.categoryKey ?? ''}` : destination.kind}
-            onChange={(event) => {
-              const value = event.target.value;
-              if (value === 'character') setDestination({ kind: 'character' });
-              else if (value === 'beat') setDestination({ kind: 'beat' });
-              else setDestination({ kind: 'research', categoryKey: value.split(':')[1] || null });
-            }}
-          >
-            {categories.map((category) => (
-              <option key={category.id} value={`research:${category.system_key ?? ''}`}>
-                {category.name}
-              </option>
-            ))}
-            <option value="character">A character</option>
-            <option value="beat">A scene or beat</option>
-          </select>
-        </label>
-      </div>
-
-      <textarea
-        className="notes-input"
-        value={interim.length > 0 ? `${text}${text.length > 0 ? ' ' : ''}${interim}` : text}
-        onChange={(event) => setText(event.target.value)}
-        placeholder="What just occurred to you?"
-        rows={10}
-        autoFocus
-      />
-
-      <div className="notes-actions">
+      <nav className="notes-tabs" aria-label="Notes">
         <button
           type="button"
-          className={dictating ? 'button recording' : 'button secondary'}
-          onClick={toggleDictation}
-          disabled={!isDictationSupported()}
-          title={isDictationSupported() ? 'Dictate' : 'Your browser does not offer dictation'}
+          className={screen === 'capture' ? 'notes-tab selected' : 'notes-tab'}
+          aria-current={screen === 'capture' ? 'page' : undefined}
+          onClick={() => setScreen('capture')}
         >
-          {dictating ? '● Listening — tap to stop' : 'Dictate'}
+          Capture
         </button>
-        <button type="button" className="button" onClick={() => void save()} disabled={text.trim().length === 0}>
-          Save note
+        <button
+          type="button"
+          className={screen === 'review' ? 'notes-tab selected' : 'notes-tab'}
+          aria-current={screen === 'review' ? 'page' : undefined}
+          onClick={() => setScreen('review')}
+        >
+          Review
         </button>
-      </div>
+      </nav>
 
-      {!isDictationSupported() ? (
-        <p className="muted small">
-          This browser has no dictation API. On iPhone, use the microphone key on the keyboard.
-        </p>
-      ) : null}
+      {screen === 'review' ? <NotesReview projectId={projectId} /> : null}
 
-      {status ? <p className="notice">{status}</p> : null}
-
-      <section className="notes-queue">
-        <h2>
-          {queue.length === 0
-            ? online
-              ? 'Everything is synced'
-              : 'Offline — nothing waiting'
-            : `${queue.length} waiting to sync`}
-        </h2>
-        {queue.length > 0 ? (
-          <>
-            <ul>
-              {queue.map((capture) => (
-                <li key={capture.clientCaptureId}>
-                  <span className="queue-text">{capture.rawText.slice(0, 90)}</span>
-                  {capture.lastError ? <span className="error small">{capture.lastError}</span> : null}
-                </li>
+      {screen === 'capture' ? (
+        <>
+      <div className="notes-pickers">
+          <label className="field">
+            <span>Project</span>
+            <select value={projectId ?? ''} onChange={(event) => setProjectId(event.target.value || null)}>
+              <option value="">Unassigned — decide later</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.title}
+                </option>
               ))}
-            </ul>
-            <button type="button" className="button secondary" onClick={() => void flushQueue()} disabled={!online}>
-              Sync now
-            </button>
-          </>
+            </select>
+          </label>
+  
+          <label className="field">
+            <span>This is a</span>
+            <select value={category} onChange={(event) => setCategory(event.target.value as CaptureCategory)}>
+              {CAPTURE_CATEGORIES.map((one) => (
+                <option key={one} value={one}>
+                  {CAPTURE_CATEGORY_NAMES[one]}
+                </option>
+              ))}
+            </select>
+          </label>
+  
+          {/* Optional for all five: a character's name for a Character or an Arc
+              note, a short label for the rest. */}
+          <label className="field">
+            <span>{category === 'character' || category === 'arc' ? 'Who' : 'About'}</span>
+            <input
+              value={subjectName}
+              onChange={(event) => setSubjectName(event.target.value)}
+              placeholder={category === 'character' || category === 'arc' ? 'MARA' : 'Optional'}
+              autoComplete="off"
+            />
+          </label>
+        </div>
+  
+        <textarea
+          className="notes-input"
+          value={interim.length > 0 ? `${text}${text.length > 0 ? ' ' : ''}${interim}` : text}
+          onChange={(event) => setText(event.target.value)}
+          placeholder="What just occurred to you?"
+          rows={10}
+          autoFocus
+        />
+  
+        <div className="notes-actions">
+          <button
+            type="button"
+            className={dictating ? 'button recording' : 'button secondary'}
+            onClick={toggleDictation}
+            disabled={!isDictationSupported()}
+            title={isDictationSupported() ? 'Dictate' : 'Your browser does not offer dictation'}
+          >
+            {dictating ? '● Listening — tap to stop' : 'Dictate'}
+          </button>
+          <button type="button" className="button" onClick={() => void save()} disabled={text.trim().length === 0}>
+            Save note
+          </button>
+        </div>
+  
+        {!isDictationSupported() ? (
+          <p className="muted small">
+            This browser has no dictation API. On iPhone, use the microphone key on the keyboard.
+          </p>
         ) : null}
-        <p className="muted small">
-          Notes wait here until you review them in VC Writer on your desktop — nothing is added to a project
-          automatically.
-        </p>
-      </section>
+  
+        {status ? <p className="notice">{status}</p> : null}
+  
+        <section className="notes-queue">
+          <h2>
+            {queue.length === 0
+              ? online
+                ? 'Everything is synced'
+                : 'Offline — nothing waiting'
+              : `${queue.length} waiting to sync`}
+          </h2>
+          {queue.length > 0 ? (
+            <>
+              <ul>
+                {queue.map((capture) => (
+                  <li key={capture.clientCaptureId}>
+                    <span className="queue-text">{capture.rawText.slice(0, 90)}</span>
+                    {capture.lastError ? <span className="error small">{capture.lastError}</span> : null}
+                  </li>
+                ))}
+              </ul>
+              <button type="button" className="button secondary" onClick={() => void flushQueue()} disabled={!online}>
+                Sync now
+              </button>
+            </>
+          ) : null}
+          <p className="muted small">
+            Notes wait here until you review them in VC Writer on your desktop — nothing is added to a project
+            automatically.
+          </p>
+        </section>
+        </>
+      ) : null}
     </div>
   );
 }

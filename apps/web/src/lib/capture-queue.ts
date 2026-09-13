@@ -24,7 +24,16 @@ export interface QueuedCapture {
   rawText: string;
   source: 'mobile_voice' | 'mobile_text';
   capturedAt: string;
+  /**
+   * Kept for notes queued before the companion app's categories existed. The
+   * capture screen no longer writes it: **the phone says what a thought is, not
+   * where it goes** (addendum 09 §2).
+   */
   requestedRouting: { kind: 'research' | 'beat' | 'character'; categoryKey: string | null } | null;
+  /** One of the five (addendum 09 §4), or null if nobody said. */
+  category: 'character' | 'plot_point' | 'idea' | 'theme' | 'arc' | null;
+  /** The name the writer spoke, when they spoke one. */
+  subjectName: string | null;
   /** Set once the server has the row; kept briefly so the UI can show it landed. */
   syncedAt: string | null;
   lastError: string | null;
