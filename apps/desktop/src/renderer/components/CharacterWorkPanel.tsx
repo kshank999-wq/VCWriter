@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
+  ARC_LINK_VERB_NAMES,
+  arcsTurningIn,
   characterWorkIn,
   describeWork,
   onDeckForBeat,
@@ -40,6 +42,13 @@ export function CharacterWorkPanel({ file, beatId, onUpdate }: CharacterWorkPane
 
   const here = useMemo(() => characterWorkIn(file, beatId), [file, beatId]);
   const queue = useMemo(() => onDeckForBeat(file, beatId), [file, beatId]);
+  /**
+   * Several arcs turning on the same dramatic event (addendum 08 §13).
+   *
+   * Only links with *both* ends in this beat: that is what makes it one event
+   * rather than two things connected across the script.
+   */
+  const turning = useMemo(() => arcsTurningIn(file, beatId), [file, beatId]);
 
   const pin = (work: CharacterWork) => {
     onUpdate((current) =>
@@ -94,6 +103,20 @@ export function CharacterWorkPanel({ file, beatId, onUpdate }: CharacterWorkPane
           ) : (
             <p className="muted empty">Nothing of anybody's plan has landed here yet.</p>
           )}
+
+          {turning.length > 0 ? (
+            <ul className="work-turning">
+              {turning.map((one) => (
+                <li key={one.linkId}>
+                  <span className="work-who">{one.fromName}</span>
+                  <span className="work-what">{one.from.text}</span>
+                  <span className="arc-effect-verb muted">{ARC_LINK_VERB_NAMES[one.verb]}</span>
+                  <span className="work-who">{one.toName}</span>
+                  <span className="work-what">{one.to.text}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
           {/* §10's unassigned queue, offered where the opportunity appears. */}
           {waiting.length > 0 ? (

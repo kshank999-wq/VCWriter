@@ -9627,3 +9627,63 @@ dialog.projects-dialog {
   width: 100%;
   background: var(--ink);
 }
+
+/* ------------------------------ arcs that move arcs (addendum 08 §13) */
+
+.arc-affects {
+  margin: 6px 0 8px 18px;
+  padding: 8px 10px;
+  background: var(--panel);
+  border-left: 2px solid var(--gold-deep);
+  display: grid;
+  gap: 8px;
+}
+
+.arc-effects {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.arc-effects li {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 9px;
+  font-size: 12px;
+}
+
+.arc-effect-verb {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+
+.arc-effect-what {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One dramatic event, several arcs turning in it — drawn on the beat. */
+.work-turning {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0 0;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 4px;
+  font-size: 11.5px;
+}
+
+.work-turning li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 8px;
+  align-items: baseline;
+  padding: 2px 0;
+}

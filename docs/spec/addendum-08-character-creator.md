@@ -1,6 +1,6 @@
 # Addendum 08 — Character Creator
 
-Status: **stages 0–8 built** (0–5 were Ken's MVP), September 2026. From his
+Status: **stages 0–9 built** (0–5 were Ken's MVP), September 2026. From his
 *VC Writer Character Creator Development Specification* — the first module of
 the Research room. Extends §7 (research), §8 (structure) and §19 of the master specification,
 and uses the typed link system §7.4 already built.
@@ -204,7 +204,7 @@ interrupts writing to say a character is underdeveloped.
    Elements box (§10).
 7. **Built.** Relationships (§11).
 8. **Built.** The relationship mind map (§12).
-9. Cross-character arc links (§13).
+9. **Built.** Cross-character arc links (§13).
 10. Search, filters, the review modes and the Unused Character Material
     report (§18).
 
@@ -588,3 +588,40 @@ with one tick.
 
 A 1.5px line is hard to hit with a pointer, so a fat transparent line sits under
 each edge and takes the clicks.
+
+### Stage 9 — arcs that move arcs
+
+`arcEffectsOf`, `arcsTurningIn` and `otherArcPoints` in the domain; the
+**Moves** panel on an arc point, and the turning-list on a beat.
+
+**Nothing new is stored, and nothing new is drawn** — which is what §3.1 decided
+three stages before this one was built. A cross-character arc link is exactly a
+story link: two references, a verb and a note. So the whole of the new shape is
+`'arc_point'` joining `storyEntityTypeSchema` and the eight verbs joining
+`storyLinkTypeSchema`, and **no migration**: `story_links.from_type` has always
+been text, and both ends were already indexed.
+
+The proof that the promise held is in the tests: an arc point resolves through
+`resolveRef` like any other entity, so the **Related Elements box shows a
+cross-arc link without being told that arcs exist**, and a character rename
+reaches it through the id like every other link.
+
+**Read in both directions.** Being moved by somebody is as much a fact about a
+journey as moving them, so a writer looking at a refusal sees what it set off
+*and* what set it off. §13's *from an arc point, show all characters whose arcs
+are affected* is `arcEffectsOf`, and the row wears the verb.
+
+**An arc cannot move itself.** The picker offers other people's points only: a
+link between two points of one arc says nothing a reader could act on, and
+allowing it would fill §13's reading with characters affecting nobody but
+themselves.
+
+**One dramatic event means both ends in one beat** (`arcsTurningIn`). A refusal
+here that causes a decision three scenes later is a real link and belongs on the
+point; what belongs on the *beat* is the moment where two arcs turn together,
+which is §13's last line — one character's refusal becoming another's catalyst —
+made visible where it happens.
+
+Driven in the real interface: Mara's *takes the money anyway* **causes**
+Deakins' *stops covering for her*; her point reads `causes → DEAKINS`, his reads
+`← causes MARA`, and his row counts it without anybody telling it to.

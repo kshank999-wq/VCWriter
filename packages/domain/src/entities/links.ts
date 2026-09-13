@@ -19,6 +19,15 @@ export const storyEntityTypeSchema = z.enum([
   'character',
   'setup_payoff',
   'capture_item',
+  /**
+   * A point in somebody's arc (addendum 08 §13).
+   *
+   * Joining this list is the whole of what a cross-character arc link needed:
+   * *Mara's refusal **causes** Deakins' decision* is two references, a verb and
+   * a note, which is exactly what a story link already is. The database stores
+   * these types as text, so nothing had to change there either.
+   */
+  'arc_point',
 ]);
 export type StoryEntityType = z.infer<typeof storyEntityTypeSchema>;
 
@@ -37,6 +46,17 @@ export const storyLinkTypeSchema = z.enum([
   'owns',
   'depends_on',
   'relates_to',
+  // What one arc point does to another (addendum 08 §13). They are link types
+  // rather than a second vocabulary beside them, because the thing they
+  // describe is a link: two references and a verb.
+  'causes',
+  'influences',
+  'challenges',
+  'enables',
+  'prevents',
+  'reveals',
+  'betrays',
+  'inspires',
   'custom',
 ]);
 export type StoryLinkType = z.infer<typeof storyLinkTypeSchema>;

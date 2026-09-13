@@ -112,7 +112,10 @@ describe('one pair, one line', () => {
 
     const map = characterMap({ file: two.file });
     expect(map.edges).toHaveLength(1);
-    expect(edgeLabel(map.edges[0]!.forward)).toBe('Rival, Family');
+    // Which end of the pair is `a` is decided by id order, so the readings are
+    // asked for without assuming which way round they came out.
+    const edge = map.edges[0]!;
+    expect(edgeLabel(edge.forward.length > 0 ? edge.forward : edge.back)).toBe('Rival, Family');
   });
 
   it('drops a line whose kind is filtered out', () => {
@@ -126,7 +129,8 @@ describe('one pair, one line', () => {
 
     const map = characterMap({ file: two.file, kinds: ['family'] });
     expect(map.edges).toHaveLength(1);
-    expect(edgeLabel(map.edges[0]!.forward)).toBe('Family');
+    const edge = map.edges[0]!;
+    expect(edgeLabel(edge.forward.length > 0 ? edge.forward : edge.back)).toBe('Family');
   });
 });
 

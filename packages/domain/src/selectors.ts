@@ -280,6 +280,15 @@ export const resolveRef = (file: ProjectFile, target: StoryEntityRef): ResolvedE
       const record = file.setupsPayoffs.find((candidate) => candidate.id === target.id);
       return record ? found(record.title, `setup/payoff · ${record.status}`) : missing();
     }
+    // A point in somebody's arc (addendum 08 §13). Resolved here rather than in
+    // the module, so a cross-arc link appears in the Related Elements box for
+    // free — which is what §3.1 meant by nothing new being built for it.
+    case 'arc_point': {
+      const point = file.arcPoints.find((candidate) => candidate.id === target.id);
+      if (!point) return missing();
+      const person = file.characters.find((candidate) => candidate.id === point.characterId);
+      return found(point.text, person ? `${person.name}'s arc` : 'arc point');
+    }
     default:
       return missing();
   }

@@ -136,7 +136,7 @@ push live; the build takes a minute or two.
   0038 is the owner's switch.
   §19 says what each built stage does; §15 is the build order.
   `addendum-08-character-creator.md` is the Character Creator, the first module
-  of the Research room, from Ken's own dev spec. **Stages 0–8 built** (0–5 were
+  of the Research room, from Ken's own dev spec. **Stages 0–9 built** (0–5 were
   his MVP) —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
@@ -202,7 +202,15 @@ push live; the build takes a minute or two.
   every time and a new character appears without anybody dragging one. One line
   per pair with a label at each end (the promise §3.1 made), and clicking the
   line is the only place in the product where both readings can be edited side
-  by side. §3
+  by side. Stage 9 is cross-character arc links, and it is the stage that
+  **built nothing**: §3.1 decided three stages earlier that one of these is
+  exactly a story link, so the whole change is `'arc_point'` joining
+  `storyEntityTypeSchema`, the eight verbs joining `storyLinkTypeSchema`, and a
+  case in `resolveRef` — **no migration**, since `story_links.from_type` was
+  always text. The Related Elements box then shows a cross-arc link without
+  being told arcs exist, which is the proof the promise held. `arcEffectsOf`
+  reads both directions and `arcsTurningIn` wants **both ends in one beat**,
+  since that is what makes it one dramatic event. §3
   says what already exists and is only being widened; §8 is the
   build order; §3.4 says why there is deliberately no module framework yet; §10
   says what each built stage does.

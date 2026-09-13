@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
+  ARC_LINK_VERBS,
+  ARC_LINK_VERB_NAMES,
   ARC_POINT_KINDS,
   ARC_POINT_NAMES,
   ARC_SHAPE_WORDS,
@@ -13,6 +15,7 @@ import {
   addArcPoint,
   addCharacterization,
   addTrait,
+  arcEffectsOf,
   answerRelationship,
   arcBoard,
   beginArc,
@@ -20,18 +23,23 @@ import {
   characterCategoriesInOrder,
   characterStanding,
   fileCharacterization,
+  isArcVerb,
   isDecisive,
+  linkEntities,
   moveArcPoint,
+  otherArcPoints,
   pinUsage,
   placesToPin,
+  quotableLines,
+  ref,
   relate,
   relationshipsOf,
-  quotableLines,
   removeArc,
   removeArcPoint,
   removeCharacterization,
   removeRelationship,
   removeTrait,
+  unlink,
   unpinUsage,
   updateArc,
   updateArcPoint,
@@ -40,6 +48,8 @@ import {
   updateRelationship,
   updateTrait,
   whereItAppears,
+  type ArcLinkVerb,
+  type ArcPoint,
   type ArcPointId,
   type ArcPointKind,
   type BeatId,
@@ -54,6 +64,7 @@ import {
   type ProjectFile,
   type RelationshipKind,
   type RelationshipRow,
+  type StoryLinkId,
   type TraitTone,
   type UsageColour,
 } from '@vcwriter/domain';
@@ -890,6 +901,23 @@ function Arc({
   const [adding, setAdding] = useState('');
   const [addingKind, setAddingKind] = useState<ArcPointKind>('movement');
   const [open, setOpen] = useState<ArcPointId | null>(null);
+  /** Which point has its cross-arc links open (§13). */
+  const [affects, setAffects] = useState<ArcPointId | null>(null);
+
+  // How many other arcs each point moves, counted once for the whole tab
+  // rather than per row as it is drawn.
+  const moves = useMemo(() => {
+    const counted = new Map<string, number>();
+    for (const link of file.links) {
+      if (!isArcVerb(link.type)) continue;
+      for (const end of [link.from, link.to]) {
+        if (end.type !== 'arc_point') continue;
+        counted.set(end.id, (counted.get(end.id) ?? 0) + 1);
+      }
+    }
+    return counted;
+  }, [file.links]);
+  const movesCount = (id: ArcPointId): number => moves.get(id as string) ?? 0;
 
   if (!board.arc) {
     return (
@@ -956,6 +984,17 @@ function Arc({
         >
           {USAGE_WORDS[row.colour]}
         </button>
+        {/* §13: what this moment does to somebody else's journey. */}
+        <button
+          type="button"
+          className={affects === row.point.id ? 'creator-item-state open' : 'creator-item-state'}
+          aria-expanded={affects === row.point.id}
+          aria-label={`Arcs moved by: ${row.point.text}`}
+          title="Whose arcs this moment moves, and whose move it"
+          onClick={() => setAffects(affects === row.point.id ? null : row.point.id)}
+        >
+          Moves{movesCount(row.point.id) > 0 ? ` ${movesCount(row.point.id)}` : ''}
+        </button>
         {movable ? (
           <>
             <button
@@ -1008,6 +1047,10 @@ function Arc({
           currentBeatId={currentBeatId}
           onUpdate={onUpdate}
         />
+      ) : null}
+
+      {affects === row.point.id ? (
+        <Affects file={file} point={row.point} characterId={characterId} onUpdate={onUpdate} />
       ) : null}
     </li>
   );
@@ -1339,6 +1382,117 @@ function Relationships({
           <ul className="rel-list">{rows.inward.map((entry) => row(entry, false))}</ul>
         )}
       </section>
+    </div>
+  );
+}
+
+// -------------------------------------------------- arcs that move arcs
+
+/**
+ * What one arc point does to somebody else's (addendum 08 §13, stage 9).
+ *
+ * **Nothing new is stored for this.** A cross-character arc link is exactly a
+ * story link — two references, a verb and a note — which §3.1 decided before any
+ * of it was built, so this panel writes through `linkEntities` like the Related
+ * Elements box and the link turns up there too without that box being told arcs
+ * exist.
+ *
+ * Read in both directions, because being moved by somebody is as much a fact
+ * about a journey as moving them: a writer looking at a refusal wants to see
+ * what it set off *and* what set it off.
+ */
+function Affects({
+  file,
+  point,
+  characterId,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  point: ArcPoint;
+  characterId: CharacterId;
+  onUpdate: CharacterCreatorProps['onUpdate'];
+}) {
+  const effects = useMemo(() => arcEffectsOf(file, point.id), [file, point.id]);
+  const offers = useMemo(() => otherArcPoints(file, characterId), [file, characterId]);
+  const [toId, setToId] = useState('');
+  const [verb, setVerb] = useState<ArcLinkVerb>('causes');
+
+  const join = () => {
+    if (toId === '') return;
+    onUpdate((current) =>
+      linkEntities(current, {
+        from: ref('arc_point', point.id as string),
+        to: ref('arc_point', toId),
+        type: verb,
+      }),
+    );
+    setToId('');
+  };
+
+  return (
+    <div className="arc-affects">
+      {effects.length === 0 ? (
+        <p className="muted small">This moment moves nobody else’s arc yet.</p>
+      ) : (
+        <ul className="arc-effects">
+          {effects.map((effect) => (
+            <li key={effect.linkId}>
+              <span className="arc-effect-verb muted">
+                {effect.outward ? '' : '← '}
+                {ARC_LINK_VERB_NAMES[effect.verb]}
+              </span>
+              <span className="work-who">{effect.otherCharacterName}</span>
+              <span className="arc-effect-what">{effect.otherPoint.text}</span>
+              <button
+                type="button"
+                className="ghost small"
+                aria-label="Unlink it"
+                title="Removes the link. Both arcs are untouched."
+                onClick={() => onUpdate((current) => unlink(current, effect.linkId as StoryLinkId))}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {offers.length === 0 ? (
+        <p className="muted small">Nobody else has an arc to join this to yet.</p>
+      ) : (
+        <div className="creator-pin">
+          <select
+            aria-label="What it does"
+            className="arc-kind"
+            value={verb}
+            onChange={(event) => setVerb(event.target.value as ArcLinkVerb)}
+          >
+            {ARC_LINK_VERBS.map((one) => (
+              <option key={one} value={one}>
+                {ARC_LINK_VERB_NAMES[one]}
+              </option>
+            ))}
+          </select>
+          {/* Grouped by person, and this character's own points are not on the
+              list: an arc cannot move itself, and offering that would fill §13's
+              reading with people affecting only themselves. */}
+          <select aria-label="Whose moment" value={toId} onChange={(event) => setToId(event.target.value)}>
+            <option value="">Whose moment…</option>
+            {offers.map((group) => (
+              <optgroup key={group.characterId} label={group.characterName}>
+                {group.points.map((one) => (
+                  <option key={one.id} value={one.id as string}>
+                    {ARC_POINT_NAMES[one.kind]}: {one.text}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <button type="button" className="ghost small" disabled={toId === ''} onClick={join}>
+            Join
+          </button>
+        </div>
+      )}
     </div>
   );
 }

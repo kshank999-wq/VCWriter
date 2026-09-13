@@ -1610,3 +1610,162 @@ export const answerRelationship = (
     kind: one.kind,
   });
 };
+
+// ------------------------------------------- arcs that move arcs (§13)
+
+/**
+ * The verbs one arc point can do to another, as link types.
+ *
+ * `ARC_LINK_VERBS` has named these since stage 0; joining `storyLinkTypeSchema`
+ * is all that was needed to make them real, because **a cross-character arc
+ * link is exactly a story link** (addendum 08 §3.1) — two references, a verb and
+ * a note. Nothing new is stored for §13 and nothing new is drawn: the Related
+ * Elements box already shows them.
+ */
+export const ARC_LINK_VERB_NAMES: Record<ArcLinkVerb, string> = {
+  causes: 'causes',
+  influences: 'influences',
+  challenges: 'challenges',
+  enables: 'enables',
+  prevents: 'prevents',
+  reveals: 'reveals',
+  betrays: 'betrays',
+  inspires: 'inspires',
+};
+
+export const isArcVerb = (type: string): type is ArcLinkVerb =>
+  (ARC_LINK_VERBS as readonly string[]).includes(type);
+
+/** One arc point moving another, seen from one end of the link. */
+export interface ArcEffect {
+  linkId: string;
+  verb: ArcLinkVerb;
+  note: string;
+  /** True when the point asked about is the one doing it. */
+  outward: boolean;
+  otherPoint: ArcPoint;
+  otherCharacterId: CharacterId;
+  otherCharacterName: string;
+}
+
+/**
+ * Whose arcs this point moves, and whose move it — §13's *from an arc point,
+ * show all characters whose arcs are affected*.
+ *
+ * Read in both directions on purpose: being moved by somebody is as much a fact
+ * about your journey as moving them, and a writer looking at a refusal wants to
+ * see what it set off **and** what set it off.
+ */
+export const arcEffectsOf = (file: ProjectFile, pointId: ArcPointId): ArcEffect[] => {
+  const id = pointId as string;
+
+  return file.links
+    .filter(
+      (link) =>
+        isArcVerb(link.type) &&
+        ((link.from.type === 'arc_point' && link.from.id === id) ||
+          (link.to.type === 'arc_point' && link.to.id === id)),
+    )
+    .map((link): ArcEffect | null => {
+      const outward = link.from.type === 'arc_point' && link.from.id === id;
+      const otherRef = outward ? link.to : link.from;
+      const point = file.arcPoints.find((one) => (one.id as string) === otherRef.id);
+      if (!point) return null;
+      const person = file.characters.find((one) => (one.id as string) === (point.characterId as string));
+      return {
+        linkId: link.id as string,
+        verb: link.type as ArcLinkVerb,
+        note: link.label.trim().length > 0 ? link.label : link.notes,
+        outward,
+        otherPoint: point,
+        otherCharacterId: point.characterId,
+        otherCharacterName: person?.name ?? '',
+      };
+    })
+    .filter((effect): effect is ArcEffect => effect !== null)
+    .sort((a, b) =>
+      a.outward === b.outward
+        ? a.otherCharacterName.localeCompare(b.otherCharacterName)
+        : Number(b.outward) - Number(a.outward),
+    );
+};
+
+/**
+ * Several arcs turning on the same dramatic event — §13's *from a scene, show
+ * multiple character arc changes occurring in the same event*.
+ *
+ * The links that matter here are the ones whose **both ends are in this beat**:
+ * that is what makes it one event rather than two things that happen to be
+ * connected across the script. A refusal here that causes a decision three
+ * scenes later is a real link and belongs on the point, not on this list.
+ */
+export const arcsTurningIn = (
+  file: ProjectFile,
+  beatId: BeatId,
+): { linkId: string; verb: ArcLinkVerb; from: ArcPoint; to: ArcPoint; fromName: string; toName: string }[] => {
+  const here = new Set(
+    file.usageLinks
+      .filter((link) => link.ownerKind === 'arc_point' && (link.beatId as string) === (beatId as string))
+      .map((link) => link.ownerId),
+  );
+  const nameOf = (characterId: CharacterId): string =>
+    file.characters.find((one) => (one.id as string) === (characterId as string))?.name ?? '';
+
+  return file.links
+    .filter(
+      (link) =>
+        isArcVerb(link.type) &&
+        link.from.type === 'arc_point' &&
+        link.to.type === 'arc_point' &&
+        here.has(link.from.id) &&
+        here.has(link.to.id),
+    )
+    .map((link) => {
+      const from = file.arcPoints.find((one) => (one.id as string) === link.from.id);
+      const to = file.arcPoints.find((one) => (one.id as string) === link.to.id);
+      if (!from || !to) return null;
+      return {
+        linkId: link.id as string,
+        verb: link.type as ArcLinkVerb,
+        from,
+        to,
+        fromName: nameOf(from.characterId),
+        toName: nameOf(to.characterId),
+      };
+    })
+    .filter(
+      (
+        entry,
+      ): entry is {
+        linkId: string;
+        verb: ArcLinkVerb;
+        from: ArcPoint;
+        to: ArcPoint;
+        fromName: string;
+        toName: string;
+      } => entry !== null,
+    );
+};
+
+/**
+ * Every arc point in the project except this character's own, for a picker.
+ *
+ * **Somebody's arc cannot move itself**: a link from a point to another point of
+ * the same arc says nothing a reader could act on — the arc is already in order —
+ * and allowing it would fill §13's reading with a character affecting only
+ * themselves.
+ */
+export const otherArcPoints = (
+  file: ProjectFile,
+  characterId: CharacterId,
+): { characterId: CharacterId; characterName: string; points: ArcPoint[] }[] =>
+  file.characters
+    .filter((person) => !person.archived && (person.id as string) !== (characterId as string))
+    .map((person) => ({
+      characterId: person.id,
+      characterName: person.name,
+      points: file.arcPoints
+        .filter((point) => (point.characterId as string) === (person.id as string))
+        .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1)),
+    }))
+    .filter((entry) => entry.points.length > 0);
