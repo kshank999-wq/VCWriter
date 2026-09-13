@@ -138,10 +138,6 @@ push live; the build takes a minute or two.
   `addendum-08-character-creator.md` is the Character Creator, the first module
   of the Research room, from Ken's own dev spec. **Complete: all ten stages
   built, plus stage 11, the way in** (0–5 were his MVP) —
-  the Creator is reached from the **Cast** section of the research side menu
-  (every name, one click) or a right-click on a cast row, and it is a
-  *selection* rather than a layer over one, which is what makes it stay with
-  that person — leaving and coming back lands on the tab they were left on —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
   so the unit of work is the characterization item and a trait is a folder for
@@ -156,8 +152,8 @@ push live; the build takes a minute or two.
   assembles a fetch, so a new module's collections cannot be named in one list
   and forgotten in another — which read back as nothing, after which the push
   took nothing for the truth and deleted the server's rows. Stage 2 is the
-  screen (`CharacterCreator.tsx`, reached from **Build** beside somebody in the
-  Characters folder): traits down the side and the *ways one of them gets shown*
+  screen (`CharacterCreator.tsx`, reached from the **Cast** section of the
+  research side menu — see stage 11): traits down the side and the *ways one of them gets shown*
   in the middle, because the characterization is the work and the trait is only
   the folder. The behaviour to protect is that **removing a trait unfiles its
   characterization rather than taking it**, and the colour is never computed in
@@ -221,7 +217,14 @@ push live; the build takes a minute or two.
   question asked three ways. The two continuity notes are **checkable rather
   than opinions** — a cause written after its effect, and a refusal in an arc
   that never offers a change — because *this character is thin* is not a thing
-  software gets to say. §3
+  software gets to say. Stage 11 is **being able to find it**: the module
+  shipped behind a small button on a row inside one folder, so a writer who
+  opened Research and looked around correctly concluded it was not there. The
+  cast is now in the research side menu by name, one click in, and the Creator
+  is a **selection** rather than a layer over one — which is the whole of why
+  it stays with somebody: pointing the menu at a person is the same act as
+  pointing it at a folder, so leaving is clicking something else and coming
+  back is clicking them again, on the tab they were left on. §3
   says what already exists and is only being widened; §8 is the
   build order; §3.4 says why there is deliberately no module framework yet; §10
   says what each built stage does; §11 names the two things deliberately left
