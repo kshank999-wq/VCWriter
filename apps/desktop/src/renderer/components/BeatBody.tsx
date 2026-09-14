@@ -20,8 +20,11 @@ import {
   cuesInOrder,
   defaultElementType,
   elementTypesFor,
+  MOTIF_TYPES,
+  addMotif,
   addSetupPayoff,
   addSetupPoint,
+  addTheme,
   groupManuscript,
   hasBookIndex,
   headingsSoFar,
@@ -40,6 +43,7 @@ import {
   reformatText,
   setDualDialogue,
   setupsBoard,
+  tagPassage,
   styleShortcuts,
   subHeadingsUnder,
   toggleInline,
@@ -53,9 +57,11 @@ import {
   type ManuscriptElement,
   type ManuscriptElementId,
   type ManuscriptElementType,
+  type MotifType,
   type PageLayoutSpec,
   type ProjectFile,
   type SetupPayoffId,
+  type ThematicKind,
   type Typing,
 } from '@vcwriter/domain';
 
@@ -169,6 +175,8 @@ export function BeatBody({
   const [indexing, setIndexing] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
   /** And on its way into a setup or a payoff (the Setups & Payoffs spec §4). */
   const [planting, setPlanting] = useState<{ text: string } | null>(null);
+  /** And under a theme or a motif (addendum 12 §4). */
+  const [tagging, setTagging] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
 
   /**
    * Dictation (spec §9), and *which* dictation depends on where this is
@@ -825,6 +833,14 @@ export function BeatBody({
                   setCaught(null);
                 }
           }
+          onTag={
+            readOnly
+              ? null
+              : () => {
+                  setTagging({ elementId: caught.elementId, text: caught.text });
+                  setCaught(null);
+                }
+          }
           onClose={() => setCaught(null)}
         />
       ) : null}
@@ -858,6 +874,17 @@ export function BeatBody({
           passage={planting.text}
           onUpdate={onUpdate}
           onClose={() => setPlanting(null)}
+        />
+      ) : null}
+
+      {tagging ? (
+        <TagThematic
+          file={file}
+          beatId={beat.id}
+          elementId={tagging.elementId}
+          passage={tagging.text}
+          onUpdate={onUpdate}
+          onClose={() => setTagging(null)}
         />
       ) : null}
     </div>
@@ -967,6 +994,7 @@ function CaughtMenu({
   onPick,
   onIndex,
   onPlant,
+  onTag,
   onClose,
 }: {
   x: number;
@@ -974,6 +1002,7 @@ function CaughtMenu({
   onPick(): void;
   onIndex: (() => void) | null;
   onPlant: (() => void) | null;
+  onTag: (() => void) | null;
   onClose(): void;
 }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -1017,6 +1046,11 @@ function CaughtMenu({
       {onPlant ? (
         <button type="button" role="menuitem" className="caught-item" onClick={onPlant}>
           Make this a setup or a payoff…
+        </button>
+      ) : null}
+      {onTag ? (
+        <button type="button" role="menuitem" className="caught-item" onClick={onTag}>
+          Tag a theme or a motif…
         </button>
       ) : null}
     </div>
@@ -1486,6 +1520,189 @@ function PlantSetupOrPayoff({
           onClick={save}
         >
           {kind === 'setup' ? 'Plant it' : 'Pay it off'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Tagging a passage under a theme or a motif, from the writing (addendum 12 §4).
+ *
+ * **Theme and motif are separate choices, not one picker with a filter.** §2 of
+ * that spec is emphatic about this and it is right: they are different kinds of
+ * thing, and the one interface that treated them alike would be the place the
+ * distinction started to rot. So the kind is chosen first, in the largest type,
+ * and the list underneath is that kind's list and nothing else.
+ *
+ * A theme or a motif can be named here — §10's requirement that a writer is not
+ * made to predefine everything before writing. Nothing is classified for them:
+ * the spec forbids auto-classifying a highlighted passage, and there is no
+ * guess in this dialog to forbid.
+ */
+function TagThematic({
+  file,
+  beatId,
+  elementId,
+  passage,
+  onUpdate,
+  onClose,
+}: {
+  file: ProjectFile;
+  beatId: BeatId;
+  elementId: ManuscriptElementId;
+  passage: string;
+  onUpdate: BeatBodyProps['onUpdate'];
+  onClose(): void;
+}) {
+  const [kind, setKind] = useState<ThematicKind>('theme');
+  const [ownerId, setOwnerId] = useState<string>('');
+  const [newName, setNewName] = useState('');
+  const [motifType, setMotifType] = useState<MotifType>('visual');
+  const [note, setNote] = useState('');
+
+  const list = kind === 'theme' ? (file.themes ?? []) : (file.motifs ?? []);
+  // Choosing a kind changes what the list is, so the selection goes with it —
+  // a theme id left standing in a motif picker is a control that lies.
+  const chosen = list.find((one) => (one.id as string) === ownerId) ?? list[0] ?? null;
+  const targetId = chosen ? (chosen.id as string) : '';
+
+  const save = () => {
+    const name = newName.trim();
+    if (targetId === '' && name.length === 0) return;
+    onUpdate((current) => {
+      let next = current;
+      let owner = targetId;
+      if (owner === '') {
+        if (kind === 'theme') {
+          const made = addTheme(next, { name });
+          next = made.file;
+          owner = made.theme.id as string;
+        } else {
+          const made = addMotif(next, { name, motifType });
+          next = made.file;
+          owner = made.motif.id as string;
+        }
+      }
+      return tagPassage(next, {
+        kind,
+        ownerId: owner,
+        beatId,
+        elementId,
+        quote: passage,
+        note: note.trim(),
+      }).file;
+    });
+    onClose();
+  };
+
+  return (
+    <div
+      className="caught-dialog"
+      role="dialog"
+      aria-label="Tag a theme or a motif"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
+      <div className="plant-kind" role="radiogroup" aria-label="Theme or motif">
+        {(['theme', 'motif'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            role="radio"
+            aria-checked={kind === option}
+            className={kind === option ? 'plant-choice on' : 'plant-choice'}
+            onClick={() => {
+              setKind(option);
+              setOwnerId('');
+            }}
+          >
+            {option === 'theme' ? 'A theme' : 'A motif'}
+          </button>
+        ))}
+      </div>
+
+      <label className="field">
+        <span>{kind === 'theme' ? 'Which theme' : 'Which motif'}</span>
+        <select
+          autoFocus
+          aria-label={kind === 'theme' ? 'Theme' : 'Motif'}
+          value={targetId}
+          onChange={(event) => setOwnerId(event.target.value)}
+        >
+          {list.map((one) => (
+            <option key={one.id} value={one.id as string}>
+              {one.name || (kind === 'theme' ? 'Untitled theme' : 'Untitled motif')}
+            </option>
+          ))}
+          <option value="">Something new…</option>
+        </select>
+      </label>
+
+      {targetId === '' ? (
+        <>
+          <label className="field">
+            <span>{kind === 'theme' ? 'The idea it carries' : 'What recurs'}</span>
+            <input
+              aria-label={kind === 'theme' ? 'New theme' : 'New motif'}
+              placeholder={kind === 'theme' ? 'What a town owes its dead' : 'the bell'}
+              value={newName}
+              onChange={(event) => setNewName(event.target.value)}
+            />
+          </label>
+          {/* A motif's own field, asked only of a motif — which is the whole of
+              why these are two kinds rather than one with a flag. */}
+          {kind === 'motif' ? (
+            <label className="field">
+              <span>What kind of thing</span>
+              <select
+                aria-label="Motif type"
+                value={motifType}
+                onChange={(event) => setMotifType(event.target.value as MotifType)}
+              >
+                {MOTIF_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </>
+      ) : null}
+
+      <label className="field">
+        <span>What this moment does (optional)</span>
+        <input
+          aria-label="What this moment does"
+          placeholder={kind === 'theme' ? 'This is where it turns' : 'The first time it is heard'}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+        />
+      </label>
+
+      <p className="index-quote">{passage}</p>
+
+      <p className="muted small">
+        The passage stays as it is. This records where it was met — cut the writing and the
+        occurrence says so rather than vanishing.
+      </p>
+
+      <div className="caught-actions">
+        <button type="button" className="ghost small" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="ghost small"
+          disabled={targetId === '' && newName.trim().length === 0}
+          onClick={save}
+        >
+          Tag it
         </button>
       </div>
     </div>

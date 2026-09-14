@@ -25,6 +25,10 @@ export type CharacterCategoryId = Id<'CharacterCategory'>;
 export type CharacterTraitId = Id<'CharacterTrait'>;
 export type CharacterizationItemId = Id<'CharacterizationItem'>;
 export type UsageLinkId = Id<'UsageLink'>;
+/** A theme and a motif are separate kinds (addendum 12 §2), so separate ids. */
+export type ResearchThemeId = Id<'ResearchTheme'>;
+export type ResearchMotifId = Id<'ResearchMotif'>;
+export type ThemeMotifLinkId = Id<'ThemeMotifLink'>;
 export type CharacterArcId = Id<'CharacterArc'>;
 export type ArcPointId = Id<'ArcPoint'>;
 export type CharacterRelationshipId = Id<'CharacterRelationship'>;

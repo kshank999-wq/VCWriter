@@ -14,6 +14,11 @@ import {
   usageLinkSchema,
 } from './character-creator.js';
 import {
+  researchMotifSchema,
+  researchThemeSchema,
+  themeMotifLinkSchema,
+} from './entities/themes.js';
+import {
   DEFAULT_RESEARCH_CATEGORIES,
   researchCategorySchema,
   researchItemSchema,
@@ -93,6 +98,14 @@ export const projectFileSchema = z.object({
   characterTraits: z.array(characterTraitSchema).default([]),
   characterizationItems: z.array(characterizationItemSchema).default([]),
   usageLinks: z.array(usageLinkSchema).default([]),
+  /**
+   * Themes and motifs (addendum 12 §2): two collections rather than one, all
+   * the way down, because one place that blurred them is the place the
+   * interface would start to.
+   */
+  themes: z.array(researchThemeSchema).default([]),
+  motifs: z.array(researchMotifSchema).default([]),
+  themeMotifLinks: z.array(themeMotifLinkSchema).default([]),
   characterArcs: z.array(characterArcSchema).default([]),
   arcPoints: z.array(arcPointSchema).default([]),
   characterRelationships: z.array(characterRelationshipSchema).default([]),

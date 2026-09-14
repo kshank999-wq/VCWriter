@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import {
   defaultMarkerKind,
   markerNoun,
@@ -17,7 +17,9 @@ import {
   threadLayout,
   timecode,
   setupLane,
+  thematicLanes,
   type SetupLaneRow,
+  type ThematicLaneRow,
   timelineArcs,
   unitsForLane,
   updateLane,
@@ -87,6 +89,8 @@ const HEAD_WIDTH = 168;
 const LINKS_HEIGHT = 44;
 /** A setup row is shorter than the links track: it carries marks, not curves. */
 const SETUP_HEIGHT = 20;
+/** A thematic row is the same height: a mark, not a curve. */
+const THEMATIC_HEIGHT = 18;
 
 /**
  * How many beats stack in a scene before the next column starts.
@@ -158,6 +162,23 @@ export function MasterTimeline({
   const shortForm = file.project.format === 'short_form';
   // A row per payoff that has anything placed (the Setups & Payoffs spec §6).
   const setupRows = useMemo(() => (shortForm ? [] : setupLane(file)), [file, shortForm]);
+  /**
+   * Themes and motifs, in two groups (addendum 12 §8).
+   *
+   * Never one lane: a reader *meets* a motif and *understands* a theme, so nine
+   * marks on a motif's row is recurrence working and nine on a theme's row is a
+   * different claim entirely. Combining them would average the two into nothing.
+   */
+  const thematics = useMemo(() => (shortForm ? { themes: [], motifs: [] } : thematicLanes(file)), [file, shortForm]);
+  /** Whole groups folded away. Per machine, like the Sculptor's filters. */
+  const [foldedGroups, setFoldedGroups] = useState<ReadonlySet<'themes' | 'motifs'>>(new Set());
+  const foldGroup = (group: 'themes' | 'motifs') =>
+    setFoldedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      return next;
+    });
 
   const selectedBeat = selectedBeatId ? file.beats.find((beat) => beat.id === selectedBeatId) : undefined;
   // What was clicked wins; otherwise the scene being written in.
@@ -388,6 +409,46 @@ export function MasterTimeline({
                 }}
               />
               <div className="links-cell tail" />
+
+              {/* Themes and motifs: two groups, each foldable whole, each row
+                  hideable on its own (addendum 12 §8). */}
+              {(['themes', 'motifs'] as const).map((group) =>
+                thematics[group].length === 0 ? null : (
+                  <Fragment key={group}>
+                    <button
+                      type="button"
+                      className="track-head thematic-group"
+                      aria-expanded={!foldedGroups.has(group)}
+                      onClick={() => foldGroup(group)}
+                    >
+                      <span className="fold-mark">{foldedGroups.has(group) ? '▸' : '▾'}</span>
+                      {group === 'themes' ? 'Themes' : 'Motifs'}
+                    </button>
+                    <div className="thematic-group-cell" style={{ gridColumn: `span ${spans.length}` }} />
+                    <div className="thematic-group-cell tail" />
+                    {foldedGroups.has(group)
+                      ? null
+                      : thematics[group].map((row) => (
+                          <Fragment key={`${row.kind}-${row.ownerId}`}>
+                            <div className={`track-head thematic-head ${row.kind}`} title={row.name}>
+                              <span className="thematic-head-name">{row.name}</span>
+                              {row.detail ? <span className="muted small">{row.detail}</span> : null}
+                            </div>
+                            <ThematicTrack
+                              row={row}
+                              widths={widths}
+                              spans={spans}
+                              onPick={(index) => {
+                                const first = beatsForUnit(file, spans[index]!.unit.id)[0];
+                                if (first) onSelectBeat(first.id);
+                              }}
+                            />
+                            <div className="thematic-cell tail" />
+                          </Fragment>
+                        ))}
+                  </Fragment>
+                ),
+              )}
 
               {/* Setups & payoffs: a row per promise, so how far apart this
                   payoff's setups are is a thing you can see (the spec's §6). */}
@@ -1154,6 +1215,70 @@ function SetupTrack({
                 <path d={`M ${at} ${mid - 5} L ${at + 5} ${mid} L ${at} ${mid + 5} L ${at - 5} ${mid} Z`} />
               ) : (
                 <circle cx={at} cy={mid} r={4} />
+              )}
+              <title>{mark.label}</title>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+/**
+ * One theme's or one motif's row (addendum 12 §8).
+ *
+ * A mark per tagged moment, at the scene it falls in — several at one position
+ * where the writer met it several times in one scene, which §8 asks for and
+ * which a row that collapsed them would hide.
+ *
+ * A theme's marks and a motif's marks are drawn differently: §8's requirement
+ * that the two remain distinguishable even before anybody colours them. An
+ * orphaned occurrence is not here at all, having no position to be drawn at.
+ */
+function ThematicTrack({
+  row,
+  widths,
+  spans,
+  onPick,
+}: {
+  row: ThematicLaneRow;
+  widths: number[];
+  spans: StorySpan[];
+  onPick(index: number): void;
+}) {
+  if (spans.length === 0) return null;
+  const total = widths.reduce((sum, width) => sum + width, 0);
+  const starts: number[] = [];
+  let x = 0;
+  for (const width of widths) {
+    starts.push(x);
+    x += width;
+  }
+  const mid = THEMATIC_HEIGHT / 2;
+  /** Several marks in one scene fan out rather than stacking invisibly. */
+  const seen = new Map<number, number>();
+
+  return (
+    <div className="thematic-cell" style={{ gridColumn: `span ${spans.length}` }}>
+      <svg
+        width={total}
+        height={THEMATIC_HEIGHT}
+        viewBox={`0 0 ${total} ${THEMATIC_HEIGHT}`}
+        role="list"
+        aria-label={row.name}
+      >
+        {row.marks.map((mark) => {
+          if (mark.unitIndex >= widths.length) return null;
+          const already = seen.get(mark.unitIndex) ?? 0;
+          seen.set(mark.unitIndex, already + 1);
+          const at = starts[mark.unitIndex]! + Math.min(widths[mark.unitIndex]! / 2, 60) + already * 7;
+          return (
+            <g key={mark.linkId} className={`thematic-mark ${row.kind}`} role="listitem" onClick={() => onPick(mark.unitIndex)}>
+              {row.kind === 'theme' ? (
+                <rect x={at - 3} y={mid - 3} width={6} height={6} />
+              ) : (
+                <circle cx={at} cy={mid} r={3.5} />
               )}
               <title>{mark.label}</title>
             </g>

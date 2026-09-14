@@ -14,6 +14,11 @@ import {
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
 import { setupPayoffSchema } from './entities/setups.js';
 import { indexMarkSchema, indexRefSchema } from './entities/book-index.js';
+import {
+  researchMotifSchema,
+  researchThemeSchema,
+  themeMotifLinkSchema,
+} from './entities/themes.js';
 import { projectSchema, projectSettingsSchema } from './entities/project.js';
 import { beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
 import { countWords } from './entities/manuscript.js';
@@ -76,6 +81,11 @@ export const SYNC_TABLES = {
   // deletes the server's rows.
   indexMarks: 'index_marks',
   indexRefs: 'index_refs',
+  // Themes and motifs (addendum 12). Two collections, for the reason §2 gives:
+  // the one place that blurred them is the place the interface would start to.
+  themes: 'research_themes',
+  motifs: 'research_motifs',
+  themeMotifLinks: 'theme_motif_links',
 } as const;
 
 export type SyncCollection = keyof typeof SYNC_TABLES;
@@ -536,6 +546,7 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
   ...planRows(file),
   ...characterCreatorRows(file),
   ...bookIndexRows(file),
+  ...thematicRows(file),
 });
 
 /**
@@ -546,6 +557,86 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
  * out from the pagination every time and a column holding one would be a
  * second answer to go stale.
  */
+/**
+ * Themes and motifs (addendum 12). Two shapes rather than one with a kind,
+ * which is the same decision the entities make and for the same reason.
+ */
+const thematicRows = (
+  file: ProjectFile,
+): Pick<ProjectRows, 'themes' | 'motifs' | 'themeMotifLinks'> => ({
+  themes: (file.themes ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    name: one.name,
+    description: one.description,
+    arc_notes: one.arcNotes,
+    notes: one.notes,
+    state: one.state,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+  motifs: (file.motifs ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    name: one.name,
+    description: one.description,
+    motif_type: one.motifType,
+    notes: one.notes,
+    state: one.state,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+  themeMotifLinks: (file.themeMotifLinks ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    theme_id: one.themeId,
+    motif_id: one.motifId,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+});
+
+const thematicFromRows = (
+  rows: ProjectRows,
+): Pick<ProjectFile, 'themes' | 'motifs' | 'themeMotifLinks'> => ({
+  themes: (rows.themes ?? []).map((row) =>
+    researchThemeSchema.parse({
+      id: row['id'],
+      projectId: row['project_id'],
+      name: row['name'] ?? '',
+      description: row['description'] ?? '',
+      arcNotes: row['arc_notes'] ?? '',
+      notes: row['notes'] ?? '',
+      state: row['state'] ?? 'active',
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
+  motifs: (rows.motifs ?? []).map((row) =>
+    researchMotifSchema.parse({
+      id: row['id'],
+      projectId: row['project_id'],
+      name: row['name'] ?? '',
+      description: row['description'] ?? '',
+      motifType: row['motif_type'] ?? 'visual',
+      notes: row['notes'] ?? '',
+      state: row['state'] ?? 'active',
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
+  themeMotifLinks: (rows.themeMotifLinks ?? []).map((row) =>
+    themeMotifLinkSchema.parse({
+      id: row['id'],
+      projectId: row['project_id'],
+      themeId: row['theme_id'],
+      motifId: row['motif_id'],
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
+});
+
 const bookIndexRows = (file: ProjectFile): Pick<ProjectRows, 'indexMarks' | 'indexRefs'> => ({
   indexMarks: (file.indexMarks ?? []).map((one) => ({
     id: one.id,
@@ -679,6 +770,7 @@ const characterCreatorRows = (
     beat_id: one.beatId,
     element_id: one.elementId,
     quote: one.quote,
+    note: one.note,
     created_at: one.createdAt,
     updated_at: one.updatedAt,
   })),
@@ -1089,6 +1181,7 @@ const characterCreatorFromRows = (
       beatId: row['beat_id'],
       elementId: nullableText(row['element_id']),
       quote: text(row['quote']),
+      note: text(row['note']),
       createdAt: row['created_at'],
       updatedAt: row['updated_at'],
     }),
@@ -1164,6 +1257,7 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     ...plansFromRows(rows),
     ...characterCreatorFromRows(rows),
     ...bookIndexFromRows(rows),
+    ...thematicFromRows(rows),
     // Snapshots are local recovery points, not shared state; they stay on disk.
     snapshots: [],
   });

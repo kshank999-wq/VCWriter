@@ -10972,3 +10972,203 @@ dialog.chapter-page-dialog {
   color: var(--gold);
   background: var(--panel-2);
 }
+
+/* -------------------------------- themes & motifs (addendum 12 §§6–8) */
+/* Two kinds, kept apart everywhere — including in how a mark is drawn, which
+   is §8's requirement that they stay distinguishable before anybody colours
+   them. A theme is a square, a motif is a ring. */
+
+.thematics {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.thematics-list {
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.thematics-detail {
+  padding: 14px 18px 32px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-content: start;
+  max-width: 820px;
+}
+
+.thematics-detail h3 {
+  margin: 10px 0 0;
+}
+
+.thematics-detail .field {
+  display: grid;
+  gap: 4px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.thematics-detail .field input,
+.thematics-detail .field select,
+.thematics-detail .field textarea {
+  font-size: 12.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 5px 8px;
+  width: 100%;
+  background: var(--ink);
+}
+
+.thematic-lost {
+  color: var(--danger, #d06a5a);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.thematic-state {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.thematic-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.thematic-related {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.thematic-related li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.thematic-related li span {
+  flex: 1;
+  min-width: 0;
+}
+
+.thematic-occurrences {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.thematic-occurrences li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.thematic-where {
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.thematic-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.thematic-occurrences li input {
+  width: 180px;
+  font-size: 12px;
+  padding: 3px 6px;
+  background: var(--ink);
+}
+
+/* A passage that has been cut keeps its row, struck through — the spec's
+   unresolved state, which is a reading rather than a stored flag. */
+.thematic-occurrences li.gone .thematic-where,
+.thematic-occurrences li.gone .thematic-text {
+  color: var(--danger, #d06a5a);
+  text-decoration: line-through;
+}
+
+/* ------------------------------------------------------- the two lanes */
+
+.thematic-cell {
+  height: 18px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.thematic-cell svg {
+  display: block;
+}
+
+.thematic-group-cell {
+  height: 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
+.track-head.thematic-group {
+  background: var(--panel-2);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--gold);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.track-head.thematic-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 16px;
+}
+
+.thematic-head-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thematic-mark rect,
+.thematic-mark circle {
+  cursor: pointer;
+}
+
+.thematic-mark.theme rect {
+  fill: var(--gold);
+}
+
+.thematic-mark.motif circle {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 1.5;
+}

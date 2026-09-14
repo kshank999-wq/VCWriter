@@ -129,8 +129,17 @@ export type CharacterizationItem = z.infer<typeof characterizationItemSchema>;
 export const usageLinkSchema = z.object({
   id: id<UsageLinkId>(),
   projectId: id<ProjectId>(),
-  /** What is being tracked: a characterization item, or an arc point. */
-  ownerKind: z.enum(['characterization', 'arc_point']),
+  /**
+   * What is being tracked.
+   *
+   * A characterization item or an arc point when this was built; a theme or a
+   * motif since addendum 12, which needed exactly this and nothing else. A
+   * record with an owner kind, a beat, an element and a quote **is** the
+   * polymorphic occurrence service that spec's §12 asks for, so widening the
+   * list was the whole of the data work — the same move addendum 08 §13 made
+   * for cross-arc links.
+   */
+  ownerKind: z.enum(['characterization', 'arc_point', 'theme', 'motif']),
   ownerId: z.string(),
   /** The scene it is in, for getting back to it. */
   unitId: id<StructuralUnitId>().nullable().default(null),
@@ -139,6 +148,15 @@ export const usageLinkSchema = z.object({
   elementId: id<ManuscriptElementId>().nullable().default(null),
   /** The words as they were. For reading — never for finding. */
   quote: z.string().default(''),
+  /**
+   * What this moment contributes, in the writer's words (addendum 12 §6).
+   *
+   * Empty on everything the Character Creator makes: *where it landed* is the
+   * whole of what a pin says there. A theme's occurrence wants somewhere to say
+   * *this is where it turns*, which is a note about the moment rather than
+   * about the theme, so it belongs on the occurrence.
+   */
+  note: z.string().default(''),
   ...timestamps,
 });
 export type UsageLink = z.infer<typeof usageLinkSchema>;

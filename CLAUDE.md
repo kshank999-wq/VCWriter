@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0046.
+  reads like it does. Applied through 0047.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§12a**
   is the **chapter page** as Ken asked for it — *File ▸ Chapter page…*, under
@@ -516,6 +516,32 @@ push live; the build takes a minute or two.
   what you see, and a point that falls after drawn dashed and red where it
   actually is. No migration — an `excerpt` on each point and `minimumSetups` on
   the record live in the project document.
+  `addendum-12-themes-and-motifs.md` is Themes & Motifs, from Ken's own dev
+  spec v2. **Built.** Nothing of it existed — but §1 is the thing worth
+  remembering: the spec asks for *a polymorphic occurrence service*, and one was
+  already there. `usage_links` (0039, built for the Character Creator) carries an
+  owner kind, an owner id, a scene, a beat, an element and a quote, which is
+  every field the spec's §5 lists — so widening `ownerKind` from two values to
+  four was the whole of the data work for occurrences. **When a spec asks for a
+  general mechanism, look for the one that is already general and merely narrow
+  in vocabulary**; this is the third time (arc links joined `story_links` the
+  same way). **Two kinds all the way down** (§2): two tables, two collections,
+  two tabs, two lanes, two choices on the right-click, and no function anywhere
+  that takes *a thematic thing* and works out which. The reason it is true rather
+  than merely asked for is that the fields differ — a theme has `arcNotes`
+  because a theme **develops**, a motif has `motifType` because a motif
+  **recurs**, and neither means anything on the other. A motif may be *linked* to
+  a theme and this never merges their occurrence lists: the bell recurring nine
+  times does not make the theme nine times explored. **Whether a tagged passage
+  still exists is a reading** (§3): `occurrencesOf` works it out from the
+  manuscript every time, so cutting the scene turns the occurrence red and struck
+  through with nothing running, and orphans sort last because they have no place
+  in the story to sort into. **Tag a theme or a motif…** is the fourth thing the
+  manuscript right-click does; the kind is chosen first and the list underneath
+  is that kind's alone. The two timeline lanes are **never one** (§6): a reader
+  *meets* a motif and *understands* a theme, so nine marks mean different things
+  on each row and combining them would average the two into nothing — squares for
+  a theme, rings for a motif, each group foldable whole. Migration 0047.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

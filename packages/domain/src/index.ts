@@ -34,6 +34,7 @@ export * from './import-lines.js';
 export * from './import-build.js';
 export * from './markers.js';
 export * from './setups.js';
+export * from './themes.js';
 export * from './chapter-style.js';
 export * from './mutations.js';
 export * from './render.js';
