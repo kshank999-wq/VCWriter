@@ -42,6 +42,7 @@ interface RoomRow {
   name: string;
   included_seats: number;
   ai_enabled?: boolean;
+  ai_cap_cents?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -71,6 +72,7 @@ const roomFromRow = (row: RoomRow): Room =>
     name: row.name,
     includedSeats: row.included_seats,
     aiEnabled: row.ai_enabled ?? true,
+    aiCapCents: row.ai_cap_cents ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   });

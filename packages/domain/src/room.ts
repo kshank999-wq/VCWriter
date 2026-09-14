@@ -133,12 +133,18 @@ export const roomSchema = z.object({
   /**
    * Whether this room may ask the AI for readings (addendum 07 §14, stage 12).
    *
-   * The owner's switch, on by default — the usage control that can be honoured
-   * completely, so it is the one that exists. A *spending cap* is a larger
-   * promise needing metering per room, and a limit that silently does not hold
-   * would be worse than none.
+   * The owner's switch, on by default.
    */
   aiEnabled: z.boolean().default(true),
+  /**
+   * What the room will spend on readings in a calendar month, in cents (stage
+   * 13). Null, and the default, is no cap.
+   *
+   * A different statement from the switch: off means *this room does not use
+   * AI*, and a cap of nothing means *not until next month*. `spending.ts` says
+   * how it is counted and why it can be passed by one reading.
+   */
+  aiCapCents: z.number().int().min(0).nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

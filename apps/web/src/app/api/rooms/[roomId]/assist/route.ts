@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import {
+  CAP_CAVEAT,
   assistRefusalText,
   canAskHere,
+  capStanding,
+  describeSpend,
   curatableFrom,
   ideaBoxes,
   ideasIn,
@@ -14,7 +17,8 @@ import { loadRoomById } from '@/lib/rooms';
 import { RULES, rateLimit } from '@/lib/rate-limit';
 import { versionWithDocument } from '@/lib/branches';
 import { submissionsIn } from '@/lib/submissions';
-import { compareTwo, findDuplicates, isAiConfigured } from '@/lib/ai-room';
+import { ReadingFailed, compareTwo, findDuplicates, isAiConfigured } from '@/lib/ai-room';
+import { recordSpend, spentThisMonth } from '@/lib/room-spend';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -24,15 +28,24 @@ export const maxDuration = 120;
 /**
  * Asking the room's AI for a reading (addendum 07 §14, stage 12).
  *
- * **Three gates before anything costs money**, in the order they actually
+ * **Four gates before anything costs money**, in the order they actually
  * matter: whether the deployment has AI at all, whether *this room* has it on —
- * the owner's switch, §14 — and whether this person may read all the
- * contributions. That last one is the interesting gate: the readings are
- * *about* several writers' work at once, so somebody who may not read the
- * contributions must not be able to get them summarised instead.
+ * the owner's switch, §14 — whether this person may read all the contributions,
+ * and what the room has already spent this month (stage 13). The third is the
+ * interesting one: the readings are *about* several writers' work at once, so
+ * somebody who may not read the contributions must not be able to get them
+ * summarised instead. The fourth is last because it is the only one that costs
+ * a query.
  *
  * Then the account rate limit, which is the spending limit the whole product
- * already uses.
+ * already uses, and which the room's cap does not replace: one is what this
+ * room will spend in a month, the other is what one person may ask for in a
+ * minute.
+ *
+ * **Every reading that reaches the model goes on the meter, including the ones
+ * that fail.** A refusal and a cut-off answer both cost the room money, and a
+ * meter that counted only the successes would read low in exactly the month
+ * somebody goes looking at it.
  *
  * **Nothing this returns is written anywhere.** The answer goes back to the
  * page that asked, and a person decides. There is no field in any of it that
@@ -68,11 +81,15 @@ export async function POST(
     role: view.role,
     roomEnabled: view.room.aiEnabled,
     configured: isAiConfigured(),
+    // Counted only where there is a cap to count against: a room with no limit
+    // should not pay for a query to prove it.
+    spentCents: view.room.aiCapCents === null ? 0 : await spentThisMonth(view.room.id),
+    capCents: view.room.aiCapCents,
   });
   if (allowed !== true) {
     return NextResponse.json(
       { error: assistRefusalText(allowed) },
-      { status: allowed.reason === 'unavailable' ? 503 : 403 },
+      { status: allowed.reason === 'unavailable' ? 503 : allowed.reason === 'capped' ? 402 : 403 },
     );
   }
 
@@ -114,7 +131,9 @@ export async function POST(
         return NextResponse.json({ error: assistRefusalText({ reason: 'not_enough' }) }, { status: 409 });
       }
 
-      return NextResponse.json({ duplicates: await findDuplicates({ ideas }) });
+      const found = await findDuplicates({ ideas });
+      await recordSpend({ roomId: view.room.id, userId: user.id, reading: 'duplicates', ...found.cost });
+      return NextResponse.json({ duplicates: found.reading });
     }
 
     // Two passes at one scene. Bound once so the narrowing survives into the
@@ -156,8 +175,20 @@ export async function POST(
       return NextResponse.json({ error: assistRefusalText({ reason: 'not_enough' }) }, { status: 409 });
     }
 
-    return NextResponse.json({ comparison: await compareTwo({ first, second }) });
+    const compared = await compareTwo({ first, second });
+    await recordSpend({ roomId: view.room.id, userId: user.id, reading: 'compare', ...compared.cost });
+    return NextResponse.json({ comparison: compared.reading });
   } catch (cause) {
+    // A reading that reached the model and came back wrong still spent the
+    // money, so it goes on the meter before the error goes back.
+    if (cause instanceof ReadingFailed) {
+      await recordSpend({
+        roomId: view.room.id,
+        userId: user.id,
+        reading: `${parsed.data.reading}:failed`,
+        ...cause.cost,
+      });
+    }
     const message = cause instanceof Error ? cause.message : 'The reading failed.';
     return NextResponse.json({ error: message }, { status: 502 });
   }
@@ -180,14 +211,21 @@ export async function GET(
   const view = await loadRoomById(params.roomId);
   if (!view || !view.role) return NextResponse.json({ error: 'No such room.' }, { status: 404 });
 
+  const spentCents = await spentThisMonth(view.room.id);
   const allowed = canAskHere({
     role: view.role,
     roomEnabled: view.room.aiEnabled,
     configured: isAiConfigured(),
+    spentCents,
+    capCents: view.room.aiCapCents,
   });
 
+  const standing = capStanding({ spentCents, capCents: view.room.aiCapCents });
   return NextResponse.json({
     available: allowed === true,
     reason: allowed === true ? null : assistRefusalText(allowed),
+    // The month, whether or not there is a cap: the button that spends money
+    // should be able to say what has been spent (stage 13).
+    spend: { ...standing, line: describeSpend(standing), caveat: CAP_CAVEAT },
   });
 }

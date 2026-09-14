@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { roleCan, type RoomRole } from './room.js';
+import { capStanding, describeSpend, type CapStanding } from './spending.js';
 import { originSchema, type Origin } from './entities/structure.js';
 
 /**
@@ -44,6 +45,7 @@ export const canAssist = (role: RoomRole | null): boolean =>
 export type AssistRefusal =
   | { reason: 'cannot_assist' }
   | { reason: 'room_off' }
+  | { reason: 'capped'; standing: CapStanding }
   | { reason: 'not_enough' }
   | { reason: 'unavailable' };
 
@@ -53,6 +55,10 @@ export const assistRefusalText = (refusal: AssistRefusal): string => {
       return 'Reading the room’s work with AI is for whoever reads all of it.';
     case 'room_off':
       return 'This room has AI turned off. The showrunner decides.';
+    case 'capped':
+      // Says the number, because *you have reached your limit* without one is a
+      // refusal nobody can act on: the showrunner can raise it or wait.
+      return `This room has spent its cap for the month — ${describeSpend(refusal.standing)} The showrunner can raise it.`;
     case 'not_enough':
       return 'There is not enough here to compare yet.';
     case 'unavailable':
@@ -149,25 +155,46 @@ export const ASSISTED_LABEL = 'AI-assisted';
 /**
  * What the room has decided about AI (§14 — *usage controls are the owner's*).
  *
- * One switch, and it is the owner's. A spending cap is a different and larger
- * promise — it needs metering per room and a decision about what happens when
- * it is reached — and saying that here is better than shipping a limit that
- * silently does not hold. What exists meanwhile is the account rate limit every
- * AI call in the product already goes through.
+ * Two controls, both the owner's, and they are different statements: the switch
+ * says *this room does not use AI*, and a cap says *not past here this month*.
+ * A cap of nothing is therefore not the same as the switch being off, and both
+ * exist because a showrunner who wants the second does not want the first.
  */
 export const roomAiSchema = z.object({
   enabled: z.boolean().default(true),
+  /** In cents, per calendar month. Null is the default and means no limit. */
+  capCents: z.number().int().min(0).nullable().default(null),
 });
 export type RoomAi = z.infer<typeof roomAiSchema>;
 
-/** Whether a reading can be asked for here, and why not where it cannot. */
+/**
+ * Whether a reading can be asked for here, and why not where it cannot.
+ *
+ * The gates are in the order they cost: what the deployment has, what the room
+ * has decided, what this person may read, and last what the month has already
+ * cost — because the spend is the only one of the four that needs a query.
+ *
+ * The cap is checked against what has **already** been spent, which is the one
+ * thing about it worth stating twice: what a reading costs is known when it
+ * comes back, so this stops the next one rather than the one in flight.
+ */
 export const canAskHere = (input: {
   role: RoomRole | null;
   roomEnabled: boolean;
   configured: boolean;
+  /** Spent this month, in cents. Nothing, where the caller has not counted. */
+  spentCents?: number;
+  /** The room's cap. Null, and the default, is no cap. */
+  capCents?: number | null;
 }): true | AssistRefusal => {
   if (!input.configured) return { reason: 'unavailable' };
   if (!input.roomEnabled) return { reason: 'room_off' };
   if (!canAssist(input.role)) return { reason: 'cannot_assist' };
+
+  const standing = capStanding({
+    spentCents: input.spentCents ?? 0,
+    capCents: input.capCents ?? null,
+  });
+  if (standing.reached) return { reason: 'capped', standing };
   return true;
 };

@@ -500,6 +500,13 @@ survive the journey — and which is why §4 is a prerequisite and not a detail.
 10. **Built.** Comments, notifications and activity history (§14, §9, §19).
 11. **Built.** Desktop synchronisation, and export/backup of a whole room (§14, §19).
 12. **Built.** AI comparison and summarisation (§14, §19).
+13. **Built.** The per-room AI spending cap (§14, §21).
+14. **Built.** Email notification (§14, §22).
+15. **Built.** Recurring seat billing (§14, §23).
+
+Stages 13 to 15 were §20's list of what §14 described and nobody had built.
+They are the module's outside edges — money, and mail — rather than more of
+the room, which is why they came last.
 
 Stage 9 is the point of the module, the way promotion is the point of the
 Outliner: everything before it is making it possible to see what the room
@@ -1316,9 +1323,92 @@ room has had twice. Both were chosen because §14 names them and because both ar
 
 ## 20. Where this leaves the module
 
-**All twelve stages of §15 are built.** What §14 still describes and nobody has
-built is named rather than left to be discovered: email notification (the Room
-notifies in the Room; Resend carries the transactional mail and is not wired to
-this), recurring billing for seats (Stripe carries the flag and the entitlement
-is data, but the subscription itself is not built), and a per-room AI spending
-cap. Everything else in this addendum exists.
+**All fifteen stages of §15 are built.** This section used to name the three
+things §14 described and nobody had built — a per-room AI spending cap, email
+notification, and recurring billing for seats. They are §21, §22 and §23.
+
+Nothing in this addendum is now unbuilt.
+
+
+## 21. The AI spending cap (stage 13)
+
+`packages/domain/src/spending.ts` and `apps/web/src/lib/room-spend.ts`;
+migration 0043; the panel at the top of *Read it with AI*.
+
+§14 asks for *room-level usage and cost controls*. Stage 12 shipped the half
+that could be honoured completely — one switch, the owner's — and wrote down,
+in the migration itself, why the other half was not there with it: a cap needs
+**metering per room**, a decision about **what happens when the number is
+reached**, and **somewhere to show the running total**, and a limit that
+silently does not hold is worse than no limit at all. This is those three, and
+the fourth thing that turned out to be missing.
+
+### A cap stops the next reading, never the one in flight
+
+The admission that makes the whole feature honest, and it is said in the
+interface rather than in this document alone. What a reading costs is known
+only once the model has answered, so the check before one runs is against what
+has **already** been spent. A room can therefore pass its cap by one reading.
+
+The alternative was to refuse anything that *might* take it over, which means
+guessing a price before asking — and a guess is the thing this was built to
+replace. So the rule is stated, the overshoot is drawn rather than clamped
+(`describeSpend` says *the last reading took it over* rather than showing $50
+of $50, which would make the one honest thing about a cap look like a bug), and
+nobody is ever surprised by a number they were shown.
+
+### The meter records, and that is a departure
+
+The rest of the module **computes**: what is new, the activity trail, whether a
+characterization is used. It does that because the facts were already written
+down somewhere and a second copy drifts — §14 and §9 both turn on it.
+
+Tokens are not written down anywhere. They exist for the length of one HTTP
+response and then they are gone, so a row per reading is the only honest way to
+know what a month cost. The exception holds rather than breaking the rule,
+because the row records an **event** rather than a second copy of a state:
+there is nothing for it to disagree with.
+
+Three things follow from that:
+
+- **A failed reading goes on the meter too.** A refusal, a cut-off answer and
+  an unparseable one all spent the room's money, and a meter counting only the
+  successes would read low in exactly the month somebody goes looking at it.
+  `ReadingFailed` carries the cost out through the throw.
+- **Cost is stored beside the tokens rather than recomputed from them.** The
+  rate that applied is the rate that applied; a price change six months from
+  now must not silently rewrite what last quarter cost.
+- **A meter a client may write is not a meter.** `room_ai_usage` has a read
+  policy and no insert, update or delete policy at all. Rows come from the
+  route that made the call, through the service role, with the counts the model
+  reported — so a room cannot spend without the number moving, and nobody can
+  tidy the number afterwards.
+
+### The rate is not the domain's to assert
+
+`spending.ts` does arithmetic on a `TokenRate` it is handed; the rate itself
+lives in `ai-room.ts` beside the model id, because a rate is a fact about one
+model at one time and should change in the same edit as the model. That is the
+same decision `pricing.ts` makes about the shop price for the same reason: a
+second copy of a price is a copy that will eventually disagree with the till.
+
+### The number is everybody's; the controls are the showrunner's
+
+A writer who may not ask for a reading still sits in a room whose budget is
+being spent, and **a cap you can hit without seeing it coming is the failure
+this stage exists to fix**. So `room_ai_usage` is readable by anybody in the
+room and the *Read it with AI* section appears for all of them — with the
+month's line and bar, and without the readings.
+
+### The fourth thing, which was missing
+
+Stage 12 put the owner's switch in the database and nowhere else, so it was the
+showrunner's in principle and nobody's in practice. `PATCH
+/api/rooms/[roomId]/ai` is where both controls are actually set, and they are
+drawn as two because they say different things: the switch is *this room does
+not use AI*, and the cap is *not past here this month*. A cap of **nothing** is
+therefore a real and offered setting, and is not the same as turning it off.
+
+The account rate limit every AI call already goes through is untouched and is
+not replaced: one is what this room will spend in a month, the other is what
+one person may ask for in a minute.

@@ -1769,3 +1769,49 @@ p.room-stamp {
 .notes-heard {
   margin: -10px 0 0;
 }
+
+/* ---------------------------------------------------------------------------
+   What the room's AI has cost, and the cap on it (addendum 07 §14, stage 13).
+--------------------------------------------------------------------------- */
+
+.room-spend {
+  margin-bottom: 20px;
+}
+
+/* Drawn only where there is something to be a fraction of. It is a reading of
+   the month rather than a control, so it takes no clicks. */
+.spend-bar {
+  height: 6px;
+  margin: 10px 0 14px;
+  border-radius: 3px;
+  background: var(--bg-raised-2);
+  overflow: hidden;
+}
+
+.spend-fill {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+  transition: width 160ms ease-out;
+}
+
+/* Reached is red rather than fuller gold: gold is the brand's colour for
+   everything, so a bar that only got longer would say nothing at the moment it
+   most needs to. */
+.spend-fill.reached {
+  background: var(--red);
+}
+
+.spend-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.spend-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

@@ -1,5 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { comparisonSchema, duplicatesSchema, type Comparison, type Duplicates } from '@vcwriter/domain';
+import {
+  comparisonSchema,
+  costOf,
+  duplicatesSchema,
+  type Comparison,
+  type Duplicates,
+  type TokenRate,
+} from '@vcwriter/domain';
 
 /**
  * The room's readings (addendum 07 §14, stage 12).
@@ -18,6 +25,37 @@ import { comparisonSchema, duplicatesSchema, type Comparison, type Duplicates } 
 
 const MODEL = 'claude-opus-5';
 
+/**
+ * What that model costs, per million tokens, in cents (stage 13).
+ *
+ * **Here rather than in the domain, and beside the model id rather than
+ * anywhere else.** A rate is a fact about one model at one time, so it belongs
+ * where the model is named and changes in the same edit; the domain does the
+ * arithmetic on whatever it is handed. That is the same decision `pricing.ts`
+ * makes about the shop price for the same reason — a second copy of a price is
+ * a copy that will eventually disagree.
+ *
+ * What is recorded on a reading is the money, not the rate, so changing this
+ * never rewrites what a past month cost.
+ */
+export const RATE: TokenRate = {
+  inputCentsPerMillion: 500,
+  outputCentsPerMillion: 2500,
+};
+
+/** What a reading cost the room, and what it spent to get there. */
+export interface ReadingCost {
+  inputTokens: number;
+  outputTokens: number;
+  costCents: number;
+}
+
+/** A reading, and the meter reading that goes with it. */
+export interface Metered<T> {
+  reading: T;
+  cost: ReadingCost;
+}
+
 let cached: Anthropic | null = null;
 const client = (): Anthropic => {
   if (!cached) cached = new Anthropic();
@@ -27,6 +65,22 @@ const client = (): Anthropic => {
 export const isAiConfigured = (): boolean => Boolean(process.env['ANTHROPIC_API_KEY']);
 
 export class RoomReadingError extends Error {}
+
+/**
+ * A reading that did not come back, and what it cost anyway.
+ *
+ * A refusal, a cut-off answer and a malformed one all spent the room's money,
+ * and a meter that counted only the successes would read low exactly when
+ * somebody is in trouble — which is the month they go looking at it.
+ */
+export class ReadingFailed extends RoomReadingError {
+  constructor(
+    message: string,
+    readonly cost: ReadingCost,
+  ) {
+    super(message);
+  }
+}
 
 // ------------------------------------------------------------- the schemas
 
@@ -117,7 +171,7 @@ const askFor = async <T>(input: {
   user: string;
   schema: unknown;
   parse: (body: unknown) => T;
-}): Promise<T> => {
+}): Promise<Metered<T>> => {
   const response = await client().messages.create({
     max_tokens: 16000,
     model: MODEL,
@@ -133,29 +187,42 @@ const askFor = async <T>(input: {
     messages: [{ role: 'user', content: input.user }],
   });
 
+  // Read before anything can throw: a reading that was refused or cut off still
+  // cost the room money, and a meter that only counts the successes is a meter
+  // that reads low exactly when somebody is in trouble. The caller records it
+  // whatever happens next.
+  const cost: ReadingCost = {
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+    costCents: costOf(
+      { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens },
+      RATE,
+    ),
+  };
+
   if (response.stop_reason === 'refusal') {
-    throw new RoomReadingError('The reading was declined.');
+    throw new ReadingFailed('The reading was declined.', cost);
   }
   if (response.stop_reason === 'max_tokens') {
-    throw new RoomReadingError('The reading ran long and was cut off. Try a shorter pass.');
+    throw new ReadingFailed('The reading ran long and was cut off. Try a shorter pass.', cost);
   }
 
   const text = response.content.find((block) => block.type === 'text');
-  if (!text || text.type !== 'text') throw new RoomReadingError('The reading came back empty.');
+  if (!text || text.type !== 'text') throw new ReadingFailed('The reading came back empty.', cost);
 
   let body: unknown;
   try {
     body = JSON.parse(text.text);
   } catch {
-    throw new RoomReadingError('The reading came back in a shape we could not read.');
+    throw new ReadingFailed('The reading came back in a shape we could not read.', cost);
   }
 
   try {
     // Parsed through the domain's schema as well as the model's. Two gates on
     // the same shape, and the second is the one that runs in the tests.
-    return input.parse(body);
+    return { reading: input.parse(body), cost };
   } catch {
-    throw new RoomReadingError('The reading came back in a shape we could not read.');
+    throw new ReadingFailed('The reading came back in a shape we could not read.', cost);
   }
 };
 
@@ -173,7 +240,7 @@ export interface Pass {
  * else about the room: not the other contributions, not the comments, not who
  * has been assigned what. What leaves the room is what is being compared.
  */
-export const compareTwo = async (input: { first: Pass; second: Pass }): Promise<Comparison> => {
+export const compareTwo = async (input: { first: Pass; second: Pass }): Promise<Metered<Comparison>> => {
   const body = [
     `The first pass is ${input.first.writer}'s — ${input.first.label}.`,
     '',
@@ -197,7 +264,7 @@ export const compareTwo = async (input: { first: Pass; second: Pass }): Promise<
 /** Find ideas the room has had twice. */
 export const findDuplicates = async (input: {
   ideas: { id: string; writer: string; title: string; body: string }[];
-}): Promise<Duplicates> => {
+}): Promise<Metered<Duplicates>> => {
   const body = input.ideas
     .map((idea) =>
       [`id: ${idea.id}`, `from: ${idea.writer}`, idea.title, idea.body].filter(Boolean).join('\n'),

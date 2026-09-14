@@ -50,6 +50,8 @@ import { WhoOwesWhat, YourAsks } from './assignments';
 import { Tray } from './tray';
 import { Talk, Trail, WhatIsNew } from './talk';
 import { Assist } from './assist';
+import { Spend } from './spend';
+import { standingFor } from '@/lib/room-spend';
 import { assistRefusalText } from '@vcwriter/domain';
 import { isAiConfigured } from '@/lib/ai-room';
 
@@ -201,13 +203,20 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
   // news it was about to show already marked read.
   await markRead(view.room.id, user.id);
 
-  // The room's AI (§14, stage 12). Three gates, and the page asks the same
-  // question the route does — so the control is absent for the same reason the
-  // call would have been refused, and says which reason.
+  // The room's AI (§14, stages 12 and 13). Four gates, and the page asks the
+  // same question the route does — so the control is absent for the same reason
+  // the call would have been refused, and says which reason.
+  //
+  // The month is counted for everybody in the room, not only for whoever may
+  // ask: a cap somebody can hit without seeing it coming is the failure stage
+  // 13 exists to fix.
+  const spend = await standingFor({ roomId: view.room.id, capCents: view.room.aiCapCents });
   const mayAsk = canAskHere({
     role: view.role,
     roomEnabled: view.room.aiEnabled,
     configured: isAiConfigured(),
+    spentCents: spend.spentCents,
+    capCents: view.room.aiCapCents,
   });
   const passes = curating ? submissions.filter((one) => one.kind === 'script') : [];
   const scenesIn: Record<string, Curatable[]> = {};
@@ -359,25 +368,40 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
         </section>
       ) : null}
 
-      {curating ? (
+      {/* The section is here for anybody in the room, because the *month* is
+          everybody's business (stage 13) — a cap you can hit without seeing it
+          coming is the thing that stage exists to fix. What is inside it
+          differs: whoever curates gets the readings, and everybody gets the
+          number. */}
+      {isAiConfigured() ? (
         <section>
           <h2>Read it with AI</h2>
-          <p className="lede">
-            A reading, not a decision. It says what differs between two passes and what each does
-            better, and where the room has had the same idea twice — it never writes anything, never
-            merges anybody’s work, and nothing it says changes a draft.
-          </p>
-          <Assist
+          <Spend
             roomId={view.room.id}
-            available={mayAsk === true}
-            reason={mayAsk === true ? null : assistRefusalText(mayAsk)}
-            passes={passes}
-            scenes={scenesIn}
-            nameOf={(userId) => {
-              const seat = view.seats.find((one) => one.userId === userId);
-              return seat ? seatName(seat) : 'Somebody no longer in the room';
-            }}
+            standing={spend}
+            enabled={view.room.aiEnabled}
+            yours={view.role === 'owner'}
           />
+          {curating ? (
+            <>
+              <p className="lede">
+                A reading, not a decision. It says what differs between two passes and what each
+                does better, and where the room has had the same idea twice — it never writes
+                anything, never merges anybody’s work, and nothing it says changes a draft.
+              </p>
+              <Assist
+                roomId={view.room.id}
+                available={mayAsk === true}
+                reason={mayAsk === true ? null : assistRefusalText(mayAsk)}
+                passes={passes}
+                scenes={scenesIn}
+                nameOf={(userId) => {
+                  const seat = view.seats.find((one) => one.userId === userId);
+                  return seat ? seatName(seat) : 'Somebody no longer in the room';
+                }}
+              />
+            </>
+          ) : null}
         </section>
       ) : null}
 
