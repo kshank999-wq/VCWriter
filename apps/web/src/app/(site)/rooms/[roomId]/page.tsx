@@ -15,7 +15,9 @@ import {
   curatableFrom,
   awaitingCuration,
   mergeRefusalText,
+  describeBilling,
   describeSeats,
+  seatsToBill,
   filingChoices,
   ideaBoxes,
   ideasIn,
@@ -52,6 +54,8 @@ import { Talk, Trail, WhatIsNew } from './talk';
 import { Assist } from './assist';
 import { Spend } from './spend';
 import { NotifyMe } from './notify';
+import { Billing } from './billing';
+import { loadBilling, seatPriceCents } from '@/lib/room-billing';
 import { standingFor } from '@/lib/room-spend';
 import { assistRefusalText } from '@vcwriter/domain';
 import { isAiConfigured } from '@/lib/ai-room';
@@ -212,6 +216,10 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
   // ask: a cap somebody can hit without seeing it coming is the failure stage
   // 13 exists to fix.
   const spend = await standingFor({ roomId: view.room.id, capCents: view.room.aiCapCents });
+
+  // The room's seat subscription (§14, stage 15). Read for everybody who is
+  // shown the billing section, which `landingFor` makes the showrunner's.
+  const [billing, seatCents] = await Promise.all([loadBilling(view.room.id), seatPriceCents()]);
   const mayAsk = canAskHere({
     role: view.role,
     roomEnabled: view.room.aiEnabled,
@@ -312,6 +320,16 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
             <article className="card">
               <h3>Seats</h3>
               <p className="lede">{describeSeats(view.seatsCount)}</p>
+              {/* The subscription itself (stage 15). The line above is who is
+                  in the room; this one is what it costs, and they are kept
+                  apart because a showrunner asks them separately. */}
+              <Billing
+                roomId={view.room.id}
+                line={describeBilling({ count: view.seatsCount, billing, seatCents })}
+                billing={billing}
+                wanted={seatsToBill(view.room, view.seats)}
+                yours={view.role === 'owner'}
+              />
               <p className="small">
                 An invitation nobody has answered is not a seat and is not billed. A seat you take
                 out of the room stops being billed and keeps everything it wrote.

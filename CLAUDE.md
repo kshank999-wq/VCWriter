@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0042.
+  reads like it does. Applied through 0045.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
@@ -79,7 +79,8 @@ push live; the build takes a minute or two.
   `addendum-07-writers-room.md` is Writers Room, the cloud collaboration
   module: the showrunner's dashboard as the front door, logins, assignments,
   submitting, the brainstorming room, curation and a non-destructive master
-  merge. **All twelve stages of §15 are built.** §20 names what §14 still describes and nobody has built: email notification, recurring seat billing, and a per-room AI spending cap. §1 and §2 are the rules it all hangs
+  merge. **All fifteen stages of §15 are built, and nothing in the addendum is
+  unbuilt.** §1 and §2 are the rules it all hangs
   off — one writer's work is never destroyed by another's, and a collaborator
   gets the whole program rather than a web editor. §3 says how much of it the
   product already has (the Room is `/preview` grown up; membership widens
@@ -155,7 +156,50 @@ push live; the build takes a minute or two.
   tried has nowhere to put it. Work it helps make is `assisted` on the record's
   existing `origin`, attributed to the person and never the machine. Migration
   0038 is the owner's switch.
-  §19 says what each built stage does; §15 is the build order.
+  Stage 13 is the **AI spending cap**, which 0038 had named the three blockers
+  for — metering, what happens at the limit, somewhere to show the total —
+  `packages/domain/src/spending.ts`, `room-spend.ts` and migration 0043. The
+  admission that makes it honest is in the interface: **a cap stops the next
+  reading, never the one in flight**, because what a reading costs is known only
+  once the model has answered, so a room can pass it by one reading and the
+  overshoot is drawn rather than clamped. The meter **records** where the rest of
+  the module reads, and the exception holds because tokens are written down
+  nowhere else and the row is an *event* rather than a second copy of a state; a
+  refusal and a cut-off answer go on it too. `room_ai_usage` has a read policy
+  and **no write policy at all** — a meter a client may write is not a meter. The
+  rate lives beside the model id and never in the domain. Everybody in the room
+  reads the number (a cap you can hit without seeing it coming is the failure it
+  fixes); only the showrunner sets it, along with the stage-12 switch, which
+  until now was in the database and nowhere else.
+  Stage 14 is **email notification**: `packages/domain/src/notify.ts`, the
+  `roomNotice` template, migration 0044. One sentence carries it — **the room
+  notifies; email interrupts, so email carries only what was addressed to you**:
+  a mention, an assignment given to you, a decision on your own submission, and
+  nothing else. A **reply in your thread is news in the room and never an
+  email**, which is where the line sits. Four refusals: your own act never mails
+  you; an invited seat gets the invitation and nothing else, mail about the work
+  being the one way in that skips RLS; a deactivated seat gets nothing; and
+  **speech travels while the work does not**. Still **no notification table** —
+  what is recorded is that mail was *sent*, in `email_events`. The switch is on
+  the **seat**, and it is the one field a seat holder changes and the showrunner
+  cannot: §6 gives them what you are called, not the ability to make your phone
+  ring, which needed a second policy plus 0033's trigger shape (RLS answers
+  *which rows*; the question is *which column*).
+  Stage 15 is **recurring seat billing**: `packages/domain/src/billing.ts`,
+  `room-billing.ts`, migration 0045, `STRIPE_PRICE_ID_SEAT`. **An unpaid room
+  never locks anybody out of what they wrote** — the only thing a lapsed
+  subscription stops is *taking another seat*, and the refusal itself says so,
+  because a showrunner reading a payment failure is at the worst moment to be
+  guessing. Billed from **acceptance, never invitation** (charging for one would
+  be charging for an email), and the gate counts the room as it *would* stand.
+  The quantity is **set, never incremented** — a retry can apply an *add one*
+  twice — which is what lets `setQuantity` fail safely and self-heal at the next
+  seat change, and why *what Stripe was told* is stored apart from *what the
+  room needs*. Stripe's own Checkout and Portal rather than an invoice screen
+  here. **The Stripe half is not proved live**: no seat product exists yet, and
+  until one does a room reads as it always did.
+  §19 says what each built stage does; §15 is the build order; §21, §22 and §23
+  are stages 13–15.
   `addendum-08-character-creator.md` is the Character Creator, the first module
   of the Research room, from Ken's own dev spec. **Complete: all ten stages
   built, plus stages 11–14 — the way in, the map and the review reading

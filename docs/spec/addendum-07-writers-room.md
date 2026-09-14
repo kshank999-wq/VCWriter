@@ -1497,3 +1497,103 @@ because Resend was down would lose the work to protect the notification. The
 same trade a purchase makes, for the same reason. A comment naming four people
 posts four notices through `Promise.allSettled`, so one bad address does not
 silence the other three.
+
+
+## 23. Recurring seat billing (stage 15)
+
+`packages/domain/src/billing.ts` and `apps/web/src/lib/room-billing.ts`;
+migration 0045; the Seats card, and the subscription events in
+`api/stripe/webhook`.
+
+§14: *a Writers Room entitlement is separate from the desktop licence — the
+base subscription includes the owner's seat and further collaborators are
+billable seats.* The desktop licence is a purchase (spec §12.2); this is the
+only recurring thing in the product, and it is a separate Stripe price because
+§14 makes the two separate entitlements.
+
+### An unpaid room never locks anybody out of what they wrote
+
+This is §1 pointed at the money, and it is the decision the whole stage is
+built around. **The only thing a lapsed subscription stops is taking another
+seat.** Everybody already in the room keeps writing, keeps reading, keeps
+submitting, keeps every draft, and the master is untouched. There is no other
+enforcement anywhere, on purpose and permanently.
+
+A product that held a writer's pages hostage to a card that expired would be
+destroying work to collect a debt, which is the one thing this module exists
+not to do — and it would make §16's *removing a seat removes access and never
+authorship* a promise the billing system quietly broke.
+
+So the refusal itself carries the promise: `billingRefusalText` says *everybody
+already in it keeps writing, and nothing anybody wrote is affected*, and the
+Seats card shows `LAPSE_PROMISE` whenever the subscription is not in good
+standing. A showrunner reading a payment failure is at the worst possible
+moment to be guessing what happens to the work, and the answer is not in a
+support article.
+
+One consequence worth naming: a seat still **inside** the plan is allowed
+whatever the card says. There is nothing to charge for, and refusing there
+would be refusing a free seat over a bill for something else.
+
+### Billed from acceptance, never from invitation
+
+True in `seatCount` since stage 1, because §14 made invited and active
+different states rather than one flag with a comment. Charging for an
+invitation would be charging for an email, and a showrunner who asks six people
+and gets two would be paying for four strangers. Deactivating stops the billing
+and keeps every contribution — that is §16 applied to the invoice.
+
+`mayTakeAnotherSeat` therefore counts the room **as it would stand**: active
+seats plus outstanding invitations plus the one being sent. An invitation is
+not billed and *is* a seat about to be, so the gate asks what the room would
+owe rather than what it owes today.
+
+### The quantity is set, never incremented
+
+Every seat change asks the domain what the room's billable count *is* and tells
+Stripe that number. A retried webhook or a double-clicked button can apply an
+*add one* twice; a **set** is the same answer however many times it arrives.
+
+It is also self-healing, which is what makes the next decision safe: **changing
+the quantity never fails the seat change**. Accepting an invitation and
+deactivating a seat are facts about the room, and Stripe being unreachable must
+not undo them — so `setQuantity` logs and returns. The drift shows as
+`billed_seats` disagreeing with what the seats say, and the next seat change
+puts it right with nobody reconciling anything. Keeping *what Stripe was told*
+separately from *what the room needs* is precisely what makes that possible;
+storing only the first would be storing a number that can be wrong with nothing
+to compare it against.
+
+A room that shrinks back inside its plan is cancelled **at the end of the
+period** rather than immediately: the month is already paid for, and taking it
+away would be charging for it twice.
+
+### Stripe's pages, not ours
+
+Checkout for starting and the Customer Portal for the card, the invoices and
+cancelling. Invoices, tax receipts, dunning and cancellation are a product, and
+the version built here would be a worse copy that has to be kept in step with
+tax law. One `POST` serves both, and the room's own row decides which — a page
+that worked it out for itself would eventually work it out wrong.
+
+The price lives in Stripe for the third time in this codebase and the same
+reason (`pricing.ts`): it is what the customer is actually charged, and a
+second copy in a constant is a copy that will disagree with the till. A
+deployment with no seat price shows the seat count without a number beside it
+rather than a page that will not render.
+
+**Nothing grants anything except the webhook.** A returned Checkout URL is an
+intention; the subscription exists when Stripe says so — the rule spec §12.2
+set for the desktop licence, unchanged. The three subscription events share one
+handler because `status` says everything the room needs, and `deleted` arrives
+as `canceled` without a special case; a special case is how a cancelled state
+ends up written in two places that disagree.
+
+### What is not proved here
+
+The rules are tested and the migration is applied. **The Stripe half has not
+been run against a live account**, because there is no seat product or price
+configured yet — `STRIPE_PRICE_ID_SEAT` is new, and `docs/deployment.md` says
+what to create and which webhook events to subscribe. Until that exists a room
+behaves exactly as it did before: the seat count reads, the subscription reads
+as *none*, and a room inside its included seat never asks for a card.

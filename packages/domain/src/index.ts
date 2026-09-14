@@ -77,6 +77,7 @@ export * from './standing.js';
 export * from './assist.js';
 export * from './spending.js';
 export * from './notify.js';
+export * from './billing.js';
 export * from './character-creator.js';
 export * from './character-map.js';
 export * from './character-review.js';

@@ -5,6 +5,7 @@ import { stripe } from '@/lib/stripe';
 import { adminClient } from '@/lib/supabase';
 import { fulfillCheckout, parsePlatform } from '@/lib/fulfillment';
 import { sendPurchaseEmail } from '@/lib/email';
+import { recordSubscription } from '@/lib/room-billing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -82,6 +83,25 @@ export async function POST(request: Request): Promise<Response> {
           });
         }
       }
+    } else if (
+      event.type === 'customer.subscription.created' ||
+      event.type === 'customer.subscription.updated' ||
+      event.type === 'customer.subscription.deleted'
+    ) {
+      // A Writers Room seat subscription (addendum 07 §14, stage 15).
+      //
+      // **The only place the room's billing columns are written.** Stripe's
+      // answer written down, like `orders` and `licenses`: entitlement is
+      // server-authoritative or it is not entitlement.
+      //
+      // One handler for all three, because `status` says everything the room
+      // needs — `deleted` arrives as `canceled` and needs no special case, and a
+      // special case is how the cancelled state ends up written in two places
+      // that disagree.
+      //
+      // Nothing is taken away here. A lapsed subscription stops the room taking
+      // another seat; everybody already in it keeps writing (`billing.ts`).
+      await recordSubscription(event.data.object as Stripe.Subscription);
     } else if (event.type === 'charge.refunded' || event.type === 'charge.dispute.created') {
       // Entitlement state must be able to follow the money (§12.2).
       const charge = event.data.object as Stripe.Charge;

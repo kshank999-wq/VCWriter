@@ -81,6 +81,17 @@ export const env = {
   get stripePriceId(): string {
     return required('STRIPE_PRICE_ID_DESKTOP');
   },
+  /**
+   * The recurring price of one Writers Room seat (addendum 07 §14, stage 15).
+   *
+   * A separate price from the desktop licence because §14 makes them separate
+   * entitlements: one is a purchase, the other a subscription. Required at the
+   * point of use like every other key here, so a deployment without it has a
+   * room that cannot take a billed seat rather than a site that will not build.
+   */
+  get stripeSeatPriceId(): string {
+    return required('STRIPE_PRICE_ID_SEAT');
+  },
   get resendApiKey(): string {
     return required('RESEND_API_KEY');
   },

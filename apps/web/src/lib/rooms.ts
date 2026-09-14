@@ -16,6 +16,7 @@ import {
   type SeatRefusal,
 } from '@vcwriter/domain';
 import { adminClient, serverClient } from './supabase';
+import { billingFromRow, setQuantity } from './room-billing';
 
 /**
  * Writers Room: the data layer (addendum 07, stage 1).
@@ -43,6 +44,11 @@ interface RoomRow {
   included_seats: number;
   ai_enabled?: boolean;
   ai_cap_cents?: number | null;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  subscription_state?: string | null;
+  billed_seats?: number | null;
+  current_period_end?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -339,7 +345,39 @@ export const acceptInvitation = async (input: {
 
   // Spent. The link is not a way back in afterwards.
   await db.from('room_invitations').delete().eq('seat_id', seatId);
-  return seatFromRow(data as SeatRow);
+
+  const seat = seatFromRow(data as SeatRow);
+  // Accepting is the billable event (§14, stage 15): an invitation is not a
+  // seat until it is taken up. Never allowed to fail the acceptance — Stripe
+  // being unreachable must not keep somebody out of a room they were asked
+  // into, and the drift is corrected at the next seat change.
+  await reconcileSeats(seat.roomId);
+  return seat;
+};
+
+/**
+ * Tell Stripe what the room needs now (stage 15).
+ *
+ * Here rather than in `room-billing.ts` because it needs the row mappers, and
+ * called from the two places that change the active count rather than from
+ * their routes — a rule that lives in the caller is a rule somebody adds a
+ * third caller without.
+ *
+ * **Sets, never increments**, and never throws: `setQuantity` says why both.
+ */
+export const reconcileSeats = async (roomId: string): Promise<void> => {
+  const db = adminClient();
+  const [{ data: roomRow }, { data: seatRows }] = await Promise.all([
+    db.from('rooms').select('*').eq('id', roomId).maybeSingle(),
+    db.from('room_seats').select('*').eq('room_id', roomId),
+  ]);
+  if (!roomRow) return;
+
+  await setQuantity({
+    room: roomFromRow(roomRow as RoomRow),
+    seats: ((seatRows ?? []) as SeatRow[]).map(seatFromRow),
+    billing: billingFromRow(roomRow as RoomRow),
+  });
 };
 
 // -------------------------------------------------------- managing a seat
@@ -399,5 +437,10 @@ export const deactivateSeat = async (input: {
 
   // An invitation nobody took up stops working when the seat goes.
   await db.from('room_invitations').delete().eq('seat_id', input.seatId);
-  return seatFromRow(data as SeatRow);
+
+  const seat = seatFromRow(data as SeatRow);
+  // A room stops paying for somebody who has left without losing what they
+  // wrote (§14, §16). Same call as accepting, pointed the other way.
+  await reconcileSeats(seat.roomId);
+  return seat;
 };

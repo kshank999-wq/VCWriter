@@ -159,6 +159,7 @@ same two variables below. (The old JWT keys still exist under API Keys →
 | `STRIPE_WEBHOOK_SECRET` | Stripe → Webhooks → the vc-writer.com endpoint | **Secret**. Different per environment |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe → API keys | Public |
 | `STRIPE_PRICE_ID_DESKTOP` | Stripe → Products → VC Writer Desktop | The server-chosen price |
+| `STRIPE_PRICE_ID_SEAT` | Stripe → Products → Writers Room seat | A **recurring** monthly price. Absent means a room cannot take a billed seat; everything else is unaffected |
 | `RESEND_API_KEY` | Resend → API keys | **Secret** |
 | `ANTHROPIC_API_KEY` | Anthropic Console | **Secret.** Absent means the Final Editor's AI read returns 503 and its deterministic pass still works |
 | `RESEND_FROM_ADDRESS` | `VC Writer <noreply@vc-writer.com>` | Needs a verified domain |
@@ -188,10 +189,18 @@ Add. Nothing else.
 ## Stripe
 
 1. Create the product and price; put the price id in `STRIPE_PRICE_ID_DESKTOP`.
-2. Add a webhook endpoint at `https://vc-writer.com/api/stripe/webhook`
-   subscribed to `checkout.session.completed`, `charge.refunded` and
-   `charge.dispute.created`.
-3. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
+2. Create a **second** product — a Writers Room seat — with a **recurring
+   monthly** price, and put that price id in `STRIPE_PRICE_ID_SEAT`. It is
+   separate because §14 of addendum 07 makes the two separate entitlements: the
+   desktop licence is a purchase and a seat is a subscription.
+3. Add a webhook endpoint at `https://vc-writer.com/api/stripe/webhook`
+   subscribed to `checkout.session.completed`, `charge.refunded`,
+   `charge.dispute.created`, `customer.subscription.created`,
+   `customer.subscription.updated` and `customer.subscription.deleted`.
+4. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
+5. Turn on the **Customer portal** (Settings → Billing → Customer portal) and
+   allow cancelling and payment-method updates: the room sends showrunners
+   there rather than growing its own invoice screen.
 
 Also switch on **Stripe Tax** in the dashboard: checkout already sends
 `automatic_tax`, but it only applies once the account has tax registrations
