@@ -36,6 +36,7 @@ export * from './markers.js';
 export * from './setups.js';
 export * from './themes.js';
 export * from './polarity.js';
+export * from './locations.js';
 export * from './chapter-style.js';
 export * from './mutations.js';
 export * from './render.js';

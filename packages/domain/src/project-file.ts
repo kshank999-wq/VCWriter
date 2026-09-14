@@ -18,6 +18,7 @@ import {
   researchThemeSchema,
   themeMotifLinkSchema,
 } from './entities/themes.js';
+import { locationSchema } from './entities/locations.js';
 import {
   DEFAULT_RESEARCH_CATEGORIES,
   researchCategorySchema,
@@ -106,6 +107,11 @@ export const projectFileSchema = z.object({
   themes: z.array(researchThemeSchema).default([]),
   motifs: z.array(researchMotifSchema).default([]),
   themeMotifLinks: z.array(themeMotifLinkSchema).default([]),
+  /**
+   * Locations (addendum 14): reusable places, each with however many prepared
+   * descriptions the writer has made for it.
+   */
+  locations: z.array(locationSchema).default([]),
   characterArcs: z.array(characterArcSchema).default([]),
   arcPoints: z.array(arcPointSchema).default([]),
   characterRelationships: z.array(characterRelationshipSchema).default([]),

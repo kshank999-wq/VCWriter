@@ -14,8 +14,13 @@ import {
   structuralUnitStatusSchema,
   timecode,
   TIMES,
+  addLocation,
+  insertDescription,
+  locationOfScene,
+  locationsInOrder,
   sceneGridSchema,
   setPolarity,
+  useLocationInScene,
   turnOf,
   updateUnit,
   type Beat,
@@ -24,6 +29,8 @@ import {
   type SceneHeading,
   type StructuralUnit,
   type StructuralUnitId,
+  type LocationDescriptionId,
+  type LocationId,
   type PolarityValue,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
@@ -374,6 +381,119 @@ function HeadingFields({
           </option>
         ))}
       </select>
+
+      {/* The library, beside the heading it fills in (addendum 14 §4.1).
+          Choosing one writes the place and, where the scene has not said,
+          the setting and the time — and from then on the heading is the
+          scene's, because a scene here at night is a scene. */}
+      <LocationPicker file={file} unit={unit} onUpdate={onUpdate} disabled={!hasBeats} />
     </div>
+  );
+}
+
+/**
+ * Choose a prepared place, make a new one, or insert one of its descriptions
+ * (addendum 14 §§4.1–4.3).
+ *
+ * **A new location is made without leaving the scene** — §5's requirement, and
+ * the reason the module is usable while writing at all: a writer who has to go
+ * to Research to name a house will type the heading by hand instead, and the
+ * library will be empty forever.
+ *
+ * **Nothing is inserted because a place was chosen.** §3.3 is explicit. The
+ * description is a separate, named act, and what it puts in the scene is a
+ * snapshot — the writer's prose from that moment on.
+ */
+function LocationPicker({
+  file,
+  unit,
+  onUpdate,
+  disabled,
+}: {
+  file: ProjectFile;
+  unit: StructuralUnit;
+  onUpdate: SceneDialogProps['onUpdate'];
+  disabled: boolean;
+}) {
+  const places = locationsInOrder(file);
+  const here = locationOfScene(file, unit.id);
+  const [making, setMaking] = useState(false);
+  const [name, setName] = useState('');
+
+  return (
+    <span className="scene-location">
+      <select
+        aria-label="Prepared location"
+        disabled={disabled}
+        value={here ? (here.id as string) : ''}
+        onChange={(event) => {
+          const value = event.target.value;
+          if (value === '__new') {
+            setMaking(true);
+            return;
+          }
+          if (value === '') return;
+          onUpdate((current) => useLocationInScene(current, unit.id, value as LocationId));
+        }}
+      >
+        <option value="">Prepared location…</option>
+        {places.map((one) => (
+          <option key={one.id} value={one.id as string}>
+            {one.name} — {one.setting} {one.time}
+          </option>
+        ))}
+        <option value="__new">New location…</option>
+      </select>
+
+      {/* Its prepared descriptions, where it has any. Inserting is its own
+          press, and says what it does. */}
+      {here && here.descriptions.length > 0 ? (
+        <select
+          aria-label="Insert a description"
+          disabled={disabled}
+          value=""
+          onChange={(event) => {
+            const id = event.target.value;
+            if (!id) return;
+            onUpdate((current) => insertDescription(current, unit.id, here.id, id as LocationDescriptionId));
+          }}
+        >
+          <option value="">Insert a description…</option>
+          {here.descriptions.map((one) => (
+            <option key={one.id} value={one.id as string}>
+              {one.title || 'Untitled'}
+            </option>
+          ))}
+        </select>
+      ) : null}
+
+      {making ? (
+        <span className="scene-location-new">
+          <input
+            autoFocus
+            aria-label="New location name"
+            placeholder="MILLER HOUSE"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setMaking(false);
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              const wanted = name.trim();
+              if (wanted.length === 0) return;
+              onUpdate((current) => {
+                const made = addLocation(current, { name: wanted });
+                return useLocationInScene(made.file, unit.id, made.location.id);
+              });
+              setName('');
+              setMaking(false);
+            }}
+          />
+          <button type="button" className="ghost small" onClick={() => setMaking(false)}>
+            Cancel
+          </button>
+        </span>
+      ) : null}
+    </span>
   );
 }

@@ -19,6 +19,7 @@ import {
   researchThemeSchema,
   themeMotifLinkSchema,
 } from './entities/themes.js';
+import { locationSchema } from './entities/locations.js';
 import { projectSchema, projectSettingsSchema } from './entities/project.js';
 import { beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
 import { countWords } from './entities/manuscript.js';
@@ -86,6 +87,10 @@ export const SYNC_TABLES = {
   themes: 'research_themes',
   motifs: 'research_motifs',
   themeMotifLinks: 'theme_motif_links',
+  // Locations (addendum 14). The descriptions ride inside the row as JSON:
+  // they are parts of a location rather than records of their own, and a
+  // second table would make deleting a place a two-step deletion.
+  locations: 'locations',
 } as const;
 
 export type SyncCollection = keyof typeof SYNC_TABLES;
@@ -547,6 +552,19 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
   ...characterCreatorRows(file),
   ...bookIndexRows(file),
   ...thematicRows(file),
+  locations: (file.locations ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    name: one.name,
+    setting: one.setting,
+    time_of_day: one.time,
+    short_name: one.shortName,
+    notes: one.notes,
+    descriptions: one.descriptions,
+    archived: one.archived,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
 });
 
 /**
@@ -1258,6 +1276,21 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     ...characterCreatorFromRows(rows),
     ...bookIndexFromRows(rows),
     ...thematicFromRows(rows),
+    locations: (rows.locations ?? []).map((row) =>
+      locationSchema.parse({
+        id: row['id'],
+        projectId: row['project_id'],
+        name: text(row['name']),
+        setting: text(row['setting']) || 'INT.',
+        time: text(row['time_of_day']) || 'DAY',
+        shortName: text(row['short_name']),
+        notes: text(row['notes']),
+        descriptions: Array.isArray(row['descriptions']) ? row['descriptions'] : [],
+        archived: Boolean(row['archived']),
+        createdAt: row['created_at'],
+        updatedAt: row['updated_at'],
+      }),
+    ),
     // Snapshots are local recovery points, not shared state; they stay on disk.
     snapshots: [],
   });

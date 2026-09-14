@@ -29,6 +29,9 @@ export type UsageLinkId = Id<'UsageLink'>;
 export type ResearchThemeId = Id<'ResearchTheme'>;
 export type ResearchMotifId = Id<'ResearchMotif'>;
 export type ThemeMotifLinkId = Id<'ThemeMotifLink'>;
+/** A place, and one of the several descriptions prepared for it (addendum 14). */
+export type LocationId = Id<'Location'>;
+export type LocationDescriptionId = Id<'LocationDescription'>;
 export type CharacterArcId = Id<'CharacterArc'>;
 export type ArcPointId = Id<'ArcPoint'>;
 export type CharacterRelationshipId = Id<'CharacterRelationship'>;

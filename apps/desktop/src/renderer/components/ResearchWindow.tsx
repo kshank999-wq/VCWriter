@@ -36,6 +36,7 @@ import {
 import { InlineText } from './InlineText';
 import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
+import { LocationsPanel } from './LocationsPanel';
 import { ThemesPanel } from './ThemesPanel';
 import { CastPanel } from './CastPanel';
 import { CharacterCreator, type CreatorTab } from './CharacterCreator';
@@ -70,6 +71,8 @@ type Selection =
   | { kind: 'setups' }
   /** Themes and motifs (addendum 12), one screen with two tabs inside it. */
   | { kind: 'thematics' }
+  /** The location library (addendum 14). */
+  | { kind: 'locations' }
   /** The relationship mind map (addendum 08 §12) — a view of the whole cast. */
   | { kind: 'charmap' }
   /** Search, filters and the review modes (addendum 08 §18). */
@@ -378,6 +381,8 @@ export function ResearchBody({
         ? 'Character review'
         : selection.kind === 'plots'
         ? 'Plots'
+        : selection.kind === 'locations'
+          ? 'Locations'
         : selection.kind === 'thematics'
           ? 'Themes & motifs'
         : selection.kind === 'setups'
@@ -523,6 +528,18 @@ export function ResearchBody({
                 <span className="count muted">{file.setupsPayoffs.filter((record) => !record.archived).length}</span>
               </button>
             </li>
+            {/* Places, as a first-class entry rather than a folder of notes:
+                a location is a project asset like a character (addendum 14). */}
+            <li>
+              <button
+                type="button"
+                className={selection.kind === 'locations' ? 'folder-row selected' : 'folder-row'}
+                onClick={() => setSelection({ kind: 'locations' })}
+              >
+                <span className="folder-name">Locations</span>
+                <span className="count muted">{(file.locations ?? []).filter((one) => !one.archived).length}</span>
+              </button>
+            </li>
             {/* Named as one entry with two tabs behind it, rather than two
                 entries: a theme and a motif are separate kinds, and the menu
                 is where a writer looks for the pair. */}
@@ -631,6 +648,7 @@ export function ResearchBody({
             {selection.kind === 'plots' ||
             selection.kind === 'setups' ||
             selection.kind === 'thematics' ||
+            selection.kind === 'locations' ||
             selection.kind === 'charmap' ||
             selection.kind === 'review' ||
             selection.kind === 'mobile' ? null : (
@@ -679,6 +697,10 @@ export function ResearchBody({
             />
           ) : selection.kind === 'plots' ? (
             <Plots file={file} onUpdate={onUpdate} />
+          ) : selection.kind === 'locations' ? (
+            <div className="research-embedded">
+              <LocationsPanel file={file} onUpdate={onUpdate} />
+            </div>
           ) : selection.kind === 'thematics' ? (
             <div className="research-embedded">
               <ThemesPanel

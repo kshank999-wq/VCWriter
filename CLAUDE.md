@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0047.
+  reads like it does. Applied through 0048.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§12a**
   is the **chapter page** as Ken asked for it — *File ▸ Chapter page…*, under
@@ -569,6 +569,30 @@ push live; the build takes a minute or two.
   that on its own*. The pair control also sits in the scene's own dialog, which
   is §2's *visible while working inside the scene*. No migration — four more
   fields on the scene grid.
+  `addendum-14-locations.md` is Location Research & Scene Integration, from
+  Ken's own dev spec. **Built.** A *Locations* research folder held ordinary
+  notes and the slugline SmartType offered places already typed; neither is a
+  location record. **A location fills a heading in and never owns one** (§1):
+  choosing one writes `EXT. MILLER HOUSE - NIGHT`, taking the record's defaults
+  for whatever the scene has not said, and from then on the heading is the
+  scene's — a scene at the same house in daylight is a scene, not a second
+  house, so `setting` and `time` are **defaults, not facts about the place**
+  and the screen says so. **Which scenes use it is a reading** (§2): `usedIn`
+  matches the place in each heading, so there is no `scene_locations` table to
+  drift, retyping a heading moves the scene with nothing running, and §10's
+  *unused* indicator and `placesWithoutRecords` — adopt what the script already
+  names rather than retyping it — fall out for free. **Several prepared
+  descriptions, and an inserted one is a snapshot** (§3): a place is described
+  differently the second time it is seen, nothing is inserted because a place
+  was chosen, and editing the master afterwards changes nothing already written
+  — the only behaviour that makes prepared descriptions safe to go on editing.
+  Renaming carries into scene *headings* (a structural line the program writes)
+  and never into inserted prose (§4). Reached from **Research ▸ Locations** and
+  from a picker in the scene's own dialog, where **New location…** makes one
+  without leaving the scene — a writer sent to Research to name a house will
+  type the heading by hand instead and the library will be empty forever.
+  Migration 0048; the descriptions ride inside the row as JSON, being parts of a
+  location rather than records of their own.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
