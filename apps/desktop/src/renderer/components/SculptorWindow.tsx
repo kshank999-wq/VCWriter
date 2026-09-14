@@ -36,6 +36,7 @@ import {
   linksOf,
   outlinesOf,
   linksTouching,
+  miniMap,
   moveNode,
   outOfStep,
   realiseNode,
@@ -55,8 +56,10 @@ import {
   unlinkNodes,
   updateNode,
   whatGoesWith,
+  windowFromMap,
   type BeatId,
   type Board,
+  type BoardWindow,
   type LaidNode,
   type ProjectFile,
   type SculptorColumn,
@@ -91,6 +94,13 @@ interface SculptorWindowProps {
 const UNIT = 46;
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 2;
+
+/**
+ * The largest the mini-map may be (§10). The board is fitted inside it with
+ * its proportions kept, so this is a bound rather than a size: a tall board
+ * makes a tall map and a wide one makes a wide map, and neither is squashed.
+ */
+const MAP_BOX = { width: 176, height: 124 };
 
 /**
  * The curve for one of the writer's own connections, and where its label goes.
@@ -242,6 +252,57 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
   const reading = useMemo(() => (board ? readBoard(board, boardView) : null), [board, boardView]);
 
   const canvas = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * How big the window onto the board is, in pixels.
+   *
+   * Measured rather than assumed, and re-measured when the shelf folds out or
+   * the writer resizes: the mini-map's whole question is whether the board is
+   * bigger than *this*, and a stale answer would leave a map over a board that
+   * fits, or none over one that does not.
+   */
+  const [frame, setFrame] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const element = canvas.current;
+    if (!open || !element) return undefined;
+    const measure = () => setFrame({ width: element.clientWidth, height: element.clientHeight });
+    measure();
+    const watcher = new ResizeObserver(measure);
+    watcher.observe(element);
+    return () => watcher.disconnect();
+  }, [open, shelfOpen]);
+
+  /** The pan, said the way the domain talks: canvas units, from the top left. */
+  const boardWindow: BoardWindow = useMemo(() => {
+    const px = UNIT * zoom;
+    return {
+      left: -pan.x / px,
+      top: -pan.y / px,
+      width: frame.width / px,
+      height: frame.height / px,
+    };
+  }, [pan, zoom, frame]);
+
+  const map = useMemo(
+    () =>
+      layout && reading && frame.width > 0 && frame.height > 0
+        ? miniMap(layout, reading, boardWindow, MAP_BOX)
+        : null,
+    [layout, reading, boardWindow, frame],
+  );
+
+  /** Pressing or dragging on the map moves the board under the window. */
+  const mapping = useRef(false);
+  const moveToMap = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!map || !layout) return;
+    const box = event.currentTarget.getBoundingClientRect();
+    const moved = windowFromMap(map, layout, boardWindow, {
+      x: event.clientX - box.left,
+      y: event.clientY - box.top,
+    });
+    const px = UNIT * zoom;
+    setPan({ x: -moved.left * px, y: -moved.top * px });
+  };
 
   /**
    * Put a node in the middle of the window (§10's *jump-to*).
@@ -817,6 +878,63 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
           ) : (
             <p className="muted empty-state">Starting a board…</p>
           )}
+
+          {/* The mini-map (§10), which is there only when §10's six words are
+              true: *for a board bigger than the window*. A board that fits
+              gets none, because a map of what is already on the screen is a
+              picture of the screen costing a corner of the canvas all day.
+
+              It carries the lighting the views put on the board, so it is the
+              one place a writer can see that what they searched for is off the
+              top of the window. */}
+          {map ? (
+            <div
+              className="sculpt-minimap"
+              aria-label="Where the window is on the board"
+              title="Press or drag to move the board"
+              style={{ width: `${map.width}px`, height: `${map.height}px` }}
+              onPointerDown={(event) => {
+                // The canvas's own drag is the pan; this one is not it.
+                event.stopPropagation();
+                mapping.current = true;
+                event.currentTarget.setPointerCapture(event.pointerId);
+                moveToMap(event);
+              }}
+              onPointerMove={(event) => {
+                if (!mapping.current) return;
+                event.stopPropagation();
+                moveToMap(event);
+              }}
+              onPointerUp={(event) => {
+                mapping.current = false;
+                event.stopPropagation();
+              }}
+              onPointerCancel={() => {
+                mapping.current = false;
+              }}
+            >
+              <svg width={map.width} height={map.height} aria-hidden="true">
+                {map.cards.map((card) => (
+                  <rect
+                    key={card.id as string}
+                    className={card.lit ? 'sculpt-map-card' : 'sculpt-map-card dimmed'}
+                    x={card.box.x}
+                    y={card.box.y}
+                    width={card.box.width}
+                    height={card.box.height}
+                    rx={1}
+                  />
+                ))}
+                <rect
+                  className="sculpt-map-window"
+                  x={map.window.x}
+                  y={map.window.y}
+                  width={map.window.width}
+                  height={map.window.height}
+                />
+              </svg>
+            </div>
+          ) : null}
         </div>
 
         {/* The detail panel (§9): the node's own, beside the canvas, without

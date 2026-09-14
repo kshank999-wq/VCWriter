@@ -47,6 +47,7 @@ export * from './story-grid.js';
 export * from './planning.js';
 export * from './sculptor.js';
 export * from './sculptor-binding.js';
+export * from './sculptor-map.js';
 export * from './outline.js';
 export * from './outline-binding.js';
 export * from './crossing.js';

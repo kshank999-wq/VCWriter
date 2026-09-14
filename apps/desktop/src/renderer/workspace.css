@@ -7232,6 +7232,49 @@ dialog.preferences .field {
   transform-origin: 0 0;
 }
 
+/* The mini-map (§10). Bottom right of the canvas, over the board rather than
+   beside it: it is only there while the board is bigger than the window, and
+   a control that comes and goes may not be allowed to reflow everything else
+   when it does. */
+.sculpt-minimap {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 28%);
+  cursor: pointer;
+  touch-action: none;
+  box-sizing: content-box;
+}
+
+.sculpt-minimap svg {
+  display: block;
+}
+
+.sculpt-map-card {
+  fill: var(--accent);
+}
+
+/* The same dimming the board itself wears, for the same reason: the map is
+   the one place a search hit off the top of the window is visible at all. */
+.sculpt-map-card.dimmed {
+  fill: var(--muted);
+  opacity: 0.3;
+}
+
+/* Where the window is. An outline rather than a wash, so the cards under it
+   are still readable — knowing what is just outside the frame is most of the
+   point of having a map. */
+.sculpt-map-window {
+  fill: color-mix(in srgb, var(--accent) 12%, transparent);
+  stroke: var(--text);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
 /* A column's name, above what it holds. The writer's, and renameable. */
 .sculpt-column {
   position: absolute;

@@ -42,8 +42,8 @@ push live; the build takes a minute or two.
   they do — plus the card revision: a card opens as a dialog with its notes and
   who is in it, the × asks before anything goes (`whatGoesWith` in
   `sculptor.ts` says what would), and the research shelf folds out from the
-  left (§5, §9) — and stage 9, **the views**, is built but for the mini-map: §17
-  says what it does. Folding was already in the layout (`boardLayout` has
+  left (§5, §9) — and stage 9, **the views**, all five of them: §17 and §18
+  say what they do. Folding was already in the layout (`boardLayout` has
   honoured `collapsed` since stage 4, and a line into a fold already drew to
   the folded card), so the new work is focus, filters and search — and the
   design is one split: **depth hides, everything else dims**. A column is a
@@ -54,7 +54,17 @@ push live; the build takes a minute or two.
   **prefix** of one, a tree having no coherent way to draw beats with no
   scenes above them, and §10's **Focus** is labelled **Just this** because the
   workspace's title bar already owns that word. Filters are per machine;
-  folding stays on the node. What is left is the mini-map, then Writers Room. §8, the export as an outline, is **withdrawn**
+  folding stays on the node. The **mini-map** (§18,
+  `packages/domain/src/sculptor-map.ts`) closes the stage, and it holds §10's
+  six words whole — *for a board bigger than the window*, **including the half
+  everybody drops**: a board that fits gets no map, so there is no switch and
+  *Structure alone* makes it vanish by itself. *Bigger* is by a **whole card**,
+  a column across or a row down, because the literal reading put a sliver of
+  two marks under a board that was entirely legible. It reads the *layout*
+  rather than the board, so a fold is folded and a hidden depth is absent on it
+  too, and it carries `readBoard`'s lighting — the one place a writer can see
+  that what they searched for is off the top of the window. Nothing about it is
+  stored. What is left is Writers Room. §8, the export as an outline, is **withdrawn**
   — the Sculptor does not make outlines. §14 says why the first draft was
   wrong.
   `addendum-04-story-grid.md` is the Story Grid, the third tab of the

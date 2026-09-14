@@ -225,7 +225,7 @@ away and the board has the window back.
 | **Fold** | Any node, and everything to the right of it, folded to its head |
 | **Focus** | One node's subtree lit, the rest dimmed |
 | **Unbound only** | What is still an idea |
-| **Mini-map** | For a board bigger than the window |
+| **Mini-map** | For a board bigger than the window. §18 |
 | **Search** | Node title, note and kind, with jump-to |
 
 ## 11. What it must never do
@@ -326,8 +326,8 @@ it worth opening.
 7. **Built.** The writer's own connections, labelled.
 8. ~~Export as an outline~~ — **withdrawn** (§8). The Outliner is where a
    story becomes an outline, and material reaches it by being carried across.
-9. **Built, except the mini-map.** Folding was already in the layout; focus,
-   filters and search are §17.
+9. **Built.** Folding was already in the layout; focus, filters and search are
+   §17, and the mini-map is §18.
 10. Writers Room attribution and alternate boards (addendum 07). A board now
     syncs — addendum 07 §4, stage 0 — so what is left is Writers Room itself,
     which is specified and, past that stage, unbuilt.
@@ -572,6 +572,60 @@ Driven in the built renderer: focus lit *The diner* and *The bill* and dimmed
 the rest; *Structure alone* drew one column and three blocks; *bill* lit one
 node and offered one place to jump to; **Clear** put all of it back.
 
-**The mini-map is not built.** It is the one part of stage 9 still owed, and
-the only one of the five that is about a board too big for the window rather
-than about reading the one in front of you.
+## 18. The mini-map (stage 9, finished)
+
+`packages/domain/src/sculptor-map.ts`; the corner of the canvas in
+`SculptorWindow.tsx`.
+
+It is the one of §10's five that is about a board too big for the window
+rather than about reading the one in front of you, and §10 specifies it in six
+words — *for a board bigger than the window*. Those words are the whole of it,
+**including the half everybody drops**: a board that fits gets no map. There is
+no switch and no preference. A mini-map is not a thing a writer should have to
+manage; it turns up when the board has outgrown the window and goes away when
+it has not, and `Structure alone` makes it go away by itself, which is the rule
+working.
+
+*Bigger* is **by a whole card** — a column across, a row down — rather than by
+a pixel. That threshold is the board's own measure rather than a taste, and it
+was found on the screen: an empty board is 21 units wide in a 19-unit window,
+so the literal reading put a sliver of two marks in the corner of a board that
+was entirely legible. Debris, not a picture of anything.
+
+Three decisions carry the rest:
+
+- **It is a reading of the layout, never of the board.** It is handed the same
+  `BoardLayout` the canvas is drawing, so a folded node is one row on the map
+  as well, and a column a depth has hidden is not on it at all. A map showing
+  cards the board is not drawing would be a map of a different board, which is
+  worse than no map.
+- **It carries the lighting.** `readBoard`'s lit set comes in beside the
+  layout, so focus, *ideas only* and search dim the map exactly as they dim the
+  board. This matters more here than anywhere: the map is the only place in the
+  product where a writer can see that what they searched for is off the top of
+  the window.
+- **Nothing about it is stored.** The scale is the board fitted into the box it
+  is given with its proportions kept, the window rectangle is the pan read back
+  in canvas units, and both are worked out every time — §4's *everything is
+  measured, nothing is positioned* pointed at the picture of the thing rather
+  than at the thing.
+
+Pressing anywhere on it puts that point in the **middle** of the window, which
+is what pressing a map means everywhere else, and dragging keeps doing it. The
+result is held on the board: a map may not scroll a writer past the edge of
+their own story, and an axis the board fits has nothing to scroll, so pressing
+the map cannot shunt the board sideways to make a point. The window rectangle
+is drawn as an outline rather than a wash, because knowing what is *just*
+outside the frame is most of why there is a map, and it is clipped to the
+picture — a rectangle half outside it reads as the board having moved, when
+what has happened is the canvas being dragged past its own edge.
+
+Driven in the built renderer: an empty board showed no map; four blocks and
+twelve scenes brought one with eighteen cards; pressing the bottom of it moved
+the sheet from `translate(40px, 24px)` to `translate(-64px, -145px)` and the
+window rectangle down with it, stopping at the end of the board; focusing on
+*Block 2* dimmed fourteen of the eighteen on the map as well as on the canvas;
+and *Structure alone* took the map away, the board then fitting.
+
+**Stage 9 is finished, and with it everything the Sculptor owes before Writers
+Room** (§14 stage 10).
