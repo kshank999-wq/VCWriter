@@ -11,6 +11,7 @@ import {
   type CharacterWork,
   type ProjectFile,
 } from '@vcwriter/domain';
+import { carryWork } from '../carry-work';
 
 /**
  * The Character Creator read from the scene (addendum 08 §10, stage 6).
@@ -28,6 +29,12 @@ import {
  *
  * Whoever speaks in the beat comes first and **everybody else is still offered**:
  * a scene can carry work belonging to somebody who never says a word in it.
+ *
+ * **A row can also be dragged** (§13 of the addendum). The press is still the
+ * shortest way into the beat that is selected, which is the only beat it can
+ * reach; the drag is how the same work lands in a beat three pages down without
+ * the writer leaving where they are. `carry-work.ts` says why the drop is
+ * claimed by a MIME type of its own.
  */
 
 interface CharacterWorkPanelProps {
@@ -132,7 +139,21 @@ export function CharacterWorkPanel({ file, beatId, onUpdate }: CharacterWorkPane
               {offering ? (
                 <ul className="work-list deck">
                   {waiting.map((work) => (
-                    <li key={`${work.kind}:${work.id}`} className={queue.here.includes(work) ? 'in-beat' : ''}>
+                    <li
+                      key={`${work.kind}:${work.id}`}
+                      className={
+                        queue.here.includes(work) ? 'in-beat draggable-work' : 'draggable-work'
+                      }
+                      draggable
+                      title="Drag it onto any beat in the script, or press + Here for this one."
+                      onDragStart={(event) =>
+                        carryWork(event.dataTransfer, {
+                          ownerKind: work.kind,
+                          ownerId: work.id,
+                          label: `${work.characterName} — ${work.text}`,
+                        })
+                      }
+                    >
                       <span className="work-who">{work.characterName}</span>
                       <span className="work-what" title={describeWork(work)}>
                         {describeWork(work)}

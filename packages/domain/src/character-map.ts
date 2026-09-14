@@ -4,7 +4,7 @@ import {
   type CharacterRelationship,
   type RelationshipKind,
 } from './character-creator.js';
-import { beatsInStoryOrder } from './selectors.js';
+import { beatsInStoryOrder, unitsInStoryOrder } from './selectors.js';
 import type { CharacterId, LaneId } from './ids.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -22,6 +22,14 @@ import type { ProjectFile } from './project-file.js';
  * other differently (§11), and addendum 08 §3.1 already promised this is how the
  * map would show it: the edge carries both directions rather than drawing two
  * lines that overlap and say contradictory things.
+ *
+ * **A scene range narrows what the script says and never what a writer said**
+ * (§12, §11's leftover). A stretch of the story is a real question — *who is in
+ * act two, and how do they connect there* — and the lines the manuscript draws
+ * by itself answer it exactly: count only the scenes inside the range. A
+ * relationship has no scene number, so a range cannot decide when one began
+ * without inventing the answer; two people both present in the range keep their
+ * named line, and two people who are not are simply not on the map.
  */
 
 export interface MapNode {
@@ -76,6 +84,87 @@ export interface CharacterMap {
   edges: MapEdge[];
 }
 
+// --------------------------------------------------------------- a stretch
+
+/**
+ * A stretch of the story, by position rather than by name (§12).
+ *
+ * **Positions in the story order, not scene ids.** *Scenes 12 to 30* means
+ * where they are in the script, so moving a scene into the range puts it in the
+ * range — which is what a writer asking about act two means. Storing two ids
+ * would freeze the answer to wherever those two scenes happened to be on the
+ * day the filter was set.
+ *
+ * Inclusive at both ends, and one-based, because a writer counting scenes
+ * counts from one and says *twelve to thirty* meaning both of them.
+ */
+export interface SceneRange {
+  from: number;
+  to: number;
+}
+
+/** Every scene in the script, numbered as a range means it. */
+export const scenesForRange = (
+  file: ProjectFile,
+): { position: number; unitId: string; title: string }[] =>
+  unitsInStoryOrder(file).map((unit, index) => ({
+    position: index + 1,
+    unitId: unit.id as string,
+    title: unit.title,
+  }));
+
+/**
+ * The scenes a range covers, or null for the whole script.
+ *
+ * A range given backwards is read forwards rather than refused: a writer who
+ * picks *30* and then *12* has said which stretch they mean, and a control that
+ * answered *nothing matches that* would be being right at their expense.
+ */
+export const unitsInRange = (file: ProjectFile, range?: SceneRange | null): Set<string> | null => {
+  if (!range) return null;
+  const low = Math.min(range.from, range.to);
+  const high = Math.max(range.from, range.to);
+  const inside = new Set<string>();
+  for (const scene of scenesForRange(file)) {
+    if (scene.position >= low && scene.position <= high) inside.add(scene.unitId);
+  }
+  return inside;
+};
+
+/** Whether a range is the whole script, and so not worth applying. */
+export const isWholeScript = (file: ProjectFile, range?: SceneRange | null): boolean => {
+  if (!range) return true;
+  const scenes = scenesForRange(file).length;
+  return Math.min(range.from, range.to) <= 1 && Math.max(range.from, range.to) >= scenes;
+};
+
+/**
+ * Who speaks inside a stretch of the story, for §12's range filter.
+ *
+ * The same rule as the lane filter one function up: somebody is *in* a stretch
+ * because they speak there. A range that kept people who are not in it would
+ * draw a map of the whole cast with fewer lines, which answers nothing.
+ */
+export const charactersInScenes = (file: ProjectFile, range: SceneRange): CharacterId[] => {
+  const inside = unitsInRange(file, range);
+  const found: CharacterId[] = [];
+  for (const beat of file.beats) {
+    if (inside && !inside.has(beat.unitId as string)) continue;
+    for (const person of peopleSpeakingIn(file, beat)) {
+      if (!found.includes(person)) found.push(person);
+    }
+  }
+  return file.characters.filter((character) => found.includes(character.id)).map((one) => one.id);
+};
+
+/** What the range says on the screen, so a filtered map admits it is filtered. */
+export const describeRange = (file: ProjectFile, range?: SceneRange | null): string => {
+  if (isWholeScript(file, range)) return 'The whole script';
+  const low = Math.min(range!.from, range!.to);
+  const high = Math.max(range!.from, range!.to);
+  return low === high ? `Scene ${low} alone` : `Scenes ${low} to ${high}`;
+};
+
 /** The label an edge wears in one direction, or an empty string for none. */
 export const edgeLabel = (rows: readonly CharacterRelationship[]): string =>
   rows.map(relationshipName).join(', ');
@@ -95,8 +184,9 @@ const pairKey = (one: string, two: string): string => (one < two ? `${one}:${two
  * finding them means matching names in prose, and a name in an action line is
  * as often somebody being *talked about* as somebody being there.
  */
-export const togetherInScript = (file: ProjectFile): ScriptPairing[] => {
+export const togetherInScript = (file: ProjectFile, range?: SceneRange | null): ScriptPairing[] => {
   const byPair = new Map<string, { a: CharacterId; b: CharacterId; units: Set<string>; beats: number }>();
+  const inside = unitsInRange(file, range);
 
   const note = (one: CharacterId, two: CharacterId, unitId: string) => {
     const key = pairKey(one as string, two as string);
@@ -111,9 +201,10 @@ export const togetherInScript = (file: ProjectFile): ScriptPairing[] => {
   };
 
   for (const beat of beatsInStoryOrder(file)) {
+    const unitId = beat.unitId as string;
+    if (inside && !inside.has(unitId)) continue;
     const here = peopleSpeakingIn(file, beat);
     if (here.length < 2) continue;
-    const unitId = beat.unitId as string;
     for (let i = 0; i < here.length; i += 1) {
       for (let j = i + 1; j < here.length; j += 1) note(here[i]!, here[j]!, unitId);
     }
@@ -162,6 +253,16 @@ export const characterMap = (input: {
   among?: readonly CharacterId[];
   /** Only these kinds of relationship. Undefined means all of them. */
   kinds?: readonly RelationshipKind[];
+  /**
+   * A stretch of the story (§12). Undefined, and the default, is all of it.
+   *
+   * It narrows two things and deliberately not a third: who is on the map (a
+   * person who does not speak in the stretch is not in it), and what the script
+   * itself says about a pair (only the scenes inside). It does **not** touch a
+   * relationship the writer wrote down, because a relationship has no scene
+   * number and deciding when one began would be inventing the answer.
+   */
+  range?: SceneRange | null;
   focusId?: CharacterId | null;
   /** How far out from the focus to go. Ignored when there is no focus. */
   depth?: number;
@@ -183,10 +284,22 @@ export const characterMap = (input: {
   includeUnconnected?: boolean;
 }): CharacterMap => {
   const { file } = input;
-  const allowed = input.among ? new Set(input.among.map((id) => id as string)) : null;
+  const range = isWholeScript(file, input.range) ? null : (input.range ?? null);
+
+  // Two filters on the cast, and a person has to pass both: *in this lane* and
+  // *in this stretch* are different questions, and a writer asking both wants
+  // the people who answer both.
+  const limits = [
+    input.among ? new Set(input.among.map((id) => id as string)) : null,
+    range ? new Set(charactersInScenes(file, range).map((id) => id as string)) : null,
+  ].filter((one): one is Set<string> => one !== null);
+  const allowed = limits.length === 0 ? null : limits;
 
   const cast = file.characters
-    .filter((person) => !person.archived && (!allowed || allowed.has(person.id as string)))
+    .filter(
+      (person) =>
+        !person.archived && (!allowed || allowed.every((set) => set.has(person.id as string))),
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
   const present = new Set(cast.map((person) => person.id as string));
 
@@ -220,7 +333,7 @@ export const characterMap = (input: {
   // written anything for, which is the point: the script draws the line and the
   // writer decides what it is.
   if (kinds === null && input.fromScript !== false) {
-    for (const pairing of togetherInScript(file)) {
+    for (const pairing of togetherInScript(file, range)) {
       if (!present.has(pairing.a as string) || !present.has(pairing.b as string)) continue;
       const key = pairKey(pairing.a as string, pairing.b as string);
       const edge = pairs.get(key) ?? {

@@ -1175,6 +1175,25 @@ dialog.scene-dialog > header.off {
   box-shadow: inset 2px 0 0 var(--beat-colour);
 }
 
+/* A beat about to take a piece of somebody's plan (addendum 08 §13).
+   Gold rather than green, because green in this product means *in the script*
+   and this beat is not carrying it yet — it is about to. */
+.beat-block.taking-work {
+  outline: 2px dashed var(--gold);
+  outline-offset: 2px;
+}
+
+/* An on-deck row that can be carried to a beat. Grab rather than move: the
+   item is copied and stays in the queue behind it (§2 — pinning adds a usage
+   link and takes nothing). */
+.draggable-work {
+  cursor: grab;
+}
+
+.draggable-work:active {
+  cursor: grabbing;
+}
+
 /* A beat switched off: still in its scene on the timeline, dimmed. */
 .beat-row.off .beat-row-title {
   opacity: 0.5;
@@ -9802,6 +9821,21 @@ dialog.projects-dialog {
 
 .charmap-check {
   margin-left: auto;
+}
+
+/* §12's scene range. The selects carry whole scene headings, which are as long
+   as a writer wants them to be, so they are cut rather than allowed to push
+   the rest of the bar onto a second line every time. */
+.charmap-range select {
+  max-width: 170px;
+}
+
+/* A filtered map says so, under the bar and above the picture. Without it, a
+   range that dropped half the cast looks like a story with half the cast. */
+.charmap-showing {
+  margin: 0;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--border);
 }
 
 .charmap-canvas {

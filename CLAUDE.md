@@ -203,7 +203,8 @@ push live; the build takes a minute or two.
   `addendum-08-character-creator.md` is the Character Creator, the first module
   of the Research room, from Ken's own dev spec. **Complete: all ten stages
   built, plus stages 11–14 — the way in, the map and the review reading
-  the script, and the rail** (0–5 were his MVP) —
+  the script, and the rail — and §11's two leftovers, the scene range and the
+  drag** (0–5 were his MVP) —
   `packages/domain/character-creator.ts`. Two decisions carry it: **a trait is
   not characterization** (*greedy* is telling, *leaves a small tip* is showing,
   so the unit of work is the characterization item and a trait is a folder for
@@ -330,8 +331,21 @@ push live; the build takes a minute or two.
   *done* to nobody. §3
   says what already exists and is only being widened; §8 is the
   build order; §3.4 says why there is deliberately no module framework yet; §10
-  says what each built stage does; §11 names the two things deliberately left
-  out (a scene-range filter on the map, and drag-and-drop for assigning).
+  says what each built stage does. §11's two leftovers are now built and §11 is
+  empty. The **scene range** (§12 of the addendum) is `SceneRange`,
+  `charactersInScenes` and `describeRange` in `character-map.ts` plus the
+  **Scenes … to …** pair in the map's bar: a lane is a *subplot* and a range is a
+  *stretch of the script*, so *who is in act two* is a question the lane cannot
+  answer, and the rule that decides everything is that **a range narrows what
+  the script says and never what a writer said** — a relationship has no scene
+  number, so dating one would be inventing it. It is positions rather than ids
+  (moving a scene into the stretch puts it in the stretch), a backwards range is
+  read forwards, and a range covering everything is `null` so a filtered map
+  cannot look unfiltered. **Drag and drop** (§13) is `carry-work.ts`: the press
+  stays, because the drag does the one thing a press cannot — land work in a
+  beat that is *not* the selected one — and **the drop is claimed by a MIME type
+  of its own**, so dragging a line of dialogue inside the manuscript is left
+  entirely alone rather than swallowed by a beat that prevents every drag.
   `addendum-09-companion-app.md` is the phone, from Ken's own *Companion App —
   Simplified Development Specification v1.0*. **All six stages are built.**
   §1 is the rule the whole thing hangs off — **the phone captures and the

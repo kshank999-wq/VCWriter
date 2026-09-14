@@ -1,8 +1,8 @@
 # Addendum 08 — Character Creator
 
-Status: **complete — all ten stages built, plus stages 11–13: the way in,
-and the map and the review reading the script**
-(0–5 were Ken's MVP), September 2026. From his
+Status: **complete — all ten stages built, plus stages 11–14 (the way in, the
+map and the review reading the script, and the rail) and §11's two leftovers,
+the scene range and the drag** (0–5 were Ken's MVP), September 2026. From his
 *VC Writer Character Creator Development Specification* — the first module of
 the Research room. Extends §7 (research), §8 (structure) and §19 of the master specification,
 and uses the typed link system §7.4 already built.
@@ -504,8 +504,10 @@ reason §7's list is ordered that way: a scene can carry work belonging to
 somebody who never says a word in it. Retired work is left out entirely — that
 decision is already made, and offering it again is the nagging §7 rules out.
 
-**Drag and drop is not built.** §10 says *drag/drop **or** assign*, and a press
-that says where something lands is the same act with fewer ways to miss.
+**Drag and drop is now built as well** (§13 of this addendum). The press stays, because it is
+still the shortest way to put something in the beat already selected; the drag
+does the thing the press cannot, which is land work in a beat that is *not* the
+selected one.
 
 Driven in the real interface: select the beat, open **On deck (2)**, press
 **+ Here** on a piece of characterization — it moves up into what the beat is
@@ -582,9 +584,14 @@ does.
 
 **A lane filter counts somebody as in a plot because they speak there**
 (`charactersInLane`), the same way the rest of the module works out who is in a
-beat, rather than because anybody filed them under it. §12's scene-range filter
-is not built: the lane answers the same question for the way this product is
-organised, and a range would need a second control for a rarer question.
+beat, rather than because anybody filed them under it.
+
+**A scene range is now beside it** (§12 of this addendum), and the two are not
+the same question
+said differently: a lane is a subplot and a range is a stretch of the script, so
+*who is in act two and how do they connect there* is a question the lane cannot
+answer. Both narrow the cast, and a writer who sets both gets the people who
+pass both.
 
 **A character nothing joins to is still drawn**, because a person no line
 reaches is a fact about the story worth seeing. A large cast can turn them off
@@ -834,14 +841,89 @@ on the Traits tab with that trait chosen and **Where** open on *Pin it*.
 
 ## 11. What is left
 
-Nothing in §8. Two things §18 and §12 name are deliberately not built, and both
-are recorded where the stage describes them: a **scene-range filter** on the map
-(the lane filter answers the same question for the way this product is
-organised) and **drag and drop** for assigning arc points (the specification says
-*drag/drop or assign*, and a press has fewer ways to miss).
+**Nothing.** §8's stages are built, and so are the two things Ken's §12 and §10
+named that this section used to hold back: the **scene-range filter** on the map
+is §12 of this addendum, and **drag and drop** for assigning on-deck work is
+§13.
 
-What would come next is not more of this module but the **second** one — and
+What comes next is not more of this module but the **second** one — and
 §3.4 is the reason to wait: the pattern this establishes is a research category
 that opens a screen of its own, with its records in the document and its links in
 the existing link system. If three modules end up sharing machinery, that
 machinery gets extracted then, from three real examples rather than one guess.
+
+
+## 12. The scene range on the map — his §12
+
+`SceneRange`, `scenesForRange`, `unitsInRange`, `charactersInScenes` and
+`describeRange` in `character-map.ts`; the **Scenes … to …** pair in the map's
+bar.
+
+*His* §12, the mind map. Stage 8 left this out on the grounds that the plot lane
+beside it answered the same question. It does not. A lane is a **subplot** and a range is a **stretch
+of the script**, and the question a range answers — *who is in act two, and how
+do they connect there* — cannot be asked of a lane at all. Both narrow the cast,
+so a writer who sets both gets the people who pass both, which is what setting
+two filters means everywhere else.
+
+**A range is positions, not scene ids.** *Scenes 12 to 30* means where they sit
+in the story order, so moving a scene into the stretch puts it in the stretch.
+Storing two ids would freeze the answer to wherever those two scenes happened to
+be on the afternoon somebody set the filter — which is the same reason nothing
+else in this module stores a reading.
+
+**It narrows what the script says and never what a writer said.** This is the
+decision the whole thing turns on. The manuscript's own lines are counted inside
+the range, so a pair who share nine scenes across the film share two in act two
+and the line thins accordingly. A **relationship the writer wrote down is
+untouched**: a relationship has no scene number, and deciding when one began
+would be the map inventing a fact the record does not carry. Two people who are
+both in the stretch keep their named line; a line whose other end is outside it
+is not drawn, because that person is not on this map and a line to nowhere is a
+reading of nothing.
+
+Who counts as *in* a stretch is the module's one rule, for the fourth time:
+**they speak there**. A range that kept people who were not in it would draw the
+whole cast with fewer lines, which answers nothing.
+
+Two more small things, both because being right at a writer's expense is not
+being right: a range given **backwards** is read forwards rather than refused,
+and a range covering the **whole script** is not a range at all — the control
+sits at both ends until somebody moves one, and `null` is the only
+representation of *no range*, so a filtered map and an unfiltered one cannot
+look alike.
+
+**A filtered map says so.** The line under the bar names the stretch, counts who
+speaks in it, and states the rule about relationships — because a range that
+dropped half the cast without explanation looks like a story with half the cast
+in it.
+
+Driven in the built renderer: the whole script drew four people and four lines
+with MARA and DEAKINS at *3 scenes*; narrowing to scenes 2–3 thinned that line
+to *2 scenes* and put the line up; the last scene alone dropped ROURKE from the
+map entirely, leaving three people and two lines; and **×** put all of it back.
+
+## 13. Drag and drop for on-deck work — his §10
+
+Stage 6 read his §10's *drag/drop **or** assign* and built the press, on the
+grounds
+that a press that says where something lands is the same act with fewer ways to
+miss. That is true of the beat already selected — and it is the whole of what a
+press can reach, which is the thing the drag fixes: **a drag can land work in a
+beat that is not the selected one.**
+
+So both exist and neither replaces the other. **+ Here** is still the shortest
+way to put something in the scene being written; dragging is how a writer moves
+a piece of somebody's plan to a scene three pages down without leaving where
+they are.
+
+**The drop is claimed by type.** The on-deck row writes a MIME type of its own
+on the drag, and a beat only takes a drop that carries it — which means
+dragging a line of dialogue inside the manuscript behaves exactly as it always
+did, because the beat never calls `preventDefault` on a drag that is not this
+one. A drop handler that swallowed text drags would have broken editing to add a
+convenience.
+
+**It runs the same `pinUsage` as everywhere else**, so the colour follows from
+the manuscript exactly as §2 requires, and dropping something twice in the same
+beat changes nothing.

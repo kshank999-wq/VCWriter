@@ -3,6 +3,7 @@ import {
   beatsForUnit,
   isProseFormat,
   pageBreaks,
+  pinUsage,
   storyLayout,
   updateBeat,
   updateUnit,
@@ -14,6 +15,7 @@ import {
   type StructuralUnitId,
 } from '@vcwriter/domain';
 import { BeatBody } from './BeatBody';
+import { carryingWork, workCarried } from '../carry-work';
 import { DEFAULT_PAGE_STYLE, ScriptOptions, type PageStyle } from './ScriptOptions';
 import { ManuscriptDataLists } from './ManuscriptDataLists';
 import { useAsk, useMark, useRoom, useTalk } from '../room';
@@ -133,6 +135,14 @@ export function StoryView({
   const [ownZoom, setOwnZoom] = useState(1);
   const [ownStyle, setOwnStyle] = useState<PageStyle>(DEFAULT_PAGE_STYLE);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  /**
+   * The beat a piece of on-deck work is hovering over (addendum 08 §13).
+   *
+   * Held here rather than on each block so exactly one is ever lit: a beat can
+   * be drawn on two sheets in the page view, and two of them glowing at once
+   * would say the drop was about to happen twice.
+   */
+  const [landingOn, setLandingOn] = useState<string | null>(null);
   const display = givenDisplay ?? ownDisplay;
   const setDisplay = onDisplay ?? setOwnDisplay;
   const scriptLayout = givenScriptLayout ?? ownLayout;
@@ -280,9 +290,47 @@ export function StoryView({
   const beatBody = (beat: Beat, only: ReadonlySet<number> | null, lead: boolean) => (
     <article
       ref={lead ? registerBlock(beat.id) : undefined}
-      className={`beat-block${beat.id === selectedBeatId ? ' selected' : ''}${beat.color ? ' coloured' : ''}`}
+      className={[
+        'beat-block',
+        beat.id === selectedBeatId ? 'selected' : '',
+        beat.color ? 'coloured' : '',
+        landingOn === (beat.id as string) ? 'taking-work' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={beat.color ? ({ '--beat-colour': beat.color } as React.CSSProperties) : undefined}
       aria-current={beat.id === selectedBeatId ? 'true' : undefined}
+      // A piece of somebody's plan, carried here from the Inspector's on-deck
+      // queue (addendum 08 §13). **Claimed by type**: a drag that is not ours
+      // is left entirely alone, so dragging a line of dialogue inside the
+      // manuscript still does what it has always done.
+      onDragOver={(event) => {
+        if (!carryingWork(event.dataTransfer)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        if (landingOn !== (beat.id as string)) setLandingOn(beat.id as string);
+      }}
+      onDragLeave={(event) => {
+        // Only when the pointer has actually left the block, rather than moved
+        // onto a line inside it.
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        if (landingOn === (beat.id as string)) setLandingOn(null);
+      }}
+      onDrop={(event) => {
+        const carried = workCarried(event.dataTransfer);
+        setLandingOn(null);
+        if (!carried) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onSelectBeat(beat.id);
+        onUpdate((current) =>
+          pinUsage(current, {
+            ownerKind: carried.ownerKind,
+            ownerId: carried.ownerId,
+            beatId: beat.id,
+          }).file,
+        );
+      }}
     >
       {/* The writing is done here as well as in the beat's own screen; this
           is the way to that screen without taking double-click away from

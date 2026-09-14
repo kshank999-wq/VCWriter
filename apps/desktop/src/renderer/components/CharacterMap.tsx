@@ -4,11 +4,13 @@ import {
   RELATIONSHIP_KIND_NAMES,
   characterMap,
   charactersInLane,
+  describeRange,
   edgeLabel,
   lanesInOrder,
   relate,
   relationshipName,
   removeRelationship,
+  scenesForRange,
   updateRelationship,
   type CharacterId,
   type CharacterRelationship,
@@ -16,6 +18,7 @@ import {
   type MapEdge,
   type ProjectFile,
   type RelationshipKind,
+  type SceneRange,
 } from '@vcwriter/domain';
 
 /**
@@ -39,7 +42,28 @@ import {
  * is labelled with that count and nothing else — the manuscript can say they are
  * in nine scenes together and must not say what that *is*. Clicking one is how
  * the writer answers: naming it makes the relationship, and the line goes solid.
+ *
+ * **A scene range narrows the stretch being read** (§12, §11's leftover). It is
+ * not the plot lane beside it said differently: a lane is a subplot and a range
+ * is a piece of the script, and *who is in act two* is a question the lane
+ * cannot answer. What it narrows is who is on the map and what the manuscript
+ * counts; a relationship the writer wrote down is untouched, because a
+ * relationship has no scene number and deciding when one began would be
+ * inventing the answer.
  */
+
+/**
+ * Two scene numbers as a range, or null where they cover the whole script.
+ *
+ * Null rather than 1-to-everything so *no range* has one representation: a
+ * control that could be at its ends and still count as filtering would draw the
+ * *showing* line over an unfiltered map.
+ */
+const asRange = (scenes: number, from: number, to: number): SceneRange | null => {
+  const low = Math.min(from, to);
+  const high = Math.max(from, to);
+  return low <= 1 && high >= scenes ? null : { from: low, to: high };
+};
 
 interface CharacterMapProps {
   file: ProjectFile;
@@ -58,11 +82,20 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
   const [depth, setDepth] = useState(1);
   const [kind, setKind] = useState<RelationshipKind | ''>('');
   const [laneId, setLaneId] = useState<LaneId | ''>('');
+  /**
+   * A stretch of the story (§12). Null is the whole script, and is the default.
+   *
+   * Two numbers rather than a pair of scene ids: a range means *where in the
+   * script*, so moving a scene into the stretch puts it in the stretch. Held as
+   * one piece of state so *from* and *to* cannot be half-applied.
+   */
+  const [range, setRange] = useState<SceneRange | null>(null);
   const [connectedOnly, setConnectedOnly] = useState(false);
   const [fromScript, setFromScript] = useState(true);
   const [openPair, setOpenPair] = useState<string | null>(null);
 
   const lanes = lanesInOrder(file);
+  const scenes = useMemo(() => scenesForRange(file), [file]);
   const among = useMemo(
     () => (laneId === '' ? undefined : charactersInLane(file, laneId)),
     [file, laneId],
@@ -75,10 +108,11 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
         ...(among ? { among } : {}),
         ...(kind === '' ? {} : { kinds: [kind] }),
         ...(focusId === '' ? {} : { focusId, depth }),
+        ...(range ? { range } : {}),
         includeUnconnected: !connectedOnly,
         fromScript,
       }),
-    [file, among, kind, focusId, depth, connectedOnly, fromScript],
+    [file, among, kind, focusId, depth, connectedOnly, fromScript, range],
   );
 
   const where = new Map(map.nodes.map((node) => [node.characterId as string, node]));
@@ -148,6 +182,58 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
           </select>
         </label>
 
+        {/* §12's scene range, and the second of §11's two leftovers.
+
+            **A stretch is its own question** — *who is in act two, and how do
+            they connect there* — which the plot lane beside it does not answer:
+            a lane is a subplot and a range is a piece of the script.
+
+            Two selects listing the scenes by name, because a writer knows the
+            scene and not its number. Both start at the ends, so the control
+            reads as the whole script until somebody moves one. */}
+        {scenes.length > 1 ? (
+          <label className="charmap-range">
+            <span className="muted small">Scenes</span>
+            <select
+              aria-label="From which scene"
+              value={range ? Math.min(range.from, range.to) : 1}
+              onChange={(event) =>
+                setRange(asRange(scenes.length, Number(event.target.value), range?.to ?? scenes.length))
+              }
+            >
+              {scenes.map((scene) => (
+                <option key={scene.unitId} value={scene.position}>
+                  {scene.position}. {scene.title || 'Untitled'}
+                </option>
+              ))}
+            </select>
+            <span className="muted small">to</span>
+            <select
+              aria-label="To which scene"
+              value={range ? Math.max(range.from, range.to) : scenes.length}
+              onChange={(event) =>
+                setRange(asRange(scenes.length, range?.from ?? 1, Number(event.target.value)))
+              }
+            >
+              {scenes.map((scene) => (
+                <option key={scene.unitId} value={scene.position}>
+                  {scene.position}. {scene.title || 'Untitled'}
+                </option>
+              ))}
+            </select>
+            {range ? (
+              <button
+                type="button"
+                className="ghost small"
+                title="Back to the whole script"
+                onClick={() => setRange(null)}
+              >
+                ×
+              </button>
+            ) : null}
+          </label>
+        ) : null}
+
         <label className="charmap-check">
           <input
             type="checkbox"
@@ -169,8 +255,22 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
         </label>
       </header>
 
+      {/* A filtered map says so. Without this a range that dropped half the
+          cast looks like a story with half the cast in it. */}
+      {range ? (
+        <p className="charmap-showing muted small">
+          {describeRange(file, range)} — {map.nodes.length}{' '}
+          {map.nodes.length === 1 ? 'person speaks' : 'people speak'}{' '}
+          {Math.min(range.from, range.to) === Math.max(range.from, range.to) ? 'in it' : 'in them'}. A
+          relationship somebody wrote down is still drawn; only what the script itself says is counted
+          inside the stretch.
+        </p>
+      ) : null}
+
       {map.nodes.length === 0 ? (
-        <p className="muted empty-state">Nobody to draw yet.</p>
+        <p className="muted empty-state">
+          {range ? 'Nobody speaks in those scenes.' : 'Nobody to draw yet.'}
+        </p>
       ) : (
         <svg
           className="charmap-canvas"
