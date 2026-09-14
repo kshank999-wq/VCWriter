@@ -22,6 +22,7 @@ import { assetSchema } from './entities/asset.js';
 import { boardSchema } from './entities/sculptor.js';
 import { outlineSchema } from './entities/outline.js';
 import { setupPayoffSchema } from './entities/setups.js';
+import { indexMarkSchema, indexRefSchema } from './entities/book-index.js';
 import { snapshotSchema } from './entities/revision.js';
 import { writingSessionSchema } from './sessions.js';
 import {
@@ -95,6 +96,13 @@ export const projectFileSchema = z.object({
   characterArcs: z.array(characterArcSchema).default([]),
   arcPoints: z.array(arcPointSchema).default([]),
   characterRelationships: z.array(characterRelationshipSchema).default([]),
+  /**
+   * The back-of-book index (addendum 10). Two collections, because a mark in
+   * the manuscript and a cross-reference between headings are different in
+   * kind — `entities/book-index.ts` says why.
+   */
+  indexMarks: z.array(indexMarkSchema).default([]),
+  indexRefs: z.array(indexRefSchema).default([]),
   links: z.array(storyLinkSchema).default([]),
   setupsPayoffs: z.array(setupPayoffSchema).default([]),
   snapshots: z.array(snapshotSchema).default([]),

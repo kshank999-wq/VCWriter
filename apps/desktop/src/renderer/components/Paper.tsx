@@ -1,4 +1,4 @@
-import type { ChapterPageContent, ContentsPage, InlineSpan, Page } from '@vcwriter/domain';
+import { runsText, type ChapterPageContent, type ContentsPage, type IndexHeading, type IndexPage, type InlineSpan, type Page } from '@vcwriter/domain';
 import { TitleSheet } from './TitleSheet';
 
 /**
@@ -16,12 +16,15 @@ export function Paper({ pages, empty = 'Nothing written yet.' }: { pages: Page[]
           key={sheet}
           className={
             `paper${page.chapter ? ' chapter-leaf' : ''}` +
-            `${page.titlePage ? ' title-leaf' : ''}${page.contents ? ' contents-leaf' : ''}`
+            `${page.titlePage ? ' title-leaf' : ''}${page.contents ? ' contents-leaf' : ''}` +
+            `${page.index ? ' index-leaf' : ''}`
           }
           aria-label={
             page.contents
               ? 'Contents'
-              : page.titlePage
+              : page.index
+                ? `Index, page ${page.number}`
+                : page.titlePage
                 ? `Title page: ${page.titlePage.episode || page.titlePage.title}`
                 : `Page ${page.number}`
           }
@@ -29,6 +32,8 @@ export function Paper({ pages, empty = 'Nothing written yet.' }: { pages: Page[]
           {page.number > 1 ? <span className="paper-number">{page.number}.</span> : null}
           {page.contents ? (
             <ContentsLeaf contents={page.contents} />
+          ) : page.index ? (
+            <IndexLeaf index={page.index} />
           ) : page.titlePage ? (
             <TitleSheet page={page.titlePage} />
           ) : page.chapter ? (
@@ -87,6 +92,81 @@ function ContentsLeaf({ contents }: { contents: ContentsPage }) {
               </span>
             ) : null}
             <span className="contents-sheet">{stack ? entry.sheet : entry.page}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A page of the back-of-book index (addendum 10), drawn the way the print
+ * stylesheet draws it.
+ *
+ * **A run is one span and a principal discussion is bold**, which is the only
+ * thing on the line telling *where this is discussed* from *where it is
+ * mentioned*. A *see* stands where the numbers would be, because a redirect
+ * has none; a *see also* follows them.
+ */
+function IndexEntry({ heading, level }: { heading: IndexHeading; level: 'term' | 'sub' }) {
+  return (
+    <div className={level === 'sub' ? 'index-entry index-sub' : 'index-entry'}>
+      <span className="index-term">{heading.term}</span>
+      <span className="index-pages">
+        {heading.see.length > 0 ? (
+          <em className="index-see">see {heading.see.join('; ')}</em>
+        ) : (
+          <>
+            {heading.runs.map((run, at) => (
+              <span key={`${run.from}-${run.to}`}>
+                {at > 0 ? <span className="index-sep">, </span> : null}
+                <span className={run.principal ? 'index-run principal' : 'index-run'}>
+                  {runsText([run])}
+                </span>
+              </span>
+            ))}
+            {heading.seeAlso.length > 0 ? (
+              <em className="index-see-also"> see also {heading.seeAlso.join('; ')}</em>
+            ) : null}
+          </>
+        )}
+      </span>
+    </div>
+  );
+}
+
+function IndexLeaf({ index }: { index: IndexPage }) {
+  return (
+    <div className="index-page">
+      <p className="index-heading">{index.title}</p>
+      <div className="index-list">
+        {index.letters.map((group, at) => (
+          <div key={group.letter + at}>
+            <div className="index-letter">
+              {group.letter}
+              {index.continuing === group.letter && at === 0 ? (
+                <span className="index-continued"> (continued)</span>
+              ) : null}
+            </div>
+            {group.headings.map((heading) => (
+              <div key={heading.term}>
+                <IndexEntry heading={heading} level="term" />
+                {heading.subEntries.map((sub) => (
+                  <IndexEntry
+                    key={sub.subTerm}
+                    heading={{
+                      term: sub.subTerm,
+                      runs: sub.runs,
+                      subEntries: [],
+                      see: [],
+                      seeAlso: sub.seeAlso,
+                      orphans: 0,
+                    }}
+                    level="sub"
+                  />
+                ))}
+              </div>
+            ))}
           </div>
         ))}
       </div>

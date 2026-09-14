@@ -11,6 +11,13 @@ import {
   type PlacedMarker,
 } from './markers.js';
 import { episodeTitlePages, episodes, type Episode } from './episodes.js';
+import {
+  bookIndex,
+  hasBookIndex,
+  indexPages,
+  type BookIndex,
+  type IndexPage,
+} from './book-index.js';
 import type { TitlePage } from './entities/title-page.js';
 import { groupManuscript, isProseFormat } from './editing.js';
 import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
@@ -391,6 +398,13 @@ export interface Page {
    * title page it takes no number.
    */
   contents?: ContentsPage;
+  /**
+   * Set on a page of the back-of-book index (addendum 10). `lines` is empty
+   * and the page **is** numbered, unlike the contents and a title page: the
+   * index is at the back of the book, inside the numbering, which is where a
+   * reader turning to page 312 expects to find it.
+   */
+  index?: IndexPage;
 }
 
 /** Greedy wrap at `width`, breaking on spaces and never mid-word when avoidable. */
@@ -855,6 +869,8 @@ export interface ManuscriptOptions {
    * list.
    */
   includeContentsPage?: boolean;
+  /** Whether the back-of-book index prints (addendum 10). */
+  includeBookIndex?: boolean;
   /**
    * The sluglines themselves. On unless asked otherwise — a script without
    * them is a rehearsal script or a prose read-through, which is a real
@@ -892,7 +908,52 @@ export const manuscriptElements = (file: ProjectFile, options: ManuscriptOptions
  * exactly what breaking the run does. A format with no chapter pages, or a
  * printing that leaves them out, paginates as one run and is unchanged.
  */
-export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = {}): Page[] => {
+export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = {}): Page[] =>
+  paginated(file, options).pages;
+
+/**
+ * The index as it will print, for the screen that manages it (addendum 10).
+ *
+ * **The screen and the printed book read the same function**, which is the only
+ * way a page number shown beside a mark can be trusted: a second reading that
+ * worked the pages out its own way would be a second answer, and a writer
+ * looking at two of them has no way to tell which one the book will use.
+ *
+ * The print toggle is deliberately overridden — somebody managing the index
+ * wants to see it whether or not this printing carries it.
+ */
+export const bookIndexOf = (file: ProjectFile, options: ManuscriptOptions = {}): BookIndex => {
+  const where = elementPages(file, options);
+  return bookIndex({
+    marks: file.indexMarks ?? [],
+    refs: file.indexRefs ?? [],
+    pageOfElement: (elementId: string) => where.get(elementId) ?? 0,
+  });
+};
+
+/**
+ * What page every element of the manuscript prints on.
+ *
+ * The index's own question, exported because a screen showing a mark beside its
+ * page has to ask it too — and asking it anywhere else would be a second
+ * answer.
+ */
+export const elementPages = (
+  file: ProjectFile,
+  options: ManuscriptOptions = {},
+): Map<string, number> => paginated(file, { ...options, includeBookIndex: true }).where;
+
+/**
+ * The pagination, and where every element landed.
+ *
+ * One walk answers both, because the second question has no other honest
+ * source: a page number is *worked out*, and working it out twice is how two
+ * answers happen.
+ */
+const paginated = (
+  file: ProjectFile,
+  options: ManuscriptOptions = {},
+): { pages: Page[]; where: Map<string, number> } => {
   const speakerFor = (element: ManuscriptElement) => {
     if (!element.characterId) return null;
     return file.characters.find((character) => character.id === element.characterId)?.name.toUpperCase() ?? null;
@@ -915,9 +976,13 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
     fronts.length === 0 &&
     opensEpisode.size === 0 &&
     !anyActBreaks &&
-    !hasContentsPage(file, options)
+    !hasContentsPage(file, options) &&
+    !wantsBookIndex(file, options)
   ) {
-    return numbered(paginateElements(manuscriptElements(file, options), layout, speakerFor), new Set());
+    return {
+      pages: numbered(paginateElements(manuscriptElements(file, options), layout, speakerFor), new Set()),
+      where: new Map(),
+    };
   }
 
   // Where each leaf falls, and where each episode's front page does, by the
@@ -1038,6 +1103,14 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
   closeAct();
 
   const laid = numbered(pages, restartAt);
+  const where = pageNumbersOfElements(laid, emitted);
+
+  // The index at the back, which like the contents at the front can only be
+  // written once the pages exist — and for the stronger reason: **every entry
+  // in it is a page number nobody stored** (addendum 10). Appended before the
+  // contents is unshifted, so the contents' sheet numbers still count from the
+  // front of the finished stack.
+  laid.push(...bookIndexPages(file, laid, where, layout, options));
 
   // The list at the front, which can only be written once the pages exist:
   // it says where to turn, and a page that is not there cannot be pointed at.
@@ -1049,7 +1122,87 @@ export const paginateProject = (file: ProjectFile, options: ManuscriptOptions = 
       contents: contentsOf(file, laid, runs, emitted),
     });
   }
-  return laid;
+  return { pages: laid, where };
+};
+
+/**
+ * Whether this printing carries an index: a book, with something in it, and
+ * not turned off for this printing.
+ */
+const wantsBookIndex = (file: ProjectFile, options: ManuscriptOptions): boolean =>
+  options.includeBookIndex !== false &&
+  hasBookIndex(file.project.format) &&
+  (file.indexMarks ?? []).length + (file.indexRefs ?? []).length > 0;
+
+/**
+ * Where every element landed, as the number its page actually prints.
+ *
+ * The index's whole job, and the one thing only the paginator can answer. An
+ * element it has never heard of comes back 0, which is a mark whose passage
+ * has gone — shown as an orphan rather than quietly dropped.
+ */
+const pageNumbersOfElements = (
+  laid: readonly Page[],
+  emitted: readonly string[],
+): Map<string, number> => {
+  const position = new Map(emitted.map((id, index) => [id, index]));
+  const where = new Map<string, number>();
+
+  // Walk the pages once, carrying the page each element belongs to: a page
+  // owns every element from the one it starts with up to the next page's.
+  let page = 0;
+  for (let index = 0; index < laid.length; index += 1) {
+    const starts = laid[index]?.startsWith;
+    if (starts === null || starts === undefined) continue;
+    const at = position.get(starts);
+    if (at === undefined) continue;
+    const nextAt = (() => {
+      for (let after = index + 1; after < laid.length; after += 1) {
+        const next = laid[after]?.startsWith;
+        if (next === null || next === undefined) continue;
+        const found = position.get(next);
+        if (found !== undefined) return found;
+      }
+      return emitted.length;
+    })();
+    page = laid[index]?.number ?? 0;
+    for (let element = at; element < nextAt; element += 1) {
+      const id = emitted[element];
+      if (id !== undefined) where.set(id, page);
+    }
+  }
+  return where;
+};
+
+/** The index's own pages, numbered on from the last page of the book. */
+const bookIndexPages = (
+  file: ProjectFile,
+  laid: readonly Page[],
+  where: ReadonlyMap<string, number>,
+  layout: PageLayoutSpec,
+  options: ManuscriptOptions,
+): Page[] => {
+  if (!wantsBookIndex(file, options)) return [];
+
+  const index = bookIndex({
+    marks: file.indexMarks ?? [],
+    refs: file.indexRefs ?? [],
+    pageOfElement: (elementId: string) => where.get(elementId) ?? 0,
+  });
+  if (index.headings.length === 0) return [];
+
+  const last = laid.reduce((most, page) => Math.max(most, page.number), 0);
+  return indexPages({
+    index,
+    title: 'Index',
+    linesPerPage: layout.linesPerPage,
+    columns: layout.columns,
+  }).map((page: IndexPage, offset: number) => ({
+    number: last + offset + 1,
+    lines: [],
+    startsWith: null,
+    index: page,
+  }));
 };
 
 /** A division of the document, and where it landed once the pages were laid. */

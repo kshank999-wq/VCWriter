@@ -5214,6 +5214,65 @@ dialog.lane-dialog.title-page-dialog {
   padding-bottom: 0;
 }
 
+/* ---------------------------------------------------------------------------
+   The back-of-book index (addendum 10), drawn on paper the way it prints.
+--------------------------------------------------------------------------- */
+
+.index-leaf .index-page {
+  text-align: left;
+}
+
+.index-leaf .index-heading {
+  margin: 0.4in 0 0.35in;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.index-leaf .index-letter {
+  margin: 1.4em 0 0.4em;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+.index-leaf .index-list > div:first-child .index-letter {
+  margin-top: 0;
+}
+
+.index-leaf .index-continued {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.85em;
+}
+
+/* A hanging indent, so a heading that wraps does not read as two headings —
+   which is the one typographic thing an index cannot do without. */
+.index-leaf .index-entry {
+  padding-left: 2em;
+  text-indent: -2em;
+}
+
+.index-leaf .index-entry.index-sub {
+  padding-left: 4em;
+  text-indent: -2em;
+}
+
+/* *lamp, the, 2, 3* and *lens, see Fresnel lens* — the comma after the
+   heading is how an index reads in both cases. */
+.index-leaf .index-term::after {
+  content: ', ';
+}
+
+/* The only thing on the line telling "discussed here" from "mentioned here". */
+.index-leaf .index-run.principal {
+  font-weight: 700;
+}
+
+.index-leaf .index-see,
+.index-leaf .index-see-also {
+  font-style: italic;
+}
+
 /* The same sheet at the size of a real page: the Preview draws an episode's
    front page as a page of the document (§17), so the geometry here is the
    print stylesheet's, in inches, rather than the dialog's thumbnail. */
@@ -10327,4 +10386,206 @@ dialog.projects-dialog {
 .mobile-suggestion {
   flex: 1;
   min-width: 0;
+}
+
+/* ------------------------------------------- the book's index (addendum 10) */
+/* Set like an index: the heading at the left, its page numbers at the right,
+   sub-headings indented under it. The screen looks like what it makes. */
+
+/* The passage as it stands, in the dialog that files it. Shown rather than
+   offered for editing: the quote is what the page said, kept for recognising
+   the mark later. */
+.index-quote {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  border-left: 2px solid var(--border);
+  padding-left: 10px;
+  max-height: 6em;
+  overflow-y: auto;
+}
+
+.index-panel {
+  padding: 14px 18px 32px;
+  overflow-y: auto;
+  display: grid;
+  /* One column that cannot be widened by what is in it: a mark's quote is a
+     whole paragraph, and a grid column sized to its content would push the
+     page numbers off the right-hand edge. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-content: start;
+  max-width: 860px;
+}
+
+.index-head {
+  display: grid;
+  gap: 4px;
+}
+
+.index-head h3 {
+  margin: 0;
+}
+
+.index-panel h4 {
+  margin: 0 0 6px;
+}
+
+.index-letter-block {
+  margin-bottom: 12px;
+}
+
+.index-letter {
+  color: var(--gold);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+}
+
+.index-row.sub {
+  padding-left: 20px;
+}
+
+/* Heading, pages: the two ends of a line of an index, with the gap between
+   them doing what the leader dots do on paper. */
+.index-term {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  text-align: left;
+  padding: 3px 0;
+  cursor: pointer;
+  font-size: 12.5px;
+}
+
+.index-term:hover .index-name,
+.index-term:focus-visible .index-name {
+  color: var(--gold);
+}
+
+.index-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.index-pages {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.index-orphans {
+  color: var(--danger, #d06a5a);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.index-refs {
+  margin: 0 0 4px;
+  padding-left: 20px;
+  font-style: italic;
+}
+
+.index-marks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  padding: 8px 0 10px 20px;
+  border-left: 1px solid var(--border);
+  margin-left: 4px;
+}
+
+.index-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+/* A mark whose passage has gone keeps its row, struck through: the page it
+   no longer prints needs an explanation. */
+.index-mark.gone .index-mark-quote,
+.index-mark-quote.gone {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.index-mark-page {
+  min-width: 3em;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.index-mark-quote {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+/* The one button among the rows: sized to itself rather than stretched
+   across the column the mark rows fill. */
+.index-marks > button {
+  justify-self: start;
+}
+
+.index-rename {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.index-rename input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  padding: 4px 8px;
+  background: var(--ink);
+}
+
+.index-ref-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.index-ref-form input,
+.index-ref-form select {
+  font-size: 12.5px;
+  padding: 4px 8px;
+  background: var(--ink);
+}
+
+.index-ref-list,
+.index-orphan-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.index-ref-list li,
+.index-orphan-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.index-ref-list li span,
+.index-orphan-list li span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

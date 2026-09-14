@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Paper } from './Paper';
 import {
+  hasBookIndex,
   hasChapterPages,
   paginateProject,
   paginateUnit,
@@ -26,6 +27,9 @@ interface PagePreviewProps {
   includeTitlePage: boolean;
   /** And the list at the front of a season's stack (§17), for the same reason. */
   includeContentsPage: boolean;
+  /** Whether the back-of-book index prints (addendum 10). */
+  includeBookIndex: boolean;
+  onToggleBookIndex(next: boolean): void;
   /** The rest of what a printing carries lives in Page setup (§13). */
   onPageSetup?(): void;
   onExportPdf(): void;
@@ -52,6 +56,8 @@ export function PagePreview({
   onToggleChapterPages,
   includeTitlePage,
   includeContentsPage,
+  includeBookIndex,
+  onToggleBookIndex,
   onPageSetup,
   onExportPdf,
   onPrint,
@@ -64,10 +70,28 @@ export function PagePreview({
     () =>
       scope === 'unit' && unitId
         ? paginateUnit(file, unitId)
-        : paginateProject(file, { includeBeatTitles, includeChapterPages, includeTitlePage, includeContentsPage }),
-    [file, scope, unitId, includeBeatTitles, includeChapterPages, includeTitlePage, includeContentsPage],
+        : paginateProject(file, {
+            includeBeatTitles,
+            includeChapterPages,
+            includeTitlePage,
+            includeContentsPage,
+            includeBookIndex,
+          }),
+    [
+      file,
+      scope,
+      unitId,
+      includeBeatTitles,
+      includeChapterPages,
+      includeTitlePage,
+      includeContentsPage,
+      includeBookIndex,
+    ],
   );
   const chapters = hasChapterPages(file.project.format);
+  // A book has an index; a script does not, so the control is not there to
+  // puzzle over — the same rule the chapter-pages switch beside it follows.
+  const indexable = hasBookIndex(file.project.format);
 
   return (
     <div className="preview">
@@ -121,6 +145,21 @@ export function PagePreview({
               onChange={(event) => onToggleChapterPages(event.target.checked)}
             />
             Chapter pages
+          </label>
+        ) : null}
+
+        {/* The back of the book (addendum 10). Its page numbers are worked
+            out from this very pagination, so what is drawn here is what
+            prints. */}
+        {indexable ? (
+          <label className="toggle" title="Print the index at the back of the book">
+            <input
+              type="checkbox"
+              checked={includeBookIndex}
+              disabled={scope === 'unit'}
+              onChange={(event) => onToggleBookIndex(event.target.checked)}
+            />
+            Index
           </label>
         ) : null}
 

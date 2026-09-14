@@ -13,6 +13,7 @@ import {
 } from './character-creator.js';
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
 import { setupPayoffSchema } from './entities/setups.js';
+import { indexMarkSchema, indexRefSchema } from './entities/book-index.js';
 import { projectSchema, projectSettingsSchema } from './entities/project.js';
 import { beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
 import { countWords } from './entities/manuscript.js';
@@ -69,6 +70,12 @@ export const SYNC_TABLES = {
   arcPoints: 'arc_points',
   usageLinks: 'usage_links',
   characterRelationships: 'character_relationships',
+  // The back-of-book index (addendum 10). Named here as well as in the schema
+  // *because* of what the comment below this block records: a collection in
+  // one list and not the other reads back as nothing, and the next push then
+  // deletes the server's rows.
+  indexMarks: 'index_marks',
+  indexRefs: 'index_refs',
 } as const;
 
 export type SyncCollection = keyof typeof SYNC_TABLES;
@@ -528,6 +535,69 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
   setupsPayoffs: file.setupsPayoffs.map(setupPayoffToRow),
   ...planRows(file),
   ...characterCreatorRows(file),
+  ...bookIndexRows(file),
+});
+
+/**
+ * The back-of-book index, as rows (addendum 10).
+ *
+ * Flat both sides and entirely uninteresting, which is the point: two straight
+ * mappings and **no page number in either of them**, because a page is worked
+ * out from the pagination every time and a column holding one would be a
+ * second answer to go stale.
+ */
+const bookIndexRows = (file: ProjectFile): Pick<ProjectRows, 'indexMarks' | 'indexRefs'> => ({
+  indexMarks: (file.indexMarks ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    term: one.term,
+    sub_term: one.subTerm,
+    beat_id: one.beatId,
+    element_id: one.elementId,
+    quote: one.quote,
+    principal: one.principal,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+  indexRefs: (file.indexRefs ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    term: one.term,
+    sub_term: one.subTerm,
+    kind: one.kind,
+    target: one.target,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+});
+
+const bookIndexFromRows = (rows: ProjectRows): Pick<ProjectFile, 'indexMarks' | 'indexRefs'> => ({
+  indexMarks: (rows.indexMarks ?? []).map((row) =>
+    indexMarkSchema.parse({
+      id: row['id'],
+      projectId: row['project_id'],
+      term: row['term'] ?? '',
+      subTerm: row['sub_term'] ?? '',
+      beatId: row['beat_id'],
+      elementId: row['element_id'],
+      quote: row['quote'] ?? '',
+      principal: row['principal'] ?? false,
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
+  indexRefs: (rows.indexRefs ?? []).map((row) =>
+    indexRefSchema.parse({
+      id: row['id'],
+      projectId: row['project_id'],
+      term: row['term'] ?? '',
+      subTerm: row['sub_term'] ?? '',
+      kind: row['kind'] ?? 'see',
+      target: row['target'] ?? '',
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
 });
 
 /**
@@ -1093,6 +1163,7 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     setupsPayoffs: rows.setupsPayoffs.map(setupPayoffFromRow),
     ...plansFromRows(rows),
     ...characterCreatorFromRows(rows),
+    ...bookIndexFromRows(rows),
     // Snapshots are local recovery points, not shared state; they stay on disk.
     snapshots: [],
   });

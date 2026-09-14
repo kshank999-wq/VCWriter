@@ -21,8 +21,11 @@ import {
   defaultElementType,
   elementTypesFor,
   groupManuscript,
+  hasBookIndex,
+  headingsSoFar,
   isDual,
   layoutForFile,
+  markForIndex,
   newId,
   onEnter,
   onTab,
@@ -33,9 +36,11 @@ import {
   reformatText,
   setDualDialogue,
   styleShortcuts,
+  subHeadingsUnder,
   toggleInline,
   updateBeat,
   type Beat,
+  type BeatId,
   type CharacterId,
   type CharacterTraitId,
   type InlineMark,
@@ -154,6 +159,8 @@ export function BeatBody({
     text: string;
   } | null>(null);
   const [filing, setFiling] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
+  /** The same passage, on its way into the book's index (addendum 10 §6). */
+  const [indexing, setIndexing] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
 
   /**
    * Dictation (spec §9), and *which* dictation depends on where this is
@@ -791,6 +798,17 @@ export function BeatBody({
             setFiling({ elementId: caught.elementId, text: caught.text });
             setCaught(null);
           }}
+          // An index is a book's, so a screenplay is never offered one
+          // (addendum 10 §2): a stack of scripts each numbering from its own
+          // page one has no single page 34 for an entry to point at.
+          onIndex={
+            hasBookIndex(file.project.format)
+              ? () => {
+                  setIndexing({ elementId: caught.elementId, text: caught.text });
+                  setCaught(null);
+                }
+              : null
+          }
           onClose={() => setCaught(null)}
         />
       ) : null}
@@ -803,6 +821,17 @@ export function BeatBody({
           passage={filing.text}
           onUpdate={onUpdate}
           onClose={() => setFiling(null)}
+        />
+      ) : null}
+
+      {indexing ? (
+        <FileInIndex
+          file={file}
+          beatId={beat.id}
+          elementId={indexing.elementId}
+          passage={indexing.text}
+          onUpdate={onUpdate}
+          onClose={() => setIndexing(null)}
         />
       ) : null}
     </div>
@@ -897,20 +926,26 @@ function ExtensionMenu({ onPick, onClose }: { onPick(mark: string): void; onClos
 /**
  * The menu the right-click opens on a line of the manuscript.
  *
- * One item today, and it is deliberately the *only* one: Electron gives a
- * renderer no context menu of its own, so nothing is being taken away here, and
- * a menu that grew Cut/Copy/Paste would be reimplementing the platform badly.
- * When something else genuinely belongs on the writing, it joins this list.
+ * Electron gives a renderer no context menu of its own, so nothing is being
+ * taken away here, and a menu that grew Cut/Copy/Paste would be reimplementing
+ * the platform badly. What joins the list is only ever *filing this passage
+ * somewhere* — which is what a right-click on writing is for.
+ *
+ * The index item is absent rather than disabled on a screenplay: a greyed line
+ * says *you cannot do this yet*, and the true thing is that this format has no
+ * index at all.
  */
 function CaughtMenu({
   x,
   y,
   onPick,
+  onIndex,
   onClose,
 }: {
   x: number;
   y: number;
   onPick(): void;
+  onIndex: (() => void) | null;
   onClose(): void;
 }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -946,6 +981,11 @@ function CaughtMenu({
       <button type="button" role="menuitem" className="caught-item" onClick={onPick}>
         Add to a character’s characterization…
       </button>
+      {onIndex ? (
+        <button type="button" role="menuitem" className="caught-item" onClick={onIndex}>
+          Index this…
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -1105,6 +1145,148 @@ function FileAsCharacterization({
         </button>
         <button type="button" className="ghost small" disabled={text.trim().length === 0} onClick={save}>
           Add it
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Filing a passage in the book's index, from the writing (addendum 10 §6).
+ *
+ * The same right-click as the Character Creator's and deliberately the same
+ * shape, because it is the same act — *this passage is about that* — pointed at
+ * the back of the book instead of at a person.
+ *
+ * Two things differ, and both are the module's rules arriving in the interface.
+ * **The heading is the writer's words and never the passage's**, so the box
+ * starts empty rather than pre-filled with the line: an index whose headings
+ * were the sentences they came from would be a concordance. And **the passage
+ * is shown rather than offered for editing** — the Character Creator lets it be
+ * rewritten because what is filed there is the writer's *reading* of the line,
+ * while a quote here is what the page said, kept for recognising the mark later
+ * and for nothing else.
+ *
+ * No page number is asked for and none is shown, because there is none to
+ * store: where this lands is worked out from the pagination every time, and the
+ * line under the buttons says so — a writer expecting to type a number should
+ * find out here rather than wonder later why nothing asked.
+ */
+function FileInIndex({
+  file,
+  beatId,
+  elementId,
+  passage,
+  onUpdate,
+  onClose,
+}: {
+  file: ProjectFile;
+  beatId: BeatId;
+  elementId: ManuscriptElementId;
+  passage: string;
+  onUpdate: BeatBodyProps['onUpdate'];
+  onClose(): void;
+}) {
+  const [term, setTerm] = useState('');
+  const [subTerm, setSubTerm] = useState('');
+  const [principal, setPrincipal] = useState(false);
+
+  const headings = useMemo(() => headingsSoFar(file), [file]);
+  // The sub-headings of whatever heading is being typed — which is empty until
+  // the heading is one the book already has, and that is the honest answer.
+  const subs = useMemo(() => (term.trim().length > 0 ? subHeadingsUnder(file, term) : []), [file, term]);
+
+  const save = () => {
+    if (term.trim().length === 0) return;
+    onUpdate(
+      (current) =>
+        markForIndex(current, {
+          term,
+          subTerm,
+          beatId,
+          elementId,
+          // What the page said when it was marked. For reading, never for
+          // finding — the mark is anchored to the element, not to these words.
+          quote: passage,
+          principal,
+        }).file,
+    );
+    onClose();
+  };
+
+  return (
+    <div
+      className="caught-dialog"
+      role="dialog"
+      aria-label="Index this passage"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
+      <label className="field">
+        <span>Index it under</span>
+        <input
+          autoFocus
+          aria-label="Heading"
+          list="vcwriter-index-headings"
+          placeholder="lamp, the"
+          value={term}
+          onChange={(event) => setTerm(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              save();
+            }
+          }}
+        />
+      </label>
+      <datalist id="vcwriter-index-headings">
+        {headings.map((heading) => (
+          <option key={heading} value={heading} />
+        ))}
+      </datalist>
+
+      <label className="field">
+        <span>Under a sub-heading (optional)</span>
+        <input
+          aria-label="Sub-heading"
+          list="vcwriter-index-subheadings"
+          placeholder="cleaning of"
+          value={subTerm}
+          onChange={(event) => setSubTerm(event.target.value)}
+        />
+      </label>
+      <datalist id="vcwriter-index-subheadings">
+        {subs.map((sub) => (
+          <option key={sub} value={sub} />
+        ))}
+      </datalist>
+
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={principal}
+          onChange={(event) => setPrincipal(event.target.checked)}
+        />
+        <span>This is the principal discussion — set bold in the index</span>
+      </label>
+
+      <p className="index-quote">{passage}</p>
+
+      <p className="muted small">
+        The page number is worked out when the book is laid out, and follows the
+        writing on its own.
+      </p>
+
+      <div className="caught-actions">
+        <button type="button" className="ghost small" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="ghost small" disabled={term.trim().length === 0} onClick={save}>
+          Index it
         </button>
       </div>
     </div>

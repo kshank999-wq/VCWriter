@@ -6,6 +6,7 @@ import {
   findBeat,
   findUnit,
   groupFindings,
+  hasBookIndex,
   isProseFormat,
   gridFromRead,
   runDailyEditor,
@@ -25,6 +26,7 @@ import {
   type SceneVerdict,
   type StructuralUnitId,
 } from '@vcwriter/domain';
+import { IndexPanel } from './IndexPanel';
 import { StoryGridPanel } from './StoryGridPanel';
 
 interface EditorPanelProps {
@@ -49,8 +51,12 @@ interface EditorPanelProps {
  * its own. It reads the manuscript and asks whether it delivers — which is
  * what the other two tabs do, so this is where a writer already comes to be
  * told what is missing.
+ *
+ * Addendum 10 §7 adds a fourth for a book's index, on the same reasoning and
+ * with the same gate the module has everywhere: a screenplay has no index, so
+ * the tab is absent rather than empty.
  */
-type Tab = 'daily' | 'final' | 'grid';
+type Tab = 'daily' | 'final' | 'grid' | 'index';
 
 /**
  * When a read was made, and by what.
@@ -89,7 +95,11 @@ export function EditorPanel({
   busy = false,
   exportMessage = null,
 }: EditorPanelProps) {
+  const indexed = hasBookIndex(file.project.format);
+  // A tab that is not there cannot be the one that is open: closing a project
+  // and opening a screenplay would otherwise leave the Index showing.
   const [tab, setTab] = useState<Tab>(openOn ?? 'daily');
+  const openTab: Tab = tab === 'index' && !indexed ? 'daily' : tab;
 
   // The Editor menu names an editor; choosing it opens that one.
   useEffect(() => {
@@ -162,7 +172,7 @@ export function EditorPanel({
   // Asked once when the Final Editor is opened, so the button can say why it
   // is greyed out instead of failing after the click.
   useEffect(() => {
-    if (tab !== 'final') return;
+    if (openTab !== 'final') return;
     let current = true;
     void window.vcwriter.sceneReviewStatus().then((result) => {
       if (!current) return;
@@ -201,8 +211,8 @@ export function EditorPanel({
           <button
             type="button"
             role="tab"
-            aria-selected={tab === 'daily'}
-            className={tab === 'daily' ? 'tab selected' : 'tab'}
+            aria-selected={openTab === 'daily'}
+            className={openTab === 'daily' ? 'tab selected' : 'tab'}
             onClick={() => setTab('daily')}
           >
             Daily ({summary.errors + summary.style})
@@ -210,8 +220,8 @@ export function EditorPanel({
           <button
             type="button"
             role="tab"
-            aria-selected={tab === 'final'}
-            className={tab === 'final' ? 'tab selected' : 'tab'}
+            aria-selected={openTab === 'final'}
+            className={openTab === 'final' ? 'tab selected' : 'tab'}
             onClick={() => setTab('final')}
           >
             Final ({report.findings.length})
@@ -221,17 +231,29 @@ export function EditorPanel({
           <button
             type="button"
             role="tab"
-            aria-selected={tab === 'grid'}
-            className={tab === 'grid' ? 'tab selected' : 'tab'}
+            aria-selected={openTab === 'grid'}
+            className={openTab === 'grid' ? 'tab selected' : 'tab'}
             onClick={() => setTab('grid')}
           >
             Story Grid ({grid.keptObligatory + grid.keptConventions}/{grid.promises.length})
           </button>
+          {/* A book's index, and only a book's (addendum 10 §2). */}
+          {indexed ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={openTab === 'index'}
+              className={openTab === 'index' ? 'tab selected' : 'tab'}
+              onClick={() => setTab('index')}
+            >
+              Index ({(file.indexMarks ?? []).length})
+            </button>
+          ) : null}
         </div>
 
         {/* The grid is a document as well as a tab (§8 stage 6): what the
             story is, the five at every scale, the graph, and the rows. */}
-        {tab === 'grid' && (onPrintGrid || onExportGrid) ? (
+        {openTab === 'grid' && (onPrintGrid || onExportGrid) ? (
           <div className="editor-controls">
             {onPrintGrid ? (
               <button type="button" className="ghost" disabled={busy} onClick={onPrintGrid}>
@@ -246,7 +268,7 @@ export function EditorPanel({
           </div>
         ) : null}
 
-        {tab === 'daily' ? (
+        {openTab === 'daily' ? (
           <div className="editor-controls">
             <select value={scope} onChange={(event) => setScope(event.target.value as 'project' | 'scene')}>
               <option value="project">Whole project</option>
@@ -272,7 +294,7 @@ export function EditorPanel({
         </p>
       ) : null}
 
-      {tab === 'daily' ? (
+      {openTab === 'daily' ? (
         <div className="editing-mode">
           {/* The rules, with what each one found. Working through a
               manuscript one rule at a time is how it is actually done: the
@@ -416,7 +438,7 @@ export function EditorPanel({
             )}
           </div>
         </div>
-      ) : tab === 'grid' ? (
+      ) : openTab === 'grid' ? (
         <>
           {exportMessage ? (
             <p className="notice" role="status">
@@ -425,6 +447,8 @@ export function EditorPanel({
           ) : null}
           <StoryGridPanel file={file} onUpdate={onUpdate} {...(onGoToUnit ? { onGoToUnit } : {})} />
         </>
+      ) : openTab === 'index' ? (
+        <IndexPanel file={file} onUpdate={onUpdate} {...(onGoTo ? { onGoTo } : {})} />
       ) : (
         <div className="final-review">
           <p className="muted">

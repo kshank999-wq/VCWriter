@@ -466,6 +466,8 @@ describe('page preview', () => {
         onToggleBeatTitles={() => undefined}
         includeChapterPages
         onToggleChapterPages={() => undefined}
+        includeBookIndex
+        onToggleBookIndex={() => undefined}
         includeTitlePage
         includeContentsPage
         onExportPdf={() => undefined}
@@ -489,6 +491,8 @@ describe('page preview', () => {
         onToggleBeatTitles={() => undefined}
         includeChapterPages
         onToggleChapterPages={() => undefined}
+        includeBookIndex
+        onToggleBookIndex={() => undefined}
         includeTitlePage
         includeContentsPage
         onExportPdf={() => undefined}
@@ -537,6 +541,8 @@ describe('a book’s contents page', () => {
         onToggleBeatTitles={() => undefined}
         includeChapterPages
         onToggleChapterPages={() => undefined}
+        includeBookIndex
+        onToggleBookIndex={() => undefined}
         includeTitlePage
         includeContentsPage
         onExportPdf={() => undefined}

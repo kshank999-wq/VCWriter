@@ -28,6 +28,9 @@ export type UsageLinkId = Id<'UsageLink'>;
 export type CharacterArcId = Id<'CharacterArc'>;
 export type ArcPointId = Id<'ArcPoint'>;
 export type CharacterRelationshipId = Id<'CharacterRelationship'>;
+/* The book index (addendum 10). */
+export type IndexMarkId = Id<'IndexMark'>;
+export type IndexRefId = Id<'IndexRef'>;
 export type StoryLinkId = Id<'StoryLink'>;
 export type SetupPayoffId = Id<'SetupPayoff'>;
 export type SetupPointId = Id<'SetupPoint'>;

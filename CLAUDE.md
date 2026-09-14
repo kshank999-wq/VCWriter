@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0045.
+  reads like it does. Applied through 0046.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
@@ -437,6 +437,36 @@ push live; the build takes a minute or two.
   line* works and naming a style aloud cannot, and the interface says so. The
   control is opt-in per surface (`dictation` on `BeatBody`), the Script drawing
   every beat with one having put nine of them down a short script.
+  `addendum-10-book-index.md` is the back-of-book index, from Ken's ask for
+  chapter pages that carry a graphic *"but it goes into an Index"* with the page
+  numbers updating themselves. **Built.** Two of the three things he asked for
+  already existed — the chapter leaf (addendum 02 §11) and the contents page —
+  and §1 draws the line the module needed: a contents page lists the divisions
+  in the order they happen, an index lists what the book is *about*,
+  alphabetically, at the back. Two decisions carry it. **A mark is an anchor the
+  writer places and never a search** (§2): indexing every occurrence would be a
+  concordance, and which mentions matter is the editorial judgement that makes
+  an index worth having — so `findForIndex` helps somebody mark and marks
+  nothing, and the heading is the writer's words rather than the passage's. And
+  **no page number is stored anywhere** (§3), which is how *it updates when the
+  writing shifts* needs nothing to run: there is no page column in migration
+  0046, no *rebuild* command and nowhere to type one, because the index is read
+  off the pagination every time. The screen and the printed book go through the
+  same `bookIndexOf`, or a writer looking at two answers has no way to tell
+  which one the book will use. `packages/domain/src/book-index.ts` is the
+  module, `entities/book-index.ts` the two tables — a mark is anchored to a
+  passage and a cross-reference is a sentence about the index itself, which is
+  why they are not one table with a flag. A run prints as `14–17`, and **a
+  principal discussion never merges with a passing mention** because `14–17` set
+  half bold is not something type can do. `indexPages` breaks it by counting
+  lines, and never leaves a letter alone at the foot of a page. **Index this…**
+  is on the manuscript right-click beside the Character Creator's (§6), and
+  **Editor ▸ Index…** opens the fourth tab of the Editors page (§7) — which
+  shows the three things the printed index cannot: the *marks* under a heading
+  rather than only its numbers, **orphans** (a mark whose passage was cut, kept
+  and struck through rather than silently dropped), and renaming a heading
+  everywhere at once. Absent rather than greyed on a screenplay, everywhere: a
+  format with no index has no index, and a disabled control says *not yet*.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

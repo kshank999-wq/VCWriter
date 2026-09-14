@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import {
+  hasBookIndex,
   hasChapterPages,
   hasContentsPage,
   type ParagraphStyle,
@@ -23,6 +24,8 @@ export interface PrintSetup {
   includeChapterPages: boolean;
   /** The list at the front of a season's stack (§17). */
   includeContentsPage: boolean;
+  /** Whether the back-of-book index prints (addendum 10). */
+  includeBookIndex: boolean;
   /** The sluglines. On: a script without them is a read-through, not a draft. */
   includeSceneHeadings: boolean;
   /** Numbered in the margins, as a shooting script is. Off until production. */
@@ -50,6 +53,7 @@ export const DEFAULT_PRINT_SETUP: PrintSetup = {
   includeTitlePage: true,
   includeChapterPages: true,
   includeContentsPage: true,
+  includeBookIndex: true,
   includeSceneHeadings: true,
   includeSceneNumbers: false,
   includePageNumbers: true,
@@ -109,6 +113,7 @@ export function PageSetup({
   // episodes or a book's chapters, and nothing where there would be nothing
   // to print.
   const contents = hasContentsPage(file);
+  const indexable = hasBookIndex(file.project.format);
   const prose = file.project.format === 'novel' || file.project.format === 'short_story';
   const paragraphStyle = file.settings.paragraphStyle;
   const scriptFormat = file.settings.scriptFormat ?? 'us';
@@ -156,6 +161,17 @@ export function PageSetup({
                 {prose
                   ? 'Contents — the chapters and the page each opens on'
                   : 'Contents — what is in the stack, at the front of it'}
+              </Check>
+            ) : null}
+
+            {indexable ? (
+              <Check
+                label="Index"
+                on={setup.includeBookIndex}
+                onChange={(includeBookIndex) => set({ includeBookIndex })}
+              >
+                The index at the back — the page numbers are worked out every
+                time, so they follow the writing
               </Check>
             ) : null}
 

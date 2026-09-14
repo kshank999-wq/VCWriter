@@ -3,6 +3,7 @@ import { isProseFormat } from './editing.js';
 import { titlePageOf } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
 import type { ContentsPage } from './markers.js';
+import { runsText, type IndexHeading, type IndexPage } from './book-index.js';
 import type { PageStamp } from './attribution.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -83,6 +84,7 @@ const renderPage = (page: Page, isProse: boolean, options: PrintOptions): string
   // rather than of the manuscript, and neither carries a page number.
   if (page.titlePage) return renderTitleSheet(page.titlePage);
   if (page.contents) return renderContentsPage(page.contents);
+  if (page.index) return renderIndexPage(page.index);
   if (page.chapter) return renderChapterPage(page, isProse, options);
   const lines = page.lines
     .map((line) => {
@@ -177,6 +179,72 @@ const renderContentsPage = (contents: ContentsPage): string => {
     `<h1 class="contents-series">${escapeHtml(contents.title || 'Untitled')}</h1>` +
     '<p class="contents-heading">Contents</p>' +
     `<div class="contents-list">${head}${rows}</div>` +
+    '</section>'
+  );
+};
+
+/**
+ * A page of the back-of-book index (addendum 10).
+ *
+ * **Page runs are printed as runs** — `14–17` — and a principal discussion is
+ * set bold, which is the only thing on the line distinguishing *where this is
+ * discussed* from *where it is mentioned*. A *see* sits where the page numbers
+ * would be, because a redirect has none; a *see also* follows them.
+ *
+ * A letter carried over from the page before says so, rather than starting
+ * again as if it were new.
+ */
+const renderIndexHeading = (heading: IndexHeading, level: 'term' | 'sub'): string => {
+  const runs = heading.runs
+    .map(
+      (run) =>
+        `<span class="${run.principal ? 'index-run principal' : 'index-run'}">${escapeHtml(
+          runsText([run]),
+        )}</span>`,
+    )
+    .join('<span class="index-sep">, </span>');
+
+  const see = heading.see.length > 0 ? `<em class="index-see">see ${escapeHtml(heading.see.join('; '))}</em>` : '';
+  const also =
+    heading.seeAlso.length > 0
+      ? `<em class="index-see-also">see also ${escapeHtml(heading.seeAlso.join('; '))}</em>`
+      : '';
+
+  return (
+    `<div class="index-entry index-${level}">` +
+    `<span class="index-term">${escapeHtml(heading.term)}</span>` +
+    (see ? `<span class="index-pages">${see}</span>` : `<span class="index-pages">${runs}${also ? ` ${also}` : ''}</span>`) +
+    '</div>'
+  );
+};
+
+const renderIndexPage = (index: IndexPage): string => {
+  const letters = index.letters
+    .map((group) => {
+      const continued =
+        index.continuing === group.letter && index.letters[0] === group ? ' <span class="index-continued">(continued)</span>' : '';
+      const entries = group.headings
+        .map((heading) => {
+          const own = renderIndexHeading(heading, 'term');
+          const subs = heading.subEntries
+            .map((sub) =>
+              renderIndexHeading(
+                { term: sub.subTerm, runs: sub.runs, subEntries: [], see: [], seeAlso: sub.seeAlso, orphans: 0 },
+                'sub',
+              ),
+            )
+            .join('');
+          return own + subs;
+        })
+        .join('');
+      return `<div class="index-letter">${escapeHtml(group.letter)}${continued}</div>${entries}`;
+    })
+    .join('');
+
+  return (
+    '<section class="page index-page">' +
+    `<p class="index-heading">${escapeHtml(index.title)}</p>` +
+    `<div class="index-list">${letters}</div>` +
     '</section>'
   );
 };
@@ -385,6 +453,28 @@ const STYLES = `
   /* The two figures need saying: the sheet is not the page the script
      prints, because every episode numbers from its own page one. */
   .contents-head { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.15em; padding-bottom: 0; }
+
+  /* The back-of-book index (addendum 10). Set as a book sets one: a hanging
+     indent so a heading that wraps does not look like two headings, the
+     sub-heading indented under it, and the page numbers at the end of the
+     line rather than ranged right — an index is read along the line, not
+     down a column. */
+  .index-page { text-align: left; }
+  .index-heading { text-transform: uppercase; letter-spacing: 0.2em; margin: 0.5in 0 0.4in; text-align: center; }
+  .index-letter {
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin: 1.4em 0 0.4em;
+  }
+  .index-letter:first-child { margin-top: 0; }
+  .index-continued { text-transform: none; letter-spacing: 0; font-size: 9pt; }
+  .index-entry { padding-left: 2em; text-indent: -2em; }
+  .index-entry.index-sub { padding-left: 4em; text-indent: -2em; }
+  /* *lamp, the, 2, 3* and *lens, see Fresnel lens* — the comma after the
+     heading is how an index reads in both cases. */
+  .index-term::after { content: ', '; }
+  .index-run.principal { font-weight: 700; }
+  .index-see, .index-see-also { font-style: italic; }
   ${TITLE_PAGE_STYLES}
   .watermark {
     position: fixed;

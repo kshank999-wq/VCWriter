@@ -283,6 +283,8 @@ describe('an episode’s front page in the preview', () => {
         onToggleBeatTitles={() => undefined}
         includeChapterPages
         onToggleChapterPages={() => undefined}
+        includeBookIndex
+        onToggleBookIndex={() => undefined}
         includeTitlePage={includeTitlePage}
         includeContentsPage
         onExportPdf={() => undefined}
@@ -396,6 +398,8 @@ describe('the contents page in the preview', () => {
         onToggleBeatTitles={() => undefined}
         includeChapterPages
         onToggleChapterPages={() => undefined}
+        includeBookIndex
+        onToggleBookIndex={() => undefined}
         includeTitlePage
         includeContentsPage={includeContentsPage}
         onExportPdf={() => undefined}

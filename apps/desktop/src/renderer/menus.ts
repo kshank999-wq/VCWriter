@@ -13,7 +13,7 @@
  * that is all it should ever know.
  */
 
-import type { ProjectFormat } from '@vcwriter/domain';
+import { hasBookIndex, type ProjectFormat } from '@vcwriter/domain';
 import { paneNamesFor } from './panes';
 
 export type CommandId =
@@ -40,6 +40,7 @@ export type CommandId =
   | 'editor.daily'
   | 'editor.final'
   | 'editor.storyGrid'
+  | 'editor.index'
   | 'editor.readBack'
   | 'editor.reformat'
   // Reports
@@ -139,6 +140,12 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       { command: 'editor.daily', label: 'Daily editor' },
       { command: 'editor.final', label: 'Final editor' },
       { command: 'editor.storyGrid', label: 'Story Grid' },
+      // A book's index (addendum 10 §7), and only a book's: a stack of scripts
+      // each numbering from its own page one has no single page for an entry
+      // to point at, so the item is absent rather than greyed.
+      ...(format !== null && hasBookIndex(format)
+        ? [{ command: 'editor.index' as CommandId, label: 'Index…' }]
+        : []),
       { command: 'editor.readBack', label: 'Read back' },
     ],
   },

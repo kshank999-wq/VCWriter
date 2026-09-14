@@ -113,7 +113,7 @@ export default function App() {
   const [episodeRailOpen, setEpisodeRailOpen] = useState(false);
   const [newEpisodeOpen, setNewEpisodeOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [editorTab, setEditorTab] = useState<'daily' | 'final' | 'grid'>('daily');
+  const [editorTab, setEditorTab] = useState<'daily' | 'final' | 'grid' | 'index'>('daily');
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
@@ -575,6 +575,9 @@ export default function App() {
           return setView('editor');
         case 'editor.storyGrid':
           setEditorTab('grid');
+          return setView('editor');
+        case 'editor.index':
+          setEditorTab('index');
           return setView('editor');
         case 'editor.readBack':
           return setView('readback');
@@ -1054,6 +1057,8 @@ export default function App() {
               onToggleBeatTitles={(next) => setPrintSetup({ ...printSetup, includeBeatTitles: next })}
               includeChapterPages={printSetup.includeChapterPages}
               onToggleChapterPages={(next) => setPrintSetup({ ...printSetup, includeChapterPages: next })}
+              includeBookIndex={setup.includeBookIndex}
+              onToggleBookIndex={(next) => setPrintSetup({ ...printSetup, includeBookIndex: next })}
               includeTitlePage={setup.includeTitlePage}
               includeContentsPage={setup.includeContentsPage}
               onPageSetup={() => setPageSetupOpen(true)}
