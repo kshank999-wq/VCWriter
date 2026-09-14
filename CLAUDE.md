@@ -490,6 +490,32 @@ push live; the build takes a minute or two.
   and struck through rather than silently dropped), and renaming a heading
   everywhere at once. Absent rather than greyed on a screenplay, everywhere: a
   format with no index has no index, and a disabled control says *not yet*.
+  `addendum-11-setups-and-payoffs.md` is Setups & Payoffs, from Ken's own dev
+  spec. **Built.** Half of it already existed (the record, its setup points, its
+  payoff, archiving — master spec §7.3); what was missing was **the rule the
+  spec is about**. Two decisions carry it. **Before the payoff is the only thing
+  that counts** — a setup falling after it is an explanation, so it stays listed
+  with a sentence saying why it does not count, because a point that silently
+  stopped counting is worse than one that says why. And **nothing is stored**:
+  `setupReadiness` in `packages/domain/src/setups.ts` counts every time it is
+  asked, so dragging a scene across the payoff turns the light red with nothing
+  run, and dragging it back turns it green — a cached status would survive the
+  reorder and be wrong, which is the same absence the book index and the
+  Character Creator's colour rest on. Position is read **to the beat**, since a
+  setup and its payoff in one scene is a real thing and *which came first* is
+  answerable. `MINIMUM_VALID_SETUPS = 3` is the one place the number lives;
+  `minimumSetups` on a record overrides it and `0` means *use the default*. The
+  light and the X/3 count are **on the list** rather than inside each record
+  (§10), and the under-prepared sort first. The sentence separates three states
+  the light cannot — *not named yet*, *one short*, *prepared* — which is what
+  stops it becoming noise. **Make this a setup or a payoff…** is the third thing
+  the manuscript right-click does; which of the two it is gets the largest type,
+  and everything else is worked out from the story order afterwards. The
+  timeline lane is **a row per payoff** rather than one row of everything: rings
+  for the setups, a diamond for the payoff, a rule between them so the gap is
+  what you see, and a point that falls after drawn dashed and red where it
+  actually is. No migration — an `excerpt` on each point and `minimumSetups` on
+  the record live in the project document.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

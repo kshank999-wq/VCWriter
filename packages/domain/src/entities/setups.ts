@@ -20,6 +20,14 @@ export const setupPointSchema = z.object({
   /** Where the setup lands in the story, when it has been placed. */
   location: storyEntityRefSchema.nullable().default(null),
   strength: setupStrengthSchema.default('planned'),
+  /**
+   * What the passage said when it was tagged.
+   *
+   * For recognising the point again, never for finding it: the anchor is the
+   * `location`, so editing the line does not move the setup and cutting the
+   * beat orphans it rather than silently losing it.
+   */
+  excerpt: z.string().default(''),
   createdAt: isoDateTime(),
 });
 export type SetupPoint = z.infer<typeof setupPointSchema>;
@@ -27,6 +35,8 @@ export type SetupPoint = z.infer<typeof setupPointSchema>;
 export const payoffPointSchema = z.object({
   description: z.string().default(''),
   location: storyEntityRefSchema.nullable().default(null),
+  /** As on a setup point: the page's words, kept for recognition. */
+  excerpt: z.string().default(''),
   writtenAt: isoDateTime().nullable().default(null),
 });
 export type PayoffPoint = z.infer<typeof payoffPointSchema>;
@@ -48,6 +58,15 @@ export const setupPayoffSchema = z.object({
   status: setupPayoffStatusSchema.default('open'),
   setups: z.array(setupPointSchema).default([]),
   payoff: payoffPointSchema.nullable().default(null),
+  /**
+   * How many setups this payoff wants before it counts as prepared.
+   *
+   * Three unless the writer says otherwise — `MINIMUM_VALID_SETUPS` in
+   * `setups.ts` is the one place the number lives, and this is the one place it
+   * can be disagreed with. Zero means *use the default*, so a record written
+   * before the field existed reads as three rather than as none required.
+   */
+  minimumSetups: z.number().int().min(0).max(20).default(0),
   /** Resolved records may be archived out of the active list (§7.3). */
   archived: z.boolean().default(false),
   ...timestamps,

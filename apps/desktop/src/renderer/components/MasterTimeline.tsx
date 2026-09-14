@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import {
   defaultMarkerKind,
   markerNoun,
@@ -16,6 +16,8 @@ import {
   storyLayout,
   threadLayout,
   timecode,
+  setupLane,
+  type SetupLaneRow,
   timelineArcs,
   unitsForLane,
   updateLane,
@@ -83,6 +85,8 @@ interface MasterTimelineProps {
 
 const HEAD_WIDTH = 168;
 const LINKS_HEIGHT = 44;
+/** A setup row is shorter than the links track: it carries marks, not curves. */
+const SETUP_HEIGHT = 20;
 
 /**
  * How many beats stack in a scene before the next column starts.
@@ -152,6 +156,8 @@ export function MasterTimeline({
    * taken out rather than left there greyed.
    */
   const shortForm = file.project.format === 'short_form';
+  // A row per payoff that has anything placed (the Setups & Payoffs spec §6).
+  const setupRows = useMemo(() => (shortForm ? [] : setupLane(file)), [file, shortForm]);
 
   const selectedBeat = selectedBeatId ? file.beats.find((beat) => beat.id === selectedBeatId) : undefined;
   // What was clicked wins; otherwise the scene being written in.
@@ -382,6 +388,27 @@ export function MasterTimeline({
                 }}
               />
               <div className="links-cell tail" />
+
+              {/* Setups & payoffs: a row per promise, so how far apart this
+                  payoff's setups are is a thing you can see (the spec's §6). */}
+              {setupRows.map((row) => (
+                <Fragment key={row.recordId}>
+                  <div className="track-head setup-head" title={`${row.title} — ${row.count}`}>
+                    <span className={`setup-light ${row.light}`} aria-hidden="true" />
+                    <span className="setup-head-name">{row.title}</span>
+                  </div>
+                  <SetupTrack
+                    row={row}
+                    widths={widths}
+                    spans={spans}
+                    onPick={(index) => {
+                      const first = beatsForUnit(file, spans[index]!.unit.id)[0];
+                      if (first) onSelectBeat(first.id);
+                    }}
+                  />
+                  <div className="setup-cell tail" />
+                </Fragment>
+              ))}
             </>
           )}
 
@@ -1067,6 +1094,72 @@ function FrameStrip({ rows, onSelectBeat }: { rows: AvRow[]; onSelectBeat(beatId
           ) : null}
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * One payoff's row on the timeline (the Setups & Payoffs spec §6).
+ *
+ * Setups are rings and the payoff is a filled diamond, joined by a rule that
+ * runs from the first setup to the payoff — so *how far apart they are* and
+ * *where it lands* are the two things the row says at a glance, which is what
+ * §6 asks of it.
+ *
+ * **A setup that falls after the payoff is drawn where it is, in the colour of
+ * something that does not count.** Hiding it would make the row agree with the
+ * count and lie about the script.
+ */
+function SetupTrack({
+  row,
+  widths,
+  spans,
+  onPick,
+}: {
+  row: SetupLaneRow;
+  widths: number[];
+  spans: StorySpan[];
+  onPick(index: number): void;
+}) {
+  if (spans.length === 0) return null;
+  const total = widths.reduce((sum, width) => sum + width, 0);
+  const starts: number[] = [];
+  let x = 0;
+  for (const width of widths) {
+    starts.push(x);
+    x += width;
+  }
+  const centre = (index: number) => starts[index]! + Math.min(widths[index]! / 2, 60);
+  const mid = SETUP_HEIGHT / 2;
+  const placed = row.marks.filter((mark) => mark.unitIndex < widths.length);
+  const from = placed.length > 0 ? centre(placed[0]!.unitIndex) : 0;
+  const to = placed.length > 0 ? centre(placed[placed.length - 1]!.unitIndex) : 0;
+
+  return (
+    <div className="setup-cell" style={{ gridColumn: `span ${spans.length}` }}>
+      <svg
+        width={total}
+        height={SETUP_HEIGHT}
+        viewBox={`0 0 ${total} ${SETUP_HEIGHT}`}
+        role="list"
+        aria-label={`${row.title} — ${row.count}`}
+      >
+        {placed.length > 1 ? <line className="setup-run" x1={from} y1={mid} x2={to} y2={mid} /> : null}
+        {placed.map((mark) => {
+          const at = centre(mark.unitIndex);
+          const className = `setup-mark ${mark.kind}${mark.counts ? '' : ' spent'}`;
+          return (
+            <g key={mark.id} className={className} role="listitem" onClick={() => onPick(mark.unitIndex)}>
+              {mark.kind === 'payoff' ? (
+                <path d={`M ${at} ${mid - 5} L ${at + 5} ${mid} L ${at} ${mid + 5} L ${at - 5} ${mid} Z`} />
+              ) : (
+                <circle cx={at} cy={mid} r={4} />
+              )}
+              <title>{mark.label}</title>
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }

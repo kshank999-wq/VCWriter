@@ -20,6 +20,8 @@ import {
   cuesInOrder,
   defaultElementType,
   elementTypesFor,
+  addSetupPayoff,
+  addSetupPoint,
   groupManuscript,
   hasBookIndex,
   headingsSoFar,
@@ -31,10 +33,13 @@ import {
   onTab,
   peopleInBeat,
   readDictatedScript,
+  recordPayoff,
+  ref,
   retype,
   parseInlineMarks,
   reformatText,
   setDualDialogue,
+  setupsBoard,
   styleShortcuts,
   subHeadingsUnder,
   toggleInline,
@@ -50,6 +55,7 @@ import {
   type ManuscriptElementType,
   type PageLayoutSpec,
   type ProjectFile,
+  type SetupPayoffId,
   type Typing,
 } from '@vcwriter/domain';
 
@@ -161,6 +167,8 @@ export function BeatBody({
   const [filing, setFiling] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
   /** The same passage, on its way into the book's index (addendum 10 §6). */
   const [indexing, setIndexing] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
+  /** And on its way into a setup or a payoff (the Setups & Payoffs spec §4). */
+  const [planting, setPlanting] = useState<{ text: string } | null>(null);
 
   /**
    * Dictation (spec §9), and *which* dictation depends on where this is
@@ -809,6 +817,14 @@ export function BeatBody({
                 }
               : null
           }
+          onPlant={
+            readOnly
+              ? null
+              : () => {
+                  setPlanting({ text: caught.text });
+                  setCaught(null);
+                }
+          }
           onClose={() => setCaught(null)}
         />
       ) : null}
@@ -832,6 +848,16 @@ export function BeatBody({
           passage={indexing.text}
           onUpdate={onUpdate}
           onClose={() => setIndexing(null)}
+        />
+      ) : null}
+
+      {planting ? (
+        <PlantSetupOrPayoff
+          file={file}
+          beatId={beat.id}
+          passage={planting.text}
+          onUpdate={onUpdate}
+          onClose={() => setPlanting(null)}
         />
       ) : null}
     </div>
@@ -940,12 +966,14 @@ function CaughtMenu({
   y,
   onPick,
   onIndex,
+  onPlant,
   onClose,
 }: {
   x: number;
   y: number;
   onPick(): void;
   onIndex: (() => void) | null;
+  onPlant: (() => void) | null;
   onClose(): void;
 }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -984,6 +1012,11 @@ function CaughtMenu({
       {onIndex ? (
         <button type="button" role="menuitem" className="caught-item" onClick={onIndex}>
           Index this…
+        </button>
+      ) : null}
+      {onPlant ? (
+        <button type="button" role="menuitem" className="caught-item" onClick={onPlant}>
+          Make this a setup or a payoff…
         </button>
       ) : null}
     </div>
@@ -1287,6 +1320,172 @@ function FileInIndex({
         </button>
         <button type="button" className="ghost small" disabled={term.trim().length === 0} onClick={save}>
           Index it
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Making a passage a setup point or the payoff, from the writing (the Setups &
+ * Payoffs spec §4).
+ *
+ * The third thing the right-click can do, and the same shape as the other two
+ * on purpose: *this passage is that*, pointed at a promise the story has made
+ * rather than at a person or an index heading.
+ *
+ * **Which of the two it is, is the only question that matters here**, so it is
+ * the control with the largest type. Everything else — where it landed, whether
+ * it counts, how many the payoff still wants — is worked out afterwards from
+ * the story order and shown in the Research panel, because none of it is
+ * something a writer in the middle of a scene should have to answer.
+ *
+ * A payoff can be named before any of its setups are written, so the record
+ * list includes every active record and a way to start a new one without
+ * leaving the page.
+ */
+function PlantSetupOrPayoff({
+  file,
+  beatId,
+  passage,
+  onUpdate,
+  onClose,
+}: {
+  file: ProjectFile;
+  beatId: BeatId;
+  passage: string;
+  onUpdate: BeatBodyProps['onUpdate'];
+  onClose(): void;
+}) {
+  const records = useMemo(
+    () => setupsBoard(file).map((row) => ({ record: row.record, readiness: row.readiness })),
+    [file],
+  );
+  const [recordId, setRecordId] = useState<SetupPayoffId | ''>(records[0]?.record.id ?? '');
+  const [newTitle, setNewTitle] = useState('');
+  const [kind, setKind] = useState<'setup' | 'payoff'>('setup');
+  const [note, setNote] = useState('');
+
+  const chosen = records.find((row) => (row.record.id as string) === (recordId as string)) ?? null;
+
+  const save = () => {
+    const title = newTitle.trim();
+    if (recordId === '' && title.length === 0) return;
+    onUpdate((current) => {
+      // A record named here is made first, so the point has somewhere to go —
+      // and the whole act is one update, so a failure leaves neither behind.
+      let next = current;
+      let target = recordId as SetupPayoffId | '';
+      if (target === '') {
+        next = addSetupPayoff(next, { title, description: '' });
+        target = next.setupsPayoffs[next.setupsPayoffs.length - 1]!.id;
+      }
+      const description = note.trim().length > 0 ? note.trim() : passage;
+      return kind === 'setup'
+        ? addSetupPoint(next, {
+            setupPayoffId: target,
+            description,
+            location: ref('beat', beatId as string),
+            strength: 'written',
+            excerpt: passage,
+          })
+        : recordPayoff(next, {
+            setupPayoffId: target,
+            description,
+            location: ref('beat', beatId as string),
+            excerpt: passage,
+          });
+    });
+    onClose();
+  };
+
+  return (
+    <div
+      className="caught-dialog"
+      role="dialog"
+      aria-label="Make this a setup or a payoff"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
+      <div className="plant-kind" role="radiogroup" aria-label="What this passage is">
+        {(['setup', 'payoff'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            role="radio"
+            aria-checked={kind === option}
+            className={kind === option ? 'plant-choice on' : 'plant-choice'}
+            onClick={() => setKind(option)}
+          >
+            {option === 'setup' ? 'A setup point' : 'The payoff'}
+          </button>
+        ))}
+      </div>
+
+      <label className="field">
+        <span>For which payoff</span>
+        <select
+          autoFocus
+          aria-label="Payoff"
+          value={recordId as string}
+          onChange={(event) => setRecordId(event.target.value as SetupPayoffId | '')}
+        >
+          {records.map((row) => (
+            <option key={row.record.id} value={row.record.id}>
+              {row.record.title} — {row.readiness.count}
+            </option>
+          ))}
+          <option value="">Something new…</option>
+        </select>
+      </label>
+
+      {/* Naming a new payoff here is the same requirement §7 has elsewhere: the
+          fast path must not stop to send somebody off to make a record first. */}
+      {recordId === '' ? (
+        <label className="field">
+          <span>What has to land</span>
+          <input
+            aria-label="New payoff"
+            placeholder="The gun in the drawer fires"
+            value={newTitle}
+            onChange={(event) => setNewTitle(event.target.value)}
+          />
+        </label>
+      ) : null}
+
+      <label className="field">
+        <span>What this one does — in your words</span>
+        <input
+          aria-label="What this point does"
+          placeholder={kind === 'setup' ? 'She notices the drawer is locked' : 'She fires it'}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+        />
+      </label>
+
+      <p className="index-quote">{passage}</p>
+
+      <p className="muted small">
+        {chosen && kind === 'setup'
+          ? `${chosen.readiness.says} Whether this one counts depends on where it falls against the payoff.`
+          : 'Only setups that fall before the payoff count towards it.'}
+      </p>
+
+      <div className="caught-actions">
+        <button type="button" className="ghost small" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="ghost small"
+          disabled={recordId === '' && newTitle.trim().length === 0}
+          onClick={save}
+        >
+          {kind === 'setup' ? 'Plant it' : 'Pay it off'}
         </button>
       </div>
     </div>

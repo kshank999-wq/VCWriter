@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import {
+  MINIMUM_VALID_SETUPS,
   addSetupPayoff,
   addSetupPoint,
-  derivedSetupPayoffStatus,
+  describePlace,
   findUnit,
   recordPayoff,
   removeSetupPoint,
   reopenPayoff,
   ref,
-  resolveRef,
   setSetupPayoffArchived,
+  setupReadiness,
+  setupsBoard,
   updateSetupPayoff,
   updateSetupPoint,
   type BeatId,
@@ -22,29 +24,46 @@ interface SetupsPanelProps {
   file: ProjectFile;
   currentBeatId: BeatId | null;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  /**
+   * Go and look at the passage a point was tagged on. Absent in the popped-out
+   * research window, which has no script beside it to go to.
+   */
+  onGoTo?(beatId: BeatId): void;
 }
 
 const STRENGTHS: readonly SetupStrength[] = ['planned', 'written', 'weak'];
 
 /**
- * Setups & payoffs (spec §7.3).
+ * Setups & payoffs (spec §7.3, and the Setups & Payoffs spec §3).
  *
  * A payoff can be established in several places, so setups are a list, not a
  * field. Anything not yet delivered stays in Active — that list is the writer's
  * outstanding debt to the reader, which is the whole point of the feature.
  * Resolving and archiving keep every setup point and link, and both are
  * reversible.
+ *
+ * **The light and the count are on the list rather than inside each record**,
+ * which is §10's requirement and the right one: a writer opening this wants to
+ * know which payoffs are under-prepared, and a status they have to open twenty
+ * records to find is a status nobody reads. The under-prepared sort first for
+ * the same reason.
+ *
+ * Nothing here is stored. `setupReadiness` counts the setups that land *before*
+ * the payoff every time it is drawn, so dragging a scene across the payoff
+ * changes the light with nothing running — and a setup that ends up after it
+ * stays in the list, struck through with a reason, because a point that
+ * silently stopped counting is worse than one that says why.
  */
-export function SetupsPanel({ file, currentBeatId, onUpdate }: SetupsPanelProps) {
+export function SetupsPanel({ file, currentBeatId, onUpdate, onGoTo }: SetupsPanelProps) {
   const [scope, setScope] = useState<'active' | 'archived'>('active');
   const [selectedId, setSelectedId] = useState<SetupPayoffId | null>(null);
   const [draftSetup, setDraftSetup] = useState('');
   const [draftPayoff, setDraftPayoff] = useState('');
 
-  const records = file.setupsPayoffs.filter((record) =>
-    scope === 'active' ? !record.archived : record.archived,
-  );
+  const rows = setupsBoard(file, scope === 'archived');
+  const records = rows.map((row) => row.record);
   const selected = records.find((record) => record.id === selectedId) ?? records[0] ?? null;
+  const readiness = selected ? setupReadiness(file, selected) : null;
 
   const currentBeat = currentBeatId ? file.beats.find((beat) => beat.id === currentBeatId) ?? null : null;
   const currentUnit = currentBeat ? findUnit(file, currentBeat.unitId) ?? null : null;
@@ -83,24 +102,21 @@ export function SetupsPanel({ file, currentBeatId, onUpdate }: SetupsPanelProps)
         </div>
 
         <ul className="item-list">
-          {records.map((record) => {
-            const status = derivedSetupPayoffStatus(record);
-            return (
-              <li key={record.id}>
-                <button
-                  type="button"
-                  className={selected?.id === record.id ? 'item selected' : 'item'}
-                  onClick={() => setSelectedId(record.id)}
-                >
-                  <span className="item-title">{record.title}</span>
-                  <span className={`chip status-${status}`}>{status}</span>
-                  <span className="muted count">
-                    {record.setups.length} {record.setups.length === 1 ? 'setup' : 'setups'}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
+          {rows.map(({ record, readiness: read }) => (
+            <li key={record.id}>
+              <button
+                type="button"
+                className={selected?.id === record.id ? 'item selected' : 'item'}
+                onClick={() => setSelectedId(record.id)}
+                title={read.says}
+              >
+                {/* The light, visible without opening the record (§10). */}
+                <span className={`setup-light ${read.light}`} aria-label={read.light === 'green' ? 'Prepared' : 'Under-prepared'} />
+                <span className="item-title">{record.title}</span>
+                <span className="muted count">{read.count}</span>
+              </button>
+            </li>
+          ))}
         </ul>
         {records.length === 0 ? (
           <p className="muted empty">
@@ -133,12 +149,40 @@ export function SetupsPanel({ file, currentBeatId, onUpdate }: SetupsPanelProps)
               }
             />
 
+            {/* What the record owes, in a sentence — and the number it wants,
+                which is three unless this payoff says otherwise. */}
+            {readiness ? (
+              <div className={`setup-readiness ${readiness.light}`}>
+                <span className={`setup-light ${readiness.light}`} aria-hidden="true" />
+                <strong>{readiness.count}</strong>
+                <span>{readiness.says}</span>
+                <label className="setup-minimum">
+                  <span className="muted small">wants</span>
+                  <input
+                    type="number"
+                    aria-label="Setups wanted"
+                    min={1}
+                    max={20}
+                    value={readiness.needed}
+                    onChange={(event) =>
+                      onUpdate((current) =>
+                        updateSetupPayoff(current, selected.id, {
+                          minimumSetups:
+                            Number(event.target.value) === MINIMUM_VALID_SETUPS ? 0 : Number(event.target.value),
+                        }),
+                      )
+                    }
+                  />
+                </label>
+              </div>
+            ) : null}
+
             <h3>Setups ({selected.setups.length})</h3>
             <ul className="setup-points">
-              {selected.setups.map((point) => {
-                const where = point.location ? resolveRef(file, point.location) : null;
+              {(readiness?.setups ?? []).map((place) => {
+                const point = place.point;
                 return (
-                  <li key={point.id}>
+                  <li key={point.id} className={place.counts ? 'counts' : 'spent'}>
                     <input
                       aria-label="Setup description"
                       value={point.description}
@@ -171,9 +215,23 @@ export function SetupsPanel({ file, currentBeatId, onUpdate }: SetupsPanelProps)
                         </option>
                       ))}
                     </select>
-                    <span className="muted where">
-                      {where ? (where.exists ? where.label : 'missing element') : 'not placed'}
+                    {/* Where it landed, and — where it does not count — why. A
+                        point that quietly stopped counting is worse than one
+                        that says it falls after the payoff. */}
+                    <span className={place.counts ? 'muted where' : 'where does-not-count'} title={place.why}>
+                      {place.where}
+                      {place.why ? ` — ${place.why}` : ''}
                     </span>
+                    {onGoTo && point.location?.type === 'beat' && place.at ? (
+                      <button
+                        type="button"
+                        className="ghost"
+                        title="Go and look at the passage"
+                        onClick={() => onGoTo(point.location!.id as BeatId)}
+                      >
+                        Go to it
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="ghost"
@@ -238,6 +296,15 @@ export function SetupsPanel({ file, currentBeatId, onUpdate }: SetupsPanelProps)
             {selected.payoff?.writtenAt ? (
               <div className="payoff-recorded">
                 <p>{selected.payoff.description}</p>
+                <p className="muted small">
+                  {describePlace(file, selected.payoff.location)}
+                  {selected.payoff.excerpt ? ` — “${selected.payoff.excerpt}”` : ''}
+                </p>
+                {onGoTo && selected.payoff.location?.type === 'beat' ? (
+                  <button type="button" className="ghost" onClick={() => onGoTo(selected.payoff!.location!.id as BeatId)}>
+                    Go to it
+                  </button>
+                ) : null}
                 <button type="button" onClick={() => onUpdate((current) => reopenPayoff(current, selected.id))}>
                   Reopen — not written after all
                 </button>

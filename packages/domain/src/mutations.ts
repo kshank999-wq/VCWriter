@@ -596,6 +596,8 @@ export const addSetupPoint = (
     description: string;
     location?: StoryEntityRef | null;
     strength?: 'planned' | 'written' | 'weak';
+    /** The page's words, where the point was tagged from the writing. */
+    excerpt?: string;
   },
 ): ProjectFile => {
   const record = file.setupsPayoffs.find((candidate) => candidate.id === input.setupPayoffId);
@@ -605,6 +607,7 @@ export const addSetupPoint = (
     description: input.description,
     location: input.location ?? null,
     strength: input.strength ?? 'planned',
+    excerpt: (input.excerpt ?? '').slice(0, 400),
     createdAt: nowIso(),
   });
   const updated = touch({
@@ -620,13 +623,23 @@ export const addSetupPoint = (
 
 export const recordPayoff = (
   file: ProjectFile,
-  input: { setupPayoffId: SetupPayoffId; description: string; location?: StoryEntityRef | null },
+  input: {
+    setupPayoffId: SetupPayoffId;
+    description: string;
+    location?: StoryEntityRef | null;
+    excerpt?: string;
+  },
 ): ProjectFile => {
   const record = file.setupsPayoffs.find((candidate) => candidate.id === input.setupPayoffId);
   if (!record) throw new DomainError(`Setup/payoff ${input.setupPayoffId} does not exist`);
   const updated = touch({
     ...record,
-    payoff: { description: input.description, location: input.location ?? null, writtenAt: nowIso() },
+    payoff: {
+      description: input.description,
+      location: input.location ?? null,
+      excerpt: (input.excerpt ?? '').slice(0, 400),
+      writtenAt: nowIso(),
+    },
     status: 'resolved' as const,
   });
   return touchProject({
@@ -1348,7 +1361,7 @@ export const moveResearchItem = (
 export const updateSetupPayoff = (
   file: ProjectFile,
   setupPayoffId: SetupPayoffId,
-  patch: Partial<Pick<SetupPayoff, 'title' | 'description' | 'status'>>,
+  patch: Partial<Pick<SetupPayoff, 'title' | 'description' | 'status' | 'minimumSetups'>>,
 ): ProjectFile => {
   if (!file.setupsPayoffs.some((record) => record.id === setupPayoffId)) {
     throw new DomainError(`Setup/payoff ${setupPayoffId} does not exist`);
@@ -1366,7 +1379,7 @@ export const updateSetupPoint = (
   input: {
     setupPayoffId: SetupPayoffId;
     setupPointId: SetupPointId;
-    patch: Partial<Pick<SetupPoint, 'description' | 'strength' | 'location'>>;
+    patch: Partial<Pick<SetupPoint, 'description' | 'strength' | 'location' | 'excerpt'>>;
   },
 ): ProjectFile => {
   const record = file.setupsPayoffs.find((candidate) => candidate.id === input.setupPayoffId);

@@ -1011,6 +1011,10 @@ export default function App() {
             open={researchOpen && !away.has('research')}
             currentBeatId={selectedBeat?.id ?? null}
             {...(researchView ? { openOn: researchView } : {})}
+            onGoToBeat={(beatId) => {
+              setSelectedBeatId(beatId);
+              setResearchOpen(false);
+            }}
             onClose={() => {
               setResearchOpen(false);
               setResearchView(undefined);

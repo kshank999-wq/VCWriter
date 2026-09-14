@@ -10824,3 +10824,151 @@ dialog.chapter-page-dialog {
   position: sticky;
   top: 0;
 }
+
+/* ------------------------------- setups & payoffs: the light and the count */
+/* Red is a warning, never a block: the writer stays free to export, write and
+   ignore it. What it may not do is be invisible. */
+
+.setup-light {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--danger, #d06a5a);
+}
+
+.setup-light.green {
+  background: #6fbf73;
+}
+
+.setups-list .item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setup-readiness {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--danger, #d06a5a);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.setup-readiness.green {
+  border-left-color: #6fbf73;
+}
+
+.setup-readiness strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.setup-readiness span:not(.setup-light) {
+  flex: 1;
+  min-width: 0;
+}
+
+.setup-minimum {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.setup-minimum input {
+  width: 56px;
+  font-size: 12px;
+  padding: 3px 6px;
+  background: var(--ink);
+}
+
+/* A point that does not count keeps its row and says why. The reason wraps
+   onto its own line rather than truncating: a warning nobody can read is not
+   a warning. */
+.setup-points li {
+  flex-wrap: wrap;
+}
+
+.where.does-not-count {
+  color: var(--danger, #d06a5a);
+  flex-basis: 100%;
+  order: 9;
+}
+
+/* ------------------------------------ the setups & payoffs lane (spec §6) */
+/* A row per promise: rings for the setups, a diamond for the payoff, and a
+   rule between them so the gap is the thing you see. */
+
+.setup-cell {
+  height: 20px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.setup-cell svg {
+  display: block;
+}
+
+.track-head.setup-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.setup-head-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setup-run {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.setup-mark circle,
+.setup-mark path {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  cursor: pointer;
+}
+
+.setup-mark.payoff path {
+  fill: var(--gold);
+}
+
+/* Drawn where it is, in the colour of something that does not count: hiding it
+   would make the row agree with the count and lie about the script. */
+.setup-mark.spent circle,
+.setup-mark.spent path {
+  stroke: var(--danger, #d06a5a);
+  stroke-dasharray: 2 2;
+}
+
+/* The dialog that plants one: which of the two it is, in the largest type. */
+.plant-kind {
+  display: flex;
+  gap: 8px;
+}
+
+.plant-choice {
+  flex: 1;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.plant-choice.on {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: var(--panel-2);
+}

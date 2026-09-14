@@ -54,6 +54,11 @@ interface ResearchWindowProps {
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   /** Move research into a window of its own, for a second monitor (§8). */
   onPopOut?(): void;
+  /**
+   * Go and look at a passage. Given by the workspace, where there is a script
+   * beside this to go to; absent in the popped-out window, which has none.
+   */
+  onGoToBeat?(beatId: BeatId): void;
 }
 
 /** What the side menu can be pointed at. */
@@ -112,6 +117,7 @@ export function ResearchWindow({
   onClose,
   onUpdate,
   onPopOut,
+  onGoToBeat,
 }: ResearchWindowProps) {
   const dialog = useModal(open);
   return (
@@ -124,6 +130,7 @@ export function ResearchWindow({
           onUpdate={onUpdate}
           {...(openOn ? { openOn } : {})}
           {...(onPopOut ? { onPopOut } : {})}
+          {...(onGoToBeat ? { onGoToBeat } : {})}
         />
       ) : null}
     </dialog>
@@ -141,11 +148,13 @@ export function ResearchBody({
   onClose,
   onUpdate,
   onPopOut,
+  onGoToBeat,
 }: {
   file: ProjectFile;
   currentBeatId: BeatId | null;
   /** Which view to land on. The report's "research not used" arrives here. */
   openOn?: ResearchView;
+  onGoToBeat?(beatId: BeatId): void;
   onClose(): void;
   onUpdate: ResearchWindowProps['onUpdate'];
   onPopOut?(): void;
@@ -653,7 +662,12 @@ export function ResearchBody({
             <Plots file={file} onUpdate={onUpdate} />
           ) : selection.kind === 'setups' ? (
             <div className="research-embedded">
-              <SetupsPanel file={file} currentBeatId={currentBeatId} onUpdate={onUpdate} />
+              <SetupsPanel
+                file={file}
+                currentBeatId={currentBeatId}
+                onUpdate={onUpdate}
+                {...(onGoToBeat ? { onGoTo: onGoToBeat } : {})}
+              />
             </div>
           ) : items.length === 0 ? (
             <p className="muted empty-state">
