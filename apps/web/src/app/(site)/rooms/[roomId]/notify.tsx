@@ -43,7 +43,7 @@ export function NotifyMe({ roomId, on }: { roomId: string; on: boolean }) {
           ? 'This room emails you when somebody names you, asks you for something, or decides on your work.'
           : 'This room does not email you. Everything it does is still waiting for you here.'}
       </p>
-      <button type="button" className="ghost" disabled={busy} onClick={() => change(!now)}>
+      <button type="button" className="button secondary small room-act" disabled={busy} onClick={() => change(!now)}>
         {now ? 'Stop emailing me about this room' : 'Email me about this room'}
       </button>
       {error ? <p className="small error">{error}</p> : null}

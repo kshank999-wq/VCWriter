@@ -58,7 +58,7 @@ export function Billing({
       {lapsed || needed ? <p className="small">{LAPSE_PROMISE}</p> : null}
 
       {yours ? (
-        <button type="button" className="ghost" disabled={busy} onClick={open}>
+        <button type="button" className="button secondary small room-act" disabled={busy} onClick={open}>
           {billing.subscriptionId
             ? 'Card, invoices and cancelling'
             : wanted > 0

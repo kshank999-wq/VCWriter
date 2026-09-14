@@ -1815,3 +1815,28 @@ p.room-stamp {
   flex-direction: column;
   gap: 4px;
 }
+
+/* A room control that sits among explanations rather than at the end of a form
+   (stages 13–15). The cards these live in alternate a sentence and a button —
+   *here is what it costs, here is where you change it* — so the button needs
+   air on both sides or it reads as part of the paragraph above it. */
+.room-act {
+  margin: 10px 0 14px;
+}
+
+/* Except in a row of controls, where the row's own gap is the spacing and a
+   margin on one item would shove it out of line with the others. */
+.spend-controls .room-act {
+  margin: 0;
+}
+
+/* The cap picker wears what the rest of the site's selects wear. A native grey
+   dropdown in the middle of a gold room says nobody looked at this one. */
+.spend-controls select {
+  padding: 9px 12px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}

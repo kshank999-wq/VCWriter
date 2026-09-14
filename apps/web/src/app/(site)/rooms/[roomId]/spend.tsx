@@ -114,7 +114,7 @@ export function Spend({
               </select>
             </label>
 
-            <button type="button" className="ghost" disabled={busy} onClick={() => change({ enabled: !on })}>
+            <button type="button" className="button secondary small room-act" disabled={busy} onClick={() => change({ enabled: !on })}>
               {on ? 'Turn AI off for this room' : 'Turn AI on for this room'}
             </button>
           </div>
