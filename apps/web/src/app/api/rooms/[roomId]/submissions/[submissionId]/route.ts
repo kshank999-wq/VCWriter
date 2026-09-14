@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { SUBMISSION_STATES, STATE_NAMES, canReview } from '@vcwriter/domain';
+import { SUBMISSION_STATES, STATE_NAMES, canReview, noticeForDecision } from '@vcwriter/domain';
 import { currentUser } from '@/lib/supabase';
 import { loadRoomById } from '@/lib/rooms';
 import { decideSubmission } from '@/lib/submissions';
+import { sendRoomNotice } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,6 +63,17 @@ export async function PATCH(
     }
     return NextResponse.json({ error: 'That is not yours to decide.' }, { status: 403 });
   }
+
+  // The one thing in the room a writer is genuinely waiting on, and the one
+  // they cannot find out by looking at their own draft (stage 14). The reply
+  // travels with it: a rejection whose reason is one click away is a rejection
+  // read without its reason. A showrunner deciding their own gets nothing.
+  const notice = noticeForDecision({
+    submission: decided,
+    seats: view.seats,
+    roomName: view.room.name || view.projectTitle || 'the room',
+  });
+  if (notice) await sendRoomNotice(notice);
 
   return NextResponse.json({ submission: decided });
 }

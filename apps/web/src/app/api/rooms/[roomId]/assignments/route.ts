@@ -14,6 +14,8 @@ import { currentUser } from '@/lib/supabase';
 import { loadRoomById } from '@/lib/rooms';
 import { assignmentsIn, makeAssignment } from '@/lib/assignments';
 import { projectDocument } from '@/lib/project-document';
+import { noticeForAssignment } from '@vcwriter/domain';
+import { sendRoomNotice } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -127,6 +129,17 @@ export async function POST(
     dueOn,
   });
   if ('reason' in made) return NextResponse.json({ error: made.message }, { status: 403 });
+
+  // Being given work is the clearest case of something addressed to you, and
+  // §14 names it in the same breath as mentions (stage 14). Nobody is mailed
+  // about work they gave themselves, and a send that fails never fails the
+  // assignment — it is already made and already on their page.
+  const notice = noticeForAssignment({
+    assignment: made,
+    seats: view.seats,
+    roomName: view.room.name || view.projectTitle || 'the room',
+  });
+  if (notice) await sendRoomNotice(notice);
 
   return NextResponse.json({ assignment: made });
 }

@@ -165,6 +165,19 @@ export const seatSchema = z.object({
   initials: z.string().default(''),
   colour: z.string().default(''),
   state: seatStateSchema.default('invited'),
+  /**
+   * Whether the room writes to them when somebody addresses them (stage 14).
+   *
+   * On the **seat** rather than on the person, because the question is *do I
+   * want mail from this room* — a writer on two shows wants the one that is
+   * shooting and not the one in development, and one switch for both would make
+   * them choose wrong.
+   *
+   * A boolean rather than a list of kinds to tick: email carries exactly one
+   * thing (`notify.ts` — what was addressed to you), so a panel of checkboxes
+   * would be a preference screen for a single item.
+   */
+  notifyByEmail: z.boolean().default(true),
   invitedAt: z.string(),
   acceptedAt: z.string().nullable().default(null),
   deactivatedAt: z.string().nullable().default(null),

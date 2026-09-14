@@ -1412,3 +1412,88 @@ therefore a real and offered setting, and is not the same as turning it off.
 The account rate limit every AI call already goes through is untouched and is
 not replaced: one is what this room will spend in a month, the other is what
 one person may ask for in a minute.
+
+
+## 22. Email notification (stage 14)
+
+`packages/domain/src/notify.ts`; `roomNotice` in `email-templates.ts` and
+`sendRoomNotice` in `email.ts`; migration 0044.
+
+§14 asks for *notifications in the Room, optionally by email*. The Room half
+has existed since stage 10 — `newsFor` and `activityIn`, both readings of
+records that already exist. This is the other half, and the whole design is one
+sentence:
+
+> **The room notifies; email interrupts — so email carries only what was
+> addressed to you.**
+
+Three things qualify: being **named** in a comment, being **asked** for
+something, and a **decision on your own submission**. Not a new version on
+somebody's branch, not a comment in a thread you happen to be in, not a merge.
+Those are all in the room and worth reading when you next look; none of them is
+worth a phone lighting up. The list is short on purpose — a digest of
+everything is a digest nobody reads after the second week, and the moment mail
+from this product becomes noise it stops working for the three things that
+actually matter.
+
+The clearest case of the line being drawn: **a reply in your thread is news in
+the room and is never an email.** `newsFor` counts it and should; a busy thread
+would send a writer twenty messages in an afternoon, and the second one is
+already being ignored. Being *named* is somebody asking you directly.
+
+### Four refusals
+
+- **Your own act never mails you.** Naming yourself, giving yourself work,
+  deciding your own submission.
+- **An invited seat gets the invitation and nothing else.** Somebody who has
+  not accepted cannot read the room, and mail about its work would be the one
+  way into it that does not go through RLS.
+- **A deactivated seat gets nothing.** Their contributions stay (§16); their
+  inbox is not part of the room any more.
+- **Speech travels; the work does not.** A comment goes out with what was said,
+  because a mention you must click to read one sentence wastes the click. A
+  scene, a beat and a draft never do — mail is not a place anybody agreed to
+  put the script. A `Notice` has four pieces of text and none of them can hold a
+  draft, which is the same structural guarantee stage 12 uses for the AI.
+
+### Still no notification table
+
+The third migration in this module to say so. A row per event is a second copy
+of something already written down, and a second copy drifts. What *is* recorded
+is that mail was sent — in `email_events`, which has done that since spec
+§12.3 — and that is a record of an act by this system rather than a second copy
+of the room's.
+
+### The switch is the seat holder's, and the showrunner cannot reach it
+
+`notify_by_email` sits on the **seat** rather than on the person, because the
+question is *do I want mail from this room*: a writer on two shows wants the
+one that is shooting and not the one in development, and one switch for both
+would make them choose wrong. It is a boolean rather than a list of kinds to
+tick, because email carries exactly one thing and a panel of checkboxes for a
+single item is a preference screen pretending to be a choice.
+
+§6 gives the showrunner what you are called and what colour you are drawn in.
+**It does not give them the ability to make your phone ring**, so this is the
+one field on a seat that its holder changes and its owner cannot. That needed
+0044's second policy and a trigger beside it, in the shape 0033 established:
+RLS answers *which rows* and the question here is *which column*, which it
+cannot answer — without the guard the policy would have been a route to any
+role a seat holder fancied. The route writes through the caller's own session
+rather than the service role, which is the opposite of every other seat change
+in the module and is the point: acting as the service role would step over both
+the policy and the guard.
+
+Proved live and rolled back: a writer silenced their own seat; the same update
+attempting `role = 'owner'` came back *Your own seat is yours to be quiet on,
+and nothing else* with the role still `writer`; and their attempt to silence
+somebody else's seat changed nothing.
+
+### A send failure never fails the act
+
+The comment is said, the assignment is made, the submission is decided — and
+the room already shows all three. Turning a database write into an error
+because Resend was down would lose the work to protect the notification. The
+same trade a purchase makes, for the same reason. A comment naming four people
+posts four notices through `Promise.allSettled`, so one bad address does not
+silence the other three.

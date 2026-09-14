@@ -1,8 +1,14 @@
 import { Resend } from 'resend';
-import type { Platform } from '@vcwriter/domain';
+import { WHY_THIS_ARRIVED, type Notice, type Platform } from '@vcwriter/domain';
 import { env } from './env';
 import { adminClient } from './supabase';
-import { licenseReminder, purchaseConfirmation, roomInvitation, type RenderedEmail } from './email-templates';
+import {
+  licenseReminder,
+  purchaseConfirmation,
+  roomInvitation,
+  roomNotice,
+  type RenderedEmail,
+} from './email-templates';
 
 /**
  * Transactional email (spec §12.3).
@@ -113,3 +119,40 @@ export const sendRoomInvitation = async (input: {
       expiresIn: input.expiresIn,
     }),
   });
+
+/**
+ * Tell somebody the room addressed them (addendum 07 §14, stage 14).
+ *
+ * **Who and what are `notify.ts`'s** — whether this seat may be written to, and
+ * the sentence. This only posts it, so the rules stay testable and there is one
+ * place that decides them.
+ *
+ * **A send failure never fails the act.** The comment is said, the assignment
+ * is made, the submission is decided; the room already shows all three, and
+ * turning a database write into an error because Resend was down would lose the
+ * work to protect the notification. Same trade as a purchase, for the same
+ * reason, and the failure is recorded in `email_events` either way.
+ */
+export const sendRoomNotice = async (notice: Notice): Promise<SendResult> =>
+  deliver({
+    to: notice.to.email,
+    userId: notice.to.userId,
+    email: roomNotice({
+      roomName: notice.subject,
+      subject: notice.subject,
+      line: notice.line,
+      said: notice.said,
+      roomUrl: `${env.siteUrl}${notice.path}`,
+      why: WHY_THIS_ARRIVED,
+    }),
+  });
+
+/**
+ * Post a batch of them without letting one failure stop the rest.
+ *
+ * A comment naming four people must not tell three of them because the fourth
+ * address bounced.
+ */
+export const sendRoomNotices = async (notices: readonly Notice[]): Promise<void> => {
+  await Promise.allSettled(notices.map((notice) => sendRoomNotice(notice)));
+};

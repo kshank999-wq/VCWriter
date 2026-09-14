@@ -9,6 +9,8 @@ import {
 import { currentUser } from '@/lib/supabase';
 import { loadRoomById } from '@/lib/rooms';
 import { commentsIn, markRead, sayInRoom } from '@/lib/comments';
+import { noticesForComment } from '@vcwriter/domain';
+import { sendRoomNotices } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -99,6 +101,19 @@ export async function POST(
 
   // Saying something is looking: nothing said before this is news to them now.
   await markRead(view.room.id, user.id);
+
+  // Being **named** is the one thing said in a room that is worth an
+  // interruption (stage 14). A reply in your thread is news in the room and
+  // never an email — a busy thread would send twenty in an afternoon, and the
+  // second one is already being ignored. `notify.ts` decides all of it; a send
+  // that fails never fails the comment, which is already said.
+  await sendRoomNotices(
+    noticesForComment({
+      comment: said,
+      seats: view.seats,
+      roomName: view.room.name || view.projectTitle || 'the room',
+    }),
+  );
 
   return NextResponse.json({ comment: said });
 }

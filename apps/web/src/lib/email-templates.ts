@@ -152,6 +152,21 @@ const primaryLink = (url: string, label: string): string => `
 const note = (text: string): string =>
   `<p style="margin:0;font-family:${BODY};font-size:14px;line-height:1.6;color:${MUTED}">${text}</p>`;
 
+/**
+ * Text that came from a person, going into HTML.
+ *
+ * Every other template here interpolates values this codebase generated — a
+ * serial, a platform name, a URL. A room notice (stage 14) carries what
+ * somebody *typed*, and a comment with a `<` in it would otherwise arrive as
+ * broken markup at best.
+ */
+const escapeHtml = (text: string): string =>
+  text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
 /** The one red element per screen: a diamond before an aside. */
 const diamond = `<span style="display:inline-block;width:8px;height:8px;background:${RED};border:1px solid ${GOLD};transform:rotate(45deg);margin:0 10px 1px 2px"></span>`;
 
@@ -279,3 +294,58 @@ export const roomInvitation = (input: RoomInvitationInput): RenderedEmail => {
     ].join('\n'),
   };
 };
+
+export interface RoomNoticeInput {
+  /** Which room, so an inbox with two shows in it can tell them apart. */
+  roomName: string;
+  subject: string;
+  /** The one sentence the room itself would show. */
+  line: string;
+  /** What was said, where speech is what happened. Empty otherwise. */
+  said: string;
+  roomUrl: string;
+  /** Why this arrived, and how to stop it. */
+  why: string;
+}
+
+/**
+ * Somebody in the room addressed you (addendum 07 §14, stage 14).
+ *
+ * **One template for all three** — being named, being asked for something, a
+ * decision on your own work — because they are one thing said three ways:
+ * *somebody addressed you, here is the sentence, here is the room*. Three
+ * near-identical templates would drift apart within a year, and the difference
+ * between them is a sentence the domain already wrote (`notify.ts`).
+ *
+ * **It carries no manuscript.** A quoted comment is speech about the work and
+ * travels; a scene, a beat and a draft do not. Mail is not a place anybody
+ * agreed to put the script.
+ */
+export const roomNotice = (input: RoomNoticeInput): RenderedEmail => ({
+  template: 'room_notice',
+  version: 1,
+  subject: input.subject,
+  html: shell(
+    input.roomName,
+    `<p style="margin:0 0 8px">${escapeHtml(input.line)}</p>
+     ${
+       input.said.trim().length > 0
+         ? `<blockquote style="margin:14px 0;padding:10px 16px;border-left:2px solid ${GOLD_DEEP};font-family:${BODY};font-size:15px;line-height:1.6;color:${TEXT}">${escapeHtml(input.said).replace(/\n/g, '<br>')}</blockquote>`
+         : ''
+     }
+     ${primaryLink(input.roomUrl, 'Open the room')}
+     ${note(`${diamond}${escapeHtml(input.why)}`)}`,
+  ),
+  text: [
+    'VC WRITER',
+    '',
+    input.line,
+    ...(input.said.trim().length > 0 ? ['', input.said] : []),
+    '',
+    `Open the room: ${input.roomUrl}`,
+    '',
+    input.why,
+    '',
+    'vc-writer.com',
+  ].join('\n'),
+});

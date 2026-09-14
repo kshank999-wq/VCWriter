@@ -51,6 +51,7 @@ import { Tray } from './tray';
 import { Talk, Trail, WhatIsNew } from './talk';
 import { Assist } from './assist';
 import { Spend } from './spend';
+import { NotifyMe } from './notify';
 import { standingFor } from '@/lib/room-spend';
 import { assistRefusalText } from '@vcwriter/domain';
 import { isAiConfigured } from '@/lib/ai-room';
@@ -264,6 +265,11 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
                 draft once they do.
               </p>
             )}
+
+            {/* Yours and nobody else's, including the showrunner's (stage 14):
+                §6 gives them what you are called, not the ability to make your
+                phone ring. */}
+            {you ? <NotifyMe roomId={view.room.id} on={you.notifyByEmail} /> : null}
           </article>
 
           <article className="card">

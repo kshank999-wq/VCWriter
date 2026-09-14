@@ -58,6 +58,7 @@ interface SeatRow {
   initials: string;
   colour: string;
   state: Seat['state'];
+  notify_by_email?: boolean;
   invited_at: string;
   accepted_at: string | null;
   deactivated_at: string | null;
@@ -89,6 +90,7 @@ const seatFromRow = (row: SeatRow): Seat =>
     initials: row.initials,
     colour: row.colour,
     state: row.state,
+    notifyByEmail: row.notify_by_email ?? true,
     invitedAt: row.invited_at,
     acceptedAt: row.accepted_at,
     deactivatedAt: row.deactivated_at,
