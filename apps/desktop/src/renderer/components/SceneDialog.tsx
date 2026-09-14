@@ -14,6 +14,9 @@ import {
   structuralUnitStatusSchema,
   timecode,
   TIMES,
+  sceneGridSchema,
+  setPolarity,
+  turnOf,
   updateUnit,
   type Beat,
   type BeatId,
@@ -21,8 +24,10 @@ import {
   type SceneHeading,
   type StructuralUnit,
   type StructuralUnitId,
+  type PolarityValue,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
+import { PolarityPair } from './PolarityGraph';
 
 interface SceneDialogProps {
   file: ProjectFile;
@@ -87,6 +92,8 @@ function SceneDialogBody({
   const prose = isProseFormat(file.project.format);
   const cast = sceneCast(file, unit.id);
   const promises = promisesIn(file, { unitId: unit.id });
+  // Read rather than stored: flat is start === end (addendum 13 §1).
+  const turn = turnOf(sceneGridSchema.parse(unit.grid ?? {}));
   const beats = beatsForUnit(file, unit.id);
   const pages = pagesForUnit(file, unit.id);
   const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
@@ -159,6 +166,23 @@ function SceneDialogBody({
         </aside>
 
         <div className="scene-dialog-main scene-dialog-middle">
+          {/* Where the scene begins and where it ends (addendum 13 §2). Here
+              because this is the scene's own screen, and because a control a
+              writer has to go and find is a control they set once. Whether it
+              is flat follows from the pair; there is nothing to answer. */}
+          <div className="scene-polarity">
+            <PolarityPair
+              start={(unit.grid?.polarityStart ?? '') as PolarityValue}
+              end={(unit.grid?.polarityEnd ?? '') as PolarityValue}
+              onChange={(patch) => onUpdate((current) => setPolarity(current, unit.id, patch))}
+            />
+            {turn.said ? (
+              <span className={turn.flat ? 'polarity-flat-chip' : 'muted small'}>
+                {turn.flat ? 'Flat — it ends where it started' : `Turns ${turn.direction === 1 ? 'up' : 'down'}`}
+              </span>
+            ) : null}
+          </div>
+
           <div className="field-row">
             <label className="field">
               Status

@@ -42,6 +42,7 @@ export type CommandId =
   | 'editor.final'
   | 'editor.storyGrid'
   | 'editor.index'
+  | 'editor.polarity'
   | 'editor.readBack'
   | 'editor.reformat'
   // Reports
@@ -148,6 +149,9 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       { command: 'editor.daily', label: 'Daily editor' },
       { command: 'editor.final', label: 'Final editor' },
       { command: 'editor.storyGrid', label: 'Story Grid' },
+      // Where each scene begins and ends (addendum 13). Every format has
+      // scenes that turn, so this one is not gated.
+      { command: 'editor.polarity', label: 'Scene polarity' },
       // A book's index (addendum 10 §7), and only a book's: a stack of scripts
       // each numbering from its own page one has no single page for an entry
       // to point at, so the item is absent rather than greyed.

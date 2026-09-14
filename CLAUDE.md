@@ -542,6 +542,33 @@ push live; the build takes a minute or two.
   *meets* a motif and *understands* a theme, so nine marks mean different things
   on each row and combining them would average the two into nothing — squares for
   a theme, rings for a motif, each group foldable whole. Migration 0047.
+  `addendum-13-scene-polarity.md` is Scene Polarity & Scene Purpose, from Ken's
+  own dev spec. **Built.** An overlapping feature existed and was close enough
+  to feel done — the Story Grid's polarity column and purpose line — and §1 says
+  why the difference matters: that column was **one word the writer picks**, so
+  a scene could be marked *up* while beginning and ending in exactly the same
+  place, and nothing could catch it. **Flat is worked out and nobody says it**:
+  `turnOf` reads `start === end`, and there is deliberately no *changed / flat*
+  control anywhere, because that is not a question a writer gets to answer. Both
+  values start empty because **a scene nobody has read is not a neutral scene**,
+  and **the label is the truth while the number is only for drawing** — storing
+  `+2` would let the word and the figure drift and would invite arithmetic
+  nobody asked for. §2 is the tidy part: `movementOf` makes the Story Grid's
+  single word **a reading wherever the pair is given**, falling back to the
+  stored word where it is not, so the grid's column, filters and value graph
+  improved untouched and an older project keeps the work somebody did. The graph
+  (Editor ▸ Scene polarity, and the fourth Editors tab, every format) is
+  **neutral-centred** with each scene's start joined to its end, so what you see
+  is the *turn*, and the ends joined scene to scene so the handover is visible
+  too. **An unread scene is drawn as a gap rather than skipped** — a graph that
+  dropped them would draw a continuous story and lie about how much has been
+  looked at — and the whole column is the click target, since a scene with
+  nothing on it is the one you most want to click. A flat scene gets a red ring
+  and a **prompt, never a verdict**. Purposes are **six tags, several true at
+  once**, and an untagged scene reads *Purpose not defined. Nothing follows from
+  that on its own*. The pair control also sits in the scene's own dialog, which
+  is §2's *visible while working inside the scene*. No migration — four more
+  fields on the scene grid.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

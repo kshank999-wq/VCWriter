@@ -58,7 +58,14 @@ describe('the Story Grid tab', () => {
     bridge();
     render(<Harness />);
     const tabs = within(screen.getByRole('tablist', { name: 'Editor' })).getAllByRole('tab');
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Daily (0)', 'Final (2)', 'Story Grid (0/0)']);
+    // Scene polarity joined the page (addendum 13); the index is a book's only,
+    // and this fixture is a screenplay.
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      'Daily (0)',
+      'Final (2)',
+      'Story Grid (0/0)',
+      'Polarity (0 flat)',
+    ]);
     expect(tabs[2]?.getAttribute('aria-selected')).toBe('true');
   });
 

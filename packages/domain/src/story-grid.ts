@@ -6,6 +6,7 @@ import { placedMarkerForUnit, placedMarkers } from './markers.js';
 import { setSceneGrid } from './mutations.js';
 import { reviewScenes } from './editor-final.js';
 import { sceneHeadingOf } from './scene-heading.js';
+import { movementOf } from './polarity.js';
 import { sceneGridSchema } from './entities/structure.js';
 import type { SceneRead } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
@@ -543,7 +544,10 @@ export const storyGridRows = (file: ProjectFile): GridRow[] => {
       event: grid.event,
       suggestedEvent: scene.aiVerdict?.change ?? '',
       value: grid.value,
-      polarity: grid.polarity,
+      // The pair decides where it has been given (addendum 13 §1): a scene
+      // cannot say two things about its own movement, and the word is what a
+      // writer chose while the pair is what the scene does.
+      polarity: movementOf(grid),
       commandments: commandmentsOfScene(grid),
       suggested: commandmentsOfRead(scene.aiVerdict),
       read: scene.aiVerdict !== null,

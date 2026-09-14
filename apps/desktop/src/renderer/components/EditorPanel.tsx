@@ -7,6 +7,7 @@ import {
   findUnit,
   groupFindings,
   hasBookIndex,
+  polarityGraph,
   isProseFormat,
   gridFromRead,
   runDailyEditor,
@@ -27,6 +28,7 @@ import {
   type StructuralUnitId,
 } from '@vcwriter/domain';
 import { IndexPanel } from './IndexPanel';
+import { PolarityGraph } from './PolarityGraph';
 import { StoryGridPanel } from './StoryGridPanel';
 
 interface EditorPanelProps {
@@ -56,7 +58,7 @@ interface EditorPanelProps {
  * with the same gate the module has everywhere: a screenplay has no index, so
  * the tab is absent rather than empty.
  */
-type Tab = 'daily' | 'final' | 'grid' | 'index';
+type Tab = 'daily' | 'final' | 'grid' | 'index' | 'polarity';
 
 /**
  * When a read was made, and by what.
@@ -100,6 +102,8 @@ export function EditorPanel({
   // and opening a screenplay would otherwise leave the Index showing.
   const [tab, setTab] = useState<Tab>(openOn ?? 'daily');
   const openTab: Tab = tab === 'index' && !indexed ? 'daily' : tab;
+  // Every scene's turn, for the count on the tab (addendum 13 §3).
+  const polarity = useMemo(() => polarityGraph(file), [file]);
 
   // The Editor menu names an editor; choosing it opens that one.
   useEffect(() => {
@@ -236,6 +240,17 @@ export function EditorPanel({
             onClick={() => setTab('grid')}
           >
             Story Grid ({grid.keptObligatory + grid.keptConventions}/{grid.promises.length})
+          </button>
+          {/* Where each scene begins and ends (addendum 13). The count is the
+              one number worth showing: how many are flat. */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={openTab === 'polarity'}
+            className={openTab === 'polarity' ? 'tab selected' : 'tab'}
+            onClick={() => setTab('polarity')}
+          >
+            Polarity ({polarity.flat} flat)
           </button>
           {/* A book's index, and only a book's (addendum 10 §2). */}
           {indexed ? (
@@ -447,6 +462,8 @@ export function EditorPanel({
           ) : null}
           <StoryGridPanel file={file} onUpdate={onUpdate} {...(onGoToUnit ? { onGoToUnit } : {})} />
         </>
+      ) : openTab === 'polarity' ? (
+        <PolarityGraph file={file} onUpdate={onUpdate} {...(onGoToUnit ? { onGoToUnit } : {})} />
       ) : openTab === 'index' ? (
         <IndexPanel file={file} onUpdate={onUpdate} {...(onGoTo ? { onGoTo } : {})} />
       ) : (

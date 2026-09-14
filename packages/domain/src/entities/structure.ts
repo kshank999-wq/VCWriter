@@ -90,8 +90,36 @@ export type StructuralUnitStatus = z.infer<typeof structuralUnitStatusSchema>;
 export const sceneGridSchema = z.object({
   /** What is at stake: "trust / betrayal", "life / death", "hope / despair". */
   value: z.string().default(''),
-  /** Which way it moves by the end. Empty means nobody has said. */
+  /**
+   * Which way it moves by the end. Empty means nobody has said.
+   *
+   * **Now a reading wherever the pair below is given** (addendum 13 §1):
+   * `movementOf` prefers the start/end pair and falls back to this word, so a
+   * scene cannot say two things about its own movement. Kept stored because a
+   * project answered the Story Grid's way before the pair existed still has
+   * work here worth keeping.
+   */
   polarity: z.enum(['up', 'down', 'mixed', 'flat', '']).default(''),
+  /**
+   * Where the scene begins and where it ends, on the five-point scale
+   * (addendum 13). Empty means nobody has said — a scene nobody has read is not
+   * a neutral scene.
+   *
+   * **Flat is derived from these and never chosen.** That is the whole reason
+   * they exist: the word above could be set to *up* on a scene that begins and
+   * ends in exactly the same place, and the pair cannot lie that way.
+   */
+  polarityStart: z.enum(['', 'double_negative', 'negative', 'neutral', 'positive', 'double_positive']).default(''),
+  polarityEnd: z.enum(['', 'double_negative', 'negative', 'neutral', 'positive', 'double_positive']).default(''),
+  /**
+   * What the scene is for (addendum 13 §2). Analytical tags rather than
+   * categories, so several may be true at once — a scene that reveals character
+   * while creating tension is doing both, and a control that made a writer pick
+   * would teach them something false about their own scene.
+   */
+  purposes: z.array(z.string()).default([]),
+  /** The writer's own, where `other` is among them. */
+  otherPurpose: z.string().default(''),
   /** Where it turns. Empty on a scene that does not. */
   turn: z.string().default(''),
   /** Why this scene is in the script. */

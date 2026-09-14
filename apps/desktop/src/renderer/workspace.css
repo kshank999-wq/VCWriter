@@ -11172,3 +11172,218 @@ dialog.chapter-page-dialog {
   stroke: var(--gold);
   stroke-width: 1.5;
 }
+
+/* -------------------------------------- scene polarity (addendum 13 §3) */
+/* An axis with neutral through the middle, and a stroke per scene from where
+   it begins to where it ends — so the thing you see is the turn. */
+
+.polarity {
+  padding: 14px 18px 32px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-content: start;
+}
+
+.polarity-head {
+  display: grid;
+  gap: 3px;
+}
+
+.polarity-head h3 {
+  margin: 0;
+}
+
+.polarity-chart {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.polarity-axis {
+  padding-top: 4px;
+  flex: none;
+}
+
+.polarity-row-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.polarity-scroll {
+  overflow-x: auto;
+  min-width: 0;
+  flex: 1;
+}
+
+.polarity-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+/* Neutral is the line the story is measured against, so it reads as one. */
+.polarity-grid.neutral {
+  stroke: var(--muted);
+  stroke-dasharray: none;
+}
+
+.polarity-between {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.polarity-turn {
+  stroke: var(--gold);
+  stroke-width: 2;
+}
+
+.polarity-start {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 1.5;
+}
+
+.polarity-end {
+  fill: var(--gold);
+}
+
+.polarity-scene {
+  cursor: pointer;
+}
+
+/* Marked, never condemned: a ring, not a colour of shame. */
+.polarity-scene.flat .polarity-turn {
+  stroke: var(--muted);
+}
+
+.polarity-scene.flat .polarity-end {
+  fill: none;
+  stroke: var(--danger, #d06a5a);
+  stroke-width: 2;
+}
+
+.polarity-scene.open .polarity-turn {
+  stroke-width: 3;
+}
+
+.polarity-number {
+  fill: var(--muted);
+  font-size: 10px;
+}
+
+.polarity-gap {
+  fill: var(--muted);
+  font-size: 16px;
+}
+
+.polarity-pair {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.polarity-pair .field {
+  display: grid;
+  gap: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.polarity-pair select {
+  font-size: 12.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 4px 8px;
+  background: var(--ink);
+}
+
+.polarity-arrow {
+  color: var(--muted);
+  padding-bottom: 6px;
+}
+
+.polarity-scene-detail {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+  max-width: 720px;
+}
+
+.polarity-scene-detail header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.polarity-scene-detail h4,
+.polarity-scene-detail h5 {
+  margin: 0;
+  flex: 1;
+}
+
+.polarity-purposes {
+  display: grid;
+  gap: 4px;
+}
+
+.polarity-flat-note {
+  margin: 0;
+  color: var(--danger, #d06a5a);
+  font-size: 12px;
+}
+
+.polarity-flat-chip {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--danger, #d06a5a);
+}
+
+.polarity-flat-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.polarity-flat-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.scene-polarity {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* The whole column is the target: a scene with nothing drawn on it is the one
+   a writer most wants to click, and a dot is not something anybody can hit. */
+.polarity-hit {
+  fill: transparent;
+}
+
+.polarity-scene:hover .polarity-hit,
+.polarity-scene.open .polarity-hit {
+  fill: color-mix(in srgb, var(--gold) 8%, transparent);
+}
