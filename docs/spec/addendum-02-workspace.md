@@ -975,6 +975,97 @@ scene in story order, or goes with the last scene if there is none.
 Markers are stored in the project file (`markers[]`) and synced like any
 other structural record (`story_markers`).
 
+## 12a. The chapter page, and how the book sets it
+
+Built September 2026, from Ken's ask: *under Title page you'll have Chapter
+page — this will help you build a chapter page. You can add an illustration,
+name the chapter, put in some text or whatever you want. And the chapter number
+will be taken from the next chapter, but it allows you to stylize the text.*
+
+Most of what he described existed. §12's chapter leaf already carried a number,
+a name, an epigraph and an illustration, and the number was already worked out
+rather than typed. Two things were missing, and they are what this section is:
+**a way in from File**, and **any control at all over how the type looks**.
+
+### The way in
+
+**File ▸ Chapter page…**, directly under **Title page…**, and absent in a
+format that prints no such leaf.
+
+It belongs there because a chapter leaf is the same kind of object as a title
+page: *a page of the book that is not a page of the manuscript*. Nothing on it
+is writing the writer is writing, which is why neither belongs on the writing
+screen.
+
+Until now the only way to reach one was to find its marker on the timeline and
+click it. That is a fine way to touch up the chapter you happen to be looking
+at and a poor way to design the leaf your book opens all its chapters with — and
+a writer who had read that the feature existed had no way to find it.
+
+### The split that shapes the screen
+
+| | Whose it is | Where it lives |
+| --- | --- | --- |
+| Face, sizes, case, weight, tracking, the rule, how far down the page | **The book's** | `settings.chapterPageStyle` |
+| Name, epigraph, illustration, what shows, alignment | **The chapter's** | the marker's `page` |
+| The number | **Neither — it is worked out** | nowhere |
+
+**One look for the whole book.** A reader who turns to chapter nine and finds
+its heading in a different face has found a mistake rather than a design, so
+there is deliberately nowhere to style one chapter page on its own. This is the
+same rule §12's numbering has followed since it was built — *a book whose
+chapters are numbered three different ways is not a book* — and it is the same
+rule for the same reason.
+
+**The number is worked out from where the chapter falls**, so moving chapter
+nine makes it chapter eight and the leaf it opens with says so with nothing run.
+There is no field for it here or anywhere else. The chapter list down the left
+shows the number each one would print, which is how a writer can see it is being
+derived rather than remembered, and a line under the controls says so in words —
+because somebody looking for the box to type a number in should find out rather
+than hunt.
+
+### What can be set
+
+Face (the manuscript's, serif, sans), and for each of the three lines — the
+number, the name, the lines under it — size in points, case, bold, italic and
+tracking. Plus a rule under the heading, and how far down the page the block
+sits.
+
+**Case is a real typographic setting rather than a change to the letters.**
+*Small caps* is `font-variant-caps`, not upper-cased text: a heading whose
+characters have been changed can never be set any other way again, and the
+writer typed *The Drowned Bell*, not *THE DROWNED BELL*.
+
+### One reading, three places
+
+`chapterStyleVars` in `packages/domain/src/chapter-style.ts` turns the style
+into CSS custom properties, and **it is the only thing that decides what they
+mean**. The printed document carries them as an inline style, the on-screen
+preview declares them on the leaf, and the dialog's own sheet is the same
+`ChapterLeaf` component the preview draws — so the stylesheets on both sides
+name no sizes, faces or cases of their own.
+
+A preview exists to answer *what will this look like*. One that worked the type
+out its own way would be answering a different question. The marker dialog had
+its own hand-rolled copy of the leaf's markup; it now draws `ChapterLeaf` too,
+because a second copy was a second answer.
+
+### Everything here saves as you type
+
+Deliberately unlike the title page, which does not. A title page is the front of
+a thing that goes out to people, and trying a credit line on for size should not
+be the same act as changing it. A chapter leaf is a look being tuned against the
+sheet beside it, and a page that only updated on a button press would make that
+impossible to judge.
+
+### One bulk act
+
+**Give every chapter a page**, and **None of them**. A book has thirty chapters
+and a writer who has decided it opens each one with a leaf should not have to
+say so thirty times. Nothing else about a page is touched, so a chapter that
+already had a name and an epigraph keeps them.
+
 ## 13. The menu bar
 
 A desktop application has menus. The workspace has grown enough controls that

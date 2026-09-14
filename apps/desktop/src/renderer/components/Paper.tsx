@@ -1,4 +1,15 @@
-import { runsText, type ChapterPageContent, type ContentsPage, type IndexHeading, type IndexPage, type InlineSpan, type Page } from '@vcwriter/domain';
+import {
+  chapterPageStyleSchema,
+  chapterStyleVars,
+  runsText,
+  type ChapterPageContent,
+  type ChapterPageStyle,
+  type ContentsPage,
+  type IndexHeading,
+  type IndexPage,
+  type InlineSpan,
+  type Page,
+} from '@vcwriter/domain';
 import { TitleSheet } from './TitleSheet';
 
 /**
@@ -6,7 +17,20 @@ import { TitleSheet } from './TitleSheet';
  * the viewport's Page view; the pages come from the domain's paginator, so
  * what is drawn here is exactly what prints.
  */
-export function Paper({ pages, empty = 'Nothing written yet.' }: { pages: Page[]; empty?: string }) {
+export function Paper({
+  pages,
+  chapterStyle,
+  empty = 'Nothing written yet.',
+}: {
+  pages: Page[];
+  /**
+   * How the book sets its chapter pages (addendum 02 §12a). Given, the leaves
+   * are drawn in it; left out, they are drawn as a book that has never been
+   * styled — which is what the printed document does with the same absence.
+   */
+  chapterStyle?: ChapterPageStyle;
+  empty?: string;
+}) {
   return (
     <div className="pages">
       {pages.map((page, sheet) => (
@@ -37,7 +61,7 @@ export function Paper({ pages, empty = 'Nothing written yet.' }: { pages: Page[]
           ) : page.titlePage ? (
             <TitleSheet page={page.titlePage} />
           ) : page.chapter ? (
-            <ChapterLeaf chapter={page.chapter} />
+            <ChapterLeaf chapter={page.chapter} style={chapterStyle} />
           ) : (
             page.lines.map((line, index) => (
               <div
@@ -179,11 +203,25 @@ function IndexLeaf({ index }: { index: IndexPage }) {
  * print stylesheet draws it: the block a third of the way down the page,
  * with whatever the writer left switched on.
  */
-function ChapterLeaf({ chapter }: { chapter: ChapterPageContent }) {
+export function ChapterLeaf({
+  chapter,
+  style,
+}: {
+  chapter: ChapterPageContent;
+  style?: ChapterPageStyle;
+}) {
+  // The same custom properties the printed page carries, from the same
+  // function — which is the whole of why the preview can be believed.
+  const type = chapterStyleVars(style ?? chapterPageStyleSchema.parse({})) as React.CSSProperties;
+  const head = chapter.label.length > 0 || chapter.title.length > 0;
   return (
-    <div className="chapter-leaf-block" style={{ textAlign: chapter.align }}>
-      {chapter.label.length > 0 ? <p className="chapter-leaf-label">{chapter.label}</p> : null}
-      {chapter.title.length > 0 ? <p className="chapter-leaf-title">{chapter.title}</p> : null}
+    <div className="chapter-leaf-block" style={{ textAlign: chapter.align, ...type }}>
+      {head ? (
+        <div className="chapter-leaf-head">
+          {chapter.label.length > 0 ? <p className="chapter-leaf-label">{chapter.label}</p> : null}
+          {chapter.title.length > 0 ? <p className="chapter-leaf-title">{chapter.title}</p> : null}
+        </div>
+      ) : null}
       {chapter.image ? (
         <img
           className="chapter-leaf-device"

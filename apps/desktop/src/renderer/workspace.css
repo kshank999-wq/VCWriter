@@ -3564,6 +3564,11 @@ dialog.marker-dialog {
   overflow-y: auto;
 }
 
+.chapter-leaf-sheet .chapter-leaf-block {
+  /* The sheet is drawn a few inches high, so the drop is a share of it. */
+  padding-top: var(--chapter-drop-ratio, 22.7%);
+}
+
 .chapter-leaf-sheet {
   aspect-ratio: 8.5 / 11;
   background: var(--panel-2);
@@ -3585,19 +3590,40 @@ dialog.marker-dialog {
 }
 
 .chapter-leaf-block {
-  padding-top: 2.5in;
+  padding-top: var(--chapter-drop, 2.5in);
+  font-family: var(--chapter-face, inherit);
 }
 
+.chapter-leaf-head {
+  display: inline-block;
+  border-bottom: var(--chapter-rule, none);
+  padding-bottom: 0.35em;
+}
+
+/* Nothing below names a size, a face or a case. They are the book's, and
+   `chapterStyleVars` in the domain is the one place that says what these
+   custom properties mean — the same ones the printed document carries, so
+   what is on this sheet is what comes off the printer. */
 .chapter-leaf-label,
 .chapter-leaf-sheet .chapter-leaf-label {
   margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
+  font-size: var(--chapter-number-size, 12pt);
+  font-weight: var(--chapter-number-weight, 400);
+  font-style: var(--chapter-number-style, normal);
+  text-transform: var(--chapter-number-case, uppercase);
+  font-variant-caps: var(--chapter-number-variant, normal);
+  letter-spacing: var(--chapter-number-tracking, 0.2em);
 }
 
 .chapter-leaf-title,
 .chapter-leaf-sheet .chapter-leaf-title {
   margin: 1.5em 0 0;
+  font-size: var(--chapter-title-size, inherit);
+  font-weight: var(--chapter-title-weight, 400);
+  font-style: var(--chapter-title-style, normal);
+  text-transform: var(--chapter-title-case, none);
+  font-variant-caps: var(--chapter-title-variant, normal);
+  letter-spacing: var(--chapter-title-tracking, 0);
 }
 
 .chapter-leaf-device {
@@ -3609,7 +3635,12 @@ dialog.marker-dialog {
 .chapter-leaf-epigraph {
   margin: 2.5em 0 0;
   white-space: pre-wrap;
-  font-style: italic;
+  font-size: var(--chapter-epigraph-size, inherit);
+  font-weight: var(--chapter-epigraph-weight, 400);
+  font-style: var(--chapter-epigraph-style, italic);
+  text-transform: var(--chapter-epigraph-case, none);
+  font-variant-caps: var(--chapter-epigraph-variant, normal);
+  letter-spacing: var(--chapter-epigraph-tracking, 0);
 }
 
 /* --------------------------------------------------- the writer's own page */
@@ -10588,4 +10619,208 @@ dialog.projects-dialog {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ------------------------------------- the chapter page (addendum 02 §12a) */
+/* Three columns: which chapter, what it says and how the book is set, and the
+   sheet. The sheet is on the right because that is what everything else is in
+   service of. */
+
+/* The element selector, as the other wide dialogs use, or `dialog.lane-dialog`
+   beats it on specificity and the three columns land in 640px. */
+dialog.chapter-page-dialog {
+  width: min(1180px, calc(100vw - 40px));
+}
+
+.chapter-page-body {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: start;
+  max-height: 70vh;
+  padding: 14px 16px 18px;
+}
+
+.chapter-page-list {
+  border-right: 1px solid var(--border);
+  padding-right: 12px;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+.chapter-page-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.chapter-page-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chapter-page-pick {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  text-align: left;
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.chapter-page-pick:hover,
+.chapter-page-pick:focus-visible {
+  background: var(--panel-2);
+}
+
+.chapter-page-pick.on {
+  background: var(--panel-2);
+  color: var(--gold);
+}
+
+.chapter-page-number {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.chapter-page-pick.on .chapter-page-number {
+  color: var(--gold);
+}
+
+.chapter-page-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A chapter that opens with a leaf, said with a dot rather than a word: the
+   list is scanned rather than read. */
+.chapter-page-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex: none;
+}
+
+.chapter-page-form {
+  overflow-y: auto;
+  max-height: 70vh;
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  padding-right: 6px;
+}
+
+.chapter-page-form section {
+  display: grid;
+  gap: 8px;
+}
+
+.chapter-page-form h3 {
+  margin: 0;
+}
+
+.chapter-page-form .field {
+  display: grid;
+  gap: 4px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.chapter-page-form .field input,
+.chapter-page-form .field select,
+.chapter-page-form .field textarea {
+  font-size: 12.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 5px 8px;
+  width: 100%;
+  background: var(--ink);
+}
+
+.chapter-page-shows {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.chapter-page-art {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.chapter-page-art .field {
+  width: 100%;
+}
+
+/* One line of type, and the controls it needs on one row: the three things
+   that change how a heading reads, side by side, so the effect of each is
+   visible against the sheet without hunting. */
+.chapter-line-style {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+
+.chapter-line-label {
+  flex: 1 0 100%;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.chapter-line-control {
+  display: grid;
+  gap: 2px;
+}
+
+.chapter-line-control input[type='number'] {
+  width: 60px;
+}
+
+.chapter-line-control input,
+.chapter-line-control select {
+  font-size: 12.5px;
+  padding: 4px 6px;
+  background: var(--ink);
+}
+
+.chapter-line-mark {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.chapter-line-mark.on {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.chapter-page-preview {
+  border-left: 1px solid var(--border);
+  padding-left: 14px;
+  position: sticky;
+  top: 0;
 }

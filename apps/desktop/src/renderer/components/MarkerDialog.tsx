@@ -3,6 +3,7 @@ import {
   MARKER_NUMBERINGS,
   MAX_CHAPTER_IMAGE_BYTES,
   chapterPageContent,
+  chapterPageStyleOf,
   hasChapterPages,
   markerNumbering,
   placedMarkers,
@@ -15,6 +16,7 @@ import {
   type StoryMarkerKind,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
+import { ChapterLeaf } from './Paper';
 
 interface MarkerDialogProps {
   file: ProjectFile;
@@ -295,23 +297,12 @@ function Body({
 
         {leaves ? (
           <aside className="marker-page-preview" aria-label="The page">
-            <div className="chapter-leaf-sheet" style={{ textAlign: preview.align }}>
+            {/* The same component the preview and the printed page draw, in
+                the book's own type — a second copy of this markup was a second
+                answer to *what will it look like*. */}
+            <div className="chapter-leaf-sheet">
               {marker.page.include ? (
-                <>
-                  {preview.label.length > 0 ? <p className="chapter-leaf-label">{preview.label}</p> : null}
-                  {preview.title.length > 0 ? <p className="chapter-leaf-title">{preview.title}</p> : null}
-                  {preview.image ? (
-                    <img
-                      className="chapter-leaf-device"
-                      src={preview.image.dataUrl}
-                      alt={preview.image.name}
-                      style={{ width: `${preview.image.width}%` }}
-                    />
-                  ) : null}
-                  {preview.epigraph.trim().length > 0 ? (
-                    <p className="chapter-leaf-epigraph">{preview.epigraph}</p>
-                  ) : null}
-                </>
+                <ChapterLeaf chapter={preview} style={chapterPageStyleOf(file)} />
               ) : (
                 <p className="muted">This chapter runs straight on from the last one.</p>
               )}

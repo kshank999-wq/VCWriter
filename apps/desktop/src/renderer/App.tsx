@@ -51,6 +51,7 @@ import { ResearchWindow } from './components/ResearchWindow';
 import { SculptorWindow } from './components/SculptorWindow';
 import { OutlinerWindow } from './components/OutlinerWindow';
 import { BeatDialog } from './components/BeatDialog';
+import { ChapterPageDialog } from './components/ChapterPageDialog';
 import { MarkerDialog } from './components/MarkerDialog';
 import { PageBar, type View } from './components/PageBar';
 import { PagePreview } from './components/PagePreview';
@@ -163,6 +164,7 @@ export default function App() {
   const [startingNew, setStartingNew] = useState(false);
   /** The title page's own screen: a page of the document, off the File menu. */
   const [titlePageOpen, setTitlePageOpen] = useState(false);
+  const [chapterPageOpen, setChapterPageOpen] = useState(false);
   /** Whose page it is: an episode's, or — null — the project's own. */
   const [titlePageEpisode, setTitlePageEpisode] = useState<Episode | null>(null);
   /** Set when something sent the writer to research to look at one thing. */
@@ -541,6 +543,8 @@ export default function App() {
         case 'file.titlePage':
           setTitlePageEpisode(null);
           return setTitlePageOpen(true);
+        case 'file.chapterPage':
+          return setChapterPageOpen(true);
         case 'file.pageSetup':
           return setPageSetupOpen(true);
         case 'file.print':
@@ -1211,6 +1215,13 @@ export default function App() {
         open={titlePageOpen}
         episode={titlePageEpisode}
         onClose={() => setTitlePageOpen(false)}
+        onUpdate={project.update}
+      />
+
+      <ChapterPageDialog
+        file={file}
+        open={chapterPageOpen}
+        onClose={() => setChapterPageOpen(false)}
         onUpdate={project.update}
       />
 

@@ -34,7 +34,30 @@ push live; the build takes a minute or two.
   performance) and fix what they raise, because they catch what the SQL
   reads like it does. Applied through 0046.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
-  describes the workspace as built. Keep it current with the code.
+  describes the workspace as built. Keep it current with the code. Its **§12a**
+  is the **chapter page** as Ken asked for it — *File ▸ Chapter page…*, under
+  *Title page…*, because a chapter leaf is the same kind of object: a page of
+  the book that is not a page of the manuscript. Most of what he described
+  already existed (§12's leaf carried a number, a name, an epigraph and an
+  illustration, and the number was already derived); what was missing was a way
+  in from File and any control over the type. The split that shapes it is that
+  **the look belongs to the book and the words belong to the chapter** — face,
+  sizes, case, weight, tracking, the rule and the drop are set once in
+  `settings.chapterPageStyle`, because a reader who turns to chapter nine and
+  finds its heading in another face has found a mistake rather than a design,
+  which is §12's numbering rule pointed at the type. **The number is neither and
+  there is nowhere to type it**: it is worked out from where the chapter falls,
+  so moving chapter nine makes it chapter eight with nothing run, the list down
+  the left shows the number each would print, and a line under the controls says
+  so in words. `chapterStyleVars` in `packages/domain/src/chapter-style.ts` is
+  the **one** thing that decides what the CSS custom properties mean — the
+  printed document carries them inline, the preview declares them on the leaf,
+  and the dialog's sheet is the same `ChapterLeaf` the preview draws, so neither
+  stylesheet names a size of its own. The marker dialog's hand-rolled copy of
+  that markup is gone: a second copy was a second answer to *what will it look
+  like*. Case is a real setting rather than a change to the letters (*small
+  caps* is `font-variant-caps`), and unlike the title page everything here saves
+  as you type, because a look is tuned against the sheet beside it.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
   1–7 (the board and its two nodes, the structure column, the layout rule
   with scenes, beats, the columns the writer defines, binding a node to a real

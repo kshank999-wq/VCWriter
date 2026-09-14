@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Paper } from './Paper';
 import {
+  chapterPageStyleOf,
   hasBookIndex,
   hasChapterPages,
   paginateProject,
@@ -180,7 +181,7 @@ export function PagePreview({
 
       {message ? <p className="notice preview-message">{message}</p> : null}
 
-      <Paper pages={pages} />
+      <Paper pages={pages} chapterStyle={chapterPageStyleOf(file)} />
     </div>
   );
 }

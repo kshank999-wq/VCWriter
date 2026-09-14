@@ -156,6 +156,16 @@ export const projectSettingsSchema = z.object({
    * wants when the script is titled one thing and the file another.
    */
   titlePage: titlePageSchema.default({}),
+  /**
+   * How the chapter pages are set (addendum 02 §12a). Kept loose here so the
+   * typography lives with `chapter-style.ts` rather than with the settings,
+   * the way `storyGrid` and `episodeCarry` do.
+   *
+   * It is the **book's**, not the chapter's, for the reason the numbering is:
+   * a reader who turns to chapter nine and finds its heading in another face
+   * has found a mistake rather than a design.
+   */
+  chapterPageStyle: z.record(z.unknown()).default({}),
 });
 export type ProjectSettings = z.infer<typeof projectSettingsSchema>;
 

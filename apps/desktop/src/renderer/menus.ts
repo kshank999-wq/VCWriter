@@ -13,7 +13,7 @@
  * that is all it should ever know.
  */
 
-import { hasBookIndex, type ProjectFormat } from '@vcwriter/domain';
+import { hasBookIndex, hasChapterPages, type ProjectFormat } from '@vcwriter/domain';
 import { paneNamesFor } from './panes';
 
 export type CommandId =
@@ -26,6 +26,7 @@ export type CommandId =
   | 'file.save'
   | 'file.saveAs'
   | 'file.titlePage'
+  | 'file.chapterPage'
   | 'file.pageSetup'
   | 'file.print'
   | 'file.exportPdf'
@@ -108,6 +109,13 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       { command: 'file.saveAs', label: 'Save a copy…', accelerator: 'CmdOrCtrl+Shift+S' },
       null,
       { command: 'file.titlePage', label: 'Title page…' },
+      // The leaf a chapter opens with (addendum 02 §12a). Beside the title
+      // page because it is the same kind of thing — a page of the book that
+      // is not a page of the manuscript — and absent in a format that prints
+      // no such leaf.
+      ...(format !== null && hasChapterPages(format)
+        ? [{ command: 'file.chapterPage' as CommandId, label: 'Chapter page…' }]
+        : []),
       { command: 'file.pageSetup', label: 'Page setup…' },
       { command: 'file.print', label: 'Print…', accelerator: 'CmdOrCtrl+P' },
       { command: 'file.exportPdf', label: 'Export PDF…', accelerator: 'CmdOrCtrl+Shift+P' },

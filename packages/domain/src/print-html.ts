@@ -4,6 +4,12 @@ import { titlePageOf } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
 import type { ContentsPage } from './markers.js';
 import { runsText, type IndexHeading, type IndexPage } from './book-index.js';
+import {
+  chapterPageStyleOf,
+  chapterPageStyleSchema,
+  chapterStyleAttr,
+  type ChapterPageStyle,
+} from './chapter-style.js';
 import type { PageStamp } from './attribution.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -26,6 +32,11 @@ export interface PrintOptions extends ManuscriptOptions {
   includeTitlePage?: boolean;
   // `includeChapterPages` comes from ManuscriptOptions: the paginator decides
   // whether the leaves are there at all, and this renderer draws what it gets.
+  /**
+   * How the chapter pages are set (addendum 02 §12a). Filled in from the
+   * project when the document is rendered, so a caller never has to.
+   */
+  chapterStyle?: ChapterPageStyle;
   /** Diagonal marking for drafts sent out for notes. */
   watermark?: string;
   /**
@@ -257,9 +268,17 @@ const renderIndexPage = (index: IndexPage): string => {
  */
 const renderChapterPage = (page: Page, isProse: boolean, options: PrintOptions): string => {
   const chapter = page.chapter as NonNullable<Page['chapter']>;
+  // How it is set is the book's (addendum 02 §12a), carried in on the options
+  // and turned into custom properties by the one function the preview reads
+  // too — so the stylesheet below declares no sizes of its own.
+  const style = chapterStyleAttr(options.chapterStyle ?? chapterPageStyleSchema.parse({}));
   const parts: string[] = [];
-  if (chapter.label.length > 0) parts.push(`<h2 class="chapter-label">${escapeHtml(chapter.label)}</h2>`);
-  if (chapter.title.length > 0) parts.push(`<p class="chapter-title">${escapeHtml(chapter.title)}</p>`);
+  const head: string[] = [];
+  if (chapter.label.length > 0) head.push(`<h2 class="chapter-label">${escapeHtml(chapter.label)}</h2>`);
+  if (chapter.title.length > 0) head.push(`<p class="chapter-title">${escapeHtml(chapter.title)}</p>`);
+  // The number and the name are one block, so a rule under the heading sits
+  // under both of them rather than between them.
+  if (head.length > 0) parts.push(`<div class="chapter-head">${head.join('\n')}</div>`);
   if (chapter.image) {
     // The source is a data URL held in the project; it is escaped as an
     // attribute like any other, and nothing else about it is trusted.
@@ -271,7 +290,7 @@ const renderChapterPage = (page: Page, isProse: boolean, options: PrintOptions):
   if (chapter.epigraph.trim().length > 0) {
     parts.push(`<p class="chapter-epigraph">${escapeHtml(chapter.epigraph)}</p>`);
   }
-  return `<section class="page chapter-page${isProse ? ' prose' : ''}" style="text-align:${chapter.align}">${stampOf(page, options)}${pageNumber(page, options)}
+  return `<section class="page chapter-page${isProse ? ' prose' : ''}" style="text-align:${chapter.align};${style}">${stampOf(page, options)}${pageNumber(page, options)}
   <div class="chapter-block">${parts.join('\n')}</div>
 </section>`;
 };
@@ -491,12 +510,41 @@ const STYLES = `
   .general { color: #444; }
   /* The leaf between chapters. Its block sits a third of the way down, which
      is where a book puts a chapter opening. */
-  .chapter-page { display: flex; align-items: flex-start; justify-content: center; }
-  .chapter-block { width: 100%; padding-top: 2.5in; }
-  .chapter-label { font-size: 12pt; font-weight: normal; text-transform: uppercase; letter-spacing: 0.2em; margin: 0; }
-  .chapter-title { margin: 1.5em 0 0; }
+  /* Nothing here names a size, a face or a case: they are the book's, and
+     chapterStyleVars in the domain is the one place that decides what these
+     custom properties mean. The on-screen preview reads the same ones. */
+  .chapter-page { display: flex; align-items: flex-start; justify-content: center; font-family: var(--chapter-face); }
+  .chapter-block { width: 100%; padding-top: var(--chapter-drop); }
+  .chapter-head { display: inline-block; border-bottom: var(--chapter-rule); padding-bottom: 0.35em; }
+  .chapter-label {
+    margin: 0;
+    font-size: var(--chapter-number-size);
+    font-weight: var(--chapter-number-weight);
+    font-style: var(--chapter-number-style);
+    text-transform: var(--chapter-number-case);
+    font-variant-caps: var(--chapter-number-variant);
+    letter-spacing: var(--chapter-number-tracking);
+  }
+  .chapter-title {
+    margin: 1.5em 0 0;
+    font-size: var(--chapter-title-size);
+    font-weight: var(--chapter-title-weight);
+    font-style: var(--chapter-title-style);
+    text-transform: var(--chapter-title-case);
+    font-variant-caps: var(--chapter-title-variant);
+    letter-spacing: var(--chapter-title-tracking);
+  }
   .chapter-device { display: block; margin: 2em auto 0; max-width: 100%; }
-  .chapter-epigraph { margin: 2.5em 0 0; white-space: pre-wrap; font-style: italic; }
+  .chapter-epigraph {
+    margin: 2.5em 0 0;
+    white-space: pre-wrap;
+    font-size: var(--chapter-epigraph-size);
+    font-weight: var(--chapter-epigraph-weight);
+    font-style: var(--chapter-epigraph-style);
+    text-transform: var(--chapter-epigraph-case);
+    font-variant-caps: var(--chapter-epigraph-variant);
+    letter-spacing: var(--chapter-epigraph-tracking);
+  }
   @media print {
     body { background: #fff; }
     .page {
@@ -518,10 +566,12 @@ const STYLES = `
 
 export const renderPrintDocumentHtml = (file: ProjectFile, options: PrintOptions = {}): string => {
   const pages = paginateProject(file, options);
+  // The book's own chapter-page typography, unless a caller has said otherwise.
+  const withStyle: PrintOptions = { chapterStyle: chapterPageStyleOf(file), ...options };
   const isProse = isProseFormat(file.project.format);
   const body = [
     opensWithItsOwn(pages, options) ? '' : renderTitlePage(file),
-    ...pages.map((page) => renderPage(page, isProse, options)),
+    ...pages.map((page) => renderPage(page, isProse, withStyle)),
   ]
     .filter((section) => section.length > 0)
     .join('\n');
