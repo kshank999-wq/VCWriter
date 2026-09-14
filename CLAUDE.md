@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0048.
+  reads like it does. Applied through 0049.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§12a**
   is the **chapter page** as Ken asked for it — *File ▸ Chapter page…*, under
@@ -593,6 +593,37 @@ push live; the build takes a minute or two.
   type the heading by hand instead and the library will be empty forever.
   Migration 0048; the descriptions ride inside the row as JSON, being parts of a
   location rather than records of their own.
+  `addendum-15-research-links.md` is Research Links and the story relationship
+  timeline, from Ken's own dev spec. **Built.** §16 asks for three record types
+  and **two already existed** — the fourth time this project has found the
+  general mechanism already built and merely narrow in vocabulary: a **node** is
+  a `usage_link` (owner kind widened a third time, to `thread`) and a
+  **dependency edge** is a `story_link` with `depends_on`, whose `from_type` is
+  text so `thread_node` needed no DDL at all. Migration 0049 is therefore one
+  table, `story_threads` — a name, a description and what its connectors assert
+  — and nothing else. **A sequence edge is stored nowhere**, and §13 is the
+  reason read from the other end: it requires a node's position to be derived
+  from script position and never draggable, so if position is derived then order
+  is derived, and §16's `sequence_order` would be a second answer waiting to
+  disagree the next time a scene moves. **Nothing infers a cause** (§5.2): a
+  dependency thread draws only the arrows the writer drew, and with none drawn
+  it says *the order alone is not a cause* rather than falling back to
+  chronology and calling it a claim — the one exception being the one §12
+  permits, a setup and its payoff, where naming the setup *is* the dependency.
+  `packages/domain/src/story-map.ts` is §21's ask made real: the lane engine
+  knows **nodes, edges and a scene index and nothing else**, so it cannot tell a
+  setup from a motif, each module contributes rows through one small reader, and
+  §19's next lane is another reader and no change to the engine or to anything
+  that draws it — the screen has one `LaneRow` used by all four. **One grid**
+  carries the ruler and every lane on the screen, so §2's *synchronised to the
+  scene timeline* holds by construction rather than by two widths agreeing, and
+  **Whole story means the whole story fits** (the column is measured from the
+  window; a fixed one drew a 154-pixel board in a 1200-pixel pane). Three widths
+  rather than §15's four, because act view and scene-range view are the same act
+  and the **Scenes … to …** pair does it properly. **Add to Research ▸ Links…**
+  is the fifth thing the manuscript right-click does, with §11's *new* and
+  *existing* one control rather than two, and it keeps nothing at all if the
+  moment cannot be marked. A thread of one is **said, never refused**.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

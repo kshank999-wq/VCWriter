@@ -5,6 +5,7 @@ import { nowIso } from './entities/common.js';
 import { characterCategorySchema, characterSchema } from './entities/character.js';
 import { defaultCharacterCategories } from './characters.js';
 import { storyLinkSchema } from './entities/links.js';
+import { storyThreadSchema } from './entities/threads.js';
 import {
   arcPointSchema,
   characterArcSchema,
@@ -123,6 +124,12 @@ export const projectFileSchema = z.object({
   indexMarks: z.array(indexMarkSchema).default([]),
   indexRefs: z.array(indexRefSchema).default([]),
   links: z.array(storyLinkSchema).default([]),
+  /**
+   * Narrative threads (addendum 15). One collection, because a thread's
+   * *moments* are `usageLinks` and its *dependencies* are `links` — the module
+   * asks for three record types and two of them were already here.
+   */
+  threads: z.array(storyThreadSchema).default([]),
   setupsPayoffs: z.array(setupPayoffSchema).default([]),
   snapshots: z.array(snapshotSchema).default([]),
   /**

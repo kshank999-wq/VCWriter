@@ -39,6 +39,11 @@ export type CharacterRelationshipId = Id<'CharacterRelationship'>;
 export type IndexMarkId = Id<'IndexMark'>;
 export type IndexRefId = Id<'IndexRef'>;
 export type StoryLinkId = Id<'StoryLink'>;
+/**
+ * A narrative thread (addendum 15). Its *moments* are usage links and its
+ * *dependencies* are story links, so this is the module's only new id.
+ */
+export type StoryThreadId = Id<'StoryThread'>;
 export type SetupPayoffId = Id<'SetupPayoff'>;
 export type SetupPointId = Id<'SetupPoint'>;
 export type CaptureItemId = Id<'CaptureItem'>;

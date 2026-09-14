@@ -36,6 +36,7 @@ import {
 import { InlineText } from './InlineText';
 import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
+import { LinksTimeline } from './LinksTimeline';
 import { LocationsPanel } from './LocationsPanel';
 import { ThemesPanel } from './ThemesPanel';
 import { CastPanel } from './CastPanel';
@@ -73,6 +74,8 @@ type Selection =
   | { kind: 'thematics' }
   /** The location library (addendum 14). */
   | { kind: 'locations' }
+  /** The story-relationship timeline (addendum 15) — every lane at once. */
+  | { kind: 'links' }
   /** The relationship mind map (addendum 08 §12) — a view of the whole cast. */
   | { kind: 'charmap' }
   /** Search, filters and the review modes (addendum 08 §18). */
@@ -381,6 +384,8 @@ export function ResearchBody({
         ? 'Character review'
         : selection.kind === 'plots'
         ? 'Plots'
+        : selection.kind === 'links'
+          ? 'Links'
         : selection.kind === 'locations'
           ? 'Locations'
         : selection.kind === 'thematics'
@@ -428,6 +433,8 @@ export function ResearchBody({
       <div
         className={
           creator ||
+          // The wiring diagram wants the whole width: it is a timeline.
+          selection.kind === 'links' ||
           selection.kind === 'charmap' ||
           selection.kind === 'review' ||
           selection.kind === 'mobile'
@@ -540,6 +547,20 @@ export function ResearchBody({
                 <span className="count muted">{(file.locations ?? []).filter((one) => !one.archived).length}</span>
               </button>
             </li>
+            {/* The story-relationship timeline (addendum 15). It sits with the
+                modules it draws rather than under one of them, because it is
+                the lane engine for all four and belongs to none. */}
+            <li>
+              <button
+                type="button"
+                className={selection.kind === 'links' ? 'folder-row selected' : 'folder-row'}
+                title="How story elements travel through the script"
+                onClick={() => setSelection({ kind: 'links' })}
+              >
+                <span className="folder-name">Links</span>
+                <span className="count muted">{(file.threads ?? []).filter((one) => !one.archived).length}</span>
+              </button>
+            </li>
             {/* Named as one entry with two tabs behind it, rather than two
                 entries: a theme and a motif are separate kinds, and the menu
                 is where a writer looks for the pair. */}
@@ -649,6 +670,7 @@ export function ResearchBody({
             selection.kind === 'setups' ||
             selection.kind === 'thematics' ||
             selection.kind === 'locations' ||
+            selection.kind === 'links' ||
             selection.kind === 'charmap' ||
             selection.kind === 'review' ||
             selection.kind === 'mobile' ? null : (
@@ -697,6 +719,14 @@ export function ResearchBody({
             />
           ) : selection.kind === 'plots' ? (
             <Plots file={file} onUpdate={onUpdate} />
+          ) : selection.kind === 'links' ? (
+            <div className="research-embedded">
+              <LinksTimeline
+                file={file}
+                onUpdate={onUpdate}
+                {...(onGoToBeat ? { onGoToBeat } : {})}
+              />
+            </div>
           ) : selection.kind === 'locations' ? (
             <div className="research-embedded">
               <LocationsPanel file={file} onUpdate={onUpdate} />

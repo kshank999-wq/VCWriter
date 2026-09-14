@@ -11542,3 +11542,377 @@ dialog.chapter-page-dialog {
   align-items: center;
   gap: 6px;
 }
+
+/* ------------------------------------------------------------------ Links
+   The story wiring diagram (addendum 15 §18): scenes across the top, the
+   structural systems beneath, connectors showing how each element travels.
+   Every lane is drawn by the same code, so there is one set of rules here
+   rather than one per module — which is the stylesheet half of §21. */
+
+.links-timeline {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.links-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.links-bar .field.inline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+}
+
+.links-bar .field.inline > span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.links-bar .field.inline input {
+  width: 46px;
+  text-align: center;
+}
+
+.links-lanes,
+.links-widths {
+  display: flex;
+  gap: 4px;
+}
+
+.links-toggle {
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.links-toggle.on {
+  color: var(--text);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.links-scroll {
+  overflow: auto;
+  min-height: 0;
+  padding: 10px 14px 14px;
+}
+
+.links-board {
+  display: grid;
+  align-items: center;
+  min-width: 100%;
+}
+
+/* The lane titles and the "nothing here yet" lines are not of a column:
+   they run the width of the board. */
+.links-lane-title,
+.links-empty {
+  grid-column: 1 / -1;
+}
+
+.links-ruler-spacer {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 2;
+  height: 100%;
+}
+
+.links-scenes {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 1;
+}
+
+.links-scene {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 3px 4px 5px;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: default;
+  overflow: hidden;
+  text-align: left;
+}
+
+.links-scene-number {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.links-scene-heading {
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.links-lane-title {
+  margin: 14px 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.links-empty {
+  margin: 0 0 6px;
+}
+
+/* The row is not a grid of its own: its head and its track are cells of the
+   board's, which is what keeps a node under its scene at every width. */
+.links-row {
+  display: contents;
+}
+
+.links-row.lit .links-row-name {
+  color: var(--accent);
+}
+
+.links-row-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+  padding: 0 8px 0 0;
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+}
+
+.links-row-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The under-prepared payoff's light, the same red the Setups screen uses —
+   the lane does not decide what is wrong, it only draws what it was told. */
+.links-warn {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  flex: 0 0 auto;
+}
+
+.links-row-track {
+  display: block;
+  overflow: visible;
+}
+
+.links-edge {
+  stroke-width: 1.2;
+}
+
+/* Sequence asserts nothing, so it is a quiet line. A dependency is a claim,
+   so it is drawn solid and carries an arrow. */
+.links-edge.sequence {
+  stroke: var(--border);
+}
+
+.links-edge.dependency {
+  stroke: var(--accent);
+}
+
+.links-arrow-head {
+  fill: var(--accent);
+}
+
+.links-node {
+  cursor: pointer;
+}
+
+.links-node circle,
+.links-node rect {
+  fill: var(--panel);
+  stroke: var(--text);
+  stroke-width: 1.2;
+}
+
+.links-node.dot circle {
+  fill: var(--text);
+}
+
+.links-node.diamond rect {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.links-node.warn circle,
+.links-node.warn rect {
+  stroke: var(--red);
+  fill: color-mix(in srgb, var(--red) 30%, transparent);
+}
+
+.links-node.on circle,
+.links-node.on rect {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+}
+
+.links-pile-count {
+  font-size: 8px;
+  fill: var(--muted);
+}
+
+.links-under {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  border-top: 1px solid var(--border);
+  min-height: 0;
+}
+
+.links-threads {
+  padding: 10px 14px 20px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.links-threads h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.links-thread-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.links-thread-head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 3px 0;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.links-thread-name {
+  font-weight: 600;
+}
+
+.links-thread-body {
+  padding: 6px 0 12px 16px;
+  display: grid;
+  gap: 8px;
+  border-left: 1px solid var(--border);
+  margin-left: 5px;
+}
+
+.links-thread-body h5 {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.links-moments,
+.links-depends ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.links-moments li,
+.links-depends li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+}
+
+.links-moments li input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.links-moment-where {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* A moment whose writing has gone is kept and struck through: it is work the
+   writer still has, and the red needs an explanation. */
+.links-moments li.gone .links-moment-where {
+  text-decoration: line-through;
+  color: var(--red);
+}
+
+.links-depends-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.links-thread-actions,
+.links-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.links-inspector {
+  border-left: 1px solid var(--border);
+  padding: 10px 14px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.links-inspector h3 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.links-inspector-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.links-inspector-label {
+  margin: 8px 0 2px;
+  font-size: 12px;
+}

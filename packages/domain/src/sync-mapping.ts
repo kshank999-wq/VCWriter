@@ -20,6 +20,7 @@ import {
   themeMotifLinkSchema,
 } from './entities/themes.js';
 import { locationSchema } from './entities/locations.js';
+import { storyThreadSchema } from './entities/threads.js';
 import { projectSchema, projectSettingsSchema } from './entities/project.js';
 import { beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
 import { countWords } from './entities/manuscript.js';
@@ -91,6 +92,12 @@ export const SYNC_TABLES = {
   // they are parts of a location rather than records of their own, and a
   // second table would make deleting a place a two-step deletion.
   locations: 'locations',
+  /**
+   * Narrative threads (addendum 15). One table and one collection: the module's
+   * nodes are `usage_links` and its dependency edges are `story_links`, both of
+   * which already sync.
+   */
+  threads: 'story_threads',
 } as const;
 
 export type SyncCollection = keyof typeof SYNC_TABLES;
@@ -552,6 +559,16 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
   ...characterCreatorRows(file),
   ...bookIndexRows(file),
   ...thematicRows(file),
+  threads: (file.threads ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    name: one.name,
+    description: one.description,
+    relationship: one.relationship,
+    archived: one.archived,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
   locations: (file.locations ?? []).map((one) => ({
     id: one.id,
     project_id: one.projectId,
@@ -1276,6 +1293,18 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     ...characterCreatorFromRows(rows),
     ...bookIndexFromRows(rows),
     ...thematicFromRows(rows),
+    threads: (rows.threads ?? []).map((row) =>
+      storyThreadSchema.parse({
+        id: row['id'],
+        projectId: row['project_id'],
+        name: text(row['name']),
+        description: text(row['description']),
+        relationship: text(row['relationship']) || 'sequence',
+        archived: Boolean(row['archived']),
+        createdAt: row['created_at'],
+        updatedAt: row['updated_at'],
+      }),
+    ),
     locations: (rows.locations ?? []).map((row) =>
       locationSchema.parse({
         id: row['id'],

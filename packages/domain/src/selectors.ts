@@ -289,6 +289,19 @@ export const resolveRef = (file: ProjectFile, target: StoryEntityRef): ResolvedE
       const person = file.characters.find((candidate) => candidate.id === point.characterId);
       return found(point.text, person ? `${person.name}'s arc` : 'arc point');
     }
+    // A moment of a narrative thread (addendum 15 §3). Resolved here for the
+    // same reason: a dependency between two moments then reads in the Related
+    // Elements box without that box being told threads exist.
+    case 'thread_node': {
+      const node = file.usageLinks.find((candidate) => candidate.id === target.id);
+      if (!node || node.ownerKind !== 'thread') return missing();
+      const thread = (file.threads ?? []).find((candidate) => candidate.id === node.ownerId);
+      const beat = file.beats.find((candidate) => candidate.id === node.beatId);
+      return found(
+        node.note || node.quote || beat?.title || 'A moment',
+        thread ? `${thread.name || 'Untitled thread'} · thread` : 'thread',
+      );
+    }
     default:
       return missing();
   }

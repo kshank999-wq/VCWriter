@@ -139,7 +139,7 @@ export const usageLinkSchema = z.object({
    * list was the whole of the data work — the same move addendum 08 §13 made
    * for cross-arc links.
    */
-  ownerKind: z.enum(['characterization', 'arc_point', 'theme', 'motif']),
+  ownerKind: z.enum(['characterization', 'arc_point', 'theme', 'motif', 'thread']),
   ownerId: z.string(),
   /** The scene it is in, for getting back to it. */
   unitId: id<StructuralUnitId>().nullable().default(null),

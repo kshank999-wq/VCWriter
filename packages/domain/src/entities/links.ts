@@ -28,6 +28,16 @@ export const storyEntityTypeSchema = z.enum([
    * these types as text, so nothing had to change there either.
    */
   'arc_point',
+  /**
+   * A moment of a narrative thread (addendum 15 §3).
+   *
+   * The same move again, and the plainest one yet: a dependency edge between
+   * two moments of a thread is two references and a verb, and `depends_on` has
+   * been in the list below since spec §7.4. So Ken's spec §16 asks for a
+   * StoryLinkEdge table and the answer is this one line — no table, no
+   * migration, and the same reading code draws it.
+   */
+  'thread_node',
 ]);
 export type StoryEntityType = z.infer<typeof storyEntityTypeSchema>;
 

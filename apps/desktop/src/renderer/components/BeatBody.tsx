@@ -9,6 +9,10 @@ import {
   autoType,
   CHARACTER_EXTENSIONS,
   captureFromScript,
+  captureToThread,
+  describeThread,
+  threadsInOrder,
+  THREAD_RELATIONSHIPS,
   EXTENSIONS,
   EXTENSION_GROUPS,
   carriesStructure,
@@ -60,6 +64,8 @@ import {
   type MotifType,
   type PageLayoutSpec,
   type ProjectFile,
+  type StoryThreadId,
+  type ThreadRelationship,
   type SetupPayoffId,
   type ThematicKind,
   type Typing,
@@ -177,6 +183,8 @@ export function BeatBody({
   const [planting, setPlanting] = useState<{ text: string } | null>(null);
   /** And under a theme or a motif (addendum 12 §4). */
   const [tagging, setTagging] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
+  /** And into a narrative thread (addendum 15 §11). */
+  const [threading, setThreading] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
 
   /**
    * Dictation (spec §9), and *which* dictation depends on where this is
@@ -841,6 +849,14 @@ export function BeatBody({
                   setCaught(null);
                 }
           }
+          onThread={
+            readOnly
+              ? null
+              : () => {
+                  setThreading({ elementId: caught.elementId, text: caught.text });
+                  setCaught(null);
+                }
+          }
           onClose={() => setCaught(null)}
         />
       ) : null}
@@ -885,6 +901,17 @@ export function BeatBody({
           passage={tagging.text}
           onUpdate={onUpdate}
           onClose={() => setTagging(null)}
+        />
+      ) : null}
+
+      {threading ? (
+        <AddToThread
+          file={file}
+          beatId={beat.id}
+          elementId={threading.elementId}
+          passage={threading.text}
+          onUpdate={onUpdate}
+          onClose={() => setThreading(null)}
         />
       ) : null}
     </div>
@@ -995,6 +1022,7 @@ function CaughtMenu({
   onIndex,
   onPlant,
   onTag,
+  onThread,
   onClose,
 }: {
   x: number;
@@ -1003,6 +1031,7 @@ function CaughtMenu({
   onIndex: (() => void) | null;
   onPlant: (() => void) | null;
   onTag: (() => void) | null;
+  onThread: (() => void) | null;
   onClose(): void;
 }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -1051,6 +1080,11 @@ function CaughtMenu({
       {onTag ? (
         <button type="button" role="menuitem" className="caught-item" onClick={onTag}>
           Tag a theme or a motif…
+        </button>
+      ) : null}
+      {onThread ? (
+        <button type="button" role="menuitem" className="caught-item" onClick={onThread}>
+          Add to Research ▸ Links…
         </button>
       ) : null}
     </div>
@@ -1703,6 +1737,157 @@ function TagThematic({
           onClick={save}
         >
           Tag it
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * *Add to Research ▸ Links* — a moment of the script into a narrative thread
+ * (addendum 15 §11).
+ *
+ * §11 names the two things this has to do — **Create New Link** and **Add to
+ * Existing Link** — and they are one control here rather than two menu items,
+ * because the choice is *which thread*, and *a new one* is an answer to that
+ * question. The same shape the theme and the setup dialogs use, for the same
+ * reason: a writer who has to decide between two menu entries before they can
+ * see the list of threads is being asked to remember what they have.
+ *
+ * The relationship is only asked when the thread is new, and defaults to
+ * sequence. A dependency asserts a cause, and choosing one for a thread that
+ * has a single moment in it is choosing before there is anything to choose
+ * between.
+ */
+function AddToThread({
+  file,
+  beatId,
+  elementId,
+  passage,
+  onUpdate,
+  onClose,
+}: {
+  file: ProjectFile;
+  beatId: BeatId;
+  elementId: ManuscriptElementId;
+  passage: string;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  onClose(): void;
+}) {
+  const threads = useMemo(() => threadsInOrder(file), [file]);
+  const [threadId, setThreadId] = useState<string>(threads[0]?.id ?? '');
+  const [name, setName] = useState('');
+  const [relationship, setRelationship] = useState<ThreadRelationship>('sequence');
+  const [note, setNote] = useState('');
+
+  const chosen = threads.find((one) => one.id === threadId) ?? null;
+  const making = threadId === '';
+
+  const save = () => {
+    if (making && name.trim().length === 0) return;
+    onUpdate((current) =>
+      captureToThread(current, {
+        beatId,
+        elementId,
+        threadId: making ? null : (threadId as StoryThreadId),
+        name: name.trim(),
+        note: note.trim(),
+        relationship,
+      }).file,
+    );
+    onClose();
+  };
+
+  return (
+    <div
+      className="caught-dialog"
+      role="dialog"
+      aria-label="Add to a link"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
+      <label className="field">
+        <span>Which thread</span>
+        <select
+          autoFocus
+          aria-label="Thread"
+          value={threadId}
+          onChange={(event) => setThreadId(event.target.value)}
+        >
+          {threads.map((one) => (
+            <option key={one.id} value={one.id as string}>
+              {one.name || 'Untitled thread'}
+            </option>
+          ))}
+          <option value="">A new thread…</option>
+        </select>
+      </label>
+
+      {making ? (
+        <>
+          <label className="field">
+            <span>What runs through the story</span>
+            <input
+              aria-label="New thread"
+              placeholder="The key"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          {/* Only asked of a new thread, and only ever *sequence* by default:
+              an order is not a cause, and nothing is drawn for a dependency
+              until the writer says what relies on what. */}
+          <label className="field">
+            <span>What the connectors mean</span>
+            <select
+              aria-label="Relationship"
+              value={relationship}
+              onChange={(event) => setRelationship(event.target.value as ThreadRelationship)}
+            >
+              {THREAD_RELATIONSHIPS.map((one) => (
+                <option key={one} value={one}>
+                  {one === 'sequence' ? 'Sequence — the order it unfolds' : 'Dependency — what relies on what'}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      ) : chosen ? (
+        <p className="muted small">{describeThread(file, chosen)}</p>
+      ) : null}
+
+      <label className="field">
+        <span>What this moment is (optional)</span>
+        <input
+          aria-label="What this moment is"
+          placeholder="The key first appears"
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+        />
+      </label>
+
+      <p className="index-quote">{passage}</p>
+
+      <p className="muted small">
+        Where it sits on the timeline is read from the script, so moving the scene moves the
+        moment and there is nothing to put back in order.
+      </p>
+
+      <div className="caught-actions">
+        <button type="button" className="ghost small" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="ghost small"
+          disabled={making && name.trim().length === 0}
+          onClick={save}
+        >
+          Add it
         </button>
       </div>
     </div>
