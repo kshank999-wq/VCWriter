@@ -6,7 +6,7 @@ There's a few narrative softwares out there. But I feel like they're very
 limited."** That sentence is the spec this addendum actually answers; §9 below
 says what the limitation is and what we do instead.*
 
-**Status: stages 0 and 1 built.** §10 is the build order; §13 says what each
+**Status: stages 0–3 built.** §10 is the build order; §13 says what each
 built stage does.
 
 ---
@@ -261,7 +261,7 @@ Each stage is usable on its own; none needs the next.
 1. **The graph, in the domain.** ✅ Elements, choices, conditions, effects,
    state and resource definitions. Pure, tested, no screen.
 2. **Evaluation.** ✅ One `evaluate`, and reachability as a reading off it. §4, §5.
-3. **Validation.** §12, whole, off the same reading. §8.
+3. **Validation.** ✅ §12, whole, off the same reading. §8.
 4. **The canvas.** The second map: derived layout, the spine as the primary
    path, convergence, condition badges. §1, §9.
 5. **The rule builder and the inspector.** WHEN / DO / GO TO. §15.2, §15.3.
@@ -420,3 +420,66 @@ layout derived rather than dragged (§1).
 project sits against the room's master since addendum 07 §14, so a node's
 reading is a **`Situation`**. The second time this module has had to step
 around a name, and the same reason as `Test`.
+
+### Stage 3 — validation
+
+`narrative-check.ts`, and **all twelve of §12**. Each is a `Finding` with a
+check, the thing to open, and one sentence that is the whole of it — nothing
+else is needed to act on one.
+
+The twelve, and what each turned out to be:
+
+| §12 | Built as |
+| --- | --- |
+| Unreachable nodes or choices | `unreachableNodes`. The choices stranded on one are said in the same sentence, being the same problem and one fix. |
+| Choices with no consequence or destination | `emptyChoices`, and the spec's *or* is an **and** — §2. |
+| Dead-end branches not meant as endings | `deadEnds`, reading `endsHere`. |
+| Missing prerequisites | `prerequisites`. |
+| Circular dependencies that cannot be satisfied | `prerequisites`, the same walk with the gate left out. |
+| Contradictory conditions | `contradictions`. |
+| A resource required before any acquisition point | `prerequisites` again — it is §12.4 said about a resource. |
+| A weapon with no ammunition available | `weaponsWithoutAmmunition`, both halves: none defined, and none ever given. |
+| A required resource exhausted before a mandatory use | `exhaustibleResources`. |
+| Endings with impossible conditions | `impossibleEndings`. |
+| Branches that never return to the spine | `spineBypassed`. |
+| Orphaned variables set but never read, or read but never set | `orphanState`. |
+
+Three of the twelve collapsed into one function, which is the audit habit
+arriving inside a single spec section: *missing prerequisite*, *circular
+dependency* and *required before any acquisition point* are one question asked
+at three distances — **can this ever be true, and is the only thing that makes
+it true behind the thing it gates**. Both answers come off stage 2: `meets`
+decides whether an effect could satisfy a condition, and `reachable` decides
+what is behind what, which is why it grew a `without` rather than a second copy
+of the walk appearing here.
+
+**The discipline is not crying wolf**, and it is worth stating as plainly as
+the checks themselves, because a validator that reports something a designer
+can see is fine is one they switch off — after which it catches nothing at all.
+So this module is deliberately silent about:
+
+- a condition under an **ANY**, where another branch may carry the group, and
+  one under a **NONE**, which being impossible satisfies;
+- an **`add`** of an unknown amount, which could reach any number, and a
+  `consume`, which could leave any number — only a `set` and a `grant` are read
+  exactly;
+- a range a fraction still falls into: *more than 5* with *less than 6* is
+  satisfiable and says nothing, while *at least 5* with *at most 3* is not;
+- a **dead end the designer has marked**, §8's one refusal;
+- a rule on a node nothing reaches, and an **ending** that cannot be reached,
+  which get one finding each rather than three for one problem;
+- a state nothing sets **at all**, which is the orphan check's to name — one
+  problem, one finding, and the missing-prerequisite check is therefore about a
+  state that *is* set, but never to anything that satisfies the gate.
+
+Two words earned their meaning here. **`endsHere` is what *intentional* means**
+in §12.3, and **`mandatory` is what *supposed to* means** in §12.11 — the
+question that check asks is whether a path exists from a start to a stop that
+never passes the node the designer said the story does not work without, which
+is the walk with one node removed for the second time.
+
+`findingsAt` is what §15.2's inspector shows against the selected node: its own
+findings, its choices', and those about a state or resource its rules mention,
+because a warning a designer can only find by reading a list somewhere else is
+one they do not find. And `describeFindings` says *nothing to report* out loud,
+since a validator that shows an empty box when it is happy looks broken.

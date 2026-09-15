@@ -785,7 +785,7 @@ push live; the build takes a minute or two.
   builds and escapes it from eight plain strings, and the key art does not
   travel. No migration: every field has existed since 0001.
   `addendum-18-interactive-narrative.md` is Interactive Narrative for video
-  games, from Ken's own dev spec. **Stages 0, 1 and 2 built** — §10 is the build
+  games, from Ken's own dev spec. **Stages 0–3 built** — §10 is the build
   order and §13 says what each built stage does. The audit found **more than half of it already
   exists**: §2.3's central spine is the **story order**, §3's Relationship is the
   Character Creator's two-directional one, §4's edges are `story_links` (whose
@@ -860,6 +860,28 @@ push live; the build takes a minute or two.
   ranks by. `Standing` was taken by the desktop's mooring (addendum 07 §14), so
   a node's reading is a **`Situation`** — the second name this module has had to
   step around, for `Test`'s reason.
+  **Stage 3** is `narrative-check.ts` and **all twelve of §12**, each a
+  `Finding` with one sentence that is the whole of it. Three of the twelve
+  collapsed into one function — *missing prerequisite*, *circular dependency*
+  and *required before any acquisition point* are **one question asked at three
+  distances**, which is the audit habit arriving inside a single spec section —
+  and both halves of the answer come off stage 2: `meets` decides whether an
+  effect could satisfy a condition, `reachable` grew a **`without`** rather than
+  a second copy of the walk appearing here. **The discipline is not crying
+  wolf**, because a validator that reports what a designer can see is fine gets
+  switched off and then catches nothing: it is deliberately silent about a
+  condition under an ANY or a NONE, an `add` or a `consume` of an unknown
+  amount (only `set` and `grant` are read exactly), a range a fraction still
+  falls into, a dead end the designer has marked, a rule on a node nothing
+  reaches, and a state nothing sets at all — that last being the orphan check's
+  to name, so *missing prerequisite* is about a state that **is** set but never
+  to anything that satisfies the gate. Two words earned their meaning:
+  **`endsHere` is what *intentional* means** in §12.3 and **`mandatory` is what
+  *supposed to* means** in §12.11, that check being the walk-with-one-node-out
+  for the second time. `findingsAt` is §15.2's inspector — a node's own
+  findings, its choices' and its rules' — because a warning a designer can only
+  find in a list elsewhere is one they do not find, and `describeFindings` says
+  *nothing to report* out loud, a validator with an empty box looking broken.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

@@ -418,21 +418,41 @@ export const beginRun = (file: ProjectFile): Move | null => {
  * but possible gate as unreachable, which is a false alarm; and a validator
  * that cries wolf is one somebody switches off.
  */
-export const reachable = (file: ProjectFile): ReadonlySet<string> => {
+export const edgesOut = (file: ProjectFile): ReadonlyMap<string, NarrativeElementId[]> => {
   const out = new Map<string, NarrativeElementId[]>();
   for (const choice of file.choices ?? []) {
     if (!choice.toElementId) continue;
     const from = choice.elementId as string;
     out.set(from, [...(out.get(from) ?? []), choice.toElementId]);
   }
+  return out;
+};
+
+/**
+ * `without` leaves one node out of the walk, which is how stage 3 asks the two
+ * questions a plain reachability cannot: *is the thing that unlocks this door
+ * behind the door*, and *can a path reach an ending without passing the node
+ * the designer marked mandatory*. Both are the same walk with one node removed,
+ * which is why it is a parameter here rather than a second copy over there.
+ */
+export const reachable = (
+  file: ProjectFile,
+  options: { without?: NarrativeElementId } = {},
+): ReadonlySet<string> => {
+  const out = edgesOut(file);
+  const skip = options.without ? (options.without as string) : null;
 
   const found = new Set<string>();
-  const queue = entryPoints(file).map((one) => one.id);
+  const queue = entryPoints(file)
+    .map((one) => one.id)
+    .filter((one) => (one as string) !== skip);
   while (queue.length > 0) {
     const here = queue.shift()!;
     if (found.has(here as string)) continue;
     found.add(here as string);
-    for (const next of out.get(here as string) ?? []) queue.push(next);
+    for (const next of out.get(here as string) ?? []) {
+      if ((next as string) !== skip) queue.push(next);
+    }
   }
   return found;
 };
@@ -452,13 +472,7 @@ export const unreachable = (file: ProjectFile): NarrativeElement[] => {
  * is the map's problem to draw rather than this function's to guess at.
  */
 export const depths = (file: ProjectFile): ReadonlyMap<string, number> => {
-  const out = new Map<string, NarrativeElementId[]>();
-  for (const choice of file.choices ?? []) {
-    if (!choice.toElementId) continue;
-    const from = choice.elementId as string;
-    out.set(from, [...(out.get(from) ?? []), choice.toElementId]);
-  }
-
+  const out = edgesOut(file);
   const depth = new Map<string, number>();
   let edge = entryPoints(file).map((one) => one.id as string);
   let step = 0;
