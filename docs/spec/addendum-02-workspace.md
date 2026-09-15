@@ -799,21 +799,31 @@ The arrangement is a preference, per machine, not project data.
 
 ### A section in a window of its own
 
-Any of the four, plus the **three rooms** and **any number of beats**, can be
+Any of the four, plus the **four rooms** and **any number of beats**, can be
 opened as a real window and pushed onto another monitor. The window runs the
 same renderer with `?pane=` naming what it holds: `script`, `viewer`,
-`lanes`, `inspector`, `research`, `outliner`, `sculptor`, or `beat:<id>` —
-beats key on their own id, so two beats can be open side by side. Asking
-twice for the same section raises the window that already exists rather than
-making a second one.
+`lanes`, `inspector`, `research`, `outliner`, `sculptor`, `editors`, or
+`beat:<id>` — beats key on their own id, so two beats can be open side by
+side. Asking twice for the same section raises the window that already exists
+rather than making a second one.
 
 **The rooms are the reason the list is not just the four sections.** Research,
-the Outliner and the Story Sculptor are each a whole screen's work done
-*beside* the writing rather than in it, and each covers the workspace entirely
-when it is opened over one — so a writer with two monitors was covering the
-script with the board they were building it from. None of the three needed
-splitting to get out: all are already `position: fixed; inset: 0`, which in a
+the Outliner, the Story Sculptor and the Editors are each a whole screen's work
+done *beside* the writing rather than in it, and each takes the whole of the
+window when it is opened — so a writer with two monitors was covering the
+script with the board they were building it from. Three of the four needed no
+splitting to get out: they are already `position: fixed; inset: 0`, which in a
 window of its own is simply the window.
+
+**The Editors are the one that is a page rather than an overlay**, so the thing
+left behind is the page bar sitting on a page that has gone. It is **marked
+rather than removed**: *Editors* keeps its place on the bar with a **⧉** beside
+it, and choosing it brings that window forward — a writer who could not find it
+would reasonably conclude the build had lost it. Popping it out returns this
+window to the writing rather than to a blank. In that window a finding **opens
+its beat in a window of its own**, there being no Write page over there to send
+anybody to, which is the arrangement the page is for: what is wrong on one
+screen and the passage it is wrong in on the other.
 
 A room is offered the move in two places, which are the same act: the **⧉** in
 its own bar, beside the ×, and the item in the **Window** menu, ticked while it
@@ -1112,7 +1122,7 @@ does lives in the workspace, which is the only place that knows what is open.
 | **File** | **New project** (one item, `Ctrl/Cmd+N`), **New episode** *in a series only*, Open, **Import a script**, **Delete a project** (§13.1), Save, Save a copy, **Title page** (§6.1), **Page setup**, Print, Export PDF, Preferences, Close project |
 | **Editor** | Find, Find next, Find and replace, Reformat pasted text, and the two editors of spec §8 — Daily and Final — plus Read back |
 | **Reports** | Writing log, Story statistics (§15) |
-| **Window** | The episode rail; each section **and each of the three rooms**, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
+| **Window** | The episode rail; each section **and each of the four rooms**, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
 | **Help** | What this build does, About |
 
 It is called **Editor**, not Edit, because the clipboard is not what it is

@@ -350,6 +350,15 @@ main {
   font-size: 12.5px;
 }
 
+/* The editors fill their window the same way, and scroll inside it rather
+   than growing a second scrollbar around the panel. */
+.satellite-body.editors-window {
+  min-height: 0;
+  overflow: auto;
+  background: var(--ink);
+  color: var(--text);
+}
+
 /* The stage: viewport and inspector above, the lanes below (addendum 02 §3). */
 .stage {
   display: flex;
@@ -1815,6 +1824,18 @@ button.tool:disabled {
 .master-subtabs .tab.selected {
   color: var(--gold);
   border-bottom-color: var(--gold);
+}
+
+/* A page that is on another monitor (addendum 02 §8). Marked rather than
+   removed: it is still a page of the project, and choosing it brings that
+   window forward. */
+.page-away {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+.page.away {
+  color: var(--gold);
 }
 
 .page-count {

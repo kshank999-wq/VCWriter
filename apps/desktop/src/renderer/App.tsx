@@ -557,7 +557,8 @@ export default function App() {
         case 'window.inspector':
         case 'window.research':
         case 'window.outliner':
-        case 'window.sculptor': {
+        case 'window.sculptor':
+        case 'window.editors': {
           // Ticked means it is out; choosing it again brings it back.
           const pane = command.slice('window.'.length);
           // A room sent out closes the copy laid over the workspace, or the
@@ -566,6 +567,9 @@ export default function App() {
             if (pane === 'outliner') setOutlinerOpen(false);
             if (pane === 'sculptor') setSculptorOpen(false);
             if (pane === 'research') setResearchOpen(false);
+            // The editors are a page rather than an overlay, so what is left
+            // behind is the page bar sitting on a page that has gone.
+            if (pane === 'editors' && view === 'editor') setView('write');
           }
           return detached.includes(pane) ? closePane(pane) : openPane(pane);
         }
@@ -585,7 +589,7 @@ export default function App() {
           return setPreferencesOpen(true);
       }
     },
-    [project, print, exportPdf, selectedBeat, detached, openPane, closePane, resetWindows],
+    [project, print, exportPdf, selectedBeat, detached, view, openPane, closePane, resetWindows],
   );
 
   /** The items with a tick beside them right now. */
@@ -1065,6 +1069,12 @@ export default function App() {
               onExportGrid={() => void exportPdf('grid')}
               busy={exporting}
               exportMessage={exportMessage}
+              onPopOut={() => {
+                // The page it was on has gone to the other screen, so this
+                // window goes back to the writing rather than to a blank.
+                setView('write');
+                openPane('editors');
+              }}
             />
           ) : view === 'home' ? (
             /* The project itself: what the writer has said about it, and what
@@ -1221,7 +1231,17 @@ export default function App() {
         onUpdate={project.update}
       />
 
-      {focused ? null : <PageBar view={view} onSelect={setView} counts={{ recovery: conflicts.length }} />}
+      {focused ? null : (
+        <PageBar
+          view={view}
+          // The editors may be on the other monitor. Choosing the page then
+          // raises that window rather than drawing a second copy of it here,
+          // which is the same rule the Research button follows.
+          onSelect={(next) => (next === 'editor' && away.has('editors') ? openPane('editors') : setView(next))}
+          counts={{ recovery: conflicts.length }}
+          out={away.has('editors') ? ['editor'] : []}
+        />
+      )}
     </div>
   );
 }

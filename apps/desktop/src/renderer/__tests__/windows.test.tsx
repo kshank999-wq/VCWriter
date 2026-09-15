@@ -17,6 +17,7 @@ import {
 } from '../panes';
 import { createHub, type LinkMessage, type LinkTransport } from '../link';
 import { PaneFrame } from '../components/PaneFrame';
+import { PageBar } from '../components/PageBar';
 import { TitleBar } from '../components/TitleBar';
 import Satellite from '../Satellite';
 
@@ -318,6 +319,7 @@ describe('a room in a window of its own', () => {
     expect(paneTitle('sculptor')).toBe('Story Sculptor');
     // And the format has no say: a board is a board in a novel.
     expect(paneTitle('sculptor', 'novel')).toBe('Story Sculptor');
+    expect(paneTitle('editors')).toBe('Editors');
     expect(ROOM_PANES.every((pane) => isRoomPane(pane))).toBe(true);
     expect(isRoomPane('script')).toBe(false);
   });
@@ -362,6 +364,17 @@ describe('a room in a window of its own', () => {
     expect(request.file.project.title).toBe('Lighthouse');
   });
 
+  it('draws the editors, and opens a finding’s beat in a window rather than a page', async () => {
+    const workspace = connect(project());
+    render(<Satellite pane="editors" />);
+    await waitFor(() => expect(screen.getByRole('tablist', { name: 'Editor' })).toBeDefined());
+    // Its own pop-out is absent: this window is already the one.
+    expect(screen.queryByLabelText('Open the editors in its own window')).toBeNull();
+    // There is no Write page over here, so going to a finding opens the beat
+    // in a window of its own — which is the arrangement the page is for.
+    expect(workspace.opened).toEqual([]);
+  });
+
   /**
    * The plot lanes used to be the fallthrough, so a window asking for a
    * section this build has not got opened showing the lanes and claimed on its
@@ -372,6 +385,33 @@ describe('a room in a window of its own', () => {
     render(<Satellite pane={'nonesuch' as never} />);
     await waitFor(() => expect(screen.getByText(/has no section called/)).toBeDefined());
     expect(screen.queryByText('+ Lane')).toBeNull();
+  });
+
+  /**
+   * The editors are a page rather than an overlay, so what is left behind is
+   * the page bar sitting on a page that has gone. It is **marked rather than
+   * removed**: a writer who could not find *Editors* on the bar would
+   * conclude the build had lost it.
+   */
+  it('marks a page that is out rather than taking it off the bar', () => {
+    const chosen: string[] = [];
+    render(
+      <PageBar
+        view="write"
+        onSelect={(next) => chosen.push(next)}
+        counts={{}}
+        out={['editor']}
+      />,
+    );
+    const editors = screen.getByRole('button', { name: /^Editors/ });
+    expect(editors).toBeDefined();
+    expect(editors.className).toContain('away');
+    // Choosing it is the workspace's business; the bar only says which.
+    fireEvent.click(editors);
+    expect(chosen).toEqual(['editor']);
+
+    // Nothing else is marked.
+    expect(screen.getByRole('button', { name: 'Write' }).className).not.toContain('away');
   });
 
   it('still draws the plot lanes when the plot lanes are what was asked for', async () => {

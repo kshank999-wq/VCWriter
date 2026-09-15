@@ -29,6 +29,7 @@ import {
   nounsFor,
 } from '@vcwriter/domain';
 import { IndexPanel } from './IndexPanel';
+import { PopOutButton } from './PopOutButton';
 import { PolarityGraph } from './PolarityGraph';
 import { StoryGridPanel } from './StoryGridPanel';
 
@@ -47,6 +48,14 @@ interface EditorPanelProps {
   onExportGrid?(): void;
   busy?: boolean;
   exportMessage?: string | null;
+  /**
+   * Take the editors to a window of its own (addendum 02 §8). Absent in the
+   * window that already is one.
+   *
+   * This is the page a writer works *from* — findings on one screen and the
+   * manuscript on the other is the whole shape of a revision pass.
+   */
+  onPopOut?(): void;
 }
 
 /**
@@ -97,6 +106,7 @@ export function EditorPanel({
   onExportGrid,
   busy = false,
   exportMessage = null,
+  onPopOut,
 }: EditorPanelProps) {
   const indexed = hasBookIndex(file.project.format);
   // A tab that is not there cannot be the one that is open: closing a project
@@ -268,10 +278,14 @@ export function EditorPanel({
           ) : null}
         </div>
 
+        {/* Everything on the right of the tabs, in one place: the header is
+            laid out as two sides, so a third child would push the controls
+            into the middle of it. */}
+        <div className="editor-controls">
         {/* The grid is a document as well as a tab (§8 stage 6): what the
             story is, the five at every scale, the graph, and the rows. */}
         {openTab === 'grid' && (onPrintGrid || onExportGrid) ? (
-          <div className="editor-controls">
+          <>
             {onPrintGrid ? (
               <button type="button" className="ghost" disabled={busy} onClick={onPrintGrid}>
                 Print…
@@ -282,11 +296,11 @@ export function EditorPanel({
                 {busy ? 'Working…' : 'Export PDF…'}
               </button>
             ) : null}
-          </div>
+          </>
         ) : null}
 
         {openTab === 'daily' ? (
-          <div className="editor-controls">
+          <>
             <select value={scope} onChange={(event) => setScope(event.target.value as 'project' | 'scene')}>
               <option value="project">Whole project</option>
               <option value="scene" disabled={!currentUnitId}>
@@ -301,8 +315,11 @@ export function EditorPanel({
               />
               Include style notes
             </label>
-          </div>
+          </>
         ) : null}
+
+        {onPopOut ? <PopOutButton what="the editors" onPopOut={onPopOut} /> : null}
+        </div>
       </div>
 
       {error ? (

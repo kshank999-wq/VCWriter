@@ -35,13 +35,17 @@ push live; the build takes a minute or two.
   reads like it does. Applied through 0050.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
-  the windowing, and the thing to know is that **all three rooms go to a second
-  monitor**: research could already, and the Outliner and the Story Sculptor now
-  can, which is what Ken asked for. Neither needed splitting the way
-  `ResearchBody` was split — both are already `position: fixed; inset: 0`, so a
-  window of their own is the same component with nothing under it, and the whole
-  change is `'outliner' | 'sculptor'` joining `PaneKey`, two `SHAPES` entries,
-  two branches in `Satellite.tsx` and two menu items. Three things came out of
+  the windowing, and the thing to know is that **all four rooms go to a second
+  monitor**: research could already, and the Outliner, the Story Sculptor and the
+  Editors now can. The first three needed no splitting the way `ResearchBody` was
+  split — they are already `position: fixed; inset: 0`, so a window of their own
+  is the same component with nothing under it, and the change is the key joining
+  `PaneKey` and `ROOM_PANES`, a `SHAPES` entry, a branch in `Satellite.tsx` and a
+  menu item. **The Editors are the odd one**, being a *page* rather than an
+  overlay: what is left behind is the page bar sitting on a page that has gone,
+  so it is **marked rather than removed** — *Editors* keeps its place with a ⧉
+  and choosing it raises that window — and over there a finding opens its beat in
+  a window of its own, there being no Write page to send anybody to. Three things came out of
   building it. **An unknown `?pane=` used to draw the plot lanes** — they were
   the fallthrough of the branch ladder — so a window opened by an older
   workspace drew the lanes while its title bar claimed to be whatever had been

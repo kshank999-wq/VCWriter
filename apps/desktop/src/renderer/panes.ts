@@ -118,10 +118,10 @@ export const normaliseArrangement = (value: unknown): Arrangement => {
  * it, so a writer with two screens was covering the script to look at the
  * board they were building it from.
  */
-export type PaneKey = PaneId | 'research' | 'outliner' | 'sculptor' | `beat:${string}`;
+export type PaneKey = PaneId | 'research' | 'outliner' | 'sculptor' | 'editors' | `beat:${string}`;
 
 /** The rooms: whole screens rather than sections of the workspace. */
-export const ROOM_PANES = ['research', 'outliner', 'sculptor'] as const;
+export const ROOM_PANES = ['research', 'outliner', 'sculptor', 'editors'] as const;
 export type RoomPane = (typeof ROOM_PANES)[number];
 
 export const isRoomPane = (pane: string): pane is RoomPane =>
@@ -137,6 +137,7 @@ export const ROOM_NAMES: Record<RoomPane, string> = {
   research: 'Research',
   outliner: 'Outliner',
   sculptor: 'Story Sculptor',
+  editors: 'Editors',
 };
 
 /** What a window of this section calls itself, before the project is known. */

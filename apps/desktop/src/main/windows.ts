@@ -48,6 +48,9 @@ const SHAPES: Record<string, { width: number; height: number }> = {
   // list read top to bottom, which is why it is the narrower of the two.
   sculptor: { width: 1400, height: 900 },
   outliner: { width: 1040, height: 940 },
+  // The editors are a list of findings beside the thing found, and the Story
+  // Grid inside them is a wide table.
+  editors: { width: 1320, height: 900 },
 };
 
 const shapeFor = (pane: PaneKey) => SHAPES[pane.split(':')[0] ?? ''] ?? { width: 1000, height: 800 };

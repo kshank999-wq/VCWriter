@@ -56,6 +56,7 @@ export type CommandId =
   | 'window.research'
   | 'window.outliner'
   | 'window.sculptor'
+  | 'window.editors'
   | 'window.episodes'
   | 'window.beat'
   | 'window.focus'
@@ -193,6 +194,7 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       { command: 'window.research', label: 'Research in its own window', checkable: true },
       { command: 'window.outliner', label: 'Outliner in its own window', checkable: true },
       { command: 'window.sculptor', label: 'Story Sculptor in its own window', checkable: true },
+      { command: 'window.editors', label: 'Editors in its own window', checkable: true },
       { command: 'window.episodes', label: 'Episodes', checkable: true },
       { command: 'window.beat', label: 'This beat in its own window' },
       null,

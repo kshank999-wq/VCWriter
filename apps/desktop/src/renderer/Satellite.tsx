@@ -3,6 +3,7 @@ import {
   addLane,
   addMarker,
   defaultMarkerKind,
+  beatsForUnit,
   beatsInStoryOrder,
   findBeat,
   storyLayout,
@@ -27,6 +28,7 @@ import { usePrinting } from './printing';
 import { ResearchBody } from './components/ResearchWindow';
 import { SculptorWindow } from './components/SculptorWindow';
 import { OutlinerWindow } from './components/OutlinerWindow';
+import { EditorPanel } from './components/EditorPanel';
 import { TimelineViewer } from './components/TimelineViewer';
 import { MasterTimeline, DEFAULT_BEATS_PER_COLUMN } from './components/MasterTimeline';
 import { Inspector } from './components/Inspector';
@@ -289,6 +291,31 @@ function Section({
         onPrint={(outlineId) => void printing.print('outline', outlineId)}
         onExport={(outlineId) => void printing.exportPdf('outline', outlineId)}
       />
+    );
+  }
+
+  if (pane === 'editors') {
+    return (
+      <div className="satellite-body editors-window">
+        <EditorPanel
+          file={file}
+          currentUnitId={selectedUnitId ?? selectedBeat?.unitId ?? null}
+          onUpdate={onUpdate}
+          // There is no Write page over here to send somebody to, so a finding
+          // opens the beat it is about in a window of its own — which is the
+          // arrangement this page is for: what is wrong on one screen, the
+          // passage it is wrong in on the other.
+          onGoTo={openBeatWindow}
+          onGoToUnit={(unitId) => {
+            const first = beatsForUnit(file, unitId)[0];
+            if (first) openBeatWindow(first.id);
+          }}
+          onPrintGrid={() => void printing.print('grid')}
+          onExportGrid={() => void printing.exportPdf('grid')}
+          busy={printing.busy}
+          exportMessage={printing.message}
+        />
+      </div>
     );
   }
 
