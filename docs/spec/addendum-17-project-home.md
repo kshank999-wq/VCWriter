@@ -1,6 +1,6 @@
 # Addendum 17 — The project home
 
-Status: **stage 1 built**, September 2026. Master spec **§4**, which until now
+Status: **stages 1–2 built**, September 2026. Master spec **§4**, which until now
 was the one section of the master spec that existed only as a data model.
 
 ## 0. The gap, and how it was found
@@ -95,6 +95,8 @@ mistake the software should correct.
 | --- | --- |
 | The readings and the sheet | `packages/domain/src/project-home.ts` |
 | The fields on the project | `packages/domain/src/entities/project.ts` (unchanged) |
+| The screen | `apps/desktop/src/renderer/components/ProjectHomePanel.tsx` |
+| The page itself | `Home` in `PageBar.tsx` |
 
 ## 6. What is deliberately not here
 
@@ -107,5 +109,13 @@ mistake the software should correct.
 ## 7. Build order
 
 1. **The domain** — the readings, the sheet, and the mutations. *Built.*
-2. **The home screen** — the fields, the poster, and the dashboard.
+2. **The home screen** — the fields, the poster, and the dashboard. *Built.*
+   It is the **first** page on the bar and deliberately **not** the one the
+   application opens on: a writer opening a file wants the writing, not a
+   dashboard about it. The figures are **stated rather than scored** — *3 of 7
+   written* is a fact, while *43% complete* with a bar creeping toward a goal is
+   the software having an opinion about somebody's morning. The one chart, a
+   fortnight of sittings, is measured against the busiest of those days rather
+   than against a target, and **a day spent cutting is drawn as a day's work**
+   in red rather than as a gap.
 3. **The one-sheet printed, and the email action** (§4's last bullet).

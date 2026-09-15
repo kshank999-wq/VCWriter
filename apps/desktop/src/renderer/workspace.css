@@ -12423,3 +12423,227 @@ dialog.chapter-page-dialog {
   padding-top: 2px;
   border-top: 1px solid var(--border);
 }
+
+/* ------------------------------------ the project home (master spec §4) */
+/* Two halves: what the writer has said about the work on the left, what the
+   document says about itself on the right. The figures are stated rather than
+   scored — no progress bar creeping toward a goal nobody set. */
+
+/* The two columns are sized rather than stretched, and the page is packed to
+   the left: a 1fr first column capped at 720px pushes the side column to the
+   far edge of a wide window, leaving a corridor of nothing between the fields
+   and the figures that describe them. */
+.home {
+  display: grid;
+  grid-template-columns: minmax(320px, 720px) 320px;
+  justify-content: start;
+  gap: 20px;
+  padding: 16px 20px 40px;
+  overflow-y: auto;
+  align-items: start;
+  height: 100%;
+  min-height: 0;
+}
+
+.home-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-content: start;
+}
+
+.home-details > .panel-header {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  padding: 0 0 6px;
+}
+
+.home-details > .panel-header h3 {
+  margin: 0;
+  font-size: 12px;
+}
+
+.home .small {
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.home-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.home .field {
+  display: grid;
+  gap: 4px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.home .field input,
+.home .field textarea,
+.home .field select {
+  font-size: 12.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 6px 8px;
+  width: 100%;
+  background: var(--ink);
+}
+
+.home .field textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.home-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-content: start;
+}
+
+/* The key art. A shape at poster proportions even when empty, so the page does
+   not jump the first time somebody drops one in. */
+.home-poster {
+  border: 1px dashed var(--border);
+  border-radius: 5px;
+  padding: 10px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-height: 160px;
+  align-content: center;
+}
+
+.home-poster.over {
+  border-color: var(--accent);
+  border-style: solid;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.home-poster img {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
+.home-poster-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.home-card {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.home-card h4 {
+  margin: 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.home-where {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.home-figures {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 12px;
+  width: 100%;
+  font-size: 12px;
+}
+
+.home-figures dt {
+  color: var(--muted);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  align-self: center;
+}
+
+.home-figures dd {
+  margin: 0;
+  text-align: right;
+}
+
+.home-open {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  font-size: 12px;
+}
+
+.home-open li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+/* Recent days, measured against the busiest of them rather than against a
+   target: a goal nobody set is a goal nobody agreed to. */
+.home-days {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 36px;
+  width: 100%;
+}
+
+.home-days li {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.home-bar {
+  width: 100%;
+  min-height: 2px;
+  background: var(--gold);
+  border-radius: 1px;
+}
+
+/* A day spent cutting is a real day's work, and is drawn as one. */
+.home-bar.cut {
+  background: var(--red);
+}
+
+.home-gaps {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+/* Under a narrow window the side column goes below rather than squeezing the
+   writing into a gutter. */
+@media (max-width: 1100px) {
+  .home {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

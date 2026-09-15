@@ -48,6 +48,7 @@ import { DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay, type ScriptLayout } from '.
 import { LaneDialog } from './components/LaneDialog';
 import { SceneDialog } from './components/SceneDialog';
 import { ResearchWindow } from './components/ResearchWindow';
+import { ProjectHomePanel } from './components/ProjectHomePanel';
 import { SculptorWindow } from './components/SculptorWindow';
 import { OutlinerWindow } from './components/OutlinerWindow';
 import { BeatDialog } from './components/BeatDialog';
@@ -1099,6 +1100,24 @@ export default function App() {
               onExportGrid={() => void exportPdf('grid')}
               busy={exporting}
               exportMessage={exportMessage}
+            />
+          ) : view === 'home' ? (
+            /* The project itself: what the writer has said about it, and what
+               the document says about itself (master spec §4). */
+            <ProjectHomePanel
+              file={file}
+              onUpdate={project.update}
+              onGoToBeat={(beatId) => {
+                setSelectedBeatId(beatId);
+                setView('write');
+              }}
+              onShowUnusedResearch={() => {
+                setResearchView('unused');
+                setResearchOpen(true);
+              }}
+              onShowSetups={() => {
+                setResearchOpen(true);
+              }}
             />
           ) : view === 'readback' ? (
             <ReadBackPanel file={file} currentUnitId={selectedBeat?.unitId ?? null} onUpdate={project.update} />

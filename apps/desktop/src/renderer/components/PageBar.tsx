@@ -1,7 +1,11 @@
-export type View = 'write' | 'preview' | 'editor' | 'readback' | 'account' | 'recovery';
+export type View = 'home' | 'write' | 'preview' | 'editor' | 'readback' | 'account' | 'recovery';
 
 /** Research and setups are tabs of the master panel now (addendum 02 §6). */
 export const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
+  // First, because it is the project rather than a tool for working on it
+  // (master spec §4). It is not the page the application opens on: a writer
+  // opening a file wants the writing, not a dashboard about it.
+  { id: 'home', label: 'Home' },
   { id: 'write', label: 'Write' },
   { id: 'preview', label: 'Preview' },
   { id: 'editor', label: 'Editors' },
