@@ -784,6 +784,33 @@ push live; the build takes a minute or two.
   make vc-writer.com send whatever HTML anybody posted to it, so the server
   builds and escapes it from eight plain strings, and the key art does not
   travel. No migration: every field has existed since 0001.
+  `addendum-18-interactive-narrative.md` is Interactive Narrative for video
+  games, from Ken's own dev spec. **Specified, not built** — §10 is the build
+  order and nothing is started. The audit found **more than half of it already
+  exists**: §2.3's central spine is the **story order**, §3's Relationship is the
+  Character Creator's two-directional one, §4's edges are `story_links` (whose
+  `from_type` is text and whose verb list already holds five of §4.1's twelve),
+  §9's chrome is the Sculptor's, §14's lanes are `story-map.ts`, and §17/§18's
+  export is the print stack. What is new is choices, conditions, effects, state,
+  resources, endings, the simulator and the canvas. Four decisions carry it.
+  **The Sculptor is a tree and a branching narrative is not** (§1) —
+  `sculptorNodeSchema` has a `parentId` and convergence means two parents, so
+  the map is a *second canvas sharing the Sculptor's chrome and not its layout*,
+  with the layout **derived rather than dragged** for the character map's
+  reason. **A choice is not an edge** (§2), which is the one the module rests
+  on: §5 wants delayed and cumulative consequences, and a consequence fifty
+  nodes away has no edge to live on — so an *edge* says where the player goes, an
+  *effect* hangs on the choice, and a *condition* hangs on the gated element.
+  **The spine is the manuscript** (§3), so the prose and the graph cannot drift,
+  which is most of what "limited" means in the tools Ken has tried. And
+  **reachability is a reading** (§4) — no stored flag, no *validate* button, an
+  unreachable node drawn unreachable the moment the choice that led there is
+  cut, which is the fifth time this project has made a fact about the work a
+  reading rather than a column. §5 is one `evaluate` read by the simulator, the
+  map and the validator alike (`applyTray`'s precedent); §6 is state named once
+  by id, which is what makes §12's *set but never read* answerable at all; §9
+  is the comparison against Twine, Ink and articy; §12 holds the two open
+  questions.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
