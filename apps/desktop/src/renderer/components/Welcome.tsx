@@ -45,6 +45,9 @@ const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string; about: strin
   { value: 'series', label: 'Series or episodic', about: 'episodes across a series' },
   { value: 'novel', label: 'Novel', about: 'manuscript formatting' },
   { value: 'instructional', label: 'Instructional book', about: 'academic, reference and nonfiction' },
+  // Written as a script; what it has that a screenplay does not is a graph
+  // over the scenes saying how they are reached (addendum 18 §3).
+  { value: 'game', label: 'Video game', about: 'branching, choices and consequences' },
   { value: 'stage_play', label: 'Stage play', about: '' },
   { value: 'short_story', label: 'Short story', about: '' },
   { value: 'short_form', label: 'Short form', about: 'commercials, web video, social' },

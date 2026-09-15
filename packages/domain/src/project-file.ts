@@ -6,6 +6,13 @@ import { characterCategorySchema, characterSchema } from './entities/character.j
 import { defaultCharacterCategories } from './characters.js';
 import { storyLinkSchema } from './entities/links.js';
 import { storyThreadSchema } from './entities/threads.js';
+import { gameSetupSchema } from './entities/game.js';
+import {
+  choiceSchema,
+  narrativeElementSchema,
+  resourceDefinitionSchema,
+  stateDefinitionSchema,
+} from './entities/narrative.js';
 import { learningAidSchema } from './entities/learning.js';
 import { importBatchSchema } from './entities/import-batch.js';
 import {
@@ -134,6 +141,21 @@ export const projectFileSchema = z.object({
    * asks for three record types and two of them were already here.
    */
   threads: z.array(storyThreadSchema).default([]),
+  /**
+   * The interactive narrative graph (addendum 18). Empty in every project that
+   * is not a game.
+   *
+   * Four collections and no edge table: **a choice is not an edge** (§2), so
+   * the only edge in the module is a choice's `toElementId`, and everything the
+   * spec calls a relationship is a condition or an effect living on the thing
+   * it is about.
+   */
+  narrativeElements: z.array(narrativeElementSchema).default([]),
+  choices: z.array(choiceSchema).default([]),
+  stateDefinitions: z.array(stateDefinitionSchema).default([]),
+  resourceDefinitions: z.array(resourceDefinitionSchema).default([]),
+  /** What the designer said the game is (addendum 18 §2). */
+  gameSetup: gameSetupSchema.nullable().default(null),
   /**
    * End-of-section learning aids (addendum 16 §10). Empty in every project
    * that is not an instructional book, and in most that are.

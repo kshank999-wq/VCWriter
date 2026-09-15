@@ -6,7 +6,8 @@ There's a few narrative softwares out there. But I feel like they're very
 limited."** That sentence is the spec this addendum actually answers; §9 below
 says what the limitation is and what we do instead.*
 
-**Status: specified, not built.** §10 is the build order.
+**Status: stages 0 and 1 built.** §10 is the build order; §13 says what each
+built stage does.
 
 ---
 
@@ -255,11 +256,10 @@ there, which is the honest answer to *what makes this unique*.
 
 Each stage is usable on its own; none needs the next.
 
-0. **The format and the setup.** `game` joins `ProjectFormat`; `nounsFor` gets
-   its nouns; §2's type, structure and spine. Small, and nothing is reachable
-   without it.
-1. **The graph, in the domain.** Elements, edges, conditions, effects, state
-   definitions. Pure, tested, no screen. §2 and §6 live or die here.
+0. **The format and the setup.** ✅ `game` joins `ProjectFormat`; `nounsFor`
+   gets its nouns; §2's type, structure and spine.
+1. **The graph, in the domain.** ✅ Elements, choices, conditions, effects,
+   state and resource definitions. Pure, tested, no screen.
 2. **Evaluation.** One `evaluate`, and reachability as a reading off it. §4, §5.
 3. **Validation.** §12, whole, off the same reading. §8.
 4. **The canvas.** The second map: derived layout, the spine as the primary
@@ -300,3 +300,73 @@ Two the spec does not settle, and neither blocks stage 1:
 2. **Where the words live for an unbound node.** §3's spine binding covers a
    node that is a scene. A node that is a state change with no prose has
    nowhere to put a line of dialogue, and probably should not.
+
+---
+
+## 13. What the built stages do
+
+### Stage 0 — the format
+
+`game` joins `projectFormatSchema` and **`isInteractive`** joins `formats.ts`.
+The predicate is named for the property rather than the format, because what
+every caller wants to know is *does this project have a narrative graph* — an
+interactive drama would answer yes and argue about being a video game.
+
+**A game is not a third branch of `isProseFormat`.** Its manuscript is a script:
+sluglines, cues, dialogue. So the noun table's entry is `...SCRIPT_NOUNS` with
+`work: 'Game'` — one line that differs — and that is the table working rather
+than failing, because game writers say *scene* and *beat*. Every other format
+predicate is an allow-list, so `hasChapterPages`, `hasBookIndex` and the rest
+said no to a game without being told.
+
+The setup record (`entities/game.ts`) is short on purpose, and §2 of this
+addendum is why: §2.3's premise is the project's **logline**, its milestones are
+**story markers** already in order on the timeline, and its mandatory nodes are
+a **flag on the node**. Writing the milestones down twice is the failure this
+project keeps finding in other people's specs. What is left — game type,
+structure, player role, objective, conflict, stakes — is what nothing else
+holds. Game type and narrative structure are **free text with suggestions,
+never enums**: §2.1 says the choice never limits the designer, and the
+thirteenth genre is always the one somebody is writing. **Nothing reads the
+structure** — a hub is a node with many edges back, and the engine cannot tell
+it from a converge and should not try.
+
+### Stage 1 — the graph
+
+`entities/narrative.ts` and `narrative.ts`. Four collections on the project
+file and **no edge table**, which is §2 made structural: the only edge in the
+module is a choice's `toElementId`.
+
+Three things the tests hold down:
+
+- **A choice may have effects and nowhere to go.** Examining, taking, refusing.
+  Null is legal, and it is what makes §5's delayed consequence expressible.
+- **Convergence needed no word.** Two choices pointing at one node is two edges
+  in, and nothing in the module was told what convergence is.
+- **Renaming a state renames every rule**, because conditions hold the id and
+  not the key. Deleting one takes its rules with it — the one place a delete
+  reaches into another record, because a condition about nothing cannot be
+  evaluated and cannot be repaired by guessing.
+
+`Comparison` was taken: the room AI has meant *two drafts side by side* since
+addendum 07 §12, so a rule's operator is a **`Test`**. One name for two
+unrelated things is how a domain stops being readable.
+
+Effects are eight kinds and four of them — `unlock`, `block`, `reveal`, `hide`
+— are **the designer's vocabulary over one mechanism**: they name an element
+and the evaluator keeps the state, so §4.1's words survive into the interface
+without anybody inventing a flag called `tunnel_unlocked` and remembering to
+read it. `timing` is a **label** that nothing evaluates, and the comment says
+so, because a field that looks as though it schedules something and does not is
+the worst kind of field.
+
+Resources are **one record with a kind rather than eight tables** (§7's bullets
+differ in what a designer says about them, not in what they are), and
+`feeds` points from ammunition at the weapons it serves — inverted from how §12
+asks, because a reading can invert a list where it cannot invent one.
+
+The first node made is an **entry point** unless the designer says otherwise: a
+graph whose every node is unreachable because nobody ticked a box is a bad
+first five minutes. And deleting a node **keeps the choices that led to it**,
+with their destination cleared — the designer wrote that choice, and deleting
+it because its destination went is the tool throwing work away.

@@ -37,6 +37,22 @@ export const isProseFormat = (format: ProjectFormat): boolean =>
 export const isInstructional = (format: ProjectFormat): boolean => format === 'instructional';
 
 /**
+ * Whether the work is played rather than read or watched (addendum 18).
+ *
+ * The one question the Interactive Narrative module asks, and it is named for
+ * the **property** rather than for the format: what every caller wants to know
+ * is *does this project have a narrative graph*, not *is this literally a video
+ * game*. An interactive drama or a VR piece would answer yes to the first and
+ * argue about the second.
+ *
+ * A game's manuscript is a **script** — sluglines, cues, dialogue — so this is
+ * deliberately not a third branch of `isProseFormat`. What is different about a
+ * game is not how a line is set; it is that the scenes are reached by choices
+ * rather than in order, and that is what the graph is for.
+ */
+export const isInteractive = (format: ProjectFormat): boolean => format === 'game';
+
+/**
  * What a format calls its parts.
  *
  * §14 of the spec asks that a writer in Book Mode never be forced to work
@@ -110,6 +126,24 @@ const NOUNS: Partial<Record<ProjectFormat, FormatNouns>> = {
     subPlural: 'Subsections',
     manuscript: 'Book',
     work: 'Book',
+  },
+  /**
+   * A game is written as a script, and only the last line differs.
+   *
+   * It would be easy to invent a vocabulary here — nodes, encounters, beats —
+   * and it would be wrong. Game writers say *scene* and *beat*, they write
+   * sluglines and cues, and the pages they hand to a studio are a script. The
+   * thing a game has that a screenplay does not is a **graph over** those
+   * scenes (addendum 18 §3), and a graph is not a renaming.
+   *
+   * So the table says `Game` where the project is named and repeats the script
+   * nouns everywhere else — which is the table doing its job rather than
+   * failing to: a format that calls its parts what its writers call them needs
+   * no entry at all, and this one has an entry only for `work`.
+   */
+  game: {
+    ...SCRIPT_NOUNS,
+    work: 'Game',
   },
 };
 

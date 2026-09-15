@@ -62,6 +62,16 @@ export type SculptorFieldId = Id<'SculptorField'>;
 export type SculptorLinkId = Id<'SculptorLink'>;
 export type OutlineId = Id<'Outline'>;
 export type OutlineItemId = Id<'OutlineItem'>;
+/**
+ * Interactive Narrative (addendum 18). Four ids and no more: a **choice** is
+ * not an edge (§2) so it needs one of its own, and everything the spec calls a
+ * relationship is either a choice's destination, a condition or an effect —
+ * none of which is addressable on its own.
+ */
+export type NarrativeElementId = Id<'NarrativeElement'>;
+export type ChoiceId = Id<'Choice'>;
+export type StateDefinitionId = Id<'StateDefinition'>;
+export type ResourceDefinitionId = Id<'ResourceDefinition'>;
 export type OrderId = Id<'Order'>;
 export type LicenseId = Id<'License'>;
 export type ReleaseBuildId = Id<'ReleaseBuild'>;

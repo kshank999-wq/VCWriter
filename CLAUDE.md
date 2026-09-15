@@ -785,8 +785,8 @@ push live; the build takes a minute or two.
   builds and escapes it from eight plain strings, and the key art does not
   travel. No migration: every field has existed since 0001.
   `addendum-18-interactive-narrative.md` is Interactive Narrative for video
-  games, from Ken's own dev spec. **Specified, not built** — §10 is the build
-  order and nothing is started. The audit found **more than half of it already
+  games, from Ken's own dev spec. **Stages 0 and 1 built** — §10 is the build
+  order and §13 says what each built stage does. The audit found **more than half of it already
   exists**: §2.3's central spine is the **story order**, §3's Relationship is the
   Character Creator's two-directional one, §4's edges are `story_links` (whose
   `from_type` is text and whose verb list already holds five of §4.1's twelve),
@@ -810,7 +810,32 @@ push live; the build takes a minute or two.
   map and the validator alike (`applyTray`'s precedent); §6 is state named once
   by id, which is what makes §12's *set but never read* answerable at all; §9
   is the comparison against Twine, Ink and articy; §12 holds the two open
-  questions.
+  questions. **Stage 0** is the format: `game` joins `ProjectFormat` and
+  `isInteractive` joins `formats.ts` — named for the *property* rather than the
+  format, because every caller asks *does this have a graph*. A game is **not**
+  a third branch of `isProseFormat`: its manuscript is a script, so the noun
+  table's entry is `...SCRIPT_NOUNS` with `work: 'Game'` and nothing else, which
+  is the table working rather than failing. Every other format predicate is an
+  allow-list, so `hasChapterPages` and `hasBookIndex` refused a game without
+  being told. The setup record is short **on purpose** — §2.3's premise is the
+  logline, its milestones are story markers already in order, its mandatory
+  nodes are a flag on the node — and game type and structure are **free text
+  with suggestions, never enums**, with *nothing reading the structure* because
+  a hub is a node with many edges back and the engine cannot tell it from a
+  converge. **Stage 1** is `entities/narrative.ts` + `narrative.ts`: four
+  collections and **no edge table**, the only edge being a choice's
+  `toElementId`. A choice may have effects and **nowhere to go** (null is legal
+  and is what makes a delayed consequence expressible); convergence needed no
+  word; renaming a state renames every rule because conditions hold the **id**,
+  and deleting one takes its rules with it — the one place a delete reaches into
+  another record, a condition about nothing being unevaluable and unrepairable.
+  `Comparison` was already the room AI's, so a rule's operator is a **`Test`**.
+  Four of the eight effect kinds (`unlock`, `block`, `reveal`, `hide`) are **the
+  designer's vocabulary over one mechanism**, and `timing` is a **label nothing
+  evaluates**, said so in the comment because a field that looks as if it
+  schedules and does not is the worst kind. Resources are **one record with a
+  kind rather than eight tables**, with `feeds` inverted from how §12 asks
+  because a reading can invert a list where it cannot invent one.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

@@ -30,6 +30,14 @@ export const projectFormatSchema = z.enum([
    * similarity; nothing should test this string directly.
    */
   'instructional',
+  /**
+   * A video game, or anything else the audience plays (addendum 18).
+   *
+   * Written as a script — sluglines, cues, dialogue — with a **graph over the
+   * scenes** saying how they are reached. Ask `isInteractive` for the
+   * difference; nothing should test this string directly.
+   */
+  'game',
   'other',
 ]);
 export type ProjectFormat = z.infer<typeof projectFormatSchema>;
