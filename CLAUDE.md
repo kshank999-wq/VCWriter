@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0049.
+  reads like it does. Applied through 0050.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§12a**
   is the **chapter page** as Ken asked for it — *File ▸ Chapter page…*, under
@@ -624,6 +624,44 @@ push live; the build takes a minute or two.
   is the fifth thing the manuscript right-click does, with §11's *new* and
   *existing* one control rather than two, and it keeps nothing at all if the
   moment cannot be marked. A thread of one is **said, never refused**.
+  `addendum-16-instructional-mode.md` is Instructional / Book Mode, from Ken's
+  own dev spec. **The domain is built and tested; the interface is not** — §8 of
+  the addendum lists what is missing, and the largest item is that nothing in
+  the desktop offers the format yet. §0 is the audit that shaped everything:
+  §11 lists eight entities and **six already existed** (a Chapter is a
+  structural unit, a Section is a beat, a ContentItem is a manuscript element, a
+  GraphicAsset is an asset, a Relationship is a story link — the fifth time),
+  and §5's mind map is the Sculptor, §6's Outliner is built, §8's Book View is
+  the Script already rendering prose. Migration 0050 is one column and one
+  table. Stage 1 is the precondition: `format === 'novel' || format ===
+  'short_story'` was inline in **twelve places** and one had already drifted —
+  `render.ts` asked `format !== 'novel'`, so **a short story was being laid out
+  with screenplay geometry**, a live bug this fixed. `formats.ts` now holds
+  `isProseFormat` and `isInstructional`, and `nounsFor` is how §14's *never
+  forced to work around Scene, Beat or Script* is kept: **nothing names a unit
+  itself**, so a surface that forgot is one still saying "Scene". An
+  `isBookFormat` was written and deleted because every use was wrong — a short
+  story is prose, keeps chapter units, prints chapter pages and has an index, so
+  *more of a book than a short story* had no honest users. Stage 2 is the
+  shelves (Graphics, General Notes, Ideas, an **Imported inbox** that is a real
+  shelf rather than a modal) and `source` on a research item — **the one field a
+  nonfiction author cannot work without and a novelist never needs**, not to be
+  confused with `origin`, which has meant *how it got in* since 0003 — plus
+  graphics: **a figure is an element of the manuscript, not an attachment to a
+  section**, so it paginates and travels for free, and its **number and height
+  are both readings** (moving a chapter renumbers; replacing a picture
+  re-sizes). Cutting a figure keeps the picture; deleting a picture keeps the
+  figure reading as missing. Stage 3 is learning aids, and §10's hardest rule is
+  kept **structurally**: two content fields, and **regeneration cannot overwrite
+  an edit because it does not write where edits live** — a test runs a hundred
+  regenerations over a paragraph and the paragraph survives. Accepting is not
+  approving, and accepting hands back what it replaced. Stage 4 is the importer,
+  which exists for one sentence of §4 — *never silently discard unsupported
+  content* — so **every file gets an entry** and `skipped`/`failed`/`empty` are
+  three different answers to the reader. **What splits is what the file says
+  splits**: markdown headings do, blank lines do not. The host turns bytes into
+  text or a data URI and the domain decides what it becomes, which is §4's
+  extensibility made real.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

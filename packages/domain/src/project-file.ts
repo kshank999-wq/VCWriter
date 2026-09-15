@@ -7,6 +7,7 @@ import { defaultCharacterCategories } from './characters.js';
 import { storyLinkSchema } from './entities/links.js';
 import { storyThreadSchema } from './entities/threads.js';
 import { learningAidSchema } from './entities/learning.js';
+import { importBatchSchema } from './entities/import-batch.js';
 import {
   arcPointSchema,
   characterArcSchema,
@@ -138,6 +139,14 @@ export const projectFileSchema = z.object({
    * that is not an instructional book, and in most that are.
    */
   learningAids: z.array(learningAidSchema).default([]),
+  /**
+   * What each import brought in, and what it could not (addendum 16 §4).
+   *
+   * In the document rather than a table, like `sessions`: it is a record of
+   * something that happened to this project, small, and worth following the
+   * work to another machine.
+   */
+  importBatches: z.array(importBatchSchema).default([]),
   setupsPayoffs: z.array(setupPayoffSchema).default([]),
   snapshots: z.array(snapshotSchema).default([]),
   /**

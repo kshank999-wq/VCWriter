@@ -46,6 +46,8 @@ export type StoryLinkId = Id<'StoryLink'>;
 export type StoryThreadId = Id<'StoryThread'>;
 /** An end-of-section learning aid (addendum 16 §10). */
 export type LearningAidId = Id<'LearningAid'>;
+/** One run of the research importer (addendum 16 §4). */
+export type ImportBatchId = Id<'ImportBatch'>;
 export type SetupPayoffId = Id<'SetupPayoff'>;
 export type SetupPointId = Id<'SetupPoint'>;
 export type CaptureItemId = Id<'CaptureItem'>;
