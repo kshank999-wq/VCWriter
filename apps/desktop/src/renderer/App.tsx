@@ -78,10 +78,8 @@ import { ReadBackPanel } from './components/ReadBackPanel';
 import { RecoveryPanel } from './components/RecoveryPanel';
 import { Preferences } from './components/Preferences';
 import { applyScheme, DEFAULT_SCHEME, type SchemeId } from './themes';
-import type { AccountStatus, VcWriterApi } from '../preload/index';
-
-/** Which document a print or an export is asking for. The bridge decides. */
-type PrintKind = NonNullable<Parameters<VcWriterApi['print']>[0]['kind']>;
+import { printOptionsFrom, usePrinting } from './printing';
+import type { AccountStatus } from '../preload/index';
 
 /**
  * What this machine does with a deleted project, in its own words (spec §4).
@@ -118,8 +116,6 @@ export default function App() {
   const [newEpisodeOpen, setNewEpisodeOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editorTab, setEditorTab] = useState<'daily' | 'final' | 'grid' | 'index' | 'polarity'>('daily');
-  const [exporting, setExporting] = useState(false);
-  const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
@@ -240,25 +236,6 @@ export default function App() {
   // the defaults fill in underneath rather than leaving it undefined.
   const setup = useMemo(() => ({ ...DEFAULT_PRINT_SETUP, ...printSetup }), [printSetup]);
 
-  const printOptions = useMemo(
-    () => ({
-      includeBeatTitles: setup.includeBeatTitles,
-      includeChapterPages: setup.includeChapterPages,
-      includeTitlePage: setup.includeTitlePage,
-      includeSceneHeadings: setup.includeSceneHeadings,
-      includeSceneNumbers: setup.includeSceneNumbers,
-      includePageNumbers: setup.includePageNumbers,
-      includeSceneSummary: setup.includeSceneSummary,
-      includeSceneLinks: setup.includeSceneLinks,
-      includePrintedAt: setup.includePrintedAt,
-      ...(setup.watermark ? { watermark: setup.watermark } : {}),
-      // Whose draft this is, in the corner of every page (addendum 07 §6.1).
-      // Absent on the master and on every script printed outside a room: the
-      // master is clean and a contribution is signed (§6.3).
-      ...(room.stamp ? { stamp: room.stamp } : {}),
-    }),
-    [setup, room.stamp],
-  );
 
   const clearTitleFocus = useCallback(() => setFocusTitleBeatId(null), []);
 
@@ -450,47 +427,16 @@ export default function App() {
    * tree as one (addendum 06 §12) — which takes the outline's id with it,
    * because a project may hold more than one.
    */
-  const exportPdf = useCallback(
-    async (kind: PrintKind = 'script', outlineId?: string) => {
-      if (!file) return;
-      setExporting(true);
-      setExportMessage(null);
-      // Flush first: the export reads the project it is handed, and a writer who
-      // just typed a line expects it in the PDF.
-      await project.saveNow();
-      const result = await window.vcwriter.exportPdf({ file, options: printOptions, kind, outlineId });
-      setExporting(false);
-      if (!result.ok) {
-        setExportMessage(result.error ?? 'The PDF could not be created');
-        return;
-      }
-      if (!result.data) {
-        setExportMessage(null);
-        return;
-      }
-      // A document the browser paginates as it lays it out cannot say how many
-      // pages it came to until it has, so it says where it went instead.
-      setExportMessage(
-        result.data.pageCount > 0
-          ? `Exported ${result.data.pageCount} pages to ${result.data.path}`
-          : `Exported to ${result.data.path}`,
-      );
-    },
-    [file, printOptions, project],
-  );
-
-  const print = useCallback(
-    async (kind: PrintKind = 'script', outlineId?: string) => {
-      if (!file) return;
-      setExporting(true);
-      setExportMessage(null);
-      await project.saveNow();
-      const result = await window.vcwriter.print({ file, options: printOptions, kind, outlineId });
-      setExporting(false);
-      if (!result.ok) setExportMessage(result.error ?? 'The document could not be printed');
-    },
-    [file, printOptions, project],
-  );
+  /**
+   * Printing, from the one module that knows how (addendum 02 §13). The
+   * workspace gives it a flush, because the workspace owns the file; a room in
+   * a window of its own uses the same module without one.
+   */
+  const printing = usePrinting({ file, setup, stamp: room.stamp, flush: () => project.saveNow() });
+  const { print, exportPdf } = printing;
+  const exporting = printing.busy;
+  const exportMessage = printing.message;
+  const printOptions = useMemo(() => printOptionsFrom(setup, room.stamp), [setup, room.stamp]);
 
   /**
    * The workspace as it opens (addendum 02 §8).
@@ -609,9 +555,18 @@ export default function App() {
         case 'window.viewer':
         case 'window.lanes':
         case 'window.inspector':
-        case 'window.research': {
+        case 'window.research':
+        case 'window.outliner':
+        case 'window.sculptor': {
           // Ticked means it is out; choosing it again brings it back.
           const pane = command.slice('window.'.length);
+          // A room sent out closes the copy laid over the workspace, or the
+          // writer is left looking at the same board twice.
+          if (!detached.includes(pane)) {
+            if (pane === 'outliner') setOutlinerOpen(false);
+            if (pane === 'sculptor') setSculptorOpen(false);
+            if (pane === 'research') setResearchOpen(false);
+          }
           return detached.includes(pane) ? closePane(pane) : openPane(pane);
         }
         case 'window.beat':
@@ -877,8 +832,8 @@ export default function App() {
         focusMode={focusMode}
         onFocus={() => setFocusMode(!focusMode)}
         onOpenResearch={() => (away.has('research') ? openPane('research') : setResearchOpen(true))}
-        onOpenSculptor={() => setSculptorOpen(true)}
-        onOpenOutliner={() => setOutlinerOpen(true)}
+        onOpenSculptor={() => (away.has('sculptor') ? openPane('sculptor') : setSculptorOpen(true))}
+        onOpenOutliner={() => (away.has('outliner') ? openPane('outliner') : setOutlinerOpen(true))}
         away={detached}
         onBringBack={closePane}
         account={account}
@@ -1035,19 +990,27 @@ export default function App() {
               in a corner of the stage (addendum 03 §2). */}
           <SculptorWindow
             file={file}
-            open={sculptorOpen}
+            open={sculptorOpen && !away.has('sculptor')}
             onClose={() => setSculptorOpen(false)}
             onUpdate={project.update}
+            onPopOut={() => {
+              setSculptorOpen(false);
+              openPane('sculptor');
+            }}
           />
           {/* The outline over the workspace too: the rigid sibling of the
               board, and worked on whole for the same reason (addendum 06). */}
           <OutlinerWindow
             file={file}
-            open={outlinerOpen}
+            open={outlinerOpen && !away.has('outliner')}
             onClose={() => setOutlinerOpen(false)}
             onUpdate={project.update}
             onPrint={(outlineId) => void print('outline', outlineId)}
             onExport={(outlineId) => void exportPdf('outline', outlineId)}
+            onPopOut={() => {
+              setOutlinerOpen(false);
+              openPane('outliner');
+            }}
           />
         </div>
       ) : (

@@ -108,17 +108,40 @@ export const normaliseArrangement = (value: unknown): Arrangement => {
 
 // ------------------------------------------------------------ windows of one
 
-/** A section in a window of its own. Beats carry the beat's id. */
-export type PaneKey = PaneId | 'research' | `beat:${string}`;
+/**
+ * A section in a window of its own. Beats carry the beat's id.
+ *
+ * The three rooms — research, the Outliner and the Story Sculptor — are here
+ * for the same reason the four sections are: each is a whole screen's work
+ * done *beside* the writing rather than in it, which is exactly what a second
+ * monitor is for. They cover the whole workspace when they are opened over
+ * it, so a writer with two screens was covering the script to look at the
+ * board they were building it from.
+ */
+export type PaneKey = PaneId | 'research' | 'outliner' | 'sculptor' | `beat:${string}`;
+
+/** The rooms: whole screens rather than sections of the workspace. */
+export const ROOM_PANES = ['research', 'outliner', 'sculptor'] as const;
+export type RoomPane = (typeof ROOM_PANES)[number];
+
+export const isRoomPane = (pane: string): pane is RoomPane =>
+  (ROOM_PANES as readonly string[]).includes(pane);
 
 export const beatPane = (beatId: string): PaneKey => `beat:${beatId}`;
 
 export const beatIdOf = (pane: string): string | null =>
   pane.startsWith('beat:') ? pane.slice('beat:'.length) : null;
 
+/** What each room is called, in the one place that decides it. */
+export const ROOM_NAMES: Record<RoomPane, string> = {
+  research: 'Research',
+  outliner: 'Outliner',
+  sculptor: 'Story Sculptor',
+};
+
 /** What a window of this section calls itself, before the project is known. */
 export const paneTitle = (pane: string, format: ProjectFormat | null = null): string => {
-  if (pane === 'research') return 'Research';
+  if (isRoomPane(pane)) return ROOM_NAMES[pane];
   if (beatIdOf(pane)) return 'Beat';
   return paneNamesFor(format)[pane as PaneId] ?? 'VC Writer';
 };

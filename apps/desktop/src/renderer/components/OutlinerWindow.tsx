@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { scrollNudge, zoneFor, type OutlineZone } from '../drag';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
+import { PopOutButton } from './PopOutButton';
 import {
   isInstructional,
   addItem,
@@ -81,6 +82,14 @@ interface OutlinerWindowProps {
   /** The outline as a document (§12 stage 9). Absent where there is no printer. */
   onPrint?(outlineId: string): void;
   onExport?(outlineId: string): void;
+  /**
+   * Take the outline to a window of its own (addendum 02 §8). Absent in the
+   * window that already is one.
+   *
+   * The outline beside the script is the thing this is for: a writer
+   * promoting rows into the manuscript wants to see the manuscript take them.
+   */
+  onPopOut?(): void;
 }
 
 /** How far one level of depth moves a row in. */
@@ -155,7 +164,7 @@ const placeholderOf = (kind: string, format: ProjectFormat): string => {
 };
 const markOf = (kind: string): string => MARKS[kind] ?? '•';
 
-export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExport }: OutlinerWindowProps) {
+export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExport, onPopOut }: OutlinerWindowProps) {
   const outlines = outlinesOf(file);
   const [outlineId, setOutlineId] = useState<string | null>(null);
   const [selected, setSelected] = useState<OutlineItemId | null>(null);
@@ -598,6 +607,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
           </>
         ) : null}
 
+        {onPopOut ? <PopOutButton what="the Outliner" onPopOut={onPopOut} /> : null}
         <button type="button" className="ghost" onClick={onClose} aria-label="Close the Outliner">
           ×
         </button>

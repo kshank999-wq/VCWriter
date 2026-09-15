@@ -40,6 +40,14 @@ const SHAPES: Record<string, { width: number; height: number }> = {
   research: { width: 1280, height: 860 },
   viewer: { width: 1240, height: 560 },
   lanes: { width: 1240, height: 620 },
+  // The inspector is a column beside the writing, so it opens as one rather
+  // than as the square the fallback was quietly giving it.
+  inspector: { width: 420, height: 900 },
+  // A board is read across: its columns run left to right and a story of any
+  // size is wider than it is tall. The outline is the other way about — a
+  // list read top to bottom, which is why it is the narrower of the two.
+  sculptor: { width: 1400, height: 900 },
+  outliner: { width: 1040, height: 940 },
 };
 
 const shapeFor = (pane: PaneKey) => SHAPES[pane.split(':')[0] ?? ''] ?? { width: 1000, height: 800 };

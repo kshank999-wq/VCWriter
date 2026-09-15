@@ -7,8 +7,10 @@ import {
   DEFAULT_ARRANGEMENT,
   movePane,
   normaliseArrangement,
+  isRoomPane,
   paneNamesFor,
   paneTitle,
+  ROOM_PANES,
   slotOf,
   type Arrangement,
   type PaneId,
@@ -293,5 +295,88 @@ describe('a beat in a window of its own', () => {
     };
     render(<Satellite pane="script" />);
     expect(screen.getByText('Waiting for the workspace…')).toBeDefined();
+  });
+});
+
+/**
+ * The three rooms on a second monitor (addendum 02 §8).
+ *
+ * Research could already go; the Outliner and the Story Sculptor could not,
+ * although both cover the whole workspace when they are opened over it — so on
+ * two screens a writer was covering the script with the board they were
+ * building it from. Neither needed splitting to get out: both are already
+ * `position: fixed; inset: 0`, which in a window of its own is the window.
+ */
+describe('a room in a window of its own', () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it('names each room the same on its window, its chip and its menu item', () => {
+    // One answer, so the window's title and the chip that brings it back
+    // cannot drift apart.
+    expect(paneTitle('research')).toBe('Research');
+    expect(paneTitle('outliner')).toBe('Outliner');
+    expect(paneTitle('sculptor')).toBe('Story Sculptor');
+    // And the format has no say: a board is a board in a novel.
+    expect(paneTitle('sculptor', 'novel')).toBe('Story Sculptor');
+    expect(ROOM_PANES.every((pane) => isRoomPane(pane))).toBe(true);
+    expect(isRoomPane('script')).toBe(false);
+  });
+
+  it('draws the Story Sculptor, editing the workspace’s project', async () => {
+    const workspace = connect(project());
+    render(<Satellite pane="sculptor" />);
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Story Sculptor' })).toBeDefined());
+    // It is the window, so there is nothing to send it to a window.
+    expect(screen.queryByLabelText('Open the Story Sculptor in its own window')).toBeNull();
+    expect(workspace.state.file.project.title).toBe('Lighthouse');
+  });
+
+  it('draws the Outliner, editing the workspace’s project', async () => {
+    connect(project());
+    render(<Satellite pane="outliner" />);
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Outliner' })).toBeDefined());
+    expect(screen.queryByLabelText('Open the Outliner in its own window')).toBeNull();
+  });
+
+  /**
+   * A room that could do less on the other monitor is a reason not to move it
+   * there. What goes to the printer is the document in hand — the workspace's,
+   * over the link — so there is nothing to flush and nothing missing.
+   */
+  it('still prints the outline from the window it was moved to', async () => {
+    const printed: unknown[] = [];
+    connect(project());
+    const bridge = (window as unknown as { vcwriter: Record<string, unknown> }).vcwriter;
+    bridge['print'] = async (request: unknown) => {
+      printed.push(request);
+      return { ok: true, data: undefined };
+    };
+    render(<Satellite pane="outliner" />);
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Outliner' })).toBeDefined());
+
+    fireEvent.click(screen.getByText('Print…'));
+    await waitFor(() => expect(printed).toHaveLength(1));
+    const request = printed[0] as { kind: string; file: ProjectFile };
+    expect(request.kind).toBe('outline');
+    // The workspace's document, not a copy this window made up.
+    expect(request.file.project.title).toBe('Lighthouse');
+  });
+
+  /**
+   * The plot lanes used to be the fallthrough, so a window asking for a
+   * section this build has not got opened showing the lanes and claimed on its
+   * own title bar to be whatever it had asked for.
+   */
+  it('says it does not know a section rather than drawing the plot lanes', async () => {
+    connect(project());
+    render(<Satellite pane={'nonesuch' as never} />);
+    await waitFor(() => expect(screen.getByText(/has no section called/)).toBeDefined());
+    expect(screen.queryByText('+ Lane')).toBeNull();
+  });
+
+  it('still draws the plot lanes when the plot lanes are what was asked for', async () => {
+    connect(project());
+    render(<Satellite pane="lanes" />);
+    await waitFor(() => expect(screen.getByText('+ Lane')).toBeDefined());
   });
 });

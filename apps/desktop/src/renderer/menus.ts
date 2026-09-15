@@ -54,6 +54,8 @@ export type CommandId =
   | 'window.lanes'
   | 'window.inspector'
   | 'window.research'
+  | 'window.outliner'
+  | 'window.sculptor'
   | 'window.episodes'
   | 'window.beat'
   | 'window.focus'
@@ -185,7 +187,12 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
         : [{ command: 'window.viewer' as CommandId, label: `${names.viewer} in its own window`, checkable: true }]),
       { command: 'window.lanes', label: `${names.lanes} in its own window`, checkable: true },
       { command: 'window.inspector', label: 'Inspector in its own window', checkable: true },
+      // The three rooms. Each is a whole screen's work done beside the
+      // writing rather than in it, and each covers the workspace when it is
+      // opened over one — which on two monitors is the wrong screen covered.
       { command: 'window.research', label: 'Research in its own window', checkable: true },
+      { command: 'window.outliner', label: 'Outliner in its own window', checkable: true },
+      { command: 'window.sculptor', label: 'Story Sculptor in its own window', checkable: true },
       { command: 'window.episodes', label: 'Episodes', checkable: true },
       { command: 'window.beat', label: 'This beat in its own window' },
       null,

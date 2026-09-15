@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
+import { PopOutButton } from './PopOutButton';
 import { usePreference } from '../use-split';
 import {
   COLUMN_WIDTH,
@@ -89,6 +90,14 @@ interface SculptorWindowProps {
   open: boolean;
   onClose(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  /**
+   * Take the board to a window of its own (addendum 02 §8). Absent in the
+   * window that already is one — there is nowhere further to send it.
+   *
+   * The board needs no other change to live there: it covers the workspace
+   * whole, so a window of its own is the same component with nothing under it.
+   */
+  onPopOut?(): void;
 }
 
 /** Pixels to a canvas unit at 100%. A row is this tall; a column four across. */
@@ -179,7 +188,7 @@ const spreadLabels = (points: { x: number; y: number }[]): number[] => {
   });
 };
 
-export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindowProps) {
+export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: SculptorWindowProps) {
   const boards = boardsOf(file);
   // §14: the board talks about scenes and beats in half a dozen tooltips.
   const nouns = nounsFor(file.project.format);
@@ -267,7 +276,9 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
   const [frame, setFrame] = useState({ width: 0, height: 0 });
   useEffect(() => {
     const element = canvas.current;
-    if (!open || !element) return undefined;
+    // Guarded the way the Script's own measurement is: a renderer without a
+    // `ResizeObserver` still draws the board, it just does not re-measure it.
+    if (!open || !element || typeof ResizeObserver !== 'function') return undefined;
     const measure = () => setFrame({ width: element.clientWidth, height: element.clientHeight });
     measure();
     const watcher = new ResizeObserver(measure);
@@ -491,6 +502,7 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
           </>
         ) : null}
 
+        {onPopOut ? <PopOutButton what="the Story Sculptor" onPopOut={onPopOut} /> : null}
         <button type="button" className="ghost" onClick={onClose} aria-label="Close the Story Sculptor">
           ×
         </button>

@@ -721,7 +721,9 @@ Research is where the material is kept **before, during and after** it is
 used in the script — a working inventory, not a junk drawer — so it is not
 a quarter of the screen with a strip of category tabs across the top. It is
 its own window over the whole of the workspace, opened from **Research**
-beside the Script tab, and closed with `Escape`.
+beside the Script tab, and closed with `Escape` — or, on a second monitor, a
+real window of its own (§8), which is where it and the other two rooms belong
+if there is a screen for them.
 
 Three columns:
 
@@ -797,12 +799,38 @@ The arrangement is a preference, per machine, not project data.
 
 ### A section in a window of its own
 
-Any of the four, plus **research** and **any number of beats**, can be
+Any of the four, plus the **three rooms** and **any number of beats**, can be
 opened as a real window and pushed onto another monitor. The window runs the
 same renderer with `?pane=` naming what it holds: `script`, `viewer`,
-`lanes`, `inspector`, `research`, or `beat:<id>` — beats key on their own id,
-so two beats can be open side by side. Asking twice for the same section
-raises the window that already exists rather than making a second one.
+`lanes`, `inspector`, `research`, `outliner`, `sculptor`, or `beat:<id>` —
+beats key on their own id, so two beats can be open side by side. Asking
+twice for the same section raises the window that already exists rather than
+making a second one.
+
+**The rooms are the reason the list is not just the four sections.** Research,
+the Outliner and the Story Sculptor are each a whole screen's work done
+*beside* the writing rather than in it, and each covers the workspace entirely
+when it is opened over one — so a writer with two monitors was covering the
+script with the board they were building it from. None of the three needed
+splitting to get out: all are already `position: fixed; inset: 0`, which in a
+window of its own is simply the window.
+
+A room is offered the move in two places, which are the same act: the **⧉** in
+its own bar, beside the ×, and the item in the **Window** menu, ticked while it
+is out there so choosing it again brings it back. The mark is **absent rather
+than greyed** in the window that already is the room, because a window has
+nowhere to pop out to.
+
+**A room on the other monitor can do everything the docked one can.** The
+Outliner still prints and exports: what goes to the printer is the document in
+hand, which is the workspace's document over the link, so there is nothing to
+flush and nothing missing. A window that could do less than the panel it came
+out of would be a reason not to move it.
+
+**A key this build has not got says so.** An unknown `?pane=` used to fall
+through to the plot lanes, so a window opened by an older workspace, or from a
+hand-edited URL, drew the lanes while its title bar claimed to be whatever had
+been asked for. It now says which section it does not have.
 
 **The workspace closes over the place a section left.** The Script taken to
 another monitor does not leave a striped rectangle where it was: the column
@@ -1084,7 +1112,7 @@ does lives in the workspace, which is the only place that knows what is open.
 | **File** | **New project** (one item, `Ctrl/Cmd+N`), **New episode** *in a series only*, Open, **Import a script**, **Delete a project** (§13.1), Save, Save a copy, **Title page** (§6.1), **Page setup**, Print, Export PDF, Preferences, Close project |
 | **Editor** | Find, Find next, Find and replace, Reformat pasted text, and the two editors of spec §8 — Daily and Final — plus Read back |
 | **Reports** | Writing log, Story statistics (§15) |
-| **Window** | The episode rail; each section, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
+| **Window** | The episode rail; each section **and each of the three rooms**, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
 | **Help** | What this build does, About |
 
 It is called **Editor**, not Edit, because the clipboard is not what it is

@@ -34,7 +34,25 @@ push live; the build takes a minute or two.
   performance) and fix what they raise, because they catch what the SQL
   reads like it does. Applied through 0050.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
-  describes the workspace as built. Keep it current with the code. Its **§12a**
+  describes the workspace as built. Keep it current with the code. Its **§8** is
+  the windowing, and the thing to know is that **all three rooms go to a second
+  monitor**: research could already, and the Outliner and the Story Sculptor now
+  can, which is what Ken asked for. Neither needed splitting the way
+  `ResearchBody` was split — both are already `position: fixed; inset: 0`, so a
+  window of their own is the same component with nothing under it, and the whole
+  change is `'outliner' | 'sculptor'` joining `PaneKey`, two `SHAPES` entries,
+  two branches in `Satellite.tsx` and two menu items. Three things came out of
+  building it. **An unknown `?pane=` used to draw the plot lanes** — they were
+  the fallthrough of the branch ladder — so a window opened by an older
+  workspace drew the lanes while its title bar claimed to be whatever had been
+  asked for; there is a real default now. `paneTitle` is **the one thing that
+  names a pane**, the title bar's chips having held a second copy that knew
+  about research and nothing else. And `printing.ts` is printing in one place,
+  because **a room on the other monitor must not be able to do less than the
+  panel it came out of**: the popped-out Outliner still prints and exports, and
+  the thing that makes that sound is that **what is printed is the document in
+  hand rather than the one on disk** — the flush is the workspace's business and
+  a satellite needs none. Its **§12a**
   is the **chapter page** as Ken asked for it — *File ▸ Chapter page…*, under
   *Title page…*, because a chapter leaf is the same kind of object: a page of
   the book that is not a page of the manuscript. Most of what he described

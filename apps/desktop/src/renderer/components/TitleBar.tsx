@@ -1,4 +1,4 @@
-import { beatIdOf, paneNamesFor, type PaneId } from '../panes';
+import { beatIdOf, paneTitle } from '../panes';
 import { Wordmark } from './Brand';
 import { avSheet, formatRt, nounsFor, type ProjectFile, type ProjectFormat } from '@vcwriter/domain';
 import type { AccountStatus } from '../../preload/index';
@@ -187,5 +187,12 @@ export function TitleBar({
   );
 }
 
-const nameOf = (pane: string, format: ProjectFormat | null): string =>
-  pane === 'research' ? 'Research' : (paneNamesFor(format)[pane as PaneId] ?? pane);
+/**
+ * What a chip calls the section it brings back.
+ *
+ * `paneTitle` is the one thing that answers this — it is what the window's own
+ * title bar says, so the chip and the window agree by construction. A second
+ * copy here had already gone stale once: it knew about research and nothing
+ * else, so a new room would have been a chip wearing its own key.
+ */
+const nameOf = (pane: string, format: ProjectFormat | null): string => paneTitle(pane, format);

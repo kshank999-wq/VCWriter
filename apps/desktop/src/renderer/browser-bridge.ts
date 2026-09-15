@@ -197,7 +197,16 @@ const createPaneWindows = (): VcWriterApi['panes'] => {
       }
       const url = new URL(window.location.href);
       url.search = `?pane=${encodeURIComponent(pane)}`;
-      const shape = pane.startsWith('beat') || pane === 'script' ? 'width=900,height=1040' : 'width=1280,height=860';
+      // The same proportions the desktop's registry gives each kind: a page
+      // is tall, a board is wide, an outline is between the two.
+      const shape =
+        pane.startsWith('beat') || pane === 'script'
+          ? 'width=900,height=1040'
+          : pane === 'sculptor'
+            ? 'width=1400,height=900'
+            : pane === 'outliner'
+              ? 'width=1040,height=940'
+              : 'width=1280,height=860';
       const popup = window.open(url.toString(), `vcwriter-${pane}`, `popup=yes,${shape}`);
       if (!popup) return fail<true>('The browser blocked the new window — allow pop-ups for this site.');
       popups.set(pane, popup);

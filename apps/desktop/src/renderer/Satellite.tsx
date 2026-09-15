@@ -22,7 +22,11 @@ import { applyScheme, DEFAULT_SCHEME, type SchemeId } from './themes';
 import { StoryView, DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay, type ScriptLayout } from './components/StoryView';
 import { AvSheet } from './components/AvSheet';
 import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
+import { DEFAULT_PRINT_SETUP, type PrintSetup } from './components/PageSetup';
+import { usePrinting } from './printing';
 import { ResearchBody } from './components/ResearchWindow';
+import { SculptorWindow } from './components/SculptorWindow';
+import { OutlinerWindow } from './components/OutlinerWindow';
 import { TimelineViewer } from './components/TimelineViewer';
 import { MasterTimeline, DEFAULT_BEATS_PER_COLUMN } from './components/MasterTimeline';
 import { Inspector } from './components/Inspector';
@@ -106,6 +110,17 @@ function Section({
   // Paper, ink and face: the writer's, per machine, never project data (§6.3).
   const [pageStyle, setPageStyle] = usePreference<PageStyle>('pageStyle', DEFAULT_PAGE_STYLE);
   const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
+  /**
+   * Printing, from the same module the workspace uses, and with **no flush**:
+   * this window has no file to flush, and does not need one — what goes to the
+   * printer is the document in hand rather than the one on disk, and the two
+   * windows hold the same document over the link.
+   *
+   * The page setup is a per-machine preference, so a printing from here
+   * carries exactly what a printing from the workspace would.
+   */
+  const [printSetup] = usePreference<PrintSetup>('printSetup', DEFAULT_PRINT_SETUP);
+  const printing = usePrinting({ file, setup: printSetup });
   const [beatsPerColumn] = usePreference('beatsPerColumn', DEFAULT_BEATS_PER_COLUMN);
   const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', 180);
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
@@ -250,6 +265,42 @@ function Section({
       <div className="satellite-body">
         <Inspector file={file} selectedBeatId={selectedBeat?.id ?? null} onUpdate={onUpdate} />
       </div>
+    );
+  }
+
+  // The two rooms. Both already cover the whole workspace when they are
+  // opened over it — `position: fixed; inset: 0` — so a window of their own
+  // is the same component with nothing under it, and closing is closing the
+  // window rather than uncovering the script.
+  if (pane === 'sculptor') {
+    return <SculptorWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} />;
+  }
+
+  if (pane === 'outliner') {
+    return (
+      <OutlinerWindow
+        file={file}
+        open
+        onClose={closeSelf}
+        onUpdate={onUpdate}
+        // The outline prints from here too. What is printed is the document in
+        // hand — the same one the workspace holds, over the link — so a room on
+        // the other monitor is not a room that can do less.
+        onPrint={(outlineId) => void printing.print('outline', outlineId)}
+        onExport={(outlineId) => void printing.exportPdf('outline', outlineId)}
+      />
+    );
+  }
+
+  if (pane !== 'lanes') {
+    // Every key this build knows is above. Saying so is the point: the plot
+    // lanes used to be the fallthrough, so a window asking for something this
+    // version has not got — an older workspace, a hand-edited URL — opened
+    // showing the lanes and claiming to be whatever it had asked for.
+    return (
+      <p className="muted empty-state">
+        This build has no section called “{pane}”. Close this window and open it from the workspace’s Window menu.
+      </p>
     );
   }
 

@@ -36,6 +36,7 @@ import {
   type ResearchItemId,
   type ResearchView,
 } from '@vcwriter/domain';
+import { PopOutButton } from './PopOutButton';
 import { InlineText } from './InlineText';
 import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
@@ -439,17 +440,7 @@ export function ResearchBody({
         <button type="button" className="ghost" onClick={addFolder}>
           + Folder
         </button>
-        {onPopOut ? (
-          <button
-            type="button"
-            className="ghost"
-            aria-label="Open research in its own window"
-            title="Open research in its own window — put it on another monitor"
-            onClick={onPopOut}
-          >
-            ⧉
-          </button>
-        ) : null}
+        {onPopOut ? <PopOutButton what="research" onPopOut={onPopOut} /> : null}
         <button type="button" className="ghost" aria-label="Close research" onClick={onClose}>
           ×
         </button>

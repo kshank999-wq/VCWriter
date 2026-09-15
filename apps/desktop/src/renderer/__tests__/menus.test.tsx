@@ -26,6 +26,24 @@ import { TitlePageDialog } from '../components/TitlePageDialog';
 afterEach(cleanup);
 
 describe('the menu list', () => {
+  /**
+   * Addendum 02 §8: every room can be pushed onto another monitor, and each
+   * one ticks when it is out there so choosing it again brings it back.
+   */
+  it('offers all three rooms a window of their own, and ticks the one that is out', () => {
+    const window_ = MENUS.find((menu) => menu.id === 'window')!;
+    const rooms = window_.items
+      .filter(Boolean)
+      .filter((item) => ['window.research', 'window.outliner', 'window.sculptor'].includes(item!.command));
+    expect(rooms.map((item) => item!.label)).toEqual([
+      'Research in its own window',
+      'Outliner in its own window',
+      'Story Sculptor in its own window',
+    ]);
+    // Ticked means out there; a room you cannot bring back is a room lost.
+    expect(rooms.every((item) => item!.checkable)).toBe(true);
+  });
+
   it('has the three menus the workspace is driven from, and no command twice', () => {
     expect(MENUS.map((menu) => menu.label)).toEqual(['File', 'Editor', 'Reports', 'Window', 'Help']);
     const commands = MENUS.flatMap((menu) => menu.items.filter(Boolean).map((item) => item!.command));
