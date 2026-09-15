@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ProjectFormat } from '@vcwriter/domain';
+import { nounsFor, type ProjectFormat } from '@vcwriter/domain';
 // The stacked lockup (docs/brand.md), cut for this screen by
 // brand/logo/derive.mjs. Bundled by Vite, so it ships inside the app and the
 // renderer's `img-src 'self'` policy covers it.
@@ -32,14 +32,29 @@ interface WelcomeProps {
   error: string | null;
 }
 
-const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string; detail: string }> = [
-  { value: 'screenplay', label: 'Screenplay', detail: 'Scenes and beats, industry formatting' },
-  { value: 'series', label: 'Series or episodic', detail: 'Episodes across a series, script formatting' },
-  { value: 'novel', label: 'Novel', detail: 'Chapters and beats, manuscript formatting' },
-  { value: 'stage_play', label: 'Stage play', detail: 'Scenes and beats' },
-  { value: 'short_story', label: 'Short story', detail: 'Sections and beats' },
-  { value: 'short_form', label: 'Short form', detail: 'Commercials, web video, social' },
+/**
+ * What each format is, in a line.
+ *
+ * The **parts** half is read from `nounsFor` rather than typed here, so this
+ * list cannot tell a writer a novel has "chapters and beats" while every screen
+ * in the program calls them passages (addendum 16 §1). What stays written down
+ * is the part a noun table cannot know: what the format is *for*.
+ */
+const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string; about: string }> = [
+  { value: 'screenplay', label: 'Screenplay', about: 'industry formatting' },
+  { value: 'series', label: 'Series or episodic', about: 'episodes across a series' },
+  { value: 'novel', label: 'Novel', about: 'manuscript formatting' },
+  { value: 'instructional', label: 'Instructional book', about: 'academic, reference and nonfiction' },
+  { value: 'stage_play', label: 'Stage play', about: '' },
+  { value: 'short_story', label: 'Short story', about: '' },
+  { value: 'short_form', label: 'Short form', about: 'commercials, web video, social' },
 ];
+
+const detailFor = (option: { value: ProjectFormat; about: string }): string => {
+  const nouns = nounsFor(option.value);
+  const parts = `${nouns.unitPlural} and ${nouns.subPlural.toLowerCase()}`;
+  return option.about.length > 0 ? `${parts}, ${option.about}` : parts;
+};
 
 export function Welcome({
   onCreate,
@@ -99,7 +114,7 @@ export function Welcome({
                 onClick={() => setFormat(option.value)}
               >
                 <strong>{option.label}</strong>
-                <span>{option.detail}</span>
+                <span>{detailFor(option)}</span>
               </button>
             ))}
           </div>

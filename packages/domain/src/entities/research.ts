@@ -30,9 +30,10 @@ export const systemCategoryKeySchema = z.enum([
    *
    * `ideas` is deliberately **not** repeated here — it is already in the list
    * above and means the same thing in both. A second `instructional_ideas`
-   * key would be two names for one shelf.
+   * key would be two names for one shelf. Nor is there a `graphics` key: the
+   * library (§9) is the graphics shelf, and a folder of the same name beside
+   * it could only hold the wrong thing.
    */
-  'graphics',
   'notes',
   'inbox',
 ]);
@@ -141,9 +142,15 @@ export const DEFAULT_RESEARCH_CATEGORIES: ReadonlyArray<SeededCategory> = [
  * **The inbox is last and is a real shelf**, not a modal. §4 wants imported
  * material to land somewhere before it is classified, and somewhere is a
  * place you can leave things and come back to.
+ *
+ * **There is deliberately no Graphics folder.** One was seeded here and the
+ * screen showed why it should not be: the research menu carried a *Graphics*
+ * folder that holds notes directly above a *Graphics* library that holds
+ * pictures, and the first thing anybody would do is drop a diagram into the
+ * one that cannot take it. The library is the graphics shelf; §9 is where it
+ * lives, and a second thing of the same name is a trap rather than a taxonomy.
  */
 export const INSTRUCTIONAL_RESEARCH_CATEGORIES: ReadonlyArray<SeededCategory> = [
-  { name: 'Graphics', systemKey: 'graphics' },
   { name: 'General Notes', systemKey: 'notes' },
   { name: 'Ideas', systemKey: 'ideas' },
   { name: 'Imported', systemKey: 'inbox' },

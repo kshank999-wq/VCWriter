@@ -26,9 +26,11 @@ import {
   type Lane,
   type ProjectFile,
   type StructuralUnit,
+  isInstructional,
 } from '@vcwriter/domain';
 import { RelatedPanel } from './RelatedPanel';
 import { CharacterWorkPanel } from './CharacterWorkPanel';
+import { LearningAidsPanel } from './LearningAidsPanel';
 import { BEAT_STATUSES } from './status';
 
 interface InspectorProps {
@@ -166,9 +168,16 @@ function BeatSection({
         <dd>{speakers.length > 0 ? speakers.join(', ') : <span className="muted">No dialogue yet</span>}</dd>
       </dl>
       <RelatedPanel file={file} target={ref('beat', beat.id)} onUpdate={onUpdate} />
-      {/* What the Character Creator has landed here, and what is waiting for
-          the people in it (addendum 08 §10). */}
-      <CharacterWorkPanel file={file} beatId={beat.id} onUpdate={onUpdate} />
+      {/* An instructional book's section ends in aids rather than beginning a
+          scene, and a novel has no use for a quiz — so the panel is absent
+          rather than empty elsewhere (addendum 16 §10). */}
+      {isInstructional(file.project.format) ? (
+        <LearningAidsPanel file={file} beatId={beat.id} onUpdate={onUpdate} />
+      ) : (
+        /* What the Character Creator has landed here, and what is waiting for
+           the people in it (addendum 08 §10). */
+        <CharacterWorkPanel file={file} beatId={beat.id} onUpdate={onUpdate} />
+      )}
     </Section>
   );
 }

@@ -22,11 +22,14 @@ import {
   updateLane,
   updateResearchCategory,
   updateResearchItem,
+  isInstructional,
+  nounsFor,
   type ApprovalDecision,
   type BeatId,
   type CaptureItem,
   type CharacterId,
   type ProjectFile,
+  type ProjectFormat,
   type ResearchCategoryId,
   type ResearchFolder,
   type ResearchItem,
@@ -36,6 +39,8 @@ import {
 import { InlineText } from './InlineText';
 import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
+import { GraphicsPanel } from './GraphicsPanel';
+import { ImportNotesPanel } from './ImportNotesPanel';
 import { LinksTimeline } from './LinksTimeline';
 import { LocationsPanel } from './LocationsPanel';
 import { ThemesPanel } from './ThemesPanel';
@@ -76,6 +81,10 @@ type Selection =
   | { kind: 'locations' }
   /** The story-relationship timeline (addendum 15) — every lane at once. */
   | { kind: 'links' }
+  /** The graphics library (addendum 16 §9). Instructional books only. */
+  | { kind: 'graphics' }
+  /** Bringing notes and pictures in (addendum 16 §4). Instructional books only. */
+  | { kind: 'importer' }
   /** The relationship mind map (addendum 08 §12) — a view of the whole cast. */
   | { kind: 'charmap' }
   /** Search, filters and the review modes (addendum 08 §18). */
@@ -92,10 +101,17 @@ type Selection =
    */
   | { kind: 'creator'; id: CharacterId };
 
-const VIEWS: ReadonlyArray<{ view: ResearchView; label: string }> = [
+/**
+ * The four views, named for the format.
+ *
+ * *Used in the script* is exactly the phrasing §14 forbids on a book, so the
+ * label reads the noun table rather than saying a word of its own — the same
+ * rule every other surface follows since addendum 16 §1.
+ */
+const viewsFor = (format: ProjectFormat): ReadonlyArray<{ view: ResearchView; label: string }> => [
   { view: 'all', label: 'All research' },
   { view: 'unused', label: 'Not yet used' },
-  { view: 'used', label: 'Used in the script' },
+  { view: 'used', label: `Used in the ${nounsFor(format).manuscript.toLowerCase()}` },
   { view: 'archived', label: 'Put away' },
 ];
 
@@ -190,6 +206,13 @@ export function ResearchBody({
    * feel like it had forgotten them.
    */
   const [tabFor, setTabFor] = useState<Readonly<Record<string, CreatorTab>>>({});
+  /**
+   * An instructional book keeps a different research shelf (addendum 16 §3),
+   * and §15 requires the two stay distinct — so the *menu* is the taxonomy.
+   * A professor is not offered a Character Creator to ignore.
+   */
+  const instructional = isInstructional(file.project.format);
+  const views = useMemo(() => viewsFor(file.project.format), [file.project.format]);
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [dragging, setDragging] = useState<{ kind: 'item' | 'folder' | 'capture'; id: string } | null>(null);
@@ -375,7 +398,7 @@ export function ResearchBody({
     selection.kind === 'creator'
       ? (creator?.name ?? 'Character')
       : selection.kind === 'view'
-      ? (VIEWS.find((entry) => entry.view === selection.view)?.label ?? 'Research')
+      ? (views.find((entry) => entry.view === selection.view)?.label ?? 'Research')
       : selection.kind === 'mobile'
       ? 'Mobile App'
       : selection.kind === 'charmap'
@@ -384,6 +407,10 @@ export function ResearchBody({
         ? 'Character review'
         : selection.kind === 'plots'
         ? 'Plots'
+        : selection.kind === 'graphics'
+          ? 'Graphics'
+        : selection.kind === 'importer'
+          ? 'Import'
         : selection.kind === 'links'
           ? 'Links'
         : selection.kind === 'locations'
@@ -435,6 +462,8 @@ export function ResearchBody({
           creator ||
           // The wiring diagram wants the whole width: it is a timeline.
           selection.kind === 'links' ||
+          selection.kind === 'graphics' ||
+          selection.kind === 'importer' ||
           selection.kind === 'charmap' ||
           selection.kind === 'review' ||
           selection.kind === 'mobile'
@@ -446,7 +475,7 @@ export function ResearchBody({
         <nav className="research-side" aria-label="Research folders">
           <h4>Everything</h4>
           <ul className="research-views">
-            {VIEWS.map((entry) => (
+            {views.map((entry) => (
               <li key={entry.view}>
                 <button
                   type="button"
@@ -467,7 +496,7 @@ export function ResearchBody({
               is how somebody finds it after reading about it. The order is the
               order names are offered while a cue is being typed: main
               characters first. */}
-          {cast.length > 0 ? (
+          {cast.length > 0 && !instructional ? (
             <>
               <h4>Character Creator</h4>
               <ul className="research-views research-cast">
@@ -515,38 +544,75 @@ export function ResearchBody({
 
           <h4>Also</h4>
           <ul className="research-views">
-            <li>
-              <button
-                type="button"
-                className={selection.kind === 'plots' ? 'folder-row selected' : 'folder-row'}
-                onClick={() => setSelection({ kind: 'plots' })}
-              >
-                <span className="folder-name">Plots</span>
-                <span className="count muted">{file.lanes.length}</span>
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                className={selection.kind === 'setups' ? 'folder-row selected' : 'folder-row'}
-                onClick={() => setSelection({ kind: 'setups' })}
-              >
-                <span className="folder-name">Setups &amp; payoffs</span>
-                <span className="count muted">{file.setupsPayoffs.filter((record) => !record.archived).length}</span>
-              </button>
-            </li>
-            {/* Places, as a first-class entry rather than a folder of notes:
-                a location is a project asset like a character (addendum 14). */}
-            <li>
-              <button
-                type="button"
-                className={selection.kind === 'locations' ? 'folder-row selected' : 'folder-row'}
-                onClick={() => setSelection({ kind: 'locations' })}
-              >
-                <span className="folder-name">Locations</span>
-                <span className="count muted">{(file.locations ?? []).filter((one) => !one.archived).length}</span>
-              </button>
-            </li>
+            {instructional ? (
+              <>
+                <li>
+                  <button
+                    type="button"
+                    className={selection.kind === 'importer' ? 'folder-row selected' : 'folder-row'}
+                    title="Bring in notes, documents and pictures"
+                    onClick={() => setSelection({ kind: 'importer' })}
+                  >
+                    <span className="folder-name">Import</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className={selection.kind === 'graphics' ? 'folder-row selected' : 'folder-row'}
+                    onClick={() => setSelection({ kind: 'graphics' })}
+                  >
+                    <span className="folder-name">Graphics</span>
+                    <span className="count muted">{(file.assets ?? []).length}</span>
+                  </button>
+                </li>
+              </>
+            ) : null}
+            {/* Absent rather than greyed on a book (addendum 16 §3): a plot
+                lane, a planted setup and a place read off a slugline are
+                things a textbook does not have, and a disabled control says
+                *not yet* about something that is never coming. Themes, Links
+                and the phone stay: a work of nonfiction has all three. */}
+            {!instructional ? (
+              <>
+                <li>
+                  <button
+                    type="button"
+                    className={selection.kind === 'plots' ? 'folder-row selected' : 'folder-row'}
+                    onClick={() => setSelection({ kind: 'plots' })}
+                  >
+                    <span className="folder-name">Plots</span>
+                    <span className="count muted">{file.lanes.length}</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className={selection.kind === 'setups' ? 'folder-row selected' : 'folder-row'}
+                    onClick={() => setSelection({ kind: 'setups' })}
+                  >
+                    <span className="folder-name">Setups &amp; payoffs</span>
+                    <span className="count muted">
+                      {file.setupsPayoffs.filter((record) => !record.archived).length}
+                    </span>
+                  </button>
+                </li>
+                {/* Places, as a first-class entry rather than a folder of notes:
+                    a location is a project asset like a character (addendum 14). */}
+                <li>
+                  <button
+                    type="button"
+                    className={selection.kind === 'locations' ? 'folder-row selected' : 'folder-row'}
+                    onClick={() => setSelection({ kind: 'locations' })}
+                  >
+                    <span className="folder-name">Locations</span>
+                    <span className="count muted">
+                      {(file.locations ?? []).filter((one) => !one.archived).length}
+                    </span>
+                  </button>
+                </li>
+              </>
+            ) : null}
             {/* The story-relationship timeline (addendum 15). It sits with the
                 modules it draws rather than under one of them, because it is
                 the lane engine for all four and belongs to none. */}
@@ -585,28 +651,36 @@ export function ResearchBody({
                 {waiting > 0 ? <span className="count muted">{waiting}</span> : null}
               </button>
             </li>
-            <li>
-              <button
-                type="button"
-                className={selection.kind === 'charmap' ? 'folder-row selected' : 'folder-row'}
-                onClick={() => setSelection({ kind: 'charmap' })}
-              >
-                <span className="folder-name">Character map</span>
-                <span className="count muted">{file.characterRelationships.length}</span>
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                className={selection.kind === 'review' ? 'folder-row selected' : 'folder-row'}
-                onClick={() => setSelection({ kind: 'review' })}
-              >
-                <span className="folder-name">Character review</span>
-                <span className="count muted">
-                  {file.characterizationItems.length + file.arcPoints.length}
-                </span>
-              </button>
-            </li>
+            {/* The Character Creator's two whole-cast readings. Gone with the
+                cast itself on a book: the menu already declined to offer the
+                people, and offering the map of them afterwards would be the
+                same mistake made twice. */}
+            {!instructional ? (
+              <>
+                <li>
+                  <button
+                    type="button"
+                    className={selection.kind === 'charmap' ? 'folder-row selected' : 'folder-row'}
+                    onClick={() => setSelection({ kind: 'charmap' })}
+                  >
+                    <span className="folder-name">Character map</span>
+                    <span className="count muted">{file.characterRelationships.length}</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className={selection.kind === 'review' ? 'folder-row selected' : 'folder-row'}
+                    onClick={() => setSelection({ kind: 'review' })}
+                  >
+                    <span className="folder-name">Character review</span>
+                    <span className="count muted">
+                      {file.characterizationItems.length + file.arcPoints.length}
+                    </span>
+                  </button>
+                </li>
+              </>
+            ) : null}
           </ul>
 
           {/* Last, because they are the least of it. The research a writer
@@ -671,6 +745,8 @@ export function ResearchBody({
             selection.kind === 'thematics' ||
             selection.kind === 'locations' ||
             selection.kind === 'links' ||
+            selection.kind === 'graphics' ||
+            selection.kind === 'importer' ||
             selection.kind === 'charmap' ||
             selection.kind === 'review' ||
             selection.kind === 'mobile' ? null : (
@@ -719,6 +795,18 @@ export function ResearchBody({
             />
           ) : selection.kind === 'plots' ? (
             <Plots file={file} onUpdate={onUpdate} />
+          ) : selection.kind === 'graphics' ? (
+            <div className="research-embedded">
+              <GraphicsPanel
+                file={file}
+                onUpdate={onUpdate}
+                {...(onGoToBeat ? { onGoToBeat } : {})}
+              />
+            </div>
+          ) : selection.kind === 'importer' ? (
+            <div className="research-embedded">
+              <ImportNotesPanel file={file} onUpdate={onUpdate} />
+            </div>
           ) : selection.kind === 'links' ? (
             <div className="research-embedded">
               <LinksTimeline

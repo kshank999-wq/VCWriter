@@ -1,6 +1,6 @@
 # Addendum 16 — Instructional / Book Mode
 
-Status: **domain built**, September 2026. From Ken's *VC Writer — Instructional /
+Status: **built**, September 2026. From Ken's *VC Writer — Instructional /
 Book Mode Development Specification v1.0*.
 
 A mode for academic, instructional, reference and nonfiction books: chapters and
@@ -199,11 +199,65 @@ three files nobody read.
 | | |
 | --- | --- |
 | Formats and nouns | `packages/domain/src/formats.ts` |
+| The way in | `apps/desktop/src/renderer/components/Welcome.tsx` |
+| The graphics screen | `apps/desktop/src/renderer/components/GraphicsPanel.tsx` |
+| A figure in the writing | `FigureRow`, `PutAFigureHere` in `BeatBody.tsx` |
+| The aids screen | `apps/desktop/src/renderer/components/LearningAidsPanel.tsx` |
+| The importer screen | `apps/desktop/src/renderer/components/ImportNotesPanel.tsx` |
+| The menu that is the taxonomy | `ResearchWindow.tsx` |
 | Graphics and figures | `packages/domain/src/instructional.ts` |
 | Learning aids | `packages/domain/src/learning.ts`, `entities/learning.ts` |
 | The importer | `packages/domain/src/note-import.ts`, `entities/import-batch.ts` |
 | Generation | `apps/web/src/lib/ai-learning.ts` |
 | The schema | `packages/supabase/migrations/0050_instructional_mode.sql` |
+
+## 6a. The interface, and the four things looking at it caught
+
+The domain was complete and tested and the mode was still unreachable: the
+format was valid and nothing offered it, and a placed figure drew as a stray
+caption. The screens are **Instructional book** on the New Project card, the
+graphics library and the importer in the research menu, the aids in the
+Inspector on a section, and a figure in the manuscript itself.
+
+Four things were wrong on the screen and right in the tests, which is the case
+for building the fixture and driving the real renderer rather than trusting
+1550 green assertions:
+
+- **The menu was the wrong taxonomy.** §3 asks for a research system
+  *intentionally different* from the creative one and §15 requires the two stay
+  distinct — and the menu was still offering a professor Plots, Setups &
+  payoffs, Locations, a character mind map and a character review. They are
+  **absent rather than greyed**, the same rule the book index follows: a
+  disabled control says *not yet* about something that is never coming. Themes,
+  Links and the phone stay, because a work of nonfiction has all three.
+- **Two things called Graphics.** The seeded `graphics` shelf sat directly above
+  the graphics *library*, and the first thing anybody would do is drop a diagram
+  into the one that cannot hold a picture. The shelf is gone; the library is the
+  graphics shelf. The key is out of the schema too, so it cannot come back by
+  accident.
+- **"Used in the script" on a book**, which is the exact phrasing §14 forbids.
+  The four research views now read the noun table like every other surface.
+- **A name collision made a lie.** The manuscript importer already owned
+  `.import-warnings` and coloured it red, so every note import drew *every*
+  unread file as a failure — including the ones that merely were not read and
+  the one that was empty. The note importer's classes are `note-import-*`.
+
+Two decisions the screens add to the module:
+
+**Nothing about a figure is stored except which picture and where.** The number
+is counted in reading order by `figuresInOrder` every time it is drawn, so
+there is no field for it and no *renumber* command; and a figure carries no
+colour, size or face of its own, because the manuscript is drawn on dark ink or
+on white paper depending on the gear — a caption field with a background of its
+own was black on black on one of them, which is what the first screenshot
+showed.
+
+**Putting a figure in is on the manuscript's right-click**, the sixth thing it
+does, rather than a button on the graphics screen. A figure has a place in the
+reading order and the only person who knows where it goes is the one looking at
+the paragraph it belongs under. It is absent on any other format and absent on
+a book whose library is empty: *put a figure here* with nothing to put is not
+an offer.
 
 ## 7. What is deliberately not here
 
@@ -217,14 +271,16 @@ three files nobody read.
 
 ## 8. What is not built
 
-The domain is complete and tested; **the interface is not**. Specifically:
+The mode is reachable and every screen §4, §9 and §10 ask for is there. What is
+left:
 
-- No **New Project** entry for the mode — `instructional` is a valid format and
-  nothing in the desktop offers it yet.
-- No screen for the **graphics library**, for **learning aids**, or for the
-  **importer** and its batch review.
-- No **drag-and-drop** import (§4), and no way in from the Outliner (§6) or the
-  mind map (§5) — both of which the audit found already built for the creative
-  side and neither of which has been pointed at instructional research.
-- The generation path in `ai-learning.ts` is typechecked but **has never been
-  run against the live API**.
+- The **AI suggestion** is not wired. `onGenerate` is an optional prop on the
+  aids panel and nothing passes one, so the panel is an ordinary editor —
+  which is the whole of what §10 requires, the machine being the optional half.
+  `ai-learning.ts` lives in `apps/web` and is typechecked but **has never been
+  run against the live API**; the desktop has no HTTP path to it yet.
+- No way in from the **Outliner** (§6) or the **mind map** (§5) — both of which
+  the audit found already built for the creative side and neither of which has
+  been pointed at instructional research.
+- Dropping files onto the Research window from **outside** it. The importer's
+  own drop zone works; dragging a folder onto the folder tree does not.

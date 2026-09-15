@@ -625,9 +625,8 @@ push live; the build takes a minute or two.
   *existing* one control rather than two, and it keeps nothing at all if the
   moment cannot be marked. A thread of one is **said, never refused**.
   `addendum-16-instructional-mode.md` is Instructional / Book Mode, from Ken's
-  own dev spec. **The domain is built and tested; the interface is not** — §8 of
-  the addendum lists what is missing, and the largest item is that nothing in
-  the desktop offers the format yet. §0 is the audit that shaped everything:
+  own dev spec. **Built**; §8 of the addendum lists the three things left, all
+  of them optional halves. §0 is the audit that shaped everything:
   §11 lists eight entities and **six already existed** (a Chapter is a
   structural unit, a Section is a beat, a ContentItem is a manuscript element, a
   GraphicAsset is an asset, a Relationship is a story link — the fifth time),
@@ -661,7 +660,24 @@ push live; the build takes a minute or two.
   three different answers to the reader. **What splits is what the file says
   splits**: markdown headings do, blank lines do not. The host turns bytes into
   text or a data URI and the domain decides what it becomes, which is §4's
-  extensibility made real.
+  extensibility made real. Stage 5 is **the interface** (§6a), and the case for
+  it is that four things were wrong on the screen with 1550 tests green, every
+  one of them found by building a fixture and driving the real renderer. **The
+  menu is the taxonomy**: Plots, Setups & payoffs, Locations and the two
+  character readings are *absent rather than greyed* on a book, and there is no
+  longer a seeded *Graphics* folder sitting above the graphics *library* waiting
+  for somebody to drop a diagram into the one that cannot hold a picture. The
+  research views read the noun table, so a book no longer says *used in the
+  script*. The note importer's classes are `note-import-*` because the
+  manuscript importer already owned `.import-warnings` and coloured it red —
+  which drew every unread file as a failure, a **collision that made the screen
+  lie**. And a figure now draws in the manuscript (`FigureRow`): number counted
+  in reading order and nowhere to type one, and **no colour of its own**, the
+  manuscript being dark ink or white paper depending on the gear — a caption
+  field with its own background was black on black. **Putting a figure in is on
+  the right-click**, the sixth thing it does, because the only person who knows
+  where a figure goes is the one looking at the paragraph it belongs under; it is
+  absent on every other format and on a book whose library is empty.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

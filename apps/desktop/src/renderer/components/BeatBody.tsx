@@ -29,8 +29,11 @@ import {
   addSetupPayoff,
   addSetupPoint,
   addTheme,
+  figuresInOrder,
+  graphicsInOrder,
   groupManuscript,
   hasBookIndex,
+  isInstructional,
   headingsSoFar,
   isDual,
   layoutForFile,
@@ -39,7 +42,9 @@ import {
   onEnter,
   onTab,
   peopleInBeat,
+  placeFigure,
   readDictatedScript,
+  removeFigure,
   recordPayoff,
   ref,
   retype,
@@ -52,6 +57,7 @@ import {
   subHeadingsUnder,
   toggleInline,
   updateBeat,
+  type AssetId,
   type Beat,
   type BeatId,
   type CharacterId,
@@ -185,6 +191,8 @@ export function BeatBody({
   const [tagging, setTagging] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
   /** And into a narrative thread (addendum 15 §11). */
   const [threading, setThreading] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
+  /** Which line a figure is going in after (addendum 16 §9). */
+  const [placing, setPlacing] = useState<{ elementId: ManuscriptElementId } | null>(null);
 
   /**
    * Dictation (spec §9), and *which* dictation depends on where this is
@@ -601,6 +609,30 @@ export function BeatBody({
   };
 
   const row = (element: ManuscriptElement, index: number, dual: boolean) => {
+    // A figure is an element of the manuscript (addendum 16 §3), so it sits in
+    // the reading order like everything else — but it is a picture rather than
+    // a line, and drawing it through the ordinary row gave a bare caption
+    // floating where the diagram should be.
+    if (element.type === 'figure') {
+      const page = breaks?.get(element.id);
+      return (
+        <Fragment key={element.id}>
+          {page ? (
+            <div className="page-break" aria-label={`Page ${page} starts here`}>
+              <span>{page}.</span>
+            </div>
+          ) : null}
+          <FigureRow
+            file={file}
+            element={element}
+            readOnly={readOnly}
+            onCaption={(text) => updateElement(element.id, { text })}
+            onRemove={() => onUpdate((current) => removeFigure(current, beat.id, element.id))}
+          />
+        </Fragment>
+      );
+    }
+
     const geometry = dual && layout.dual ? layout.dual : layout;
     const indent = geometry.indent[element.type] ?? 0;
     // A prose paragraph's five spaces belong to its opening line only (§6.4).
@@ -857,6 +889,17 @@ export function BeatBody({
                   setCaught(null);
                 }
           }
+          // A figure belongs to a book with pictures in it. Absent rather than
+          // greyed everywhere else, and absent on a book whose library is
+          // empty: *put a figure here* with nothing to put is not an offer.
+          onFigure={
+            readOnly || !isInstructional(file.project.format) || graphicsInOrder(file).length === 0
+              ? null
+              : () => {
+                  setPlacing({ elementId: caught.elementId });
+                  setCaught(null);
+                }
+          }
           onClose={() => setCaught(null)}
         />
       ) : null}
@@ -912,6 +955,16 @@ export function BeatBody({
           passage={threading.text}
           onUpdate={onUpdate}
           onClose={() => setThreading(null)}
+        />
+      ) : null}
+
+      {placing ? (
+        <PutAFigureHere
+          file={file}
+          beatId={beat.id}
+          afterElementId={placing.elementId}
+          onUpdate={onUpdate}
+          onClose={() => setPlacing(null)}
         />
       ) : null}
     </div>
@@ -1004,6 +1057,78 @@ function ExtensionMenu({ onPick, onClose }: { onPick(mark: string): void; onClos
 }
 
 /**
+ * A figure, where the author put it (addendum 16 §3, §9).
+ *
+ * **The number is not stored and there is nowhere to type one**: it is counted
+ * in reading order, so dragging this section to the front of the book renumbers
+ * every figure with nothing run. The same rule the chapter page's number
+ * follows, pointed at pictures.
+ *
+ * The caption here is the *placement's* — it starts as the picture's and then
+ * goes its own way, which is what lets one diagram be captioned twice in one
+ * book. Removing is `removeFigure`, which takes the figure out of the writing
+ * and leaves the picture in the library: §12's two different acts.
+ *
+ * A picture that has been deleted from the library leaves its figure standing
+ * and reading as missing, rather than silently taking the writer's caption and
+ * whatever the words around it promised.
+ */
+function FigureRow({
+  file,
+  element,
+  readOnly,
+  onCaption,
+  onRemove,
+}: {
+  file: ProjectFile;
+  element: ManuscriptElement;
+  readOnly: boolean;
+  onCaption(text: string): void;
+  onRemove(): void;
+}) {
+  const assetId = (element.attributes.assetId ?? '') as string;
+  const asset = (file.assets ?? []).find((one) => (one.id as string) === assetId) ?? null;
+  const number = useMemo(
+    () => figuresInOrder(file).find((one) => (one.elementId as string) === (element.id as string))?.number ?? null,
+    [file, element.id],
+  );
+
+  return (
+    <figure className={asset ? 'figure-element' : 'figure-element missing'}>
+      {asset ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={asset.data} alt={asset.altText || asset.name} />
+      ) : (
+        <p className="figure-gone">
+          The picture this figure used is no longer in the library. The writing around it is
+          untouched.
+        </p>
+      )}
+      <figcaption>
+        <span className="figure-number">Figure {number ?? '—'}</span>
+        <input
+          aria-label={`Figure ${number ?? ''} caption`}
+          placeholder="What prints under it"
+          value={element.text}
+          readOnly={readOnly}
+          onChange={(event) => onCaption(event.target.value)}
+        />
+        {!readOnly ? (
+          <button
+            type="button"
+            className="ghost small danger"
+            title="Take the figure out of the writing. The picture stays in the library."
+            onClick={onRemove}
+          >
+            Remove
+          </button>
+        ) : null}
+      </figcaption>
+    </figure>
+  );
+}
+
+/**
  * The menu the right-click opens on a line of the manuscript.
  *
  * Electron gives a renderer no context menu of its own, so nothing is being
@@ -1023,6 +1148,7 @@ function CaughtMenu({
   onPlant,
   onTag,
   onThread,
+  onFigure,
   onClose,
 }: {
   x: number;
@@ -1032,6 +1158,7 @@ function CaughtMenu({
   onPlant: (() => void) | null;
   onTag: (() => void) | null;
   onThread: (() => void) | null;
+  onFigure: (() => void) | null;
   onClose(): void;
 }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -1085,6 +1212,11 @@ function CaughtMenu({
       {onThread ? (
         <button type="button" role="menuitem" className="caught-item" onClick={onThread}>
           Add to Research ▸ Links…
+        </button>
+      ) : null}
+      {onFigure ? (
+        <button type="button" role="menuitem" className="caught-item" onClick={onFigure}>
+          Put a figure here…
         </button>
       ) : null}
     </div>
@@ -1888,6 +2020,125 @@ function AddToThread({
           onClick={save}
         >
           Add it
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Putting a picture from the library into the writing (addendum 16 §9).
+ *
+ * It goes in **after the line the writer right-clicked**, which is the whole
+ * reason this is on the manuscript's menu rather than a button on the graphics
+ * screen: a figure has a place in the reading order, and the only person who
+ * knows where it goes is the one looking at the paragraph it belongs under.
+ *
+ * The caption arrives as the picture's and is then the placement's own — so
+ * editing it here never reaches the library, and the same diagram can be
+ * captioned twice in one book without either caption changing the other.
+ *
+ * There is no number to choose. It is counted in reading order (§3).
+ */
+function PutAFigureHere({
+  file,
+  beatId,
+  afterElementId,
+  onUpdate,
+  onClose,
+}: {
+  file: ProjectFile;
+  beatId: BeatId;
+  afterElementId: ManuscriptElementId;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  onClose(): void;
+}) {
+  const graphics = useMemo(() => graphicsInOrder(file), [file]);
+  const [assetId, setAssetId] = useState<string>(graphics[0]?.id ?? '');
+  const chosen = graphics.find((one) => (one.id as string) === assetId) ?? null;
+  /** Empty means *take the picture's*, so the field starts where §9 says. */
+  const [caption, setCaption] = useState<string | null>(null);
+  const words = caption ?? chosen?.caption ?? '';
+
+  const save = () => {
+    if (!chosen) return;
+    onUpdate((current) =>
+      placeFigure(current, {
+        beatId,
+        assetId: chosen.id as AssetId,
+        afterElementId,
+        caption: words,
+      }),
+    );
+    onClose();
+  };
+
+  return (
+    <div
+      className="caught-dialog"
+      role="dialog"
+      aria-label="Put a figure here"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
+      <label className="field">
+        <span>Which picture</span>
+        <select
+          autoFocus
+          aria-label="Picture"
+          value={assetId}
+          onChange={(event) => {
+            setAssetId(event.target.value);
+            // Back to the new picture's own caption: a caption left over from
+            // the last one would be a sentence about a different diagram.
+            setCaption(null);
+          }}
+        >
+          {graphics.map((one) => (
+            <option key={one.id} value={one.id as string}>
+              {one.name || 'Untitled'}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {chosen ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="figure-choice" src={chosen.data} alt={chosen.altText || chosen.name} />
+      ) : null}
+
+      <label className="field">
+        <span>Caption</span>
+        <input
+          aria-label="Caption"
+          placeholder="What prints under it"
+          value={words}
+          onChange={(event) => setCaption(event.target.value)}
+        />
+      </label>
+
+      {chosen && chosen.altText.trim().length === 0 ? (
+        <p className="muted small">
+          Nothing is written down about what this shows. A reader who cannot see it gets the
+          caption and no more — the graphics screen is where to say it.
+        </p>
+      ) : null}
+
+      <p className="muted small">
+        It goes in after the line you clicked, and is numbered by where it falls. Moving the
+        chapter renumbers it.
+      </p>
+
+      <div className="caught-actions">
+        <button type="button" className="ghost small" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="ghost small" disabled={!chosen} onClick={save}>
+          Put it in
         </button>
       </div>
     </div>

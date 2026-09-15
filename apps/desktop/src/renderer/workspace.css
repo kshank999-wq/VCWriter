@@ -11916,3 +11916,492 @@ dialog.chapter-page-dialog {
   margin: 8px 0 2px;
   font-size: 12px;
 }
+
+/* ------------------------------ instructional mode (addendum 16 §9, §10, §4) */
+/* Three screens that share a habit: a fact about the work is said in words on
+   the row, and the only thing drawn in a colour is a promise to a reader that
+   has not been kept. */
+
+/* ---------------------------------------------------- the graphics library */
+
+.graphics {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  /* The research pane is a flex row, so a panel that does not say it grows
+     is sized by its widest paragraph and leaves a dead strip beside it. */
+  flex: 1;
+  min-width: 0;
+}
+
+.graphics-list {
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.graphics .small,
+.importer .small,
+.aids .small {
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.graphics-drop,
+.importer-drop {
+  margin: 10px 12px;
+  padding: 14px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+/* The only feedback a drag gets: the target says it is the target. */
+.graphics-drop.over,
+.importer-drop.over {
+  border-color: var(--accent);
+  border-style: solid;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.graphics-drop p,
+.importer-drop p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* A picture in the book that a reader who cannot see it is told nothing
+   about. Everything else on a row is grey, because everything else is a
+   fact rather than a fault (§9). */
+.graphics-nodesc {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--red);
+  white-space: nowrap;
+}
+
+.graphics-detail {
+  padding: 14px 18px 32px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-content: start;
+  max-width: 780px;
+}
+
+.graphics-detail h3 {
+  margin: 10px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Big enough to judge, small enough that the fields stay on the screen. */
+.graphics-plate {
+  max-width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  justify-self: start;
+  background: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px;
+}
+
+.graphics-detail .field {
+  display: grid;
+  gap: 4px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.graphics-detail .field input,
+.graphics-detail .field textarea {
+  font-size: 12.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 5px 8px;
+  width: 100%;
+  background: var(--ink);
+}
+
+.graphics-where {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.graphics-where li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.graphics-where li span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphics-actions,
+.graphics-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+/* ------------------------------------------------- end-of-section aids */
+/* The author's box and the machine's box are drawn differently on purpose:
+   §10's rule is that a writer can always see which is which. */
+
+.aids {
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.aids > .panel-header {
+  padding: 8px 0;
+  border-bottom: none;
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+}
+
+.aids > .panel-header h3 {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.aid {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px 10px 10px;
+  display: grid;
+  gap: 6px;
+}
+
+/* What prints. The one thing about an aid worth seeing from across the room. */
+.aid.in-book {
+  border-color: var(--gold);
+}
+
+/* Stacked, not side by side: the Inspector is a narrow column, and a heading
+   sharing a line with a sentence wraps into "What you / learned".
+   Two classes, because `.inspector-section header` would otherwise win on its
+   type selector and lay this out as a flex row. */
+.aids .aid-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  padding: 0;
+  border-bottom: none;
+}
+
+.aid-head h4 {
+  margin: 0;
+  font-size: 12px;
+}
+
+.aid-text {
+  width: 100%;
+  font-size: 12.5px;
+  padding: 6px 8px;
+  background: var(--ink);
+  resize: vertical;
+}
+
+.aid-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Never the author's box: dashed, inset, and labelled. */
+.aid-offer {
+  border: 1px dashed var(--border);
+  border-radius: 5px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--panel) 60%, transparent);
+  display: grid;
+  gap: 6px;
+}
+
+.aid-offer h5 {
+  margin: 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.aid-offer-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.aid-offer-questions,
+.aid-questions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.aid-offer-questions li {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.aid-questions li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.aid-questions input {
+  font-size: 12px;
+  padding: 4px 6px;
+  background: var(--ink);
+  min-width: 0;
+}
+
+.aid-undo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+/* ------------------------------------------------------------ the importer */
+
+/* `note-import-*` rather than `import-*`: the manuscript importer already owns
+   `.import-warnings`, and inheriting its red made every unread file look like a
+   failure. Two features named the same thing is one collision away from a lie
+   on the screen. */
+.importer {
+  padding: 0 0 24px;
+  overflow-y: auto;
+  min-height: 0;
+  display: grid;
+  /* One full-width column, or the header's rule stops wherever the widest
+     paragraph happens to end. */
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.importer > .panel-header {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+}
+
+.importer > .panel-header h3 {
+  margin: 0;
+  font-size: 12px;
+}
+
+.importer > p {
+  margin: 0 14px;
+  max-width: 640px;
+}
+
+.importer-history {
+  margin: 12px 14px 0;
+  display: grid;
+  gap: 8px;
+}
+
+.importer-history h4 {
+  margin: 0;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.note-import-batch {
+  margin: 0 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  display: grid;
+  gap: 4px;
+}
+
+.importer-history .note-import-batch {
+  margin: 0;
+}
+
+/* The import that just happened, while somebody is still reading it. */
+.note-import-batch.lead {
+  border-color: var(--accent);
+  margin-top: 12px;
+}
+
+.note-import-batch h5 {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.note-import-batch p {
+  margin: 0;
+}
+
+.note-import-warnings {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.note-import-warnings li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11.5px;
+  padding-left: 8px;
+  border-left: 2px solid var(--border);
+}
+
+/* Tried and could not is worth a colour; will not read this kind of file and
+   read fine but was empty are worth a sentence and nothing more (§5). */
+.note-import-warnings li.failed {
+  border-left-color: var(--red);
+}
+
+/* A filename set in the interface's mono rather than the manuscript's Courier:
+   it is a fact about a file on a disk, not a line of the book. */
+.note-import-file {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+/* --------------------------------------- a figure in the manuscript (§3, §9) */
+/* Set in the text column and centred in it, because that is where it prints.
+   The controls are the interface's face and size rather than the page's: a
+   caption field in Courier at the page's measure reads like the book, and
+   editing it would look like typing into the printed page.
+
+   **Nothing here names a colour of its own.** The manuscript is drawn on dark
+   ink or on white paper depending on the gear, so a field with a background of
+   its own is black-on-black on one of them — which is exactly what happened
+   the first time this was looked at. */
+
+.figure-element {
+  margin: 10px 0 14px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  max-width: 62ch;
+}
+
+.figure-element img {
+  max-width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+}
+
+/* The picture is gone from the library and the figure stayed (§12). */
+.figure-element.missing {
+  border-style: dashed;
+  border-color: var(--red);
+}
+
+.figure-gone {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--red);
+  text-align: center;
+}
+
+/* The caption gets its own line under the label and the control: in a side
+   column a single row leaves it three words wide. */
+.figure-element figcaption {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 8px;
+  width: 100%;
+  font-family: var(--display);
+  font-size: 11.5px;
+}
+
+.figure-number {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.figure-element figcaption input {
+  grid-column: 1 / -1;
+  min-width: 0;
+  width: 100%;
+  font-size: 11.5px;
+  padding: 3px 0;
+  color: inherit;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 0;
+}
+
+/* The picture in the dialog, big enough to tell two diagrams apart. */
+.figure-choice {
+  max-width: 100%;
+  max-height: 160px;
+  object-fit: contain;
+  justify-self: start;
+  background: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px;
+}

@@ -56,14 +56,20 @@ const picture = (w: number, h: number) =>
   ({ name: 'histogram.png', data: 'data:image/png;base64,AA', width: w, height: h });
 
 describe('the shelves', () => {
-  it('seeds a book with graphics, notes, ideas and an inbox', () => {
+  it('seeds a book with notes, ideas and an inbox', () => {
     const file = createProjectFile({ title: 'Teaching Statistics', format: 'instructional' });
     expect(file.researchCategories.map((one) => one.name)).toEqual([
-      'Graphics',
       'General Notes',
       'Ideas',
       'Imported',
     ]);
+  });
+
+  it('seeds no Graphics folder, because the library is the graphics shelf', () => {
+    // A folder of that name beside the library could only hold the wrong
+    // thing: a picture dropped into it is a picture nothing can place.
+    const file = createProjectFile({ title: 'Teaching Statistics', format: 'instructional' });
+    expect(file.researchCategories.map((one) => one.name)).not.toContain('Graphics');
   });
 
   it('leaves a novel’s shelves exactly as they were', () => {
