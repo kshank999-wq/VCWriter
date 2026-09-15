@@ -260,7 +260,7 @@ Each stage is usable on its own; none needs the next.
    gets its nouns; §2's type, structure and spine.
 1. **The graph, in the domain.** ✅ Elements, choices, conditions, effects,
    state and resource definitions. Pure, tested, no screen.
-2. **Evaluation.** One `evaluate`, and reachability as a reading off it. §4, §5.
+2. **Evaluation.** ✅ One `evaluate`, and reachability as a reading off it. §4, §5.
 3. **Validation.** §12, whole, off the same reading. §8.
 4. **The canvas.** The second map: derived layout, the spine as the primary
    path, convergence, condition badges. §1, §9.
@@ -370,3 +370,53 @@ graph whose every node is unreachable because nobody ticked a box is a bad
 first five minutes. And deleting a node **keeps the choices that led to it**,
 with their destination cleared — the designer wrote that choice, and deleting
 it because its destination went is the tool throwing work away.
+
+### Stage 2 — evaluation
+
+`narrative-eval.ts`. **There is one of these and there must only ever be one**
+(§5): the simulator calls it to say what is offered and why something is not,
+the map calls it to colour, the validator calls it to find the impossible.
+`applyTray` is the precedent — the Writers Room preview runs the same pure
+function the commit runs, so the picture and the result cannot disagree. A
+second implementation of *is this choice available* anywhere is the bug,
+whatever else it appears to fix.
+
+`PlayState` is held **inside a run and nowhere else**: nothing about a
+playthrough is stored on the project. Its two maps of elements read **absent as
+open** — a node nobody has spoken about is reachable and revealed, which is the
+only non-surprising default, because the alternative is a graph where
+everything is locked until somebody remembers to unlock it.
+
+Four decisions beyond that:
+
+- **A refusal changes nothing at all.** Availability is read first and the
+  effects are applied only once the answer is yes, so a simulator that refuses
+  leaves no half-applied state behind. It is the one thing that makes the
+  simulator safe to press repeatedly.
+- **A destination is read against the state the choice's own effects leave**,
+  because a choice that grants the key its destination requires is ordinary and
+  every tool in the field gets it wrong. And a choice whose destination is shut
+  is **refused rather than hidden or entered** — hiding makes a door vanish for
+  a reason nobody can see, entering puts the player where the rules say they
+  cannot be, and the sentence is what a designer can act on.
+- **A `consume` the player cannot pay is a reason the choice is not offered**,
+  rather than a thing that happens and takes the count negative. §12 asks the
+  same question standing still and sits on this one reading.
+- **Why** is a sentence, built here rather than in a component: `trust_mara is
+  at least 40`, in the designer's key and the designer's number. Under NONE
+  what is named is what **passed**, since naming what failed would name nothing.
+
+`reachable` is §4 made real — no column, no *validate* command, nowhere to
+press one: cut the only choice that led somewhere and that somewhere is
+unreachable the next time anything asks. It is **structural on purpose**,
+following every edge regardless of conditions, because *could the player ever
+get here* and *can this condition ever be satisfied* are two questions and the
+second is §12's own check. A validator that called a hard-but-possible gate
+unreachable would cry wolf, and one that cries wolf gets switched off. `depths`
+is the same walk breadth-first, and is what stage 4's canvas ranks by — the
+layout derived rather than dragged (§1).
+
+`Standing` was taken: it has been the desktop's word for where a copy of the
+project sits against the room's master since addendum 07 §14, so a node's
+reading is a **`Situation`**. The second time this module has had to step
+around a name, and the same reason as `Test`.

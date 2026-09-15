@@ -27,6 +27,7 @@ export * from './project-file.js';
 export * from './print-one-sheet.js';
 export * from './numbering.js';
 export * from './narrative.js';
+export * from './narrative-eval.js';
 export * from './project-home.js';
 export * from './formats.js';
 export * from './projects.js';

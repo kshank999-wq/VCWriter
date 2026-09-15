@@ -785,7 +785,7 @@ push live; the build takes a minute or two.
   builds and escapes it from eight plain strings, and the key art does not
   travel. No migration: every field has existed since 0001.
   `addendum-18-interactive-narrative.md` is Interactive Narrative for video
-  games, from Ken's own dev spec. **Stages 0 and 1 built** — §10 is the build
+  games, from Ken's own dev spec. **Stages 0, 1 and 2 built** — §10 is the build
   order and §13 says what each built stage does. The audit found **more than half of it already
   exists**: §2.3's central spine is the **story order**, §3's Relationship is the
   Character Creator's two-directional one, §4's edges are `story_links` (whose
@@ -836,6 +836,30 @@ push live; the build takes a minute or two.
   schedules and does not is the worst kind. Resources are **one record with a
   kind rather than eight tables**, with `feeds` inverted from how §12 asks
   because a reading can invert a list where it cannot invent one.
+  **Stage 2** is `narrative-eval.ts`, and the whole of it is §5's *one
+  evaluation*: a second implementation of *is this choice available* anywhere is
+  the bug, whatever else it appears to fix. A `PlayState` is held **inside a run
+  and nowhere else**, and its element maps read **absent as open** — the
+  alternative is a graph where everything is locked until somebody remembers to
+  unlock it. **A refusal changes nothing at all** (availability first, effects
+  only once the answer is yes), which is what makes the simulator safe to press;
+  a **destination is read against the state the choice's own effects leave**,
+  because a choice that grants the key its destination requires is ordinary, and
+  one whose destination is shut is **refused rather than hidden or entered** —
+  hiding makes a door vanish for a reason nobody can see. A `consume` the player
+  cannot pay is **a reason the choice is not offered** rather than a negative
+  count, and *why* is a sentence built in the domain (`trust_mara is at least
+  40`), because a sentence assembled in a component cannot be tested — under
+  NONE what is named is what **passed**. `reachable` is §4: no column and
+  nowhere to press *validate*, so cutting the only choice that led somewhere
+  makes that somewhere unreachable the next time anything asks. It is
+  **structural on purpose** — *could the player ever get here* and *can this
+  condition ever be satisfied* are two questions, and a validator that called a
+  hard-but-possible gate unreachable would cry wolf, which is how a validator
+  gets switched off. `depths` is the same walk and is what stage 4's canvas
+  ranks by. `Standing` was taken by the desktop's mooring (addendum 07 §14), so
+  a node's reading is a **`Situation`** — the second name this module has had to
+  step around, for `Test`'s reason.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
