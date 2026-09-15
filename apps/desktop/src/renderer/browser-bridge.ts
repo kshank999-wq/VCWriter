@@ -468,6 +468,26 @@ export const createBrowserBridge = (): BrowserBridge => {
       }
     },
 
+    async sendOneSheet(input) {
+      try {
+        const response = await fetch('/api/one-sheet', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(input),
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | { sent?: boolean; error?: string }
+          | null;
+        if (!response.ok || payload?.sent !== true) {
+          return fail(payload?.error ?? `The one-sheet could not be sent (${response.status})`);
+        }
+        return ok(true as const);
+      } catch {
+        return fail('The one-sheet could not be sent. Check your connection.');
+      }
+    },
+
     activateLicense: async () => fail(NOT_HERE),
     checkForUpdate: async () => fail(NOT_HERE),
     downloadUpdate: async () => fail(NOT_HERE),

@@ -56,6 +56,13 @@ export const RULES = {
    * purpose and nowhere near a bill worth noticing.
    */
   learningAid: { name: 'learning-aid', limit: 40, windowSeconds: 3600 },
+  /**
+   * Sending a one-sheet costs nothing but a message, so this is a spam limit
+   * rather than a spending one — and it is tighter than the others for exactly
+   * that reason: nobody sends their own one-sheet to twenty people in an hour,
+   * and an account that tries is not a writer.
+   */
+  oneSheet: { name: 'one-sheet', limit: 20, windowSeconds: 3600 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /** The first hop in X-Forwarded-For is the client; Vercel sets it. */

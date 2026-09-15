@@ -4,6 +4,7 @@ import { env } from './env';
 import { adminClient } from './supabase';
 import {
   licenseReminder,
+  oneSheetEmail,
   purchaseConfirmation,
   roomInvitation,
   roomNotice,
@@ -144,6 +145,38 @@ export const sendRoomNotice = async (notice: Notice): Promise<SendResult> =>
       said: notice.said,
       roomUrl: `${env.siteUrl}${notice.path}`,
       why: WHY_THIS_ARRIVED,
+    }),
+  });
+
+/**
+ * Send somebody a project's one-sheet (master spec §4).
+ *
+ * The markup is built by the caller from a `OneSheet` value through the
+ * domain's own renderer, so nothing a client sent can reach this as HTML.
+ *
+ * Unlike a room notice, **a failure here is reported**: the writer pressed
+ * *send* and nothing else happened, so telling them it worked would be a lie.
+ * A notice can fail quietly because the work it accompanies is already saved;
+ * this has no other half.
+ */
+export const sendOneSheet = async (input: {
+  to: string;
+  userId: string;
+  from: string;
+  projectTitle: string;
+  message: string;
+  sheetHtml: string;
+  sheetText: string;
+}): Promise<SendResult> =>
+  deliver({
+    to: input.to,
+    userId: input.userId,
+    email: oneSheetEmail({
+      from: input.from,
+      projectTitle: input.projectTitle,
+      message: input.message,
+      sheetHtml: input.sheetHtml,
+      sheetText: input.sheetText,
     }),
   });
 

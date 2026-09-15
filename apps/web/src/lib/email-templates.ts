@@ -349,3 +349,52 @@ export const roomNotice = (input: RoomNoticeInput): RenderedEmail => ({
     'vc-writer.com',
   ].join('\n'),
 });
+
+export interface OneSheetEmailInput {
+  /** Whose project it is, so the recipient knows who sent it. */
+  from: string;
+  projectTitle: string;
+  /** The writer's own covering line, where they wrote one. */
+  message: string;
+  /** The sheet itself, already rendered by the domain. */
+  sheetHtml: string;
+  sheetText: string;
+}
+
+/**
+ * Somebody sent you their one-sheet (master spec §4, addendum 17).
+ *
+ * **The sheet is the body of the email rather than an attachment.** A one-sheet
+ * exists to be read in the ten seconds before somebody decides whether to open
+ * anything, and a PDF nobody opens has failed at the one job it has. The PDF is
+ * still there on the home screen for whoever wants a file.
+ *
+ * It carries **no manuscript**, the same line `roomNotice` holds: a logline, a
+ * pitch and a synopsis are what a writer chose to say about the work, and the
+ * work itself is not in here.
+ */
+export const oneSheetEmail = (input: OneSheetEmailInput): RenderedEmail => ({
+  template: 'one_sheet',
+  version: 1,
+  subject: `${input.projectTitle} — a one-sheet from ${input.from}`,
+  html: shell(
+    input.projectTitle,
+    `${
+      input.message.trim().length > 0
+        ? `<p style="margin:0 0 16px">${escapeHtml(input.message).replace(/\n/g, '<br>')}</p>`
+        : ''
+    }
+     <div style="margin:0;padding:16px;background:#fff;border:1px solid ${BORDER};color:#111">${input.sheetHtml}</div>
+     ${note(`${diamond}Sent by ${escapeHtml(input.from)} from VC Writer.`)}`,
+  ),
+  text: [
+    'VC WRITER',
+    '',
+    ...(input.message.trim().length > 0 ? [input.message, ''] : []),
+    input.sheetText,
+    '',
+    `Sent by ${input.from} from VC Writer.`,
+    '',
+    'vc-writer.com',
+  ].join('\n'),
+});

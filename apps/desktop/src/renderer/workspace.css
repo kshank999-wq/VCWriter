@@ -12647,3 +12647,17 @@ dialog.chapter-page-dialog {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.home-sheet-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.home-send {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}

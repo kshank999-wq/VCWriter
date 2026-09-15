@@ -148,14 +148,14 @@ export interface VcWriterApi {
      * Omitted means the script — and a short-form project prints its sheet
      * whatever is asked for, because it has no script to print instead.
      */
-    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline';
+    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet';
     /** Which outline, when there is more than one. Left out, it is the first. */
     outlineId?: string;
   }): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>>;
   print(input: {
     file: ProjectFile;
     options?: PrintOptions;
-    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline';
+    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet';
     outlineId?: string;
   }): Promise<DesktopApiResult<boolean>>;
   appInfo(): Promise<DesktopApiResult<{ version: string; platform: string }>>;
@@ -256,6 +256,18 @@ export interface VcWriterApi {
   }): Promise<DesktopApiResult<LearningSuggestion>>;
   /** Whether one can be asked for, so the button is absent rather than broken. */
   learningAidStatus(): Promise<DesktopApiResult<{ available: boolean; reason: string | null }>>;
+  /**
+   * Send the project's one-sheet to somebody (master spec §4).
+   *
+   * Carries the **fields**, never the rendered page: the server builds the
+   * markup, so nothing from here can become HTML in a message sent over
+   * vc-writer.com's own domain.
+   */
+  sendOneSheet(input: {
+    to: string;
+    message: string;
+    sheet: Record<string, string>;
+  }): Promise<DesktopApiResult<true>>;
 
   // Licensing and updates (§3.3).
   activateLicense(serial: string): Promise<DesktopApiResult<ActivationResult>>;
@@ -364,6 +376,7 @@ const api: VcWriterApi = {
   sceneReviewStatus: () => ipcRenderer.invoke('cloud:sceneReviewStatus'),
   suggestLearningAid: (input) => ipcRenderer.invoke('cloud:suggestLearningAid', input),
   learningAidStatus: () => ipcRenderer.invoke('cloud:learningAidStatus'),
+  sendOneSheet: (input) => ipcRenderer.invoke('cloud:sendOneSheet', input),
   activateLicense: (serial) => ipcRenderer.invoke('license:activate', serial),
   checkForUpdate: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: (input) => ipcRenderer.invoke('update:download', input),

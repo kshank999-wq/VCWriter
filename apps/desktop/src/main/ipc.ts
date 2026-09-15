@@ -23,6 +23,7 @@ import {
   listCaptures,
   requestLearningAid,
   requestSceneReview,
+  sendOneSheet,
   requestSignInCode,
   resolveCapture,
   learningAidStatus,
@@ -539,6 +540,20 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
     ): Promise<DesktopApiResult<LearningSuggestion>> => {
       try {
         return ok(await requestLearningAid(input));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    'cloud:sendOneSheet',
+    async (
+      _event,
+      input: { to: string; message: string; sheet: Record<string, string> },
+    ): Promise<DesktopApiResult<true>> => {
+      try {
+        return ok(await sendOneSheet(input));
       } catch (cause) {
         return fail(cause);
       }

@@ -422,6 +422,40 @@ export const requestLearningAid = async (input: {
   return payload.suggestion;
 };
 
+/**
+ * Send the project's one-sheet to somebody (master spec §4).
+ *
+ * The **fields** go up, never the rendered page: the server builds and escapes
+ * the markup itself, so nothing this machine sends can become HTML in a message
+ * from vc-writer.com. The poster stays here for the same reason it is left out
+ * of the email at all.
+ */
+export const sendOneSheet = async (input: {
+  to: string;
+  message: string;
+  sheet: Record<string, string>;
+}): Promise<true> => {
+  const { data, error } = await supabase().auth.getSession();
+  if (error || !data.session) throw new CloudError('Sign in to send a one-sheet.');
+
+  const response = await fetch(`${SITE_URL}/api/one-sheet`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${data.session.access_token}`,
+    },
+    body: JSON.stringify(input),
+  }).catch(() => {
+    throw new CloudError('vc-writer.com could not be reached. Check your connection and try again.');
+  });
+
+  const payload = (await response.json().catch(() => null)) as { sent?: boolean; error?: string } | null;
+  if (!response.ok || payload?.sent !== true) {
+    throw new CloudError(payload?.error ?? `The one-sheet could not be sent (${response.status})`);
+  }
+  return true;
+};
+
 /** Whether one can be asked for, before the writer clicks and finds out. */
 export const learningAidStatus = async (): Promise<SceneReviewAvailability> => {
   if (!isCloudConfigured()) {

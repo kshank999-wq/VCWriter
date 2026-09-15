@@ -4,6 +4,7 @@ import {
   asDuration,
   clearPoster,
   describeGaps,
+  oneSheet,
   projectHome,
   setPoster,
   setProjectDetails,
@@ -35,6 +36,13 @@ interface ProjectHomePanelProps {
   onShowUnusedResearch?(): void;
   /** Go and look at the setups with no payoff. */
   onShowSetups?(): void;
+  /** Print the one-sheet, and save it as a PDF (§4). */
+  onPrintOneSheet?(): void;
+  onExportOneSheet?(): void;
+  /** True while a document is being made, so the buttons say so. */
+  busy?: boolean;
+  /** What went wrong, where something did. */
+  message?: string | null;
 }
 
 /** Reads a chosen picture into a data URI and its own dimensions. */
@@ -58,10 +66,15 @@ export function ProjectHomePanel({
   onGoToBeat,
   onShowUnusedResearch,
   onShowSetups,
+  onPrintOneSheet,
+  onExportOneSheet,
+  busy = false,
+  message = null,
 }: ProjectHomePanelProps) {
   const home = useMemo(() => projectHome(file), [file]);
   const gaps = useMemo(() => describeGaps(file), [file]);
   const [dragging, setDragging] = useState(false);
+  const [sending, setSending] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
 
   const write = (patch: Parameters<typeof setProjectDetails>[1]) =>
@@ -338,9 +351,148 @@ export function ProjectHomePanel({
           )}
         </div>
 
-        {/* A fact about the one-sheet, never a grade about the writer (§3). */}
-        {gaps ? <p className="muted small home-gaps">{gaps}</p> : null}
+        {/* ---------------------------------------------- the one-sheet */}
+        {onPrintOneSheet || onExportOneSheet ? (
+          <div className="home-card">
+            <h4>One-sheet</h4>
+            <p className="muted small">
+              One page, made from what is above. Nothing is kept — it is built again each time, so it
+              can never be out of date with the fields.
+            </p>
+            <div className="home-sheet-actions">
+              {onPrintOneSheet ? (
+                <button type="button" className="ghost small" disabled={busy} onClick={onPrintOneSheet}>
+                  {busy ? 'Working…' : 'Print'}
+                </button>
+              ) : null}
+              {onExportOneSheet ? (
+                <button type="button" className="ghost small" disabled={busy} onClick={onExportOneSheet}>
+                  Save as PDF…
+                </button>
+              ) : null}
+              <button type="button" className="ghost small" onClick={() => setSending((one) => !one)}>
+                {sending ? 'Not now' : 'Email it…'}
+              </button>
+            </div>
+
+            {sending ? <SendOneSheet file={file} onDone={() => setSending(false)} /> : null}
+            {/* A fact about the sheet, never a grade about the writer (§3). */}
+            {gaps ? <p className="muted small home-gaps">{gaps}</p> : null}
+            {message ? (
+              <p className="error small" role="alert">
+                {message}
+              </p>
+            ) : null}
+          </div>
+        ) : gaps ? (
+          <p className="muted small home-gaps">{gaps}</p>
+        ) : null}
       </section>
+    </div>
+  );
+}
+
+/**
+ * Sending the one-sheet to somebody (master spec §4's last bullet).
+ *
+ * **The fields go, not the page.** The server renders and escapes the markup,
+ * so nothing typed here can become HTML in a message sent over vc-writer.com's
+ * own domain — and the poster does not travel at all, a few hundred kilobytes
+ * of data URI being most of a message-size limit spent on something half the
+ * clients refuse to show.
+ *
+ * A failure is **said**, unlike a room notice that can fail quietly because the
+ * work it accompanies is already saved. This has no other half: the writer
+ * pressed send and either it went or it did not.
+ */
+function SendOneSheet({ file, onDone }: { file: ProjectFile; onDone(): void }) {
+  const [to, setTo] = useState('');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+
+  const send = async () => {
+    setBusy(true);
+    setProblem(null);
+    const sheet = oneSheet(file);
+    const result = await window.vcwriter.sendOneSheet({
+      to: to.trim(),
+      message,
+      sheet: {
+        title: sheet.title,
+        author: sheet.author,
+        standfirst: sheet.standfirst,
+        logline: sheet.logline,
+        elevatorPitch: sheet.elevatorPitch,
+        synopsis: sheet.synopsis,
+        notes: sheet.notes,
+        status: sheet.status,
+        figures: sheet.figures,
+      },
+    });
+    setBusy(false);
+    if (!result.ok) {
+      setProblem(result.error ?? 'The one-sheet could not be sent.');
+      return;
+    }
+    setSent(true);
+  };
+
+  if (sent) {
+    return (
+      <div className="home-send">
+        <p className="muted small">Sent to {to.trim()}.</p>
+        <button type="button" className="ghost small" onClick={onDone}>
+          Done
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="home-send">
+      <label className="field">
+        <span>To</span>
+        <input
+          autoFocus
+          type="email"
+          aria-label="Send the one-sheet to"
+          placeholder="somebody@example.com"
+          value={to}
+          onChange={(event) => setTo(event.target.value)}
+        />
+      </label>
+      <label className="field">
+        <span>A line with it</span>
+        <textarea
+          aria-label="A line with it"
+          rows={2}
+          placeholder="Optional"
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+        />
+      </label>
+      {/* Said before they press it rather than discovered afterwards. */}
+      <p className="muted small">The sheet goes in the body of the email. The key art does not travel.</p>
+      {problem ? (
+        <p className="error small" role="alert">
+          {problem}
+        </p>
+      ) : null}
+      <div className="home-sheet-actions">
+        <button
+          type="button"
+          className="ghost small"
+          disabled={busy || !/.+@.+\..+/.test(to.trim())}
+          onClick={() => void send()}
+        >
+          {busy ? 'Sending…' : 'Send it'}
+        </button>
+        <button type="button" className="ghost small" onClick={onDone}>
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

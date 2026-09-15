@@ -13,6 +13,12 @@ import {
   statusName,
   whereYouAre,
 } from '../project-home.js';
+import {
+  oneSheetText,
+  renderOneSheetBody,
+  renderOneSheetHtml,
+  suggestedOneSheetFileName,
+} from '../print-one-sheet.js';
 import type { ProjectFile } from '../project-file.js';
 
 /**
@@ -270,5 +276,62 @@ describe('the one-sheet', () => {
     let file = createProjectFile({ title: 'A Book', format: 'instructional' });
     file = addUnit(file, { laneId: file.lanes[0]!.id, title: 'One' }).file;
     expect(oneSheet(file).figures).toContain('chapters');
+  });
+});
+
+describe('the one-sheet as a document', () => {
+  it('escapes everything, so no field can carry markup', () => {
+    const { file } = book();
+    const told = setProjectDetails(file, {
+      title: '<script>alert(1)</script>',
+      logline: 'A & B <b>bold</b>',
+    });
+
+    const html = renderOneSheetHtml(told);
+    // The point: it is in the page as text, and not as a tag.
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).not.toContain('<script>alert');
+    expect(html).toContain('A &amp; B &lt;b&gt;bold&lt;/b&gt;');
+  });
+
+  it('leaves out a field the writer has not filled in, rather than heading it', () => {
+    const { file } = book();
+    const told = setProjectDetails(file, { logline: 'A line.' });
+    const html = renderOneSheetHtml(told);
+
+    expect(html).toContain('A line.');
+    // An empty heading looks like the software failed; the screen names the
+    // gaps instead, where somebody can do something about them.
+    expect(html).not.toContain('Synopsis');
+    expect(html).not.toContain('The pitch');
+  });
+
+  it('drops the art on request, and says so in the markup', () => {
+    const { file } = book();
+    const made = setPoster(file, { name: 'art.png', data: DOT });
+    const sheet = oneSheet(made.file);
+
+    expect(renderOneSheetBody(sheet, true)).toContain('one-art');
+    // Email: the poster does not travel.
+    const forEmail = renderOneSheetBody(sheet, false);
+    expect(forEmail).not.toContain('one-art');
+    expect(forEmail).toContain('no-art');
+  });
+
+  it('writes a plain-text sheet off the same reading, so the two cannot disagree', () => {
+    const { file } = book();
+    const told = setProjectDetails(file, { author: 'K. Shank', logline: 'A line.', synopsis: 'A synopsis.' });
+    const text = oneSheetText(oneSheet(told));
+
+    expect(text).toContain('The Brass Key');
+    expect(text).toContain('by K. Shank');
+    expect(text).toContain('SYNOPSIS');
+    expect(text).not.toContain('<');
+  });
+
+  it('names the file after the project, without characters a filesystem refuses', () => {
+    const { file } = book();
+    const told = setProjectDetails(file, { title: 'A/B: the "sequel"' });
+    expect(suggestedOneSheetFileName(told)).toBe('A-B- the -sequel- — one-sheet.pdf');
   });
 });

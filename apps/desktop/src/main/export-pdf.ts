@@ -8,12 +8,14 @@ import {
   parseProjectFile,
   renderBoardDocumentHtml,
   renderGridDocumentHtml,
+  renderOneSheetHtml,
   renderOutlineDocumentHtml,
   renderPrintDocumentHtml,
   renderSheetDocumentHtml,
   suggestedBoardFileName,
   suggestedExportFileName,
   suggestedGridFileName,
+  suggestedOneSheetFileName,
   suggestedOutlineFileName,
   suggestedSheetFileName,
   type PrintOptions,
@@ -86,7 +88,7 @@ const withDocumentWindow = async <T>(
  * tree as one (addendum 06 §12, stage 9). They are renderings of one project
  * rather than separate projects.
  */
-export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline';
+export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet';
 
 export interface ExportPdfInput {
   file: unknown;
@@ -115,6 +117,16 @@ const documentFor = (
     return {
       html: renderOutlineDocumentHtml(project, outlineId ?? null, options),
       name: suggestedOutlineFileName(project, outlineId ?? null),
+      paged: false,
+      landscape: false,
+    };
+  }
+  // The project's own one page (master spec §4). Assembled from the fields
+  // every time rather than kept, so there is nothing here to go stale.
+  if (kind === 'one-sheet') {
+    return {
+      html: renderOneSheetHtml(project),
+      name: suggestedOneSheetFileName(project),
       paged: false,
       landscape: false,
     };

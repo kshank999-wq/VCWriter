@@ -1118,6 +1118,10 @@ export default function App() {
               onShowSetups={() => {
                 setResearchOpen(true);
               }}
+              onPrintOneSheet={() => void print('one-sheet')}
+              onExportOneSheet={() => void exportPdf('one-sheet')}
+              busy={exporting}
+              message={exportMessage}
             />
           ) : view === 'readback' ? (
             <ReadBackPanel file={file} currentUnitId={selectedBeat?.unitId ?? null} onUpdate={project.update} />
