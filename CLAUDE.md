@@ -35,9 +35,9 @@ push live; the build takes a minute or two.
   reads like it does. Applied through 0050.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
-  the windowing, and the thing to know is that **all four rooms go to a second
-  monitor**: research could already, and the Outliner, the Story Sculptor and the
-  Editors now can. The first three needed no splitting the way `ResearchBody` was
+  the windowing, and the thing to know is that **every room goes to a second
+  monitor**: research could already, and the Outliner, the Story Sculptor, the
+  Editors and (on a game) the narrative map now can. The first three needed no splitting the way `ResearchBody` was
   split — they are already `position: fixed; inset: 0`, so a window of their own
   is the same component with nothing under it, and the change is the key joining
   `PaneKey` and `ROOM_PANES`, a `SHAPES` entry, a branch in `Satellite.tsx` and a
@@ -785,7 +785,7 @@ push live; the build takes a minute or two.
   builds and escapes it from eight plain strings, and the key art does not
   travel. No migration: every field has existed since 0001.
   `addendum-18-interactive-narrative.md` is Interactive Narrative for video
-  games, from Ken's own dev spec. **Stages 0–3 built** — §10 is the build
+  games, from Ken's own dev spec. **Stages 0–4 built** — §10 is the build
   order and §13 says what each built stage does. The audit found **more than half of it already
   exists**: §2.3's central spine is the **story order**, §3's Relationship is the
   Character Creator's two-directional one, §4's edges are `story_links` (whose
@@ -882,6 +882,28 @@ push live; the build takes a minute or two.
   findings, its choices' and its rules' — because a warning a designer can only
   find in a list elsewhere is one they do not find, and `describeFindings` says
   *nothing to report* out loud, a validator with an empty box looking broken.
+  **Stage 4** is `narrative-map.ts` + `NarrativeMapWindow.tsx`, the **fifth
+  room** (`ROOM_PANES`), absent rather than greyed on every format but a game.
+  **The layout is derived and there is nowhere to drag**, which is §1 on a
+  screen: columns are `depths`, and within a column the **spine comes first in
+  the script's order**, so the top row read left to right is the story. The
+  honest limitation is said on the screen rather than hidden — *the layout is
+  read from the graph* — because a designer will otherwise hunt for the handle;
+  they cannot compose the picture, they change it by changing the graph. Every
+  mark is a reading from somewhere else: `reachable` and `depths` from stage 2,
+  `findingsAt` from stage 3 as a badge **on the node it is about**, the gold
+  line from the story order. A node nothing reaches is **placed rather than
+  dropped**, a map that omitted it hiding the thing the validator is shouting
+  about. Driving the real renderer caught three things 1698 green tests did
+  not: **a card the designer had just made was off the screen** (a new node is
+  unreachable, so it lands in a column past the right edge — the selected card
+  is scrolled into view, the layout not being theirs to arrange), **the entry
+  was a gold stripe and nothing else** (a stripe explains itself to nobody, so
+  `describeNode` says *starts here*), and **SVG text neither wraps nor clips**,
+  so a long name ran out across the canvas. A connection is drawn by pressing
+  the node and then its destination rather than by dragging, keeping the screen's
+  one rule; the inspector is deliberately modest, WHEN / DO / GO TO being stage
+  5's and half a rule builder here meaning building it twice.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

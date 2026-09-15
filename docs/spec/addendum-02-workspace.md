@@ -799,7 +799,9 @@ The arrangement is a preference, per machine, not project data.
 
 ### A section in a window of its own
 
-Any of the four, plus the **four rooms** and **any number of beats**, can be
+Any of the four, plus the **rooms** — research, the Outliner, the Story
+Sculptor, the Editors and, on a game, the narrative map — and **any number of
+beats**, can be
 opened as a real window and pushed onto another monitor. The window runs the
 same renderer with `?pane=` naming what it holds: `script`, `viewer`,
 `lanes`, `inspector`, `research`, `outliner`, `sculptor`, `editors`, or
@@ -1122,7 +1124,7 @@ does lives in the workspace, which is the only place that knows what is open.
 | **File** | **New project** (one item, `Ctrl/Cmd+N`), **New episode** *in a series only*, Open, **Import a script**, **Delete a project** (§13.1), Save, Save a copy, **Title page** (§6.1), **Page setup**, Print, Export PDF, Preferences, Close project |
 | **Editor** | Find, Find next, Find and replace, Reformat pasted text, and the two editors of spec §8 — Daily and Final — plus Read back |
 | **Reports** | Writing log, Story statistics (§15) |
-| **Window** | The episode rail; each section **and each of the four rooms**, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
+| **Window** | The episode rail; each section **and each room**, ticked when it is in a window of its own and choosing it brings it back; this beat in its own window; bring everything back; focus mode; window preferences |
 | **Help** | What this build does, About |
 
 It is called **Editor**, not Edit, because the clipboard is not what it is

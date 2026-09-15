@@ -13,7 +13,7 @@
  * that is all it should ever know.
  */
 
-import { hasBookIndex, hasChapterPages, type ProjectFormat } from '@vcwriter/domain';
+import { hasBookIndex, hasChapterPages, isInteractive, type ProjectFormat } from '@vcwriter/domain';
 import { paneNamesFor } from './panes';
 
 export type CommandId =
@@ -56,6 +56,7 @@ export type CommandId =
   | 'window.research'
   | 'window.outliner'
   | 'window.sculptor'
+  | 'window.narrative'
   | 'window.editors'
   | 'window.episodes'
   | 'window.beat'
@@ -195,6 +196,12 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       { command: 'window.outliner', label: 'Outliner in its own window', checkable: true },
       { command: 'window.sculptor', label: 'Story Sculptor in its own window', checkable: true },
       { command: 'window.editors', label: 'Editors in its own window', checkable: true },
+      // The fifth room, and a game's alone: a format with no graph has no
+      // graph to draw, and a greyed item would say *not yet* about something
+      // that is never coming (addendum 18 §10).
+      ...(format !== null && isInteractive(format)
+        ? [{ command: 'window.narrative' as CommandId, label: 'Narrative map in its own window', checkable: true }]
+        : []),
       { command: 'window.episodes', label: 'Episodes', checkable: true },
       { command: 'window.beat', label: 'This beat in its own window' },
       null,

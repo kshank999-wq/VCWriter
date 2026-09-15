@@ -26,6 +26,12 @@ interface TitleBarProps {
   onOpenResearch(): void;
   /** The Story Sculptor's canvas (addendum 03). */
   onOpenSculptor(): void;
+  /**
+   * A game's branching graph (addendum 18). **Undefined on every other
+   * format**, which is how the button is absent rather than greyed: a
+   * screenplay has no graph, and a disabled control says *not yet*.
+   */
+  onOpenNarrative?(): void;
   /** The Outliner's tree (addendum 06), the Sculptor's rigid sibling. */
   onOpenOutliner(): void;
   /** Sections in windows of their own, and the way to bring one back (§8). */
@@ -60,6 +66,7 @@ export function TitleBar({
   onFocus,
   onOpenResearch,
   onOpenSculptor,
+  onOpenNarrative,
   onOpenOutliner,
   away,
   onBringBack,
@@ -131,6 +138,16 @@ export function TitleBar({
             onClick={onOpenSculptor}
           >
             Sculptor
+          </button>
+        ) : null}
+        {writing && onOpenNarrative ? (
+          <button
+            type="button"
+            className="ghost"
+            title="Narrative map: the branching graph, laid out from the graph itself"
+            onClick={onOpenNarrative}
+          >
+            Narrative
           </button>
         ) : null}
         {writing ? (

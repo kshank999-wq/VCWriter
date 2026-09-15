@@ -7,6 +7,7 @@ import {
   beatsInStoryOrder,
   projectStats,
   setActBreaks,
+  isInteractive,
   setParagraphStyle,
   setScriptFormat,
   setSectionNumbering,
@@ -52,6 +53,7 @@ import { SceneDialog } from './components/SceneDialog';
 import { ResearchWindow } from './components/ResearchWindow';
 import { ProjectHomePanel } from './components/ProjectHomePanel';
 import { SculptorWindow } from './components/SculptorWindow';
+import { NarrativeMapWindow } from './components/NarrativeMapWindow';
 import { OutlinerWindow } from './components/OutlinerWindow';
 import { BeatDialog } from './components/BeatDialog';
 import { ChapterPageDialog } from './components/ChapterPageDialog';
@@ -154,6 +156,7 @@ export default function App() {
   const [researchOpen, setResearchOpen] = useState(false);
   /** The Story Sculptor's canvas, over the workspace (addendum 03). */
   const [sculptorOpen, setSculptorOpen] = useState(false);
+  const [narrativeOpen, setNarrativeOpen] = useState(false);
   const [outlinerOpen, setOutlinerOpen] = useState(false);
   /**
    * File → New project shows the project screen even with one already open:
@@ -558,6 +561,7 @@ export default function App() {
         case 'window.research':
         case 'window.outliner':
         case 'window.sculptor':
+        case 'window.narrative':
         case 'window.editors': {
           // Ticked means it is out; choosing it again brings it back.
           const pane = command.slice('window.'.length);
@@ -566,6 +570,7 @@ export default function App() {
           if (!detached.includes(pane)) {
             if (pane === 'outliner') setOutlinerOpen(false);
             if (pane === 'sculptor') setSculptorOpen(false);
+            if (pane === 'narrative') setNarrativeOpen(false);
             if (pane === 'research') setResearchOpen(false);
             // The editors are a page rather than an overlay, so what is left
             // behind is the page bar sitting on a page that has gone.
@@ -837,6 +842,13 @@ export default function App() {
         onFocus={() => setFocusMode(!focusMode)}
         onOpenResearch={() => (away.has('research') ? openPane('research') : setResearchOpen(true))}
         onOpenSculptor={() => (away.has('sculptor') ? openPane('sculptor') : setSculptorOpen(true))}
+        onOpenNarrative={
+          // Absent on every format but a game, rather than greyed: a
+          // screenplay has no graph and never will (addendum 18 §10).
+          isInteractive(file.project.format)
+            ? () => (away.has('narrative') ? openPane('narrative') : setNarrativeOpen(true))
+            : undefined
+        }
         onOpenOutliner={() => (away.has('outliner') ? openPane('outliner') : setOutlinerOpen(true))}
         away={detached}
         onBringBack={closePane}
@@ -855,7 +867,7 @@ export default function App() {
           Outliner are ideas. */}
       <RoomBar
         file={file}
-        looking={researchOpen || sculptorOpen || outlinerOpen ? 'research' : 'script'}
+        looking={researchOpen || sculptorOpen || outlinerOpen || narrativeOpen ? 'research' : 'script'}
       />
 
       <Preferences
@@ -1000,6 +1012,18 @@ export default function App() {
             onPopOut={() => {
               setSculptorOpen(false);
               openPane('sculptor');
+            }}
+          />
+          {/* The branching graph, over the workspace for the board's reason
+              (addendum 18 §1): a game is read across its whole width. */}
+          <NarrativeMapWindow
+            file={file}
+            open={narrativeOpen && !away.has('narrative')}
+            onClose={() => setNarrativeOpen(false)}
+            onUpdate={project.update}
+            onPopOut={() => {
+              setNarrativeOpen(false);
+              openPane('narrative');
             }}
           />
           {/* The outline over the workspace too: the rigid sibling of the

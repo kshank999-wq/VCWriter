@@ -111,17 +111,24 @@ export const normaliseArrangement = (value: unknown): Arrangement => {
 /**
  * A section in a window of its own. Beats carry the beat's id.
  *
- * The three rooms — research, the Outliner and the Story Sculptor — are here
- * for the same reason the four sections are: each is a whole screen's work
- * done *beside* the writing rather than in it, which is exactly what a second
- * monitor is for. They cover the whole workspace when they are opened over
- * it, so a writer with two screens was covering the script to look at the
- * board they were building it from.
+ * The rooms — research, the Outliner, the Story Sculptor, the Editors and, on
+ * a game, the narrative map — are here for the same reason the four sections
+ * are: each is a whole screen's work done *beside* the writing rather than in
+ * it, which is exactly what a second monitor is for. They cover the whole
+ * workspace when they are opened over it, so a writer with two screens was
+ * covering the script to look at the board they were building it from.
  */
-export type PaneKey = PaneId | 'research' | 'outliner' | 'sculptor' | 'editors' | `beat:${string}`;
+export type PaneKey =
+  | PaneId
+  | 'research'
+  | 'outliner'
+  | 'sculptor'
+  | 'editors'
+  | 'narrative'
+  | `beat:${string}`;
 
 /** The rooms: whole screens rather than sections of the workspace. */
-export const ROOM_PANES = ['research', 'outliner', 'sculptor', 'editors'] as const;
+export const ROOM_PANES = ['research', 'outliner', 'sculptor', 'editors', 'narrative'] as const;
 export type RoomPane = (typeof ROOM_PANES)[number];
 
 export const isRoomPane = (pane: string): pane is RoomPane =>
@@ -138,6 +145,7 @@ export const ROOM_NAMES: Record<RoomPane, string> = {
   outliner: 'Outliner',
   sculptor: 'Story Sculptor',
   editors: 'Editors',
+  narrative: 'Narrative map',
 };
 
 /** What a window of this section calls itself, before the project is known. */

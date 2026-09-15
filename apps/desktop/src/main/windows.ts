@@ -51,6 +51,9 @@ const SHAPES: Record<string, { width: number; height: number }> = {
   // The editors are a list of findings beside the thing found, and the Story
   // Grid inside them is a wide table.
   editors: { width: 1320, height: 900 },
+  // A branching graph is read left to right along its columns, and wants the
+  // inspector beside it rather than under it.
+  narrative: { width: 1440, height: 900 },
 };
 
 const shapeFor = (pane: PaneKey) => SHAPES[pane.split(':')[0] ?? ''] ?? { width: 1000, height: 800 };

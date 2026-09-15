@@ -27,6 +27,7 @@ import { DEFAULT_PRINT_SETUP, type PrintSetup } from './components/PageSetup';
 import { usePrinting } from './printing';
 import { ResearchBody } from './components/ResearchWindow';
 import { SculptorWindow } from './components/SculptorWindow';
+import { NarrativeMapWindow } from './components/NarrativeMapWindow';
 import { OutlinerWindow } from './components/OutlinerWindow';
 import { EditorPanel } from './components/EditorPanel';
 import { TimelineViewer } from './components/TimelineViewer';
@@ -276,6 +277,12 @@ function Section({
   // window rather than uncovering the script.
   if (pane === 'sculptor') {
     return <SculptorWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} />;
+  }
+
+  // The narrative canvas is the same shape: a room that already covers
+  // everything, so a window of it is the component with nothing underneath.
+  if (pane === 'narrative') {
+    return <NarrativeMapWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} standalone />;
   }
 
   if (pane === 'outliner') {

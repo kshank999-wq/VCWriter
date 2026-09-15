@@ -6,7 +6,7 @@ There's a few narrative softwares out there. But I feel like they're very
 limited."** That sentence is the spec this addendum actually answers; §9 below
 says what the limitation is and what we do instead.*
 
-**Status: stages 0–3 built.** §10 is the build order; §13 says what each
+**Status: stages 0–4 built.** §10 is the build order; §13 says what each
 built stage does.
 
 ---
@@ -262,7 +262,7 @@ Each stage is usable on its own; none needs the next.
    state and resource definitions. Pure, tested, no screen.
 2. **Evaluation.** ✅ One `evaluate`, and reachability as a reading off it. §4, §5.
 3. **Validation.** ✅ §12, whole, off the same reading. §8.
-4. **The canvas.** The second map: derived layout, the spine as the primary
+4. **The canvas.** ✅ The second map: derived layout, the spine as the primary
    path, convergence, condition badges. §1, §9.
 5. **The rule builder and the inspector.** WHEN / DO / GO TO. §15.2, §15.3.
 6. **Progression.** §7's definitions and §8's resource-to-story edges — mostly
@@ -483,3 +483,49 @@ findings, its choices', and those about a state or resource its rules mention,
 because a warning a designer can only find by reading a list somewhere else is
 one they do not find. And `describeFindings` says *nothing to report* out loud,
 since a validator that shows an empty box when it is happy looks broken.
+
+### Stage 4 — the canvas
+
+`narrative-map.ts` and `NarrativeMapWindow.tsx`, the fifth room — **absent
+rather than greyed** on every format but a game, because a screenplay has no
+graph and a disabled item says *not yet* about something that is never coming.
+
+**The layout is derived, and there is nowhere to drag**, which is §1 made into
+a screen. Columns are `depths` — how many choices from a start — and within a
+column the **spine comes first, in the script's own order**, so §1's *primary
+path* is drawn rather than declared: the top row read left to right is the
+story. Everything else follows its earliest parent, so a branch sits near what
+it branches off. Draw a connection and the node moves with nothing arranged,
+which is the claim a test makes from both ends.
+
+The honest limitation is stated rather than hidden, on the screen: *the layout
+is read from the graph — draw a connection and a node moves by itself*, said
+under the bar because somebody will otherwise hunt for the handle. A designer
+cannot compose this picture; they can change it, by changing the graph, which
+is the only thing it is about.
+
+Every mark is a reading from somewhere else. The columns and the red dashed
+ring are stage 2's `depths` and `reachable`; the badge is stage 3's
+`findingsAt`, on the node it is about; the gold line is the spine, read from
+the story order. A node nothing reaches is **placed rather than dropped** — a
+map that quietly omitted it would hide the thing the validator is shouting
+about — and can be dropped only when a designer asks.
+
+Three things came out of driving the real renderer, none of which the tests
+saw:
+
+- **A card the designer had just made was off the screen.** A new node is
+  unreachable, so it is placed in a column of its own past the right-hand
+  edge: press *+ Node*, type a name, watch nothing happen. Since the layout is
+  not theirs to arrange, bringing the picture to them is the only answer, so
+  the selected card is scrolled into view.
+- **The entry was a gold stripe and nothing else**, and a stripe explains
+  itself to nobody. `describeNode` now says *starts here* in words.
+- **SVG text neither wraps nor clips**, so a long name ran out over the canvas.
+  The card cuts it; the tooltip and the panel carry the whole of it.
+
+A connection is drawn by pressing the node and then its destination rather than
+by dragging one, which keeps the one rule of the screen: nothing here is
+dragged. The inspector beside it is deliberately modest — name, kind, note, the
+three flags, the choices and what the checks say — because WHEN / DO / GO TO is
+stage 5's, and putting half a rule builder here would mean building it twice.
