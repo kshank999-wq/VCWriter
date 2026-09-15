@@ -21,6 +21,7 @@ import {
 } from './entities/themes.js';
 import { locationSchema } from './entities/locations.js';
 import { storyThreadSchema } from './entities/threads.js';
+import { learningAidSchema } from './entities/learning.js';
 import { projectSchema, projectSettingsSchema } from './entities/project.js';
 import { beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
 import { countWords } from './entities/manuscript.js';
@@ -98,6 +99,12 @@ export const SYNC_TABLES = {
    * which already sync.
    */
   threads: 'story_threads',
+  /**
+   * End-of-section learning aids (addendum 16 §10). The author's words and the
+   * machine's last offer travel as two columns, never one — which is the whole
+   * of how regeneration is stopped from eating an edit.
+   */
+  learningAids: 'learning_aids',
 } as const;
 
 export type SyncCollection = keyof typeof SYNC_TABLES;
@@ -561,6 +568,20 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
   ...characterCreatorRows(file),
   ...bookIndexRows(file),
   ...thematicRows(file),
+  learningAids: (file.learningAids ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    beat_id: one.beatId,
+    kind: one.kind,
+    text: one.text,
+    questions: one.questions,
+    suggestion: one.suggestion,
+    suggested_questions: one.suggestedQuestions,
+    suggested_at: one.suggestedAt,
+    approved: one.approved,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
   threads: (file.threads ?? []).map((one) => ({
     id: one.id,
     project_id: one.projectId,
@@ -1296,6 +1317,22 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     ...characterCreatorFromRows(rows),
     ...bookIndexFromRows(rows),
     ...thematicFromRows(rows),
+    learningAids: (rows.learningAids ?? []).map((row) =>
+      learningAidSchema.parse({
+        id: row['id'],
+        projectId: row['project_id'],
+        beatId: row['beat_id'],
+        kind: row['kind'],
+        text: text(row['text']),
+        questions: Array.isArray(row['questions']) ? row['questions'] : [],
+        suggestion: text(row['suggestion']),
+        suggestedQuestions: Array.isArray(row['suggested_questions']) ? row['suggested_questions'] : [],
+        suggestedAt: nullableText(row['suggested_at']),
+        approved: Boolean(row['approved']),
+        createdAt: row['created_at'],
+        updatedAt: row['updated_at'],
+      }),
+    ),
     threads: (rows.threads ?? []).map((row) =>
       storyThreadSchema.parse({
         id: row['id'],

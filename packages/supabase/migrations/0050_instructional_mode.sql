@@ -41,3 +41,66 @@ comment on column public.research_items.source is
 -- order every time they are asked for, so moving a chapter renumbers
 -- everything after it with nothing run — the same absence the book index's
 -- page numbers rest on.
+
+-- ------------------------------------------------------- the learning aids
+
+-- End-of-section learning aids (§10): a summary, a *what you learned* list and
+-- review questions, attached to a section and printed at the end of it.
+--
+-- **Two content columns, not one.** `text`/`questions` are the author's and are
+-- the only things that print; `suggestion`/`suggested_questions` are what the
+-- machine last offered and are never printed. §10 requires that regeneration
+-- not overwrite author-edited content, and this is how that is kept: a
+-- regeneration writes only to the suggestion columns, so it *cannot* reach an
+-- edit. The alternative — one column and a `has_been_edited` flag — puts the
+-- whole rule on a boolean that every code path has to set correctly, and the
+-- first one that forgets costs somebody an afternoon.
+--
+-- `approved` is the other half of §10: an aid is not part of the book until
+-- the author says so, and nothing in the generation path may set this.
+create table if not exists public.learning_aids (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  -- The Section, which this program has always called a beat.
+  beat_id uuid not null references public.beats (id) on delete cascade,
+  kind text not null,
+  -- The author's.
+  text text not null default '',
+  questions jsonb not null default '[]'::jsonb,
+  -- The machine's. Never printed.
+  suggestion text not null default '',
+  suggested_questions jsonb not null default '[]'::jsonb,
+  suggested_at timestamptz,
+  approved boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint learning_aids_kind check (kind in ('summary', 'what_you_learned', 'quiz')),
+  -- One of each kind per section. Two summaries on one section is not a thing
+  -- anybody wants, and the interface relies on asking twice being idempotent.
+  constraint learning_aids_once unique (beat_id, kind)
+);
+
+create index if not exists learning_aids_project_idx on public.learning_aids (project_id);
+create index if not exists learning_aids_beat_idx on public.learning_aids (beat_id);
+
+alter table public.learning_aids enable row level security;
+
+-- Read by whoever reads the project, written by whoever writes it — the pair
+-- 0024 split apart. One select policy and three mutating ones rather than a
+-- `for all`, which would be evaluated on every row of every read.
+create policy learning_aids_read on public.learning_aids
+  for select using (public.may_read_project(project_id));
+create policy learning_aids_insert on public.learning_aids
+  for insert with check (public.may_write_project(project_id));
+create policy learning_aids_update on public.learning_aids
+  for update using (public.may_write_project(project_id))
+  with check (public.may_write_project(project_id));
+create policy learning_aids_delete on public.learning_aids
+  for delete using (public.may_write_project(project_id));
+
+create trigger learning_aids_touch_updated_at before update on public.learning_aids
+  for each row execute function public.touch_updated_at();
+
+comment on table public.learning_aids is
+  'An end-of-section learning aid (addendum 16). The author''s words and the machine''s last offer are separate columns, so regeneration cannot overwrite an edit.';

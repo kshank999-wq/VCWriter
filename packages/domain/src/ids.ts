@@ -44,6 +44,8 @@ export type StoryLinkId = Id<'StoryLink'>;
  * *dependencies* are story links, so this is the module's only new id.
  */
 export type StoryThreadId = Id<'StoryThread'>;
+/** An end-of-section learning aid (addendum 16 §10). */
+export type LearningAidId = Id<'LearningAid'>;
 export type SetupPayoffId = Id<'SetupPayoff'>;
 export type SetupPointId = Id<'SetupPoint'>;
 export type CaptureItemId = Id<'CaptureItem'>;

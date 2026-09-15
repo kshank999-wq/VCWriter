@@ -6,6 +6,7 @@ import { characterCategorySchema, characterSchema } from './entities/character.j
 import { defaultCharacterCategories } from './characters.js';
 import { storyLinkSchema } from './entities/links.js';
 import { storyThreadSchema } from './entities/threads.js';
+import { learningAidSchema } from './entities/learning.js';
 import {
   arcPointSchema,
   characterArcSchema,
@@ -132,6 +133,11 @@ export const projectFileSchema = z.object({
    * asks for three record types and two of them were already here.
    */
   threads: z.array(storyThreadSchema).default([]),
+  /**
+   * End-of-section learning aids (addendum 16 §10). Empty in every project
+   * that is not an instructional book, and in most that are.
+   */
+  learningAids: z.array(learningAidSchema).default([]),
   setupsPayoffs: z.array(setupPayoffSchema).default([]),
   snapshots: z.array(snapshotSchema).default([]),
   /**
