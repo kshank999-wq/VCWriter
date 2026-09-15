@@ -7,6 +7,7 @@ import {
   type ProjectFile,
   type ScriptFormat,
   isProseFormat,
+  nounsFor,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 
@@ -116,6 +117,9 @@ export function PageSetup({
   const contents = hasContentsPage(file);
   const indexable = hasBookIndex(file.project.format);
   const prose = isProseFormat(file.project.format);
+  // The fifth copy of "chapter or scene?" this sweep found, written out inline
+  // half a dozen times in this one file. All of it reads the table now (§14).
+  const nouns = nounsFor(file.project.format);
   const paragraphStyle = file.settings.paragraphStyle;
   const scriptFormat = file.settings.scriptFormat ?? 'us';
   const set = (patch: Partial<PrintSetup>) => onSetup({ ...setup, ...patch });
@@ -187,11 +191,11 @@ export function PageSetup({
             ) : null}
 
             <Check
-              label="Scene headings"
+              label={`${nouns.unit} headings`}
               on={setup.includeSceneHeadings}
               onChange={(includeSceneHeadings) => set({ includeSceneHeadings })}
             >
-              {prose ? 'Chapter headings' : 'Scene headings'}
+              {nouns.unit} headings
             </Check>
 
             <Check
@@ -308,27 +312,27 @@ export function PageSetup({
             </p>
 
             <Check
-              label="Beat titles"
+              label={`${nouns.sub} titles`}
               on={setup.includeBeatTitles}
               onChange={(includeBeatTitles) => set({ includeBeatTitles })}
             >
-              Beat titles
+              {nouns.sub} titles
             </Check>
 
             <Check
-              label="Scene summary"
+              label={`${nouns.unit} summary`}
               on={setup.includeSceneSummary}
               onChange={(includeSceneSummary) => set({ includeSceneSummary })}
             >
-              {prose ? 'Each chapter’s summary' : 'Each scene’s summary'}
+              Each {nouns.unit.toLowerCase()}’s summary
             </Check>
 
             <Check
-              label="Links in the scene"
+              label={`Links in the ${nouns.unit.toLowerCase()}`}
               on={setup.includeSceneLinks}
               onChange={(includeSceneLinks) => set({ includeSceneLinks })}
             >
-              What each {prose ? 'chapter' : 'scene'} is linked to
+              What each {nouns.unit.toLowerCase()} is linked to
             </Check>
 
             <Check

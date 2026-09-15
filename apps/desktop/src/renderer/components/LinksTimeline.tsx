@@ -24,6 +24,7 @@ import {
   type ThreadRelationship,
   type TimelineNode,
   type TimelineRow,
+  nounsFor,
 } from '@vcwriter/domain';
 
 /**
@@ -75,6 +76,7 @@ const HEAD = 170;
 const MIN_COLUMN = 14;
 
 export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps) {
+  const nouns = nounsFor(file.project.format);
   const [shown, setShown] = useState<readonly MapLaneId[]>(MAP_LANES);
   const [only, setOnly] = useState<{ laneId: MapLaneId; sourceId: string } | null>(null);
   const [width, setWidth] = useState<WidthId>('project');
@@ -175,9 +177,9 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
         </label>
 
         <label className="field inline">
-          <span>Scenes</span>
+          <span>{nouns.unitPlural}</span>
           <input
-            aria-label="From scene"
+            aria-label={`From ${nouns.unit.toLowerCase()}`}
             inputMode="numeric"
             placeholder="1"
             value={from}
@@ -185,7 +187,7 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
           />
           <span>to</span>
           <input
-            aria-label="To scene"
+            aria-label={`To ${nouns.unit.toLowerCase()}`}
             inputMode="numeric"
             placeholder={String(total)}
             value={to}

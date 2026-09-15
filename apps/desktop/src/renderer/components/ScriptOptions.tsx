@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { isProseFormat, nounsFor, type ProjectFormat } from '@vcwriter/domain';
 import type { ScriptDisplay, ScriptLayout } from './StoryView';
 
 /**
@@ -55,8 +56,15 @@ interface ScriptOptionsProps {
   onDisplay(next: ScriptDisplay): void;
   scriptLayout: ScriptLayout;
   onScriptLayout(next: ScriptLayout): void;
-  /** A novel has no sluglines, so it is not offered the switch for them. */
-  prose: boolean;
+  /**
+   * The project's format, and **not a boolean**.
+   *
+   * It answers two questions rather than one: whether there are sluglines to
+   * switch (a novel has none) and what this format calls its parts, so §14's
+   * *never forced to work around Scene or Beat* is kept here like everywhere
+   * else. A `prose` flag could only answer the first.
+   */
+  format: ProjectFormat;
 }
 
 /**
@@ -72,7 +80,7 @@ export function ScriptOptions({
   onDisplay,
   scriptLayout,
   onScriptLayout,
-  prose,
+  format,
 }: ScriptOptionsProps) {
   const panel = useRef<HTMLDivElement>(null);
 
@@ -96,7 +104,9 @@ export function ScriptOptions({
   }, [open, onClose]);
 
   if (!open) return null;
-  const noun = prose ? 'Chapter' : 'Scene';
+  // The third copy of "Chapter or Scene?" this sweep found, and the last.
+  const prose = isProseFormat(format);
+  const nouns = nounsFor(format);
   const toggle = (key: keyof ScriptDisplay) => onDisplay({ ...display, [key]: !display[key] });
 
   return (
@@ -176,10 +186,10 @@ export function ScriptOptions({
 
       <h4>What shows</h4>
       <div className="option-checks">
-        {prose ? null : <Check label="Scene headings" on={display.headings} onClick={() => toggle('headings')} />}
-        <Check label={`${noun} names`} on={display.sceneNames} onClick={() => toggle('sceneNames')} />
-        <Check label="Beat names" on={display.beatNames} onClick={() => toggle('beatNames')} />
-        <Check label={prose ? 'Chapter breaks' : 'Acts'} on={display.acts} onClick={() => toggle('acts')} />
+        {prose ? null : <Check label={`${nouns.unit} headings`} on={display.headings} onClick={() => toggle('headings')} />}
+        <Check label={`${nouns.unit} names`} on={display.sceneNames} onClick={() => toggle('sceneNames')} />
+        <Check label={`${nouns.sub} names`} on={display.beatNames} onClick={() => toggle('beatNames')} />
+        <Check label={prose ? `${nouns.unit} breaks` : 'Acts'} on={display.acts} onClick={() => toggle('acts')} />
         {scriptLayout === 'flow' ? (
           <Check label="Page breaks" on={display.pages} onClick={() => toggle('pages')} />
         ) : null}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { scrollNudge, zoneFor, type OutlineZone } from '../drag';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
 import {
-  OUTLINE_KINDS,
+  isInstructional,
   addItem,
   addResearchRow,
   bindRow,
@@ -50,6 +50,8 @@ import {
   type ProjectFile,
   type ResearchItemId,
   type StructuralUnitId,
+  nounsFor,
+  type ProjectFormat,
 } from '@vcwriter/domain';
 
 /**
@@ -87,17 +89,47 @@ const STEP = 22;
  * writer is reading, and *CHARACTER —* in front of every one of them is a
  * column of noise down the left of the outline (§9).
  */
-const KINDS: Record<string, { name: string; mark: string }> = {
-  scene: { name: 'Scene', mark: '▣' },
-  beat: { name: 'Beat', mark: '◈' },
-  note: { name: 'Note', mark: '✎' },
-  idea: { name: 'Idea', mark: '✦' },
-  character: { name: 'Character', mark: '☺' },
-  setting: { name: 'Setting', mark: '⌂' },
-  prop: { name: 'Prop', mark: '❖' },
+const MARKS: Record<string, string> = {
+  scene: '▣',
+  beat: '◈',
+  note: '✎',
+  idea: '✦',
+  character: '☺',
+  setting: '⌂',
+  prop: '❖',
 };
 
-const nameOf = (kind: string): string => KINDS[kind]?.name ?? kind.replace(/_/g, ' ');
+/**
+ * What each type is called **in this format** (addendum 16 §14).
+ *
+ * `scene` and `beat` are the outline's own two structural kinds and are named
+ * from the table, so a textbook's tree offers Chapter and Section rather than
+ * Scene and Beat. The rest are the writer's material and mean the same thing in
+ * every format.
+ *
+ * The three narrative kinds are **absent on a book** rather than renamed: a
+ * professor has no use for a Character, a Setting or a Prop, and the honest
+ * thing is not to offer them — the same rule the research menu follows.
+ */
+const kindsFor = (format: ProjectFormat): Record<string, { name: string; mark: string }> => {
+  const nouns = nounsFor(format);
+  const shared: Record<string, { name: string; mark: string }> = {
+    scene: { name: nouns.unit, mark: MARKS['scene']! },
+    beat: { name: nouns.sub, mark: MARKS['beat']! },
+    note: { name: 'Note', mark: MARKS['note']! },
+    idea: { name: 'Idea', mark: MARKS['idea']! },
+  };
+  if (isInstructional(format)) return shared;
+  return {
+    ...shared,
+    character: { name: 'Character', mark: MARKS['character']! },
+    setting: { name: 'Setting', mark: MARKS['setting']! },
+    prop: { name: 'Prop', mark: MARKS['prop']! },
+  };
+};
+
+const nameOf = (kind: string, format: ProjectFormat): string =>
+  kindsFor(format)[kind]?.name ?? kind.replace(/_/g, ' ');
 
 /** "An idea", "a note" — the right article for a type the writer may have named. */
 const article = (name: string): string =>
@@ -106,7 +138,7 @@ const article = (name: string): string =>
 /** What an empty row of each kind asks for. */
 const placeholderOf = (kind: string): string =>
   kind === 'scene' ? 'name the scene' : kind === 'beat' ? 'what happens' : 'say what it is';
-const markOf = (kind: string): string => KINDS[kind]?.mark ?? '•';
+const markOf = (kind: string): string => MARKS[kind] ?? '•';
 
 export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExport }: OutlinerWindowProps) {
   const outlines = outlinesOf(file);
@@ -425,10 +457,10 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
                 type="button"
                 className="tool"
                 disabled={!chosen}
-                title={chosen ? `A ${nameOf(kind).toLowerCase()} under ${chosen.title || 'the selected row'}` : 'Choose a row to put it under'}
+                title={chosen ? `A ${nameOf(kind, file.project.format).toLowerCase()} under ${chosen.title || 'the selected row'}` : 'Choose a row to put it under'}
                 onClick={() => add(kind)}
               >
-                + {nameOf(kind)}
+                + {nameOf(kind, file.project.format)}
               </button>
             ))}
 
@@ -467,9 +499,9 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
               }
             >
               <option value="">Everything</option>
-              {OUTLINE_KINDS.map((kind) => (
+              {Object.keys(kindsFor(file.project.format)).map((kind) => (
                 <option key={kind} value={kind}>
-                  {nameOf(kind)}s
+                  {nameOf(kind, file.project.format)}s
                 </option>
               ))}
             </select>
@@ -634,6 +666,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
 
           {rows.map((row) => (
             <Row
+              format={file.project.format}
               key={row.item.id as string}
               row={row}
               title={rowTitle(file, row.item)}
@@ -723,7 +756,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
           </datalist>
           {chosen ? (
             <>
-              <h3>{nameOf(chosen.kind)}</h3>
+              <h3>{nameOf(chosen.kind, file.project.format)}</h3>
               {chosen.source?.type === 'research_item' ? (
                 <p className="small outline-from">
                   <strong>{rowTitle(file, chosen)}</strong>, from the research shelf.{' '}
@@ -752,17 +785,17 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
                 <span>What it is</span>
                 <select
                   aria-label="The row's type"
-                  value={OUTLINE_KINDS.includes(chosen.kind as (typeof OUTLINE_KINDS)[number]) ? chosen.kind : ''}
+                  value={kindsFor(file.project.format)[chosen.kind] ? chosen.kind : ''}
                   onChange={(event) => write((current, id) => updateItem(current, id, chosen.id, { kind: event.target.value }))}
                 >
                   {/* A type nobody has heard of is kept and shown: the list is
                       a list of words, and §12 says it grows. */}
-                  {!OUTLINE_KINDS.includes(chosen.kind as (typeof OUTLINE_KINDS)[number]) ? (
-                    <option value="">{nameOf(chosen.kind)}</option>
+                  {!kindsFor(file.project.format)[chosen.kind] ? (
+                    <option value="">{nameOf(chosen.kind, file.project.format)}</option>
                   ) : null}
-                  {OUTLINE_KINDS.map((kind) => (
+                  {Object.keys(kindsFor(file.project.format)).map((kind) => (
                     <option key={kind} value={kind}>
-                      {nameOf(kind)}
+                      {nameOf(kind, file.project.format)}
                     </option>
                   ))}
                 </select>
@@ -981,7 +1014,7 @@ function Promotion({
   if (kind === null) {
     return (
       <p className="muted small outline-promotion">
-        Planning. {article(nameOf(item.kind))} is something to know while the scene is written, and it stays here
+        Planning. {article(nameOf(item.kind, file.project.format))} is something to know while the scene is written, and it stays here
         when it is.
       </p>
     );
@@ -1099,6 +1132,7 @@ const topmostOf = (outline: Outline, item: OutlineItem): OutlineItem => {
  * with the arrow keys.
  */
 function Row({
+  format,
   row,
   title,
   linked,
@@ -1124,6 +1158,8 @@ function Row({
   onDragLeave,
   onDrop,
 }: {
+  /** So a row names its own kind the way this format names it (§14). */
+  format: ProjectFormat;
   row: OutlineRow;
   /** Read through to the shelf where the row references research (§5). */
   title: string;
@@ -1198,7 +1234,7 @@ function Row({
       onDragStart={(event) => {
         // Something has to be set or the drag never begins; the payload the
         // handlers actually read is held by the panel (§8).
-        event.dataTransfer.setData('text/plain', item.title || nameOf(item.kind));
+        event.dataTransfer.setData('text/plain', item.title || nameOf(item.kind, format));
         event.dataTransfer.effectAllowed = 'move';
         onDragStart();
       }}
@@ -1236,7 +1272,7 @@ function Row({
         <span className="outline-fold empty" aria-hidden="true" />
       )}
 
-      <span className="outline-mark" title={nameOf(item.kind)} aria-label={nameOf(item.kind)}>
+      <span className="outline-mark" title={nameOf(item.kind, format)} aria-label={nameOf(item.kind, format)}>
         {markOf(item.kind)}
       </span>
 
@@ -1281,7 +1317,7 @@ function Row({
             className="outline-title"
             rows={1}
             spellCheck={false}
-            aria-label={`${nameOf(item.kind)}: what it is`}
+            aria-label={`${nameOf(item.kind, format)}: what it is`}
             placeholder={placeholderOf(item.kind)}
             value={title}
             onFocus={() => onEdit(true)}

@@ -67,6 +67,7 @@ import {
   type BoardView,
   type SculptorNodeId,
   type StructuralUnitId,
+  nounsFor,
 } from '@vcwriter/domain';
 
 /**
@@ -180,6 +181,8 @@ const spreadLabels = (points: { x: number; y: number }[]): number[] => {
 
 export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindowProps) {
   const boards = boardsOf(file);
+  // §14: the board talks about scenes and beats in half a dozen tooltips.
+  const nouns = nounsFor(file.project.format);
   const [boardId, setBoardId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 40, y: 24 });
@@ -522,7 +525,7 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
             type="button"
             className={unboundOnly ? 'tool on' : 'tool'}
             aria-pressed={unboundOnly}
-            title="Light what is still an idea, and dim what is already a scene in the script"
+            title={`Light what is still an idea, and dim what is already a ${nouns.unit.toLowerCase()} in the ${nouns.manuscript.toLowerCase()}`}
             onClick={() => setUnboundOnly(!unboundOnly)}
           >
             Ideas only
@@ -745,6 +748,7 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
 
               {layout.nodes.map((laid) => (
                 <Node
+                  nouns={nouns}
                   key={laid.node.id as string}
                   laid={laid}
                   zoom={zoom}
@@ -1106,7 +1110,7 @@ export function SculptorWindow({ file, open, onClose, onUpdate }: SculptorWindow
                 <button
                   type="button"
                   className="ghost"
-                  title="Leave the card where it is and let go of the scene it stands for"
+                  title={`Leave the card where it is and let go of the ${nouns.unit.toLowerCase()} it stands for`}
                   onClick={() => {
                     write((current, id) => unbindNode(current, id, doomed.id));
                     setRemoving(null);
@@ -1322,6 +1326,7 @@ function Binding({
   node: SculptorNode;
   onWrite(mutate: (current: ProjectFile, id: Board['id']) => ProjectFile): void;
 }) {
+  const nouns = nounsFor(file.project.format);
   const kind = bindKindOf(node);
   const bound = boundOf(file, node);
   const step = useMemo(() => (isBound(node) ? outOfStep(file, board, node.id) : null), [file, board, node]);
@@ -1335,7 +1340,7 @@ function Binding({
     );
   }
 
-  const what = kind === 'unit' ? 'scene' : 'beat';
+  const what = kind === 'unit' ? nouns.unit.toLowerCase() : nouns.sub.toLowerCase();
 
   if (bound) {
     // Named the way the rest of the workspace names a scene: its sequence
@@ -1384,7 +1389,7 @@ function Binding({
         }))
       : bindableBeats(file, board, node.id).map((beat) => ({
           id: beat.id as string,
-          label: beat.title || 'Untitled beat',
+          label: beat.title || `Untitled ${nouns.sub.toLowerCase()}`,
         }));
 
   return (
@@ -1402,7 +1407,8 @@ function Binding({
         </button>
       ) : (
         <p className="muted small">
-          A beat lives inside a scene, so this one can be real as soon as the scene above it is.
+          A {nouns.sub.toLowerCase()} lives inside a {nouns.unit.toLowerCase()}, so this one can be real as soon
+          as the {nouns.unit.toLowerCase()} above it is.
         </p>
       )}
 
@@ -1521,6 +1527,7 @@ function ColumnFields({
 }
 
 function Node({
+  nouns,
   laid,
   zoom,
   selected,
@@ -1539,6 +1546,7 @@ function Node({
   onCarryLeave,
   onCarryDrop,
 }: {
+  nouns: ReturnType<typeof nounsFor>;
   laid: LaidNode;
   zoom: number;
   selected: boolean;
@@ -1614,7 +1622,11 @@ function Node({
       {/* The badge §6 asks for, on every node: a glance says how much of the
           canvas is real. A filled mark is in the script; an idea has none. */}
       {bound ? (
-        <span className="sculpt-real" title="This is a scene in the script" aria-label="In the script">
+        <span
+          className="sculpt-real"
+          title={`This is a ${nouns.unit.toLowerCase()} in the ${nouns.manuscript.toLowerCase()}`}
+          aria-label={`In the ${nouns.manuscript.toLowerCase()}`}
+        >
           ●
         </span>
       ) : null}

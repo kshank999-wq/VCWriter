@@ -12,6 +12,7 @@ import {
   type LaneId,
   type ProjectFile,
   type StructuralUnitId,
+  nounsFor,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 
@@ -107,8 +108,8 @@ export function LaneDialog({ file, laneId, onClose, onUpdate }: LaneDialogProps)
             </div>
 
             {/* The same rail the episodes have, listing scenes instead. */}
-            <aside className="scene-rail" aria-label="Scenes in this plot">
-              <h4>Scenes</h4>
+            <aside className="scene-rail" aria-label={`${nounsFor(file.project.format).unitPlural} in this plot`}>
+              <h4>{nounsFor(file.project.format).unitPlural}</h4>
               {scenes.length === 0 ? (
                 <p className="muted small">Nothing on this plot yet.</p>
               ) : (
@@ -124,7 +125,7 @@ export function LaneDialog({ file, laneId, onClose, onUpdate }: LaneDialogProps)
                         <span className="scene-rail-number muted">{unit.sequenceLabel || `Sc. ${index + 1}`}</span>
                         <span className="scene-rail-title">{unit.title || 'Untitled'}</span>
                         <span className="scene-rail-figures muted">
-                          {beatsForUnit(file, unit.id).length} beats ·{' '}
+                          {beatsForUnit(file, unit.id).length} {nounsFor(file.project.format).subPlural.toLowerCase()} ·{' '}
                           {beatsForUnit(file, unit.id).reduce((total, beat) => total + countWords(beat.manuscript), 0)}{' '}
                           words
                         </span>

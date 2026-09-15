@@ -14,6 +14,7 @@ import {
   type ProjectFile,
   type SceneGrid,
   type StructuralUnitId,
+  nounsFor,
 } from '@vcwriter/domain';
 import { ValueGraph } from './ValueGraph';
 
@@ -54,6 +55,7 @@ export function StoryGridTable({ file, onUpdate, onGoToUnit }: StoryGridTablePro
   const all = storyGridRows(file);
   const acts = actCommandments(file);
   const rows = viewGridRows(all, view);
+  const nouns = nounsFor(file.project.format);
 
   const set = (unitId: StructuralUnitId, patch: Partial<SceneGrid>) =>
     onUpdate((current) => setSceneGrid(current, unitId, patch));
@@ -81,7 +83,7 @@ export function StoryGridTable({ file, onUpdate, onGoToUnit }: StoryGridTablePro
         <label className="toggle">
           Show
           <select
-            aria-label="Which scenes to show"
+            aria-label={`Which ${nouns.unitPlural.toLowerCase()} to show`}
             value={view.show}
             onChange={(event) => setView({ ...view, show: event.target.value as GridView['show'] })}
           >
@@ -137,7 +139,7 @@ export function StoryGridTable({ file, onUpdate, onGoToUnit }: StoryGridTablePro
                 <th scope="col" className="grid-num">
                   #
                 </th>
-                <th scope="col">Scene</th>
+                <th scope="col">{nouns.unit}</th>
                 <th scope="col" className="grid-num">
                   Length
                 </th>

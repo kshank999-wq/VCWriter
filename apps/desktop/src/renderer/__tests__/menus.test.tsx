@@ -329,7 +329,24 @@ describe('page setup', () => {
   it('does not offer scene numbers to a book, which has no scenes to number', () => {
     render(<Setup format="novel" />);
     expect(screen.queryByLabelText('Scene numbers')).toBeNull();
+    // And the heading switch it *is* offered is named for the format. This
+    // test used to assert "Scene headings" here — on a novel, in a test whose
+    // own name says a book has no scenes (addendum 16 §14).
+    expect(screen.getByLabelText('Chapter headings')).toBeTruthy();
+    expect(screen.queryByLabelText('Scene headings')).toBeNull();
+  });
+
+  it('names every printable part for the format, on a book and on a script', () => {
+    render(<Setup format="instructional" />);
+    expect(screen.getByLabelText('Chapter headings')).toBeTruthy();
+    expect(screen.getByLabelText('Section titles')).toBeTruthy();
+    expect(screen.getByLabelText('Chapter summary')).toBeTruthy();
+    cleanup();
+
+    render(<Setup format="screenplay" />);
     expect(screen.getByLabelText('Scene headings')).toBeTruthy();
+    expect(screen.getByLabelText('Beat titles')).toBeTruthy();
+    expect(screen.getByLabelText('Scene summary')).toBeTruthy();
   });
 
   it('does not offer chapter pages to a format that has none', () => {

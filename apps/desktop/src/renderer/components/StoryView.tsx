@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   beatsForUnit,
   isProseFormat,
+  nounsFor,
   pageBreaks,
   pinUsage,
   storyLayout,
@@ -130,6 +131,8 @@ export function StoryView({
 }: StoryViewProps) {
   const layout = useMemo(() => givenLayout ?? storyLayout(file), [givenLayout, file]);
   const prose = isProseFormat(file.project.format);
+  // §14: no screen names a unit itself. Every label below reads the table.
+  const nouns = nounsFor(file.project.format);
   const [ownDisplay, setOwnDisplay] = useState<ScriptDisplay>(DEFAULT_SCRIPT_DISPLAY);
   const [ownLayout, setOwnLayout] = useState<ScriptLayout>('flow');
   const [ownZoom, setOwnZoom] = useState(1);
@@ -224,7 +227,6 @@ export function StoryView({
   const talk = useTalk();
   const roomId = useRoom().identity?.roomId ?? null;
 
-  const noun = prose ? 'Chapter' : 'Scene';
   const toggle = (key: keyof ScriptDisplay) => setDisplay({ ...display, [key]: !display[key] });
 
   const registerBlock = (beatId: string) => (node: HTMLElement | null) => {
@@ -270,14 +272,14 @@ export function StoryView({
   const beatHeader = (beat: Beat) => (
     <header
       className="beat-name"
-      title={onOpenBeat ? 'Double-click to open this beat' : undefined}
+      title={onOpenBeat ? `Double-click to open this ${nouns.sub.toLowerCase()}` : undefined}
       onClick={() => onSelectBeat(beat.id)}
       onDoubleClick={() => onOpenBeat?.(beat.id)}
     >
       <input
         ref={registerTitle(beat.id)}
-        aria-label="Beat title (not printed)"
-        placeholder="What happens in this beat"
+        aria-label={`${nouns.sub} title (not printed)`}
+        placeholder={`What happens in this ${nouns.sub.toLowerCase()}`}
         value={beat.title}
         onFocus={() => onSelectBeat(beat.id)}
         onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { title: event.target.value }))}
@@ -348,8 +350,8 @@ export function StoryView({
         <button
           type="button"
           className="beat-open"
-          aria-label="Write in this beat"
-          title="Write in this beat"
+          aria-label={`Write in this ${nouns.sub.toLowerCase()}`}
+          title={`Write in this ${nouns.sub.toLowerCase()}`}
           onClick={() => onOpenBeat(beat.id)}
         >
           ✎
@@ -384,7 +386,7 @@ export function StoryView({
       <ManuscriptDataLists file={file} />
 
       {focusMode ? null : (
-        <div className="script-options" role="group" aria-label="Script display">
+        <div className="script-options" role="group" aria-label={`${nouns.manuscript} display`}>
           {/* Everything about how the page looks is behind the gear now: the
               bar above the page should be the page's, not a control panel. */}
           <button
@@ -420,7 +422,7 @@ export function StoryView({
             onDisplay={setDisplay}
             scriptLayout={scriptLayout}
             onScriptLayout={setScriptLayout}
-            prose={prose}
+            format={file.project.format}
           />
         </div>
       )}
@@ -469,7 +471,9 @@ export function StoryView({
             </div>
           </div>
           {sheets.length === 0 ? (
-            <p className="muted empty-state">Add a scene from the lanes toolbar to start writing.</p>
+            <p className="muted empty-state">
+              Add a {nouns.unit.toLowerCase()} from the lanes toolbar to start writing.
+            </p>
           ) : null}
         </div>
       ) : (
@@ -504,7 +508,9 @@ export function StoryView({
           })}
 
           {layout.spans.length === 0 ? (
-            <p className="muted empty-state">Add a scene from the lanes toolbar to start writing.</p>
+            <p className="muted empty-state">
+              Add a {nouns.unit.toLowerCase()} from the lanes toolbar to start writing.
+            </p>
           ) : null}
         </div>
       )}
@@ -515,7 +521,8 @@ export function StoryView({
               with the same keys and the same formatting as the beat's own
               screen. Saying so is the difference between a writer using it
               and a writer double-clicking their way around it. */}
-          The whole {prose ? 'manuscript' : 'script'} in story order · type straight into the page, or double-click a beat to
+          The whole {nouns.manuscript.toLowerCase()} in story order · type straight into the page, or
+          double-click a {nouns.sub.toLowerCase()} to
           open it on its own · Return for the next element, Tab to change its type
           {dictationShortcut ? ` · to dictate, ${dictationShortcut}` : ''}
         </footer>

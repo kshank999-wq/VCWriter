@@ -10,6 +10,7 @@ import {
   reformatUntyped,
   startRevision,
   switchRevision,
+  nounsFor,
   updateBeat,
   type Beat,
   type BeatId,
@@ -128,16 +129,18 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut }
     onUpdate((current) => switchRevision(current, beat.id, value as BeatRevisionId));
   };
 
+  // §14: a writer in Book Mode is never made to work around Beat or Script.
+  const nouns = nounsFor(file.project.format);
   return (
     <>
       <ManuscriptDataLists file={file} />
 
       <header className="writer-bar" style={{ borderLeftColor: beat.color ?? lane?.color }}>
-        <span className="writer-caption muted">Beat name</span>
+        <span className="writer-caption muted">{nouns.sub} name</span>
         <input
           className="writer-name"
-          aria-label="Beat name"
-          placeholder="Name this beat"
+          aria-label={`${nouns.sub} name`}
+          placeholder={`Name this ${nouns.sub.toLowerCase()}`}
           value={beat.title}
           onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { title: event.target.value }))}
         />
@@ -191,21 +194,21 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut }
               </select>
             </label>
           ) : null}
-          <label className="check" title="Off: the beat keeps its text and leaves the script">
+          <label className="check" title={`Off: the ${nouns.sub.toLowerCase()} keeps its text and leaves the ${nouns.manuscript.toLowerCase()}`}>
             <input
               type="checkbox"
               aria-label="In script"
               checked={beat.inScript}
               onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { inScript: event.target.checked }))}
             />
-            <span>In script</span>
+            <span>In {nouns.manuscript.toLowerCase()}</span>
           </label>
           {onPopOut ? (
             <button
               type="button"
               className="ghost"
-              aria-label="Open this beat in its own window"
-              title="Open this beat in its own window — put it on another monitor"
+              aria-label={`Open this ${nouns.sub.toLowerCase()} in its own window`}
+              title={`Open this ${nouns.sub.toLowerCase()} in its own window — put it on another monitor`}
               onClick={onPopOut}
             >
               ⧉

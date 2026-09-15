@@ -204,6 +204,8 @@ function Found({ script }: { script: ImportedScript }) {
   return (
     <div className="import-found">
       <div className="report-figures">
+        {/* The source is a Final Draft file, so what was found in it is
+            scenes whatever format it is being imported into. */}
         <Figure label="Scenes" value={String(scenes)} />
         <Figure label="Characters" value={String(script.characters.length)} />
         <Figure label="Locations" value={String(script.locations.length)} />

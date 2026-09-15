@@ -5,6 +5,7 @@ import {
   dayOf,
   daysOfWriting,
   projectStats,
+  nounsFor,
   paginateProject,
   placedMarkers,
   sessionMinutes,
@@ -59,6 +60,7 @@ export function Reports({ file, open, onClose, onTab, printOptions, onShowUnused
   const stats = useMemo(() => projectStats(file), [file]);
   const pages = useMemo(() => paginateProject(file, printOptions).length, [file, printOptions]);
   const markers = useMemo(() => placedMarkers(file), [file]);
+  const nouns = nounsFor(file.project.format);
 
   /** The sittings that belong to a day, by the writer's own clock. */
   const sittingsOn = (day: string) => sessions.filter((session) => dayOf(session.startedAt) === day);
@@ -181,8 +183,8 @@ export function Reports({ file, open, onClose, onTab, printOptions, onShowUnused
               <div className="report-figures">
                 <Figure label="Words" value={stats.wordCount.toLocaleString()} />
                 <Figure label="Pages" value={String(pages)} />
-                <Figure label="Scenes" value={String(stats.unitCount)} />
-                <Figure label="Beats" value={String(stats.beatCount)} />
+                <Figure label={nouns.unitPlural} value={String(stats.unitCount)} />
+                <Figure label={nouns.subPlural} value={String(stats.beatCount)} />
                 <Figure label="Written" value={`${stats.writtenBeatCount} of ${stats.beatCount}`} />
                 <Figure label="Markers" value={String(markers.length)} />
                 <Figure label="Plot lanes" value={String(stats.laneCount)} />

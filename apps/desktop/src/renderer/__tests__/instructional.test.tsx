@@ -20,6 +20,8 @@ import {
   type ResearchCategoryId,
 } from '@vcwriter/domain';
 import { BeatBody } from '../components/BeatBody';
+import { BeatWriter } from '../components/BeatWriter';
+import { Inspector } from '../components/Inspector';
 import { GraphicsPanel } from '../components/GraphicsPanel';
 import { ImportNotesPanel } from '../components/ImportNotesPanel';
 import { LearningAidsPanel } from '../components/LearningAidsPanel';
@@ -471,5 +473,65 @@ describe('a figure in the manuscript', () => {
 
     const after = (seen as unknown as ProjectFile).beats.find((one) => one.id === made.beatId)!;
     expect(after.manuscript.elements.map((one) => one.type)).toEqual(['paragraph', 'figure']);
+  });
+});
+
+/**
+ * §14, the rule Ken's own spec states: *a writer in Book Mode must never be
+ * forced to work around Scene, Beat or Script.*
+ *
+ * Stage 1 built `nounsFor` for exactly this and pointed only the workspace
+ * shell at it; seventeen components still said "Scene" and "Beat" in visible
+ * text, and five of them held their own private copy of *chapter or scene?*.
+ *
+ * These are the surfaces a book author meets every day. The assertion that
+ * matters is the **negative** one — that the word is not there — because a
+ * missed label is exactly what this rule is about.
+ */
+describe('the words a book author is shown', () => {
+  const written = () => {
+    const made = book();
+    return {
+      beatId: made.beatId,
+      file: updateBeat(made.file, made.beatId, {
+        manuscript: {
+          elements: [{ id: newId(), type: 'paragraph', text: 'A ray bends.', characterId: null, attributes: {} }],
+        },
+      }),
+    };
+  };
+
+  it('never says Beat in the writing screen’s own chrome', () => {
+    const made = written();
+    const beat = made.file.beats.find((one) => one.id === made.beatId)!;
+    render(<BeatWriter file={made.file} beat={beat} onUpdate={() => undefined} />);
+
+    expect(screen.getByLabelText('Section name')).toBeTruthy();
+    expect(screen.getByText('Section name')).toBeTruthy();
+    expect(screen.queryByLabelText('Beat name')).toBeNull();
+    // And the manuscript is a Book rather than a script.
+    expect(screen.getByText('In book')).toBeTruthy();
+    expect(screen.queryByText('In script')).toBeNull();
+  });
+
+  it('never says Beat in the Inspector', () => {
+    const made = written();
+    render(
+      <Inspector file={made.file} selectedBeatId={made.beatId} onUpdate={() => undefined} />,
+    );
+    expect(screen.getByLabelText('Section colour')).toBeTruthy();
+    expect(screen.queryByLabelText('Beat colour')).toBeNull();
+  });
+
+  it('keeps a screenplay saying exactly what it always said', () => {
+    // The sweep must not have renamed anything for the format it was built for.
+    let film = createProjectFile({ title: 'A Film', format: 'screenplay' });
+    const unit = addUnit(film, { laneId: film.lanes[0]!.id, title: 'One' });
+    const beat = addBeat(unit.file, { unitId: unit.unit.id, title: 'a beat' });
+    film = beat.file;
+
+    render(<BeatWriter file={film} beat={beat.beat} onUpdate={() => undefined} />);
+    expect(screen.getByLabelText('Beat name')).toBeTruthy();
+    expect(screen.getByText('In script')).toBeTruthy();
   });
 });

@@ -527,7 +527,7 @@ export function MasterTimeline({
               + {nounsFor(file.project.format).unit}
             </button>
             <button type="button" className="tool" onClick={onAddBeat} disabled={!selectedUnitId}>
-              + Beat
+              + {nounsFor(file.project.format).sub}
             </button>
             <button type="button" className="tool" onClick={onAddLane}>
               + Lane
@@ -755,6 +755,8 @@ function LaneTrack({
   beatKeys,
 }: LaneTrackProps) {
   const units = unitsForLane(file, lane.id);
+  // §14 again: the rail below is full of a format's own nouns.
+  const nouns = nounsFor(file.project.format);
   const unitDragOver = (event: React.DragEvent, overId: string, orientation: 'horizontal' | 'vertical' = 'horizontal') => {
     if (drag.payload?.kind !== 'unit') return false;
     event.preventDefault();
@@ -935,7 +937,7 @@ function LaneTrack({
               <button
                 type="button"
                 className="ghost danger block-remove"
-                title={`Remove this ${unit.kind} and its beats`}
+                title={`Remove this ${unit.kind} and its ${nouns.subPlural.toLowerCase()}`}
                 onClick={(event) => {
                   event.stopPropagation();
                   onUpdate((current) => removeUnit(current, unit.id));
@@ -1013,7 +1015,7 @@ function LaneTrack({
                         {STATUS_GLYPH[beat.status]}
                       </span>
                       {/* The internal beat title is an authoring reference only (§5.3). */}
-                      <span className="beat-row-title">{beat.title || 'Untitled beat'}</span>
+                      <span className="beat-row-title">{beat.title || `Untitled ${nouns.sub.toLowerCase()}`}</span>
                       {/* Who speaks in the beat, as the cast's colours (addendum 02 §6). */}
                       <span className="cast" aria-hidden="true">
                         {(speakers.get(beat.id) ?? []).slice(0, 3).map((name) => (
@@ -1024,7 +1026,7 @@ function LaneTrack({
                     <button
                       type="button"
                       className="ghost danger beat-remove"
-                      title="Remove beat"
+                      title={`Remove ${nouns.sub.toLowerCase()}`}
                       onClick={() => onUpdate((current) => removeBeat(current, beat.id))}
                     >
                       ×
@@ -1035,10 +1037,10 @@ function LaneTrack({
                   <button
                     type="button"
                     className="ghost"
-                    title="Add beat"
-                    onClick={() => onUpdate((current) => addBeat(current, { unitId: unit.id, title: 'New beat' }).file)}
+                    title={`Add ${nouns.sub.toLowerCase()}`}
+                    onClick={() => onUpdate((current) => addBeat(current, { unitId: unit.id, title: `New ${nouns.sub.toLowerCase()}` }).file)}
                   >
-                    + beat
+                    + {nouns.sub.toLowerCase()}
                   </button>
                 </li>
               </ul>

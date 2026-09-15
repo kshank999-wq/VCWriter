@@ -1,6 +1,6 @@
 import { beatIdOf, paneNamesFor, type PaneId } from '../panes';
 import { Wordmark } from './Brand';
-import { avSheet, formatRt, type ProjectFile, type ProjectFormat } from '@vcwriter/domain';
+import { avSheet, formatRt, nounsFor, type ProjectFile, type ProjectFormat } from '@vcwriter/domain';
 import type { AccountStatus } from '../../preload/index';
 
 const SAVE_LABEL: Record<string, string> = {
@@ -74,6 +74,7 @@ export function TitleBar({
   // Beats are named by their own window's title, and there can be any number
   // of them; the chips here are for the sections and for research.
   const sections = away.filter((pane) => !beatIdOf(pane));
+  const nouns = nounsFor(file.project.format);
 
   return (
     <header className="titlebar">
@@ -94,7 +95,7 @@ export function TitleBar({
             </>
           ) : (
             <>
-              {pages} {pages === 1 ? 'page' : 'pages'} · {beatCount} beats · {wordCount} words
+              {pages} {pages === 1 ? 'page' : 'pages'} · {beatCount} {nouns.subPlural.toLowerCase()} · {wordCount} words
             </>
           )}
         </span>
@@ -116,7 +117,7 @@ export function TitleBar({
           <button
             type="button"
             className="ghost"
-            title="Research: everything the script is made from"
+            title={`Research: everything the ${nouns.manuscript.toLowerCase()} is made from`}
             onClick={onOpenResearch}
           >
             Research
@@ -136,7 +137,7 @@ export function TitleBar({
           <button
             type="button"
             className="ghost"
-            title="Outliner: arrange what you have into scenes and beats"
+            title={`Outliner: arrange what you have into ${nouns.unitPlural.toLowerCase()} and ${nouns.subPlural.toLowerCase()}`}
             onClick={onOpenOutliner}
           >
             Outliner

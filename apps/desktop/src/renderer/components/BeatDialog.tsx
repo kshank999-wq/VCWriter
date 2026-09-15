@@ -1,4 +1,4 @@
-import { findBeat, type BeatId, type ProjectFile } from '@vcwriter/domain';
+import { findBeat, nounsFor, type BeatId, type ProjectFile } from '@vcwriter/domain';
 import { BeatWriter } from './BeatWriter';
 import { useModal } from '../use-modal';
 
@@ -23,7 +23,12 @@ export function BeatDialog({ file, beatId, onClose, onUpdate, onSelect, onPopOut
   const beat = beatId ? findBeat(file, beatId) : undefined;
   const dialog = useModal(Boolean(beat));
   return (
-    <dialog ref={dialog} className="writer-dialog" aria-label="Beat" onClose={onClose}>
+    <dialog
+      ref={dialog}
+      className="writer-dialog"
+      aria-label={nounsFor(file.project.format).sub}
+      onClose={onClose}
+    >
       {beat ? (
         <BeatWriter
           file={file}

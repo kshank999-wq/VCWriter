@@ -17,6 +17,7 @@ import {
   type ProjectFile,
   type ScenePurpose,
   type StructuralUnitId,
+  nounsFor,
 } from '@vcwriter/domain';
 
 /**
@@ -52,6 +53,7 @@ const BOTTOM = 34;
 
 export function PolarityGraph({ file, onUpdate, onGoToUnit }: PolarityGraphProps) {
   const graph = useMemo(() => polarityGraph(file), [file]);
+  const nouns = nounsFor(file.project.format);
   const [openId, setOpenId] = useState<StructuralUnitId | null>(null);
 
   const open = graph.points.find((one) => one.unitId === openId) ?? null;
@@ -64,7 +66,7 @@ export function PolarityGraph({ file, onUpdate, onGoToUnit }: PolarityGraphProps
   return (
     <div className="polarity">
       <header className="polarity-head">
-        <h3>Scene polarity</h3>
+        <h3>{nouns.unit} polarity</h3>
         <p className="muted small">{describePolarity(file)}</p>
         <p className="muted small">
           Where each scene begins and where it ends. Flat means it ends where it started — worked
@@ -73,7 +75,7 @@ export function PolarityGraph({ file, onUpdate, onGoToUnit }: PolarityGraphProps
       </header>
 
       {graph.points.length === 0 ? (
-        <p className="muted">No scenes in the script yet.</p>
+        <p className="muted">No {nouns.unitPlural.toLowerCase()} in the {nouns.manuscript.toLowerCase()} yet.</p>
       ) : (
         <div className="polarity-chart">
           <div className="polarity-axis" aria-hidden="true">
@@ -90,7 +92,7 @@ export function PolarityGraph({ file, onUpdate, onGoToUnit }: PolarityGraphProps
               height={height}
               viewBox={`0 0 ${width} ${height}`}
               role="img"
-              aria-label="Scene polarity across the script"
+              aria-label={`${nouns.unit} polarity across the ${nouns.manuscript.toLowerCase()}`}
             >
               {/* The five rows, with neutral through the middle. */}
               {graph.rows.map((row) => {
@@ -203,7 +205,7 @@ export function PolarityGraph({ file, onUpdate, onGoToUnit }: PolarityGraphProps
                 : `Changes by ${open.turn.distance} ${open.turn.distance === 1 ? 'step' : 'steps'}.`}
             </p>
           ) : (
-            <p className="muted small">Set both ends and this scene says whether it turns.</p>
+            <p className="muted small">Set both ends and this {nouns.unit.toLowerCase()} says whether it turns.</p>
           )}
 
           <h5>What it is for</h5>
@@ -239,7 +241,7 @@ export function PolarityGraph({ file, onUpdate, onGoToUnit }: PolarityGraphProps
           ) : null}
         </section>
       ) : (
-        <p className="muted small">Pick a scene on the graph to set where it begins and ends.</p>
+        <p className="muted small">Pick a {nouns.unit.toLowerCase()} on the graph to set where it begins and ends.</p>
       )}
 
       {/* Every flat scene in one place, so a pass can be made over them. */}

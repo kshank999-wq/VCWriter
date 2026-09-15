@@ -27,6 +27,7 @@ import {
   type ProjectFile,
   type StructuralUnit,
   isInstructional,
+  nounsFor,
 } from '@vcwriter/domain';
 import { RelatedPanel } from './RelatedPanel';
 import { CharacterWorkPanel } from './CharacterWorkPanel';
@@ -53,7 +54,9 @@ export function Inspector({ file, selectedBeatId, onUpdate }: InspectorProps) {
   if (!beat || !unit || !lane) {
     return (
       <aside className="inspector" aria-label="Inspector">
-        <p className="muted empty-state">Select a beat to see its properties.</p>
+        <p className="muted empty-state">
+          Select a {nounsFor(file.project.format).sub.toLowerCase()} to see its properties.
+        </p>
       </aside>
     );
   }
@@ -94,13 +97,15 @@ function BeatSection({
 }) {
   // The same reading of the cues the Threads view and the cast dots use.
   const speakers = speakersIn(beat);
+  // §14: the section is called whatever this format calls the thing.
+  const nouns = nounsFor(file.project.format);
   return (
-    <Section title="Beat">
+    <Section title={nouns.sub}>
       <label className="field">
         Title
         <input
           value={beat.title}
-          placeholder="What happens in this beat"
+          placeholder={`What happens in this ${nouns.sub.toLowerCase()}`}
           onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { title: event.target.value }))}
         />
       </label>
@@ -122,7 +127,7 @@ function BeatSection({
           Colour
           <input
             type="color"
-            aria-label="Beat colour"
+            aria-label={`${nouns.sub} colour`}
             value={beat.color ?? '#c9a45c'}
             onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { color: event.target.value }))}
           />
@@ -140,7 +145,7 @@ function BeatSection({
         <label className="field">
           Version
           <select
-            aria-label="Beat version"
+            aria-label={`${nouns.sub} version`}
             value="__working__"
             onChange={(event) => onUpdate((current) => switchRevision(current, beat.id, event.target.value as BeatRevisionId))}
           >

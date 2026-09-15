@@ -26,6 +26,7 @@ import {
   type SceneGrid,
   type SceneVerdict,
   type StructuralUnitId,
+  nounsFor,
 } from '@vcwriter/domain';
 import { IndexPanel } from './IndexPanel';
 import { PolarityGraph } from './PolarityGraph';
@@ -172,6 +173,7 @@ export function EditorPanel({
 
   // The global layer, read here only for the count on the tab.
   const grid = useMemo(() => storyGridStatus(file), [file]);
+  const nouns = nounsFor(file.project.format);
 
   // Asked once when the Final Editor is opened, so the button can say why it
   // is greyed out instead of failing after the click.
@@ -553,7 +555,7 @@ export function EditorPanel({
           <table className="story-grid">
             <thead>
               <tr>
-                <th scope="col">Scene</th>
+                <th scope="col">{nouns.unit}</th>
                 <th scope="col">At stake</th>
                 <th scope="col">Moves</th>
                 <th scope="col">Turns on</th>
@@ -615,7 +617,7 @@ export function EditorPanel({
             </tbody>
           </table>
 
-          <h3>Scene by scene</h3>
+          <h3>{nouns.unit} by {nouns.unit.toLowerCase()}</h3>
           <ul className="scene-list">
             {report.scenes.map((scene) => {
               const read = scene.aiVerdict;

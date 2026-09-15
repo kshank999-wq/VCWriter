@@ -15,6 +15,7 @@ import {
   type ThreadLayout,
   type TimelineArc,
   nounsFor,
+  isProseFormat,
 } from '@vcwriter/domain';
 
 interface TimelineViewerProps {
@@ -147,9 +148,14 @@ export function TimelineViewer({
             ))}
           </select>
         </label>
-        <span className="viewer-runtime" title="A page of script is a minute of screen time">
-          {runtime}
-        </span>
+        {/* A page of script is a minute of screen time. A page of a textbook
+            is not a minute of anything, so a book is not shown a runtime —
+            absent rather than a figure that means nothing (§14). */}
+        {isProseFormat(file.project.format) ? null : (
+          <span className="viewer-runtime" title="A page of script is a minute of screen time">
+            {runtime}
+          </span>
+        )}
         <label className="zoom">
           <span className="muted">Zoom</span>
           <input
@@ -263,7 +269,8 @@ export function TimelineViewer({
             <>
               <div className="track-head">Threads</div>
               <p className="muted viewer-empty" style={{ gridColumn: `span ${spans.length + 1}` }}>
-                Characters appear here as they speak, and themes as they are linked to scenes.
+                Characters appear here as they speak, and themes as they are linked to{' '}
+                {nounsFor(file.project.format).unitPlural.toLowerCase()}.
               </p>
             </>
           ) : null}

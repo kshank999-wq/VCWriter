@@ -4,6 +4,7 @@ import {
   findLane,
   findUnit,
   isProseFormat,
+  nounsFor,
   pagesForUnit,
   promisesIn,
   sceneCast,
@@ -59,7 +60,20 @@ interface SceneDialogProps {
 export function SceneDialog({ file, unitId, onClose, onUpdate, onOpenBeat, onSelectBeat }: SceneDialogProps) {
   const unit = unitId ? findUnit(file, unitId) : undefined;
   const dialog = useModal(Boolean(unit));
-  const noun = unit?.kind === 'chapter' ? 'Chapter' : unit?.kind === 'section' ? 'Section' : 'Scene';
+  // The unit's own kind, which is a fact about this unit rather than about the
+  // format — a project may hold both. Its sub-unit and its manuscript are the
+  // format's, and come off the table like everywhere else (§14).
+  const nouns = nounsFor(file.project.format);
+  // With no unit selected there is no kind to read, and the fallback must be
+  // the **format's** noun rather than the word "Scene" — otherwise a closed
+  // dialog on a book is labelled Scene, which is what the sweep is about.
+  const noun = unit
+    ? unit.kind === 'chapter'
+      ? 'Chapter'
+      : unit.kind === 'section'
+        ? 'Section'
+        : 'Scene'
+    : nouns.unit;
 
   return (
     <dialog ref={dialog} className="lane-dialog scene-dialog" aria-label={noun} onClose={onClose}>
@@ -68,6 +82,7 @@ export function SceneDialog({ file, unitId, onClose, onUpdate, onOpenBeat, onSel
           file={file}
           unit={unit}
           noun={noun}
+          nouns={nouns}
           onClose={onClose}
           onUpdate={onUpdate}
           onOpenBeat={onOpenBeat}
@@ -82,6 +97,7 @@ function SceneDialogBody({
   file,
   unit,
   noun,
+  nouns,
   onClose,
   onUpdate,
   onOpenBeat,
@@ -90,6 +106,7 @@ function SceneDialogBody({
   file: ProjectFile;
   unit: StructuralUnit;
   noun: string;
+  nouns: ReturnType<typeof nounsFor>;
   onClose(): void;
   onUpdate: SceneDialogProps['onUpdate'];
   onOpenBeat: SceneDialogProps['onOpenBeat'];
@@ -127,16 +144,16 @@ function SceneDialogBody({
           value={unit.title}
           onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { title: event.target.value }))}
         />
-        <label className="switch" title={`Off: the ${noun.toLowerCase()} stays here and leaves the script`}>
+        <label className="switch" title={`Off: the ${noun.toLowerCase()} stays here and leaves the ${nouns.manuscript.toLowerCase()}`}>
           <input
             type="checkbox"
             role="switch"
-            aria-label="In script"
+            aria-label={`In ${nouns.manuscript.toLowerCase()}`}
             checked={unit.inScript}
             onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { inScript: event.target.checked }))}
           />
           <span className="switch-track" aria-hidden="true" />
-          <span className="switch-label">{unit.inScript ? 'In script' : 'Off'}</span>
+          <span className="switch-label">{unit.inScript ? `In ${nouns.manuscript.toLowerCase()}` : 'Off'}</span>
         </label>
         <button type="button" className="ghost" aria-label="Close" onClick={onClose}>
           ×
@@ -236,13 +253,15 @@ function SceneDialogBody({
           <p className="muted">
             {beats.length} {beats.length === 1 ? 'beat' : 'beats'} · {pages < 0.05 ? '0' : pages.toFixed(1)} pages ·{' '}
             {timecode(pages)}.
-            {unit.inScript ? '' : ` Switched off: this ${noun.toLowerCase()} is not in the script, the preview or the exports.`}{' '}
+            {unit.inScript ? '' : ` Switched off: this ${noun.toLowerCase()} is not in the ${nouns.manuscript.toLowerCase()}, the preview or the exports.`}{' '}
             Changes are kept as you type.
           </p>
         </div>
 
         <BeatList
           beats={beats}
+          sub={nouns.sub}
+          subPlural={nouns.subPlural}
           noun={noun}
           selected={selectedBeatId}
           onSelect={(beatId) => {
@@ -266,13 +285,18 @@ function SceneDialogBody({
 function BeatList({
   beats,
   noun,
+  sub,
+  subPlural,
   selected,
   onSelect,
   onOpen,
   onSplit,
 }: {
   beats: Beat[];
+  /** The unit this list belongs to, for the split control. */
   noun: string;
+  sub: string;
+  subPlural: string;
   selected: BeatId | null;
   onSelect(beatId: BeatId): void;
   onOpen?: (beatId: BeatId) => void;
@@ -280,8 +304,8 @@ function BeatList({
 }) {
   const at = beats.findIndex((beat) => beat.id === selected);
   return (
-    <aside className="scene-dialog-beats" aria-label="Beats">
-      <h4>Beats</h4>
+    <aside className="scene-dialog-beats" aria-label={subPlural}>
+      <h4>{subPlural}</h4>
       {beats.length > 0 ? (
         <ul>
           {beats.map((beat, position) => (
@@ -295,14 +319,14 @@ function BeatList({
                 onDoubleClick={() => onOpen?.(beat.id)}
               >
                 <span className="muted">{position + 1}</span>
-                <span className="beat-entry-title">{beat.title || 'Untitled beat'}</span>
+                <span className="beat-entry-title">{beat.title || `Untitled ${sub.toLowerCase()}`}</span>
                 {beat.color ? <span className="beat-entry-dot" style={{ background: beat.color }} aria-hidden="true" /> : null}
               </button>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="muted">No beats yet.</p>
+        <p className="muted">No {subPlural.toLowerCase()} yet.</p>
       )}
       <button
         type="button"
@@ -310,12 +334,12 @@ function BeatList({
         disabled={at < 1}
         title={
           at < 1
-            ? `Select a beat after the first to cut this ${noun.toLowerCase()} there`
-            : `Cut here: this beat and the ones after it become the next ${noun.toLowerCase()}`
+            ? `Select a ${sub.toLowerCase()} after the first to cut this ${noun.toLowerCase()} there`
+            : `Cut here: this ${sub.toLowerCase()} and the ones after it become the next ${noun.toLowerCase()}`
         }
         onClick={onSplit}
       >
-        Split at this beat
+        Split at this {sub.toLowerCase()}
       </button>
     </aside>
   );

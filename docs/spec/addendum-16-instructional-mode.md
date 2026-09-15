@@ -304,6 +304,49 @@ of the summary. A section with nothing written in it is the other way round —
 there the button is present and refuses, because that reason is about this
 section.
 
+## 6c. The vocabulary sweep
+
+§14 of Ken's spec — *a writer in Book Mode must never be forced to work around
+Scene, Beat or Script* — was written into `nounsFor` at stage 1 and then only
+the workspace shell was pointed at it. **Seventeen components still said Scene
+or Beat in visible text**, and the sweep turned up something worse: **five
+separate private copies of the same decision**, each spelling out *chapter or
+scene?* inline —
+
+| Where | What it said |
+| --- | --- |
+| `StoryView` | `const noun = prose ? 'Chapter' : 'Scene'` — and **never used**, dead |
+| `ScriptOptions` | the same line, used for one label |
+| `SceneDialog` | derived from the unit's kind, with `'Scene'` as the fallback |
+| `PageSetup` | `prose ? 'chapter' : 'scene'` written out **six times** in one file |
+| `OutlinerWindow` | a hardcoded table of seven kind names |
+
+Which is §1's argument arriving a second time, in the renderer this time: a
+copied predicate is a decision made twice, and by the fifth copy one of them is
+already dead code.
+
+Everything now reads the table. Three things beyond renaming came out of it:
+
+- **The Outliner's kinds are the format's.** `scene` and `beat` are named from
+  the table, so a textbook's tree offers **Chapter, Section, Note, Idea** — and
+  Character, Setting and Prop are **absent rather than renamed**, because a
+  professor has no use for them and the honest thing is not to offer them.
+- **A book is shown no runtime.** A page of script is a minute of screen time; a
+  page of a textbook is not a minute of anything, so the chip is absent rather
+  than printing a figure that means nothing.
+- **A closed scene dialog on a book said "Scene"** — its fallback, with no unit
+  selected, was the literal word rather than the format's noun.
+
+Verified by walking the whole rendered DOM of an instructional book, attributes
+included, and looking for the words. **Three survive and all three are meant**:
+*scene break* is the standard prose term for the `* * *` divider, *an act in a
+script, a chapter in a book* is an explanation that names both on purpose, and
+*Import a script* is reading a Final Draft file, which is a script.
+
+Preferences is the one screen that cannot read the table: it belongs to the
+machine rather than to a project, so there is no format to ask. Its one label
+now says **cards**, which is what the board actually draws.
+
 ## 7. What is deliberately not here
 
 - **`isBookFormat`.** §1.

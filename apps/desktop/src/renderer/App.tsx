@@ -21,6 +21,7 @@ import {
   type StoryMarkerId,
   type StructuralUnitId,
   type SyncConflict,
+  nounsFor,
 } from '@vcwriter/domain';
 import { useProject } from './use-project';
 import { useRoom } from './room';
@@ -951,7 +952,7 @@ export default function App() {
                     className="divider vertical"
                     role="separator"
                     aria-orientation="vertical"
-                    aria-label="Resize the script column"
+                    aria-label={`Resize the ${nounsFor(file.project.format).manuscript.toLowerCase()} column`}
                     {...columns.dividerProps}
                   />
                 </>

@@ -89,13 +89,13 @@ export function Preferences({
       <section>
         <h3>Lanes</h3>
         <label className="field">
-          <span>Beats before a new column</span>
+          <span>Cards before a new column</span>
           <input
             type="number"
             min={1}
             max={20}
             value={beatsPerColumn}
-            aria-label="Beats before a new column"
+            aria-label="Cards before a new column"
             onChange={(event) => {
               const count = Number(event.target.value);
               if (Number.isFinite(count)) onBeatsPerColumn(Math.min(20, Math.max(1, Math.round(count))));
@@ -103,8 +103,13 @@ export function Preferences({
           />
         </label>
         <p className="muted small">
-          Beats stack down a scene until this many, then the next one starts a column beside them and the scene grows
-          wider. A scene of twelve beats reads as three short columns rather than one you cannot see the end of.
+          {/* Preferences belong to the machine rather than to a project, so
+              there is no format here to read a noun table from — and the board
+              draws cards whatever the project calls the things behind them
+              (addendum 16 §14). */}
+          Cards stack down a column until this many, then the next one starts a column beside them and the
+          group grows wider. Twelve cards read as three short columns rather than one you cannot see the end
+          of.
         </p>
       </section>
 
