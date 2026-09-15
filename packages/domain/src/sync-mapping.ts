@@ -283,6 +283,8 @@ const researchItemToRow = (item: ResearchItem): Row => ({
   title: item.title,
   body: item.body,
   tags: item.tags,
+  // Where the fact came from (addendum 16 §3). Empty on everything creative.
+  source: item.source,
   usage: item.usage,
   used_at: item.usedAt,
   used_in_beat_ids: item.usedInBeatIds,
@@ -956,6 +958,7 @@ const researchItemFromRow = (row: Row): ResearchItem =>
     title: text(row['title'], 'Untitled note'),
     body: text(row['body']),
     tags: list(row['tags']),
+    source: text(row['source']),
     usage: row['usage'],
     usedAt: nullableText(row['used_at']),
     usedInBeatIds: list(row['used_in_beat_ids']),

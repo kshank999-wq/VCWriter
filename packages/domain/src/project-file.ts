@@ -22,6 +22,7 @@ import {
 import { locationSchema } from './entities/locations.js';
 import {
   DEFAULT_RESEARCH_CATEGORIES,
+  INSTRUCTIONAL_RESEARCH_CATEGORIES,
   researchCategorySchema,
   researchItemSchema,
 } from './entities/research.js';
@@ -39,7 +40,7 @@ import {
 } from './entities/project.js';
 import { LANE_COLOURS, beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
 import type { CharacterCategoryId, LaneId, ProjectId, ResearchCategoryId, StructuralUnitId, UserId } from './ids.js';
-import { isProseFormat } from './formats.js';
+import { isInstructional, isProseFormat } from './formats.js';
 
 /**
  * The VC Writer project document.
@@ -287,8 +288,19 @@ export const createProjectFile = (options: CreateProjectOptions): ProjectFile =>
     }),
   );
 
-  const categoryKeys = initialOrderKeys(DEFAULT_RESEARCH_CATEGORIES.length);
-  const researchCategories = DEFAULT_RESEARCH_CATEGORIES.map((category, index) =>
+  /**
+   * Which shelves a new project starts with (addendum 16 §3).
+   *
+   * An instructional book gets graphics, notes, ideas and an inbox rather than
+   * characters, props and themes — §15 requires the two taxonomies stay
+   * distinct, and a professor offered a Characters folder has been told what
+   * kind of book they are writing.
+   */
+  const seeded = isInstructional(options.format)
+    ? INSTRUCTIONAL_RESEARCH_CATEGORIES
+    : DEFAULT_RESEARCH_CATEGORIES;
+  const categoryKeys = initialOrderKeys(seeded.length);
+  const researchCategories = seeded.map((category, index) =>
     researchCategorySchema.parse({
       id: newId<ResearchCategoryId>(),
       projectId,

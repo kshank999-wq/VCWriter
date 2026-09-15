@@ -21,7 +21,28 @@ export const screenplayElementTypeSchema = z.enum([
 ]);
 export type ScreenplayElementType = z.infer<typeof screenplayElementTypeSchema>;
 
-export const proseElementTypeSchema = z.enum(['paragraph', 'heading', 'blockquote', 'scene_break']);
+/**
+ * `figure` is a picture in the manuscript (addendum 16 §9).
+ *
+ * **A figure is an element, not an attachment.** Putting it in the element
+ * list is what gives it a place in the reading order for free: it paginates,
+ * prints, moves when its section moves, and appears in Book View at exactly
+ * the point the author put it — none of which a side table of
+ * "graphics attached to this section" could do without re-deriving the order
+ * the manuscript already knows.
+ *
+ * The element's `text` is the caption *as printed here*, defaulting to the
+ * asset's own; `attributes.assetId` names the picture. So one picture may
+ * appear twice, and cutting a figure never deletes the picture from the
+ * library — the same separation the location descriptions have.
+ */
+export const proseElementTypeSchema = z.enum([
+  'paragraph',
+  'heading',
+  'blockquote',
+  'scene_break',
+  'figure',
+]);
 export type ProseElementType = z.infer<typeof proseElementTypeSchema>;
 
 export const manuscriptElementTypeSchema = z.union([screenplayElementTypeSchema, proseElementTypeSchema]);

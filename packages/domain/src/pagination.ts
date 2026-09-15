@@ -92,6 +92,20 @@ export interface PageLayoutSpec {
    */
   blanksBeforeHeading?: number;
   /**
+   * How many lines a figure's picture occupies (addendum 16 §9).
+   *
+   * A function rather than a number, because **a figure's height is a reading
+   * of the picture** — set to the text column, its height follows from its own
+   * aspect ratio. Storing one would be a second answer that a replaced image
+   * makes wrong, and the writer would have to go and correct a number they
+   * never typed.
+   *
+   * Absent on a layout built without a project, where a figure falls back to a
+   * square. That is a guess, and it is the only one here: a layout with no
+   * assets behind it cannot know, and refusing to paginate would be worse.
+   */
+  figureLines?: (assetId: string) => number;
+  /**
    * The cue is not a line of its own: it sits in the left margin, beside the
    * first line of the speech it introduces.
    *
@@ -305,10 +319,10 @@ export const PROSE_LAYOUT: PageLayoutSpec = {
   linesPerPage: 25,
   columns: 60,
   doubleSpaced: true,
-  indent: { paragraph: 0, heading: 0, blockquote: 5, scene_break: 28 },
+  indent: { paragraph: 0, heading: 0, blockquote: 5, scene_break: 28, figure: 0 },
   // Five spaces on the opening line, and the rest of the paragraph flush.
   firstIndent: { paragraph: 5 },
-  width: { paragraph: 60, heading: 60, blockquote: 55, scene_break: 5 },
+  width: { paragraph: 60, heading: 60, blockquote: 55, scene_break: 5, figure: 60 },
   uppercase: new Set(['heading']),
   // The indent is what says "a new paragraph", so nothing else has to.
   runOn: new Set(['paragraph']),
@@ -350,10 +364,49 @@ export const layoutFor = (
  * through here, so the choice cannot be honoured in one place and missed in
  * another.
  */
-export const layoutForFile = (file: ProjectFile): PageLayoutSpec =>
-  layoutFor(file.project.format, file.settings.paragraphStyle, file.settings.scriptFormat);
+export const layoutForFile = (file: ProjectFile): PageLayoutSpec => {
+  const base = layoutFor(file.project.format, file.settings.paragraphStyle, file.settings.scriptFormat);
+  // Only prose can hold a figure, so only prose gets a resolver — and a script
+  // keeps the shared layout object it has always been given, identity and all.
+  if (!isProseFormat(file.project.format)) return base;
+  return { ...base, figureLines: (assetId) => figureLinesIn(file, assetId, base) };
+};
+
+/**
+ * How many lines a picture occupies, read from the picture (addendum 16 §9).
+ *
+ * Set to the full text column, so its printed height follows from its aspect
+ * ratio and nothing about it is stored. The geometry is standard manuscript
+ * format's: 12pt Courier at ten characters to the inch, so a column is
+ * `columns / 10` inches wide, and a line is a sixth of an inch single spaced
+ * or a third double spaced.
+ *
+ * An asset that is not there, or that never reported its size, falls back to a
+ * third of a page — a guess, and one that is visible as a gap rather than
+ * silently collapsing the figure to nothing.
+ */
+export const figureLinesIn = (file: ProjectFile, assetId: string, layout: PageLayoutSpec): number => {
+  const fallback = Math.round(layout.linesPerPage / 3);
+  const asset = (file.assets ?? []).find((one) => (one.id as string) === assetId);
+  if (!asset || asset.width <= 0 || asset.height <= 0) return fallback;
+
+  const inchesWide = layout.columns / 10;
+  const inchesTall = inchesWide * (asset.height / asset.width);
+  const lineHeight = layout.doubleSpaced ? 1 / 3 : 1 / 6;
+  // Never taller than the page it has to fit on.
+  return Math.max(1, Math.min(layout.linesPerPage - 2, Math.round(inchesTall / lineHeight)));
+};
 
 export interface PageLine {
+  /**
+   * A picture set in this line and the ones after it (addendum 16 §9).
+   *
+   * Carried on the **first** line of a figure only; the lines it covers follow
+   * as blanks, which is what reserves the room. A renderer that knows nothing
+   * about figures draws a gap where the picture goes, which is wrong but not
+   * broken — and one that does draws the picture at this height.
+   */
+  figure?: { assetId: string; lines: number };
   text: string;
   type: ManuscriptElementType | 'blank' | 'more' | 'continued' | 'act_head' | 'act_end';
   indent: number;
@@ -460,6 +513,11 @@ interface Block {
   splittable: boolean;
   /** Printed in the margins beside the block's first line: a scene number. */
   mark?: string;
+  /**
+   * The picture a figure block draws, and how many of its lines it fills
+   * (addendum 16 §9). The blank lines are the room; this is what goes in them.
+   */
+  figure?: { assetId: string; lines: number };
   /** The speaker, so a continuation can be labelled. */
   speaker: string | null;
   /**
@@ -519,6 +577,35 @@ const toBlock = (element: ManuscriptElement, layout: PageLayoutSpec, speaker: st
   const width = layout.width[element.type] ?? layout.columns;
   const indent = layout.indent[element.type] ?? 0;
   const { lines, spans } = layoutText(element.text, width, layout.uppercase.has(element.type));
+
+  /**
+   * A figure is its picture and then its caption (addendum 16 §9).
+   *
+   * The picture is blank lines — nothing is printed in them, they are the room
+   * it takes — and the caption is the element's own text under it. They are
+   * **one block** so a page break can never fall between a figure and what it
+   * says it is.
+   */
+  if (element.type === 'figure') {
+    const assetId = typeof element.attributes['assetId'] === 'string' ? element.attributes['assetId'] : '';
+    const tall = Math.max(1, layout.figureLines?.(assetId) ?? Math.round(layout.linesPerPage / 3));
+    const blank = Array.from({ length: tall }, () => '');
+    return {
+      id: element.id,
+      type: element.type,
+      figure: { assetId, lines: tall },
+      lines: [...blank, ...lines],
+      spans: [...blank.map(() => [] as InlineSpan[]), ...spans],
+      indent,
+      firstIndent: 0,
+      keepWithNext: false,
+      // Never split: half a picture on one page and half on the next is not a
+      // figure, and a caption orphaned from its picture is worse.
+      splittable: false,
+      speaker: null,
+    };
+  }
+
   return {
     id: element.id,
     type: element.type,
@@ -741,10 +828,11 @@ export const paginateElements = (
     indent: number,
     spans: InlineSpan[],
     mark?: string,
+    figure?: PageLine['figure'],
   ) => {
     if (lines.length >= layout.linesPerPage) startNewPage();
     if (pageStart === null) pageStart = currentId;
-    lines.push({ text, type, indent, spans, ...(mark ? { mark } : {}) });
+    lines.push({ text, type, indent, spans, ...(mark ? { mark } : {}), ...(figure ? { figure } : {}) });
     const doubled = layout.doubleSpaced || (layout.doubleSpacedTypes?.has(type) ?? false);
     if (doubled && lines.length < layout.linesPerPage) {
       lines.push({ text: '', type: 'blank', indent: 0, spans: [] });
@@ -768,7 +856,7 @@ export const paginateElements = (
         pushContent(gutter + text, block.type, 0, [{ text: gutter }, ...spans], mark);
         return;
       }
-      pushContent(text, block.type, indent, spans, mark);
+      pushContent(text, block.type, indent, spans, mark, first ? block.figure : undefined);
     });
   };
 

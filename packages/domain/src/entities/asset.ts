@@ -38,6 +38,24 @@ export const assetSchema = z.object({
    * still, which has no length.
    */
   seconds: z.number().min(0).default(0),
+  /**
+   * The caption as it would print under the figure (addendum 16 §9).
+   *
+   * On the **asset** rather than on the placement, because a figure reused in
+   * two chapters is one picture with one caption — and the alternative, a
+   * caption typed per placement, is how the same diagram ends up described two
+   * different ways in one book.
+   */
+  caption: z.string().default(''),
+  /**
+   * What the picture shows, for a reader who cannot see it (§9).
+   *
+   * §9 asks for this outright and it is stored rather than derived because
+   * nothing can derive it: alt text is a description of meaning, and the
+   * meaning of a diagram is the author's. Empty is honest — an empty field is
+   * a thing a check can find, and a guessed one is not.
+   */
+  altText: z.string().default(''),
   ...timestamps,
 });
 export type Asset = z.infer<typeof assetSchema>;

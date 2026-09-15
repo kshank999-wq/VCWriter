@@ -20,6 +20,21 @@ export const systemCategoryKeySchema = z.enum([
   'themes',
   'setups_payoffs',
   'world',
+  /**
+   * The instructional shelves (addendum 16 §3).
+   *
+   * A separate taxonomy rather than extra folders beside the creative ones,
+   * because §3 asks for that and is right: a professor's research is graphics,
+   * notes and ideas, and offering them Characters, Props and Themes alongside
+   * is the software telling them what kind of book they are writing.
+   *
+   * `ideas` is deliberately **not** repeated here — it is already in the list
+   * above and means the same thing in both. A second `instructional_ideas`
+   * key would be two names for one shelf.
+   */
+  'graphics',
+  'notes',
+  'inbox',
 ]);
 export type SystemCategoryKey = z.infer<typeof systemCategoryKeySchema>;
 
@@ -59,6 +74,22 @@ export const researchItemSchema = z.object({
   title: z.string().min(1),
   body: z.string().default(''),
   tags: z.array(z.string()).default([]),
+  /**
+   * Where the material came from — a book, a paper, a URL, a lecture, a
+   * person (addendum 16 §3).
+   *
+   * **The one field a nonfiction author cannot work without and a novelist
+   * never needs.** `origin` below is already taken and answers a different
+   * question — *how it got into the project* (typed, dictated, imported) —
+   * which is not *whose fact this is*. A textbook that cannot cite is not a
+   * textbook, and an importer that dropped the provenance of every note it
+   * read would be worse than no importer.
+   *
+   * Free text rather than a structured citation: a writer pasting a DOI, a
+   * page reference and a half-remembered author should not be stopped by a
+   * form. Formatting a bibliography is a later problem and a different one.
+   */
+  source: z.string().default(''),
   usage: researchUsageSchema.default('unused'),
   usedAt: isoDateTime().nullable().default(null),
   /** Where the material was incorporated, when known. */
@@ -84,11 +115,36 @@ export const researchItemSchema = z.object({
 });
 export type ResearchItem = z.infer<typeof researchItemSchema>;
 
-export const DEFAULT_RESEARCH_CATEGORIES: ReadonlyArray<{ name: string; systemKey: SystemCategoryKey }> = [
+export interface SeededCategory {
+  name: string;
+  systemKey: SystemCategoryKey;
+}
+
+export const DEFAULT_RESEARCH_CATEGORIES: ReadonlyArray<SeededCategory> = [
   { name: 'Characters', systemKey: 'characters' },
   { name: 'Ideas', systemKey: 'ideas' },
   { name: 'Plot Points', systemKey: 'plot_points' },
   { name: 'Locations', systemKey: 'locations' },
   { name: 'Props', systemKey: 'props' },
   { name: 'Themes', systemKey: 'themes' },
+];
+
+/**
+ * What an instructional book starts with instead (addendum 16 §3).
+ *
+ * §15 requires that creative and instructional research stay distinct, and
+ * this is where that begins: a project seeded with these has no Characters
+ * folder to ignore. The shelves are still ordinary categories — renameable,
+ * reorderable, and joinable by any folder the author makes — because a
+ * taxonomy the author cannot extend is one they will work around.
+ *
+ * **The inbox is last and is a real shelf**, not a modal. §4 wants imported
+ * material to land somewhere before it is classified, and somewhere is a
+ * place you can leave things and come back to.
+ */
+export const INSTRUCTIONAL_RESEARCH_CATEGORIES: ReadonlyArray<SeededCategory> = [
+  { name: 'Graphics', systemKey: 'graphics' },
+  { name: 'General Notes', systemKey: 'notes' },
+  { name: 'Ideas', systemKey: 'ideas' },
+  { name: 'Imported', systemKey: 'inbox' },
 ];

@@ -90,7 +90,13 @@ const renderSpans = (line: PageLine): string => {
     .join('');
 };
 
-const renderPage = (page: Page, isProse: boolean, options: PrintOptions): string => {
+const renderPage = (
+  page: Page,
+  isProse: boolean,
+  options: PrintOptions,
+  /** The pictures the document carries, so a figure can print as one. */
+  pictures: ReadonlyMap<string, { data: string; altText: string }> = new Map(),
+): string => {
   // A front page and a leaf between chapters are both pages of the document
   // rather than of the manuscript, and neither carries a page number.
   if (page.titlePage) return renderTitleSheet(page.titlePage);
@@ -99,6 +105,29 @@ const renderPage = (page: Page, isProse: boolean, options: PrintOptions): string
   if (page.chapter) return renderChapterPage(page, isProse, options);
   const lines = page.lines
     .map((line) => {
+      /**
+       * A figure's picture, set into the blank lines the paginator reserved
+       * for it (addendum 16 §9).
+       *
+       * Its height is given in lines rather than in inches, so it is whatever
+       * a line is on this page — and the picture printed is exactly as tall as
+       * the room the paginator counted. The alt text goes on the image, which
+       * is where a PDF reader looks for it.
+       */
+      if (line.figure) {
+        const picture = pictures.get(line.figure.assetId);
+        const height = `height:${line.figure.lines}lh`;
+        if (!picture) {
+          // The picture has gone. A labelled gap, because a silent one reads
+          // as a mistake in the typesetting rather than a missing file.
+          return `<div class="line figure missing" style="${height}">[figure missing]</div>`;
+        }
+        return (
+          `<div class="line figure" style="${height}">` +
+          `<img src="${escapeHtml(picture.data)}" alt="${escapeHtml(picture.altText)}" ` +
+          `style="max-width:100%;${height};object-fit:contain" /></div>`
+        );
+      }
       if (line.text.length === 0) return '<div class="line"> </div>';
       // A scene number is set in the margins at both edges — where a
       // shooting script puts it — so it never takes room from the sixty
@@ -569,9 +598,13 @@ export const renderPrintDocumentHtml = (file: ProjectFile, options: PrintOptions
   // The book's own chapter-page typography, unless a caller has said otherwise.
   const withStyle: PrintOptions = { chapterStyle: chapterPageStyleOf(file), ...options };
   const isProse = isProseFormat(file.project.format);
+  // The pictures, by id, so a figure line can print the one it names.
+  const pictures = new Map(
+    (file.assets ?? []).map((asset) => [asset.id as string, { data: asset.data, altText: asset.altText }]),
+  );
   const body = [
     opensWithItsOwn(pages, options) ? '' : renderTitlePage(file),
-    ...pages.map((page) => renderPage(page, isProse, withStyle)),
+    ...pages.map((page) => renderPage(page, isProse, withStyle, pictures)),
   ]
     .filter((section) => section.length > 0)
     .join('\n');

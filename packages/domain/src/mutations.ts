@@ -467,7 +467,15 @@ export const removeRevision = (file: ProjectFile, beatId: BeatId, revisionId: Be
 
 export const addResearchItem = (
   file: ProjectFile,
-  input: { categoryId: ResearchCategoryId; title: string; body?: string; tags?: string[]; origin?: 'desktop' | 'mobile_capture' | 'import' },
+  input: {
+    categoryId: ResearchCategoryId;
+    title: string;
+    body?: string;
+    tags?: string[];
+    /** Where the fact came from (addendum 16 §3). What an importer fills in. */
+    source?: string;
+    origin?: 'desktop' | 'mobile_capture' | 'import';
+  },
 ): ProjectFile => {
   if (!file.researchCategories.some((category) => category.id === input.categoryId)) {
     throw new DomainError(`Research category ${input.categoryId} does not exist`);
@@ -481,6 +489,7 @@ export const addResearchItem = (
     title: input.title,
     body: input.body ?? '',
     tags: input.tags ?? [],
+    source: input.source ?? '',
     origin: input.origin ?? 'desktop',
     orderKey: orderKeyForIndex(siblings, siblings.length),
     createdAt: timestamp,
@@ -1321,7 +1330,7 @@ export const setResearchCategoryArchived = (
 export const updateResearchItem = (
   file: ProjectFile,
   itemId: ResearchItemId,
-  patch: Partial<Pick<ResearchItem, 'title' | 'body' | 'tags'>>,
+  patch: Partial<Pick<ResearchItem, 'title' | 'body' | 'tags' | 'source'>>,
 ): ProjectFile => {
   if (!file.researchItems.some((item) => item.id === itemId)) {
     throw new DomainError(`Research item ${itemId} does not exist`);
