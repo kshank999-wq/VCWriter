@@ -677,7 +677,20 @@ push live; the build takes a minute or two.
   field with its own background was black on black. **Putting a figure in is on
   the right-click**, the sixth thing it does, because the only person who knows
   where a figure goes is the one looking at the paragraph it belongs under; it is
-  absent on every other format and on a book whose library is empty. Stage 6
+  absent on every other format and on a book whose library is empty. §6c is the
+  **vocabulary sweep**, and it is §1's argument arriving a second time in the
+  renderer: seventeen components still said Scene or Beat in visible text, and
+  **five of them held a private copy of "chapter or scene?"** — one of which
+  (`StoryView`'s) was computed and never used, dead code nobody had noticed.
+  Everything reads `nounsFor` now. Three things beyond renaming came out of it:
+  the **Outliner's kinds are the format's** (a textbook's tree offers Chapter,
+  Section, Note, Idea, with Character/Setting/Prop *absent rather than renamed*),
+  a **book is shown no runtime** (a page of a textbook is not a minute of
+  anything), and a **closed scene dialog on a book said "Scene"** because its
+  fallback was the literal word. Verified by walking the whole rendered DOM of a
+  book, attributes included; the three survivors are all meant (*scene break* is
+  the prose term for the divider, *an act in a script, a chapter in a book* names
+  both on purpose, *Import a script* reads a Final Draft file). Stage 6
   (§6b) **wires the suggestion**, which had a generator nothing could reach: the
   route is `api/ai/learning-aid` with the Final Editor's three layers, and
   `resolveCaller` moved out of the scene-review route into `lib/ai-caller.ts`
