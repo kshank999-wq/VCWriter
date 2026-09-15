@@ -691,6 +691,36 @@ push live; the build takes a minute or two.
   nothing written in it is the other way round, the button present and refusing,
   because that reason is about the section rather than the account. The model
   call itself has still never been run live.
+  `addendum-17-project-home.md` is the project home, master spec **§4** —
+  **built**, and found by surveying the master spec against the code rather than
+  by anybody asking. It was the one section that existed **only as a data
+  model**: `logline`, `elevatorPitch`, `synopsis`, `genre`, `notes`, `status`
+  and `posterAssetId` have been on `projectSchema` since the beginning and
+  round-trip to the database, and grepping the whole renderer and the whole web
+  app for any of them returned nothing. A writer could not type a logline
+  anywhere. **This is the opposite of the failure the module audits usually
+  find** — there a spec asked for a mechanism that already existed under another
+  name; here the mechanism existed under its own name and nobody built the way
+  in. §1 is the audit of the dashboard, which was likewise mostly already
+  answered: `projectStats` gives the progress and both unresolved counts,
+  `writingReport` and `daysOfWriting` give recent work. §2 is the decision worth
+  keeping: **where you are is read from the work, not from the window** — a
+  selection is a fact about a pane and this application opens one document in
+  several, so a stored *current* would be whichever pane was clicked last;
+  `whereYouAre` reads the most recently updated beat, and **ties break by story
+  order** because six chapters laid out in one sitting carry the same
+  millisecond and the first draft answered with whatever was first in memory.
+  §3: **the one-sheet is assembled and never stored**, and names what is missing
+  rather than hiding it. §4: **status is the writer's and nothing reads it** —
+  deliberately not a state machine, because every such rule is a guess about how
+  somebody works. The screen is `ProjectHomePanel.tsx` on a **Home** page, first
+  on the bar and deliberately not the page the application opens on, with the
+  figures **stated rather than scored** (no percentage, no progress bar) and a
+  day spent cutting drawn as a day's work in red. §3a is the email action's rule:
+  **the request carries fields, never markup** — posting the rendered sheet would
+  make vc-writer.com send whatever HTML anybody posted to it, so the server
+  builds and escapes it from eight plain strings, and the key art does not
+  travel. No migration: every field has existed since 0001.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
