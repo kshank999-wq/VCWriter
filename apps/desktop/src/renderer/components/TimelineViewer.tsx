@@ -14,6 +14,7 @@ import {
   type StorySpan,
   type ThreadLayout,
   type TimelineArc,
+  nounsFor,
 } from '@vcwriter/domain';
 
 interface TimelineViewerProps {
@@ -78,12 +79,7 @@ export function TimelineViewer({
    * §3). What is left is the segments and their time.
    */
   const shortForm = file.project.format === 'short_form';
-  const noun =
-    file.project.format === 'novel' || file.project.format === 'short_story'
-      ? 'Chapters'
-      : shortForm
-        ? 'Segments'
-        : 'Scenes';
+  const noun = shortForm ? 'Segments' : nounsFor(file.project.format).unitPlural;
 
   const selectedUnitId = useMemo(() => {
     const beat = selectedBeatId ? file.beats.find((candidate) => candidate.id === selectedBeatId) : undefined;

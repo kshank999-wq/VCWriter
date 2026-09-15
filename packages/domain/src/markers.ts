@@ -2,6 +2,7 @@ import { unitsInStoryOrder } from './selectors.js';
 import type { ProjectFile } from './project-file.js';
 import type { ProjectFormat } from './entities/project.js';
 import type { StoryMarker, StoryMarkerKind } from './entities/structure.js';
+import { isProseFormat } from './formats.js';
 
 /**
  * Markers: the points a writer puts in the story, and what they are called
@@ -34,13 +35,13 @@ export const MARKER_NUMBERINGS: ReadonlyArray<{ value: MarkerNumbering; label: s
 
 /** What a format calls its markers, and how they are numbered, before the writer says otherwise. */
 export const defaultMarkerKind = (format: ProjectFormat): StoryMarkerKind =>
-  format === 'series' ? 'episode' : format === 'novel' || format === 'short_story' ? 'chapter' : 'act';
+  format === 'series' ? 'episode' : isProseFormat(format) ? 'chapter' : 'act';
 
 export const defaultMarkerNumbering = (format: ProjectFormat): MarkerNumbering => {
   // A short story's sections are numbered I, II, III by long convention; a
   // screenplay's acts likewise. A novel counts its chapters, and so does a
   // series count its episodes — nobody writes "Episode IV" on a call sheet.
-  if (format === 'novel' || format === 'series') return 'numeric';
+  if (format === 'novel' || format === 'series' || format === 'instructional') return 'numeric';
   return 'roman';
 };
 
@@ -50,7 +51,7 @@ export const defaultMarkerNumbering = (format: ProjectFormat): MarkerNumbering =
  * episode; a feature has nothing of the kind between its acts.
  */
 export const hasChapterPages = (format: ProjectFormat): boolean =>
-  format === 'novel' || format === 'short_story' || format === 'series';
+  isProseFormat(format) || format === 'series';
 
 const ROMAN: ReadonlyArray<readonly [number, string]> = [
   [1000, 'M'],
@@ -321,7 +322,7 @@ export interface ContentsPage {
  */
 export const contentsDivisions = (file: ProjectFile): PlacedMarker[] => {
   const format = file.project.format;
-  if (format !== 'series' && format !== 'novel' && format !== 'short_story') return [];
+  if (format !== 'series' && !isProseFormat(format)) return [];
   const kind = defaultMarkerKind(format);
   return placedMarkers(file).filter((placed) => placed.marker.kind === kind);
 };

@@ -54,6 +54,7 @@ import type {
   StructuralUnitKind,
 } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
+import { defaultUnitKind } from './project-file.js';
 import type {
   BeatId,
   BeatRevisionId,
@@ -135,7 +136,7 @@ export const addUnit = (
     id: newId<StructuralUnitId>(),
     projectId: file.project.id,
     laneId: input.laneId,
-    kind: input.kind ?? (file.project.format === 'novel' || file.project.format === 'short_story' ? 'chapter' : 'scene'),
+    kind: input.kind ?? defaultUnitKind(file.project.format),
     title: input.title ?? '',
     sequenceLabel: input.sequenceLabel ?? '',
     orderKey: orderKeyForIndex(siblings, input.index ?? siblings.length),

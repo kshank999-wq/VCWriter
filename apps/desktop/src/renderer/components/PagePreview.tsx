@@ -9,6 +9,7 @@ import {
   type ProjectFile,
   type StructuralUnitId,
 } from '@vcwriter/domain';
+import { scriptWordFor } from '../panes';
 
 interface PagePreviewProps {
   file: ProjectFile;
@@ -105,7 +106,7 @@ export function PagePreview({
             className={scope === 'project' ? 'tab selected' : 'tab'}
             onClick={() => setScope('project')}
           >
-            Whole {file.project.format === 'novel' ? 'manuscript' : 'script'}
+            Whole {scriptWordFor(file.project.format)}
           </button>
           <button
             type="button"

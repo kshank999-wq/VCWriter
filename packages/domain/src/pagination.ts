@@ -19,12 +19,13 @@ import {
   type IndexPage,
 } from './book-index.js';
 import type { TitlePage } from './entities/title-page.js';
-import { groupManuscript, isProseFormat } from './editing.js';
+import { groupManuscript } from './editing.js';
 import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
 import type { ManuscriptElement, ManuscriptElementType } from './entities/manuscript.js';
 import type { ParagraphStyle, ProjectFormat, ScriptFormat } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
 import type { StructuralUnitId } from './ids.js';
+import { isProseFormat } from './formats.js';
 
 /**
  * Page layout for screenplays and prose manuscripts (spec §6).
@@ -334,7 +335,7 @@ export const layoutFor = (
   paragraphStyle?: ParagraphStyle,
   scriptFormat?: ScriptFormat,
 ): PageLayoutSpec => {
-  if (format !== 'novel' && format !== 'short_story') {
+  if (!isProseFormat(format)) {
     if (scriptFormat === 'bbc') return BBC_LAYOUT;
     if (scriptFormat === 'bbc_taped') return BBC_TAPED_LAYOUT;
     if (scriptFormat === 'us_multi') return US_MULTI_LAYOUT;

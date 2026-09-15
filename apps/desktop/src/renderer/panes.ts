@@ -15,7 +15,7 @@
  * keys on its own id so two beats can be open at once.
  */
 
-import type { ProjectFormat } from '@vcwriter/domain';
+import { isProseFormat, nounsFor, type ProjectFormat } from '@vcwriter/domain';
 
 export type PaneId = 'script' | 'viewer' | 'lanes' | 'inspector';
 export type SlotId = 'left' | 'top' | 'bottom' | 'right';
@@ -48,7 +48,9 @@ export const PANE_NAMES: Record<PaneId, string> = {
  * same thing, under the name its writer uses for it.
  */
 export const paneNamesFor = (format: ProjectFormat | null): Record<PaneId, string> => {
-  if (format === 'novel' || format === 'short_story') return { ...PANE_NAMES, script: 'Manuscript' };
+  // Read from the format's own nouns, so a new prose format names its pages
+  // without this file being told it exists (addendum 16 §1).
+  if (format && isProseFormat(format)) return { ...PANE_NAMES, script: nounsFor(format).manuscript };
   // Short form is written on a sheet, not in a script, and the strip under it
   // is a timeline rather than a set of plot lanes — a commercial has no
   // subplot to lane (addendum 05 §1, §3).
@@ -58,7 +60,7 @@ export const paneNamesFor = (format: ProjectFormat | null): Record<PaneId, strin
 
 /** What the finished pages are called in this format. */
 export const scriptWordFor = (format: ProjectFormat | null): string => {
-  if (format === 'novel' || format === 'short_story') return 'manuscript';
+  if (format && isProseFormat(format)) return nounsFor(format).manuscript.toLowerCase();
   if (format === 'short_form') return 'sheet';
   return 'script';
 };

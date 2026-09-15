@@ -39,6 +39,7 @@ import {
 } from './entities/project.js';
 import { LANE_COLOURS, beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
 import type { CharacterCategoryId, LaneId, ProjectId, ResearchCategoryId, StructuralUnitId, UserId } from './ids.js';
+import { isProseFormat } from './formats.js';
 
 /**
  * The VC Writer project document.
@@ -258,7 +259,7 @@ export interface CreateProjectOptions {
 
 /** Unit kind a format uses for its top-level container (spec §5.2). */
 export const defaultUnitKind = (format: ProjectFormat): 'scene' | 'chapter' =>
-  format === 'novel' || format === 'short_story' ? 'chapter' : 'scene';
+  isProseFormat(format) ? 'chapter' : 'scene';
 
 /**
  * A new project starts usable: one main-plot lane holding one empty

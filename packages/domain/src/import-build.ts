@@ -9,6 +9,7 @@ import { createProjectFile } from './project-file.js';
 import { characterCategoriesInOrder } from './characters.js';
 import { bareCue, type ImportedScript } from './importing.js';
 import type { ProjectFile } from './project-file.js';
+import { defaultUnitKind } from './project-file.js';
 import type { ProjectFormat } from './entities/project.js';
 import type { Beat, StructuralUnit } from './entities/structure.js';
 import type { Character, CharacterCategory } from './entities/character.js';
@@ -175,11 +176,11 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
         id: unitId,
         projectId,
         laneId,
-        kind: format === 'novel' || format === 'short_story' ? 'chapter' : 'scene',
+        kind: defaultUnitKind(format),
         // The slugline is the scene's title as well as its first line: the
         // heading prints, the title is what the timeline shows.
         title: scene.heading.trim(),
-        sequenceLabel: format === 'novel' || format === 'short_story' ? `Chapter ${index + 1}` : `Sc. ${index + 1}`,
+        sequenceLabel: defaultUnitKind(format) === 'chapter' ? `Chapter ${index + 1}` : `Sc. ${index + 1}`,
         status: 'draft_complete',
         orderKey: sceneKeys[index] ?? orderKeyBetween(null, null),
         createdAt: timestamp,

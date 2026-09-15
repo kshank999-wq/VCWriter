@@ -21,6 +21,15 @@ export const projectFormatSchema = z.enum([
   'stage_play',
   'short_story',
   'short_form',
+  /**
+   * An instructional, academic or reference book (addendum 16).
+   *
+   * Prose with chapters, like a novel — what differs is what goes in them and
+   * what the writer keeps beside them, never how a paragraph is set. Ask
+   * `isInstructional` for the difference and `isProseFormat` for the
+   * similarity; nothing should test this string directly.
+   */
+  'instructional',
   'other',
 ]);
 export type ProjectFormat = z.infer<typeof projectFormatSchema>;

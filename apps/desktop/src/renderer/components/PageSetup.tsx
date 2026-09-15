@@ -6,6 +6,7 @@ import {
   type ParagraphStyle,
   type ProjectFile,
   type ScriptFormat,
+  isProseFormat,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 
@@ -114,7 +115,7 @@ export function PageSetup({
   // to print.
   const contents = hasContentsPage(file);
   const indexable = hasBookIndex(file.project.format);
-  const prose = file.project.format === 'novel' || file.project.format === 'short_story';
+  const prose = isProseFormat(file.project.format);
   const paragraphStyle = file.settings.paragraphStyle;
   const scriptFormat = file.settings.scriptFormat ?? 'us';
   const set = (patch: Partial<PrintSetup>) => onSetup({ ...setup, ...patch });

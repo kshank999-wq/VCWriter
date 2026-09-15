@@ -1,5 +1,6 @@
 import { screenplayElementTypeSchema, proseElementTypeSchema } from './entities/manuscript.js';
 import type { ManuscriptElement, ManuscriptElementType } from './entities/manuscript.js';
+import { isProseFormat } from './formats.js';
 import type { ProjectFormat } from './entities/project.js';
 
 /**
@@ -49,8 +50,10 @@ export const PROSE_CYCLE = [
   'scene_break',
 ] as const satisfies readonly ManuscriptElementType[];
 
-export const isProseFormat = (format: ProjectFormat): boolean =>
-  format === 'novel' || format === 'short_story';
+// The predicate lives in `formats.ts` — it is asked by a dozen modules and
+// was copied into each of them. Re-exported here because callers have always
+// imported it from the editing rules.
+export { isProseFormat };
 
 export const elementTypesFor = (format: ProjectFormat): ManuscriptElementType[] =>
   isProseFormat(format) ? [...proseElementTypeSchema.options] : [...screenplayElementTypeSchema.options];

@@ -5,6 +5,7 @@ import type { VoiceAssignment } from './entities/project.js';
 import type { Beat } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
 import type { CharacterId, StructuralUnitId } from './ids.js';
+import { isProseFormat } from './formats.js';
 
 /**
  * Rendering the manuscript out of the platform-neutral element list.
@@ -70,7 +71,7 @@ export const renderUnit = (file: ProjectFile, unitId: StructuralUnitId, options:
 };
 
 export const renderProject = (file: ProjectFile, options: RenderOptions = {}): string => {
-  const screenplayLayout = options.screenplayLayout ?? file.project.format !== 'novel';
+  const screenplayLayout = options.screenplayLayout ?? !isProseFormat(file.project.format);
   return unitsInStoryOrder(file)
     .filter((unit) => unit.inScript)
     .map((unit) => renderUnit(file, unit.id, { ...options, screenplayLayout }))

@@ -4,6 +4,7 @@ import { newId } from './ids.js';
 import type { BeatId, IndexMarkId, IndexRefId, ManuscriptElementId } from './ids.js';
 import type { ProjectFile } from './project-file.js';
 import type { ProjectFormat } from './entities/project.js';
+import { isProseFormat } from './formats.js';
 
 /**
  * The back-of-book index (addendum 10).
@@ -50,7 +51,7 @@ import type { ProjectFormat } from './entities/project.js';
  * contents page counts sheets instead.
  */
 export const hasBookIndex = (format: ProjectFormat): boolean =>
-  format === 'novel' || format === 'short_story';
+  isProseFormat(format);
 
 // ------------------------------------------------------------- the marks
 

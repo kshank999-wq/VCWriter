@@ -6,6 +6,7 @@ import { locationDescriptionSchema, locationSchema } from './entities/locations.
 import type { Location, LocationDescription } from './entities/locations.js';
 import type { ProjectFile } from './project-file.js';
 import type { LocationDescriptionId, LocationId, StructuralUnitId } from './ids.js';
+import { isProseFormat } from './formats.js';
 
 /**
  * Locations (addendum 14).
@@ -268,7 +269,7 @@ export const insertDescription = (
   const beat = beatsForUnit(file, unitId)[0];
   if (!beat) return file;
 
-  const type = file.project.format === 'novel' || file.project.format === 'short_story' ? 'paragraph' : 'action';
+  const type = isProseFormat(file.project.format) ? 'paragraph' : 'action';
   const made = description.body
     .split(/\n{2,}/)
     .map((part) => part.trim())

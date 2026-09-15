@@ -37,6 +37,7 @@ import {
   type StructuralUnitId,
   type ThreadLayout,
   type TimelineArc,
+  nounsFor,
 } from '@vcwriter/domain';
 import { InlineText } from './InlineText';
 import { STATUS_GLYPH } from './status';
@@ -153,7 +154,7 @@ export function MasterTimeline({
   const arcs = useMemo(() => givenArcs ?? timelineArcs(file), [givenArcs, file]);
   const threads = useMemo(() => givenThreads ?? threadLayout(file, { layout, arcs }), [givenThreads, file, layout, arcs]);
   const { spans, lanes } = layout;
-  const noun = file.project.format === 'novel' || file.project.format === 'short_story' ? 'chapter' : 'scene';
+  const noun = nounsFor(file.project.format).unit.toLowerCase();
   /**
    * A commercial has no subplot to lane, no acts to mark and nothing to link
    * across a thirty (addendum 05 §3). Those tracks and their buttons are
@@ -523,7 +524,7 @@ export function MasterTimeline({
         {shortForm ? null : (
           <>
             <button type="button" className="tool" onClick={onAddScene}>
-              + {noun === 'chapter' ? 'Chapter' : 'Scene'}
+              + {nounsFor(file.project.format).unit}
             </button>
             <button type="button" className="tool" onClick={onAddBeat} disabled={!selectedUnitId}>
               + Beat
