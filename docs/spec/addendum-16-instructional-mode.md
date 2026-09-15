@@ -74,8 +74,13 @@ safe to do at all: 1488 existing tests passed unchanged afterwards.
 
 §3 asks for a research system *intentionally different* from the creative one,
 and §15 requires the two stay distinct. An instructional project seeds
-**Graphics, General Notes, Ideas and an Imported inbox** — a professor offered a
+**General Notes, Ideas and an Imported inbox** — a professor offered a
 Characters folder has been told what kind of book they are writing.
+
+A *Graphics* shelf was seeded here too and **was removed when the screen was
+looked at** (§6a): it sat directly above the graphics *library*, and the first
+thing anybody would do is drop a diagram into the one that cannot hold a
+picture. The library is the graphics shelf.
 
 They remain ordinary categories, renameable and extensible, because a taxonomy
 the author cannot extend is one they will work around. The **inbox is a real
@@ -209,6 +214,8 @@ three files nobody read.
 | Learning aids | `packages/domain/src/learning.ts`, `entities/learning.ts` |
 | The importer | `packages/domain/src/note-import.ts`, `entities/import-batch.ts` |
 | Generation | `apps/web/src/lib/ai-learning.ts` |
+| The endpoint | `apps/web/src/app/api/ai/learning-aid/route.ts` |
+| Who may ask | `apps/web/src/lib/ai-caller.ts` |
 | The schema | `packages/supabase/migrations/0050_instructional_mode.sql` |
 
 ## 6a. The interface, and the four things looking at it caught
@@ -259,6 +266,44 @@ the paragraph it belongs under. It is absent on any other format and absent on
 a book whose library is empty: *put a figure here* with nothing to put is not
 an offer.
 
+## 6b. Wiring the suggestion
+
+The generator existed and nothing could reach it. It now has the same three
+layers the Final Editor's read has, for the same reasons: **the key lives on
+the server**, where it can be rotated and metered, instead of inside every
+installed copy. The desktop sends a bearer token from the main process; the
+browser preview sends its session cookie to the same origin.
+
+`resolveCaller` moved out of the scene-review route into `lib/ai-caller.ts`
+rather than being copied. The three questions — is there a key, is somebody
+signed in, do they hold a licence — are one decision, and **a copied predicate
+is a decision made twice**; the copy nobody updates is the one that lets an
+unlicensed caller through the day the rule changes. §1 made the same argument
+about a format check and found a live bug proving it.
+
+Two things the wiring adds to §10's rule rather than merely carrying it:
+
+- **The request has no field for the author's words.** The route's schema takes
+  a kind, a section and a title, so a client that tried to send `text`,
+  `approved` or an aid's id has nowhere to put them, and a test posts all three
+  and watches them not arrive. The shape is the permission on the way out as
+  well as on the way back.
+- **What comes back is recorded with `suggestAid` and nothing else.** That
+  function writes to the suggestion field and cannot reach `text`, so the client
+  half of *regeneration must not overwrite an edit* is kept by having nowhere
+  else to write. The test that matters writes a paragraph, asks for a
+  suggestion, and finds the paragraph still there.
+
+A **bucket of its own** in the rate limiter (forty an hour), because a morning
+spent on the Final Editor should not silently use up somebody's summaries.
+
+The button is **absent rather than greyed** when it cannot be had, and the
+reason is said **once at the foot** rather than three times beside three missing
+buttons: *why can I not have one* is a question about the account, not a fault
+of the summary. A section with nothing written in it is the other way round —
+there the button is present and refuses, because that reason is about this
+section.
+
 ## 7. What is deliberately not here
 
 - **`isBookFormat`.** §1.
@@ -274,11 +319,10 @@ an offer.
 The mode is reachable and every screen §4, §9 and §10 ask for is there. What is
 left:
 
-- The **AI suggestion** is not wired. `onGenerate` is an optional prop on the
-  aids panel and nothing passes one, so the panel is an ordinary editor —
-  which is the whole of what §10 requires, the machine being the optional half.
-  `ai-learning.ts` lives in `apps/web` and is typechecked but **has never been
-  run against the live API**; the desktop has no HTTP path to it yet.
+- The generator has **never been run against the live API**. Everything in
+  front of it is proved — the gate, the shape, the bridge, the screen — and the
+  model call itself is the same shape as the Final Editor's, which is. It needs
+  somebody to press the button on a deployment that has the key.
 - No way in from the **Outliner** (§6) or the **mind map** (§5) — both of which
   the audit found already built for the creative side and neither of which has
   been pointed at instructional research.

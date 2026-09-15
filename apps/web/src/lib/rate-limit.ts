@@ -48,6 +48,14 @@ export const RULES = {
    * than anyone reads in a sitting and far short of a bill worth noticing.
    */
   sceneReview: { name: 'scene-review', limit: 60, windowSeconds: 3600 },
+  /**
+   * The same kind of limit for a learning aid (addendum 16 §10), in a bucket of
+   * its own so a morning spent on the Final Editor does not silently use up
+   * somebody's summaries. A section has three aids and a book has a few dozen
+   * sections, so forty an hour is more regeneration than anybody does on
+   * purpose and nowhere near a bill worth noticing.
+   */
+  learningAid: { name: 'learning-aid', limit: 40, windowSeconds: 3600 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /** The first hop in X-Forwarded-For is the client; Vercel sets it. */

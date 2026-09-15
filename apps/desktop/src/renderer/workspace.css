@@ -12183,11 +12183,21 @@ dialog.chapter-page-dialog {
   font-size: 12px;
 }
 
+/* Stacked rather than three across: the Inspector is a narrow column, and a
+   question, its answer and a Remove side by side left each field nine
+   characters wide. The prompt takes the line, the answer shares the next one
+   with the control that removes the pair. */
 .aid-questions li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
   align-items: center;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.aid-questions li > input:first-child {
+  grid-column: 1 / -1;
 }
 
 .aid-questions input {
@@ -12404,4 +12414,12 @@ dialog.chapter-page-dialog {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 4px;
+}
+
+/* Why there is no Suggest button, said once at the foot of the aids rather
+   than three times beside three absent ones (§10). */
+.aids-why {
+  margin: 0;
+  padding-top: 2px;
+  border-top: 1px solid var(--border);
 }

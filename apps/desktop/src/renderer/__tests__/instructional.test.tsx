@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
   addBeat,
   addGraphic,
@@ -176,10 +176,138 @@ describe('the learning aids', () => {
     expect(first.disabled).toBe(true);
   });
 
-  it('offers nothing to generate where no generator is configured', () => {
+  it('offers nothing to generate where the host has no bridge at all', async () => {
+    delete (window as unknown as { vcwriter?: unknown }).vcwriter;
     const { file, beatId } = book();
     render(<Aids start={file} beatId={beatId} />);
+    await waitFor(() => expect(screen.queryByText('Suggest one')).toBeNull());
+  });
+});
+
+/**
+ * The suggestion, end to end through the bridge (§10).
+ *
+ * The rule worth a test is the one the interface could still break after the
+ * domain kept it: what comes back from a model is recorded with `suggestAid`,
+ * which **cannot reach the author's text** — so the wiring is checked by
+ * writing a paragraph, asking for a suggestion, and finding the paragraph
+ * still there.
+ */
+describe('asking for a suggestion', () => {
+  const bridge = (over: Partial<Record<string, unknown>> = {}) => {
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      learningAidStatus: async () => ({ ok: true, data: { available: true, reason: null } }),
+      suggestLearningAid: async () => ({ ok: true, data: { text: 'Light bends at a boundary.', questions: [] } }),
+      ...over,
+    };
+  };
+
+  /** A section with words in it, so there is something to read. */
+  const written = () => {
+    const { file, beatId } = book();
+    return {
+      beatId,
+      file: updateBeat(file, beatId, {
+        manuscript: {
+          elements: [
+            { id: newId(), type: 'paragraph', text: 'A ray bends at the surface.', characterId: null, attributes: {} },
+          ],
+        },
+      }),
+    };
+  };
+
+  it('is not offered where the account cannot have one, and says why once', async () => {
+    bridge({
+      learningAidStatus: async () => ({
+        ok: true,
+        data: { available: false, reason: 'Sign in to have a suggestion written' },
+      }),
+    });
+    const made = written();
+    render(<Aids start={made.file} beatId={made.beatId} />);
+
+    await waitFor(() => expect(screen.getByText('Sign in to have a suggestion written')).toBeTruthy());
     expect(screen.queryByText('Suggest one')).toBeNull();
+    // Once at the foot, not three times beside three absent buttons.
+    expect(screen.getAllByText('Sign in to have a suggestion written')).toHaveLength(1);
+  });
+
+  it('puts what comes back in the suggestion field and never in the author’s', async () => {
+    let seen: ProjectFile | null = null;
+    bridge();
+    const made = written();
+    const aid = aidFor(made.file, made.beatId, 'summary');
+    const current = writeAid(aid.file, aid.aid.id, { text: 'What the author wrote.' });
+
+    render(<Aids start={current} beatId={made.beatId} onFile={(one) => (seen = one)} />);
+    await waitFor(() => expect(screen.getAllByText('Suggest another').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText('Suggest another')[0]!);
+
+    await waitFor(() => {
+      const after = (seen as unknown as ProjectFile).learningAids.find((one) => one.kind === 'summary')!;
+      expect(after.suggestion).toBe('Light bends at a boundary.');
+      // The whole of §10's hardest rule, checked where it could still break.
+      expect(after.text).toBe('What the author wrote.');
+    });
+  });
+
+  it('sends the section’s own words and nothing else about the book', async () => {
+    const asked = vi.fn(async (_input: Record<string, unknown>) => ({
+      ok: true,
+      data: { text: 'A summary.', questions: [] },
+    }));
+    bridge({ suggestLearningAid: asked });
+    const made = written();
+
+    render(<Aids start={made.file} beatId={made.beatId} />);
+    await waitFor(() => expect(screen.getAllByText('Suggest one').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText('Suggest one')[0]!);
+
+    await waitFor(() => expect(asked).toHaveBeenCalled());
+    expect(asked.mock.calls[0]![0]).toEqual({
+      kind: 'summary',
+      sectionText: 'A ray bends at the surface.',
+      sectionTitle: 'Snell’s law',
+    });
+  });
+
+  it('says it is reading while it reads, so nobody presses twice', async () => {
+    let release: (value: unknown) => void = () => undefined;
+    bridge({ suggestLearningAid: () => new Promise((resolve) => { release = resolve; }) });
+    const made = written();
+
+    render(<Aids start={made.file} beatId={made.beatId} />);
+    await waitFor(() => expect(screen.getAllByText('Suggest one').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText('Suggest one')[0]!);
+
+    await waitFor(() => expect(screen.getByText('Reading the section…')).toBeTruthy());
+    expect((screen.getByText('Reading the section…') as HTMLButtonElement).disabled).toBe(true);
+    release({ ok: true, data: { text: 'A summary.', questions: [] } });
+    await waitFor(() => expect(screen.queryByText('Reading the section…')).toBeNull());
+  });
+
+  it('says what went wrong rather than failing quietly', async () => {
+    bridge({ suggestLearningAid: async () => ({ ok: false, error: 'The reading ran long and was cut off.' }) });
+    const made = written();
+
+    render(<Aids start={made.file} beatId={made.beatId} />);
+    await waitFor(() => expect(screen.getAllByText('Suggest one').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText('Suggest one')[0]!);
+
+    await waitFor(() => expect(screen.getByText('The reading ran long and was cut off.')).toBeTruthy());
+  });
+
+  it('will not ask for one on a section with nothing written in it', async () => {
+    bridge();
+    const { file, beatId } = book();
+    render(<Aids start={file} beatId={beatId} />);
+
+    await waitFor(() => expect(screen.getAllByText('Suggest one').length).toBeGreaterThan(0));
+    // The button is there and refuses, because the reason is about this
+    // section rather than about the account.
+    expect((screen.getAllByText('Suggest one')[0]! as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('Write the section first.')).toBeTruthy();
   });
 });
 

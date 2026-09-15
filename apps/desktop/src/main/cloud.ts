@@ -24,6 +24,8 @@ import {
   type ProjectFile,
   type RoomMaster,
   type Row,
+  type LearningAidKind,
+  type LearningSuggestion,
   type SceneVerdict,
   type Standing,
   type SyncCollection,
@@ -378,6 +380,78 @@ export interface SceneReviewAvailability {
   available: boolean;
   reason: string | null;
 }
+
+/**
+ * Ask for one end-of-section learning aid (addendum 16 §10).
+ *
+ * The same shape as the scene read above and for the same reasons: the key
+ * lives on the server, and what leaves the machine is the section's own words
+ * and nothing else about the book.
+ *
+ * What comes back is a `LearningSuggestion`. The renderer records it with the
+ * domain's `suggestAid`, which writes to the suggestion field and **cannot
+ * reach the author's text** — so a suggestion that goes wrong costs a button
+ * press and never a paragraph.
+ */
+export const requestLearningAid = async (input: {
+  kind: LearningAidKind;
+  sectionText: string;
+  sectionTitle: string;
+}): Promise<LearningSuggestion> => {
+  const { data, error } = await supabase().auth.getSession();
+  if (error || !data.session) throw new CloudError('Sign in to have a suggestion written.');
+
+  const response = await fetch(`${SITE_URL}/api/ai/learning-aid`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${data.session.access_token}`,
+    },
+    body: JSON.stringify(input),
+  }).catch(() => {
+    throw new CloudError('vc-writer.com could not be reached. Check your connection and try again.');
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | { suggestion?: LearningSuggestion; error?: string }
+    | null;
+
+  if (!response.ok || !payload?.suggestion) {
+    throw new CloudError(payload?.error ?? `The suggestion could not be written (${response.status})`);
+  }
+  return payload.suggestion;
+};
+
+/** Whether one can be asked for, before the writer clicks and finds out. */
+export const learningAidStatus = async (): Promise<SceneReviewAvailability> => {
+  if (!isCloudConfigured()) {
+    return { available: false, reason: 'This build has no connection to vc-writer.com.' };
+  }
+
+  const { data, error } = await supabase().auth.getSession();
+  if (error || !data.session) {
+    return { available: false, reason: 'Sign in to have a suggestion written.' };
+  }
+
+  try {
+    const response = await fetch(`${SITE_URL}/api/ai/learning-aid`, {
+      headers: { authorization: `Bearer ${data.session.access_token}` },
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | { configured?: boolean; entitled?: boolean; reason?: string | null }
+      | null;
+    if (!response.ok || !payload) {
+      return { available: false, reason: 'Suggestions could not be reached just now.' };
+    }
+    return {
+      available: payload.configured === true && payload.entitled === true,
+      reason: payload.reason ?? null,
+    };
+  } catch {
+    // Offline is not an error worth a dialog; the button simply is not there.
+    return { available: false, reason: 'vc-writer.com could not be reached.' };
+  }
+};
 
 // ---------------------------------------------------------------------------
 // Licensing (spec §3.3)

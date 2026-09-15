@@ -3,6 +3,8 @@ import type {
   Assignment,
   CaptureItem,
   Comment,
+  LearningAidKind,
+  LearningSuggestion,
   MergeResult,
   PrintOptions,
   ProjectEntry,
@@ -241,6 +243,19 @@ export interface VcWriterApi {
   }): Promise<DesktopApiResult<SceneVerdict>>;
   /** Whether a read can be asked for, and if not, what to tell the writer. */
   sceneReviewStatus(): Promise<DesktopApiResult<{ available: boolean; reason: string | null }>>;
+  /**
+   * One end-of-section learning aid (addendum 16 §10).
+   *
+   * **The shape is the permission**: there is no field here for the author's
+   * own words, so what comes back can only ever be recorded as a suggestion.
+   */
+  suggestLearningAid(input: {
+    kind: LearningAidKind;
+    sectionText: string;
+    sectionTitle: string;
+  }): Promise<DesktopApiResult<LearningSuggestion>>;
+  /** Whether one can be asked for, so the button is absent rather than broken. */
+  learningAidStatus(): Promise<DesktopApiResult<{ available: boolean; reason: string | null }>>;
 
   // Licensing and updates (§3.3).
   activateLicense(serial: string): Promise<DesktopApiResult<ActivationResult>>;
@@ -347,6 +362,8 @@ const api: VcWriterApi = {
   resolveCapture: (capture) => ipcRenderer.invoke('cloud:resolveCapture', capture),
   reviewScene: (input) => ipcRenderer.invoke('cloud:reviewScene', input),
   sceneReviewStatus: () => ipcRenderer.invoke('cloud:sceneReviewStatus'),
+  suggestLearningAid: (input) => ipcRenderer.invoke('cloud:suggestLearningAid', input),
+  learningAidStatus: () => ipcRenderer.invoke('cloud:learningAidStatus'),
   activateLicense: (serial) => ipcRenderer.invoke('license:activate', serial),
   checkForUpdate: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: (input) => ipcRenderer.invoke('update:download', input),

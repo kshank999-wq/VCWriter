@@ -6,6 +6,8 @@ import {
   parseProjectFile,
   projectsNewestFirst,
   type CaptureItem,
+  type LearningAidKind,
+  type LearningSuggestion,
   type PrintOptions,
   type ProjectEntry,
   type SceneVerdict,
@@ -19,9 +21,11 @@ import {
   accountStatus,
   activateLicense,
   listCaptures,
+  requestLearningAid,
   requestSceneReview,
   requestSignInCode,
   resolveCapture,
+  learningAidStatus,
   sceneReviewStatus,
   signOut,
   syncProject,
@@ -522,6 +526,28 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
   ipcMain.handle('cloud:sceneReviewStatus', async (): Promise<DesktopApiResult<SceneReviewAvailability>> => {
     try {
       return ok(await sceneReviewStatus());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle(
+    'cloud:suggestLearningAid',
+    async (
+      _event,
+      input: { kind: LearningAidKind; sectionText: string; sectionTitle: string },
+    ): Promise<DesktopApiResult<LearningSuggestion>> => {
+      try {
+        return ok(await requestLearningAid(input));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  ipcMain.handle('cloud:learningAidStatus', async (): Promise<DesktopApiResult<SceneReviewAvailability>> => {
+    try {
+      return ok(await learningAidStatus());
     } catch (cause) {
       return fail(cause);
     }

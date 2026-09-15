@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   LEARNING_AID_KINDS,
   acceptSuggestion,
@@ -9,6 +9,7 @@ import {
   approveAid,
   discardSuggestion,
   sectionTextFor,
+  suggestAid,
   writeAid,
   type BeatId,
   type LearningAid,
@@ -37,16 +38,82 @@ interface LearningAidsPanelProps {
   beatId: BeatId;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   /**
-   * Ask for a suggestion. Absent where no generator is configured, in which
-   * case the panel is an ordinary editor — which is the whole of what §10
-   * requires, the AI being the optional half.
+   * Ask for a suggestion, overriding the bridge. Only tests pass this; in the
+   * application it is absent and the panel asks `window.vcwriter` itself, the
+   * same way the Final Editor does.
    */
   onGenerate?(input: { beatId: BeatId; kind: LearningAidKind }): Promise<void>;
 }
 
+/** Whether a suggestion can be asked for, and if not, what to tell the writer. */
+interface Availability {
+  available: boolean;
+  reason: string | null;
+}
+
 export function LearningAidsPanel({ file, beatId, onUpdate, onGenerate }: LearningAidsPanelProps) {
   const aids = aidsOn(file, beatId);
-  const hasWords = sectionTextFor(file, beatId).trim().length > 0;
+  const sectionText = sectionTextFor(file, beatId);
+  const hasWords = sectionText.trim().length > 0;
+  const title = file.beats.find((one) => one.id === beatId)?.title ?? '';
+
+  /**
+   * Asked once when a section is opened, so the button can say why it is not
+   * there rather than failing after a click that costs money. `null` until the
+   * answer is back, which is what keeps it from flickering into view.
+   */
+  const [offer, setOffer] = useState<Availability | null>(null);
+  useEffect(() => {
+    // Absent in the tests that render this panel on its own, and absent in any
+    // host that has not given the renderer a bridge. Either way there is no
+    // suggestion to be had, and the panel is an ordinary editor — which is the
+    // whole of what §10 requires, the machine being the optional half.
+    const bridge = typeof window === 'undefined' ? null : window.vcwriter;
+    if (!bridge?.learningAidStatus) {
+      setOffer({ available: false, reason: null });
+      return;
+    }
+    let current = true;
+    void bridge.learningAidStatus().then((result) => {
+      if (!current) return;
+      setOffer(
+        result.ok && result.data
+          ? result.data
+          : { available: false, reason: result.error ?? 'Suggestions are unavailable.' },
+      );
+    });
+    return () => {
+      current = false;
+    };
+  }, [beatId]);
+
+  /**
+   * The default generator: ask the bridge, and record what comes back with the
+   * domain's `suggestAid`.
+   *
+   * **This is where §10's hardest rule is kept in the client**, and it is kept
+   * by having nowhere else to write: `suggestAid` touches the suggestion field
+   * and cannot reach `text`, so a suggestion that comes back wrong costs a
+   * button press rather than a paragraph somebody wrote.
+   */
+  const askTheBridge = async (input: { beatId: BeatId; kind: LearningAidKind }) => {
+    const bridge = window.vcwriter;
+    const result = await bridge.suggestLearningAid({
+      kind: input.kind,
+      sectionText,
+      sectionTitle: title,
+    });
+    if (!result.ok || !result.data) {
+      throw new Error(result.error ?? 'The suggestion could not be written.');
+    }
+    const suggestion = result.data;
+    onUpdate((current) => {
+      const made = aidFor(current, input.beatId, input.kind);
+      return suggestAid(made.file, made.aid.id, suggestion);
+    });
+  };
+
+  const generate = onGenerate ?? (offer?.available ? askTheBridge : undefined);
 
   return (
     <div className="aids">
@@ -68,10 +135,18 @@ export function LearningAidsPanel({ file, beatId, onUpdate, onGenerate }: Learni
             beatId={beatId}
             hasWords={hasWords}
             onUpdate={onUpdate}
-            {...(onGenerate ? { onGenerate } : {})}
+            {...(generate ? { onGenerate: generate } : {})}
           />
         );
       })}
+
+      {/* Said once at the foot rather than three times beside three absent
+          buttons: *why can I not have one* is one question about the account,
+          not a fault of the summary. Nothing is said while the answer is still
+          coming back, and nothing is said when it is simply available. */}
+      {offer && !offer.available && offer.reason && !onGenerate ? (
+        <p className="muted small aids-why">{offer.reason}</p>
+      ) : null}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   serializeProjectFile,
   suggestedExportFileName,
   type ProjectFile,
+  type LearningSuggestion,
   type SceneVerdict,
 } from '@vcwriter/domain';
 import type { DesktopApiResult, OpenResult, VcWriterApi } from '../preload/index';
@@ -422,6 +423,48 @@ export const createBrowserBridge = (): BrowserBridge => {
         });
       } catch {
         return ok({ available: false, reason: 'AI review could not be reached.' });
+      }
+    },
+
+    /**
+     * The second cloud call the preview can make, for the same reason as the
+     * first: same origin, session cookie already good, no key to ship.
+     */
+    async suggestLearningAid(input) {
+      try {
+        const response = await fetch('/api/ai/learning-aid', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(input),
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | { suggestion?: LearningSuggestion; error?: string }
+          | null;
+        if (!response.ok || !payload?.suggestion) {
+          return fail(payload?.error ?? `The suggestion could not be written (${response.status})`);
+        }
+        return ok(payload.suggestion);
+      } catch {
+        return fail('The suggestion could not be asked for. Check your connection.');
+      }
+    },
+
+    async learningAidStatus() {
+      try {
+        const response = await fetch('/api/ai/learning-aid', { credentials: 'same-origin' });
+        const payload = (await response.json().catch(() => null)) as
+          | { configured?: boolean; entitled?: boolean; reason?: string | null }
+          | null;
+        if (!response.ok || !payload) {
+          return ok({ available: false, reason: 'Suggestions could not be reached.' });
+        }
+        return ok({
+          available: payload.configured === true && payload.entitled === true,
+          reason: payload.reason ?? null,
+        });
+      } catch {
+        return ok({ available: false, reason: 'Suggestions could not be reached.' });
       }
     },
 

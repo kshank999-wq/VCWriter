@@ -642,7 +642,7 @@ push live; the build takes a minute or two.
   `isBookFormat` was written and deleted because every use was wrong — a short
   story is prose, keeps chapter units, prints chapter pages and has an index, so
   *more of a book than a short story* had no honest users. Stage 2 is the
-  shelves (Graphics, General Notes, Ideas, an **Imported inbox** that is a real
+  shelves (General Notes, Ideas, an **Imported inbox** that is a real
   shelf rather than a modal) and `source` on a research item — **the one field a
   nonfiction author cannot work without and a novelist never needs**, not to be
   confused with `origin`, which has meant *how it got in* since 0003 — plus
@@ -677,7 +677,20 @@ push live; the build takes a minute or two.
   field with its own background was black on black. **Putting a figure in is on
   the right-click**, the sixth thing it does, because the only person who knows
   where a figure goes is the one looking at the paragraph it belongs under; it is
-  absent on every other format and on a book whose library is empty.
+  absent on every other format and on a book whose library is empty. Stage 6
+  (§6b) **wires the suggestion**, which had a generator nothing could reach: the
+  route is `api/ai/learning-aid` with the Final Editor's three layers, and
+  `resolveCaller` moved out of the scene-review route into `lib/ai-caller.ts`
+  rather than being copied — §1's argument about a duplicated predicate, applied
+  to the one that decides who may spend money. **The request has no field for the
+  author's words**, so the shape is the permission on the way out as well as
+  back, and what returns is recorded with `suggestAid`, which cannot reach
+  `text`. Its own rate-limit bucket, so a morning on the Final Editor does not
+  use up somebody's summaries. The button is **absent rather than greyed** when
+  it cannot be had and the reason is said **once at the foot**; a section with
+  nothing written in it is the other way round, the button present and refusing,
+  because that reason is about the section rather than the account. The model
+  call itself has still never been run live.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
