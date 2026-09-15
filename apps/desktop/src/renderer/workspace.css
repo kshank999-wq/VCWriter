@@ -2081,6 +2081,20 @@ input[type='color'].swatch {
   color: var(--muted);
 }
 
+/* The derived section number (addendum 16 §15). Deliberately not an input:
+   it is worked out from where the division falls, so there is nowhere to
+   type one — a box here would be a box that could disagree with the book. */
+.bar-number {
+  flex: 0 0 auto;
+  min-width: 34px;
+  padding: 3px 6px 3px 0;
+  font-family: var(--display);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
 .bar-title {
   flex: 1;
   font-family: var(--display);
@@ -2954,6 +2968,8 @@ dialog.writer-dialog::backdrop {
 
 .workspace.script-paper .script-sheet .bar-label,
 .workspace.script-paper .page-sheet .bar-label,
+.workspace.script-paper .script-sheet .bar-number,
+.workspace.script-paper .page-sheet .bar-number,
 .workspace.script-paper .script-sheet .collapsed-note,
 .workspace.script-paper .page-sheet .collapsed-note,
 .workspace.script-paper .script-sheet .empty-state,
@@ -3679,6 +3695,7 @@ dialog.marker-dialog {
    the writing, whatever colour the writing is. */
 .workspace .script-view.own-paper .beat-name input,
 .workspace .script-view.own-paper .bar-label,
+.workspace .script-view.own-paper .bar-number,
 .workspace .script-view.own-paper .revision-chip,
 .workspace .script-view.own-paper .script-title-block p,
 .workspace .script-view.own-paper .page-break,
@@ -7942,6 +7959,25 @@ dialog.preferences .field {
   font-size: 10px;
   text-align: center;
   color: var(--gold-deep);
+}
+
+/* The derived outline number (addendum 16 §15). Beside the box rather than
+   inside it, because it is not part of what the writer typed. */
+.outline-number {
+  flex: 0 0 auto;
+  align-self: start;
+  padding: 2px 2px 0 4px;
+  line-height: 20px;
+  font-family: var(--display);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.outline-row.selected .outline-number {
+  color: var(--text);
 }
 
 /*

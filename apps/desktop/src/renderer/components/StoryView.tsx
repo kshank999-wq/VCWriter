@@ -3,9 +3,11 @@ import {
   beatsForUnit,
   isProseFormat,
   nounsFor,
+  numbersDivisions,
   pageBreaks,
   pinUsage,
   storyLayout,
+  structureNumbers,
   updateBeat,
   updateUnit,
   type Beat,
@@ -133,6 +135,14 @@ export function StoryView({
   const prose = isProseFormat(file.project.format);
   // §14: no screen names a unit itself. Every label below reads the table.
   const nouns = nounsFor(file.project.format);
+  /**
+   * The decimal numbers, where this book has them (addendum 16 §15).
+   *
+   * Counted from where each division falls, so there is nothing to keep in
+   * step — and, below, nowhere to type one.
+   */
+  const numbered = numbersDivisions(file);
+  const numbers = useMemo(() => structureNumbers(file), [file]);
   const [ownDisplay, setOwnDisplay] = useState<ScriptDisplay>(DEFAULT_SCRIPT_DISPLAY);
   const [ownLayout, setOwnLayout] = useState<ScriptLayout>('flow');
   const [ownZoom, setOwnZoom] = useState(1);
@@ -246,20 +256,30 @@ export function StoryView({
   const sceneHeader = (unit: StructuralUnit) => (
     <header
       className="scene-name"
-      title={onOpenUnit ? `Double-click to open this ${unit.kind}` : undefined}
+      title={onOpenUnit ? `Double-click to open this ${nouns.unit.toLowerCase()}` : undefined}
       onDoubleClick={() => onOpenUnit?.(unit.id)}
     >
-      <input
-        className="bar-label"
-        aria-label="Sequence label"
-        placeholder={prose ? 'Ch.' : 'Sc.'}
-        value={unit.sequenceLabel}
-        onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { sequenceLabel: event.target.value }))}
-      />
+      {numbered ? (
+        // Read rather than typed: the number is where this one falls, so a
+        // box to correct it in would be a box that could be wrong.
+        <span className="bar-number" title={`${nouns.unit} number, worked out from where it falls`}>
+          {numbers.units.get(unit.id as string) ?? ''}
+        </span>
+      ) : (
+        <input
+          className="bar-label"
+          aria-label="Sequence label"
+          placeholder={prose ? 'Ch.' : 'Sc.'}
+          value={unit.sequenceLabel}
+          onChange={(event) =>
+            onUpdate((current) => updateUnit(current, unit.id, { sequenceLabel: event.target.value }))
+          }
+        />
+      )}
       <input
         className="bar-title"
-        aria-label={`${unit.kind} title`}
-        placeholder={`Untitled ${unit.kind}`}
+        aria-label={`${nouns.unit} title`}
+        placeholder={`Untitled ${nouns.unit.toLowerCase()}`}
         value={unit.title}
         onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { title: event.target.value }))}
       />
@@ -276,6 +296,11 @@ export function StoryView({
       onClick={() => onSelectBeat(beat.id)}
       onDoubleClick={() => onOpenBeat?.(beat.id)}
     >
+      {numbered ? (
+        <span className="bar-number" title={`${nouns.sub} number, worked out from where it falls`}>
+          {numbers.subs.get(beat.id as string) ?? ''}
+        </span>
+      ) : null}
       <input
         ref={registerTitle(beat.id)}
         aria-label={`${nouns.sub} title (not printed)`}

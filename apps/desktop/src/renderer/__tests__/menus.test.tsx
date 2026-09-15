@@ -6,6 +6,7 @@ import {
   addBeat,
   createProjectFile,
   setActBreaks,
+  setSectionNumbering,
   setParagraphStyle,
   setScriptFormat,
   updateBeat,
@@ -220,6 +221,7 @@ describe('page setup', () => {
           onParagraphStyle={(style) => setFile((current) => setParagraphStyle(current, style))}
           onScriptFormat={(next) => setFile((current) => setScriptFormat(current, next))}
           onActBreaks={(on) => setFile((current) => setActBreaks(current, on))}
+          onSectionNumbering={(next) => setFile((current) => setSectionNumbering(current, next))}
           pages={12}
           onPrint={() => undefined}
           onExportPdf={() => undefined}
@@ -338,9 +340,9 @@ describe('page setup', () => {
 
   it('names every printable part for the format, on a book and on a script', () => {
     render(<Setup format="instructional" />);
-    expect(screen.getByLabelText('Chapter headings')).toBeTruthy();
-    expect(screen.getByLabelText('Section titles')).toBeTruthy();
-    expect(screen.getByLabelText('Chapter summary')).toBeTruthy();
+    expect(screen.getByLabelText('Section headings')).toBeTruthy();
+    expect(screen.getByLabelText('Subsection titles')).toBeTruthy();
+    expect(screen.getByLabelText('Section summary')).toBeTruthy();
     cleanup();
 
     render(<Setup format="screenplay" />);

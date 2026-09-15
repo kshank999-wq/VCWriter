@@ -20,6 +20,10 @@ import {
   isUnder,
   moveItem,
   nudgeItem,
+  numberOfSub,
+  numberOfUnit,
+  numberedTitle,
+  outlineNumbers,
   outdentItem,
   outlineChildren,
   outlineAsText,
@@ -103,9 +107,9 @@ const MARKS: Record<string, string> = {
  * What each type is called **in this format** (addendum 16 §14).
  *
  * `scene` and `beat` are the outline's own two structural kinds and are named
- * from the table, so a textbook's tree offers Chapter and Section rather than
- * Scene and Beat. The rest are the writer's material and mean the same thing in
- * every format.
+ * from the table, so a textbook's tree offers Section and Subsection rather
+ * than Scene and Beat. The rest are the writer's material and mean the same
+ * thing in every format.
  *
  * The three narrative kinds are **absent on a book** rather than renamed: a
  * professor has no use for a Character, a Setting or a Prop, and the honest
@@ -135,9 +139,20 @@ const nameOf = (kind: string, format: ProjectFormat): string =>
 const article = (name: string): string =>
   `${/^[aeiou]/i.test(name) ? 'An' : 'A'} ${name.toLowerCase()}`;
 
-/** What an empty row of each kind asks for. */
-const placeholderOf = (kind: string): string =>
-  kind === 'scene' ? 'name the scene' : kind === 'beat' ? 'what happens' : 'say what it is';
+/**
+ * What an empty row of each kind asks for.
+ *
+ * A textbook is asked to *name* its sections rather than to say what happens
+ * in them, because nothing happens in a section on refraction (§14).
+ */
+const placeholderOf = (kind: string, format: ProjectFormat): string => {
+  const nouns = nounsFor(format);
+  if (kind === 'scene') return `name the ${nouns.unit.toLowerCase()}`;
+  if (kind === 'beat') {
+    return isInstructional(format) ? `name the ${nouns.sub.toLowerCase()}` : 'what happens';
+  }
+  return 'say what it is';
+};
 const markOf = (kind: string): string => MARKS[kind] ?? '•';
 
 export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExport }: OutlinerWindowProps) {
@@ -223,6 +238,17 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
     [outline, filtering, found],
   );
   const tally = useMemo(() => (outline ? outlineTally(outline) : null), [outline]);
+  /**
+   * The decimal numbers down the outline (addendum 16 §15).
+   *
+   * Read from the tree every time, so indenting a row makes it 1.2.1 with
+   * nothing run and nowhere to type the figure.
+   */
+  const numbers = useMemo(
+    () => (outline ? outlineNumbers(file, outline) : new Map<string, string>()),
+    [file, outline],
+  );
+  const nouns = nounsFor(file.project.format);
 
   const write = (mutate: (current: ProjectFile, id: Outline['id']) => ProjectFile) => {
     if (!outline) return;
@@ -443,26 +469,36 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
 
         {outline ? (
           <>
+            {/* The kinds are the format's, and this is the list — a second
+                one written out by hand was still offering a textbook a
+                Character, a Setting and a Prop long after §14 said it
+                should not. */}
             <button
               type="button"
               className="tool"
-              title="A scene: the primary story unit. Always at the top level"
+              title={`${article(nouns.unit)}: the primary unit. Always at the top level`}
               onClick={() => add('scene')}
             >
-              + Scene
+              + {nouns.unit}
             </button>
-            {(['beat', 'note', 'idea', 'character', 'setting', 'prop'] as const).map((kind) => (
-              <button
-                key={kind}
-                type="button"
-                className="tool"
-                disabled={!chosen}
-                title={chosen ? `A ${nameOf(kind, file.project.format).toLowerCase()} under ${chosen.title || 'the selected row'}` : 'Choose a row to put it under'}
-                onClick={() => add(kind)}
-              >
-                + {nameOf(kind, file.project.format)}
-              </button>
-            ))}
+            {Object.keys(kindsFor(file.project.format))
+              .filter((kind) => kind !== 'scene')
+              .map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  className="tool"
+                  disabled={!chosen}
+                  title={
+                    chosen
+                      ? `${article(nameOf(kind, file.project.format))} under ${chosen.title || 'the selected row'}`
+                      : 'Choose a row to put it under'
+                  }
+                  onClick={() => add(kind)}
+                >
+                  + {nameOf(kind, file.project.format)}
+                </button>
+              ))}
 
             <span className="outliner-gap" />
 
@@ -509,7 +545,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
             {tally ? (
               <span className="muted small">
                 {filtering ? `${found.hits.size} found · ` : ''}
-                {tally.scenes} {tally.scenes === 1 ? 'scene' : 'scenes'} · {tally.rows} rows
+                {`${tally.scenes} ${(tally.scenes === 1 ? nouns.unit : nouns.unitPlural).toLowerCase()} · ${tally.rows} rows`}
               </span>
             ) : null}
 
@@ -659,8 +695,9 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
         >
           {rows.length === 0 ? (
             <p className="muted empty-state">
-              Nothing yet. Start with a scene — or a note, if what you have is a thought rather than a scene.
-              Everything here is a plan until you send it to the script.
+              Nothing yet. Start with a {nouns.unit.toLowerCase()} — or a note, if what you have is a thought
+              rather than a {nouns.unit.toLowerCase()}. Everything here is a plan until you send it to the{' '}
+              {nouns.manuscript.toLowerCase()}.
             </p>
           ) : null}
 
@@ -669,6 +706,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
               format={file.project.format}
               key={row.item.id as string}
               row={row}
+              number={numbers.get(row.item.id as string) ?? ''}
               title={rowTitle(file, row.item)}
               linked={row.item.source?.type === 'research_item'}
               promoted={isPromoted(row.item)}
@@ -1020,13 +1058,19 @@ function Promotion({
     );
   }
 
-  const what = kind === 'unit' ? 'scene' : 'beat';
+  const nouns = nounsFor(file.project.format);
+  const what = (kind === 'unit' ? nouns.unit : nouns.sub).toLowerCase();
+  const subs = nouns.subPlural.toLowerCase();
+  const sub = nouns.sub.toLowerCase();
 
   if (promoted) {
+    // A numbered book says *1.2 Refraction*, and the number is the reading
+    // rather than the stored label (addendum 16 §15).
     const name =
       promoted.kind === 'unit'
-        ? `${promoted.unit.sequenceLabel || ''} ${promoted.unit.title || 'Untitled'}`.trim()
-        : promoted.beat.title.trim() || 'Untitled';
+        ? numberedTitle(numberOfUnit(file, promoted.unit.id), promoted.unit.title, 'Untitled') ||
+          `${promoted.unit.sequenceLabel || ''} ${promoted.unit.title || 'Untitled'}`.trim()
+        : numberedTitle(numberOfSub(file, promoted.beat.id), promoted.beat.title, 'Untitled');
     return (
       <section className="outline-promotion in-script">
         <p className="small">
@@ -1070,19 +1114,22 @@ function Promotion({
           className="ghost small"
           title={
             kind === 'unit'
-              ? `Put this scene in the script${beats > 0 ? `, with its ${beats} ${beats === 1 ? 'beat' : 'beats'}` : ''}`
-              : 'Put this beat into its scene'
+              ? `Put this ${what} in the ${nouns.manuscript.toLowerCase()}${
+                  beats > 0 ? `, with its ${beats} ${beats === 1 ? sub : subs}` : ''
+                }`
+              : `Put this ${sub} into its ${nouns.unit.toLowerCase()}`
           }
           onClick={() => onWrite((current, id) => promoteRow(current, id, item.id).file)}
         >
-          Send to Script{kind === 'unit' && beats > 0 ? ` — and ${beats} ${beats === 1 ? 'beat' : 'beats'}` : ''}
+          Send to {nouns.manuscript}
+          {kind === 'unit' && beats > 0 ? ` — and ${beats} ${beats === 1 ? sub : subs}` : ''}
         </button>
       ) : (
         <p className="muted small">
           {refusal === 'its scene is still a plan'
-            ? 'A beat lives inside a scene, so this one can go in as soon as the scene above it does.'
+            ? `A ${sub} lives inside a ${nouns.unit.toLowerCase()}, so this one can go in as soon as the ${nouns.unit.toLowerCase()} above it does.`
             : refusal === 'there is no lane to put a scene in'
-              ? 'There is no plot lane to put a scene in yet.'
+              ? `There is no plot lane to put a ${nouns.unit.toLowerCase()} in yet.`
               : refusal}
         </p>
       )}
@@ -1091,7 +1138,7 @@ function Promotion({
         <label className="field">
           <span>or it already exists</span>
           <select
-            aria-label="Bind this row to a scene"
+            aria-label={`Bind this row to a ${nouns.unit.toLowerCase()}`}
             value=""
             onChange={(event) => {
               const unitId = event.target.value;
@@ -1099,10 +1146,14 @@ function Promotion({
               onWrite((current, id) => bindRow(current, id, item.id, unitId as unknown as StructuralUnitId));
             }}
           >
-            <option value="">Choose the scene it is…</option>
+            <option value="">Choose the {nouns.unit.toLowerCase()} it is…</option>
             {existing.map((unit) => (
               <option key={unit.id as string} value={unit.id as string}>
-                {`${unit.sequenceLabel || unit.kind} ${unit.title || 'Untitled'}`.trim()}
+                {numberedTitle(
+                  numberOfUnit(file, unit.id) || unit.sequenceLabel,
+                  unit.title,
+                  `Untitled ${nouns.unit.toLowerCase()}`,
+                )}
               </option>
             ))}
           </select>
@@ -1134,6 +1185,7 @@ const topmostOf = (outline: Outline, item: OutlineItem): OutlineItem => {
 function Row({
   format,
   row,
+  number,
   title,
   linked,
   promoted,
@@ -1161,6 +1213,8 @@ function Row({
   /** So a row names its own kind the way this format names it (§14). */
   format: ProjectFormat;
   row: OutlineRow;
+  /** `1.2` where this book numbers its divisions, `''` everywhere else. */
+  number: string;
   /** Read through to the shelf where the row references research (§5). */
   title: string;
   linked: boolean;
@@ -1276,6 +1330,16 @@ function Row({
         {markOf(item.kind)}
       </span>
 
+      {/* The number, where this book has them (addendum 16 §15). Read from
+          where the row sits, so indenting it makes it 1.2.1 by itself — which
+          is why it is text beside the box rather than part of what is typed
+          in it. */}
+      {number ? (
+        <span className="outline-number" title={`${nameOf(item.kind, format)} ${number}`}>
+          {number}
+        </span>
+      ) : null}
+
       {/* The badge §6 asks for: a glance says how much of the outline is in
           the script. A row that is still a plan carries no mark. */}
       {promoted ? (
@@ -1302,7 +1366,7 @@ function Row({
       */}
       <span className={linked ? 'outline-box linked' : 'outline-box'}>
         <span className="outline-ink" aria-hidden="true">
-          {title || placeholderOf(item.kind)}
+          {title || placeholderOf(item.kind, format)}
           {/* A zero-width space so a box with nothing in it still has a line's
               height, and the caret has somewhere to stand. */}
           {'\u200b'}
@@ -1318,7 +1382,7 @@ function Row({
             rows={1}
             spellCheck={false}
             aria-label={`${nameOf(item.kind, format)}: what it is`}
-            placeholder={placeholderOf(item.kind)}
+            placeholder={placeholderOf(item.kind, format)}
             value={title}
             onFocus={() => onEdit(true)}
             onBlur={() => onEdit(false)}

@@ -38,6 +38,8 @@ import {
   type ThreadLayout,
   type TimelineArc,
   nounsFor,
+  numberedTitle,
+  structureNumbers,
 } from '@vcwriter/domain';
 import { InlineText } from './InlineText';
 import { STATUS_GLYPH } from './status';
@@ -757,6 +759,9 @@ function LaneTrack({
   const units = unitsForLane(file, lane.id);
   // §14 again: the rail below is full of a format's own nouns.
   const nouns = nounsFor(file.project.format);
+  // And, on a book that numbers them, the numbers each card would print
+  // (addendum 16 §15) — counted, so dragging a card across renumbers both.
+  const numbers = structureNumbers(file);
   const unitDragOver = (event: React.DragEvent, overId: string, orientation: 'horizontal' | 'vertical' = 'horizontal') => {
     if (drag.payload?.kind !== 'unit') return false;
     event.preventDefault();
@@ -912,7 +917,11 @@ function LaneTrack({
                 type="button"
                 className="ghost twisty"
                 aria-expanded={!collapsed}
-                aria-label={collapsed ? `Expand ${unit.title || unit.kind}` : `Collapse ${unit.title || unit.kind}`}
+                aria-label={
+                  collapsed
+                    ? `Expand ${unit.title || nouns.unit.toLowerCase()}`
+                    : `Collapse ${unit.title || nouns.unit.toLowerCase()}`
+                }
                 onClick={(event) => {
                   event.stopPropagation();
                   onUpdate((current) => updateUnit(current, unit.id, { collapsed: !unit.collapsed }));
@@ -925,19 +934,19 @@ function LaneTrack({
               <span className="block-label">
                 {shortForm
                   ? `Segment ${spans.findIndex((span) => span.unit.id === unit.id) + 1}`
-                  : unit.sequenceLabel}
+                  : numbers.units.get(unit.id as string) || unit.sequenceLabel}
               </span>
               <span className="block-title">
                 {shortForm
                   ? unit.title
                     ? `— ${unit.title}`
                     : ''
-                  : unit.title || `Untitled ${unit.kind}`}
+                  : unit.title || `Untitled ${nouns.unit.toLowerCase()}`}
               </span>
               <button
                 type="button"
                 className="ghost danger block-remove"
-                title={`Remove this ${unit.kind} and its ${nouns.subPlural.toLowerCase()}`}
+                title={`Remove this ${nouns.unit.toLowerCase()} and its ${nouns.subPlural.toLowerCase()}`}
                 onClick={(event) => {
                   event.stopPropagation();
                   onUpdate((current) => removeUnit(current, unit.id));
@@ -1015,7 +1024,13 @@ function LaneTrack({
                         {STATUS_GLYPH[beat.status]}
                       </span>
                       {/* The internal beat title is an authoring reference only (§5.3). */}
-                      <span className="beat-row-title">{beat.title || `Untitled ${nouns.sub.toLowerCase()}`}</span>
+                      <span className="beat-row-title">
+                        {numberedTitle(
+                          numbers.subs.get(beat.id as string) ?? '',
+                          beat.title,
+                          `Untitled ${nouns.sub.toLowerCase()}`,
+                        )}
+                      </span>
                       {/* Who speaks in the beat, as the cast's colours (addendum 02 §6). */}
                       <span className="cast" aria-hidden="true">
                         {(speakers.get(beat.id) ?? []).slice(0, 3).map((name) => (

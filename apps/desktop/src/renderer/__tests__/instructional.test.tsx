@@ -506,8 +506,8 @@ describe('the words a book author is shown', () => {
     const beat = made.file.beats.find((one) => one.id === made.beatId)!;
     render(<BeatWriter file={made.file} beat={beat} onUpdate={() => undefined} />);
 
-    expect(screen.getByLabelText('Section name')).toBeTruthy();
-    expect(screen.getByText('Section name')).toBeTruthy();
+    expect(screen.getByLabelText('Subsection name')).toBeTruthy();
+    expect(screen.getByText('Subsection name')).toBeTruthy();
     expect(screen.queryByLabelText('Beat name')).toBeNull();
     // And the manuscript is a Book rather than a script.
     expect(screen.getByText('In book')).toBeTruthy();
@@ -519,7 +519,7 @@ describe('the words a book author is shown', () => {
     render(
       <Inspector file={made.file} selectedBeatId={made.beatId} onUpdate={() => undefined} />,
     );
-    expect(screen.getByLabelText('Section colour')).toBeTruthy();
+    expect(screen.getByLabelText('Subsection colour')).toBeTruthy();
     expect(screen.queryByLabelText('Beat colour')).toBeNull();
   });
 

@@ -86,9 +86,11 @@ describe('what a format calls its parts', () => {
 
   it('calls an instructional book’s parts what a textbook calls them', () => {
     const nouns = nounsFor('instructional');
-    expect(nouns.unit).toBe('Chapter');
-    // §2: the structural role beats play, named as a textbook names it.
-    expect(nouns.sub).toBe('Section');
+    // A textbook is a numbered outline rather than a novel with teaching in
+    // it, so its top division is a Section and what sits inside one is a
+    // Subsection — 1, then 1.1, 1.2 (addendum 16 §15).
+    expect(nouns.unit).toBe('Section');
+    expect(nouns.sub).toBe('Subsection');
     expect(nouns.manuscript).toBe('Book');
   });
 

@@ -105,6 +105,19 @@ export const projectSettingsSchema = z.object({
   markerNumbering: z.enum(['numeric', 'roman', 'roman_lower', 'letters', 'words', 'symbol', 'none', '']).default(''),
   /** The glyph used when the numbering is a symbol. */
   markerSymbol: z.string().default('❦'),
+  /**
+   * How a textbook's divisions are numbered (addendum 16 §15).
+   *
+   * `decimal` is the textbook convention: sections 1, 2, 3 and subsections
+   * 1.1, 1.2, 1.3. `none` leaves the writer's own titles standing alone, for a
+   * book whose structure is not a numbered outline — which is the whole of what
+   * *or whatever you'd like* needs.
+   *
+   * **No number is stored anywhere.** This says only which scheme to read the
+   * structure through; the figures themselves are counted from where a division
+   * falls, so moving one renumbers everything with nothing run.
+   */
+  sectionNumbering: z.enum(['decimal', 'none']).default('decimal'),
   /** Whether a printing carries the chapter pages. */
   includeChapterPagesInExport: z.boolean().default(true),
   /**

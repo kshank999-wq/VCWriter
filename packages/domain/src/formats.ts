@@ -89,13 +89,25 @@ const NOUNS: Partial<Record<ProjectFormat, FormatNouns>> = {
     manuscript: 'Manuscript',
     work: 'Story',
   },
+  /**
+   * **Sections and subsections**, not chapters and sections.
+   *
+   * The first draft of this table made an instructional book's parts Chapter
+   * and Section, which is how a novel with teaching in it is arranged. Ken's
+   * correction is that a textbook is arranged as a **numbered outline**: a
+   * section, and under it 1.1, 1.2, 1.3. So the top division is a Section and
+   * what sits inside one is a Subsection, and `numbering.ts` gives them the
+   * decimal numbers that make the structure legible.
+   *
+   * The unit's *kind* stays `chapter`, because that is what drives the opening
+   * leaf and the contents page — the kind is a structural fact and the noun is
+   * what this format calls it, which is the whole point of the table.
+   */
   instructional: {
-    unit: 'Chapter',
-    unitPlural: 'Chapters',
-    // The spec's §2: the structural role beats play, called what a textbook
-    // calls it.
-    sub: 'Section',
-    subPlural: 'Sections',
+    unit: 'Section',
+    unitPlural: 'Sections',
+    sub: 'Subsection',
+    subPlural: 'Subsections',
     manuscript: 'Book',
     work: 'Book',
   },

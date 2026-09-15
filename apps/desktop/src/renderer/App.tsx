@@ -9,6 +9,7 @@ import {
   setActBreaks,
   setParagraphStyle,
   setScriptFormat,
+  setSectionNumbering,
   storyLayout,
   threadLayout,
   timelineArcs,
@@ -1235,6 +1236,7 @@ export default function App() {
         onParagraphStyle={(style) => project.update((current) => setParagraphStyle(current, style))}
         onScriptFormat={(next) => project.update((current) => setScriptFormat(current, next))}
         onActBreaks={(on) => project.update((current) => setActBreaks(current, on))}
+        onSectionNumbering={(next) => project.update((current) => setSectionNumbering(current, next))}
         pages={pages}
         onPrint={() => void print()}
         onExportPdf={() => void exportPdf()}

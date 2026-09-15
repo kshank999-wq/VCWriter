@@ -328,9 +328,10 @@ already dead code.
 Everything now reads the table. Three things beyond renaming came out of it:
 
 - **The Outliner's kinds are the format's.** `scene` and `beat` are named from
-  the table, so a textbook's tree offers **Chapter, Section, Note, Idea** — and
-  Character, Setting and Prop are **absent rather than renamed**, because a
-  professor has no use for them and the honest thing is not to offer them.
+  the table, so a textbook's tree offers **Section, Subsection, Note, Idea**
+  (Chapter and Section until §15 renamed them) — and Character, Setting and
+  Prop are **absent rather than renamed**, because a professor has no use for
+  them and the honest thing is not to offer them.
 - **A book is shown no runtime.** A page of script is a minute of screen time; a
   page of a textbook is not a minute of anything, so the chip is absent rather
   than printing a figure that means nothing.
@@ -347,6 +348,66 @@ Preferences is the one screen that cannot read the table: it belongs to the
 machine rather than to a project, so there is no format to ask. Its one label
 now says **cards**, which is what the board actually draws.
 
+## 15. Sections, subsections, and the numbers on them
+
+Ken, after using it:
+
+> It should be called sections instead of scenes everywhere and will divide
+> things into sections and so the script of view is now book of view and in
+> the outliner you can put sections and then underneath that section 1.1 1.2
+> 1.3 like a textbook or you can put whatever you'd like depending on the type
+> of book you're writing and then you can transfer that to the lane view so
+> instead of scenes and beats you're going to have sections and subsections.
+
+Three asks, and only one of them was new.
+
+**The nouns.** §1's table already carried instructional's names; they were
+*Chapter* and *Section*, borrowed from the novel, and Ken wants *Section* and
+*Subsection*. That is one edit to `nounsFor`, and because §6c pointed every
+surface at the table it reached all seventeen of them without any of them being
+touched. `manuscript` was already *Book*, so *the script view is now the book
+view* was already true — which is the point of having done §6c first.
+
+**The numbers.** `packages/domain/src/numbering.ts`. A textbook's structure *is*
+its numbering: section 1, and under it 1.1, 1.2, 1.3. **Nothing is stored and
+there is nowhere to type a figure.** Every number is counted from where the
+division falls, so dragging section four above section two makes it section two
+and everything under it renumbers, with nothing run — the fifth time this
+project has made a fact about the work a reading rather than a column (the
+chapter page's number, the figure's, the book index's pages, the Character
+Creator's colour). The test that matters is
+`expect(JSON.stringify(file)).not.toContain('"1.1"')`.
+
+`sequenceLabel` on a unit is **not** this, and the distinction is the reason the
+module exists. It is a stored string the FDX importer writes (*Sc. 4*), empty on
+every division made inside the application, and the Book view drew it as an
+editable box — so a writer could have typed *7* against the fourth section and
+the book would have printed both answers. Where a book numbers, that box is
+**gone** rather than disabled, and the number is text.
+
+**The outline numbers a tree.** The script has two levels; an outline has as
+many as somebody indents, so `outlineNumbers` gives a *path* — 1, 1.1, 1.2,
+1.2.1 — and the two agree by construction once a row is promoted, because
+promotion puts the section where the outline said. **A note is not numbered,
+and nothing under a note is either**: a thought parked between 1.1 and 1.2 is
+not section 1.2, and the section after it is still 1.2 rather than 1.3. That is
+the rail's rule (*a note gets no dot*) pointed at numbering; numbering a note
+would put it in the book's table of contents.
+
+**The one thing there is to set is *whether*, never *what*.** *File ▸ Page
+setup ▸ Numbering*, absent rather than greyed on every format that has no
+numbering, with `describeNumbering` under it saying in words that the figures
+are worked out and there is nowhere to type one — because a writer hunting for
+the box should be told there is none rather than keep hunting. Turning it off
+gives the stored label back, for a book whose structure is not an outline.
+
+Driving the real renderer caught three more §6c survivors in the Outliner's own
+bar, all of them the same failure §6c is about: **a second hand-written list of
+kinds** still offering a textbook *+ Scene*, *+ character*, *+ setting* and
+*+ prop* — the very three §6c says are absent — plus *3 scenes* in the tally and
+*what happens* as the placeholder on a section that is about refraction. The
+bar reads `kindsFor` now, which is the list.
+
 ## 7. What is deliberately not here
 
 - **`isBookFormat`.** §1.
@@ -356,6 +417,10 @@ now says **cards**, which is what the board actually draws.
   are readings of the entries, and a stored copy is the one that goes stale.
 - **A graphics table, or a figure-placement table.** An asset rides in the
   document and a figure is already an element.
+- **A stored section number, or a box to type one in.** §15. `sequenceLabel`
+  is the older, stored thing and is exactly what §15 replaces.
+- **A *renumber* command.** There is nothing to renumber: the figures are read
+  every time, so the command would have nothing to do.
 
 ## 8. What is not built
 

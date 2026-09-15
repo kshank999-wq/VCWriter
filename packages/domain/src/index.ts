@@ -23,6 +23,7 @@ export * from './entities/revision.js';
 export * from './entities/commerce.js';
 export * from './project-file.js';
 export * from './print-one-sheet.js';
+export * from './numbering.js';
 export * from './project-home.js';
 export * from './formats.js';
 export * from './projects.js';

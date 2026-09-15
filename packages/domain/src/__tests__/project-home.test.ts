@@ -147,8 +147,8 @@ describe('where you are', () => {
     // The starter unit is still there and came first, so ask for the one written in.
     const after = updateBeat(file, beat.beat.id, { title: 'Snell’s law' });
     const where = whereYouAre(after)!;
-    expect(where.says).toContain('Chapter');
-    expect(where.says).not.toContain('Scene');
+    expect(where.says).toContain('Section');
+    expect(where.says).not.toContain('Scene ');
   });
 
   it('breaks a tie by story order rather than by whatever the array held first', () => {
@@ -208,8 +208,8 @@ describe('the home reading', () => {
   it('carries the format’s own nouns, so no screen has to name a unit', () => {
     let file = createProjectFile({ title: 'A Book', format: 'instructional' });
     file = addUnit(file, { laneId: file.lanes[0]!.id, title: 'One' }).file;
-    expect(projectHome(file).nouns.unit).toBe('Chapter');
-    expect(projectHome(file).nouns.sub).toBe('Section');
+    expect(projectHome(file).nouns.unit).toBe('Section');
+    expect(projectHome(file).nouns.sub).toBe('Subsection');
   });
 
   it('gathers the fields, the poster and the unresolved counts in one reading', () => {
@@ -275,7 +275,7 @@ describe('the one-sheet', () => {
   it('reads the format’s nouns in its figures', () => {
     let file = createProjectFile({ title: 'A Book', format: 'instructional' });
     file = addUnit(file, { laneId: file.lanes[0]!.id, title: 'One' }).file;
-    expect(oneSheet(file).figures).toContain('chapters');
+    expect(oneSheet(file).figures).toContain('sections');
   });
 });
 

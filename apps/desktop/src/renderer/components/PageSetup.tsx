@@ -6,8 +6,12 @@ import {
   type ParagraphStyle,
   type ProjectFile,
   type ScriptFormat,
+  type SectionNumbering,
+  describeNumbering,
+  isInstructional,
   isProseFormat,
   nounsFor,
+  numbersDivisions,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 
@@ -88,6 +92,14 @@ interface PageSetupProps {
   onScriptFormat(next: ScriptFormat): void;
   /** Whether the acts break the script into pages of their own (§6.5). */
   onActBreaks(on: boolean): void;
+  /**
+   * Whether a book numbers its divisions 1, 1.1, 1.2 (addendum 16 §15).
+   *
+   * A document setting like the two above, and *whether* is the whole of it:
+   * the figures themselves are counted from where each division falls, so
+   * there is nothing else here to set.
+   */
+  onSectionNumbering(next: SectionNumbering): void;
   pages: number;
   onPrint(): void;
   onExportPdf(): void;
@@ -104,6 +116,7 @@ export function PageSetup({
   onParagraphStyle,
   onScriptFormat,
   onActBreaks,
+  onSectionNumbering,
   pages,
   onPrint,
   onExportPdf,
@@ -120,6 +133,9 @@ export function PageSetup({
   // The fifth copy of "chapter or scene?" this sweep found, written out inline
   // half a dozen times in this one file. All of it reads the table now (§14).
   const nouns = nounsFor(file.project.format);
+  // Only a book that is built as a numbered outline is offered it at all:
+  // absent rather than greyed, everywhere.
+  const numberable = isInstructional(file.project.format);
   const paragraphStyle = file.settings.paragraphStyle;
   const scriptFormat = file.settings.scriptFormat ?? 'us';
   const set = (patch: Partial<PrintSetup>) => onSetup({ ...setup, ...patch });
@@ -302,6 +318,25 @@ export function PageSetup({
                 Scene numbers, in the margins — a shooting script, not a draft
               </Check>
             )}
+
+            {/* Addendum 16 §15: a textbook's structure *is* its numbering,
+                so the only question is whether this book is built that way.
+                There is no field for a number here or anywhere, and the
+                sentence under the control says so rather than leaving
+                somebody to hunt for one. */}
+            {numberable ? (
+              <>
+                <h4>Numbering</h4>
+                <Check
+                  label={`${nouns.unitPlural} are numbered`}
+                  on={numbersDivisions(file)}
+                  onChange={(on) => onSectionNumbering(on ? 'decimal' : 'none')}
+                >
+                  {`${nouns.unitPlural} and ${nouns.subPlural.toLowerCase()} are numbered`}
+                </Check>
+                <p className="muted small">{describeNumbering(file)}</p>
+              </>
+            ) : null}
 
             {/* §5.3, §19: none of this is the writing. It is what the writer
                 keeps beside it, and it prints only for a copy they are

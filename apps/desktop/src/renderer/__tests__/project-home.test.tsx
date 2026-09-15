@@ -164,8 +164,8 @@ describe('what the document says about itself', () => {
   it('names the parts for the format', () => {
     const { file } = project('instructional');
     render(<Home start={file} />);
-    expect(screen.getByText('Chapters')).toBeTruthy();
     expect(screen.getByText('Sections')).toBeTruthy();
+    expect(screen.getByText('Subsections')).toBeTruthy();
     expect(screen.queryByText('Scenes')).toBeNull();
   });
 

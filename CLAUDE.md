@@ -683,8 +683,9 @@ push live; the build takes a minute or two.
   **five of them held a private copy of "chapter or scene?"** — one of which
   (`StoryView`'s) was computed and never used, dead code nobody had noticed.
   Everything reads `nounsFor` now. Three things beyond renaming came out of it:
-  the **Outliner's kinds are the format's** (a textbook's tree offers Chapter,
-  Section, Note, Idea, with Character/Setting/Prop *absent rather than renamed*),
+  the **Outliner's kinds are the format's** (a textbook's tree offers Section,
+  Subsection, Note, Idea, with Character/Setting/Prop *absent rather than
+  renamed*),
   a **book is shown no runtime** (a page of a textbook is not a minute of
   anything), and a **closed scene dialog on a book said "Scene"** because its
   fallback was the literal word. Verified by walking the whole rendered DOM of a
@@ -703,7 +704,34 @@ push live; the build takes a minute or two.
   it cannot be had and the reason is said **once at the foot**; a section with
   nothing written in it is the other way round, the button present and refusing,
   because that reason is about the section rather than the account. The model
-  call itself has still never been run live.
+  call itself has still never been run live. **§15 is sections and
+  subsections**, from Ken after using it: the nouns are now *Section* and
+  *Subsection* (they were *Chapter* and *Section*, borrowed from the novel),
+  which was one edit to `nounsFor` and reached all seventeen surfaces without
+  touching any of them — the point of having done §6c first, and *the script
+  view is now the book view* was already true because `manuscript` already said
+  *Book*. The new work is `packages/domain/src/numbering.ts`: a textbook's
+  structure **is** its numbering, so section 1 with 1.1, 1.2, 1.3 under it, and
+  **nothing is stored and there is nowhere to type a figure** — the fifth time
+  this project has made a fact about the work a reading rather than a column,
+  so dragging section four above section two renumbers everything with nothing
+  run. `sequenceLabel` is **not** this and is the reason the module exists: a
+  stored string the FDX importer writes, which the Book view drew as an
+  *editable box*, so a writer could have typed *7* against the fourth section
+  and the book would have printed both answers. Where a book numbers, the box
+  is gone rather than disabled. The outline numbers a **tree** (`outlineNumbers`
+  gives a path, 1.2.1), and **a note is not numbered and nothing under one is
+  either** — a thought parked between 1.1 and 1.2 is not section 1.2, and the
+  section after it is still 1.2: the rail's *a note gets no dot* pointed at
+  numbering. **The one thing there is to set is *whether*, never *what*** —
+  *File ▸ Page setup ▸ Numbering*, absent rather than greyed elsewhere, with
+  `describeNumbering` under it saying in words that there is nowhere to type
+  one. Driving the real renderer caught three more §6c survivors in the
+  Outliner's own bar, all the same failure: **a second hand-written list of
+  kinds** still offering a textbook *+ Scene*, *+ character*, *+ setting* and
+  *+ prop* — the three §6c says are absent — plus *3 scenes* in the tally and
+  *what happens* as the placeholder on a section about refraction. The bar
+  reads `kindsFor` now, which is the list.
   `addendum-17-project-home.md` is the project home, master spec **§4** —
   **built**, and found by surveying the master spec against the code rather than
   by anybody asking. It was the one section that existed **only as a data
