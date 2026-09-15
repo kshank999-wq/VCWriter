@@ -86,7 +86,8 @@ describe('the node beside it', () => {
     fireEvent.click(screen.getByText('Cold open'));
     expect(screen.getByLabelText("The node's name")).toHaveProperty('value', 'Cold open');
     expect(screen.getByDisplayValue('Climb')).toBeDefined();
-    expect(screen.getByText('→ The vent')).toBeDefined();
+    // Stage 5 replaced the bare destination with §15.3's three lines.
+    expect(screen.getByText('WHEN always → GO TO The vent')).toBeDefined();
   });
 
   it('adds a node and selects it, so the next thing typed lands on it', () => {

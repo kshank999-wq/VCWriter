@@ -785,7 +785,7 @@ push live; the build takes a minute or two.
   builds and escapes it from eight plain strings, and the key art does not
   travel. No migration: every field has existed since 0001.
   `addendum-18-interactive-narrative.md` is Interactive Narrative for video
-  games, from Ken's own dev spec. **Stages 0–4 built** — §10 is the build
+  games, from Ken's own dev spec. **Stages 0–5 built** — §10 is the build
   order and §13 says what each built stage does. The audit found **more than half of it already
   exists**: §2.3's central spine is the **story order**, §3's Relationship is the
   Character Creator's two-directional one, §4's edges are `story_links` (whose
@@ -904,6 +904,28 @@ push live; the build takes a minute or two.
   the node and then its destination rather than by dragging, keeping the screen's
   one rule; the inspector is deliberately modest, WHEN / DO / GO TO being stage
   5's and half a rule builder here meaning building it twice.
+  **Stage 5** is `narrative-rules.ts` + `RuleBuilder.tsx` +
+  `NarrativeWorldPanel.tsx`. **There is no code box anywhere and the sentence
+  is the interface**: a rule *is* the `ConditionGroup` and `Effect[]` stages 2
+  and 3 already read, so there is no source text, no parser and no compile
+  step — which is §9's *logic without code*, and is what lets `sayRule` write
+  the rule back out in English (a sentence can only be written back out of
+  something structured to begin with). **The builder never says whether a rule
+  is true**, the obvious feature and a lie: at authoring time there is no state,
+  because the player arrives with whatever their path gave them — what is
+  statically true is the validator's, what is true *now* is stage 7's. Three
+  smaller ones: the **value control is read off the definition** (a flag offers
+  true and false, so `is mabye` cannot be typed), **effects are ordered and the
+  order is the rule** (stage 2 applies them in turn, so *give a key then take a
+  key* is not the reverse — hence the arrows and the word *then*), and changing
+  an effect's kind **clears its target** when the kind changes what a target is.
+  `NarrativeWorldPanel` is the half that made the stage possible at all: every
+  condition asks about a state or a resource and **nothing could define one**
+  until now. Driving the real renderer caught three layout faults tests cannot
+  see — the inspector at 320px **pushed itself off the edge of the window** (it
+  is 372 and rule rows wrap), and `.narrmap-choices li` was still `display:
+  flex` from stage 4, which laid the rule builder out *beside* its own sentence
+  in a column two words wide.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

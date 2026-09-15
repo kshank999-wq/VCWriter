@@ -6,7 +6,7 @@ There's a few narrative softwares out there. But I feel like they're very
 limited."** That sentence is the spec this addendum actually answers; §9 below
 says what the limitation is and what we do instead.*
 
-**Status: stages 0–4 built.** §10 is the build order; §13 says what each
+**Status: stages 0–5 built.** §10 is the build order; §13 says what each
 built stage does.
 
 ---
@@ -264,7 +264,7 @@ Each stage is usable on its own; none needs the next.
 3. **Validation.** ✅ §12, whole, off the same reading. §8.
 4. **The canvas.** ✅ The second map: derived layout, the spine as the primary
    path, convergence, condition badges. §1, §9.
-5. **The rule builder and the inspector.** WHEN / DO / GO TO. §15.2, §15.3.
+5. **The rule builder and the inspector.** ✅ WHEN / DO / GO TO. §15.2, §15.3.
 6. **Progression.** §7's definitions and §8's resource-to-story edges — mostly
    definitions, because the edges are edges.
 7. **The simulator.** §13, on stage 2's function.
@@ -529,3 +529,56 @@ by dragging one, which keeps the one rule of the screen: nothing here is
 dragged. The inspector beside it is deliberately modest — name, kind, note, the
 three flags, the choices and what the checks say — because WHEN / DO / GO TO is
 stage 5's, and putting half a rule builder here would mean building it twice.
+
+### Stage 5 — the rule builder
+
+`narrative-rules.ts`, `RuleBuilder.tsx`, `NarrativeWorldPanel.tsx`. §15.3's
+readable designer language, and two decisions carry it.
+
+**There is no code box anywhere, and the sentence is the interface.** Twine has
+macros and Ink has a language, which means a designer writes something a parser
+must accept before the tool can say anything at all about it. Here a rule *is*
+the `ConditionGroup` and the `Effect[]` that stages 2 and 3 already read — no
+source text, no parser, no compile step, and therefore no way to build a rule
+the game will not run, and no way for the validator to be looking at something
+other than what the designer typed. It is §9's *logic without code* column, and
+it is also what lets `sayRule` exist: a sentence can only be written *back* out
+of a rule that was structured to begin with. A test hands a rule built with the
+builder's own functions straight to stage 2, because the day that needs a
+conversion step is the day this module has grown the thing §9 says the field's
+tools have.
+
+**The builder never says whether a rule is true.** It is the obvious feature and
+it would be a lie: at authoring time there is no state, because the player
+arrives carrying whatever the path they took gave them. What is *statically*
+true is the validator's and appears on the node as a finding; what is true
+**now** is stage 7's simulator, where somebody has walked there. A test asserts
+the absence.
+
+Three smaller things the shape decided rather than the screen:
+
+- **The value control is read off the definition.** A flag offers true and
+  false, an enum offers what somebody listed, everything else is a box — so
+  `is mabye` on a flag is not a bug report waiting to happen.
+- **Effects are stacked in order and the order is the rule**, because stage 2
+  applies them one after another: *give a key then take a key* is not the other
+  way round. That is why they can be moved, and why the sentence says *then*.
+- **Changing an effect's kind clears its target** when the kind changes what a
+  target *is*: an effect aimed at the wrong list is worse than one aimed at
+  nothing.
+
+`NarrativeWorldPanel` is the other half, and the reason the stage needed it:
+every condition asks about a state or a resource, and **until this screen there
+was no way to define one**, so the builder would have opened with nothing to
+ask about. It sits beside the board rather than in a dialog, because naming a
+state is something a designer does in the middle of writing the rule that needs
+it. Renaming reaches every rule (§6, and nothing on this screen does it —
+conditions hold the id) and deleting takes the rules that mention it, which the
+button says out loud.
+
+Three things came out of driving the real renderer again, all of them layout
+and all of them invisible to the tests: the inspector was **372px because the
+WHEN / DO rows at 320 pushed the whole panel off the edge of the window**; a
+rule row **wraps** rather than overflowing; and `.narrmap-choices li` was
+`display: flex` from stage 4, when a choice was one line — which laid the rule
+builder out *beside* its own sentence in a column two words wide.

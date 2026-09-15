@@ -12848,7 +12848,10 @@ dialog.chapter-page-dialog {
 }
 
 .narrmap-side {
-  flex: 0 0 320px;
+  /* Wide enough for a rule row without the panel scrolling sideways — the
+     first build was 320 and the WHEN / DO controls pushed the whole inspector
+     off the edge of the window. */
+  flex: 0 0 372px;
   overflow: auto;
   padding: 12px 14px 20px;
   border-left: 1px solid var(--border);
@@ -12905,11 +12908,12 @@ dialog.chapter-page-dialog {
   padding: 0;
 }
 
+/* A choice is a row, a sentence and (when it is open) its rule — stacked.
+   This was `display: flex` when a choice was one line, which laid the rule
+   builder out *beside* the sentence in a column two words wide. */
 .narrmap-choices li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 5px;
+  display: block;
+  margin-bottom: 10px;
 }
 
 .narrmap-choices input {
@@ -12943,4 +12947,158 @@ dialog.chapter-page-dialog {
 
 .narrmap-remove {
   margin-top: 18px;
+}
+
+/* ---------------------------------------------- the rule builder (stage 5)
+   WHEN / DO / GO TO. Rows of controls with the sentence they build read back
+   underneath, because a screen of dropdowns has to be assembled in somebody's
+   head before it means anything. */
+
+.rule-group {
+  border-left: 2px solid var(--border);
+  padding-left: 8px;
+  margin-bottom: 6px;
+}
+
+.rule-group.is-nested {
+  margin: 6px 0 6px 10px;
+  border-left-color: var(--gold-deep);
+}
+
+.rule-group-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.rule-conditions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rule-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+/* Four controls in a column this narrow wrap onto two lines rather than
+   pushing the panel out of the window. */
+.rule-row select,
+.rule-row input {
+  min-width: 0;
+  flex: 1 1 92px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 3px 5px;
+}
+
+.rule-row button {
+  flex: 0 0 auto;
+}
+
+/* The rule, in English, under the controls that built it. */
+.rule-said {
+  margin: 2px 0 8px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.rule-effects ol {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+  counter-reset: effect;
+}
+
+.rule-effects select {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 3px 5px;
+}
+
+.rule-open {
+  margin: 2px 0 10px 6px;
+  padding-left: 8px;
+  border-left: 2px solid var(--gold-deep);
+}
+
+.rule-open h4 {
+  margin: 8px 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.rule-open > select {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 3px 5px;
+  width: 100%;
+}
+
+/* What the player carries: beside the board, never over it. */
+.narrmap-world {
+  flex: 0 0 320px;
+  overflow: auto;
+  padding: 10px 12px 20px;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.narrmap-world header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.narrmap-world h3 {
+  margin: 4px 0 8px;
+  font-size: 13px;
+}
+
+.narrmap-world h4 {
+  margin: 14px 0 4px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.world-list {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+}
+
+.world-list li {
+  margin-bottom: 6px;
+}
+
+.world-choices {
+  width: 100%;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 3px 5px;
 }

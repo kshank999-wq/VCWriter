@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PopOutButton } from './PopOutButton';
+import { ConditionGroupEditor, EffectList, RuleSentence } from './RuleBuilder';
+import { NarrativeWorldPanel } from './NarrativeWorldPanel';
 import {
   addChoice,
   addElement,
@@ -9,11 +11,14 @@ import {
   findElement,
   findingsAt,
   narrativeMap,
+  sayRuleLine,
   removeChoice,
   removeElement,
   updateChoice,
   updateElement,
   wouldBeEntry,
+  type ConditionGroup,
+  type Effect,
   type GraphLink,
   type GraphNode,
   type NarrativeElementId,
@@ -119,6 +124,9 @@ export function NarrativeMapWindow({
   const [showStranded, setShowStranded] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [joining, setJoining] = useState<NarrativeElementId | null>(null);
+  const [worldOpen, setWorldOpen] = useState(false);
+  /** Which choice has its rule open. One at a time: three WHENs is a wall. */
+  const [openRule, setOpenRule] = useState<string | null>(null);
 
   const map = useMemo(
     () =>
@@ -190,6 +198,15 @@ export function NarrativeMapWindow({
 
         <button type="button" className="tool" onClick={add} title="Add a node to the graph">
           + Node
+        </button>
+        <button
+          type="button"
+          className={worldOpen ? 'tool on' : 'tool'}
+          aria-pressed={worldOpen}
+          title="The states and resources every rule asks about"
+          onClick={() => setWorldOpen(!worldOpen)}
+        >
+          ⚙ States &amp; resources
         </button>
         <label className="sculpt-view">
           <span className="muted small">Zoom</span>
@@ -268,6 +285,13 @@ export function NarrativeMapWindow({
       </div>
 
       <div className="narrmap-body">
+        {/* The world opens beside the board rather than over it: a designer
+            naming a state is in the middle of writing the rule that needs it,
+            and a dialog would hide the rule. */}
+        {worldOpen ? (
+          <NarrativeWorldPanel file={file} onUpdate={onUpdate} onClose={() => setWorldOpen(false)} />
+        ) : null}
+
         <div className="narrmap-stage" ref={stage}>
           {map.nodes.length === 0 ? (
             <p className="muted empty-state">{describeGraph(file, map)}</p>
@@ -362,31 +386,111 @@ export function NarrativeMapWindow({
                 </label>
               </div>
 
+              {/* The node's own rule: what must be true to be here, and what
+                  arriving changes. There is no GO TO, because it *is* the
+                  destination. */}
+              <h3>Being here</h3>
+              <ConditionGroupEditor
+                file={file}
+                group={selected.conditions}
+                onChange={(next: ConditionGroup) =>
+                  onUpdate((current) => updateElement(current, selected.id, { conditions: next }))
+                }
+              />
+              <RuleSentence file={file} group={selected.conditions} empty="Anybody who gets here may be here." />
+
+              <h3>On arrival</h3>
+              <EffectList
+                file={file}
+                effects={selected.effects}
+                onChange={(next: Effect[]) =>
+                  onUpdate((current) => updateElement(current, selected.id, { effects: next }))
+                }
+              />
+
               <h3>Choices</h3>
               {rows.length === 0 ? <p className="muted small">Nothing is offered here yet.</p> : null}
               <ul className="narrmap-choices">
-                {rows.map((row) => (
-                  <li key={row.choice.id as string}>
-                    <input
-                      value={row.choice.name}
-                      placeholder="What the player does"
-                      aria-label="What the choice is called"
-                      onChange={(event) => onUpdate((current) => updateChoice(current, row.choice.id, { name: event.target.value }))}
-                    />
-                    <span className="muted small">
-                      {row.to ? `→ ${row.to.name || 'an unnamed node'}` : 'stays here'}
-                      {row.gated ? ' · gated' : ''}
-                    </span>
-                    <button
-                      type="button"
-                      className="ghost small"
-                      aria-label={`Remove ${row.choice.name || 'the choice'}`}
-                      onClick={() => onUpdate((current) => removeChoice(current, row.choice.id))}
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
+                {rows.map((row) => {
+                  const id = row.choice.id as string;
+                  const open = openRule === id;
+                  return (
+                    <li key={id}>
+                      <div className="rule-row">
+                        <input
+                          value={row.choice.name}
+                          placeholder="What the player does"
+                          aria-label="What the choice is called"
+                          onChange={(event) =>
+                            onUpdate((current) => updateChoice(current, row.choice.id, { name: event.target.value }))
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="ghost small"
+                          aria-expanded={open}
+                          aria-label={`The rule for ${row.choice.name || 'this choice'}`}
+                          onClick={() => setOpenRule(open ? null : id)}
+                        >
+                          {open ? '▴' : '▾'}
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost small"
+                          aria-label={`Remove ${row.choice.name || 'the choice'}`}
+                          onClick={() => onUpdate((current) => removeChoice(current, row.choice.id))}
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* §15.3's three lines, said back off the rule itself —
+                          so a screen of choices can be read without opening
+                          each one. */}
+                      <p className="rule-said">{sayRuleLine(file, row.choice)}</p>
+
+                      {open ? (
+                        <div className="rule-open">
+                          <h4>WHEN</h4>
+                          <ConditionGroupEditor
+                            file={file}
+                            group={row.choice.conditions}
+                            onChange={(next: ConditionGroup) =>
+                              onUpdate((current) => updateChoice(current, row.choice.id, { conditions: next }))
+                            }
+                          />
+                          <h4>DO</h4>
+                          <EffectList
+                            file={file}
+                            effects={row.choice.effects}
+                            onChange={(next: Effect[]) =>
+                              onUpdate((current) => updateChoice(current, row.choice.id, { effects: next }))
+                            }
+                          />
+                          <h4>GO TO</h4>
+                          <select
+                            value={(row.choice.toElementId as string) ?? ''}
+                            aria-label="Where this choice leads"
+                            onChange={(event) =>
+                              onUpdate((current) =>
+                                updateChoice(current, row.choice.id, {
+                                  toElementId: (event.target.value || null) as never,
+                                }),
+                              )
+                            }
+                          >
+                            <option value="">stay here</option>
+                            {map.nodes.map((node) => (
+                              <option key={node.element.id as string} value={node.element.id as string}>
+                                {node.name || 'Untitled'}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
               <div className="narrmap-actions">
                 <button
