@@ -81,13 +81,23 @@ jobs:
             echo "::error::CSC_LINK does not decode as base64. Recreate it from the .p12 with [Convert]::ToBase64String."
             exit 1
           fi
+          # Two bundles built from the same certificate are the same size, so
+          # bytes alone cannot say whether CSC_LINK is the file on the operator's
+          # disk or the one before it. The digest can, and it is safe to print:
+          # it identifies the bundle without revealing anything inside it. Ken
+          # compares it with `(Get-FileHash vcwriter-mac.p12 -Algorithm
+          # SHA256).Hash`, and a mismatch means the secret was never updated —
+          # which is not the same failure as a wrong password and must not be
+          # diagnosed as one.
           echo "Certificate bundle: $(wc -c < "$bundle" | tr -d ' ') bytes"
+          echo "Certificate bundle SHA-256: $(shasum -a 256 "$bundle" | cut -d' ' -f1)"
           if [ -z "$MAC_CERTIFICATE_PASSWORD" ]; then
             echo "::error::CSC_KEY_PASSWORD is empty."
             exit 1
           fi
+          echo "CSC_KEY_PASSWORD: ${#MAC_CERTIFICATE_PASSWORD} characters"
           if ! openssl pkcs12 -in "$bundle" -info -noout -passin env:MAC_CERTIFICATE_PASSWORD 2>&1 | sed 's/^/  /'; then
-            echo "::error::OpenSSL cannot open the CSC_LINK bundle with CSC_KEY_PASSWORD (its output is above). Either the password secret differs from the export password, or the bundle uses an encryption this runner's OpenSSL does not know; see docs/code-signing.md."
+            echo "::error::OpenSSL cannot open the CSC_LINK bundle with CSC_KEY_PASSWORD (its output is above). Check the digest above against the .p12 on disk before suspecting the password: if it differs, CSC_LINK is a stale bundle. If it matches, the password secret differs from the export password — see docs/code-signing.md."
             exit 1
           fi
           echo "OpenSSL opens the bundle with CSC_KEY_PASSWORD."
@@ -97,7 +107,7 @@ jobs:
             echo "macOS imports the bundle. Identities:"
             security find-identity -v -p codesigning "$keychain" | sed 's/^/  /'
           else
-            echo "::error::OpenSSL opens the bundle but macOS cannot import it: re-export the .p12 with 'openssl pkcs12 -export -legacy' as docs/code-signing.md describes, and update CSC_LINK."
+            echo "::error::OpenSSL opens the bundle but macOS cannot import it: re-export the .p12 with '-certpbe PBE-SHA1-3DES -keypbe PBE-SHA1-3DES -macalg sha1' as docs/code-signing.md describes, and update CSC_LINK. (Not -legacy: Git for Windows ships no legacy provider.)"
             exit 1
           fi
           security delete-keychain "$keychain"
