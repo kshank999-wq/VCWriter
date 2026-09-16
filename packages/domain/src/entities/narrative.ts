@@ -120,6 +120,35 @@ export const resourceDefinitionSchema = z.object({
    * list where it cannot invent one.
    */
   feeds: z.array(id<ResourceDefinitionId>()).default([]),
+  /**
+   * Where it sits in the progression the designer intends (§7), or 0 for
+   * unranked.
+   *
+   * One of the **three** things in §7's eight bullets that a reading cannot
+   * work out. An ability granted in the first hour can be a late-tier ability
+   * and an early-tier one can be handed over last, so the graph cannot tell
+   * where something belongs in a progression — only where it happens to be
+   * given out. Everything else §7 asks for (acquisition points, sources,
+   * sinks, use points, prerequisites, thresholds) is read off the graph in
+   * `narrative-economy.ts`.
+   */
+  tier: z.number().int().min(0).default(0),
+  /**
+   * The one it replaces, for §7's *upgrades* and *alternate variants*.
+   *
+   * The second unreadable thing: two rifles both granted somewhere, and
+   * nothing in the graph says one supersedes the other.
+   */
+  upgradeOf: id<ResourceDefinitionId>().nullable().default(null),
+  /**
+   * §7's *scarcity target*, in the designer's own words — *about 30 rounds by
+   * the reactor*.
+   *
+   * The third, and an intention rather than a fact: what the player **should**
+   * have is not something any count of grants can discover, and nothing
+   * evaluates it.
+   */
+  scarcityTarget: z.string().default(''),
   ...timestamps,
 });
 export type ResourceDefinition = z.infer<typeof resourceDefinitionSchema>;

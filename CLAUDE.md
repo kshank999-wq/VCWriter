@@ -785,7 +785,7 @@ push live; the build takes a minute or two.
   builds and escapes it from eight plain strings, and the key art does not
   travel. No migration: every field has existed since 0001.
   `addendum-18-interactive-narrative.md` is Interactive Narrative for video
-  games, from Ken's own dev spec. **Stages 0–5 built** — §10 is the build
+  games, from Ken's own dev spec. **Stages 0–6 built** — §10 is the build
   order and §13 says what each built stage does. The audit found **more than half of it already
   exists**: §2.3's central spine is the **story order**, §3's Relationship is the
   Character Creator's two-directional one, §4's edges are `story_links` (whose
@@ -926,6 +926,27 @@ push live; the build takes a minute or two.
   is 372 and rule rows wrap), and `.narrmap-choices li` was still `display:
   flex` from stage 4, which laid the rule builder out *beside* its own sentence
   in a column two words wide.
+  **Stage 6** is `narrative-economy.ts`, and the audit paid a **sixth** time:
+  **§8 was already built**. *Low ammunition makes an assault unavailable* is a
+  **condition whose subject is a resource**, which stage 1 built and stages 2,
+  3 and 5 already evaluate, check and edit — there is no resource edge to add,
+  a resource never having been a second kind of thing, and a test asserts no
+  `resourceEdges` collection exists. What §8 needed was a **reading**: a
+  designer could write *needs a keycard* in four places with nowhere to see
+  that one place gives one, so `resourceEconomy` answers sources, sinks, what
+  asks about it and whether it can be had at all — stored nowhere, so cutting
+  the choice that grants it turns it unobtainable with nothing run. **§7 asks
+  for eight tables of fields and nearly all of them are readings**; the three
+  that are not are the only fields added — **`tier`** (an ability granted in
+  hour one can be a late-tier ability, so the graph knows where it is handed
+  out and not where it belongs), **`upgradeOf`** (nothing in a graph says one
+  rifle supersedes another) and **`scarcityTarget`** (an intention nothing
+  evaluates). *Optional or required* is read from whether something
+  **mandatory** asks for it, `mandatory`'s third use. §9's overlay **dims and
+  never hides** — the Sculptor's rule pointed at a graph, where a hole punched
+  in the picture is a different game. Deliberately absent: a **duration or
+  stacking rule for a buff**, there being no clock to evaluate one, which is
+  the `timing` warning kept.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

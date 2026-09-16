@@ -1,6 +1,10 @@
 import {
   addResource,
   addState,
+  describeEconomy,
+  describeProgression,
+  progressionTiers,
+  resourceEconomy,
   removeResource,
   removeState,
   resourcesOf,
@@ -8,6 +12,7 @@ import {
   updateResource,
   updateState,
   type ProjectFile,
+  type ResourceDefinitionId,
   type ResourceKind,
   type StateKind,
 } from '@vcwriter/domain';
@@ -62,13 +67,19 @@ export function NarrativeWorldPanel({
   file,
   onUpdate,
   onClose,
+  overlayOn,
+  onOverlay,
 }: {
   file: ProjectFile;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   onClose(): void;
+  /** Which subject the map is lighting, if any (§9). */
+  overlayOn?: string | null;
+  onOverlay?(subjectId: string | null): void;
 }) {
   const states = statesOf(file);
   const resources = resourcesOf(file);
+  const tiers = progressionTiers(file);
 
   return (
     <aside className="narrmap-world" aria-label="States and resources">
@@ -150,9 +161,17 @@ export function NarrativeWorldPanel({
       </button>
 
       <h4>Resources</h4>
-      <p className="muted small">Anything the player has some of. A capacity of none means no ceiling.</p>
+      <p className="muted small">{describeProgression(file)}</p>
+      {/* Grouped by §7's tier, which is the one ordering the graph cannot
+          give — and the heading is absent where nothing is ranked, because a
+          single *Unranked* over the whole list says nothing. */}
+      {progressionTiers(file).map((row) => (
+      <div key={row.tier}>
+      {tiers.length > 1 ? (
+        <p className="world-tier-head muted small">{row.tier === 0 ? 'Unranked' : `Tier ${row.tier}`}</p>
+      ) : null}
       <ul className="world-list">
-        {resources.map((resource) => (
+        {row.resources.map((resource) => (
           <li key={resource.id as string}>
             <div className="rule-row">
               <input
@@ -221,12 +240,114 @@ export function NarrativeWorldPanel({
                   ))}
               </select>
             ) : null}
+
+            {/* §7's three fields that no reading can work out, and nothing
+                else: everything the spec asks for about where a resource is
+                acquired, spent or needed is read from the graph below. */}
+            <div className="rule-row">
+              <label className="world-tier">
+                <span className="muted small">Tier</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={resource.tier}
+                  aria-label={`Progression tier for ${resource.name || 'this resource'}`}
+                  onChange={(event) =>
+                    onUpdate((current) =>
+                      updateResource(current, resource.id, { tier: Math.max(0, Number(event.target.value) || 0) }),
+                    )
+                  }
+                />
+              </label>
+              <input
+                value={resource.scarcityTarget}
+                placeholder="about 30 by the reactor"
+                aria-label={`Scarcity target for ${resource.name || 'this resource'}`}
+                onChange={(event) =>
+                  onUpdate((current) => updateResource(current, resource.id, { scarcityTarget: event.target.value }))
+                }
+              />
+              <select
+                value={(resource.upgradeOf as string) ?? ''}
+                aria-label={`What ${resource.name || 'this resource'} replaces`}
+                onChange={(event) =>
+                  onUpdate((current) =>
+                    updateResource(current, resource.id, {
+                      upgradeOf: (event.target.value || null) as ResourceDefinitionId | null,
+                    }),
+                  )
+                }
+              >
+                <option value="">replaces nothing</option>
+                {resources
+                  .filter((one) => one.id !== resource.id)
+                  .map((one) => (
+                    <option key={one.id as string} value={one.id as string}>
+                      replaces {one.name || 'an unnamed resource'}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <Economy file={file} resourceId={resource.id} overlayOn={overlayOn} onOverlay={onOverlay} />
           </li>
         ))}
       </ul>
+      </div>
+      ))}
       <button type="button" className="tool" onClick={() => onUpdate((current) => addResource(current).file)}>
         + Resource
       </button>
     </aside>
+  );
+}
+
+/**
+ * Where a resource comes from, where it goes, and what needs it (§7, §8).
+ *
+ * **Read every time and stored nowhere**: move the choice that grants the
+ * keycard and its acquisition point moves with it. It is the answer to the
+ * question a designer could not ask before — *I have written "needs a keycard"
+ * in four places; is there anywhere that gives one?*
+ */
+function Economy({
+  file,
+  resourceId,
+  overlayOn,
+  onOverlay,
+}: {
+  file: ProjectFile;
+  resourceId: ResourceDefinitionId;
+  overlayOn?: string | null;
+  onOverlay?(subjectId: string | null): void;
+}) {
+  const economy = resourceEconomy(file, resourceId);
+  if (!economy) return null;
+  const lit = overlayOn === (resourceId as string);
+
+  const where = (rows: { element: { name: string }; choice: { name: string } | null; amount?: string }[]) =>
+    rows
+      .map((one) => `${one.choice?.name || one.element.name || 'an unnamed node'}${one.amount ? ` (${one.amount})` : ''}`)
+      .join(', ');
+
+  return (
+    <div className="world-economy">
+      <p className="muted small">{describeEconomy(economy)}</p>
+      {economy.sources.length > 0 ? <p className="small">From: {where(economy.sources)}</p> : null}
+      {economy.sinks.length > 0 ? <p className="small">Spent at: {where(economy.sinks)}</p> : null}
+      {economy.gates.length > 0 ? (
+        <p className="small">Needed by: {economy.gates.map((one) => one.element.name || 'an unnamed node').join(', ')}</p>
+      ) : null}
+      {onOverlay ? (
+        <button
+          type="button"
+          className={lit ? 'ghost small on' : 'ghost small'}
+          aria-pressed={lit}
+          onClick={() => onOverlay(lit ? null : (resourceId as string))}
+        >
+          {lit ? 'Stop lighting it on the map' : 'Light it on the map'}
+        </button>
+      ) : null}
+    </div>
   );
 }

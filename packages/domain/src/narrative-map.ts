@@ -1,6 +1,7 @@
 import { choicesAt, choicesOf, elementsOf, entryPoints, findElement, isEmptyGroup } from './narrative.js';
 import { depths, reachable } from './narrative-eval.js';
 import { findingsAt } from './narrative-check.js';
+import { nodesTouching } from './narrative-economy.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import type { Choice, NarrativeElement, NarrativeKind } from './entities/narrative.js';
 import type { NarrativeElementId } from './ids.js';
@@ -56,6 +57,13 @@ export interface GraphNode {
   changes: boolean;
   /** How many of stage 3's findings name this node, its choices or its rules. */
   findings: number;
+  /**
+   * Off the overlay: §9's *optional overlays for resources*, and the Sculptor's
+   * rule pointed at a graph — **an overlay dims, it never hides**. A tree can
+   * hide a depth because what is under it goes too; a graph with holes punched
+   * in it is a picture of a different game.
+   */
+  dim: boolean;
 }
 
 export interface GraphLink {
@@ -91,6 +99,11 @@ export interface GraphFilter {
   kinds?: readonly NarrativeKind[];
   /** Whether to place nodes nothing reaches. True by default — see below. */
   includeStranded?: boolean;
+  /**
+   * Light the nodes where one state or resource matters, and dim the rest
+   * (§9). A bare id, because the question is the same for either.
+   */
+  touching?: string | null;
 }
 
 // -------------------------------------------------------------- the reading
@@ -188,6 +201,7 @@ export const narrativeMap = (file: ProjectFile, filter: GraphFilter = {}): Narra
   const around = filter.focusId ? near(file, filter.focusId, Math.max(1, filter.within ?? 1)) : null;
   const search = filter.search ?? '';
   const includeStranded = filter.includeStranded ?? true;
+  const lit = filter.touching ? nodesTouching(file, filter.touching) : null;
 
   const shown = elementsOf(file).filter((one) => {
     if (kinds && !kinds.has(one.kind)) return false;
@@ -256,6 +270,7 @@ export const narrativeMap = (file: ProjectFile, filter: GraphFilter = {}): Narra
         gated: !isEmptyGroup(element.conditions),
         changes: element.effects.length > 0,
         findings: findingsAt(file, element.id).length,
+        dim: lit !== null && !lit.has(element.id as string),
       });
     }
   }

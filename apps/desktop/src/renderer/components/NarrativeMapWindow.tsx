@@ -125,6 +125,8 @@ export function NarrativeMapWindow({
   const [zoom, setZoom] = useState(1);
   const [joining, setJoining] = useState<NarrativeElementId | null>(null);
   const [worldOpen, setWorldOpen] = useState(false);
+  /** §9's overlay: which state or resource the board is lighting. */
+  const [overlay, setOverlay] = useState<string | null>(null);
   /** Which choice has its rule open. One at a time: three WHENs is a wall. */
   const [openRule, setOpenRule] = useState<string | null>(null);
 
@@ -136,8 +138,9 @@ export function NarrativeMapWindow({
         focusId: focusOn ? selectedId : null,
         within,
         includeStranded: showStranded,
+        touching: overlay,
       }),
-    [file, search, kind, focusOn, selectedId, within, showStranded],
+    [file, search, kind, focusOn, selectedId, within, showStranded, overlay],
   );
 
   /**
@@ -289,7 +292,13 @@ export function NarrativeMapWindow({
             naming a state is in the middle of writing the rule that needs it,
             and a dialog would hide the rule. */}
         {worldOpen ? (
-          <NarrativeWorldPanel file={file} onUpdate={onUpdate} onClose={() => setWorldOpen(false)} />
+          <NarrativeWorldPanel
+            file={file}
+            onUpdate={onUpdate}
+            onClose={() => setWorldOpen(false)}
+            overlayOn={overlay}
+            onOverlay={setOverlay}
+          />
         ) : null}
 
         <div className="narrmap-stage" ref={stage}>
@@ -582,6 +591,8 @@ function NodeCard({
   if (node.onSpine) classes.push('on-spine');
   if (node.stranded) classes.push('stranded');
   if (node.kind === 'ending' || node.element.endsHere) classes.push('ends');
+  // An overlay dims; it never hides (addendum 18 §9).
+  if (node.dim) classes.push('dim');
   if (joining) classes.push('joinable');
 
   return (

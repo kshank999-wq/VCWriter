@@ -6,7 +6,7 @@ There's a few narrative softwares out there. But I feel like they're very
 limited."** That sentence is the spec this addendum actually answers; §9 below
 says what the limitation is and what we do instead.*
 
-**Status: stages 0–5 built.** §10 is the build order; §13 says what each
+**Status: stages 0–6 built.** §10 is the build order; §13 says what each
 built stage does.
 
 ---
@@ -265,8 +265,8 @@ Each stage is usable on its own; none needs the next.
 4. **The canvas.** ✅ The second map: derived layout, the spine as the primary
    path, convergence, condition badges. §1, §9.
 5. **The rule builder and the inspector.** ✅ WHEN / DO / GO TO. §15.2, §15.3.
-6. **Progression.** §7's definitions and §8's resource-to-story edges — mostly
-   definitions, because the edges are edges.
+6. **Progression.** ✅ §7's definitions and §8's resource-to-story edges —
+   mostly definitions, because the edges are edges.
 7. **The simulator.** §13, on stage 2's function.
 8. **Endings and the matrix.** §11.
 9. **Export and reports.** §17, §18.
@@ -582,3 +582,55 @@ WHEN / DO rows at 320 pushed the whole panel off the edge of the window**; a
 rule row **wraps** rather than overflowing; and `.narrmap-choices li` was
 `display: flex` from stage 4, when a choice was one line — which laid the rule
 builder out *beside* its own sentence in a column two words wide.
+
+### Stage 6 — progression
+
+`narrative-economy.ts`, plus the economy under each resource in the world panel
+and §9's overlay on the board.
+
+**The audit paid a sixth time: §8 was already built.** It asks that *gameplay
+resources participate in the same relationship graph as narrative choices* — a
+weapon unlocking a tactical path, low ammunition making an assault unavailable,
+a clue exposing a dialogue choice, spent currency altering a later mission.
+Every one of those is a **condition whose subject is a resource**, which stage 1
+built and stages 2, 3 and 5 already evaluate, check and edit. There is no
+resource edge to add, because a resource was never a second kind of thing: it
+is one of the two subjects a rule can be about. A test asserts the absence of
+any `resourceEdges` collection, because the day one appears is the day the
+module has two ways to say the same thing.
+
+What §8 actually needed was a **reading**. A designer could write *needs a
+keycard* in four places and had nowhere to see that the keycard is given out in
+one place and spent in two, so `resourceEconomy` answers it: sources, sinks,
+the rules that ask about it, what feeds it, what it replaces, whether the player
+can get one at all. Nothing is stored and there is no *recalculate* — cut the
+choice that grants the keycard and it reads as unobtainable the next time
+anything asks.
+
+**§7 asks for eight tables of fields and nearly all of them are readings.**
+*Acquisition points*, *sources*, *sinks*, *use points*, *prerequisites*,
+*thresholds*, *optional or required* — all of them are questions about where in
+the graph a thing is granted, consumed or asked about, so storing one would be
+storing a second answer that goes stale the moment a choice moves. Three are
+**not** readings, and are the only fields the stage added:
+
+- **`tier`** — where a designer intends something to sit in a progression. An
+  ability granted in the first hour can be a late-tier ability, so the graph
+  knows where it is handed out and not where it belongs.
+- **`upgradeOf`** — that this rifle replaces that one. Two resources both
+  granted somewhere, and nothing in the graph says one supersedes the other.
+- **`scarcityTarget`** — *about 30 rounds by the reactor*. An intention, and
+  nothing evaluates it.
+
+Two smaller decisions. *Optional or required* for a clue is read from whether
+anything **mandatory** asks for it, which is `mandatory` earning its third use.
+And **an overlay dims, it never hides**: the Sculptor's *depth hides,
+everything else dims* pointed at a graph, where hiding is worse still — a tree
+can hide a depth because what hangs off it goes too, and a graph with holes
+punched in it is a picture of a different game.
+
+What is deliberately **not** here: a **duration or stacking rule for a buff**
+(§7's power-ups). There is no clock in this module and nothing would evaluate
+one, so a `duration` field would be exactly the kind of field the `timing` note
+in stage 1 warns about — one that looks as though it schedules something and
+does not.

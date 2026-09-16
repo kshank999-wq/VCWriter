@@ -13102,3 +13102,40 @@ dialog.chapter-page-dialog {
   border-radius: 2px;
   padding: 3px 5px;
 }
+
+/* ------------------------------------------------- progression (stage 6)
+   The economy under each resource, read from the graph every time. */
+
+.world-economy {
+  margin: 2px 0 8px 6px;
+  padding-left: 8px;
+  border-left: 2px solid var(--border);
+}
+
+.world-economy p {
+  margin: 0 0 3px;
+}
+
+.world-tier {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.world-tier input {
+  width: 54px;
+}
+
+/* §9's overlay dims, it never hides: a graph with holes punched in it is a
+   picture of a different game. */
+.narrmap-card.dim {
+  opacity: 0.28;
+}
+
+.world-tier-head {
+  margin: 10px 0 2px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
