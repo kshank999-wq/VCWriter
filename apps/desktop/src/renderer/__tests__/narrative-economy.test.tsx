@@ -69,7 +69,7 @@ describe('the economy under a resource', () => {
   it('says where it comes from, read off the graph', () => {
     render(<Harness initial={keycardGame()} />);
     fireEvent.click(screen.getByTitle('The states and resources every rule asks about'));
-    expect(screen.getByText('1 source · 1 rule ask about it.')).toBeDefined();
+    expect(screen.getByText('1 source · 1 rule asks about it.')).toBeDefined();
     expect(screen.getByText('From: Take it (1)')).toBeDefined();
   });
 

@@ -13250,3 +13250,95 @@ dialog.chapter-page-dialog {
   stroke: var(--green);
   stroke-width: 2.5;
 }
+
+/* ------------------------------------------- endings and the matrix (stage 8) */
+
+.narrmap-endings {
+  flex: 0 0 380px;
+  overflow: auto;
+  padding: 10px 12px 20px;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.narrmap-endings header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.narrmap-endings h3 {
+  margin: 4px 0 8px;
+  font-size: 13px;
+}
+
+.narrmap-endings h4 {
+  margin: 14px 0 4px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ending-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.ending-matrix th,
+.ending-matrix td {
+  padding: 4px 5px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ending-matrix thead th {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ending-matrix tbody th {
+  color: var(--muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* A requirement and a weight stay apart at a glance — §11's own sentence. */
+.ending-matrix td.requires {
+  color: var(--gold);
+}
+
+.ending-matrix td.weighs {
+  color: var(--green);
+}
+
+.ending-impossible {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--red);
+}
+
+.rule-contributors .rule-conditions li {
+  margin-bottom: 8px;
+}
+
+.rule-weight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0 0 4px;
+}
+
+.rule-weight input {
+  width: 64px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 3px 5px;
+}

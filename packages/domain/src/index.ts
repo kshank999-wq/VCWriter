@@ -33,6 +33,7 @@ export * from './narrative-map.js';
 export * from './narrative-rules.js';
 export * from './narrative-economy.js';
 export * from './narrative-run.js';
+export * from './narrative-endings.js';
 export * from './project-home.js';
 export * from './formats.js';
 export * from './projects.js';

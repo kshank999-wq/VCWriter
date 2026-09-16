@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PopOutButton } from './PopOutButton';
-import { ConditionGroupEditor, EffectList, RuleSentence } from './RuleBuilder';
+import { ConditionGroupEditor, ContributorList, EffectList, RuleSentence } from './RuleBuilder';
 import { NarrativeWorldPanel } from './NarrativeWorldPanel';
 import { NarrativePlayPanel } from './NarrativePlayPanel';
+import { NarrativeEndingsPanel } from './NarrativeEndingsPanel';
 import {
   addChoice,
   addElement,
@@ -18,6 +19,7 @@ import {
   updateChoice,
   updateElement,
   findRun,
+  isEnding,
   replayRun,
   wouldBeEntry,
   type ConditionGroup,
@@ -132,6 +134,7 @@ export function NarrativeMapWindow({
   /** §9's overlay: which state or resource the board is lighting. */
   const [overlay, setOverlay] = useState<string | null>(null);
   const [playOpen, setPlayOpen] = useState(false);
+  const [endingsOpen, setEndingsOpen] = useState(false);
   /** The path being walked, so §9's *path preview* is drawn on the board. */
   const [walkingId, setWalkingId] = useState<SimulationRunId | null>(null);
   /** Which choice has its rule open. One at a time: three WHENs is a wall. */
@@ -235,6 +238,15 @@ export function NarrativeMapWindow({
         >
           ▶ Play it
         </button>
+        <button
+          type="button"
+          className={endingsOpen ? 'tool on' : 'tool'}
+          aria-pressed={endingsOpen}
+          title="What decides each ending, side by side"
+          onClick={() => setEndingsOpen(!endingsOpen)}
+        >
+          ⌁ Endings
+        </button>
         <label className="sculpt-view">
           <span className="muted small">Zoom</span>
           <input
@@ -333,6 +345,10 @@ export function NarrativeMapWindow({
             onGoTo={setSelectedId}
             onWalking={setWalkingId}
           />
+        ) : null}
+
+        {endingsOpen ? (
+          <NarrativeEndingsPanel file={file} onClose={() => setEndingsOpen(false)} onGoTo={setSelectedId} />
         ) : null}
 
         <div className="narrmap-stage" ref={stage}>
@@ -456,6 +472,37 @@ export function NarrativeMapWindow({
                   onUpdate((current) => updateElement(current, selected.id, { effects: next }))
                 }
               />
+
+              {/* §11, and only where the node is an ending: a threshold and
+                  what counts towards it. Absent rather than greyed elsewhere —
+                  a scene has no ending to weigh. */}
+              {isEnding(selected) ? (
+                <>
+                  <h3>What earns it</h3>
+                  <ContributorList
+                    file={file}
+                    contributors={selected.contributors}
+                    onChange={(next) =>
+                      onUpdate((current) => updateElement(current, selected.id, { contributors: next }))
+                    }
+                  />
+                  {selected.contributors.length > 0 ? (
+                    <label className="rule-row">
+                      <span className="muted small">Needs a score of</span>
+                      <input
+                        type="number"
+                        value={selected.threshold}
+                        aria-label="The score this ending needs"
+                        onChange={(event) =>
+                          onUpdate((current) =>
+                            updateElement(current, selected.id, { threshold: Number(event.target.value) || 0 }),
+                          )
+                        }
+                      />
+                    </label>
+                  ) : null}
+                </>
+              ) : null}
 
               <h3>Choices</h3>
               {rows.length === 0 ? <p className="muted small">Nothing is offered here yet.</p> : null}

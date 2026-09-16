@@ -203,7 +203,9 @@ export const describeEconomy = (economy: ResourceEconomy): string => {
   }
   if (economy.sinks.length > 0) parts.push(`${economy.sinks.length} sink${economy.sinks.length === 1 ? '' : 's'}`);
   if (economy.gates.length > 0) {
-    parts.push(`${economy.gates.length} rule${economy.gates.length === 1 ? '' : 's'} ask about it`);
+    parts.push(
+      economy.gates.length === 1 ? '1 rule asks about it' : `${economy.gates.length} rules ask about it`,
+    );
   }
   if (economy.required) parts.push('something mandatory needs it');
   return `${parts.join(' · ')}.`;

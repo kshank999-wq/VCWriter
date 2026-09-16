@@ -785,7 +785,7 @@ push live; the build takes a minute or two.
   builds and escapes it from eight plain strings, and the key art does not
   travel. No migration: every field has existed since 0001.
   `addendum-18-interactive-narrative.md` is Interactive Narrative for video
-  games, from Ken's own dev spec. **Stages 0–7 built** — §10 is the build
+  games, from Ken's own dev spec. **Stages 0–8 built** — §10 is the build
   order and §13 says what each built stage does. The audit found **more than half of it already
   exists**: §2.3's central spine is the **story order**, §3's Relationship is the
   Character Creator's two-directional one, §4's edges are `story_links` (whose
@@ -972,6 +972,31 @@ push live; the build takes a minute or two.
   value **caught on its way out of a React state updater** depends on when the
   host runs it, so the refusal is read from the file in hand and the change
   made as a mutation of whatever is current.
+  **Stage 8** is `narrative-endings.ts`, and the audit paid a **seventh** time —
+  this one **inside the module's own spec**: §7's entity table calls an
+  `EndingDefinition` new and it is not, an ending being a node whose kind says
+  so, its **hard requirements its conditions**, already evaluated, checked and
+  edited by stages 2, 3 and 5. What was missing is half a sentence of §11, the
+  *weighted contributors*. **A weight is not a condition**: a group is boolean
+  and answers *may this happen*, a contributor answers *how much has been
+  earned*, so the two are kept apart all the way down — `conditions` **vetoes**
+  and `contributors` only **ranks**, Themes & Motifs' *two kinds* pointed at
+  §11. But the **test** is the same test, so a contributor is a `Condition`
+  with a number on it and the screen's row is `ConditionRow` with a weight
+  beside it. Three more: **scored is read rather than declared** (weights make
+  it so; no switch to disagree with the rules), **an ending is a node and not a
+  second record** (a join kept in step would let the map and the matrix
+  disagree), and **a tie is said rather than broken silently** — `earnedEnding`
+  picks because a game must, ranks earned-first then by score then by the
+  designer's order, and names what tied, an ending decided by an accident of
+  ordering being what a designer hears about from a player. The matrix is read
+  off the rules, so an ending that stops asking about the keycard loses its
+  cell with nothing run; `unreachableEndings` is **not** stage 3's check —
+  that one finds an ending nothing *reaches*, this one an ending no state can
+  *satisfy*. Driving the renderer caught two wording faults, one shipped in
+  stage 6 (*1 rule ask about it*, *1 thing decide them*), and a scored ending
+  with a threshold of nothing now **says so** rather than being defaulted to a
+  number nobody chose.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

@@ -276,6 +276,35 @@ export const effectSchema = z.object({
 });
 export type Effect = z.infer<typeof effectSchema>;
 
+// ----------------------------------------------------------- endings (§11)
+
+/**
+ * One thing that earns an ending, and how much it counts for.
+ *
+ * §11 asks the system to *distinguish hard requirements from weighted
+ * contributors*, and the audit inside the module's own spec is that **a hard
+ * requirement is already a condition**: an ending is a node, a node is gated by
+ * a `ConditionGroup`, and stages 2, 3 and 5 already evaluate, check and edit
+ * it. Nothing to build.
+ *
+ * A weight is the half that genuinely is new, because **a condition group is
+ * boolean and a weight is not**: a group answers *may this happen*, and a
+ * contributor answers *how much of this ending has been earned*. Summing
+ * booleans is not something a condition does.
+ *
+ * But the *test* is the same test, so this is a `Condition` with a number on
+ * it — which means `sayCondition` already reads it back, `meets` already
+ * evaluates it, and the rule builder's row already edits it. The seventh time
+ * this project has found the general mechanism already built.
+ */
+export const endingContributorSchema = z.object({
+  condition: conditionSchema,
+  /** How much it adds. Negative is legal: some things count against. */
+  weight: z.number().default(0),
+  note: z.string().default(''),
+});
+export type EndingContributor = z.infer<typeof endingContributorSchema>;
+
 // ---------------------------------------------------------------- elements
 
 /**
@@ -335,6 +364,24 @@ export const narrativeElementSchema = z.object({
   conditions: conditionGroupSchema.default(emptyConditions()),
   /** Applied on arrival, before any choice is offered. */
   effects: z.array(effectSchema).default([]),
+  /**
+   * What earns this ending, and how much (§11). Meaningful only where the node
+   * is one, exactly as `feeds` is meaningful only on ammunition.
+   *
+   * **An ending is a node and not a second record.** §7's table called an
+   * `EndingDefinition` new, and it is not: a second object for the same thing
+   * would need a join kept in step, and the moment it drifted the map and the
+   * matrix would disagree about what the ending requires.
+   */
+  contributors: z.array(endingContributorSchema).default([]),
+  /**
+   * The score an ending needs, where it is scored at all.
+   *
+   * **Whether it is scored is read rather than declared** — an ending with
+   * contributors is scored and one without is deterministic, so there is no
+   * switch to set wrongly and no way for the switch and the rules to disagree.
+   */
+  threshold: z.number().default(0),
   ...timestamps,
 });
 export type NarrativeElement = z.infer<typeof narrativeElementSchema>;

@@ -22,8 +22,9 @@ import {
   valuesFor,
   type Condition,
   type ConditionGroup,
-  type Effect,
   type EffectKind,
+  type Effect,
+  type EndingContributor,
   type GroupPath,
   type ProjectFile,
 } from '@vcwriter/domain';
@@ -342,6 +343,79 @@ function EffectRow({
       <button type="button" className="ghost small" aria-label="Remove this effect" onClick={onRemove}>
         ✕
       </button>
+    </div>
+  );
+}
+
+/**
+ * What earns an ending, and how much (§11).
+ *
+ * The row is `ConditionRow` — the same control the rule builder uses — with a
+ * number beside it, because **a contributor is a condition with a weight** and
+ * pretending otherwise would mean a second way to write the same test. What is
+ * different is only what the answer is *for*: a gate vetoes, a weight ranks.
+ */
+export function ContributorList({
+  file,
+  contributors,
+  onChange,
+}: {
+  file: ProjectFile;
+  contributors: readonly EndingContributor[];
+  onChange(next: EndingContributor[]): void;
+}) {
+  const canAdd = newCondition(file) !== null;
+  return (
+    <div className="rule-contributors">
+      {contributors.length === 0 ? (
+        <p className="muted small">
+          {canAdd
+            ? 'Nothing counts towards it, so reaching it is enough.'
+            : 'Nothing to weigh yet — define a state or a resource first.'}
+        </p>
+      ) : null}
+      <ul className="rule-conditions">
+        {contributors.map((one, index) => (
+          <li key={index}>
+            <ConditionRow
+              file={file}
+              condition={one.condition}
+              onChange={(patch) =>
+                onChange(
+                  contributors.map((other, at) =>
+                    at === index ? { ...other, condition: { ...other.condition, ...patch } } : other,
+                  ),
+                )
+              }
+              onRemove={() => onChange(contributors.filter((_, at) => at !== index))}
+            />
+            <label className="rule-weight">
+              <span className="muted small">counts</span>
+              <input
+                type="number"
+                value={one.weight}
+                aria-label={`How much ${sayGroup(file, { join: 'all', conditions: [one.condition], groups: [] })} counts`}
+                onChange={(event) =>
+                  onChange(
+                    contributors.map((other, at) =>
+                      at === index ? { ...other, weight: Number(event.target.value) || 0 } : other,
+                    ),
+                  )
+                }
+              />
+            </label>
+          </li>
+        ))}
+      </ul>
+      {canAdd ? (
+        <button
+          type="button"
+          className="ghost small"
+          onClick={() => onChange([...contributors, { condition: newCondition(file)!, weight: 10, note: '' }])}
+        >
+          + Contributor
+        </button>
+      ) : null}
     </div>
   );
 }

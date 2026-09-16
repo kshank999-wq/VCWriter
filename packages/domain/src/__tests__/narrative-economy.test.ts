@@ -93,7 +93,7 @@ describe('the economy of one resource', () => {
     expect(economy.sources[0]!.amount).toBe('1');
     expect(economy.sinks.map((one) => one.element.name)).toEqual(['The server door']);
     expect(economy.obtainable).toBe(true);
-    expect(describeEconomy(economy)).toBe('1 source · 1 sink · 1 rule ask about it.');
+    expect(describeEconomy(economy)).toBe('1 source · 1 sink · 1 rule asks about it.');
   });
 
   /** The absence the whole module rests on, pointed at the economy. */

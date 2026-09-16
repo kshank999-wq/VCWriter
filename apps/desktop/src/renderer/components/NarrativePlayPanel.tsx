@@ -2,6 +2,8 @@ import { useState } from 'react';
 import {
   compareRuns,
   describeComparison,
+  earnedEnding,
+  endingsOf,
   describeRun,
   findRun,
   holdings,
@@ -194,6 +196,15 @@ export function NarrativePlayPanel({
             <p className="muted small">Nothing is defined to carry yet.</p>
           ) : null}
 
+          {/* §11 arriving in §13: what the state in hand would earn. Absent
+              where the game has no endings, since there is nothing to say. */}
+          {endingsOf(file).length > 0 ? (
+            <>
+              <h4>What this earns</h4>
+              <Earned file={file} state={played.state} />
+            </>
+          ) : null}
+
           <h4>The path</h4>
           <ol className="play-path">
             {played.steps.map((step, index) => (
@@ -323,5 +334,30 @@ function Comparison({
         </ul>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The ending the state in hand would earn.
+ *
+ * It says the tie rather than hiding it, for the reason the domain picks that
+ * way: an ending decided by an accident of ordering is the kind of thing a
+ * designer finds out from a player.
+ */
+function Earned({ file, state }: { file: ProjectFile; state: Parameters<typeof earnedEnding>[1] }) {
+  const earned = earnedEnding(file, state);
+  if (!earned.ending) {
+    return <p className="small play-why">Nothing is earned yet — no ending's requirements are met.</p>;
+  }
+  return (
+    <p className="small">
+      {earned.ending.name || 'an unnamed ending'}
+      {earned.tiedWith.length > 0 ? (
+        <span className="muted">
+          {' '}
+          — tied with {earned.tiedWith.map((one) => one.name || 'an unnamed ending').join(', ')}
+        </span>
+      ) : null}
+    </p>
   );
 }

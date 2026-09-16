@@ -6,7 +6,7 @@ There's a few narrative softwares out there. But I feel like they're very
 limited."** That sentence is the spec this addendum actually answers; §9 below
 says what the limitation is and what we do instead.*
 
-**Status: stages 0–7 built.** §10 is the build order; §13 says what each
+**Status: stages 0–8 built.** §10 is the build order; §13 says what each
 built stage does.
 
 ---
@@ -268,7 +268,7 @@ Each stage is usable on its own; none needs the next.
 6. **Progression.** ✅ §7's definitions and §8's resource-to-story edges —
    mostly definitions, because the edges are edges.
 7. **The simulator.** ✅ §13, on stage 2's function.
-8. **Endings and the matrix.** §11.
+8. **Endings and the matrix.** ✅ §11.
 9. **Export and reports.** §17, §18.
 
 §19's MVP is stages 0–4 plus 6, 7 and the JSON half of 9. §20 is out of scope
@@ -688,3 +688,61 @@ refusal was being caught on its way out of a React state updater, which depends
 on *when* the host chooses to run it. The reason is now read from the file in
 hand and the change made as a mutation of whatever is current — `recordStep`
 twice rather than once, because it is pure.
+
+### Stage 8 — endings and the matrix
+
+`narrative-endings.ts` and `NarrativeEndingsPanel.tsx`.
+
+**The audit a seventh time, and this one inside the module's own spec.** §7's
+entity table above calls an `EndingDefinition` *new*; it is not. An ending is a
+node whose kind says so, its **hard requirements are its conditions**, and
+stages 2, 3 and 5 already evaluate them, check them and edit them. What was
+genuinely missing is one half of one sentence of §11 — the *weighted
+contributors* — so the table is wrong and this is the correction.
+
+**A weight is not a condition**, which is what the stage rests on. A
+`ConditionGroup` is boolean: it answers *may this happen*. A contributor
+answers *how much of this has been earned*, and summing booleans is not
+something a condition group can be asked to do. So the two are kept apart all
+the way down — `conditions` gates and `contributors` score, one **vetoes** and
+the other only **ranks**, and no function anywhere takes *whatever decides an
+ending* and works out which it was. It is Themes & Motifs' *two kinds all the
+way down*, pointed at §11's own sentence.
+
+But the **test** is the same test, so a contributor is a `Condition` with a
+number on it: `sayCondition` already reads it back, `meets` already evaluates
+it, and the rule builder's own row already edits it. The screen's contributor
+list is `ConditionRow` with a weight beside it, because a second way to write
+the same comparison is a second thing that can disagree.
+
+Three more decisions:
+
+- **Whether an ending is scored is read, never declared.** Contributors make it
+  scored and their absence makes it deterministic, so there is no switch to set
+  wrongly and no way for the switch and the rules to disagree.
+- **An ending is a node and not a second record.** A separate `EndingDefinition`
+  would need a join kept in step, and the moment it drifted the map and the
+  matrix would disagree about what the ending requires. The two fields are
+  meaningful only on an ending, exactly as `feeds` is meaningful only on
+  ammunition.
+- **A tie is said rather than broken silently.** `earnedEnding` picks, because a
+  game has to, and ranks earned-first, then by score, then by the designer's own
+  order — but it names what tied with the winner, because an ending decided by
+  an accident of ordering is the kind of thing a designer hears about from a
+  player. Where nothing is earned it says so rather than reaching for the
+  nearest: no ending is a real outcome, and usually means a requirement nobody
+  can meet.
+
+The matrix is **read off the rules and never typed**: a row is a state or a
+resource some ending mentions, so an ending that stops asking about the keycard
+loses its cell with nothing run, and a row nothing mentions is absent rather
+than empty. `unreachableEndings` is this module's own check and does not
+overlap stage 3's — that one finds an ending nothing *reaches*, this one finds
+an ending no state can *satisfy*, which is a threshold higher than everything
+that counts towards it. Arithmetic, not opinion.
+
+Driving the real renderer caught two wording faults, one of them shipped in
+stage 6: *1 rule ask about it* and *1 thing decide them*, both of which read as
+written until you see them. And a scored ending whose threshold is nothing now
+says **scored, but anything earns it** rather than being quietly defaulted to a
+number the designer never chose.
