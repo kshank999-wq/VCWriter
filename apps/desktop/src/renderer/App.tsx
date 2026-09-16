@@ -553,6 +553,8 @@ export default function App() {
           return setReportOpen('writing');
         case 'reports.story':
           return setReportOpen('story');
+        case 'reports.narrative':
+          return setReportOpen('narrative');
 
         case 'window.script':
         case 'window.viewer':
@@ -1211,6 +1213,11 @@ export default function App() {
         onClose={() => setReportOpen(null)}
         onTab={setReportOpen}
         printOptions={printOptions}
+        // §17's human-readable design report, through the print stack every
+        // other document already uses. Absent off a game.
+        onExportNarrative={
+          isInteractive(file.project.format) ? () => void exportPdf('narrative') : undefined
+        }
         onShowUnusedResearch={() => {
           // The count is the question; the folder of notes is the answer.
           setReportOpen(null);

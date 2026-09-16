@@ -48,6 +48,7 @@ export type CommandId =
   // Reports
   | 'reports.writing'
   | 'reports.story'
+  | 'reports.narrative'
   // Window
   | 'window.script'
   | 'window.viewer'
@@ -171,6 +172,11 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
     items: [
       { command: 'reports.writing', label: 'Writing log…' },
       { command: 'reports.story', label: 'Story statistics…' },
+      // §18's ten reports and §17's export. Absent rather than greyed on a
+      // format with no graph (addendum 18 stage 9).
+      ...(format !== null && isInteractive(format)
+        ? [{ command: 'reports.narrative' as CommandId, label: 'Narrative design…' }]
+        : []),
     ],
   },
   {

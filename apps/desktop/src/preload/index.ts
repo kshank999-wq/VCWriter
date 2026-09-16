@@ -148,14 +148,14 @@ export interface VcWriterApi {
      * Omitted means the script — and a short-form project prints its sheet
      * whatever is asked for, because it has no script to print instead.
      */
-    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet';
+    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative';
     /** Which outline, when there is more than one. Left out, it is the first. */
     outlineId?: string;
   }): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>>;
   print(input: {
     file: ProjectFile;
     options?: PrintOptions;
-    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet';
+    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative';
     outlineId?: string;
   }): Promise<DesktopApiResult<boolean>>;
   appInfo(): Promise<DesktopApiResult<{ version: string; platform: string }>>;

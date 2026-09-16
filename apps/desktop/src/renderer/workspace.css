@@ -13342,3 +13342,47 @@ dialog.chapter-page-dialog {
   border-radius: 2px;
   padding: 3px 5px;
 }
+
+/* ------------------------------------------ the narrative reports (stage 9) */
+
+/* Nine tables rather than one screen of figures, so it is given more of the
+   window than the two short tabs beside it — it still scrolls. */
+.narrative-reports {
+  max-height: min(74vh, 760px);
+}
+
+.narrative-reports .narrative-export {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 14px;
+}
+
+.narrative-report {
+  margin-bottom: 18px;
+}
+
+.narrative-report h3 {
+  margin: 0 0 2px;
+  font-size: 13px;
+}
+
+.narrative-report table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6px 0;
+  font-size: 11px;
+}
+
+.narrative-report th,
+.narrative-report td {
+  border: 1px solid var(--border);
+  padding: 3px 5px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.narrative-report thead th {
+  background: var(--panel-2);
+  font-weight: 600;
+}

@@ -6,7 +6,7 @@ There's a few narrative softwares out there. But I feel like they're very
 limited."** That sentence is the spec this addendum actually answers; §9 below
 says what the limitation is and what we do instead.*
 
-**Status: stages 0–8 built.** §10 is the build order; §13 says what each
+**Status: all ten stages built.** §10 is the build order; §13 says what each
 built stage does.
 
 ---
@@ -269,10 +269,10 @@ Each stage is usable on its own; none needs the next.
    mostly definitions, because the edges are edges.
 7. **The simulator.** ✅ §13, on stage 2's function.
 8. **Endings and the matrix.** ✅ §11.
-9. **Export and reports.** §17, §18.
+9. **Export and reports.** ✅ §17, §18.
 
-§19's MVP is stages 0–4 plus 6, 7 and the JSON half of 9. §20 is out of scope
-and stays there.
+§19's MVP is stages 0–4 plus 6, 7 and the JSON half of 9 — **all of it is
+built**, along with stages 5 and 8. §20 is out of scope and stays there.
 
 ---
 
@@ -746,3 +746,44 @@ stage 6: *1 rule ask about it* and *1 thing decide them*, both of which read as
 written until you see them. And a scored ending whose threshold is nothing now
 says **scored, but anything earns it** rather than being quietly defaulted to a
 number the designer never chose.
+
+### Stage 9 — export and reports
+
+`narrative-reports.ts`, `print-narrative.ts`, and the **Narrative design** tab
+of Reports — absent rather than greyed on a format with no graph.
+
+**The audit an eighth time, and the cheapest stage of the nine because of it:
+nine of §18's ten reports are readings that already exist.** The choice and
+consequence report is `sayRuleLine` per choice; the critical path is the story
+order; branch and convergence is the map's `waysIn`/`waysOut`; resources and
+weapons are stage 6's economy and stage 3's check; the ending matrix is stage
+8; errors are `narrativeFindings`; a saved playthrough is `replayRun`. Not one
+of them needed a new reading — a report here is **a reading shaped into rows,
+and nothing else**. There is no report table, no *generate* button and nothing
+cached: ask twice after cutting a choice and the second answer is different.
+
+Two of §18's ten are **absent, for opposite reasons**. The *quest dependency
+report* is absent because there are no quests — §7 calls a Quest a small state
+machine and says a setup-and-payoff is not close enough, so a report about them
+would be an empty table implying a feature. And the *character and faction
+relationship report* is absent because it is the **Character Creator's**, built
+two modules ago; a second copy under a different menu would be a second answer
+about the same relationships.
+
+§17's export is **the records themselves, with their own ids** — §21's
+*preserves nodes, relationships, conditions, effects, and stable IDs* — rather
+than a flattened convenience shape, because an adapter targeting Unreal or
+Godot has to be able to say *this is the same node the designer was looking
+at*, and a shape invented for the export would be a second vocabulary to keep
+in step. What it adds to the records is only what cannot be read without this
+program (reachability and distance from a start), computed rather than stored,
+so the export cannot disagree with the screen. JSON and per-report CSV go to
+the clipboard; the human-readable report goes through the print stack every
+other document already uses, as `kind: 'narrative'`.
+
+Driving the real renderer caught the stage's one real bug, and it was in code
+this stage did not write: **the story-statistics figures were the *else* of the
+writing tab**, so the moment a third tab existed they drew underneath its
+tables. With two tabs the two spellings were the same thing; with three they
+are not. It also caught a third singular/plural fault — *1 state and resources*
+— which is now *1 state or resource*.

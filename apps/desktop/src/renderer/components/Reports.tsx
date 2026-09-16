@@ -4,6 +4,11 @@ import {
   asDuration,
   dayOf,
   daysOfWriting,
+  describeNarrativeExport,
+  isInteractive,
+  narrativeJson,
+  narrativeReports,
+  reportToCsv,
   projectStats,
   nounsFor,
   paginateProject,
@@ -12,6 +17,7 @@ import {
   sessionsInOrder,
   sessionWords,
   writingReport,
+  type NarrativeReport,
   type ProjectFile,
   type ManuscriptOptions,
 } from '@vcwriter/domain';
@@ -29,7 +35,7 @@ import { useModal } from '../use-modal';
  * would be a claim rather than a record.
  */
 
-export type ReportTab = 'writing' | 'story';
+export type ReportTab = 'writing' | 'story' | 'narrative';
 
 interface ReportsProps {
   file: ProjectFile;
@@ -39,6 +45,8 @@ interface ReportsProps {
   printOptions: ManuscriptOptions;
   /** Go and look at the research nothing points at (addendum 02 §15). */
   onShowUnusedResearch(): void;
+  /** The design report as a PDF (addendum 18 §17). Absent off a game. */
+  onExportNarrative?(): void;
 }
 
 /** "Mon 8 Sep" — a day as a person reads it, from a `YYYY-MM-DD`. */
@@ -50,7 +58,15 @@ const asDay = (day: string): string => {
 
 const signed = (words: number): string => (words > 0 ? `+${words}` : String(words));
 
-export function Reports({ file, open, onClose, onTab, printOptions, onShowUnusedResearch }: ReportsProps) {
+export function Reports({
+  file,
+  open,
+  onClose,
+  onTab,
+  printOptions,
+  onShowUnusedResearch,
+  onExportNarrative,
+}: ReportsProps) {
   const dialog = useModal(open !== null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -93,7 +109,23 @@ export function Reports({ file, open, onClose, onTab, printOptions, onShowUnused
             >
               Story statistics
             </button>
+            {/* §18's reports. Absent rather than greyed on a format with no
+                graph, like every other narrative surface. */}
+            {isInteractive(file.project.format) ? (
+              <button
+                type="button"
+                className="report-tab"
+                aria-pressed={open === 'narrative'}
+                onClick={() => onTab('narrative')}
+              >
+                Narrative design
+              </button>
+            ) : null}
           </nav>
+
+          {open === 'narrative' ? (
+            <NarrativeReports file={file} onExport={onExportNarrative} />
+          ) : null}
 
           {open === 'writing' ? (
             <div className="report-body">
@@ -178,7 +210,10 @@ export function Reports({ file, open, onClose, onTab, printOptions, onShowUnused
                 </div>
               )}
             </div>
-          ) : (
+          ) : open === 'story' ? (
+            // Named rather than left as the *else*: with only two tabs it was
+            // the same thing, and the moment a third arrived the story figures
+            // drew underneath it.
             <div className="report-body">
               <div className="report-figures">
                 <Figure label="Words" value={stats.wordCount.toLocaleString()} />
@@ -201,7 +236,7 @@ export function Reports({ file, open, onClose, onTab, printOptions, onShowUnused
                 time, which is why the two numbers agree.
               </p>
             </div>
-          )}
+          ) : null}
         </>
       ) : null}
     </dialog>
@@ -236,5 +271,89 @@ function Figure({
       <span className="report-figure-value">{value}</span>
       <span className="report-figure-label">{label}</span>
     </button>
+  );
+}
+
+
+/**
+ * §18's reports and §17's export.
+ *
+ * Every table here is a **reading shaped into rows** — the same readings the
+ * map, the validator, the economy and the simulator draw — so a report and the
+ * screen it came from cannot disagree. Nothing is generated and nothing is
+ * kept: cut a choice and the next look says something different.
+ */
+function NarrativeReports({ file, onExport }: { file: ProjectFile; onExport?(): void }) {
+  const reports = useMemo(() => narrativeReports(file), [file]);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copy = async (what: string, text: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(what);
+    } catch {
+      // A clipboard that refuses is not a broken screen; the tables are still
+      // on it to read.
+      setCopied(null);
+    }
+  };
+
+  return (
+    <div className="report-body narrative-reports">
+      <p className="muted small">
+        Every table is read from the graph as it stands. {describeNarrativeExport(file)}
+      </p>
+      <div className="narrative-export">
+        <button type="button" className="tool" onClick={() => void copy('json', narrativeJson(file))}>
+          Copy the design as JSON
+        </button>
+        {onExport ? (
+          <button type="button" className="tool" onClick={onExport}>
+            Save the report as a PDF…
+          </button>
+        ) : null}
+        {copied === 'json' ? <span className="muted small">Copied.</span> : null}
+      </div>
+
+      {reports.map((report) => (
+        <section key={report.id} className="narrative-report">
+          <h3>{report.title}</h3>
+          <p className="muted small">{report.note}</p>
+          {report.rows.length === 0 ? (
+            <p className="muted small">{report.emptyWord}</p>
+          ) : (
+            <>
+              <table>
+                <thead>
+                  <tr>
+                    {report.columns.map((column) => (
+                      <th key={column} scope="col">
+                        {column}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.rows.map((row, index) => (
+                    <tr key={index}>
+                      {row.map((cell, at) => (
+                        <td key={at}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button
+                type="button"
+                className="ghost small"
+                onClick={() => void copy(report.id, reportToCsv(report as NarrativeReport))}
+              >
+                {copied === report.id ? 'Copied as CSV' : 'Copy as CSV'}
+              </button>
+            </>
+          )}
+        </section>
+      ))}
+    </div>
   );
 }

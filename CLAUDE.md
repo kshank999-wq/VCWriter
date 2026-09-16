@@ -785,7 +785,7 @@ push live; the build takes a minute or two.
   builds and escapes it from eight plain strings, and the key art does not
   travel. No migration: every field has existed since 0001.
   `addendum-18-interactive-narrative.md` is Interactive Narrative for video
-  games, from Ken's own dev spec. **Stages 0–8 built** — §10 is the build
+  games, from Ken's own dev spec. **All ten stages built, and §19's MVP whole** — §10 is the build
   order and §13 says what each built stage does. The audit found **more than half of it already
   exists**: §2.3's central spine is the **story order**, §3's Relationship is the
   Character Creator's two-directional one, §4's edges are `story_links` (whose
@@ -997,6 +997,27 @@ push live; the build takes a minute or two.
   stage 6 (*1 rule ask about it*, *1 thing decide them*), and a scored ending
   with a threshold of nothing now **says so** rather than being defaulted to a
   number nobody chose.
+  **Stage 9** is `narrative-reports.ts` + `print-narrative.ts` + the
+  **Narrative design** tab of Reports, and the audit paid an **eighth** time:
+  **nine of §18's ten reports are readings that already exist** — the choice
+  report is `sayRuleLine`, the critical path the story order, branches the
+  map's counts, resources and weapons stages 6 and 3, the matrix stage 8,
+  errors `narrativeFindings`, a playthrough `replayRun`. So a report is **a
+  reading shaped into rows and nothing else**: no report table, no *generate*
+  button, nothing cached. Two of the ten are **absent for opposite reasons** —
+  the *quest dependency* report because there are no quests (an empty table
+  implying a feature), and the *character relationship* report because it is
+  the **Character Creator's**, a second copy being a second answer. §17's
+  export is **the records with their own ids** (§21's *stable IDs*) rather than
+  a flattened shape, since an adapter must be able to say *this is the same
+  node the designer saw*; it adds only what cannot be read without this program
+  (reachability, distance from a start), computed rather than stored. JSON and
+  per-report CSV go to the clipboard, the human-readable report through the
+  print stack as `kind: 'narrative'`. Driving the renderer caught the stage's
+  one real bug **in code it did not write**: the story-statistics figures were
+  the ***else*** of the writing tab, so a third tab drew them underneath its own
+  tables — with two tabs the two spellings are the same thing, with three they
+  are not.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

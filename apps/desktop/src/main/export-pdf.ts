@@ -9,12 +9,14 @@ import {
   renderBoardDocumentHtml,
   renderGridDocumentHtml,
   renderOneSheetHtml,
+  renderNarrativeReportHtml,
   renderOutlineDocumentHtml,
   renderPrintDocumentHtml,
   renderSheetDocumentHtml,
   suggestedBoardFileName,
   suggestedExportFileName,
   suggestedGridFileName,
+  suggestedNarrativeFileName,
   suggestedOneSheetFileName,
   suggestedOutlineFileName,
   suggestedSheetFileName,
@@ -88,7 +90,7 @@ const withDocumentWindow = async <T>(
  * tree as one (addendum 06 §12, stage 9). They are renderings of one project
  * rather than separate projects.
  */
-export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet';
+export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative';
 
 export interface ExportPdfInput {
   file: unknown;
@@ -113,6 +115,17 @@ const documentFor = (
   options: PrintOptions,
   outlineId?: string,
 ) => {
+  // §18's reports, one after another (addendum 18 stage 9). Not paged as a
+  // manuscript is: it is a set of tables, and breaking it on script pages
+  // would cut them for a geometry it does not have.
+  if (kind === 'narrative') {
+    return {
+      html: renderNarrativeReportHtml(project, options),
+      name: suggestedNarrativeFileName(project),
+      paged: false,
+      landscape: false,
+    };
+  }
   if (kind === 'outline') {
     return {
       html: renderOutlineDocumentHtml(project, outlineId ?? null, options),
