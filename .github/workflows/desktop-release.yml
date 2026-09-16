@@ -75,7 +75,12 @@ jobs:
             echo "No CSC_LINK secret; nothing to check."
             exit 0
           fi
-          bundle=$(mktemp)
+          # `security import` reads the format off the file *extension* and has
+          # no sniffing to fall back on, so a bare mktemp path fails with
+          # "Unknown format in import" however good the bundle is. Name it .p12
+          # and say -f pkcs12 as well; either alone would do, and a check step
+          # that fails for its own reasons is worse than no check step.
+          bundle="$(mktemp -u).p12"
           printf '%s' "$MAC_CERTIFICATE" | tr -d '\r\n ' | openssl base64 -d -A > "$bundle" || true
           if [ ! -s "$bundle" ]; then
             echo "::error::CSC_LINK does not decode as base64. Recreate it from the .p12 with [Convert]::ToBase64String."
@@ -103,7 +108,7 @@ jobs:
           echo "OpenSSL opens the bundle with CSC_KEY_PASSWORD."
           keychain="$(mktemp -u).keychain-db"
           security create-keychain -p "" "$keychain"
-          if security import "$bundle" -k "$keychain" -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign >/dev/null; then
+          if security import "$bundle" -f pkcs12 -k "$keychain" -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign >/dev/null; then
             echo "macOS imports the bundle. Identities:"
             security find-identity -v -p codesigning "$keychain" | sed 's/^/  /'
           else
