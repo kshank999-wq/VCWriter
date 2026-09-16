@@ -78,6 +78,11 @@ Apple's portal wants a certificate signing request and hands back a bare
 certificate; the private key never leaves the machine that made the request.
 Neither step needs macOS. With Git for Windows installed, in PowerShell:
 
+**Paste these one line at a time.** PowerShell parses a pasted block as a
+single line, and `&` at the head of the second command is then a reserved
+operator rather than the call operator — the whole line fails to parse and
+nothing runs, including the part that looked fine.
+
 ```powershell
 mkdir $HOME\vcwriter-signing; cd $HOME\vcwriter-signing
 $openssl = "C:\Program Files\Git\usr\bin\openssl.exe"
@@ -85,16 +90,31 @@ $openssl = "C:\Program Files\Git\usr\bin\openssl.exe"
 # Upload vcwriter-mac.csr at developer.apple.com → Certificates → Developer ID
 # Application (G2 Sub-CA); download developerID_application.cer here, then:
 & $openssl x509 -in developerID_application.cer -inform DER -out vcwriter-mac.pem
-& $openssl pkcs12 -export -legacy -inkey vcwriter-mac.key -in vcwriter-mac.pem -out vcwriter-mac.p12
+Invoke-WebRequest https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -OutFile DeveloperIDG2CA.cer
+& $openssl x509 -in DeveloperIDG2CA.cer -inform DER -out DeveloperIDG2CA.pem
+& $openssl pkcs12 -export -certpbe PBE-SHA1-3DES -keypbe PBE-SHA1-3DES -macalg sha1 -inkey vcwriter-mac.key -in vcwriter-mac.pem -certfile DeveloperIDG2CA.pem -out vcwriter-mac.p12
 [Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\vcwriter-signing\vcwriter-mac.p12")) | Set-Clipboard
 ```
 
-`-legacy` matters: OpenSSL 3 otherwise writes a bundle that macOS's `security
-import` rejects with "MAC verification failed (wrong password?)", the same
-message a genuinely wrong password produces. The workflow's "Check the macOS
-signing certificate" step opens the bundle with OpenSSL and then with
-`security` and says which of the two went wrong. The `.key` file is the only
-copy of the private key: keep it, and keep it out of the repository.
+The three `pkcs12` algorithm flags matter, and they are **not** `-legacy`.
+OpenSSL 3 defaults to AES-256 with PBKDF2, which macOS's `security import`
+rejects with "MAC verification failed (wrong password?)" — the same message a
+genuinely wrong password produces, which is why the workflow checks the bundle
+two ways. `-legacy` is the documented cure everywhere on the web and **Git for
+Windows does not ship the legacy provider**, so it fails with "unable to load
+provider legacy" and no `legacy.dll` on disk. The flags above ask for the same
+old algorithms out of the *default* provider: 3DES is there, and only the RC2
+that `-legacy` also selects is not.
+
+`-certfile` puts Apple's G2 intermediate in the bundle. Without it the leaf
+imports but chains to nothing, and `security find-identity -v -p codesigning`
+lists no valid identity on a runner that lacks the intermediate.
+
+The `.key` file is the only copy of the private key: keep it, and keep it out
+of the repository. The base64 on the clipboard is the `CSC_LINK` secret, and
+the export password typed at the `pkcs12` prompt is `CSC_KEY_PASSWORD`; both
+go into GitHub ▸ Settings ▸ Secrets and nowhere else. Re-running the last line
+regenerates the clipboard text from the file at any time.
 
 The workflow only asks electron-builder to notarise when `APPLE_ID` and
 `APPLE_TEAM_ID` are both present — requesting notarisation without credentials
