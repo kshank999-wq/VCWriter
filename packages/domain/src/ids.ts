@@ -72,6 +72,7 @@ export type NarrativeElementId = Id<'NarrativeElement'>;
 export type ChoiceId = Id<'Choice'>;
 export type StateDefinitionId = Id<'StateDefinition'>;
 export type ResourceDefinitionId = Id<'ResourceDefinition'>;
+export type SimulationRunId = Id<'SimulationRun'>;
 export type OrderId = Id<'Order'>;
 export type LicenseId = Id<'License'>;
 export type ReleaseBuildId = Id<'ReleaseBuild'>;

@@ -11,6 +11,7 @@ import {
   choiceSchema,
   narrativeElementSchema,
   resourceDefinitionSchema,
+  simulationRunSchema,
   stateDefinitionSchema,
 } from './entities/narrative.js';
 import { learningAidSchema } from './entities/learning.js';
@@ -154,6 +155,8 @@ export const projectFileSchema = z.object({
   choices: z.array(choiceSchema).default([]),
   stateDefinitions: z.array(stateDefinitionSchema).default([]),
   resourceDefinitions: z.array(resourceDefinitionSchema).default([]),
+  /** Saved playthroughs (addendum 18 §13) — the module's one stored thing. */
+  simulationRuns: z.array(simulationRunSchema).default([]),
   /** What the designer said the game is (addendum 18 §2). */
   gameSetup: gameSetupSchema.nullable().default(null),
   /**

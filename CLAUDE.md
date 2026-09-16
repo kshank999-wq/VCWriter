@@ -785,7 +785,7 @@ push live; the build takes a minute or two.
   builds and escapes it from eight plain strings, and the key art does not
   travel. No migration: every field has existed since 0001.
   `addendum-18-interactive-narrative.md` is Interactive Narrative for video
-  games, from Ken's own dev spec. **Stages 0–6 built** — §10 is the build
+  games, from Ken's own dev spec. **Stages 0–7 built** — §10 is the build
   order and §13 says what each built stage does. The audit found **more than half of it already
   exists**: §2.3's central spine is the **story order**, §3's Relationship is the
   Character Creator's two-directional one, §4's edges are `story_links` (whose
@@ -947,6 +947,31 @@ push live; the build takes a minute or two.
   in the picture is a different game. Deliberately absent: a **duration or
   stacking rule for a buff**, there being no clock to evaluate one, which is
   the `timing` warning kept.
+  **Stage 7** is `narrative-run.ts` + `NarrativePlayPanel.tsx`, and it
+  **decides nothing** — what is offered, why not, what changes and where it
+  leads are `evaluate` and `choose` from stage 2, the same pair the map and the
+  validator read, which is what stage 2 was for. Its one decision is what a
+  saved path **is**: **a run stores the choices and never the states**. Stage 2
+  being deterministic, the counts and the log come back by replaying; keeping
+  them too would keep a second answer about a version of the game that may not
+  exist — which turns the objection into the feature, since **a recorded path
+  that no longer runs is the finding** and the step it breaks at is the one
+  that changed. It is also **the module's one stored thing**, and the reason
+  holds: everything else is a fact about the work and derivable, while a
+  playthrough is what a person did one afternoon. Three smaller ones: **a move
+  the rules refuse is not written down** (it did not happen, and recording it
+  would break the path from the moment it was walked — the reason is said
+  instead), **a replay stops at the break** rather than putting a state on the
+  screen no player could hold, and **comparison is where two paths part and
+  what the player is left holding**, never the middle, two routes through a hub
+  differing in twelve places and meaning nothing by it. Driving the real
+  renderer caught §9's *path preview*: the panel worked and **the board beside
+  it showed nothing** — where the player stands and the way they came are now
+  drawn, both as readings of the run, so stepping back un-draws the line with
+  nothing told to. It also caught a component fragility worth remembering: a
+  value **caught on its way out of a React state updater** depends on when the
+  host runs it, so the refusal is read from the file in hand and the change
+  made as a mutation of whatever is current.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

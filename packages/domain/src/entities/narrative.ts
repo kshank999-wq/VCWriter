@@ -6,6 +6,7 @@ import type {
   NarrativeElementId,
   ProjectId,
   ResourceDefinitionId,
+  SimulationRunId,
   StateDefinitionId,
 } from '../ids.js';
 
@@ -366,3 +367,38 @@ export const choiceSchema = z.object({
   ...timestamps,
 });
 export type Choice = z.infer<typeof choiceSchema>;
+
+// ------------------------------------------------------- a playthrough (§13)
+
+/**
+ * A saved path through the game, and **the one thing in this module that is
+ * stored**.
+ *
+ * Everything else here is a reading, because everything else is a fact about
+ * the work: whether a node can be reached, what a resource costs, whether a
+ * rule can ever be satisfied. A playthrough is not a fact about the work at
+ * all — it is a record of what a person did one afternoon, which nothing can
+ * derive from the graph. That is the whole of why it has a table when
+ * reachability does not.
+ *
+ * And it stores **what was chosen, never what the game did**. The states, the
+ * counts and the log are all read back by replaying the choices through stage
+ * 2, which is deterministic — so storing them would be keeping a second answer
+ * about a version of the game that may no longer exist. Replaying an old path
+ * against today's graph is not a limitation of this design; it is the feature:
+ * **a recorded path that no longer runs is the finding**, and the step it
+ * breaks at is the one that changed.
+ */
+export const simulationRunSchema = z.object({
+  id: id<SimulationRunId>(),
+  projectId: id<ProjectId>(),
+  /** What the designer called this path. */
+  name: z.string().default(''),
+  /** §13's *start at any node*, so not necessarily an entry point. */
+  startedAt: id<NarrativeElementId>(),
+  /** The choices taken, in order, and nothing else. */
+  steps: z.array(id<ChoiceId>()).default([]),
+  note: z.string().default(''),
+  ...timestamps,
+});
+export type SimulationRun = z.infer<typeof simulationRunSchema>;

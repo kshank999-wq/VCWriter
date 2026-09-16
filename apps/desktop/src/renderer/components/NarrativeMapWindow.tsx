@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { PopOutButton } from './PopOutButton';
 import { ConditionGroupEditor, EffectList, RuleSentence } from './RuleBuilder';
 import { NarrativeWorldPanel } from './NarrativeWorldPanel';
+import { NarrativePlayPanel } from './NarrativePlayPanel';
 import {
   addChoice,
   addElement,
@@ -16,6 +17,8 @@ import {
   removeElement,
   updateChoice,
   updateElement,
+  findRun,
+  replayRun,
   wouldBeEntry,
   type ConditionGroup,
   type Effect,
@@ -24,6 +27,7 @@ import {
   type NarrativeElementId,
   type NarrativeKind,
   type ProjectFile,
+  type SimulationRunId,
 } from '@vcwriter/domain';
 
 /**
@@ -127,6 +131,9 @@ export function NarrativeMapWindow({
   const [worldOpen, setWorldOpen] = useState(false);
   /** §9's overlay: which state or resource the board is lighting. */
   const [overlay, setOverlay] = useState<string | null>(null);
+  const [playOpen, setPlayOpen] = useState(false);
+  /** The path being walked, so §9's *path preview* is drawn on the board. */
+  const [walkingId, setWalkingId] = useState<SimulationRunId | null>(null);
   /** Which choice has its rule open. One at a time: three WHENs is a wall. */
   const [openRule, setOpenRule] = useState<string | null>(null);
 
@@ -161,6 +168,14 @@ export function NarrativeMapWindow({
       card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
   }, [selectedId, map]);
+
+  // Where the player is standing and which connections they came along. A
+  // reading of the run like every other reading here, so stepping back on the
+  // panel un-draws the last line with nothing told to do it.
+  const walking = walkingId ? findRun(file, walkingId) : null;
+  const walked = walking ? replayRun(file, walking) : null;
+  const here = walked?.at?.id ?? null;
+  const along = new Set((walking?.steps ?? []).map((one) => one as string));
 
   const selected = selectedId ? findElement(file, selectedId) : null;
   const rows = selectedId ? choicesFor(file, selectedId) : [];
@@ -210,6 +225,15 @@ export function NarrativeMapWindow({
           onClick={() => setWorldOpen(!worldOpen)}
         >
           ⚙ States &amp; resources
+        </button>
+        <button
+          type="button"
+          className={playOpen ? 'tool on' : 'tool'}
+          aria-pressed={playOpen}
+          title="Walk the game as a player, and keep the path"
+          onClick={() => setPlayOpen(!playOpen)}
+        >
+          ▶ Play it
         </button>
         <label className="sculpt-view">
           <span className="muted small">Zoom</span>
@@ -301,6 +325,16 @@ export function NarrativeMapWindow({
           />
         ) : null}
 
+        {playOpen ? (
+          <NarrativePlayPanel
+            file={file}
+            onUpdate={onUpdate}
+            onClose={() => setPlayOpen(false)}
+            onGoTo={setSelectedId}
+            onWalking={setWalkingId}
+          />
+        ) : null}
+
         <div className="narrmap-stage" ref={stage}>
           {map.nodes.length === 0 ? (
             <p className="muted empty-state">{describeGraph(file, map)}</p>
@@ -320,13 +354,19 @@ export function NarrativeMapWindow({
               </defs>
 
               {map.links.map((link) => (
-                <LinkLine key={link.choice.id as string} link={link} placed={placed} />
+                <LinkLine
+                  key={link.choice.id as string}
+                  link={link}
+                  placed={placed}
+                  walked={along.has(link.choice.id as string)}
+                />
               ))}
 
               {map.nodes.map((node) => (
                 <NodeCard
                   key={node.element.id as string}
                   node={node}
+                  here={node.element.id === here}
                   selected={node.element.id === selectedId}
                   joining={joining !== null && joining !== node.element.id}
                   onPick={() => (joining ? join(node.element.id) : setSelectedId(node.element.id))}
@@ -557,11 +597,20 @@ export function NarrativeMapWindow({
   );
 }
 
-function LinkLine({ link, placed }: { link: GraphLink; placed: Map<string, GraphNode> }) {
+function LinkLine({
+  link,
+  placed,
+  walked,
+}: {
+  link: GraphLink;
+  placed: Map<string, GraphNode>;
+  walked: boolean;
+}) {
   const from = placed.get(link.from as string);
   const to = placed.get(link.to as string);
   if (!from || !to) return null;
   const classes = ['narrmap-link'];
+  if (walked) classes.push('walked');
   if (link.spine) classes.push('on-spine');
   if (link.back) classes.push('back');
   if (link.gated) classes.push('gated');
@@ -578,16 +627,20 @@ function LinkLine({ link, placed }: { link: GraphLink; placed: Map<string, Graph
 function NodeCard({
   node,
   selected,
+  here,
   joining,
   onPick,
 }: {
   node: GraphNode;
   selected: boolean;
+  /** Where the player is standing right now, while a path is being walked. */
+  here: boolean;
   joining: boolean;
   onPick(): void;
 }) {
   const classes = ['narrmap-card'];
   if (selected) classes.push('is-selected');
+  if (here) classes.push('is-here');
   if (node.onSpine) classes.push('on-spine');
   if (node.stranded) classes.push('stranded');
   if (node.kind === 'ending' || node.element.endsHere) classes.push('ends');

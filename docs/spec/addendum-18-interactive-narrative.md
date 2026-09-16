@@ -6,7 +6,7 @@ There's a few narrative softwares out there. But I feel like they're very
 limited."** That sentence is the spec this addendum actually answers; §9 below
 says what the limitation is and what we do instead.*
 
-**Status: stages 0–6 built.** §10 is the build order; §13 says what each
+**Status: stages 0–7 built.** §10 is the build order; §13 says what each
 built stage does.
 
 ---
@@ -267,7 +267,7 @@ Each stage is usable on its own; none needs the next.
 5. **The rule builder and the inspector.** ✅ WHEN / DO / GO TO. §15.2, §15.3.
 6. **Progression.** ✅ §7's definitions and §8's resource-to-story edges —
    mostly definitions, because the edges are edges.
-7. **The simulator.** §13, on stage 2's function.
+7. **The simulator.** ✅ §13, on stage 2's function.
 8. **Endings and the matrix.** §11.
 9. **Export and reports.** §17, §18.
 
@@ -634,3 +634,57 @@ What is deliberately **not** here: a **duration or stacking rule for a buff**
 one, so a `duration` field would be exactly the kind of field the `timing` note
 in stage 1 warns about — one that looks as though it schedules something and
 does not.
+
+### Stage 7 — the simulator
+
+`narrative-run.ts` and `NarrativePlayPanel.tsx`. **It decides nothing**: what
+is offered, why something is not, what a choice changes and where it leads are
+all `evaluate` and `choose` from stage 2 — the same two functions the map
+colours with and the validator reads. A simulator that answered differently
+from the picture beside it would be worse than none, because a designer would
+have to work out which of them to believe. That is what stage 2 was for.
+
+The stage makes one decision, and it is about what a saved path **is**.
+
+**A run stores the choices and never the states.** Stage 2 is deterministic, so
+the counts, the flags and the log all come back by replaying those choices;
+keeping them as well would be keeping a second answer about a version of the
+game that may no longer exist. Which turns the obvious objection into the
+feature: replaying an old path against today's graph is exactly what a designer
+wants, because **a recorded path that no longer runs is the finding**, and the
+step it breaks at is the one that changed. Nothing else in this module can say
+*the route I walked last week has stopped working*.
+
+It is also **the one thing in the module that is stored at all**, and the reason
+is worth keeping: everything else here is a fact about the work and so can be
+derived — whether a node is reachable, what a resource costs, whether a rule can
+ever be satisfied. A playthrough is a record of what a person did one afternoon,
+which no reading of the graph can recover.
+
+Three smaller decisions:
+
+- **A move the rules refuse is not written down.** The door was shut and the
+  player is still where they were, so appending the step would record something
+  no player could have done and leave the path broken from the moment it was
+  walked. The refusal is said instead — *you cannot go that way: Keycard is at
+  least 1* — because a button that does nothing and says nothing is worse than
+  a blocked one.
+- **A replay stops at the break rather than guessing on.** Everything after it
+  was chosen in a game that no longer exists, and carrying on would put a state
+  on the screen that no player could hold.
+- **Comparison is where two paths part and what the player is left holding**,
+  and not the middle of the walk: two routes through a hub can differ in twelve
+  places and mean nothing by it.
+
+Driving the real renderer earned its keep again, on §9's last bullet — *a path
+preview lets the designer simulate a sequence of choices*. The panel worked and
+**the board beside it showed nothing**: no mark for where the player was
+standing, no line for the way they came. Both are now drawn, and both are
+readings of the run, so stepping back on the panel un-draws the last line with
+nothing told to do it.
+
+It also caught a fragility in the component rather than in the module: the
+refusal was being caught on its way out of a React state updater, which depends
+on *when* the host chooses to run it. The reason is now read from the file in
+hand and the change made as a mutation of whatever is current — `recordStep`
+twice rather than once, because it is pure.
