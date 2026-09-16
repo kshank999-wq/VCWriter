@@ -64,7 +64,7 @@ jobs:
       # is also what a bundle in a format macOS cannot read looks like. Open the
       # bundle two ways first, so the log says which of the two it is. Nothing
       # printed is secret: OpenSSL's -info -noout gives only the algorithms.
-      - name: Check the macOS signing certificate
+      - name: Check the macOS signing certificate and load the keychain
         if: matrix.platform == 'macos'
         shell: bash
         env:
@@ -106,22 +106,55 @@ jobs:
             exit 1
           fi
           echo "OpenSSL opens the bundle with CSC_KEY_PASSWORD."
-          keychain="$(mktemp -u).keychain-db"
-          security create-keychain -p "" "$keychain"
-          if security import "$bundle" -f pkcs12 -k "$keychain" -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign >/dev/null; then
-            echo "macOS imports the bundle. Identities:"
-            security find-identity -v -p codesigning "$keychain" | sed 's/^/  /'
-          else
+          # The keychain is built here and kept, rather than tested and thrown
+          # away, because electron-builder 25 cannot be trusted to build its
+          # own. `createKeychain` makes one with a random password and then
+          # calls `set-key-partition-list -k <the *certificate* password>` —
+          # two different passwords, and macOS answers "SecKeychainUnlock: the
+          # user name or passphrase you entered is not correct". It went
+          # unnoticed for years because an unlocked keychain used not to check
+          # that argument; current macOS does.
+          #
+          # electron-builder only takes that path when CSC_LINK is set. Left
+          # unset, it signs with whatever identity CSC_KEYCHAIN holds — so the
+          # keychain below is the whole of the macOS signing material, and the
+          # Package step deliberately passes no certificate at all.
+          keychain="$RUNNER_TEMP/vcwriter-signing.keychain-db"
+          keychain_password=$(openssl rand -base64 24)
+          security delete-keychain "$keychain" 2>/dev/null || true
+          security create-keychain -p "$keychain_password" "$keychain"
+          # No flags is what turns both locks off (-l is lock-on-sleep, -u is
+          # lock-after-timeout). A keychain that relocks halfway through a
+          # twenty-minute universal build takes the identity with it.
+          security set-keychain-settings "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          if ! security import "$bundle" -f pkcs12 -k "$keychain" -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productbuild >/dev/null; then
             echo "::error::OpenSSL opens the bundle but macOS cannot import it: re-export the .p12 with '-certpbe PBE-SHA1-3DES -keypbe PBE-SHA1-3DES -macalg sha1' as docs/code-signing.md describes, and update CSC_LINK. (Not -legacy: Git for Windows ships no legacy provider.)"
             exit 1
           fi
-          security delete-keychain "$keychain"
+          # Without this codesign stops to ask for the key, and a runner has
+          # nobody to ask; it hangs until the job times out.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" >/dev/null
+          # Keep the login keychain in the search list: Apple's intermediates
+          # and roots live there, and a chain that cannot be built is a
+          # certificate that cannot sign.
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          echo "macOS imports the bundle. Identities:"
+          security find-identity -v -p codesigning "$keychain" | sed 's/^/  /'
+          if ! security find-identity -v -p codesigning "$keychain" | grep -q "Developer ID Application"; then
+            echo "::error::The keychain imported but holds no Developer ID Application identity. A Development or Mac App Distribution certificate cannot sign a build for distribution; see docs/code-signing.md."
+            exit 1
+          fi
+          echo "CSC_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
           rm -f "$bundle"
 
       # Signing material per platform (spec §3.3, docs/code-signing.md):
-      # Windows Authenticode from WINDOWS_CERTIFICATE, the Apple Developer ID
-      # from CSC_LINK. Absent on a fork or a dry run, in which case the
-      # artifact is unsigned and must not ship as stable.
+      # Windows Authenticode from WINDOWS_CERTIFICATE, still as a certificate
+      # and a password. macOS is different: the identity is already in the
+      # keychain the step above built, and CSC_LINK must stay unset, because
+      # setting it is what sends electron-builder down its own broken
+      # keychain-creation path. Absent either way on a fork or a dry run, in
+      # which case the artifact is unsigned and must not ship as stable.
       #
       # The variables are exported inside the script rather than declared in
       # `env:` because a secret that is not set arrives as an empty string, and
@@ -133,26 +166,26 @@ jobs:
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-          MAC_CERTIFICATE: ${{ secrets.CSC_LINK }}
-          MAC_CERTIFICATE_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           # Apple notarization; read only when the notarize flag is passed.
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           if [ "${{ matrix.platform }}" = "windows" ]; then
-            certificate="$WINDOWS_CERTIFICATE"; password="$WINDOWS_CERTIFICATE_PASSWORD"
-          else
-            certificate="$MAC_CERTIFICATE"; password="$MAC_CERTIFICATE_PASSWORD"
-          fi
-          if [ -n "$certificate" ]; then
-            export CSC_LINK="$certificate"
-            export CSC_KEY_PASSWORD="$password"
-          else
-            # Nothing to sign with: say so, rather than letting electron-builder
-            # go looking for an identity in the runner's keychain.
+            if [ -n "$WINDOWS_CERTIFICATE" ]; then
+              export CSC_LINK="$WINDOWS_CERTIFICATE"
+              export CSC_KEY_PASSWORD="$WINDOWS_CERTIFICATE_PASSWORD"
+            else
+              # Nothing to sign with: say so, rather than letting
+              # electron-builder go looking for an identity.
+              export CSC_IDENTITY_AUTO_DISCOVERY=false
+              echo "::warning::No windows signing certificate — building unsigned."
+            fi
+          elif [ -z "$CSC_KEYCHAIN" ]; then
             export CSC_IDENTITY_AUTO_DISCOVERY=false
-            echo "::warning::No ${{ matrix.platform }} signing certificate — building unsigned."
+            echo "::warning::No macOS signing identity — building unsigned."
+          else
+            echo "Signing with the identity in $CSC_KEYCHAIN."
           fi
           pnpm --filter @vcwriter/desktop ${{ matrix.script }} ${{ steps.notarize.outputs.flag }}
 
