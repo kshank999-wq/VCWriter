@@ -42,7 +42,7 @@ export default function HomePage() {
       <div className="hero hero-split">
         <div>
           <h1>
-            Everything a script or a novel needs, <em>in one place.</em>
+            Everything a writer needs — <em>in one place.</em>
           </h1>
           <p>
             Research, outline, draft, edit and hear it read back without moving between five applications.
