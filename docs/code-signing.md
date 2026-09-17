@@ -35,9 +35,46 @@ already reads:
 - `WINDOWS_CERTIFICATE` — the `.pfx`, base64 encoded, as a repository secret
 - `WINDOWS_CERTIFICATE_PASSWORD`
 
-For Azure Trusted Signing, replace those with the Azure credentials and add
-electron-builder's `azureSignOptions` to `apps/desktop/electron-builder.yml`;
-the rest of the pipeline is unchanged.
+Azure Artifact Signing (it was called Trusted Signing) is **already wired**.
+The workflow signs with it as soon as these six secrets exist, and falls back
+to `WINDOWS_CERTIFICATE`, and then to an unsigned build, when they do not:
+
+| Secret | What it is |
+| --- | --- |
+| `AZURE_TENANT_ID` | Directory (tenant) ID of the Entra app registration |
+| `AZURE_CLIENT_ID` | Application (client) ID |
+| `AZURE_CLIENT_SECRET` | A client secret on that registration |
+| `AZURE_SIGNING_PROFILE` | The certificate profile's name |
+| `AZURE_SIGNING_ACCOUNT` | The signing account's name (defaults to `vcwriter`) |
+| `AZURE_SIGNING_ENDPOINT` | Regional endpoint (defaults to `https://wus2.codesigning.azure.net`, which is West US 2) |
+
+The first four are checked together, because three of them are useless alone
+and a half-configured Azure is the one case that would sign nothing and say
+nothing. The last two only name the account rather than granting anything, and
+are secrets purely so there is one place to set all of this.
+
+### Getting the account ready
+
+Only the account holder can do any of this; none of it can be scripted.
+
+1. On the signing account, **Access control (IAM)**: assign yourself both
+   **Trusted Signing Identity Verifier** and **Trusted Signing Certificate
+   Profile Signer**.
+2. **Identity validation** → *Individual* → **New identity → Public**. It hands
+   over to a verification partner and finishes on a phone with ID documents.
+   This is the long pole — days rather than minutes.
+3. Once that reads **Completed**: **Certificate profiles** → a new **Public
+   Trust** profile. This is the certificate, issued short-lived and renewed
+   automatically; there is nothing to download and nothing to keep.
+4. **Entra ID → App registrations** → a new registration, then a client
+   secret, then give *that registration* the **Trusted Signing Certificate
+   Profile Signer** role on the signing account. A registration that can
+   authenticate but has not been given the role fails at signing time rather
+   than at sign-in, which reads like a signing bug and is not one.
+
+Nothing about this produces a file. That is the point of the June 2023 rule:
+the private key never leaves Microsoft's HSM, so unlike the Apple half there is
+no `.p12`, no export password and nothing on anybody's disk to lose.
 
 ### Verifying
 

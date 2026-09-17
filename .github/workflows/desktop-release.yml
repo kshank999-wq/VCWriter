@@ -166,20 +166,46 @@ jobs:
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          # Azure Artifact Signing (formerly Trusted Signing). Since June 2023 a
+          # newly issued Windows certificate must keep its private key in an HSM,
+          # so there is no .pfx to put in a secret and the signing happens in
+          # Azure. electron-builder reads the first three itself; the last three
+          # only name the account, so they are secrets for one reason — one
+          # place to set everything beats two, which is how an evening goes.
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ secrets.AZURE_SIGNING_PROFILE }}
           # Apple notarization; read only when the notarize flag is passed.
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          windows_flags=""
           if [ "${{ matrix.platform }}" = "windows" ]; then
-            if [ -n "$WINDOWS_CERTIFICATE" ]; then
+            if [ -n "$AZURE_CLIENT_ID" ] && [ -n "$AZURE_TENANT_ID" ] && [ -n "$AZURE_CLIENT_SECRET" ] && [ -n "$AZURE_SIGNING_PROFILE" ]; then
+              # Passed on the command line rather than written into
+              # electron-builder.yml for the same reason as -c.mac.notarize: a
+              # machine without the credentials must still be able to produce an
+              # unsigned build, and a config file naming an account it cannot
+              # reach fails instead of falling back.
+              #
+              # All four are checked together because three of them are useless
+              # alone: a half-configured Azure is the one case that would sign
+              # nothing and say nothing.
+              windows_flags="-c.win.azureSignOptions.endpoint=${AZURE_SIGNING_ENDPOINT:-https://wus2.codesigning.azure.net} -c.win.azureSignOptions.codeSigningAccountName=${AZURE_SIGNING_ACCOUNT:-vcwriter} -c.win.azureSignOptions.certificateProfileName=$AZURE_SIGNING_PROFILE"
+              echo "Signing with Azure Artifact Signing profile $AZURE_SIGNING_PROFILE."
+            elif [ -n "$WINDOWS_CERTIFICATE" ]; then
               export CSC_LINK="$WINDOWS_CERTIFICATE"
               export CSC_KEY_PASSWORD="$WINDOWS_CERTIFICATE_PASSWORD"
+              echo "Signing with the WINDOWS_CERTIFICATE bundle."
             else
               # Nothing to sign with: say so, rather than letting
               # electron-builder go looking for an identity.
               export CSC_IDENTITY_AUTO_DISCOVERY=false
-              echo "::warning::No windows signing certificate — building unsigned."
+              echo "::warning::No windows signing certificate — building unsigned. SmartScreen will warn on first run."
             fi
           elif [ -z "$CSC_KEYCHAIN" ]; then
             export CSC_IDENTITY_AUTO_DISCOVERY=false
@@ -187,7 +213,7 @@ jobs:
           else
             echo "Signing with the identity in $CSC_KEYCHAIN."
           fi
-          pnpm --filter @vcwriter/desktop ${{ matrix.script }} ${{ steps.notarize.outputs.flag }}
+          pnpm --filter @vcwriter/desktop ${{ matrix.script }} ${{ steps.notarize.outputs.flag }} $windows_flags
 
       # The admin release form asks for a checksum, and the updater refuses an
       # installer that does not match one. Computing it here is the only place
