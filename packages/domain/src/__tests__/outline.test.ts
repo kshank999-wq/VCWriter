@@ -23,7 +23,10 @@ import {
   parseProjectFile,
   removeItem,
   removeItems,
+  rowsRemovalComfort,
+  rowsRemovalQuestion,
   setRowsStatus,
+  whatGoesWithRows,
   statusesIn,
   rowSource,
   rowTitle,
@@ -512,5 +515,56 @@ describe('more than one row at once', () => {
     const { file, outline } = warehouse();
     expect(removeItems(file, outline.id, [])).toBe(file);
     expect(setRowsStatus(file, outline.id, [], 'written')).toBe(file);
+  });
+});
+
+/**
+ * Delete is deliberate (addendum 19 §4): it acts on the selection from the
+ * toolbar, and what it would take is counted and said before it goes.
+ */
+describe('what a delete would take', () => {
+  it('counts the whole subtree, not the rows that were clicked', () => {
+    const { file, outline, scene } = warehouse();
+    // The scene carries two beats and three supporting rows: six in all.
+    const going = whatGoesWithRows(live(file, outline), [scene]);
+    expect(going.rows).toBe(6);
+    expect(going.titles).toEqual([findOutlineItem(live(file, outline), scene)!.title]);
+    expect(going.promoted).toBe(0);
+  });
+
+  it('is not tripped by a row chosen inside another chosen row', () => {
+    const { file, outline, scene, enters } = warehouse();
+    const going = whatGoesWithRows(live(file, outline), [scene, enters]);
+    expect(going.rows).toBe(6);
+    expect(going.titles).toHaveLength(2);
+  });
+
+  it('says what goes with it, in the room’s words', () => {
+    const { file, outline, scene, idea } = warehouse();
+    const named = (id: OutlineItemId) => findOutlineItem(live(file, outline), id)!.title;
+    const one = whatGoesWithRows(live(file, outline), [scene]);
+    expect(rowsRemovalQuestion(one)).toBe(`Delete “${named(scene)}”? It takes 5 rows under it too.`);
+
+    const leaf = whatGoesWithRows(live(file, outline), [idea]);
+    expect(rowsRemovalQuestion(leaf)).toBe(`Delete “${named(idea)}”?`);
+
+    expect(rowsRemovalQuestion(whatGoesWithRows(live(file, outline), []))).toBe('Nothing is chosen.');
+  });
+
+  it('names an untitled row rather than quoting nothing', () => {
+    const { file, outline } = warehouse();
+    const blank = addItem(file, outline.id, { kind: 'note', title: '   ', parentId: null });
+    const going = whatGoesWithRows(live(blank.file, outline), [blank.itemId!]);
+    expect(rowsRemovalQuestion(going)).toBe('Delete “this row”?');
+  });
+
+  it('comforts only where something chosen is real, in the format’s own noun', () => {
+    const { file, outline, scene } = warehouse();
+    expect(rowsRemovalComfort(whatGoesWithRows(live(file, outline), [scene]), 'Script')).toBeNull();
+
+    const bound = updateItem(file, outline.id, scene, { boundUnitId: 'unit-1' as never });
+    const going = whatGoesWithRows(live(bound, outline), [scene]);
+    expect(going.promoted).toBe(1);
+    expect(rowsRemovalComfort(going, 'Book')).toBe('One of them is already in the book; what it stands for stays there.');
   });
 });

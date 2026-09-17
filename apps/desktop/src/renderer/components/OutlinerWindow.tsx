@@ -35,11 +35,12 @@ import {
   promoteKindOf,
   promoteRow,
   promotedOf,
-  removeItem,
   removeItems,
   rowOutOfStep,
   rowSource,
   rowTitle,
+  rowsRemovalComfort,
+  rowsRemovalQuestion,
   sceneCardOf,
   setRowsStatus,
   setSceneGrid,
@@ -47,6 +48,7 @@ import {
   unpromoteRow,
   updateItem,
   updateUnit,
+  whatGoesWithRows,
   type Outline,
   type OutlineItem,
   type OutlineItemId,
@@ -176,6 +178,12 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
    * a bulk action applies to.
    */
   const [alsoPicked, setAlsoPicked] = useState<ReadonlySet<string>>(new Set());
+  /**
+   * Delete has been pressed and the selection is what would go (addendum 19
+   * §4). A flag rather than a list, because the selection *is* the list and a
+   * second copy of it would be the one to fall out of step.
+   */
+  const [removing, setRemoving] = useState(false);
   const [filter, setFilter] = useState<OutlineFilter>({});
   /** Says the copy happened, since a clipboard write leaves nothing on screen. */
   const [copied, setCopied] = useState(false);
@@ -271,6 +279,15 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
     if (selected) ids.add(selected as string);
     return [...ids] as OutlineItemId[];
   }, [alsoPicked, selected]);
+  /** Whether Add to track has anything to do: one chosen row the rules would take. */
+  const sendable =
+    outline !== null &&
+    picked.some((id) => {
+      const item = findOutlineItem(outline, id);
+      return item !== null && canPromote(file, outline, item) === null;
+    });
+  /** What Delete would take, counted before the question is asked. */
+  const going = outline && removing ? whatGoesWithRows(outline, picked) : null;
 
   /**
    * Choosing a row: on its own, added to, or a run of them.
@@ -511,6 +528,38 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
 
             <span className="outliner-gap" />
 
+            {/* Both act on the selection, one row or many, from here and
+                nowhere else (addendum 19 §3, §4). Add to track is promotion
+                under Ken's name for it — onto the first track, and so into
+                the manuscript, the unit being one thing seen from two places.
+                There is no × on a row, so Delete is the only way out. */}
+            <button
+              type="button"
+              className="tool"
+              disabled={!sendable}
+              title={
+                sendable
+                  ? `Put the chosen ${nouns.unitPlural.toLowerCase()} on the first track — and in the ${nouns.manuscript.toLowerCase()} — with their ${nouns.subPlural.toLowerCase()}`
+                  : `Choose a ${nouns.unit.toLowerCase()} or ${nouns.sub.toLowerCase()} that is not already on the track`
+              }
+              onClick={() =>
+                write((current, id) => picked.reduce((file2, one) => promoteRow(file2, id, one).file, current))
+              }
+            >
+              Add to track
+            </button>
+            <button
+              type="button"
+              className="tool danger"
+              disabled={picked.length === 0}
+              title={picked.length === 0 ? 'Choose a row first' : 'Take the chosen rows out of the outline'}
+              onClick={() => setRemoving(true)}
+            >
+              Delete
+            </button>
+
+            <span className="outliner-gap" />
+
             <button
               type="button"
               className="ghost small"
@@ -554,7 +603,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
             {tally ? (
               <span className="muted small">
                 {filtering ? `${found.hits.size} found · ` : ''}
-                {`${tally.scenes} ${(tally.scenes === 1 ? nouns.unit : nouns.unitPlural).toLowerCase()} · ${tally.rows} rows`}
+                {`${tally.scenes} ${(tally.scenes === 1 ? nouns.unit : nouns.unitPlural).toLowerCase()} · ${tally.rows} ${tally.rows === 1 ? 'row' : 'rows'}`}
               </span>
             ) : null}
 
@@ -648,27 +697,9 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
           >
             Move out
           </button>
-          <button
-            type="button"
-            className="ghost small"
-            title="Send every scene among them, with its beats"
-            onClick={() =>
-              write((current, id) => picked.reduce((file2, one) => promoteRow(file2, id, one).file, current))
-            }
-          >
-            Send to Script
-          </button>
-          <button
-            type="button"
-            className="ghost small danger"
-            onClick={() => {
-              setSelected(null);
-              setAlsoPicked(new Set());
-              write((current, id) => removeItems(current, id, picked));
-            }}
-          >
-            Remove
-          </button>
+          {/* Sending and deleting are the toolbar's now (addendum 19 §3, §4),
+              where they work the same for one row as for nine; this strip
+              keeps only what makes sense for several at once. */}
           <button type="button" className="ghost small" onClick={() => setAlsoPicked(new Set())}>
             Done
           </button>
@@ -734,10 +765,6 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
               onIndent={(deeper) =>
                 write((current, id) => (deeper ? indentItem : outdentItem)(current, id, row.item.id))
               }
-              onRemove={() => {
-                setSelected(null);
-                write((current, id) => removeItem(current, id, row.item.id));
-              }}
               onEnter={() => {
                 setSelected(row.item.id);
                 // Another of what this is, beside it. A scene is the exception:
@@ -901,6 +928,57 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
           )}
         </aside>
       </div>
+
+      {/* The question before anything goes (addendum 19 §4), in the Sculptor's
+          own dress: what is chosen, what goes with it, and — where a chosen
+          row is already real — that the writing stays whatever is pressed.
+          A promoted row is offered unbinding instead of deletion, which is
+          addendum 06 §10 reached by a new button. */}
+      {going && going.rows > 0 ? (
+        <div className="sculpt-card-veil" role="presentation" onClick={() => setRemoving(false)}>
+          <div
+            className="sculpt-sure-dialog"
+            role="alertdialog"
+            aria-label={rowsRemovalQuestion(going)}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3>{rowsRemovalQuestion(going)}</h3>
+            {rowsRemovalComfort(going, nouns.manuscript) ? (
+              <p className="muted small">{rowsRemovalComfort(going, nouns.manuscript)}</p>
+            ) : null}
+            <div className="sculpt-sure-row">
+              <button type="button" className="button" onClick={() => setRemoving(false)}>
+                Keep {going.titles.length === 1 ? 'it' : 'them'}
+              </button>
+              {going.promoted > 0 ? (
+                <button
+                  type="button"
+                  className="ghost"
+                  title={`Leave the rows where they are and let go of what they stand for in the ${nouns.manuscript.toLowerCase()}`}
+                  onClick={() => {
+                    write((current, id) => picked.reduce((file2, one) => unpromoteRow(file2, id, one), current));
+                    setRemoving(false);
+                  }}
+                >
+                  Just unbind {going.promoted === 1 ? 'it' : 'them'}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="ghost danger"
+                onClick={() => {
+                  setSelected(null);
+                  setAlsoPicked(new Set());
+                  setRemoving(false);
+                  write((current, id) => removeItems(current, id, picked));
+                }}
+              >
+                {going.rows > 1 ? `Delete all ${going.rows}` : 'Delete it'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1062,8 +1140,8 @@ function Promotion({
   if (kind === null) {
     return (
       <p className="muted small outline-promotion">
-        Planning. {article(nameOf(item.kind, file.project.format))} is something to know while the scene is written, and it stays here
-        when it is.
+        Planning. {article(nameOf(item.kind, file.project.format))} is something to know while the{' '}
+        {nounsFor(file.project.format).unit.toLowerCase()} is written, and it stays here when it is.
       </p>
     );
   }
@@ -1084,8 +1162,8 @@ function Promotion({
     return (
       <section className="outline-promotion in-script">
         <p className="small">
-          <span className="outline-real">●</span> This <strong>is</strong> the {what} <em>{name}</em>, in the
-          script. Rename it here or there and it is renamed in both.
+          <span className="outline-real">●</span> This <strong>is</strong> the {what} <em>{name}</em>, in the{' '}
+          {nouns.manuscript.toLowerCase()}. Rename it here or there and it is renamed in both.
         </p>
         {step ? (
           <p className="small outline-step">
@@ -1105,7 +1183,7 @@ function Promotion({
           className="ghost small"
           onClick={() => onWrite((current, id) => unpromoteRow(current, id, item.id))}
         >
-          Take it out of the script
+          Take it out of the {nouns.manuscript.toLowerCase()}
         </button>
       </section>
     );
@@ -1131,7 +1209,7 @@ function Promotion({
           }
           onClick={() => onWrite((current, id) => promoteRow(current, id, item.id).file)}
         >
-          Send to {nouns.manuscript}
+          Add to track
           {kind === 'unit' && beats > 0 ? ` — and ${beats} ${beats === 1 ? sub : subs}` : ''}
         </button>
       ) : (
@@ -1209,7 +1287,6 @@ function Row({
   onFold,
   onNudge,
   onIndent,
-  onRemove,
   onEnter,
   onStep,
   dragging,
@@ -1242,7 +1319,6 @@ function Row({
   onFold(): void;
   onNudge(direction: -1 | 1): void;
   onIndent(deeper: boolean): void;
-  onRemove(): void;
   /** Return from inside the box: the next row, never a line break. */
   onEnter(): void;
   /** An arrow off the end of the box: the row above or below. */
@@ -1353,7 +1429,11 @@ function Row({
       {/* The badge §6 asks for: a glance says how much of the outline is in
           the script. A row that is still a plan carries no mark. */}
       {promoted ? (
-        <span className="outline-real" title="This is in the script" aria-label="In the script">
+        <span
+          className="outline-real"
+          title={`This is in the ${nounsFor(format).manuscript.toLowerCase()}`}
+          aria-label={`In the ${nounsFor(format).manuscript.toLowerCase()}`}
+        >
           ●
         </span>
       ) : null}
@@ -1437,9 +1517,10 @@ function Row({
         <button type="button" className="ghost small" aria-label={`Move ${item.title || 'this row'} down`} onClick={() => onNudge(1)}>
           ↓
         </button>
-        <button type="button" className="ghost small" aria-label={`Remove ${item.title || 'this row'}`} onClick={onRemove}>
-          ×
-        </button>
+        {/* No × here, on any format (addendum 19 §4). A row being built out
+            is a row being clicked around, and a delete a pixel from the fold
+            handle is one a writer will hit. Delete is in the toolbar, on the
+            selection, and nowhere else. */}
       </div>
     </div>
   );

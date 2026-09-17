@@ -227,6 +227,69 @@ export const removeItems = (
   }));
 };
 
+/**
+ * What a Delete would take, asked of the outline before the writer is asked
+ * anything (addendum 19 §4).
+ *
+ * The Sculptor's `whatGoesWith` pointed at a tree. A selection may hold a row
+ * and something under it, and the subtrees are gathered exactly as
+ * `removeItems` gathers them, so this counts what would actually go rather
+ * than what was clicked. A promoted row is counted apart because it is the
+ * one the question has to be different for: the unit or beat it stands for
+ * stays in the manuscript whatever happens here (addendum 06 §10), and saying
+ * so is what keeps the question from being frightening.
+ */
+export interface WhatGoesRows {
+  /** Rows, the chosen ones included. */
+  rows: number;
+  /** Of those, how many stand for a real unit or beat — which stays. */
+  promoted: number;
+  /** The chosen rows' titles, for the question; blank where untitled. */
+  titles: string[];
+}
+
+export const whatGoesWithRows = (outline: Outline, itemIds: readonly OutlineItemId[]): WhatGoesRows => {
+  const doomed = new Map<string, OutlineItem>();
+  const titles: string[] = [];
+  for (const itemId of itemIds) {
+    const item = findOutlineItem(outline, itemId);
+    if (!item) continue;
+    titles.push(item.title.trim());
+    for (const one of outlineSubtree(outline, itemId)) doomed.set(one.id as string, one);
+  }
+  const going = [...doomed.values()];
+  return {
+    rows: going.length,
+    promoted: going.filter((one) => one.boundUnitId !== null || one.boundBeatId !== null).length,
+    titles,
+  };
+};
+
+/** The question, said before anything goes: what is chosen, and what goes with it. */
+export const rowsRemovalQuestion = (going: WhatGoesRows): string => {
+  if (going.rows === 0) return 'Nothing is chosen.';
+  const name =
+    going.titles.length === 1 ? `“${going.titles[0] || 'this row'}”` : `these ${going.titles.length} rows`;
+  const under = going.rows - going.titles.length;
+  if (under <= 0) return `Delete ${name}?`;
+  return `Delete ${name}? It takes ${under} ${under === 1 ? 'row' : 'rows'} under ${
+    going.titles.length === 1 ? 'it' : 'them'
+  } too.`;
+};
+
+/**
+ * What stays, where something chosen is already real. Null where nothing is,
+ * because a comfort about nothing is noise. `manuscript` is the noun table's
+ * word for this format — Script, Manuscript, Book — never assumed here.
+ */
+export const rowsRemovalComfort = (going: WhatGoesRows, manuscript: string): string | null => {
+  if (going.promoted === 0) return null;
+  const where = manuscript.toLowerCase();
+  return going.promoted === 1
+    ? `One of them is already in the ${where}; what it stands for stays there.`
+    : `${going.promoted} of them are already in the ${where}; what they stand for stays there.`;
+};
+
 /** How far along several rows are, said once (§8). */
 export const setRowsStatus = (
   file: ProjectFile,

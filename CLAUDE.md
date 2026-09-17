@@ -1020,8 +1020,14 @@ push live; the build takes a minute or two.
   are not.
   `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
   Ken after using instructional mode: chapters, sections and subsections
-  worked out first, then put on the track. **Specified; stages 0–5 in §9, none
-  built yet** — §12 fills a stage at a time. §1 is the audit and it paid a
+  worked out first, then put on the track. **Stage 0 is built; stages 1–5 of
+  §9 are not** — §12 fills a stage at a time, and stage 0's entry is there:
+  the × off every row, **Delete** and **Add to track** on the toolbar acting
+  on the selection, and an ask that says what goes (`whatGoesWithRows`,
+  `rowsRemovalQuestion`, `rowsRemovalComfort` in `outline.ts`) with *Just
+  unbind it* offered when a chosen row is already in the book. Building it
+  found three more §6c survivors in the Outliner's panel (*in the script* on a
+  book) and a *1 rows* tally. §1 is the audit and it paid a
   **ninth** time: a `chapter` **story marker** *is* a chapter — it already sits
   above units, carries the chapter page and drives the contents page — so the
   third level is a row in the Outliner that knows it, not a new table. Four

@@ -182,6 +182,94 @@ describe('the Outliner', () => {
   });
 });
 
+/**
+ * Delete is deliberate, and Add to track is promotion (addendum 19 §3, §4).
+ *
+ * Both act on the selection from the toolbar and nowhere else: there is no ×
+ * on a row, the keys do nothing to one, and one row and nine are the same
+ * gesture.
+ */
+describe('the Outliner toolbar', () => {
+  // The tree's row, never the panel's copy of the title: once a row is
+  // chosen its card shows the same words in a field of its own.
+  const rowOf = (title: string): HTMLElement =>
+    screen
+      .getAllByDisplayValue(title)
+      .map((box) => box.closest('.outline-row'))
+      .find((row): row is HTMLElement => row !== null) as HTMLElement;
+  const toolbar = (name: RegExp): HTMLButtonElement =>
+    screen.getAllByRole('button', { name })[0] as HTMLButtonElement;
+
+  it('has no × on any row, and a Delete that waits for a selection', () => {
+    render(<Outliner start={outlined()} />);
+    expect(screen.queryByLabelText(/^Remove /)).toBeNull();
+    expect(toolbar(/^Delete$/).disabled).toBe(true);
+    expect(toolbar(/^Add to track$/).disabled).toBe(true);
+
+    fireEvent.pointerDown(rowOf('Light'));
+    expect(toolbar(/^Delete$/).disabled).toBe(false);
+  });
+
+  it('asks what goes with a section before it goes, and then takes it all', () => {
+    render(<Outliner start={outlined()} />);
+    fireEvent.pointerDown(rowOf('Light'));
+    fireEvent.click(toolbar(/^Delete$/));
+
+    // Light carries two subsections, one under one of those, and a note.
+    const ask = screen.getByRole('alertdialog', { name: 'Delete “Light”? It takes 4 rows under it too.' });
+    expect(ask).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete all 5' }));
+
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(screen.queryByDisplayValue('Light')).toBeNull();
+    expect(screen.queryByDisplayValue('Focal length')).toBeNull();
+    expect(screen.getByText(/1 section · 1 row/)).toBeTruthy();
+  });
+
+  it('keeps everything when the writer keeps it', () => {
+    render(<Outliner start={outlined()} />);
+    fireEvent.pointerDown(rowOf('Lenses'));
+    fireEvent.click(toolbar(/^Delete$/));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep it' }));
+    expect(rowOf('Lenses')).toBeTruthy();
+    expect(screen.getByText('2 sections · 6 rows')).toBeTruthy();
+  });
+
+  it('is not moved by the Delete key', () => {
+    render(<Outliner start={outlined()} />);
+    const row = rowOf('Lenses');
+    fireEvent.pointerDown(row);
+    fireEvent.keyDown(row, { key: 'Delete' });
+    fireEvent.keyDown(row, { key: 'Backspace' });
+    expect(rowOf('Lenses')).toBeTruthy();
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
+  it('puts a chosen section on the track, and says so in the book’s own words', () => {
+    render(<Outliner start={outlined()} />);
+    fireEvent.pointerDown(rowOf('Lenses'));
+    expect(toolbar(/^Add to track$/).disabled).toBe(false);
+    fireEvent.click(toolbar(/^Add to track$/));
+
+    // The panel reads the noun table: a book says book, not script.
+    expect(screen.getByText(/in the book\./)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Take it out of the book' })).toBeTruthy();
+    // Already there, so the toolbar has nothing more to send.
+    expect(toolbar(/^Add to track$/).disabled).toBe(true);
+  });
+
+  it('takes several at once, and their subsections with them', () => {
+    render(<Outliner start={outlined()} />);
+    fireEvent.pointerDown(rowOf('Light'));
+    fireEvent.pointerDown(rowOf('Lenses'), { metaKey: true });
+    fireEvent.click(toolbar(/^Add to track$/));
+
+    // Both sections real, and Light's two subsections with it — and the
+    // badge reads the noun table, so a book's rows are in the book.
+    expect(screen.getAllByLabelText('In the book')).toHaveLength(4);
+  });
+});
+
 // ------------------------------------------------------------ the control
 
 function Setup({ start }: { start: ProjectFile }) {

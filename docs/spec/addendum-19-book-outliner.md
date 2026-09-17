@@ -313,5 +313,36 @@ epigraph. **Template**, the three, on the book with a per-chapter override.
 
 ## 12. What is built
 
-Nothing yet. This section is filled in a stage at a time, in the order of §9,
-each entry saying what the stage does and what building it found.
+This section is filled in a stage at a time, in the order of §9, each entry
+saying what the stage does and what building it found.
+
+### Stage 0 — Delete and Add to track, on the toolbar, on the selection
+
+**What it does.** The × is gone from every row on every format. The toolbar
+carries two more buttons after the kinds: **Add to track**, lit when any
+chosen row could be promoted and running `promoteRow` over the selection so
+one row and nine are the same gesture; and **Delete**, lit when anything is
+chosen and never acting at once. Delete opens an ask that says what would go
+before anything does: `whatGoesWithRows` in `outline.ts` gathers the chosen
+rows and everything under them (a subtree chosen twice is counted once),
+`rowsRemovalQuestion` writes the question — *Delete "Light"? It takes 4 rows
+under it too.* — and `rowsRemovalComfort` adds the one sentence a promoted row
+earns: *One of them is already in the book; what it stands for stays there.*
+The buttons are **Keep it**, **Just unbind it** (offered only when something in
+the selection is promoted, running `unpromoteRow` so the book keeps what the
+row stood for), and **Delete all N**. The keys do nothing to a row; the bulk
+strip keeps Mark, Move in, Move out and Done and loses Send to Script and
+Remove, both of which are the toolbar's now. The panel's button reads *Add to
+track* as well, since two names for one act is one too many. §4's refusal to
+delete promoted work silently is the whole of the domain change; the rest is
+the screen.
+
+**What building it found.** Three §6c survivors, all in the Outliner's panel
+and row: *in the script*, *Take it out of the script* and *while the scene is
+written* were literal words on a book, and now read the noun table — *in the
+book*, *Take it out of the book*, *while the section is written*. The
+promoted badge's title said *This is in the script* the same way. And the
+tally under the toolbar said *1 rows*, a plural nobody had pluralised. Driving
+the real renderer showed the ask dialog at the size the Sculptor's card ask
+draws at, which is the right size, so it borrows those two classes rather than
+growing its own.
