@@ -264,7 +264,7 @@ export const boardLayout = (board: Board, view: BoardView = WHOLE_BOARD): BoardL
   }
 
   // The strip of column names stops where the columns do: a board filtered to
-  // its structure that still drew five named lanes across an empty canvas
+  // its structure that still drew five named tracks across an empty canvas
   // would be saying the filter had not worked.
   const shown = view.depth === null ? columns : columns.slice(0, Math.max(1, view.depth));
 

@@ -31,7 +31,7 @@ const el = (type: string, text: string) => ({
 const scene = (): { file: ProjectFile; unitId: StructuralUnitId } => {
   let file = createProjectFile({ title: 'The Lighthouse', format: 'screenplay' });
   file = { ...file, units: [], beats: [] };
-  const made = addUnit(file, { laneId: file.lanes[0]!.id, title: 'The stair' });
+  const made = addUnit(file, { trackId: file.tracks[0]!.id, title: 'The stair' });
   const beat = addBeat(made.file, { unitId: made.unit.id });
   file = updateBeat(beat.file, beat.beat.id, {
     status: 'written',
@@ -105,7 +105,7 @@ describe('a read the document keeps', () => {
 
   it('says nothing about a scene the writer has not asked about', () => {
     const { file, unitId } = scene();
-    const other = addUnit(file, { laneId: file.lanes[0]!.id, title: 'The lamp' });
+    const other = addUnit(file, { trackId: file.tracks[0]!.id, title: 'The lamp' });
     const next = setSceneRead(other.file, unitId, verdict());
     expect(runFinalEditor(next).scenes[1]?.aiVerdict).toBeNull();
   });

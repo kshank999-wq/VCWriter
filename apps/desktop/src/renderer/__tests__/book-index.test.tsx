@@ -39,7 +39,7 @@ const para = (text: string) => ({
 /** A book with one scene of prose in it. */
 const book = (format: ProjectFormat = 'novel') => {
   let file: ProjectFile = createProjectFile({ title: 'The Lighthouse Keeper', format });
-  const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'One' });
+  const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'One' });
   const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'a beat' });
   const elements = ['The lamp turned all night.', 'Maeve did not sleep.'].map(para);
   file = updateBeat(beat.file, beat.beat.id, { manuscript: { elements } });

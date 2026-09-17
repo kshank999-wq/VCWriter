@@ -43,7 +43,7 @@ const script = (): ProjectFile => createProjectFile({ title: 'The Lighthouse', f
 
 /** A scene at the end of the story, so a promise has something to point at. */
 const scene = (file: ProjectFile, title: string): ProjectFile =>
-  addUnit(file, { laneId: file.lanes[0]!.id, title }).file;
+  addUnit(file, { trackId: file.tracks[0]!.id, title }).file;
 
 describe('saying what the story is', () => {
   it('starts saying nothing, and assumes nothing from the format', () => {

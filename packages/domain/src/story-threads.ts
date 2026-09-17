@@ -1,6 +1,6 @@
 import { beatsForUnit } from './selectors.js';
 import { storyLayout, timelineArcs, type StoryLayout, type StorySpan, type TimelineArc } from './story-layout.js';
-import type { Beat, Lane } from './entities/structure.js';
+import type { Beat, Track } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
 import type { BeatId } from './ids.js';
 
@@ -27,8 +27,8 @@ export const speakersIn = (beat: Beat): string[] => {
 /**
  * Colours for characters, assigned in order of first appearance so the same
  * project colours the same way every time it opens. They are chosen to read
- * on the dark and the light schemes alike and to stay apart from the lane
- * palette; a character is not a lane.
+ * on the dark and the light schemes alike and to stay apart from the track
+ * palette; a character is not a track.
  */
 export const CHARACTER_COLOURS = [
   '#e07a5f',
@@ -72,7 +72,7 @@ export interface ThemeThread {
 
 export interface ThreadLayout {
   spans: StorySpan[];
-  lanes: Lane[];
+  tracks: Track[];
   characters: CharacterThread[];
   themes: ThemeThread[];
   arcs: TimelineArc[];
@@ -82,7 +82,7 @@ export interface ThreadLayout {
   colours: Map<string, string>;
 }
 
-/** Themes are drawn in the lane palette; they are of the story, not of a cast. */
+/** Themes are drawn in the track palette; they are of the story, not of a cast. */
 const THEME_COLOURS = ['#c9a45c', '#8b1c1c', '#5b7fa6', '#7a9e7e', '#8a6f9e', '#a67c52', '#6f8f9e'] as const;
 
 /**
@@ -129,7 +129,7 @@ export const threadLayout = (
 
   return {
     spans: layout.spans,
-    lanes: layout.lanes,
+    tracks: layout.tracks,
     characters,
     themes: themeThreads(file, layout),
     arcs: base.arcs ?? timelineArcs(file),

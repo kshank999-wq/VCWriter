@@ -104,10 +104,10 @@ export function ProjectsDialog({
   };
 
   return (
-    <dialog ref={dialog} className="lane-dialog projects-dialog" aria-label="Projects on this machine" onClose={onClose}>
+    <dialog ref={dialog} className="track-dialog projects-dialog" aria-label="Projects on this machine" onClose={onClose}>
       {open ? (
         <>
-        <header className="lane-dialog-title">
+        <header className="track-dialog-title">
           <span className="bar-title">Projects on this machine</span>
           <button type="button" className="ghost" aria-label="Close the project list" onClick={onClose}>
             ×

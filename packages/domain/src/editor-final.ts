@@ -277,7 +277,7 @@ export const characterPresence = (file: ProjectFile): CharacterPresence[] => {
 };
 
 export interface ThreadRun {
-  laneId: string;
+  trackId: string;
   name: string;
   scenes: number[];
   first: number | null;
@@ -289,15 +289,15 @@ export const threadRuns = (file: ProjectFile): ThreadRun[] => {
   const scenes = reviewScenes(file);
   const positions = new Map(scenes.map((scene) => [scene.unitId as string, scene.position]));
 
-  return file.lanes.map((lane) => {
+  return file.tracks.map((track) => {
     const here = file.units
-      .filter((unit) => unit.laneId === lane.id && unit.inScript)
+      .filter((unit) => unit.trackId === track.id && unit.inScript)
       .map((unit) => positions.get(unit.id as string) ?? 0)
       .filter((position) => position > 0)
       .sort((a, b) => a - b);
     return {
-      laneId: lane.id as string,
-      name: lane.name,
+      trackId: track.id as string,
+      name: track.name,
       scenes: here,
       first: here[0] ?? null,
       last: here[here.length - 1] ?? null,

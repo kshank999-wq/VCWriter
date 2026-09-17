@@ -170,7 +170,7 @@ describe('depth', () => {
   });
 
   it('stops the strip of column names where the columns stop', () => {
-    // A board filtered to its structure that still drew three named lanes
+    // A board filtered to its structure that still drew three named tracks
     // across an empty canvas would be saying the filter had not worked.
     const { file, boardId } = staged();
     const board = boardOf(file, boardId);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createProjectFile, projectFileSchema, serializeProjectFile, parseProjectFile, type ProjectFile } from '../project-file.js';
-import { addBeat, addLane, addUnit, updateBeat } from '../mutations.js';
+import { addBeat, addTrack, addUnit, updateBeat } from '../mutations.js';
 import { beatsInStoryOrder, projectStats } from '../selectors.js';
 import { pageCount, manuscriptElements } from '../pagination.js';
 import { mergeProjects } from '../sync-merge.js';
@@ -23,21 +23,21 @@ import { newId, type ManuscriptElementId } from '../ids.js';
 const WORDS =
   'The lamp turns and the light crawls across the water without finding anything at all tonight '.split(' ');
 
-/** A screenplay of roughly feature length: 8 lanes, 121 scenes, 601 beats. */
+/** A screenplay of roughly feature length: 8 tracks, 121 scenes, 601 beats. */
 const largeProject = (): ProjectFile => {
   let file = createProjectFile({ title: 'The Lighthouse', format: 'screenplay' });
 
   const paragraph = (seed: number): string =>
     Array.from({ length: 40 }, (_, index) => WORDS[(seed + index) % WORDS.length]).join(' ');
 
-  for (let lane = 0; lane < 7; lane += 1) {
-    file = addLane(file, { name: `Lane ${lane}` }).file;
+  for (let track = 0; track < 7; track += 1) {
+    file = addTrack(file, { name: `Track ${track}` }).file;
   }
 
-  const lanes = file.lanes;
+  const tracks = file.tracks;
   for (let scene = 0; scene < 120; scene += 1) {
-    const lane = lanes[scene % lanes.length]!;
-    const created = addUnit(file, { laneId: lane.id, title: `Scene ${scene}` });
+    const track = tracks[scene % tracks.length]!;
+    const created = addUnit(file, { trackId: track.id, title: `Scene ${scene}` });
     file = created.file;
 
     for (let beat = 0; beat < 5; beat += 1) {

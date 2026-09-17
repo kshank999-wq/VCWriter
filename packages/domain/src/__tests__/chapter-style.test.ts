@@ -29,10 +29,10 @@ import {
 /** A book of several chapters, each on its own scene. */
 const book = (chapters: string[], format: 'novel' | 'screenplay' = 'novel') => {
   let file: ProjectFile = createProjectFile({ title: 'The Drowned Bell', format });
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   const markerIds: string[] = [];
   for (const name of chapters) {
-    const scene = addUnit(file, { laneId, title: name });
+    const scene = addUnit(file, { trackId, title: name });
     const made = addMarker(scene.file, { unitId: scene.unit.id, kind: 'chapter', title: name });
     file = made.file;
     markerIds.push(made.marker.id as string);
@@ -146,7 +146,7 @@ describe('the number on the page', () => {
     // Move the last scene to the front: its chapter is chapter one now, and
     // the leaf it opens with says so with nothing run.
     const last = unitsInStoryOrder(all).at(-1)!;
-    const moved = moveUnit(all, { unitId: last.id, toLaneId: last.laneId, index: 0 });
+    const moved = moveUnit(all, { unitId: last.id, toTrackId: last.trackId, index: 0 });
 
     const choices = chapterChoices(moved);
     expect(choices[0]!.markerId as string).toBe(markerIds[2]);

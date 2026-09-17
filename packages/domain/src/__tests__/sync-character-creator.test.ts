@@ -38,7 +38,7 @@ const peopled = (): { file: ProjectFile; ids: Record<string, string> } => {
   let file = createProjectFile({ title: 'Blackout', format: 'screenplay' });
   file = { ...file, units: [], beats: [] };
 
-  const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. DINER - NIGHT' });
+  const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. DINER - NIGHT' });
   const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'The bill' });
   file = addCharacter(beat.file, { name: 'MARA' });
   const character = file.characters[file.characters.length - 1]!;
@@ -221,10 +221,10 @@ describe('the collections go to the database and come back', () => {
   it('gives a collection the fetch never mentioned an empty list, not undefined', () => {
     const { file } = peopled();
     const rows = toRows(file);
-    const gathered = gatherRows(rows.project, { lanes: rows.lanes });
+    const gathered = gatherRows(rows.project, { tracks: rows.tracks });
     expect(gathered.usageLinks).toEqual([]);
     expect(gathered.characterTraits).toEqual([]);
-    expect(gathered.lanes).toEqual(rows.lanes);
+    expect(gathered.tracks).toEqual(rows.tracks);
   });
 
   it('opens a project written before the module existed', () => {

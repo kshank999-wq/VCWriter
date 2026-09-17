@@ -28,9 +28,9 @@ import type { ProjectFile } from '../project-file.js';
 const textbook = (sections = 3, subs = 2) => {
   let file: ProjectFile = createProjectFile({ title: 'Teaching Optics', format: 'instructional' });
   const starters = new Set(file.units.map((one) => one.id as string));
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   for (let at = 0; at < sections; at += 1) {
-    const unit = addUnit(file, { laneId, title: `Section ${at + 1}` });
+    const unit = addUnit(file, { trackId, title: `Section ${at + 1}` });
     file = unit.file;
     for (let under = 0; under < subs; under += 1) {
       file = addBeat(file, { unitId: unit.unit.id, title: `Part ${under + 1}` }).file;
@@ -88,7 +88,7 @@ describe('the numbers', () => {
     expect(numberOfUnit(file, third.id)).toBe('3');
     expect(numberOfSub(file, firstSubOfThird.id)).toBe('3.1');
 
-    const moved = moveUnit(file, { unitId: third.id, toLaneId: third.laneId, index: 0 });
+    const moved = moveUnit(file, { unitId: third.id, toTrackId: third.trackId, index: 0 });
     // Nothing was renumbered; the reading simply says something else now.
     expect(numberOfUnit(moved, third.id)).toBe('1');
     expect(numberOfSub(moved, firstSubOfThird.id)).toBe('1.1');
@@ -105,7 +105,7 @@ describe('the numbers', () => {
   it('numbers nothing on a novel or a screenplay', () => {
     for (const format of ['novel', 'screenplay', 'short_story'] as const) {
       let file: ProjectFile = createProjectFile({ title: 'A Work', format });
-      file = addUnit(file, { laneId: file.lanes[0]!.id, title: 'One' }).file;
+      file = addUnit(file, { trackId: file.tracks[0]!.id, title: 'One' }).file;
       expect(numbersDivisions(file)).toBe(false);
       expect(structureNumbers(file).units.size).toBe(0);
     }

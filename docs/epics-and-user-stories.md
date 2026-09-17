@@ -13,7 +13,7 @@ exists it is named.
 As a writer, I create a project as a screenplay, novel or other supported
 format so the workspace matches what I am writing.
 *Accepts:* a new screenplay opens with a scene container; a new novel opens
-with a chapter container; both start with one lane, one container, one beat and
+with a chapter container; both start with one track, one container, one beat and
 the default research categories.
 *Tested:* `structure.test.ts` — "creates a usable project", "uses chapters for
 novels".
@@ -42,10 +42,10 @@ setups are derived, never stored stale.
 
 ## Epic 2 — Story structure (§5)
 
-**2.1 Organise scenes and chapters into plot lanes.**
-*Accepts:* multiple lanes; lanes reorder; a container can move between lanes
+**2.1 Organise scenes and chapters into plot tracks.**
+*Accepts:* multiple tracks; tracks reorder; a container can move between tracks
 and keeps its beats.
-*Tested:* `structure.test.ts` — "moves a scene between lanes".
+*Tested:* `structure.test.ts` — "moves a scene between tracks".
 
 **2.2 Beats live inside a scene or chapter.**
 *Accepts:* creating a beat requires an existing container; there is no code
@@ -65,12 +65,12 @@ annotated reference copy includes it only when explicitly requested.
 *Tested:* `render.test.ts` — "never emits the internal beat title".
 
 **2.5 Collapse and expand containers.**
-*Accepts:* collapsed state persists per container and per lane, and survives a
+*Accepts:* collapsed state persists per container and per track, and survives a
 save/load round trip.
-*Tested:* `panels.test.tsx` — "collapses a lane and brings it back".
+*Tested:* `panels.test.tsx` — "collapses a track and brings it back".
 
 **2.6 Reorder by drag and by keyboard.**
-As a writer, I reorder beats, scenes and lanes by dragging, or by keyboard when
+As a writer, I reorder beats, scenes and tracks by dragging, or by keyboard when
 dragging is not available to me.
 *Accepts:* a drop lands the item exactly where the indicator showed, including
 the one-place-down case; dropping an item on itself changes nothing; Alt+arrows
@@ -78,15 +78,15 @@ move a beat within its scene and Alt+Shift+arrows move it between scenes.
 *Tested:* `drag.test.ts` — five ordering cases plus the cross-container move.
 
 **2.7 Rename structure in place.**
-*Accepts:* renaming a lane, scene or sequence label updates every panel that
+*Accepts:* renaming a track, scene or sequence label updates every panel that
 mentions it, because links resolve names at render time rather than copying
 them.
-*Tested:* `panels.test.tsx` — "renames a lane in place";
+*Tested:* `panels.test.tsx` — "renames a track in place";
 `structure-editing.test.ts` — "reads the current name rather than a copy".
 
 **2.8 Remove structure without leaving dangling references.**
-*Accepts:* removing a lane or scene removes its contents and every link that
-pointed at them; the last lane cannot be removed.
+*Accepts:* removing a track or scene removes its contents and every link that
+pointed at them; the last track cannot be removed.
 *Tested:* `structure-editing.test.ts` — removal cascade cases.
 
 ---

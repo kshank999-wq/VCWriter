@@ -38,7 +38,7 @@ const line = (text: string) => ({
 /** A project with a scene, a beat with two lines, and one thing to show. */
 const staged = () => {
   let file: ProjectFile = createProjectFile({ title: 'Blackout', format: 'screenplay' });
-  const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. DINER - NIGHT' });
+  const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. DINER - NIGHT' });
   const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'The bill' });
   file = updateBeat(beat.file, beat.beat.id, {
     manuscript: {
@@ -205,7 +205,7 @@ describe('reading back where something turned up', () => {
 
   it('offers the scenes and their beats in story order', () => {
     const { file } = staged();
-    const second = addUnit(file, { laneId: file.lanes[0]!.id, title: 'EXT. LOT - LATER' });
+    const second = addUnit(file, { trackId: file.tracks[0]!.id, title: 'EXT. LOT - LATER' });
     const withBeat = addBeat(second.file, { unitId: second.unit.id, title: 'The walk' });
 
     const places = placesToPin(withBeat.file);

@@ -38,11 +38,11 @@ const para = (text: string) => ({
 
 const book = (lines: string[]) => {
   let file: ProjectFile = createProjectFile({ title: 'The Bell', format: 'novel' });
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   const beatIds: BeatId[] = [];
   const elementIds: ManuscriptElementId[] = [];
   for (const line of lines) {
-    const scene = addUnit(file, { laneId, title: line.slice(0, 16) });
+    const scene = addUnit(file, { trackId, title: line.slice(0, 16) });
     const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'a beat' });
     const element = para(line);
     file = updateBeat(beat.file, beat.beat.id, { manuscript: { elements: [element] } });

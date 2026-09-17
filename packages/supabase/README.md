@@ -6,7 +6,7 @@ Database schema, row level security policies and storage layout for VC Writer.
 
 | Migration | Contents |
 | --- | --- |
-| `0001_core_story_schema.sql` | Accounts, projects, lanes → scene/chapter units → beats, research, characters, story links, setups/payoffs, snapshots |
+| `0001_core_story_schema.sql` | Accounts, projects, tracks → scene/chapter units → beats, research, characters, story links, setups/payoffs, snapshots |
 | `0002_commerce_and_releases.sql` | Orders, licenses, release builds, device activations, Stripe webhook log, email events |
 | `0003_capture_and_sync.sql` | VC Writer Notes capture queue |
 

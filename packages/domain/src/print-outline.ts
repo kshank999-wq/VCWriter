@@ -127,7 +127,7 @@ const cardLine = (file: ProjectFile, outline: Outline, item: OutlineItem): strin
   if (!card) return '';
   const facts: string[] = [];
   if (card.pov?.trim()) facts.push(`POV ${card.pov.trim()}`);
-  if (card.lane) facts.push(card.lane.name);
+  if (card.track) facts.push(card.track.name);
   if (card.status.trim()) facts.push(card.status.trim());
   facts.push(`${card.beats} ${card.beats === 1 ? 'beat' : 'beats'}`);
 

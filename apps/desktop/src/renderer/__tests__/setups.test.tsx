@@ -39,10 +39,10 @@ const para = (text: string) => ({
 /** A script of four scenes with a line in each. */
 const script = () => {
   let file: ProjectFile = createProjectFile({ title: 'The Gun', format: 'screenplay' });
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   const beatIds: BeatId[] = [];
   for (const line of ['She opens the drawer.', 'He asks about it.', 'She fires it.', 'Nobody moves.']) {
-    const scene = addUnit(file, { laneId, title: line });
+    const scene = addUnit(file, { trackId, title: line });
     const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'a beat' });
     file = { ...beat.file };
     file = {

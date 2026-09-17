@@ -26,7 +26,7 @@ const gridded = (): ProjectFile => {
   let file = createProjectFile({ title: 'Blackout', format: 'screenplay' });
   file = updateUnit(file, file.units[0]!.id, { title: 'The stair' });
   for (const title of ['The corner', 'The lamp', 'The door']) {
-    file = addUnit(file, { laneId: file.lanes[0]!.id, title }).file;
+    file = addUnit(file, { trackId: file.tracks[0]!.id, title }).file;
   }
   const order = unitsInStoryOrder(file);
   file = addMarker(file, { unitId: order[0]!.id, title: 'Setup', kind: 'act' }).file;

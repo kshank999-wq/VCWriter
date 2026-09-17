@@ -55,7 +55,7 @@ const written = (): ProjectFile => {
   // The seed scene a new project comes with is nobody's work; it would sign
   // itself over to whoever opened the room first.
   const file: ProjectFile = { ...empty, units: [], beats: [] };
-  const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. WAREHOUSE - NIGHT' });
+  const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. WAREHOUSE - NIGHT' });
   const first = addBeat(scene.file, { unitId: scene.unit.id, title: 'Mara enters' });
   const second = addBeat(first.file, { unitId: scene.unit.id, title: 'She finds the case' });
   // Something for the paginator to set: a stamp is a fact about a page, and a
@@ -220,7 +220,7 @@ describe('signing what a writer made', () => {
   it('signs the scene they added and leaves what was already there alone', () => {
     const opened = written();
     const known = knownRecords(opened);
-    const made = addUnit(opened, { laneId: opened.lanes[0]!.id, title: 'INT. CAR - DAY' });
+    const made = addUnit(opened, { trackId: opened.tracks[0]!.id, title: 'INT. CAR - DAY' });
     const signed = signNewWork(made.file, { authorId: 'mara', known, at: AT });
 
     expect(signed.units.find((unit) => unit.id === made.unit.id)?.origin).toEqual({

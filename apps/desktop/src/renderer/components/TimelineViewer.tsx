@@ -24,7 +24,7 @@ interface TimelineViewerProps {
   selectedBeatId: BeatId | null;
   onSelectBeat(beatId: BeatId): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
-  /** Pixels per page — the same unit the lanes below are zoomed in. */
+  /** Pixels per page — the same unit the tracks below are zoomed in. */
   zoom: number;
   onZoom(zoom: number): void;
   /** A character's name, or '' for all of them. */
@@ -236,7 +236,7 @@ export function TimelineViewer({
           <div className="viewer-scene viewer-sticky tail" />
 
           {/*
-            Every character, one lane each in their own colour, filled in the
+            Every character, one track each in their own colour, filled in the
             scenes they speak in — who is in what, in one look. Under a
             heading that folds them away, because a large cast is a lot of
             rows and the scenes above them are what most of the work is about.

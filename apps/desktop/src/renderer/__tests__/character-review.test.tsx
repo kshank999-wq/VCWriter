@@ -37,7 +37,7 @@ const screenplay = () => {
   for (const name of ['MARA', 'DEAKINS', 'SAL']) file = addCharacter(file, { name });
 
   [['MARA', 'DEAKINS'], ['DEAKINS'], ['DEAKINS'], ['MARA'], ['MAEVE']].forEach((cues, index) => {
-    const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: `SCENE ${index + 1}` });
+    const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: `SCENE ${index + 1}` });
     const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'A beat' });
     file = updateBeat(beat.file, beat.beat.id, { manuscript: { elements: cues.map(cue) } });
   });

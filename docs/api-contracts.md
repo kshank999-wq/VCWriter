@@ -246,7 +246,7 @@ A VC Writer project (`.vcw`) is one JSON document:
   "generator": "vcwriter",
   "savedAt": "2026-09-05T00:00:00.000Z",
   "project": { … }, "settings": { … },
-  "lanes": [ … ], "units": [ … ], "beats": [ … ],
+  "tracks": [ … ], "units": [ … ], "beats": [ … ],
   "researchCategories": [ … ], "researchItems": [ … ],
   "characters": [ … ], "links": [ … ], "setupsPayoffs": [ … ],
   "snapshots": [ … ]

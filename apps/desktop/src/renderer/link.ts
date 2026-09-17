@@ -5,7 +5,7 @@ import type { ProjectFile } from '@vcwriter/domain';
  *
  * A section moved to a second monitor is a second window onto the *same*
  * document: typing in the beat window must appear in the Script a moment
- * later, and moving a beat in the lanes must move its text in the beat
+ * later, and moving a beat in the tracks must move its text in the beat
  * window. So exactly one window — the workspace — holds the document, and
  * every other window is a client of it.
  *

@@ -53,10 +53,10 @@ const para = (text: string) => ({
  */
 const script = (scenes: number) => {
   let file: ProjectFile = createProjectFile({ title: 'The Key', format: 'screenplay' });
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   const offset = unitsInStoryOrder(file).length;
   for (let at = 0; at < scenes; at += 1) {
-    const scene = addUnit(file, { laneId, title: `Scene ${at + 1}` });
+    const scene = addUnit(file, { trackId, title: `Scene ${at + 1}` });
     const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'a beat' });
     file = updateBeat(beat.file, beat.beat.id, { manuscript: { elements: [para(`Line ${at + 1}.`)] } });
   }
@@ -102,7 +102,7 @@ describe('a thread', () => {
     // because nothing ever held its position.
     const moved = moveUnit(current, {
       unitId: beat.unitId,
-      toLaneId: current.lanes[0]!.id,
+      toTrackId: current.tracks[0]!.id,
       index: total - 1,
     });
     expect(momentsOf(moved, made.thread.id)[0]!.unitIndex).toBe(total - 1);
@@ -159,7 +159,7 @@ describe('dependency', () => {
 
   it('draws nothing until the writer says what relies on what', () => {
     const { file, threadId } = built();
-    const row = storyMap(file).lanes.find((lane) => lane.id === 'links')!.rows[0]!;
+    const row = storyMap(file).tracks.find((track) => track.id === 'links')!.rows[0]!;
     // Chronology is not causality (§5.2).
     expect(row.edges).toHaveLength(0);
     expect(describeThread(file, file.threads[0]!)).toMatch(/the order alone is not a cause/);
@@ -170,7 +170,7 @@ describe('dependency', () => {
     const current = dependOn(file, nodes[2]!, nodes[0]!);
 
     expect(dependenciesIn(current, threadId)).toEqual([{ dependent: nodes[2], required: nodes[0] }]);
-    const row = storyMap(current).lanes.find((lane) => lane.id === 'links')!.rows[0]!;
+    const row = storyMap(current).tracks.find((track) => track.id === 'links')!.rows[0]!;
     expect(row.edges).toHaveLength(1);
     // The arrow travels the way the story does.
     expect(row.edges[0]).toMatchObject({ from: nodes[0], to: nodes[2], relationship: 'dependency' });
@@ -191,7 +191,7 @@ describe('dependency', () => {
     let current = addMoment(made.file, made.thread.id, { beatId: beatAt(made.file, 2).id }).file;
     current = addMoment(current, made.thread.id, { beatId: beatAt(current, 0).id }).file;
 
-    const row = storyMap(current).lanes.find((lane) => lane.id === 'links')!.rows[0]!;
+    const row = storyMap(current).tracks.find((track) => track.id === 'links')!.rows[0]!;
     expect(row.edges).toHaveLength(1);
     expect(row.edges[0]!.relationship).toBe('sequence');
     // Nothing about the order is in the document.
@@ -249,10 +249,10 @@ describe('the map', () => {
     );
   });
 
-  it('shows only the lanes asked for', () => {
+  it('shows only the tracks asked for', () => {
     const { file } = script(2);
-    const map = storyMap(file, { lanes: ['links', 'setups'] });
-    expect(map.lanes.map((lane) => lane.id)).toEqual(['links', 'setups']);
+    const map = storyMap(file, { tracks: ['links', 'setups'] });
+    expect(map.tracks.map((track) => track.id)).toEqual(['links', 'setups']);
   });
 
   it('isolates one row and says how many it put away', () => {
@@ -266,10 +266,10 @@ describe('the map', () => {
     current = addMoment(second.file, second.thread.id, { beatId: beatAt(second.file, 1).id }).file;
 
     const all = storyMap(current);
-    expect(all.lanes.find((lane) => lane.id === 'links')!.rows).toHaveLength(2);
+    expect(all.tracks.find((track) => track.id === 'links')!.rows).toHaveLength(2);
 
-    const one = storyMap(current, { only: [{ laneId: 'links', sourceId: key as string }] });
-    expect(one.lanes.find((lane) => lane.id === 'links')!.rows.map((row) => row.title)).toEqual(['The key']);
+    const one = storyMap(current, { only: [{ trackId: 'links', sourceId: key as string }] });
+    expect(one.tracks.find((track) => track.id === 'links')!.rows.map((row) => row.title)).toEqual(['The key']);
     expect(one.hidden).toBeGreaterThan(0);
   });
 
@@ -284,7 +284,7 @@ describe('the map', () => {
 
     // The last two scenes, as a writer numbers them.
     const narrowed = storyMap(current, { range: { from: total - 1, to: total } });
-    expect(narrowed.lanes.find((lane) => lane.id === 'links')!.rows.map((row) => row.title)).toEqual(['Late']);
+    expect(narrowed.tracks.find((track) => track.id === 'links')!.rows.map((row) => row.title)).toEqual(['Late']);
     // A range narrows what is drawn and never what exists.
     expect(narrowed.scenes).toHaveLength(total);
     expect(current.threads).toHaveLength(2);
@@ -327,27 +327,27 @@ describe('the line', () => {
     let current = addMoment(made.file, made.thread.id, { beatId: beatAt(made.file, 0).id }).file;
     current = updateThread(current, made.thread.id, { name: 'The brass key' });
 
-    const row = storyMap(current).lanes.find((lane) => lane.id === 'links')!.rows[0]!;
+    const row = storyMap(current).tracks.find((track) => track.id === 'links')!.rows[0]!;
     expect(row.title).toBe('The brass key');
     // The node's label carries it too, because nothing copied the name out.
     expect(row.nodes[0]!.label).toMatch(/^The brass key/);
   });
 });
 
-describe('the other lanes', () => {
+describe('the other tracks', () => {
   it('reads the same shape from setups, themes and arcs', () => {
     const { file } = script(2);
-    // Every lane is present and normalized even when empty — the engine does
+    // Every track is present and normalized even when empty — the engine does
     // not know what a setup is, so it cannot fail to ask for one.
     const map = storyMap(file);
-    expect(map.lanes.map((lane) => lane.title)).toEqual([
+    expect(map.tracks.map((track) => track.title)).toEqual([
       'Links',
       'Setups & Payoffs',
       'Themes & Motifs',
       'Character Arcs',
     ]);
-    for (const lane of map.lanes) {
-      for (const row of lane.rows) {
+    for (const track of map.tracks) {
+      for (const row of track.rows) {
         expect(Array.isArray(row.nodes)).toBe(true);
         expect(Array.isArray(row.edges)).toBe(true);
       }

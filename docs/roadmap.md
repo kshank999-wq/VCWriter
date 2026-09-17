@@ -23,8 +23,8 @@ the first published release build, and the desktop ↔ Supabase project sync
 
 | Deliverable | Status |
 | --- | --- |
-| Lanes, scene/chapter containers, beats | Done — nested board, collapse/expand, inline rename, cascading removal |
-| Drag-reorder | Done — beats, containers and lanes, with edge drop indicators; keyboard equivalents for beats |
+| Tracks, scene/chapter containers, beats | Done — nested board, collapse/expand, inline rename, cascading removal |
+| Drag-reorder | Done — beats, containers and tracks, with edge drop indicators; keyboard equivalents for beats |
 | Research categories | Done — create, rename, reorder, archive and restore |
 | Used / unused workflow | Done — filter tabs, mark used against the open beat, restore, unconfirmed suggestions flagged |
 | Setups and payoffs | Done — many setups per payoff, place a setup in the open beat, record payoff, reopen, archive |
@@ -33,7 +33,7 @@ the first published release build, and the desktop ↔ Supabase project sync
 Remaining before Phase 2 closes: drag-reorder for research notes and
 categories (they move by buttons and a category picker today), a
 related-elements panel on scenes and characters as well as beats, and
-lane-level story-order views such as a timeline across lanes.
+track-level story-order views such as a timeline across tracks.
 
 ## Phase 3 — Writing ▸ built
 
@@ -141,7 +141,7 @@ update).
 | --- | --- |
 | Sync conflicts | Done — the losing version survives the merge, is shown, and can be put back; a `pre_sync` snapshot is taken before a conflicted merge lands |
 | Backup and recovery | Done — a Recovery view that lists snapshots by reason and restores them; restoring snapshots the current file first |
-| Accessibility | Done — lanes and scenes are keyboard-reorderable, the rename control has an accessible name, focus is visible on the handles |
+| Accessibility | Done — tracks and scenes are keyboard-reorderable, the rename control has an accessible name, focus is visible on the handles |
 | Performance | Done — floors on a 601-beat project, so a quadratic regression fails CI |
 | Security review | Done — [security-review.md](security-review.md); nonce-based CSP, renderer sandbox on, gaps named |
 | Cross-platform QA | Partly — CI runs the suites on all three systems; the manual matrix needs hardware |
@@ -158,11 +158,11 @@ shows the overwritten text and puts it back as a fresh edit — so the next sync
 carries the restore out rather than overwriting it again.
 
 **A structure board that could only be reordered by dragging.** Reordering is
-the board's central gesture, and beats had keyboard moves while lanes and
+the board's central gesture, and beats had keyboard moves while tracks and
 scenes did not — which meant that for a keyboard or screen-reader user the
 board could be read and not organised. The file's own comment claimed
 otherwise. Both now have a focusable handle with Alt+↑/↓, and Alt+Shift+↑/↓
-moves a scene between lanes.
+moves a scene between tracks.
 
 **A content security policy that killed the landing page.** The first strict
 CSP used a per-request nonce, which is right, but `/` and `/signin` were

@@ -69,7 +69,7 @@ export const restoreDiscardedVersion = (
  */
 export const canRestore = (file: ProjectFile, conflict: SyncConflict): boolean => {
   const parentOf: Partial<Record<SyncConflict['collection'], { field: string; collection: SyncCollection }>> = {
-    units: { field: 'laneId', collection: 'lanes' },
+    units: { field: 'trackId', collection: 'tracks' },
     beats: { field: 'unitId', collection: 'units' },
     researchItems: { field: 'categoryId', collection: 'researchCategories' },
     // The plans have the same shape of dependency: a node cannot be put back

@@ -82,10 +82,10 @@ export function Reports({
   const sittingsOn = (day: string) => sessions.filter((session) => dayOf(session.startedAt) === day);
 
   return (
-    <dialog ref={dialog} className="lane-dialog reports" aria-label="Reports" onClose={onClose}>
+    <dialog ref={dialog} className="track-dialog reports" aria-label="Reports" onClose={onClose}>
       {open !== null ? (
         <>
-          <header className="lane-dialog-title">
+          <header className="track-dialog-title">
             <span className="bar-title">Reports</span>
             <button type="button" className="ghost" aria-label="Close" onClick={onClose}>
               ×
@@ -222,7 +222,7 @@ export function Reports({
                 <Figure label={nouns.subPlural} value={String(stats.beatCount)} />
                 <Figure label="Written" value={`${stats.writtenBeatCount} of ${stats.beatCount}`} />
                 <Figure label="Markers" value={String(markers.length)} />
-                <Figure label="Plot lanes" value={String(stats.laneCount)} />
+                <Figure label="Plot tracks" value={String(stats.trackCount)} />
                 <Figure
                   label="Research not used"
                   value={String(stats.unusedResearchCount)}

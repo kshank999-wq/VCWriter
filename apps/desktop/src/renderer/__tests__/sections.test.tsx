@@ -33,9 +33,9 @@ afterEach(cleanup);
 const textbook = (sections = 3, subs = 2) => {
   let file: ProjectFile = createProjectFile({ title: 'Teaching Optics', format: 'instructional' });
   const starters = new Set(file.units.map((one) => one.id as string));
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   for (let at = 0; at < sections; at += 1) {
-    const unit = addUnit(file, { laneId, title: `Section ${at + 1}` });
+    const unit = addUnit(file, { trackId, title: `Section ${at + 1}` });
     file = unit.file;
     for (let under = 0; under < subs; under += 1) {
       file = addBeat(file, { unitId: unit.unit.id, title: `Part ${under + 1}` }).file;
@@ -97,7 +97,7 @@ describe('the Book view', () => {
   it('renumbers when a section moves, with nothing run', () => {
     const file = textbook(3, 1);
     const third = file.units[2]!;
-    const moved = moveUnit(file, { unitId: third.id, toLaneId: third.laneId, index: 0 });
+    const moved = moveUnit(file, { unitId: third.id, toTrackId: third.trackId, index: 0 });
     render(<Book start={moved} />);
 
     const numbers = screen.getAllByTitle('Section number, worked out from where it falls');
@@ -108,7 +108,7 @@ describe('the Book view', () => {
 
   it('numbers nothing on a screenplay', () => {
     let file: ProjectFile = createProjectFile({ title: 'A Script', format: 'screenplay' });
-    file = addUnit(file, { laneId: file.lanes[0]!.id, title: 'One' }).file;
+    file = addUnit(file, { trackId: file.tracks[0]!.id, title: 'One' }).file;
     render(<Book start={file} />);
     expect(screen.queryByTitle(/worked out from where it falls/)).toBeNull();
     expect(screen.getAllByLabelText('Sequence label').length).toBeGreaterThan(0);
@@ -221,7 +221,7 @@ describe('the one thing there is to set', () => {
 
   it('is absent rather than greyed on a format that has no numbering', () => {
     let file: ProjectFile = createProjectFile({ title: 'A Script', format: 'screenplay' });
-    file = addUnit(file, { laneId: file.lanes[0]!.id, title: 'One' }).file;
+    file = addUnit(file, { trackId: file.tracks[0]!.id, title: 'One' }).file;
     render(<Setup start={file} />);
     expect(screen.queryByText('Numbering')).toBeNull();
     expect(screen.queryByLabelText(/are numbered$/)).toBeNull();

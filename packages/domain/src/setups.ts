@@ -199,7 +199,7 @@ export const describeSetups = (file: ProjectFile): string => {
 
 export { derivedSetupPayoffStatus };
 
-// ------------------------------------------------- the lane on the timeline
+// ------------------------------------------------- the track on the timeline
 
 /** One point of one record, at the scene it falls in. */
 export interface SetupMark {
@@ -212,8 +212,8 @@ export interface SetupMark {
   label: string;
 }
 
-/** One record's row on the lane. */
-export interface SetupLaneRow {
+/** One record's row on the track. */
+export interface SetupTrackRow {
   recordId: string;
   title: string;
   light: 'red' | 'green';
@@ -222,18 +222,18 @@ export interface SetupLaneRow {
 }
 
 /**
- * Setups and payoffs as a lane of the story timeline (the spec's §6).
+ * Setups and payoffs as a track of the story timeline (the spec's §6).
  *
- * **A row per record, not one row of everything.** The question the lane exists
+ * **A row per record, not one row of everything.** The question the track exists
  * to answer is *how far apart are this payoff's setups, and where does it
  * land* — and points from three different promises on one line answer nothing.
  *
  * Only records with something placed appear: a payoff that has been written
  * down but never tagged in the script has no position, and a row of nothing is
- * a row that teaches a writer to ignore the lane.
+ * a row that teaches a writer to ignore the track.
  */
-export const setupLane = (file: ProjectFile): SetupLaneRow[] => {
-  const rows: SetupLaneRow[] = [];
+export const setupTrack = (file: ProjectFile): SetupTrackRow[] => {
+  const rows: SetupTrackRow[] = [];
   for (const { record, readiness } of setupsBoard(file)) {
     const marks: SetupMark[] = [];
     for (const place of readiness.setups) {

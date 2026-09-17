@@ -53,9 +53,9 @@ const script = () => {
     ids[name] = file.characters[file.characters.length - 1]!.id;
   }
 
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   const write = (title: string, who: string[]) => {
-    const scene = addUnit(file, { laneId, title });
+    const scene = addUnit(file, { trackId, title });
     const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'a beat' });
     file = updateBeat(beat.file, beat.beat.id, {
       manuscript: { elements: who.map((name) => cue(name)) },
@@ -118,7 +118,7 @@ describe('what a range is', () => {
 
 describe('who is in a stretch', () => {
   it('counts somebody as in it because they speak there', () => {
-    // The same rule as the lane filter, and as everything else in the module.
+    // The same rule as the track filter, and as everything else in the module.
     const { file, ids, at } = script();
     expect(charactersInScenes(file, { from: at(1), to: at(2) })).toEqual([
       ids['MARA']!,
@@ -226,7 +226,7 @@ describe('the map through a range', () => {
   });
 
   it('takes both filters at once, and wants the people who pass both', () => {
-    // *In this lane* and *in this stretch* are different questions, and a
+    // *In this track* and *in this stretch* are different questions, and a
     // writer asking both means the intersection.
     const { file, ids, at } = script();
     const map = characterMap({

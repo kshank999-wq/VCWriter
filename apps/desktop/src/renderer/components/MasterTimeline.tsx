@@ -5,10 +5,10 @@ import {
   addBeat,
   beatsForUnit,
   moveBeat,
-  moveLane,
+  moveTrack,
   moveUnit,
   removeBeat,
-  removeLane,
+  removeTrack,
   removeMarker,
   removeUnit,
   avSheet,
@@ -16,21 +16,21 @@ import {
   storyLayout,
   threadLayout,
   timecode,
-  setupLane,
-  thematicLanes,
-  type SetupLaneRow,
-  type ThematicLaneRow,
+  setupTrack,
+  thematicTracks,
+  type SetupTrackRow,
+  type ThematicTrackRow,
   timelineArcs,
-  unitsForLane,
-  updateLane,
+  unitsForTrack,
+  updateTrack,
   updateMarker,
   updateUnit,
   formatRt,
   type AvRow,
   type Beat,
   type BeatId,
-  type Lane,
-  type LaneId,
+  type Track,
+  type TrackId,
   type ProjectFile,
   type StoryLayout,
   type StorySpan,
@@ -68,20 +68,20 @@ interface MasterTimelineProps {
    * derive it from and is exactly the one you select before adding a beat.
    */
   selectedUnitId?: StructuralUnitId | null;
-  onSelectUnit?(unitId: StructuralUnitId, laneId: LaneId): void;
-  /** Clicking a lane's header makes it the one a new scene lands in. */
-  onSelectLane?(laneId: LaneId): void;
+  onSelectUnit?(unitId: StructuralUnitId, trackId: TrackId): void;
+  /** Clicking a track's header makes it the one a new scene lands in. */
+  onSelectTrack?(trackId: TrackId): void;
   /** How many beats stack before the next column starts (addendum 02 §4). */
   beatsPerColumn?: number;
-  /** Null in a window that holds only the lanes: there is no inspector there. */
+  /** Null in a window that holds only the tracks: there is no inspector there. */
   inspectorOpen: boolean | null;
   onToggleInspector(): void;
   onAddScene(): void;
   onAddBeat(): void;
-  onAddLane(): void;
+  onAddTrack(): void;
   onAddAct(): void;
   /** The track header was clicked: open the plot's summary and arc. */
-  onOpenLane(laneId: LaneId): void;
+  onOpenTrack(trackId: TrackId): void;
   /** A scene block's header was clicked: open the scene pop-up. */
   onOpenUnit?(unitId: StructuralUnitId): void;
   /** A beat row was double-clicked: open the beat pop-up. */
@@ -117,8 +117,8 @@ const beatsWidth = (beatCount: number, rows: number): number => {
 /**
  * The master timeline (addendum 02 §4): the story in order across the top
  * of the workspace. One CSS grid holds every track — ruler, acts, links and
- * a row per plot lane — with one column per scene, sized to the scene's
- * pages. Because every track shares the columns, blocks in different lanes
+ * a row per plot track — with one column per scene, sized to the scene's
+ * pages. Because every track shares the columns, blocks in different tracks
  * line up by story position with no measuring, and the playhead is nothing
  * more than a class on the selected scene's column.
  *
@@ -135,7 +135,7 @@ export function MasterTimeline({
   onSelectBeat,
   selectedUnitId: givenSelectedUnitId,
   onSelectUnit,
-  onSelectLane,
+  onSelectTrack,
   beatsPerColumn = DEFAULT_BEATS_PER_COLUMN,
   onUpdate,
   pixelsPerPage,
@@ -145,9 +145,9 @@ export function MasterTimeline({
   onToggleInspector,
   onAddScene,
   onAddBeat,
-  onAddLane,
+  onAddTrack,
   onAddAct,
-  onOpenLane,
+  onOpenTrack,
   onOpenUnit,
   onOpenBeat,
 }: MasterTimelineProps) {
@@ -155,24 +155,24 @@ export function MasterTimeline({
   const layout = useMemo(() => givenLayout ?? storyLayout(file), [givenLayout, file]);
   const arcs = useMemo(() => givenArcs ?? timelineArcs(file), [givenArcs, file]);
   const threads = useMemo(() => givenThreads ?? threadLayout(file, { layout, arcs }), [givenThreads, file, layout, arcs]);
-  const { spans, lanes } = layout;
+  const { spans, tracks } = layout;
   const noun = nounsFor(file.project.format).unit.toLowerCase();
   /**
-   * A commercial has no subplot to lane, no acts to mark and nothing to link
+   * A commercial has no subplot to track, no acts to mark and nothing to link
    * across a thirty (addendum 05 §3). Those tracks and their buttons are
    * taken out rather than left there greyed.
    */
   const shortForm = file.project.format === 'short_form';
   // A row per payoff that has anything placed (the Setups & Payoffs spec §6).
-  const setupRows = useMemo(() => (shortForm ? [] : setupLane(file)), [file, shortForm]);
+  const setupRows = useMemo(() => (shortForm ? [] : setupTrack(file)), [file, shortForm]);
   /**
    * Themes and motifs, in two groups (addendum 12 §8).
    *
-   * Never one lane: a reader *meets* a motif and *understands* a theme, so nine
+   * Never one track: a reader *meets* a motif and *understands* a theme, so nine
    * marks on a motif's row is recurrence working and nine on a theme's row is a
    * different claim entirely. Combining them would average the two into nothing.
    */
-  const thematics = useMemo(() => (shortForm ? { themes: [], motifs: [] } : thematicLanes(file)), [file, shortForm]);
+  const thematics = useMemo(() => (shortForm ? { themes: [], motifs: [] } : thematicTracks(file)), [file, shortForm]);
   /** Whole groups folded away. Per machine, like the Sculptor's filters. */
   const [foldedGroups, setFoldedGroups] = useState<ReadonlySet<'themes' | 'motifs'>>(new Set());
   const foldGroup = (group: 'themes' | 'motifs') =>
@@ -191,7 +191,7 @@ export function MasterTimeline({
   // A scene is as wide as its pages, or as wide as its beats need — whichever
   // is more. Past `rows` beats a second column starts and the block stretches
   // rather than growing a scrollbar; every track shares these columns, so the
-  // lanes stay lined up by story position.
+  // tracks stay lined up by story position.
   /**
    * How wide each segment is drawn.
    *
@@ -250,14 +250,14 @@ export function MasterTimeline({
 
   // ----------------------------------------------------------------- drops
 
-  const dropUnitAt = (toLaneId: LaneId, targetIndex: number) => {
+  const dropUnitAt = (toTrackId: TrackId, targetIndex: number) => {
     const payload = drag.payload;
     if (payload?.kind !== 'unit') return;
     const currentIndex = storyIndex(payload.id);
     onUpdate((current) =>
       moveUnit(current, {
         unitId: payload.id,
-        toLaneId,
+        toTrackId,
         index: adjustForSameList(targetIndex, currentIndex === -1 ? null : currentIndex),
       }),
     );
@@ -279,36 +279,36 @@ export function MasterTimeline({
     drag.end();
   };
 
-  const dropLaneAt = (targetIndex: number) => {
+  const dropTrackAt = (targetIndex: number) => {
     const payload = drag.payload;
-    if (payload?.kind !== 'lane') return;
-    const currentIndex = lanes.findIndex((lane) => lane.id === payload.id);
-    onUpdate((current) => moveLane(current, payload.id, adjustForSameList(targetIndex, currentIndex)));
+    if (payload?.kind !== 'track') return;
+    const currentIndex = tracks.findIndex((track) => track.id === payload.id);
+    onUpdate((current) => moveTrack(current, payload.id, adjustForSameList(targetIndex, currentIndex)));
     drag.end();
   };
 
   // -------------------------------------------------------------- keyboard
 
-  const moveLaneByKeyboard = (laneId: LaneId, direction: -1 | 1) => {
-    const position = lanes.findIndex((candidate) => candidate.id === laneId);
+  const moveTrackByKeyboard = (trackId: TrackId, direction: -1 | 1) => {
+    const position = tracks.findIndex((candidate) => candidate.id === trackId);
     const next = position + direction;
-    if (position < 0 || next < 0 || next >= lanes.length) return;
-    onUpdate((current) => moveLane(current, laneId, next));
+    if (position < 0 || next < 0 || next >= tracks.length) return;
+    onUpdate((current) => moveTrack(current, trackId, next));
   };
 
-  /** Alt+↑/↓ moves a scene earlier/later in the story; with Shift, to the neighbouring lane. */
-  const moveUnitByKeyboard = (unitId: StructuralUnitId, fromLaneId: LaneId, direction: -1 | 1, crossLane: boolean) => {
-    if (crossLane) {
-      const laneIndex = lanes.findIndex((candidate) => candidate.id === fromLaneId);
-      const target = lanes[laneIndex + direction];
+  /** Alt+↑/↓ moves a scene earlier/later in the story; with Shift, to the neighbouring track. */
+  const moveUnitByKeyboard = (unitId: StructuralUnitId, fromTrackId: TrackId, direction: -1 | 1, crossTrack: boolean) => {
+    if (crossTrack) {
+      const trackIndex = tracks.findIndex((candidate) => candidate.id === fromTrackId);
+      const target = tracks[trackIndex + direction];
       if (!target) return;
-      onUpdate((current) => moveUnit(current, { unitId, toLaneId: target.id, keepPosition: true }));
+      onUpdate((current) => moveUnit(current, { unitId, toTrackId: target.id, keepPosition: true }));
       return;
     }
     const position = storyIndex(unitId);
     const next = position + direction;
     if (position < 0 || next < 0 || next >= spans.length) return;
-    onUpdate((current) => moveUnit(current, { unitId, toLaneId: fromLaneId, index: next }));
+    onUpdate((current) => moveUnit(current, { unitId, toTrackId: fromTrackId, index: next }));
   };
 
   const moveBeatByKeyboard = (beat: Beat, direction: -1 | 1, crossContainer: boolean) => {
@@ -398,11 +398,11 @@ export function MasterTimeline({
               <div className="track-head">
                 {markerNoun(defaultMarkerKind(file.project.format))}s
               </div>
-              <ActsTrack layout={layout} playheadUnitId={selectedUnitId} onUpdate={onUpdate} />
+              <ActsRow layout={layout} playheadUnitId={selectedUnitId} onUpdate={onUpdate} />
               <div className="acts-cell tail" />
 
               <div className="track-head">Links</div>
-              <LinksTrack
+              <LinksRow
                 arcs={arcs}
                 widths={widths}
                 spans={spans}
@@ -437,7 +437,7 @@ export function MasterTimeline({
                               <span className="thematic-head-name">{row.name}</span>
                               {row.detail ? <span className="muted small">{row.detail}</span> : null}
                             </div>
-                            <ThematicTrack
+                            <ThematicRow
                               row={row}
                               widths={widths}
                               spans={spans}
@@ -461,7 +461,7 @@ export function MasterTimeline({
                     <span className={`setup-light ${row.light}`} aria-hidden="true" />
                     <span className="setup-head-name">{row.title}</span>
                   </div>
-                  <SetupTrack
+                  <SetupRow
                     row={row}
                     widths={widths}
                     spans={spans}
@@ -476,16 +476,16 @@ export function MasterTimeline({
             </>
           )}
 
-          {/* One track per lane */}
-          {/* Short form has one track, not a lane per plot (§3): the first
-              lane carries every segment, and the rest are not drawn. */}
-          {(shortForm ? lanes.slice(0, 1) : lanes).map((lane, laneIndex) => (
-            <LaneTrack
-              key={lane.id}
+          {/* One track per track */}
+          {/* Short form has one track, not a track per plot (§3): the first
+              track carries every segment, and the rest are not drawn. */}
+          {(shortForm ? tracks.slice(0, 1) : tracks).map((track, trackIndex) => (
+            <TrackRow
+              key={track.id}
               file={file}
-              lane={lane}
-              laneIndex={laneIndex}
-              laneCount={lanes.length}
+              track={track}
+              trackIndex={trackIndex}
+              trackCount={tracks.length}
               spans={spans}
               noun={noun}
               shortForm={shortForm}
@@ -494,20 +494,20 @@ export function MasterTimeline({
               selectedUnitId={selectedUnitId}
               beatRows={rows}
               onSelectUnit={onSelectUnit}
-              onSelectLane={onSelectLane}
+              onSelectTrack={onSelectTrack}
               drag={drag}
               speakers={threads.speakers}
               colours={threads.colours}
               onSelectBeat={onSelectBeat}
-              onOpenLane={onOpenLane}
+              onOpenTrack={onOpenTrack}
               onOpenUnit={onOpenUnit}
               onOpenBeat={onOpenBeat}
               onUpdate={onUpdate}
               onDropUnit={dropUnitAt}
               onDropBeat={dropBeatAt}
-              onDropLane={dropLaneAt}
-              onLaneKeys={reorderKeys((direction) => moveLaneByKeyboard(lane.id, direction))}
-              unitKeys={(unitId) => reorderKeys((direction, shift) => moveUnitByKeyboard(unitId, lane.id, direction, shift))}
+              onDropTrack={dropTrackAt}
+              onTrackKeys={reorderKeys((direction) => moveTrackByKeyboard(track.id, direction))}
+              unitKeys={(unitId) => reorderKeys((direction, shift) => moveUnitByKeyboard(unitId, track.id, direction, shift))}
               beatKeys={(beat) => reorderKeys((direction, shift) => moveBeatByKeyboard(beat, direction, shift))}
             />
           ))}
@@ -522,7 +522,7 @@ export function MasterTimeline({
 
       <footer className="timeline-toolbar">
         {/* In short form the work happens on the sheet: a segment and a row
-            are made there, and there is nothing to lane or to mark (§3). */}
+            are made there, and there is nothing to track or to mark (§3). */}
         {shortForm ? null : (
           <>
             <button type="button" className="tool" onClick={onAddScene}>
@@ -531,8 +531,8 @@ export function MasterTimeline({
             <button type="button" className="tool" onClick={onAddBeat} disabled={!selectedUnitId}>
               + {nounsFor(file.project.format).sub}
             </button>
-            <button type="button" className="tool" onClick={onAddLane}>
-              + Lane
+            <button type="button" className="tool" onClick={onAddTrack}>
+              + Track
             </button>
             {/* Always "Marker": in prose the scene button already says Chapter,
                 and what kind of marker this one is — act, chapter, part — is
@@ -581,7 +581,7 @@ export function MasterTimeline({
 
 // ---------------------------------------------------------------------------
 
-function ActsTrack({
+function ActsRow({
   layout,
   playheadUnitId,
   onUpdate,
@@ -636,7 +636,7 @@ function ActsTrack({
  * (`grid-column: span n`), so the x of a column is the running sum of the
  * widths the grid was given — the same numbers, no measuring.
  */
-function LinksTrack({
+function LinksRow({
   arcs,
   widths,
   spans,
@@ -692,15 +692,15 @@ function LinksTrack({
 
 // ---------------------------------------------------------------------------
 
-interface LaneTrackProps {
+interface TrackRowProps {
   file: ProjectFile;
-  lane: Lane;
-  laneIndex: number;
-  laneCount: number;
+  track: Track;
+  trackIndex: number;
+  trackCount: number;
   spans: StorySpan[];
   noun: string;
   /**
-   * Short form: the lane is not a plotline, a unit is a segment and a segment
+   * Short form: the track is not a plotline, a unit is a segment and a segment
    * has no beats drawn in it (addendum 05 §3, §3a).
    */
   shortForm: boolean;
@@ -710,28 +710,28 @@ interface LaneTrackProps {
   selectedUnitId: string | null;
   beatRows: number;
   onSelectUnit: MasterTimelineProps['onSelectUnit'];
-  onSelectLane: MasterTimelineProps['onSelectLane'];
+  onSelectTrack: MasterTimelineProps['onSelectTrack'];
   drag: ReturnType<typeof useDragDrop>;
   speakers: Map<BeatId, string[]>;
   colours: Map<string, string>;
   onSelectBeat(beatId: BeatId): void;
-  onOpenLane(laneId: LaneId): void;
+  onOpenTrack(trackId: TrackId): void;
   onOpenUnit: MasterTimelineProps['onOpenUnit'];
   onOpenBeat: MasterTimelineProps['onOpenBeat'];
   onUpdate: MasterTimelineProps['onUpdate'];
-  onDropUnit(toLaneId: LaneId, index: number): void;
+  onDropUnit(toTrackId: TrackId, index: number): void;
   onDropBeat(toUnitId: StructuralUnitId, index: number): void;
-  onDropLane(index: number): void;
-  onLaneKeys(event: React.KeyboardEvent): void;
+  onDropTrack(index: number): void;
+  onTrackKeys(event: React.KeyboardEvent): void;
   unitKeys(unitId: StructuralUnitId): (event: React.KeyboardEvent) => void;
   beatKeys(beat: Beat): (event: React.KeyboardEvent) => void;
 }
 
-function LaneTrack({
+function TrackRow({
   file,
-  lane,
-  laneIndex,
-  laneCount,
+  track,
+  trackIndex,
+  trackCount,
   spans,
   noun,
   shortForm,
@@ -740,23 +740,23 @@ function LaneTrack({
   selectedUnitId,
   beatRows,
   onSelectUnit,
-  onSelectLane,
+  onSelectTrack,
   drag,
   speakers,
   colours,
   onSelectBeat,
-  onOpenLane,
+  onOpenTrack,
   onOpenUnit,
   onOpenBeat,
   onUpdate,
   onDropUnit,
   onDropBeat,
-  onDropLane,
-  onLaneKeys,
+  onDropTrack,
+  onTrackKeys,
   unitKeys,
   beatKeys,
-}: LaneTrackProps) {
-  const units = unitsForLane(file, lane.id);
+}: TrackRowProps) {
+  const units = unitsForTrack(file, track.id);
   // §14 again: the rail below is full of a format's own nouns.
   const nouns = nounsFor(file.project.format);
   // And, on a book that numbers them, the numbers each card would print
@@ -774,81 +774,81 @@ function LaneTrack({
     event.preventDefault();
     event.stopPropagation();
     const edge: DropEdge = edgeFor(event, 'horizontal');
-    onDropUnit(lane.id, indexForDrop(storyPosition, edge));
+    onDropUnit(track.id, indexForDrop(storyPosition, edge));
   };
 
   return (
     <>
       <header
-        className={`track-head lane-head${lane.collapsed ? ' collapsed' : ''}${dropClass(drag.dropTarget, lane.id)}`}
-        style={{ borderLeftColor: lane.color }}
+        className={`track-head track-head${track.collapsed ? ' collapsed' : ''}${dropClass(drag.dropTarget, track.id)}`}
+        style={{ borderLeftColor: track.color }}
         draggable
-        // Clicking anywhere in the header makes this the lane a new scene
+        // Clicking anywhere in the header makes this the track a new scene
         // lands in, so "add a chapter" means "here" rather than "somewhere".
-        onClick={() => onSelectLane?.(lane.id)}
-        onDragStart={(event) => drag.begin({ kind: 'lane', id: lane.id }, event)}
+        onClick={() => onSelectTrack?.(track.id)}
+        onDragStart={(event) => drag.begin({ kind: 'track', id: track.id }, event)}
         onDragEnd={drag.end}
         onDragOver={(event) => {
-          if (drag.payload?.kind !== 'lane') return;
+          if (drag.payload?.kind !== 'track') return;
           event.preventDefault();
-          drag.hover(lane.id, edgeFor(event));
+          drag.hover(track.id, edgeFor(event));
         }}
-        onDragLeave={() => drag.clearHover(lane.id)}
+        onDragLeave={() => drag.clearHover(track.id)}
         onDrop={(event) => {
           event.preventDefault();
-          onDropLane(indexForDrop(laneIndex, edgeFor(event)));
+          onDropTrack(indexForDrop(trackIndex, edgeFor(event)));
         }}
       >
         <button
           type="button"
           className="ghost grip"
-          aria-label={`Reorder lane ${lane.name}. Alt with up or down arrow.`}
-          title="Alt+↑/↓ to reorder this lane"
-          onKeyDown={onLaneKeys}
+          aria-label={`Reorder track ${track.name}. Alt with up or down arrow.`}
+          title="Alt+↑/↓ to reorder this track"
+          onKeyDown={onTrackKeys}
         >
           ⠿
         </button>
         <button
           type="button"
           className="ghost twisty"
-          aria-expanded={!lane.collapsed}
-          aria-label={lane.collapsed ? `Expand ${lane.name}` : `Collapse ${lane.name}`}
-          onClick={() => onUpdate((current) => updateLane(current, lane.id, { collapsed: !lane.collapsed }))}
+          aria-expanded={!track.collapsed}
+          aria-label={track.collapsed ? `Expand ${track.name}` : `Collapse ${track.name}`}
+          onClick={() => onUpdate((current) => updateTrack(current, track.id, { collapsed: !track.collapsed }))}
         >
-          {lane.collapsed ? '▸' : '▾'}
+          {track.collapsed ? '▸' : '▾'}
         </button>
         {/* The track's code, the way an editor labels V1, V2: click it to
             open the plot's summary and arc. Short form has no plot to open —
             the one track is the board, and it is not a plotline (§3). */}
         {shortForm ? (
-          <span className="lane-name muted">Segments</span>
+          <span className="track-name muted">Segments</span>
         ) : (
           <>
             <button
               type="button"
-              className="lane-code"
-              style={{ borderColor: lane.color, color: lane.color }}
-              title={`Open ${lane.name}: summary and arc`}
-              aria-label={`Open plot ${lane.name}`}
-              onClick={() => onOpenLane(lane.id)}
+              className="track-code"
+              style={{ borderColor: track.color, color: track.color }}
+              title={`Open ${track.name}: summary and arc`}
+              aria-label={`Open plot ${track.name}`}
+              onClick={() => onOpenTrack(track.id)}
             >
-              P{laneIndex + 1}
+              P{trackIndex + 1}
             </button>
             <InlineText
-              value={lane.name}
-              ariaLabel="Lane name"
-              className="lane-name"
-              onCommit={(name) => onUpdate((current) => updateLane(current, lane.id, { name: name || 'Lane' }))}
+              value={track.name}
+              ariaLabel="Track name"
+              className="track-name"
+              onCommit={(name) => onUpdate((current) => updateTrack(current, track.id, { name: name || 'Track' }))}
             />
           </>
         )}
         <span className="count muted">{units.length}</span>
-        {laneCount > 1 && !shortForm ? (
+        {trackCount > 1 && !shortForm ? (
           <button
             type="button"
             className="ghost danger"
-            title={`Remove lane and its ${noun}s`}
-            onClick={() => onUpdate((current) => removeLane(current, lane.id))}
+            title={`Remove track and its ${noun}s`}
+            onClick={() => onUpdate((current) => removeTrack(current, track.id))}
           >
             ×
           </button>
@@ -858,28 +858,28 @@ function LaneTrack({
       {spans.map((span) => {
         const unit = span.unit;
         const atPlayhead = unit.id === selectedUnitId ? ' playhead' : '';
-        if (!shortForm && unit.laneId !== lane.id) {
-          // Another lane's scene occupies this story position; the empty
+        if (!shortForm && unit.trackId !== track.id) {
+          // Another track's scene occupies this story position; the empty
           // slot is where a scene can be dropped to take that position here.
           return (
             <div
               key={unit.id}
-              className={`slot${atPlayhead}${dropClass(drag.dropTarget, `${lane.id}:${unit.id}`)}`}
-              onDragOver={(event) => unitDragOver(event, `${lane.id}:${unit.id}`)}
-              onDragLeave={() => drag.clearHover(`${lane.id}:${unit.id}`)}
+              className={`slot${atPlayhead}${dropClass(drag.dropTarget, `${track.id}:${unit.id}`)}`}
+              onDragOver={(event) => unitDragOver(event, `${track.id}:${unit.id}`)}
+              onDragLeave={() => drag.clearHover(`${track.id}:${unit.id}`)}
               onDrop={(event) => dropWithEdge(event, span.index)}
             />
           );
         }
         const beats = beatsForUnit(file, unit.id);
-        const collapsed = unit.collapsed || lane.collapsed;
+        const collapsed = unit.collapsed || track.collapsed;
         const off = unit.inScript ? '' : ' off';
         const chosen = unit.id === selectedUnitId ? ' selected' : '';
         return (
           <article
             key={unit.id}
             className={`block${collapsed ? ' collapsed' : ''}${atPlayhead}${chosen}${off}${dropClass(drag.dropTarget, unit.id)}`}
-            style={{ borderTopColor: lane.color }}
+            style={{ borderTopColor: track.color }}
             title={unit.inScript ? undefined : `Switched off: not in the script`}
             onDragOver={(event) => unitDragOver(event, unit.id)}
             onDragLeave={() => drag.clearHover(unit.id)}
@@ -892,22 +892,22 @@ function LaneTrack({
               draggable
               title={onOpenUnit ? `Click to select this ${noun}, double-click to open it` : undefined}
               onClick={() => {
-                onSelectUnit?.(unit.id, lane.id);
+                onSelectUnit?.(unit.id, track.id);
                 const first = beats[0];
                 if (first) onSelectBeat(first.id);
               }}
               onDoubleClick={() => onOpenUnit?.(unit.id)}
               onDragStart={(event) => {
                 event.stopPropagation();
-                drag.begin({ kind: 'unit', id: unit.id, fromLaneId: lane.id }, event);
+                drag.begin({ kind: 'unit', id: unit.id, fromTrackId: track.id }, event);
               }}
               onDragEnd={drag.end}
             >
               <button
                 type="button"
                 className="ghost grip"
-                aria-label={`Reorder ${unit.title || `untitled ${unit.kind}`}. Alt with up or down arrow moves it in the story; add shift to move it between lanes.`}
-                title="Alt+↑/↓ earlier or later · Alt+Shift+↑/↓ between lanes"
+                aria-label={`Reorder ${unit.title || `untitled ${unit.kind}`}. Alt with up or down arrow moves it in the story; add shift to move it between tracks.`}
+                title="Alt+↑/↓ earlier or later · Alt+Shift+↑/↓ between tracks"
                 onKeyDown={unitKeys(unit.id)}
                 onClick={(event) => event.stopPropagation()}
               >
@@ -1064,19 +1064,19 @@ function LaneTrack({
         );
       })}
 
-      {/* Dropping past the last scene appends to the story, in this lane. */}
+      {/* Dropping past the last scene appends to the story, in this track. */}
       <div
-        className={`slot tail${dropClass(drag.dropTarget, `${lane.id}:tail`)}`}
+        className={`slot tail${dropClass(drag.dropTarget, `${track.id}:tail`)}`}
         onDragOver={(event) => {
           if (drag.payload?.kind !== 'unit') return;
           event.preventDefault();
-          drag.hover(`${lane.id}:tail`, 'after');
+          drag.hover(`${track.id}:tail`, 'after');
         }}
-        onDragLeave={() => drag.clearHover(`${lane.id}:tail`)}
+        onDragLeave={() => drag.clearHover(`${track.id}:tail`)}
         onDrop={(event) => {
           if (drag.payload?.kind !== 'unit') return;
           event.preventDefault();
-          onDropUnit(lane.id, spans.length);
+          onDropUnit(track.id, spans.length);
         }}
       />
     </>
@@ -1189,13 +1189,13 @@ function FrameStrip({ rows, onSelectBeat }: { rows: AvRow[]; onSelectBeat(beatId
  * something that does not count.** Hiding it would make the row agree with the
  * count and lie about the script.
  */
-function SetupTrack({
+function SetupRow({
   row,
   widths,
   spans,
   onPick,
 }: {
-  row: SetupLaneRow;
+  row: SetupTrackRow;
   widths: number[];
   spans: StorySpan[];
   onPick(index: number): void;
@@ -1254,13 +1254,13 @@ function SetupTrack({
  * that the two remain distinguishable even before anybody colours them. An
  * orphaned occurrence is not here at all, having no position to be drawn at.
  */
-function ThematicTrack({
+function ThematicRow({
   row,
   widths,
   spans,
   onPick,
 }: {
-  row: ThematicLaneRow;
+  row: ThematicTrackRow;
   widths: number[];
   spans: StorySpan[];
   onPick(index: number): void;

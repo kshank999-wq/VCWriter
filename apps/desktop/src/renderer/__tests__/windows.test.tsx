@@ -32,8 +32,8 @@ describe('where the sections sit', () => {
   it('swaps two sections when one is put in the other one’s place', () => {
     const moved = movePane(DEFAULT_ARRANGEMENT, 'script', 'bottom');
     expect(moved.bottom).toBe('script');
-    // The lanes were there; they take the place the Script came from.
-    expect(moved.left).toBe('lanes');
+    // The tracks were there; they take the place the Script came from.
+    expect(moved.left).toBe('tracks');
     // Nothing else stirred, and every section still has exactly one place.
     expect(moved.top).toBe('viewer');
     expect(new Set(Object.values(moved)).size).toBe(4);
@@ -52,19 +52,19 @@ describe('where the sections sit', () => {
     expect(paneNamesFor('series').script).toBe('Script');
     expect(paneNamesFor(null).script).toBe('Script');
     // The other three sections are the same work under either name.
-    expect(paneNamesFor('novel').lanes).toBe(paneNamesFor('screenplay').lanes);
+    expect(paneNamesFor('novel').tracks).toBe(paneNamesFor('screenplay').tracks);
     // And a window of its own carries the same name on its title.
     expect(paneTitle('script', 'novel')).toBe('Manuscript');
     expect(paneTitle('script')).toBe('Script');
   });
 
   it('falls back rather than losing a section to a bad remembered arrangement', () => {
-    expect(normaliseArrangement({ left: 'script', top: 'script', bottom: 'lanes', right: 'inspector' })).toEqual(
+    expect(normaliseArrangement({ left: 'script', top: 'script', bottom: 'tracks', right: 'inspector' })).toEqual(
       DEFAULT_ARRANGEMENT,
     );
     expect(normaliseArrangement({ left: 'script' })).toEqual(DEFAULT_ARRANGEMENT);
     expect(normaliseArrangement('nonsense')).toEqual(DEFAULT_ARRANGEMENT);
-    const good: Arrangement = { left: 'lanes', top: 'script', bottom: 'viewer', right: 'inspector' };
+    const good: Arrangement = { left: 'tracks', top: 'script', bottom: 'viewer', right: 'inspector' };
     expect(normaliseArrangement(good)).toEqual(good);
   });
 });
@@ -94,7 +94,7 @@ function Frames({ onDetach = () => undefined }: { onDetach?(pane: PaneId): void 
     <>
       <p data-testid="where">{`${arrangement.left}/${arrangement.top}/${arrangement.bottom}/${arrangement.right}`}</p>
       {frame('script')}
-      {frame('lanes')}
+      {frame('tracks')}
     </>
   );
 }
@@ -102,17 +102,17 @@ function Frames({ onDetach = () => undefined }: { onDetach?(pane: PaneId): void 
 describe('the strip on a section', () => {
   it('moves a section to another place from its menu', () => {
     render(<Frames />);
-    expect(screen.getByTestId('where').textContent).toBe('script/viewer/lanes/inspector');
+    expect(screen.getByTestId('where').textContent).toBe('script/viewer/tracks/inspector');
     fireEvent.change(screen.getByLabelText('Move Script'), { target: { value: 'bottom' } });
-    expect(screen.getByTestId('where').textContent).toBe('lanes/viewer/script/inspector');
+    expect(screen.getByTestId('where').textContent).toBe('tracks/viewer/script/inspector');
   });
 
   it('swaps two sections when one is dragged onto the other', () => {
     const { container } = render(<Frames />);
     const grips = container.querySelectorAll('.pane-grip');
     fireEvent.dragStart(grips[0] as HTMLElement);
-    fireEvent.drop(screen.getByLabelText('Plot lanes'));
-    expect(screen.getByTestId('where').textContent).toBe('lanes/viewer/script/inspector');
+    fireEvent.drop(screen.getByLabelText('Plot tracks'));
+    expect(screen.getByTestId('where').textContent).toBe('tracks/viewer/script/inspector');
   });
 
   it('takes a section out to its own window', () => {
@@ -152,7 +152,7 @@ describe('the title bar', () => {
 
   it('keeps Research reachable whatever section has left the workspace', () => {
     const onOpenResearch = vi.fn();
-    bar(['script', 'lanes'], { onOpenResearch });
+    bar(['script', 'tracks'], { onOpenResearch });
     fireEvent.click(screen.getByText('Research'));
     expect(onOpenResearch).toHaveBeenCalled();
   });
@@ -376,15 +376,15 @@ describe('a room in a window of its own', () => {
   });
 
   /**
-   * The plot lanes used to be the fallthrough, so a window asking for a
-   * section this build has not got opened showing the lanes and claimed on its
+   * The plot tracks used to be the fallthrough, so a window asking for a
+   * section this build has not got opened showing the tracks and claimed on its
    * own title bar to be whatever it had asked for.
    */
-  it('says it does not know a section rather than drawing the plot lanes', async () => {
+  it('says it does not know a section rather than drawing the plot tracks', async () => {
     connect(project());
     render(<Satellite pane={'nonesuch' as never} />);
     await waitFor(() => expect(screen.getByText(/has no section called/)).toBeDefined());
-    expect(screen.queryByText('+ Lane')).toBeNull();
+    expect(screen.queryByText('+ Track')).toBeNull();
   });
 
   /**
@@ -414,9 +414,9 @@ describe('a room in a window of its own', () => {
     expect(screen.getByRole('button', { name: 'Write' }).className).not.toContain('away');
   });
 
-  it('still draws the plot lanes when the plot lanes are what was asked for', async () => {
+  it('still draws the plot tracks when the plot tracks are what was asked for', async () => {
     connect(project());
-    render(<Satellite pane="lanes" />);
-    await waitFor(() => expect(screen.getByText('+ Lane')).toBeDefined());
+    render(<Satellite pane="tracks" />);
+    await waitFor(() => expect(screen.getByText('+ Track')).toBeDefined());
   });
 });

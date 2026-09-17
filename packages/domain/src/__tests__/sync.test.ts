@@ -3,7 +3,7 @@ import { createProjectFile, projectFileSchema, type ProjectFile } from '../proje
 import { fromRows, toRows } from '../sync-mapping.js';
 import { describeMerge, discardedText, mergeProjects } from '../sync-merge.js';
 import { canRestore, restoreDiscardedVersion } from '../sync-recovery.js';
-import { addBeat, addLane, addResearchItem, addUnit, linkEntities, updateBeat, updateUnit } from '../mutations.js';
+import { addBeat, addTrack, addResearchItem, addUnit, linkEntities, updateBeat, updateUnit } from '../mutations.js';
 import { beatsForUnit } from '../selectors.js';
 import { ref } from '../entities/links.js';
 import { newId, type ManuscriptElementId } from '../ids.js';
@@ -30,7 +30,7 @@ const stamp = (file: ProjectFile, at: string, edit: (draft: ProjectFile) => Proj
         : { ...next.project, updatedAt: at },
     beats: dateChanged(file.beats, next.beats),
     units: dateChanged(file.units, next.units),
-    lanes: dateChanged(file.lanes, next.lanes),
+    tracks: dateChanged(file.tracks, next.tracks),
     researchItems: dateChanged(file.researchItems, next.researchItems),
   });
 };
@@ -46,7 +46,7 @@ const settled = (): ProjectFile => {
   return projectFileSchema.parse({
     ...base,
     project: { ...base.project, createdAt: BEFORE, updatedAt: BEFORE },
-    lanes: base.lanes.map((lane) => ({ ...lane, createdAt: BEFORE, updatedAt: BEFORE })),
+    tracks: base.tracks.map((track) => ({ ...track, createdAt: BEFORE, updatedAt: BEFORE })),
     units: base.units.map((unit) => ({ ...unit, createdAt: BEFORE, updatedAt: BEFORE })),
     beats: base.beats.map((beat) => ({ ...beat, createdAt: BEFORE, updatedAt: BEFORE })),
     researchCategories: base.researchCategories.map((category) => ({
@@ -60,8 +60,8 @@ const settled = (): ProjectFile => {
 describe('row mapping', () => {
   it('round-trips a project through the database shape', () => {
     let file = project();
-    const laneId = file.lanes[0]!.id;
-    const created = addUnit(file, { laneId, title: 'Second scene' });
+    const trackId = file.tracks[0]!.id;
+    const created = addUnit(file, { trackId, title: 'Second scene' });
     file = addBeat(created.file, { unitId: created.unit.id, title: 'Turn' }).file;
     const ideas = file.researchCategories.find((category) => category.systemKey === 'ideas')!;
     file = addResearchItem(file, { categoryId: ideas.id, title: 'A revolver' });
@@ -75,7 +75,7 @@ describe('row mapping', () => {
 
     expect(restored.project.title).toBe('Lighthouse');
     expect(restored.project.author).toBe('K. Shank');
-    expect(restored.lanes).toHaveLength(file.lanes.length);
+    expect(restored.tracks).toHaveLength(file.tracks.length);
     expect(restored.units).toHaveLength(file.units.length);
     expect(restored.beats.map((beat) => beat.title).sort()).toEqual(file.beats.map((beat) => beat.title).sort());
     expect(restored.researchItems[0]?.title).toBe('A revolver');
@@ -174,7 +174,7 @@ describe('merging local and remote copies', () => {
 
   it('never leaves a beat without the scene it belongs to', () => {
     const base = settled();
-    const created = addUnit(base, { laneId: base.lanes[0]!.id, title: 'Doomed scene' });
+    const created = addUnit(base, { trackId: base.tracks[0]!.id, title: 'Doomed scene' });
     const withBeat = addBeat(created.file, { unitId: created.unit.id, title: 'Orphan' }).file;
 
     // The scene is gone remotely and untouched locally, so it goes — and the
@@ -201,11 +201,11 @@ describe('merging local and remote copies', () => {
 
   it('treats a first sync as a merge of everything on both sides', () => {
     const local = project();
-    const remote = addLane(project(), { name: 'From the other machine' }).file;
+    const remote = addTrack(project(), { name: 'From the other machine' }).file;
 
     const result = mergeProjects(local, remote, { lastSyncedAt: null });
 
-    expect(result.merged.lanes.length).toBeGreaterThanOrEqual(local.lanes.length);
+    expect(result.merged.tracks.length).toBeGreaterThanOrEqual(local.tracks.length);
     expect(result.summary.deletedLocally).toBe(0);
   });
 

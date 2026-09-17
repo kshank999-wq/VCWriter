@@ -68,7 +68,7 @@ The desktop workspace is laid out like a non-linear video editor's edit page
 research under a second tab; to its right, above, the viewport — the selected
 scene as it prints, or the story as a diagram of its threads — with the
 inspector beside it; below them the master timeline — the story in order,
-one track per plot lane, scenes as blocks sized to their pages, beats inside
+one track per plot track, scenes as blocks sized to their pages, beats inside
 the blocks, and setups, payoffs and links drawn as curves on their own
 track; and the pages along the bottom. The finish is an editing
 application's: flat surfaces stepped by one shade, hairlines, small uniform

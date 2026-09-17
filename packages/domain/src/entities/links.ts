@@ -12,7 +12,7 @@ import type { ProjectId, StoryLinkId } from '../ids.js';
 
 export const storyEntityTypeSchema = z.enum([
   'project',
-  'lane',
+  'track',
   'unit',
   'beat',
   'research_item',

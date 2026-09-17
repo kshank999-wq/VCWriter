@@ -4,7 +4,7 @@ import {
   addCharacter,
   addUnit,
   characterMap,
-  charactersInLane,
+  charactersInTrack,
   createProjectFile,
   edgeLabel,
   relate,
@@ -171,19 +171,19 @@ describe('focusing on one person and expanding outward', () => {
   });
 });
 
-describe('filtering by a plot lane', () => {
-  it('counts somebody as in a lane because they speak there', () => {
+describe('filtering by a plot track', () => {
+  it('counts somebody as in a track because they speak there', () => {
     const { file, ids } = company();
-    const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. DINER - NIGHT' });
+    const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. DINER - NIGHT' });
     const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'The bill' });
     const written = updateBeat(beat.file, beat.beat.id, {
       manuscript: { elements: [line('character', 'MARA'), line('action', 'DEAKINS is named but silent.')] },
     });
 
-    const inLane = charactersInLane(written, file.lanes[0]!.id);
-    expect(inLane.map((id) => id as string)).toEqual([ids['MARA'] as string]);
+    const inTrack = charactersInTrack(written, file.tracks[0]!.id);
+    expect(inTrack.map((id) => id as string)).toEqual([ids['MARA'] as string]);
 
-    const map = characterMap({ file: written, among: inLane });
+    const map = characterMap({ file: written, among: inTrack });
     expect(map.nodes.map((node) => node.name)).toEqual(['MARA']);
   });
 });
@@ -203,7 +203,7 @@ describe('filtering by a plot lane', () => {
 describe('the lines the script draws', () => {
   /** A scene, with one beat per set of cues given. */
   const scened = (file: ProjectFile, title: string, beats: string[][]) => {
-    const scene = addUnit(file, { laneId: file.lanes[0]!.id, title });
+    const scene = addUnit(file, { trackId: file.tracks[0]!.id, title });
     let next = scene.file;
     for (const cues of beats) {
       const beat = addBeat(next, { unitId: scene.unit.id, title: 'A beat' });
@@ -233,7 +233,7 @@ describe('the lines the script draws', () => {
     // Finding them would mean matching names in prose, where a name is as often
     // somebody being talked about as somebody being there.
     const { file } = company();
-    const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. DINER - NIGHT' });
+    const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. DINER - NIGHT' });
     const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'The bill' });
     const written = updateBeat(beat.file, beat.beat.id, {
       manuscript: { elements: [line('character', 'MARA'), line('action', 'DEAKINS watches from the booth.')] },

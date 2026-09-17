@@ -3,7 +3,7 @@ import {
   countWords,
   draftText,
   draftsOf,
-  findLane,
+  findTrack,
   findUnit,
   newId,
   pageBreaks,
@@ -59,7 +59,7 @@ export interface BeatWriterProps {
  */
 export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut }: BeatWriterProps) {
   const unit = findUnit(file, beat.unitId);
-  const lane = unit ? findLane(file, unit.laneId) : undefined;
+  const track = unit ? findTrack(file, unit.trackId) : undefined;
   const [naming, setNaming] = useState(false);
   /** Which draft is being read beside the one being written; null for none. */
   const [comparing, setComparing] = useState<string | null>(null);
@@ -135,7 +135,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut }
     <>
       <ManuscriptDataLists file={file} />
 
-      <header className="writer-bar" style={{ borderLeftColor: beat.color ?? lane?.color }}>
+      <header className="writer-bar" style={{ borderLeftColor: beat.color ?? track?.color }}>
         <span className="writer-caption muted">{nouns.sub} name</span>
         <input
           className="writer-name"
@@ -285,7 +285,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut }
       <footer className="writer-status muted">
         <span>
           {unit ? `${unit.sequenceLabel || unit.kind} ${unit.title || ''}`.trim() : ''}
-          {lane ? ` · ${lane.name}` : ''}
+          {track ? ` · ${track.name}` : ''}
         </span>
         <span>
           {countWords(beat.manuscript)} words

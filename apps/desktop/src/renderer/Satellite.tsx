@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  addLane,
+  addTrack,
   addMarker,
   defaultMarkerKind,
   beatsForUnit,
@@ -10,7 +10,7 @@ import {
   threadLayout,
   timelineArcs,
   type BeatId,
-  type LaneId,
+  type TrackId,
   type ProjectFile,
   type StoryMarkerId,
   type StructuralUnitId,
@@ -37,7 +37,7 @@ import { BeatWriter } from './components/BeatWriter';
 import { BeatDialog } from './components/BeatDialog';
 import { MarkerDialog } from './components/MarkerDialog';
 import { SceneDialog } from './components/SceneDialog';
-import { LaneDialog } from './components/LaneDialog';
+import { TrackDialog } from './components/TrackDialog';
 
 /**
  * A section of the workspace, in a window of its own (addendum 02 §8).
@@ -97,11 +97,11 @@ function Section({
   const beats = useMemo(() => beatsInStoryOrder(file), [file]);
   const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
   const [focusTitleBeatId, setFocusTitleBeatId] = useState<BeatId | null>(null);
-  const [openLaneId, setOpenLaneId] = useState<LaneId | null>(null);
-  // What was last clicked into: the scene a beat goes in, the lane a scene
+  const [openTrackId, setOpenTrackId] = useState<TrackId | null>(null);
+  // What was last clicked into: the scene a beat goes in, the track a scene
   // lands in. The same rule as the workspace, because it is the same toolbar.
   const [selectedUnitId, setSelectedUnitId] = useState<StructuralUnitId | null>(null);
-  const [selectedLaneId, setSelectedLaneId] = useState<LaneId | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<TrackId | null>(null);
   const [openUnitId, setOpenUnitId] = useState<StructuralUnitId | null>(null);
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
   const [openMarkerId, setOpenMarkerId] = useState<StoryMarkerId | null>(null);
@@ -139,8 +139,8 @@ function Section({
   }, []);
 
   const selection = useMemo(
-    () => ({ laneId: selectedLaneId, unitId: selectedUnitId, beat: selectedBeat }),
-    [selectedLaneId, selectedUnitId, selectedBeat],
+    () => ({ trackId: selectedTrackId, unitId: selectedUnitId, beat: selectedBeat }),
+    [selectedTrackId, selectedUnitId, selectedBeat],
   );
 
   const addScene = useCallback(() => {
@@ -163,7 +163,7 @@ function Section({
 
   const dialogs = (
     <>
-      <LaneDialog file={file} laneId={openLaneId} onClose={() => setOpenLaneId(null)} onUpdate={onUpdate} />
+      <TrackDialog file={file} trackId={openTrackId} onClose={() => setOpenTrackId(null)} onUpdate={onUpdate} />
       <SceneDialog
         file={file}
         unitId={openUnitId}
@@ -326,11 +326,11 @@ function Section({
     );
   }
 
-  if (pane !== 'lanes') {
+  if (pane !== 'tracks') {
     // Every key this build knows is above. Saying so is the point: the plot
-    // lanes used to be the fallthrough, so a window asking for something this
+    // tracks used to be the fallthrough, so a window asking for something this
     // version has not got — an older workspace, a hand-edited URL — opened
-    // showing the lanes and claiming to be whatever it had asked for.
+    // showing the tracks and claiming to be whatever it had asked for.
     return (
       <p className="muted empty-state">
         This build has no section called “{pane}”. Close this window and open it from the workspace’s Window menu.
@@ -348,11 +348,11 @@ function Section({
         selectedBeatId={selectedBeat?.id ?? null}
         onSelectBeat={setSelectedBeatId}
         selectedUnitId={selectedUnitId}
-        onSelectUnit={(unitId, laneId) => {
+        onSelectUnit={(unitId, trackId) => {
           setSelectedUnitId(unitId);
-          setSelectedLaneId(laneId);
+          setSelectedTrackId(trackId);
         }}
-        onSelectLane={setSelectedLaneId}
+        onSelectTrack={setSelectedTrackId}
         beatsPerColumn={beatsPerColumn}
         onUpdate={onUpdate}
         pixelsPerPage={pixelsPerPage}
@@ -361,7 +361,7 @@ function Section({
         onToggleInspector={() => undefined}
         onAddScene={addScene}
         onAddBeat={addBeat}
-        onAddLane={() => onUpdate((current) => addLane(current, { name: 'New lane' }).file)}
+        onAddTrack={() => onUpdate((current) => addTrack(current, { name: 'New track' }).file)}
         onAddAct={() =>
           selectedBeat
             ? onUpdate((current) => addMarker(current, {
@@ -371,7 +371,7 @@ function Section({
           }).file)
             : undefined
         }
-        onOpenLane={setOpenLaneId}
+        onOpenTrack={setOpenTrackId}
         onOpenUnit={setOpenUnitId}
         onOpenBeat={setOpenBeatId}
       />

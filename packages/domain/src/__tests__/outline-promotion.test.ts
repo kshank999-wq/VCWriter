@@ -75,7 +75,7 @@ describe('what can go into the script', () => {
     expect(canPromote(file, back, findOutlineItem(back, scene)!)).toBeNull();
     expect(canPromote(file, back, findOutlineItem(back, idea)!)).toBe('nothing to promote');
     // A beat whose scene is still a plan has nowhere to go: a beat lives
-    // inside a scene and never floats in a lane.
+    // inside a scene and never floats in a track.
     expect(canPromote(file, back, findOutlineItem(back, enters)!)).toBe('its scene is still a plan');
   });
 
@@ -303,7 +303,7 @@ describe('when the outline and the script disagree', () => {
  * **The card shows what exists**, which is the module's rule throughout: read
  * through rather than copy across. A plan has a name, a note and a status; a
  * scene in the script has a number, a synopsis, a purpose, a point of view and
- * a lane as well, and those are the scene's own — so promotion adds to the
+ * a track as well, and those are the scene's own — so promotion adds to the
  * card rather than moving it, and there is no second set of fields to keep in
  * step.
  */
@@ -329,7 +329,7 @@ describe('the scene card', () => {
       synopsis: 'They meet where nobody goes.',
       purpose: null,
       pov: null,
-      lane: null,
+      track: null,
       status: 'planned',
       beats: 2,
     });
@@ -357,7 +357,7 @@ describe('the scene card', () => {
       status: 'drafting',
       beats: 2,
     });
-    expect(card.lane?.name).toBe('Main Plot');
+    expect(card.track?.name).toBe('Main Plot');
   });
 
   it('is empty until it is filled in, and says nothing about that', () => {

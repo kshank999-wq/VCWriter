@@ -303,7 +303,7 @@ export interface MenuApi {
 
 /**
  * Moving a section of the workspace to a window of its own — and, from there,
- * to another monitor. A pane key is `script`, `research`, `viewer`, `lanes`,
+ * to another monitor. A pane key is `script`, `research`, `viewer`, `tracks`,
  * or `beat:<id>`; beats key on their own id so two can be open at once.
  */
 export interface PaneApi {

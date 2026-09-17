@@ -4,7 +4,7 @@ Status: **built**, September 2026. From Ken's *VC Writer — Themes & Motifs
 Research Module, Development Specification v2.0*.
 
 Nothing of it existed. There was a *Themes* research folder holding ordinary
-notes, and a `theme` lane kind, and that was all — no motif anywhere, no
+notes, and a `theme` track kind, and that was all — no motif anywhere, no
 occurrence index, no tagging.
 
 ## 1. What already existed, and it was more than it looked
@@ -38,7 +38,7 @@ It is right, and the reason it is right rather than merely asked for is that
 Neither field means anything on the other. One table with a `kind` would carry
 both half-empty, and the first tidy-up would collapse them.
 
-So: two tables, two collections, two tabs, two lists, two lanes, two choices on
+So: two tables, two collections, two tabs, two lists, two tracks, two choices on
 the right-click. There is no function in `themes.ts` that takes *a thematic
 thing* and works out which — the one place that blurred them would be the place
 the interface started to.
@@ -99,30 +99,30 @@ what the passage says now, and the writer's note. **Go to it** opens the beat;
 Removing a theme or a motif asks first and says what goes with it: the taggings,
 never the manuscript.
 
-## 6. The two lanes
+## 6. The two tracks
 
 §8 is explicit that they must not be combined, and the reason is worth keeping:
 **a reader meets a motif and understands a theme.** Nine marks on a motif's row
 is recurrence working; nine on a theme's row is a different claim entirely. One
-combined lane would average the two into nothing.
+combined track would average the two into nothing.
 
 So: a **Themes** group and a **Motifs** group on the master timeline, each
 foldable whole, each with a row per item. A theme's marks are squares and a
 motif's are rings — §8's requirement that the two stay distinguishable before
 anybody colours them. Several marks in one scene fan out rather than stacking
 invisibly. An orphaned occurrence is not drawn, having no position to be drawn
-at, and something *set aside* leaves the lane entirely.
+at, and something *set aside* leaves the track entirely.
 
 ## 7. Where the code is
 
 | | |
 | --- | --- |
 | The two entities | `packages/domain/src/entities/themes.ts` |
-| The module | `packages/domain/src/themes.ts` — tagging, the occurrence reading, the lanes |
+| The module | `packages/domain/src/themes.ts` — tagging, the occurrence reading, the tracks |
 | The occurrence | `packages/domain/src/character-creator.ts` — `usageLinkSchema`, widened |
 | Tagging | `apps/desktop/src/renderer/components/BeatBody.tsx` — `TagThematic` |
 | The screen | `apps/desktop/src/renderer/components/ThemesPanel.tsx` |
-| The lanes | `apps/desktop/src/renderer/components/MasterTimeline.tsx` — `ThematicTrack` |
+| The tracks | `apps/desktop/src/renderer/components/MasterTimeline.tsx` — `ThematicRow` |
 | The tables | `packages/supabase/migrations/0047_themes_and_motifs.sql` |
 
 ## 8. What is deliberately not here
@@ -133,4 +133,4 @@ at, and something *set aside* leaves the lane entirely.
 - **A judgement about whether a theme is working.** §13. The counts are facts.
 - **A required spacing or number of occurrences.** §6 says so explicitly, and
   the screen has no target to fall short of.
-- **A combined thematic lane.** §8, and §6 of this addendum for why.
+- **A combined thematic track.** §8, and §6 of this addendum for why.

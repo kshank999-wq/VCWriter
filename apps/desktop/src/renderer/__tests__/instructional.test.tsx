@@ -45,7 +45,7 @@ afterEach(cleanup);
 /** A one-chapter instructional book with a section in it. */
 const book = (): { file: ProjectFile; beatId: BeatId } => {
   const file = createProjectFile({ title: 'Teaching Optics', format: 'instructional' });
-  const chapter = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Refraction' });
+  const chapter = addUnit(file, { trackId: file.tracks[0]!.id, title: 'Refraction' });
   const made = addBeat(chapter.file, { unitId: chapter.unit.id, title: 'Snell’s law' });
   return { file: made.file, beatId: made.beat.id };
 };
@@ -346,7 +346,7 @@ describe('the importer', () => {
 /**
  * The menu *is* the taxonomy (§3, and Ken's §15 that the two research systems
  * stay distinct). Every one of these was wrong on the screen before it was
- * looked at: a professor was being offered plot lanes, a character mind map,
+ * looked at: a professor was being offered plot tracks, a character mind map,
  * and research *used in the script*.
  */
 describe('the research menu on a book', () => {
@@ -526,7 +526,7 @@ describe('the words a book author is shown', () => {
   it('keeps a screenplay saying exactly what it always said', () => {
     // The sweep must not have renamed anything for the format it was built for.
     let film = createProjectFile({ title: 'A Film', format: 'screenplay' });
-    const unit = addUnit(film, { laneId: film.lanes[0]!.id, title: 'One' });
+    const unit = addUnit(film, { trackId: film.tracks[0]!.id, title: 'One' });
     const beat = addBeat(unit.file, { unitId: unit.unit.id, title: 'a beat' });
     film = beat.file;
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createProjectFile } from '../project-file.js';
-import { addBeat, addCharacter, addUnit, updateBeat, updateLane } from '../mutations.js';
+import { addBeat, addCharacter, addUnit, updateBeat, updateTrack } from '../mutations.js';
 import { CHARACTER_COLOURS, speakersIn, threadLayout } from '../story-threads.js';
 import { toRows, fromRows } from '../sync-mapping.js';
 import type { ManuscriptElement } from '../entities/manuscript.js';
@@ -35,7 +35,7 @@ describe('thread layout', () => {
     let file = createProjectFile({ title: 'T', format: 'screenplay' });
     const first = file.units[0]!;
     file = updateBeat(file, file.beats[0]!.id, { manuscript: { elements: [cue('MIKE'), line('Hi.')] } });
-    const second = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Two' });
+    const second = addUnit(file, { trackId: file.tracks[0]!.id, title: 'Two' });
     file = second.file;
     const b2 = addBeat(file, { unitId: second.unit.id, title: 'They meet' });
     file = updateBeat(b2.file, b2.beat.id, { manuscript: { elements: [cue('CELESTE'), line('Hello.'), cue('MIKE'), line('Hey.')] } });
@@ -59,10 +59,10 @@ describe('thread layout', () => {
   });
 });
 
-describe('lane arc', () => {
+describe('track arc', () => {
   it('is kept and synced', () => {
     let file = createProjectFile({ title: 'T', format: 'screenplay' });
-    file = updateLane(file, file.lanes[0]!.id, { description: 'A man and his faith.', arc: 'Certainty to doubt to a harder faith.' });
-    expect(fromRows(toRows(file)).lanes[0]?.arc).toBe('Certainty to doubt to a harder faith.');
+    file = updateTrack(file, file.tracks[0]!.id, { description: 'A man and his faith.', arc: 'Certainty to doubt to a harder faith.' });
+    expect(fromRows(toRows(file)).tracks[0]?.arc).toBe('Certainty to doubt to a harder faith.');
   });
 });

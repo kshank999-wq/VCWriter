@@ -33,7 +33,7 @@ import {
 /** A book of `chapters` chapters, each a unit with a page of prose in it. */
 const book = (chapters: number, format: ProjectFormat = 'novel'): ProjectFile => {
   let file = createProjectFile({ title: 'The Lighthouse', format });
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
 
   const fill = (unitId: string) => {
     const beat = file.beats.find((candidate) => (candidate.unitId as string) === unitId)!;
@@ -52,7 +52,7 @@ const book = (chapters: number, format: ProjectFormat = 'novel'): ProjectFile =>
 
   fill(file.units[0]!.id as string);
   for (let n = 1; n < chapters; n += 1) {
-    const made = addUnit(file, { laneId, title: `Chapter ${n + 1}` });
+    const made = addUnit(file, { trackId, title: `Chapter ${n + 1}` });
     // A new unit has no beats; the prose needs one to live in.
     file = addBeat(made.file, { unitId: made.unit.id }).file;
     fill(made.unit.id as string);

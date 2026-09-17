@@ -163,7 +163,7 @@ describe('what the menu can point at', () => {
   it('reads acts, scenes, beats and research out of the project itself', () => {
     let file = createProjectFile({ title: 'Blackout', format: 'screenplay' });
     file = { ...file, units: [], beats: [] };
-    const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. WAREHOUSE - NIGHT' });
+    const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. WAREHOUSE - NIGHT' });
     const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'Mara enters' });
     const ideas = beat.file.researchCategories.find((one) => one.systemKey === 'ideas')!;
     file = addResearchItem(beat.file, { categoryId: ideas.id, title: 'The case is empty' });

@@ -65,7 +65,7 @@ interface ChapterPageDialogProps {
 export function ChapterPageDialog({ file, open, onClose, onUpdate }: ChapterPageDialogProps) {
   const dialog = useModal(open);
   return (
-    <dialog ref={dialog} className="lane-dialog chapter-page-dialog" aria-label="Chapter page" onClose={onClose}>
+    <dialog ref={dialog} className="track-dialog chapter-page-dialog" aria-label="Chapter page" onClose={onClose}>
       {open ? <Body file={file} onClose={onClose} onUpdate={onUpdate} /> : null}
     </dialog>
   );
@@ -131,7 +131,7 @@ function Body({
   if (chapters.length === 0) {
     return (
       <>
-        <header className="lane-dialog-title">
+        <header className="track-dialog-title">
           <span className="bar-title">Chapter page</span>
           <button type="button" className="ghost" onClick={onClose}>
             Close
@@ -147,7 +147,7 @@ function Body({
 
   return (
     <>
-      <header className="lane-dialog-title">
+      <header className="track-dialog-title">
         <span className="bar-title">Chapter page</span>
         {/* Done rather than Update: everything here saves as it is typed, and
             a button that said Update would be claiming otherwise. */}

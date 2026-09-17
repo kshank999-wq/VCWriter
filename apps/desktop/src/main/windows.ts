@@ -39,7 +39,7 @@ const SHAPES: Record<string, { width: number; height: number }> = {
   script: { width: 860, height: 1040 },
   research: { width: 1280, height: 860 },
   viewer: { width: 1240, height: 560 },
-  lanes: { width: 1240, height: 620 },
+  tracks: { width: 1240, height: 620 },
   // The inspector is a column beside the writing, so it opens as one rather
   // than as the square the fallback was quietly giving it.
   inspector: { width: 420, height: 900 },

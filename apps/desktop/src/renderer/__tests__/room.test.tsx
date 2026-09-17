@@ -41,7 +41,7 @@ const MARA = seat({ id: 's2', userId: 'mara', displayName: 'Mara Okonjo', colour
 const script = (): ProjectFile => {
   const empty = createProjectFile({ title: 'Blackout', format: 'screenplay' });
   const bare: ProjectFile = { ...empty, units: [], beats: [] };
-  const scene = addUnit(bare, { laneId: bare.lanes[0]!.id, title: 'INT. WAREHOUSE - NIGHT' });
+  const scene = addUnit(bare, { trackId: bare.tracks[0]!.id, title: 'INT. WAREHOUSE - NIGHT' });
   const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'Mara enters' });
 
   return projectFileSchema.parse({

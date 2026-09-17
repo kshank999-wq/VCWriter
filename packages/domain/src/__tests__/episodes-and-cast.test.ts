@@ -125,9 +125,9 @@ describe('an episode', () => {
   it('is a run of the story order, from its marker to the next one', () => {
     let file = series();
     // The opening scene, plus two more, then a second episode after them.
-    const lane = file.lanes[0]!.id;
-    file = addUnit(file, { laneId: lane }).file;
-    file = addUnit(file, { laneId: lane }).file;
+    const track = file.tracks[0]!.id;
+    file = addUnit(file, { trackId: track }).file;
+    file = addUnit(file, { trackId: track }).file;
     file = addEpisode(file, { title: 'Pilot' }).file;
     expect(episodes(file)).toHaveLength(1);
     // The pilot's marker is on the fourth scene, so it is the only one in it.
@@ -161,7 +161,7 @@ describe('an episode', () => {
     const carry = {
       castFrom: [headings[0]!.id as string, headings[1]!.id as string],
       castWhoSpoke: false,
-      lanes: 'series' as const,
+      tracks: 'series' as const,
       openSetups: false,
     };
     const { file: next, episode } = addEpisode(file, { title: 'Pilot', carry });
@@ -170,12 +170,12 @@ describe('an episode', () => {
 
   it('can also carry whoever actually spoke in the episode before', () => {
     let file = cast(series(), 'THE FERRYMAN', 'Minor characters');
-    file = addEpisode(file, { title: 'Pilot', carry: { castFrom: [], castWhoSpoke: false, lanes: 'series', openSetups: false } }).file;
+    file = addEpisode(file, { title: 'Pilot', carry: { castFrom: [], castWhoSpoke: false, tracks: 'series', openSetups: false } }).file;
     const pilot = episodes(file)[0]!;
     file = speaks(file, pilot.beats[0]!.id, 'THE FERRYMAN');
 
     // Nobody from the headings, but the ferryman spoke, so he comes along.
-    const carry = { castFrom: [], castWhoSpoke: true, lanes: 'series' as const, openSetups: false };
+    const carry = { castFrom: [], castWhoSpoke: true, tracks: 'series' as const, openSetups: false };
     expect(castForNewEpisode(file, carry)).toHaveLength(1);
     const { file: next, episode } = addEpisode(file, { title: 'The Wreck', carry });
     expect(castOf(next, episode).map((person) => person.name)).toEqual(['THE FERRYMAN']);
@@ -187,11 +187,11 @@ describe('an episode', () => {
     let file = cast(series(), 'MAEVENA', 'Minor characters');
     file = addEpisode(file, {
       title: 'Pilot',
-      carry: { castFrom: [], castWhoSpoke: false, lanes: 'series', openSetups: false },
+      carry: { castFrom: [], castWhoSpoke: false, tracks: 'series', openSetups: false },
     }).file;
     file = speaks(file, episodes(file)[0]!.beats[0]!.id, 'MAEVENA');
 
-    const carry = { castFrom: [], castWhoSpoke: true, lanes: 'series' as const, openSetups: false };
+    const carry = { castFrom: [], castWhoSpoke: true, tracks: 'series' as const, openSetups: false };
     const { file: next, episode } = addEpisode(file, { title: 'The Wreck', carry });
     expect(castOf(next, episode).map((person) => person.name)).toEqual(['MAEVENA']);
   });
@@ -200,28 +200,28 @@ describe('an episode', () => {
     let file = cast(series(), 'THE FERRYMAN', 'Minor characters');
     file = addEpisode(file, {
       title: 'Pilot',
-      carry: { castFrom: [], castWhoSpoke: false, lanes: 'series', openSetups: false },
+      carry: { castFrom: [], castWhoSpoke: false, tracks: 'series', openSetups: false },
     }).file;
     file = speaks(file, episodes(file)[0]!.beats[0]!.id, 'THE FERRYMAN (V.O.)');
 
-    const carry = { castFrom: [], castWhoSpoke: true, lanes: 'series' as const, openSetups: false };
+    const carry = { castFrom: [], castWhoSpoke: true, tracks: 'series' as const, openSetups: false };
     const { file: next, episode } = addEpisode(file, { title: 'The Wreck', carry });
     expect(castOf(next, episode).map((person) => person.name)).toEqual(['THE FERRYMAN']);
   });
 
-  it('plots on the series’ lanes, or starts a fresh one when asked', () => {
+  it('plots on the series’ tracks, or starts a fresh one when asked', () => {
     const file = series();
-    expect(addEpisode(file, { title: 'A', carry: { ...defaultEpisodeCarry(file), lanes: 'series' } }).file.lanes)
-      .toHaveLength(file.lanes.length);
+    expect(addEpisode(file, { title: 'A', carry: { ...defaultEpisodeCarry(file), tracks: 'series' } }).file.tracks)
+      .toHaveLength(file.tracks.length);
 
-    const fresh = addEpisode(file, { title: 'A', carry: { ...defaultEpisodeCarry(file), lanes: 'fresh' } }).file;
-    expect(fresh.lanes).toHaveLength(file.lanes.length + 1);
-    expect(fresh.lanes.at(-1)?.name).toBe('A — A story');
+    const fresh = addEpisode(file, { title: 'A', carry: { ...defaultEpisodeCarry(file), tracks: 'fresh' } }).file;
+    expect(fresh.tracks).toHaveLength(file.tracks.length + 1);
+    expect(fresh.tracks.at(-1)?.name).toBe('A — A story');
   });
 
   it('remembers what was carried, so the next one does not ask again', () => {
     const file = series();
-    const carry = { castFrom: [], castWhoSpoke: false, lanes: 'fresh' as const, openSetups: false };
+    const carry = { castFrom: [], castWhoSpoke: false, tracks: 'fresh' as const, openSetups: false };
     const next = addEpisode(file, { title: 'Pilot', carry }).file;
     expect(defaultEpisodeCarry(next)).toEqual(carry);
   });
@@ -246,7 +246,7 @@ describe('an episode', () => {
     const carry = {
       castFrom: [headings[1]!.id as string],
       castWhoSpoke: false,
-      lanes: 'series' as const,
+      tracks: 'series' as const,
       openSetups: false,
     };
     const { file: next, episode } = addEpisode(file, { title: 'Pilot', carry });

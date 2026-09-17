@@ -142,7 +142,7 @@ describe('final editor', () => {
         ],
       },
     });
-    const created = addUnit(file, { laneId: file.lanes[0]!.id, title: 'The gallery' });
+    const created = addUnit(file, { trackId: file.tracks[0]!.id, title: 'The gallery' });
     file = created.file;
     const beat = addBeat(file, { unitId: created.unit.id });
     file = updateBeat(beat.file, beat.beat.id, {

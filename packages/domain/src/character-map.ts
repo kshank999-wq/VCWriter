@@ -5,7 +5,7 @@ import {
   type RelationshipKind,
 } from './character-creator.js';
 import { beatsInStoryOrder, unitsInStoryOrder } from './selectors.js';
-import type { CharacterId, LaneId } from './ids.js';
+import type { CharacterId, TrackId } from './ids.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -141,7 +141,7 @@ export const isWholeScript = (file: ProjectFile, range?: SceneRange | null): boo
 /**
  * Who speaks inside a stretch of the story, for §12's range filter.
  *
- * The same rule as the lane filter one function up: somebody is *in* a stretch
+ * The same rule as the track filter one function up: somebody is *in* a stretch
  * because they speak there. A range that kept people who are not in it would
  * draw a map of the whole cast with fewer lines, which answers nothing.
  */
@@ -216,15 +216,15 @@ export const togetherInScript = (file: ProjectFile, range?: SceneRange | null): 
 };
 
 /**
- * Who appears in a plot lane, for §12's filter.
+ * Who appears in a plot track, for §12's filter.
  *
- * Read off the cues of the beats in that lane's scenes, the same way the rest
+ * Read off the cues of the beats in that track's scenes, the same way the rest
  * of the module works out who is in a beat — so a character counts as being in
- * a lane because they speak there, not because somebody filed them under it.
+ * a track because they speak there, not because somebody filed them under it.
  */
-export const charactersInLane = (file: ProjectFile, laneId: LaneId): CharacterId[] => {
+export const charactersInTrack = (file: ProjectFile, trackId: TrackId): CharacterId[] => {
   const units = new Set(
-    file.units.filter((unit) => (unit.laneId as string) === (laneId as string)).map((unit) => unit.id as string),
+    file.units.filter((unit) => (unit.trackId as string) === (trackId as string)).map((unit) => unit.id as string),
   );
   const found: CharacterId[] = [];
   for (const beat of file.beats) {
@@ -249,7 +249,7 @@ export const charactersInLane = (file: ProjectFile, laneId: LaneId): CharacterId
  */
 export const characterMap = (input: {
   file: ProjectFile;
-  /** Limit the cast, for §12's lane and group filters. Undefined means everybody. */
+  /** Limit the cast, for §12's track and group filters. Undefined means everybody. */
   among?: readonly CharacterId[];
   /** Only these kinds of relationship. Undefined means all of them. */
   kinds?: readonly RelationshipKind[];
@@ -286,7 +286,7 @@ export const characterMap = (input: {
   const { file } = input;
   const range = isWholeScript(file, input.range) ? null : (input.range ?? null);
 
-  // Two filters on the cast, and a person has to pass both: *in this lane* and
+  // Two filters on the cast, and a person has to pass both: *in this track* and
   // *in this stretch* are different questions, and a writer asking both wants
   // the people who answer both.
   const limits = [

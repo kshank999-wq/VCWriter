@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import type { BeatId, LaneId, StructuralUnitId } from '@vcwriter/domain';
+import type { BeatId, TrackId, StructuralUnitId } from '@vcwriter/domain';
 
 /**
  * Drag and drop for the structure board (spec §5.1–§5.3).
@@ -13,8 +13,8 @@ import type { BeatId, LaneId, StructuralUnitId } from '@vcwriter/domain';
 
 export type DragPayload =
   | { kind: 'beat'; id: BeatId; fromUnitId: StructuralUnitId }
-  | { kind: 'unit'; id: StructuralUnitId; fromLaneId: LaneId }
-  | { kind: 'lane'; id: LaneId };
+  | { kind: 'unit'; id: StructuralUnitId; fromTrackId: TrackId }
+  | { kind: 'track'; id: TrackId };
 
 export type DropEdge = 'before' | 'after';
 

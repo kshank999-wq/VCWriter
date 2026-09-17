@@ -82,9 +82,9 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
   const addSegment = () => {
     const at = sheet.segments.length + 1;
     onUpdate((current) => {
-      const lane = current.lanes[0];
-      if (!lane) return current;
-      const made = addUnit(current, { laneId: lane.id, title: '' });
+      const track = current.tracks[0];
+      if (!track) return current;
+      const made = addUnit(current, { trackId: track.id, title: '' });
       return addRow(made.file, { unitId: made.unit.id }).file;
     });
     requestAnimationFrame(() => {

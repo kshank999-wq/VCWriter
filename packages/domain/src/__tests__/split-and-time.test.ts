@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createProjectFile } from '../project-file.js';
-import { addBeat, addLane, addResearchItem, addUnit, linkEntities, splitUnit, updateBeat } from '../mutations.js';
+import { addBeat, addTrack, addResearchItem, addUnit, linkEntities, splitUnit, updateBeat } from '../mutations.js';
 import { beatsForUnit, unitsInStoryOrder } from '../selectors.js';
 import { manuscriptElements } from '../pagination.js';
 import { spanWidth, storyLayout, timecode } from '../story-layout.js';
@@ -18,10 +18,10 @@ const el = (type: ManuscriptElementType, text: string): ManuscriptElement => ({
   attributes: {},
 });
 
-/** One scene of three beats, each with a line, in a project with two lanes. */
+/** One scene of three beats, each with a line, in a project with two tracks. */
 const threeBeats = () => {
   let file = createProjectFile({ title: 'T', format: 'screenplay' });
-  file = addLane(file, { name: 'Subplot' }).file;
+  file = addTrack(file, { name: 'Subplot' }).file;
   const unitId = file.units[0]!.id;
   file = updateBeat(file, file.beats[0]!.id, { title: 'One', manuscript: { elements: [el('action', 'ONE')] } });
   const second = addBeat(file, { unitId, title: 'Two' });
@@ -38,10 +38,10 @@ describe('splitting a scene', () => {
 
     const split = splitUnit(file, unitId, beats[1]);
 
-    // Two scenes, in that order, in the same lane.
+    // Two scenes, in that order, in the same track.
     const order = unitsInStoryOrder(split.file);
     expect(order.map((unit) => unit.id)).toEqual([unitId, split.unit.id]);
-    expect(split.unit.laneId).toBe(file.units[0]!.laneId);
+    expect(split.unit.trackId).toBe(file.units[0]!.trackId);
     expect(split.unit.title).toBe('');
 
     // The beats went where they were told.
@@ -54,7 +54,7 @@ describe('splitting a scene', () => {
 
   it('scoots the scenes after it along, rather than landing at the end', () => {
     const { file, unitId, beats } = threeBeats();
-    const later = addUnit(file, { laneId: file.lanes[1]!.id, title: 'Later' });
+    const later = addUnit(file, { trackId: file.tracks[1]!.id, title: 'Later' });
     const split = splitUnit(later.file, unitId, beats[2]);
     expect(unitsInStoryOrder(split.file).map((unit) => unit.title)).toEqual(['Opening Scene', '', 'Later']);
   });
@@ -62,7 +62,7 @@ describe('splitting a scene', () => {
   it('refuses to split at the first beat, and at a beat that is not in the scene', () => {
     const { file, unitId, beats } = threeBeats();
     expect(() => splitUnit(file, unitId, beats[0])).toThrow(/first beat/);
-    const other = addUnit(file, { laneId: file.lanes[0]!.id });
+    const other = addUnit(file, { trackId: file.tracks[0]!.id });
     const stray = addBeat(other.file, { unitId: other.unit.id });
     expect(() => splitUnit(stray.file, unitId, stray.beat.id)).toThrow(/not in/);
   });

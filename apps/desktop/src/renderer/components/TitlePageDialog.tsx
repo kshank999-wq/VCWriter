@@ -119,10 +119,10 @@ export function TitlePageDialog({ file, open, episode, onClose, onUpdate }: Titl
   };
 
   return (
-    <dialog ref={dialog} className="lane-dialog title-page-dialog" aria-label="Title page" onClose={cancel}>
+    <dialog ref={dialog} className="track-dialog title-page-dialog" aria-label="Title page" onClose={cancel}>
       {open ? (
         <>
-          <header className="lane-dialog-title">
+          <header className="track-dialog-title">
             <span className="bar-title">
               {episode ? `${episode.label} — title page` : 'Title page'}
             </span>
@@ -254,7 +254,7 @@ export function TitlePageDialog({ file, open, episode, onClose, onUpdate }: Titl
             </div>
           </div>
 
-          <footer className="lane-dialog-foot">
+          <footer className="track-dialog-foot">
             <p className="muted small">
               {episode
                 ? 'Anything left empty is the series’ own. The writing screen never shows this; it prints with the episode.'

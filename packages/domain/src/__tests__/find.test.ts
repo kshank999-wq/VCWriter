@@ -20,7 +20,7 @@ import {
 
 const script = (): ProjectFile => {
   let file = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
 
   const write = (beatId: string, lines: string[]) => {
     file = updateBeat(file, beatId as never, {
@@ -37,7 +37,7 @@ const script = (): ProjectFile => {
   };
 
   write(file.beats[0]!.id as string, ['The lamp turns. The lamp answers.', 'Rain on the glass.']);
-  const second = addUnit(file, { laneId, title: 'Second' });
+  const second = addUnit(file, { trackId, title: 'Second' });
   file = addBeat(second.file, { unitId: second.unit.id }).file;
   write(file.beats[file.beats.length - 1]!.id as string, ['A lamp, unlit.', 'LAMPLIGHT on the sill.']);
   return file;

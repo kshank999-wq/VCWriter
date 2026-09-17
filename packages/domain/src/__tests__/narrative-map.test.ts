@@ -84,7 +84,7 @@ describe('the spine', () => {
    */
   it('takes the top row of its column, in the script’s order', () => {
     let file = game();
-    const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. REACTOR - NIGHT' });
+    const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. REACTOR - NIGHT' });
     file = scene.file;
     const first = addBeat(file, { unitId: scene.unit.id, title: 'One' });
     file = first.file;
@@ -113,7 +113,7 @@ describe('the spine', () => {
 
   it('marks the link between two nodes the manuscript puts next to each other', () => {
     let file = game();
-    const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. REACTOR - NIGHT' });
+    const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. REACTOR - NIGHT' });
     file = scene.file;
     const first = addBeat(file, { unitId: scene.unit.id, title: 'One' });
     file = first.file;
@@ -138,7 +138,7 @@ describe('the spine', () => {
     let file = game();
     // The scene a new project opens with, and a second one after it.
     const opening = file.beats[0]!;
-    const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. REACTOR - NIGHT' });
+    const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. REACTOR - NIGHT' });
     file = scene.file;
     const later = addBeat(file, { unitId: scene.unit.id, title: 'One' });
     file = later.file;

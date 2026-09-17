@@ -19,7 +19,7 @@ import type { RoomIdentity } from '../preload/index';
  *
  * A context rather than a prop, for one reason: **a colour is a fact about the
  * room, not about a scene**. Threading an author's colour down through the
- * workspace, the script, the lanes and the inspector would put a room into
+ * workspace, the script, the tracks and the inspector would put a room into
  * every component that draws a beat, and every one of them would have to keep
  * passing it on to the next. Nothing here knows there is a room until it wants
  * to draw a colour, and outside a room the context is empty and every one of

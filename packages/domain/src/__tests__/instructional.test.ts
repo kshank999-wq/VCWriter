@@ -38,9 +38,9 @@ import {
 
 const book = () => {
   let file: ProjectFile = createProjectFile({ title: 'Teaching Statistics', format: 'instructional' });
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   for (const title of ['Sampling', 'Inference', 'Regression']) {
-    const chapter = addUnit(file, { laneId, title });
+    const chapter = addUnit(file, { trackId, title });
     file = addBeat(chapter.file, { unitId: chapter.unit.id, title: 'a section' }).file;
   }
   return file;
@@ -123,7 +123,7 @@ describe('a figure is an element of the manuscript', () => {
 
     // Drag the last chapter to the front. Figure 2 becomes Figure 1.
     const order = unitsInStoryOrder(file);
-    const moved = moveUnit(file, { unitId: order[3]!.id, toLaneId: file.lanes[0]!.id, index: 0 });
+    const moved = moveUnit(file, { unitId: order[3]!.id, toTrackId: file.tracks[0]!.id, index: 0 });
     expect(figuresInOrder(moved).map((f) => f.asset!.name)).toEqual(['second.png', 'first.png']);
     expect(figuresInOrder(moved)[0]!.number).toBe(1);
   });

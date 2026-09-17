@@ -31,10 +31,10 @@ const DOT = 'data:image/png;base64,iVBORw0KGgo=';
 const project = (format: 'screenplay' | 'instructional' = 'screenplay') => {
   let file = createProjectFile({ title: 'The Brass Key', format });
   const starters = new Set(file.units.map((one) => one.id as string));
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   const beatIds: string[] = [];
   for (const title of ['One', 'Two']) {
-    const unit = addUnit(file, { laneId, title });
+    const unit = addUnit(file, { trackId, title });
     const beat = addBeat(unit.file, { unitId: unit.unit.id, title: `Beat ${title}` });
     file = beat.file;
     beatIds.push(beat.beat.id as string);

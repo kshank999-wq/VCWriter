@@ -102,25 +102,25 @@ hands-free idea and scene capture away from the desktop.
   items, the current scene/chapter, recent work and project assets.
 - An email action for the one-sheet through the web/backend email service.
 
-## 5. Story structure: lanes → scenes/chapters → beats
+## 5. Story structure: tracks → scenes/chapters → beats
 
-Beats do not sit loose in a plot lane. They belong inside a scene (screenplay)
-or chapter/section container (novel), while the lane organises the larger story
+Beats do not sit loose in a plot track. They belong inside a scene (screenplay)
+or chapter/section container (novel), while the track organises the larger story
 thread.
 
-### 5.1 Plot lanes
+### 5.1 Plot tracks
 
-- Multiple lanes for main plot, subplots, character arcs, themes, mysteries,
-  relationships or custom user-defined lanes.
-- Lanes visually organise scenes/chapters in story order.
-- Lane dimensions adapt to contained material so the hierarchy is visible
+- Multiple tracks for main plot, subplots, character arcs, themes, mysteries,
+  relationships or custom user-defined tracks.
+- Tracks visually organise scenes/chapters in story order.
+- Track dimensions adapt to contained material so the hierarchy is visible
   without losing beat detail.
 - Structural units can be reordered and moved while preserving relationships
   and references.
 
 ### 5.2 Scene/chapter containers
 
-- For screenplays a Scene is a visible block in the lane; novels use the
+- For screenplays a Scene is a visible block in the track; novels use the
   analogous Chapter/section container with the same underlying concept.
 - Each container holds multiple beats in order.
 - Containers are collapsible and expandable.
@@ -298,8 +298,8 @@ unnecessary email content.
 | --- | --- |
 | User / Account | Owns purchases, licenses, projects, preferences, devices |
 | Project | Owns metadata, poster, research, story structure, manuscript, settings |
-| Lane | Belongs to project; organises scenes/chapters by story thread |
-| Scene / Chapter | Belongs to project/lane; contains ordered beats and structural metadata |
+| Track | Belongs to project; organises scenes/chapters by story thread |
+| Scene / Chapter | Belongs to project/track; contains ordered beats and structural metadata |
 | Beat | Belongs to scene/chapter; owns internal title, order, manuscript segment, links |
 | Research Category | Project/user-defined organisational taxonomy |
 | Research Item | Belongs to category/project; supports used/unresolved state and links |
@@ -351,7 +351,7 @@ unnecessary email content.
 | Phase | Primary deliverables |
 | --- | --- |
 | 1 — Foundation | Repo architecture; shared data model; Supabase schema/auth; project CRUD; desktop shell; Windows/macOS build pipeline; autosave/recovery |
-| 2 — Story structure | Research categories; lanes; scene/chapter containers; beats; drag/reorder; links; setups/payoffs; used/unused workflow |
+| 2 — Story structure | Research categories; tracks; scene/chapter containers; beats; drag/reorder; links; setups/payoffs; used/unused workflow |
 | 3 — Writing | Screenplay and novel workspaces; beat-to-manuscript mapping; focus mode; print preview; PDF export |
 | 4 — Notes & sync | Mobile companion; typed/dictated capture; categorisation; approval queue; project sync; offline-tolerant capture |
 | 5 — Editor & voice | Daily Editor; Final Editor framework; STT integration; TTS voices; per-character voice assignment/playback |
@@ -397,7 +397,7 @@ as irreversible assumptions:
 ## 19. Handoff notes
 
 - Treat the Scene/Chapter → Beat hierarchy as foundational. Do not implement
-  beats as free-floating lane cards that later require migration.
+  beats as free-floating track cards that later require migration.
 - Treat internal beat titles as authoring metadata, separate from printable
   manuscript text.
 - Treat story relationships as first-class links, not text copied into multiple

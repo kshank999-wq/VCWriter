@@ -25,7 +25,7 @@ after. §11 lists eight entities and **six were already here**:
 | `LearningAid` | **new** |
 
 And the views: §5's mind map is the Story Sculptor (addendum 03), §6's Outliner
-exists with promotion built (addendum 06 §12), §7's lane view exists, §8's Book
+exists with promotion built (addendum 06 §12), §7's track view exists, §8's Book
 View is the Script already rendering prose for a novel.
 
 So the spec is largely a **vocabulary and taxonomy** change over machinery that
@@ -356,7 +356,7 @@ Ken, after using it:
 > things into sections and so the script of view is now book of view and in
 > the outliner you can put sections and then underneath that section 1.1 1.2
 > 1.3 like a textbook or you can put whatever you'd like depending on the type
-> of book you're writing and then you can transfer that to the lane view so
+> of book you're writing and then you can transfer that to the track view so
 > instead of scenes and beats you're going to have sections and subsections.
 
 Three asks, and only one of them was new.

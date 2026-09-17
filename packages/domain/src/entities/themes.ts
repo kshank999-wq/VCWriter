@@ -8,7 +8,7 @@ import type { ProjectId, ResearchMotifId, ResearchThemeId, ThemeMotifLinkId } fr
  * **Two entity types, not one with a flag**, which §2 of the spec asks for
  * twice and is right about. It would be easy to model these as one record with
  * a `kind`, and the interface would then drift towards one list, one filter and
- * one lane — which is the exact outcome §8 forbids.
+ * one track — which is the exact outcome §8 forbids.
  *
  * The reason it is true rather than merely asked for is that the fields
  * genuinely differ. A theme is an *idea* and what it wants is a sense of where

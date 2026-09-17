@@ -3,7 +3,7 @@
 Status: approved for build, 8 September 2026. Extends §5 (story structure)
 and §6 (writing workspace) of the master specification, and replaces the
 layout paragraph in `docs/brand.md`. The master spec says *what* the
-structure is — lanes hold scenes, scenes hold beats, beats hold manuscript —
+structure is — tracks hold scenes, scenes hold beats, beats hold manuscript —
 and asks for a professional editor with structural panels. It does not say
 how those are arranged on screen. This addendum does.
 
@@ -16,12 +16,12 @@ the **viewport**, where an editor shows the picture and this shows the
 story: the selected scene as it prints, or the whole story as a diagram of
 its threads. Beside the viewport is the **inspector**, with the properties
 of whatever is selected. Below them is the **master timeline**: the story in
-order, its plot lanes as tracks, scenes as blocks in the lanes, beats inside
+order, its plot tracks as tracks, scenes as blocks in the tracks, beats inside
 the scenes, and every setup, payoff and link drawn across it as a curve.
 Selecting anything in any window selects it everywhere.
 
 The arrangement is familiar to anyone who has used Causality (Hollywood
-Camera Work) — script, lanes and blocks, properties — and the finish is
+Camera Work) — script, tracks and blocks, properties — and the finish is
 DaVinci Resolve's: flat dark panels, hairline separators, small uniform
 controls, one accent, tracks with headers, a playhead, pages along the
 bottom. The palette does not change; it is `docs/brand.md`'s black, gold and
@@ -38,25 +38,25 @@ parentheses are retired.
 
 | Name | What it is |
 | --- | --- |
-| **Master timeline** (was: structure board, timeline strip) | The story in order, below the viewport: ruler, acts, links, then one track per plot lane |
-| **Timeline & Viewer** (was: viewport) | Above the lanes, where the viewer would be: the scenes in time, and the characters, themes and links that run through them |
-| **Plot pop-up** | The plot's summary and arc, opened from a lane's track header |
-| **Plot lane** | A track on the master timeline; a story thread (§5.1) |
-| **Scene block** (was: unit column, scene group) | A scene or chapter as it appears in a lane, with its beats inside |
+| **Master timeline** (was: structure board, timeline strip) | The story in order, below the viewport: ruler, acts, links, then one track per plot track |
+| **Timeline & Viewer** (was: viewport) | Above the tracks, where the viewer would be: the scenes in time, and the characters, themes and links that run through them |
+| **Plot pop-up** | The plot's summary and arc, opened from a track's track header |
+| **Plot track** | A track on the master timeline; a story thread (§5.1) |
+| **Scene block** (was: unit column, scene group) | A scene or chapter as it appears in a track, with its beats inside |
 | **Links track** | The row of the timeline where setups, payoffs and story links are drawn |
 | **Master panel** | The left editor window: the **Script** tab and the **Research** tabs |
 | **Script** (was: the beat editor) | The whole manuscript in story order, editable in place |
-| **Inspector** | Properties of the selected beat, scene, lane and act |
+| **Inspector** | Properties of the selected beat, scene, track and act |
 | **Page bar** | The row of pages along the bottom: Write, Preview, Editors, Read back, Captures, Recovery |
 | **Act marker** | A labelled point in the story order, drawn as a band on the timeline |
 
-"Plot lane", "scene", "chapter" and "beat" keep their meanings from §5.
+"Plot track", "scene", "chapter" and "beat" keep their meanings from §5.
 
 ## 3. Layout
 
 The Write page, which is the workspace, in the proportions of an editor's
 edit page: a quarter for the script column, and of the rest just under half
-for the viewport above the lanes.
+for the viewport above the tracks.
 
 ```
 ┌ title bar ─────────────────────────────────────────────────────────────────┐
@@ -67,7 +67,7 @@ for the viewport above the lanes.
 │ ─────────────│ │                                          │  │  title     │
 │ ▾ Sc 1 · HOME│ │      the scene, as it prints             │  │  status    │
 │   ▾ Home life│ │                                          │  │ Scene      │
-│     INT. …   │ └──────────────────────────────────────────┘  │ Lane       │
+│     INT. …   │ └──────────────────────────────────────────┘  │ Track       │
 │     He liste…│  1 / 13 · Home life     ⏮ ◀ ▶ ⏭              │ Act        │
 │   ▾ On the … ├════════════ divider ═══════════════════════════┴────────────┤
 │     …        │ Pages │ 1        │ 2      │ 4              │ 5   │           │
@@ -75,7 +75,7 @@ for the viewport above the lanes.
 │              │ Links │   ╭───────────────╮      ╭──────╮                    │
 │              │ P1 Main    [Sc 1 ▸ ▸ ] [Sc 2 ▸ ]   [Sc 4 ▸ ▸ ▸ ]             │
 │              │ P2 Subplot              [Sc 3 ▸ ]         [Sc 5 ▸ ]          │
-│              │ + Scene  + Beat  + Lane  + Act    zoom ───●───   Inspector ▣ │
+│              │ + Scene  + Beat  + Track  + Act    zoom ───●───   Inspector ▣ │
 ├──────────────┴─────────────────────────────────────────────────────────────┤
 │              WRITE  PREVIEW  EDITORS  READ BACK  CAPTURES  RECOVERY        │
 └────────────────────────────────────────────────────────────────────────────┘
@@ -118,8 +118,8 @@ zoom is the scale of a sequencer. Each scene block is as wide as the pages
 it takes. The floor under an empty scene is a *fraction of a page* rather
 than a fixed number of pixels, so every block answers the zoom — a timeline
 whose short clips stop responding to the zoom is not a timeline. A long
-scene is a wide block, and a glance at a lane says where the story's weight
-is. That is §5.1's "lane dimensions adapt to contained material" made
+scene is a wide block, and a glance at a track says where the story's weight
+is. That is §5.1's "track dimensions adapt to contained material" made
 literal.
 
 Tracks, top to bottom, each with a header on the left the way an editor
@@ -140,17 +140,17 @@ names its tracks:
    that ends in the air; a story link is a thin muted curve. Hovering names
    it; clicking selects the scene it lands in. This is the track that shows
    whether the story's promises are kept, in one look.
-4. **One track per plot lane**, in lane order. The header carries the
+4. **One track per plot track**, in track order. The header carries the
    track's code — `P1`, `P2`, the way an editor labels `V1`, `V2` — its name
    (rename in place), scene count and collapse. Clicking the code opens the
    **plot pop-up**: the plot's name, kind and colour, its **summary**, and
    its **arc** — how the thread develops — as text to think in, over the
-   workspace. Closing it returns to the lanes with nothing else changed;
+   workspace. Closing it returns to the tracks with nothing else changed;
    what was typed is kept as it was typed. In
-   the body, that lane's scene blocks sit at their story position, and the
-   space a scene in *another* lane occupies is left empty, so blocks line up
-   vertically across lanes and the eye can read the interleaving: main plot,
-   subplot, main plot. A collapsed lane is one thin row of bars.
+   the body, that track's scene blocks sit at their story position, and the
+   space a scene in *another* track occupies is left empty, so blocks line up
+   vertically across tracks and the eye can read the interleaving: main plot,
+   subplot, main plot. A collapsed track is one thin row of bars.
 
 A **scene block** shows its sequence label and title in a header and its
 beats as compact rows — a status glyph, the title, and at the right a dot
@@ -163,7 +163,7 @@ never grows a scrollbar. How many is a preference — five by default — set
 once, per machine. A scene of twelve beats then reads as three short columns
 instead of one column whose end you cannot see. The block is as wide as its
 pages *or* as wide as its beats need, whichever is more; every track shares
-the same columns, so the lanes stay lined up by story position either way.
+the same columns, so the tracks stay lined up by story position either way.
 
 **One click selects, two open.** Clicking a beat row selects it; clicking a
 scene's header selects the *scene* — highlighted, and the thing a new beat
@@ -175,8 +175,8 @@ saying it should cost nothing.
 What the toolbar adds follows from that. **+ Beat** goes into the scene last
 clicked into, including one with nothing in it yet — which is exactly the
 scene you select before adding its first beat, and the one that has no beat
-to be found by. **+ Scene** goes into the lane last clicked into, whether
-that was a lane's header or a scene inside it, so a chapter never lands in
+to be found by. **+ Scene** goes into the track last clicked into, whether
+that was a track's header or a scene inside it, so a chapter never lands in
 another plot because that is where the cursor happened to be.
 
 Blocks collapse to a header. The **playhead** is a
@@ -192,7 +192,7 @@ Laid out the way an editing program's clip dialog is, and differently from
 the plot pop-up:
 
 - The **scene's name**, top centre. To its left the sequence label and the
-  lane; to its right the **in-script switch** and Close.
+  track; to its right the **in-script switch** and Close.
 - Under the name, for a screenplay, the **slugline** as three fields —
   INT./EXT., the location, the time of day — exactly as it reads in the
   script. They are not stored anywhere of their own: they read from, and
@@ -206,7 +206,7 @@ the plot pop-up:
   or *payoff*.
 - A **right column** listing the scene's **beats** in order. Selecting one
   and pressing **Split at this beat** cuts the scene there: that beat and
-  everything after it become the next scene along — same lane, untitled,
+  everything after it become the next scene along — same track, untitled,
   taking the story position immediately after this one, with everything
   after it scooting along as an editing timeline does. Nothing about the
   manuscript changes; the script reads exactly as it did before the cut. A
@@ -252,7 +252,7 @@ page breaks, from the same paginator the PDF uses.
 The **Page** control in the status line scales the whole page rather than
 the text alone, from 75% to 160%, so what is on screen stays a page and
 never becomes a wider one. The rest of the status line names the scene and
-lane the beat is in, its word count, and the two keys.
+track the beat is in, its word count, and the two keys.
 
 The writing screen is the same component whether it opens over the workspace
 or in **a window of its own** on another monitor (§8); the bar carries the
@@ -350,21 +350,21 @@ as the fields are typed; Close returns to the workspace with nothing else
 changed.
 
 The **toolbar** along the bottom of the timeline: `+ Scene` (after the
-selected scene, in its lane), `+ Beat` (after the selected beat, in its
-scene), `+ Lane`, `+ Act`, a zoom slider, and the inspector toggle. The
+selected scene, in its track), `+ Beat` (after the selected beat, in its
+scene), `+ Track`, `+ Act`, a zoom slider, and the inspector toggle. The
 nouns follow the format: "Chapter" for a novel. A new scene or beat is
 selected as it is created and its title takes focus for typing.
 
 Everything reorders by drag and by keyboard, as today:
 
-- Beats: within a block, and between blocks in any lane.
-- Scene blocks: along the story axis, and between lanes. A block dropped on
+- Beats: within a block, and between blocks in any track.
+- Scene blocks: along the story axis, and between tracks. A block dropped on
   another lands before or after it in story order; dropped in a track's
-  empty space at a position, it takes that story position in that lane.
-- Lanes: by their track header.
+  empty space at a position, it takes that story position in that track.
+- Tracks: by their track header.
 - Keyboard: `Alt+↑/↓` moves the focused beat within its scene, a scene
-  earlier/later in the story, or a lane up/down; `Alt+Shift+↑/↓` moves a
-  beat to the previous/next scene, or a scene to the previous/next lane.
+  earlier/later in the story, or a track up/down; `Alt+Shift+↑/↓` moves a
+  beat to the previous/next scene, or a scene to the previous/next track.
 
 ## 5. Timeline & Viewer
 
@@ -380,7 +380,7 @@ Two rows stay put at the top while everything else scrolls:
 - **Time.** The minute each scene starts at.
 - **Scenes.** The scene as a block, its number and its title, as wide as it
   plays. Clicking one selects it; the selected scene keeps the gold
-  playhead edge it has on the lanes below. A scene switched off (§4) is
+  playhead edge it has on the tracks below. A scene switched off (§4) is
   drawn dimmed.
 
 Under them, the threads that run through the story — and only threads,
@@ -404,15 +404,15 @@ say":
 alone and dims every scene they are not in, which is how you see at a
 glance where someone is in the script and where the gaps in their arc are.
 
-**Zoom** sets pixels per page, the same unit the lanes below use, and it
+**Zoom** sets pixels per page, the same unit the tracks below use, and it
 changes the width of *every* block: the floor a short scene is given is a
 fraction of a page rather than a fixed number of pixels, so an empty scene
 still grows and shrinks with the zoom instead of sitting at one width.
-Both this screen and the lanes have their own zoom, each remembered.
+Both this screen and the tracks have their own zoom, each remembered.
 
 The page itself is not here — the Script (§6) is the manuscript, and the
 Preview page prints it — and neither are the promises or the beats, which
-belong to the lanes and the scene's own screen.
+belong to the tracks and the scene's own screen.
 
 ## 6. Master panel: Script
 
@@ -754,7 +754,7 @@ Selecting a folder shows what is filed in it **and everything under it**, so
 selecting Mike shows his journey too. The search box narrows whatever is on
 screen, across titles, notes and tags.
 
-**Also** — the two other things that are not the script: the **plot lanes**
+**Also** — the two other things that are not the script: the **plot tracks**
 as records, and the **setups and payoffs** tracker (§7.3). They were tabs in
 the master panel; they belong in the one window that holds everything the
 script is made from.
@@ -774,7 +774,7 @@ monitor is for: the material on one screen, the script on the other.
 ## 8. Sections, places and windows
 
 A workspace is not a layout the program gets to decide. Someone cutting a
-sequence wants the lanes big and the script small; someone drafting wants
+sequence wants the tracks big and the script small; someone drafting wants
 the opposite; someone with two monitors wants the page on one of them and
 everything else on the other. So the sections move.
 
@@ -783,7 +783,7 @@ everything else on the other. So the sections move.
 The workspace has four places a section can be — the tall column down one
 side, the two stacked halves of the stage beside it, and the narrow column
 on the far side — and four sections to put in them: the **Script**, the
-**Timeline & Viewer**, the **plot lanes** and the **inspector**. Any section
+**Timeline & Viewer**, the **plot tracks** and the **inspector**. Any section
 can go in any place.
 
 Each section carries a thin strip along its top: its name, which is also the
@@ -804,7 +804,7 @@ Sculptor, the Editors and, on a game, the narrative map — and **any number of
 beats**, can be
 opened as a real window and pushed onto another monitor. The window runs the
 same renderer with `?pane=` naming what it holds: `script`, `viewer`,
-`lanes`, `inspector`, `research`, `outliner`, `sculptor`, `editors`, or
+`tracks`, `inspector`, `research`, `outliner`, `sculptor`, `editors`, or
 `beat:<id>` — beats key on their own id, so two beats can be open side by
 side. Asking twice for the same section raises the window that already exists
 rather than making a second one.
@@ -840,13 +840,13 @@ flush and nothing missing. A window that could do less than the panel it came
 out of would be a reason not to move it.
 
 **A key this build has not got says so.** An unknown `?pane=` used to fall
-through to the plot lanes, so a window opened by an older workspace, or from a
-hand-edited URL, drew the lanes while its title bar claimed to be whatever had
+through to the plot tracks, so a window opened by an older workspace, or from a
+hand-edited URL, drew the tracks while its title bar claimed to be whatever had
 been asked for. It now says which section it does not have.
 
 **The workspace closes over the place a section left.** The Script taken to
 another monitor does not leave a striped rectangle where it was: the column
-disappears and the Timeline & Viewer and the plot lanes take the width. The
+disappears and the Timeline & Viewer and the plot tracks take the width. The
 way back is the chip in the title bar (§3), which is in the same place
 whatever is out — better than a hole in the layout, which costs the room the
 writer moved the section to gain.
@@ -857,7 +857,7 @@ window with nothing to edit and nothing to save it is worse than no window.
 ### One document, several windows
 
 The windows edit the **same project**, not copies of it. A line typed in the
-beat window is in the Script a moment later; a beat dragged in the lanes
+beat window is in the Script a moment later; a beat dragged in the tracks
 moves its text in the beat window. Exactly one window — the workspace — holds
 the document and runs the autosave, which keeps a single writer to the file.
 
@@ -896,8 +896,8 @@ sections, top to bottom:
 | Section | Fields |
 | --- | --- |
 | **Beat** | Title, status, summary, words and pages, characters who speak in it (derived from character cues, read-only), related elements (§7.4 — the panel that used to sit under the editor moves here) |
-| **Scene** / **Chapter** | Sequence label, title, status, summary, notes, lane (a select that moves the scene without changing its story position), pages |
-| **Lane** | Name, kind, colour, description |
+| **Scene** / **Chapter** | Sequence label, title, status, summary, notes, track (a select that moves the scene without changing its story position), pages |
+| **Track** | Name, kind, colour, description |
 | **Act** | The marker the selected scene starts: title and kind, or a control to start one |
 
 Every field writes through the same domain mutations the panes use, so an
@@ -916,19 +916,19 @@ to the master panel's Research tab.
 ## 11. Story order is global
 
 This addendum changes one rule of §5 and §13. Until now the print order was
-*lane order, then scene order within the lane*: every scene of the main plot
+*track order, then scene order within the track*: every scene of the main plot
 printed before the first scene of any subplot. A timeline cannot show that
 as anything but wrong, because it is: a subplot scene belongs between two
 main-plot scenes, not after all of them.
 
 From this addendum, **scenes have one order across the whole project**.
 `StructuralUnit.orderKey` is a position on the story axis, and a scene's
-lane is the row it is drawn in, nothing more. Beats keep their order within
-their scene; lanes keep their order as tracks. The print order, the Script,
+track is the row it is drawn in, nothing more. Beats keep their order within
+their scene; tracks keep their order as tracks. The print order, the Script,
 the Preview and every export follow the global scene order.
 
 Existing files are migrated (format version 2): scenes are re-keyed in the
-order they printed before — lane by lane — so nothing changes in the
+order they printed before — track by track — so nothing changes in the
 manuscript until the writer moves something. The migration takes the usual
 pre-migration snapshot.
 
@@ -1005,8 +1005,8 @@ are three marks in one script.
 A marker is a label at a position in the story order: `{ id, title,
 kind: 'act' | 'sequence' | 'note', unitId }`, meaning *this scene starts
 this act*. It is not a container — scenes do not belong to acts — because
-the master spec's hierarchy is lanes → scenes → beats (§19) and an act that
-owned scenes would cut across lanes. A marker is deliberately light: rename
+the master spec's hierarchy is tracks → scenes → beats (§19) and an act that
+owned scenes would cut across tracks. A marker is deliberately light: rename
 it, move it to another scene, remove it.
 
 When the scene a marker starts is removed, the marker moves to the next
@@ -1306,7 +1306,7 @@ reading. A day spent cutting is honestly **negative**, and shows as a loss.
   counts only while it is still alive: one that reaches today or yesterday.
   One that ended a week ago is history, not a streak.
 - **Story statistics** — what the document says about itself: words, pages,
-  scenes, beats, how many are written, markers, lanes, research not yet used,
+  scenes, beats, how many are written, markers, tracks, research not yet used,
   setups not yet paid. **Research not yet used** is a way in rather than a
   number to read: clicking it opens Research on the notes nothing points at.
   A count of things unused is an instruction.
@@ -1370,8 +1370,8 @@ name is complete without typing it out again.
 A series is one project divided into episodes, and **an episode is a run of
 the story order** — it starts at the scene its marker is on and runs to the
 scene before the next episode's. Nothing new holds it: no episode container,
-no episode field on a scene. A container would cut across the lanes, and the
-hierarchy is lanes → scenes → beats (spec §19); a field on the scene would be
+no episode field on a scene. A container would cut across the tracks, and the
+hierarchy is tracks → scenes → beats (spec §19); a field on the scene would be
 a second source of truth for something the story order already says.
 
 The consequence worth having: everything that already works on a run of
@@ -1401,7 +1401,7 @@ and the second is the one that matters:
 | A character heading | Everyone under it joins the new episode's cast |
 | Whoever spoke last episode | The people who actually had lines, whatever heading they are under |
 | The setups still unpaid | Noted on the episode, where it will be read while writing |
-| Plot lanes | The series' own lanes, or a fresh one for this episode |
+| Plot tracks | The series' own tracks, or a fresh one for this episode |
 
 Everything in a project is available to every episode already — one document,
 one cast, one research shelf. So carrying over is not copying; it is
@@ -1696,7 +1696,7 @@ almost always a slip. **One edit includes a transposition** — `lantren` for
 Inflections are not typos, and neither are the cast's names.
 
 Everything deterministic still runs locally: it costs nothing, works on a
-plane, and gives the same answer twice.
+ptrack, and gives the same answer twice.
 
 ## 21. The structural pass
 
@@ -1715,7 +1715,7 @@ into.
 
 The structural read proposes an answer; **this is the writer's**, and it is
 the one the checks read. That matters because the AI pass needs signing in
-and a key: a writer on a plane can still work the grid, and everything built
+and a key: a writer on a ptrack can still work the grid, and everything built
 on it still works.
 
 Empty is the honest starting state. **An unanswered question is not the same
@@ -1832,8 +1832,8 @@ Named so that nobody mistakes their absence for an oversight:
   Threads view draws and edits §7.4 links between beats; a link that
   *means* "this must happen before that", with rules the timeline enforces,
   is a later addendum.
-- Character lanes on the timeline itself. The Threads view has a row per
-  character; a lane per character among the plot lanes is a later addendum.
+- Character tracks on the timeline itself. The Threads view has a row per
+  character; a track per character among the plot tracks is a later addendum.
 - Timing in minutes. Pages are the industry's unit and the ruler uses them.
 
 ## 25. Acceptance
@@ -1851,7 +1851,7 @@ Named so that nobody mistakes their absence for an oversight:
 - The `+ Scene` and `+ Beat` controls add after the selection, and the new
   item is selected and its title focused for typing.
 - Every reorder is possible with the keyboard alone.
-- Dragging the Script's strip onto the plot lanes puts each in the other's
+- Dragging the Script's strip onto the plot tracks puts each in the other's
   place, and the same move is available from the strip's menu without a
   mouse. A remembered arrangement that is not a permutation of the four
   sections falls back to the default rather than losing one.

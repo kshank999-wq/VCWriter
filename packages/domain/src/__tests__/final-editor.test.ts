@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   actShape,
   addBeat,
-  addLane,
+  addTrack,
   addMarker,
   addUnit,
   characterPresence,
@@ -37,12 +37,12 @@ const script = (
 ): { file: ProjectFile; units: StructuralUnitId[] } => {
   let file = createProjectFile({ title: 'The Lighthouse', format: 'screenplay' });
   file = { ...file, units: [], beats: [] };
-  const lane = file.lanes[0]!.id;
+  const track = file.tracks[0]!.id;
   const units: StructuralUnitId[] = [];
 
   for (let index = 0; index < count; index += 1) {
     const { place, who } = shape(index);
-    const made = addUnit(file, { laneId: lane, title: `Scene ${index + 1}` });
+    const made = addUnit(file, { trackId: track, title: `Scene ${index + 1}` });
     file = made.file;
     units.push(made.unit.id);
     const beat = addBeat(file, { unitId: made.unit.id });
@@ -127,13 +127,13 @@ describe('threads and arcs', () => {
   it('raises a thread that stops before the story does', () => {
     // A subplot that runs early and never comes back.
     const { file } = script(9);
-    const made = addLane(file, { name: 'The subplot' });
+    const made = addTrack(file, { name: 'The subplot' });
     let next = made.file;
-    const early = addUnit(next, { laneId: made.lane.id, title: 'Subplot', index: 1 });
+    const early = addUnit(next, { trackId: made.track.id, title: 'Subplot', index: 1 });
     next = early.file;
     const beat = addBeat(next, { unitId: early.unit.id });
     next = updateBeat(beat.file, beat.beat.id, { manuscript: { elements: [el('action', 'It begins.')] } });
-    const second = addUnit(next, { laneId: made.lane.id, title: 'Subplot again', index: 2 });
+    const second = addUnit(next, { trackId: made.track.id, title: 'Subplot again', index: 2 });
     next = second.file;
     next = addBeat(next, { unitId: second.unit.id }).file;
 
@@ -143,9 +143,9 @@ describe('threads and arcs', () => {
 
   it('raises a thread that happens once', () => {
     const { file } = script(4);
-    const made = addLane(file, { name: 'The one-off' });
+    const made = addTrack(file, { name: 'The one-off' });
     let next = made.file;
-    const unit = addUnit(next, { laneId: made.lane.id, title: 'Once' });
+    const unit = addUnit(next, { trackId: made.track.id, title: 'Once' });
     next = addBeat(unit.file, { unitId: unit.unit.id }).file;
 
     expect(kinds(next)).toContain('thread_single_scene');

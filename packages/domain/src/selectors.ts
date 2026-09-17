@@ -2,19 +2,19 @@ import { sortByOrderKey } from './ordering.js';
 import { isUnresolved } from './entities/setups.js';
 import { countWords } from './entities/manuscript.js';
 import { refEquals, type StoryEntityRef, type StoryLink } from './entities/links.js';
-import type { Beat, Lane, StoryMarker, StructuralUnit } from './entities/structure.js';
+import type { Beat, Track, StoryMarker, StructuralUnit } from './entities/structure.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
 import type { SetupPayoff } from './entities/setups.js';
 import type { ProjectFile } from './project-file.js';
-import type { BeatId, LaneId, ResearchCategoryId, StructuralUnitId } from './ids.js';
+import type { BeatId, TrackId, ResearchCategoryId, StructuralUnitId } from './ids.js';
 
 /** Read-only views over a project document. All results are ordered. */
 
-export const lanesInOrder = (file: ProjectFile): Lane[] => sortByOrderKey(file.lanes);
+export const tracksInOrder = (file: ProjectFile): Track[] => sortByOrderKey(file.tracks);
 
-/** The scenes drawn in one lane, in story order. */
-export const unitsForLane = (file: ProjectFile, laneId: LaneId): StructuralUnit[] =>
-  sortByOrderKey(file.units.filter((unit) => unit.laneId === laneId));
+/** The scenes drawn in one track, in story order. */
+export const unitsForTrack = (file: ProjectFile, trackId: TrackId): StructuralUnit[] =>
+  sortByOrderKey(file.units.filter((unit) => unit.trackId === trackId));
 
 export const beatsForUnit = (file: ProjectFile, unitId: StructuralUnitId): Beat[] =>
   sortByOrderKey(file.beats.filter((beat) => beat.unitId === unitId));
@@ -28,7 +28,7 @@ export const beatsInScript = (file: ProjectFile, unitId: StructuralUnitId): Beat
   beatsForUnit(file, unitId).filter((beat) => beat.inScript);
 
 /**
- * Every scene in the order the story tells them, whatever lane each is in
+ * Every scene in the order the story tells them, whatever track each is in
  * (addendum 02 §8). This is the print order.
  */
 export const unitsInStoryOrder = (file: ProjectFile): StructuralUnit[] => sortByOrderKey(file.units);
@@ -54,8 +54,8 @@ export const findBeat = (file: ProjectFile, beatId: BeatId): Beat | undefined =>
 export const findUnit = (file: ProjectFile, unitId: StructuralUnitId): StructuralUnit | undefined =>
   file.units.find((unit) => unit.id === unitId);
 
-export const findLane = (file: ProjectFile, laneId: LaneId): Lane | undefined =>
-  file.lanes.find((lane) => lane.id === laneId);
+export const findTrack = (file: ProjectFile, trackId: TrackId): Track | undefined =>
+  file.tracks.find((track) => track.id === trackId);
 
 /** Categories the writer sees, in their chosen order; archived ones are hidden (§7.1). */
 export const researchCategoriesInOrder = (file: ProjectFile, includeArchived = false): ResearchCategory[] =>
@@ -220,7 +220,7 @@ export const relatedRefs = (file: ProjectFile, target: StoryEntityRef): StoryEnt
   linksFor(file, target).map((link) => (refEquals(link.from, target) ? link.to : link.from));
 
 export interface ProjectStats {
-  laneCount: number;
+  trackCount: number;
   unitCount: number;
   beatCount: number;
   writtenBeatCount: number;
@@ -252,9 +252,9 @@ export const resolveRef = (file: ProjectFile, target: StoryEntityRef): ResolvedE
   switch (target.type) {
     case 'project':
       return file.project.id === target.id ? found(file.project.title, 'project') : missing();
-    case 'lane': {
-      const lane = file.lanes.find((candidate) => candidate.id === target.id);
-      return lane ? found(lane.name, 'lane') : missing();
+    case 'track': {
+      const track = file.tracks.find((candidate) => candidate.id === target.id);
+      return track ? found(track.name, 'track') : missing();
     }
     case 'unit': {
       const unit = file.units.find((candidate) => candidate.id === target.id);
@@ -323,7 +323,7 @@ export const relatedEntities = (file: ProjectFile, target: StoryEntityRef): Rela
 
 /** Numbers behind the project dashboard (§4). */
 export const projectStats = (file: ProjectFile): ProjectStats => ({
-  laneCount: file.lanes.length,
+  trackCount: file.tracks.length,
   unitCount: file.units.length,
   beatCount: file.beats.length,
   writtenBeatCount: file.beats.filter((beat) => beat.status === 'written' || beat.status === 'revised').length,

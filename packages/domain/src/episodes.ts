@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
 import { orderKeyForIndex } from './ordering.js';
-import { LANE_COLOURS, laneSchema, storyMarkerSchema, structuralUnitSchema, beatSchema } from './entities/structure.js';
+import { TRACK_COLOURS, trackSchema, storyMarkerSchema, structuralUnitSchema, beatSchema } from './entities/structure.js';
 import { titlePageOf, titlePageSchema } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
 import { countWords } from './entities/manuscript.js';
@@ -10,9 +10,9 @@ import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { markerNumber, markerNoun, markerNumbering as numberingOf } from './markers.js';
 import { castByCategory, castInCueOrder, charactersCalled, charactersIn } from './characters.js';
 import type { ProjectFile } from './project-file.js';
-import type { Beat, Lane, StructuralUnit, StoryMarker } from './entities/structure.js';
+import type { Beat, Track, StructuralUnit, StoryMarker } from './entities/structure.js';
 import type { Character } from './entities/character.js';
-import type { BeatId, CharacterId, LaneId, StoryMarkerId, StructuralUnitId } from './ids.js';
+import type { BeatId, CharacterId, TrackId, StoryMarkerId, StructuralUnitId } from './ids.js';
 
 /**
  * Episodes (addendum 02 §17).
@@ -21,7 +21,7 @@ import type { BeatId, CharacterId, LaneId, StoryMarkerId, StructuralUnitId } fro
  * the story order** — it starts at the scene its marker is on and runs to the
  * scene before the next episode's. Nothing new holds it: no episode
  * container, no episode field on a scene. That is deliberate. A container
- * would cut across the lanes, and the hierarchy is lanes → scenes → beats
+ * would cut across the tracks, and the hierarchy is tracks → scenes → beats
  * (spec §19); a field on the scene would be a second source of truth for
  * something the story order already says.
  *
@@ -191,8 +191,8 @@ export const episodeCarrySchema = z.object({
   castFrom: z.array(z.string()).default([]),
   /** Also whoever actually spoke in the episode before this one. */
   castWhoSpoke: z.boolean().default(false),
-  /** Plot it on the series' existing lanes, or start a fresh one for it. */
-  lanes: z.enum(['series', 'fresh']).default('series'),
+  /** Plot it on the series' existing tracks, or start a fresh one for it. */
+  tracks: z.enum(['series', 'fresh']).default('series'),
   /** Note the setups still unpaid on the new episode, so they are not lost. */
   openSetups: z.boolean().default(true),
 });
@@ -200,7 +200,7 @@ export type EpisodeCarry = z.infer<typeof episodeCarrySchema>;
 
 /**
  * What to carry, before the writer has said: the mains and the recurring
- * cast, on the series' own lanes, with the open setups noted. Guest parts —
+ * cast, on the series' own tracks, with the open setups noted. Guest parts —
  * whatever the last heading turns out to be — are left behind, because they
  * are guests.
  */
@@ -211,7 +211,7 @@ export const defaultEpisodeCarry = (file: ProjectFile): EpisodeCarry => {
   return episodeCarrySchema.parse({
     castFrom: headings.slice(0, Math.max(1, headings.length - 1)).map((heading) => heading.id as string),
     castWhoSpoke: true,
-    lanes: 'series',
+    tracks: 'series',
     openSetups: true,
   });
 };
@@ -262,35 +262,35 @@ export const addEpisode = (
   // the same one (§17).
   const number = nextEpisodeNumber(file);
 
-  let lanes: Lane[] = file.lanes;
-  let laneId: LaneId | undefined;
+  let tracks: Track[] = file.tracks;
+  let trackId: TrackId | undefined;
 
-  if (carry.lanes === 'fresh' || file.lanes.length === 0) {
+  if (carry.tracks === 'fresh' || file.tracks.length === 0) {
     // A fresh thread for this episode, so its A story is plotted on a row of
     // its own rather than running on with the series'.
-    const lane = laneSchema.parse({
-      id: newId<LaneId>(),
+    const track = trackSchema.parse({
+      id: newId<TrackId>(),
       projectId: file.project.id,
       name: input.title?.trim() ? `${input.title.trim()} — A story` : `Episode ${number} — A story`,
       kind: 'main_plot',
-      color: LANE_COLOURS[(file.lanes.length + 1) % LANE_COLOURS.length],
-      orderKey: orderKeyForIndex(file.lanes, file.lanes.length),
+      color: TRACK_COLOURS[(file.tracks.length + 1) % TRACK_COLOURS.length],
+      orderKey: orderKeyForIndex(file.tracks, file.tracks.length),
       createdAt: timestamp,
       updatedAt: timestamp,
     });
-    lanes = [...file.lanes, lane];
-    laneId = lane.id;
+    tracks = [...file.tracks, track];
+    trackId = track.id;
   } else {
-    // The series' first lane: the main plot, wherever this week's story runs.
-    laneId = [...file.lanes].sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))[0]?.id;
+    // The series' first track: the main plot, wherever this week's story runs.
+    trackId = [...file.tracks].sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))[0]?.id;
   }
-  if (!laneId) throw new Error('A project needs at least one lane before an episode can start');
+  if (!trackId) throw new Error('A project needs at least one track before an episode can start');
 
   const order = unitsInStoryOrder(file);
   const unit = structuralUnitSchema.parse({
     id: newId<StructuralUnitId>(),
     projectId: file.project.id,
-    laneId,
+    trackId,
     kind: 'scene',
     title: '',
     sequenceLabel: '',
@@ -335,7 +335,7 @@ export const addEpisode = (
 
   const next: ProjectFile = {
     ...file,
-    lanes,
+    tracks,
     units: [...file.units, unit],
     beats: [...file.beats, beat],
     markers: [...file.markers, marker],

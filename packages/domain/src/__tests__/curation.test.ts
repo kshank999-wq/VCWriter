@@ -62,7 +62,7 @@ const item = (over: Partial<TrayItem>): TrayItem =>
 const makeMaster = (): { file: ProjectFile; unit: StructuralUnit; beat: Beat } => {
   let file = createProjectFile({ title: 'Blackout', format: 'screenplay' });
   file = { ...file, units: [], beats: [] };
-  const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. WAREHOUSE - NIGHT' });
+  const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. WAREHOUSE - NIGHT' });
   const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'Mara enters' });
   const signed: ProjectFile = {
     ...beat.file,
@@ -213,7 +213,7 @@ describe('taking a beat', () => {
 
   it('goes where the showrunner said, when they said', () => {
     const { file, unit, beat } = makeMaster();
-    const second = addUnit(file, { laneId: file.lanes[0]!.id, title: 'EXT. DOCKS' });
+    const second = addUnit(file, { trackId: file.tracks[0]!.id, title: 'EXT. DOCKS' });
     const jos: Beat = { ...beat, id: newId(), title: 'The door' };
     const merged = applyTray(
       second.file,

@@ -396,7 +396,7 @@ pixels.
 
 **A new project is made by the same function that makes one on the desktop.**
 `createProjectFile` builds the whole document — the opening scene, its beat, the
-plot lane, the research folders, the cast headings — and `toRows` says what that
+plot track, the research folders, the cast headings — and `toRows` says what that
 is in the database, written in `SYNC_TABLES` declaration order for the same
 reason the desktop's push uses it. A route that wrote a bare `projects` row
 instead would give the phone a second, thinner idea of what a project is, and

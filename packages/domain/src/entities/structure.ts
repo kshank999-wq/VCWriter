@@ -7,26 +7,26 @@ import type {
   BeatId,
   BeatRevisionId,
   CharacterId,
-  LaneId,
+  TrackId,
   ProjectId,
   StoryMarkerId,
   StructuralUnitId,
 } from '../ids.js';
 
 /**
- * Story structure: lanes -> scene/chapter containers -> beats (spec §5).
+ * Story structure: tracks -> scene/chapter containers -> beats (spec §5).
  *
  * Hierarchy rule (§19, non-negotiable): a beat belongs to a scene or chapter
- * container. Beats are never free-floating lane cards. `Beat.unitId` is
+ * container. Beats are never free-floating track cards. `Beat.unitId` is
  * therefore required, not nullable.
  *
  * Story order (addendum 02 §8): a unit's `orderKey` is its position on one
- * axis shared by the whole project. Its lane is the row it is drawn in and
+ * axis shared by the whole project. Its track is the row it is drawn in and
  * nothing more, so a subplot scene can sit between two main-plot scenes,
  * which is where subplot scenes go.
  */
 
-export const laneKindSchema = z.enum([
+export const trackKindSchema = z.enum([
   'main_plot',
   'subplot',
   'character_arc',
@@ -35,22 +35,22 @@ export const laneKindSchema = z.enum([
   'relationship',
   'custom',
 ]);
-export type LaneKind = z.infer<typeof laneKindSchema>;
+export type TrackKind = z.infer<typeof trackKindSchema>;
 
 /**
- * Default lane colours, in the order lanes are usually added. They are the
+ * Default track colours, in the order tracks are usually added. They are the
  * brand's gold and red first, then hues chosen to sit on the near-black
- * ground without shouting; a lane's colour is data and the writer can pick
+ * ground without shouting; a track's colour is data and the writer can pick
  * any other.
  */
-export const LANE_COLOURS = ['#c9a45c', '#8b1c1c', '#5b7fa6', '#7a9e7e', '#8a6f9e', '#a67c52', '#6f8f9e'] as const;
+export const TRACK_COLOURS = ['#c9a45c', '#8b1c1c', '#5b7fa6', '#7a9e7e', '#8a6f9e', '#a67c52', '#6f8f9e'] as const;
 
-export const laneSchema = z.object({
-  id: id<LaneId>(),
+export const trackSchema = z.object({
+  id: id<TrackId>(),
   projectId: id<ProjectId>(),
   name: z.string().min(1),
-  kind: laneKindSchema.default('custom'),
-  /** Hex colour the timeline draws the lane's track and blocks in. */
+  kind: trackKindSchema.default('custom'),
+  /** Hex colour the timeline draws the track's track and blocks in. */
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#5b7fa6'),
   /** What this thread of the story is about: its summary. */
   description: z.string().default(''),
@@ -60,7 +60,7 @@ export const laneSchema = z.object({
   collapsed: z.boolean().default(false),
   ...timestamps,
 });
-export type Lane = z.infer<typeof laneSchema>;
+export type Track = z.infer<typeof trackSchema>;
 
 /** Screenplays use `scene`; novels use `chapter` (or `section`) — §5.2. */
 export const structuralUnitKindSchema = z.enum(['scene', 'chapter', 'section']);
@@ -234,7 +234,7 @@ export type Origin = z.infer<typeof originSchema>;
 export const structuralUnitSchema = z.object({
   id: id<StructuralUnitId>(),
   projectId: id<ProjectId>(),
-  laneId: id<LaneId>(),
+  trackId: id<TrackId>(),
   kind: structuralUnitKindSchema,
   title: z.string().default(''),
   /** Display label such as "Sc. 14" or "Chapter Two"; free text by design. */
@@ -242,7 +242,7 @@ export const structuralUnitSchema = z.object({
   summary: z.string().default(''),
   notes: z.string().default(''),
   status: structuralUnitStatusSchema.default('outline'),
-  /** Position in the story, across every lane (addendum 02 §8). */
+  /** Position in the story, across every track (addendum 02 §8). */
   orderKey: orderKey(),
   collapsed: z.boolean().default(false),
   /**
@@ -344,7 +344,7 @@ export type Beat = z.infer<typeof beatSchema>;
 /**
  * A labelled point in the story order: "this scene starts Act II" (addendum
  * 02 §9). Not a container — scenes do not belong to acts, because an act
- * that owned scenes would cut across lanes and the hierarchy is lanes →
+ * that owned scenes would cut across tracks and the hierarchy is tracks →
  * scenes → beats (§19). A marker is anchored to the unit that starts it.
  */
 export const storyMarkerKindSchema = z.enum(['act', 'episode', 'sequence', 'chapter', 'part', 'note']);

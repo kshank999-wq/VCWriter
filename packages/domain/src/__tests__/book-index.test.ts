@@ -47,7 +47,7 @@ const para = (text: string) => ({
 /** A book of one scene, whose paragraphs are the passages to index. */
 const book = (lines: string[]) => {
   let file: ProjectFile = createProjectFile({ title: 'The Lighthouse Keeper', format: 'novel' });
-  const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'One' });
+  const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'One' });
   const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'a beat' });
   const elements = lines.map(para);
   file = updateBeat(beat.file, beat.beat.id, { manuscript: { elements } });

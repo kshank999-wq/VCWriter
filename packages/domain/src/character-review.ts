@@ -14,7 +14,7 @@ import { charactersCalled } from './characters.js';
 import type {
   CharacterId,
   CharacterTraitId,
-  LaneId,
+  TrackId,
   StructuralUnitId,
 } from './ids.js';
 import type { ProjectFile } from './project-file.js';
@@ -46,7 +46,7 @@ export interface WorkFilter {
   /** An arc point of this kind — §18's *arc stage*. */
   arcKind?: ArcPointKind | null;
   unitId?: StructuralUnitId | null;
-  laneId?: LaneId | null;
+  trackId?: TrackId | null;
   /** Only people who have a relationship with this one, either way round. */
   relatedTo?: CharacterId | null;
 }
@@ -181,13 +181,13 @@ export const reviewRows = (file: ProjectFile, filter: WorkFilter = {}): ReviewRo
         const item = file.characterizationItems.find((one) => (one.id as string) === row.work.id);
         if (!item || (item.traitId as string | null) !== (filter.traitId as string)) return false;
       }
-      if (filter.unitId || filter.laneId) {
+      if (filter.unitId || filter.trackId) {
         const pin = pinOf(row.work.kind, row.work.id);
         const beat = pin ? file.beats.find((one) => (one.id as string) === (pin.beatId as string)) : undefined;
         const unit = beat ? file.units.find((one) => (one.id as string) === (beat.unitId as string)) : undefined;
         if (!unit) return false;
         if (filter.unitId && (unit.id as string) !== (filter.unitId as string)) return false;
-        if (filter.laneId && (unit.laneId as string) !== (filter.laneId as string)) return false;
+        if (filter.trackId && (unit.trackId as string) !== (filter.trackId as string)) return false;
       }
       if (needle.length > 0) {
         // The trait's name and the person's are searched as well as the work
@@ -375,7 +375,7 @@ export interface PresenceRow {
  * Who is in the script, where, read off the cues.
  *
  * Honours the review's own filters where they mean something here: a person, a
- * plot lane, a scene, and the search — matched against the name, since a name
+ * plot track, a scene, and the search — matched against the name, since a name
  * is all a presence row has to search.
  */
 export const scriptPresence = (file: ProjectFile, filter: WorkFilter = {}): PresenceRow[] => {
@@ -390,7 +390,7 @@ export const scriptPresence = (file: ProjectFile, filter: WorkFilter = {}): Pres
     const unit = units.find((one) => (one.id as string) === unitId);
     if (!unit) return false;
     if (filter.unitId && (unit.id as string) !== (filter.unitId as string)) return false;
-    if (filter.laneId && (unit.laneId as string) !== (filter.laneId as string)) return false;
+    if (filter.trackId && (unit.trackId as string) !== (filter.trackId as string)) return false;
     return true;
   };
 

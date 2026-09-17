@@ -5,10 +5,10 @@ import { orderKeyForIndex } from './ordering.js';
 import { retitlePlans, unbindRemovedFromPlans } from './planning.js';
 import { nowIso } from './entities/common.js';
 import {
-  LANE_COLOURS,
+  TRACK_COLOURS,
   beatSchema,
   chapterPageSchema,
-  laneSchema,
+  trackSchema,
   sceneGridSchema,
   sceneReadSchema,
   storyMarkerSchema,
@@ -30,7 +30,7 @@ import {
 } from './entities/links.js';
 import {
   beatsForUnit,
-  lanesInOrder,
+  tracksInOrder,
   researchCategoriesInOrder,
   researchSubtree,
   unitsInStoryOrder,
@@ -45,8 +45,8 @@ import type { ResearchCategory, ResearchItem } from './entities/research.js';
 import type { SetupPayoff, SetupPoint } from './entities/setups.js';
 import type {
   Beat,
-  Lane,
-  LaneKind,
+  Track,
+  TrackKind,
   ChapterPage,
   StoryMarker,
   StoryMarkerKind,
@@ -60,7 +60,7 @@ import type {
   BeatRevisionId,
   CharacterCategoryId,
   CharacterId,
-  LaneId,
+  TrackId,
   ManuscriptElementId,
   ResearchCategoryId,
   ResearchItemId,
@@ -93,49 +93,49 @@ const touchProject = (file: ProjectFile): ProjectFile => ({
   project: touch(file.project),
 });
 
-export const addLane = (
+export const addTrack = (
   file: ProjectFile,
-  input: { name: string; kind?: LaneKind; color?: string; index?: number },
-): { file: ProjectFile; lane: Lane } => {
+  input: { name: string; kind?: TrackKind; color?: string; index?: number },
+): { file: ProjectFile; track: Track } => {
   const timestamp = nowIso();
   // The next colour in the sequence the project has not used yet, so three
-  // lanes added in a row come out gold, red, blue rather than all one grey.
-  const used = new Set(file.lanes.map((lane) => lane.color));
-  const nextColour = LANE_COLOURS.find((colour) => !used.has(colour)) ?? LANE_COLOURS[file.lanes.length % LANE_COLOURS.length];
-  const lane = laneSchema.parse({
-    id: newId<LaneId>(),
+  // tracks added in a row come out gold, red, blue rather than all one grey.
+  const used = new Set(file.tracks.map((track) => track.color));
+  const nextColour = TRACK_COLOURS.find((colour) => !used.has(colour)) ?? TRACK_COLOURS[file.tracks.length % TRACK_COLOURS.length];
+  const track = trackSchema.parse({
+    id: newId<TrackId>(),
     projectId: file.project.id,
     name: input.name,
     kind: input.kind ?? 'custom',
     color: input.color ?? nextColour,
-    orderKey: orderKeyForIndex(lanesInOrder(file), input.index ?? file.lanes.length),
+    orderKey: orderKeyForIndex(tracksInOrder(file), input.index ?? file.tracks.length),
     createdAt: timestamp,
     updatedAt: timestamp,
   });
-  return { file: touchProject({ ...file, lanes: [...file.lanes, lane] }), lane };
+  return { file: touchProject({ ...file, tracks: [...file.tracks, track] }), track };
 };
 
 /**
- * Add a scene/chapter to a lane at a position in the story.
+ * Add a scene/chapter to a track at a position in the story.
  *
  * `index` is a position among *every* scene in the project, not among the
- * lane's own (addendum 02 §8): a subplot scene added "after scene 3" lands
- * after scene 3 whatever lane scene 3 is in. Omitted, the scene goes at the
+ * track's own (addendum 02 §8): a subplot scene added "after scene 3" lands
+ * after scene 3 whatever track scene 3 is in. Omitted, the scene goes at the
  * end of the story.
  */
 export const addUnit = (
   file: ProjectFile,
-  input: { laneId: LaneId; kind?: StructuralUnitKind; title?: string; sequenceLabel?: string; index?: number },
+  input: { trackId: TrackId; kind?: StructuralUnitKind; title?: string; sequenceLabel?: string; index?: number },
 ): { file: ProjectFile; unit: StructuralUnit } => {
-  if (!file.lanes.some((lane) => lane.id === input.laneId)) {
-    throw new DomainError(`Lane ${input.laneId} does not exist in this project`);
+  if (!file.tracks.some((track) => track.id === input.trackId)) {
+    throw new DomainError(`Track ${input.trackId} does not exist in this project`);
   }
   const timestamp = nowIso();
   const siblings = unitsInStoryOrder(file);
   const unit = structuralUnitSchema.parse({
     id: newId<StructuralUnitId>(),
     projectId: file.project.id,
-    laneId: input.laneId,
+    trackId: input.trackId,
     kind: input.kind ?? defaultUnitKind(file.project.format),
     title: input.title ?? '',
     sequenceLabel: input.sequenceLabel ?? '',
@@ -148,14 +148,14 @@ export const addUnit = (
 
 /**
  * Beats are created inside a scene/chapter container. There is deliberately no
- * way to create a beat that belongs only to a lane (spec §19).
+ * way to create a beat that belongs only to a track (spec §19).
  */
 export const addBeat = (
   file: ProjectFile,
   input: { unitId: StructuralUnitId; title?: string; summary?: string; index?: number },
 ): { file: ProjectFile; beat: Beat } => {
   if (!file.units.some((unit) => unit.id === input.unitId)) {
-    throw new DomainError(`Scene/chapter ${input.unitId} does not exist; a beat cannot float in a lane`);
+    throw new DomainError(`Scene/chapter ${input.unitId} does not exist; a beat cannot float in a track`);
   }
   const timestamp = nowIso();
   const siblings = beatsForUnit(file, input.unitId);
@@ -195,31 +195,31 @@ export const moveBeat = (
 };
 
 /**
- * Move a scene/chapter to a lane and a position in the story.
+ * Move a scene/chapter to a track and a position in the story.
  *
  * `index` counts every scene in the project except the one moving, in story
- * order (addendum 02 §8). Pass `keepPosition: true` to change only the lane:
+ * order (addendum 02 §8). Pass `keepPosition: true` to change only the track:
  * the scene stays where it is in the story and simply draws in another row.
  */
 export const moveUnit = (
   file: ProjectFile,
-  input: { unitId: StructuralUnitId; toLaneId: LaneId; index?: number; keepPosition?: boolean },
+  input: { unitId: StructuralUnitId; toTrackId: TrackId; index?: number; keepPosition?: boolean },
 ): ProjectFile => {
   const unit = file.units.find((candidate) => candidate.id === input.unitId);
   if (!unit) throw new DomainError(`Scene/chapter ${input.unitId} does not exist`);
-  if (!file.lanes.some((lane) => lane.id === input.toLaneId)) {
-    throw new DomainError(`Lane ${input.toLaneId} does not exist`);
+  if (!file.tracks.some((track) => track.id === input.toTrackId)) {
+    throw new DomainError(`Track ${input.toTrackId} does not exist`);
   }
   if (input.keepPosition || input.index === undefined) {
-    if (unit.laneId === input.toLaneId) return file;
-    const relaned = touch({ ...unit, laneId: input.toLaneId });
+    if (unit.trackId === input.toTrackId) return file;
+    const retrackd = touch({ ...unit, trackId: input.toTrackId });
     return touchProject({
       ...file,
-      units: file.units.map((candidate) => (candidate.id === unit.id ? relaned : candidate)),
+      units: file.units.map((candidate) => (candidate.id === unit.id ? retrackd : candidate)),
     });
   }
   const siblings = unitsInStoryOrder(file).filter((candidate) => candidate.id !== unit.id);
-  const moved = touch({ ...unit, laneId: input.toLaneId, orderKey: orderKeyForIndex(siblings, input.index) });
+  const moved = touch({ ...unit, trackId: input.toTrackId, orderKey: orderKeyForIndex(siblings, input.index) });
   return touchProject({
     ...file,
     units: file.units.map((candidate) => (candidate.id === unit.id ? moved : candidate)),
@@ -1033,46 +1033,46 @@ export const assignCharacterVoice = (
 const withoutLinksTouching = (file: ProjectFile, removedIds: ReadonlySet<string>): StoryLink[] =>
   file.links.filter((link) => !removedIds.has(link.from.id) && !removedIds.has(link.to.id));
 
-export const updateLane = (
+export const updateTrack = (
   file: ProjectFile,
-  laneId: LaneId,
-  patch: Partial<Pick<Lane, 'name' | 'kind' | 'color' | 'description' | 'arc' | 'collapsed'>>,
+  trackId: TrackId,
+  patch: Partial<Pick<Track, 'name' | 'kind' | 'color' | 'description' | 'arc' | 'collapsed'>>,
 ): ProjectFile => {
-  if (!file.lanes.some((lane) => lane.id === laneId)) throw new DomainError(`Lane ${laneId} does not exist`);
+  if (!file.tracks.some((track) => track.id === trackId)) throw new DomainError(`Track ${trackId} does not exist`);
   return touchProject({
     ...file,
-    lanes: file.lanes.map((lane) => (lane.id === laneId ? touch({ ...lane, ...patch }) : lane)),
+    tracks: file.tracks.map((track) => (track.id === trackId ? touch({ ...track, ...patch }) : track)),
   });
 };
 
-export const moveLane = (file: ProjectFile, laneId: LaneId, index: number): ProjectFile => {
-  const lane = file.lanes.find((candidate) => candidate.id === laneId);
-  if (!lane) throw new DomainError(`Lane ${laneId} does not exist`);
-  const siblings = lanesInOrder(file).filter((candidate) => candidate.id !== laneId);
-  const moved = touch({ ...lane, orderKey: orderKeyForIndex(siblings, index) });
+export const moveTrack = (file: ProjectFile, trackId: TrackId, index: number): ProjectFile => {
+  const track = file.tracks.find((candidate) => candidate.id === trackId);
+  if (!track) throw new DomainError(`Track ${trackId} does not exist`);
+  const siblings = tracksInOrder(file).filter((candidate) => candidate.id !== trackId);
+  const moved = touch({ ...track, orderKey: orderKeyForIndex(siblings, index) });
   return touchProject({
     ...file,
-    lanes: file.lanes.map((candidate) => (candidate.id === laneId ? moved : candidate)),
+    tracks: file.tracks.map((candidate) => (candidate.id === trackId ? moved : candidate)),
   });
 };
 
 /**
- * Remove a lane and everything inside it. The last lane cannot be removed:
+ * Remove a track and everything inside it. The last track cannot be removed:
  * scenes and chapters have nowhere to live without one.
  */
-export const removeLane = (file: ProjectFile, laneId: LaneId): ProjectFile => {
-  if (!file.lanes.some((lane) => lane.id === laneId)) throw new DomainError(`Lane ${laneId} does not exist`);
-  if (file.lanes.length === 1) throw new DomainError('A project needs at least one plot lane');
+export const removeTrack = (file: ProjectFile, trackId: TrackId): ProjectFile => {
+  if (!file.tracks.some((track) => track.id === trackId)) throw new DomainError(`Track ${trackId} does not exist`);
+  if (file.tracks.length === 1) throw new DomainError('A project needs at least one plot track');
 
-  const removedUnitIds = new Set(file.units.filter((unit) => unit.laneId === laneId).map((unit) => unit.id as string));
+  const removedUnitIds = new Set(file.units.filter((unit) => unit.trackId === trackId).map((unit) => unit.id as string));
   const removedBeatIds = new Set(
     file.beats.filter((beat) => removedUnitIds.has(beat.unitId)).map((beat) => beat.id as string),
   );
-  const removed = new Set<string>([laneId, ...removedUnitIds, ...removedBeatIds]);
+  const removed = new Set<string>([trackId, ...removedUnitIds, ...removedBeatIds]);
 
   return touchProject({
     ...file,
-    lanes: file.lanes.filter((lane) => lane.id !== laneId),
+    tracks: file.tracks.filter((track) => track.id !== trackId),
     units: file.units.filter((unit) => !removedUnitIds.has(unit.id)),
     beats: file.beats.filter((beat) => !removedBeatIds.has(beat.id)),
     markers: reanchorMarkers(file, removedUnitIds),
@@ -1101,7 +1101,7 @@ export const updateUnit = (
  * Split a scene in two at one of its beats (addendum 02 §5).
  *
  * The beat chosen, and everything after it, moves into a new scene that
- * takes the story position immediately after this one — in the same lane,
+ * takes the story position immediately after this one — in the same track,
  * untitled, the way a cut in an editing timeline leaves the second half to
  * be named. Nothing about the manuscript changes: the beats keep their
  * order, so the script reads exactly as it did before the cut. Splitting
@@ -1123,7 +1123,7 @@ export const splitUnit = (
   const order = unitsInStoryOrder(file);
   const position = order.findIndex((candidate) => candidate.id === unitId);
   const created = addUnit(file, {
-    laneId: unit.laneId,
+    trackId: unit.trackId,
     kind: unit.kind,
     // Straight after this scene in the story, which is where a cut leaves it.
     index: position + 1,

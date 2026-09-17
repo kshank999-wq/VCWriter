@@ -8,8 +8,8 @@ import {
   inboxGroups,
   rejectCapture,
   suggestRouting,
-  laneKindSchema,
-  lanesInOrder,
+  trackKindSchema,
+  tracksInOrder,
   markResearchUsed,
   moveResearchItem,
   ref,
@@ -19,7 +19,7 @@ import {
   researchTree,
   restoreResearchItem,
   setResearchArchived,
-  updateLane,
+  updateTrack,
   updateResearchCategory,
   updateResearchItem,
   isInstructional,
@@ -80,7 +80,7 @@ type Selection =
   | { kind: 'thematics' }
   /** The location library (addendum 14). */
   | { kind: 'locations' }
-  /** The story-relationship timeline (addendum 15) — every lane at once. */
+  /** The story-relationship timeline (addendum 15) — every track at once. */
   | { kind: 'links' }
   /** The graphics library (addendum 16 §9). Instructional books only. */
   | { kind: 'graphics' }
@@ -132,7 +132,7 @@ const viewsFor = (format: ProjectFormat): ReadonlyArray<{ view: ResearchView; la
  * Dragging a note onto a folder files it there; dragging a folder onto
  * another files that.
  *
- * Everything that is not the script lives here, so the plot lanes and the
+ * Everything that is not the script lives here, so the plot tracks and the
  * setups and payoffs are the last two entries in the same menu.
  */
 export function ResearchWindow({
@@ -560,7 +560,7 @@ export function ResearchBody({
               </>
             ) : null}
             {/* Absent rather than greyed on a book (addendum 16 §3): a plot
-                lane, a planted setup and a place read off a slugline are
+                track, a planted setup and a place read off a slugline are
                 things a textbook does not have, and a disabled control says
                 *not yet* about something that is never coming. Themes, Links
                 and the phone stay: a work of nonfiction has all three. */}
@@ -573,7 +573,7 @@ export function ResearchBody({
                     onClick={() => setSelection({ kind: 'plots' })}
                   >
                     <span className="folder-name">Plots</span>
-                    <span className="count muted">{file.lanes.length}</span>
+                    <span className="count muted">{file.tracks.length}</span>
                   </button>
                 </li>
                 <li>
@@ -606,7 +606,7 @@ export function ResearchBody({
             ) : null}
             {/* The story-relationship timeline (addendum 15). It sits with the
                 modules it draws rather than under one of them, because it is
-                the lane engine for all four and belongs to none. */}
+                the track engine for all four and belongs to none. */}
             <li>
               <button
                 type="button"
@@ -1127,45 +1127,45 @@ function Detail({
   );
 }
 
-/** The plot lanes as records, which is what the Research tab used to show. */
+/** The plot tracks as records, which is what the Research tab used to show. */
 function Plots({ file, onUpdate }: { file: ProjectFile; onUpdate: ResearchWindowProps['onUpdate'] }) {
   return (
     <ul className="research-plots">
-      {lanesInOrder(file).map((lane) => (
-        <li key={lane.id}>
+      {tracksInOrder(file).map((track) => (
+        <li key={track.id}>
           <div className="research-plot-head">
             <input
               type="color"
               className="swatch"
-              aria-label={`Colour of ${lane.name}`}
-              value={lane.color}
-              onChange={(event) => onUpdate((current) => updateLane(current, lane.id, { color: event.target.value }))}
+              aria-label={`Colour of ${track.name}`}
+              value={track.color}
+              onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { color: event.target.value }))}
             />
             <InlineText
-              value={lane.name}
+              value={track.name}
               ariaLabel="Plot name"
               className="research-plot-name"
-              onCommit={(name) => onUpdate((current) => updateLane(current, lane.id, { name: name || 'Lane' }))}
+              onCommit={(name) => onUpdate((current) => updateTrack(current, track.id, { name: name || 'Track' }))}
             />
             <select
-              aria-label={`Kind of ${lane.name}`}
-              value={lane.kind}
-              onChange={(event) => onUpdate((current) => updateLane(current, lane.id, { kind: event.target.value as typeof lane.kind }))}
+              aria-label={`Kind of ${track.name}`}
+              value={track.kind}
+              onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { kind: event.target.value as typeof track.kind }))}
             >
-              {laneKindSchema.options.map((kind) => (
+              {trackKindSchema.options.map((kind) => (
                 <option key={kind} value={kind}>
                   {kind.replace(/_/g, ' ')}
                 </option>
               ))}
             </select>
-            <span className="count muted">{file.units.filter((unit) => unit.laneId === lane.id).length}</span>
+            <span className="count muted">{file.units.filter((unit) => unit.trackId === track.id).length}</span>
           </div>
           <textarea
             rows={2}
-            aria-label={`What ${lane.name} is about`}
+            aria-label={`What ${track.name} is about`}
             placeholder="What this thread of the story is about"
-            value={lane.description}
-            onChange={(event) => onUpdate((current) => updateLane(current, lane.id, { description: event.target.value }))}
+            value={track.description}
+            onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { description: event.target.value }))}
           />
         </li>
       ))}

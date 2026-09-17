@@ -55,7 +55,7 @@ export function MarkerDialog({ file, markerId, onClose, onUpdate }: MarkerDialog
   const dialog = useModal(Boolean(placed));
 
   return (
-    <dialog ref={dialog} className="lane-dialog marker-dialog" aria-label="Marker" onClose={onClose}>
+    <dialog ref={dialog} className="track-dialog marker-dialog" aria-label="Marker" onClose={onClose}>
       {placed ? <Body file={file} placed={placed} onClose={onClose} onUpdate={onUpdate} /> : null}
     </dialog>
   );
@@ -106,7 +106,7 @@ function Body({
 
   return (
     <>
-      <header className="lane-dialog-title marker-dialog-title">
+      <header className="track-dialog-title marker-dialog-title">
         <span className="muted">{placed.label}</span>
         <input
           className="bar-title"

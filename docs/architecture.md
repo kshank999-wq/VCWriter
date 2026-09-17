@@ -36,7 +36,7 @@ other package is a delivery surface over it.
 
 It would have been cheaper to declare a handful of interfaces and let each app
 enforce the specification's rules its own way. That is exactly how a beat ends
-up floating in a lane on mobile and nested under a scene on desktop. So the
+up floating in a track on mobile and nested under a scene on desktop. So the
 rules live in one place and are expressed as code that cannot be bypassed:
 
 - `Beat.unitId` is a required, branded id — the type system rejects a beat with
@@ -60,7 +60,7 @@ and the cloud copy are not two different models.
 
 ### Ordering is fractional, not positional
 
-Lanes, scenes, chapters and beats are reordered constantly. An integer
+Tracks, scenes, chapters and beats are reordered constantly. An integer
 `position` column means a drag rewrites every sibling, which is slow, noisy in
 version control, and hostile to the optimistic local editing and sync merge
 that §14 requires. Every ordered row instead carries an `orderKey` string, and

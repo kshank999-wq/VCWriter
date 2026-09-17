@@ -33,10 +33,10 @@ import {
 /** A script of `scenes` scenes, one beat each, and a payoff record. */
 const script = (scenes: number) => {
   let file: ProjectFile = createProjectFile({ title: 'The Gun', format: 'screenplay' });
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   const beatIds: string[] = [];
   for (let at = 0; at < scenes; at += 1) {
-    const scene = addUnit(file, { laneId, title: `Scene ${at + 1}` });
+    const scene = addUnit(file, { trackId, title: `Scene ${at + 1}` });
     const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'a beat' });
     file = beat.file;
     beatIds.push(beat.beat.id as string);
@@ -140,20 +140,20 @@ describe('before the payoff is the only thing that counts', () => {
     // light is red the next time anybody looks.
     const order = unitsInStoryOrder(current);
     const third = order[2]!;
-    current = moveUnit(current, { unitId: third.id, toLaneId: third.laneId, index: 4 });
+    current = moveUnit(current, { unitId: third.id, toTrackId: third.trackId, index: 4 });
     expect(readOf(current, recordId).light).toBe('red');
     expect(readOf(current, recordId).valid).toBe(2);
 
     // And back again.
     const back = unitsInStoryOrder(current).findIndex((unit) => unit.id === third.id);
     expect(back).toBeGreaterThan(2);
-    current = moveUnit(current, { unitId: third.id, toLaneId: third.laneId, index: 0 });
+    current = moveUnit(current, { unitId: third.id, toTrackId: third.trackId, index: 0 });
     expect(readOf(current, recordId).light).toBe('green');
   });
 
   it('reads to the beat, so two points in one scene are still ordered', () => {
     let file: ProjectFile = createProjectFile({ title: 'One scene', format: 'screenplay' });
-    const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Only' });
+    const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'Only' });
     const first = addBeat(scene.file, { unitId: scene.unit.id, title: 'first' });
     const second = addBeat(first.file, { unitId: scene.unit.id, title: 'second' });
     file = addSetupPayoff(second.file, { title: 'In one scene', description: '' });

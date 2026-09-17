@@ -46,9 +46,9 @@ push live; the build takes a minute or two.
   so it is **marked rather than removed** — *Editors* keeps its place with a ⧉
   and choosing it raises that window — and over there a finding opens its beat in
   a window of its own, there being no Write page to send anybody to. Three things came out of
-  building it. **An unknown `?pane=` used to draw the plot lanes** — they were
+  building it. **An unknown `?pane=` used to draw the plot tracks** — they were
   the fallthrough of the branch ladder — so a window opened by an older
-  workspace drew the lanes while its title bar claimed to be whatever had been
+  workspace drew the tracks while its title bar claimed to be whatever had been
   asked for; there is a real default now. `paneTitle` is **the one thing that
   names a pane**, the title bar's chips having held a second copy that knew
   about research and nothing else. And `printing.ts` is printing in one place,
@@ -379,8 +379,8 @@ push live; the build takes a minute or two.
   says what each built stage does. §11's two leftovers are now built and §11 is
   empty. The **scene range** (§12 of the addendum) is `SceneRange`,
   `charactersInScenes` and `describeRange` in `character-map.ts` plus the
-  **Scenes … to …** pair in the map's bar: a lane is a *subplot* and a range is a
-  *stretch of the script*, so *who is in act two* is a question the lane cannot
+  **Scenes … to …** pair in the map's bar: a track is a *subplot* and a range is a
+  *stretch of the script*, so *who is in act two* is a question the track cannot
   answer, and the rule that decides everything is that **a range narrows what
   the script says and never what a writer said** — a relationship has no scene
   number, so dating one would be inventing it. It is positions rather than ids
@@ -533,7 +533,7 @@ push live; the build takes a minute or two.
   stops it becoming noise. **Make this a setup or a payoff…** is the third thing
   the manuscript right-click does; which of the two it is gets the largest type,
   and everything else is worked out from the story order afterwards. The
-  timeline lane is **a row per payoff** rather than one row of everything: rings
+  timeline track is **a row per payoff** rather than one row of everything: rings
   for the setups, a diamond for the payoff, a rule between them so the gap is
   what you see, and a point that falls after drawn dashed and red where it
   actually is. No migration — an `excerpt` on each point and `minimumSetups` on
@@ -548,7 +548,7 @@ push live; the build takes a minute or two.
   general mechanism, look for the one that is already general and merely narrow
   in vocabulary**; this is the third time (arc links joined `story_links` the
   same way). **Two kinds all the way down** (§2): two tables, two collections,
-  two tabs, two lanes, two choices on the right-click, and no function anywhere
+  two tabs, two tracks, two choices on the right-click, and no function anywhere
   that takes *a thematic thing* and works out which. The reason it is true rather
   than merely asked for is that the fields differ — a theme has `arcNotes`
   because a theme **develops**, a motif has `motifType` because a motif
@@ -560,7 +560,7 @@ push live; the build takes a minute or two.
   through with nothing running, and orphans sort last because they have no place
   in the story to sort into. **Tag a theme or a motif…** is the fourth thing the
   manuscript right-click does; the kind is chosen first and the list underneath
-  is that kind's alone. The two timeline lanes are **never one** (§6): a reader
+  is that kind's alone. The two timeline tracks are **never one** (§6): a reader
   *meets* a motif and *understands* a theme, so nine marks mean different things
   on each row and combining them would average the two into nothing — squares for
   a theme, rings for a motif, each group foldable whole. Migration 0047.
@@ -632,12 +632,12 @@ push live; the build takes a minute or two.
   it says *the order alone is not a cause* rather than falling back to
   chronology and calling it a claim — the one exception being the one §12
   permits, a setup and its payoff, where naming the setup *is* the dependency.
-  `packages/domain/src/story-map.ts` is §21's ask made real: the lane engine
+  `packages/domain/src/story-map.ts` is §21's ask made real: the track engine
   knows **nodes, edges and a scene index and nothing else**, so it cannot tell a
   setup from a motif, each module contributes rows through one small reader, and
-  §19's next lane is another reader and no change to the engine or to anything
-  that draws it — the screen has one `LaneRow` used by all four. **One grid**
-  carries the ruler and every lane on the screen, so §2's *synchronised to the
+  §19's next track is another reader and no change to the engine or to anything
+  that draws it — the screen has one `TrackRow` used by all four. **One grid**
+  carries the ruler and every track on the screen, so §2's *synchronised to the
   scene timeline* holds by construction rather than by two widths agreeing, and
   **Whole story means the whole story fits** (the column is measured from the
   window; a fixed one drew a 154-pixel board in a 1200-pixel pane). Three widths
@@ -790,7 +790,7 @@ push live; the build takes a minute or two.
   exists**: §2.3's central spine is the **story order**, §3's Relationship is the
   Character Creator's two-directional one, §4's edges are `story_links` (whose
   `from_type` is text and whose verb list already holds five of §4.1's twelve),
-  §9's chrome is the Sculptor's, §14's lanes are `story-map.ts`, and §17/§18's
+  §9's chrome is the Sculptor's, §14's tracks are `story-map.ts`, and §17/§18's
   export is the print stack. What is new is choices, conditions, effects, state,
   resources, endings, the simulator and the canvas. Four decisions carry it.
   **The Sculptor is a tree and a branching narrative is not** (§1) —

@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
  *
  * **A project made on the phone is made by the same function that makes one on
  * the desktop.** `createProjectFile` builds the whole document — the opening
- * scene, its first beat, the plot lane, the research folders, the cast
+ * scene, its first beat, the plot track, the research folders, the cast
  * headings — and `toRows` says what that is in the database. Writing a bare
  * `projects` row here instead would give the phone a second, thinner idea of
  * what a project is, and the difference would only show up the first time
@@ -74,7 +74,7 @@ export async function POST(request: Request): Promise<Response> {
     const { error } = await db.from(table).insert(collection);
     if (error) {
       // Half a project is worse than none: a writer would open it on the
-      // desktop and find a scene with no lane to sit in. The project row goes
+      // desktop and find a scene with no track to sit in. The project row goes
       // and its children with it, on the cascades migration 0001 set up.
       await db.from('projects').delete().eq('id', rows.project['id'] as string);
       return NextResponse.json({ error: error.message }, { status: 400 });

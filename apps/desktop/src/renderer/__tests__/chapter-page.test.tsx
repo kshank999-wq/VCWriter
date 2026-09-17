@@ -28,9 +28,9 @@ afterEach(cleanup);
 
 const book = (chapters: string[], format: ProjectFormat = 'novel') => {
   let file: ProjectFile = createProjectFile({ title: 'The Drowned Bell', format });
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   for (const name of chapters) {
-    const scene = addUnit(file, { laneId, title: name });
+    const scene = addUnit(file, { trackId, title: name });
     file = addMarker(scene.file, { unitId: scene.unit.id, kind: 'chapter', title: name }).file;
   }
   return file;
@@ -81,7 +81,7 @@ describe('the chapter list', () => {
   it('renumbers when the story is reordered', () => {
     const start = book(['The Lamp', 'The Wreck', 'Dr Hale']);
     const last = unitsInStoryOrder(start).at(-1)!;
-    const moved = moveUnit(start, { unitId: last.id, toLaneId: last.laneId, index: 0 });
+    const moved = moveUnit(start, { unitId: last.id, toTrackId: last.trackId, index: 0 });
     render(<Harness start={moved} />);
 
     const rows = screen.getAllByRole('button').filter((node) => node.className.includes('chapter-page-pick'));

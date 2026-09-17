@@ -32,7 +32,7 @@ import {
 
 const peopled = () => {
   let file: ProjectFile = createProjectFile({ title: 'Blackout', format: 'screenplay' });
-  const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. DINER - NIGHT' });
+  const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. DINER - NIGHT' });
   const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'The bill' });
   file = addCharacter(beat.file, { name: 'MARA' });
   const characterId = file.characters[file.characters.length - 1]!.id;

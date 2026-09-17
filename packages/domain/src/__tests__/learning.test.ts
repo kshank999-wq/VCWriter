@@ -43,7 +43,7 @@ const para = (text: string) => ({
 
 const book = () => {
   let file: ProjectFile = createProjectFile({ title: 'Teaching Statistics', format: 'instructional' });
-  const chapter = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Sampling' });
+  const chapter = addUnit(file, { trackId: file.tracks[0]!.id, title: 'Sampling' });
   const beat = addBeat(chapter.file, { unitId: chapter.unit.id, title: 'What a sample is' });
   file = updateBeat(beat.file, beat.beat.id, {
     manuscript: {

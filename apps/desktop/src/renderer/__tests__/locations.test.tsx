@@ -30,9 +30,9 @@ afterEach(cleanup);
 
 const script = (scenes: number) => {
   let file: ProjectFile = createProjectFile({ title: 'The House', format: 'screenplay' });
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   for (let at = 0; at < scenes; at += 1) {
-    const scene = addUnit(file, { laneId, title: `Scene ${at + 1}` });
+    const scene = addUnit(file, { trackId, title: `Scene ${at + 1}` });
     file = addBeat(scene.file, { unitId: scene.unit.id, title: 'a beat' }).file;
   }
   return { file, ids: unitsInStoryOrder(file).map((unit) => unit.id) };

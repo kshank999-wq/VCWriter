@@ -1,5 +1,5 @@
 import { addBeat, addUnit, moveBeat, moveUnit } from './mutations.js';
-import { beatsForUnit, lanesInOrder, unitsInStoryOrder } from './selectors.js';
+import { beatsForUnit, tracksInOrder, unitsInStoryOrder } from './selectors.js';
 import { findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf } from './outline.js';
 import { claimedInScript, retitleScript } from './planning.js';
 import type { Outline, OutlineItem } from './entities/outline.js';
@@ -59,7 +59,7 @@ export type Refusal =
   | 'nothing to promote'
   | 'already in the script'
   | 'its scene is still a plan'
-  | 'there is no lane to put a scene in';
+  | 'there is no track to put a scene in';
 
 /**
  * Whether this row can be sent to the script, and what to say when it cannot.
@@ -72,8 +72,8 @@ export const canPromote = (file: ProjectFile, outline: Outline, item: OutlineIte
   const kind = promoteKindOf(item);
   if (kind === null) return 'nothing to promote';
   if (isPromoted(item)) return 'already in the script';
-  if (kind === 'unit') return lanesInOrder(file).length === 0 ? 'there is no lane to put a scene in' : null;
-  // A beat lives inside a scene and never floats in a lane (spec §19), so
+  if (kind === 'unit') return tracksInOrder(file).length === 0 ? 'there is no track to put a scene in' : null;
+  // A beat lives inside a scene and never floats in a track (spec §19), so
   // there is nowhere to put one whose scene has not been written yet.
   const parent = outlineParent(outline, item);
   return parent?.boundUnitId ? null : 'its scene is still a plan';
@@ -153,11 +153,11 @@ const promoteOne = (
   const siblings = outlineChildren(outline, item.parentId);
 
   if (promoteKindOf(item) === 'unit') {
-    const lane = lanesInOrder(file)[0] as { id: Parameters<typeof addUnit>[1]['laneId'] };
+    const track = tracksInOrder(file)[0] as { id: Parameters<typeof addUnit>[1]['trackId'] };
     const order = unitsInStoryOrder(file);
     const positionOf = (id: string) => order.findIndex((unit) => (unit.id as string) === id);
     const made = addUnit(file, {
-      laneId: lane.id,
+      trackId: track.id,
       title,
       index: indexAmong(item, siblings, positionOf, order.length),
     });
@@ -354,9 +354,9 @@ export const followOutline = (file: ProjectFile, outlineId: OutlineId, itemId: O
     const index = here !== -1 && target > here ? target - 1 : target;
     const unit = file.units.find((candidate) => candidate.id === item.boundUnitId);
     if (!unit) return file;
-    // Its own lane: the outline says where a scene is in the story, never
+    // Its own track: the outline says where a scene is in the story, never
     // which thread it belongs to (addendum 02 §8).
-    return moveUnit(file, { unitId: item.boundUnitId, toLaneId: unit.laneId, index });
+    return moveUnit(file, { unitId: item.boundUnitId, toTrackId: unit.trackId, index });
   }
 
   const unitId = outlineParent(outline, item)?.boundUnitId ?? null;
@@ -378,7 +378,7 @@ export const followOutline = (file: ProjectFile, outlineId: OutlineId, itemId: O
  * module follows: read through rather than copy across. A row that is still a
  * plan has a name, a note and a status of its own, because that is all a plan
  * is. A row in the script has a number, a synopsis, a purpose, a point of view
- * and a lane as well — and those are **the scene's own fields**, shown here
+ * and a track as well — and those are **the scene's own fields**, shown here
  * rather than copied here (§7), so there is no second set of them to keep in
  * step and promotion adds to the card rather than moving it.
  *
@@ -398,7 +398,7 @@ export interface SceneCard {
   /** Whose eyes it is seen through. Null for a plan. */
   pov: string | null;
   /** The thread it is drawn in (addendum 02 §8). Null for a plan. */
-  lane: { id: string; name: string } | null;
+  track: { id: string; name: string } | null;
   status: string;
   /** How many beat rows are under it, promoted or not. */
   beats: number;
@@ -418,14 +418,14 @@ export const sceneCardOf = (file: ProjectFile, outline: Outline, item: OutlineIt
       synopsis: item.body,
       purpose: null,
       pov: null,
-      lane: null,
+      track: null,
       status: item.status,
       beats,
     };
   }
 
   const unit = promoted.unit;
-  const lane = file.lanes.find((candidate) => candidate.id === unit.laneId);
+  const track = file.tracks.find((candidate) => candidate.id === unit.trackId);
   return {
     inScript: true,
     title: unit.title,
@@ -433,7 +433,7 @@ export const sceneCardOf = (file: ProjectFile, outline: Outline, item: OutlineIt
     synopsis: unit.summary,
     purpose: unit.grid.purpose,
     pov: unit.grid.pov,
-    lane: lane ? { id: lane.id as string, name: lane.name } : null,
+    track: track ? { id: track.id as string, name: track.name } : null,
     status: unit.status,
     beats,
   };

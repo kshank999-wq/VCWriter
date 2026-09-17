@@ -1,7 +1,7 @@
 import { unitsInStoryOrder } from './selectors.js';
 import { sceneHeadingOf } from './scene-heading.js';
-import { setupLane } from './setups.js';
-import { thematicLanes } from './themes.js';
+import { setupTrack } from './setups.js';
+import { thematicTracks } from './themes.js';
 import { arcInStoryOrder } from './character-creator.js';
 import { dependenciesIn, momentsOf, threadsInOrder } from './threads.js';
 import type { SceneRange } from './character-map.js';
@@ -20,7 +20,7 @@ import type { BeatId, StructuralUnitId } from './ids.js';
  * So this module knows about **nodes, edges and a scene index**, and it knows
  * nothing else. It cannot tell a setup from a motif; what it has of either is a
  * position, a label, a shape and whether something is wrong. Each module
- * contributes rows through one small reader below, and adding §19's next lane —
+ * contributes rows through one small reader below, and adding §19's next track —
  * locations, objects, mysteries — is another reader and no change to the engine
  * or to anything that draws it.
  *
@@ -31,8 +31,8 @@ import type { BeatId, StructuralUnitId } from './ids.js';
  * colour, for the third time.
  */
 
-export const MAP_LANES = ['links', 'setups', 'thematics', 'arcs'] as const;
-export type MapLaneId = (typeof MAP_LANES)[number];
+export const MAP_TRACKS = ['links', 'setups', 'thematics', 'arcs'] as const;
+export type MapTrackId = (typeof MAP_TRACKS)[number];
 
 /** What a node is drawn as. The engine picks the glyph; the reader picks the name. */
 export type NodeShape = 'dot' | 'ring' | 'diamond' | 'square';
@@ -67,7 +67,7 @@ export interface TimelineEdge {
 export type TimelineSourceKind = 'thread' | 'setup_payoff' | 'theme' | 'motif' | 'character_arc';
 
 export interface TimelineRow {
-  laneId: MapLaneId;
+  trackId: MapTrackId;
   sourceKind: TimelineSourceKind;
   sourceId: string;
   title: string;
@@ -79,8 +79,8 @@ export interface TimelineRow {
   edges: TimelineEdge[];
 }
 
-export interface TimelineLane {
-  id: MapLaneId;
+export interface TimelineTrack {
+  id: MapTrackId;
   title: string;
   rows: TimelineRow[];
 }
@@ -95,21 +95,21 @@ export interface TimelineScene {
 
 export interface StoryMap {
   scenes: TimelineScene[];
-  lanes: TimelineLane[];
+  tracks: TimelineTrack[];
   /** Rows the filter hid, so a filtered map can say it is filtered. */
   hidden: number;
 }
 
 export interface MapFilter {
-  /** Lanes to show. Undefined is all of them (§14). */
-  lanes?: readonly MapLaneId[];
+  /** Tracks to show. Undefined is all of them (§14). */
+  tracks?: readonly MapTrackId[];
   /** Isolate these rows alone. Empty or undefined is no isolation. */
-  only?: readonly { laneId: MapLaneId; sourceId: string }[];
+  only?: readonly { trackId: MapTrackId; sourceId: string }[];
   /** §15's scene-range view. Null is the whole script. */
   range?: SceneRange | null;
 }
 
-const LANE_TITLES: Record<MapLaneId, string> = {
+const TRACK_TITLES: Record<MapTrackId, string> = {
   links: 'Links',
   setups: 'Setups & Payoffs',
   thematics: 'Themes & Motifs',
@@ -121,7 +121,7 @@ const LANE_TITLES: Record<MapLaneId, string> = {
 /**
  * Links (§4, §5).
  *
- * The one lane whose rows the writer draws by hand, and the only one where the
+ * The one track whose rows the writer draws by hand, and the only one where the
  * relationship is a choice. A sequence thread is joined in script order — which
  * is computed here and stored nowhere — and a dependency thread is joined only
  * where the writer drew an arrow.
@@ -154,7 +154,7 @@ const threadRows = (file: ProjectFile): TimelineRow[] =>
         : chain(nodes);
 
     return {
-      laneId: 'links',
+      trackId: 'links',
       sourceKind: 'thread',
       sourceId: thread.id as string,
       title: thread.name || 'Untitled thread',
@@ -179,7 +179,7 @@ const threadRows = (file: ProjectFile): TimelineRow[] =>
  * falls after it is drawn where it actually is, in the warning state.
  */
 const setupRows = (file: ProjectFile): TimelineRow[] =>
-  setupLane(file).map((row) => {
+  setupTrack(file).map((row) => {
     const nodes: TimelineNode[] = row.marks.map((mark) => ({
       id: mark.id,
       index: mark.unitIndex,
@@ -202,7 +202,7 @@ const setupRows = (file: ProjectFile): TimelineRow[] =>
       : [];
 
     return {
-      laneId: 'setups',
+      trackId: 'setups',
       sourceKind: 'setup_payoff',
       sourceId: row.recordId,
       title: row.title,
@@ -216,15 +216,15 @@ const setupRows = (file: ProjectFile): TimelineRow[] =>
 /**
  * Themes and motifs (§7).
  *
- * Two kinds, still — addendum 12 §6's rule that they are never one lane holds
- * here too, as two `sourceKind`s inside one lane, each row its own. A
+ * Two kinds, still — addendum 12 §6's rule that they are never one track holds
+ * here too, as two `sourceKind`s inside one track, each row its own. A
  * recurrence is joined in chronological order and claims nothing, which is
  * exactly what a sequence edge is for.
  */
 const thematicRows = (file: ProjectFile): TimelineRow[] => {
-  const lanes = thematicLanes(file);
+  const tracks = thematicTracks(file);
   const rowsFor = (kind: 'theme' | 'motif') =>
-    lanes[kind === 'theme' ? 'themes' : 'motifs']
+    tracks[kind === 'theme' ? 'themes' : 'motifs']
       .filter((row) => row.marks.length > 0)
       .map((row): TimelineRow => {
         const nodes: TimelineNode[] = row.marks.map((mark) => ({
@@ -237,7 +237,7 @@ const thematicRows = (file: ProjectFile): TimelineRow[] => {
           warn: false,
         }));
         return {
-          laneId: 'thematics',
+          trackId: 'thematics',
           sourceKind: kind,
           sourceId: row.ownerId,
           title: row.name,
@@ -256,7 +256,7 @@ const thematicRows = (file: ProjectFile): TimelineRow[] => {
  * **The arc data is the Character Creator's, read and never copied** — §8 asks
  * for exactly that and the module already holds it. A point's position is where
  * it was pinned in the script; a point still on deck has no position and so is
- * not drawn, because a lane is a reading of the script.
+ * not drawn, because a track is a reading of the script.
  *
  * Sequence by default, and dependency *where explicitly defined*: a cross-arc
  * story link between two points of this arc is a relationship the writer drew
@@ -300,7 +300,7 @@ const arcRows = (file: ProjectFile): TimelineRow[] => {
       }));
 
     rows.push({
-      laneId: 'arcs',
+      trackId: 'arcs',
       sourceKind: 'character_arc',
       sourceId: character.id as string,
       title: character.name,
@@ -330,7 +330,7 @@ const chain = (nodes: readonly TimelineNode[]): TimelineEdge[] => {
 
 // -------------------------------------------------------------- the engine
 
-const READERS: Record<MapLaneId, (file: ProjectFile) => TimelineRow[]> = {
+const READERS: Record<MapTrackId, (file: ProjectFile) => TimelineRow[]> = {
   links: threadRows,
   setups: setupRows,
   thematics: thematicRows,
@@ -359,29 +359,29 @@ export const storyMap = (file: ProjectFile, filter: MapFilter = {}): StoryMap =>
     };
   });
 
-  const wanted = new Set<MapLaneId>(filter.lanes ?? MAP_LANES);
+  const wanted = new Set<MapTrackId>(filter.tracks ?? MAP_TRACKS);
   const isolated = filter.only ?? [];
   const keeps = (row: TimelineRow) =>
-    isolated.length === 0 || isolated.some((one) => one.laneId === row.laneId && one.sourceId === row.sourceId);
+    isolated.length === 0 || isolated.some((one) => one.trackId === row.trackId && one.sourceId === row.sourceId);
 
   const low = filter.range ? Math.min(filter.range.from, filter.range.to) - 1 : 0;
   const high = filter.range ? Math.max(filter.range.from, filter.range.to) - 1 : scenes.length - 1;
   const inRange = (row: TimelineRow) => row.nodes.some((node) => node.index >= low && node.index <= high);
 
   let hidden = 0;
-  const lanes: TimelineLane[] = MAP_LANES.filter((id) => wanted.has(id)).map((id) => {
+  const tracks: TimelineTrack[] = MAP_TRACKS.filter((id) => wanted.has(id)).map((id) => {
     const all = READERS[id](file);
     const rows = all.filter((row) => {
       const keep = keeps(row) && (row.nodes.length === 0 ? isolated.length > 0 : inRange(row));
       if (!keep) hidden += 1;
       return keep;
     });
-    return { id, title: LANE_TITLES[id], rows };
+    return { id, title: TRACK_TITLES[id], rows };
   });
 
-  // Rows of a hidden lane are hidden too, and a writer who turned a lane off
+  // Rows of a hidden track are hidden too, and a writer who turned a track off
   // knows where they went — so they are not counted as filtered away.
-  return { scenes, lanes, hidden };
+  return { scenes, tracks, hidden };
 };
 
 /**
@@ -390,9 +390,9 @@ export const storyMap = (file: ProjectFile, filter: MapFilter = {}): StoryMap =>
  * Read off the same readers as the map, so nothing can be offered that cannot
  * be shown.
  */
-export const isolatable = (file: ProjectFile): { laneId: MapLaneId; sourceId: string; title: string }[] =>
-  MAP_LANES.flatMap((id) =>
-    READERS[id](file).map((row) => ({ laneId: id, sourceId: row.sourceId, title: row.title })),
+export const isolatable = (file: ProjectFile): { trackId: MapTrackId; sourceId: string; title: string }[] =>
+  MAP_TRACKS.flatMap((id) =>
+    READERS[id](file).map((row) => ({ trackId: id, sourceId: row.sourceId, title: row.title })),
   );
 
 /**
@@ -417,8 +417,8 @@ export const pilesOf = (row: TimelineRow): { index: number; nodes: TimelineNode[
 
 /** One node, found anywhere on the map — for the inspector and for navigation. */
 export const nodeOn = (map: StoryMap, nodeId: string): { row: TimelineRow; node: TimelineNode } | null => {
-  for (const lane of map.lanes) {
-    for (const row of lane.rows) {
+  for (const track of map.tracks) {
+    for (const row of track.rows) {
       const node = row.nodes.find((one) => one.id === nodeId);
       if (node) return { row, node };
     }
@@ -428,10 +428,10 @@ export const nodeOn = (map: StoryMap, nodeId: string): { row: TimelineRow; node:
 
 /** What the map holds, in one line. */
 export const describeMap = (map: StoryMap): string => {
-  const rows = map.lanes.reduce((count, lane) => count + lane.rows.length, 0);
+  const rows = map.tracks.reduce((count, track) => count + track.rows.length, 0);
   if (rows === 0) return 'Nothing to map yet.';
-  const nodes = map.lanes.reduce(
-    (count, lane) => count + lane.rows.reduce((inner, row) => inner + row.nodes.length, 0),
+  const nodes = map.tracks.reduce(
+    (count, track) => count + track.rows.reduce((inner, row) => inner + row.nodes.length, 0),
     0,
   );
   const filtered = map.hidden > 0 ? ` · ${map.hidden} filtered out` : '';

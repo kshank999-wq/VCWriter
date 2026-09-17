@@ -208,7 +208,7 @@ export function StoryView({
   }, [paged, sheets?.length, display, file]);
   const scale = zoom === FIT ? Math.max(0.25, Math.min(1.6, room / PAGE_PX)) : zoom;
 
-  // A selection made in the lanes or the inspector brings the beat into view.
+  // A selection made in the tracks or the inspector brings the beat into view.
   // One made here — the cursor is already in it — must not yank the page.
   useEffect(() => {
     if (!selectedBeatId) return;
@@ -497,7 +497,7 @@ export function StoryView({
           </div>
           {sheets.length === 0 ? (
             <p className="muted empty-state">
-              Add a {nouns.unit.toLowerCase()} from the lanes toolbar to start writing.
+              Add a {nouns.unit.toLowerCase()} from the tracks toolbar to start writing.
             </p>
           ) : null}
         </div>
@@ -534,7 +534,7 @@ export function StoryView({
 
           {layout.spans.length === 0 ? (
             <p className="muted empty-state">
-              Add a {nouns.unit.toLowerCase()} from the lanes toolbar to start writing.
+              Add a {nouns.unit.toLowerCase()} from the tracks toolbar to start writing.
             </p>
           ) : null}
         </div>

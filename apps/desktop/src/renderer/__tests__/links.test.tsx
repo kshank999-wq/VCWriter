@@ -26,8 +26,8 @@ import { LinksTimeline } from '../components/LinksTimeline';
  * The Links timeline through the interface (addendum 15).
  *
  * The rules are tested in the domain. What these cover is what a writer meets:
- * that every lane is drawn by the same code, that a sequence and a dependency
- * look different, that a lane can be turned off and a row isolated, and that
+ * that every track is drawn by the same code, that a sequence and a dependency
+ * look different, that a track can be turned off and a row isolated, and that
  * the under-prepared payoff's red arrives here without this screen knowing what
  * a setup is.
  */
@@ -44,10 +44,10 @@ const para = (text: string) => ({
 
 const script = (scenes: number) => {
   let file: ProjectFile = createProjectFile({ title: 'The Key', format: 'screenplay' });
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   const offset = unitsInStoryOrder(file).length;
   for (let at = 0; at < scenes; at += 1) {
-    const scene = addUnit(file, { laneId, title: `Scene ${at + 1}` });
+    const scene = addUnit(file, { trackId, title: `Scene ${at + 1}` });
     const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'a beat' });
     file = updateBeat(beat.file, beat.beat.id, { manuscript: { elements: [para(`Line ${at + 1}.`)] } });
   }
@@ -93,7 +93,7 @@ describe('the wiring diagram', () => {
     expect(numbers).toHaveLength(total);
   });
 
-  it('draws every lane by the same code, including the ones with nothing in them', () => {
+  it('draws every track by the same code, including the ones with nothing in them', () => {
     const { file } = script(2);
     render(<Board start={file} />);
     for (const title of ['Links', 'Setups & Payoffs', 'Themes & Motifs', 'Character Arcs']) {
@@ -123,7 +123,7 @@ describe('the wiring diagram', () => {
 });
 
 describe('filters', () => {
-  it('turns a lane off and back on', () => {
+  it('turns a track off and back on', () => {
     const { file } = threaded();
     render(<Board start={file} />);
     expect(document.querySelectorAll('.links-row').length).toBeGreaterThan(0);
@@ -165,7 +165,7 @@ describe('filters', () => {
   });
 });
 
-describe('the other lanes arrive without this screen knowing what they are', () => {
+describe('the other tracks arrive without this screen knowing what they are', () => {
   it('shows an under-prepared payoff in red, read from the Setups module', () => {
     const { file } = script(4);
     let current = addSetupPayoff(file, { title: 'The gun' });

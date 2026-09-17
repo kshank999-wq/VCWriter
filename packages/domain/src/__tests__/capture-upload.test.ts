@@ -131,10 +131,10 @@ describe('a project started on the phone', () => {
   it('arrives with everything a desktop expects to find', () => {
     const rows = started();
 
-    // A scene to write in, the beat inside it, and the lane it sits on.
+    // A scene to write in, the beat inside it, and the track it sits on.
     expect(rows.units.length).toBeGreaterThan(0);
     expect(rows.beats.length).toBeGreaterThan(0);
-    expect(rows.lanes.length).toBeGreaterThan(0);
+    expect(rows.tracks.length).toBeGreaterThan(0);
     // The research folders and the cast headings, which is what the Mobile App
     // inbox drops notes into.
     expect(rows.researchCategories.length).toBeGreaterThan(0);

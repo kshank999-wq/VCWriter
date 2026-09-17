@@ -914,7 +914,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
  *
  * Each part of it is edited where it lives. While the row is a plan there is a
  * synopsis and a status and no more, because that is all a plan has. Once it
- * is in the script the number, the purpose, the point of view and the lane
+ * is in the script the number, the purpose, the point of view and the track
  * appear, and they are **the scene's own fields, shown here rather than copied
  * here** — so promotion adds to the card rather than moving it, and there is
  * never a second copy to keep in step.
@@ -1012,7 +1012,7 @@ function SceneCardPanel({
                   ))}
                 </select>
               </label>
-              {card.lane ? <p className="muted small">In the {card.lane.name} lane.</p> : null}
+              {card.track ? <p className="muted small">In the {card.track.name} track.</p> : null}
             </>
           ) : (
             <label className="field">
@@ -1138,8 +1138,8 @@ function Promotion({
         <p className="muted small">
           {refusal === 'its scene is still a plan'
             ? `A ${sub} lives inside a ${nouns.unit.toLowerCase()}, so this one can go in as soon as the ${nouns.unit.toLowerCase()} above it does.`
-            : refusal === 'there is no lane to put a scene in'
-              ? `There is no plot lane to put a ${nouns.unit.toLowerCase()} in yet.`
+            : refusal === 'there is no track to put a scene in'
+              ? `There is no plot track to put a ${nouns.unit.toLowerCase()} in yet.`
               : refusal}
         </p>
       )}

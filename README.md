@@ -39,7 +39,7 @@ These come straight from the specification and are enforced in code, in the
 database, or both — not left to convention:
 
 - **A beat lives inside a scene or chapter.** There is no API and no column
-  that allows a beat to float loose in a plot lane (§19).
+  that allows a beat to float loose in a plot track (§19).
 - **A beat's internal title is authoring metadata.** It renders only when a
   caller explicitly asks for an annotated reference copy, never in the
   delivered manuscript (§5.3, §6).

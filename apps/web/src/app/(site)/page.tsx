@@ -4,7 +4,7 @@ import { Emblem } from '../wordmark';
 const FEATURES = [
   {
     title: 'Structure that holds together',
-    body: 'Plot lanes hold scenes or chapters, and every beat lives inside one. Reorder anything and the writing, research and links move with it.',
+    body: 'Plot tracks hold scenes or chapters, and every beat lives inside one. Reorder anything and the writing, research and links move with it.',
   },
   {
     title: 'Research that stays connected',

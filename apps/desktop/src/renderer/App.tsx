@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  addLane,
+  addTrack,
   addMarker,
   defaultMarkerKind,
   beatsForUnit,
@@ -15,7 +15,7 @@ import {
   threadLayout,
   timelineArcs,
   type BeatId,
-  type LaneId,
+  type TrackId,
   type ProjectFile,
   type Episode,
   type ProjectFormat,
@@ -48,7 +48,7 @@ import { MasterPanel } from './components/MasterPanel';
 import { Inspector } from './components/Inspector';
 import { TimelineViewer } from './components/TimelineViewer';
 import { DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay, type ScriptLayout } from './components/StoryView';
-import { LaneDialog } from './components/LaneDialog';
+import { TrackDialog } from './components/TrackDialog';
 import { SceneDialog } from './components/SceneDialog';
 import { ResearchWindow } from './components/ResearchWindow';
 import { ProjectHomePanel } from './components/ProjectHomePanel';
@@ -100,13 +100,13 @@ export default function App() {
   const [view, setView] = useState<View>('write');
   const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
   /**
-   * What was last clicked into on the lanes: the scene a new beat goes in,
-   * and the lane a new scene lands in. Held separately from the selected beat
+   * What was last clicked into on the tracks: the scene a new beat goes in,
+   * and the track a new scene lands in. Held separately from the selected beat
    * because a scene with nothing in it is exactly the one you click before
    * adding the first beat, and it has no beat to be remembered by.
    */
   const [selectedUnitId, setSelectedUnitId] = useState<StructuralUnitId | null>(null);
-  const [selectedLaneId, setSelectedLaneId] = useState<LaneId | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<TrackId | null>(null);
   const [focusTitleBeatId, setFocusTitleBeatId] = useState<BeatId | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   // What a printing carries, in one place, read by the Preview, the print
@@ -149,7 +149,7 @@ export default function App() {
   const [scriptZoom, setScriptZoom] = usePreference('scriptZoom', 0);
   // Paper, ink and face: the writer's, per machine, never project data (§6.3).
   const [pageStyle, setPageStyle] = usePreference<PageStyle>('pageStyle', DEFAULT_PAGE_STYLE);
-  const [openLaneId, setOpenLaneId] = useState<LaneId | null>(null);
+  const [openTrackId, setOpenTrackId] = useState<TrackId | null>(null);
   const [openUnitId, setOpenUnitId] = useState<StructuralUnitId | null>(null);
   const [openBeatId, setOpenBeatId] = useState<BeatId | null>(null);
   const [openMarkerId, setOpenMarkerId] = useState<StoryMarkerId | null>(null);
@@ -186,7 +186,7 @@ export default function App() {
   /** Bumped when a project is deleted, so the recents are read again. */
   const [projectsChanged, setProjectsChanged] = useState(0);
   // The Edit-page proportions (addendum 02 §3): a quarter for the script,
-  // and of the rest, just under half for the viewport above the lanes.
+  // and of the rest, just under half for the viewport above the tracks.
   const columns = useSplit({ key: 'leftWidth', initial: 0.25, min: 300, reserve: 640, axis: 'x' });
   /**
    * Short form is written on the sheet, so the sheet opens at full size and
@@ -216,7 +216,7 @@ export default function App() {
    * draw — a commercial has nothing to view that the board does not show.
    */
   const arrangement: Arrangement = shortForm
-    ? { left: 'viewer', top: 'script', bottom: 'lanes', right: 'inspector' }
+    ? { left: 'viewer', top: 'script', bottom: 'tracks', right: 'inspector' }
     : chosenArrangement;
 
   const file = project.file;
@@ -337,8 +337,8 @@ export default function App() {
   // addendum), computed from the current document so the new id is known.
 
   const selection = useMemo(
-    () => ({ laneId: selectedLaneId, unitId: selectedUnitId, beat: selectedBeat }),
-    [selectedLaneId, selectedUnitId, selectedBeat],
+    () => ({ trackId: selectedTrackId, unitId: selectedUnitId, beat: selectedBeat }),
+    [selectedTrackId, selectedUnitId, selectedBeat],
   );
 
   const addSceneAfterSelection = useCallback(() => {
@@ -361,8 +361,8 @@ export default function App() {
     setFocusTitleBeatId(made.beatId);
   }, [file, selection, project]);
 
-  const addLaneToProject = useCallback(() => {
-    project.update((current) => addLane(current, { name: 'New lane' }).file);
+  const addTrackToProject = useCallback(() => {
+    project.update((current) => addTrack(current, { name: 'New track' }).file);
   }, [project]);
 
   const addActAtSelection = useCallback(() => {
@@ -558,7 +558,7 @@ export default function App() {
 
         case 'window.script':
         case 'window.viewer':
-        case 'window.lanes':
+        case 'window.tracks':
         case 'window.inspector':
         case 'window.research':
         case 'window.outliner':
@@ -743,7 +743,7 @@ export default function App() {
         onOpenMarker={setOpenMarkerId}
       />
     ),
-    lanes: (
+    tracks: (
       <MasterTimeline
         file={file}
         layout={layout ?? undefined}
@@ -752,11 +752,11 @@ export default function App() {
         selectedBeatId={selectedBeat?.id ?? null}
         onSelectBeat={setSelectedBeatId}
         selectedUnitId={selectedUnitId}
-        onSelectUnit={(unitId, laneId) => {
+        onSelectUnit={(unitId, trackId) => {
           setSelectedUnitId(unitId);
-          setSelectedLaneId(laneId);
+          setSelectedTrackId(trackId);
         }}
-        onSelectLane={setSelectedLaneId}
+        onSelectTrack={setSelectedTrackId}
         beatsPerColumn={beatsPerColumn}
         onUpdate={project.update}
         pixelsPerPage={pixelsPerPage}
@@ -766,9 +766,9 @@ export default function App() {
         onToggleInspector={() => setInspectorOpen(!inspectorOpen)}
         onAddScene={addSceneAfterSelection}
         onAddBeat={addBeatAfterSelection}
-        onAddLane={addLaneToProject}
+        onAddTrack={addTrackToProject}
         onAddAct={addActAtSelection}
-        onOpenLane={setOpenLaneId}
+        onOpenTrack={setOpenTrackId}
         onOpenUnit={setOpenUnitId}
         onOpenBeat={setOpenBeatId}
       />
@@ -955,7 +955,7 @@ export default function App() {
               </div>
             </>
           )}
-          <LaneDialog file={file} laneId={openLaneId} onClose={() => setOpenLaneId(null)} onUpdate={project.update} />
+          <TrackDialog file={file} trackId={openTrackId} onClose={() => setOpenTrackId(null)} onUpdate={project.update} />
           <SceneDialog
             file={file}
             unitId={openUnitId}

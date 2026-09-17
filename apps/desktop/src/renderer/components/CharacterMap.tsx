@@ -3,10 +3,10 @@ import {
   RELATIONSHIP_KINDS,
   RELATIONSHIP_KIND_NAMES,
   characterMap,
-  charactersInLane,
+  charactersInTrack,
   describeRange,
   edgeLabel,
-  lanesInOrder,
+  tracksInOrder,
   relate,
   relationshipName,
   removeRelationship,
@@ -14,7 +14,7 @@ import {
   updateRelationship,
   type CharacterId,
   type CharacterRelationship,
-  type LaneId,
+  type TrackId,
   type MapEdge,
   type ProjectFile,
   type RelationshipKind,
@@ -44,8 +44,8 @@ import {
  * the writer answers: naming it makes the relationship, and the line goes solid.
  *
  * **A scene range narrows the stretch being read** (§12, §11's leftover). It is
- * not the plot lane beside it said differently: a lane is a subplot and a range
- * is a piece of the script, and *who is in act two* is a question the lane
+ * not the plot track beside it said differently: a track is a subplot and a range
+ * is a piece of the script, and *who is in act two* is a question the track
  * cannot answer. What it narrows is who is on the map and what the manuscript
  * counts; a relationship the writer wrote down is untouched, because a
  * relationship has no scene number and deciding when one began would be
@@ -81,7 +81,7 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
   const [focusId, setFocusId] = useState<CharacterId | ''>('');
   const [depth, setDepth] = useState(1);
   const [kind, setKind] = useState<RelationshipKind | ''>('');
-  const [laneId, setLaneId] = useState<LaneId | ''>('');
+  const [trackId, setTrackId] = useState<TrackId | ''>('');
   /**
    * A stretch of the story (§12). Null is the whole script, and is the default.
    *
@@ -94,11 +94,11 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
   const [fromScript, setFromScript] = useState(true);
   const [openPair, setOpenPair] = useState<string | null>(null);
 
-  const lanes = lanesInOrder(file);
+  const tracks = tracksInOrder(file);
   const scenes = useMemo(() => scenesForRange(file), [file]);
   const among = useMemo(
-    () => (laneId === '' ? undefined : charactersInLane(file, laneId)),
-    [file, laneId],
+    () => (trackId === '' ? undefined : charactersInTrack(file, trackId)),
+    [file, trackId],
   );
 
   const map = useMemo(
@@ -169,14 +169,14 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
         <label>
           <span className="muted small">Plot</span>
           <select
-            aria-label="Plot lane"
-            value={laneId as string}
-            onChange={(event) => setLaneId(event.target.value as LaneId)}
+            aria-label="Plot track"
+            value={trackId as string}
+            onChange={(event) => setTrackId(event.target.value as TrackId)}
           >
             <option value="">Every plot</option>
-            {lanes.map((lane) => (
-              <option key={lane.id} value={lane.id}>
-                {lane.name}
+            {tracks.map((track) => (
+              <option key={track.id} value={track.id}>
+                {track.name}
               </option>
             ))}
           </select>
@@ -185,8 +185,8 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
         {/* §12's scene range, and the second of §11's two leftovers.
 
             **A stretch is its own question** — *who is in act two, and how do
-            they connect there* — which the plot lane beside it does not answer:
-            a lane is a subplot and a range is a piece of the script.
+            they connect there* — which the plot track beside it does not answer:
+            a track is a subplot and a range is a piece of the script.
 
             Two selects listing the scenes by name, because a writer knows the
             scene and not its number. Both start at the ends, so the control

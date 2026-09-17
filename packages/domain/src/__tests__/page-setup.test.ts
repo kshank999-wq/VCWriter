@@ -23,7 +23,7 @@ import {
  */
 
 const scene = (file: ProjectFile, heading: string, line: string) => {
-  const made = addUnit(file, { laneId: file.lanes[0]!.id, title: heading });
+  const made = addUnit(file, { trackId: file.tracks[0]!.id, title: heading });
   const beat = addBeat(made.file, { unitId: made.unit.id, title: 'The turn' });
   return {
     file: updateBeat(beat.file, beat.beat.id, {

@@ -20,7 +20,7 @@ const VERSION = 'bbbbbbbb-cccc-dddd-eeee-ffffffffffff';
 const opened = (): ProjectFile => {
   const empty = createProjectFile({ title: 'Blackout', format: 'screenplay' });
   const bare: ProjectFile = { ...empty, units: [], beats: [] };
-  const scene = addUnit(bare, { laneId: bare.lanes[0]!.id, title: 'INT. WAREHOUSE - NIGHT' });
+  const scene = addUnit(bare, { trackId: bare.tracks[0]!.id, title: 'INT. WAREHOUSE - NIGHT' });
   return addBeat(scene.file, { unitId: scene.unit.id, title: 'Mara enters' }).file;
 };
 
@@ -113,7 +113,7 @@ describe('the bridge over a room', () => {
     expect(open.ok).toBe(true);
     const file = open.data!.file as ProjectFile;
 
-    const made = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. CAR - DAY' });
+    const made = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. CAR - DAY' });
     const signed = bridge.signWork!(made.file);
 
     expect(signed.units.find((unit) => unit.id === made.unit.id)?.origin?.authorId).toBe('jo');
@@ -185,7 +185,7 @@ describe('a window opened on a recorded version (§13, stage 5)', () => {
     const open = await bridge.openProject();
     const file = open.data!.file as ProjectFile;
 
-    const made = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. CAR - DAY' });
+    const made = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. CAR - DAY' });
     expect(bridge.signWork!(made.file)).toBe(made.file);
   });
 });

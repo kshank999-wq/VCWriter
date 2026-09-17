@@ -2,17 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { createProjectFile, migrateProjectFile, parseProjectFile, PROJECT_FORMAT_VERSION } from '../project-file.js';
 import {
   addBeat,
-  addLane,
+  addTrack,
   addMarker,
   addUnit,
   moveUnit,
-  removeLane,
+  removeTrack,
   removeMarker,
   removeUnit,
   updateBeat,
   updateMarker,
 } from '../mutations.js';
-import { markersInStoryOrder, unitsForLane, unitsInStoryOrder } from '../selectors.js';
+import { markersInStoryOrder, unitsForTrack, unitsInStoryOrder } from '../selectors.js';
 import { pagesForUnit, spanWidth, storyLayout, timelineArcs } from '../story-layout.js';
 import { addSetupPayoff, addSetupPoint, linkEntities, recordPayoff } from '../mutations.js';
 import { ref } from '../entities/links.js';
@@ -25,29 +25,29 @@ import { mergeProjects } from '../sync-merge.js';
  * markers ride on that order.
  */
 
-const twoLanes = () => {
+const twoTracks = () => {
   let file = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
-  const main = file.lanes[0]!;
-  const subplot = addLane(file, { name: 'Subplot', kind: 'subplot' });
+  const main = file.tracks[0]!;
+  const subplot = addTrack(file, { name: 'Subplot', kind: 'subplot' });
   file = subplot.file;
-  return { file, main, subplot: subplot.lane };
+  return { file, main, subplot: subplot.track };
 };
 
 const titles = (file: ReturnType<typeof createProjectFile>) => unitsInStoryOrder(file).map((unit) => unit.title);
 
 describe('global story order', () => {
-  it('interleaves scenes from different lanes by position, not by lane', () => {
-    let { file, main, subplot } = twoLanes();
-    file = addUnit(file, { laneId: main.id, title: 'Main 2' }).file;
-    // "After the first scene", whatever lane it is in: index counts every scene.
-    file = addUnit(file, { laneId: subplot.id, title: 'Sub 1', index: 1 }).file;
+  it('interleaves scenes from different tracks by position, not by track', () => {
+    let { file, main, subplot } = twoTracks();
+    file = addUnit(file, { trackId: main.id, title: 'Main 2' }).file;
+    // "After the first scene", whatever track it is in: index counts every scene.
+    file = addUnit(file, { trackId: subplot.id, title: 'Sub 1', index: 1 }).file;
 
     expect(titles(file)).toEqual(['Opening Scene', 'Sub 1', 'Main 2']);
-    expect(unitsForLane(file, subplot.id).map((unit) => unit.title)).toEqual(['Sub 1']);
+    expect(unitsForTrack(file, subplot.id).map((unit) => unit.title)).toEqual(['Sub 1']);
   });
 
   it('prints in story order, so a subplot scene lands between main-plot scenes', () => {
-    let { file, main, subplot } = twoLanes();
+    let { file, main, subplot } = twoTracks();
     const write = (unitTitle: string, line: string) => {
       const unit = file.units.find((candidate) => candidate.title === unitTitle)!;
       const created = addBeat(file, { unitId: unit.id, title: line });
@@ -55,8 +55,8 @@ describe('global story order', () => {
         manuscript: { elements: [{ id: crypto.randomUUID() as never, type: 'action', text: line, characterId: null, attributes: {} }] },
       });
     };
-    file = addUnit(file, { laneId: main.id, title: 'Main 2' }).file;
-    file = addUnit(file, { laneId: subplot.id, title: 'Sub 1', index: 1 }).file;
+    file = addUnit(file, { trackId: main.id, title: 'Main 2' }).file;
+    file = addUnit(file, { trackId: subplot.id, title: 'Sub 1', index: 1 }).file;
     write('Opening Scene', 'ONE');
     write('Sub 1', 'TWO');
     write('Main 2', 'THREE');
@@ -68,50 +68,50 @@ describe('global story order', () => {
     expect(text).toEqual(['ONE', 'TWO', 'THREE']);
   });
 
-  it('moves a scene to another lane without changing its place in the story', () => {
-    let { file, main, subplot } = twoLanes();
-    file = addUnit(file, { laneId: main.id, title: 'Main 2' }).file;
-    file = addUnit(file, { laneId: main.id, title: 'Main 3' }).file;
+  it('moves a scene to another track without changing its place in the story', () => {
+    let { file, main, subplot } = twoTracks();
+    file = addUnit(file, { trackId: main.id, title: 'Main 2' }).file;
+    file = addUnit(file, { trackId: main.id, title: 'Main 3' }).file;
     const middle = file.units.find((unit) => unit.title === 'Main 2')!;
 
-    file = moveUnit(file, { unitId: middle.id, toLaneId: subplot.id, keepPosition: true });
+    file = moveUnit(file, { unitId: middle.id, toTrackId: subplot.id, keepPosition: true });
 
     expect(titles(file)).toEqual(['Opening Scene', 'Main 2', 'Main 3']);
-    expect(unitsForLane(file, subplot.id).map((unit) => unit.title)).toEqual(['Main 2']);
+    expect(unitsForTrack(file, subplot.id).map((unit) => unit.title)).toEqual(['Main 2']);
   });
 
   it('moves a scene along the story axis with an index that counts every other scene', () => {
-    let { file, main } = twoLanes();
-    file = addUnit(file, { laneId: main.id, title: 'Main 2' }).file;
-    file = addUnit(file, { laneId: main.id, title: 'Main 3' }).file;
+    let { file, main } = twoTracks();
+    file = addUnit(file, { trackId: main.id, title: 'Main 2' }).file;
+    file = addUnit(file, { trackId: main.id, title: 'Main 3' }).file;
     const last = file.units.find((unit) => unit.title === 'Main 3')!;
 
-    file = moveUnit(file, { unitId: last.id, toLaneId: main.id, index: 0 });
+    file = moveUnit(file, { unitId: last.id, toTrackId: main.id, index: 0 });
     expect(titles(file)).toEqual(['Main 3', 'Opening Scene', 'Main 2']);
   });
 });
 
 describe('format 1 migration', () => {
-  it('re-keys scenes in the order they used to print, lane by lane', () => {
-    // A format-1 document: two lanes, each with per-lane keys that overlap.
+  it('re-keys scenes in the order they used to print, track by track', () => {
+    // A format-1 document: two tracks, each with per-track keys that overlap.
     const base = createProjectFile({ title: 'Old', format: 'screenplay' });
-    const laneA = base.lanes[0]!;
-    const laneB = { ...laneA, id: '22222222-2222-4222-8222-222222222222', name: 'Subplot', orderKey: 'b' };
-    const unit = (id: string, laneId: string, title: string, orderKey: string) => ({
+    const trackA = base.tracks[0]!;
+    const trackB = { ...trackA, id: '22222222-2222-4222-8222-222222222222', name: 'Subplot', orderKey: 'b' };
+    const unit = (id: string, trackId: string, title: string, orderKey: string) => ({
       ...base.units[0]!,
       id,
-      laneId,
+      trackId,
       title,
       orderKey,
     });
     const legacy = {
       ...base,
       formatVersion: 1,
-      lanes: [{ ...laneA, orderKey: 'a' }, laneB],
+      tracks: [{ ...trackA, orderKey: 'a' }, trackB],
       units: [
-        unit('33333333-3333-4333-8333-333333333331', laneB.id, 'Sub 1', 'a'),
-        unit('33333333-3333-4333-8333-333333333332', laneA.id, 'Main 2', 'b'),
-        unit('33333333-3333-4333-8333-333333333333', laneA.id, 'Main 1', 'a'),
+        unit('33333333-3333-4333-8333-333333333331', trackB.id, 'Sub 1', 'a'),
+        unit('33333333-3333-4333-8333-333333333332', trackA.id, 'Main 2', 'b'),
+        unit('33333333-3333-4333-8333-333333333333', trackA.id, 'Main 1', 'a'),
       ],
       beats: [],
     };
@@ -122,10 +122,10 @@ describe('format 1 migration', () => {
     expect(migrated['markers']).toEqual([]);
 
     const file = parseProjectFile(legacy);
-    // Format 1 printed lane A (Main 1, Main 2) then lane B (Sub 1).
+    // Format 1 printed track A (Main 1, Main 2) then track B (Sub 1).
     expect(titles(file)).toEqual(['Main 1', 'Main 2', 'Sub 1']);
     // Re-keyed scenes count as edited, so the next sync pushes the global
-    // keys instead of a stale per-lane copy winning the merge.
+    // keys instead of a stale per-track copy winning the merge.
     for (const unit of file.units) expect(unit.updatedAt >= base.units[0]!.updatedAt).toBe(true);
   });
 
@@ -139,8 +139,8 @@ describe('format 1 migration', () => {
 
 describe('act markers', () => {
   it('labels a scene, replaces rather than stacks, and lists in story order', () => {
-    let { file, main } = twoLanes();
-    const second = addUnit(file, { laneId: main.id, title: 'Main 2' });
+    let { file, main } = twoTracks();
+    const second = addUnit(file, { trackId: main.id, title: 'Main 2' });
     file = second.file;
     const first = file.units.find((unit) => unit.title === 'Opening Scene')!;
 
@@ -153,10 +153,10 @@ describe('act markers', () => {
   });
 
   it('moves to the next scene when its scene is removed, and goes with the last one', () => {
-    let { file, main } = twoLanes();
-    const second = addUnit(file, { laneId: main.id, title: 'Main 2' });
+    let { file, main } = twoTracks();
+    const second = addUnit(file, { trackId: main.id, title: 'Main 2' });
     file = second.file;
-    const third = addUnit(file, { laneId: main.id, title: 'Main 3' });
+    const third = addUnit(file, { trackId: main.id, title: 'Main 3' });
     file = third.file;
     const marker = addMarker(file, { unitId: second.unit.id, title: 'Act II' });
     file = marker.file;
@@ -172,21 +172,21 @@ describe('act markers', () => {
   });
 
   it('drops a displaced marker rather than stacking two on one scene', () => {
-    let { file, main, subplot } = twoLanes();
-    const second = addUnit(file, { laneId: subplot.id, title: 'Sub 1' });
+    let { file, main, subplot } = twoTracks();
+    const second = addUnit(file, { trackId: subplot.id, title: 'Sub 1' });
     file = second.file;
-    const third = addUnit(file, { laneId: main.id, title: 'Main 3' });
+    const third = addUnit(file, { trackId: main.id, title: 'Main 3' });
     file = third.file;
     file = addMarker(file, { unitId: second.unit.id, title: 'Act II' }).file;
     file = addMarker(file, { unitId: third.unit.id, title: 'Act III' }).file;
 
-    file = removeLane(file, subplot.id);
+    file = removeTrack(file, subplot.id);
     expect(file.markers.map((m) => m.title)).toEqual(['Act III']);
   });
 
   it('renames, re-anchors and removes', () => {
-    let { file, main } = twoLanes();
-    const second = addUnit(file, { laneId: main.id, title: 'Main 2' });
+    let { file, main } = twoTracks();
+    const second = addUnit(file, { trackId: main.id, title: 'Main 2' });
     file = second.file;
     const created = addMarker(file, { unitId: file.units[0]!.id, title: 'Act I' });
     file = created.file;
@@ -199,11 +199,11 @@ describe('act markers', () => {
   });
 
   it('round-trips through sync rows and is pruned when its scene is gone after a merge', () => {
-    let { file, main } = twoLanes();
+    let { file, main } = twoTracks();
     file = addMarker(file, { unitId: file.units[0]!.id, title: 'Act I' }).file;
     expect(fromRows(toRows(file)).markers).toEqual(file.markers);
 
-    const second = addUnit(file, { laneId: main.id, title: 'Main 2' });
+    const second = addUnit(file, { trackId: main.id, title: 'Main 2' });
     file = second.file;
     file = addMarker(file, { unitId: second.unit.id, title: 'Act II' }).file;
     const remote = { ...file, units: file.units.filter((unit) => unit.id !== second.unit.id) };
@@ -212,7 +212,7 @@ describe('act markers', () => {
   });
 
   it('keeps one marker per scene when two devices marked the same scene', () => {
-    const { file } = twoLanes();
+    const { file } = twoTracks();
     const unitId = file.units[0]!.id;
     const mine = addMarker(file, { unitId, title: 'Act I' }).file;
     const theirs = addMarker(
@@ -231,7 +231,7 @@ describe('act markers', () => {
 
 describe('story layout', () => {
   it('measures scenes in pages and places them end to end', () => {
-    let { file, main, subplot } = twoLanes();
+    let { file, main, subplot } = twoTracks();
     const first = file.units[0]!;
     const paragraph = 'The rain does not stop. '.repeat(40);
     const lines = Array.from({ length: 40 }, (_, index) => ({
@@ -242,8 +242,8 @@ describe('story layout', () => {
       attributes: {},
     }));
     file = updateBeat(file, file.beats[0]!.id, { manuscript: { elements: lines } });
-    file = addUnit(file, { laneId: subplot.id, title: 'Sub 1' }).file;
-    file = addUnit(file, { laneId: main.id, title: 'Main 3' }).file;
+    file = addUnit(file, { trackId: subplot.id, title: 'Sub 1' }).file;
+    file = addUnit(file, { trackId: main.id, title: 'Main 3' }).file;
     file = addMarker(file, { unitId: first.id, title: 'Act I' }).file;
 
     const layout = storyLayout(file);
@@ -257,9 +257,9 @@ describe('story layout', () => {
   });
 
   it('draws a setup as a curve to its payoff, an unpaid one into the air, and a link between scenes', () => {
-    let { file, main } = twoLanes();
+    let { file, main } = twoTracks();
     const first = file.units[0]!;
-    const fourth = addUnit(file, { laneId: main.id, title: 'Sc 4' });
+    const fourth = addUnit(file, { trackId: main.id, title: 'Sc 4' });
     file = fourth.file;
     const beatInFourth = addBeat(file, { unitId: fourth.unit.id, title: 'It fires' });
     file = beatInFourth.file;
@@ -285,7 +285,7 @@ describe('story layout', () => {
   });
 
   it('gives an empty scene a block you can still see', () => {
-    const { file } = twoLanes();
+    const { file } = twoTracks();
     const span = storyLayout(file).spans[0]!;
     expect(span.pages).toBe(0);
     // A short scene keeps a readable minimum — and still answers the zoom.

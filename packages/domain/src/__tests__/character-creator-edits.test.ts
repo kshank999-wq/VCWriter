@@ -131,7 +131,7 @@ describe('what the screen is told', () => {
   /** A project where one item is in the writing and one is not. */
   const written = () => {
     const { file, characterId } = peopled();
-    const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. DINER - NIGHT' });
+    const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. DINER - NIGHT' });
     const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'The bill' });
     const withTrait = addTrait(beat.file, { characterId, name: 'Greedy' });
     const one = addCharacterization(withTrait.file, {

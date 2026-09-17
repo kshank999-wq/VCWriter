@@ -28,7 +28,7 @@ import type {
  * Three things decide the shape of everything here.
  *
  * **They are two kinds, all the way down.** Separate records, separate lists,
- * separate lanes, separate choices on the right-click. There is no function in
+ * separate tracks, separate choices on the right-click. There is no function in
  * this file that takes "a thematic thing" and works out which — because the one
  * place that blurred them would be the place the interface started to.
  *
@@ -352,7 +352,7 @@ export const describeThematics = (file: ProjectFile): string => {
   return `${themes} ${themes === 1 ? 'theme' : 'themes'} · ${motifs} ${motifs === 1 ? 'motif' : 'motifs'}`;
 };
 
-// ------------------------------------------------------------ the two lanes
+// ------------------------------------------------------------ the two tracks
 
 /** One tagged moment, at the scene it falls in. */
 export interface ThematicMark {
@@ -363,7 +363,7 @@ export interface ThematicMark {
 }
 
 /** One theme's or one motif's row. */
-export interface ThematicLaneRow {
+export interface ThematicTrackRow {
   kind: ThematicKind;
   ownerId: string;
   name: string;
@@ -373,21 +373,21 @@ export interface ThematicLaneRow {
 }
 
 /**
- * The two lanes (§8).
+ * The two tracks (§8).
  *
  * **Two groups, never one.** §8 is explicit, and the reason it matters is that
  * a reader meets a motif and understands a theme: nine marks on a motif's row
  * is recurrence working, and nine on a theme's row is a different claim
- * entirely. One combined lane would average them into nothing.
+ * entirely. One combined track would average them into nothing.
  *
  * A row per theme and a row per motif, so one can be hidden without hiding the
  * other — and an orphaned mark is not drawn, because it has no position to be
  * drawn at.
  */
-export const thematicLanes = (
+export const thematicTracks = (
   file: ProjectFile,
-): { themes: ThematicLaneRow[]; motifs: ThematicLaneRow[] } => {
-  const rowFor = (kind: ThematicKind, ownerId: string, name: string, detail: string): ThematicLaneRow => ({
+): { themes: ThematicTrackRow[]; motifs: ThematicTrackRow[] } => {
+  const rowFor = (kind: ThematicKind, ownerId: string, name: string, detail: string): ThematicTrackRow => ({
     kind,
     ownerId,
     name,

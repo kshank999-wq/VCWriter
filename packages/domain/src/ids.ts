@@ -11,7 +11,7 @@ export type Id<TBrand extends string> = string & { readonly __brand: TBrand };
 
 export type UserId = Id<'User'>;
 export type ProjectId = Id<'Project'>;
-export type LaneId = Id<'Lane'>;
+export type TrackId = Id<'Track'>;
 export type StructuralUnitId = Id<'StructuralUnit'>;
 export type BeatId = Id<'Beat'>;
 export type StoryMarkerId = Id<'StoryMarker'>;

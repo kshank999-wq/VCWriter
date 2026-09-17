@@ -5,7 +5,7 @@
  * The workspace has four places a section can be: the tall column down one
  * side, the two stacked halves of the stage beside it, and the narrow column
  * on the far side. Which section is in which is the writer's business, not
- * the program's — someone cutting a sequence wants the lanes big and the
+ * the program's — someone cutting a sequence wants the tracks big and the
  * script small, someone drafting wants the opposite — so the arrangement is
  * a preference, and any section can be swapped with any other.
  *
@@ -17,25 +17,25 @@
 
 import { isProseFormat, nounsFor, type ProjectFormat } from '@vcwriter/domain';
 
-export type PaneId = 'script' | 'viewer' | 'lanes' | 'inspector';
+export type PaneId = 'script' | 'viewer' | 'tracks' | 'inspector';
 export type SlotId = 'left' | 'top' | 'bottom' | 'right';
 
 export type Arrangement = Record<SlotId, PaneId>;
 
-export const PANE_IDS: PaneId[] = ['script', 'viewer', 'lanes', 'inspector'];
+export const PANE_IDS: PaneId[] = ['script', 'viewer', 'tracks', 'inspector'];
 export const SLOT_IDS: SlotId[] = ['left', 'top', 'bottom', 'right'];
 
 export const DEFAULT_ARRANGEMENT: Arrangement = {
   left: 'script',
   top: 'viewer',
-  bottom: 'lanes',
+  bottom: 'tracks',
   right: 'inspector',
 };
 
 export const PANE_NAMES: Record<PaneId, string> = {
   script: 'Script',
   viewer: 'Timeline & Viewer',
-  lanes: 'Plot lanes',
+  tracks: 'Plot tracks',
   inspector: 'Inspector',
 };
 
@@ -52,9 +52,9 @@ export const paneNamesFor = (format: ProjectFormat | null): Record<PaneId, strin
   // without this file being told it exists (addendum 16 §1).
   if (format && isProseFormat(format)) return { ...PANE_NAMES, script: nounsFor(format).manuscript };
   // Short form is written on a sheet, not in a script, and the strip under it
-  // is a timeline rather than a set of plot lanes — a commercial has no
-  // subplot to lane (addendum 05 §1, §3).
-  if (format === 'short_form') return { ...PANE_NAMES, script: 'Sheet', lanes: 'Timeline' };
+  // is a timeline rather than a set of plot tracks — a commercial has no
+  // subplot to track (addendum 05 §1, §3).
+  if (format === 'short_form') return { ...PANE_NAMES, script: 'Sheet', tracks: 'Timeline' };
   return PANE_NAMES;
 };
 

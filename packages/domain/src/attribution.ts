@@ -8,7 +8,7 @@ import type { ProjectFile } from './project-file.js';
  * **Colour is the fastest fact on a page**, and it is used in exactly four
  * places: the stamp in the top corner of a writer's page, the identity bar
  * above their version, the beat badge, and the overlay that tints the master
- * by source. Never on a lane — a lane is a thread of the story and a
+ * by source. Never on a track — a track is a thread of the story and a
  * contributor colour is a fact about who wrote a line, and two colour
  * languages on one page is neither (§6.2).
  *

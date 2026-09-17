@@ -99,7 +99,7 @@ interface under development is looked at.
 
 ### 3.2 Membership widens one function; it does not add a second set of rules
 
-Every child table in the project schema — lanes, units, beats, markers,
+Every child table in the project schema — tracks, units, beats, markers,
 research, characters, links, setups — carries the same generated policy:
 
 ```sql
@@ -279,8 +279,8 @@ Used in exactly four places:
 - the **boxes in the brainstorming room** (§11) — Ken: *the boxes are
   colorized*.
 
-**Never on a lane.** Plot lanes already carry colour (addendum 02 §8), and two
-colour languages on one page is neither. A lane is a thread of the story; a
+**Never on a track.** Plot tracks already carry colour (addendum 02 §8), and two
+colour languages on one page is neither. A track is a thread of the story; a
 contributor colour is a fact about who wrote a line. They must not be mistaken
 for each other, so they never appear in the same role.
 
@@ -827,7 +827,7 @@ is not. It sits on the beat block itself, opposite the ✎ and outside the page'
 own column, so it never crowds the manuscript it describes.
 
 **Where colour is refused.** The stamp is on the printed page and the PDF; the
-screen carries the identity bar and the marks. Nothing colours a lane — a lane
+screen carries the identity bar and the marks. Nothing colours a track — a track
 is a thread of the story and a contributor colour is a fact about who wrote a
 line, and two colour languages on one page is neither (§6.2).
 

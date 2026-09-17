@@ -119,7 +119,7 @@ describe('the sheet', () => {
 
   it('carries the running totals to the foot of each segment', () => {
     let file = commercial();
-    const made = addUnit(file, { laneId: file.lanes[0]!.id, title: 'The tag' });
+    const made = addUnit(file, { trackId: file.tracks[0]!.id, title: 'The tag' });
     file = made.file;
     const beat = addBeat(file, { unitId: made.unit.id, title: 'Tag' });
     file = updateBeat(beat.file, beat.beat.id, {
@@ -300,7 +300,7 @@ describe('writing in the sheet', () => {
 
   it('carries a row into the segment above or below when it runs off the end', () => {
     let file = commercial();
-    const made = addUnit(file, { laneId: file.lanes[0]!.id, title: 'The tag' });
+    const made = addUnit(file, { trackId: file.tracks[0]!.id, title: 'The tag' });
     file = made.file;
     const beat = addBeat(file, { unitId: made.unit.id, title: 'Tag' });
     file = updateBeat(beat.file, beat.beat.id, { manuscript: { elements: [line('Villain Academy.')] } });
@@ -527,7 +527,7 @@ describe('dragging a shot', () => {
 
   it('moves a shot into another segment when it is dropped in one', () => {
     let file = commercial();
-    const made = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Second' });
+    const made = addUnit(file, { trackId: file.tracks[0]!.id, title: 'Second' });
     const added = addRow(made.file, { unitId: made.unit.id });
     file = added.file;
 
@@ -539,7 +539,7 @@ describe('dragging a shot', () => {
 
   it('drops a shot at the end of a segment when it is dropped on the segment', () => {
     let file = commercial();
-    const made = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Second' });
+    const made = addUnit(file, { trackId: file.tracks[0]!.id, title: 'Second' });
     file = made.file;
 
     const moved = dropRowInSegment(file, file.beats[0]!.id, made.unit.id);

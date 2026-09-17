@@ -36,9 +36,9 @@ import {
 const staged = () => {
   let file: ProjectFile = createProjectFile({ title: 'Blackout', format: 'screenplay' });
 
-  const one = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. DINER - NIGHT' });
+  const one = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. DINER - NIGHT' });
   const beatOne = addBeat(one.file, { unitId: one.unit.id, title: 'The bill' });
-  const two = addUnit(beatOne.file, { laneId: file.lanes[0]!.id, title: 'EXT. LOT - LATER' });
+  const two = addUnit(beatOne.file, { trackId: file.tracks[0]!.id, title: 'EXT. LOT - LATER' });
   const beatTwo = addBeat(two.file, { unitId: two.unit.id, title: 'The walk' });
   file = beatTwo.file;
 
@@ -75,7 +75,7 @@ const staged = () => {
     unitTwo: two.unit.id,
     beatOne: beatOne.beat.id,
     beatTwo: beatTwo.beat.id,
-    laneId: file.lanes[0]!.id,
+    trackId: file.tracks[0]!.id,
   };
 };
 
@@ -131,14 +131,14 @@ describe('the filters', () => {
     expect(reviewRows(pinned.file, { standing: 'on_deck' })).toHaveLength(2);
   });
 
-  it('filters by scene and by plot lane, and drops what is not written', () => {
-    const { file, tipId, beatOne, unitOne, unitTwo, laneId } = staged();
+  it('filters by scene and by plot track, and drops what is not written', () => {
+    const { file, tipId, beatOne, unitOne, unitTwo, trackId } = staged();
     const pinned = pinUsage(file, { ownerKind: 'characterization', ownerId: tipId, beatId: beatOne });
 
     expect(reviewRows(pinned.file, { unitId: unitOne })).toHaveLength(1);
     expect(reviewRows(pinned.file, { unitId: unitTwo })).toHaveLength(0);
-    // A lane holds both scenes, but only one piece of work is on the page.
-    expect(reviewRows(pinned.file, { laneId })).toHaveLength(1);
+    // A track holds both scenes, but only one piece of work is on the page.
+    expect(reviewRows(pinned.file, { trackId })).toHaveLength(1);
   });
 
   it('filters by arc stage', () => {
@@ -291,7 +291,7 @@ describe('the review reading the script', () => {
     for (const name of ['MARA', 'DEAKINS', 'SAL']) file = addCharacter(file, { name });
 
     scenes.forEach((cues, index) => {
-      const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: `SCENE ${index + 1}` });
+      const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: `SCENE ${index + 1}` });
       const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'A beat' });
       file = updateBeat(beat.file, beat.beat.id, { manuscript: { elements: cues.map(cue) } });
     });
@@ -364,7 +364,7 @@ describe('the review reading the script', () => {
     const mara = file.characters.find((one) => one.name === 'MARA')!;
 
     expect(scriptPresence(file, { characterId: mara.id })).toHaveLength(1);
-    expect(scriptPresence(file, { laneId: file.lanes[0]!.id }).length).toBeGreaterThan(0);
+    expect(scriptPresence(file, { trackId: file.tracks[0]!.id }).length).toBeGreaterThan(0);
     expect(scriptPresence(file, { query: 'deak' }).map((row) => row.characterName)).toEqual(['DEAKINS']);
   });
 

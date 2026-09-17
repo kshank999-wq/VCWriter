@@ -234,8 +234,8 @@ const oneMarkerPerUnit = (markers: ProjectFile['markers']): ProjectFile['markers
 };
 
 const pruneOrphans = (file: ProjectFile): ProjectFile => {
-  const laneIds = new Set(file.lanes.map((lane) => lane.id as string));
-  const units = file.units.filter((unit) => laneIds.has(unit.laneId));
+  const trackIds = new Set(file.tracks.map((track) => track.id as string));
+  const units = file.units.filter((unit) => trackIds.has(unit.trackId));
   const unitIds = new Set(units.map((unit) => unit.id as string));
   const beats = file.beats.filter((beat) => unitIds.has(beat.unitId));
   const categoryIds = new Set(file.researchCategories.map((category) => category.id as string));
@@ -243,7 +243,7 @@ const pruneOrphans = (file: ProjectFile): ProjectFile => {
 
   const survivingIds = new Set<string>([
     file.project.id,
-    ...laneIds,
+    ...trackIds,
     ...unitIds,
     ...beats.map((beat) => beat.id as string),
     ...categoryIds,

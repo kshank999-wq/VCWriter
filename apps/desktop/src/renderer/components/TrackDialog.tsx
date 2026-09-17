@@ -2,64 +2,64 @@ import { useMemo, useState } from 'react';
 import {
   beatsForUnit,
   countWords,
-  findLane,
-  laneKindSchema,
+  findTrack,
+  trackKindSchema,
   promisesIn,
   relatedEntities,
   sceneCast,
   unitsInStoryOrder,
-  updateLane,
-  type LaneId,
+  updateTrack,
+  type TrackId,
   type ProjectFile,
   type StructuralUnitId,
   nounsFor,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 
-interface LaneDialogProps {
+interface TrackDialogProps {
   file: ProjectFile;
-  laneId: LaneId | null;
+  trackId: TrackId | null;
   onClose(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
 }
 
 /**
- * The plot pop-up (addendum 02 §4): clicking a lane's track header opens
+ * The plot pop-up (addendum 02 §4): clicking a track's track header opens
  * the plot itself — its summary and its arc — over the workspace, to think
- * in; closing it returns to the lanes with nothing else changed. The fields
- * write through `updateLane` as they are typed, so there is no Save.
+ * in; closing it returns to the tracks with nothing else changed. The fields
+ * write through `updateTrack` as they are typed, so there is no Save.
  */
-export function LaneDialog({ file, laneId, onClose, onUpdate }: LaneDialogProps) {
-  const lane = laneId ? findLane(file, laneId) : undefined;
-  const dialog = useModal(Boolean(lane));
+export function TrackDialog({ file, trackId, onClose, onUpdate }: TrackDialogProps) {
+  const track = trackId ? findTrack(file, trackId) : undefined;
+  const dialog = useModal(Boolean(track));
   const [chosen, setChosen] = useState<StructuralUnitId | null>(null);
 
   // This plot's scenes, in story order — the order they are read in, not the
   // order they were made (addendum 02 §19).
   const scenes = useMemo(
-    () => (lane ? unitsInStoryOrder(file).filter((unit) => unit.laneId === lane.id) : []),
-    [file, lane],
+    () => (track ? unitsInStoryOrder(file).filter((unit) => unit.trackId === track.id) : []),
+    [file, track],
   );
   const scene = scenes.find((unit) => unit.id === chosen) ?? null;
 
   return (
-    <dialog ref={dialog} className="lane-dialog" aria-label="Plot" onClose={onClose}>
-      {lane ? (
+    <dialog ref={dialog} className="track-dialog" aria-label="Plot" onClose={onClose}>
+      {track ? (
         <>
-          <header style={{ borderLeftColor: lane.color }}>
-            <div className="lane-dialog-title">
+          <header style={{ borderLeftColor: track.color }}>
+            <div className="track-dialog-title">
               <input
                 className="bar-title"
                 aria-label="Plot name"
-                value={lane.name}
-                onChange={(event) => onUpdate((current) => updateLane(current, lane.id, { name: event.target.value || 'Lane' }))}
+                value={track.name}
+                onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { name: event.target.value || 'Track' }))}
               />
               <select
                 aria-label="Plot kind"
-                value={lane.kind}
-                onChange={(event) => onUpdate((current) => updateLane(current, lane.id, { kind: event.target.value as typeof lane.kind }))}
+                value={track.kind}
+                onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { kind: event.target.value as typeof track.kind }))}
               >
-                {laneKindSchema.options.map((kind) => (
+                {trackKindSchema.options.map((kind) => (
                   <option key={kind} value={kind}>
                     {kind.replace(/_/g, ' ')}
                   </option>
@@ -69,23 +69,23 @@ export function LaneDialog({ file, laneId, onClose, onUpdate }: LaneDialogProps)
                 type="color"
                 className="swatch"
                 aria-label="Plot colour"
-                value={lane.color}
-                onChange={(event) => onUpdate((current) => updateLane(current, lane.id, { color: event.target.value }))}
+                value={track.color}
+                onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { color: event.target.value }))}
               />
             </div>
             <button type="button" className="ghost" aria-label="Close" onClick={onClose}>
               ×
             </button>
           </header>
-          <div className="lane-dialog-body with-scenes">
-            <div className="lane-dialog-main">
+          <div className="track-dialog-body with-scenes">
+            <div className="track-dialog-main">
             <label className="field">
               Summary
               <textarea
                 rows={4}
                 placeholder="What this thread of the story is about"
-                value={lane.description}
-                onChange={(event) => onUpdate((current) => updateLane(current, lane.id, { description: event.target.value }))}
+                value={track.description}
+                onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { description: event.target.value }))}
               />
             </label>
             <label className="field">
@@ -93,8 +93,8 @@ export function LaneDialog({ file, laneId, onClose, onUpdate }: LaneDialogProps)
               <textarea
                 rows={10}
                 placeholder="How it develops: where it starts, what turns it, where it ends"
-                value={lane.arc}
-                onChange={(event) => onUpdate((current) => updateLane(current, lane.id, { arc: event.target.value }))}
+                value={track.arc}
+                onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { arc: event.target.value }))}
               />
             </label>
             {/* What is in the scene the rail has selected: who is in it, what

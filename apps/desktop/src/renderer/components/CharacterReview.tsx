@@ -7,7 +7,7 @@ import {
   castNeverSpoken,
   cuesWithoutCharacter,
   describeRow,
-  lanesInOrder,
+  tracksInOrder,
   reviewRows,
   scriptPresence,
   unitsInStoryOrder,
@@ -15,7 +15,7 @@ import {
   type ArcPointKind,
   type CharacterId,
   type CharacterTraitId,
-  type LaneId,
+  type TrackId,
   type ProjectFile,
   type ReviewRow,
   type StructuralUnitId,
@@ -69,7 +69,7 @@ export function CharacterReview({ file, onOpenCreator }: CharacterReviewProps) {
   const [standing, setStanding] = useState<WorkStanding | ''>('');
   const [arcKind, setArcKind] = useState<ArcPointKind | ''>('');
   const [unitId, setUnitId] = useState<StructuralUnitId | ''>('');
-  const [laneId, setLaneId] = useState<LaneId | ''>('');
+  const [trackId, setTrackId] = useState<TrackId | ''>('');
   const [relatedTo, setRelatedTo] = useState<CharacterId | ''>('');
 
   const cast = file.characters.filter((person) => !person.archived);
@@ -88,10 +88,10 @@ export function CharacterReview({ file, onOpenCreator }: CharacterReviewProps) {
       ...(standing === '' ? {} : { standing }),
       ...(arcKind === '' ? {} : { arcKind }),
       ...(unitId === '' ? {} : { unitId }),
-      ...(laneId === '' ? {} : { laneId }),
+      ...(trackId === '' ? {} : { trackId }),
       ...(relatedTo === '' ? {} : { relatedTo }),
     }),
-    [query, characterId, traitId, standing, arcKind, unitId, laneId, relatedTo],
+    [query, characterId, traitId, standing, arcKind, unitId, trackId, relatedTo],
   );
 
   const rows = useMemo(() => reviewRows(file, filter), [file, filter]);
@@ -214,13 +214,13 @@ export function CharacterReview({ file, onOpenCreator }: CharacterReviewProps) {
 
         <select
           aria-label="Plot"
-          value={laneId as string}
-          onChange={(event) => setLaneId(event.target.value as LaneId)}
+          value={trackId as string}
+          onChange={(event) => setTrackId(event.target.value as TrackId)}
         >
           <option value="">Any plot</option>
-          {lanesInOrder(file).map((lane) => (
-            <option key={lane.id} value={lane.id}>
-              {lane.name}
+          {tracksInOrder(file).map((track) => (
+            <option key={track.id} value={track.id}>
+              {track.name}
             </option>
           ))}
         </select>

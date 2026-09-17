@@ -171,8 +171,8 @@ main {
 
 /* Four places, and whichever section the writer has put in each of them
    (addendum 02 §8). The geometry belongs to the place, not to the section:
-   that is what lets the Script and the lanes trade sides without either of
-   them knowing it happened. (`place`, not `slot`: the lanes already have
+   that is what lets the Script and the tracks trade sides without either of
+   them knowing it happened. (`place`, not `slot`: the tracks already have
    slots, and they are a different thing entirely.) */
 .place {
   display: flex;
@@ -184,7 +184,7 @@ main {
   width: var(--right-width, 300px);
 }
 
-/* The lanes fill what is left under the viewport, and all of the stage when
+/* The tracks fill what is left under the viewport, and all of the stage when
    the viewport is not there. */
 .place-bottom {
   flex: 1;
@@ -359,7 +359,7 @@ main {
   color: var(--text);
 }
 
-/* The stage: viewport and inspector above, the lanes below (addendum 02 §3). */
+/* The stage: viewport and inspector above, the tracks below (addendum 02 §3). */
 .stage {
   display: flex;
   flex-direction: column;
@@ -384,7 +384,7 @@ main {
 
 /* The story along the top as a strip of scenes measured in time, and the
    threads that run through it below. The same column-per-scene grid as the
-   lanes underneath, so the two read as one sequencer. */
+   tracks underneath, so the two read as one sequencer. */
 .viewer {
   display: flex;
   flex-direction: column;
@@ -549,7 +549,7 @@ main {
 }
 
 /* One row per character, one per theme. */
-/* The heading the character lanes hang under, and the rule beside it. */
+/* The heading the character tracks hang under, and the rule beside it. */
 .viewer-cast-head {
   display: flex;
   align-items: center;
@@ -661,9 +661,9 @@ main {
 }
 
 
-/* ------------------------------------------------------------- lane dialog */
+/* ------------------------------------------------------------- track dialog */
 
-.lane-code {
+.track-code {
   font-family: var(--display);
   font-size: 9.5px;
   letter-spacing: 0.08em;
@@ -675,7 +675,7 @@ main {
   flex: 0 0 auto;
 }
 
-.lane-code:hover {
+.track-code:hover {
   background: var(--panel-2);
 }
 
@@ -693,7 +693,7 @@ main {
   display: inline-block;
 }
 
-dialog.lane-dialog {
+dialog.track-dialog {
   width: min(640px, calc(100vw - 48px));
   padding: 0;
   border: 1px solid var(--border);
@@ -703,11 +703,11 @@ dialog.lane-dialog {
   font-size: 12.5px;
 }
 
-dialog.lane-dialog::backdrop {
+dialog.track-dialog::backdrop {
   background: color-mix(in srgb, var(--ink) 65%, transparent);
 }
 
-dialog.lane-dialog > header {
+dialog.track-dialog > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -717,7 +717,7 @@ dialog.lane-dialog > header {
   border-left: 4px solid var(--gold-deep);
 }
 
-.lane-dialog-title {
+.track-dialog-title {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -725,7 +725,7 @@ dialog.lane-dialog > header {
   min-width: 0;
 }
 
-.lane-dialog-title .bar-title {
+.track-dialog-title .bar-title {
   flex: 1;
   min-width: 0;
   background: transparent;
@@ -734,29 +734,29 @@ dialog.lane-dialog > header {
   font-size: 13px;
 }
 
-.lane-dialog-title .bar-title:hover,
-.lane-dialog-title .bar-title:focus {
+.track-dialog-title .bar-title:hover,
+.track-dialog-title .bar-title:focus {
   border-color: var(--border);
 }
 
-.lane-dialog-title select {
+.track-dialog-title select {
   font-size: 11.5px;
   padding: 3px 6px;
 }
 
-.lane-dialog-body {
+.track-dialog-body {
   padding: 14px 18px 12px;
   display: grid;
   gap: 12px;
 }
 
-.lane-dialog-body .field {
+.track-dialog-body .field {
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
-.lane-dialog-body textarea {
+.track-dialog-body textarea {
   font-size: 13px;
   text-transform: none;
   letter-spacing: 0;
@@ -1165,7 +1165,7 @@ dialog.scene-dialog > header.off {
   padding: 1px;
 }
 
-/* A coloured beat carries its colour as an edge, in the lanes and the Script. */
+/* A coloured beat carries its colour as an edge, in the tracks and the Script. */
 .beat-row.coloured {
   box-shadow: inset 3px 0 0 var(--beat-colour);
   padding-left: 9px;
@@ -1385,33 +1385,33 @@ dialog.scene-dialog > header.off {
   opacity: 1;
 }
 
-.lane-head {
+.track-head {
   border-left: 3px solid var(--gold-deep);
   min-height: 44px;
   padding-left: 0;
   padding-right: 4px;
 }
 
-.lane-head .grip {
+.track-head .grip {
   padding: 0 2px;
   opacity: 0;
 }
 
-.lane-head:hover .grip,
-.lane-head .grip:focus-visible {
+.track-head:hover .grip,
+.track-head .grip:focus-visible {
   opacity: 1;
 }
 
-.lane-head .twisty {
+.track-head .twisty {
   width: 16px;
   padding: 1px 0;
 }
 
-.lane-head.collapsed {
+.track-head.collapsed {
   min-height: 26px;
 }
 
-.lane-name {
+.track-name {
   flex: 1;
   color: var(--text);
   letter-spacing: 0.08em;
@@ -1419,13 +1419,13 @@ dialog.scene-dialog > header.off {
   min-width: 0;
 }
 
-.lane-head .ghost.danger {
+.track-head .ghost.danger {
   opacity: 0;
   padding: 0 4px;
 }
 
-.lane-head:hover .ghost.danger,
-.lane-head:focus-within .ghost.danger {
+.track-head:hover .ghost.danger,
+.track-head:focus-within .ghost.danger {
   opacity: 1;
 }
 
@@ -4627,18 +4627,18 @@ dialog.import-dialog {
    one and what is in it appears under the arc, which is what the scene is
    being read against. */
 
-dialog.lane-dialog:has(.with-scenes) {
+dialog.track-dialog:has(.with-scenes) {
   width: min(920px, calc(100vw - 40px));
 }
 
-.lane-dialog-body.with-scenes {
+.track-dialog-body.with-scenes {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 250px;
   gap: 14px;
   align-items: start;
 }
 
-.lane-dialog-main {
+.track-dialog-main {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -5019,7 +5019,7 @@ dialog.lane-dialog:has(.with-scenes) {
    Its own screen, off File. The fields on the left, the page as it will
    print on the right, because a title page is a layout and a column of
    labelled boxes says nothing about whether it looks right. */
-dialog.lane-dialog.title-page-dialog {
+dialog.track-dialog.title-page-dialog {
   width: min(940px, 95vw);
   max-width: none;
 }
@@ -5391,7 +5391,7 @@ dialog.lane-dialog.title-page-dialog {
 
 /* The title page commits on a button rather than as you type, so its footer
    carries the two answers. */
-.title-page-dialog .lane-dialog-foot {
+.title-page-dialog .track-dialog-foot {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -5399,7 +5399,7 @@ dialog.lane-dialog.title-page-dialog {
   border-top: 1px solid var(--border);
 }
 
-.title-page-dialog .lane-dialog-foot > p {
+.title-page-dialog .track-dialog-foot > p {
   margin: 0;
   flex: 1;
 }
@@ -8532,7 +8532,7 @@ dialog.preferences .field {
 
    Colour is the fastest fact on a page, and it is used in exactly the places
    §6.2 allows: the bar above a writer's draft, the mark on a record they wrote,
-   and the stamp in the corner of the printed page. Never on a lane — a lane is
+   and the stamp in the corner of the printed page. Never on a track — a track is
    a thread of the story, and two colour languages on one page is neither. */
 
 .room-bar {
@@ -10683,7 +10683,7 @@ dialog.projects-dialog {
    sheet. The sheet is on the right because that is what everything else is in
    service of. */
 
-/* The element selector, as the other wide dialogs use, or `dialog.lane-dialog`
+/* The element selector, as the other wide dialogs use, or `dialog.track-dialog`
    beats it on specificity and the three columns land in 640px. */
 dialog.chapter-page-dialog {
   width: min(1180px, calc(100vw - 40px));
@@ -10955,7 +10955,7 @@ dialog.chapter-page-dialog {
   order: 9;
 }
 
-/* ------------------------------------ the setups & payoffs lane (spec §6) */
+/* ------------------------------------ the setups & payoffs track (spec §6) */
 /* A row per promise: rings for the setups, a diamond for the payoff, and a
    rule between them so the gap is the thing you see. */
 
@@ -11171,7 +11171,7 @@ dialog.chapter-page-dialog {
   text-decoration: line-through;
 }
 
-/* ------------------------------------------------------- the two lanes */
+/* ------------------------------------------------------- the two tracks */
 
 .thematic-cell {
   height: 18px;
@@ -11603,7 +11603,7 @@ dialog.chapter-page-dialog {
 /* ------------------------------------------------------------------ Links
    The story wiring diagram (addendum 15 §18): scenes across the top, the
    structural systems beneath, connectors showing how each element travels.
-   Every lane is drawn by the same code, so there is one set of rules here
+   Every track is drawn by the same code, so there is one set of rules here
    rather than one per module — which is the stylesheet half of §21. */
 
 .links-timeline {
@@ -11640,7 +11640,7 @@ dialog.chapter-page-dialog {
   text-align: center;
 }
 
-.links-lanes,
+.links-tracks,
 .links-widths {
   display: flex;
   gap: 4px;
@@ -11674,9 +11674,9 @@ dialog.chapter-page-dialog {
   min-width: 100%;
 }
 
-/* The lane titles and the "nothing here yet" lines are not of a column:
+/* The track titles and the "nothing here yet" lines are not of a column:
    they run the width of the board. */
-.links-lane-title,
+.links-track-title,
 .links-empty {
   grid-column: 1 / -1;
 }
@@ -11728,7 +11728,7 @@ dialog.chapter-page-dialog {
   max-width: 100%;
 }
 
-.links-lane-title {
+.links-track-title {
   margin: 14px 0 4px;
   font-size: 11px;
   letter-spacing: 0.08em;
@@ -11771,7 +11771,7 @@ dialog.chapter-page-dialog {
 }
 
 /* The under-prepared payoff's light, the same red the Setups screen uses —
-   the lane does not decide what is wrong, it only draws what it was told. */
+   the track does not decide what is wrong, it only draws what it was told. */
 .links-warn {
   width: 7px;
   height: 7px;

@@ -19,7 +19,7 @@ import type {
   BeatId,
   CharacterCategoryId,
   CharacterId,
-  LaneId,
+  TrackId,
   ManuscriptElementId,
   ResearchItemId,
   StructuralUnitId,
@@ -121,7 +121,7 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
   const base = createProjectFile({ title, format, author });
   const timestamp = nowIso();
   const projectId = base.project.id;
-  const laneId = base.lanes[0]?.id as LaneId;
+  const trackId = base.tracks[0]?.id as TrackId;
 
   // ------------------------------------------------------------- the cast
   const headings = characterCategoriesInOrder(base);
@@ -175,7 +175,7 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
       structuralUnitSchema.parse({
         id: unitId,
         projectId,
-        laneId,
+        trackId,
         kind: defaultUnitKind(format),
         // The slugline is the scene's title as well as its first line: the
         // heading prints, the title is what the timeline shows.

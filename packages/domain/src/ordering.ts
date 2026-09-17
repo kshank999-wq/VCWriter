@@ -1,7 +1,7 @@
 /**
  * Fractional index ordering.
  *
- * Story structure is reordered constantly (spec §5.1, §5.2, §5.3: lanes,
+ * Story structure is reordered constantly (spec §5.1, §5.2, §5.3: tracks,
  * scene/chapter containers and beats are all drag-reorderable). Renumbering
  * every sibling on each drag would rewrite whole scenes and fight sync
  * (spec §14: optimistic local editing with safe merge). Instead every ordered

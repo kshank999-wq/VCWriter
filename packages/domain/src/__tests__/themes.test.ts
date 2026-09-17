@@ -15,7 +15,7 @@ import {
   removeMotif,
   removeTheme,
   tagPassage,
-  thematicLanes,
+  thematicTracks,
   thematicWorkIn,
   themesOfMotif,
   toRows,
@@ -48,11 +48,11 @@ const para = (text: string) => ({
 /** A book of several scenes, each with one paragraph. */
 const book = (lines: string[]) => {
   let file: ProjectFile = createProjectFile({ title: 'The Bell', format: 'novel' });
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   const beatIds: BeatId[] = [];
   const elementIds: ManuscriptElementId[] = [];
   for (const line of lines) {
-    const scene = addUnit(file, { laneId, title: line.slice(0, 20) });
+    const scene = addUnit(file, { trackId, title: line.slice(0, 20) });
     const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'a beat' });
     const element = para(line);
     file = updateBeat(beat.file, beat.beat.id, { manuscript: { elements: [element] } });
@@ -200,7 +200,7 @@ describe('where the occurrences are is a reading', () => {
     // Drag the last scene to the front. Nothing is recalculated; the order is
     // simply read again.
     const last = unitsInStoryOrder(file).at(-1)!;
-    const moved = moveUnit(file, { unitId: last.id, toLaneId: last.laneId, index: 0 });
+    const moved = moveUnit(file, { unitId: last.id, toTrackId: last.trackId, index: 0 });
     const after = occurrencesOf(moved, 'motif', motif.motif.id as string);
     expect(after.map((one) => one.link.beatId)).toEqual([beatIds[2], beatIds[0]]);
   });
@@ -250,7 +250,7 @@ describe('where the occurrences are is a reading', () => {
   });
 });
 
-describe('the two lanes', () => {
+describe('the two tracks', () => {
   it('are two groups, never one', () => {
     const { file: made, beatIds } = book(['One.', 'Two.']);
     let file = made;
@@ -263,15 +263,15 @@ describe('the two lanes', () => {
       file = tagPassage(file, { kind: 'motif', ownerId: motif.motif.id as string, beatId }).file;
     }
 
-    const lanes = thematicLanes(file);
-    expect(lanes.themes).toHaveLength(1);
-    expect(lanes.motifs).toHaveLength(1);
-    expect(lanes.themes[0]!.marks).toHaveLength(1);
-    expect(lanes.motifs[0]!.marks).toHaveLength(2);
-    expect(lanes.motifs[0]!.detail).toBe('object');
+    const tracks = thematicTracks(file);
+    expect(tracks.themes).toHaveLength(1);
+    expect(tracks.motifs).toHaveLength(1);
+    expect(tracks.themes[0]!.marks).toHaveLength(1);
+    expect(tracks.motifs[0]!.marks).toHaveLength(2);
+    expect(tracks.motifs[0]!.detail).toBe('object');
   });
 
-  it('leaves something set aside off the lane, and draws no orphan', () => {
+  it('leaves something set aside off the track, and draws no orphan', () => {
     const { file: made, beatIds, elementIds } = book(['One.', 'Two.']);
     let file = made;
     const motif = addMotif(file, { name: 'A motif' });
@@ -285,10 +285,10 @@ describe('the two lanes', () => {
     const cut = updateBeat(file, beatIds[0]!, { manuscript: { elements: [] } });
 
     // An orphan has no position, so it cannot be drawn at one.
-    expect(thematicLanes(cut).motifs[0]!.marks).toHaveLength(0);
+    expect(thematicTracks(cut).motifs[0]!.marks).toHaveLength(0);
 
     const aside = updateMotif(cut, motif.motif.id, { state: 'set_aside' });
-    expect(thematicLanes(aside).motifs).toHaveLength(0);
+    expect(thematicTracks(aside).motifs).toHaveLength(0);
   });
 });
 

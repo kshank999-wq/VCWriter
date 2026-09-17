@@ -171,7 +171,7 @@ still be read while the scene is written.
 
 A Scene row carries a compact summary so the writer can understand it without
 opening the script: title, optional number, a short synopsis or statement of
-purpose, POV or principal character, location, plot lane, and status.
+purpose, POV or principal character, location, plot track, and status.
 
 **Lightweight and collapsible**, and empty until filled in — an unanswered
 field is not a gap to be nagged about. Where the scene is promoted these are
@@ -510,7 +510,7 @@ scene is without opening the script.
 **The card shows what exists**, which is the rule the whole module follows:
 read through rather than copy across. A row that is still a plan has a
 synopsis and a status and no more, because that is all a plan is. A row in the
-script gains a number, a purpose, a point of view and the lane it is drawn in
+script gains a number, a purpose, a point of view and the track it is drawn in
 — and those are **the scene's own fields, shown here rather than copied here**
 (§7). So promotion *adds* to the card rather than moving it, and there is never
 a second set of fields to keep in step.

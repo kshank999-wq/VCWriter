@@ -106,7 +106,7 @@ describe('the menu bar', () => {
     fireEvent.click(screen.getByText('Window'));
     const menu = within(screen.getByRole('menu', { name: 'Window' }));
     expect(menu.getByText('Script in its own window').closest('button')).toHaveProperty('ariaChecked', 'true');
-    expect(menu.getByText('Plot lanes in its own window').closest('button')).toHaveProperty('ariaChecked', 'false');
+    expect(menu.getByText('Plot tracks in its own window').closest('button')).toHaveProperty('ariaChecked', 'false');
   });
 
   it('greys a command that cannot be run rather than hiding it', () => {
@@ -422,7 +422,7 @@ describe('the menus a board is written from', () => {
     expect(labels('novel', 'window')).toContain('Manuscript in its own window');
     expect(labels('short_form', 'window')).toContain('Sheet in its own window');
     expect(labels('short_form', 'window')).toContain('Timeline in its own window');
-    expect(labels('short_form', 'window')).not.toContain('Plot lanes in its own window');
+    expect(labels('short_form', 'window')).not.toContain('Plot tracks in its own window');
   });
 
   it('does not offer a viewer to a format that has none', () => {

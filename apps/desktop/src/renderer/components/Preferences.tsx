@@ -87,7 +87,7 @@ export function Preferences({
       </section>
 
       <section>
-        <h3>Lanes</h3>
+        <h3>Tracks</h3>
         <label className="field">
           <span>Cards before a new column</span>
           <input

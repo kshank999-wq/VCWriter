@@ -1,17 +1,17 @@
 import { layoutForFile, paginateElements } from './pagination.js';
-import { beatsForUnit, beatsInScript, lanesInOrder, markersInStoryOrder, unitsInStoryOrder } from './selectors.js';
-import type { Lane, StoryMarker, StructuralUnit } from './entities/structure.js';
+import { beatsForUnit, beatsInScript, tracksInOrder, markersInStoryOrder, unitsInStoryOrder } from './selectors.js';
+import type { Track, StoryMarker, StructuralUnit } from './entities/structure.js';
 import type { StoryEntityRef } from './entities/links.js';
 import type { ProjectFile } from './project-file.js';
 import type { StructuralUnitId } from './ids.js';
 
 /**
- * The geometry of the Plot Lanes timeline (addendum 02 §5).
+ * The geometry of the Plot Tracks timeline (addendum 02 §5).
  *
  * The horizontal axis is story order measured in pages, so a scene block is
  * as wide as the pages it takes and the ruler above it is page numbers. This
  * module computes that once, in the domain, so the ruler, the acts track and
- * every lane row draw from the same numbers — and so the numbers can be
+ * every track row draw from the same numbers — and so the numbers can be
  * tested without a browser.
  *
  * Pages are fractional here: a scene that fills a page and a third occupies
@@ -41,7 +41,7 @@ export interface ActBand {
 
 export interface StoryLayout {
   spans: StorySpan[];
-  lanes: Lane[];
+  tracks: Track[];
   /** Total of every scene's pages; the length of the axis. */
   totalPages: number;
   acts: ActBand[];
@@ -86,7 +86,7 @@ export const storyLayout = (file: ProjectFile): StoryLayout => {
     return { marker, fromIndex, toIndex: Math.max(fromIndex, toIndex) };
   });
 
-  return { spans, lanes: lanesInOrder(file), totalPages: cursor, acts };
+  return { spans, tracks: tracksInOrder(file), totalPages: cursor, acts };
 };
 
 export interface TimelineArc {

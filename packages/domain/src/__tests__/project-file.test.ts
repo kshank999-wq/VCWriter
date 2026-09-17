@@ -13,8 +13,8 @@ import { projectStats } from '../selectors.js';
 describe('project file format', () => {
   it('round-trips a project through serialize/parse without losing structure', () => {
     let file = createProjectFile({ title: 'Cross-platform Test', format: 'screenplay', author: 'K. Shank' });
-    const laneId = file.lanes[0]!.id;
-    const created = addUnit(file, { laneId, title: 'Second Scene' });
+    const trackId = file.tracks[0]!.id;
+    const created = addUnit(file, { trackId, title: 'Second Scene' });
     file = addBeat(created.file, { unitId: created.unit.id, title: 'Turn' }).file;
     const ideas = file.researchCategories.find((category) => category.systemKey === 'ideas')!;
     file = addResearchItem(file, { categoryId: ideas.id, title: 'A note' });
@@ -22,7 +22,7 @@ describe('project file format', () => {
     const reloaded = parseProjectFile(JSON.parse(serializeProjectFile(file)));
 
     expect(reloaded.project.title).toBe('Cross-platform Test');
-    expect(reloaded.lanes).toHaveLength(file.lanes.length);
+    expect(reloaded.tracks).toHaveLength(file.tracks.length);
     expect(reloaded.units).toHaveLength(file.units.length);
     expect(reloaded.beats).toHaveLength(file.beats.length);
     expect(reloaded.researchItems).toHaveLength(1);

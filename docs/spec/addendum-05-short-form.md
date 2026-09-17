@@ -15,14 +15,14 @@ each row and a running time against it.
 
 In a short-form project the **Script becomes the AV sheet**. Not a tab beside
 it — instead of it. Everything else about the workspace stays where it is:
-the same lanes, the same timeline, the same research, the same editors.
+the same tracks, the same timeline, the same research, the same editors.
 
 | | Screenplay | Short form |
 | --- | --- | --- |
 | The finished document | Script — pages | **The sheet** — rows |
 | The unit of work | A beat, written as manuscript | **A row**: audio, visual, a frame, a duration |
 | What it is measured in | Pages | **Seconds** |
-| The timeline | Lanes of plot, acts, threads, links | **One track**, segments and their dialogue |
+| The timeline | Tracks of plot, acts, threads, links | **One track**, segments and their dialogue |
 | Above it | Screen time from the page count | **The storyboard**, frame by frame |
 
 **Nothing new is invented underneath.** A segment is a scene; a row is a
@@ -90,8 +90,8 @@ does not are taken out** rather than left there greyed:
 
 | Gone in short form | Why |
 | --- | --- |
-| `+ Scene`, `+ Beat`, `+ Lane` | The work happens on the sheet. A segment and a row are made there. |
-| Plot lanes | A commercial has no subplot. There is nothing to lane. |
+| `+ Scene`, `+ Beat`, `+ Track` | The work happens on the sheet. A segment and a row are made there. |
+| Plot tracks | A commercial has no subplot. There is nothing to track. |
 | Acts | There are no act breaks in a thirty. |
 | Threads, and Links | Nobody tracks a character's arc across a spot. |
 | The **Timeline & Viewer** | Screen time from a page count, and threads. A commercial has neither (§3e). |
@@ -173,8 +173,8 @@ Short form is written **on the sheet**, so the sheet gets the room:
   inspector.** The Timeline & Viewer is a screenplay's screen — screen time
   from a page count, threads, markers — and a commercial has none of that.
   The side column goes with it.
-- The strip under the sheet is called **Timeline**, not Plot lanes. There is
-  no subplot to lane.
+- The strip under the sheet is called **Timeline**, not Plot tracks. There is
+  no subplot to track.
 - The window's own count says **the running time and the shots**, not pages
   and beats. A commercial has no pages anywhere in it.
 
@@ -381,7 +381,7 @@ Everything below already exists on a beat except where it says otherwise.
 2. **Built.** Writing in it: audio and visual edited in place, rows added,
    removed and reordered, durations typed — the sheet as the place the work
    happens, in place of the Script.
-3. **Built.** The workspace stripped (§3): no scene, beat or lane; no acts,
+3. **Built.** The workspace stripped (§3): no scene, beat or track; no acts,
    threads or links; Scene becomes Segment wherever it is written; one
    track, with each segment's dialogue laid along its time; and Tab marks a
    line as spoken (§3b).
@@ -459,13 +459,13 @@ there is only one of it. Nothing is kept in step; there is nothing to keep.
 Open a short-form project and the things a script needs and a commercial does
 not are **gone**, not greyed:
 
-- `+ Scene`, `+ Beat`, `+ Lane` and `+ Marker` leave the timeline's toolbar.
+- `+ Scene`, `+ Beat`, `+ Track` and `+ Marker` leave the timeline's toolbar.
   A segment and a row are made on the sheet.
 - The **Acts** and **Links** tracks go, in the timeline and in the Timeline &
   Viewer, and so do **Markers** and **Threads** above. Nobody tracks an arc
   across a thirty.
-- **One track**, not a lane per plot. Its head says **Segments**, and it holds
-  every segment there is — there is no subplot to lane.
+- **One track**, not a track per plot. Its head says **Segments**, and it holds
+  every segment there is — there is no subplot to track.
 - **Segment**, everywhere the word Scene was.
 - A segment on the timeline is drawn as `SEGMENT 1 — Know your enemy`, and
   under it, **no beats**: the dialogue, each row at the width of its own

@@ -66,7 +66,7 @@ travels — which is the reverse of how the record reads. A dependency pointing
 backwards in the script is drawn where it actually falls rather than refused, the
 same choice Setups & Payoffs makes about a setup after its payoff.
 
-## 4. The lane engine (§21)
+## 4. The track engine (§21)
 
 §21 is the critical instruction: *build Links as VC Writer's shared
 story-relationship visualization layer, not as a standalone feature.*
@@ -76,19 +76,19 @@ and a scene index**, and nothing else — it cannot tell a setup from a motif;
 what it has of either is a position, a label, a shape and whether something is
 wrong. Each module contributes rows through one small reader:
 
-| Lane | Reader | Edges |
+| Track | Reader | Edges |
 | --- | --- | --- |
 | Links | `threadRows` | sequence, or the writer's dependencies |
-| Setups & Payoffs | `setupRows` (over `setupLane`) | every setup → the payoff |
-| Themes & Motifs | `thematicRows` (over `thematicLanes`) | sequence, per row |
+| Setups & Payoffs | `setupRows` (over `setupTrack`) | every setup → the payoff |
+| Themes & Motifs | `thematicRows` (over `thematicTracks`) | sequence, per row |
 | Character Arcs | `arcRows` (over `arcInStoryOrder`) | declared cross-arc links, else sequence |
 
-§19's next lane — locations, objects, mysteries, questions — is another reader
+§19's next track — locations, objects, mysteries, questions — is another reader
 and **no change to the engine or to anything that draws it**. The screen proves
-it: `LinksTimeline.tsx` has one `LaneRow` component, used by all four.
+it: `LinksTimeline.tsx` has one `TrackRow` component, used by all four.
 
 Two smaller decisions inside it. Themes and motifs stay **two `sourceKind`s**
-in one lane, because addendum 12 §6's rule that they are never averaged
+in one track, because addendum 12 §6's rule that they are never averaged
 together holds here too. And a character arc's *declared* relationships
 **replace** its chain rather than joining it: two pictures of the same points
 would say the order twice and the claim once, and the claim is the part worth
@@ -97,10 +97,10 @@ seeing.
 ## 5. What the screen does
 
 **Research ▸ Links.** The scene timeline across the top from the script's own
-units, the four lanes beneath it, and the link list and inspector below.
+units, the four tracks beneath it, and the link list and inspector below.
 
-- **One grid** carries the ruler and every lane, so a node is under its scene by
-  construction rather than by two widths agreeing. §2's *all lanes remain
+- **One grid** carries the ruler and every track, so a node is under its scene by
+  construction rather than by two widths agreeing. §2's *all tracks remain
   horizontally synchronised* is not a thing to remember to maintain.
 - **Whole story means the whole story fits**: its column is measured from the
   window rather than fixed, because a fixed small column drew a 154-pixel board
@@ -112,7 +112,7 @@ units, the four lanes beneath it, and the link list and inspector below.
 - At the narrowest column several moments in one scene collapse into one mark
   with a count (§15's density rule). `pilesOf` groups them; the drawing decides,
   because it is the part that knows how wide a scene is.
-- **Toggle each lane, isolate one element, clear the lot** (§14). The count says
+- **Toggle each track, isolate one element, clear the lot** (§14). The count says
   how many rows a filter put away, so a filtered board cannot look unfiltered.
 - Click a node to inspect it, double-click to go to its beat in the script
   (§10). There is **no move control anywhere** (§13).
@@ -135,7 +135,7 @@ through. A moment whose writing was cut is kept and struck through.
 | --- | --- |
 | The thread | `packages/domain/src/entities/threads.ts` |
 | The module | `packages/domain/src/threads.ts` |
-| The lane engine | `packages/domain/src/story-map.ts` |
+| The track engine | `packages/domain/src/story-map.ts` |
 | The screen | `apps/desktop/src/renderer/components/LinksTimeline.tsx` |
 | From the writing | `apps/desktop/src/renderer/components/BeatBody.tsx` — `AddToThread` |
 | The table | `packages/supabase/migrations/0049_story_threads.sql` |

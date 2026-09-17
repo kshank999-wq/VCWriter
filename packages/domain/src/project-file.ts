@@ -48,8 +48,8 @@ import {
   projectSettingsSchema,
   type ProjectFormat,
 } from './entities/project.js';
-import { LANE_COLOURS, beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
-import type { CharacterCategoryId, LaneId, ProjectId, ResearchCategoryId, StructuralUnitId, UserId } from './ids.js';
+import { TRACK_COLOURS, beatSchema, trackSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
+import type { CharacterCategoryId, TrackId, ProjectId, ResearchCategoryId, StructuralUnitId, UserId } from './ids.js';
 import { isInstructional, isProseFormat } from './formats.js';
 
 /**
@@ -65,7 +65,7 @@ import { isInstructional, isProseFormat } from './formats.js';
  *
  * Versions:
  *  1 — initial release.
- *  2 — scene order is global rather than per lane, and `markers[]` exists
+ *  2 — scene order is global rather than per track, and `markers[]` exists
  *      (addendum 02 §8, §9).
  */
 export const PROJECT_FORMAT_VERSION = 2;
@@ -77,7 +77,7 @@ export const projectFileSchema = z.object({
   savedAt: z.string().datetime({ offset: true }),
   project: projectSchema,
   settings: projectSettingsSchema,
-  lanes: z.array(laneSchema).default([]),
+  tracks: z.array(trackSchema).default([]),
   units: z.array(structuralUnitSchema).default([]),
   beats: z.array(beatSchema).default([]),
   markers: z.array(storyMarkerSchema).default([]),
@@ -201,7 +201,7 @@ interface Migration {
 interface OrderedRow {
   id?: unknown;
   orderKey?: unknown;
-  laneId?: unknown;
+  trackId?: unknown;
 }
 
 const byOrderKey = (a: OrderedRow, b: OrderedRow): number => {
@@ -212,27 +212,27 @@ const byOrderKey = (a: OrderedRow, b: OrderedRow): number => {
 };
 
 /**
- * Format 1 ordered scenes within their lane and printed lane by lane. Format
+ * Format 1 ordered scenes within their track and printed track by track. Format
  * 2 orders scenes across the project. Re-key every scene in the order it
- * printed before — lane order, then scene order — so the manuscript reads
+ * printed before — track order, then scene order — so the manuscript reads
  * exactly as it did until the writer moves something.
  */
 const migrateToGlobalStoryOrder = (doc: Record<string, unknown>): Record<string, unknown> => {
-  const lanes = Array.isArray(doc['lanes']) ? ([...doc['lanes']] as OrderedRow[]).sort(byOrderKey) : [];
+  const tracks = Array.isArray(doc['tracks']) ? ([...doc['tracks']] as OrderedRow[]).sort(byOrderKey) : [];
   const units = Array.isArray(doc['units']) ? ([...doc['units']] as OrderedRow[]) : [];
 
   const printed: OrderedRow[] = [];
-  for (const lane of lanes) {
-    printed.push(...units.filter((unit) => unit.laneId === lane.id).sort(byOrderKey));
+  for (const track of tracks) {
+    printed.push(...units.filter((unit) => unit.trackId === track.id).sort(byOrderKey));
   }
-  // A scene whose lane is missing still has to land somewhere: after everything.
-  printed.push(...units.filter((unit) => !lanes.some((lane) => lane.id === unit.laneId)).sort(byOrderKey));
+  // A scene whose track is missing still has to land somewhere: after everything.
+  printed.push(...units.filter((unit) => !tracks.some((track) => track.id === unit.trackId)).sort(byOrderKey));
 
   const keys = initialOrderKeys(printed.length);
   const keyFor = new Map(printed.map((unit, index) => [unit, keys[index]]));
   // The re-key is an edit as far as sync is concerned: stamped now, so the
   // next merge pushes the global keys to the cloud rather than letting a
-  // copy that still carries per-lane keys win and interleave the two.
+  // copy that still carries per-track keys win and interleave the two.
   const stamp = nowIso();
 
   return {
@@ -303,13 +303,13 @@ export const defaultUnitKind = (format: ProjectFormat): 'scene' | 'chapter' =>
   isProseFormat(format) ? 'chapter' : 'scene';
 
 /**
- * A new project starts usable: one main-plot lane holding one empty
+ * A new project starts usable: one main-plot track holding one empty
  * scene/chapter with one beat, plus the default research categories (§7.1).
  */
 export const createProjectFile = (options: CreateProjectOptions): ProjectFile => {
   const timestamp = nowIso();
   const projectId = newId<ProjectId>();
-  const laneId = newId<LaneId>();
+  const trackId = newId<TrackId>();
   const unitId = newId<StructuralUnitId>();
   const unitKind = defaultUnitKind(options.format);
 
@@ -367,13 +367,13 @@ export const createProjectFile = (options: CreateProjectOptions): ProjectFile =>
       updatedAt: timestamp,
     },
     settings: projectSettingsSchema.parse({}),
-    lanes: [
+    tracks: [
       {
-        id: laneId,
+        id: trackId,
         projectId,
         name: 'Main Plot',
         kind: 'main_plot',
-        color: LANE_COLOURS[0],
+        color: TRACK_COLOURS[0],
         orderKey: orderKeyBetween(null, null),
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -383,7 +383,7 @@ export const createProjectFile = (options: CreateProjectOptions): ProjectFile =>
       {
         id: unitId,
         projectId,
-        laneId,
+        trackId,
         kind: unitKind,
         title: unitKind === 'chapter' ? 'Chapter One' : 'Opening Scene',
         sequenceLabel: unitKind === 'chapter' ? 'Chapter 1' : 'Sc. 1',

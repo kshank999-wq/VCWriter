@@ -582,14 +582,14 @@ at depth 2 whoever *those* people are joined to. The graph is walked in both
 directions — being read by somebody connects you to them as much as reading them
 does.
 
-**A lane filter counts somebody as in a plot because they speak there**
-(`charactersInLane`), the same way the rest of the module works out who is in a
+**A track filter counts somebody as in a plot because they speak there**
+(`charactersInTrack`), the same way the rest of the module works out who is in a
 beat, rather than because anybody filed them under it.
 
 **A scene range is now beside it** (§12 of this addendum), and the two are not
 the same question
-said differently: a lane is a subplot and a range is a stretch of the script, so
-*who is in act two and how do they connect there* is a question the lane cannot
+said differently: a track is a subplot and a range is a stretch of the script, so
+*who is in act two and how do they connect there* is a question the track cannot
 answer. Both narrow the cast, and a writer who sets both gets the people who
 pass both.
 
@@ -783,7 +783,7 @@ presence report that silently omitted them would be a report you cannot trust.
 character* by testing whether the cue **starts with** the name, which quietly
 made `MARABEL` speak as `MARA`. The cast list already had the right rule —
 strip the extension and the dual caret, then match whole — so it is now one
-function, `charactersCalled`, and `peopleSpeakingIn` and `charactersInLane` both
+function, `charactersCalled`, and `peopleSpeakingIn` and `charactersInTrack` both
 use it. It returns a *list* because an alias may collide with somebody else's
 name, and silently picking one of the two would put a speech in the wrong
 character's scene. `castForNewEpisode`'s *carry whoever spoke* in `episodes.ts`
@@ -859,10 +859,10 @@ machinery gets extracted then, from three real examples rather than one guess.
 `describeRange` in `character-map.ts`; the **Scenes … to …** pair in the map's
 bar.
 
-*His* §12, the mind map. Stage 8 left this out on the grounds that the plot lane
-beside it answered the same question. It does not. A lane is a **subplot** and a range is a **stretch
+*His* §12, the mind map. Stage 8 left this out on the grounds that the plot track
+beside it answered the same question. It does not. A track is a **subplot** and a range is a **stretch
 of the script**, and the question a range answers — *who is in act two, and how
-do they connect there* — cannot be asked of a lane at all. Both narrow the cast,
+do they connect there* — cannot be asked of a track at all. Both narrow the cast,
 so a writer who sets both gets the people who pass both, which is what setting
 two filters means everywhere else.
 

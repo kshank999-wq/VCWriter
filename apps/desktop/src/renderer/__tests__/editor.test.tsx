@@ -514,7 +514,7 @@ describe('page preview', () => {
 describe('a book’s contents page', () => {
   const novel = (): ProjectFile => {
     let file = createProjectFile({ title: 'The Lighthouse', format: 'novel' });
-    const laneId = file.lanes[0]!.id;
+    const trackId = file.tracks[0]!.id;
     const fill = (current: ProjectFile, unitId: string, text: string) =>
       updateBeat(current, current.beats.find((beat) => (beat.unitId as string) === unitId)!.id, {
         manuscript: {
@@ -525,7 +525,7 @@ describe('a book’s contents page', () => {
     file = fill(file, file.units[0]!.id as string, 'The lamp turned all that long night.');
     file = addMarker(file, { unitId: file.units[0]!.id, title: 'The Lamp', kind: 'chapter' }).file;
 
-    const made = addUnit(file, { laneId, title: 'Two' });
+    const made = addUnit(file, { trackId, title: 'Two' });
     file = addBeat(made.file, { unitId: made.unit.id }).file;
     file = fill(file, made.unit.id as string, 'She did not sleep.');
     file = addMarker(file, { unitId: made.unit.id, title: 'The Wreck', kind: 'chapter' }).file;

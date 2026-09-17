@@ -52,7 +52,7 @@ export type CommandId =
   // Window
   | 'window.script'
   | 'window.viewer'
-  | 'window.lanes'
+  | 'window.tracks'
   | 'window.inspector'
   | 'window.research'
   | 'window.outliner'
@@ -193,7 +193,7 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       ...(format === 'short_form'
         ? []
         : [{ command: 'window.viewer' as CommandId, label: `${names.viewer} in its own window`, checkable: true }]),
-      { command: 'window.lanes', label: `${names.lanes} in its own window`, checkable: true },
+      { command: 'window.tracks', label: `${names.tracks} in its own window`, checkable: true },
       { command: 'window.inspector', label: 'Inspector in its own window', checkable: true },
       // The three rooms. Each is a whole screen's work done beside the
       // writing rather than in it, and each covers the workspace when it is

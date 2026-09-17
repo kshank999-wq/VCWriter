@@ -141,10 +141,10 @@ export function PageSetup({
   const set = (patch: Partial<PrintSetup>) => onSetup({ ...setup, ...patch });
 
   return (
-    <dialog ref={dialog} className="lane-dialog page-setup" aria-label="Page setup" onClose={onClose}>
+    <dialog ref={dialog} className="track-dialog page-setup" aria-label="Page setup" onClose={onClose}>
       {open ? (
         <>
-          <header className="lane-dialog-title">
+          <header className="track-dialog-title">
             <span className="bar-title">Page setup</span>
             <button type="button" className="ghost" aria-label="Close" onClick={onClose}>
               ×

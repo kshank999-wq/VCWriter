@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   beatsForUnit,
-  findLane,
+  findTrack,
   findUnit,
   isProseFormat,
   nounsFor,
@@ -76,7 +76,7 @@ export function SceneDialog({ file, unitId, onClose, onUpdate, onOpenBeat, onSel
     : nouns.unit;
 
   return (
-    <dialog ref={dialog} className="lane-dialog scene-dialog" aria-label={noun} onClose={onClose}>
+    <dialog ref={dialog} className="track-dialog scene-dialog" aria-label={noun} onClose={onClose}>
       {unit ? (
         <SceneDialogBody
           file={file}
@@ -112,7 +112,7 @@ function SceneDialogBody({
   onOpenBeat: SceneDialogProps['onOpenBeat'];
   onSelectBeat: SceneDialogProps['onSelectBeat'];
 }) {
-  const lane = findLane(file, unit.laneId);
+  const track = findTrack(file, unit.trackId);
   const prose = isProseFormat(file.project.format);
   const cast = sceneCast(file, unit.id);
   const promises = promisesIn(file, { unitId: unit.id });
@@ -132,10 +132,10 @@ function SceneDialogBody({
 
   return (
     <>
-      <header style={{ borderLeftColor: lane?.color }} className={unit.inScript ? '' : 'off'}>
+      <header style={{ borderLeftColor: track?.color }} className={unit.inScript ? '' : 'off'}>
         <span className="scene-dialog-label muted">
           {unit.sequenceLabel || noun}
-          {lane ? ` · ${lane.name}` : ''}
+          {track ? ` · ${track.name}` : ''}
         </span>
         <input
           className="bar-title scene-dialog-name"

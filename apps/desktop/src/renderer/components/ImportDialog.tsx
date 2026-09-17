@@ -96,10 +96,10 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
   };
 
   return (
-    <dialog ref={dialog} className="lane-dialog import-dialog" aria-label="Import a script" onClose={close}>
+    <dialog ref={dialog} className="track-dialog import-dialog" aria-label="Import a script" onClose={close}>
       {open ? (
         <>
-          <header className="lane-dialog-title">
+          <header className="track-dialog-title">
             <span className="bar-title">Import a script</span>
             <button type="button" className="ghost" aria-label="Close" onClick={close}>
               ×

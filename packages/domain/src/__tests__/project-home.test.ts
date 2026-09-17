@@ -41,10 +41,10 @@ const DOT = 'data:image/png;base64,iVBORw0KGgo=';
 const book = (chapters = 2): { file: ProjectFile; beatIds: string[] } => {
   let file = createProjectFile({ title: 'The Brass Key', format: 'screenplay' });
   const starters = new Set(file.units.map((one) => one.id as string));
-  const laneId = file.lanes[0]!.id;
+  const trackId = file.tracks[0]!.id;
   const beatIds: string[] = [];
   for (let at = 0; at < chapters; at += 1) {
-    const unit = addUnit(file, { laneId, title: `Scene ${at + 1}` });
+    const unit = addUnit(file, { trackId, title: `Scene ${at + 1}` });
     const beat = addBeat(unit.file, { unitId: unit.unit.id, title: `Beat ${at + 1}` });
     file = beat.file;
     beatIds.push(beat.beat.id as string);
@@ -140,7 +140,7 @@ describe('where you are', () => {
 
   it('names the unit for the format rather than saying "scene" on a book', () => {
     let file = createProjectFile({ title: 'Teaching Optics', format: 'instructional' });
-    const unit = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Refraction' });
+    const unit = addUnit(file, { trackId: file.tracks[0]!.id, title: 'Refraction' });
     const beat = addBeat(unit.file, { unitId: unit.unit.id, title: 'Snell’s law' });
     file = beat.file;
 
@@ -207,7 +207,7 @@ describe('the home reading', () => {
 
   it('carries the format’s own nouns, so no screen has to name a unit', () => {
     let file = createProjectFile({ title: 'A Book', format: 'instructional' });
-    file = addUnit(file, { laneId: file.lanes[0]!.id, title: 'One' }).file;
+    file = addUnit(file, { trackId: file.tracks[0]!.id, title: 'One' }).file;
     expect(projectHome(file).nouns.unit).toBe('Section');
     expect(projectHome(file).nouns.sub).toBe('Subsection');
   });
@@ -274,7 +274,7 @@ describe('the one-sheet', () => {
 
   it('reads the format’s nouns in its figures', () => {
     let file = createProjectFile({ title: 'A Book', format: 'instructional' });
-    file = addUnit(file, { laneId: file.lanes[0]!.id, title: 'One' }).file;
+    file = addUnit(file, { trackId: file.tracks[0]!.id, title: 'One' }).file;
     expect(oneSheet(file).figures).toContain('sections');
   });
 });

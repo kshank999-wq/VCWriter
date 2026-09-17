@@ -10,7 +10,7 @@ import type { BeatId, ManuscriptElementId, StructuralUnitId } from './ids.js';
  *
  * Grammar, mechanics, readability and the habits that weaken a page. Every
  * check here is deterministic and runs locally: it costs nothing, works on a
- * plane, and gives the same answer twice. AI-assisted editing sits on top of
+ * ptrack, and gives the same answer twice. AI-assisted editing sits on top of
  * this rather than replacing it — a writer should never have to be online to
  * find a doubled word.
  *

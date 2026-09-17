@@ -95,7 +95,7 @@ const link = (over: Partial<UsageLink>): UsageLink =>
 const written = (): { file: ProjectFile; beatId: string; elementId: string } => {
   let file = createProjectFile({ title: 'Blackout', format: 'screenplay' });
   file = { ...file, units: [], beats: [] };
-  const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. DINER - NIGHT' });
+  const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. DINER - NIGHT' });
   const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'The bill' });
   const elementId = newId();
   const done = updateBeat(beat.file, beat.beat.id, {
@@ -315,7 +315,7 @@ describe('the arc does not assume anybody improves', () => {
 
   it('reads the arc in the story’s order, not the order the points were thought of', () => {
     const { file } = written();
-    const second = addUnit(file, { laneId: file.lanes[0]!.id, title: 'EXT. DOCKS' });
+    const second = addUnit(file, { trackId: file.tracks[0]!.id, title: 'EXT. DOCKS' });
     const secondBeat = addBeat(second.file, { unitId: second.unit.id, title: 'Later' });
     const whole = secondBeat.file;
 

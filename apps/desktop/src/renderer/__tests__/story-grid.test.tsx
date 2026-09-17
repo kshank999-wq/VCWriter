@@ -282,7 +282,7 @@ describe('the value graph', () => {
   const withScenes = (...shifts: SceneGrid['polarity'][]): ProjectFile => {
     let file = createProjectFile({ title: 'Blackout', format: 'screenplay' });
     for (let extra = 1; extra < shifts.length; extra += 1) {
-      file = addUnit(file, { laneId: file.lanes[0]!.id, title: `Scene ${extra + 1}` }).file;
+      file = addUnit(file, { trackId: file.tracks[0]!.id, title: `Scene ${extra + 1}` }).file;
     }
     unitsInStoryOrder(file).forEach((unit, index) => {
       const polarity = shifts[index];

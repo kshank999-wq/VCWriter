@@ -66,10 +66,10 @@ export function NewEpisodeDialog({ file, open, onClose, onCreate, onGo }: NewEpi
   };
 
   return (
-    <dialog ref={dialog} className="lane-dialog new-episode" aria-label="New episode" onClose={onClose}>
+    <dialog ref={dialog} className="track-dialog new-episode" aria-label="New episode" onClose={onClose}>
       {open ? (
         <>
-          <header className="lane-dialog-title">
+          <header className="track-dialog-title">
             <span className="bar-title">Episode {next}</span>
             <button type="button" className="ghost" aria-label="Close" onClick={onClose}>
               ×
@@ -135,11 +135,11 @@ export function NewEpisodeDialog({ file, open, onClose, onCreate, onGo }: NewEpi
               Where it is plotted
               <select
                 aria-label="Where it is plotted"
-                value={carry.lanes}
-                onChange={(event) => setCarry({ ...carry, lanes: event.target.value as EpisodeCarry['lanes'] })}
+                value={carry.tracks}
+                onChange={(event) => setCarry({ ...carry, tracks: event.target.value as EpisodeCarry['tracks'] })}
               >
-                <option value="series">On the series&rsquo; own plot lanes</option>
-                <option value="fresh">On a fresh lane for this episode</option>
+                <option value="series">On the series&rsquo; own plot tracks</option>
+                <option value="fresh">On a fresh track for this episode</option>
               </select>
             </label>
 

@@ -21,12 +21,12 @@ already exist**.
 
 | The spec asks for | What is already built |
 | --- | --- |
-| §2.3 **Central spine** | **The story order.** `unitsInStoryOrder`, lanes, markers. See §3 below — this is the most consequential finding in the audit. |
+| §2.3 **Central spine** | **The story order.** `unitsInStoryOrder`, tracks, markers. See §3 below — this is the most consequential finding in the audit. |
 | §3 **Story Node** | A **beat** is a playable story unit and a **unit** a scene or encounter; manuscript elements hold the words. Both already carry status, colour, summary, links and attribution. |
 | §3 **Relationship** (NPC trust, faction standing) | **Character relationships**, addendum 08 §7 — and already *two directions rather than one*, because the directions may disagree. A faction is a character the cast list has no opinion about. |
 | §4 **Relationship edges** | **`story_links`**. `from_type`/`to_type` are text, so a new element kind needs no DDL; the verb list already holds `enables`, `prevents`, `depends_on`, `causes`, `reveals` — five of §4.1's twelve — plus `custom` with a label. |
 | §9 **Node map** chrome | **The Story Sculptor**: canvas, zoom, pan, mini-map, focus, filters, search, labelled links, card dialogs, research shelf. Its *layout* does not fit — §1. |
-| §9 overlays, §14 lanes | **`story-map.ts`**. The lane engine knows nodes, edges and a scene index *and nothing else*, and every lane is drawn by one `LaneRow`. A narrative lane is another small reader and no change to the engine. |
+| §9 overlays, §14 tracks | **`story-map.ts`**. The track engine knows nodes, edges and a scene index *and nothing else*, and every track is drawn by one `TrackRow`. A narrative track is another small reader and no change to the engine. |
 | §12 **Validation** | The *pattern* is built and proved — `setupReadiness`, the Character Creator's continuity notes, the book index's orphans. The checks themselves are new. §8. |
 | §14 **Integration** | Characters, locations, themes, motifs, setups & payoffs, arcs and research are all linkable today, through `story_links` and `usage_links`. |
 | §15.2 **Element Inspector** | The Inspector, with **Related Elements** already in it. |
@@ -105,7 +105,7 @@ is the thing the field gets wrong.
 
 §2.3 wants a central through-line that branches leave and rejoin. The audit's
 best finding is that **VC Writer already has one and the designer already
-writes in it**: the story order — units in lanes, in order, with markers.
+writes in it**: the story order — units in tracks, in order, with markers.
 
 Every other tool makes you keep a flowchart beside a script and reconcile them
 by hand. The flowchart is the truth for logic, the script is the truth for

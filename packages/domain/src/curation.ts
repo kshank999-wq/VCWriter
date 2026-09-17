@@ -236,7 +236,7 @@ export const applyTray = (
             ? structuralUnitSchema.parse({
                 ...piece.unit,
                 projectId: master.project.id,
-                laneId: sitting.laneId,
+                trackId: sitting.trackId,
                 orderKey: sitting.orderKey,
                 updatedAt: at,
               })
@@ -266,7 +266,7 @@ export const applyTray = (
           ...piece.unit,
           id: unitId,
           projectId: master.project.id,
-          laneId: master.lanes[0]?.id ?? piece.unit.laneId,
+          trackId: master.tracks[0]?.id ?? piece.unit.trackId,
           orderKey,
           createdAt: at,
           updatedAt: at,

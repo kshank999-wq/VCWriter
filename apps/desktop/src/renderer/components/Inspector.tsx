@@ -3,10 +3,10 @@ import {
   addMarker,
   countWords,
   findBeat,
-  findLane,
+  findTrack,
   findUnit,
-  laneKindSchema,
-  lanesInOrder,
+  trackKindSchema,
+  tracksInOrder,
   markerForUnit,
   moveUnit,
   pagesForUnit,
@@ -17,13 +17,13 @@ import {
   structuralUnitStatusSchema,
   switchRevision,
   updateBeat,
-  updateLane,
+  updateTrack,
   updateMarker,
   updateUnit,
   type Beat,
   type BeatId,
   type BeatRevisionId,
-  type Lane,
+  type Track,
   type ProjectFile,
   type StructuralUnit,
   isInstructional,
@@ -42,16 +42,16 @@ interface InspectorProps {
 
 /**
  * Properties of the selection (addendum 02 §7): the beat, its scene, its
- * lane and the act the scene starts, as collapsible sections. Every field
+ * track and the act the scene starts, as collapsible sections. Every field
  * writes through the same domain mutation the Script and the timeline use,
  * so an edit here is visible there on the next render.
  */
 export function Inspector({ file, selectedBeatId, onUpdate }: InspectorProps) {
   const beat = selectedBeatId ? findBeat(file, selectedBeatId) : undefined;
   const unit = beat ? findUnit(file, beat.unitId) : undefined;
-  const lane = unit ? findLane(file, unit.laneId) : undefined;
+  const track = unit ? findTrack(file, unit.trackId) : undefined;
 
-  if (!beat || !unit || !lane) {
+  if (!beat || !unit || !track) {
     return (
       <aside className="inspector" aria-label="Inspector">
         <p className="muted empty-state">
@@ -65,7 +65,7 @@ export function Inspector({ file, selectedBeatId, onUpdate }: InspectorProps) {
     <aside className="inspector" aria-label="Inspector">
       <BeatSection file={file} beat={beat} onUpdate={onUpdate} />
       <UnitSection file={file} unit={unit} onUpdate={onUpdate} />
-      <LaneSection lane={lane} onUpdate={onUpdate} />
+      <TrackSection track={track} onUpdate={onUpdate} />
       <ActSection file={file} unit={unit} onUpdate={onUpdate} />
     </aside>
   );
@@ -234,19 +234,19 @@ function UnitSection({
         />
       </label>
       <label className="field">
-        Lane
+        Track
         <select
-          aria-label={`${noun} lane`}
-          value={unit.laneId}
+          aria-label={`${noun} track`}
+          value={unit.trackId}
           onChange={(event) =>
             onUpdate((current) =>
-              moveUnit(current, { unitId: unit.id, toLaneId: event.target.value as Lane['id'], keepPosition: true }),
+              moveUnit(current, { unitId: unit.id, toTrackId: event.target.value as Track['id'], keepPosition: true }),
             )
           }
         >
-          {lanesInOrder(file).map((lane) => (
-            <option key={lane.id} value={lane.id}>
-              {lane.name}
+          {tracksInOrder(file).map((track) => (
+            <option key={track.id} value={track.id}>
+              {track.name}
             </option>
           ))}
         </select>
@@ -275,34 +275,34 @@ function UnitSection({
   );
 }
 
-function LaneSection({ lane, onUpdate }: { lane: Lane; onUpdate: InspectorProps['onUpdate'] }) {
+function TrackSection({ track, onUpdate }: { track: Track; onUpdate: InspectorProps['onUpdate'] }) {
   return (
-    <Section title="Lane">
+    <Section title="Track">
       <div className="field-row">
         <label className="field">
           Name
           <input
-            value={lane.name}
-            onChange={(event) => onUpdate((current) => updateLane(current, lane.id, { name: event.target.value || 'Lane' }))}
+            value={track.name}
+            onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { name: event.target.value || 'Track' }))}
           />
         </label>
         <label className="field swatch-field">
           Colour
           <input
             type="color"
-            value={lane.color}
-            aria-label="Lane colour"
-            onChange={(event) => onUpdate((current) => updateLane(current, lane.id, { color: event.target.value }))}
+            value={track.color}
+            aria-label="Track colour"
+            onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { color: event.target.value }))}
           />
         </label>
       </div>
       <label className="field">
         Kind
         <select
-          value={lane.kind}
-          onChange={(event) => onUpdate((current) => updateLane(current, lane.id, { kind: event.target.value as Lane['kind'] }))}
+          value={track.kind}
+          onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { kind: event.target.value as Track['kind'] }))}
         >
-          {laneKindSchema.options.map((kind) => (
+          {trackKindSchema.options.map((kind) => (
             <option key={kind} value={kind}>
               {kind.replace(/_/g, ' ')}
             </option>
@@ -313,8 +313,8 @@ function LaneSection({ lane, onUpdate }: { lane: Lane; onUpdate: InspectorProps[
         Description
         <textarea
           rows={2}
-          value={lane.description}
-          onChange={(event) => onUpdate((current) => updateLane(current, lane.id, { description: event.target.value }))}
+          value={track.description}
+          onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { description: event.target.value }))}
         />
       </label>
     </Section>

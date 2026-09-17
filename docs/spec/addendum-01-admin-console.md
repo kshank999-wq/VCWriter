@@ -128,6 +128,6 @@ being cheap, that is the moment to add a view for that tile — not before.
   licence, devices and emails, and the three actions work from there.
 - Every order row with a Stripe session id links to that session in the
   Stripe dashboard.
-- No page or route under `/admin` selects from `projects`, `lanes`,
+- No page or route under `/admin` selects from `projects`, `tracks`,
   `structural_units`, `beats`, `research_*`, `characters`, `story_links`,
   `setups_payoffs`, `snapshots`, or `capture_items`.

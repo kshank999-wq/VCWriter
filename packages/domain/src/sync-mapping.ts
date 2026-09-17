@@ -23,11 +23,11 @@ import { locationSchema } from './entities/locations.js';
 import { storyThreadSchema } from './entities/threads.js';
 import { learningAidSchema } from './entities/learning.js';
 import { projectSchema, projectSettingsSchema } from './entities/project.js';
-import { beatSchema, laneSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
+import { beatSchema, trackSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
 import { countWords } from './entities/manuscript.js';
 import { writingSessionSchema, type WritingSession } from './sessions.js';
 import { PROJECT_FORMAT_VERSION, projectFileSchema, type ProjectFile } from './project-file.js';
-import type { Beat, Lane, StoryMarker, StructuralUnit } from './entities/structure.js';
+import type { Beat, Track, StoryMarker, StructuralUnit } from './entities/structure.js';
 import type { Character, CharacterCategory } from './entities/character.js';
 import type { StoryLink } from './entities/links.js';
 import type { ResearchCategory, ResearchItem } from './entities/research.js';
@@ -51,7 +51,7 @@ export type Row = Record<string, unknown>;
 
 /** Table each collection lives in, so callers do not hard-code names. */
 export const SYNC_TABLES = {
-  lanes: 'lanes',
+  tracks: 'tracks',
   units: 'structural_units',
   beats: 'beats',
   markers: 'story_markers',
@@ -175,24 +175,24 @@ export const projectToRow = (file: ProjectFile): Row => ({
   updated_at: file.project.updatedAt,
 });
 
-const laneToRow = (lane: Lane): Row => ({
-  id: lane.id,
-  project_id: lane.projectId,
-  name: lane.name,
-  kind: lane.kind,
-  color: lane.color,
-  description: lane.description,
-  arc: lane.arc,
-  order_key: lane.orderKey,
-  collapsed: lane.collapsed,
-  created_at: lane.createdAt,
-  updated_at: lane.updatedAt,
+const trackToRow = (track: Track): Row => ({
+  id: track.id,
+  project_id: track.projectId,
+  name: track.name,
+  kind: track.kind,
+  color: track.color,
+  description: track.description,
+  arc: track.arc,
+  order_key: track.orderKey,
+  collapsed: track.collapsed,
+  created_at: track.createdAt,
+  updated_at: track.updatedAt,
 });
 
 const unitToRow = (unit: StructuralUnit): Row => ({
   id: unit.id,
   project_id: unit.projectId,
-  lane_id: unit.laneId,
+  track_id: unit.trackId,
   kind: unit.kind,
   title: unit.title,
   sequence_label: unit.sequenceLabel,
@@ -553,7 +553,7 @@ const outlineItemToRow = (item: OutlineItem, projectId: ProjectId): Row => ({
 
 export const toRows = (file: ProjectFile): ProjectRows => ({
   project: projectToRow(file),
-  lanes: file.lanes.map(laneToRow),
+  tracks: file.tracks.map(trackToRow),
   units: file.units.map(unitToRow),
   beats: file.beats.map(beatToRow),
   markers: file.markers.map(markerToRow),
@@ -872,11 +872,11 @@ const planRows = (
 // Rows -> document
 // ---------------------------------------------------------------------------
 
-const laneFromRow = (row: Row): Lane =>
-  laneSchema.parse({
+const trackFromRow = (row: Row): Track =>
+  trackSchema.parse({
     id: row['id'],
     projectId: row['project_id'],
-    name: text(row['name'], 'Untitled lane'),
+    name: text(row['name'], 'Untitled track'),
     kind: row['kind'],
     color: text(row['color'], '#6b7280'),
     description: text(row['description']),
@@ -891,7 +891,7 @@ const unitFromRow = (row: Row): StructuralUnit =>
   structuralUnitSchema.parse({
     id: row['id'],
     projectId: row['project_id'],
-    laneId: row['lane_id'],
+    trackId: row['track_id'],
     kind: row['kind'],
     title: text(row['title']),
     sequenceLabel: text(row['sequence_label']),
@@ -1302,7 +1302,7 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     savedAt: new Date().toISOString(),
     project: projectFromRow(rows.project),
     settings: projectSettingsSchema.parse(rows.project['settings'] ?? {}),
-    lanes: rows.lanes.map(laneFromRow),
+    tracks: rows.tracks.map(trackFromRow),
     units: rows.units.map(unitFromRow),
     beats: rows.beats.map(beatFromRow),
     markers: rows.markers.map(markerFromRow),

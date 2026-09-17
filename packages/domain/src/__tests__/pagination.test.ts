@@ -476,7 +476,7 @@ describe('act breaks', () => {
       manuscript: { elements: [element('action', 'The bell rings.')] },
     });
     for (const title of ['Two', 'Three', 'Four', 'Five', 'Six']) {
-      const made = addUnit(file, { laneId: file.lanes[0]!.id, title });
+      const made = addUnit(file, { trackId: file.tracks[0]!.id, title });
       file = made.file;
       const beat = addBeat(file, { unitId: made.unit.id, title });
       file = updateBeat(beat.file, beat.beat.id, {

@@ -1,5 +1,5 @@
 import { addBeat, addUnit, moveUnit, moveBeat } from './mutations.js';
-import { beatsForUnit, lanesInOrder, unitsInStoryOrder } from './selectors.js';
+import { beatsForUnit, tracksInOrder, unitsInStoryOrder } from './selectors.js';
 import { boardsOf, childrenOf, columnOf, findBoard, findNode } from './sculptor.js';
 import { claimedInScript, retitleScript } from './planning.js';
 import type { Board, SculptorNode } from './entities/sculptor.js';
@@ -195,7 +195,7 @@ const indexAfterNeighbour = (
  *
  * A beat can only be made where its parent node is already a scene in the
  * script: a beat belongs to a scene/chapter container and never floats in a
- * lane (spec §19), so there is nowhere to put one whose scene is still an
+ * track (spec §19), so there is nowhere to put one whose scene is still an
  * idea. Nothing happens, and the caller says why.
  */
 export const realiseNode = (
@@ -211,17 +211,17 @@ export const realiseNode = (
   const title = node.title.trim();
 
   if (kind === 'unit') {
-    const lane = lanesInOrder(file)[0];
-    // Without a lane there is no row to draw a scene in, and addUnit would
+    const track = tracksInOrder(file)[0];
+    // Without a track there is no row to draw a scene in, and addUnit would
     // throw. A project always has one; a hand-edited file might not.
-    if (!lane) return { file, unitId: null, beatId: null };
+    if (!track) return { file, unitId: null, beatId: null };
 
     const order = unitsInStoryOrder(file);
     const positionOf = (id: string) => order.findIndex((unit) => (unit.id as string) === id);
     const siblings = node.parentId === null ? [] : childrenOf(board, node.parentId);
     const index = indexAfterNeighbour(node, siblings, positionOf, order.length);
 
-    const made = addUnit(file, { laneId: lane.id, title, index });
+    const made = addUnit(file, { trackId: track.id, title, index });
     return { file: writeNode(made.file, boardId, nodeId, { boundUnitId: made.unit.id }), unitId: made.unit.id, beatId: null };
   }
 
@@ -332,9 +332,9 @@ export const followCanvas = (file: ProjectFile, boardId: BoardId, nodeId: Sculpt
     const index = here !== -1 && target > here ? target - 1 : target;
     const unit = file.units.find((candidate) => candidate.id === node.boundUnitId);
     if (!unit) return file;
-    // Its own lane: the board says where a scene is in the story, never which
+    // Its own track: the board says where a scene is in the story, never which
     // thread it belongs to (addendum 02 §8).
-    return moveUnit(file, { unitId: node.boundUnitId, toLaneId: unit.laneId, index });
+    return moveUnit(file, { unitId: node.boundUnitId, toTrackId: unit.trackId, index });
   }
 
   const unitId = parent?.boundUnitId ?? null;

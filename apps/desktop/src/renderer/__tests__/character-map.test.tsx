@@ -48,7 +48,7 @@ const spoken = () => {
   let file = createProjectFile({ title: 'Blackout', format: 'screenplay' });
   for (const name of ['MARA', 'DEAKINS']) file = addCharacter(file, { name });
 
-  const scene = addUnit(file, { laneId: file.lanes[0]!.id, title: 'INT. DINER - NIGHT' });
+  const scene = addUnit(file, { trackId: file.tracks[0]!.id, title: 'INT. DINER - NIGHT' });
   const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'The bill' });
   return updateBeat(beat.file, beat.beat.id, {
     manuscript: { elements: [cue('MARA'), cue('DEAKINS')] },

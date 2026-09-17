@@ -3,19 +3,19 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import {
-  addLane,
+  addTrack,
   addSetupPayoff,
   addSetupPoint,
   addUnit,
   beatsInStoryOrder,
   createProjectFile,
-  lanesInOrder,
+  tracksInOrder,
   recordPayoff,
   ref,
   setRowFrame,
   updateBeat,
   updateUnit,
-  unitsForLane,
+  unitsForTrack,
   unitsInStoryOrder,
   type BeatId,
   type ProjectFile,
@@ -65,25 +65,25 @@ const timeline = (initial: ProjectFile, extra: Partial<React.ComponentProps<type
           onToggleInspector={() => undefined}
           onAddScene={() => undefined}
           onAddBeat={() => undefined}
-          onAddLane={() => undefined}
+          onAddTrack={() => undefined}
           onAddAct={() => undefined}
-          onOpenLane={() => undefined}
+          onOpenTrack={() => undefined}
           {...extra}
         />
       )}
     </Harness>,
   );
 
-const twoLanes = (): ProjectFile =>
-  addLane(createProjectFile({ title: 'Lighthouse', format: 'screenplay' }), { name: 'Subplot' }).file;
+const twoTracks = (): ProjectFile =>
+  addTrack(createProjectFile({ title: 'Lighthouse', format: 'screenplay' }), { name: 'Subplot' }).file;
 
-const laneNames = () =>
-  screen.getAllByLabelText(/^Lane name: /).map((element) => (element.getAttribute('aria-label') ?? '').replace('Lane name: ', ''));
+const trackNames = () =>
+  screen.getAllByLabelText(/^Track name: /).map((element) => (element.getAttribute('aria-label') ?? '').replace('Track name: ', ''));
 
 describe('master timeline', () => {
-  it('draws a track per lane with the scene blocks and beats in them', () => {
-    timeline(twoLanes());
-    expect(laneNames()).toEqual(['Main Plot', 'Subplot']);
+  it('draws a track per track with the scene blocks and beats in them', () => {
+    timeline(twoTracks());
+    expect(trackNames()).toEqual(['Main Plot', 'Subplot']);
     expect(screen.getByText('Opening Scene')).toBeDefined();
     expect(screen.getByText('Opening beat')).toBeDefined();
     expect(screen.getByText('Pages · time')).toBeDefined();
@@ -93,19 +93,19 @@ describe('master timeline', () => {
     expect(screen.getByText('New beat')).toBeDefined();
   });
 
-  it('moves a lane down with Alt and an arrow, and not without Alt', () => {
-    timeline(twoLanes());
-    fireEvent.keyDown(screen.getByLabelText(/Reorder lane Main Plot/i), { key: 'ArrowDown' });
-    expect(laneNames()).toEqual(['Main Plot', 'Subplot']);
+  it('moves a track down with Alt and an arrow, and not without Alt', () => {
+    timeline(twoTracks());
+    fireEvent.keyDown(screen.getByLabelText(/Reorder track Main Plot/i), { key: 'ArrowDown' });
+    expect(trackNames()).toEqual(['Main Plot', 'Subplot']);
 
-    fireEvent.keyDown(screen.getByLabelText(/Reorder lane Main Plot/i), { key: 'ArrowDown', altKey: true });
-    expect(laneNames()).toEqual(['Subplot', 'Main Plot']);
+    fireEvent.keyDown(screen.getByLabelText(/Reorder track Main Plot/i), { key: 'ArrowDown', altKey: true });
+    expect(trackNames()).toEqual(['Subplot', 'Main Plot']);
   });
 
-  it('moves a scene later in the story with Alt+↓ and to the next lane with Alt+Shift+↓', () => {
-    let initial = twoLanes();
-    const main = initial.lanes[0]!;
-    initial = addUnit(initial, { laneId: main.id, title: 'Second scene' }).file;
+  it('moves a scene later in the story with Alt+↓ and to the next track with Alt+Shift+↓', () => {
+    let initial = twoTracks();
+    const main = initial.tracks[0]!;
+    initial = addUnit(initial, { trackId: main.id, title: 'Second scene' }).file;
     expect(unitsInStoryOrder(initial).map((unit) => unit.title)).toEqual(['Opening Scene', 'Second scene']);
 
     let latest: ProjectFile = initial;
@@ -125,9 +125,9 @@ describe('master timeline', () => {
               onToggleInspector={() => undefined}
               onAddScene={() => undefined}
               onAddBeat={() => undefined}
-              onAddLane={() => undefined}
+              onAddTrack={() => undefined}
               onAddAct={() => undefined}
-              onOpenLane={() => undefined}
+              onOpenTrack={() => undefined}
             />
           );
         }}
@@ -138,16 +138,16 @@ describe('master timeline', () => {
     expect(unitsInStoryOrder(latest).map((unit) => unit.title)).toEqual(['Second scene', 'Opening Scene']);
 
     fireEvent.keyDown(screen.getByLabelText(/Reorder Opening Scene/i), { key: 'ArrowDown', altKey: true, shiftKey: true });
-    const subplot = lanesInOrder(latest)[1]!;
-    expect(unitsForLane(latest, subplot.id).map((unit) => unit.title)).toEqual(['Opening Scene']);
-    // The lane changed; the story position did not.
+    const subplot = tracksInOrder(latest)[1]!;
+    expect(unitsForTrack(latest, subplot.id).map((unit) => unit.title)).toEqual(['Opening Scene']);
+    // The track changed; the story position did not.
     expect(unitsInStoryOrder(latest).map((unit) => unit.title)).toEqual(['Second scene', 'Opening Scene']);
   });
 
   it('draws a kept promise as a curve to its payoff and an outstanding one into the air', () => {
-    let file = twoLanes();
+    let file = twoTracks();
     const first = file.units[0]!;
-    const fourth = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Sc 4' });
+    const fourth = addUnit(file, { trackId: file.tracks[0]!.id, title: 'Sc 4' });
     file = fourth.file;
     file = addSetupPayoff(file, { title: 'The revolver' });
     file = addSetupPoint(file, { setupPayoffId: file.setupsPayoffs[0]!.id, description: 'Drawer', location: ref('unit', first.id) });
@@ -163,8 +163,8 @@ describe('master timeline', () => {
   });
 
   it('puts the playhead on the selected scene and follows a click', () => {
-    let file = twoLanes();
-    const second = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Second scene' });
+    let file = twoTracks();
+    const second = addUnit(file, { trackId: file.tracks[0]!.id, title: 'Second scene' });
     file = second.file;
     const { container } = timeline(file);
 
@@ -183,7 +183,7 @@ describe('master timeline', () => {
   it('offers the toolbar actions', () => {
     const onAddScene = vi.fn();
     const onAddAct = vi.fn();
-    timeline(twoLanes(), { onAddScene, onAddAct });
+    timeline(twoTracks(), { onAddScene, onAddAct });
     fireEvent.click(screen.getByRole('button', { name: '+ Scene' }));
     fireEvent.click(screen.getByRole('button', { name: '+ Marker' }));
     expect(onAddScene).toHaveBeenCalledTimes(1);
@@ -192,8 +192,8 @@ describe('master timeline', () => {
 });
 
 describe('inspector', () => {
-  it('edits the beat, moves its scene to another lane, and starts an act', () => {
-    let latest: ProjectFile = twoLanes();
+  it('edits the beat, moves its scene to another track, and starts an act', () => {
+    let latest: ProjectFile = twoTracks();
     render(
       <Harness initial={latest}>
         {(file, update, selected) => {
@@ -206,9 +206,9 @@ describe('inspector', () => {
     fireEvent.change(screen.getByPlaceholderText('What happens in this beat'), { target: { value: 'She arrives' } });
     expect(latest.beats[0]?.title).toBe('She arrives');
 
-    const subplot = lanesInOrder(latest)[1]!;
-    fireEvent.change(screen.getByLabelText('Scene lane'), { target: { value: subplot.id } });
-    expect(latest.units[0]?.laneId).toBe(subplot.id);
+    const subplot = tracksInOrder(latest)[1]!;
+    fireEvent.change(screen.getByLabelText('Scene track'), { target: { value: subplot.id } });
+    expect(latest.units[0]?.trackId).toBe(subplot.id);
 
     fireEvent.click(screen.getByRole('button', { name: /Start one here/i }));
     expect(latest.markers).toHaveLength(1);
@@ -219,7 +219,7 @@ describe('inspector', () => {
 describe('master panel', () => {
   it('is the Script and nothing around it', () => {
     render(
-      <Harness initial={twoLanes()}>
+      <Harness initial={twoTracks()}>
         {(file, update, selected, select) => (
           <MasterPanel
             file={file}
@@ -250,7 +250,7 @@ describe('master panel', () => {
 
 /**
  * Short form's timeline (addendum 05 §3a, §3e, §5): a commercial has no pages
- * to count, no plot to lane, and a clock the strip and the sheet share.
+ * to count, no plot to track, and a clock the strip and the sheet share.
  */
 describe('the timeline under a board', () => {
   const commercial = (): ProjectFile => {

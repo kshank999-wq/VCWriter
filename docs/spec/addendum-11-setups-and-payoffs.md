@@ -16,7 +16,7 @@ meant to meet it.
 | **Red / green with an X / 3 count on the list** | — | §2 |
 | **A setup after the payoff does not count** | — | §1 |
 | **Tagging from the writing** | — | §3 |
-| **A timeline lane** | — | §4 |
+| **A timeline track** | — | §4 |
 | Jump from an occurrence to its passage | — | §2 |
 
 ## 1. The rule, and why it is a reading
@@ -89,11 +89,11 @@ first. The point keeps two different things: the **excerpt** is the page's words
 for recognising it later; the **description** is the writer's, for saying what it
 does.
 
-## 4. The lane
+## 4. The track
 
 A row per payoff on the master timeline, under Links.
 
-**A row per record, not one row of everything.** The question the lane answers is
+**A row per record, not one row of everything.** The question the track answers is
 *how far apart are this payoff's setups, and where does it land* — and points
 from three different promises on one line answer nothing.
 
@@ -103,17 +103,17 @@ where it is, dashed and red: hiding it would make the row agree with the count
 and lie about the script. The track head carries the light and the count.
 
 Only records with something placed get a row. A payoff written down but never
-tagged has no position, and a row of nothing teaches a writer to ignore the lane.
+tagged has no position, and a row of nothing teaches a writer to ignore the track.
 
 ## 5. Where the code is
 
 | | |
 | --- | --- |
-| The rule | `packages/domain/src/setups.ts` — `setupReadiness`, `setupsBoard`, `setupLane`, `storyPositionOf` |
+| The rule | `packages/domain/src/setups.ts` — `setupReadiness`, `setupsBoard`, `setupTrack`, `storyPositionOf` |
 | The record | `packages/domain/src/entities/setups.ts` |
 | The panel | `apps/desktop/src/renderer/components/SetupsPanel.tsx` |
 | Tagging | `apps/desktop/src/renderer/components/BeatBody.tsx` — `PlantSetupOrPayoff` |
-| The lane | `apps/desktop/src/renderer/components/MasterTimeline.tsx` — `SetupTrack` |
+| The track | `apps/desktop/src/renderer/components/MasterTimeline.tsx` — `SetupRow` |
 
 No migration: a setup point and a payoff each gained an `excerpt`, and a record
 gained `minimumSetups`, all inside the project document.
@@ -124,7 +124,7 @@ gained `minimumSetups`, all inside the project document.
   decides.
 - **A cached status.** §1. It would survive a reorder and be wrong.
 - **A warning that setups are clustered too closely** (§7 offers it as optional).
-  *These three are too close together* is a judgement about pacing, and the lane
+  *These three are too close together* is a judgement about pacing, and the track
   shows the spacing so a writer can make it themselves.
 - **More than one payoff occurrence per record.** §12 asks the question; one
   payoff is what a payoff is, and a second passage that also pays it off is a

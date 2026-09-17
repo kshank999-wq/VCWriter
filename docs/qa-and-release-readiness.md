@@ -53,9 +53,9 @@ per platform before a release.
 
 - [ ] Tab reaches every control on the structure board, and the focus ring is
       visible on each.
-- [ ] Alt+↑/↓ reorders a lane, a scene and a beat. Alt+Shift+↑/↓ moves a scene
-      between lanes and a beat between scenes.
-- [ ] Narrator (Windows) or VoiceOver (macOS) announces lane and scene names,
+- [ ] Alt+↑/↓ reorders a track, a scene and a beat. Alt+Shift+↑/↓ moves a scene
+      between tracks and a beat between scenes.
+- [ ] Narrator (Windows) or VoiceOver (macOS) announces track and scene names,
       and reads the reorder handle's instructions.
 - [ ] The app is usable at 150% and 200% system text scaling.
 

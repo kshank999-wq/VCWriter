@@ -12,7 +12,7 @@ import {
   updateUnit,
   type ProjectFile,
 } from '@vcwriter/domain';
-import { LaneDialog } from '../components/LaneDialog';
+import { TrackDialog } from '../components/TrackDialog';
 
 /**
  * The plot pop-up's scene rail (addendum 02 §19): the same rail the episodes
@@ -32,16 +32,16 @@ const el = (type: string, text: string) => ({
 const project = () => {
   let file = createProjectFile({ title: 'The Lighthouse', format: 'screenplay' });
   file = { ...file, units: [], beats: [] };
-  const lane = file.lanes[0]!.id;
+  const track = file.tracks[0]!.id;
 
-  const first = addUnit(file, { laneId: lane, title: 'The stair' });
+  const first = addUnit(file, { trackId: track, title: 'The stair' });
   file = updateUnit(first.file, first.unit.id, { summary: 'She finds the lamp out.' });
   const beat = addBeat(file, { unitId: first.unit.id });
   file = updateBeat(beat.file, beat.beat.id, {
     manuscript: { elements: [el('character', 'MAEVE'), el('dialogue', 'Forty years.')] },
   });
 
-  const second = addUnit(file, { laneId: lane, title: 'The harbour' });
+  const second = addUnit(file, { trackId: track, title: 'The harbour' });
   file = second.file;
   file = addBeat(file, { unitId: second.unit.id }).file;
 
@@ -59,11 +59,11 @@ const project = () => {
     type: 'pays_off',
   });
 
-  return { file, laneId: lane };
+  return { file, trackId: track };
 };
 
-const show = (file: ProjectFile, laneId: string) =>
-  render(<LaneDialog file={file} laneId={laneId as never} onClose={() => {}} onUpdate={() => {}} />);
+const show = (file: ProjectFile, trackId: string) =>
+  render(<TrackDialog file={file} trackId={trackId as never} onClose={() => {}} onUpdate={() => {}} />);
 
 /** Click a row of the rail. The name is also in the facts panel once open. */
 const chooseScene = (title: string) => {
@@ -73,8 +73,8 @@ const chooseScene = (title: string) => {
 
 describe('the plot pop-up', () => {
   it('lists this plot’s scenes in story order, with what is in each', () => {
-    const { file, laneId } = project();
-    show(file, laneId);
+    const { file, trackId } = project();
+    show(file, trackId);
 
     const rows = document.querySelectorAll('.scene-rail-row');
     expect(rows).toHaveLength(2);
@@ -84,8 +84,8 @@ describe('the plot pop-up', () => {
   });
 
   it('opens a scene to its characters, its promises and its links', () => {
-    const { file, laneId } = project();
-    show(file, laneId);
+    const { file, trackId } = project();
+    show(file, trackId);
 
     // Nothing is shown until a scene is chosen.
     expect(document.querySelector('.scene-facts')).toBeNull();
@@ -100,8 +100,8 @@ describe('the plot pop-up', () => {
   });
 
   it('says plainly when a scene has nobody and owes nothing', () => {
-    const { file, laneId } = project();
-    show(file, laneId);
+    const { file, trackId } = project();
+    show(file, trackId);
 
     chooseScene('The harbour');
     const facts = document.querySelector('.scene-facts');
@@ -112,8 +112,8 @@ describe('the plot pop-up', () => {
   });
 
   it('closes the scene again when the same row is chosen', () => {
-    const { file, laneId } = project();
-    show(file, laneId);
+    const { file, trackId } = project();
+    show(file, trackId);
 
     chooseScene('The stair');
     expect(document.querySelector('.scene-facts')).toBeTruthy();
@@ -122,11 +122,11 @@ describe('the plot pop-up', () => {
   });
 
   it('keeps the arc where it was: the scene appears under it', () => {
-    const { file, laneId } = project();
-    const { container } = show(file, laneId);
+    const { file, trackId } = project();
+    const { container } = show(file, trackId);
     chooseScene('The stair');
 
-    const main = container.querySelector('.lane-dialog-main');
+    const main = container.querySelector('.track-dialog-main');
     const html = main?.innerHTML ?? '';
     // The arc is what the scene is being read against, so it comes first.
     expect(html.indexOf('How it develops')).toBeLessThan(html.indexOf('scene-facts'));

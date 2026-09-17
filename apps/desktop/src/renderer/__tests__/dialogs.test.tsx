@@ -14,7 +14,7 @@ import {
   updateBeat,
   type BeatId,
   type ProjectFile,
-  type LaneId,
+  type TrackId,
   type StructuralUnitId,
 } from '@vcwriter/domain';
 import { SceneDialog } from '../components/SceneDialog';
@@ -203,9 +203,9 @@ describe('cutting a scene in two', () => {
     const [first, made] = unitsInStoryOrder(latest);
     expect(beatsForUnit(latest, first!.id).map((beat) => beat.title)).toEqual(['Home life']);
     expect(beatsForUnit(latest, made!.id).map((beat) => beat.title)).toEqual(['On the corner', 'Back at home']);
-    // The new scene comes after, untitled, in the same lane.
+    // The new scene comes after, untitled, in the same track.
     expect(made!.title).toBe('');
-    expect(made!.laneId).toBe(first!.laneId);
+    expect(made!.trackId).toBe(first!.trackId);
   });
 });
 
@@ -252,7 +252,7 @@ describe('opening the pop-ups', () => {
     const file = scene();
     const onOpenUnit = vi.fn<(id: StructuralUnitId) => void>();
     const onOpenBeat = vi.fn<(id: BeatId) => void>();
-    const onSelectUnit = vi.fn<(id: StructuralUnitId, laneId: LaneId) => void>();
+    const onSelectUnit = vi.fn<(id: StructuralUnitId, trackId: TrackId) => void>();
     render(
       <MasterTimeline
         file={file}
@@ -267,9 +267,9 @@ describe('opening the pop-ups', () => {
         onToggleInspector={() => undefined}
         onAddScene={() => undefined}
         onAddBeat={() => undefined}
-        onAddLane={() => undefined}
+        onAddTrack={() => undefined}
         onAddAct={() => undefined}
-        onOpenLane={() => undefined}
+        onOpenTrack={() => undefined}
         onOpenUnit={onOpenUnit}
         onOpenBeat={onOpenBeat}
       />,
@@ -278,7 +278,7 @@ describe('opening the pop-ups', () => {
     // One click chooses the scene — this is the thing a new beat goes in —
     // and does not open anything over the top of the writer.
     fireEvent.click(screen.getByText('Opening Scene'));
-    expect(onSelectUnit).toHaveBeenCalledWith(file.units[0]!.id, file.lanes[0]!.id);
+    expect(onSelectUnit).toHaveBeenCalledWith(file.units[0]!.id, file.tracks[0]!.id);
     expect(onOpenUnit).not.toHaveBeenCalled();
     expect(document.querySelector('.block.selected')).toBeTruthy();
 
@@ -315,9 +315,9 @@ describe('opening the pop-ups', () => {
           onToggleInspector={() => undefined}
           onAddScene={() => undefined}
           onAddBeat={() => undefined}
-          onAddLane={() => undefined}
+          onAddTrack={() => undefined}
           onAddAct={() => undefined}
-          onOpenLane={() => undefined}
+          onOpenTrack={() => undefined}
         />
       </>,
     );

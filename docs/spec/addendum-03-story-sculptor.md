@@ -62,7 +62,7 @@ A node in column *n* hangs off a node in column *n−1*: its **parent**. The
 connector is drawn from the parent to the group of its children, as in the
 diagram — one arrow into the stack, not one arrow per child.
 
-**This is not a plot lane.** Addendum 02 §2 fixes *lane* as a track of the
+**This is not a plot track.** Addendum 02 §2 fixes *track* as a track of the
 master timeline, one row per subplot. These are columns: levels of detail,
 not threads of story. The two words stay apart.
 
@@ -278,7 +278,7 @@ change the model rather than the presentation:
 
 1. **Beginning and End are nodes you write in**, not the ends of a story that
    happen to exist. That is where the work starts.
-2. **The columns stand beside each other**, each a lane of its own, with
+2. **The columns stand beside each other**, each a track of its own, with
    connectors between them — not scenes nested inside structure bands.
 3. **The columns keep going** — character arcs, then more detail, then more.
    A fixed ladder of three cannot hold that, and nothing beyond scenes and
@@ -342,7 +342,7 @@ which is withdrawn: it is the Outliner, and carrying cards into it (addendum
 | --- | --- |
 | **Board** | One canvas. A project may have more than one |
 | **Node** | Anything on it |
-| **Column** | A vertical lane of the canvas, a level of detail. **Not** a plot lane |
+| **Column** | A vertical track of the canvas, a level of detail. **Not** a plot track |
 | **Block** | A node in the structure column |
 | **Bound** | A node that is the same object as a scene or beat in the script |
 | **Link** | A connection the writer drew, as opposed to the parent relation |
@@ -449,7 +449,7 @@ takes the script's — binding to a scene reads as recognising it, never as
 wiping it.
 
 A **beat** node binds the same way, with one rule from the script: a beat
-lives inside a scene and never floats in a lane (spec §19), so a beat can only
+lives inside a scene and never floats in a track (spec §19), so a beat can only
 be made once the scene above it is real. Until then the panel says so, in
 those words, rather than failing when the button is pressed. Once the parent
 is bound, only **that scene's** beats are offered — the diagram already says

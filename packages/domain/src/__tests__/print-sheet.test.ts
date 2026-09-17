@@ -239,7 +239,7 @@ describe('the board as a document', () => {
 
   it('runs the panels in the story order the sheet has them in', () => {
     let file = commercial();
-    const made = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Second' });
+    const made = addUnit(file, { trackId: file.tracks[0]!.id, title: 'Second' });
     file = addBeat(made.file, { unitId: made.unit.id, title: 'Three' }).file;
     const html = renderBoardDocumentHtml(file);
     expect(html.indexOf('Segment 1')).toBeLessThan(html.indexOf('Segment 2'));

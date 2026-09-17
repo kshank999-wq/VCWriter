@@ -3,7 +3,7 @@ import { createProjectFile } from '../project-file.js';
 import {
   DomainError,
   addBeat,
-  addLane,
+  addTrack,
   addResearchCategory,
   addResearchItem,
   addSetupPayoff,
@@ -11,12 +11,12 @@ import {
   addUnit,
   linkEntities,
   markResearchUsed,
-  moveLane,
+  moveTrack,
   moveResearchCategory,
   moveResearchItem,
   recordPayoff,
   removeBeat,
-  removeLane,
+  removeTrack,
   removeSetupPoint,
   removeUnit,
   reopenPayoff,
@@ -25,7 +25,7 @@ import {
   updateUnit,
 } from '../mutations.js';
 import {
-  lanesInOrder,
+  tracksInOrder,
   relatedEntities,
   researchCategoriesInOrder,
   researchItemsForCategory,
@@ -37,24 +37,24 @@ import { ref } from '../entities/links.js';
 const project = () => createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
 
 describe('removing structure', () => {
-  it('takes a lane, its scenes, its beats and their links together', () => {
+  it('takes a track, its scenes, its beats and their links together', () => {
     let file = project();
-    const subplot = addLane(file, { name: 'Subplot' });
+    const subplot = addTrack(file, { name: 'Subplot' });
     file = subplot.file;
-    const created = addUnit(file, { laneId: subplot.lane.id, title: 'Doomed scene' });
+    const created = addUnit(file, { trackId: subplot.track.id, title: 'Doomed scene' });
     file = created.file;
     const beat = addBeat(file, { unitId: created.unit.id, title: 'Doomed beat' });
     file = beat.file;
     file = linkEntities(file, {
       from: ref('beat', beat.beat.id),
-      to: ref('lane', subplot.lane.id),
+      to: ref('track', subplot.track.id),
       type: 'appears_in',
     });
     expect(file.links).toHaveLength(1);
 
-    file = removeLane(file, subplot.lane.id);
+    file = removeTrack(file, subplot.track.id);
 
-    expect(file.lanes).toHaveLength(1);
+    expect(file.tracks).toHaveLength(1);
     expect(file.units.some((unit) => unit.id === created.unit.id)).toBe(false);
     expect(file.beats.some((candidate) => candidate.id === beat.beat.id)).toBe(false);
     // A link to something that no longer exists would render as an unresolvable
@@ -62,14 +62,14 @@ describe('removing structure', () => {
     expect(file.links).toHaveLength(0);
   });
 
-  it('refuses to remove the last lane', () => {
+  it('refuses to remove the last track', () => {
     const file = project();
-    expect(() => removeLane(file, file.lanes[0]!.id)).toThrow(DomainError);
+    expect(() => removeTrack(file, file.tracks[0]!.id)).toThrow(DomainError);
   });
 
   it('removes a scene with its beats', () => {
     let file = project();
-    const created = addUnit(file, { laneId: file.lanes[0]!.id, title: 'Second' });
+    const created = addUnit(file, { trackId: file.tracks[0]!.id, title: 'Second' });
     file = addBeat(created.file, { unitId: created.unit.id }).file;
     expect(file.beats).toHaveLength(2);
 
@@ -93,14 +93,14 @@ describe('removing structure', () => {
     expect(file.researchItems[0]?.usedInBeatIds).toEqual([]);
   });
 
-  it('reorders lanes', () => {
+  it('reorders tracks', () => {
     let file = project();
-    file = addLane(file, { name: 'Subplot' }).file;
-    file = addLane(file, { name: 'Theme' }).file;
-    expect(lanesInOrder(file).map((lane) => lane.name)).toEqual(['Main Plot', 'Subplot', 'Theme']);
+    file = addTrack(file, { name: 'Subplot' }).file;
+    file = addTrack(file, { name: 'Theme' }).file;
+    expect(tracksInOrder(file).map((track) => track.name)).toEqual(['Main Plot', 'Subplot', 'Theme']);
 
-    file = moveLane(file, lanesInOrder(file)[2]!.id, 0);
-    expect(lanesInOrder(file).map((lane) => lane.name)).toEqual(['Theme', 'Main Plot', 'Subplot']);
+    file = moveTrack(file, tracksInOrder(file)[2]!.id, 0);
+    expect(tracksInOrder(file).map((track) => track.name)).toEqual(['Theme', 'Main Plot', 'Subplot']);
   });
 
   it('edits scene metadata without touching its beats', () => {
@@ -201,17 +201,17 @@ describe('related elements', () => {
 
   it('reads the current name rather than a copy taken when the link was made', () => {
     let file = project();
-    const subplot = addLane(file, { name: 'Subplot' });
+    const subplot = addTrack(file, { name: 'Subplot' });
     file = subplot.file;
     file = linkEntities(file, {
       from: ref('beat', file.beats[0]!.id),
-      to: ref('lane', subplot.lane.id),
+      to: ref('track', subplot.track.id),
     });
 
-    file = moveLane(file, subplot.lane.id, 0);
-    const renamed = { ...file, lanes: file.lanes.map((lane) => (lane.id === subplot.lane.id ? { ...lane, name: 'B story' } : lane)) };
+    file = moveTrack(file, subplot.track.id, 0);
+    const renamed = { ...file, tracks: file.tracks.map((track) => (track.id === subplot.track.id ? { ...track, name: 'B story' } : track)) };
 
-    expect(resolveRef(renamed, ref('lane', subplot.lane.id)).label).toBe('B story');
+    expect(resolveRef(renamed, ref('track', subplot.track.id)).label).toBe('B story');
   });
 
   it('marks a reference whose target is gone', () => {

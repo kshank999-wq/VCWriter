@@ -69,7 +69,7 @@ const settled = (file: ProjectFile): ProjectFile => {
   return projectFileSchema.parse({
     ...file,
     project: older(file.project),
-    lanes: file.lanes.map(older),
+    tracks: file.tracks.map(older),
     units: file.units.map(older),
     beats: file.beats.map(older),
     researchCategories: file.researchCategories.map(older),

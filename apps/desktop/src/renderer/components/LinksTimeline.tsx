@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useMemo, useState } from 'react';
 import {
-  MAP_LANES,
+  MAP_TRACKS,
   addThread,
   describeMap,
   describeThread,
@@ -18,7 +18,7 @@ import {
   undepend,
   updateThread,
   type BeatId,
-  type MapLaneId,
+  type MapTrackId,
   type ProjectFile,
   type StoryThreadId,
   type ThreadRelationship,
@@ -32,7 +32,7 @@ import {
  *
  * §18 asks for a story wiring diagram: the scene structure across the top and
  * the story's structural systems beneath it, with connectors showing how each
- * element travels. That is what this draws, and it draws every lane the same
+ * element travels. That is what this draws, and it draws every track the same
  * way because `storyMap` hands it nodes and edges and nothing else — it cannot
  * tell a setup from a motif, which is the whole of §21.
  *
@@ -77,8 +77,8 @@ const MIN_COLUMN = 14;
 
 export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps) {
   const nouns = nounsFor(file.project.format);
-  const [shown, setShown] = useState<readonly MapLaneId[]>(MAP_LANES);
-  const [only, setOnly] = useState<{ laneId: MapLaneId; sourceId: string } | null>(null);
+  const [shown, setShown] = useState<readonly MapTrackId[]>(MAP_TRACKS);
+  const [only, setOnly] = useState<{ trackId: MapTrackId; sourceId: string } | null>(null);
   const [width, setWidth] = useState<WidthId>('project');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -111,7 +111,7 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
   }, [from, to, total]);
 
   const map = useMemo(
-    () => storyMap(file, { lanes: shown, only: only ? [only] : [], range }),
+    () => storyMap(file, { tracks: shown, only: only ? [only] : [], range }),
     [file, shown, only, range],
   );
   const choices = useMemo(() => isolatable(file), [file]);
@@ -120,13 +120,13 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
   const asked = WIDTHS.find((one) => one.id === width)!.column;
   const column =
     asked ?? Math.max(MIN_COLUMN, Math.floor((room - HEAD) / Math.max(1, map.scenes.length)));
-  const laneWidth = map.scenes.length * column;
+  const trackWidth = map.scenes.length * column;
   /** Centre of a scene's column, which is where a node sits. */
   const centreOf = (index: number) => index * column + column / 2;
 
-  const toggleLane = (laneId: MapLaneId) =>
+  const toggleTrack = (trackId: MapTrackId) =>
     setShown((current) =>
-      current.includes(laneId) ? current.filter((one) => one !== laneId) : [...MAP_LANES.filter((one) => current.includes(one) || one === laneId)],
+      current.includes(trackId) ? current.filter((one) => one !== trackId) : [...MAP_TRACKS.filter((one) => current.includes(one) || one === trackId)],
     );
 
   return (
@@ -134,21 +134,21 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
       <div className="links-bar">
         <span className="muted small">{describeMap(map)}</span>
 
-        {/* §14: a lane at a time, and a way back. */}
-        <div className="links-lanes" role="group" aria-label="Lanes">
-          {MAP_LANES.map((laneId) => (
+        {/* §14: a track at a time, and a way back. */}
+        <div className="links-tracks" role="group" aria-label="Tracks">
+          {MAP_TRACKS.map((trackId) => (
             <button
-              key={laneId}
+              key={trackId}
               type="button"
-              className={shown.includes(laneId) ? 'links-toggle on' : 'links-toggle'}
-              aria-pressed={shown.includes(laneId)}
-              onClick={() => toggleLane(laneId)}
+              className={shown.includes(trackId) ? 'links-toggle on' : 'links-toggle'}
+              aria-pressed={shown.includes(trackId)}
+              onClick={() => toggleTrack(trackId)}
             >
-              {laneId === 'links'
+              {trackId === 'links'
                 ? 'Links'
-                : laneId === 'setups'
+                : trackId === 'setups'
                   ? 'Setups & Payoffs'
-                  : laneId === 'thematics'
+                  : trackId === 'thematics'
                     ? 'Themes & Motifs'
                     : 'Character Arcs'}
             </button>
@@ -159,17 +159,17 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
           <span>Just</span>
           <select
             aria-label="Isolate"
-            value={only ? `${only.laneId}:${only.sourceId}` : ''}
+            value={only ? `${only.trackId}:${only.sourceId}` : ''}
             onChange={(event) => {
               const value = event.target.value;
               if (value === '') return setOnly(null);
               const at = value.indexOf(':');
-              setOnly({ laneId: value.slice(0, at) as MapLaneId, sourceId: value.slice(at + 1) });
+              setOnly({ trackId: value.slice(0, at) as MapTrackId, sourceId: value.slice(at + 1) });
             }}
           >
             <option value="">Everything</option>
             {choices.map((choice) => (
-              <option key={`${choice.laneId}:${choice.sourceId}`} value={`${choice.laneId}:${choice.sourceId}`}>
+              <option key={`${choice.trackId}:${choice.sourceId}`} value={`${choice.trackId}:${choice.sourceId}`}>
                 {choice.title}
               </option>
             ))}
@@ -213,7 +213,7 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
           type="button"
           className="ghost small"
           onClick={() => {
-            setShown(MAP_LANES);
+            setShown(MAP_TRACKS);
             setOnly(null);
             setFrom('');
             setTo('');
@@ -225,11 +225,11 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
       </div>
 
       <div className="links-scroll" ref={scroller}>
-        {/* One grid for the ruler and every lane, so a node is under its scene
+        {/* One grid for the ruler and every track, so a node is under its scene
             by construction rather than by two widths agreeing. §2 asks that all
-            lanes stay horizontally synchronised to the scene timeline; two
+            tracks stay horizontally synchronised to the scene timeline; two
             separately-sized rows is how that promise gets broken. */}
-        <div className="links-board" style={{ gridTemplateColumns: `${HEAD}px ${laneWidth}px` }}>
+        <div className="links-board" style={{ gridTemplateColumns: `${HEAD}px ${trackWidth}px` }}>
           <div className="links-ruler-spacer" />
           {/* §2: the scene timeline, in script order, from the script's own
               units — this module keeps no order of its own. */}
@@ -248,25 +248,25 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
             ))}
           </div>
 
-          {map.lanes.map((lane) => (
-            <Fragment key={lane.id}>
-              <h4 className="links-lane-title">{lane.title}</h4>
-              {lane.rows.length === 0 ? (
-                <p className="muted small links-empty">Nothing in this lane yet.</p>
+          {map.tracks.map((track) => (
+            <Fragment key={track.id}>
+              <h4 className="links-track-title">{track.title}</h4>
+              {track.rows.length === 0 ? (
+                <p className="muted small links-empty">Nothing in this track yet.</p>
               ) : (
                 // Each row is `display: contents`, so its head and its track
                 // are cells of the board's own two columns.
-                lane.rows.map((row) => (
-                  <LaneRow
-                    key={`${row.laneId}:${row.sourceId}`}
+                track.rows.map((row) => (
+                  <TrackRow
+                    key={`${row.trackId}:${row.sourceId}`}
                     row={row}
                     column={column}
-                    width={laneWidth}
+                    width={trackWidth}
                     centreOf={centreOf}
                     selected={selected}
                     onSelect={setSelected}
                     onGoToBeat={onGoToBeat}
-                    onIsolate={() => setOnly({ laneId: row.laneId, sourceId: row.sourceId })}
+                    onIsolate={() => setOnly({ trackId: row.trackId, sourceId: row.sourceId })}
                   />
                 ))
               )}
@@ -324,7 +324,7 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
             <>
               <p className="links-inspector-title">{found.row.title}</p>
               <p className="muted small">
-                {found.row.laneId === 'links' ? 'Link' : found.row.laneId === 'setups' ? 'Setup & payoff' : found.row.laneId === 'thematics' ? found.row.sourceKind : 'Character arc'}
+                {found.row.trackId === 'links' ? 'Link' : found.row.trackId === 'setups' ? 'Setup & payoff' : found.row.trackId === 'thematics' ? found.row.sourceKind : 'Character arc'}
                 {found.row.detail ? ` · ${found.row.detail}` : ''}
               </p>
               <p className="links-inspector-label">{found.node.label}</p>
@@ -344,8 +344,8 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
   );
 }
 
-/** One row of one lane: its nodes at their scenes, and the lines between them. */
-function LaneRow({
+/** One row of one track: its nodes at their scenes, and the lines between them. */
+function TrackRow({
   row,
   column,
   width,

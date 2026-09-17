@@ -34,7 +34,7 @@ const twoScenes = () => {
   file = updateBeat(file, file.beats[0]!.id, {
     manuscript: { elements: [action('Rain. '.repeat(120)), cue('MIKE'), say('Morning.')] },
   });
-  const second = addUnit(file, { laneId: file.lanes[0]!.id, title: 'The kitchen' });
+  const second = addUnit(file, { trackId: file.tracks[0]!.id, title: 'The kitchen' });
   file = second.file;
   const beat = addBeat(file, { unitId: second.unit.id });
   file = updateBeat(beat.file, beat.beat.id, { manuscript: { elements: [cue('CELESTE'), say('Hello.'), cue('MIKE'), say('Hey.')] } });
