@@ -457,7 +457,7 @@ main {
   background: var(--ink);
 }
 
-.viewer-grid .track-head {
+.viewer-grid .row-head {
   position: sticky;
   left: 0;
   z-index: 3;
@@ -478,13 +478,13 @@ main {
   overflow: hidden;
 }
 
-.viewer-grid .track-head.time {
+.viewer-grid .row-head.time {
   top: 0;
   height: 20px;
   z-index: 4;
 }
 
-.viewer-grid .track-head.scenes {
+.viewer-grid .row-head.scenes {
   top: 20px;
   z-index: 4;
 }
@@ -1249,7 +1249,7 @@ dialog.scene-dialog > header.off {
   position: relative;
 }
 
-.track-head {
+.row-head {
   position: sticky;
   left: 0;
   z-index: 2;
@@ -3451,7 +3451,7 @@ dialog.research-window::backdrop {
    the way an editing program draws them: a coloured tick at the point in the
    story, with its label running to the right of it. Acts in a script,
    chapters in a book, and clicking one opens what hangs off it. */
-.viewer-grid .track-head.marks {
+.viewer-grid .row-head.marks {
   z-index: 3;
 }
 
@@ -10969,7 +10969,7 @@ dialog.chapter-page-dialog {
   display: block;
 }
 
-.track-head.setup-head {
+.row-head.setup-head {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -11189,7 +11189,7 @@ dialog.chapter-page-dialog {
   background: var(--panel-2);
 }
 
-.track-head.thematic-group {
+.row-head.thematic-group {
   background: var(--panel-2);
   border: none;
   border-bottom: 1px solid var(--border);
@@ -11201,7 +11201,7 @@ dialog.chapter-page-dialog {
   gap: 6px;
 }
 
-.track-head.thematic-head {
+.row-head.thematic-head {
   display: flex;
   align-items: center;
   gap: 6px;

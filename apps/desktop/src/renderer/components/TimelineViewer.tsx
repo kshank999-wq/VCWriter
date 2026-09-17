@@ -173,7 +173,7 @@ export function TimelineViewer({
       <div className="viewer-scroll">
         <div className="viewer-grid" style={{ gridTemplateColumns: columns }}>
           {/* Time, and the scenes: these stay while the threads scroll. */}
-          <div className="track-head viewer-sticky time">Time</div>
+          <div className="row-head viewer-sticky time">Time</div>
           {spans.map((span) => (
             <div key={span.unit.id} className="viewer-time viewer-sticky">
               {timecode(span.startPage)}
@@ -185,7 +185,7 @@ export function TimelineViewer({
               book, each at the point it starts. A commercial has neither. */}
           {shortForm ? null : (
             <>
-          <div className="track-head viewer-sticky marks">Markers</div>
+          <div className="row-head viewer-sticky marks">Markers</div>
           {spans.map((span) => {
             const placed = marks.get(span.unit.id as string);
             if (!placed) return <div key={span.unit.id} className="viewer-mark viewer-sticky" />;
@@ -215,7 +215,7 @@ export function TimelineViewer({
             </>
           )}
 
-          <div className="track-head viewer-sticky scenes">{noun}</div>
+          <div className="row-head viewer-sticky scenes">{noun}</div>
           {spans.map((span) => {
             const dim = isolatedScenes && !isolatedScenes.has(span.index) ? ' dim' : '';
             const here = span.unit.id === selectedUnitId ? ' playhead' : '';
@@ -243,7 +243,7 @@ export function TimelineViewer({
           */}
           {castRows.length > 0 ? (
             <>
-              <div className="track-head viewer-sticky viewer-cast-head">
+              <div className="row-head viewer-sticky viewer-cast-head">
                 <button
                   type="button"
                   className="ghost twisty"
@@ -267,7 +267,7 @@ export function TimelineViewer({
 
           {rows.length === 0 && !shortForm ? (
             <>
-              <div className="track-head">Threads</div>
+              <div className="row-head">Threads</div>
               <p className="muted viewer-empty" style={{ gridColumn: `span ${spans.length + 1}` }}>
                 Characters appear here as they speak, and themes as they are linked to{' '}
                 {nounsFor(file.project.format).unitPlural.toLowerCase()}.
@@ -278,7 +278,7 @@ export function TimelineViewer({
           {/* Nobody tracks a character's arc across a thirty (addendum 05 §3). */}
           {shortForm ? null : (
             <>
-              <div className="track-head">Links</div>
+              <div className="row-head">Links</div>
               <LinksRow arcs={arcs} widths={widths} spans={spans} onUpdate={onUpdate} />
               <div className="viewer-links tail" />
             </>
@@ -300,7 +300,7 @@ function Row({
 }) {
   return (
     <>
-      <div className={`track-head viewer-thread-head ${row.kind}`} style={{ borderLeftColor: row.color }} title={row.name}>
+      <div className={`row-head viewer-thread-head ${row.kind}`} style={{ borderLeftColor: row.color }} title={row.name}>
         <span className="dot" style={{ background: row.color }} aria-hidden="true" />
         <span className="viewer-thread-name">{row.name}</span>
       </div>

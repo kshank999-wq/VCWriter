@@ -346,7 +346,7 @@ export function MasterTimeline({
           {/* Pages, and the time they play for: a page is a minute (§5).
               A commercial has no pages, so short form says Time and means it
               (addendum 05 §3a). */}
-          <div className="track-head ruler-head">{shortForm ? 'Time' : 'Pages · time'}</div>
+          <div className="row-head ruler-head">{shortForm ? 'Time' : 'Pages · time'}</div>
           {spans.map((span, index) => (
             <div key={span.unit.id} className={`ruler-cell${playhead(span.unit.id)}`}>
               {shortForm ? (
@@ -378,7 +378,7 @@ export function MasterTimeline({
               the cut (addendum 05 §3a). */}
           {shortForm ? (
             <>
-              <div className="track-head">Board</div>
+              <div className="row-head">Board</div>
               {spans.map((span) => (
                 <FrameStrip
                   key={span.unit.id}
@@ -395,13 +395,13 @@ export function MasterTimeline({
               thirty, so short form has neither track (addendum 05 §3). */}
           {shortForm ? null : (
             <>
-              <div className="track-head">
+              <div className="row-head">
                 {markerNoun(defaultMarkerKind(file.project.format))}s
               </div>
               <ActsRow layout={layout} playheadUnitId={selectedUnitId} onUpdate={onUpdate} />
               <div className="acts-cell tail" />
 
-              <div className="track-head">Links</div>
+              <div className="row-head">Links</div>
               <LinksRow
                 arcs={arcs}
                 widths={widths}
@@ -420,7 +420,7 @@ export function MasterTimeline({
                   <Fragment key={group}>
                     <button
                       type="button"
-                      className="track-head thematic-group"
+                      className="row-head thematic-group"
                       aria-expanded={!foldedGroups.has(group)}
                       onClick={() => foldGroup(group)}
                     >
@@ -433,7 +433,7 @@ export function MasterTimeline({
                       ? null
                       : thematics[group].map((row) => (
                           <Fragment key={`${row.kind}-${row.ownerId}`}>
-                            <div className={`track-head thematic-head ${row.kind}`} title={row.name}>
+                            <div className={`row-head thematic-head ${row.kind}`} title={row.name}>
                               <span className="thematic-head-name">{row.name}</span>
                               {row.detail ? <span className="muted small">{row.detail}</span> : null}
                             </div>
@@ -457,7 +457,7 @@ export function MasterTimeline({
                   payoff's setups are is a thing you can see (the spec's §6). */}
               {setupRows.map((row) => (
                 <Fragment key={row.recordId}>
-                  <div className="track-head setup-head" title={`${row.title} — ${row.count}`}>
+                  <div className="row-head setup-head" title={`${row.title} — ${row.count}`}>
                     <span className={`setup-light ${row.light}`} aria-hidden="true" />
                     <span className="setup-head-name">{row.title}</span>
                   </div>
@@ -780,7 +780,7 @@ function TrackRow({
   return (
     <>
       <header
-        className={`track-head track-head${track.collapsed ? ' collapsed' : ''}${dropClass(drag.dropTarget, track.id)}`}
+        className={`row-head track-head${track.collapsed ? ' collapsed' : ''}${dropClass(drag.dropTarget, track.id)}`}
         style={{ borderLeftColor: track.color }}
         draggable
         // Clicking anywhere in the header makes this the track a new scene
