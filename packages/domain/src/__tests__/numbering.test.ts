@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { addBeat, addUnit, moveUnit } from '../mutations.js';
+import { addBeat, addMarker, addUnit, moveUnit } from '../mutations.js';
 import { createProjectFile } from '../project-file.js';
 import { nounsFor } from '../formats.js';
 import {
   describeNumbering,
+  numberOfChapter,
   numberOfSub,
   numberOfUnit,
   numberedTitle,
@@ -11,6 +12,7 @@ import {
   outlineNumbers,
   setSectionNumbering,
   structureNumbers,
+  whyUnnumbered,
 } from '../numbering.js';
 import { addItem, createOutline, findOutline, outlinesOf } from '../outline.js';
 import { unitsInStoryOrder } from '../selectors.js';
@@ -174,6 +176,117 @@ describe('the outline, which is where a textbook is actually built', () => {
     const outlineId = outlinesOf(file)[0]!.id;
     const made = addItem(file, outlineId, { kind: 'scene', title: 'One', parentId: null });
     expect(outlineNumbers(made.file, findOutline(made.file, outlineId)!).size).toBe(0);
+  });
+});
+
+/**
+ * Three levels once there is a chapter (addendum 19 §6): the chapter is a
+ * marker, and everything under it counts from it. Still nothing stored.
+ */
+describe('chapters above the sections', () => {
+  /** Four sections, two subsections each; chapter markers on the first and third. */
+  const chaptered = () => {
+    const { file } = textbook(4, 2);
+    const units = unitsInStoryOrder(file);
+    let next = addMarker(file, { unitId: units[0]!.id, kind: 'chapter', title: 'Geometric optics' }).file;
+    next = addMarker(next, { unitId: units[2]!.id, kind: 'chapter', title: 'Wave optics' }).file;
+    return { file: next, units };
+  };
+
+  it('numbers chapters 1, 2, sections 1.1, 1.2, 2.1 and subsections 1.1.1', () => {
+    const { file, units } = chaptered();
+    const numbers = structureNumbers(file);
+    expect([...numbers.chapters.values()]).toEqual(['1', '2']);
+    expect(units.map((unit) => numbers.units.get(unit.id as string))).toEqual(['1.1', '1.2', '2.1', '2.2']);
+    const firstSub = file.beats.find((beat) => beat.unitId === units[0]!.id)!;
+    expect(numbers.subs.get(firstSub.id as string)).toBe('1.1.1');
+    const lastSub = file.beats.filter((beat) => beat.unitId === units[3]!.id)[1]!;
+    expect(numbers.subs.get(lastSub.id as string)).toBe('2.2.2');
+    expect(numberOfChapter(file, file.markers[1]!.id)).toBe('2');
+  });
+
+  it('numbers as before while there is no chapter, and never on a screenplay', () => {
+    const { file } = textbook(2, 1);
+    expect(structureNumbers(file).chapters.size).toBe(0);
+    expect(numberOfUnit(file, unitsInStoryOrder(file)[1]!.id)).toBe('2');
+  });
+
+  it('gives a section before the first chapter no number', () => {
+    const { file } = textbook(3, 1);
+    const units = unitsInStoryOrder(file);
+    const marked = addMarker(file, { unitId: units[1]!.id, kind: 'chapter', title: 'One' }).file;
+    const numbers = structureNumbers(marked);
+    expect(numbers.units.has(units[0]!.id as string)).toBe(false);
+    expect(numbers.subs.size).toBe(2);
+    expect(numbers.units.get(units[1]!.id as string)).toBe('1.1');
+    expect(numbers.units.get(units[2]!.id as string)).toBe('1.2');
+  });
+
+  /** The whole reason nothing is stored, one level up. */
+  it('renumbers both chapters when one is dragged above the other, with nothing run', () => {
+    const { file, units } = chaptered();
+    // Chapter two's sections go to the front, one after the other.
+    let moved = moveUnit(file, { unitId: units[2]!.id, toTrackId: units[2]!.trackId, index: 0 });
+    moved = moveUnit(moved, { unitId: units[3]!.id, toTrackId: units[3]!.trackId, index: 1 });
+    const numbers = structureNumbers(moved);
+    expect(numbers.units.get(units[2]!.id as string)).toBe('1.1');
+    expect(numbers.units.get(units[3]!.id as string)).toBe('1.2');
+    expect(numbers.units.get(units[0]!.id as string)).toBe('2.1');
+    expect(numberOfChapter(moved, moved.markers[1]!.id)).toBe('1');
+  });
+
+  it('says all three levels in words, and the rule about the first chapter', () => {
+    const { file } = chaptered();
+    const says = describeNumbering(file);
+    expect(says).toContain('Chapters are numbered 1, 2, 3');
+    expect(says).toContain('sections 1.1, 1.2, 1.3');
+    expect(says).toContain('subsections 1.1.1, 1.1.2');
+    expect(says).toContain('before the first chapter has no number');
+  });
+
+  describe('in the outline', () => {
+    const outlined = () => {
+      let file: ProjectFile = createProjectFile({ title: 'Teaching Optics', format: 'instructional' });
+      file = createOutline(file).file;
+      const outlineId = outlinesOf(file)[0]!.id;
+      const put = (kind: string, title: string, parentId: OutlineItemId | null) => {
+        const made = addItem(file, outlineId, { kind, title, parentId });
+        file = made.file;
+        return made.itemId!;
+      };
+      const preface = put('scene', 'Preface', null);
+      const one = put('chapter', 'Geometric optics', null);
+      const light = put('scene', 'Light', one);
+      const refraction = put('beat', 'Refraction', light);
+      put('note', 'Ask the editor', one);
+      const lenses = put('scene', 'Lenses', one);
+      const two = put('chapter', 'Wave optics', null);
+      const waves = put('scene', 'Waves', two);
+      return { file, outlineId, preface, one, light, refraction, lenses, two, waves };
+    };
+    const read = (made: ReturnType<typeof outlined>) =>
+      outlineNumbers(made.file, findOutline(made.file, made.outlineId)!);
+
+    it('numbers the chapter, its sections and their subsections, three deep', () => {
+      const made = outlined();
+      const numbers = read(made);
+      expect(numbers.get(made.one as string)).toBe('1');
+      expect(numbers.get(made.light as string)).toBe('1.1');
+      expect(numbers.get(made.refraction as string)).toBe('1.1.1');
+      expect(numbers.get(made.lenses as string)).toBe('1.2');
+      expect(numbers.get(made.two as string)).toBe('2');
+      expect(numbers.get(made.waves as string)).toBe('2.1');
+    });
+
+    it('leaves a section before the first chapter unnumbered, and says why', () => {
+      const made = outlined();
+      expect(read(made).has(made.preface as string)).toBe(false);
+      const outline = findOutline(made.file, made.outlineId)!;
+      const row = outline.items.find((item) => item.id === made.preface)!;
+      expect(whyUnnumbered(made.file, outline, row)).toContain('before the first chapter');
+      // A numbered row has nothing to explain.
+      expect(whyUnnumbered(made.file, outline, outline.items.find((item) => item.id === made.light)!)).toBeNull();
+    });
   });
 });
 

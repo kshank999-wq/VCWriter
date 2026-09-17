@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import {
   chapterPageStyleSchema,
   chapterStyleVars,
@@ -107,16 +108,27 @@ function ContentsLeaf({ contents }: { contents: ContentsPage }) {
           </div>
         ) : null}
         {contents.entries.map((entry) => (
-          <div key={entry.label} className="contents-row">
-            <span className="contents-label">{entry.label}</span>
-            <span className="contents-title">{entry.title}</span>
-            {stack ? (
-              <span className="contents-pages">
-                {entry.pages} {entry.pages === 1 ? 'page' : 'pages'}
-              </span>
-            ) : null}
-            <span className="contents-sheet">{stack ? entry.sheet : entry.page}</span>
-          </div>
+          <Fragment key={entry.label}>
+            <div className="contents-row">
+              <span className="contents-label">{entry.label}</span>
+              <span className="contents-title">{entry.title}</span>
+              {stack ? (
+                <span className="contents-pages">
+                  {entry.pages} {entry.pages === 1 ? 'page' : 'pages'}
+                </span>
+              ) : null}
+              <span className="contents-sheet">{stack ? entry.sheet : entry.page}</span>
+            </div>
+            {/* The sections under a chapter, indented (addendum 19 §6), with
+                the number the page itself carries. */}
+            {entry.sections.map((section) => (
+              <div key={section.number} className="contents-row contents-section">
+                <span className="contents-label">{section.number}</span>
+                <span className="contents-title">{section.title}</span>
+                <span className="contents-sheet">{section.page}</span>
+              </div>
+            ))}
+          </Fragment>
         ))}
       </div>
     </div>

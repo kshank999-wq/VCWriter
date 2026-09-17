@@ -4,6 +4,7 @@ import {
   chapterPageStyleOf,
   hasBookIndex,
   hasChapterPages,
+  nounsFor,
   paginateProject,
   paginateUnit,
   type ProjectFile,
@@ -116,7 +117,8 @@ export function PagePreview({
             disabled={!unitId}
             onClick={() => setScope('unit')}
           >
-            This scene
+            {/* The noun table's word: a book says section, a script scene. */}
+            This {nounsFor(file.project.format).unit.toLowerCase()}
           </button>
         </div>
 

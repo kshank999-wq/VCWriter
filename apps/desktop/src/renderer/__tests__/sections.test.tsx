@@ -370,6 +370,27 @@ describe('the Chapter row', () => {
     expect(screen.getByText(/A chapter starts on a section, and this one has none yet/)).toBeTruthy();
   });
 
+  it('numbers three deep once there is a chapter, and explains a section above the first', () => {
+    render(<Outliner start={chaptered()} />);
+    // Chapter 1, 1.1 Light, 1.1.1 Refraction, 1.2 Lenses — read from the tree.
+    expect(screen.getByTitle('Chapter 1')).toBeTruthy();
+    expect(screen.getByTitle('Section 1.1')).toBeTruthy();
+    expect(screen.getByTitle('Subsection 1.1.1')).toBeTruthy();
+    expect(screen.getByTitle('Section 1.2')).toBeTruthy();
+
+    // A section put above the first chapter carries no number, and the panel
+    // says why rather than leaving a gap.
+    fireEvent.pointerDown(rowOf('Geometric optics'));
+    fireEvent.click(screen.getByText('+ Section'));
+    const added = screen
+      .getAllByPlaceholderText('name the section')
+      .find((box) => (box as HTMLTextAreaElement).value === '')!;
+    // + Section on a chosen chapter goes under it, so it is 1.3; drag it
+    // above the chapter instead by making it first.
+    expect(added.closest('[role="treeitem"]')?.getAttribute('aria-level')).toBe('2');
+    expect(screen.getByTitle('Section 1.3')).toBeTruthy();
+  });
+
   it('puts its sections in the book and becomes the page before them', () => {
     render(<Outliner start={chaptered()} />);
     fireEvent.pointerDown(rowOf('Geometric optics'));

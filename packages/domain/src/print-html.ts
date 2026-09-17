@@ -205,12 +205,25 @@ const renderContentsPage = (contents: ContentsPage): string => {
         ? `<span class="contents-pages">${entry.pages} ${entry.pages === 1 ? 'page' : 'pages'}</span>` +
           `<span class="contents-sheet">${entry.sheet}</span>`
         : `<span class="contents-sheet">${entry.page}</span>`;
+      // The sections under a chapter, indented (addendum 19 §6): the number
+      // is the one the page carries, so the list and the page agree.
+      const sections = entry.sections
+        .map(
+          (section) =>
+            '<div class="contents-row contents-section">' +
+            `<span class="contents-label">${escapeHtml(section.number)}</span>` +
+            `<span class="contents-title">${escapeHtml(section.title)}</span>` +
+            `<span class="contents-sheet">${section.page}</span>` +
+            '</div>',
+        )
+        .join('');
       return (
         '<div class="contents-row">' +
         `<span class="contents-label">${escapeHtml(entry.label)}</span>` +
         `<span class="contents-title">${escapeHtml(entry.title)}</span>` +
         figures +
-        '</div>'
+        '</div>' +
+        sections
       );
     })
     .join('');
@@ -498,6 +511,7 @@ const STYLES = `
   .contents-title { flex: 1; }
   .contents-pages { width: 10ch; flex: none; text-align: right; }
   .contents-sheet { width: 6ch; flex: none; text-align: right; }
+  .contents-section { padding: 0.15em 0 0.15em 3ch; font-size: 0.92em; }
   /* The two figures need saying: the sheet is not the page the script
      prints, because every episode numbers from its own page one. */
   .contents-head { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.15em; padding-bottom: 0; }

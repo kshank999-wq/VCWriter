@@ -50,6 +50,7 @@ import {
   updateItem,
   updateUnit,
   whatGoesWithRows,
+  whyUnnumbered,
   type Outline,
   type OutlineItem,
   type OutlineItemId,
@@ -891,6 +892,11 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
                   />
                 </label>
               )}
+              {/* A number that is simply missing looks like a fault; one that
+                  says why is a fact about the book (addendum 19 §6). */}
+              {outline && whyUnnumbered(file, outline, chosen) ? (
+                <p className="muted small outline-unnumbered">{whyUnnumbered(file, outline, chosen)}</p>
+              ) : null}
               <label className="field">
                 <span>What it is</span>
                 <select

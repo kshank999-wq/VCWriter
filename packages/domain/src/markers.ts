@@ -291,6 +291,19 @@ export const MAX_CHAPTER_IMAGE_BYTES = 5 * 1024 * 1024;
  */
 export type ContentsKind = 'episodes' | 'chapters';
 
+/**
+ * A section listed under its chapter on a book that numbers its divisions
+ * (addendum 19 §6): the third level, drawn as an indent. Its number is
+ * `structureNumbers`', so the contents and the page agree by construction.
+ */
+export interface ContentsSection {
+  /** "1.1", "1.2". */
+  number: string;
+  title: string;
+  /** The page it opens on, as the page itself prints it. */
+  page: number;
+}
+
 export interface ContentsEntry {
   /** "EPISODE 2", "Chapter 4" — in whatever scheme the project numbers by. */
   label: string;
@@ -306,6 +319,8 @@ export interface ContentsEntry {
   sheet: number;
   /** The page it opens on, as the page itself prints it. */
   page: number;
+  /** The numbered sections under it, on a book that numbers them; empty otherwise. */
+  sections: ContentsSection[];
 }
 
 export interface ContentsPage {

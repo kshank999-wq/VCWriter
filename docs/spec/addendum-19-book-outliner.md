@@ -182,9 +182,11 @@ Two rules, both the note rule of addendum 16 §15 pointed one level up:
   collide with the sections that have. The Outliner says so beside the row, the
   same way it explains an unnumbered note.
 
-The contents page and the index read the same numbers and need no rule of
-their own: the contents page already lists markers and units in story order,
-and draws the third level as an indent.
+The contents page reads the same numbers and lists the sections under each
+chapter as an indent, `1.2 Lenses` with the page it opens on. (The first draft
+of this section said the contents page already did this; it listed the
+chapter markers and nothing under them, and stage 2 built the rest.) The
+index needs no rule of its own.
 
 ## 7. The chapter page for a book
 
@@ -402,3 +404,42 @@ Return read the selection from the render that made the handler, which on a
 row made a moment earlier was one render stale, so the section landed at the
 top; a row's Return now names its own row (`fromId`), the row the caret is in
 being the fact.
+
+### Stage 2 — three levels, and how they number
+
+**What it does.** `structureNumbers` grows a third map, `chapters`, keyed by
+marker id, and once a book has a chapter marker its units number `1.1`,
+`1.2`, `2.1` under the chapter whose marker fell at or before them — the same
+reading `chapterSpan` makes — and their subsections `1.1.1`. A book with no
+chapters numbers as it always has, so nothing changes for an existing project
+until its first chapter is placed. **A unit before the first chapter carries
+no number**, and nothing under it does either. `numberOfChapter` reads one.
+`outlineNumbers` walks the same three levels through the tree, and at the top
+level reads the manuscript's rule: a section beside a chapter row rather than
+under it belongs to the last chapter above it, and before the first chapter it
+has no number. `whyUnnumbered` is the sentence the panel puts under such a
+row's title — *No number: it comes before the first chapter, so it is a
+section of no chapter* — because a number that is simply missing looks like a
+fault. `describeNumbering` says all three levels and that rule in words, under
+*File ▸ Page setup ▸ Numbering*.
+
+**The contents page lists the third level**, which is the part §6 got wrong:
+it said the contents already drew it, and it did not — a contents entry was a
+chapter marker and nothing under it. `ContentsEntry` carries `sections` now,
+each `1.2 Lenses` with the page it opens on, read from `structureNumbers` so
+the list and the page cannot disagree, and both the print stylesheet and the
+preview's leaf draw them indented under the chapter. A novel's entries carry
+none, a novel numbering nothing inside a chapter.
+
+**What building it found.** Two faults in the contents reading, both from a
+book still being planned. Which chapter a section fell in was first read by
+counting the lines that went in ahead of it, and every section with no prose
+yet counts the same number of lines, so all of them landed under the last
+chapter — it is read from the story order now. And an empty section was
+pointed at the page of the *next* section's first line, which on a book with
+chapter leaves put *1.2 Lenses* on page 15 under a chapter 2 that opened on
+14: a section with nothing in it stands where the chapter's flow stands, on
+the page the line before it fell on, or the chapter's own page when it is the
+first thing in the chapter. And one more §6c survivor, on the Preview page:
+its scope tab said *This scene* on a book, the one word beside *Whole book*
+that had never been read from the table.

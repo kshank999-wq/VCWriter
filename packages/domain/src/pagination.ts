@@ -25,7 +25,9 @@ import type { ManuscriptElement, ManuscriptElementType } from './entities/manusc
 import type { ParagraphStyle, ProjectFormat, ScriptFormat } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
 import type { StructuralUnitId } from './ids.js';
+import type { StructuralUnit } from './entities/structure.js';
 import { isProseFormat } from './formats.js';
+import { structureNumbers } from './numbering.js';
 
 /**
  * Page layout for screenplays and prose manuscripts (spec §6).
@@ -1094,6 +1096,8 @@ const paginated = (
   const runs: Division[] = [];
   /** Every element as it went in, so a division with no leaf can be placed. */
   const emitted: string[] = [];
+  /** Where each unit's first line went in, so a numbered book's contents can list its sections (addendum 19 §6). */
+  const starts: SectionStart[] = [];
   const divisions = new Map(contentsDivisions(file).map((placed) => [placed.marker.unitId as string, placed]));
   let run: ManuscriptElement[] = [];
 
@@ -1183,8 +1187,8 @@ const paginated = (
     // on, which `emitted` is kept for.
     const opens = divisions.get(unit.id as string);
     if (opens) runs.push({ placed: opens, from: opensAtIndex, at: emitted.length });
-
     const elements = unitElements(file, unit.id, options, String(sceneNumbers.get(unit.id as string) ?? 0));
+    starts.push({ unit, at: emitted.length, count: elements.length });
     emitted.push(...elements.map((element) => element.id as string));
     run.push(...elements);
   }
@@ -1208,7 +1212,7 @@ const paginated = (
       number: 0,
       lines: [],
       startsWith: null,
-      contents: contentsOf(file, laid, runs, emitted),
+      contents: contentsOf(file, laid, runs, starts, emitted),
     });
   }
   return { pages: laid, where };
@@ -1294,6 +1298,13 @@ const bookIndexPages = (
   }));
 };
 
+/** A unit, how many elements went in ahead of its first line, and how many it has. */
+interface SectionStart {
+  unit: StructuralUnit;
+  at: number;
+  count: number;
+}
+
 /** A division of the document, and where it landed once the pages were laid. */
 interface Division {
   placed: PlacedMarker;
@@ -1315,6 +1326,7 @@ const contentsOf = (
   file: ProjectFile,
   pages: readonly Page[],
   runs: readonly Division[],
+  starts: readonly SectionStart[],
   emitted: readonly string[],
 ): ContentsPage => {
   // Where each element fell, so a division with no leaf of its own can still
@@ -1335,10 +1347,47 @@ const contentsOf = (
 
   const opensAt = runs.map((run) => (run.from >= 0 ? run.from : pageOf(run.at)));
 
+  // The third level (addendum 19 §6): on a book that numbers its divisions,
+  // each chapter lists the sections it covers — every unit from its own to
+  // the next chapter's — with the number the page itself carries, read from
+  // `structureNumbers` so the two cannot disagree. Empty everywhere else.
+  const numbers = structureNumbers(file).units;
+  // Which chapter a unit falls in is its place in the story order, never how
+  // many lines went in ahead of it: a book being planned has units with no
+  // prose yet, and every one of those counts the same number of lines.
+  const order = new Map(unitsInStoryOrder(file).map((unit, index) => [unit.id as string, index]));
+  const placeOf = (unitId: string): number => order.get(unitId) ?? -1;
+
   const entries: ContentsEntry[] = runs.map((run, position_) => {
     const from = opensAt[position_] as number;
     const end = opensAt[position_ + 1] ?? pages.length;
     const own = pages.slice(from, end);
+    const first = placeOf(run.placed.marker.unitId as string);
+    const next = runs[position_ + 1];
+    const until = next ? placeOf(next.placed.marker.unitId as string) : Number.POSITIVE_INFINITY;
+    const opened = own.find((page) => page.number > 0)?.number ?? 0;
+    const sections =
+      numbers.size === 0
+        ? []
+        : starts
+            .filter((start) => {
+              const place = placeOf(start.unit.id as string);
+              return place >= first && place < until && numbers.has(start.unit.id as string);
+            })
+            .map((start) => ({
+              number: numbers.get(start.unit.id as string) as string,
+              title: start.unit.title,
+              // A section with nothing written in it has no line of its own
+              // to be found on, so it stands where the chapter's flow stands:
+              // on the page the line before it fell on, or the chapter's own
+              // page when it is the first thing in the chapter.
+              page:
+                start.count > 0
+                  ? (pages[pageOf(start.at)]?.number ?? 0)
+                  : start.at > run.at
+                    ? (pages[pageOf(start.at - 1)]?.number ?? 0)
+                    : opened,
+            }));
     return {
       label: run.placed.label,
       title: run.placed.marker.title,
@@ -1348,7 +1397,8 @@ const contentsOf = (
       sheet: from + 2,
       // What the page it opens on prints on its own face. A cover carries no
       // number, so the number is the first one the division actually has.
-      page: own.find((page) => page.number > 0)?.number ?? 0,
+      page: opened,
+      sections,
     };
   });
 

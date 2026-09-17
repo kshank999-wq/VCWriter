@@ -1020,8 +1020,8 @@ push live; the build takes a minute or two.
   are not.
   `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
   Ken after using instructional mode: chapters, sections and subsections
-  worked out first, then put on the track. **Stages 0 and 1 are built; stages
-  2–5 of §9 are not** — §12 fills a stage at a time. Stage 0 is the × off
+  worked out first, then put on the track. **Stages 0–2 are built; stages
+  3–5 of §9 are not** — §12 fills a stage at a time. Stage 0 is the × off
   every row, **Delete** and **Add to track** on the toolbar acting on the
   selection, and an ask that says what goes (`whatGoesWithRows`,
   `rowsRemovalQuestion`, `rowsRemovalComfort` in `outline.ts`) with *Just
@@ -1038,7 +1038,19 @@ push live; the build takes a minute or two.
   which is what lets a second chapter land after the whole of the first and
   *Move the chapter to match* move the span as a block. Found on the way:
   `removeTrack` never let the plans go of what left with the track, and a
-  row's Return read a stale selection, so it names its own row now. §1 is the
+  row's Return read a stale selection, so it names its own row now. Stage 2
+  is **three levels**: `structureNumbers` has a `chapters` map and numbers
+  units `1.1` and subs `1.1.1` under the chapter whose marker fell at or
+  before them, a unit before the first chapter unnumbered and `whyUnnumbered`
+  saying so under the row's title; `outlineNumbers` reads the same rule at
+  the top level; and the contents page lists the sections under each chapter
+  (`ContentsEntry.sections`, drawn indented by the print stylesheet and
+  `Paper.tsx`), which §6 had wrongly said it already did. Building it found
+  two faults in placing those sections, both from a book with no prose yet —
+  read by element count, every empty section fell under the last chapter, and
+  an empty section pointed at the *next* section's page — so the chapter is
+  read from the story order and an empty section stands where the flow
+  stands. §1 is the
   audit and it paid a
   **ninth** time: a `chapter` **story marker** *is* a chapter — it already sits
   above units, carries the chapter page and drives the contents page — so the

@@ -16,6 +16,7 @@ import {
   toRoman,
   toWords,
   updateBeat,
+  updateUnit,
   type ProjectFile,
   type ProjectFormat,
 } from '../index.js';
@@ -257,6 +258,35 @@ describe('the contents page of a book', () => {
     // is named past the end of it.
     expect([...numbers].sort((a, b) => a - b)).toEqual(numbers);
     expect(Math.max(...numbers)).toBeLessThanOrEqual(pages.length - 1);
+  });
+
+  it('lists the numbered sections under each chapter of a textbook, and nothing under a novel’s', () => {
+    // A novel numbers nothing inside a chapter, so its contents has no third level.
+    expect(paginateProject(markAll(book(2)))[0]?.contents?.entries.every((entry) => entry.sections.length === 0)).toBe(
+      true,
+    );
+
+    // A textbook: two chapters, the second over two sections.
+    let file = createProjectFile({ title: 'Teaching Optics', format: 'instructional' });
+    const trackId = file.tracks[0]!.id;
+    const light = file.units[0]!;
+    file = updateUnit(file, light.id, { title: 'Light' });
+    const lenses = addUnit(file, { trackId, title: 'Lenses' });
+    file = addBeat(lenses.file, { unitId: lenses.unit.id }).file;
+    const waves = addUnit(file, { trackId, title: 'Waves' });
+    file = addBeat(waves.file, { unitId: waves.unit.id }).file;
+    file = addMarker(file, { unitId: light.id, kind: 'chapter', title: 'Geometric optics' }).file;
+    file = addMarker(file, { unitId: waves.unit.id, kind: 'chapter', title: 'Wave optics' }).file;
+
+    const contents = paginateProject(file)[0]?.contents;
+    expect(contents?.entries.map((entry) => entry.sections.map((section) => `${section.number} ${section.title}`))).toEqual([
+      ['1.1 Light', '1.2 Lenses'],
+      ['2.1 Waves'],
+    ]);
+    // The printed page indents them under the chapter.
+    const html = renderPrintDocumentHtml(file);
+    expect(html).toContain('contents-section');
+    expect(html).toContain('1.2</span><span class="contents-title">Lenses');
   });
 
   it('is not printed for a book of one chapter, nor for a screenplay', () => {
