@@ -525,8 +525,12 @@ export function StoryView({
                   </div>
                 ))}
 
+                {/* The noun table's words, not the unit's kind: a book's unit
+                    is a `chapter` by kind and a Section by name. */}
                 {beats.length === 0 ? (
-                  <p className="muted collapsed-note">Nothing in this {unit.kind} is in the script.</p>
+                  <p className="muted collapsed-note">
+                    Nothing in this {nouns.unit.toLowerCase()} is in the {nouns.manuscript.toLowerCase()}.
+                  </p>
                 ) : null}
               </section>
             );

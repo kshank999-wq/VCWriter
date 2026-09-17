@@ -52,6 +52,17 @@ export const findOutline = (file: ProjectFile, outlineId: OutlineId): Outline | 
 
 const touch = <T extends { updatedAt: string }>(row: T): T => ({ ...row, updatedAt: nowIso() });
 
+/** Whether a row stands for something real: a unit, a beat, or a chapter marker. */
+const bound = (item: OutlineItem): boolean =>
+  item.boundUnitId !== null || item.boundBeatId !== null || item.boundMarkerId !== null;
+
+/**
+ * **A chapter cannot hang under anything** (addendum 19 §2): a chapter inside a
+ * section is not a thing a book can print, so it is the one kind whose place is
+ * fixed at the top. Every move and every retyping asks this before acting.
+ */
+const mayHang = (kind: string, parentId: OutlineItemId | null): boolean => kind !== 'chapter' || parentId === null;
+
 const withOutline = (
   file: ProjectFile,
   outlineId: OutlineId,
@@ -170,10 +181,7 @@ export const filterOutline = (
     if (filter.kinds?.length && !filter.kinds.includes(item.kind)) continue;
     if (filter.status && item.status !== filter.status) continue;
     if (filter.linked !== undefined && (item.source?.type === 'research_item') !== filter.linked) continue;
-    if (filter.promoted !== undefined) {
-      const promoted = item.boundUnitId !== null || item.boundBeatId !== null;
-      if (promoted !== filter.promoted) continue;
-    }
+    if (filter.promoted !== undefined && bound(item) !== filter.promoted) continue;
     if (query.length > 0) {
       // The name it shows, which for a linked row is the research item's.
       const said = `${rowTitle(file, item)} ${item.body}`.toLowerCase();
@@ -260,7 +268,7 @@ export const whatGoesWithRows = (outline: Outline, itemIds: readonly OutlineItem
   const going = [...doomed.values()];
   return {
     rows: going.length,
-    promoted: going.filter((one) => one.boundUnitId !== null || one.boundBeatId !== null).length,
+    promoted: going.filter(bound).length,
     titles,
   };
 };
@@ -392,6 +400,7 @@ const madeItem = (input: {
     collapsed: false,
     boundUnitId: null,
     boundBeatId: null,
+    boundMarkerId: null,
     source: null,
     createdAt: at,
     updatedAt: at,
@@ -415,12 +424,14 @@ export const addItem = (
 
   const parentId = input.parentId ?? null;
   if (parentId !== null && !findOutlineItem(outline, parentId)) return { file, itemId: null };
+  const kind = input.kind ?? 'note';
+  if (!mayHang(kind, parentId)) return { file, itemId: null };
 
   const item = madeItem({
     outlineId,
     parentId,
     orderKey: keyFor(outlineChildren(outline, parentId), { afterId: input.afterId ?? null }),
-    kind: input.kind ?? 'note',
+    kind,
     title: input.title ?? '',
   });
 
@@ -433,9 +444,12 @@ export const addItem = (
 /**
  * What a row says, and what it is. Anything not given is left alone.
  *
- * Retitling a **promoted** row retitles the scene or beat it is (§6): they are
- * one object, so there is no version of this where the row and the script say
- * different things.
+ * Retitling a **promoted** row retitles the scene, beat or chapter it is (§6,
+ * addendum 19 §2): they are one object, so there is no version of this where
+ * the row and the script say different things.
+ *
+ * A nested row cannot be retyped into a chapter (addendum 19 §2); the rest of
+ * the patch still lands, so nothing else typed alongside is lost.
  */
 export const updateItem = (
   file: ProjectFile,
@@ -445,13 +459,16 @@ export const updateItem = (
 ): ProjectFile => {
   const outline = findOutline(file, outlineId);
   const before = outline ? findOutlineItem(outline, itemId) : null;
+  const { kind, ...rest } = patch;
+  const allowed = kind !== undefined && before && mayHang(kind, before.parentId) ? { ...rest, kind } : rest;
   const next = withOutline(file, outlineId, (current) => ({
     ...current,
-    items: current.items.map((item) => (item.id === itemId ? touch({ ...item, ...patch }) : item)),
+    items: current.items.map((item) => (item.id === itemId ? touch({ ...item, ...allowed }) : item)),
   }));
   if (patch.title === undefined || !before) return next;
   if (before.boundUnitId !== null) return retitleScript(next, { unitId: before.boundUnitId }, patch.title);
   if (before.boundBeatId !== null) return retitleScript(next, { beatId: before.boundBeatId }, patch.title);
+  if (before.boundMarkerId !== null) return retitleScript(next, { markerId: before.boundMarkerId }, patch.title);
   return next;
 };
 
@@ -492,6 +509,7 @@ export const moveItem = (
   if (to.parentId !== null && !findOutlineItem(outline, to.parentId)) return file;
   if (to.parentId === itemId) return file;
   if (to.parentId !== null && isUnder(outline, to.parentId, itemId)) return file;
+  if (!mayHang(item.kind, to.parentId)) return file;
 
   // The dragged row is lifted out of the list before the key is worked out,
   // so "after the row below me" is a real move rather than a no-op.
@@ -592,7 +610,7 @@ export const renameOutline = (file: ProjectFile, outlineId: OutlineId, name: str
 export const outlineTally = (outline: Outline): { rows: number; scenes: number; promoted: number } => ({
   rows: outline.items.length,
   scenes: outline.items.filter((item) => item.kind === 'scene').length,
-  promoted: outline.items.filter((item) => item.boundUnitId !== null || item.boundBeatId !== null).length,
+  promoted: outline.items.filter(bound).length,
 });
 
 // ------------------------------------ research, dragged in (§5)
@@ -664,6 +682,7 @@ export const addResearchRow = (
     collapsed: false,
     boundUnitId: null,
     boundBeatId: null,
+    boundMarkerId: null,
     source: { type: 'research_item', id: researchItemId as string },
     createdAt: at,
     updatedAt: at,

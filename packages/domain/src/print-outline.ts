@@ -157,7 +157,7 @@ const renderRow = (file: ProjectFile, outline: Outline, row: { item: OutlineItem
     `<li class="out-row ${tier} out-kind-${escapeHtml(item.kind)}" style="margin-left:${indent}pt">` +
     `<p class="out-head">${escapeHtml(headOf(file, outline, item))}` +
     (linked ? '<span class="out-mark" title="From the research">&#9670;</span>' : '') +
-    (item.boundUnitId || item.boundBeatId ? '<span class="out-mark">&#9679;</span>' : '') +
+    (item.boundUnitId || item.boundBeatId || item.boundMarkerId ? '<span class="out-mark">&#9679;</span>' : '') +
     '</p>' +
     (item.kind === 'scene' ? cardLine(file, outline, item) : '') +
     (body.length > 0 && item.kind !== 'scene' ? `<p class="out-body">${escapeHtml(body)}</p>` : '') +

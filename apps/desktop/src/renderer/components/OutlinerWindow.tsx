@@ -10,6 +10,7 @@ import {
   boardsOf,
   carryNodeToOutline,
   canPromote,
+  chapterSpan,
   createOutline,
   filterOutline,
   findOutline,
@@ -105,6 +106,7 @@ const STEP = 22;
  * column of noise down the left of the outline (§9).
  */
 const MARKS: Record<string, string> = {
+  chapter: '▤',
   scene: '▣',
   beat: '◈',
   note: '✎',
@@ -125,6 +127,12 @@ const MARKS: Record<string, string> = {
  * The three narrative kinds are **absent on a book** rather than renamed: a
  * professor has no use for a Character, a Setting or a Prop, and the honest
  * thing is not to offer them — the same rule the research menu follows.
+ *
+ * A book has a **Chapter** above its sections (addendum 19 §2): a page that
+ * announces the subject, under which the writing begins. It is the one kind
+ * whose place is fixed at the top, and it is only a book's — a novel's unit is
+ * already called Chapter, and offering it a second one would be two words for
+ * one thing.
  */
 const kindsFor = (format: ProjectFormat): Record<string, { name: string; mark: string }> => {
   const nouns = nounsFor(format);
@@ -134,7 +142,7 @@ const kindsFor = (format: ProjectFormat): Record<string, { name: string; mark: s
     note: { name: 'Note', mark: MARKS['note']! },
     idea: { name: 'Idea', mark: MARKS['idea']! },
   };
-  if (isInstructional(format)) return shared;
+  if (isInstructional(format)) return { chapter: { name: 'Chapter', mark: MARKS['chapter']! }, ...shared };
   return {
     ...shared,
     character: { name: 'Character', mark: MARKS['character']! },
@@ -158,6 +166,7 @@ const article = (name: string): string =>
  */
 const placeholderOf = (kind: string, format: ProjectFormat): string => {
   const nouns = nounsFor(format);
+  if (kind === 'chapter') return 'name the chapter';
   if (kind === 'scene') return `name the ${nouns.unit.toLowerCase()}`;
   if (kind === 'beat') {
     return isInstructional(format) ? `name the ${nouns.sub.toLowerCase()}` : 'what happens';
@@ -430,13 +439,35 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
    * of a character means *another one of these*, so it goes **beside** it —
    * a beat inside a beat is not what anybody means by "another beat".
    */
-  const add = (kind: string, beside = false) => {
+  const add = (kind: string, beside = false, fromId: OutlineItemId | null = null) => {
     write((current, id) => {
       const live = findOutline(current, id);
-      const here = live && selected ? findOutlineItem(live, selected) : null;
-      const parentId = kind === 'scene' ? null : beside ? here?.parentId ?? null : here?.id ?? null;
+      // Return names its own row: the selection may not have caught up with
+      // a row made a moment ago, and the row the caret is in is the fact.
+      const at = fromId ?? selected;
+      const here = live && at ? findOutlineItem(live, at) : null;
+      const chain = live && here ? chainOf(live, here) : [];
+      const top = chain[chain.length - 1] ?? null;
+      // A chapter is the other kind whose place is the top (addendum 19 §2),
+      // and a section goes under the chapter the writer is in, after the
+      // section they are in — or at the top where there is no chapter.
+      const inChapter = kind === 'scene' && top?.kind === 'chapter';
+      const parentId =
+        kind === 'chapter' || (kind === 'scene' && !inChapter)
+          ? null
+          : inChapter
+            ? top.id
+            : beside
+              ? here?.parentId ?? null
+              : here?.id ?? null;
       const afterId =
-        kind === 'scene' && here ? topmostOf(live as Outline, here).id : beside ? here?.id ?? null : null;
+        kind === 'chapter' || (kind === 'scene' && !inChapter)
+          ? top?.id ?? null
+          : inChapter
+            ? chain[chain.length - 2]?.id ?? null
+            : beside
+              ? here?.id ?? null
+              : null;
       const made = addItem(current, id, { parentId, afterId, kind });
       if (made.itemId) {
         // Typed into straight away: outlining is typing, not form-filling (§8).
@@ -478,8 +509,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
     if (event.key === 'Enter') {
       event.preventDefault();
       const here = findOutlineItem(outline, selected);
-      if (!here || here.kind === 'scene') add('beat');
-      else add(here.kind, true);
+      add(...nextAfter(here));
     }
   };
 
@@ -499,6 +529,16 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
                 one written out by hand was still offering a textbook a
                 Character, a Setting and a Prop long after §14 said it
                 should not. */}
+            {kindsFor(file.project.format)['chapter'] ? (
+              <button
+                type="button"
+                className="tool"
+                title="A chapter: a page that announces the subject, and the sections under it. Always at the top level"
+                onClick={() => add('chapter')}
+              >
+                + Chapter
+              </button>
+            ) : null}
             <button
               type="button"
               className="tool"
@@ -508,7 +548,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
               + {nouns.unit}
             </button>
             {Object.keys(kindsFor(file.project.format))
-              .filter((kind) => kind !== 'scene')
+              .filter((kind) => kind !== 'scene' && kind !== 'chapter')
               .map((kind) => (
                 <button
                   key={kind}
@@ -767,12 +807,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
               }
               onEnter={() => {
                 setSelected(row.item.id);
-                // Another of what this is, beside it. A scene is the exception:
-                // its Return makes a **beat**, under it, because nobody writes
-                // two scene names in a row and a scene with nothing in it is
-                // what you have just finished naming.
-                if (row.item.kind === 'scene') add('beat');
-                else add(row.item.kind, true);
+                add(...nextAfter(row.item), row.item.id);
               }}
               onStep={(direction) => {
                 const at = rows.findIndex((entry) => entry.item.id === row.item.id);
@@ -868,11 +903,16 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
                   {!kindsFor(file.project.format)[chosen.kind] ? (
                     <option value="">{nameOf(chosen.kind, file.project.format)}</option>
                   ) : null}
-                  {Object.keys(kindsFor(file.project.format)).map((kind) => (
-                    <option key={kind} value={kind}>
-                      {nameOf(kind, file.project.format)}
-                    </option>
-                  ))}
+                  {/* A row under something cannot become a chapter (addendum
+                      19 §2), and the domain would refuse it; the list says so
+                      by not offering it. */}
+                  {Object.keys(kindsFor(file.project.format))
+                    .filter((kind) => kind !== 'chapter' || chosen.parentId === null)
+                    .map((kind) => (
+                      <option key={kind} value={kind}>
+                        {nameOf(kind, file.project.format)}
+                      </option>
+                    ))}
                 </select>
               </label>
               {/* How far along it is (§8). A scene keeps this in its card,
@@ -1147,9 +1187,11 @@ function Promotion({
   }
 
   const nouns = nounsFor(file.project.format);
-  const what = (kind === 'unit' ? nouns.unit : nouns.sub).toLowerCase();
+  const what = (kind === 'unit' ? nouns.unit : kind === 'chapter' ? 'Chapter' : nouns.sub).toLowerCase();
   const subs = nouns.subPlural.toLowerCase();
   const sub = nouns.sub.toLowerCase();
+  const units = nouns.unitPlural.toLowerCase();
+  const unit = nouns.unit.toLowerCase();
 
   if (promoted) {
     // A numbered book says *1.2 Refraction*, and the number is the reading
@@ -1158,17 +1200,26 @@ function Promotion({
       promoted.kind === 'unit'
         ? numberedTitle(numberOfUnit(file, promoted.unit.id), promoted.unit.title, 'Untitled') ||
           `${promoted.unit.sequenceLabel || ''} ${promoted.unit.title || 'Untitled'}`.trim()
-        : numberedTitle(numberOfSub(file, promoted.beat.id), promoted.beat.title, 'Untitled');
+        : promoted.kind === 'beat'
+          ? numberedTitle(numberOfSub(file, promoted.beat.id), promoted.beat.title, 'Untitled')
+          : promoted.marker.title.trim() || 'Untitled';
+    // What a chapter covers is read off the markers every time (addendum 19
+    // §2): move a section into the stretch and the count follows.
+    const covers = promoted.kind === 'marker' ? chapterSpan(file, promoted.marker.id).length : 0;
     return (
       <section className="outline-promotion in-script">
         <p className="small">
           <span className="outline-real">●</span> This <strong>is</strong> the {what} <em>{name}</em>, in the{' '}
-          {nouns.manuscript.toLowerCase()}. Rename it here or there and it is renamed in both.
+          {nouns.manuscript.toLowerCase()}
+          {promoted.kind === 'marker'
+            ? ` — a page before ${covers === 1 ? `one ${unit}` : `${covers} ${units}`}`
+            : ''}
+          . Rename it here or there and it is renamed in both.
         </p>
         {step ? (
           <p className="small outline-step">
-            In the outline it comes {step.outlineFirst ? 'before' : 'after'} {step.otherTitle}; in the script it
-            comes {step.outlineFirst ? 'after' : 'before'}.{' '}
+            In the outline it comes {step.outlineFirst ? 'before' : 'after'} {step.otherTitle}; in the{' '}
+            {nouns.manuscript.toLowerCase()} it comes {step.outlineFirst ? 'after' : 'before'}.{' '}
             <button
               type="button"
               className="ghost small"
@@ -1190,7 +1241,15 @@ function Promotion({
   }
 
   const beats = outlineChildren(outline, item.id).filter((child) => child.kind === 'beat').length;
+  const sections = outlineChildren(outline, item.id).filter((child) => child.kind === 'scene').length;
   const existing = kind === 'unit' ? promotableUnits(file, item.id) : [];
+  /** What comes with it: a scene's beats, a chapter's sections. */
+  const brings =
+    kind === 'unit' && beats > 0
+      ? `${beats} ${beats === 1 ? sub : subs}`
+      : kind === 'chapter' && sections > 0
+        ? `${sections === 1 ? `its ${unit}` : `its ${sections} ${units}`}`
+        : '';
 
   return (
     <section className="outline-promotion">
@@ -1202,23 +1261,25 @@ function Promotion({
           className="ghost small"
           title={
             kind === 'unit'
-              ? `Put this ${what} in the ${nouns.manuscript.toLowerCase()}${
-                  beats > 0 ? `, with its ${beats} ${beats === 1 ? sub : subs}` : ''
-                }`
-              : `Put this ${sub} into its ${nouns.unit.toLowerCase()}`
+              ? `Put this ${what} in the ${nouns.manuscript.toLowerCase()}${brings ? `, with its ${brings}` : ''}`
+              : kind === 'chapter'
+                ? `Put ${brings} in the ${nouns.manuscript.toLowerCase()}, then the chapter page on the first`
+                : `Put this ${sub} into its ${unit}`
           }
           onClick={() => onWrite((current, id) => promoteRow(current, id, item.id).file)}
         >
           Add to track
-          {kind === 'unit' && beats > 0 ? ` — and ${beats} ${beats === 1 ? sub : subs}` : ''}
+          {brings ? ` — and ${brings}` : ''}
         </button>
       ) : (
         <p className="muted small">
           {refusal === 'its scene is still a plan'
-            ? `A ${sub} lives inside a ${nouns.unit.toLowerCase()}, so this one can go in as soon as the ${nouns.unit.toLowerCase()} above it does.`
+            ? `A ${sub} lives inside a ${unit}, so this one can go in as soon as the ${unit} above it does.`
             : refusal === 'there is no track to put a scene in'
-              ? `There is no plot track to put a ${nouns.unit.toLowerCase()} in yet.`
-              : refusal}
+              ? `There is no plot track to put a ${unit} in yet.`
+              : refusal === 'a chapter starts on a section, and this one has none yet'
+                ? `A chapter starts on a ${unit}, and this one has none yet. Put one under it first.`
+                : refusal}
         </p>
       )}
 
@@ -1251,15 +1312,35 @@ function Promotion({
   );
 }
 
-/** The scene a row is inside, or the row itself when it is already at the top. */
-const topmostOf = (outline: Outline, item: OutlineItem): OutlineItem => {
+/**
+ * What Return makes after a row: another of what this is, beside it.
+ *
+ * Two exceptions, and they are the same exception. A scene's Return makes a
+ * **beat** under it, because nobody writes two scene names in a row and a
+ * scene with nothing in it is what you have just finished naming; a chapter's
+ * Return makes a **section** under it for the same reason — a chapter is a
+ * page, and the writing begins at its first section (addendum 19 §2).
+ */
+const nextAfter = (here: OutlineItem | null): [kind: string, beside: boolean] => {
+  if (!here || here.kind === 'scene') return ['beat', false];
+  if (here.kind === 'chapter') return ['scene', false];
+  return [here.kind, true];
+};
+
+/**
+ * A row and everything above it, up to the top: the row first, the topmost
+ * last. What `add` reads to find the scene a row is inside, or the chapter.
+ */
+const chainOf = (outline: Outline, item: OutlineItem): OutlineItem[] => {
+  const chain = [item];
   let walk = item;
   for (let step = 0; walk.parentId !== null && step <= outline.items.length; step += 1) {
     const parent = findOutlineItem(outline, walk.parentId);
     if (!parent) break;
+    chain.push(parent);
     walk = parent;
   }
-  return walk;
+  return chain;
 };
 
 /**

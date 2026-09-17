@@ -346,3 +346,59 @@ tally under the toolbar said *1 rows*, a plural nobody had pluralised. Driving
 the real renderer showed the ask dialog at the size the Sculptor's card ask
 draws at, which is the right size, so it borrows those two classes rather than
 growing its own.
+
+### Stage 1 — the Chapter row and its marker
+
+**What it does.** `chapter` joins `OUTLINE_KINDS`, and a book's Outliner
+offers **+ Chapter** first on the toolbar, a ruled heading in the display
+face above its sections. It is the one kind whose place is fixed: `mayHang`
+in `outline.ts` refuses a chapter under anything — `addItem` returns nothing,
+`moveItem` and Tab leave it where it is, and retyping a nested row into a
+chapter keeps the rest of the patch and drops the kind, while the panel's
+type list simply does not offer it there. Return on a chapter makes a
+**section under it** (`nextAfter`, the scene's own rule pointed one level
+up), and **+ Section** from inside a chapter stays inside it, after the
+section the writer is in.
+
+Promotion is §2 made real. `boundMarkerId` is the third binding on the row
+(migration 0052, one nullable column with the marker's `on delete set null`),
+and `promoteChapter` in `outline-binding.ts` promotes the sections beneath,
+each with its subsections, then `addMarker` of kind `chapter` on the first of
+them with the row's title, and binds. `canPromote` refuses an empty chapter
+with the sentence — *a chapter starts on a section, and this one has none
+yet* — and makes nothing, no marker and no section invented to hang one on.
+The rename is two-way through `planning.ts`: `BindingTarget` gained
+`{ markerId }`, so `updateItem` retitles the marker and `updateMarker` (the
+marker dialog, the chapter page dialog, the timeline) retitles the row.
+Letting go is the same shape as a scene's: `removeMarker` unbinds the row,
+`removeUnit` re-anchors the marker to the next section and the row stays
+bound, and only when the last section goes does the marker go and the row
+return to a plan. `unpromoteRow` leaves the marker, for §10's reason.
+
+**What a chapter covers is read, never stored**: `chapterSpan` walks the
+story order from the marker's unit to the next chapter marker's, so a section
+dragged into the stretch is in the chapter with nothing run. That reading is
+what places things. `indexAmong` now takes *where a sibling stands* as a
+first-and-last rather than one position, so a second chapter lands after the
+**whole** of the first rather than between its first section and its second,
+and a section promoted on its own beside chapters lands after the last unit
+of the chapter above it. Out-of-step reaches chapters the same way — two
+chapters compare by their first units — and **Move the chapter to match**
+moves the whole span as a block, each unit placed after the one before it
+from the live order, because a chapter is a page and its sections are what
+it is: moving the page alone would put the heading of chapter three over the
+sections of chapter two.
+
+**What building it found.** Two things outside the stage. `removeTrack`
+never let the plans go — a row bound to a scene that left with its track
+kept claiming to be real — so it calls `unbindRemovedFromPlans` as
+`removeUnit` always has, and both now name the markers re-anchoring dropped.
+Two §6c survivors: the promotion panel's out-of-step sentence still said *in
+the script it comes* on a book, and the Book view's empty unit said *Nothing
+in this chapter is in the script* — the unit's *kind* rather than its noun,
+and the wrong manuscript — which the promoted chapter's leaf drew in the
+first screenshot; both read the noun table now. In the renderer,
+Return read the selection from the render that made the handler, which on a
+row made a moment earlier was one render stale, so the section landed at the
+top; a row's Return now names its own row (`fromId`), the row the caret is in
+being the fact.

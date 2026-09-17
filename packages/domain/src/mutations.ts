@@ -273,14 +273,23 @@ export const updateMarker = (
   if (patch.unitId !== undefined && !file.units.some((unit) => unit.id === patch.unitId)) {
     throw new DomainError(`Scene/chapter ${patch.unitId} does not exist`);
   }
-  return touchProject({
+  const next = touchProject({
     ...file,
     markers: file.markers.map((marker) => (marker.id === markerId ? touch({ ...marker, ...patch }) : marker)),
   });
+  // A Chapter row that is this marker is renamed with it (addendum 19 §2).
+  return patch.title === undefined ? next : retitlePlans(next, { markerId }, patch.title);
 };
 
+/**
+ * The marker goes; a Chapter row that was it goes back to being a plan
+ * (addendum 19 §2), for the reason `removeUnit` lets go of a scene's row.
+ */
 export const removeMarker = (file: ProjectFile, markerId: StoryMarkerId): ProjectFile =>
-  touchProject({ ...file, markers: file.markers.filter((marker) => marker.id !== markerId) });
+  unbindRemovedFromPlans(
+    touchProject({ ...file, markers: file.markers.filter((marker) => marker.id !== markerId) }),
+    { units: new Set(), beats: new Set(), markers: new Set<string>([markerId as string]) },
+  );
 
 /**
  * The page a chapter opens with (addendum 02 §11). Patched rather than
@@ -329,6 +338,12 @@ const reanchorMarkers = (file: ProjectFile, removedUnitIds: ReadonlySet<string>)
     kept.push(touch({ ...marker, unitId: target.id }));
   }
   return kept;
+};
+
+/** The markers re-anchoring could not keep, by id, so their plans can let go. */
+const droppedMarkers = (file: ProjectFile, kept: readonly StoryMarker[]): Set<string> => {
+  const survivors = new Set(kept.map((marker) => marker.id as string));
+  return new Set(file.markers.map((marker) => marker.id as string).filter((id) => !survivors.has(id)));
 };
 
 export const updateBeat = (
@@ -1069,15 +1084,22 @@ export const removeTrack = (file: ProjectFile, trackId: TrackId): ProjectFile =>
     file.beats.filter((beat) => removedUnitIds.has(beat.unitId)).map((beat) => beat.id as string),
   );
   const removed = new Set<string>([trackId, ...removedUnitIds, ...removedBeatIds]);
+  const markers = reanchorMarkers(file, removedUnitIds);
 
-  return touchProject({
-    ...file,
-    tracks: file.tracks.filter((track) => track.id !== trackId),
-    units: file.units.filter((unit) => !removedUnitIds.has(unit.id)),
-    beats: file.beats.filter((beat) => !removedBeatIds.has(beat.id)),
-    markers: reanchorMarkers(file, removedUnitIds),
-    links: withoutLinksTouching(file, removed),
-  });
+  // The plans let go of what left with the track, as `removeUnit` does for
+  // one scene: a row bound to a scene that has gone claims to be real and
+  // cannot say what it is.
+  return unbindRemovedFromPlans(
+    touchProject({
+      ...file,
+      tracks: file.tracks.filter((track) => track.id !== trackId),
+      units: file.units.filter((unit) => !removedUnitIds.has(unit.id)),
+      beats: file.beats.filter((beat) => !removedBeatIds.has(beat.id)),
+      markers,
+      links: withoutLinksTouching(file, removed),
+    }),
+    { units: removedUnitIds, beats: removedBeatIds, markers: droppedMarkers(file, markers) },
+  );
 };
 
 export const updateUnit = (
@@ -1151,18 +1173,20 @@ export const removeUnit = (file: ProjectFile, unitId: StructuralUnitId): Project
     file.beats.filter((beat) => beat.unitId === unitId).map((beat) => beat.id as string),
   );
   const removed = new Set<string>([unitId, ...removedBeatIds]);
+  const markers = reanchorMarkers(file, new Set<string>([unitId]));
 
   // A card pointing at a scene that has left the script claims to be real and
-  // cannot say what it is, so it goes back to being a plan.
+  // cannot say what it is, so it goes back to being a plan. A marker the
+  // re-anchoring dropped takes its Chapter row back to a plan the same way.
   return unbindRemovedFromPlans(
     touchProject({
       ...file,
       units: file.units.filter((unit) => unit.id !== unitId),
       beats: file.beats.filter((beat) => !removedBeatIds.has(beat.id)),
-      markers: reanchorMarkers(file, new Set<string>([unitId])),
+      markers,
       links: withoutLinksTouching(file, removed),
     }),
-    { units: new Set<string>([unitId as string]), beats: removedBeatIds },
+    { units: new Set<string>([unitId as string]), beats: removedBeatIds, markers: droppedMarkers(file, markers) },
   );
 };
 

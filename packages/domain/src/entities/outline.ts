@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { id, orderKey, timestamps } from './common.js';
 import { storyEntityRefSchema } from './links.js';
-import type { BeatId, OutlineId, OutlineItemId, ProjectId, StructuralUnitId } from '../ids.js';
+import type { BeatId, OutlineId, OutlineItemId, ProjectId, StoryMarkerId, StructuralUnitId } from '../ids.js';
 
 /**
  * The Outliner's document (addendum 06).
@@ -27,7 +27,7 @@ import type { BeatId, OutlineId, OutlineItemId, ProjectId, StructuralUnitId } fr
  * string with known values rather than an enum that would refuse the eighth
  * one.
  */
-export const OUTLINE_KINDS = ['scene', 'beat', 'note', 'idea', 'character', 'setting', 'prop'] as const;
+export const OUTLINE_KINDS = ['chapter', 'scene', 'beat', 'note', 'idea', 'character', 'setting', 'prop'] as const;
 export type OutlineKind = (typeof OUTLINE_KINDS)[number];
 
 /** How far along a row is. The writer's own words are allowed (§8). */
@@ -62,6 +62,13 @@ export const outlineItemSchema = z.object({
    */
   boundUnitId: id<StructuralUnitId>().nullable().default(null),
   boundBeatId: id<BeatId>().nullable().default(null),
+  /**
+   * The chapter this row **is**, once promoted (addendum 19 §2): a `chapter`
+   * story marker, which is what a chapter in the manuscript has always been —
+   * a page between units that carries no text of its own. The third binding
+   * beside the two above, and like them null on a plan.
+   */
+  boundMarkerId: id<StoryMarkerId>().nullable().default(null),
   /**
    * The research this row references, where it was dragged in from the shelf
    * (§5). A **reference, not a copy**: the title follows the source, and

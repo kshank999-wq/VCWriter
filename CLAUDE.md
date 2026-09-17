@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0050.
+  reads like it does. Applied through 0052.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
   the windowing, and the thing to know is that **every room goes to a second
@@ -1020,14 +1020,26 @@ push live; the build takes a minute or two.
   are not.
   `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
   Ken after using instructional mode: chapters, sections and subsections
-  worked out first, then put on the track. **Stage 0 is built; stages 1–5 of
-  §9 are not** — §12 fills a stage at a time, and stage 0's entry is there:
-  the × off every row, **Delete** and **Add to track** on the toolbar acting
-  on the selection, and an ask that says what goes (`whatGoesWithRows`,
+  worked out first, then put on the track. **Stages 0 and 1 are built; stages
+  2–5 of §9 are not** — §12 fills a stage at a time. Stage 0 is the × off
+  every row, **Delete** and **Add to track** on the toolbar acting on the
+  selection, and an ask that says what goes (`whatGoesWithRows`,
   `rowsRemovalQuestion`, `rowsRemovalComfort` in `outline.ts`) with *Just
-  unbind it* offered when a chosen row is already in the book. Building it
+  unbind it* offered when a chosen row is already in the book; building it
   found three more §6c survivors in the Outliner's panel (*in the script* on a
-  book) and a *1 rows* tally. §1 is the audit and it paid a
+  book) and a *1 rows* tally. Stage 1 is the **Chapter row**: `chapter` in
+  `OUTLINE_KINDS`, offered on a book only (a novel's unit is already called
+  Chapter), fixed at the top by `mayHang` in `outline.ts`, Return under it
+  making a section; `boundMarkerId` is the third binding (migration 0052) and
+  `promoteChapter` in `outline-binding.ts` promotes the sections and then
+  places a `chapter` marker on the first, with `BindingTarget` in
+  `planning.ts` carrying the two-way rename to a marker. **What a chapter
+  covers is `chapterSpan`, a reading** from the marker to the next chapter's,
+  which is what lets a second chapter land after the whole of the first and
+  *Move the chapter to match* move the span as a block. Found on the way:
+  `removeTrack` never let the plans go of what left with the track, and a
+  row's Return read a stale selection, so it names its own row now. §1 is the
+  audit and it paid a
   **ninth** time: a `chapter` **story marker** *is* a chapter — it already sits
   above units, carries the chapter page and drives the contents page — so the
   third level is a row in the Outliner that knows it, not a new table. Four

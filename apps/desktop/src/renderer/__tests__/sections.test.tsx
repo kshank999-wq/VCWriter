@@ -270,6 +270,121 @@ describe('the Outliner toolbar', () => {
   });
 });
 
+/**
+ * The Chapter row (addendum 19 §2).
+ *
+ * A chapter is a page, not a container: it is offered on a book at the top
+ * level only, Return under it makes a section, and putting it on the track
+ * puts its sections in the book and the chapter page on the first of them.
+ */
+describe('the Chapter row', () => {
+  const rowOf = (title: string): HTMLElement =>
+    screen
+      .getAllByDisplayValue(title)
+      .map((box) => box.closest('.outline-row'))
+      .find((row): row is HTMLElement => row !== null) as HTMLElement;
+  const toolbar = (name: RegExp): HTMLButtonElement =>
+    screen.getAllByRole('button', { name })[0] as HTMLButtonElement;
+
+  /** A textbook outline with a chapter over its two sections, the manuscript empty. */
+  const chaptered = (sections = 2) => {
+    let file: ProjectFile = createProjectFile({ title: 'Teaching Optics', format: 'instructional' });
+    const starters = new Set(file.units.map((one) => one.id as string));
+    file = {
+      ...file,
+      units: [],
+      beats: file.beats.filter((one) => !starters.has(one.unitId as string)),
+    };
+    file = createOutline(file).file;
+    const outlineId = outlinesOf(file)[0]!.id;
+    const put = (kind: string, title: string, parentId: OutlineItemId | null) => {
+      const made = addItem(file, outlineId, { kind, title, parentId });
+      file = made.file;
+      return made.itemId!;
+    };
+    const chapter = put('chapter', 'Geometric optics', null);
+    if (sections > 0) {
+      const light = put('scene', 'Light', chapter);
+      put('beat', 'Refraction', light);
+      put('beat', 'Reflection', light);
+    }
+    if (sections > 1) put('scene', 'Lenses', chapter);
+    return file;
+  };
+
+  it('is offered on a book and on nothing else', () => {
+    render(<Outliner start={outlined()} />);
+    expect(screen.getByText('+ Chapter')).toBeTruthy();
+    cleanup();
+    render(<Outliner start={outlined('screenplay')} />);
+    expect(screen.queryByText('+ Chapter')).toBeNull();
+  });
+
+  it('is made at the top, and Return under it makes a section', () => {
+    render(<Outliner start={outlined()} />);
+    fireEvent.pointerDown(rowOf('Refraction'));
+    fireEvent.click(screen.getByText('+ Chapter'));
+
+    // At the top level, whatever was chosen: the row is level 1.
+    const chapter = screen.getByPlaceholderText('name the chapter');
+    expect(chapter.closest('[role="treeitem"]')?.getAttribute('aria-level')).toBe('1');
+
+    fireEvent.change(chapter, { target: { value: 'Wave optics' } });
+    fireEvent.keyDown(chapter, { key: 'Enter' });
+    // The new section is the empty one, under the chapter.
+    const section = screen
+      .getAllByPlaceholderText('name the section')
+      .find((box) => (box as HTMLTextAreaElement).value === '')!;
+    expect(section.closest('[role="treeitem"]')?.getAttribute('aria-level')).toBe('2');
+
+    // + Section from inside that chapter stays inside it, after the section
+    // the writer is in; from a section with no chapter it goes to the top.
+    fireEvent.change(section, { target: { value: 'Waves' } });
+    fireEvent.pointerDown(rowOf('Waves'));
+    fireEvent.click(screen.getByText('+ Section'));
+    const added = screen
+      .getAllByPlaceholderText('name the section')
+      .find((box) => (box as HTMLTextAreaElement).value === '')!;
+    expect(added.closest('[role="treeitem"]')?.getAttribute('aria-level')).toBe('2');
+  });
+
+  it('is not a type a nested row can be given', () => {
+    render(<Outliner start={chaptered()} />);
+    fireEvent.pointerDown(rowOf('Light'));
+    const kinds = Array.from(screen.getByLabelText("The row's type").querySelectorAll('option')).map(
+      (option) => option.textContent,
+    );
+    expect(kinds).not.toContain('Chapter');
+
+    fireEvent.pointerDown(rowOf('Geometric optics'));
+    const top = Array.from(screen.getByLabelText("The row's type").querySelectorAll('option')).map(
+      (option) => option.textContent,
+    );
+    expect(top).toContain('Chapter');
+  });
+
+  it('refuses to go on the track with no section under it, and says why', () => {
+    render(<Outliner start={chaptered(0)} />);
+    fireEvent.pointerDown(rowOf('Geometric optics'));
+    expect(toolbar(/^Add to track$/).disabled).toBe(true);
+    expect(screen.getByText(/A chapter starts on a section, and this one has none yet/)).toBeTruthy();
+  });
+
+  it('puts its sections in the book and becomes the page before them', () => {
+    render(<Outliner start={chaptered()} />);
+    fireEvent.pointerDown(rowOf('Geometric optics'));
+    expect(screen.getByRole('button', { name: 'Add to track — and its 2 sections' })).toBeTruthy();
+    fireEvent.click(toolbar(/^Add to track$/));
+
+    // The chapter, both sections and Light's two subsections are real.
+    expect(screen.getAllByLabelText('In the book')).toHaveLength(5);
+    expect(screen.getByText(/This/)).toBeTruthy();
+    expect(screen.getByText(/a page before 2 sections/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Take it out of the book' })).toBeTruthy();
+    expect(toolbar(/^Add to track$/).disabled).toBe(true);
+  });
+});
+
 // ------------------------------------------------------------ the control
 
 function Setup({ start }: { start: ProjectFile }) {

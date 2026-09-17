@@ -8078,7 +8078,30 @@ dialog.preferences .field {
 }
 
 /* §9: scene rows strongest, beats lighter, supporting rows lighter still, so
-   the hierarchy reads at a glance without being read. */
+   the hierarchy reads at a glance without being read. A chapter (addendum 19
+   §2) sits above the scenes: the same display face, larger, and a rule
+   under it, because it is the page that announces the subject. */
+.outline-row.kind-chapter .outline-box {
+  border-color: transparent;
+  border-bottom: 1px solid var(--gold-deep);
+  border-radius: 0;
+  background: transparent;
+}
+
+.outline-row.kind-chapter .outline-ink,
+.outline-row.kind-chapter .outline-title,
+.outline-row.kind-chapter .outline-read {
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.outline-row.kind-chapter .outline-mark {
+  color: var(--gold);
+}
+
 .outline-row.kind-scene .outline-box {
   border-color: var(--gold-deep);
 }

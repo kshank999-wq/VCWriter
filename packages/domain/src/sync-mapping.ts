@@ -545,6 +545,8 @@ const outlineItemToRow = (item: OutlineItem, projectId: ProjectId): Row => ({
   collapsed: item.collapsed,
   bound_unit_id: item.boundUnitId,
   bound_beat_id: item.boundBeatId,
+  // A Chapter row's marker, the third binding (addendum 19 §2, migration 0052).
+  bound_marker_id: item.boundMarkerId,
   // The research this row references, as the project's own `StoryEntityRef`.
   source: item.source,
   created_at: item.createdAt,
@@ -1149,6 +1151,7 @@ const outlineItemFromRow = (row: Row): OutlineItem =>
     collapsed: flag(row['collapsed']),
     boundUnitId: nullableText(row['bound_unit_id']),
     boundBeatId: nullableText(row['bound_beat_id']),
+    boundMarkerId: nullableText(row['bound_marker_id']),
     source: row['source'] ?? null,
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],

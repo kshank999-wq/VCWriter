@@ -1,11 +1,11 @@
-import { addBeat, addUnit, moveBeat, moveUnit } from './mutations.js';
+import { addBeat, addMarker, addUnit, moveBeat, moveUnit } from './mutations.js';
 import { beatsForUnit, tracksInOrder, unitsInStoryOrder } from './selectors.js';
 import { findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf } from './outline.js';
 import { claimedInScript, retitleScript } from './planning.js';
 import type { Outline, OutlineItem } from './entities/outline.js';
-import type { Beat, StructuralUnit } from './entities/structure.js';
+import type { Beat, StoryMarker, StructuralUnit } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
-import type { BeatId, OutlineId, OutlineItemId, StructuralUnitId } from './ids.js';
+import type { BeatId, OutlineId, OutlineItemId, StoryMarkerId, StructuralUnitId } from './ids.js';
 
 /**
  * Promotion: the outline into the script (addendum 06 §6), stage 5.
@@ -22,27 +22,28 @@ import type { BeatId, OutlineId, OutlineItemId, StructuralUnitId } from './ids.j
  */
 
 /** What a row of this kind becomes in the script, if anything. */
-export type PromoteKind = 'unit' | 'beat' | null;
+export type PromoteKind = 'unit' | 'beat' | 'chapter' | null;
 
 /**
  * What a row can become.
  *
- * **Only scenes and beats.** Notes, Ideas, Characters, Settings and Props are
- * the writer's planning: they stay in the outline, where they can be read
- * while the scene is written, and there is nothing in the script for them to
- * turn into (§6).
+ * **Scenes, beats — and chapters** (addendum 19 §2). Notes, Ideas, Characters,
+ * Settings and Props are the writer's planning: they stay in the outline,
+ * where they can be read while the scene is written, and there is nothing in
+ * the script for them to turn into (§6). A chapter becomes a `chapter` story
+ * marker, which is what a chapter in the manuscript has always been.
  */
 export const promoteKindOf = (item: OutlineItem): PromoteKind =>
-  item.kind === 'scene' ? 'unit' : item.kind === 'beat' ? 'beat' : null;
+  item.kind === 'scene' ? 'unit' : item.kind === 'beat' ? 'beat' : item.kind === 'chapter' ? 'chapter' : null;
 
 export const isPromoted = (item: OutlineItem): boolean =>
-  item.boundUnitId !== null || item.boundBeatId !== null;
+  item.boundUnitId !== null || item.boundBeatId !== null || item.boundMarkerId !== null;
 
-/** The scene or beat a row **is**, resolved; null for a plan. */
+/** The scene, beat or chapter marker a row **is**, resolved; null for a plan. */
 export const promotedOf = (
   file: ProjectFile,
   item: OutlineItem,
-): { kind: 'unit'; unit: StructuralUnit } | { kind: 'beat'; beat: Beat } | null => {
+): { kind: 'unit'; unit: StructuralUnit } | { kind: 'beat'; beat: Beat } | { kind: 'marker'; marker: StoryMarker } | null => {
   if (item.boundUnitId !== null) {
     const unit = file.units.find((candidate) => candidate.id === item.boundUnitId);
     return unit ? { kind: 'unit', unit } : null;
@@ -50,6 +51,10 @@ export const promotedOf = (
   if (item.boundBeatId !== null) {
     const beat = file.beats.find((candidate) => candidate.id === item.boundBeatId);
     return beat ? { kind: 'beat', beat } : null;
+  }
+  if (item.boundMarkerId !== null) {
+    const marker = file.markers.find((candidate) => candidate.id === item.boundMarkerId);
+    return marker ? { kind: 'marker', marker } : null;
   }
   return null;
 };
@@ -59,7 +64,12 @@ export type Refusal =
   | 'nothing to promote'
   | 'already in the script'
   | 'its scene is still a plan'
-  | 'there is no track to put a scene in';
+  | 'there is no track to put a scene in'
+  | 'a chapter starts on a section, and this one has none yet';
+
+/** The Scene rows directly under a row, in their order — what a chapter is made of. */
+const sectionsUnder = (outline: Outline, item: OutlineItem): OutlineItem[] =>
+  outlineChildren(outline, item.id).filter((child) => child.kind === 'scene');
 
 /**
  * Whether this row can be sent to the script, and what to say when it cannot.
@@ -67,12 +77,22 @@ export type Refusal =
  * Every refusal here is a sentence a writer can act on, which is the point of
  * answering rather than simply failing: *its scene is still a plan* tells them
  * what to do next, and a button that does nothing does not.
+ *
+ * A chapter with nothing under it is refused rather than given an empty
+ * section to hang its marker on (addendum 19 §2): a marker starts *on* a
+ * unit, and making one up would be inventing writing.
  */
 export const canPromote = (file: ProjectFile, outline: Outline, item: OutlineItem): Refusal | null => {
   const kind = promoteKindOf(item);
   if (kind === null) return 'nothing to promote';
   if (isPromoted(item)) return 'already in the script';
   if (kind === 'unit') return tracksInOrder(file).length === 0 ? 'there is no track to put a scene in' : null;
+  if (kind === 'chapter') {
+    if (tracksInOrder(file).length === 0) return 'there is no track to put a scene in';
+    return sectionsUnder(outline, item).length === 0
+      ? 'a chapter starts on a section, and this one has none yet'
+      : null;
+  }
   // A beat lives inside a scene and never floats in a track (spec §19), so
   // there is nowhere to put one whose scene has not been written yet.
   const parent = outlineParent(outline, item);
@@ -113,28 +133,47 @@ const writeRow = (
  * **Nothing already in the script moves** (§6, §10): this only says where one
  * new scene belongs.
  */
-const indexAmong = (
-  item: OutlineItem,
-  siblings: readonly OutlineItem[],
-  positionOf: (id: string) => number,
-  end: number,
-): number => {
+/**
+ * Where a sibling stands in the script: the first and last position of what
+ * it is, or null for a plan. A scene stands in one place; a chapter stands
+ * across every unit its marker covers (addendum 19 §2), so what lands after
+ * one lands after the whole of it rather than between its first section and
+ * its second.
+ */
+type PlaceOf = (other: OutlineItem) => { first: number; last: number } | null;
+
+const indexAmong = (item: OutlineItem, siblings: readonly OutlineItem[], placeOf: PlaceOf, end: number): number => {
   const at = siblings.findIndex((candidate) => candidate.id === item.id);
-  const positionAt = (index: number): number => {
-    const other = siblings[index];
-    const id = other ? ((other.boundUnitId ?? other.boundBeatId) as string | null) : null;
-    return id === null ? -1 : positionOf(id);
-  };
 
   for (let index = at - 1; index >= 0; index -= 1) {
-    const position = positionAt(index);
-    if (position >= 0) return position + 1;
+    const place = placeOf(siblings[index] as OutlineItem);
+    if (place) return place.last + 1;
   }
   for (let index = at + 1; index < siblings.length; index += 1) {
-    const position = positionAt(index);
-    if (position >= 0) return position;
+    const place = placeOf(siblings[index] as OutlineItem);
+    if (place) return place.first;
   }
   return end;
+};
+
+/** Where each row at the unit level stands, in the story order. */
+const unitPlaces = (file: ProjectFile): PlaceOf => {
+  const order = unitsInStoryOrder(file).map((unit) => unit.id as string);
+  return (other) => {
+    if (other.boundMarkerId !== null) {
+      const span = chapterSpan(file, other.boundMarkerId).map((unit) => order.indexOf(unit.id as string));
+      return span.length === 0 ? null : { first: span[0] as number, last: span[span.length - 1] as number };
+    }
+    const anchor = anchorUnitOf(file, other);
+    const position = anchor === null ? -1 : order.indexOf(anchor);
+    return position === -1 ? null : { first: position, last: position };
+  };
+};
+
+/** Where each row inside a unit stands, among its beats. */
+const beatPlaces = (order: readonly Beat[]): PlaceOf => (other) => {
+  const position = other.boundBeatId === null ? -1 : order.findIndex((beat) => beat.id === other.boundBeatId);
+  return position === -1 ? null : { first: position, last: position };
 };
 
 /** One row into the script, without its children. */
@@ -145,7 +184,8 @@ const promoteOne = (
 ): { file: ProjectFile; unitId: StructuralUnitId | null; beatId: BeatId | null } => {
   const outline = findOutline(file, outlineId);
   const item = outline ? findOutlineItem(outline, itemId) : null;
-  if (!outline || !item || canPromote(file, outline, item) !== null) {
+  // A chapter is `promoteChapter`'s, being its sections and then a marker.
+  if (!outline || !item || promoteKindOf(item) === 'chapter' || canPromote(file, outline, item) !== null) {
     return { file, unitId: null, beatId: null };
   }
 
@@ -154,12 +194,10 @@ const promoteOne = (
 
   if (promoteKindOf(item) === 'unit') {
     const track = tracksInOrder(file)[0] as { id: Parameters<typeof addUnit>[1]['trackId'] };
-    const order = unitsInStoryOrder(file);
-    const positionOf = (id: string) => order.findIndex((unit) => (unit.id as string) === id);
     const made = addUnit(file, {
       trackId: track.id,
       title,
-      index: indexAmong(item, siblings, positionOf, order.length),
+      index: indexAmong(item, siblings, unitPlaces(file), file.units.length),
     });
     return {
       file: writeRow(made.file, outlineId, itemId, { boundUnitId: made.unit.id }),
@@ -170,8 +208,7 @@ const promoteOne = (
 
   const unitId = outlineParent(outline, item)?.boundUnitId as StructuralUnitId;
   const order = beatsForUnit(file, unitId);
-  const positionOf = (id: string) => order.findIndex((beat) => (beat.id as string) === id);
-  const made = addBeat(file, { unitId, title, index: indexAmong(item, siblings, positionOf, order.length) });
+  const made = addBeat(file, { unitId, title, index: indexAmong(item, siblings, beatPlaces(order), order.length) });
   return {
     file: writeRow(made.file, outlineId, itemId, { boundBeatId: made.beat.id }),
     unitId,
@@ -200,24 +237,74 @@ export const promoteRow = (
   file: ProjectFile,
   outlineId: OutlineId,
   itemId: OutlineItemId,
-): { file: ProjectFile; unitId: StructuralUnitId | null; beats: BeatId[] } => {
+): { file: ProjectFile; unitId: StructuralUnitId | null; beats: BeatId[]; markerId: StoryMarkerId | null } => {
+  const outline = findOutline(file, outlineId);
+  const item = outline ? findOutlineItem(outline, itemId) : null;
+  if (outline && item && item.kind === 'chapter') return promoteChapter(file, outline, item);
+
   const first = promoteOne(file, outlineId, itemId);
-  if (first.unitId === null && first.beatId === null) return { file, unitId: null, beats: [] };
-  if (first.beatId !== null) return { file: first.file, unitId: first.unitId, beats: [first.beatId] };
+  if (first.unitId === null && first.beatId === null) return { file, unitId: null, beats: [], markerId: null };
+  if (first.beatId !== null) return { file: first.file, unitId: first.unitId, beats: [first.beatId], markerId: null };
 
   // The scene is real; now its beats, in the order the outline has them, so
   // each lands after the one before it.
   let current = first.file;
   const beats: BeatId[] = [];
-  const outline = findOutline(current, outlineId) as Outline;
-  for (const child of outlineChildren(outline, itemId)) {
+  const grown = findOutline(current, outlineId) as Outline;
+  for (const child of outlineChildren(grown, itemId)) {
     if (child.kind !== 'beat' || isPromoted(child)) continue;
     const made = promoteOne(current, outlineId, child.id);
     current = made.file;
     if (made.beatId) beats.push(made.beatId);
   }
 
-  return { file: current, unitId: first.unitId, beats };
+  return { file: current, unitId: first.unitId, beats, markerId: null };
+};
+
+/**
+ * **A chapter is a page, not a container** (addendum 19 §2).
+ *
+ * Nothing is written *in* a chapter — it announces the subject and the writing
+ * begins at the first section — which is exactly what a story marker is. So
+ * promoting a Chapter row promotes the sections beneath it, each a unit with
+ * its subsections as beats, in their order, and then places a `chapter`
+ * marker on the first of them with the chapter's title, and binds the row to
+ * the marker. From then on the two are one thing.
+ *
+ * A section already in the book is left where it is, as `promoteRow` has
+ * always left a scene; the marker goes on whichever section reads first in
+ * the outline, real before or real now. A chapter with no section under it
+ * is refused by `canPromote` before anything happens here, because a marker
+ * has to start on a unit and there is none to start it on.
+ */
+const promoteChapter = (
+  file: ProjectFile,
+  outline: Outline,
+  item: OutlineItem,
+): { file: ProjectFile; unitId: StructuralUnitId | null; beats: BeatId[]; markerId: StoryMarkerId | null } => {
+  const nothing = { file, unitId: null, beats: [], markerId: null };
+  if (canPromote(file, outline, item) !== null) return nothing;
+
+  let current = file;
+  const beats: BeatId[] = [];
+  for (const section of sectionsUnder(outline, item)) {
+    if (isPromoted(section)) continue;
+    const made = promoteRow(current, outline.id, section.id);
+    current = made.file;
+    beats.push(...made.beats);
+  }
+
+  const grown = findOutline(current, outline.id) as Outline;
+  const first = sectionsUnder(grown, item).find((section) => section.boundUnitId !== null);
+  if (!first || first.boundUnitId === null) return nothing;
+
+  const placed = addMarker(current, { unitId: first.boundUnitId, kind: 'chapter', title: item.title.trim() });
+  return {
+    file: writeRow(placed.file, outline.id, item.id, { boundMarkerId: placed.marker.id }),
+    unitId: first.boundUnitId,
+    beats,
+    markerId: placed.marker.id,
+  };
 };
 
 /**
@@ -227,10 +314,46 @@ export const promoteRow = (
  * keeps its place in the outline and goes back to being a plan. Taking a
  * promoted row out of the outline is the same: §10 says deleting one offers to
  * unbind rather than to delete the scene, and the writing is never what the ×
- * on a row is allowed to cost.
+ * on a row is allowed to cost. A chapter's marker stays for the same reason.
  */
 export const unpromoteRow = (file: ProjectFile, outlineId: OutlineId, itemId: OutlineItemId): ProjectFile =>
-  writeRow(file, outlineId, itemId, { boundUnitId: null, boundBeatId: null });
+  writeRow(file, outlineId, itemId, { boundUnitId: null, boundBeatId: null, boundMarkerId: null });
+
+// ------------------------------------------- what a chapter is made of
+
+/**
+ * The units a chapter marker covers, read off the story order: from the unit
+ * it starts on up to the next chapter's, or to the end (addendum 19 §2).
+ *
+ * **Never stored.** Which sections a chapter holds is a fact about where the
+ * markers fall, so moving a section into the stretch puts it in the chapter
+ * with nothing run — the same absence the section numbers rest on.
+ */
+export const chapterSpan = (file: ProjectFile, markerId: StoryMarkerId): StructuralUnit[] => {
+  const marker = file.markers.find((candidate) => candidate.id === markerId);
+  if (!marker) return [];
+  const order = unitsInStoryOrder(file);
+  const start = order.findIndex((unit) => unit.id === marker.unitId);
+  if (start === -1) return [];
+  const starts = new Set(
+    file.markers.filter((one) => one.kind === 'chapter' && one.id !== markerId).map((one) => one.unitId as string),
+  );
+  const end = order.findIndex((unit, at) => at > start && starts.has(unit.id as string));
+  return order.slice(start, end === -1 ? order.length : end);
+};
+
+/**
+ * The unit a row stands at in the story: its own, or the one its chapter
+ * marker starts on. Null for a plan and for a beat, which stands in a unit
+ * rather than among them.
+ */
+const anchorUnitOf = (file: ProjectFile, item: OutlineItem): string | null => {
+  if (item.boundUnitId !== null) return item.boundUnitId as string;
+  if (item.boundMarkerId !== null) {
+    return (file.markers.find((marker) => marker.id === item.boundMarkerId)?.unitId as string | undefined) ?? null;
+  }
+  return null;
+};
 
 /** The scenes a row could be, in story order: every one not already spoken for. */
 export const promotableUnits = (file: ProjectFile, itemId: OutlineItemId | null = null): StructuralUnit[] => {
@@ -295,15 +418,18 @@ export const rowOutOfStep = (file: ProjectFile, outline: Outline, itemId: Outlin
   if (at === -1) return null;
 
   const parent = outlineParent(outline, item);
-  const order =
-    item.boundUnitId !== null
-      ? unitsInStoryOrder(file).map((unit) => unit.id as string)
-      : parent?.boundUnitId
-        ? beatsForUnit(file, parent.boundUnitId).map((beat) => beat.id as string)
-        : file.beats.map((beat) => beat.id as string);
+  // A chapter stands where its marker's unit stands (addendum 19 §2), so two
+  // chapters, or a chapter and a section beside it, compare by their first
+  // units in the story order.
+  const amongUnits = item.boundUnitId !== null || item.boundMarkerId !== null;
+  const order = amongUnits
+    ? unitsInStoryOrder(file).map((unit) => unit.id as string)
+    : parent?.boundUnitId
+      ? beatsForUnit(file, parent.boundUnitId).map((beat) => beat.id as string)
+      : file.beats.map((beat) => beat.id as string);
 
   const positionOf = (candidate: OutlineItem): number => {
-    const id = (candidate.boundUnitId ?? candidate.boundBeatId) as string | null;
+    const id = amongUnits ? anchorUnitOf(file, candidate) : (candidate.boundBeatId as string | null);
     return id === null ? -1 : order.indexOf(id);
   };
 
@@ -344,12 +470,14 @@ export const followOutline = (file: ProjectFile, outlineId: OutlineId, itemId: O
   const siblings = outlineChildren(outline, item.parentId);
   if (siblings.findIndex((candidate) => candidate.id === itemId) === -1) return file;
 
+  if (item.boundMarkerId !== null) return followChapter(file, item, siblings);
+
   if (item.boundUnitId !== null) {
     const order = unitsInStoryOrder(file);
     const positionOf = (id: string) => order.findIndex((unit) => (unit.id as string) === id);
     // The index `moveUnit` wants counts every scene but this one, so a scene
     // moving down loses the place it is vacating.
-    const target = indexAmong(item, siblings, positionOf, order.length);
+    const target = indexAmong(item, siblings, unitPlaces(file), order.length);
     const here = positionOf(item.boundUnitId as string);
     const index = here !== -1 && target > here ? target - 1 : target;
     const unit = file.units.find((candidate) => candidate.id === item.boundUnitId);
@@ -363,10 +491,72 @@ export const followOutline = (file: ProjectFile, outlineId: OutlineId, itemId: O
   if (unitId === null || item.boundBeatId === null) return file;
   const order = beatsForUnit(file, unitId);
   const positionOf = (id: string) => order.findIndex((beat) => (beat.id as string) === id);
-  const target = indexAmong(item, siblings, positionOf, order.length);
+  const target = indexAmong(item, siblings, beatPlaces(order), order.length);
   const here = positionOf(item.boundBeatId as string);
   const index = here !== -1 && target > here ? target - 1 : target;
   return moveBeat(file, { beatId: item.boundBeatId, toUnitId: unitId, index });
+};
+
+/**
+ * A chapter moved to match the outline moves **the whole of it** (addendum
+ * 19 §2): every unit its marker covers, as one block, to after the last unit
+ * of whatever promoted sibling is above it in the outline — or before the
+ * first unit of the one below, or to the end. A chapter is a page and its
+ * sections are what it is; moving the page and leaving them behind would
+ * put the heading of chapter three over the sections of chapter two.
+ *
+ * The block is walked one unit at a time and each lands directly after the
+ * one placed before it, read from the live order, so nothing is counted
+ * twice however the block and its neighbours were interleaved.
+ */
+const followChapter = (file: ProjectFile, item: OutlineItem, siblings: readonly OutlineItem[]): ProjectFile => {
+  const block = chapterSpan(file, item.boundMarkerId as StoryMarkerId).map((unit) => unit.id as string);
+  if (block.length === 0) return file;
+  const moving = new Set(block);
+
+  /** The units a sibling stands for, first to last, or nothing for a plan. */
+  const spanOf = (sibling: OutlineItem): string[] => {
+    if (sibling.boundMarkerId !== null) {
+      return chapterSpan(file, sibling.boundMarkerId).map((unit) => unit.id as string).filter((id) => !moving.has(id));
+    }
+    const anchor = anchorUnitOf(file, sibling);
+    return anchor === null || moving.has(anchor) ? [] : [anchor];
+  };
+
+  const at = siblings.findIndex((candidate) => candidate.id === item.id);
+  let after: string | null = null;
+  let before: string | null = null;
+  for (let index = at - 1; index >= 0 && after === null; index -= 1) {
+    const span = spanOf(siblings[index] as OutlineItem);
+    if (span.length > 0) after = span[span.length - 1] as string;
+  }
+  if (after === null) {
+    for (let index = at + 1; index < siblings.length && before === null; index += 1) {
+      const span = spanOf(siblings[index] as OutlineItem);
+      if (span.length > 0) before = span[0] as string;
+    }
+  }
+
+  let current = file;
+  let previous: string | null = null;
+  for (const unitId of block) {
+    const unit = current.units.find((candidate) => (candidate.id as string) === unitId);
+    if (!unit) continue;
+    // `moveUnit` counts every unit but the one moving, so the place is read
+    // from the order with this one lifted out.
+    const rest = unitsInStoryOrder(current).map((one) => one.id as string).filter((id) => id !== unitId);
+    const index =
+      previous !== null
+        ? rest.indexOf(previous) + 1
+        : after !== null
+          ? rest.indexOf(after) + 1
+          : before !== null
+            ? rest.indexOf(before)
+            : rest.length;
+    current = moveUnit(current, { unitId: unit.id, toTrackId: unit.trackId, index });
+    previous = unitId;
+  }
+  return current;
 };
 
 // --------------------------------------------- the scene card (§7)
