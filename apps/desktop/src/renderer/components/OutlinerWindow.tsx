@@ -94,6 +94,13 @@ interface OutlinerWindowProps {
    * promoting rows into the manuscript wants to see the manuscript take them.
    */
   onPopOut?(): void;
+  /**
+   * Mounted as a page of the workspace rather than laid over it (addendum 19
+   * §5): on a book the Outliner is the *Outline* page on the bar, so it sits
+   * inside the main area with the page bar still under it, and its × means
+   * *to the Book*. The same component; only where it is mounted differs.
+   */
+  page?: boolean;
 }
 
 /** How far one level of depth moves a row in. */
@@ -176,7 +183,7 @@ const placeholderOf = (kind: string, format: ProjectFormat): string => {
 };
 const markOf = (kind: string): string => MARKS[kind] ?? '•';
 
-export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExport, onPopOut }: OutlinerWindowProps) {
+export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExport, onPopOut, page = false }: OutlinerWindowProps) {
   const outlines = outlinesOf(file);
   const [outlineId, setOutlineId] = useState<string | null>(null);
   const [selected, setSelected] = useState<OutlineItemId | null>(null);
@@ -517,7 +524,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
   if (!open) return null;
 
   return (
-    <div className="outliner" role="dialog" aria-label="Outliner">
+    <div className={page ? 'outliner as-page' : 'outliner'} role={page ? 'region' : 'dialog'} aria-label="Outliner">
       <header className="outliner-bar">
         <h2>Outliner</h2>
         {outline ? <span className="muted small">{outline.name}</span> : null}
@@ -698,7 +705,13 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
         ) : null}
 
         {onPopOut ? <PopOutButton what="the Outliner" onPopOut={onPopOut} /> : null}
-        <button type="button" className="ghost" onClick={onClose} aria-label="Close the Outliner">
+        <button
+          type="button"
+          className="ghost"
+          onClick={onClose}
+          aria-label="Close the Outliner"
+          title={page ? `To the ${nouns.manuscript}` : undefined}
+        >
           ×
         </button>
       </header>

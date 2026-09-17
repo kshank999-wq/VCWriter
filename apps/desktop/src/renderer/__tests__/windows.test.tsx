@@ -414,6 +414,19 @@ describe('a room in a window of its own', () => {
     expect(screen.getByRole('button', { name: 'Write' }).className).not.toContain('away');
   });
 
+  it('leaves a page a project does not have off the bar rather than greying it', () => {
+    // A book has an Outline page before Write (addendum 19 §5); a screenplay
+    // has no such page, and the bar does not say "not yet" about it.
+    render(<PageBar view="outline" onSelect={() => undefined} counts={{}} />);
+    const names = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(names.slice(0, 3)).toEqual(['Home', 'Outline', 'Write']);
+    cleanup();
+
+    render(<PageBar view="write" onSelect={() => undefined} counts={{}} hidden={['outline']} />);
+    expect(screen.queryByRole('button', { name: 'Outline' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Write' })).toBeDefined();
+  });
+
   it('still draws the plot tracks when the plot tracks are what was asked for', async () => {
     connect(project());
     render(<Satellite pane="tracks" />);

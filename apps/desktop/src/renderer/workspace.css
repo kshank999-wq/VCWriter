@@ -7874,6 +7874,17 @@ dialog.preferences .field {
   background: var(--ink);
 }
 
+/* As a page of a book's workspace (addendum 19 §5): inside the main area,
+   with the page bar still under it, rather than laid over everything. */
+.outliner.as-page {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
 .outliner-bar {
   display: flex;
   align-items: center;

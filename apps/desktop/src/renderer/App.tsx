@@ -7,6 +7,7 @@ import {
   beatsInStoryOrder,
   projectStats,
   setActBreaks,
+  isInstructional,
   isInteractive,
   setParagraphStyle,
   setScriptFormat,
@@ -570,7 +571,12 @@ export default function App() {
           // A room sent out closes the copy laid over the workspace, or the
           // writer is left looking at the same board twice.
           if (!detached.includes(pane)) {
-            if (pane === 'outliner') setOutlinerOpen(false);
+            if (pane === 'outliner') {
+              setOutlinerOpen(false);
+              // On a book the Outliner is a page (addendum 19 §5), and the
+              // page it was on has gone to the other screen.
+              if (view === 'outline') setView('write');
+            }
             if (pane === 'sculptor') setSculptorOpen(false);
             if (pane === 'narrative') setNarrativeOpen(false);
             if (pane === 'research') setResearchOpen(false);
@@ -646,6 +652,20 @@ export default function App() {
     void project.openProject();
   }, [file, project]);
 
+  /**
+   * A book opens on its outline (addendum 19 §5): a textbook is planned
+   * before it is written, and the plan is the numbering, the contents and
+   * the shape of the whole thing. Everything else opens on the writing, as
+   * it always has. Keyed on the project rather than the file, so switching
+   * pages afterwards is the writer's and only opening another project
+   * decides again.
+   */
+  const openedId = file?.project.id ?? null;
+  const openedBook = file ? isInstructional(file.project.format) : false;
+  useEffect(() => {
+    if (openedId) setView(openedBook ? 'outline' : 'write');
+  }, [openedId, openedBook]);
+
   if (!file || startingNew) {
     return (
       <>
@@ -688,6 +708,8 @@ export default function App() {
   }
 
   const writing = view === 'write';
+  /** On a book the Outliner is a page, elsewhere a room (addendum 19 §5). */
+  const isBook = isInstructional(file.project.format);
   const focused = focusMode && writing;
   const showBottom = writing && timelineOpen && !focused;
   const showRight = writing && inspectorOpen && !focused;
@@ -851,7 +873,9 @@ export default function App() {
             ? () => (away.has('narrative') ? openPane('narrative') : setNarrativeOpen(true))
             : undefined
         }
-        onOpenOutliner={() => (away.has('outliner') ? openPane('outliner') : setOutlinerOpen(true))}
+        onOpenOutliner={() =>
+          away.has('outliner') ? openPane('outliner') : isBook ? setView('outline') : setOutlinerOpen(true)
+        }
         away={detached}
         onBringBack={closePane}
         account={account}
@@ -869,7 +893,9 @@ export default function App() {
           Outliner are ideas. */}
       <RoomBar
         file={file}
-        looking={researchOpen || sculptorOpen || outlinerOpen || narrativeOpen ? 'research' : 'script'}
+        looking={
+          researchOpen || sculptorOpen || outlinerOpen || narrativeOpen || view === 'outline' ? 'research' : 'script'
+        }
       />
 
       <Preferences
@@ -1045,7 +1071,26 @@ export default function App() {
         </div>
       ) : (
         <main className="full">
-          {view === 'preview' && shortForm ? (
+          {view === 'outline' && isBook ? (
+            /* The Outliner as the page a book opens on (addendum 19 §5): the
+               same component the rooms use, mounted here with the page bar
+               under it, its × going to the Book. */
+            <OutlinerWindow
+              file={file}
+              open
+              page
+              onClose={() => setView('write')}
+              onUpdate={project.update}
+              onPrint={(outlineId) => void print('outline', outlineId)}
+              onExport={(outlineId) => void exportPdf('outline', outlineId)}
+              onPopOut={() => {
+                // The page it was on has gone to the other screen, so this
+                // window goes back to the writing rather than to a blank.
+                setView('write');
+                openPane('outliner');
+              }}
+            />
+          ) : view === 'preview' && shortForm ? (
             /* A commercial's document is the sheet, and beside it a board
                (addendum 05 §8). There are no script pages to preview. */
             <SheetPreview
@@ -1268,9 +1313,20 @@ export default function App() {
           // The editors may be on the other monitor. Choosing the page then
           // raises that window rather than drawing a second copy of it here,
           // which is the same rule the Research button follows.
-          onSelect={(next) => (next === 'editor' && away.has('editors') ? openPane('editors') : setView(next))}
+          onSelect={(next) =>
+            next === 'editor' && away.has('editors')
+              ? openPane('editors')
+              : next === 'outline' && away.has('outliner')
+                ? openPane('outliner')
+                : setView(next)
+          }
           counts={{ recovery: conflicts.length }}
-          out={away.has('editors') ? ['editor'] : []}
+          out={[
+            ...(away.has('editors') ? (['editor'] as const) : []),
+            ...(isBook && away.has('outliner') ? (['outline'] as const) : []),
+          ]}
+          // A screenplay has no Outline page: the Outliner is a room there.
+          hidden={isBook ? [] : ['outline']}
         />
       )}
     </div>

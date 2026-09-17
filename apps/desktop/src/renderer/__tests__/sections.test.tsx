@@ -391,6 +391,30 @@ describe('the Chapter row', () => {
     expect(screen.getByTitle('Section 1.3')).toBeTruthy();
   });
 
+  it('is the same component as a page of the workspace, whose × goes to the Book', () => {
+    // On a book the Outliner is mounted as the Outline page (addendum 19 §5):
+    // inside the main area rather than over everything, so the page bar
+    // stays under it, and closing it is going to the Book.
+    let closed = 0;
+    render(
+      <OutlinerWindow
+        file={chaptered()}
+        open
+        page
+        onClose={() => {
+          closed += 1;
+        }}
+        onUpdate={() => undefined}
+      />,
+    );
+    const outliner = screen.getByRole('region', { name: 'Outliner' });
+    expect(outliner.className).toContain('as-page');
+    const close = screen.getByRole('button', { name: 'Close the Outliner' });
+    expect(close.getAttribute('title')).toBe('To the Book');
+    fireEvent.click(close);
+    expect(closed).toBe(1);
+  });
+
   it('puts its sections in the book and becomes the page before them', () => {
     render(<Outliner start={chaptered()} />);
     fireEvent.pointerDown(rowOf('Geometric optics'));

@@ -1,4 +1,4 @@
-export type View = 'home' | 'write' | 'preview' | 'editor' | 'readback' | 'account' | 'recovery';
+export type View = 'home' | 'outline' | 'write' | 'preview' | 'editor' | 'readback' | 'account' | 'recovery';
 
 /** Research and setups are tabs of the master panel now (addendum 02 §6). */
 export const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
@@ -6,6 +6,10 @@ export const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
   // (master spec §4). It is not the page the application opens on: a writer
   // opening a file wants the writing, not a dashboard about it.
   { id: 'home', label: 'Home' },
+  // A book's outline, before its writing, and the page a book opens on
+  // (addendum 19 §5): a textbook is planned before it is written. On every
+  // other format the Outliner is a room, and this page is not on the bar.
+  { id: 'outline', label: 'Outline' },
   { id: 'write', label: 'Write' },
   { id: 'preview', label: 'Preview' },
   { id: 'editor', label: 'Editors' },
@@ -28,6 +32,12 @@ interface PageBarProps {
    * which the workspace arranges — this only says which.
    */
   out?: readonly View[];
+  /**
+   * Pages this project does not have, left off the bar rather than greyed
+   * (addendum 19 §5): a screenplay has no Outline page, and a disabled one
+   * would say *not yet* about something that is never coming.
+   */
+  hidden?: readonly View[];
 }
 
 /**
@@ -35,10 +45,10 @@ interface PageBarProps {
  * piece of chrome shared by every page, where an editing application keeps
  * it, so the title bar can be nothing but the project and its state.
  */
-export function PageBar({ view, onSelect, counts, out = [] }: PageBarProps) {
+export function PageBar({ view, onSelect, counts, out = [], hidden = [] }: PageBarProps) {
   return (
     <nav className="page-bar" aria-label="Pages">
-      {VIEWS.map((option) => {
+      {VIEWS.filter((option) => !hidden.includes(option.id)).map((option) => {
         const count = counts[option.id];
         const away = out.includes(option.id);
         return (

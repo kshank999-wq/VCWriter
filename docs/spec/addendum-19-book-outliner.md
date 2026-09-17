@@ -443,3 +443,26 @@ the page the line before it fell on, or the chapter's own page when it is the
 first thing in the chapter. And one more §6c survivor, on the Preview page:
 its scope tab said *This scene* on a book, the one word beside *Whole book*
 that had never been read from the table.
+
+### Stage 3 — the book opens on its outline
+
+**What it does.** `'outline'` joins the page bar's views, between *Home* and
+*Write*, and on a book it is the page the workspace opens on: `App` sets the
+view when a project is opened, keyed on the project's id rather than the file,
+so switching pages afterwards is the writer's and only opening another
+project decides again — a screenplay opened next lands on *Write* as it
+always has. The page is `OutlinerWindow` with `page` set: the same component
+the rooms use, mounted inside the main area with the page bar still under it
+(`.outliner.as-page` is `position: relative` where the room is `fixed; inset:
+0`), its × titled *To the Book* and going there, its ⧉ sending it to the other
+monitor and the bar marking *Outline* away, as it marks *Editors*. On a
+book the title bar's *Outliner* and *Window ▸ Outliner* go to the page rather
+than laying a room over it, so there is one Outliner and not two. On every
+other format nothing changes: `PageBar` takes `hidden`, the page is left off
+the bar rather than greyed, and the Outliner stays a room.
+
+**What building it found.** Nothing in the code; the drive of the real
+renderer confirmed each step of §10's first line — a new book opens on the
+Outliner, *Write* shows the Book, *Outline* comes back, the × goes to the
+Book — and that a screenplay's bar carries no *Outline* and its Outliner
+still opens as a room.

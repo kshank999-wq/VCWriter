@@ -1020,8 +1020,8 @@ push live; the build takes a minute or two.
   are not.
   `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
   Ken after using instructional mode: chapters, sections and subsections
-  worked out first, then put on the track. **Stages 0–2 are built; stages
-  3–5 of §9 are not** — §12 fills a stage at a time. Stage 0 is the × off
+  worked out first, then put on the track. **Stages 0–3 are built; stages
+  4 and 5 of §9 are not** — §12 fills a stage at a time. Stage 0 is the × off
   every row, **Delete** and **Add to track** on the toolbar acting on the
   selection, and an ask that says what goes (`whatGoesWithRows`,
   `rowsRemovalQuestion`, `rowsRemovalComfort` in `outline.ts`) with *Just
@@ -1050,7 +1050,13 @@ push live; the build takes a minute or two.
   read by element count, every empty section fell under the last chapter, and
   an empty section pointed at the *next* section's page — so the chapter is
   read from the story order and an empty section stands where the flow
-  stands. §1 is the
+  stands. Stage 3 is the **Outline page**: `'outline'` on the page bar
+  between Home and Write, hidden (never greyed) off a book, the page a book
+  opens on (an effect keyed on the project id in `App.tsx`), and it is
+  `OutlinerWindow` with `page` set — the same component, `position:
+  relative` instead of `fixed`, its × *To the Book*, poppable and marked
+  away like Editors; the title bar's Outliner and *Window ▸ Outliner* go to
+  the page on a book so there is one Outliner and not two. §1 is the
   audit and it paid a
   **ninth** time: a `chapter` **story marker** *is* a chapter — it already sits
   above units, carries the chapter page and drives the contents page — so the
