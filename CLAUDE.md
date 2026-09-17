@@ -1018,6 +1018,42 @@ push live; the build takes a minute or two.
   the ***else*** of the writing tab, so a third tab drew them underneath its own
   tables — with two tabs the two spellings are the same thing, with three they
   are not.
+  `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
+  Ken after using instructional mode: chapters, sections and subsections
+  worked out first, then put on the track. **Specified; stages 0–5 in §9, none
+  built yet** — §12 fills a stage at a time. §1 is the audit and it paid a
+  **ninth** time: a `chapter` **story marker** *is* a chapter — it already sits
+  above units, carries the chapter page and drives the contents page — so the
+  third level is a row in the Outliner that knows it, not a new table. Four
+  decisions carry it. **A chapter is a page, not a container** (§2, Ken's
+  sentence): promoting a Chapter row promotes its sections and then places the
+  marker on the first of them, bound through `boundMarkerId` (migration 0052,
+  the addendum's only one); an empty chapter is **refused with a sentence**
+  rather than padded with a section nobody wrote. **Add to track is promotion**
+  (§3) — the existing `promoteOne` onto the first track with Ken's name for the
+  button, on every format, acting on the selection from the toolbar so one row
+  and nine are the same gesture; *Send to Script* is retired. **Delete is
+  deliberate** (§4): the × comes off every row on every format, Delete is a
+  toolbar button on the selection, and the keys do nothing to a row. **The book
+  opens on its outline** (§5): on a book the Outliner is a *page* on the bar —
+  *Outline*, before *Write* — and the page a book opens on, poppable with the
+  Editors' ⧉ marking; elsewhere it stays a room. §6 numbers three deep (1,
+  1.1, 1.1.1), still storing nothing; a book with no chapters numbers as
+  before, and a section before the first chapter carries no number, said why.
+  §7 is the chapter page for a book: a **summary** (reading face; not the
+  epigraph), **three templates** (graphic top, middle, bottom) as a **book
+  setting with a per-chapter override** that defaults to *use the book's* —
+  `minimumSetups`' shape — and the graphic taken from the **library**, so one
+  place holds the pictures; no migration, the page being one JSON column. A
+  suggested summary is the last stage on purpose, through the learning-aid
+  route with its no-author-words rule. Yesterday's rename is a precondition
+  it leans on: a lane is a **track** in every module and in Postgres
+  (migration 0051, done while `lanes` held zero rows), and the timeline's
+  drawing rows are **rows** — `ActsRow`, `TrackRow` — because the code had
+  already used *track* for those and one word cannot mean two things in one
+  file. That rename fused `.lane-head` into `.track-head`, two classes into
+  one of seventeen rules, which no test could see; `.row-head` is the generic
+  sticky cell now, and the counts are back to eight and nine.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
