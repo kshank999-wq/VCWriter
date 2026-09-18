@@ -383,6 +383,14 @@ export const chapterPageSchema = z.object({
    */
   summary: z.string().default(''),
   /**
+   * What the machine last offered as a summary, and when (addendum 19 §7).
+   * **Never printed, and never merged on its own** — addendum 16 §10's rule
+   * kept the same way the learning aids keep it: a suggestion writes here and
+   * only here, so asking twice cannot cost the author a word of `summary`.
+   */
+  suggestedSummary: z.string().default(''),
+  suggestedAt: z.string().nullable().default(null),
+  /**
    * This chapter's template, or `book` for *use the book's* (addendum 19 §7)
    * — `minimumSetups`' shape, where zero means the default: one chapter's
    * picture can sit at the foot without every other chapter following.

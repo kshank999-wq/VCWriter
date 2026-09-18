@@ -1020,8 +1020,8 @@ push live; the build takes a minute or two.
   are not.
   `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
   Ken after using instructional mode: chapters, sections and subsections
-  worked out first, then put on the track. **Stages 0–4 are built; stage 5
-  of §9 is not** — §12 fills a stage at a time. Stage 0 is the × off
+  worked out first, then put on the track. **All six stages of §9 are
+  built** — §12 says what each does. Stage 0 is the × off
   every row, **Delete** and **Add to track** on the toolbar acting on the
   selection, and an ask that says what goes (`whatGoesWithRows`,
   `rowsRemovalQuestion`, `rowsRemovalComfort` in `outline.ts`) with *Just
@@ -1064,7 +1064,15 @@ push live; the build takes a minute or two.
   the **reading face** whatever the heading wears, the picture from the
   graphics library by id; `chapterLeafContent` in `chapter-style.ts` is the
   one function that resolves the template and the picture, read by the print,
-  the preview and both dialogs' sheets. §1 is the
+  the preview and both dialogs' sheets. Stage 5 is the **suggested summary**,
+  `chapter-summary.ts` and no route of its own: `chapterTextFor` is the
+  learning-aid reading pointed one level up (every section the chapter
+  covers, by `chapterSpan`), sent through the existing learning-aid route
+  and bridge with kind `summary`; `offerSummary` writes `suggestedSummary`
+  and nothing else, `acceptSummary` is the one act that reaches `summary`
+  and hands back what it replaced, and `summaryRefusal` is the chapter's own
+  reason (nothing under it yet), the account's being said once at the foot.
+  §1 is the
   audit and it paid a
   **ninth** time: a `chapter` **story marker** *is* a chapter — it already sits
   above units, carries the chapter page and drives the contents page — so the

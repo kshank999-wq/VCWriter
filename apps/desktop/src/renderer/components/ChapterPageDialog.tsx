@@ -5,16 +5,22 @@ import {
   MAX_CHAPTER_IMAGE_BYTES,
   TYPE_CASES,
   TYPE_FACES,
+  acceptSummary,
   chapterChoices,
   chapterLeafContent,
   chapterPageStyleOf,
   chapterPagesEverywhere,
+  chapterTextFor,
+  chapterTextIsCut,
+  discardSummary,
   graphicsInOrder,
   isInstructional,
+  offerSummary,
   placedMarkers,
   setChapterLineStyle,
   setChapterPage,
   setChapterPageStyle,
+  summaryRefusal,
   templateOf,
   updateMarker,
   type AssetId,
@@ -123,6 +129,62 @@ function Body({
    */
   const book = isInstructional(file.project.format);
   const library = useMemo(() => (book ? graphicsInOrder(file) : []), [book, file]);
+
+  /**
+   * Whether a summary can be suggested at all (addendum 19 §7), asked once
+   * when the dialog opens so the button is absent rather than broken, with
+   * the account's reason said once at the foot. `null` until the answer is
+   * back, which keeps the button from flickering into view.
+   */
+  const [offer, setOffer] = useState<{ available: boolean; reason: string | null } | null>(null);
+  useEffect(() => {
+    if (!book) return;
+    const bridge = typeof window === 'undefined' ? null : window.vcwriter;
+    if (!bridge?.learningAidStatus) {
+      setOffer({ available: false, reason: null });
+      return;
+    }
+    let current = true;
+    void bridge.learningAidStatus().then((result) => {
+      if (!current) return;
+      setOffer(
+        result.ok && result.data ? result.data : { available: false, reason: result.error ?? 'Suggestions are unavailable.' },
+      );
+    });
+    return () => {
+      current = false;
+    };
+  }, [book]);
+  const [asking, setAsking] = useState(false);
+  const [askError, setAskError] = useState<string | null>(null);
+  /** What accepting replaced, offered back until the writer moves on. */
+  const [undo, setUndo] = useState<string | null>(null);
+
+  /**
+   * Ask through the learning-aid route, as a summary of the chapter's
+   * sections read together (addendum 19 §7). **The request has no field for
+   * the author's words**, and what comes back is recorded with
+   * `offerSummary`, which cannot reach `summary` — so a suggestion that
+   * comes back wrong costs a button press rather than a paragraph.
+   */
+  const askForSummary = async (markerId: StoryMarkerId) => {
+    const bridge = window.vcwriter;
+    setAsking(true);
+    setAskError(null);
+    try {
+      const result = await bridge.suggestLearningAid({
+        kind: 'summary',
+        sectionText: chapterTextFor(file, markerId),
+        sectionTitle: file.markers.find((one) => one.id === markerId)?.title ?? '',
+      });
+      if (!result.ok || !result.data) throw new Error(result.error ?? 'The suggestion could not be written.');
+      const text = result.data.text;
+      onUpdate((current) => offerSummary(current, markerId, text));
+    } catch (problem) {
+      setAskError(problem instanceof Error ? problem.message : 'Could not write a suggestion.');
+    }
+    setAsking(false);
+  };
 
   const patchPage = (patch: Parameters<typeof setChapterPage>[2]) => {
     if (!marker) return;
@@ -283,6 +345,89 @@ function Body({
                     onChange={(event) => patchPage({ summary: event.target.value })}
                   />
                 </label>
+              ) : null}
+
+              {/* A suggested summary (addendum 19 §7): absent where the
+                  account cannot have one, present and refusing where the
+                  chapter has nothing under it yet — that reason being the
+                  chapter's rather than the account's. */}
+              {book && offer?.available ? (
+                <div className="aid-actions chapter-summary-ask">
+                  <button
+                    type="button"
+                    className="ghost small"
+                    disabled={asking || summaryRefusal(file, marker.id) !== null}
+                    title={summaryRefusal(file, marker.id) ?? 'Read every section under this chapter and suggest a summary'}
+                    onClick={() => void askForSummary(marker.id)}
+                  >
+                    {asking
+                      ? 'Reading the chapter…'
+                      : marker.page.summary.trim().length > 0
+                        ? 'Suggest another summary'
+                        : 'Suggest a summary'}
+                  </button>
+                  {summaryRefusal(file, marker.id) ? (
+                    <span className="muted small">{summaryRefusal(file, marker.id)}</span>
+                  ) : chapterTextIsCut(file, marker.id) ? (
+                    <span className="muted small">A long chapter: only its first part is read.</span>
+                  ) : null}
+                </div>
+              ) : null}
+              {askError ? (
+                <p className="error small" role="alert">
+                  {askError}
+                </p>
+              ) : null}
+
+              {/* The machine's, in its own box and never in the author's. */}
+              {book && marker.page.suggestedSummary.trim().length > 0 ? (
+                <div className="aid-offer">
+                  <h5>Suggested</h5>
+                  <p className="aid-offer-text">{marker.page.suggestedSummary}</p>
+                  <div className="aid-actions">
+                    <button
+                      type="button"
+                      className="ghost small"
+                      onClick={() =>
+                        onUpdate((current) => {
+                          const taken = acceptSummary(current, marker.id);
+                          setUndo(taken.replaced);
+                          return taken.file;
+                        })
+                      }
+                    >
+                      Use this
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost small"
+                      onClick={() => onUpdate((current) => discardSummary(current, marker.id))}
+                    >
+                      Discard
+                    </button>
+                    {marker.page.summary.trim().length > 0 ? (
+                      <span className="muted small">Replaces what you wrote. You can put it back.</span>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+              {book && undo && undo.length > 0 ? (
+                <div className="aid-undo">
+                  <span className="muted small">Your earlier wording is still here.</span>
+                  <button
+                    type="button"
+                    className="ghost small"
+                    onClick={() => {
+                      patchPage({ summary: undo });
+                      setUndo(null);
+                    }}
+                  >
+                    Put it back
+                  </button>
+                  <button type="button" className="ghost small" onClick={() => setUndo(null)}>
+                    Keep the new one
+                  </button>
+                </div>
               ) : null}
 
               {/* Where the picture sits is the book's, with this one chapter
@@ -504,6 +649,11 @@ function Body({
         {/* The sheet, at the shape it will print. The same component the
             preview and the printed page use, so this is not a likeness. */}
         <aside className="chapter-page-preview" aria-label="The page">
+          {/* Said once at the foot rather than beside an absent button: why
+              a summary cannot be suggested is a fact about the account. */}
+          {book && offer && !offer.available && offer.reason ? (
+            <p className="muted small aids-why">{offer.reason}</p>
+          ) : null}
           <div className="chapter-leaf-sheet">
             {marker && marker.page.include ? (
               <ChapterLeaf chapter={chapterLeafContent(file, placed!)} style={style} />

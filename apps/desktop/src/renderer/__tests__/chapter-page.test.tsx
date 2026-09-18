@@ -1,15 +1,18 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
+  addBeat,
   addGraphic,
   addMarker,
   addUnit,
   chapterPageStyleOf,
   createProjectFile,
   moveUnit,
+  newId,
   unitsInStoryOrder,
+  updateBeat,
   type ProjectFile,
   type ProjectFormat,
 } from '@vcwriter/domain';
@@ -194,6 +197,78 @@ describe('the chapter page for a book', () => {
     // The width is the page's own; the picture stays one picture in the file.
     expect((seen as unknown as ProjectFile).markers[0]!.page.assetId).toBe(asset.id);
     expect((seen as unknown as ProjectFile).markers[0]!.page.image).toBeNull();
+  });
+});
+
+/**
+ * A suggested chapter summary (addendum 19 §7), through the bridge: what
+ * comes back is recorded where it cannot reach the author's words.
+ */
+describe('a suggested summary', () => {
+  const bridge = (over: Partial<Record<string, unknown>> = {}) => {
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      learningAidStatus: async () => ({ ok: true, data: { available: true, reason: null } }),
+      suggestLearningAid: async () => ({ ok: true, data: { text: 'Light, bent and focused.', questions: [] } }),
+      ...over,
+    };
+  };
+  afterEach(() => {
+    delete (window as unknown as { vcwriter?: unknown }).vcwriter;
+  });
+
+  /** A textbook whose first chapter has a paragraph under it and the second nothing. */
+  const written = () => {
+    let file = book(['Geometric optics', 'Wave optics'], 'instructional');
+    // The chapter's own unit, not the starter section that precedes the
+    // first chapter and belongs to no chapter at all.
+    const first = unitsInStoryOrder(file).find((unit) => unit.title === 'Geometric optics')!;
+    const beat = addBeat(file, { unitId: first.id, title: 'Light' });
+    file = updateBeat(beat.file, beat.beat.id, {
+      manuscript: {
+        elements: [{ id: newId(), type: 'paragraph', text: 'Light travels in straight lines.', characterId: null, attributes: {} }],
+      },
+    });
+    return file;
+  };
+
+  it('is not offered where the account cannot have one, and says why once', async () => {
+    bridge({
+      learningAidStatus: async () => ({ ok: true, data: { available: false, reason: 'Sign in to have a suggestion written' } }),
+    });
+    render(<Harness start={written()} />);
+    await waitFor(() => expect(screen.getByText('Sign in to have a suggestion written')).toBeTruthy());
+    expect(screen.queryByText(/Suggest a summary/)).toBeNull();
+  });
+
+  it('refuses a chapter with nothing under it, as the chapter’s own reason', async () => {
+    bridge();
+    render(<Harness start={written()} />);
+    await waitFor(() => expect(screen.getByText('Suggest a summary')).toBeTruthy());
+    fireEvent.click(screen.getByText('Wave optics'));
+    const button = screen.getByText('Suggest a summary') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(screen.getByText(/nothing to summarise/)).toBeTruthy();
+  });
+
+  it('puts what comes back in the suggestion and never in the summary, until accepted', async () => {
+    let seen: ProjectFile | null = null;
+    bridge();
+    render(<Harness start={written()} onFile={(file) => (seen = file)} />);
+    fireEvent.change(screen.getByLabelText('Summary'), { target: { value: 'What the author wrote.' } });
+    await waitFor(() => expect(screen.getByText('Suggest another summary')).toBeTruthy());
+    fireEvent.click(screen.getByText('Suggest another summary'));
+
+    await waitFor(() => {
+      const page = (seen as unknown as ProjectFile).markers[0]!.page;
+      expect(page.suggestedSummary).toBe('Light, bent and focused.');
+      expect(page.summary).toBe('What the author wrote.');
+    });
+
+    // Accepting is the explicit act, and it hands the old wording back.
+    fireEvent.click(screen.getByText('Use this'));
+    expect((seen as unknown as ProjectFile).markers[0]!.page.summary).toBe('Light, bent and focused.');
+    fireEvent.click(screen.getByText('Put it back'));
+    expect((seen as unknown as ProjectFile).markers[0]!.page.summary).toBe('What the author wrote.');
   });
 });
 

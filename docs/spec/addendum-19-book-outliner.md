@@ -507,3 +507,31 @@ that way, but `templateOf` now reads a missing value as *the book's*, the one
 answer that cannot be wrong. Otherwise the audit paid a tenth time: the leaf,
 its typography, the library and the print stack all existed, and the stage
 was three fields and one resolving function.
+
+### Stage 5 — a suggested summary
+
+**What it does.** `packages/domain/src/chapter-summary.ts`, and no route of
+its own: the learning-aid route of addendum 16 §6b already writes a summary
+from a section's words, and a chapter's overview is **the same reading
+pointed one level up**. `chapterTextFor` gathers the words of every section
+the chapter covers — `chapterSpan`'s reading of the markers, so a section
+dragged into the chapter is read and one dragged out is not — each under its
+title, the chapter page's own words and the next chapter left out, and cut
+at the route's cap on a paragraph boundary with `chapterTextIsCut` saying so.
+The dialog sends that as `sectionText` with kind `summary`, through the same
+bridge and the same rate-limit bucket, and **the request has no field for
+the author's words**. What comes back is recorded with `offerSummary`, which
+writes `suggestedSummary` and nothing else; `acceptSummary` is the one act
+that moves it into `summary` and it hands back what it replaced, so the
+dialog offers *Put it back*; `discardSummary` throws it away. Addendum 16
+§10's third rule, kept the same way — two fields, regeneration writing to
+one of them. The button is **absent** where the account cannot have one and
+the reason is said once at the foot; it is **present and refusing** on a
+chapter with nothing under it, `summaryRefusal` being the one reason that is
+the chapter's own. The model call has still never been run live, as the
+learning aids' has not.
+
+**What building it found.** Nothing new: the route, the bridge on both
+hosts, the availability check and the offer-accept-undo shape all existed on
+the learning aids, and the stage was one reading, four small functions and
+the dialog's use of them. §9's build order is complete, and §12 with it.

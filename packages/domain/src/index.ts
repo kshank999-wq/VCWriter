@@ -59,6 +59,7 @@ export * from './learning.js';
 export * from './note-import.js';
 export * from './story-map.js';
 export * from './chapter-style.js';
+export * from './chapter-summary.js';
 export * from './mutations.js';
 export * from './render.js';
 export * from './editing.js';
