@@ -20,7 +20,16 @@ export default function SignInPage() {
 function SignInForm() {
   // Where to land after the link: the page that sent the customer here (the
   // admin console, the browser preview), or the account page.
-  const next = safeNextPath(useSearchParams().get('next'));
+  const params = useSearchParams();
+  const next = safeNextPath(params.get('next'));
+  /**
+   * Why the last link did not work, where the callback said so. A link is
+   * single-use and is tied to the browser that asked for it, so the two ways
+   * it fails are being opened twice and being opened somewhere else — a
+   * phone's mail app opening it in its own browser is the common one. Said
+   * here, because a form that silently reappears reads as a loop.
+   */
+  const failed = params.get('error') === 'link_expired';
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -48,8 +57,18 @@ function SignInForm() {
         <p>We will email you a link. Use the address you bought VC Writer with.</p>
       </div>
       <section>
+        {failed && status !== 'sent' ? (
+          <p className="notice" role="status">
+            That link could not sign you in: it had already been used, or it was opened in a different browser
+            from the one that asked for it. Ask for a new one here, and open it in this same browser — if your
+            mail app opens links in a browser of its own, copy the link and paste it here instead.
+          </p>
+        ) : null}
         {status === 'sent' ? (
-          <p className="notice">Check {email} for your sign-in link.</p>
+          <p className="notice">
+            Check {email} for your sign-in link, and open it in this browser — the link only works where it was
+            asked for.
+          </p>
         ) : (
           <form onSubmit={submit} style={{ display: 'grid', gap: 16, maxWidth: 340 }}>
             <input
