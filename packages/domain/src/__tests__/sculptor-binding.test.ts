@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   addBlock,
   addChild,
+  addToTrack,
   addUnit,
+  nounsFor,
+  sayTrackOffer,
+  trackOffer,
   bindKindOf,
   bindNode,
   bindableBeats,
@@ -178,6 +182,112 @@ describe('making the idea real', () => {
     // A beat node under the second scene is never offered the first scene's.
     expect(bindableBeats(theirs.file, boardIn(theirs.file, board), theirs.nodeId!)).toHaveLength(0);
     expect(there.unitId).not.toBe(here.unitId);
+  });
+});
+
+describe('onto the track, whole (addendum 03 §6a)', () => {
+  const nouns = nounsFor('screenplay');
+
+  /** A scene node with three beat nodes under it, all ideas. */
+  const withBeats = () => {
+    const base = shaped();
+    let file = base.file;
+    const beats: SculptorNodeId[] = [];
+    for (const title of ['She lies', 'He believes her', 'The door']) {
+      const made = addChild(file, base.board.id, base.first, { title });
+      file = made.file;
+      beats.push(made.nodeId!);
+    }
+    return { ...base, file, beats };
+  };
+
+  it('offers the scene and counts the beats that would come with it', () => {
+    const { file, board, first } = withBeats();
+    const offer = trackOffer(file, boardIn(file, board), first);
+    expect(offer).toEqual({ refusal: null, self: true, beats: 3 });
+    expect(sayTrackOffer(offer, nodeIn(file, board, first)!, nouns)).toBe('Add to track — and its 3 beats');
+  });
+
+  it('puts the scene on the track with every beat under it, in canvas order', () => {
+    const { file, board, first, beats } = withBeats();
+    const made = addToTrack(file, board.id, first);
+
+    expect(made.unitId).not.toBeNull();
+    expect(made.beats).toHaveLength(3);
+    expect(beatsForUnit(made.file, made.unitId!).map((beat) => beat.title)).toEqual([
+      'She lies',
+      'He believes her',
+      'The door',
+    ]);
+    // Each node is now that beat, and the scene node is that scene.
+    for (const [index, nodeId] of beats.entries()) {
+      expect(nodeIn(made.file, board, nodeId)?.boundBeatId).toBe(made.beats[index]);
+    }
+    expect(nodeIn(made.file, board, first)?.boundUnitId).toBe(made.unitId);
+  });
+
+  it('adds the beats alone where the scene is already on the track', () => {
+    const { file, board, first } = withBeats();
+    const scene = realiseNode(file, board.id, first);
+    const offer = trackOffer(scene.file, boardIn(scene.file, board), first);
+    expect(offer).toEqual({ refusal: null, self: false, beats: 3 });
+    expect(sayTrackOffer(offer, nodeIn(scene.file, board, first)!, nouns)).toBe('Add its 3 beats to the track');
+
+    const made = addToTrack(scene.file, board.id, first);
+    expect(made.unitId).toBe(scene.unitId);
+    expect(unitsInStoryOrder(made.file)).toHaveLength(unitsInStoryOrder(scene.file).length);
+    expect(made.beats).toHaveLength(3);
+  });
+
+  it('leaves a beat that is already real alone and takes the rest', () => {
+    const { file, board, first, beats } = withBeats();
+    const scene = realiseNode(file, board.id, first);
+    const one = realiseNode(scene.file, board.id, beats[1]!);
+    const made = addToTrack(one.file, board.id, first);
+
+    expect(made.beats).toHaveLength(2);
+    expect(beatsForUnit(made.file, scene.unitId!).map((beat) => beat.title)).toEqual([
+      'She lies',
+      'He believes her',
+      'The door',
+    ]);
+    expect(nodeIn(made.file, board, beats[1]!)?.boundBeatId).toBe(one.beatId);
+  });
+
+  it('says a scene with everything on the track is already there', () => {
+    const { file, board, first } = withBeats();
+    const made = addToTrack(file, board.id, first);
+    const offer = trackOffer(made.file, boardIn(made.file, board), first);
+    expect(offer.refusal).toBe('already on the track');
+    expect(addToTrack(made.file, board.id, first).file).toBe(made.file);
+  });
+
+  it('refuses a block, in a sentence', () => {
+    const { file, board, blockId } = withBeats();
+    const offer = trackOffer(file, boardIn(file, board), blockId);
+    expect(offer.refusal).toBe('a block is the shape of the story rather than a scene in it');
+    expect(addToTrack(file, board.id, blockId).file).toBe(file);
+  });
+
+  it('refuses a beat whose scene is still an idea, and takes one whose scene is real', () => {
+    const { file, board, first, beats } = withBeats();
+    expect(trackOffer(file, boardIn(file, board), beats[0]!).refusal).toBe('its scene is still an idea');
+    expect(addToTrack(file, board.id, beats[0]!).file).toBe(file);
+
+    const scene = realiseNode(file, board.id, first);
+    const offer = trackOffer(scene.file, boardIn(scene.file, board), beats[0]!);
+    expect(offer).toEqual({ refusal: null, self: true, beats: 0 });
+    const made = addToTrack(scene.file, board.id, beats[0]!);
+    expect(made.beats).toHaveLength(1);
+    expect(made.unitId).toBe(scene.unitId);
+  });
+
+  it('lands the scene where the canvas says, like a press on the node alone', () => {
+    const { file, board, first, second } = shaped();
+    const one = addToTrack(file, board.id, first);
+    const two = addToTrack(one.file, board.id, second);
+    const order = unitsInStoryOrder(two.file).map((unit) => unit.id);
+    expect(order.indexOf(two.unitId!)).toBe(order.indexOf(one.unitId!) + 1);
   });
 });
 

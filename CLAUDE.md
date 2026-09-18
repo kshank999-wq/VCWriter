@@ -109,7 +109,21 @@ push live; the build takes a minute or two.
   rather than the board, so a fold is folded and a hidden depth is absent on it
   too, and it carries `readBoard`'s lighting — the one place a writer can see
   that what they searched for is off the top of the window. Nothing about it is
-  stored. What is left is Writers Room. §8, the export as an outline, is **withdrawn**
+  stored. **§6a is *Add to track***, from Ken after the Outliner got its
+  button: one press puts the selected scene on the track **with every beat
+  under it**, from the toolbar, the card's right-click (`.sculpt-menu`) or the
+  panel where *Make it a scene* used to be — all three reading one
+  `trackOffer` in `sculptor-binding.ts` and saying its one sentence (*Add to
+  track — and its 3 beats*; *Add its 2 beats to the track* where the scene is
+  already there), so they cannot disagree about what a press would do, and
+  refusing in a sentence a writer can act on. `addToTrack` is `realiseNode`
+  on the scene and then on each idea beat in canvas order, which is the
+  Outliner's `promoteRow` read off a board. It came with the **stepped
+  layout** (§4): children used to lie level with the parent's head, so a scene
+  stood *beside* its block and nothing separated two structure points but the
+  scenes' own height; now `place` starts a node's children a row and a gap
+  under its head, so the scenes fall between the structure points and the
+  beats fall under a scene the same way. §8, the export as an outline, is **withdrawn**
   — the Sculptor does not make outlines. §14 says why the first draft was
   wrong.
   `addendum-04-story-grid.md` is the Story Grid, the third tab of the

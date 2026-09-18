@@ -1,6 +1,7 @@
 # Addendum 03 — Story Sculptor
 
-Status: stages 1–7 built, September 2026. **Rewritten** from Ken's diagram of
+Status: stages 1–7 and 9 built, plus §6a's *Add to track* and the stepped
+layout of §4, September 2026. **Rewritten** from Ken's diagram of
 10 September; §14 says what changed and what happens to the code built
 against the first draft. Extends §5 (story structure) and §19 (the hierarchy)
 of the master specification, and adds an area alongside the workspace of
@@ -72,10 +73,20 @@ One rule, applied recursively, produces the whole diagram:
 
 > **A node is as tall as its children, and no shorter than itself.**
 
-A beat is one row. A scene is as tall as its beats — two beats, a short card;
-four beats, a tall one. The **gap between two structure nodes** is as tall as
-the scenes stacked beside it. So:
+A beat is one row. A scene is its head and the beats **under** it — two
+beats, a short card; four beats, a tall one. A block is its head and the
+scenes under it, so **the scenes fall between one structure point and the
+next**: the structure column reads as a spine with the story's scenes stepped
+down between its points, and a scene with beats reads the same way one level
+in. So:
 
+- What hangs off a node starts below its head, one column to the right, never
+  level with it. (The first build laid children level with the parent's head,
+  which read as a scene standing *beside* its block rather than under it, and
+  put nothing between two blocks but the scenes' own height — so the
+  structure points were never separated from what they contained. Ken asked
+  for them expanded out and separated, with the scenes in between, and the
+  beats the same way inside a scene.)
 - Adding a beat grows its scene and pushes the scenes below it down.
 - Adding a scene grows the gap between the two big blocks it sits between,
   and pushes everything below down the canvas.
@@ -141,6 +152,38 @@ This is what §9 of the source specification asked for as "prefer linked
 references to duplicate content", and what it meant by "Sculptor-only,
 Sequencer-linked, or already in the written script" — three states that fall
 out of one flag and the script's own `inScript` switch.
+
+## 6a. Add to track
+
+Ken's ask, after the Outliner got its button: *select a scene and right-click,
+or there needs to be a button, that drops it into the track so you can see it
+there and all the beats will be there. Then you can start working.*
+
+**One act, and it takes the beats.** *Add to track* makes the scene node real
+and then every beat node under it, in the order they stand on the canvas,
+each one landing after the nearest bound one above it exactly as a press on
+the node alone would. A beat already real is left alone. The scene may
+already be on the track — the writer thought of two more beats after
+realising it — and then the same act covers the beats alone, and its label
+says so: *Add its 2 beats to the track*.
+
+**Three ways in, one offer.** The toolbar carries the button, acting on the
+selected card; the card's right-click carries it; the detail panel and the
+opened card carry it where *Make it a scene* used to be. All three read one
+`trackOffer` and say its one sentence, so they cannot disagree about what a
+press would do — and the sentence counts what would come, because a press
+that took the scene and left the beats behind is the one confusing outcome.
+
+**Where it cannot go, it says why**, in a sentence the writer can act on: a
+block (*the shape of the story rather than a scene in it*), a beat whose scene
+is still an idea (spec §19 — a beat never floats in a track), a scene with
+nothing left to add. The right-click keeps the item, disabled, over the reason;
+a menu that simply lacked it would leave the writer hunting.
+
+The Outliner's *Add to track* (addendum 19 §3) is the same act read off a
+tree, which is why the button carries the same words on both: a scene row
+promotes with the beat rows under it, on every format. Nothing is stored
+beyond the bindings §6 already keeps.
 
 ## 7. Connections
 
@@ -373,9 +416,12 @@ script, because a node is an idea until it is bound and binding is stage 6.
 > A node is as tall as its children, and no shorter than itself.
 
 Applied recursively that produces the diagram. A beat is one row; a scene is
-as tall as its beats; the gap between two structure nodes is as tall as the
-scenes stacked beside it, so the chain down the structure column **stretches
-as the clay goes on**. Adding a beat grows its scene, which grows its block,
+its head and the beats under it; a block is its head and the scenes under it,
+so the scenes fall between one structure point and the next and the chain down
+the structure column **stretches as the clay goes on**. (Children began level
+with the parent's head until Ken asked for the structure points separated with
+the scenes between them; now the head is a row of its own and the stack starts
+a gap under it.) Adding a beat grows its scene, which grows its block,
 which pushes everything below it down the canvas — and **nothing ever
 overlaps, because nothing is positioned: everything is measured.** A folded
 node is one row tall and its children are not laid out at all, which
@@ -520,6 +566,20 @@ observation and not one thing more. A line whose card is deleted goes with it,
 and so does one drawn into a column that is removed. A line into a **fold** is
 drawn to the folded card standing in for what is hidden, rather than
 disappearing, because folding should not look like losing something.
+
+### Add to track (§6a)
+
+`trackOffer`, `sayTrackOffer` and `addToTrack` in `sculptor-binding.ts`. The
+offer is what a press would do — the node itself, how many beats — or the
+refusal; the sentence is built once from it; the act runs `realiseNode` on
+the scene and then on each idea beat under it, in canvas order. The toolbar
+button is disabled with the reason in its title until a card that can go is
+chosen; the card's right-click (`.sculpt-menu`, over a clear veil, Escape
+closes it) offers the same item and *Open the card…*; the Binding panel's
+*Make it a scene* became this, and a bound scene with idea beats under it
+offers them alone. The layout change (§4) is `boardLayout`'s `place` starting
+a node's children a row and a gap below its head; the connectors needed no
+change, a wire already running from the parent's head to the child's.
 
 ## 17. The views (stage 9)
 

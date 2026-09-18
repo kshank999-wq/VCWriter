@@ -8861,6 +8861,57 @@ a.talk-mark:hover {
   background: rgba(0, 0, 0, 0.55);
 }
 
+/* The card's right-click (addendum 03 §6a): a small menu at the pointer,
+   over a clear veil that closes it on a press anywhere else. */
+.sculpt-menu-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.sculpt-menu {
+  position: fixed;
+  z-index: 41;
+  min-width: 200px;
+  max-width: 280px;
+  padding: 6px;
+  display: grid;
+  gap: 2px;
+  background: var(--panel);
+  border: 1px solid var(--gold-deep, var(--border));
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.sculpt-menu button {
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.sculpt-menu button:hover:not(:disabled),
+.sculpt-menu button:focus-visible {
+  border-color: var(--gold-deep, var(--border));
+  background: var(--panel-2, rgba(255, 255, 255, 0.03));
+  outline: none;
+}
+
+.sculpt-menu button:disabled {
+  opacity: 0.5;
+}
+
+.sculpt-menu p {
+  margin: 0 8px 4px;
+}
+
 .sculpt-card-dialog {
   display: flex;
   flex-direction: column;

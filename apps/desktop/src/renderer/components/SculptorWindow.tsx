@@ -8,6 +8,9 @@ import {
   addChild,
   addColumn,
   addCharacter,
+  addToTrack,
+  sayTrackOffer,
+  trackOffer,
   addColumnField,
   addResearchRow,
   canCarryToBoard,
@@ -40,7 +43,6 @@ import {
   miniMap,
   moveNode,
   outOfStep,
-  realiseNode,
   removeColumn,
   removeColumnField,
   relabelLink,
@@ -205,6 +207,13 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: Scul
    * about what goes with it, and only the board knows that.
    */
   const [removing, setRemoving] = useState<SculptorNodeId | null>(null);
+  /**
+   * The card the writer right-clicked, and where, while its menu is up (§6a).
+   *
+   * One menu for the board rather than one on every card, for the removal
+   * dialog's reason: what it offers is read off the board and the script.
+   */
+  const [menu, setMenu] = useState<{ nodeId: SculptorNodeId; x: number; y: number } | null>(null);
   /** The shelf, folded out over the canvas rather than beside it (§5). */
   const [shelfOpen, setShelfOpen] = useState(false);
 
@@ -238,15 +247,18 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: Scul
   const [overNode, setOverNode] = useState<SculptorNodeId | null>(null);
   const dragging = useRef<{ x: number; y: number } | null>(null);
 
-  // Escape gets out of drawing a connection, which is what Escape is for.
+  // Escape gets out of drawing a connection, which is what Escape is for —
+  // and closes the card's menu, which is the other thing it is for.
   useEffect(() => {
-    if (linking === null) return undefined;
+    if (linking === null && menu === null) return undefined;
     const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setLinking(null);
+      if (event.key !== 'Escape') return;
+      setLinking(null);
+      setMenu(null);
     };
     window.addEventListener('keydown', escape);
     return () => window.removeEventListener('keydown', escape);
-  }, [linking]);
+  }, [linking, menu]);
 
   const board: Board | null = useMemo(() => {
     if (boards.length === 0) return null;
@@ -362,6 +374,18 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: Scul
 
   const chosen = board && selected ? board.nodes.find((node) => node.id === selected) ?? null : null;
   const column = board && chosen ? columnOf(board, chosen) : null;
+  /** What *Add to track* would do to the selected card, or why nothing (§6a). */
+  const chosenOffer = board && chosen ? trackOffer(file, board, chosen.id) : null;
+
+  const menuNode = board && menu ? board.nodes.find((node) => node.id === menu.nodeId) ?? null : null;
+  const menuOffer = board && menuNode ? trackOffer(file, board, menuNode.id) : null;
+
+  /** The one act, from the toolbar, the menu or the panel: all three call this. */
+  const putOnTrack = (nodeId: SculptorNodeId) => {
+    write((current, id) => addToTrack(current, id, nodeId).file);
+    setSelected(nodeId);
+    setMenu(null);
+  };
 
   const opened = board && openCard ? board.nodes.find((node) => node.id === openCard) ?? null : null;
   const openedColumn = board && opened ? columnOf(board, opened) : null;
@@ -446,6 +470,31 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: Scul
               }}
             >
               + Under it
+            </button>
+            {/* Ken's ask (§6a): select a scene, one press, and it is on the
+                track with every beat under it. The label is the offer's own
+                sentence, so it says what would come; disabled with the reason
+                where nothing can. */}
+            <button
+              type="button"
+              className="tool"
+              disabled={!chosen || !chosenOffer || chosenOffer.refusal !== null}
+              title={
+                chosen && chosenOffer
+                  ? chosenOffer.refusal !== null
+                    ? `Cannot go on the track: ${chosenOffer.refusal}`
+                    : `Put ${chosen.title.trim() || 'this'} in the ${nouns.manuscript.toLowerCase()}, on the first track${
+                        chosenOffer.beats > 0 ? `, with the ${nouns.subPlural.toLowerCase()} under it` : ''
+                      }`
+                  : `Choose a ${nouns.unit.toLowerCase()} to put on the track`
+              }
+              onClick={() => {
+                if (chosen) putOnTrack(chosen.id);
+              }}
+            >
+              {chosen && chosenOffer && chosenOffer.refusal === null
+                ? sayTrackOffer(chosenOffer, chosen, nouns)
+                : 'Add to track'}
             </button>
             <button
               type="button"
@@ -783,6 +832,10 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: Scul
                     setSelected(laid.node.id);
                     setOpenCard(laid.node.id);
                   }}
+                  onMenu={(x, y) => {
+                    setSelected(laid.node.id);
+                    setMenu({ nodeId: laid.node.id, x, y });
+                  }}
                   onTitle={(title) => write((current, id) => updateNode(current, id, laid.node.id, { title }))}
                   onFold={() =>
                     write((current, id) =>
@@ -1007,7 +1060,7 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: Scul
               {/* What it is connected to (§9), and the words on each line. */}
               <Connections board={board as Board} node={chosen} onGo={setSelected} onWrite={write} />
 
-              <Binding file={file} board={board as Board} node={chosen} onWrite={write} />
+              <Binding file={file} board={board as Board} node={chosen} onWrite={write} onTrack={putOnTrack} />
             </>
           ) : (
             <p className="muted small">
@@ -1089,7 +1142,7 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: Scul
                 onWrite={write}
               />
 
-              <Binding file={file} board={board} node={opened} onWrite={write} />
+              <Binding file={file} board={board} node={opened} onWrite={write} onTrack={putOnTrack} />
             </div>
 
             <footer>
@@ -1097,6 +1150,53 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: Scul
                 Done
               </button>
             </footer>
+          </div>
+        </div>
+      ) : null}
+
+      {/* The card's right-click (§6a). Two things, and the first is the one
+          Ken asked for: put it on the track, beats and all. Where it cannot
+          go the item stays, disabled, over the sentence saying why — a menu
+          that simply lacked the item would leave the writer hunting for it. */}
+      {menu && menuNode && menuOffer ? (
+        <div
+          className="sculpt-menu-veil"
+          role="presentation"
+          onPointerDown={() => setMenu(null)}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            setMenu(null);
+          }}
+        >
+          <div
+            className="sculpt-menu"
+            role="menu"
+            aria-label={`Card: ${menuNode.title.trim() || 'untitled'}`}
+            style={{
+              left: `${Math.min(menu.x, Math.max(0, window.innerWidth - 280))}px`,
+              top: `${Math.min(menu.y, Math.max(0, window.innerHeight - 140))}px`,
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              disabled={menuOffer.refusal !== null}
+              onClick={() => putOnTrack(menuNode.id)}
+            >
+              {menuOffer.refusal !== null ? 'Add to track' : sayTrackOffer(menuOffer, menuNode, nouns)}
+            </button>
+            {menuOffer.refusal !== null ? <p className="muted small">{menuOffer.refusal}.</p> : null}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenu(null);
+                setOpenCard(menuNode.id);
+              }}
+            >
+              Open the card…
+            </button>
           </div>
         </div>
       ) : null}
@@ -1332,16 +1432,20 @@ function Binding({
   board,
   node,
   onWrite,
+  onTrack,
 }: {
   file: ProjectFile;
   board: Board;
   node: SculptorNode;
   onWrite(mutate: (current: ProjectFile, id: Board['id']) => ProjectFile): void;
+  /** Put it on the track, beats and all — the window's one act for it (§6a). */
+  onTrack(nodeId: SculptorNodeId): void;
 }) {
   const nouns = nounsFor(file.project.format);
   const kind = bindKindOf(node);
   const bound = boundOf(file, node);
   const step = useMemo(() => (isBound(node) ? outOfStep(file, board, node.id) : null), [file, board, node]);
+  const offer = trackOffer(file, board, node.id);
 
   if (kind === null) {
     return (
@@ -1380,6 +1484,19 @@ function Binding({
             </button>
           </p>
         ) : null}
+        {/* A scene on the track can still have beats that are not — the
+            writer thought of two more after realising it — so the offer
+            covers the beats alone, and says so. */}
+        {offer.refusal === null ? (
+          <button
+            type="button"
+            className="ghost small"
+            title={`Put the ${nouns.subPlural.toLowerCase()} under this card in the ${nouns.manuscript.toLowerCase()}, inside this ${what}`}
+            onClick={() => onTrack(node.id)}
+          >
+            {sayTrackOffer(offer, node, nouns)}
+          </button>
+        ) : null}
         <button
           type="button"
           className="ghost small"
@@ -1391,8 +1508,7 @@ function Binding({
     );
   }
 
-  const parent = node.parentId ? findNode(board, node.parentId) : null;
-  const canMake = kind === 'unit' || (parent?.boundUnitId ?? null) !== null;
+  const canMake = offer.refusal === null;
   const candidates: Array<{ id: string; label: string }> =
     kind === 'unit'
       ? bindableUnits(file, node.id).map((unit) => ({
@@ -1412,10 +1528,12 @@ function Binding({
         <button
           type="button"
           className="ghost small"
-          title={`Put this in the script as a ${what}, and bind the two`}
-          onClick={() => onWrite((current, id) => realiseNode(current, id, node.id).file)}
+          title={`Put this in the ${nouns.manuscript.toLowerCase()} as a ${what}${
+            offer.beats > 0 ? `, with the ${nouns.subPlural.toLowerCase()} under it` : ''
+          }, and bind the two`}
+          onClick={() => onTrack(node.id)}
         >
-          Make it a {what}
+          {sayTrackOffer(offer, node, nouns)}
         </button>
       ) : (
         <p className="muted small">
@@ -1548,6 +1666,7 @@ function Node({
   linkingFrom,
   onSelect,
   onOpen,
+  onMenu,
   onTitle,
   onFold,
   onMove,
@@ -1570,6 +1689,8 @@ function Node({
   onSelect(): void;
   /** Open the card's own dialog — its note, who is in it, and the rest (§5). */
   onOpen(): void;
+  /** The right-click, at these screen coordinates (§6a). */
+  onMenu(x: number, y: number): void;
   onTitle(title: string): void;
   onFold(): void;
   onMove(direction: -1 | 1): void;
@@ -1608,6 +1729,11 @@ function Node({
         height: `${laid.headHeight * UNIT * zoom}px`,
       }}
       onPointerDown={onSelect}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onMenu(event.clientX, event.clientY);
+      }}
       // Clicking a card opens it. Double rather than single, because a single
       // click is how a card is picked up and moved, and because the title is
       // typed straight on the card — so a double-click inside the title is

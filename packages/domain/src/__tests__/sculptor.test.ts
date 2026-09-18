@@ -149,7 +149,7 @@ describe('the layout rule', () => {
     expect(layout.nodes.every((laid) => laid.height === ROW)).toBe(true);
   });
 
-  it('makes a scene as tall as its beats', () => {
+  it('makes a scene as tall as its head and the beats under it', () => {
     let { file, board } = started();
     const block = addBlock(file, board.id, { title: 'The job' });
     file = block.file;
@@ -159,21 +159,44 @@ describe('the layout rule', () => {
     expect(heightOf(file, board, scene.nodeId!)).toBe(ROW);
     file = addChild(file, board.id, scene.nodeId!, { title: 'She lies' }).file;
     file = addChild(file, board.id, scene.nodeId!, { title: 'He believes her' }).file;
-    // Two beats and the gap between them.
-    expect(heightOf(file, board, scene.nodeId!)).toBeCloseTo(ROW * 2 + GAP);
+    // The head, a gap, then two beats and the gap between them.
+    expect(heightOf(file, board, scene.nodeId!)).toBeCloseTo(ROW * 3 + GAP * 2);
   });
 
-  it('grows the gap between two blocks as scenes are stacked beside it', () => {
+  it('puts what hangs off a node under its head, a column to the right', () => {
+    let { file, board } = started();
+    const block = addBlock(file, board.id, { title: 'The job' });
+    file = block.file;
+    const scene = addChild(file, board.id, block.nodeId!, { title: 'The interview' });
+    file = scene.file;
+    const beat = addChild(file, board.id, scene.nodeId!, { title: 'She lies' });
+    file = beat.file;
+
+    const layout = boardLayout(boardIn(file, board));
+    const of = (id: SculptorNodeId) => layout.nodes.find((laid) => laid.node.id === id)!;
+    // A scene falls below the block's head, and a beat below the scene's.
+    expect(of(scene.nodeId!).y).toBeGreaterThanOrEqual(of(block.nodeId!).y + ROW);
+    expect(of(beat.nodeId!).y).toBeGreaterThanOrEqual(of(scene.nodeId!).y + ROW);
+    expect(of(scene.nodeId!).column).toBe(of(block.nodeId!).column + 1);
+  });
+
+  it('separates two blocks by the scenes between them', () => {
     let { file, board } = started();
     const block = addBlock(file, board.id, { title: 'The job' });
     file = block.file;
     const was = heightOf(file, board, block.nodeId!);
 
-    file = addChild(file, board.id, block.nodeId!, { title: 'One' }).file;
-    file = addChild(file, board.id, block.nodeId!, { title: 'Two' }).file;
+    const one = addChild(file, board.id, block.nodeId!, { title: 'One' });
+    file = one.file;
+    const two = addChild(file, board.id, block.nodeId!, { title: 'Two' });
+    file = two.file;
     const now = heightOf(file, board, block.nodeId!);
     expect(now).toBeGreaterThan(was);
-    expect(now).toBeCloseTo(ROW * 2 + GAP);
+    expect(now).toBeCloseTo(ROW * 3 + GAP * 2);
+
+    // The next structure point stands under the last scene, not level with it.
+    const end = blocksOf(board).find((node) => node.end === 'end')!;
+    expect(topOf(file, board, end.id)).toBeGreaterThanOrEqual(topOf(file, board, two.nodeId!) + ROW);
   });
 
   it('pushes everything below a block down the canvas when one grows', () => {
@@ -198,9 +221,9 @@ describe('the layout rule', () => {
 
     file = addChild(file, board.id, scene.nodeId!, { title: 'She lies' }).file;
     file = addChild(file, board.id, scene.nodeId!, { title: 'He believes her' }).file;
-    // A beat grew its scene, and the scene grew the block it hangs off.
+    // A beat grew its scene, and the scene grew the block it hangs under.
     expect(heightOf(file, board, block.nodeId!)).toBeGreaterThan(was);
-    expect(heightOf(file, board, block.nodeId!)).toBe(heightOf(file, board, scene.nodeId!));
+    expect(heightOf(file, board, block.nodeId!)).toBeCloseTo(ROW + GAP + heightOf(file, board, scene.nodeId!));
   });
 
   it('never overlaps anything, because nothing is positioned', () => {

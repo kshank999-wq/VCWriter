@@ -210,10 +210,21 @@ export interface BoardLayout {
  * > **A node is as tall as its children, and no shorter than itself.**
  *
  * Applied recursively it produces the entire diagram. A beat is one row; a
- * scene is as tall as its beats; the gap between two structure nodes is as
- * tall as the scenes stacked beside it. Adding a beat grows its scene and
- * pushes what is below down the canvas, and **nothing ever overlaps, because
- * nothing is positioned — everything is measured.**
+ * scene is its head and the beats under it; a block is its head and the
+ * scenes under it, so **the scenes fall between one structure point and the
+ * next** rather than standing level with the block they hang off. Adding a
+ * beat grows its scene and pushes what is below down the canvas, and
+ * **nothing ever overlaps, because nothing is positioned — everything is
+ * measured.**
+ *
+ * What hangs off a node starts **below its head**, one column to the right.
+ * The first draft laid children level with the parent's head, which read as
+ * a scene standing *beside* its block rather than *under* it, and put nothing
+ * between two blocks but the scenes' own height — so the structure points
+ * were never separated from what they contained. Now the head is a row of its
+ * own and the stack begins a gap under it: the structure column reads as a
+ * spine with the story's scenes stepped down between its points, and a scene
+ * with beats reads the same way one level in (§4).
  *
  * A folded node is one row tall and its children are not laid out at all,
  * which compresses them and keeps their order (§4).
@@ -236,14 +247,14 @@ export const boardLayout = (board: Board, view: BoardView = WHOLE_BOARD): BoardL
     const children =
       node.collapsed || columnIndex >= deepest ? [] : childrenOf(board, node.id);
 
-    let below = top;
+    // The head is a row of its own; what hangs off it starts a gap under it.
+    let below = children.length > 0 ? top + ROW + GAP : top;
     for (const [index, child] of children.entries()) {
       if (index > 0) below += GAP;
       below += place(child, columnIndex + 1, below);
     }
 
-    const stacked = below - top;
-    const height = Math.max(ROW, stacked);
+    const height = Math.max(ROW, below - top);
     laid.push({
       node,
       column: columnIndex,

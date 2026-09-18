@@ -2,6 +2,7 @@ import { addBeat, addUnit, moveUnit, moveBeat } from './mutations.js';
 import { beatsForUnit, tracksInOrder, unitsInStoryOrder } from './selectors.js';
 import { boardsOf, childrenOf, columnOf, findBoard, findNode } from './sculptor.js';
 import { claimedInScript, retitleScript } from './planning.js';
+import type { FormatNouns } from './formats.js';
 import type { Board, SculptorNode } from './entities/sculptor.js';
 import type { Beat, StructuralUnit } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
@@ -240,6 +241,132 @@ export const realiseNode = (
   }
 
   return { file, unitId: null, beatId: null };
+};
+
+// ------------------------------------------------ onto the track, whole
+
+/**
+ * Why a node cannot go on the track, as a sentence the writer can act on.
+ *
+ * *Its scene is still an idea* says what to do next; a button that does
+ * nothing does not. Every refusal here is that kind of sentence.
+ */
+export type TrackRefusal =
+  | 'a block is the shape of the story rather than a scene in it'
+  | 'its scene is still an idea'
+  | 'already on the track'
+  | 'there is no track to put a scene in';
+
+/**
+ * What putting this node on the track would do.
+ *
+ * Ken's ask (addendum 03 §6a): *select a scene, and one press puts it on the
+ * track with all its beats under it, and then you can start working*. So the
+ * offer counts the beats that would come, and the sentence on the button is
+ * built from this rather than from the node alone — a press that took the
+ * scene and left the beats behind would be the one confusing outcome.
+ *
+ * A scene already on the track can still have beats that are not, which is
+ * ordinary — the writer thought of two more after realising it — so the
+ * offer then covers the beats alone, and says so.
+ */
+export interface TrackOffer {
+  /** Null where it can go; otherwise why not. */
+  refusal: TrackRefusal | null;
+  /** The node itself would be made real (false where only its beats would). */
+  self: boolean;
+  /** How many beat nodes under it would be made real with it. */
+  beats: number;
+}
+
+/** The beat nodes directly under a node that are still ideas, in their order. */
+const ideaBeatsUnder = (board: Board, node: SculptorNode): SculptorNode[] =>
+  childrenOf(board, node.id).filter((child) => bindKindOf(child) === 'beat' && !isBound(child));
+
+export const trackOffer = (file: ProjectFile, board: Board, nodeId: SculptorNodeId): TrackOffer => {
+  const node = findNode(board, nodeId);
+  const none: TrackOffer = { refusal: 'already on the track', self: false, beats: 0 };
+  if (!node) return none;
+  const kind = bindKindOf(node);
+
+  if (kind === null) {
+    return { refusal: 'a block is the shape of the story rather than a scene in it', self: false, beats: 0 };
+  }
+
+  if (kind === 'unit') {
+    const beats = ideaBeatsUnder(board, node).length;
+    if (isBound(node)) return beats === 0 ? none : { refusal: null, self: false, beats };
+    if (tracksInOrder(file).length === 0) {
+      return { refusal: 'there is no track to put a scene in', self: false, beats: 0 };
+    }
+    return { refusal: null, self: true, beats };
+  }
+
+  if (isBound(node)) return none;
+  const parent = node.parentId ? findNode(board, node.parentId) : null;
+  if ((parent?.boundUnitId ?? null) === null) return { refusal: 'its scene is still an idea', self: false, beats: 0 };
+  return { refusal: null, self: true, beats: 0 };
+};
+
+/**
+ * The offer as the button reads it: *Add to track — and its 3 beats*, or
+ * *Add its 3 beats to the track* where the scene is already there, or the
+ * refusal. One sentence in one place, so the toolbar, the right-click and the
+ * panel cannot disagree about what a press would do.
+ */
+export const sayTrackOffer = (offer: TrackOffer, node: SculptorNode, nouns: FormatNouns): string => {
+  const beats = `${offer.beats} ${(offer.beats === 1 ? nouns.sub : nouns.subPlural).toLowerCase()}`;
+  if (offer.refusal !== null) return offer.refusal;
+  if (!offer.self) return `Add its ${beats} to the track`;
+  if (bindKindOf(node) === 'beat') return 'Add to track';
+  return offer.beats > 0 ? `Add to track — and its ${beats}` : 'Add to track';
+};
+
+/**
+ * Put the node on the track, and everything under it that can go.
+ *
+ * The scene is made real first, then each beat node under it in the order
+ * they stand on the canvas — each one `realiseNode`, so a beat lands after
+ * the nearest bound beat above it exactly as it would have one press at a
+ * time. A beat already real is left alone; one under a scene that is still
+ * an idea cannot go (spec §19), and the offer said so before anything was
+ * pressed.
+ *
+ * The Outliner's *Add to track* is the same act read off a tree
+ * (`promoteRow`), which is why the button carries the same words on both.
+ */
+export const addToTrack = (
+  file: ProjectFile,
+  boardId: BoardId,
+  nodeId: SculptorNodeId,
+): { file: ProjectFile; unitId: StructuralUnitId | null; beats: BeatId[] } => {
+  const board = findBoard(file, boardId);
+  const node = board ? findNode(board, nodeId) : null;
+  if (!board || !node) return { file, unitId: null, beats: [] };
+  const offer = trackOffer(file, board, nodeId);
+  if (offer.refusal !== null) return { file, unitId: null, beats: [] };
+
+  if (bindKindOf(node) === 'beat') {
+    const made = realiseNode(file, boardId, nodeId);
+    return { file: made.file, unitId: made.unitId, beats: made.beatId ? [made.beatId] : [] };
+  }
+
+  let next = file;
+  let unitId = node.boundUnitId;
+  if (offer.self) {
+    const made = realiseNode(next, boardId, nodeId);
+    next = made.file;
+    unitId = made.unitId;
+  }
+  if (unitId === null) return { file, unitId: null, beats: [] };
+
+  const beats: BeatId[] = [];
+  for (const child of ideaBeatsUnder(board, node)) {
+    const made = realiseNode(next, boardId, child.id);
+    next = made.file;
+    if (made.beatId) beats.push(made.beatId);
+  }
+  return { file: next, unitId, beats };
 };
 
 // ------------------------------------------ when the two fall out of step
