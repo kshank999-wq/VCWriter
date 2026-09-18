@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addGraphic,
   addMarker,
   addUnit,
   chapterChoices,
+  chapterLeafContent,
   chapterPageStyleOf,
   chapterPagesEverywhere,
   chapterStyleAttr,
@@ -10,9 +12,13 @@ import {
   createProjectFile,
   moveUnit,
   paginateProject,
+  placedMarkers,
+  removeGraphic,
+  renderPrintDocumentHtml,
   setChapterLineStyle,
   setChapterPage,
   setChapterPageStyle,
+  templateOf,
   unitsInStoryOrder,
   type ProjectFile,
 } from '../index.js';
@@ -161,5 +167,103 @@ describe('the number on the page', () => {
     const leaves = pages.filter((page) => page.chapter);
 
     expect(leaves.map((page) => page.chapter!.label)).toEqual(['Chapter 1', 'Chapter 2']);
+  });
+});
+
+/**
+ * The chapter page for a book (addendum 19 §7): a summary that is not the
+ * epigraph, a template that is the book's with one chapter allowed to differ,
+ * and a picture from the library rather than a second copy of it.
+ */
+describe('the page for a book', () => {
+  const textbook = () => {
+    let file: ProjectFile = createProjectFile({ title: 'Teaching Optics', format: 'instructional' });
+    const trackId = file.tracks[0]!.id;
+    const markerIds: string[] = [];
+    for (const name of ['Geometric optics', 'Wave optics']) {
+      const scene = addUnit(file, { trackId, title: name });
+      const made = addMarker(scene.file, { unitId: scene.unit.id, kind: 'chapter', title: name });
+      file = made.file;
+      markerIds.push(made.marker.id as string);
+    }
+    return { file: chapterPagesEverywhere(file, true), markerIds };
+  };
+  const leafOf = (file: ProjectFile, markerId: string) =>
+    chapterLeafContent(file, placedMarkers(file).find((one) => (one.marker.id as string) === markerId)!);
+
+  it('draws every page the way it always has until a template is chosen', () => {
+    const { file, markerIds } = textbook();
+    expect(chapterPageStyleOf(file).template).toBe('graphic_middle');
+    expect(leafOf(file, markerIds[0]!).template).toBe('graphic_middle');
+  });
+
+  it('is the book’s template, with one chapter allowed its own', () => {
+    const { file, markerIds } = textbook();
+    const top = setChapterPageStyle(file, { template: 'graphic_top' });
+    expect(leafOf(top, markerIds[0]!).template).toBe('graphic_top');
+    expect(leafOf(top, markerIds[1]!).template).toBe('graphic_top');
+
+    const one = setChapterPage(top, markerIds[1]! as never, { template: 'graphic_bottom' });
+    expect(templateOf(one, one.markers[1]!)).toBe('graphic_bottom');
+    expect(leafOf(one, markerIds[0]!).template).toBe('graphic_top');
+    // Back to the book's is a word, not a copy of the book's value.
+    const back = setChapterPage(one, markerIds[1]! as never, { template: 'book' });
+    expect(leafOf(back, markerIds[1]!).template).toBe('graphic_top');
+  });
+
+  it('keeps the summary apart from the epigraph, and prints it in the reading face', () => {
+    const { file, markerIds } = textbook();
+    const said = setChapterPage(file, markerIds[0]! as never, {
+      epigraph: 'Let there be light.',
+      summary: 'How light travels, bends and reflects, and what a lens does with it.',
+    });
+    const leaf = leafOf(said, markerIds[0]!);
+    expect(leaf.epigraph).toBe('Let there be light.');
+    expect(leaf.summary).toContain('what a lens does');
+
+    const html = renderPrintDocumentHtml(said);
+    expect(html).toContain('class="chapter-summary"');
+    expect(html).toContain('class="chapter-epigraph"');
+    // The summary's face is the manuscript's, whatever the heading wears.
+    const vars = chapterStyleVars(chapterPageStyleOf(setChapterPageStyle(said, { face: 'serif' })));
+    expect(vars['--chapter-summary-face']).toContain('Courier');
+    expect(vars['--chapter-face']).not.toContain('Courier');
+  });
+
+  it('orders the page by the template', () => {
+    const { file, markerIds } = textbook();
+    let next = setChapterPage(file, markerIds[0]! as never, {
+      summary: 'The summary.',
+      image: { dataUrl: 'data:image/png;base64,AAAA', name: 'device', width: 40 },
+    });
+    // Read from the page itself, past the stylesheet that names every class first.
+    const order = (html: string) => {
+      const body = html.slice(html.indexOf('class="chapter-block"'));
+      return ['chapter-device', 'chapter-head', 'chapter-summary']
+        .map((mark) => [mark, body.indexOf(mark)] as const)
+        .sort((a, b) => a[1] - b[1])
+        .map(([mark]) => mark);
+    };
+    expect(order(renderPrintDocumentHtml(next))).toEqual(['chapter-head', 'chapter-device', 'chapter-summary']);
+    next = setChapterPageStyle(next, { template: 'graphic_top' });
+    expect(order(renderPrintDocumentHtml(next))).toEqual(['chapter-device', 'chapter-head', 'chapter-summary']);
+    next = setChapterPageStyle(next, { template: 'graphic_bottom' });
+    expect(order(renderPrintDocumentHtml(next))).toEqual(['chapter-head', 'chapter-summary', 'chapter-device']);
+  });
+
+  it('takes the picture from the library by id, so a replaced diagram is replaced here too', () => {
+    const { file, markerIds } = textbook();
+    const added = addGraphic(file, { name: 'Snell', data: 'data:image/png;base64,AAAA', altText: 'A ray bending' });
+    const chosen = setChapterPage(added.file, markerIds[0]! as never, { assetId: added.asset.id, graphicWidth: 60 });
+    const leaf = leafOf(chosen, markerIds[0]!);
+    expect(leaf.image).toEqual({ dataUrl: 'data:image/png;base64,AAAA', name: 'A ray bending', width: 60 });
+    // One picture in the file: the page holds the id and nothing else.
+    expect(chosen.markers[0]!.page.image).toBeNull();
+
+    // The picture gone from the library draws nothing rather than a broken plate.
+    const gone = removeGraphic(chosen, added.asset.id);
+    expect(leafOf(gone, markerIds[0]!).image).toBeNull();
+    // And the printed page carries the library's picture.
+    expect(renderPrintDocumentHtml(chosen)).toContain('alt="A ray bending"');
   });
 });

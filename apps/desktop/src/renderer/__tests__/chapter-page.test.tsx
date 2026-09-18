@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import {
+  addGraphic,
   addMarker,
   addUnit,
   chapterPageStyleOf,
@@ -139,6 +140,60 @@ describe('what belongs to the chapter and what belongs to the book', () => {
   it('says where the number comes from rather than leaving it to be hunted for', () => {
     render(<Harness start={book(['One'])} />);
     expect(screen.getByText(/worked out from where the chapter falls/i)).toBeTruthy();
+  });
+});
+
+/**
+ * The chapter page for a book (addendum 19 §7): a summary, three templates as
+ * a book setting with a per-chapter override, and a picture from the library.
+ */
+describe('the chapter page for a book', () => {
+  const textbook = () => {
+    let file = book(['Geometric optics', 'Wave optics'], 'instructional');
+    file = addGraphic(file, { name: 'Snell’s law', data: 'data:image/png;base64,AAAA', width: 10, height: 10 }).file;
+    return file;
+  };
+
+  it('has a summary box, and a novel does not', () => {
+    render(<Harness start={textbook()} />);
+    expect(screen.getByLabelText('Summary')).toBeTruthy();
+    cleanup();
+    render(<Harness start={book(['One'])} />);
+    expect(screen.queryByLabelText('Summary')).toBeNull();
+  });
+
+  it('sets the template once for the book, and lets one chapter differ', () => {
+    let seen: ProjectFile | null = null;
+    render(<Harness start={textbook()} onFile={(file) => (seen = file)} />);
+    fireEvent.click(screen.getByText('Give every chapter a page'));
+
+    // Three tiles; the book's is the middle until chosen otherwise.
+    const tiles = within(screen.getByRole('radiogroup', { name: 'Template' })).getAllByRole('radio');
+    expect(tiles).toHaveLength(3);
+    expect(tiles[1]!.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(tiles[0]!);
+    expect(chapterPageStyleOf(seen as unknown as ProjectFile).template).toBe('graphic_top');
+
+    // This chapter alone, at the foot; the other still follows the book.
+    fireEvent.change(screen.getByLabelText('This chapter’s template'), { target: { value: 'graphic_bottom' } });
+    const markers = (seen as unknown as ProjectFile).markers;
+    expect(markers.map((marker) => marker.page.template)).toEqual(['graphic_bottom', 'book']);
+    expect(screen.getByText(/This chapter has its own — graphic at the bottom/)).toBeTruthy();
+  });
+
+  it('takes the picture from the library and draws it on the sheet', () => {
+    let seen: ProjectFile | null = null;
+    render(<Harness start={textbook()} onFile={(file) => (seen = file)} />);
+    fireEvent.click(screen.getByText('Give every chapter a page'));
+    const library = screen.getByLabelText('Graphic from the library') as HTMLSelectElement;
+    const asset = (seen as unknown as ProjectFile).assets![0]!;
+    fireEvent.change(library, { target: { value: asset.id as string } });
+
+    const sheet = within(screen.getByLabelText('The page'));
+    expect(sheet.getByRole('img').getAttribute('src')).toBe(asset.data);
+    // The width is the page's own; the picture stays one picture in the file.
+    expect((seen as unknown as ProjectFile).markers[0]!.page.assetId).toBe(asset.id);
+    expect((seen as unknown as ProjectFile).markers[0]!.page.image).toBeNull();
   });
 });
 

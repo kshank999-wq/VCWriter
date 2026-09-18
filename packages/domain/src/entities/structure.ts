@@ -359,6 +359,15 @@ export type StoryMarkerKind = z.infer<typeof storyMarkerKindSchema>;
  * writer is writing — so it lives on the marker rather than among the
  * elements, and it can be left out of a printing without touching a word.
  */
+/**
+ * Where the graphic sits on a chapter page (addendum 19 §7): at the top, in
+ * the middle between the heading and the words under it, or at the foot.
+ * Where it sits is layout, so the book chooses once and a chapter may differ.
+ */
+export const CHAPTER_TEMPLATES = ['graphic_top', 'graphic_middle', 'graphic_bottom'] as const;
+export const chapterTemplateSchema = z.enum(CHAPTER_TEMPLATES);
+export type ChapterTemplate = z.infer<typeof chapterTemplateSchema>;
+
 export const chapterPageSchema = z.object({
   /** Off: the chapter still exists, it just has no page of its own. */
   include: z.boolean().default(false),
@@ -366,6 +375,28 @@ export const chapterPageSchema = z.object({
   showTitle: z.boolean().default(true),
   /** A few lines under the title: a dedication, an epigraph, a date. */
   epigraph: z.string().default(''),
+  /**
+   * What this chapter covers, in prose (addendum 19 §7). **Not the epigraph**
+   * it sits near: an epigraph is a quotation in the display face, a summary
+   * is reading matter in the reading face, and the two are different fields
+   * with different type rather than one field renamed.
+   */
+  summary: z.string().default(''),
+  /**
+   * This chapter's template, or `book` for *use the book's* (addendum 19 §7)
+   * — `minimumSetups`' shape, where zero means the default: one chapter's
+   * picture can sit at the foot without every other chapter following.
+   */
+  template: z.enum(['book', ...CHAPTER_TEMPLATES]).default('book'),
+  /**
+   * A picture from the book's graphics library (addendum 19 §7), by id, so
+   * replacing a diagram in the library replaces it here too and there is one
+   * answer to *where are my graphics*. Null means the page uses `image`, the
+   * data-URL illustration a novel's device has always been, or nothing.
+   */
+  assetId: id<AssetId>().nullable().default(null),
+  /** How wide the library graphic draws, as a share of the page. */
+  graphicWidth: z.number().min(5).max(100).default(40),
   /**
    * A device or illustration, held in the document as a data URL. Kept small
    * on purpose (`MAX_CHAPTER_IMAGE_BYTES`): the project is a text file that

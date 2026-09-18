@@ -1020,8 +1020,8 @@ push live; the build takes a minute or two.
   are not.
   `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
   Ken after using instructional mode: chapters, sections and subsections
-  worked out first, then put on the track. **Stages 0–3 are built; stages
-  4 and 5 of §9 are not** — §12 fills a stage at a time. Stage 0 is the × off
+  worked out first, then put on the track. **Stages 0–4 are built; stage 5
+  of §9 is not** — §12 fills a stage at a time. Stage 0 is the × off
   every row, **Delete** and **Add to track** on the toolbar acting on the
   selection, and an ask that says what goes (`whatGoesWithRows`,
   `rowsRemovalQuestion`, `rowsRemovalComfort` in `outline.ts`) with *Just
@@ -1056,7 +1056,15 @@ push live; the build takes a minute or two.
   `OutlinerWindow` with `page` set — the same component, `position:
   relative` instead of `fixed`, its × *To the Book*, poppable and marked
   away like Editors; the title bar's Outliner and *Window ▸ Outliner* go to
-  the page on a book so there is one Outliner and not two. §1 is the
+  the page on a book so there is one Outliner and not two. Stage 4 is the
+  **chapter page for a book**: `summary`, `template` and `assetId` on the
+  marker's page (one JSON column, no migration), the template a **book
+  setting with a per-chapter override defaulting to `book`** whose book
+  default is *middle* so every existing page draws as it did, the summary in
+  the **reading face** whatever the heading wears, the picture from the
+  graphics library by id; `chapterLeafContent` in `chapter-style.ts` is the
+  one function that resolves the template and the picture, read by the print,
+  the preview and both dialogs' sheets. §1 is the
   audit and it paid a
   **ninth** time: a `chapter` **story marker** *is* a chapter — it already sits
   above units, carries the chapter page and drives the contents page — so the

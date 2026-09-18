@@ -1,7 +1,7 @@
 import { unitsInStoryOrder } from './selectors.js';
 import type { ProjectFile } from './project-file.js';
 import type { ProjectFormat } from './entities/project.js';
-import type { StoryMarker, StoryMarkerKind } from './entities/structure.js';
+import type { ChapterTemplate, StoryMarker, StoryMarkerKind } from './entities/structure.js';
 import { isProseFormat } from './formats.js';
 
 /**
@@ -245,16 +245,27 @@ export interface ChapterPageContent {
   label: string;
   title: string;
   epigraph: string;
+  /** What the chapter covers (addendum 19 §7); empty on a page without one. */
+  summary: string;
   image: { dataUrl: string; name: string; width: number } | null;
   align: 'left' | 'center';
+  /**
+   * Where the picture sits. Resolved — never `book` — by `chapterLeafContent`,
+   * which knows the book's; read alone, a page that defers to the book draws
+   * the way every page always has, the picture between the heading and the
+   * lines under it.
+   */
+  template: ChapterTemplate;
 }
 
 export const chapterPageContent = (placed: PlacedMarker): ChapterPageContent => ({
   label: placed.marker.page.showNumber ? placed.label : '',
   title: placed.marker.page.showTitle ? placed.marker.title : '',
   epigraph: placed.marker.page.epigraph,
+  summary: placed.marker.page.summary,
   image: placed.marker.page.image,
   align: placed.marker.page.align,
+  template: placed.marker.page.template === 'book' ? 'graphic_middle' : placed.marker.page.template,
 });
 
 /**

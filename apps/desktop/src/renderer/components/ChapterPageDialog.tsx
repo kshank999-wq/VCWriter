@@ -1,17 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  CHAPTER_TEMPLATES,
+  CHAPTER_TEMPLATE_WORDS,
   MAX_CHAPTER_IMAGE_BYTES,
   TYPE_CASES,
   TYPE_FACES,
   chapterChoices,
-  chapterPageContent,
+  chapterLeafContent,
   chapterPageStyleOf,
   chapterPagesEverywhere,
+  graphicsInOrder,
+  isInstructional,
   placedMarkers,
   setChapterLineStyle,
   setChapterPage,
   setChapterPageStyle,
+  templateOf,
   updateMarker,
+  type AssetId,
+  type ChapterTemplate,
   type LineStyle,
   type ProjectFile,
   type StoryMarkerId,
@@ -110,6 +117,12 @@ function Body({
   );
   const style = chapterPageStyleOf(file);
   const marker = placed?.marker;
+  /**
+   * A book's page has a summary and takes its picture from the library
+   * (addendum 19 §7). A novel keeps the illustration it has always had.
+   */
+  const book = isInstructional(file.project.format);
+  const library = useMemo(() => (book ? graphicsInOrder(file) : []), [book, file]);
 
   const patchPage = (patch: Parameters<typeof setChapterPage>[2]) => {
     if (!marker) return;
@@ -256,6 +269,43 @@ function Body({
                 />
               </label>
 
+              {/* The summary is the chapter's words (addendum 19 §7), and
+                  not the epigraph above it: prose about what the chapter
+                  covers, set in the reading face. A book's alone. */}
+              {book ? (
+                <label className="field">
+                  <span>What this chapter covers</span>
+                  <textarea
+                    aria-label="Summary"
+                    rows={5}
+                    placeholder="A paragraph on what the reader will find in it"
+                    value={marker.page.summary}
+                    onChange={(event) => patchPage({ summary: event.target.value })}
+                  />
+                </label>
+              ) : null}
+
+              {/* Where the picture sits is the book's, with this one chapter
+                  allowed to differ (addendum 19 §7): the override defaults to
+                  the book's, the way a setup's minimum defaults to the rule. */}
+              <label className="field">
+                <span>Where the graphic sits</span>
+                <select
+                  aria-label="This chapter’s template"
+                  value={marker.page.template}
+                  onChange={(event) =>
+                    patchPage({ template: event.target.value as 'book' | ChapterTemplate })
+                  }
+                >
+                  <option value="book">The book’s — {CHAPTER_TEMPLATE_WORDS[style.template].name.toLowerCase()}</option>
+                  {CHAPTER_TEMPLATES.map((one) => (
+                    <option key={one} value={one}>
+                      {CHAPTER_TEMPLATE_WORDS[one].name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <label className="field">
                 <span>On the page</span>
                 <select
@@ -269,6 +319,41 @@ function Body({
               </label>
 
               <div className="chapter-page-art">
+                {/* On a book the picture comes from the graphics library
+                    (addendum 19 §7), so one place holds the pictures and a
+                    diagram replaced there is replaced here. */}
+                {book ? (
+                  <label className="field">
+                    <span>The graphic, from the library</span>
+                    <select
+                      aria-label="Graphic from the library"
+                      value={(marker.page.assetId as string | null) ?? ''}
+                      onChange={(event) =>
+                        patchPage({ assetId: event.target.value ? (event.target.value as AssetId) : null })
+                      }
+                    >
+                      <option value="">{library.length === 0 ? 'The library is empty' : 'None'}</option>
+                      {library.map((asset) => (
+                        <option key={asset.id as string} value={asset.id as string}>
+                          {asset.name || 'Untitled picture'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                {book && marker.page.assetId ? (
+                  <label className="field">
+                    <span>How wide — {marker.page.graphicWidth}% of the page</span>
+                    <input
+                      type="range"
+                      aria-label="Graphic width"
+                      min={5}
+                      max={100}
+                      value={marker.page.graphicWidth}
+                      onChange={(event) => patchPage({ graphicWidth: Number(event.target.value) })}
+                    />
+                  </label>
+                ) : null}
                 <input
                   ref={picker}
                   type="file"
@@ -276,10 +361,12 @@ function Body({
                   hidden
                   onChange={(event) => takeImage(event.target.files?.[0])}
                 />
-                <button type="button" className="ghost small" onClick={() => picker.current?.click()}>
-                  {marker.page.image ? 'Change the illustration' : 'Add an illustration'}
-                </button>
-                {marker.page.image ? (
+                {book && marker.page.assetId ? null : (
+                  <button type="button" className="ghost small" onClick={() => picker.current?.click()}>
+                    {marker.page.image ? 'Change the illustration' : book ? 'Or add a picture of its own' : 'Add an illustration'}
+                  </button>
+                )}
+                {marker.page.image && !(book && marker.page.assetId) ? (
                   <>
                     <label className="field">
                       <span>How wide — {marker.page.image.width}% of the page</span>
@@ -349,6 +436,44 @@ function Body({
               tracking={false}
               onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'epigraph', patch))}
             />
+            {book ? (
+              <Line
+                label="The summary"
+                style={style.summary}
+                tracking={false}
+                onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'summary', patch))}
+              />
+            ) : null}
+
+            {/* The three templates as tiles (addendum 19 §7). Layout is the
+                book's: set once, every chapter page follows, and the sheet
+                beside them is what prints. */}
+            <div className="chapter-template-tiles" role="radiogroup" aria-label="Template">
+              {CHAPTER_TEMPLATES.map((one) => (
+                <button
+                  key={one}
+                  type="button"
+                  role="radio"
+                  aria-checked={style.template === one}
+                  className={style.template === one ? 'chapter-template-tile on' : 'chapter-template-tile'}
+                  title={CHAPTER_TEMPLATE_WORDS[one].says}
+                  onClick={() => onUpdate((current) => setChapterPageStyle(current, { template: one }))}
+                >
+                  <span className={`chapter-template-sketch ${one}`} aria-hidden="true">
+                    <i className="sketch-graphic" />
+                    <i className="sketch-head" />
+                    <i className="sketch-words" />
+                  </span>
+                  <span className="chapter-template-name">{CHAPTER_TEMPLATE_WORDS[one].name}</span>
+                </button>
+              ))}
+            </div>
+            {marker && marker.page.template !== 'book' ? (
+              <p className="muted small">
+                This chapter has its own — {CHAPTER_TEMPLATE_WORDS[templateOf(file, marker)].name.toLowerCase()}. Every
+                other chapter follows the book.
+              </p>
+            ) : null}
 
             <label className="check">
               <input
@@ -381,7 +506,7 @@ function Body({
         <aside className="chapter-page-preview" aria-label="The page">
           <div className="chapter-leaf-sheet">
             {marker && marker.page.include ? (
-              <ChapterLeaf chapter={chapterPageContent(placed!)} style={style} />
+              <ChapterLeaf chapter={chapterLeafContent(file, placed!)} style={style} />
             ) : (
               <p className="muted">This chapter runs straight on from the last one.</p>
             )}

@@ -466,3 +466,44 @@ renderer confirmed each step of §10's first line — a new book opens on the
 Outliner, *Write* shows the Book, *Outline* comes back, the × goes to the
 Book — and that a screenplay's bar carries no *Outline* and its Outliner
 still opens as a room.
+
+### Stage 4 — the chapter page for a book
+
+**What it does.** Three fields join the page a marker carries, and none of
+them needed a migration, the page being one JSON column. **`summary`** is
+prose about what the chapter covers, a box of its own on a book under the
+epigraph's, and it prints in the **reading face** whatever the heading wears:
+`chapterStyleVars` emits `--chapter-summary-face` as the manuscript's stack,
+and the summary's size and weight are a fourth line of the book's style.
+**`template`** is where the graphic sits — `graphic_top`, `graphic_middle`,
+`graphic_bottom` — and it is a **book setting with a per-chapter override
+that defaults to `book`**, `minimumSetups`' shape: the dialog shows the
+three as tiles under *How every chapter page is set*, one chapter can differ
+through a select that names the book's as its first choice, and a line says
+so when one does. The book's default is *middle*, because that is the order
+every page made before there was a choice has always drawn — heading, device,
+lines under it — so a novel that never chooses looks exactly as it did.
+**`assetId`** points at the graphics library, so on a book the picture is
+chosen from the library rather than pasted in, one place holds the pictures,
+and a diagram replaced there is replaced on the page; `graphicWidth` is its
+own, and the data-URL illustration a novel's device has always been stays
+for a novel and for pages already made.
+
+**`chapterLeafContent` is the one function** that resolves what the marker
+alone cannot — the template that may be the book's, the picture that may be
+the library's — and the print, the preview, the marker dialog's sheet and
+the chapter page dialog's sheet all read it, for the reason `chapterStyleVars`
+is one function: a writer looking at two answers to *what will it look like*
+has no way to tell which one the book will use. A library picture that has
+gone draws nothing rather than a broken plate.
+
+**What building it found.** A test that checked the order the printed page
+put its parts in read the whole document and measured the stylesheet, which
+names every class before the page does; the domain's render is right and the
+test now reads from the page. Driving the renderer with a fixture written
+before the field existed crashed the dialog on a page with no `template` at
+all — the desktop parses every file on open, so a real project cannot arrive
+that way, but `templateOf` now reads a missing value as *the book's*, the one
+answer that cannot be wrong. Otherwise the audit paid a tenth time: the leaf,
+its typography, the library and the print stack all existed, and the stage
+was three fields and one resolving function.

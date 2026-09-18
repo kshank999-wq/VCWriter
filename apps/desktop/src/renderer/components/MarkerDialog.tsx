@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import {
   MARKER_NUMBERINGS,
   MAX_CHAPTER_IMAGE_BYTES,
-  chapterPageContent,
+  chapterLeafContent,
   chapterPageStyleOf,
   hasChapterPages,
   markerNumbering,
@@ -102,7 +102,9 @@ function Body({
     reader.readAsDataURL(picked);
   };
 
-  const preview = chapterPageContent(placed);
+  // Resolved against the book: the template may be the book's and the
+  // picture may be the library's (addendum 19 §7).
+  const preview = chapterLeafContent(file, placed);
 
   return (
     <>

@@ -314,26 +314,30 @@ const renderChapterPage = (page: Page, isProse: boolean, options: PrintOptions):
   // and turned into custom properties by the one function the preview reads
   // too — so the stylesheet below declares no sizes of its own.
   const style = chapterStyleAttr(options.chapterStyle ?? chapterPageStyleSchema.parse({}));
-  const parts: string[] = [];
   const head: string[] = [];
   if (chapter.label.length > 0) head.push(`<h2 class="chapter-label">${escapeHtml(chapter.label)}</h2>`);
   if (chapter.title.length > 0) head.push(`<p class="chapter-title">${escapeHtml(chapter.title)}</p>`);
   // The number and the name are one block, so a rule under the heading sits
   // under both of them rather than between them.
-  if (head.length > 0) parts.push(`<div class="chapter-head">${head.join('\n')}</div>`);
-  if (chapter.image) {
-    // The source is a data URL held in the project; it is escaped as an
-    // attribute like any other, and nothing else about it is trusted.
-    parts.push(
-      `<img class="chapter-device" alt="${escapeHtml(chapter.image.name)}" ` +
-        `style="width:${Math.round(chapter.image.width)}%" src="${escapeHtml(chapter.image.dataUrl)}" />`,
-    );
-  }
-  if (chapter.epigraph.trim().length > 0) {
-    parts.push(`<p class="chapter-epigraph">${escapeHtml(chapter.epigraph)}</p>`);
-  }
+  const heading = head.length > 0 ? `<div class="chapter-head">${head.join('\n')}</div>` : '';
+  // The source is a data URL held in the project; it is escaped as an
+  // attribute like any other, and nothing else about it is trusted.
+  const graphic = chapter.image
+    ? `<img class="chapter-device" alt="${escapeHtml(chapter.image.name)}" ` +
+      `style="width:${Math.round(chapter.image.width)}%" src="${escapeHtml(chapter.image.dataUrl)}" />`
+    : '';
+  const epigraph = chapter.epigraph.trim().length > 0 ? `<p class="chapter-epigraph">${escapeHtml(chapter.epigraph)}</p>` : '';
+  const summary = chapter.summary.trim().length > 0 ? `<p class="chapter-summary">${escapeHtml(chapter.summary)}</p>` : '';
+  // The template says where the picture goes (addendum 19 §7); the words keep
+  // their order — heading, epigraph, summary — whichever it is.
+  const parts =
+    chapter.template === 'graphic_top'
+      ? [graphic, heading, epigraph, summary]
+      : chapter.template === 'graphic_bottom'
+        ? [heading, epigraph, summary, graphic]
+        : [heading, graphic, epigraph, summary];
   return `<section class="page chapter-page${isProse ? ' prose' : ''}" style="text-align:${chapter.align};${style}">${stampOf(page, options)}${pageNumber(page, options)}
-  <div class="chapter-block">${parts.join('\n')}</div>
+  <div class="chapter-block">${parts.filter((part) => part.length > 0).join('\n')}</div>
 </section>`;
 };
 
@@ -578,6 +582,23 @@ const STYLES = `
     letter-spacing: var(--chapter-title-tracking);
   }
   .chapter-device { display: block; margin: 2em auto 0; max-width: 100%; }
+  .chapter-device:first-child { margin-top: 0; }
+  /* The summary is reading matter (addendum 19 §7): the reading face, at a
+     reading measure, whatever the heading wears. */
+  .chapter-summary {
+    margin: 2.5em auto 0;
+    max-width: 34em;
+    white-space: pre-wrap;
+    text-align: left;
+    font-family: var(--chapter-summary-face);
+    font-size: var(--chapter-summary-size);
+    font-weight: var(--chapter-summary-weight);
+    font-style: var(--chapter-summary-style);
+    text-transform: var(--chapter-summary-case);
+    font-variant-caps: var(--chapter-summary-variant);
+    letter-spacing: var(--chapter-summary-tracking);
+    line-height: 1.5;
+  }
   .chapter-epigraph {
     margin: 2.5em 0 0;
     white-space: pre-wrap;

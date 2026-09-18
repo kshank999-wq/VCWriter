@@ -1,6 +1,6 @@
 import { beatsInScript, relatedEntities, unitsInStoryOrder } from './selectors.js';
+import { chapterLeafContent } from './chapter-style.js';
 import {
-  chapterPageContent,
   chapterPagesFor,
   placedMarkers,
   contentsDivisions,
@@ -1179,7 +1179,7 @@ const paginated = (
     if (leaf) {
       flush();
       if (opensAtIndex < 0) opensAtIndex = pages.length;
-      pages.push({ number: 0, lines: [], startsWith: null, chapter: chapterPageContent(leaf) });
+      pages.push({ number: 0, lines: [], startsWith: null, chapter: chapterLeafContent(file, leaf) });
     }
 
     // A division opens at the first leaf of its own — its cover, its chapter

@@ -3669,6 +3669,28 @@ dialog.marker-dialog {
   max-width: 100%;
 }
 
+.chapter-leaf-device:first-child {
+  margin-top: 0;
+}
+
+/* The summary is reading matter (addendum 19 §7): the reading face at a
+   reading measure, whatever the heading wears — the same custom properties
+   the printed page carries. */
+.chapter-leaf-summary {
+  margin: 2.5em auto 0;
+  max-width: 34em;
+  white-space: pre-wrap;
+  text-align: left;
+  font-family: var(--chapter-summary-face, inherit);
+  font-size: var(--chapter-summary-size, inherit);
+  font-weight: var(--chapter-summary-weight, 400);
+  font-style: var(--chapter-summary-style, normal);
+  text-transform: var(--chapter-summary-case, none);
+  font-variant-caps: var(--chapter-summary-variant, normal);
+  letter-spacing: var(--chapter-summary-tracking, 0);
+  line-height: 1.5;
+}
+
 .chapter-leaf-epigraph {
   margin: 2.5em 0 0;
   white-space: pre-wrap;
@@ -10859,6 +10881,90 @@ dialog.chapter-page-dialog {
   display: grid;
   gap: 6px;
   justify-items: start;
+}
+
+/* The three templates as tiles (addendum 19 §7): a sketch of where the
+   graphic, the heading and the words fall, and the one in force lit. */
+.chapter-template-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.chapter-template-tile {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+}
+
+.chapter-template-tile.on {
+  border-color: var(--gold);
+  color: var(--text);
+}
+
+.chapter-template-sketch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 44px;
+  height: 58px;
+  padding: 8px 6px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.chapter-template-sketch i {
+  display: block;
+  border-radius: 1px;
+}
+
+.chapter-template-sketch .sketch-graphic {
+  width: 18px;
+  height: 12px;
+  background: var(--gold-deep);
+}
+
+.chapter-template-sketch .sketch-head {
+  width: 24px;
+  height: 3px;
+  background: currentColor;
+}
+
+.chapter-template-sketch .sketch-words {
+  width: 28px;
+  height: 8px;
+  background: repeating-linear-gradient(currentColor 0 1px, transparent 1px 3px);
+  opacity: 0.6;
+}
+
+/* The order of the three marks is the template. */
+.chapter-template-sketch.graphic_middle .sketch-graphic {
+  order: 2;
+}
+
+.chapter-template-sketch.graphic_middle .sketch-head {
+  order: 1;
+}
+
+.chapter-template-sketch.graphic_middle .sketch-words {
+  order: 3;
+}
+
+.chapter-template-sketch.graphic_bottom .sketch-graphic {
+  order: 3;
+}
+
+.chapter-template-name {
+  font-size: 11px;
+  text-align: center;
 }
 
 .chapter-page-art .field {

@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import type { ProjectFile } from './project-file.js';
 import { nowIso } from './entities/common.js';
-import { hasChapterPages, placedMarkers } from './markers.js';
+import { chapterTemplateSchema, type ChapterTemplate, type StoryMarker } from './entities/structure.js';
+import { chapterPageContent, hasChapterPages, placedMarkers, type ChapterPageContent, type PlacedMarker } from './markers.js';
 import type { StoryMarkerId } from './ids.js';
 
 /**
@@ -74,8 +75,21 @@ export const chapterPageStyleSchema = z.object({
   /** The chapter's name, where it has one. */
   title: lineStyleSchema.default({ size: 14 }),
   epigraph: lineStyleSchema.default({ size: 11, italic: true }),
+  /**
+   * The summary's size and weight (addendum 19 §7). Its face is not chosen
+   * here: a summary is reading matter, so it is set in the reading face —
+   * the manuscript's — whatever display face the heading wears.
+   */
+  summary: lineStyleSchema.default({ size: 11 }),
   /** A rule under the heading, which is a thing books do and a thing they do not. */
   rule: z.boolean().default(false),
+  /**
+   * Where every chapter page puts its graphic (addendum 19 §7), unless a
+   * chapter says otherwise. *Middle* is what every page made before there was
+   * a choice has always drawn — the heading, then the device, then the lines
+   * under it — so a book that never chooses looks exactly as it did.
+   */
+  template: chapterTemplateSchema.default('graphic_middle'),
   /**
    * How far down the page the block sits, in inches. A chapter opening falls
    * about a third of the way down in most books, which is where this starts.
@@ -103,7 +117,7 @@ export const setChapterPageStyle = (
 /** Patch one line of the style without restating the other two. */
 export const setChapterLineStyle = (
   file: ProjectFile,
-  line: 'number' | 'title' | 'epigraph',
+  line: 'number' | 'title' | 'epigraph' | 'summary',
   patch: Partial<LineStyle>,
 ): ProjectFile =>
   setChapterPageStyle(file, { [line]: { ...chapterPageStyleOf(file)[line], ...patch } } as Partial<ChapterPageStyle>);
@@ -136,9 +150,52 @@ export const chapterStyleVars = (style: ChapterPageStyle): Record<string, string
     // block dropped a literal two and a half inches would be blank.
     '--chapter-drop-ratio': `${((style.dropInches / 11) * 100).toFixed(2)}%`,
     '--chapter-rule': style.rule ? '1px solid currentColor' : 'none',
+    // The reading face, whatever the heading wears (addendum 19 §7).
+    '--chapter-summary-face': FACE_STACKS.manuscript,
     ...line('number', style.number),
     ...line('title', style.title),
     ...line('epigraph', style.epigraph),
+    ...line('summary', style.summary),
+  };
+};
+
+// ------------------------------------------------ the page for a book (§7)
+
+/** What each template is called, and what it does, for the tiles. */
+export const CHAPTER_TEMPLATE_WORDS: Record<ChapterTemplate, { name: string; says: string }> = {
+  graphic_top: { name: 'Graphic at the top', says: 'The picture first, then the heading and the summary under it.' },
+  graphic_middle: { name: 'Graphic in the middle', says: 'The heading, the picture, then the summary.' },
+  graphic_bottom: { name: 'Graphic at the bottom', says: 'The heading and the summary, the picture at the foot.' },
+};
+
+/**
+ * The template a chapter page draws with: its own where it has said so, the
+ * book's otherwise (addendum 19 §7).
+ */
+export const templateOf = (file: ProjectFile, marker: StoryMarker): ChapterTemplate =>
+  // A page that says nothing — `book`, or a page read without the field —
+  // follows the book, which is the one answer that cannot be wrong.
+  !marker.page.template || marker.page.template === 'book' ? chapterPageStyleOf(file).template : marker.page.template;
+
+/**
+ * The leaf as it will draw, with everything resolved that the marker alone
+ * cannot resolve: the template, which may be the book's, and the picture,
+ * which on a book comes from the library by id (addendum 19 §7).
+ *
+ * **One function for the print, the preview and the dialog's sheet**, for
+ * the reason `chapterStyleVars` is one: a writer looking at two answers to
+ * *what will it look like* has no way to tell which one the book will use.
+ * A library picture that has gone draws nothing rather than a broken
+ * plate, and the data-URL illustration stands in where no asset is named.
+ */
+export const chapterLeafContent = (file: ProjectFile, placed: PlacedMarker): ChapterPageContent => {
+  const content = chapterPageContent(placed);
+  const page = placed.marker.page;
+  const asset = page.assetId ? (file.assets ?? []).find((one) => one.id === page.assetId) : undefined;
+  return {
+    ...content,
+    template: templateOf(file, placed.marker),
+    image: asset ? { dataUrl: asset.data, name: asset.altText || asset.name, width: page.graphicWidth } : content.image,
   };
 };
 

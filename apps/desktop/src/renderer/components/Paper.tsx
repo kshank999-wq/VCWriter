@@ -226,23 +226,32 @@ export function ChapterLeaf({
   // function — which is the whole of why the preview can be believed.
   const type = chapterStyleVars(style ?? chapterPageStyleSchema.parse({})) as React.CSSProperties;
   const head = chapter.label.length > 0 || chapter.title.length > 0;
+  const heading = head ? (
+    <div className="chapter-leaf-head">
+      {chapter.label.length > 0 ? <p className="chapter-leaf-label">{chapter.label}</p> : null}
+      {chapter.title.length > 0 ? <p className="chapter-leaf-title">{chapter.title}</p> : null}
+    </div>
+  ) : null;
+  const graphic = chapter.image ? (
+    <img
+      className="chapter-leaf-device"
+      src={chapter.image.dataUrl}
+      alt={chapter.image.name}
+      style={{ width: `${chapter.image.width}%` }}
+    />
+  ) : null;
+  const epigraph = chapter.epigraph.trim().length > 0 ? <p className="chapter-leaf-epigraph">{chapter.epigraph}</p> : null;
+  const summary = chapter.summary.trim().length > 0 ? <p className="chapter-leaf-summary">{chapter.summary}</p> : null;
+  // The template says where the picture goes (addendum 19 §7); the words keep
+  // their order whichever it is — the same order the printed page uses.
   return (
-    <div className="chapter-leaf-block" style={{ textAlign: chapter.align, ...type }}>
-      {head ? (
-        <div className="chapter-leaf-head">
-          {chapter.label.length > 0 ? <p className="chapter-leaf-label">{chapter.label}</p> : null}
-          {chapter.title.length > 0 ? <p className="chapter-leaf-title">{chapter.title}</p> : null}
-        </div>
-      ) : null}
-      {chapter.image ? (
-        <img
-          className="chapter-leaf-device"
-          src={chapter.image.dataUrl}
-          alt={chapter.image.name}
-          style={{ width: `${chapter.image.width}%` }}
-        />
-      ) : null}
-      {chapter.epigraph.trim().length > 0 ? <p className="chapter-leaf-epigraph">{chapter.epigraph}</p> : null}
+    <div className={`chapter-leaf-block ${chapter.template}`} style={{ textAlign: chapter.align, ...type }}>
+      {chapter.template === 'graphic_top' ? graphic : null}
+      {heading}
+      {chapter.template === 'graphic_middle' ? graphic : null}
+      {epigraph}
+      {summary}
+      {chapter.template === 'graphic_bottom' ? graphic : null}
     </div>
   );
 }
