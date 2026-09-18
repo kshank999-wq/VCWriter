@@ -8861,6 +8861,258 @@ a.talk-mark:hover {
   background: rgba(0, 0, 0, 0.55);
 }
 
+/* ------------------------------------------------ the Layout room (addendum 20) */
+
+.layout-room {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+  color: var(--text);
+}
+
+.layout-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.layout-rail {
+  flex: 0 0 240px;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  padding: 12px;
+  overflow: auto;
+}
+
+.layout-rail h3,
+.layout-inspector h3 {
+  margin: 12px 0 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+.layout-rail h3:first-child {
+  margin-top: 0;
+}
+
+.layout-parts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.layout-part {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.layout-part > span:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layout-part.selected {
+  background: var(--panel-2, rgba(255, 255, 255, 0.05));
+  outline: 1px solid var(--gold-deep, var(--border));
+}
+
+.layout-story .layout-part {
+  font-size: 11.5px;
+}
+
+.layout-page-no {
+  min-width: 2em;
+  text-align: right;
+}
+
+.layout-stage {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.layout-spreads {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.layout-spread-box {
+  position: relative;
+  flex: none;
+}
+
+.layout-spread {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  transform-origin: top left;
+}
+
+.layout-sheet {
+  flex: none;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+}
+
+.layout-sheet .bk-page {
+  border-radius: 1px;
+}
+
+.layout-no-sheet {
+  box-shadow: none;
+}
+
+.layout-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.layout-foot input[type='range'] {
+  flex: 1;
+  min-width: 80px;
+}
+
+.layout-foot .zoom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.layout-foot .zoom input {
+  width: 120px;
+}
+
+.layout-message {
+  color: var(--gold);
+}
+
+.layout-inspector {
+  flex: 0 0 320px;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  padding: 12px 14px;
+  overflow: auto;
+}
+
+.layout-section {
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.layout-section .field {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+
+.layout-section .field > span {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted, #999);
+}
+
+.layout-section input,
+.layout-section select,
+.layout-section textarea,
+.layout-rail select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.layout-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 10px;
+}
+
+.layout-margin-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.layout-margin-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.layout-section .check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+  font-size: 12px;
+}
+
+.layout-section .check input {
+  width: auto;
+}
+
+.layout-geometry {
+  margin: 8px 0 0;
+  line-height: 1.45;
+}
+
+.layout-warning {
+  margin: 6px 0 0;
+  color: #d98c8c;
+  line-height: 1.4;
+}
+
+.layout-part-fields {
+  border-bottom: 2px solid var(--gold-deep, var(--border));
+}
+
+.layout-part-tools {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.layout-ask {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.layout-count {
+  white-space: nowrap;
+}
+
 /* The card's right-click (addendum 03 §6a): a small menu at the pointer,
    over a clear veil that closes it on a press anywhere else. */
 .sculpt-menu-veil {

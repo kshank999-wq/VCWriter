@@ -13,7 +13,7 @@
  * that is all it should ever know.
  */
 
-import { hasBookIndex, hasChapterPages, isInteractive, type ProjectFormat } from '@vcwriter/domain';
+import { hasBookIndex, hasChapterPages, isInteractive, isProseFormat, type ProjectFormat } from '@vcwriter/domain';
 import { paneNamesFor } from './panes';
 
 export type CommandId =
@@ -58,6 +58,7 @@ export type CommandId =
   | 'window.outliner'
   | 'window.sculptor'
   | 'window.narrative'
+  | 'window.layout'
   | 'window.editors'
   | 'window.episodes'
   | 'window.beat'
@@ -207,6 +208,11 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       // that is never coming (addendum 18 §10).
       ...(format !== null && isInteractive(format)
         ? [{ command: 'window.narrative' as CommandId, label: 'Narrative map in its own window', checkable: true }]
+        : []),
+      // The sixth room, and a book's alone: a screenplay is not set as a book
+      // (addendum 20 §9), so the item is absent rather than greyed.
+      ...(format !== null && isProseFormat(format)
+        ? [{ command: 'window.layout' as CommandId, label: 'Layout in its own window', checkable: true }]
         : []),
       { command: 'window.episodes', label: 'Episodes', checkable: true },
       { command: 'window.beat', label: 'This beat in its own window' },

@@ -125,10 +125,11 @@ export type PaneKey =
   | 'sculptor'
   | 'editors'
   | 'narrative'
+  | 'layout'
   | `beat:${string}`;
 
 /** The rooms: whole screens rather than sections of the workspace. */
-export const ROOM_PANES = ['research', 'outliner', 'sculptor', 'editors', 'narrative'] as const;
+export const ROOM_PANES = ['research', 'outliner', 'sculptor', 'editors', 'narrative', 'layout'] as const;
 export type RoomPane = (typeof ROOM_PANES)[number];
 
 export const isRoomPane = (pane: string): pane is RoomPane =>
@@ -146,6 +147,7 @@ export const ROOM_NAMES: Record<RoomPane, string> = {
   sculptor: 'Story Sculptor',
   editors: 'Editors',
   narrative: 'Narrative map',
+  layout: 'Layout',
 };
 
 /** What a window of this section calls itself, before the project is known. */

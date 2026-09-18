@@ -1120,6 +1120,35 @@ push live; the build takes a minute or two.
   file. That rename fused `.lane-head` into `.track-head`, two classes into
   one of seventeen rules, which no test could see; `.row-head` is the generic
   sticky cell now, and the counts are back to eight and nine.
+  `addendum-20-layout.md` is **Layout**, the room where a book is set, from
+  Ken's ask for something comparable to Vellum: *enter the trim size and it
+  sets up margins, page numbers, headers, footers, spread balancing*, with
+  the pages in front of the story and behind it. **Stages 0–5 built**; §13
+  says what each does and what of 6 and 7 is there (plates yes, figures cut
+  into the text no; opening treatment and ornament yes, presets no). The fact
+  that shaped it: **everything the program printed was a manuscript** — Courier
+  on letter on a character grid — and a book is proportional type at a trim,
+  which a character grid cannot paginate. So (§2) the manuscript printing is
+  untouched and the room produces a **second document from the same
+  elements**, never editing a word; (§3) the trim is the one measurement the
+  writer chooses and margins, text block, lines and measure are **readings**
+  of it (`book-layout.ts`, the gutter growing with the page count, an
+  override stored as `null`-means-derived); (§4) **the browser measures and
+  the domain decides where the pages fall** — the domain has no font metrics,
+  so `book-typeset.ts` sets each block in a hidden box and reads back a line
+  count, and `layPages` in `book-pages.ts` holds every rule (recto starts,
+  blank versos, roman then arabic, running heads, widows and orphans, a
+  spread cut to one depth) and is tested with made-up counts; (§5) **the
+  story is not a part** and a part with a reading behind it stores only its
+  place, parts living in `settings.book.parts` by `titlePage`'s precedent, so
+  no migration. `print-book.ts` is **one string builder for three readers**
+  — measure, draw, print — which is what lets the page on the screen be the
+  page in the PDF; the export is the one document whose markup the renderer
+  hands to the main process, with the trim as paper. A chapter opens on a
+  leaf only where its page carries a device, a summary or an epigraph
+  (`opensOnLeaf`, a reading); a chapter-page face of *manuscript* means the
+  book's face in the book. Room wiring is the usual five places plus a
+  **Layout** title-bar button, absent rather than greyed off prose.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

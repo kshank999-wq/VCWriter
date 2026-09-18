@@ -1,0 +1,364 @@
+# Addendum 20 — Layout
+
+*A room for setting the book: the trim size drives the page, the plan says
+what is in front of the story and behind it, and the words stay where they
+were written.*
+
+Status: stages 0–5 built, 18 September 2026; §13 says what each does and
+what of stages 6 and 7 is there.
+
+## 0. Where it came from
+
+Ken, 18 September:
+
+> In the novel, and short story sections, and instructional, there's going to
+> be a layout section that is going to be comparable to the software Vellum.
+> You enter in the trim size and it will automatically set up margins, page
+> numbers, headers, footers, spread balancing, and allows you to insert your
+> illustrated pages, chapter pages, index and other fore pages. And also pages
+> in the end, possibly indexing or about the author or pages after the story.
+> This will be called Layout, and will be its own section like Research. Needs
+> to be easy: can help you format your text, pick your fonts, stylize the
+> pages, etc., add in little graphics, cut them into your text, and re-lay
+> everything out — basically everything you need to do a book layout.
+
+So: a **Layout** room, on the three prose formats, opened from the title bar
+beside Research, that turns the manuscript into a book.
+
+## 1. The audit: what already exists
+
+Less than usual, and the reason is the one fact that shapes the whole
+addendum. **Everything the program prints today is a manuscript.** The page
+is letter, the face is Courier at 12pt, a line is a sixth of an inch, and the
+paginator lays text on a **character grid** — sixty columns, twenty-five
+double-spaced lines for prose (`PROSE_LAYOUT` in `pagination.ts`). That is
+standard manuscript format, the thing a novel goes out to an agent in, and it
+is right. It is also not a book, and no setting of it can become one: a book
+is proportional type at a trim size, and a character grid cannot say where a
+line of Garamond breaks.
+
+What does exist, and is only being widened:
+
+| Asked for | Already built | Where |
+| --- | --- | --- |
+| Chapter pages | The leaf between chapters, its style set once for the book, its number derived, a summary, three templates, a graphic from the library | addendum 02 §12a, addendum 19 §7, `chapter-style.ts` |
+| A contents page | `contentsOf`, listing chapters and the sections under them, with the page each opens on | `markers.ts`, `pagination.ts` |
+| An index | Marks the writer places, page numbers stored nowhere, read off the pagination every time | addendum 10, `book-index.ts` |
+| A title page | `settings.titlePage`, with a logotype and the front-page fields | spec §6.1, `entities/title-page.ts` |
+| Fonts | Three faces named for what they are for and resolved to stacks that end in a generic family, so a page prints on a machine that has none of them | `chapter-style.ts` |
+| Graphics | The library (`assets`), and a **figure** that is an element of the manuscript with its height read from the picture | addendum 16 §9 |
+| The print stack | One HTML document for preview and PDF, a page being a `div` the size of the paper, `@page` at zero so the browser draws nothing of its own, `printToPDF` in the main process | `print-html.ts`, `export-pdf.ts` |
+| A room on the title bar, in its own window | `ROOM_PANES`, `SHAPES`, `paneTitle`, a branch in `Satellite.tsx`, a *Window* menu item | addendum 02 §8 |
+| Numbering and ornaments | `markerNumbering` and `markerSymbol` on the settings | addendum 02 §11 |
+| Paragraph style | Indented or blocked, a book setting | spec §6.4 |
+
+What is genuinely new: a trim size and everything derived from it; a plan of
+the book's parts, front and back; recto and verso, running heads and folios;
+a typesetting of proportional type; spread balancing; plates and insets; and
+the room itself.
+
+## 2. The manuscript and the book are two settings of one text
+
+The words are the manuscript's. The Layout room **never edits them**: it
+decides how they are set, and Write stays the one place anything is written.
+This is the same shape as every other room in the program — Research, the
+Sculptor and the Outliner all read the manuscript and write to it through
+one door — and it is what keeps a novel one document rather than a
+manuscript and a book that drift apart.
+
+What follows from it: **the manuscript printing is untouched.** *File ▸
+Export PDF* still produces standard manuscript format, because that is what
+goes to an agent. The Layout room produces a second document, **the book**,
+from the same elements, and *Export the book…* lives in the room.
+
+The parts of a book that are not the story — a dedication, a copyright page,
+*About the author* — are the book's furniture rather than writing of the
+story, so they are stored beside the book's settings (§5) and never in the
+manuscript. A dedication that appeared in the Outliner as a scene would be a
+mistake the writer would have to keep stepping around.
+
+## 3. The trim size drives everything, and the derived values are readings
+
+Ken's sentence: *you enter in the trim size and it will automatically set up
+margins, page numbers, headers, footers.* Built literally: the writer chooses
+a trim — from a list of the sizes printers take (5×8, 5.25×8, 5.5×8.5, 6×9,
+6.14×9.21, 7×10, 8.5×11, A5, B-format, Royal) or a custom width and height —
+and **every other measurement is worked out from it**, in `book-layout.ts`:
+
+- **Margins**, from the trim by a classical proportion (the outside larger
+  than the inside would be on a single sheet, the foot larger than the head)
+  with the **inside margin growing with the page count**, because a thick
+  book's gutter swallows more. Nothing here is stored: a book that grows from
+  two hundred pages to four hundred widens its own gutter with nothing run.
+- **The text block**, what is left; **lines per page**, the block's height
+  over the leading; the **measure** in characters, which the room says out
+  loud because a measure over about seventy-five characters is hard to read
+  and the room should say so rather than let it happen.
+- **Running heads and folios** placed in the head and foot margins, mirrored
+  on verso and recto.
+
+Any derived value may be **overridden** by typing one, and an override is the
+one thing stored — `minimumSetups`' shape (addendum 11): `null` means *worked
+out*, a number means *the writer said*. The room shows the derived value in
+the box either way, greyed where it is derived, so the writer can see what
+they would be overriding.
+
+## 4. The browser measures and the domain decides where the pages fall
+
+The honest constraint. Where a line of proportional type breaks depends on
+the font's advance widths, which the domain does not have — the faces are
+stacks, resolved by the machine the page is drawn on. So the domain cannot
+paginate a book on its own, and a domain that guessed with average character
+widths would be wrong at every line.
+
+The split is the one `capture-voice.ts` made for speech (*the browser hears
+and the domain decides what was meant*), pointed at type:
+
+- **The domain says what the book is made of and every rule about it**:
+  the sequence of blocks (§5), which start on a recto, which carry a running
+  head, how the pages are numbered, how many lines a page holds (§3), that a
+  paragraph's last line may not stand alone at the head of a page nor its
+  first alone at the foot, that a heading keeps the lines after it, that a
+  spread's two pages are cut to the same depth.
+- **The renderer measures**: it sets each block in the chosen face at the
+  chosen size and measure, reads back how many lines it made, and hands the
+  counts to the domain.
+- **The domain lays the pages** from those counts (`book-pages.ts`): recto
+  starts, blank versos, roman numbers over the front matter and arabic over
+  the body, the running heads' words, widows and orphans, balancing. This is
+  where the rules live, so it is tested with counts made up in a test, and a
+  renderer that measured a line differently would change where a break falls
+  and never whether a chapter opens on a recto.
+- **The renderer draws** what it is given: a page is a `div` the size of the
+  trim, the running head and folio positioned from the geometry, and the
+  export is `printToPDF` with the paper set to the trim — the print stack's
+  existing shape with a different paper.
+
+The contents page and the index then read the **book's** pages rather than
+the manuscript's, through the same `bookIndex` reading the manuscript's index
+uses, given the book's page-of-element map. No page number is stored, still.
+
+## 5. The plan: parts in front of the story and behind it
+
+A book is a sequence of **parts**. Most of them exist as readings already
+(§1) and stay that way; what is new is saying **where they go and what stands
+around them**.
+
+| Part | What it is | Stored? |
+| --- | --- | --- |
+| Half title | The title alone, first leaf | position only |
+| Title page | Title, author, publisher | reads `settings.titlePage` and the book's imprint |
+| Copyright | The notice, the ISBN, the edition | its text |
+| Dedication | A few lines | its text |
+| Epigraph | A quotation | its text |
+| Contents | The chapters, read | position only |
+| Foreword, preface, prologue, introduction | Prose before the story | its text |
+| **The story** | The manuscript, in story order, with its chapter pages | never a part you move |
+| Epilogue, afterword, acknowledgements, glossary | Prose after the story | its text |
+| About the author, also by | The back pages | its text |
+| Index | The index, read | position only |
+| Plate | A full-page picture, anchored before a chapter | the asset and a caption |
+
+Two rules shape it. **The story is not a part**: it is the manuscript, its
+order is the story order, and nothing in the room reorders it — the
+Outliner and the tracks do that. And **a part with a reading behind it stores
+only its place**: the contents page's rows come from `contentsOf`, the
+index's from `bookIndexOf`, the chapter pages from the markers, and a part
+record that held a copy of any of them would be a second answer.
+
+A new book starts with the parts nearly every book has — half title, title
+page, copyright, contents, and *About the author* — and the writer adds,
+removes and reorders the rest. The conventions a reader expects are
+**rules rather than choices**: the copyright page is the verso of the title
+page, every other front-matter part opens on a recto, the first page of the
+story is a recto, the front matter is numbered in lowercase roman and the
+body from 1 — and a chapter opening on a recto is a book setting the writer
+can turn off, because some books run their chapters on.
+
+Parts are stored in `settings.book.parts`, beside the trim and the type,
+for the reason §2 gives and by the precedent of `settings.titlePage`: the
+book's furniture travels with the book's settings. No migration.
+
+## 6. The type
+
+Picking fonts, in Ken's words, has to be easy, and the way to make it easy
+is the way the chapter page did it: **a short list named for what each is
+for**, resolved to stacks that print everywhere. The body face is one of a
+handful of book faces — an old-style serif, a transitional serif, a modern
+serif, a humanist sans for a textbook — at a size from 9 to 13 points and a
+leading the room proposes from the size. A **style** is the face, the size,
+the leading, the paragraph style (indented or blocked, already a setting),
+what a chapter's first paragraph does (nothing, small capitals for the first
+words, a drop cap), the ornament at a scene break, justification and
+hyphenation. Three presets — *Classic*, *Modern*, *Textbook* — set all of it
+at once, and any field can be changed after.
+
+The chapter opening is **not restated here**: it is `settings.chapterPageStyle`
+already, edited in *File ▸ Chapter page…*, and the room's chapter section is a
+button to that dialog. Two places to set the same heading would be two
+answers.
+
+## 7. Running heads and folios
+
+A running head is a reading: the verso carries one of *the book's title*,
+*the author* or nothing, the recto one of *the chapter's title*, *the book's
+title* or nothing, and the folio sits at the outside of the foot, the centre
+of the foot, or the outside of the head. Display pages — the chapter
+opening, every front-matter part, a plate, a blank — carry no running head,
+and a chapter opening carries a folio only where the style says so. None of
+the text is stored: the chapter's title is the marker's, and the book's title
+is the project's.
+
+## 8. Graphics
+
+Three kinds, and two of them exist:
+
+- A **chapter-page graphic**, from the library, placed by the template
+  (addendum 19 §7). Unchanged.
+- A **figure** in the manuscript (addendum 16 §9), which the manuscript
+  prints across the full measure. In the book it gains a **placement** —
+  across the measure, or cut into the text at the left or the right at a
+  fraction of the measure, which is *little graphics cut into your text* —
+  read from an attribute on the element that only the book honours. The
+  renderer measures a wrapped paragraph the same way it measures any other,
+  with the float in place, so the domain's rule needs no change.
+- A **plate**: a full-page picture, a part anchored *before a chapter*, so
+  that moving the chapter moves the plate.
+
+## 9. The room
+
+Opened from **Layout** on the title bar, beside Research, and absent rather
+than greyed on every format that is not prose. In its own window like every
+other room (addendum 02 §8). Three regions:
+
+- **The parts**, down the left: front matter, the story's chapters (read,
+  not draggable), back matter; a part is selected to edit it, added from a
+  list, removed with an ask, and reordered within its half.
+- **The spreads**, in the middle: two facing pages at a time, the verso on
+  the left, at a zoom, with a slider along the foot. The page the writer is
+  looking at is the page the PDF will have, because both come off one laying.
+- **The inspector**, on the right: *Trim & margins* (§3), *Type* (§6),
+  *Running heads & folios* (§7), *Chapter openings* (a button to the dialog),
+  and the selected part's own fields.
+
+**Export the book…** is in the room's bar, and it is the only place the book
+is exported from; *File ▸ Export PDF* stays the manuscript's.
+
+## 10. What it must never do
+
+- Edit a word of the manuscript.
+- Store a page number, a margin it worked out, or a running head's words.
+- Reorder the story.
+- Guess a line break in the domain.
+- Grey out on a screenplay. It is absent.
+
+## 11. Build order
+
+| Stage | What | Where |
+| --- | --- | --- |
+| 0 | The room exists: pane, title bar button, menu item, window shape, an empty screen that says what is coming | `panes.ts`, `TitleBar.tsx`, `menus.ts`, `Satellite.tsx`, `LayoutWindow.tsx` |
+| 1 | The trim and the geometry: presets, the settings record, `geometryOf`, overrides, `describeGeometry` | `book-layout.ts`, `entities/project.ts` |
+| 2 | The plan: parts, the default plan, ordering rules, `bookBlocks` — the sequence of blocks with their rules | `book-plan.ts` |
+| 3 | The laying: `layPages` from measured counts — recto starts, blanks, numbering, running heads, widows and orphans, balancing; the book's contents and index | `book-pages.ts` |
+| 4 | The screen: the measuring typesetter, the spreads, the parts rail, the inspector | `LayoutWindow.tsx`, `typeset.ts` |
+| 5 | The export: `renderBookHtml` from laid pages, `printToPDF` at the trim, the browser preview's print | `print-book.ts`, `export-pdf.ts` |
+| 6 | Graphics: plates, and figures cut into the text | §8 |
+| 7 | Type presets, drop caps, ornaments, hyphenation | §6 |
+
+## 12. Open questions
+
+- **EPUB.** Vellum's other half. A reflowable book has no trim, no spreads
+  and no folios, so nearly nothing in §3, §4 and §7 applies, and what does
+  apply — the plan, the type, the parts — is already separate from the
+  laying. It would be a second renderer over `bookBlocks`. Not in this
+  addendum.
+- **Bundled fonts.** The faces are stacks (§6), so a book set in *old-style
+  serif* prints in whichever old-style serif the machine has. Shipping font
+  files would make the PDF the same everywhere, at the cost of licensing and
+  size. Deferred; the stack ends in a generic family so nothing breaks.
+- **The web preview's export.** In the browser the export is the browser's
+  own *Save as PDF*, which honours `@page size` — so the trim carries, and
+  the writer chooses *no margins* in the dialog as the manuscript already
+  asks them to.
+
+## 13. What is built
+
+### Stage 0 — the room
+
+`layout` in `ROOM_PANES` with a window shape of its own; **Layout** on the
+title bar between Research and Sculptor, drawn only where `isProseFormat`
+holds; *Window ▸ Layout in its own window*, likewise; a branch in
+`Satellite.tsx`. `LayoutWindow.tsx` is the room, opened over the workspace
+the way Research is.
+
+### Stage 1 — the trim and the geometry
+
+`book-layout.ts`: `TRIM_PRESETS`, `bookSettingsSchema` (trim, the four
+margin overrides, the face, the size, the leading, running heads, the folio,
+whether chapters open recto, the parts of stage 2), `bookSettingsOf`,
+`setBookSettings`, and `geometryOf(settings, pageCount)` — the derived
+margins, the text block, the lines per page and the measure, every override
+honoured and every derived value said. `describeGeometry` writes the answer
+in words for the inspector, and `measureWarning` says when the measure is too
+long to read.
+
+### Stage 2 — the plan
+
+`book-plan.ts`: `PART_KINDS` with what each is (text, reading, or plate),
+`defaultParts` for a new book, `addPart`, `removePart`, `movePart` (within
+its half; the story is not a part), `updatePart`, and `bookBlocks(file)` —
+the whole book as a sequence of blocks, each saying what it is, what text it
+carries, whether it opens on a recto, whether it carries a running head, and
+how its pages are numbered.
+
+### Stage 3 — the laying
+
+`book-pages.ts`: `layPages(blocks, measured, geometry)` — the cutter. Given
+each block's measured line count, it produces `BookPage[]`: which sheet,
+verso or recto, its folio in roman or arabic or none, its running head's
+words, the lines of each block it carries, and blanks where a recto start
+needs one. Widows and orphans are refused by moving a line, a heading keeps
+its two following lines, and a spread's two pages are cut to the same depth
+where both run on — by laying the pair again to the shallower of the two.
+A page a chapter opens on carries no running head (the heading is the head)
+and shows its number at the foot whatever the book does elsewhere.
+`bookContentsOf` and `bookIndexFor` read the laid pages, so the contents and
+the index carry the **book's** numbers and store none.
+
+### Stage 4 — the screen
+
+`book-typeset.ts` is the measuring typesetter: every block is set at once in
+a hidden box the width of the text block (`.bk-measure`), one layout, one
+read per block, a picture's lines coming from its own shape rather than the
+box so an undecoded data URL cannot measure as nothing. Two passes at most,
+for the gutter. `LayoutWindow.tsx` is the room: the parts down the left with
+the chapters between them (read, and each showing the page it opens on), the
+spreads in the middle at a zoom with ← and → and a slider, the inspector on
+the right — *Trim & margins* with every derived value shown greyed and a ×
+to let a typed one go, *Type*, *Running heads & page numbers*, and the
+selected part's own fields. Choosing a part or a chapter turns to its page.
+
+### Stage 5 — the export
+
+`print-book.ts` is **one string builder for three readers**: the screen
+measures a block with it, draws a page with it (each block clipped to the
+lines the laying gave that page, shifted up by the lines before), and the
+export prints the same pages at the trim with `@page { size: <trim> }`. A
+chapter page whose face is *manuscript* is set in the book's face, because
+in the book that is the face the text is in. **Export the book…** in the
+room's bar hands the drawn document to `exportPdf` with `kind: 'book'` and
+the trim as `paper`, which `printToPDF` takes in inches; in the browser
+preview it is the browser's own *Save as PDF*, whose page size the document
+names. This is the one document whose markup the renderer hands to the main
+process, because its pages exist only where the type was measured; the
+window it prints in still runs with scripts off and the sandbox on.
+
+### Stages 6 and 7 — what is there, and what is left
+
+Of §8's three kinds of graphic, two are built: the chapter-page graphic
+(unchanged) and the **plate**, a part anchored before a chapter, with its
+picture from the library and its caption. A figure in the manuscript prints
+across the measure; its **placement** — cut into the text at the left or
+right — is not built yet. Of §6, the opening treatment (small capitals, a
+drop capital), the scene-break ornament, justification and hyphenation are
+built; the three **presets** are not, every field being settable on its own.

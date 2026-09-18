@@ -14,6 +14,7 @@ import {
   renderPrintDocumentHtml,
   renderSheetDocumentHtml,
   suggestedBoardFileName,
+  suggestedBookFileName,
   suggestedExportFileName,
   suggestedGridFileName,
   suggestedNarrativeFileName,
@@ -44,13 +45,24 @@ const PAGE_SETUP = {
   margins: { marginType: 'none' } as const,
 };
 
+/** The paper a document asks for: a trim, in inches (addendum 20 §4). */
+export interface Paper {
+  width: number;
+  height: number;
+}
+
 /**
  * The board is landscape (addendum 05 §4c): a strip of shots reads across.
  * The document's own `@page` rule says so, but `printToPDF` takes the paper
  * from here, so it has to be told as well or the pages come out portrait with
- * a landscape layout squeezed onto them.
+ * a landscape layout squeezed onto them. A book names its own paper — the
+ * trim — which `printToPDF` takes in inches.
  */
-const setupFor = (landscape: boolean) => ({ ...PAGE_SETUP, landscape });
+const setupFor = (landscape: boolean, paper?: Paper) => ({
+  ...PAGE_SETUP,
+  landscape,
+  ...(paper ? { pageSize: { width: paper.width, height: paper.height } } : {}),
+});
 
 const withDocumentWindow = async <T>(
   html: string,
@@ -90,7 +102,7 @@ const withDocumentWindow = async <T>(
  * tree as one (addendum 06 §12, stage 9). They are renderings of one project
  * rather than separate projects.
  */
-export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative';
+export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book';
 
 export interface ExportPdfInput {
   file: unknown;
@@ -98,6 +110,16 @@ export interface ExportPdfInput {
   kind?: PrintKind;
   /** Which outline, when there is more than one. Left out, it is the first. */
   outlineId?: string;
+  /**
+   * The **book**, already drawn (addendum 20 §4). The one document whose
+   * markup arrives from the renderer rather than being built here: its pages
+   * exist only where the type was measured. The window it prints in still
+   * runs with scripts off, node off and the sandbox on, as every document
+   * does — and the book is only ever printed, never shown.
+   */
+  html?: string;
+  /** The book's paper: the trim, in inches. */
+  paper?: Paper;
   /** Skips the save dialog; used by tests and future batch export. */
   targetPath?: string;
 }
@@ -114,7 +136,20 @@ const documentFor = (
   kind: PrintKind,
   options: PrintOptions,
   outlineId?: string,
+  drawn?: { html?: string; paper?: Paper },
 ) => {
+  // The book (addendum 20): drawn by the renderer at the trim, printed here
+  // on paper that size. A page is a `.bk-page`, one per leaf.
+  if (kind === 'book') {
+    return {
+      html: drawn?.html ?? '',
+      name: suggestedBookFileName(project.project.title),
+      paged: true,
+      landscape: false,
+      paper: drawn?.paper,
+      pageClass: 'bk-page',
+    };
+  }
   // §18's reports, one after another (addendum 18 stage 9). Not paged as a
   // manuscript is: it is a set of tables, and breaking it on script pages
   // would cut them for a geometry it does not have.
@@ -184,8 +219,8 @@ const documentFor = (
  * A sheet is paginated by the browser, so the only place the answer exists is
  * the PDF itself: count its page objects rather than guess.
  */
-const pageCountOf = (pdf: Buffer, html: string, paged: boolean): number => {
-  if (paged) return html.split('class="page').length - 1;
+const pageCountOf = (pdf: Buffer, html: string, paged: boolean, pageClass = 'page'): number => {
+  if (paged) return html.split(`class="${pageClass}`).length - 1;
   const matches = pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g);
   return matches ? matches.length : 1;
 };
@@ -200,11 +235,12 @@ export const exportProjectPdf = async (
   parent: BrowserWindowType | null,
 ): Promise<ExportPdfResult | null> => {
   const project = parseProjectFile(input.file);
-  const { html, name, paged, landscape } = documentFor(
+  const { html, name, paged, landscape, paper, pageClass } = documentFor(
     project,
     input.kind ?? 'script',
     input.options ?? {},
     input.outlineId,
+    { html: input.html, paper: input.paper },
   );
 
   let targetPath = input.targetPath;
@@ -222,10 +258,10 @@ export const exportProjectPdf = async (
     targetPath = choice.filePath;
   }
 
-  const pdf = await withDocumentWindow(html, (window) => window.webContents.printToPDF(setupFor(landscape)));
+  const pdf = await withDocumentWindow(html, (window) => window.webContents.printToPDF(setupFor(landscape, paper)));
   await writeFile(targetPath, pdf);
 
-  return { path: targetPath, pageCount: pageCountOf(pdf, html, paged) };
+  return { path: targetPath, pageCount: pageCountOf(pdf, html, paged, pageClass) };
 };
 
 export const printProject = async (input: {
@@ -233,9 +269,14 @@ export const printProject = async (input: {
   options?: PrintOptions;
   kind?: PrintKind;
   outlineId?: string;
+  html?: string;
+  paper?: Paper;
 }): Promise<boolean> => {
   const project = parseProjectFile(input.file);
-  const { html, landscape } = documentFor(project, input.kind ?? 'script', input.options ?? {}, input.outlineId);
+  const { html, landscape } = documentFor(project, input.kind ?? 'script', input.options ?? {}, input.outlineId, {
+    html: input.html,
+    paper: input.paper,
+  });
 
   return withDocumentWindow(
     html,

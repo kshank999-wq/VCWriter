@@ -1,0 +1,131 @@
+import { describe, expect, it } from 'vitest';
+import {
+  TRIM_PRESETS,
+  bookSettingsOf,
+  createProjectFile,
+  defaultTrimFor,
+  derivedLeading,
+  derivedMargins,
+  describeGeometry,
+  describeTrim,
+  estimatedPages,
+  geometryOf,
+  gutterFor,
+  measureWarning,
+  setBookSettings,
+  trimOf,
+  trimPresetOf,
+} from '../index.js';
+
+/**
+ * The trim size and everything worked out from it (addendum 20 §3).
+ *
+ * The claim is that entering a trim sets up the page: the margins, the text
+ * block, the lines, the measure. So what is tested is that they follow from
+ * the trim and the page count, that nothing but an override is stored, and
+ * that the sentence says which is which.
+ */
+
+const novel = () => createProjectFile({ title: 'The Lamp', format: 'novel' });
+
+describe('the trim', () => {
+  it('is the format’s until somebody chooses one', () => {
+    const file = novel();
+    expect(trimOf(bookSettingsOf(file), 'novel')).toEqual(defaultTrimFor('novel'));
+    expect(defaultTrimFor('instructional')).toEqual({ width: 7, height: 10 });
+    expect(defaultTrimFor('novel')).toEqual({ width: 5.5, height: 8.5 });
+  });
+
+  it('names a preset it matches, and a custom size in inches', () => {
+    expect(trimPresetOf({ width: 6, height: 9 })?.id).toBe('6x9');
+    expect(trimPresetOf({ width: 6.5, height: 9 })).toBeNull();
+    expect(describeTrim({ width: 6, height: 9 })).toBe('6 × 9 in');
+    expect(describeTrim({ width: 6.5, height: 9.25 })).toBe('6½ × 9¼ in');
+    expect(TRIM_PRESETS.length).toBeGreaterThan(5);
+  });
+
+  it('stores the trim and nothing worked out from it', () => {
+    const file = setBookSettings(novel(), { trim: { width: 6, height: 9 } });
+    const stored = file.settings.book as Record<string, unknown>;
+    expect(stored.trim).toEqual({ width: 6, height: 9 });
+    expect(stored.margins).toEqual({ inside: null, outside: null, top: null, bottom: null });
+    expect(JSON.stringify(stored)).not.toContain('linesPerPage');
+  });
+});
+
+describe('the margins', () => {
+  it('follow from the trim by proportion, to the sixteenth', () => {
+    const margins = derivedMargins({ width: 6, height: 9 }, 250);
+    expect(margins.outside).toBe(0.625);
+    expect(margins.top).toBe(0.75);
+    expect(margins.bottom).toBe(0.875);
+    // Inside is outside plus the gutter a 250-page book needs.
+    expect(margins.inside).toBe(0.875);
+  });
+
+  it('widen the gutter as the book thickens, with nothing run', () => {
+    expect(gutterFor(100)).toBeLessThan(gutterFor(400));
+    expect(gutterFor(400)).toBeLessThan(gutterFor(800));
+    const thin = derivedMargins({ width: 6, height: 9 }, 100);
+    const thick = derivedMargins({ width: 6, height: 9 }, 600);
+    expect(thick.inside).toBeGreaterThan(thin.inside);
+    expect(thick.outside).toBe(thin.outside);
+  });
+
+  it('never go under three-eighths, which is what a printer trims to', () => {
+    const tiny = derivedMargins({ width: 3, height: 4 }, 50);
+    expect(Math.min(tiny.inside, tiny.outside, tiny.top, tiny.bottom)).toBeGreaterThanOrEqual(0.375);
+  });
+
+  it('honour an override, and say which edge was typed', () => {
+    const file = setBookSettings(novel(), {
+      trim: { width: 6, height: 9 },
+      margins: { inside: null, outside: 1, top: null, bottom: null },
+    });
+    const geometry = geometryOf(bookSettingsOf(file), 'novel', 250);
+    expect(geometry.margins.outside).toBe(1);
+    expect(geometry.overridden).toEqual({ inside: false, outside: true, top: false, bottom: false });
+    // The inside is still worked out, and from the derived outside rather than the typed one.
+    expect(geometry.margins.inside).toBe(0.875);
+    expect(describeGeometry(geometry, 'old_style')).toContain('outside 1 in (typed)');
+    expect(describeGeometry(geometry, 'old_style')).toContain('Margins partly typed');
+  });
+});
+
+describe('the page', () => {
+  it('holds as many lines as the text block over the leading', () => {
+    const geometry = geometryOf(bookSettingsOf(novel()), 'novel', 200);
+    // 5.5 × 8.5: top 0.6875 + bottom 0.8125 leaves 7 in; 11 on 15 pt is 33 lines.
+    expect(geometry.leading).toBe(derivedLeading(11));
+    expect(derivedLeading(11)).toBe(15);
+    expect(geometry.text.height).toBeCloseTo(7, 5);
+    expect(geometry.linesPerPage).toBe(33);
+  });
+
+  it('says the measure in characters, and warns when a line is too long or too short', () => {
+    const settings = bookSettingsOf(novel());
+    const usual = geometryOf(settings, 'novel', 200);
+    expect(usual.measure).toBeGreaterThan(50);
+    expect(usual.measure).toBeLessThan(75);
+    expect(measureWarning(usual)).toBeNull();
+
+    const wide = geometryOf({ ...settings, trim: { width: 8.5, height: 11 }, size: 9 }, 'novel', 200);
+    expect(measureWarning(wide)).toMatch(/long line/);
+
+    const narrow = geometryOf({ ...settings, trim: { width: 4, height: 6 }, size: 14 }, 'novel', 200);
+    expect(measureWarning(narrow)).toMatch(/short line/);
+  });
+
+  it('puts it all in one sentence', () => {
+    const geometry = geometryOf(bookSettingsOf(novel()), 'novel', 200);
+    const said = describeGeometry(geometry, 'old_style');
+    expect(said).toContain('5½ × 8½ in');
+    expect(said).toContain('worked out from the trim and 200 pages');
+    expect(said).toContain('33 lines of old-style serif at 11 on 15 pt');
+  });
+
+  it('guesses a page count before anything is laid, and says so in the name', () => {
+    expect(estimatedPages(60_000, 20)).toBe(230);
+    expect(estimatedPages(0, 0)).toBe(1);
+  });
+});

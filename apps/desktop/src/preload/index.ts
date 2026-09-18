@@ -148,15 +148,26 @@ export interface VcWriterApi {
      * Omitted means the script — and a short-form project prints its sheet
      * whatever is asked for, because it has no script to print instead.
      */
-    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative';
+    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book';
     /** Which outline, when there is more than one. Left out, it is the first. */
     outlineId?: string;
+    /**
+     * The book, already drawn (addendum 20 §4). The one document whose markup
+     * the renderer hands over rather than the main process building it: its
+     * pages exist only where the type was measured, which is the renderer.
+     * The window that prints it still runs with scripts off.
+     */
+    html?: string;
+    /** The paper for the book: the trim, in inches. */
+    paper?: { width: number; height: number };
   }): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>>;
   print(input: {
     file: ProjectFile;
     options?: PrintOptions;
-    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative';
+    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book';
     outlineId?: string;
+    html?: string;
+    paper?: { width: number; height: number };
   }): Promise<DesktopApiResult<boolean>>;
   appInfo(): Promise<DesktopApiResult<{ version: string; platform: string }>>;
 

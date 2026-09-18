@@ -381,7 +381,14 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
     'project:exportPdf',
     async (
       _event,
-      input: { file: unknown; options?: PrintOptions; kind?: PrintKind; outlineId?: string },
+      input: {
+        file: unknown;
+        options?: PrintOptions;
+        kind?: PrintKind;
+        outlineId?: string;
+        html?: string;
+        paper?: { width: number; height: number };
+      },
     ): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>> => {
       try {
         return ok(await exportProjectPdf(input, getWindow()));
@@ -395,7 +402,14 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
     'project:print',
     async (
       _event,
-      input: { file: unknown; options?: PrintOptions; kind?: PrintKind; outlineId?: string },
+      input: {
+        file: unknown;
+        options?: PrintOptions;
+        kind?: PrintKind;
+        outlineId?: string;
+        html?: string;
+        paper?: { width: number; height: number };
+      },
     ): Promise<DesktopApiResult<boolean>> => {
       try {
         return ok(await printProject(input));

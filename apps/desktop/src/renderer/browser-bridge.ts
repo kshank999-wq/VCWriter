@@ -137,6 +137,9 @@ type PrintOptions = NonNullable<PrintInput['options']>;
  */
 const documentFor = (input: PrintInput): string => {
   const options: PrintOptions = input.options ?? {};
+  // The book arrives drawn (addendum 20 §4): its pages exist only where the
+  // type was measured, which is this window. Its own `@page` names the trim.
+  if (input.kind === 'book') return input.html ?? '';
   if (input.kind === 'outline') return renderOutlineDocumentHtml(input.file, input.outlineId ?? null, options);
   if (input.kind === 'grid') return renderGridDocumentHtml(input.file, options);
   if (input.kind === 'board') return renderBoardDocumentHtml(input.file, options);
@@ -365,7 +368,12 @@ export const createBrowserBridge = (): BrowserBridge => {
       if (!printDocument(input)) return fail('The browser blocked the print window');
       // Only the manuscript is paginated by hand; the browser decides the rest
       // as it lays them out, and it has not laid them out yet.
-      const pageCount = input.kind && input.kind !== 'script' ? 0 : printedPageCount(input.file, input.options ?? {});
+      const pageCount =
+        input.kind === 'book'
+          ? (input.html ?? '').split('class="bk-page').length - 1
+          : input.kind && input.kind !== 'script'
+            ? 0
+            : printedPageCount(input.file, input.options ?? {});
       return ok({ path: "your browser's Save as PDF", pageCount });
     },
 

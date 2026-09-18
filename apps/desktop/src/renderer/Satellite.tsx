@@ -27,6 +27,7 @@ import { DEFAULT_PRINT_SETUP, type PrintSetup } from './components/PageSetup';
 import { usePrinting } from './printing';
 import { ResearchBody } from './components/ResearchWindow';
 import { SculptorWindow } from './components/SculptorWindow';
+import { LayoutWindow } from './components/LayoutWindow';
 import { NarrativeMapWindow } from './components/NarrativeMapWindow';
 import { OutlinerWindow } from './components/OutlinerWindow';
 import { EditorPanel } from './components/EditorPanel';
@@ -277,6 +278,12 @@ function Section({
   // window rather than uncovering the script.
   if (pane === 'sculptor') {
     return <SculptorWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} />;
+  }
+
+  // The book, set (addendum 20): the same shape again. There is no File menu
+  // over here, so the chapter page is reached from the workspace.
+  if (pane === 'layout') {
+    return <LayoutWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} />;
   }
 
   // The narrative canvas is the same shape: a room that already covers

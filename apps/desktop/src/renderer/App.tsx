@@ -8,6 +8,7 @@ import {
   projectStats,
   setActBreaks,
   isInstructional,
+  isProseFormat,
   isInteractive,
   setParagraphStyle,
   setScriptFormat,
@@ -54,6 +55,7 @@ import { SceneDialog } from './components/SceneDialog';
 import { ResearchWindow } from './components/ResearchWindow';
 import { ProjectHomePanel } from './components/ProjectHomePanel';
 import { SculptorWindow } from './components/SculptorWindow';
+import { LayoutWindow } from './components/LayoutWindow';
 import { NarrativeMapWindow } from './components/NarrativeMapWindow';
 import { OutlinerWindow } from './components/OutlinerWindow';
 import { BeatDialog } from './components/BeatDialog';
@@ -159,6 +161,8 @@ export default function App() {
   const [sculptorOpen, setSculptorOpen] = useState(false);
   const [narrativeOpen, setNarrativeOpen] = useState(false);
   const [outlinerOpen, setOutlinerOpen] = useState(false);
+  /** The Layout room, over the workspace (addendum 20). */
+  const [layoutOpen, setLayoutOpen] = useState(false);
   /**
    * File → New project shows the project screen even with one already open:
    * the format is chosen there, beside the title and a word on what each one
@@ -565,6 +569,7 @@ export default function App() {
         case 'window.outliner':
         case 'window.sculptor':
         case 'window.narrative':
+        case 'window.layout':
         case 'window.editors': {
           // Ticked means it is out; choosing it again brings it back.
           const pane = command.slice('window.'.length);
@@ -579,6 +584,7 @@ export default function App() {
             }
             if (pane === 'sculptor') setSculptorOpen(false);
             if (pane === 'narrative') setNarrativeOpen(false);
+            if (pane === 'layout') setLayoutOpen(false);
             if (pane === 'research') setResearchOpen(false);
             // The editors are a page rather than an overlay, so what is left
             // behind is the page bar sitting on a page that has gone.
@@ -876,6 +882,12 @@ export default function App() {
         onOpenOutliner={() =>
           away.has('outliner') ? openPane('outliner') : isBook ? setView('outline') : setOutlinerOpen(true)
         }
+        onOpenLayout={
+          // A book's alone, absent rather than greyed elsewhere (addendum 20 §9).
+          isProseFormat(file.project.format)
+            ? () => (away.has('layout') ? openPane('layout') : setLayoutOpen(true))
+            : undefined
+        }
         away={detached}
         onBringBack={closePane}
         account={account}
@@ -1054,6 +1066,22 @@ export default function App() {
               openPane('narrative');
             }}
           />
+          {/* The book, set (addendum 20): the trim, the type, and the pages in
+              front of the story and behind it, over the workspace like the
+              other rooms. */}
+          {isProseFormat(file.project.format) ? (
+            <LayoutWindow
+              file={file}
+              open={layoutOpen && !away.has('layout')}
+              onClose={() => setLayoutOpen(false)}
+              onUpdate={project.update}
+              onOpenChapterPage={() => setChapterPageOpen(true)}
+              onPopOut={() => {
+                setLayoutOpen(false);
+                openPane('layout');
+              }}
+            />
+          ) : null}
           {/* The outline over the workspace too: the rigid sibling of the
               board, and worked on whole for the same reason (addendum 06). */}
           <OutlinerWindow

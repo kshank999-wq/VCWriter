@@ -196,6 +196,14 @@ export const projectSettingsSchema = z.object({
    * has found a mistake rather than a design.
    */
   chapterPageStyle: z.record(z.unknown()).default({}),
+  /**
+   * The book (addendum 20): the trim, the type, the running heads and the
+   * parts in front of the story and behind it. Kept loose here so the rules
+   * live with `entities/book.ts` and `book-layout.ts`, the way the chapter
+   * page's do. The book's furniture, never the story's — which is why it is
+   * here rather than in the manuscript (§2).
+   */
+  book: z.record(z.unknown()).default({}),
 });
 export type ProjectSettings = z.infer<typeof projectSettingsSchema>;
 

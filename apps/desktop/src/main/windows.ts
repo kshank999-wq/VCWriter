@@ -54,6 +54,9 @@ const SHAPES: Record<string, { width: number; height: number }> = {
   // A branching graph is read left to right along its columns, and wants the
   // inspector beside it rather than under it.
   narrative: { width: 1440, height: 900 },
+  // Two facing pages between a rail and an inspector: wide, and tall enough
+  // for a page at a readable zoom (addendum 20 §9).
+  layout: { width: 1500, height: 960 },
 };
 
 const shapeFor = (pane: PaneKey) => SHAPES[pane.split(':')[0] ?? ''] ?? { width: 1000, height: 800 };

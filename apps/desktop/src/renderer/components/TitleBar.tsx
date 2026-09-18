@@ -34,6 +34,12 @@ interface TitleBarProps {
   onOpenNarrative?(): void;
   /** The Outliner's tree (addendum 06), the Sculptor's rigid sibling. */
   onOpenOutliner(): void;
+  /**
+   * The Layout room (addendum 20), where a book is set. **Undefined on every
+   * format that is not prose**, for the narrative map's reason: a screenplay
+   * is not set as a book, and the button is absent rather than greyed.
+   */
+  onOpenLayout?(): void;
   /** Sections in windows of their own, and the way to bring one back (§8). */
   away: readonly string[];
   onBringBack(pane: string): void;
@@ -68,6 +74,7 @@ export function TitleBar({
   onOpenSculptor,
   onOpenNarrative,
   onOpenOutliner,
+  onOpenLayout,
   away,
   onBringBack,
   account,
@@ -128,6 +135,16 @@ export function TitleBar({
             onClick={onOpenResearch}
           >
             Research
+          </button>
+        ) : null}
+        {writing && onOpenLayout ? (
+          <button
+            type="button"
+            className="ghost"
+            title={`Layout: set the ${nouns.manuscript.toLowerCase()} as a book — the trim, the type, the pages in front and behind`}
+            onClick={onOpenLayout}
+          >
+            Layout
           </button>
         ) : null}
         {writing ? (
