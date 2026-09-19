@@ -40,6 +40,7 @@ import {
   nounsFor,
   numberedTitle,
   structureNumbers,
+  isCollection,
 } from '@vcwriter/domain';
 import { InlineText } from './InlineText';
 import { STATUS_GLYPH } from './status';
@@ -80,6 +81,8 @@ interface MasterTimelineProps {
   onAddBeat(): void;
   onAddTrack(): void;
   onAddAct(): void;
+  /** A collection's: a new story on a section of its own (addendum 22). */
+  onAddStory?(): void;
   /** The track header was clicked: open the plot's summary and arc. */
   onOpenTrack(trackId: TrackId): void;
   /** A scene block's header was clicked: open the scene pop-up. */
@@ -147,6 +150,7 @@ export function MasterTimeline({
   onAddBeat,
   onAddTrack,
   onAddAct,
+  onAddStory,
   onOpenTrack,
   onOpenUnit,
   onOpenBeat,
@@ -396,7 +400,7 @@ export function MasterTimeline({
           {shortForm ? null : (
             <>
               <div className="row-head">
-                {markerNoun(defaultMarkerKind(file.project.format))}s
+                {isCollection(file.project.format) ? 'Stories' : `${markerNoun(defaultMarkerKind(file.project.format))}s`}
               </div>
               <ActsRow layout={layout} playheadUnitId={selectedUnitId} onUpdate={onUpdate} />
               <div className="acts-cell tail" />
@@ -536,18 +540,32 @@ export function MasterTimeline({
             </button>
             {/* Always "Marker": in prose the scene button already says Chapter,
                 and what kind of marker this one is — act, chapter, part — is
-                chosen on the marker itself (addendum 02 §11). */}
-            <button
-              type="button"
-              className="tool"
-              onClick={onAddAct}
-              disabled={!selectedUnitId}
-              title={`A point in the story: an act in a script, a chapter in a book. Starts a ${markerNoun(
-                defaultMarkerKind(file.project.format),
-              ).toLowerCase()} here.`}
-            >
-              + Marker
-            </button>
+                chosen on the marker itself (addendum 02 §11). A collection is
+                the exception: its marker is a story, and a story starts on a
+                section of its own at the end rather than on the selected one
+                (addendum 22 §3). */}
+            {isCollection(file.project.format) ? (
+              <button
+                type="button"
+                className="tool"
+                onClick={onAddStory}
+                title="A new story at the end of the collection, on a section of its own."
+              >
+                + Story
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="tool"
+                onClick={onAddAct}
+                disabled={!selectedUnitId}
+                title={`A point in the story: an act in a script, a chapter in a book. Starts a ${markerNoun(
+                  defaultMarkerKind(file.project.format),
+                ).toLowerCase()} here.`}
+              >
+                + Marker
+              </button>
+            )}
           </>
         )}
         <label className="zoom">

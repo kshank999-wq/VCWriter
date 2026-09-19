@@ -27,6 +27,7 @@ import type {
   CharacterId,
   TrackId,
   ManuscriptElementId,
+  ProjectId,
   ResearchItemId,
   StoryMarkerId,
   StructuralUnitId,
@@ -113,64 +114,43 @@ const namedHeading = (
   return headings.at(-1)?.id ?? null;
 };
 
+export interface MaterialiseOptions {
+  projectId: ProjectId;
+  trackId: TrackId;
+  format: ProjectFormat;
+  timestamp: string;
+  /** The cast by name, so a cue binds to its character. */
+  byName: ReadonlyMap<string, CharacterId>;
+  /** The order key the first unit follows; null for the start of an empty story. */
+  after: string | null;
+  /** "Chapter 3" / "Sc. 3" on each unit — for a new project, never for a story added to one. */
+  sequenceLabels: boolean;
+}
+
+export interface Materialised {
+  units: StructuralUnit[];
+  beats: Beat[];
+  /** On a prose format, a chapter marker per headed scene (addendum 19 §1). */
+  markers: StoryMarker[];
+  /** A picture the document carried, one asset each, named by its figure. */
+  assets: Asset[];
+  words: number;
+}
+
 /**
- * Build a project from a script that has been read.
- *
- * A new project rather than a merge into an open one: an import is a
- * document arriving, and dropping somebody else's script into the middle of
- * one you are writing is not something anybody asks for by accident.
+ * The scenes of a read script as records: a unit per scene, a beat per unit
+ * holding the elements, the pictures as assets, and on a prose format a
+ * chapter marker per heading. Shared by building a project (below) and by
+ * adding a story to a collection (`collection.ts`), so the two cannot differ
+ * about what an element becomes.
  */
-export const buildProjectFromImport = (script: ImportedScript, options: ImportOptions = {}): ImportResult => {
-  const format = options.format ?? 'screenplay';
-  const title = (options.title ?? script.title ?? '').trim() || 'Untitled';
-  const author = (options.author ?? script.author ?? '').trim();
-
-  const base = createProjectFile({ title, format, author });
-  const timestamp = nowIso();
-  const projectId = base.project.id;
-  const trackId = base.tracks[0]?.id as TrackId;
-
-  // ------------------------------------------------------------- the cast
-  const headings = characterCategoriesInOrder(base);
-  const busiest = script.characters[0]?.speeches ?? 0;
-  const describe = (person: { speeches: number; scenes: number }): string =>
-    person.speeches === 0
-      ? // Named in the action and never given a line. Said plainly, because a
-        // writer looking down the cast list should be able to see at a glance
-        // which of these the script actually hands a speech to.
-        `Named in the action, with no lines. ${person.scenes} ${person.scenes === 1 ? 'scene' : 'scenes'}.`
-      : `${person.speeches} ${person.speeches === 1 ? 'speech' : 'speeches'} across ${person.scenes} ${person.scenes === 1 ? 'scene' : 'scenes'}.`;
-  const mainAtLeast = options.mainAtLeast ?? 12;
-  const byName = new Map<string, CharacterId>();
-
-  // In order of how much they speak, so the busiest part reads first here too.
-  const characters: Character[] = script.characters.map((person) => {
-    const id = newId<CharacterId>();
-    byName.set(person.name, id);
-    const heading =
-      options.fileCast === false
-        ? null
-        : (namedHeading(headings, headingFor(person.speeches, busiest, mainAtLeast)) ?? null);
-    return characterSchema.parse({
-      id,
-      projectId,
-      name: person.name,
-      // The fuller name the action introduced them by. An alias rather than
-      // the name, because the name has to stay what the manuscript cues with.
-      aliases: person.aliases ?? [],
-      // What the script itself says about them: how much they carry.
-      description: describe(person),
-      categoryId: heading,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    });
-  });
-
-  // -------------------------------------------------------- scenes & beats
+export const materialiseScenes = (script: ImportedScript, options: MaterialiseOptions): Materialised => {
+  const { projectId, trackId, format, timestamp, byName } = options;
   const scenes = script.scenes.filter(
     (scene) => scene.heading.trim().length > 0 || scene.elements.length > 0,
   );
-  const sceneKeys = initialOrderKeys(Math.max(1, scenes.length));
+  const fresh = options.after === null ? initialOrderKeys(Math.max(1, scenes.length)) : [];
+  let previous = options.after;
 
   const units: StructuralUnit[] = [];
   const beats: Beat[] = [];
@@ -181,6 +161,8 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
 
   scenes.forEach((scene, index) => {
     const unitId = newId<StructuralUnitId>();
+    const orderKey = options.after === null ? (fresh[index] ?? orderKeyBetween(null, null)) : orderKeyBetween(previous, null);
+    previous = orderKey;
     units.push(
       structuralUnitSchema.parse({
         id: unitId,
@@ -190,9 +172,13 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
         // The slugline is the scene's title as well as its first line: the
         // heading prints, the title is what the timeline shows.
         title: scene.heading.trim(),
-        sequenceLabel: defaultUnitKind(format) === 'chapter' ? `Chapter ${index + 1}` : `Sc. ${index + 1}`,
+        sequenceLabel: options.sequenceLabels
+          ? defaultUnitKind(format) === 'chapter'
+            ? `Chapter ${index + 1}`
+            : `Sc. ${index + 1}`
+          : '',
         status: 'draft_complete',
-        orderKey: sceneKeys[index] ?? orderKeyBetween(null, null),
+        orderKey,
         createdAt: timestamp,
         updatedAt: timestamp,
       }),
@@ -287,6 +273,74 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
       }),
     );
   });
+
+  return { units, beats, markers, assets, words };
+};
+
+/**
+ * Build a project from a script that has been read.
+ *
+ * A new project rather than a merge into an open one: an import is a
+ * document arriving, and dropping somebody else's script into the middle of
+ * one you are writing is not something anybody asks for by accident.
+ */
+export const buildProjectFromImport = (script: ImportedScript, options: ImportOptions = {}): ImportResult => {
+  const format = options.format ?? 'screenplay';
+  const title = (options.title ?? script.title ?? '').trim() || 'Untitled';
+  const author = (options.author ?? script.author ?? '').trim();
+
+  const base = createProjectFile({ title, format, author });
+  const timestamp = nowIso();
+  const projectId = base.project.id;
+  const trackId = base.tracks[0]?.id as TrackId;
+
+  // ------------------------------------------------------------- the cast
+  const headings = characterCategoriesInOrder(base);
+  const busiest = script.characters[0]?.speeches ?? 0;
+  const describe = (person: { speeches: number; scenes: number }): string =>
+    person.speeches === 0
+      ? // Named in the action and never given a line. Said plainly, because a
+        // writer looking down the cast list should be able to see at a glance
+        // which of these the script actually hands a speech to.
+        `Named in the action, with no lines. ${person.scenes} ${person.scenes === 1 ? 'scene' : 'scenes'}.`
+      : `${person.speeches} ${person.speeches === 1 ? 'speech' : 'speeches'} across ${person.scenes} ${person.scenes === 1 ? 'scene' : 'scenes'}.`;
+  const mainAtLeast = options.mainAtLeast ?? 12;
+  const byName = new Map<string, CharacterId>();
+
+  // In order of how much they speak, so the busiest part reads first here too.
+  const characters: Character[] = script.characters.map((person) => {
+    const id = newId<CharacterId>();
+    byName.set(person.name, id);
+    const heading =
+      options.fileCast === false
+        ? null
+        : (namedHeading(headings, headingFor(person.speeches, busiest, mainAtLeast)) ?? null);
+    return characterSchema.parse({
+      id,
+      projectId,
+      name: person.name,
+      // The fuller name the action introduced them by. An alias rather than
+      // the name, because the name has to stay what the manuscript cues with.
+      aliases: person.aliases ?? [],
+      // What the script itself says about them: how much they carry.
+      description: describe(person),
+      categoryId: heading,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+  });
+
+  // -------------------------------------------------------- scenes & beats
+  const made = materialiseScenes(script, {
+    projectId,
+    trackId,
+    format,
+    timestamp,
+    byName,
+    after: null,
+    sequenceLabels: true,
+  });
+  const { units, beats, markers, assets, words } = made;
 
   // ---------------------------------------------------------- the locations
   const locationsFolder = base.researchCategories.find((category) => category.systemKey === 'locations');

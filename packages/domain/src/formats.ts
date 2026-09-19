@@ -37,6 +37,14 @@ export const isProseFormat = (format: ProjectFormat): boolean =>
 export const isInstructional = (format: ProjectFormat): boolean => format === 'instructional';
 
 /**
+ * A collection of stories (addendum 22): the short-story format, which holds
+ * one story or many. Its divisions are **stories** — each a marker over the
+ * sections it spans — so the Layout room sets a collection the way it sets a
+ * novel, a story to a chapter, and the contents page lists the stories.
+ */
+export const isCollection = (format: ProjectFormat): boolean => format === 'short_story';
+
+/**
  * Whether the work is played rather than read or watched (addendum 18).
  *
  * The one question the Interactive Narrative module asks, and it is named for
@@ -97,13 +105,18 @@ const NOUNS: Partial<Record<ProjectFormat, FormatNouns>> = {
     manuscript: 'Manuscript',
     work: 'Novel',
   },
+  /**
+   * Short stories and collections (addendum 22). A story is a marker over
+   * its sections, so the project is a collection whether it holds one story
+   * or twenty, and the work is named for that.
+   */
   short_story: {
     unit: 'Section',
     unitPlural: 'Sections',
     sub: 'Passage',
     subPlural: 'Passages',
     manuscript: 'Manuscript',
-    work: 'Story',
+    work: 'Collection',
   },
   /**
    * **Sections and subsections**, not chapters and sections.

@@ -32,6 +32,7 @@ import {
   type BookSettings,
   type PartKind,
   type ProjectFile,
+  isCollection,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
 import { usePreference } from '../use-split';
@@ -267,7 +268,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
             </select>
           </label>
           <p className="muted small">
-            The story is the manuscript in story order, {chapterCount} {chapterCount === 1 ? 'chapter' : 'chapters'};
+            The story is the manuscript in story order, {chapterCount}{' '}
+            {isCollection(file.project.format) ? (chapterCount === 1 ? 'story' : 'stories') : chapterCount === 1 ? 'chapter' : 'chapters'};
             nothing here reorders it.
           </p>
         </aside>
@@ -332,7 +334,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               <TypeSection settings={settings} write={write} />
               <FurnitureSection settings={settings} write={write} />
               <section className="layout-section">
-                <h3>Chapter openings</h3>
+                <h3>{isCollection(file.project.format) ? 'Story openings' : 'Chapter openings'}</h3>
                 <p className="muted small">
                   The number, the name, the face and the drop are set once for the book in{' '}
                   <em>File ▸ Chapter page…</em>. A chapter page carrying a device, a summary or an epigraph opens on a

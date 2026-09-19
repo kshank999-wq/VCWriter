@@ -1181,6 +1181,31 @@ push live; the build takes a minute or two.
   listing chapter headings as *places* and a picture drawn as a red warning;
   §8 says what is deliberately not read (tables as cells, no footnotes or
   tracked changes, a mid-sentence face change read as the paragraph's).
+  `addendum-22-collections.md` is **Short stories and collections**, from
+  Ken's ask for a collection of stories laid out as a book. **Built.** §1 is
+  the audit and it paid a **tenth** time: a short-story project's unit was
+  already a Section and its marker already the chapter-kind marker that
+  carries a page, drives the contents and opens a chapter in Layout — so the
+  whole of *a book full of stories divided into chapters* was standing, and
+  what was missing was the **reading** and the two ways in. **A story is a
+  marker over its sections** (§2): `isCollection` in `formats.ts`,
+  `collection.ts` (`storiesOf`, `beginStory`, `appendImportedStory`), and
+  nothing new stored, since a second record kept in step with the marker
+  would be a second answer about where a story ends. Two words changed in
+  `markers.ts`: `markerNoun` takes the format and a story is called
+  **nothing** before its number (a numbered collection prints *3*, never
+  *Story 3*), and a collection's default numbering is **none**, so the page
+  carries the title once — which needed the empty label a marker with
+  neither noun nor number now has, rather than borrowing its title. *+ Story*
+  on the bar starts a story **on a section of its own at the end** (§3), a
+  story not being a division of its neighbour. *File ▸ Add stories to the
+  collection…* (§4, `AddStoriesDialog.tsx`) takes several files, **one story
+  each**, and a document's headings divide its story into sections and
+  **never make stories** — the builder's per-heading markers are left out on
+  purpose. `materialiseScenes` in `import-build.ts` is the one builder both
+  importers call. The Layout room needed no change (§5). The format is
+  offered as *Short stories and collections* and the noun table calls the
+  work a *Collection*.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

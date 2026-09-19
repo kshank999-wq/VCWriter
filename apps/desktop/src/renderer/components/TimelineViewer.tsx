@@ -195,17 +195,19 @@ export function TimelineViewer({
                 type="button"
                 key={span.unit.id}
                 className={`viewer-mark viewer-sticky set${leaf ? ' has-page' : ''}`}
-                aria-label={`Marker: ${placed.label}${placed.marker.title ? ` — ${placed.marker.title}` : ''}`}
+                aria-label={`Marker: ${[placed.label, placed.marker.title].filter(Boolean).join(' — ')}`}
                 title={
                   leaves
-                    ? `${placed.label} — open it to design the page it starts with`
-                    : `${placed.label} — open it for its notes`
+                    ? `${placed.label || placed.marker.title} — open it to design the page it starts with`
+                    : `${placed.label || placed.marker.title} — open it for its notes`
                 }
                 onClick={() => onOpenMarker?.(placed.marker.id)}
               >
                 <span className="viewer-mark-flag">
-                  {placed.label}
-                  {placed.marker.title ? ` · ${placed.marker.title}` : ''}
+                  {/* A story in a collection has no label of its own, only a
+                      title (addendum 22 §2), so the parts are joined rather
+                      than the title hung off a label that may be empty. */}
+                  {[placed.label, placed.marker.title].filter(Boolean).join(' · ')}
                   {leaf ? ' ◲' : ''}
                 </span>
               </button>

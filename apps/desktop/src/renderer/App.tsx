@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addTrack,
   addMarker,
+  beginStory,
+  isCollection,
   defaultMarkerKind,
   beatsForUnit,
   beatsInStoryOrder,
@@ -70,6 +72,7 @@ import { TitlePageDialog } from './components/TitlePageDialog';
 import { Reports, type ReportTab } from './components/Reports';
 import { EpisodeRail } from './components/EpisodeRail';
 import { ImportDialog } from './components/ImportDialog';
+import { AddStoriesDialog } from './components/AddStoriesDialog';
 import { ProjectsDialog } from './components/ProjectsDialog';
 import { NewEpisodeDialog } from './components/NewEpisodeDialog';
 import { useWritingClock } from './use-writing-clock';
@@ -120,6 +123,7 @@ export default function App() {
   const [episodeRailOpen, setEpisodeRailOpen] = useState(false);
   const [newEpisodeOpen, setNewEpisodeOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [importStoriesOpen, setImportStoriesOpen] = useState(false);
   const [editorTab, setEditorTab] = useState<'daily' | 'final' | 'grid' | 'index' | 'polarity'>('daily');
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
   const [syncing, setSyncing] = useState(false);
@@ -370,6 +374,15 @@ export default function App() {
     project.update((current) => addTrack(current, { name: 'New track' }).file);
   }, [project]);
 
+  // A collection's new story: a section of its own at the end, and the
+  // marker that names it (addendum 22 §3).
+  const addStoryAtEnd = useCallback(() => {
+    if (!file) return;
+    const made = beginStory(file, { title: 'New story' });
+    project.update(() => made.file);
+    setSelectedUnitId(made.unitId);
+  }, [file, project]);
+
   const addActAtSelection = useCallback(() => {
     if (!selectedBeat) return;
     project.update((current) => addMarker(current, {
@@ -489,6 +502,8 @@ export default function App() {
           return void project.openProject();
         case 'file.import':
           return setImportOpen(true);
+        case 'file.importStories':
+          return setImportStoriesOpen(true);
         case 'file.projects':
           return setProjectsOpen(true);
         case 'file.save':
@@ -796,6 +811,7 @@ export default function App() {
         onAddBeat={addBeatAfterSelection}
         onAddTrack={addTrackToProject}
         onAddAct={addActAtSelection}
+        onAddStory={addStoryAtEnd}
         onOpenTrack={setOpenTrackId}
         onOpenUnit={setOpenUnitId}
         onOpenBeat={setOpenBeatId}
@@ -1271,6 +1287,15 @@ export default function App() {
         onClose={() => setImportOpen(false)}
         onImported={(imported) => project.replace(imported)}
       />
+
+      {file && isCollection(file.project.format) ? (
+        <AddStoriesDialog
+          open={importStoriesOpen}
+          file={file}
+          onClose={() => setImportStoriesOpen(false)}
+          onAdded={(next) => project.update(() => next)}
+        />
+      ) : null}
 
       <ProjectsDialog
         open={projectsOpen}

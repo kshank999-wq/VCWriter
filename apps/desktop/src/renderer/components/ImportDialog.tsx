@@ -60,7 +60,7 @@ const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string }> = [
 /** Only a Word document can come in as a book: a PDF's lines say where, not what. */
 const PROSE_FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string }> = [
   { value: 'novel', label: 'Novel' },
-  { value: 'short_story', label: 'Short story' },
+  { value: 'short_story', label: 'Short stories and collections' },
   { value: 'instructional', label: 'Instructional or textbook' },
 ];
 

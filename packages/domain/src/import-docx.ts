@@ -605,12 +605,16 @@ export const docxToScript = (doc: DocxDocument, options: { title?: string } = {}
 
 const BREAK_MARK = /^[\s*#~_\-—–•·.]{1,12}$/;
 
-/** Whether a paragraph opens a chapter (§4): a top heading, or *Chapter N*, or a page break with a short line after it. */
+/** A section numbered and nothing else — *II*, *3.* — the way a short story divides. */
+const BARE_NUMBER = /^([IVXLC]+|[0-9]+)\.?$/;
+
+/** Whether a paragraph opens a chapter (§4): a top heading, *Chapter N*, a bare numeral set centred, or a page break with a short line after it. */
 export const opensChapter = (paragraph: DocxParagraph): boolean => {
   if (paragraph.pictures.length > 0) return false;
   if (paragraph.outline === 0) return true;
   const short = paragraph.plain.length > 0 && paragraph.plain.length <= 60;
   if (short && CHAPTER_HEAD.test(paragraph.plain)) return true;
+  if (paragraph.align === 'center' && BARE_NUMBER.test(paragraph.plain)) return true;
   if (paragraph.pageBreakBefore && short && (paragraph.caps || paragraph.align === 'center')) return true;
   return false;
 };

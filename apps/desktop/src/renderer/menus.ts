@@ -13,7 +13,7 @@
  * that is all it should ever know.
  */
 
-import { hasBookIndex, hasChapterPages, isInteractive, isProseFormat, type ProjectFormat } from '@vcwriter/domain';
+import { hasBookIndex, hasChapterPages, isCollection, isInteractive, isProseFormat, type ProjectFormat } from '@vcwriter/domain';
 import { paneNamesFor } from './panes';
 
 export type CommandId =
@@ -22,6 +22,7 @@ export type CommandId =
   | 'file.new.episode'
   | 'file.open'
   | 'file.import'
+  | 'file.importStories'
   | 'file.projects'
   | 'file.save'
   | 'file.saveAs'
@@ -110,6 +111,12 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       null,
       { command: 'file.open', label: 'Open…', accelerator: 'CmdOrCtrl+O' },
       { command: 'file.import', label: 'Import a script…' },
+      // A collection's alone: each document chosen becomes a story after the
+      // last (addendum 22 §4). Absent elsewhere, since a novel has no
+      // stories to add one to.
+      ...(format !== null && isCollection(format)
+        ? [{ command: 'file.importStories' as CommandId, label: 'Add stories to the collection…' }]
+        : []),
       { command: 'file.projects', label: 'Delete a project…' },
       null,
       { command: 'file.save', label: 'Save', accelerator: 'CmdOrCtrl+S' },

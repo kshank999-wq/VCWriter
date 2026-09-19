@@ -49,6 +49,7 @@ export * from './import-fdx.js';
 export * from './import-lines.js';
 export * from './import-build.js';
 export * from './import-docx.js';
+export * from './collection.js';
 export * from './xml-walk.js';
 export * from './markers.js';
 export * from './setups.js';

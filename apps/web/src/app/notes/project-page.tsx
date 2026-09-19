@@ -33,7 +33,7 @@ const FORMAT_WORDS: Record<string, string> = {
   short_form: 'Short form',
   stage_play: 'Stage play',
   novel: 'Novel',
-  short_story: 'Short story',
+  short_story: 'Short stories and collections',
 };
 
 export function ProjectPage({
@@ -153,7 +153,7 @@ export function ProjectPage({
                   <option value="short_form">Short form</option>
                   <option value="stage_play">Stage play</option>
                   <option value="novel">Novel</option>
-                  <option value="short_story">Short story</option>
+                  <option value="short_story">Short stories and collections</option>
                 </select>
               </label>
               <div className="notes-item-actions">

@@ -2,7 +2,7 @@ import { unitsInStoryOrder } from './selectors.js';
 import type { ProjectFile } from './project-file.js';
 import type { ProjectFormat } from './entities/project.js';
 import type { ChapterTemplate, StoryMarker, StoryMarkerKind } from './entities/structure.js';
-import { isProseFormat } from './formats.js';
+import { isCollection, isProseFormat } from './formats.js';
 
 /**
  * Markers: the points a writer puts in the story, and what they are called
@@ -11,9 +11,9 @@ import { isProseFormat } from './formats.js';
  * Every format has them and every format means something different by them.
  * A screenplay's are **acts**, and what hangs off one is a note — there is no
  * page to design, because a script does not print a leaf between acts. A
- * novel's are **chapters**, and each can open a page of its own. A short
- * story's are chapters too, numbered in Roman numerals as short stories
- * conventionally are.
+ * novel's are **chapters**, and each can open a page of its own. A
+ * collection's are **stories** (addendum 22): the same kind of marker, called
+ * nothing before its number, since a story's page carries its title.
  *
  * The numbering is a project setting rather than a property of each marker,
  * because a book whose chapters are numbered three different ways is not a
@@ -38,10 +38,12 @@ export const defaultMarkerKind = (format: ProjectFormat): StoryMarkerKind =>
   format === 'series' ? 'episode' : isProseFormat(format) ? 'chapter' : 'act';
 
 export const defaultMarkerNumbering = (format: ProjectFormat): MarkerNumbering => {
-  // A short story's sections are numbered I, II, III by long convention; a
-  // screenplay's acts likewise. A novel counts its chapters, and so does a
-  // series count its episodes — nobody writes "Episode IV" on a call sheet.
+  // A screenplay's acts are numbered I, II, III by long convention. A novel
+  // counts its chapters, and so does a series count its episodes — nobody
+  // writes "Episode IV" on a call sheet. A collection's stories are titled
+  // rather than numbered (addendum 22), until the writer says otherwise.
   if (format === 'novel' || format === 'series' || format === 'instructional') return 'numeric';
+  if (isCollection(format)) return 'none';
   return 'roman';
 };
 
@@ -152,10 +154,17 @@ export const markerNumber = (position: number, numbering: MarkerNumbering, symbo
   }
 };
 
-/** What a marker of this kind is called before its number: "Chapter 4". */
-export const markerNoun = (kind: StoryMarkerKind): string =>
+/**
+ * What a marker of this kind is called before its number: "Chapter 4". In a
+ * collection the chapter-kind marker is a story, and a story is called
+ * nothing before its number — its page carries its title, and "Story 4" is
+ * not something a book prints (addendum 22 §2).
+ */
+export const markerNoun = (kind: StoryMarkerKind, format?: ProjectFormat): string =>
   kind === 'chapter'
-    ? 'Chapter'
+    ? format !== undefined && isCollection(format)
+      ? ''
+      : 'Chapter'
     : kind === 'episode'
       ? 'Episode'
       : kind === 'part'
@@ -216,7 +225,7 @@ export const placedMarkers = (file: ProjectFile): PlacedMarker[] => {
     // the Sculptor's canvas (addendum 03 §2).
     const counted = marker.kind !== 'note';
     const number = counted ? markerNumber(position, numbering, symbol) : '';
-    const noun = markerNoun(marker.kind);
+    const noun = markerNoun(marker.kind, file.project.format);
     // A script prints ACT TWO and EPISODE 2 in capitals; a book prints
     // Chapter Two.
     const shouts = marker.kind === 'act' || marker.kind === 'episode';
@@ -226,8 +235,11 @@ export const placedMarkers = (file: ProjectFile): PlacedMarker[] => {
       position,
       unitIndex: indexOf.get(marker.unitId as string) ?? 0,
       number,
-      label: head.length > 0 ? head : marker.title,
-      };
+      // A note's label is what the writer typed, having no noun and no
+      // number; a division with neither (a story in an unnumbered
+      // collection) has no label at all, its title being drawn beside it.
+      label: head.length > 0 ? head : marker.kind === 'note' ? marker.title : '',
+    };
   });
 };
 

@@ -82,22 +82,25 @@ describe('numbering', () => {
   });
 
   it('gives each format the numbering it is written in, until told otherwise', () => {
-    // A short story's sections are I, II, III; a novel counts its chapters.
-    expect(defaultMarkerNumbering('short_story')).toBe('roman');
+    // A collection's stories are titled, not numbered (addendum 22 §2); a
+    // novel counts its chapters; a screenplay's acts are I, II, III.
+    expect(defaultMarkerNumbering('short_story')).toBe('none');
     expect(defaultMarkerNumbering('novel')).toBe('numeric');
     expect(defaultMarkerNumbering('screenplay')).toBe('roman');
 
+    // A story has no noun before its number and no number by default, so
+    // it has no label at all: its page carries its title, once.
     const story = markAll(book(3, 'short_story'));
-    expect(placedMarkers(story).map((placed) => placed.label)).toEqual(['Chapter I', 'Chapter II', 'Chapter III']);
+    expect(placedMarkers(story).map((placed) => placed.label)).toEqual(['', '', '']);
 
-    // …and the writer can change it to anything, for the whole project at once.
+    // …and the writer can change it to anything, for the whole project at
+    // once — a plain number, never "Story One".
     const numbered: ProjectFile = { ...story, settings: { ...story.settings, markerNumbering: 'words' } };
     expect(markerNumbering(numbered)).toBe('words');
-    expect(placedMarkers(numbered).map((placed) => placed.label)).toEqual([
-      'Chapter One',
-      'Chapter Two',
-      'Chapter Three',
-    ]);
+    expect(placedMarkers(numbered).map((placed) => placed.label)).toEqual(['One', 'Two', 'Three']);
+
+    const novel = markAll(book(3, 'novel'));
+    expect(placedMarkers(novel).map((placed) => placed.label)).toEqual(['Chapter 1', 'Chapter 2', 'Chapter 3']);
   });
 
   it('numbers a screenplay’s acts in capitals, as a script prints them', () => {
