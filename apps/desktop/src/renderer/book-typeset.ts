@@ -106,11 +106,17 @@ export const measureBlocks = (
       return;
     }
     const element = items[index];
-    const height = element ? element.offsetHeight : 0;
+    // The fractional height, never `offsetHeight`: that is a whole number of
+    // pixels, and a four-line paragraph on a 18.667-pixel leading measures 75
+    // rather than 74.67, which read as 4.02 lines and was counted as five —
+    // one line too many on every such paragraph, and a widow the cutter's
+    // own rule could not prevent. A tenth of a line of slack covers what
+    // rounding is left; a real extra line is a whole one.
+    const height = element ? element.getBoundingClientRect().height : 0;
     // A box that cannot measure — a test's document has no layout — reads as
     // one line, so the laying still runs and says something rather than
     // nothing.
-    measured.set(block.id, height > 0 ? Math.max(1, Math.ceil(height / leadPx - 0.001)) : 1);
+    measured.set(block.id, height > 0 ? Math.max(1, Math.ceil(height / leadPx - 0.1)) : 1);
   });
   box.innerHTML = '';
   return measured;

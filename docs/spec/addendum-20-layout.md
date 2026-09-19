@@ -391,3 +391,12 @@ trim, being no part of a style, does not. The *Style* select at the head of
 the Type section applies one; every field stays settable under it. The
 opening treatment, the ornament, justification and hyphenation were stage
 5's and are unchanged.
+
+Driving the presets caught a fault in **stage 4's measuring** that the
+tests could not: the box read a block's `offsetHeight`, which is a whole
+number of pixels, so a four-line paragraph on a fractional leading (14 pt
+is 18.667 px) measured 75 rather than 74.67, read as 4.02 lines and was
+counted as five — one line too many on such paragraphs, and a last line
+alone at the head of the next page that the cutter's widow rule could not
+see, because by its count there was no widow. The box reads the fractional
+height now, with a tenth of a line of slack for what rounding is left.
