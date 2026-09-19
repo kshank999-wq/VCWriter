@@ -161,6 +161,15 @@ export interface VcWriterApi {
     /** The paper for the book: the trim, in inches. */
     paper?: { width: number; height: number };
   }): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>>;
+  /**
+   * Write an export's files into a folder of their own (addendum 23 §7): the
+   * writer picks where, the folder is made there, and every file goes in.
+   * Null when the writer cancelled.
+   */
+  saveExport(input: {
+    folderName: string;
+    files: { name: string; bytes: Uint8Array; mediaType: string }[];
+  }): Promise<DesktopApiResult<{ folder: string; paths: string[] } | null>>;
   print(input: {
     file: ProjectFile;
     options?: PrintOptions;
@@ -371,6 +380,7 @@ const api: VcWriterApi = {
   listSnapshots: (path) => ipcRenderer.invoke('project:snapshots', path),
   restoreSnapshot: (input) => ipcRenderer.invoke('project:restoreSnapshot', input),
   exportPdf: (input) => ipcRenderer.invoke('project:exportPdf', input),
+  saveExport: (input) => ipcRenderer.invoke('project:saveExport', input),
   print: (input) => ipcRenderer.invoke('project:print', input),
   appInfo: () => ipcRenderer.invoke('app:version'),
   accountStatus: () => ipcRenderer.invoke('cloud:status'),

@@ -33,8 +33,17 @@ export class ZipError extends Error {
 }
 
 const inflateRaw = async (bytes: Uint8Array): Promise<Uint8Array> => {
-  const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  // A stream of one chunk rather than a Blob's: the same in Chromium and
+  // Node, and a test runner's window has no Blob that streams.
+  const source = new ReadableStream<BufferSource>({
+    start(controller) {
+      // Copied: a view into the archive is not the ArrayBuffer-backed chunk
+      // the stream's typing wants, and the copy is the entry's size, not the file's.
+      controller.enqueue(new Uint8Array(bytes));
+      controller.close();
+    },
+  });
+  return new Uint8Array(await new Response(source.pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
 };
 
 /**

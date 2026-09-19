@@ -1206,6 +1206,34 @@ push live; the build takes a minute or two.
   importers call. The Layout room needed no change (§5). The format is
   offered as *Short stories and collections* and the noun table calls the
   work a *Collection*.
+  `addendum-23-ebook-export.md` is **eBook export**, from Ken's own *eBook
+  Export Engine* dev spec: one EPUB 3.3 from the laid-out book, with store
+  presets for Kindle, Apple, NOOK, Kobo, Google Play, Draft2Digital and
+  IngramSpark. **Phases 1 and 2 built**; §8 says what is not (EPUBCheck,
+  fixed layout, footnotes, fonts, retailer APIs). §1 is the audit and it
+  paid an **eleventh** time: the spec's *intermediate representation* is
+  `bookBlocks` (addendum 20 §5), so `ebook.ts` is a **second reader of the
+  same blocks** — a file per part and per chapter (per story in a
+  collection), semantic XHTML by construction (escaped, void tags closed,
+  a scene break one separator paragraph and never empty ones), and the
+  desktop test parses every file as XML to prove it. **Nothing about a page
+  survives** and the log says so — no folio, running head, blank verso,
+  trim or face. **The stores are rules, not renderers** (§3,
+  `ebook-presets.ts`): limits and switches read by the preflight and
+  nothing else, so a retailer moving a number is a line to edit. Metadata
+  lives in `settings.book.ebook` (no migration) and falls back to what the
+  project knows — title page, imprint, synopsis, key art as cover — so a
+  second export says the same as the first. `zip-write.ts` is the reader's
+  other half, the `mimetype` first and stored, deflate by
+  `CompressionStream` through a `ReadableStream` (a test runner's `Blob`
+  does not stream; the desktop's `unzip.ts` inflates the same way for the
+  same reason), and `platform.d.ts` declares the few globals the domain
+  leans on without pulling the DOM library in. `ebook-preflight.ts` asks
+  what a store's checker asks first and **says it cannot run EPUBCheck**
+  rather than pretending. *Export as eBook…* is in the Layout bar; the
+  dialog is the preflight, errors hold the button, and `saveExport` on the
+  bridge makes a *Title - eBook Export* folder holding the EPUB, the cover
+  beside it, a report and `metadata.json`.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

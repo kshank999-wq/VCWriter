@@ -1,6 +1,6 @@
 import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import { join } from 'node:path';
-import { readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import {
   createProjectFile,
   parseProjectFile,
@@ -371,6 +371,37 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
     async (_event, input: { path: string; snapshotId: string }): Promise<DesktopApiResult<OpenResult>> => {
       try {
         return ok(toOpenResult(await restoreSnapshot(input.path, input.snapshotId)));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  // An export's files, into a folder of their own (addendum 23 §7). The
+  // writer picks the parent; the folder is made there and the files go in,
+  // so an eBook, its cover and its report arrive together.
+  ipcMain.handle(
+    'project:saveExport',
+    async (
+      _event,
+      input: { folderName: string; files: { name: string; bytes: Uint8Array; mediaType: string }[] },
+    ): Promise<DesktopApiResult<{ folder: string; paths: string[] } | null>> => {
+      try {
+        const window = getWindow();
+        const options = { title: 'Where to put the export', properties: ['openDirectory', 'createDirectory'] as ('openDirectory' | 'createDirectory')[] };
+        const choice = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
+        const parent = choice.filePaths[0];
+        if (choice.canceled || !parent) return ok(null);
+        const safe = input.folderName.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').trim() || 'Export';
+        const folder = join(parent, safe);
+        await mkdir(folder, { recursive: true });
+        const paths: string[] = [];
+        for (const one of input.files) {
+          const target = join(folder, one.name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-'));
+          await writeFile(target, Buffer.from(one.bytes));
+          paths.push(target);
+        }
+        return ok({ folder, paths });
       } catch (cause) {
         return fail(cause);
       }

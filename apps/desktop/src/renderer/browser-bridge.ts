@@ -381,6 +381,24 @@ export const createBrowserBridge = (): BrowserBridge => {
       return ok(printDocument(input));
     },
 
+    // An export in the browser is a download per file: the browser decides
+    // where they land, and the folder is whatever it downloads to.
+    async saveExport(input) {
+      const paths: string[] = [];
+      for (const one of input.files) {
+        const url = URL.createObjectURL(new Blob([one.bytes as BlobPart], { type: one.mediaType }));
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = one.name;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+        paths.push(one.name);
+      }
+      return ok({ folder: "your browser's downloads folder", paths });
+    },
+
     appInfo: async () => ok({ version: 'preview', platform: 'browser' }),
 
     accountStatus: async () => ok({ configured: false, signedIn: false, email: null }),

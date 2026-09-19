@@ -111,7 +111,38 @@ export const bookPartSchema = z.object({
 });
 export type BookPart = z.infer<typeof bookPartSchema>;
 
+/**
+ * What the eBook carries that the printed book does not (addendum 23 §4):
+ * the metadata a retailer's package wants and the cover. Stored on the
+ * project rather than typed at export, so the second export says the same
+ * as the first. Empty means *not given*; the exporter falls back to the
+ * project's own fields where it can and says where it cannot.
+ */
+export const ebookSettingsSchema = z.object({
+  /** BCP-47: en-US, en-GB, fr. */
+  language: z.string().default('en-US'),
+  /** The eBook's ISBN, digits and hyphens. Empty means the project's own id names the package. */
+  isbn: z.string().default(''),
+  /** Empty means the book's imprint. */
+  publisher: z.string().default(''),
+  /** ISO date, YYYY-MM-DD, or empty. */
+  published: z.string().default(''),
+  /** Empty means the project's synopsis, then its logline. */
+  description: z.string().default(''),
+  /** The rights statement: "Copyright © 2026 K. Shank. All rights reserved." */
+  rights: z.string().default(''),
+  seriesName: z.string().default(''),
+  seriesNumber: z.string().default(''),
+  /** The cover, from the graphics library. Null is no cover. */
+  coverAssetId: z.string().nullable().default(null),
+  /** The retailer the last export was made for. */
+  target: z.string().default('universal'),
+});
+export type EbookSettings = z.infer<typeof ebookSettingsSchema>;
+
 export const bookSettingsSchema = z.object({
+  /** The eBook's own fields (addendum 23). */
+  ebook: ebookSettingsSchema.default({}),
   trim: trimSchema.default({}),
   /** Typed over the derived margins, in inches; null is derived (§3). */
   margins: z

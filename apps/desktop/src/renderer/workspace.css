@@ -13848,3 +13848,17 @@ dialog.chapter-page-dialog {
   background: var(--panel-2);
   font-weight: 600;
 }
+
+/* ---- Export as an eBook (addendum 23 §7) ---- */
+.ebook-dialog { width: min(720px, 92vw); }
+.ebook-body { max-height: 70vh; overflow: auto; }
+.ebook-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; }
+.ebook-findings { margin: 6px 0 10px; }
+.ebook-findings h4 { margin: 0 0 4px; }
+.ebook-findings ul { margin: 0; padding-left: 18px; }
+.ebook-findings li { margin: 2px 0; }
+.ebook-error li { color: var(--danger, #d9534f); }
+.ebook-warning li { color: var(--gold); }
+.ebook-info li { color: var(--muted); }
+.ebook-checklist { padding-left: 18px; }
+.ebook-done h4 { margin: 8px 0 4px; }

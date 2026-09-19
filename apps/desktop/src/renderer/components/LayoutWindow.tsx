@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { EbookExportDialog } from './EbookExportDialog';
 import {
   ADDABLE_KINDS,
   BOOK_FACES,
@@ -80,6 +81,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const [spread, setSpread] = useState(0);
   const [zoom, setZoom] = usePreference('layout.zoom', 0.55);
   const [busy, setBusy] = useState(false);
+  const [ebookOpen, setEbookOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const parts = useMemo(() => partsOf(file), [file]);
@@ -157,6 +159,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       {/* The measuring box (§4): the browser sets each block here, out of
           sight, and the domain reads the count of lines back. */}
       <div ref={box} className="bk-measure" aria-hidden="true" />
+      <EbookExportDialog open={ebookOpen} file={file} onClose={() => setEbookOpen(false)} onUpdate={onUpdate} />
 
       <header className="sculptor-bar">
         <h2>Layout</h2>
@@ -176,6 +179,11 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           onClick={() => void exportBook()}
         >
           {busy ? 'Exporting…' : 'Export the book…'}
+        </button>
+        {/* The same blocks as a reflowable EPUB for the stores (addendum 23):
+            nothing about a page survives, and the dialog says what does. */}
+        <button type="button" className="tool" title="The book as an EPUB for the eBook stores, checked against the store's rules" onClick={() => setEbookOpen(true)}>
+          Export as eBook…
         </button>
         {onPopOut ? <PopOutButton what="the Layout room" onPopOut={onPopOut} /> : null}
         <button type="button" className="ghost" onClick={onClose} aria-label="Close the Layout room">
