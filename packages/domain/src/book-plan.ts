@@ -224,6 +224,14 @@ export interface BookBlock {
   opensChapter?: boolean;
   /** The part this block belongs to, where it belongs to one. */
   partId?: string;
+  /**
+   * How the document this came from set it (addendum 21 §3): a face, a size
+   * in points, an alignment. Read by the printer only under the *As imported*
+   * face, except the alignment, which is a fact about the words.
+   */
+  face?: string;
+  size?: number;
+  align?: 'center' | 'right';
 }
 
 const block = (input: Partial<BookBlock> & Pick<BookBlock, 'id' | 'kind' | 'numbering'>): BookBlock => ({
@@ -347,15 +355,26 @@ const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle:
   }
 };
 
+/** What an element kept of how its document set it, where it kept anything. */
+const setting = (element: ManuscriptElement): Pick<BookBlock, 'face' | 'size' | 'align'> => {
+  const out: Pick<BookBlock, 'face' | 'size' | 'align'> = {};
+  const { face, size, align } = element.attributes;
+  if (typeof face === 'string' && face.trim().length > 0) out.face = face.trim();
+  if (typeof size === 'number' && size > 0) out.size = size;
+  if (align === 'center' || align === 'right') out.align = align;
+  return out;
+};
+
 const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensChapter: boolean): BookBlock | null => {
   const id = element.id as string;
+  const set = setting(element);
   switch (element.type) {
     case 'paragraph':
-      return block({ id, kind: 'paragraph', numbering: 'arabic', text: element.text, spans: parseInline(element.text), chapterTitle, opensChapter });
+      return block({ id, kind: 'paragraph', numbering: 'arabic', text: element.text, spans: parseInline(element.text), chapterTitle, opensChapter, ...set });
     case 'heading':
-      return block({ id, kind: 'heading', numbering: 'arabic', text: element.text, spans: parseInline(element.text), chapterTitle, keepWithNext: true, unbreakable: true });
+      return block({ id, kind: 'heading', numbering: 'arabic', text: element.text, spans: parseInline(element.text), chapterTitle, keepWithNext: true, unbreakable: true, ...set });
     case 'blockquote':
-      return block({ id, kind: 'blockquote', numbering: 'arabic', text: element.text, spans: parseInline(element.text), chapterTitle });
+      return block({ id, kind: 'blockquote', numbering: 'arabic', text: element.text, spans: parseInline(element.text), chapterTitle, ...set });
     case 'scene_break':
       return block({ id, kind: 'scene_break', numbering: 'arabic', chapterTitle, unbreakable: true, keepWithNext: true });
     case 'figure':

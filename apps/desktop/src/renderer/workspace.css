@@ -3734,6 +3734,18 @@ dialog.marker-dialog {
   caret-color: var(--own-ink);
 }
 
+/* *As imported* (addendum 21 §3): a paragraph the Word document set in a face
+   or a size of its own keeps it. The ink and the caret box inherit together,
+   so the two stay on top of each other; the leading is proportional so a
+   heading at twenty-four point does not run into the line below. */
+.workspace .script-view.as-imported .element.imported-face {
+  font-family: var(--imported-face);
+}
+.workspace .script-view.as-imported .element.imported-size {
+  font-size: var(--imported-size);
+  line-height: 1.35;
+}
+
 /* Everything that is *about* the page rather than on it stays quieter than
    the writing, whatever colour the writing is. */
 .workspace .script-view.own-paper .beat-name input,

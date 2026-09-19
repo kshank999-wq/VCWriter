@@ -1149,6 +1149,38 @@ push live; the build takes a minute or two.
   (`opensOnLeaf`, a reading); a chapter-page face of *manuscript* means the
   book's face in the book. Room wiring is the usual five places plus a
   **Layout** title-bar button, absent rather than greyed off prose.
+  `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
+  document and maintain the formatting, along with the font type and size*.
+  **Built.** §1 is the audit: the script importer already had both halves
+  (Final Draft's hand-written XML reader and the PDF's laid-out-line
+  classifier), the research importer said in its own comment that it left a
+  `.docx` to be reported as skipped, and the manuscript element had carried
+  `attributes` since 0001 — so no migration. Two decisions carry it. **The
+  host unzips and the domain reads** (§2): `unzip.ts` reads the central
+  directory and inflates with the platform's `DecompressionStream`,
+  `read-docx.ts` hands over the parts, and `import-docx.ts` decides what every
+  paragraph is where it can be tested with a string; `xml-walk.ts` is the tag
+  reader split out of `import-fdx.ts` and shared. **A script by its geometry,
+  a book by its headings** (§4): a Word screenplay is laid out as the lines a
+  PDF gives — a paragraph's indent is where its line starts, a centred one
+  stands in the cue band — and goes through the same `readLaidOutLines`, so
+  screenplay classification was not written twice; a book divides at its
+  headings (`CHAPTER_HEAD` in `importing.ts`, shared with the builder's
+  `chapterName` so the two agree about what *Chapter One: The Road* is called),
+  and a chapter heading becomes a **story marker** rather than a slugline,
+  with the number derived. Only a `.docx` is offered the book formats, and
+  choosing one **reads the document again** rather than converting a script.
+  **Formatting is kept as data and honoured where asked** (§3): `face`, `size`
+  and `align` ride in the element's `attributes`, the manuscript print is
+  untouched (a screenplay from Word still prints Courier on letter), and *As
+  imported* is a face in the Script's gear (`IMPORTED_FACE`) and among
+  `BOOK_FACES` in Layout, where `blockStyle` in `print-book.ts` sets each
+  block in its own face with the size snapped to whole lines of the leading;
+  alignment is kept under every face because it is about the words. Pictures
+  become assets and figures. Driving it in Chromium found the found panel
+  listing chapter headings as *places* and a picture drawn as a red warning;
+  §8 says what is deliberately not read (tables as cells, no footnotes or
+  tracked changes, a mid-sentence face change read as the paragraph's).
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

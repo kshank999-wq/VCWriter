@@ -8,7 +8,7 @@ import logo from '../assets/logo-stacked.webp';
 interface WelcomeProps {
   onCreate(input: { title: string; format: ProjectFormat; author?: string }): void;
   onOpen(): void;
-  /** Somebody else's script: Final Draft or a PDF (addendum 02 §18). */
+  /** Somebody else's script: Final Draft, Word or a PDF (addendum 02 §18, 21). */
   onImport(): void;
   /**
    * The project list, and deleting from it (spec §4).
@@ -138,7 +138,7 @@ export function Welcome({
           Open a project file…
         </button>
         <button type="button" onClick={onImport}>
-          Import a script — Final Draft or PDF…
+          Import a script — Final Draft, Word or PDF…
         </button>
         <button type="button" onClick={onProjects}>
           Projects on this machine…

@@ -92,6 +92,8 @@ export const FACE_STACKS: Record<BookFace, string> = {
   transitional: "Baskerville, 'Libre Baskerville', 'Times New Roman', Times, serif",
   modern: "Didot, 'Bodoni MT', 'Bodoni 72', Georgia, serif",
   sans: "'Helvetica Neue', Helvetica, Arial, ui-sans-serif, sans-serif",
+  // The stack a paragraph falls back to where the document named no face.
+  imported: "'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif",
 };
 
 export const FACE_NAMES: Record<BookFace, string> = {
@@ -99,6 +101,7 @@ export const FACE_NAMES: Record<BookFace, string> = {
   transitional: 'Transitional serif',
   modern: 'Modern serif',
   sans: 'Sans serif',
+  imported: 'As imported',
 };
 
 export const FACE_NOTES: Record<BookFace, string> = {
@@ -106,6 +109,7 @@ export const FACE_NOTES: Record<BookFace, string> = {
   transitional: 'Baskerville, Times — a little crisper',
   modern: 'Didot, Bodoni — high contrast; best at larger sizes',
   sans: 'Helvetica — for a textbook or a manual',
+  imported: 'Each paragraph in the face and size its Word document gave it',
 };
 
 export const faceStackOf = (face: BookFace): string => FACE_STACKS[face] ?? FACE_STACKS.old_style;
@@ -188,6 +192,8 @@ const CHAR_EMS: Record<BookFace, number> = {
   transitional: 0.46,
   modern: 0.45,
   sans: 0.5,
+  // Whatever the document said, which the sentence cannot know; the fallback's.
+  imported: 0.47,
 };
 
 export const geometryOf = (settings: BookSettings, format: ProjectFormat, pages: number): BookGeometry => {

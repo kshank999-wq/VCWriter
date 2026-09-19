@@ -204,17 +204,40 @@ const openingMarkup = (block: BookBlock, context: BookRenderContext): string => 
  * drawn from the context, which is empty while the book is being measured
  * — the row count is what is measured, and the numbers fill in after.
  */
+/**
+ * How a text block was set in the document it came from, as an inline style
+ * (addendum 21 §3). The face and the size are honoured only under the *As
+ * imported* face — under any other the book is set in one face, which is
+ * what choosing one means — and a size is snapped to whole lines of the
+ * book's leading so the page keeps its grid. Alignment is always kept: a
+ * centred paragraph is centred whatever it is set in.
+ */
+export const blockStyle = (block: BookBlock, context: BookRenderContext): string => {
+  const rules: string[] = [];
+  if (context.settings.face === 'imported') {
+    if (block.face) rules.push(`font-family:'${block.face.replace(/'/g, '')}',${faceStackOf('imported')}`);
+    if (block.size) {
+      rules.push(`font-size:${(block.size * PX_PER_PT).toFixed(3)}px`);
+      const lines = Math.max(1, Math.ceil(block.size / context.geometry.size - 0.001));
+      if (lines > 1) rules.push(`line-height:calc(var(--bk-lead) * ${lines})`);
+    }
+  }
+  if (block.align) rules.push(`text-align:${block.align}`, 'text-indent:0');
+  return rules.length > 0 ? ` style="${rules.join(';')}"` : '';
+};
+
 export const renderBookBlock = (block: BookBlock, context: BookRenderContext): string => {
   const opens = block.opensChapter && context.settings.opening !== 'none';
+  const style = blockStyle(block, context);
   switch (block.kind) {
     case 'paragraph': {
       const cls = ['bk-p', opens ? `bk-opens bk-${context.settings.opening}` : ''].filter(Boolean).join(' ');
-      return `<p class="${cls}">${renderSpans(block.spans, block.text)}</p>`;
+      return `<p class="${cls}"${style}>${renderSpans(block.spans, block.text)}</p>`;
     }
     case 'heading':
-      return `<p class="bk-heading">${renderSpans(block.spans, block.text)}</p>`;
+      return `<p class="bk-heading"${style}>${renderSpans(block.spans, block.text)}</p>`;
     case 'blockquote':
-      return `<p class="bk-quote">${renderSpans(block.spans, block.text)}</p>`;
+      return `<p class="bk-quote"${style}>${renderSpans(block.spans, block.text)}</p>`;
     case 'scene_break': {
       const ornament = context.settings.ornament.trim();
       return `<p class="bk-break">${ornament ? escapeHtml(ornament) : '&nbsp;'}</p>`;

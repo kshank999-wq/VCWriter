@@ -639,6 +639,8 @@ export function BeatBody({
     const firstIndent = dual ? 0 : layout.firstIndent?.[element.type] ?? 0;
     const width = dual && layout.dual ? layout.dual.width - indent : layout.width[element.type] ?? layout.columns;
     const page = breaks?.get(element.id);
+    const importedFace = typeof element.attributes.face === 'string' ? element.attributes.face : '';
+    const importedSize = typeof element.attributes.size === 'number' && element.attributes.size > 0 ? element.attributes.size : 0;
     return (
       <Fragment key={element.id}>
         {page ? (
@@ -647,7 +649,15 @@ export function BeatBody({
           </div>
         ) : null}
         <div
-          className={`element element-${element.type}`}
+          className={[
+            `element element-${element.type}`,
+            // How the document it came from set it (addendum 21 §3), honoured
+            // only under the Script's *As imported* face.
+            importedFace ? 'imported-face' : '',
+            importedSize ? 'imported-size' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
           // The page geometry as variables, so a narrow column can trade the
           // fixed width for the room it has without losing the indent.
           style={
@@ -655,6 +665,8 @@ export function BeatBody({
               '--indent': `${indent}ch`,
               '--width': `${width}ch`,
               '--first-indent': `${firstIndent}ch`,
+              ...(importedFace ? { '--imported-face': `'${importedFace.replace(/'/g, '')}', serif` } : {}),
+              ...(importedSize ? { '--imported-size': `${importedSize}pt` } : {}),
             } as React.CSSProperties
           }
         >

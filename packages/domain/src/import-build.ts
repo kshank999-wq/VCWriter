@@ -5,23 +5,30 @@ import { beatSchema, structuralUnitSchema } from './entities/structure.js';
 import { characterSchema } from './entities/character.js';
 import { researchItemSchema } from './entities/research.js';
 import { manuscriptElementSchema } from './entities/manuscript.js';
+import { assetSchema } from './entities/asset.js';
+import { storyMarkerSchema } from './entities/structure.js';
 import { createProjectFile } from './project-file.js';
 import { characterCategoriesInOrder } from './characters.js';
-import { bareCue, type ImportedScript } from './importing.js';
+import { CHAPTER_HEAD, bareCue, type ImportedScript } from './importing.js';
 import type { ProjectFile } from './project-file.js';
 import { defaultUnitKind } from './project-file.js';
+import { defaultMarkerKind } from './markers.js';
+import { isProseFormat } from './formats.js';
 import type { ProjectFormat } from './entities/project.js';
-import type { Beat, StructuralUnit } from './entities/structure.js';
+import type { Beat, StoryMarker, StructuralUnit } from './entities/structure.js';
 import type { Character, CharacterCategory } from './entities/character.js';
 import type { ResearchItem } from './entities/research.js';
 import type { ManuscriptElement } from './entities/manuscript.js';
+import type { Asset } from './entities/asset.js';
 import type {
+  AssetId,
   BeatId,
   CharacterCategoryId,
   CharacterId,
   TrackId,
   ManuscriptElementId,
   ResearchItemId,
+  StoryMarkerId,
   StructuralUnitId,
 } from './ids.js';
 
@@ -167,6 +174,9 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
 
   const units: StructuralUnit[] = [];
   const beats: Beat[] = [];
+  const markers: StoryMarker[] = [];
+  const assets: Asset[] = [];
+  const prose = isProseFormat(format);
   let words = 0;
 
   scenes.forEach((scene, index) => {
@@ -190,16 +200,54 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
 
     const elements: ManuscriptElement[] = [];
     if (scene.heading.trim().length > 0) {
-      elements.push(
-        manuscriptElementSchema.parse({
-          id: newId<ManuscriptElementId>(),
-          type: 'scene_heading',
-          text: scene.heading.trim(),
-        }),
-      );
+      if (prose) {
+        // A book's chapter heading is a story marker, not a line of the
+        // manuscript (addendum 19 §1): the marker carries the chapter page
+        // and the contents page reads it. Its number is derived, so a
+        // heading that is only "Chapter 3" leaves the title empty.
+        markers.push(
+          storyMarkerSchema.parse({
+            id: newId<StoryMarkerId>(),
+            projectId,
+            unitId,
+            kind: defaultMarkerKind(format),
+            title: chapterName(scene.heading),
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          }),
+        );
+      } else {
+        elements.push(
+          manuscriptElementSchema.parse({
+            id: newId<ManuscriptElementId>(),
+            type: 'scene_heading',
+            text: scene.heading.trim(),
+          }),
+        );
+      }
     }
     for (const element of scene.elements) {
       words += wordsIn(element.text);
+      // A picture the document carried goes into the library once, and the
+      // figure names it (addendum 16 §9): cutting the figure keeps the
+      // picture, as it does for one placed by hand.
+      let assetId: AssetId | null = null;
+      if (element.picture) {
+        assetId = newId<AssetId>();
+        assets.push(
+          assetSchema.parse({
+            id: assetId,
+            projectId,
+            kind: 'image',
+            name: element.picture.name,
+            data: element.picture.dataUrl,
+            width: element.picture.width,
+            height: element.picture.height,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          }),
+        );
+      }
       elements.push(
         manuscriptElementSchema.parse({
           id: newId<ManuscriptElementId>(),
@@ -211,10 +259,14 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
           // cue in the script attached to nobody.
           characterId: element.type === 'character' ? (byName.get(bareCue(element.text)) ?? null) : null,
           attributes: {
+            // What the document said about how the words were set — the
+            // face, the size, the alignment — kept as data (addendum 21 §3).
+            ...(element.attributes ?? {}),
             ...(element.dual ? { dual: true } : {}),
             // Marked so the writer can be shown what to look at, and so a
             // later pass can find every line the reader was unsure of.
             ...(element.guessed ? { imported_guess: true } : {}),
+            ...(assetId ? { assetId } : {}),
           },
         }),
       );
@@ -267,6 +319,8 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
     // its own, and an empty "Opening Scene" ahead of page one is litter.
     units: units.length > 0 ? units : base.units,
     beats: beats.length > 0 ? beats : base.beats,
+    markers: units.length > 0 ? markers : base.markers,
+    assets: [...base.assets, ...assets],
     characters,
     researchItems: [...base.researchItems, ...research],
   };
@@ -281,8 +335,30 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
   };
 };
 
+/**
+ * A chapter marker's title from an imported heading. The number is derived
+ * from where the chapter falls (addendum 02 §12a), so "Chapter 3" on its
+ * own carries no title, and "Chapter 3: The Road" carries *The Road*.
+ */
+export const chapterName = (heading: string): string => {
+  const trimmed = heading.trim();
+  const head = CHAPTER_HEAD.exec(trimmed);
+  if (!head) return trimmed;
+  return trimmed
+    .slice(head[0].length)
+    .replace(/^\s*[:.\-—–]?\s*/, '')
+    .trim();
+};
+
+const SOURCE_NAMES: Record<ImportedScript['source'], string> = {
+  fdx: 'a Final Draft document',
+  pdf: 'a PDF',
+  text: 'plain text',
+  docx: 'a Word document',
+};
+
 const noteFor = (script: ImportedScript): string => {
-  const from = script.source === 'fdx' ? 'a Final Draft document' : script.source === 'pdf' ? 'a PDF' : 'plain text';
+  const from = SOURCE_NAMES[script.source] ?? 'a file';
   const lines = [`Imported from ${from}.`];
   if (script.warnings.length > 0) lines.push('', ...script.warnings.map((warning) => `— ${warning}`));
   return lines.join('\n');

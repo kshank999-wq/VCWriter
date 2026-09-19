@@ -1,8 +1,12 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   buildProjectFromImport,
+  docxToImport,
+  isProseFormat,
+  readDocx,
   readFinalDraft,
   readLaidOutLines,
+  type DocxDocument,
   type ImportedCharacter,
   type ImportedLocation,
   type ImportedScene,
@@ -21,10 +25,13 @@ import { useModal } from '../use-modal';
  * importer that goes straight to a finished project asks the writer to
  * audit a hundred pages to find out whether it worked.
  *
- * Two readers behind it. A Final Draft document says what every line is, so
+ * Three readers behind it. A Final Draft document says what every line is, so
  * nothing is guessed. A PDF says only where each line sits — which in a
  * screenplay is very nearly as good, because the format is the indentation —
- * and anything it had to work out from shape is counted and said.
+ * and anything it had to work out from shape is counted and said. A Word
+ * document (addendum 21) is read by its headings for a book and by its
+ * indents for a script, so what it is read *as* follows the format chosen
+ * here — the document is kept and read again when the format changes.
  */
 
 interface ImportDialogProps {
@@ -37,7 +44,10 @@ interface ImportDialogProps {
 type Stage =
   | { kind: 'waiting' }
   | { kind: 'reading'; name: string }
+  /** Read once, as a script. */
   | { kind: 'read'; name: string; script: ImportedScript }
+  /** A Word document: read for whichever format is chosen. */
+  | { kind: 'word'; name: string; doc: DocxDocument; title: string }
   | { kind: 'failed'; message: string };
 
 const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string }> = [
@@ -45,6 +55,13 @@ const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string }> = [
   { value: 'series', label: 'Series or episodic' },
   { value: 'stage_play', label: 'Stage play' },
   { value: 'short_form', label: 'Short form' },
+];
+
+/** Only a Word document can come in as a book: a PDF's lines say where, not what. */
+const PROSE_FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string }> = [
+  { value: 'novel', label: 'Novel' },
+  { value: 'short_story', label: 'Short story' },
+  { value: 'instructional', label: 'Instructional or textbook' },
 ];
 
 export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
@@ -55,14 +72,31 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
   const [fileCast, setFileCast] = useState(true);
   const [keepLocations, setKeepLocations] = useState(true);
 
+  // What was read, as the format it is going into.
+  const script = useMemo<ImportedScript | null>(() => {
+    if (stage.kind === 'read') return stage.script;
+    if (stage.kind === 'word') return docxToImport(stage.doc, format, { title: stage.title });
+    return null;
+  }, [stage, format]);
+  const formats = stage.kind === 'word' ? [...FORMATS, ...PROSE_FORMATS] : FORMATS;
+
   const read = async (chosen: File) => {
     setStage({ kind: 'reading', name: chosen.name });
     try {
       if (/\.fdx$/i.test(chosen.name)) {
+        if (isProseFormat(format)) setFormat('screenplay');
         setStage({ kind: 'read', name: chosen.name, script: readFinalDraft(await chosen.text()) });
         return;
       }
+      if (/\.docx$/i.test(chosen.name)) {
+        // Unzipped by the host, read by the domain (addendum 21 §2).
+        const { readDocxParts } = await import('../read-docx');
+        const doc = readDocx(await readDocxParts(await chosen.arrayBuffer()));
+        setStage({ kind: 'word', name: chosen.name, doc, title: chosen.name.replace(/\.docx$/i, '') });
+        return;
+      }
       if (/\.pdf$/i.test(chosen.name)) {
+        if (isProseFormat(format)) setFormat('screenplay');
         // Loaded only when a PDF is actually chosen.
         const { readPdfLines } = await import('../read-pdf');
         const { lines, title } = await readPdfLines(await chosen.arrayBuffer());
@@ -75,7 +109,7 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
       }
       setStage({
         kind: 'failed',
-        message: 'That is neither a Final Draft document nor a PDF. Those are the two this reads.',
+        message: 'That is not a Final Draft document, a Word document or a PDF. Those are the three this reads.',
       });
     } catch (error) {
       setStage({ kind: 'failed', message: error instanceof Error ? error.message : 'That file could not be read.' });
@@ -83,8 +117,8 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
   };
 
   const finish = () => {
-    if (stage.kind !== 'read') return;
-    const built = buildProjectFromImport(stage.script, { format, fileCast, keepLocations });
+    if (!script) return;
+    const built = buildProjectFromImport(script, { format, fileCast, keepLocations });
     onImported(built.file);
     setStage({ kind: 'waiting' });
     onClose();
@@ -110,7 +144,7 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
             <input
               ref={picker}
               type="file"
-              accept=".fdx,.pdf,application/pdf"
+              accept=".fdx,.docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               aria-label="Script file"
               className="import-picker"
               onChange={(event) => {
@@ -121,8 +155,10 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
 
             {stage.kind === 'waiting' ? (
               <p className="muted">
-                A Final Draft document (<code>.fdx</code>) or a PDF. Final Draft says what every line is, so nothing is
-                guessed. A PDF is read from where each line sits on the page — which is what a screenplay&rsquo;s
+                A Final Draft document (<code>.fdx</code>), a Word document (<code>.docx</code>) or a PDF. Final Draft
+                says what every line is, so nothing is guessed. A Word document keeps its formatting — the face and
+                size each paragraph was set in — and is read by its headings for a book and by its indents for a
+                script. A PDF is read from where each line sits on the page — which is what a screenplay&rsquo;s
                 format actually is — and anything worked out that way is marked.
               </p>
             ) : null}
@@ -135,9 +171,9 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
               </p>
             ) : null}
 
-            {stage.kind === 'read' ? <Found script={stage.script} /> : null}
+            {script ? <Found script={script} prose={isProseFormat(format)} /> : null}
 
-            {stage.kind === 'read' ? (
+            {script ? (
               <>
                 <h4>What to make of it</h4>
                 <label className="field">
@@ -147,31 +183,37 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
                     value={format}
                     onChange={(event) => setFormat(event.target.value as ProjectFormat)}
                   >
-                    {FORMATS.map((option) => (
+                    {formats.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
                     ))}
                   </select>
                 </label>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    aria-label="File the cast"
-                    checked={fileCast}
-                    onChange={(event) => setFileCast(event.target.checked)}
-                  />
-                  <span>File the cast under main, recurring and minor by how much they speak</span>
-                </label>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    aria-label="Keep the locations"
-                    checked={keepLocations}
-                    onChange={(event) => setKeepLocations(event.target.checked)}
-                  />
-                  <span>Write each location up under Research → Locations</span>
-                </label>
+                {/* A book has no cast list to file and no sluglines to write
+                    up, so the two choices are absent rather than greyed. */}
+                {isProseFormat(format) ? null : (
+                  <>
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        aria-label="File the cast"
+                        checked={fileCast}
+                        onChange={(event) => setFileCast(event.target.checked)}
+                      />
+                      <span>File the cast under main, recurring and minor by how much they speak</span>
+                    </label>
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        aria-label="Keep the locations"
+                        checked={keepLocations}
+                        onChange={(event) => setKeepLocations(event.target.checked)}
+                      />
+                      <span>Write each location up under Research → Locations</span>
+                    </label>
+                  </>
+                )}
               </>
             ) : null}
           </div>
@@ -181,9 +223,9 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
               Cancel
             </button>
             <button type="button" className="ghost" onClick={() => picker.current?.click()}>
-              {stage.kind === 'read' ? 'Choose another…' : 'Choose a file…'}
+              {script ? 'Choose another…' : 'Choose a file…'}
             </button>
-            <button type="button" className="primary" disabled={stage.kind !== 'read'} onClick={finish}>
+            <button type="button" className="primary" disabled={!script} onClick={finish}>
               Import
             </button>
           </footer>
@@ -194,22 +236,36 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
 }
 
 /** What the reader found, before anything is made from it. */
-function Found({ script }: { script: ImportedScript }) {
+function Found({ script, prose }: { script: ImportedScript; prose: boolean }) {
   const scenes = script.scenes.filter((scene: ImportedScene) => scene.heading.trim().length > 0).length;
   const speeches = script.characters.reduce(
     (total: number, person: ImportedCharacter) => total + person.speeches,
     0,
   );
 
+  const elements = script.scenes.flatMap((scene: ImportedScene) => scene.elements);
+  const count = (type: string) => elements.filter((element) => element.type === type).length;
+
   return (
     <div className="import-found">
       <div className="report-figures">
-        {/* The source is a Final Draft file, so what was found in it is
-            scenes whatever format it is being imported into. */}
-        <Figure label="Scenes" value={String(scenes)} />
-        <Figure label="Characters" value={String(script.characters.length)} />
-        <Figure label="Locations" value={String(script.locations.length)} />
-        <Figure label="Speeches" value={String(speeches)} />
+        {/* A script's divisions are scenes whatever format it is going into;
+            a Word document read as a book divides at its chapter headings, and
+            what is counted under them is what a book is made of. */}
+        <Figure label={prose ? 'Chapters' : 'Scenes'} value={String(scenes)} />
+        {prose ? (
+          <>
+            <Figure label="Paragraphs" value={String(count('paragraph') + count('blockquote'))} />
+            <Figure label="Headings" value={String(count('heading'))} />
+            <Figure label="Pictures" value={String(count('figure'))} />
+          </>
+        ) : (
+          <>
+            <Figure label="Characters" value={String(script.characters.length)} />
+            <Figure label="Locations" value={String(script.locations.length)} />
+            <Figure label="Speeches" value={String(speeches)} />
+          </>
+        )}
       </div>
 
       {script.title ? (

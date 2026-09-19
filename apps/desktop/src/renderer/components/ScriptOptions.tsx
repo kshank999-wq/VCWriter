@@ -24,6 +24,9 @@ export interface PageStyle {
   on: boolean;
 }
 
+/** The face value that means *as the document was set*. */
+export const IMPORTED_FACE = 'imported';
+
 export const PAPER_FACES: ReadonlyArray<{ value: string; label: string }> = [
   { value: "'Courier New', Courier, ui-monospace, monospace", label: 'Courier' },
   { value: "'Courier Prime', 'Courier New', Courier, monospace", label: 'Courier Prime' },
@@ -31,6 +34,9 @@ export const PAPER_FACES: ReadonlyArray<{ value: string; label: string }> = [
   { value: "'Georgia', 'Times New Roman', serif", label: 'Georgia' },
   { value: "'Times New Roman', Times, serif", label: 'Times' },
   { value: "'Iowan Old Style', 'Palatino Linotype', Palatino, serif", label: 'Palatino' },
+  // Not a face but a rule: each paragraph in the face and size the Word
+  // document it came from gave it (addendum 21 §3); the rest as Courier.
+  { value: IMPORTED_FACE, label: 'As imported' },
 ];
 
 export const PAPERS: ReadonlyArray<{ paper: string; ink: string; label: string }> = [

@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { castByCategory, type ProjectFile } from '@vcwriter/domain';
 import { ImportDialog } from '../components/ImportDialog';
 import { MENUS } from '../menus';
+import { buildDocx, wordParagraph } from './zip-fixture';
 
 /**
  * The import dialog (addendum 02 §18): what it shows before it makes
@@ -32,18 +33,44 @@ ${Array.from(
 </Content></TitlePage>
 </FinalDraft>`;
 
-/** jsdom's File has no `text()`, so give the picker one that has. */
-const fileNamed = (name: string, body: string): File => {
+/** jsdom's File has no `text()` or `arrayBuffer()`, so give the picker one that has. */
+const fileNamed = (name: string, body: string | ArrayBuffer): File => {
   const made = new File([body], name);
-  Object.defineProperty(made, 'text', { value: () => Promise.resolve(body) });
+  Object.defineProperty(made, 'text', { value: () => Promise.resolve(typeof body === 'string' ? body : '') });
+  Object.defineProperty(made, 'arrayBuffer', {
+    value: () => Promise.resolve(typeof body === 'string' ? new TextEncoder().encode(body).buffer : body),
+  });
   return made;
 };
 
-const choose = (name: string, body: string) => {
+const choose = (name: string, body: string | ArrayBuffer) => {
   const picker = screen.getByLabelText('Script file') as HTMLInputElement;
   Object.defineProperty(picker, 'files', { value: [fileNamed(name, body)], configurable: true });
   fireEvent.change(picker);
 };
+
+/** A novel typed in Word: a title, chapter headings, a paragraph set in its own face. */
+const NOVEL = () =>
+  buildDocx([
+    wordParagraph('The Lighthouse', { style: 'Title' }),
+    wordParagraph('by K. Shank', { align: 'center' }),
+    wordParagraph('Chapter One: The Road', { style: 'Heading1' }),
+    wordParagraph('The kettle would not boil.'),
+    wordParagraph('Or on the road.', { face: 'Garamond', size: 14 }),
+    wordParagraph('Chapter Two', { style: 'Heading1' }),
+    wordParagraph('The road went north.'),
+  ]);
+
+/** A screenplay typed in Word: sluglines at the margin, cues centred, speeches an inch in. */
+const SCREENPLAY = () =>
+  buildDocx([
+    wordParagraph('INT. LIGHTHOUSE - STAIRS - NIGHT'),
+    wordParagraph('She climbs.'),
+    ...Array.from({ length: 6 }, () => [wordParagraph('MAEVE', { align: 'center' }), wordParagraph('Again.', { indent: 1 })]).flat(),
+    wordParagraph('EXT. LIGHTHOUSE - DAWN'),
+    wordParagraph('THE KEEPER', { align: 'center' }),
+    wordParagraph('It did. Twice.', { indent: 1 }),
+  ]);
 
 describe('importing a script', () => {
   it('shows what it found before it makes anything of it', async () => {
@@ -89,11 +116,65 @@ describe('importing a script', () => {
     expect(file.researchItems.map((item) => item.title)).toContain('LIGHTHOUSE - STAIRS');
   });
 
-  it('says so plainly when the file is neither kind', async () => {
+  it('says so plainly when the file is none of the kinds it reads', async () => {
     render(<ImportDialog open onClose={() => {}} onImported={() => {}} />);
     choose('notes.txt', 'just some notes');
     await screen.findByRole('alert');
-    expect(screen.getByRole('alert').textContent).toMatch(/neither a Final Draft document nor a PDF/);
+    expect(screen.getByRole('alert').textContent).toMatch(/not a Final Draft document, a Word document or a PDF/);
+  });
+
+  /**
+   * A Word document (addendum 21): read by its headings for a book, by its
+   * indents for a script, and the choice between them is the format.
+   */
+  it('reads a Word document as a novel, chapter by heading, with the face and size kept', async () => {
+    const made: ProjectFile[] = [];
+    render(<ImportDialog open onClose={() => {}} onImported={(file) => made.push(file)} />);
+    choose('lighthouse.docx', NOVEL());
+    await screen.findByLabelText('Format');
+
+    // A book is offered only for a Word document, and choosing it reads the
+    // document again, by its headings this time.
+    fireEvent.change(screen.getByLabelText('Format'), { target: { value: 'novel' } });
+    await screen.findByText('The Lighthouse — K. Shank');
+    const figures = [...document.querySelectorAll('.report-figure')].map((node) => node.textContent);
+    expect(figures[0]).toBe('2Chapters');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(made).toHaveLength(1));
+    const file = made[0]!;
+    expect(file.project.format).toBe('novel');
+    expect(file.units.map((unit) => unit.title)).toEqual(['Chapter One: The Road', 'Chapter Two']);
+    expect(file.markers.map((marker) => marker.title)).toEqual(['The Road', '']);
+    const elements = file.beats[0]!.manuscript.elements;
+    expect(elements.map((element) => element.type)).toEqual(['paragraph', 'paragraph']);
+    expect(elements[1]?.attributes).toEqual({ face: 'Garamond', size: 14 });
+  });
+
+  it('reads a Word screenplay by where its paragraphs sit', async () => {
+    const made: ProjectFile[] = [];
+    render(<ImportDialog open onClose={() => {}} onImported={(file) => made.push(file)} />);
+    choose('lighthouse.docx', SCREENPLAY());
+    await screen.findByText('Who is in it');
+    expect(screen.getByText('MAEVE')).toBeTruthy();
+    expect(screen.getByText('THE KEEPER')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(made).toHaveLength(1));
+    expect(made[0]!.units.map((unit) => unit.title)).toEqual(['INT. LIGHTHOUSE - STAIRS - NIGHT', 'EXT. LIGHTHOUSE - DAWN']);
+    expect(made[0]!.beats[0]!.manuscript.elements.map((element) => element.type).slice(0, 4)).toEqual([
+      'scene_heading',
+      'action',
+      'character',
+      'dialogue',
+    ]);
+  });
+
+  it('says so when a Word document is not one', async () => {
+    render(<ImportDialog open onClose={() => {}} onImported={() => {}} />);
+    choose('broken.docx', '<html><body>not a document</body></html>');
+    await screen.findByRole('alert');
+    expect(screen.getByRole('alert').textContent).toMatch(/not a Word document/);
   });
 
   it('says so when the file claims to be Final Draft and is not', async () => {

@@ -1,4 +1,5 @@
 import { summarise, type ImportedElement, type ImportedScene, type ImportedScript } from './importing.js';
+import { readXmlTag, unescapeXml } from './xml-walk.js';
 import type { ManuscriptElementType } from './entities/manuscript.js';
 
 /**
@@ -9,8 +10,9 @@ import type { ManuscriptElementType } from './entities/manuscript.js';
  * Draft becomes a scene heading, and if a type is one we have no equivalent
  * for it is named in the warnings rather than silently turned into action.
  *
- * The parser is written here rather than pulled in. `DOMParser` is a browser
- * global the Electron main process and Node do not have, an XML library is a
+ * The parser is written here rather than pulled in (`xml-walk.ts` holds the
+ * tag reader, shared with the Word importer). `DOMParser` is a browser global
+ * the Electron main process and Node do not have, an XML library is a
  * dependency in the path of opening a file, and FDX is a small, regular
  * document: paragraphs holding runs of text. A reader for exactly that shape
  * is a hundred lines and cannot be surprised by an unrelated CVE.
@@ -32,52 +34,7 @@ const TYPES: Record<string, ManuscriptElementType> = {
   'end of act': 'general',
 };
 
-const ENTITIES: Record<string, string> = {
-  amp: '&',
-  lt: '<',
-  gt: '>',
-  quot: '"',
-  apos: "'",
-  nbsp: ' ',
-};
-
-const unescapeXml = (text: string): string =>
-  text.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (whole, body: string) => {
-    if (body.startsWith('#x') || body.startsWith('#X')) {
-      const code = Number.parseInt(body.slice(2), 16);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : whole;
-    }
-    if (body.startsWith('#')) {
-      const code = Number.parseInt(body.slice(1), 10);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : whole;
-    }
-    return ENTITIES[body.toLowerCase()] ?? whole;
-  });
-
-interface Tag {
-  name: string;
-  attributes: Record<string, string>;
-  /** `<Text/>` — opens and closes at once. */
-  selfClosing: boolean;
-  closing: boolean;
-}
-
-const ATTRIBUTE = /([A-Za-z_:][-A-Za-z0-9_:.]*)\s*=\s*"([^"]*)"/g;
-
-const readTag = (raw: string): Tag => {
-  const closing = raw.startsWith('/');
-  const body = closing ? raw.slice(1) : raw;
-  const selfClosing = body.endsWith('/');
-  const inner = selfClosing ? body.slice(0, -1) : body;
-  const name = (/^\s*([^\s/>]+)/.exec(inner)?.[1] ?? '').toLowerCase();
-  const attributes: Record<string, string> = {};
-  ATTRIBUTE.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = ATTRIBUTE.exec(inner)) !== null) {
-    attributes[(match[1] as string).toLowerCase()] = unescapeXml(match[2] as string);
-  }
-  return { name, attributes, selfClosing, closing };
-};
+const readTag = readXmlTag;
 
 /** Final Draft's styles, written back as the marks the editor uses (§7.2). */
 const withStyle = (text: string, style: string): string => {

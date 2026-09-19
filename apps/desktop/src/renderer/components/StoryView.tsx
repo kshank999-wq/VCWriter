@@ -19,7 +19,7 @@ import {
 } from '@vcwriter/domain';
 import { BeatBody } from './BeatBody';
 import { carryingWork, workCarried } from '../carry-work';
-import { DEFAULT_PAGE_STYLE, ScriptOptions, type PageStyle } from './ScriptOptions';
+import { DEFAULT_PAGE_STYLE, IMPORTED_FACE, PAPER_FACES, ScriptOptions, type PageStyle } from './ScriptOptions';
 import { ManuscriptDataLists } from './ManuscriptDataLists';
 import { useAsk, useMark, useRoom, useTalk } from '../room';
 import { AssignedMark } from './AssignedMark';
@@ -396,7 +396,14 @@ export function StoryView({
 
   return (
     <div
-      className={['story script-view', focusMode ? 'focus' : '', paged ? 'paged' : '', style.on ? 'own-paper' : '']
+      className={[
+        'story script-view',
+        focusMode ? 'focus' : '',
+        paged ? 'paged' : '',
+        style.on ? 'own-paper' : '',
+        // Each imported paragraph in its own face and size (addendum 21 §3).
+        style.face === IMPORTED_FACE ? 'as-imported' : '',
+      ]
         .filter(Boolean)
         .join(' ')}
       style={
@@ -404,7 +411,11 @@ export function StoryView({
           ? // Names of their own rather than the paper preference's: the
             // sheet re-declares those locally, and a variable cannot be
             // inherited past a declaration on the element itself.
-            ({ '--own-paper': style.paper, '--own-ink': style.ink, '--own-face': style.face } as React.CSSProperties)
+            ({
+              '--own-paper': style.paper,
+              '--own-ink': style.ink,
+              '--own-face': style.face === IMPORTED_FACE ? PAPER_FACES[0]!.value : style.face,
+            } as React.CSSProperties)
           : undefined
       }
     >

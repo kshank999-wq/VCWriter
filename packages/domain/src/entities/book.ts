@@ -29,7 +29,13 @@ export type Trim = z.infer<typeof trimSchema>;
  * may not be installed (§6): each resolves to a stack ending in a generic
  * family, so a book set here prints on a machine that has none of them.
  */
-export const BOOK_FACES = ['old_style', 'transitional', 'modern', 'sans'] as const;
+/**
+ * The faces a book may be set in. `imported` is not a face but a rule: each
+ * paragraph is set in whatever face and size the document it was imported
+ * from gave it (addendum 21 §3), falling back to old-style where one said
+ * nothing.
+ */
+export const BOOK_FACES = ['old_style', 'transitional', 'modern', 'sans', 'imported'] as const;
 export const bookFaceSchema = z.enum(BOOK_FACES);
 export type BookFace = z.infer<typeof bookFaceSchema>;
 

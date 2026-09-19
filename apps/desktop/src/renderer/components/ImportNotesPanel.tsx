@@ -2,8 +2,10 @@ import { useMemo, useRef, useState } from 'react';
 import {
   batchesInOrder,
   describeBatch,
+  docxToMarkdown,
   graphicsMadeBy,
   importFiles,
+  readDocx,
   itemsMadeBy,
   warningsIn,
   type ImportBatch,
@@ -29,9 +31,37 @@ interface ImportNotesPanelProps {
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
 }
 
+/** The name without its extension, for naming the pictures a document carried. */
+const bareName = (name: string): string => name.replace(/\.[^.]+$/, '');
+
+/**
+ * A Word document for the notes shelf (addendum 21 §5): unzipped here, read
+ * by the domain, and handed over as markdown so it splits where the author's
+ * own headings say. Its pictures come along as files of their own, for the
+ * graphics library. A document that will not read still gets an entry, named.
+ */
+const readWord = async (one: File): Promise<ImportedFile[]> => {
+  try {
+    const { readDocxParts } = await import('../read-docx');
+    const doc = readDocx(await readDocxParts(await one.arrayBuffer()));
+    const pictures = doc.paragraphs.flatMap((paragraph) => paragraph.pictures);
+    return [
+      { name: one.name, text: docxToMarkdown(doc) },
+      ...pictures.map((picture, index) => ({
+        name: `${bareName(one.name)} ${index + 1} — ${picture.name}`,
+        dataUrl: picture.dataUrl,
+        ...(picture.width > 0 ? { width: picture.width, height: picture.height } : {}),
+      })),
+    ];
+  } catch {
+    return [{ name: one.name }];
+  }
+};
+
 /** Text out of a file, or a data URI where it is a picture. The host's half (§4). */
-const readOne = (one: File): Promise<ImportedFile> =>
-  new Promise((resolve) => {
+const readOne = (one: File): Promise<ImportedFile[]> => {
+  if (/\.docx$/i.test(one.name)) return readWord(one);
+  return new Promise((resolve) => {
     const reader = new FileReader();
 
     if (one.type.startsWith('image/')) {
@@ -39,34 +69,31 @@ const readOne = (one: File): Promise<ImportedFile> =>
         const data = String(reader.result ?? '');
         const image = new Image();
         image.onload = () =>
-          resolve({ name: one.name, dataUrl: data, width: image.naturalWidth, height: image.naturalHeight });
-        image.onerror = () => resolve({ name: one.name, dataUrl: data });
+          resolve([{ name: one.name, dataUrl: data, width: image.naturalWidth, height: image.naturalHeight }]);
+        image.onerror = () => resolve([{ name: one.name, dataUrl: data }]);
         image.src = data;
       };
       // A picture that will not read at all still gets an entry, named.
-      reader.onerror = () => resolve({ name: one.name });
+      reader.onerror = () => resolve([{ name: one.name }]);
       reader.readAsDataURL(one);
       return;
     }
 
     /**
-     * Anything the browser can give us words from.
-     *
-     * Deliberately narrow: a `.docx` is a zip and reading it as text produces
-     * mojibake rather than a note, so it is **left to be reported as skipped**
-     * rather than imported as rubbish. Adding it later is a host-side
-     * extractor and no change to the research model, which is §4's
-     * extensibility point.
+     * Anything the browser can give us words from. A `.docx` went the other
+     * way above; anything else that is not text is **left to be reported as
+     * skipped** rather than read as rubbish.
      */
     const textual = /\.(txt|md|markdown|mdown|csv|json|rtf|log)$/i.test(one.name) || one.type.startsWith('text/');
     if (!textual) {
-      resolve({ name: one.name });
+      resolve([{ name: one.name }]);
       return;
     }
-    reader.onload = () => resolve({ name: one.name, text: String(reader.result ?? '') });
-    reader.onerror = () => resolve({ name: one.name });
+    reader.onload = () => resolve([{ name: one.name, text: String(reader.result ?? '') }]);
+    reader.onerror = () => resolve([{ name: one.name }]);
     reader.readAsText(one);
   });
+};
 
 export function ImportNotesPanel({ file, onUpdate }: ImportNotesPanelProps) {
   const shelves = useMemo(() => {
@@ -84,7 +111,7 @@ export function ImportNotesPanel({ file, onUpdate }: ImportNotesPanelProps) {
   const take = async (chosen: FileList | null) => {
     if (!chosen || chosen.length === 0 || !shelves.notes) return;
     setBusy(true);
-    const read = await Promise.all(Array.from(chosen).map(readOne));
+    const read = (await Promise.all(Array.from(chosen).map(readOne))).flat();
     onUpdate((current) => {
       const done = importFiles(current, read, {
         notesCategoryId: shelves.notes as ResearchCategoryId,

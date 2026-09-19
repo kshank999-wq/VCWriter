@@ -135,13 +135,16 @@ export const splitMarkdown = (name: string, text: string): DraftItem[] => {
 export const READERS: Reader[] = [
   {
     name: 'markdown',
-    handles: (file) => ['md', 'markdown', 'mdown'].includes(extensionOf(file.name)),
+    // A `.docx` arrives as markdown too: the host unzips it and the Word
+    // reader writes its headings as `#` lines, so it splits where the
+    // author's own headings say (addendum 21 §5).
+    handles: (file) => ['md', 'markdown', 'mdown', 'docx'].includes(extensionOf(file.name)),
     read: (file) => splitMarkdown(file.name, file.text ?? ''),
   },
   {
     name: 'text',
     // Everything the host managed to get words out of, whatever it was: a
-    // `.docx` the host unzipped arrives here as text, and so does a `.txt`.
+    // `.txt`, or a file of some kind the host could still read words from.
     handles: (file) => typeof file.text === 'string',
     read: (file) => {
       const body = (file.text ?? '').trim();

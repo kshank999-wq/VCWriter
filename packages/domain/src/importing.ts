@@ -21,6 +21,15 @@ export interface ImportedElement {
   dual?: boolean;
   /** Whether this line's type was read from the file or worked out from its shape. */
   guessed?: boolean;
+  /**
+   * How the paragraph was set where it came from (addendum 21 §3): the face
+   * it was typed in, its size in points, its alignment. Kept on the element
+   * as data and honoured where the book is set; the manuscript page stays in
+   * standard format whatever arrived.
+   */
+  attributes?: Record<string, string | number | boolean>;
+  /** A picture in the document, for a figure: the builder makes the asset. */
+  picture?: { dataUrl: string; width: number; height: number; name: string };
 }
 
 export interface ImportedScene {
@@ -62,7 +71,7 @@ export interface ImportedScript {
   /** What the reader could not do confidently. Shown before anything is made. */
   warnings: string[];
   /** Which reader produced this, for the note left on the project. */
-  source: 'fdx' | 'pdf' | 'text';
+  source: 'fdx' | 'pdf' | 'text' | 'docx';
 }
 
 /** Elements in reading order, across every scene. */
@@ -74,6 +83,16 @@ export const importedElements = (script: ImportedScript): ImportedElement[] =>
   );
 
 /** The cue without its extension: "MAEVE (O.S.)" is MAEVE, and always was. */
+/**
+ * A heading that names a chapter by number — *Chapter 3*, *Part II*, *Book
+ * One*, with or without a title after it. Read the same way wherever a
+ * document's headings are asked what they are (the Word importer) and
+ * wherever one becomes a marker (the builder), so the two cannot disagree
+ * about what "Chapter One: The Road" is called.
+ */
+export const CHAPTER_HEAD =
+  /^(chapter|part|book)\s+([0-9]+|[ivxlcdm]+|(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?)\b/i;
+
 export const bareCue = (cue: string): string =>
   cue
     .replace(/\s*\((?:[^)]*)\)\s*$/, '')
