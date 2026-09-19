@@ -39,6 +39,50 @@ describe('project file format', () => {
     expect(() => migrateProjectFile({ project: {} })).toThrow(ProjectFormatError);
   });
 
+  /**
+   * A project saved before a lane became a track (format 2, migration 0051).
+   * Ken's test projects in the browser were exactly this, and every one of
+   * them failed to open with `units.0.trackId: Required`.
+   */
+  it('opens a format-2 project that still calls a track a lane', () => {
+    const fresh = JSON.parse(serializeProjectFile(createProjectFile({ title: 'Novel Test', format: 'novel' })));
+    const track = fresh.tracks[0];
+    const unit = fresh.units[0];
+    const older = {
+      ...fresh,
+      formatVersion: 2,
+      lanes: fresh.tracks,
+      units: fresh.units.map(({ trackId, ...rest }: { trackId: string }) => ({ ...rest, laneId: trackId })),
+      links: [
+        {
+          id: '11111111-1111-4111-8111-111111111111',
+          projectId: fresh.project.id,
+          from: { type: 'unit', id: unit.id },
+          to: { type: 'lane', id: track.id },
+          type: 'relates_to',
+          note: '',
+          createdAt: fresh.savedAt,
+          updatedAt: fresh.savedAt,
+        },
+      ],
+    };
+    delete older.tracks;
+
+    const opened = parseProjectFile(older);
+    expect(opened.formatVersion).toBe(PROJECT_FORMAT_VERSION);
+    expect(opened.tracks.map((one) => one.id)).toEqual([track.id]);
+    expect(opened.units[0]?.trackId).toBe(track.id);
+    expect(opened.links[0]?.to.type).toBe('track');
+    expect('lanes' in opened).toBe(false);
+  });
+
+  it('leaves a format-2 project that already says track untouched', () => {
+    const fresh = JSON.parse(serializeProjectFile(createProjectFile({ title: 'Already tracks', format: 'screenplay' })));
+    const opened = parseProjectFile({ ...fresh, formatVersion: 2 });
+    expect(opened.tracks).toHaveLength(fresh.tracks.length);
+    expect(opened.units[0]?.trackId).toBe(fresh.units[0].trackId);
+  });
+
   it('reports validation failures rather than returning a partial project', () => {
     const file = JSON.parse(serializeProjectFile(createProjectFile({ title: 'Broken', format: 'screenplay' })));
     file.beats[0].unitId = 'not-a-uuid';

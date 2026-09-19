@@ -67,8 +67,14 @@ import { isInstructional, isProseFormat } from './formats.js';
  *  1 — initial release.
  *  2 — scene order is global rather than per track, and `markers[]` exists
  *      (addendum 02 §8, §9).
+ *  3 — a lane is a track (migration 0051): `lanes[]` is `tracks[]`, a unit's
+ *      `laneId` is its `trackId`, and a story link's `lane` end is a `track`.
+ *      The rename went into the database and the code on the same day and
+ *      the file format was forgotten, so a project saved before it failed
+ *      validation on `units.0.trackId: Required` — which is what a format
+ *      version is for.
  */
-export const PROJECT_FORMAT_VERSION = 2;
+export const PROJECT_FORMAT_VERSION = 3;
 
 export const projectFileSchema = z.object({
   formatVersion: z.number().int().positive(),
@@ -243,8 +249,43 @@ const migrateToGlobalStoryOrder = (doc: Record<string, unknown>): Record<string,
   };
 };
 
+/**
+ * Format 2 called a track a lane. Format 3 says track everywhere, the way
+ * the code and the database have since migration 0051. Each rename is made
+ * only where the old name is present, so a format-2 file saved *after* the
+ * rename — which already says track, the version having not been bumped —
+ * passes through unchanged.
+ */
+const migrateLanesToTracks = (doc: Record<string, unknown>): Record<string, unknown> => {
+  const rows = (value: unknown): Record<string, unknown>[] =>
+    Array.isArray(value) ? value.filter((row): row is Record<string, unknown> => typeof row === 'object' && row !== null) : [];
+  const tracks = Array.isArray(doc['tracks']) ? doc['tracks'] : Array.isArray(doc['lanes']) ? doc['lanes'] : [];
+  const units = rows(doc['units']).map((unit) => {
+    if ('trackId' in unit || !('laneId' in unit)) return unit;
+    const { laneId, ...rest } = unit;
+    return { ...rest, trackId: laneId };
+  });
+  const end = (value: unknown): unknown => {
+    if (typeof value !== 'object' || value === null) return value;
+    const ref = value as Record<string, unknown>;
+    return ref['type'] === 'lane' ? { ...ref, type: 'track' } : ref;
+  };
+  const links = rows(doc['links']).map((link) => ({ ...link, from: end(link['from']), to: end(link['to']) }));
+  const { lanes: _lanes, ...rest } = doc;
+  return {
+    ...rest,
+    formatVersion: 3,
+    tracks,
+    units,
+    ...(Array.isArray(doc['links']) ? { links } : {}),
+  };
+};
+
 /** Ordered, contiguous migrations from an older format version to the current one. */
-const MIGRATIONS: readonly Migration[] = [{ from: 1, to: 2, migrate: migrateToGlobalStoryOrder }];
+const MIGRATIONS: readonly Migration[] = [
+  { from: 1, to: 2, migrate: migrateToGlobalStoryOrder },
+  { from: 2, to: 3, migrate: migrateLanesToTracks },
+];
 
 /** Apply every migration needed to bring a raw document up to the current version. */
 export const migrateProjectFile = (raw: unknown): Record<string, unknown> => {
