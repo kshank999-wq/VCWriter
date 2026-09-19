@@ -34,6 +34,14 @@ import {
   type PartKind,
   type ProjectFile,
   isCollection,
+  BOOK_PRESET_NAMES,
+  BOOK_PRESETS,
+  INSET_SPAN,
+  PRESET_INFO,
+  bookFigures,
+  bookPresetOf,
+  placeBookFigure,
+  type BookFigure,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
 import { usePreference } from '../use-split';
@@ -82,6 +90,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const [zoom, setZoom] = usePreference('layout.zoom', 0.55);
   const [busy, setBusy] = useState(false);
   const [ebookOpen, setEbookOpen] = useState(false);
+  const [selectedFigureId, setSelectedFigureId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const parts = useMemo(() => partsOf(file), [file]);
@@ -119,7 +128,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
     const page = laying.laid.pages.find((candidate) =>
       candidate.pieces.some((piece) => {
         const block = blocks.get(piece.blockId);
-        return block !== undefined && (block.id === partId || block.partId === partId);
+        return block !== undefined && (block.id === partId || block.partId === partId || block.inset?.figureId === partId);
       }),
     );
     if (page) setSpread(spreadOfSheet(page.sheet));
@@ -152,6 +161,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   };
 
   const chapterCount = divisions.length;
+  const figures = bookFigures(file);
+  const selectedFigure = figures.find((figure) => figure.elementId === selectedFigureId) ?? null;
 
   return (
     <div className="layout-room" role="dialog" aria-label="Layout">
@@ -236,6 +247,30 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               })
             )}
           </ul>
+          {figures.length > 0 ? (
+            <>
+              <h3>Figures</h3>
+              <ul className="layout-parts layout-figures">
+                {figures.map((figure) => (
+                  <li key={figure.elementId}>
+                    <button
+                      type="button"
+                      className={figure.elementId === selectedFigureId ? 'ghost layout-part selected' : 'ghost layout-part'}
+                      title="A figure in the manuscript. Where it sits in the book is set here; the manuscript prints it across the measure."
+                      onClick={() => {
+                        setSelectedPartId(null);
+                        setSelectedFigureId(figure.elementId);
+                        goToPart(figure.elementId);
+                      }}
+                    >
+                      <span>{figure.caption.trim() || figure.assetName || 'Figure'}</span>
+                      <span className="muted">{PLACE_WORDS[figure.placement.place]}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
           <h3>Back matter</h3>
           <ul className="layout-parts">
             {parts
@@ -284,7 +319,15 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
 
         <div className="layout-stage">
           {laying ? (
-            <Spreads laying={laying} spread={spread} zoom={zoom} />
+            <Spreads
+              laying={laying}
+              spread={spread}
+              zoom={zoom}
+              onPickFigure={(figureId) => {
+                setSelectedPartId(null);
+                setSelectedFigureId(figureId);
+              }}
+            />
           ) : (
             <p className="muted empty-state">Setting the book…</p>
           )}
@@ -333,6 +376,13 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         </div>
 
         <aside className="layout-inspector">
+          {selectedFigure ? (
+            <FigureSection
+              figure={selectedFigure}
+              onPlace={(placement) => onUpdate((current) => placeBookFigure(current, selectedFigure.elementId, placement))}
+              onDone={() => setSelectedFigureId(null)}
+            />
+          ) : null}
           {selected ? (
             <PartFields file={file} part={selected} onUpdate={onUpdate} onDone={() => setSelectedPartId(null)} />
           ) : null}
@@ -390,7 +440,7 @@ function PartRow({ part, selected, onSelect }: { part: BookPart; selected: boole
 }
 
 /** The two facing pages, drawn from the same markup the PDF prints (§4). */
-function Spreads({ laying, spread, zoom }: { laying: Laying; spread: number; zoom: number }) {
+function Spreads({ laying, spread, zoom, onPickFigure }: { laying: Laying; spread: number; zoom: number; onPickFigure(figureId: string): void }) {
   const { pageWidthPx, pageHeightPx } = bookMetrics(laying.geometry);
   const blocks = useMemo(() => new Map(laying.blocks.map((block) => [block.id, block])), [laying.blocks]);
   const pages = laying.laid.pages;
@@ -406,6 +456,12 @@ function Spreads({ laying, spread, zoom }: { laying: Laying; spread: number; zoo
       <div
         key={key}
         className="layout-sheet"
+        onClick={(event) => {
+          // A figure on the page is tagged with its element id (§8); pressing
+          // it picks it for the inspector, whichever page it fell on.
+          const hit = (event.target as HTMLElement).closest('[data-figure]');
+          if (hit) onPickFigure(hit.getAttribute('data-figure') ?? '');
+        }}
         // The page's own markup, from the one builder the export reads too;
         // every string in it was escaped there.
         dangerouslySetInnerHTML={{ __html: renderBookPage(page, blocks, laying.context) }}
@@ -535,10 +591,89 @@ function TrimSection({ laying, write }: { laying: Laying; write(patch: Partial<B
   );
 }
 
+const PLACE_WORDS: Record<'measure' | 'left' | 'right', string> = {
+  measure: 'across the measure',
+  left: 'cut in at the left',
+  right: 'cut in at the right',
+};
+
+/** Where a figure sits in the book (§8): across the measure, or cut into the text at a side. */
+function FigureSection({
+  figure,
+  onPlace,
+  onDone,
+}: {
+  figure: BookFigure;
+  onPlace(placement: { place: 'measure' | 'left' | 'right'; span: number }): void;
+  onDone(): void;
+}) {
+  const { place, span } = figure.placement;
+  return (
+    <section className="layout-section layout-figure">
+      <h3>Figure</h3>
+      <p className="muted small">
+        {figure.caption.trim() || figure.assetName || 'A figure'}
+        {figure.chapterTitle ? ` · in ${figure.chapterTitle}` : ''}. The manuscript prints it across the measure; the
+        book puts it where you say.
+      </p>
+      <label className="field">
+        <span>Place</span>
+        <select aria-label="Figure place" value={place} onChange={(event) => onPlace({ place: event.target.value as 'measure' | 'left' | 'right', span })}>
+          <option value="measure">Across the measure</option>
+          <option value="left">Cut into the text, at the left</option>
+          <option value="right">Cut into the text, at the right</option>
+        </select>
+      </label>
+      {place !== 'measure' ? (
+        <label className="field">
+          <span>Width, {Math.round(span * 100)}% of the measure</span>
+          <input
+            type="range"
+            aria-label="Figure width"
+            min={Math.round(INSET_SPAN.min * 100)}
+            max={Math.round(INSET_SPAN.max * 100)}
+            step={5}
+            value={Math.round(span * 100)}
+            onChange={(event) => onPlace({ place, span: Number(event.target.value) / 100 })}
+          />
+        </label>
+      ) : null}
+      <p className="muted small">The text after it wraps beside the picture; a paragraph carrying one is never split across a page.</p>
+      <div className="layout-part-actions">
+        <button type="button" className="ghost small" onClick={onDone}>
+          Done
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function TypeSection({ settings, write }: { settings: BookSettings; write(patch: Partial<BookSettings>): void }) {
+  const preset = bookPresetOf(settings);
   return (
     <section className="layout-section">
       <h3>Type</h3>
+      {/* The three presets (§6): a whole style at once, and what is in force
+          is read back from the fields rather than stored, so a change by
+          hand reads as custom by itself. */}
+      <label className="field">
+        <span>Style</span>
+        <select
+          aria-label="Type style"
+          value={preset ?? 'custom'}
+          onChange={(event) => {
+            const chosen = event.target.value;
+            if (chosen === 'classic' || chosen === 'modern' || chosen === 'textbook') write(BOOK_PRESETS[chosen]);
+          }}
+        >
+          {BOOK_PRESET_NAMES.map((name) => (
+            <option key={name} value={name}>
+              {PRESET_INFO[name].name} — {PRESET_INFO[name].about}
+            </option>
+          ))}
+          {preset === null ? <option value="custom">Custom — set by hand below</option> : null}
+        </select>
+      </label>
       <label className="field">
         <span>Face</span>
         <select aria-label="Body face" value={settings.face} onChange={(event) => write({ face: event.target.value as BookSettings['face'] })}>

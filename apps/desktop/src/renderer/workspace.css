@@ -13862,3 +13862,7 @@ dialog.chapter-page-dialog {
 .ebook-info li { color: var(--muted); }
 .ebook-checklist { padding-left: 18px; }
 .ebook-done h4 { margin: 8px 0 4px; }
+
+/* ---- Layout: figures in the rail and the picked one on the page (addendum 20 §8) ---- */
+.layout-sheet [data-figure] { cursor: pointer; }
+.layout-figure input[type='range'] { width: 100%; }

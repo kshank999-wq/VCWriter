@@ -408,7 +408,15 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
         const first = opening !== null ? ` first${opening}` : '';
         opening = null;
         const align = block.align ? ` ${block.align}` : '';
-        current.html.push(`<p class="p${first}${align}">${renderSpans(block.spans, block.text)}</p>`);
+        let inset = '';
+        if (block.inset) {
+          const image = assetImage(block.inset.assetId, block.inset.caption || 'figure');
+          if (image) {
+            const cap = block.inset.caption.trim() ? `<span class="cap">${escapeXml(block.inset.caption.trim())}</span>` : '';
+            inset = `<span class="inset inset-${block.inset.place}" style="width:${Math.round(block.inset.span * 100)}%"><img src="../${image.href}" alt="${escapeXml(image.alt)}"/>${cap}</span>`;
+          }
+        }
+        current.html.push(`<p class="p${first}${align}">${inset}${renderSpans(block.spans, block.text)}</p>`);
         break;
       }
       case 'heading':
@@ -630,6 +638,10 @@ blockquote { margin: 1em 8%; }
 blockquote p { text-indent: 0; }
 p.break { text-align: center; margin: 1.5em 0; text-indent: 0; }
 figure { margin: 1.5em 0; text-align: center; page-break-inside: avoid; }
+.inset { float: left; margin: 0.2em 1em 0.3em 0; }
+.inset-right { float: right; margin: 0.2em 0 0.3em 1em; }
+.inset img { display: block; width: 100%; height: auto; }
+.inset .cap { display: block; font-size: 0.8em; text-align: center; margin-top: 0.3em; }
 figure img { max-width: 100%; height: auto; }
 figcaption { font-size: 0.85em; margin-top: 0.5em; }
 img.cover { max-width: 100%; max-height: 100%; margin: 0 auto; display: block; }

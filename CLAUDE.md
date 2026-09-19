@@ -1123,9 +1123,17 @@ push live; the build takes a minute or two.
   `addendum-20-layout.md` is **Layout**, the room where a book is set, from
   Ken's ask for something comparable to Vellum: *enter the trim size and it
   sets up margins, page numbers, headers, footers, spread balancing*, with
-  the pages in front of the story and behind it. **Stages 0–5 built**; §13
-  says what each does and what of 6 and 7 is there (plates yes, figures cut
-  into the text no; opening treatment and ornament yes, presets no). The fact
+  the pages in front of the story and behind it. **All eight stages built**;
+  §13 says what each does. Stage 6 is the **inset** — a figure cut into the
+  text at a side, `bookPlace`/`bookSpan` on the element that the manuscript
+  carries and never reads, and the rule that keeps the cutter innocent of
+  floats: **an inset rides in the paragraph it cuts into** (`inset` on the
+  block, unbreakable), so the renderer measures the wrapped paragraph whole;
+  the float declares the picture's proportions or it would measure as no
+  height before decoding; a figure on the spread is tagged with its id so
+  pressing it picks it. Stage 7 is `BOOK_PRESETS` — Classic is the defaults,
+  Modern and Textbook are patches — and **which is in force is read back**
+  (`bookPresetOf`), never stored, so a hand change reads as Custom. The fact
   that shaped it: **everything the program printed was a manuscript** — Courier
   on letter on a character grid — and a book is proportional type at a trim,
   which a character grid cannot paginate. So (§2) the manuscript printing is

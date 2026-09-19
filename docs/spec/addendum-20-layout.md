@@ -4,8 +4,8 @@
 what is in front of the story and behind it, and the words stay where they
 were written.*
 
-Status: stages 0–5 built, 18 September 2026; §13 says what each does and
-what of stages 6 and 7 is there.
+Status: all eight stages built, 19 September 2026; §13 says what each
+does.
 
 ## 0. Where it came from
 
@@ -353,12 +353,41 @@ names. This is the one document whose markup the renderer hands to the main
 process, because its pages exist only where the type was measured; the
 window it prints in still runs with scripts off and the sandbox on.
 
-### Stages 6 and 7 — what is there, and what is left
+### Stage 6 — graphics
 
-Of §8's three kinds of graphic, two are built: the chapter-page graphic
-(unchanged) and the **plate**, a part anchored before a chapter, with its
-picture from the library and its caption. A figure in the manuscript prints
-across the measure; its **placement** — cut into the text at the left or
-right — is not built yet. Of §6, the opening treatment (small capitals, a
-drop capital), the scene-break ornament, justification and hyphenation are
-built; the three **presets** are not, every field being settable on its own.
+All three of §8's kinds. The chapter-page graphic is unchanged, and the
+**plate** — a part anchored before a chapter, with its picture from the
+library and its caption — came with stage 2. The new work is the
+**inset**: a figure in the manuscript cut into the text at the left or the
+right, at a fraction of the measure. Its placement is `bookPlace` and
+`bookSpan` on the figure element's attributes, read by `figurePlacement`
+and written by `placeBookFigure`; the manuscript carries the two and never
+reads them, so it prints the figure across the measure as it always has,
+and *across the measure* clears them so an unplaced figure and one put back
+are the same element. **An inset rides in the paragraph it cuts into**:
+`bookBlocks` holds a placed figure until the next paragraph and puts it on
+that block as `inset`, marked unbreakable, so the renderer measures the
+wrapped paragraph with the float in place and `layPages` needs no rule for
+floats at all — which is what §8 promised. A placed figure with nothing to
+cut into stands across the measure. The float declares the picture's own
+proportions, because the paragraph is measured the moment it is set and a
+picture that has not decoded would measure as no height. The room lists the
+figures in the rail with where each sits, and a figure on the page is
+tagged with its id, so pressing it on the spread picks it for the
+inspector — place, and a width from a fifth to three fifths of the measure.
+The eBook floats it the same way.
+
+### Stage 7 — the presets
+
+`BOOK_PRESETS` in `book-layout.ts`: **Classic** (old-style serif, small
+capitals to open, a blank line between scenes, folios at the outer foot —
+which is the book's defaults, so a new book reads as Classic), **Modern**
+(transitional serif, a drop cap, chapters on either page, folios at the
+outer head) and **Textbook** (sans, ragged right, no hyphenation, folios at
+the centre foot). A preset is a patch and nothing else: **which one is in
+force is read back** by `bookPresetOf` from the fields rather than stored,
+so a field changed by hand makes the style *Custom* by itself, and the
+trim, being no part of a style, does not. The *Style* select at the head of
+the Type section applies one; every field stays settable under it. The
+opening treatment, the ornament, justification and hyphenation were stage
+5's and are unchanged.

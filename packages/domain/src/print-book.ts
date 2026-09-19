@@ -2,7 +2,7 @@ import type { BookSettings } from './entities/book.js';
 import type { InlineSpan } from './entities/inline.js';
 import { chapterPageStyleSchema, chapterStyleAttr, type ChapterPageStyle } from './chapter-style.js';
 import { faceStackOf, type BookGeometry } from './book-layout.js';
-import type { BookBlock } from './book-plan.js';
+import type { BookBlock, FigureInset } from './book-plan.js';
 import type { BookContentsRow, BookPage } from './book-pages.js';
 import { runsText, type BookIndex } from './book-index.js';
 import type { TitlePage } from './entities/title-page.js';
@@ -231,8 +231,8 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
   const style = blockStyle(block, context);
   switch (block.kind) {
     case 'paragraph': {
-      const cls = ['bk-p', opens ? `bk-opens bk-${context.settings.opening}` : ''].filter(Boolean).join(' ');
-      return `<p class="${cls}"${style}>${renderSpans(block.spans, block.text)}</p>`;
+      const cls = ['bk-p', opens ? `bk-opens bk-${context.settings.opening}` : '', block.inset ? 'bk-has-inset' : ''].filter(Boolean).join(' ');
+      return `<p class="${cls}"${style}>${block.inset ? insetMarkup(block.inset, context) : ''}${renderSpans(block.spans, block.text)}</p>`;
     }
     case 'heading':
       return `<p class="bk-heading"${style}>${renderSpans(block.spans, block.text)}</p>`;
@@ -248,7 +248,7 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
         ? `<img class="bk-figure-image" alt="${escapeHtml(picture.altText || block.caption || '')}" src="${escapeHtml(picture.data)}" />`
         : '<div class="bk-figure-missing">Picture missing</div>';
       const caption = (block.caption ?? '').trim() ? `<p class="bk-caption">${escapeHtml(block.caption ?? '')}</p>` : '';
-      return `<div class="bk-figure">${image}${caption}</div>`;
+      return `<div class="bk-figure" data-figure="${escapeHtml(block.id)}">${image}${caption}</div>`;
     }
     case 'chapter_opening':
     case 'part_opening':
@@ -289,6 +289,22 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
     default:
       return displayInner(block, context);
   }
+};
+
+/**
+ * A figure cut into a paragraph (§8): a float at one side, a fraction of the
+ * measure wide. The picture's own proportions are declared so the box is the
+ * right height before the picture has decoded — the paragraph is measured
+ * the moment it is set, and a float of no height would be measured as none.
+ */
+const insetMarkup = (inset: FigureInset, context: BookRenderContext): string => {
+  const picture = inset.assetId ? context.pictures.get(inset.assetId) : undefined;
+  const ratio = picture && picture.width > 0 && picture.height > 0 ? `aspect-ratio:${picture.width} / ${picture.height};` : '';
+  const image = picture
+    ? `<img class="bk-inset-image" alt="${escapeHtml(picture.altText || inset.caption || '')}" style="${ratio}" src="${escapeHtml(picture.data)}" />`
+    : '<span class="bk-figure-missing">Picture missing</span>';
+  const caption = inset.caption.trim() ? `<span class="bk-inset-caption">${escapeHtml(inset.caption)}</span>` : '';
+  return `<span class="bk-inset bk-inset-${inset.place}" data-figure="${escapeHtml(inset.figureId)}" style="width:${Math.round(inset.span * 100)}%">${image}${caption}</span>`;
 };
 
 /** The text block's class, and the measuring box's: the paragraph style rides on it. */
@@ -365,6 +381,12 @@ export const BOOK_STYLES = `
   .bk-quote { margin: 0; padding: 0 2em; text-align: var(--bk-align); }
   .bk-break { margin: 0; height: calc(var(--bk-lead) * 3); line-height: calc(var(--bk-lead) * 3); text-align: center; letter-spacing: 0.5em; }
   .bk-figure { margin: 0; padding-bottom: var(--bk-lead); text-align: center; }
+  .bk-p.bk-has-inset { display: flow-root; }
+  .bk-inset { float: left; margin: 0.15em 1em 0.2em 0; }
+  .bk-inset.bk-inset-right { float: right; margin: 0.15em 0 0.2em 1em; }
+  .bk-inset-image { display: block; width: 100%; height: auto; }
+  .bk-inset-caption { display: block; font-size: 0.8em; line-height: 1.25; text-align: center; margin-top: 0.3em; }
+  .bk-inset .bk-figure-missing { display: flex; height: calc(var(--bk-lead) * 5); }
   .bk-figure-image, .bk-plate-image { display: block; width: 100%; height: auto; }
   .bk-figure-missing, .bk-plate-missing { height: calc(var(--bk-lead) * 8); border: 1px dashed #999; color: #777; display: flex; align-items: center; justify-content: center; font-size: 0.85em; }
   .bk-caption { margin: 0; padding-top: calc(var(--bk-lead) * 0.5); font-size: 0.85em; text-align: center; font-style: italic; }

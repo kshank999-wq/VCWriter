@@ -114,6 +114,86 @@ export const FACE_NOTES: Record<BookFace, string> = {
 
 export const faceStackOf = (face: BookFace): string => FACE_STACKS[face] ?? FACE_STACKS.old_style;
 
+/**
+ * The three presets (§6): a whole style set at once, every field changeable
+ * after. A preset is a patch, nothing more — which one is in force is read
+ * back from the settings (`bookPresetOf`) rather than stored, so a field
+ * changed by hand makes the style *custom* by itself.
+ */
+export type BookPreset = 'classic' | 'modern' | 'textbook';
+export const BOOK_PRESET_NAMES: readonly BookPreset[] = ['classic', 'modern', 'textbook'];
+
+export type PresetFields = Pick<
+  BookSettings,
+  'face' | 'size' | 'leading' | 'justify' | 'hyphenate' | 'opening' | 'ornament' | 'chaptersOpenRecto' | 'runningHeads' | 'folio' | 'folioOnOpening'
+>;
+
+export const BOOK_PRESETS: Record<BookPreset, PresetFields> = {
+  classic: {
+    face: 'old_style',
+    size: 11,
+    leading: null,
+    justify: true,
+    hyphenate: true,
+    opening: 'small_caps',
+    // A blank line between scenes, which is what most trade fiction does;
+    // it is also the book's default, so a new book reads as Classic.
+    ornament: '',
+    chaptersOpenRecto: true,
+    runningHeads: { verso: 'author', recto: 'chapter' },
+    folio: 'foot_outside',
+    folioOnOpening: true,
+  },
+  modern: {
+    face: 'transitional',
+    size: 10.5,
+    leading: null,
+    justify: true,
+    hyphenate: true,
+    opening: 'drop_cap',
+    ornament: '',
+    chaptersOpenRecto: false,
+    runningHeads: { verso: 'title', recto: 'chapter' },
+    folio: 'head_outside',
+    folioOnOpening: false,
+  },
+  textbook: {
+    face: 'sans',
+    size: 10,
+    leading: null,
+    justify: false,
+    hyphenate: false,
+    opening: 'none',
+    ornament: '',
+    chaptersOpenRecto: true,
+    runningHeads: { verso: 'title', recto: 'chapter' },
+    folio: 'foot_centre',
+    folioOnOpening: true,
+  },
+};
+
+export const PRESET_INFO: Record<BookPreset, { name: string; about: string }> = {
+  classic: { name: 'Classic', about: 'old-style serif, small capitals to open, a blank line between scenes, folios at the outer foot' },
+  modern: { name: 'Modern', about: 'transitional serif, a drop cap, chapters on either page, folios at the outer head' },
+  textbook: { name: 'Textbook', about: 'sans serif, ragged right, no hyphenation, folios at the centre foot' },
+};
+
+/** Which preset the settings match whole, or null where a field was changed by hand. */
+export const bookPresetOf = (settings: BookSettings): BookPreset | null => {
+  for (const preset of BOOK_PRESET_NAMES) {
+    const fields = BOOK_PRESETS[preset];
+    const same = (Object.keys(fields) as (keyof PresetFields)[]).every((key) =>
+      key === 'runningHeads'
+        ? settings.runningHeads.verso === fields.runningHeads.verso && settings.runningHeads.recto === fields.runningHeads.recto
+        : settings[key] === fields[key],
+    );
+    if (same) return preset;
+  }
+  return null;
+};
+
+export const applyBookPreset = (file: ProjectFile, preset: BookPreset): ProjectFile => setBookSettings(file, BOOK_PRESETS[preset]);
+
 export { BOOK_FACES };
 
 // ---------------------------------------------------------------- geometry

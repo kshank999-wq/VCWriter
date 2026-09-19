@@ -225,6 +225,12 @@ export interface BookBlock {
   /** The part this block belongs to, where it belongs to one. */
   partId?: string;
   /**
+   * A figure cut into this paragraph at the left or the right (§8), at a
+   * fraction of the measure. The figure is the manuscript's; where it sits
+   * in the book is read off its element and honoured here alone.
+   */
+  inset?: FigureInset;
+  /**
    * How the document this came from set it (addendum 21 §3): a face, a size
    * in points, an alignment. Read by the printer only under the *As imported*
    * face, except the alignment, which is a fact about the words.
@@ -365,6 +371,105 @@ const setting = (element: ManuscriptElement): Pick<BookBlock, 'face' | 'size' | 
   return out;
 };
 
+/** Where a figure sits in the book: across the measure, or cut into the text at a side. */
+export type FigurePlace = 'measure' | 'left' | 'right';
+
+export interface BookFigurePlacement {
+  place: FigurePlace;
+  /** The fraction of the measure an inset takes, 0.2 to 0.6. */
+  span: number;
+}
+
+export interface FigureInset extends BookFigurePlacement {
+  place: 'left' | 'right';
+  /** The figure element's id, for finding it on the page and in the rail. */
+  figureId: string;
+  assetId: string | null;
+  caption: string;
+}
+
+export const INSET_SPAN = { min: 0.2, max: 0.6, default: 0.4 } as const;
+
+/**
+ * A figure's placement, read off its element (§8). The manuscript prints
+ * every figure across the measure and never looks at this; only the book
+ * does. Absent means across the measure.
+ */
+export const figurePlacement = (element: ManuscriptElement): BookFigurePlacement => {
+  const place = element.attributes.bookPlace;
+  const span = element.attributes.bookSpan;
+  const chosen: FigurePlace = place === 'left' || place === 'right' ? place : 'measure';
+  const fraction = typeof span === 'number' && Number.isFinite(span) ? Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, span)) : INSET_SPAN.default;
+  return { place: chosen, span: fraction };
+};
+
+/** A figure in the book, for the rail: where it is and what it shows. */
+export interface BookFigure {
+  elementId: string;
+  beatId: string;
+  caption: string;
+  assetId: string | null;
+  assetName: string;
+  placement: BookFigurePlacement;
+  chapterTitle: string;
+}
+
+export const bookFigures = (file: ProjectFile): BookFigure[] => {
+  const names = new Map(file.assets.map((asset) => [asset.id as string, asset.name]));
+  const divisions = new Map<string, PlacedMarker>(contentsDivisions(file).map((placed) => [placed.marker.unitId as string, placed]));
+  const out: BookFigure[] = [];
+  let chapterTitle = file.project.title;
+  for (const unit of unitsInStoryOrder(file)) {
+    if (!unit.inScript) continue;
+    const placed = divisions.get(unit.id as string);
+    if (placed) chapterTitle = placed.marker.title.trim() || placed.label || chapterTitle;
+    for (const beat of beatsInScript(file, unit.id)) {
+      for (const element of beat.manuscript.elements) {
+        if (element.type !== 'figure') continue;
+        const assetId = typeof element.attributes.assetId === 'string' ? element.attributes.assetId : null;
+        out.push({
+          elementId: element.id as string,
+          beatId: beat.id as string,
+          caption: element.text,
+          assetId,
+          assetName: (assetId && names.get(assetId)) || '',
+          placement: figurePlacement(element),
+          chapterTitle,
+        });
+      }
+    }
+  }
+  return out;
+};
+
+/**
+ * Place a figure in the book. Written on the element's attributes, which
+ * the manuscript carries and never reads; *across the measure* clears them,
+ * so an unplaced figure and one put back read the same.
+ */
+export const placeBookFigure = (file: ProjectFile, elementId: string, placement: BookFigurePlacement): ProjectFile => ({
+  ...file,
+  beats: file.beats.map((beat) =>
+    beat.manuscript.elements.some((element) => element.id === elementId)
+      ? {
+          ...beat,
+          manuscript: {
+            ...beat.manuscript,
+            elements: beat.manuscript.elements.map((element) => {
+              if (element.id !== elementId) return element;
+              const { bookPlace: _place, bookSpan: _span, ...rest } = element.attributes;
+              const attributes =
+                placement.place === 'measure'
+                  ? rest
+                  : { ...rest, bookPlace: placement.place, bookSpan: Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, placement.span)) };
+              return { ...element, attributes };
+            }),
+          },
+        }
+      : beat,
+  ),
+});
+
 const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensChapter: boolean): BookBlock | null => {
   const id = element.id as string;
   const set = setting(element);
@@ -420,10 +525,18 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   );
   let chapterTitle = bookTitle;
   let opensChapter = false;
+  let pending: BookBlock | null = null;
+  const elementById = new Map<string, ManuscriptElement>(
+    file.beats.flatMap((beat) => beat.manuscript.elements.map((element) => [element.id as string, element] as const)),
+  );
   for (const unit of unitsInStoryOrder(file)) {
     if (!unit.inScript) continue;
     const placed = divisions.get(unit.id as string);
     if (placed) {
+      if (pending) {
+        out.push(pending);
+        pending = null;
+      }
       for (const plate of platesBefore.get(placed.marker.id as string) ?? []) {
         out.push(...partBlocks(plate, 'arabic', chapterTitle));
       }
@@ -452,11 +565,40 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
         if (element.text.trim().length === 0 && element.type !== 'scene_break' && element.type !== 'figure') continue;
         const made = elementBlock(element, chapterTitle, opensChapter && element.type === 'paragraph');
         if (!made) continue;
+        // A figure cut into the text (§8) waits for the paragraph it cuts
+        // into, and rides in that block: the renderer measures the wrapped
+        // paragraph with the float in place, so the cutter needs no rule
+        // for it. With nothing to cut into, it stands across the measure.
+        if (made.kind === 'figure') {
+          const placement = figurePlacement(element);
+          if (placement.place !== 'measure') {
+            if (pending) out.push(pending);
+            pending = made;
+            continue;
+          }
+        }
+        if (pending) {
+          if (made.kind === 'paragraph') {
+            const placement = figurePlacement(elementById.get(pending.id) as ManuscriptElement);
+            made.inset = {
+              place: placement.place as 'left' | 'right',
+              span: placement.span,
+              figureId: pending.id,
+              assetId: pending.assetId ?? null,
+              caption: pending.caption ?? '',
+            };
+            made.unbreakable = true;
+          } else {
+            out.push(pending);
+          }
+          pending = null;
+        }
         if (made.kind === 'paragraph') opensChapter = false;
         out.push(made);
       }
     }
   }
+  if (pending) out.push(pending);
 
   for (const part of backParts(parts)) out.push(...partBlocks(part, 'arabic', bookTitle));
   return out;
