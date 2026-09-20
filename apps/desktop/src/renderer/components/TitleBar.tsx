@@ -48,7 +48,6 @@ interface TitleBarProps {
   onSync(): void;
   saveState: string;
   onSaveNow(): void;
-  onCloseProject(): void;
   onPreferences(): void;
 }
 
@@ -82,7 +81,6 @@ export function TitleBar({
   onSync,
   saveState,
   onSaveNow,
-  onCloseProject,
   onPreferences,
 }: TitleBarProps) {
   // Beats are named by their own window's title, and there can be any number
@@ -202,9 +200,6 @@ export function TitleBar({
         <span className={`save-state ${saveState}`}>{SAVE_LABEL[saveState]}</span>
         <button type="button" className="ghost" onClick={onSaveNow}>
           Save now
-        </button>
-        <button type="button" className="ghost" onClick={onCloseProject}>
-          Close
         </button>
         <button
           type="button"

@@ -13,7 +13,7 @@ import { CHAPTER_HEAD, bareCue, type ImportedScript } from './importing.js';
 import type { ProjectFile } from './project-file.js';
 import { defaultUnitKind } from './project-file.js';
 import { defaultMarkerKind } from './markers.js';
-import { isProseFormat } from './formats.js';
+import { isCollection, isProseFormat } from './formats.js';
 import type { ProjectFormat } from './entities/project.js';
 import type { Beat, StoryMarker, StructuralUnit } from './entities/structure.js';
 import type { Character, CharacterCategory } from './entities/character.js';
@@ -59,6 +59,12 @@ export interface ImportOptions {
   keepLocations?: boolean;
   /** A character with at least this many speeches is a main character. */
   mainAtLeast?: number;
+  /**
+   * On the short-story format (addendum 22 §2): `one` reads the document as a
+   * single story, its headings dividing it into sections; `many` makes a
+   * story of each chapter heading, a collection. Ignored elsewhere.
+   */
+  stories?: 'one' | 'many';
 }
 
 export interface ImportResult {
@@ -125,6 +131,15 @@ export interface MaterialiseOptions {
   after: string | null;
   /** "Chapter 3" / "Sc. 3" on each unit — for a new project, never for a story added to one. */
   sequenceLabels: boolean;
+  /**
+   * What a prose document's headings become (addendum 22 §2). `markers`, the
+   * default, makes each one a chapter — or a story, in a collection.
+   * `sections` keeps the document as **one** story: the headings still divide
+   * it into sections, the first is the story's own title and is not repeated,
+   * and each later one stays in the manuscript as a heading, so no words are
+   * lost to the choice.
+   */
+  headings?: 'markers' | 'sections';
 }
 
 export interface Materialised {
@@ -186,7 +201,15 @@ export const materialiseScenes = (script: ImportedScript, options: MaterialiseOp
 
     const elements: ManuscriptElement[] = [];
     if (scene.heading.trim().length > 0) {
-      if (prose) {
+      if (prose && options.headings === 'sections') {
+        // One story: the first heading is its title, said on the marker the
+        // caller places; every later one stays a heading in the words.
+        if (index > 0) {
+          elements.push(
+            manuscriptElementSchema.parse({ id: newId<ManuscriptElementId>(), type: 'heading', text: chapterName(scene.heading) || scene.heading.trim() }),
+          );
+        }
+      } else if (prose) {
         // A book's chapter heading is a story marker, not a line of the
         // manuscript (addendum 19 §1): the marker carries the chapter page
         // and the contents page reads it. Its number is derived, so a
@@ -331,6 +354,7 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
   });
 
   // -------------------------------------------------------- scenes & beats
+  const oneStory = isCollection(format) && options.stories !== 'many';
   const made = materialiseScenes(script, {
     projectId,
     trackId,
@@ -339,8 +363,27 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
     byName,
     after: null,
     sequenceLabels: true,
+    ...(oneStory ? { headings: 'sections' as const } : {}),
   });
-  const { units, beats, markers, assets, words } = made;
+  const { units, beats, assets, words } = made;
+  // A single story is one marker over all its sections, named as the story
+  // (addendum 22 §2): the document's first heading where it had one, else
+  // the title. A collection has the marker per heading the builder made.
+  const firstHeading = chapterName(script.scenes.find((scene) => scene.heading.trim().length > 0)?.heading ?? '');
+  const markers: StoryMarker[] =
+    oneStory && units[0]
+      ? [
+          storyMarkerSchema.parse({
+            id: newId<StoryMarkerId>(),
+            projectId,
+            unitId: units[0].id,
+            kind: 'chapter',
+            title: firstHeading || title,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          }),
+        ]
+      : made.markers;
 
   // ---------------------------------------------------------- the locations
   const locationsFolder = base.researchCategories.find((category) => category.systemKey === 'locations');

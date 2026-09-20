@@ -6,7 +6,7 @@ import { unitsInStoryOrder } from './selectors.js';
 import { placedMarkers, type PlacedMarker } from './markers.js';
 import { chapterSpan } from './outline-binding.js';
 import { isCollection } from './formats.js';
-import { materialiseScenes } from './import-build.js';
+import { chapterName, materialiseScenes } from './import-build.js';
 import type { ProjectFile } from './project-file.js';
 import type { ImportedScript } from './importing.js';
 import type { StoryMarker, StructuralUnit } from './entities/structure.js';
@@ -106,11 +106,15 @@ export const appendImportedStory = (
     byName,
     after: last?.orderKey ?? null,
     sequenceLabels: false,
+    // One story: its first heading is its title, and every later heading
+    // stays in the words as a heading rather than starting a story.
+    headings: 'sections',
   });
   const first = made.units[0];
   if (!first) return null;
 
-  const title = (options.title ?? script.title ?? '').trim() || 'Untitled story';
+  const firstHeading = chapterName(script.scenes.find((scene) => scene.heading.trim().length > 0)?.heading ?? '');
+  const title = (options.title ?? script.title ?? '').trim() || firstHeading || 'Untitled story';
   const marker: StoryMarker = storyMarkerSchema.parse({
     id: newId<StoryMarkerId>(),
     projectId: file.project.id,

@@ -3,6 +3,7 @@ import {
   addUnit,
   appendImportedStory,
   beginStory,
+  buildProjectFromImport,
   contentsDivisions,
   createProjectFile,
   defaultMarkerNumbering,
@@ -152,5 +153,47 @@ describe('a section head in a Word document', () => {
     expect(opensChapter({ ...base, plain: '3.', text: '3.' })).toBe(true);
     expect(opensChapter({ ...base, plain: 'II', text: 'II', align: 'left' })).toBe(false);
     expect(opensChapter({ ...base, plain: 'I am here.', text: 'I am here.' })).toBe(false);
+  });
+});
+
+describe('importing one story or many (addendum 22 §2)', () => {
+  it('reads a document as one story by default: one marker named by its first heading, the rest kept as headings in the words', () => {
+    const script = story('', ['Rain on the water.', 'Nobody came.', 'Then the lamp.'], ['The Road', 'Rain', 'Night']);
+    const built = buildProjectFromImport(script, { format: 'short_story', title: 'harbour.docx' });
+    const stories = storiesOf(built.file);
+    expect(stories).toHaveLength(1);
+    expect(stories[0]?.placed.marker.title).toBe('The Road');
+    expect(stories[0]?.sections).toHaveLength(3);
+    // The first heading is the story's title and is not repeated; the later ones stay as headings.
+    const texts = built.file.beats.flatMap((beat) => beat.manuscript.elements.map((element) => `${element.type}:${element.text}`));
+    expect(texts).not.toContain('heading:The Road');
+    expect(texts).toContain('heading:Rain');
+    expect(texts).toContain('heading:Night');
+    expect(texts).toContain('paragraph:Nobody came.');
+  });
+
+  it('reads a document as a collection when asked: a story per heading, nothing kept as a heading', () => {
+    const script = story('Tales', ['Rain on the water.', 'Nobody came.', 'Then the lamp.'], ['The Road', 'Rain', 'Night']);
+    const built = buildProjectFromImport(script, { format: 'short_story', stories: 'many' });
+    expect(storiesOf(built.file).map((one) => one.placed.marker.title)).toEqual(['The Road', 'Rain', 'Night']);
+    const texts = built.file.beats.flatMap((beat) => beat.manuscript.elements.map((element) => element.type));
+    expect(texts).not.toContain('heading');
+  });
+
+  it('names a story with no heading after the project, and leaves a novel alone', () => {
+    const plain = buildProjectFromImport(story('', ['Words.']), { format: 'short_story', title: 'The Lamp' });
+    expect(storiesOf(plain.file).map((one) => one.placed.marker.title)).toEqual(['The Lamp']);
+    const novel = buildProjectFromImport(story('N', ['a', 'b'], ['Chapter One: Dawn', 'Chapter Two']), { format: 'novel', stories: 'one' });
+    expect(novel.file.markers.map((marker) => marker.title)).toEqual(['Dawn', '']);
+  });
+
+  it('keeps an appended story’s later headings in its words', () => {
+    let file = beginStory(createProjectFile({ title: 'Tales', format: 'short_story' }), { title: 'The Road' }).file;
+    const added = appendImportedStory(file, story('', ['One.', 'Two.'], ['The Harbour', 'Later']));
+    file = added!.file;
+    expect(storiesOf(file).map((one) => one.placed.marker.title)).toEqual(['The Road', 'The Harbour']);
+    const texts = file.beats.flatMap((beat) => beat.manuscript.elements.map((element) => `${element.type}:${element.text}`));
+    expect(texts).toContain('heading:Later');
+    expect(texts).not.toContain('heading:The Harbour');
   });
 });

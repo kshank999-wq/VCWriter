@@ -144,7 +144,6 @@ describe('the title bar', () => {
         onSync={() => undefined}
         saveState="saved"
         onSaveNow={() => undefined}
-        onCloseProject={() => undefined}
         onPreferences={() => undefined}
         {...extra}
       />,

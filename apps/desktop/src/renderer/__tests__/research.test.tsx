@@ -65,7 +65,6 @@ describe('the research window', () => {
         onSync={() => undefined}
         saveState="saved"
         onSaveNow={() => undefined}
-        onCloseProject={() => undefined}
         onPreferences={() => undefined}
       />,
     );

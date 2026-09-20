@@ -104,7 +104,13 @@ section's own controls belong inside it.
 - The timeline can be hidden with `Ctrl/Cmd+Shift+L` to give the viewport
   the height, and shown again the same way.
 - Focus mode (`Ctrl/Cmd+Shift+F`, `Escape` to leave) keeps only the Script,
-  full width, and dims the title bar. Unchanged from §6.
+  full width, and dims the title bar. Unchanged from §6. A **Leave focus · Esc** button sits at the top right while it is on,
+  because the title bar is dimmed and Escape is a thing a writer has to
+  know; and focus is **dropped** whenever the writer goes anywhere else — a
+  room over the page, another page — since a room that closed onto the
+  focus view again left no way out. The title bar's *Close* is gone: it
+  closed the project, which is *File ▸ Close project*, and it sat where a
+  writer looking for a way out of a view would press it.
 - Below 1100px of window width the inspector hides itself.
 
 The other pages (Preview, Editors, …) are unchanged and fill the area

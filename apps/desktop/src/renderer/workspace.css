@@ -2733,6 +2733,23 @@ button.page.selected {
 
 /* --------------------------------------------------------------- focus mode */
 
+/* The one way out that is in plain sight while the title bar is dimmed. */
+.focus-leave {
+  position: fixed;
+  top: 44px;
+  right: 16px;
+  z-index: 30;
+  font-size: 11.5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line, #444);
+  background: var(--panel, #1f2430);
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0.7;
+}
+.focus-leave:hover { opacity: 1; color: var(--gold); border-color: var(--gold); }
+
 .workspace.focus-mode .titlebar {
   opacity: 0.25;
   transition: opacity 120ms ease;
@@ -13862,6 +13879,13 @@ dialog.chapter-page-dialog {
 .ebook-info li { color: var(--muted); }
 .ebook-checklist { padding-left: 18px; }
 .ebook-done h4 { margin: 8px 0 4px; }
+.import-stories { border: 1px solid var(--line, #444); border-radius: 6px; padding: 6px 10px; margin: 6px 0 10px; display: flex; flex-direction: column; gap: 4px; }
+.import-stories legend { padding: 0 4px; font-size: 12px; color: var(--muted); }
+.import-stories label { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; }
+.layout-story-row { display: flex; flex-direction: column; }
+.layout-story-actions { display: flex; gap: 4px; padding: 0 0 4px 10px; }
+.layout-story-actions .small { font-size: 10.5px; padding: 1px 6px; color: var(--muted); }
+.layout-story-actions .small:hover { color: var(--gold); }
 .ebook-views { display: inline-flex; gap: 4px; margin-left: 12px; }
 .ebook-views .tool.active { background: var(--gold); color: var(--ink, #111); }
 .ebook-layout { border: 1px solid var(--line, #444); border-radius: 6px; padding: 6px 10px; margin: 6px 0 10px; display: flex; flex-direction: column; gap: 4px; }

@@ -37,6 +37,8 @@ import { ChapterLeaf } from './Paper';
 interface ChapterPageDialogProps {
   file: ProjectFile;
   open: boolean;
+  /** The chapter to open on, when the caller has one in hand (the Layout rail, a story's row). */
+  initialMarkerId?: string | null;
   onClose(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
 }
@@ -75,11 +77,11 @@ interface ChapterPageDialogProps {
  * leaf is a look being tuned against the sheet beside it, and a page that only
  * updated on a button would make that impossible to judge.
  */
-export function ChapterPageDialog({ file, open, onClose, onUpdate }: ChapterPageDialogProps) {
+export function ChapterPageDialog({ file, open, initialMarkerId = null, onClose, onUpdate }: ChapterPageDialogProps) {
   const dialog = useModal(open);
   return (
     <dialog ref={dialog} className="track-dialog chapter-page-dialog" aria-label="Chapter page" onClose={onClose}>
-      {open ? <Body file={file} onClose={onClose} onUpdate={onUpdate} /> : null}
+      {open ? <Body file={file} initialMarkerId={initialMarkerId} onClose={onClose} onUpdate={onUpdate} /> : null}
     </dialog>
   );
 }
@@ -98,15 +100,21 @@ const FACE_WORDS: Record<TypeFace, string> = {
 
 function Body({
   file,
+  initialMarkerId,
   onClose,
   onUpdate,
 }: {
   file: ProjectFile;
+  initialMarkerId: string | null;
   onClose(): void;
   onUpdate: ChapterPageDialogProps['onUpdate'];
 }) {
   const chapters = useMemo(() => chapterChoices(file), [file]);
-  const [chosen, setChosen] = useState<StoryMarkerId | null>(chapters[0]?.markerId ?? null);
+  // The body mounts afresh each time the dialog opens, so the chapter asked
+  // for is the first one shown; a chapter nobody asked for is the first.
+  const [chosen, setChosen] = useState<StoryMarkerId | null>(
+    (initialMarkerId && chapters.some((one) => one.markerId === initialMarkerId) ? (initialMarkerId as StoryMarkerId) : null) ?? chapters[0]?.markerId ?? null,
+  );
   const [imageError, setImageError] = useState<string | null>(null);
   const picker = useRef<HTMLInputElement>(null);
 

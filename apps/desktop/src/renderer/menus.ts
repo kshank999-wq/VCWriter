@@ -221,7 +221,13 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       ...(format !== null && isProseFormat(format)
         ? [{ command: 'window.layout' as CommandId, label: 'Layout in its own window', checkable: true }]
         : []),
-      { command: 'window.episodes', label: 'Episodes', checkable: true },
+      // The rail down the right: a series' episodes, a collection's stories
+      // (addendum 22 §3); absent on a format with neither.
+      ...(format === 'series'
+        ? [{ command: 'window.episodes' as CommandId, label: 'Episodes', checkable: true }]
+        : format !== null && isCollection(format)
+          ? [{ command: 'window.episodes' as CommandId, label: 'Stories', checkable: true }]
+          : []),
       { command: 'window.beat', label: 'This beat in its own window' },
       null,
       { command: 'window.bringAllBack', label: 'Bring everything back' },

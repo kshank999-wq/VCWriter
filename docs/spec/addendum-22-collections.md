@@ -58,6 +58,18 @@ project itself is a **Collection** in the noun table, whether it holds one
 story or twenty, and the format is offered as *Short stories and
 collections*.
 
+**A document cannot say which it is.** Ken imported a short story and got
+a story per heading: the builder made a chapter-kind marker of every
+heading, which on a collection is a story each, and a story with three
+parts became three stories. The import dialog now asks, on this format
+alone, *what the document is*: **one story** (the default) — its headings
+divide it into sections, the first heading names the story and is not
+repeated, and every later heading stays in the words as a heading, so no
+words are lost to the choice — or **a collection**, a story per chapter
+heading, with the count said. `materialiseScenes` carries it as
+`headings: 'sections'`, and `appendImportedStory` reads the same way now:
+it used to drop a document's later headings on the floor.
+
 ## 3. Writing a story
 
 The timeline's *+ Marker* is *+ Story* on a collection, and it does one
@@ -67,6 +79,16 @@ selected section would divide the story before it, and a story is not a
 division of its neighbour. `beginStory` adds the section and the marker
 together and hands back both ids, so the new section is selected and
 writing can start.
+
+**The stories down the right.** A collection's stories are what a series'
+episodes are — the divisions a writer moves between and adds to — so a
+collection has the episode rail's shape with a story in each row
+(`StoryRail.tsx`, *Window ▸ Stories*): its number where the collection
+numbers, its name, its sections and words. One click goes to it; two open
+**its own page**, the leaf the story opens on (the chapter page, opened on
+that story), because a story in a collection has a page of its own the way
+an episode has a title page. **+ New story** at the foot is `beginStory`,
+as many as the writer wants.
 
 ## 4. Adding stories from documents
 

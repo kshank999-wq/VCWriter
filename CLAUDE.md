@@ -1156,7 +1156,15 @@ push live; the build takes a minute or two.
   leaf only where its page carries a device, a summary or an epigraph
   (`opensOnLeaf`, a reading); a chapter-page face of *manuscript* means the
   book's face in the book. Room wiring is the usual five places plus a
-  **Layout** title-bar button, absent rather than greyed off prose.
+  **Layout** title-bar button, absent rather than greyed off prose. The rail
+  (§9) now dresses the book **between the chapters**, which Ken found
+  unintuitive: each chapter's row carries *+ Picture facing* (a plate before
+  it, selected so the inspector asks for the picture) and *Chapter page…*
+  (the dialog opened on that chapter, `initialMarkerId`), and a plate that
+  faces a chapter is listed where it falls. Focus mode got a **Leave focus ·
+  Esc** button and is dropped when a room opens or the page changes, and
+  the title bar's *Close* (which closed the project) is gone; *File ▸ Close
+  project* remains.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves
@@ -1204,7 +1212,15 @@ push live; the build takes a minute or two.
   **nothing** before its number (a numbered collection prints *3*, never
   *Story 3*), and a collection's default numbering is **none**, so the page
   carries the title once — which needed the empty label a marker with
-  neither noun nor number now has, rather than borrowing its title. *+ Story*
+  neither noun nor number now has, rather than borrowing its title. **The
+  import asks what a document is** (§2), on this format alone: *one story*
+  (the default — headings divide it into sections, the first names it, the
+  rest stay headings in the words) or *a collection* (a story per heading),
+  because Ken imported one story and got three; `appendImportedStory` reads
+  the same way and no longer drops later headings. **The stories are down
+  the right** (§3, `StoryRail.tsx`, *Window ▸ Stories*), the episode rail's
+  shape with a story per row — one click goes to it, two open its own page,
+  *+ New story* at the foot. *+ Story*
   on the bar starts a story **on a section of its own at the end** (§3), a
   story not being a division of its neighbour. *File ▸ Add stories to the
   collection…* (§4, `AddStoriesDialog.tsx`) takes several files, **one story

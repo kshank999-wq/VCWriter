@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { EbookExportDialog } from './EbookExportDialog';
 import {
   ADDABLE_KINDS,
@@ -64,8 +64,8 @@ interface LayoutWindowProps {
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   /** Take the room to a window of its own (addendum 02 §8). Absent in one. */
   onPopOut?(): void;
-  /** File ▸ Chapter page…, where the chapter opening is set. Absent in a window of its own. */
-  onOpenChapterPage?(): void;
+  /** File ▸ Chapter page…, opened on the chapter asked for. Absent in a window of its own. */
+  onOpenChapterPage?(markerId: string): void;
 }
 
 const FOLIO_WORDS: Record<(typeof FOLIO_PLACES)[number], string> = {
@@ -96,6 +96,15 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const parts = useMemo(() => partsOf(file), [file]);
   const selected = parts.find((part) => part.id === selectedPartId) ?? null;
   const divisions = useMemo(() => contentsDivisions(file), [file]);
+  /** The plates the writer put before each chapter, by the chapter (§9). */
+  const platesBefore = useMemo(() => {
+    const map = new Map<string, BookPart[]>();
+    for (const part of parts) {
+      if (part.kind !== 'plate' || !part.beforeMarkerId) continue;
+      map.set(part.beforeMarkerId, [...(map.get(part.beforeMarkerId) ?? []), part]);
+    }
+    return map;
+  }, [parts]);
 
   const pages = laying?.laid.pages ?? [];
   const spreadCount = Math.max(1, Math.ceil((pages.length + 1) / 2));
@@ -162,6 +171,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
 
   const chapterCount = divisions.length;
   const figures = bookFigures(file);
+  /** A collection's divisions are stories (addendum 22); the rail says so. */
+  const noun = isCollection(file.project.format) ? 'Story' : 'Chapter';
   const selectedFigure = figures.find((figure) => figure.elementId === selectedFigureId) ?? null;
 
   return (
@@ -232,23 +243,66 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               <li className="muted small">No chapters yet: the story runs as one.</li>
             ) : (
               divisions.map((placed) => {
-                const at = laying?.laid.where.get(placed.marker.id as string);
+                const id = placed.marker.id as string;
+                const at = laying?.laid.where.get(id);
+                const facing = platesBefore.get(id) ?? [];
                 return (
-                  <li key={placed.marker.id as string}>
-                    <button
-                      type="button"
-                      className="ghost layout-part"
-                      title="A chapter of the manuscript. Its order is the story's, set in the Outliner and on the tracks."
-                      onClick={() => {
-                        setSelectedPartId(null);
-                        goToPart(placed.marker.id as string);
-                      }}
-                    >
-                      <span>{placed.label}</span>
-                      <span className="muted">{placed.marker.title.trim() || ''}</span>
-                      <span className="muted layout-page-no">{at && at.numbering === 'arabic' ? at.number : ''}</span>
-                    </button>
-                  </li>
+                  <Fragment key={id}>
+                    {/* A picture on the page facing this chapter: a plate the
+                        writer put before it, listed where it falls (§9). */}
+                    {facing.map((part) => (
+                      <PartRow
+                        key={part.id}
+                        part={part}
+                        selected={part.id === selectedPartId}
+                        onSelect={() => {
+                          setSelectedPartId(part.id);
+                          goToPart(part.id);
+                        }}
+                      />
+                    ))}
+                    <li className="layout-story-row">
+                      <button
+                        type="button"
+                        className="ghost layout-part"
+                        title={`${noun} of the manuscript. Its order is the story's, set in the Outliner and on the tracks.`}
+                        onClick={() => {
+                          setSelectedPartId(null);
+                          goToPart(id);
+                        }}
+                      >
+                        <span>{placed.label || placed.marker.title.trim() || noun}</span>
+                        <span className="muted">{placed.label ? placed.marker.title.trim() : ''}</span>
+                        <span className="muted layout-page-no">{at && at.numbering === 'arabic' ? at.number : ''}</span>
+                      </button>
+                      <span className="layout-story-actions">
+                        {onOpenChapterPage ? (
+                          <button
+                            type="button"
+                            className="ghost small"
+                            title={`The page this ${noun.toLowerCase()} opens on: its name, an epigraph, a picture, how it is set`}
+                            onClick={() => onOpenChapterPage(id)}
+                          >
+                            {noun} page…
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="ghost small"
+                          title={`A full-page picture on the page facing this ${noun.toLowerCase()}`}
+                          onClick={() =>
+                            onUpdate((current) => {
+                              const made = addPart(current, 'plate', { beforeMarkerId: id });
+                              if (made.partId) setSelectedPartId(made.partId);
+                              return made.file;
+                            })
+                          }
+                        >
+                          + Picture facing
+                        </button>
+                      </span>
+                    </li>
+                  </Fragment>
                 );
               })
             )}
@@ -319,7 +373,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           <p className="muted small">
             The story is the manuscript in story order, {chapterCount}{' '}
             {isCollection(file.project.format) ? (chapterCount === 1 ? 'story' : 'stories') : chapterCount === 1 ? 'chapter' : 'chapters'};
-            nothing here reorders it.
+            nothing here reorders it. Between them go a picture on the facing page or the {noun.toLowerCase()}’s own page; the type
+            and the trim are on the right.
           </p>
         </aside>
 
@@ -404,9 +459,9 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                   <em>File ▸ Chapter page…</em>. A chapter page carrying a device, a summary or an epigraph opens on a
                   leaf of its own; one carrying only its number and name opens above its first paragraph.
                 </p>
-                {onOpenChapterPage ? (
-                  <button type="button" className="ghost small" onClick={onOpenChapterPage}>
-                    Chapter page…
+                {onOpenChapterPage && divisions[0] ? (
+                  <button type="button" className="ghost small" onClick={() => onOpenChapterPage(divisions[0]!.marker.id as string)}>
+                    {noun} page…
                   </button>
                 ) : null}
               </section>

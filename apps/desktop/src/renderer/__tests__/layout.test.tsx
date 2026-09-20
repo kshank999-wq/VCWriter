@@ -31,10 +31,18 @@ afterEach(cleanup);
 
 let latest: ProjectFile | null = null;
 
-function Harness({ initial }: { initial: ProjectFile }) {
+function Harness({ initial, onOpenChapterPage }: { initial: ProjectFile; onOpenChapterPage?: (markerId: string) => void }) {
   const [file, setFile] = useState(initial);
   latest = file;
-  return <LayoutWindow file={file} open onClose={() => undefined} onUpdate={(mutate) => setFile((current) => mutate(current))} />;
+  return (
+    <LayoutWindow
+      file={file}
+      open
+      onClose={() => undefined}
+      onUpdate={(mutate) => setFile((current) => mutate(current))}
+      onOpenChapterPage={onOpenChapterPage}
+    />
+  );
 }
 
 const novel = (): ProjectFile => {
@@ -78,6 +86,24 @@ describe('the room', () => {
     expect(rail.getByRole('button', { name: /Chapter 1/ })).toBeDefined();
     expect(rail.getByRole('button', { name: /Chapter 2/ })).toBeDefined();
     expect(rail.getByText(/nothing here reorders it/)).toBeDefined();
+  });
+
+  it('puts a picture on the page facing a chapter, and opens the chapter’s own page, from the chapter’s row', () => {
+    const opened: string[] = [];
+    render(<Harness initial={novel()} onOpenChapterPage={(markerId) => opened.push(markerId)} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    // Two chapters, two of each action.
+    expect(rail.getAllByRole('button', { name: '+ Picture facing' })).toHaveLength(2);
+    fireEvent.click(rail.getAllByRole('button', { name: '+ Picture facing' })[1]!);
+    const plate = partsOf(latest as ProjectFile).find((part) => part.kind === 'plate');
+    expect(plate?.beforeMarkerId).toBe((latest as ProjectFile).markers[1]?.id);
+    // Listed where it falls, before the second chapter, and selected for its picture.
+    const names = rail.getAllByRole('button').map((button) => button.textContent ?? '');
+    expect(names.indexOf('Platepicture')).toBeLessThan(names.findIndex((name) => name.startsWith('Chapter 2')));
+    expect(screen.getByLabelText('Plate picture')).toBeDefined();
+    expect((screen.getByLabelText('Plate place') as HTMLSelectElement).value).toBe(plate?.beforeMarkerId);
+    fireEvent.click(rail.getAllByRole('button', { name: 'Chapter page…' })[0]!);
+    expect(opened).toEqual([(latest as ProjectFile).markers[0]?.id]);
   });
 
   it('writes the trim and says what was worked out from it', () => {

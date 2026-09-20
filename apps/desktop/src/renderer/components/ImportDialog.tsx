@@ -71,6 +71,8 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
   const [format, setFormat] = useState<ProjectFormat>('screenplay');
   const [fileCast, setFileCast] = useState(true);
   const [keepLocations, setKeepLocations] = useState(true);
+  // One story or many (addendum 22 §2): only the short-story format asks.
+  const [stories, setStories] = useState<'one' | 'many'>('one');
 
   // What was read, as the format it is going into.
   const script = useMemo<ImportedScript | null>(() => {
@@ -118,7 +120,7 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
 
   const finish = () => {
     if (!script) return;
-    const built = buildProjectFromImport(script, { format, fileCast, keepLocations });
+    const built = buildProjectFromImport(script, { format, fileCast, keepLocations, stories });
     onImported(built.file);
     setStage({ kind: 'waiting' });
     onClose();
@@ -190,6 +192,25 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
                     ))}
                   </select>
                 </label>
+                {/* The short-story format holds one story or many, and a
+                    document cannot say which it is (addendum 22 §2): its
+                    headings divide one story into sections, or begin a story
+                    each. Asked here, where it is decided. */}
+                {format === 'short_story' ? (
+                  <fieldset className="import-stories">
+                    <legend>What the document is</legend>
+                    <label>
+                      <input type="radio" name="import-stories" aria-label="One story" checked={stories === 'one'} onChange={() => setStories('one')} />
+                      One story — its headings divide it into sections, and the first names it.
+                    </label>
+                    <label>
+                      <input type="radio" name="import-stories" aria-label="A collection" checked={stories === 'many'} onChange={() => setStories('many')} />
+                      A collection — each chapter heading begins a story
+                      {script ? ` (${script.scenes.filter((scene) => scene.heading.trim().length > 0).length} of them here)` : ''}. More can be added later from
+                      File ▸ Add stories to the collection…
+                    </label>
+                  </fieldset>
+                ) : null}
                 {/* A book has no cast list to file and no sluglines to write
                     up, so the two choices are absent rather than greyed. */}
                 {isProseFormat(format) ? null : (

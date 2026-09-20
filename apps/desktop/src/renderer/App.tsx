@@ -71,6 +71,7 @@ import { DEFAULT_PRINT_SETUP, PageSetup, type PrintSetup } from './components/Pa
 import { TitlePageDialog } from './components/TitlePageDialog';
 import { Reports, type ReportTab } from './components/Reports';
 import { EpisodeRail } from './components/EpisodeRail';
+import { StoryRail } from './components/StoryRail';
 import { ImportDialog } from './components/ImportDialog';
 import { AddStoriesDialog } from './components/AddStoriesDialog';
 import { ProjectsDialog } from './components/ProjectsDialog';
@@ -176,6 +177,12 @@ export default function App() {
   /** The title page's own screen: a page of the document, off the File menu. */
   const [titlePageOpen, setTitlePageOpen] = useState(false);
   const [chapterPageOpen, setChapterPageOpen] = useState(false);
+  /** The chapter the page dialog opens on, when a caller has one in hand; null is the first. */
+  const [chapterPageMarkerId, setChapterPageMarkerId] = useState<string | null>(null);
+  const openChapterPage = useCallback((markerId?: string) => {
+    setChapterPageMarkerId(markerId ?? null);
+    setChapterPageOpen(true);
+  }, []);
   /** Whose page it is: an episode's, or — null — the project's own. */
   const [titlePageEpisode, setTitlePageEpisode] = useState<Episode | null>(null);
   /** Set when something sent the writer to research to look at one thing. */
@@ -301,6 +308,14 @@ export default function App() {
   const closePane = useCallback((pane: string) => {
     void window.vcwriter?.panes?.close(pane);
   }, []);
+
+  // Focus mode is the Write page and nothing else, so going anywhere else
+  // leaves it (addendum 02 §11): another page, or a room over the page.
+  // Without this the room closed onto the focus view again, and a writer who
+  // had wandered into Research could not find the way back out.
+  useEffect(() => {
+    if (focusMode && (view !== 'write' || researchOpen || sculptorOpen || outlinerOpen || layoutOpen || narrativeOpen)) setFocusMode(false);
+  }, [focusMode, view, researchOpen, sculptorOpen, outlinerOpen, layoutOpen, narrativeOpen]);
 
   // Keyboard: focus mode, the panes, and stepping through beats (addendum 02 §11).
   useEffect(() => {
@@ -516,7 +531,7 @@ export default function App() {
           setTitlePageEpisode(null);
           return setTitlePageOpen(true);
         case 'file.chapterPage':
-          return setChapterPageOpen(true);
+          return openChapterPage();
         case 'file.pageSetup':
           return setPageSetupOpen(true);
         case 'file.print':
@@ -735,6 +750,18 @@ export default function App() {
   const showBottom = writing && timelineOpen && !focused;
   const showRight = writing && inspectorOpen && !focused;
   const away = new Set(detached);
+  /**
+   * A rail down the right: a series' episodes, a collection's stories
+   * (addendum 22 §3). Not while a room stands over the page — a room is the
+   * whole window, and the rail drawn over its inspector was hiding it.
+   */
+  const roomOpen =
+    (researchOpen && !away.has('research')) ||
+    (sculptorOpen && !away.has('sculptor')) ||
+    (outlinerOpen && !away.has('outliner')) ||
+    (layoutOpen && !away.has('layout')) ||
+    (narrativeOpen && !away.has('narrative'));
+  const withRail = (file.project.format === 'series' || isCollection(file.project.format)) && !roomOpen;
   // A section in a window of its own leaves no gap here: its place is not
   // drawn and the rest of the workspace takes the room (§8).
   const here = (slot: SlotId) =>
@@ -862,8 +889,8 @@ export default function App() {
         here('left') ? '' : 'without-left',
         here('top') ? '' : 'without-top',
         here('bottom') ? '' : 'without-bottom',
-        file.project.format === 'series' && !focused ? 'with-episode-tab' : '',
-        episodeRailOpen && file.project.format === 'series' && !focused ? 'with-episodes' : '',
+        withRail && !focused ? 'with-episode-tab' : '',
+        episodeRailOpen && withRail && !focused ? 'with-episodes' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -911,7 +938,6 @@ export default function App() {
         onSync={() => (account.signedIn ? void sync() : setView('account'))}
         saveState={project.saveState}
         onSaveNow={() => void project.saveNow()}
-        onCloseProject={project.closeProject}
         onPreferences={() => setPreferencesOpen(true)}
       />
 
@@ -955,8 +981,14 @@ export default function App() {
       {writing ? (
         <div className="workspace-body">
           {focused ? (
-            // Focus mode is the page and nothing else: no places, no strips.
-            <MasterPanel
+            // Focus mode is the page and nothing else: no places, no strips —
+            // and one way out in plain sight, because the title bar is dimmed
+            // and Escape is a thing a writer has to know.
+            <>
+              <button type="button" className="focus-leave" title="Leave focus mode (Esc)" onClick={() => setFocusMode(false)}>
+                Leave focus · Esc
+              </button>
+              <MasterPanel
               file={file}
               layout={layout ?? undefined}
               selectedBeatId={selectedBeat?.id ?? null}
@@ -969,6 +1001,7 @@ export default function App() {
               display={display}
               onDisplay={setScriptDisplay}
             />
+            </>
           ) : (
             <>
               {/* The tall column down the side. Which section is in it is the
@@ -1091,7 +1124,7 @@ export default function App() {
               open={layoutOpen && !away.has('layout')}
               onClose={() => setLayoutOpen(false)}
               onUpdate={project.update}
-              onOpenChapterPage={() => setChapterPageOpen(true)}
+              onOpenChapterPage={openChapterPage}
               onPopOut={() => {
                 setLayoutOpen(false);
                 openPane('layout');
@@ -1248,7 +1281,7 @@ export default function App() {
         </main>
       )}
 
-      {file.project.format === 'series' && !focused ? (
+      {file.project.format === 'series' && withRail && !focused ? (
         <EpisodeRail
           file={file}
           open={episodeRailOpen}
@@ -1263,6 +1296,26 @@ export default function App() {
             setTitlePageOpen(true);
           }}
           onNew={() => setNewEpisodeOpen(true)}
+        />
+      ) : null}
+
+      {isCollection(file.project.format) && withRail && !focused ? (
+        <StoryRail
+          file={file}
+          open={episodeRailOpen}
+          onOpen={setEpisodeRailOpen}
+          currentUnitId={selectedBeat?.unitId ?? null}
+          onGo={(story) => {
+            const first = story.sections[0];
+            const beat = first ? beats.find((one) => one.unitId === first.id) : undefined;
+            if (beat) setSelectedBeatId(beat.id);
+            else if (first) setSelectedUnitId(first.id);
+          }}
+          onOpenPage={(story) => openChapterPage(story.placed.marker.id as string)}
+          onNew={() => {
+            addStoryAtEnd();
+            setEpisodeRailOpen(true);
+          }}
         />
       ) : null}
 
@@ -1356,6 +1409,7 @@ export default function App() {
       <ChapterPageDialog
         file={file}
         open={chapterPageOpen}
+        initialMarkerId={chapterPageMarkerId}
         onClose={() => setChapterPageOpen(false)}
         onUpdate={project.update}
       />

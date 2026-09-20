@@ -233,7 +233,17 @@ other room (addendum 02 §8). Three regions:
 
 - **The parts**, down the left: front matter, the story's chapters (read,
   not draggable), back matter; a part is selected to edit it, added from a
-  list, removed with an ask, and reordered within its half.
+  list, removed with an ask, and reordered within its half. **Between the
+  chapters** is where a book is dressed, and Ken found the way to it
+  unintuitive — a plate was added from the list at the foot and pointed at
+  its chapter in the inspector, and once placed it was listed nowhere. Each
+  chapter's row now carries the two things that go between chapters: **+
+  Picture facing** adds a plate before that chapter and selects it, so the
+  inspector is asking for the picture; **Chapter page…** (*Story page…* on a
+  collection) opens the chapter-page dialog *on that chapter*. A plate that
+  faces a chapter is listed in the story, where it falls; one at the back
+  stays in the back matter. The type and the trim stay on the right, and
+  the foot of the rail says so.
 - **The spreads**, in the middle: two facing pages at a time, the verso on
   the left, at a zoom, with a slider along the foot. The page the writer is
   looking at is the page the PDF will have, because both come off one laying.
