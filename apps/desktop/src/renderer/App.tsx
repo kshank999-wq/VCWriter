@@ -937,7 +937,6 @@ export default function App() {
         syncing={syncing}
         onSync={() => (account.signedIn ? void sync() : setView('account'))}
         saveState={project.saveState}
-        onSaveNow={() => void project.saveNow()}
         onPreferences={() => setPreferencesOpen(true)}
       />
 
@@ -1341,7 +1340,7 @@ export default function App() {
         onImported={(imported) => project.replace(imported)}
       />
 
-      {file && isCollection(file.project.format) ? (
+      {file && (isCollection(file.project.format) || file.project.format === 'series') ? (
         <AddStoriesDialog
           open={importStoriesOpen}
           file={file}

@@ -44,18 +44,39 @@ body {
   line-height: 1.55;
 }
 
+/*
+ * Buttons are raised (Ken: "give them kind of a 3D look", so the eye finds
+ * them). One recipe, theme-agnostic — a light overlay on the top edge and
+ * a dark one below, over whatever the panel colour is — and pressing sinks
+ * it. Ghost buttons stay flat: they are text that can be pressed (×,
+ * Cancel), not controls the eye is meant to find.
+ */
 button {
   font: inherit;
   color: inherit;
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: 6px;
   border: 1px solid var(--border);
-  background: var(--panel-2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.18)), var(--panel-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.45);
   padding: 7px 12px;
 }
 
 button:hover {
   border-color: var(--gold-deep);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.16)), var(--panel-2);
+}
+
+button:active:not(:disabled) {
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.45);
+  transform: translateY(1px);
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.6;
+  box-shadow: none;
+  transform: none;
 }
 
 button:focus-visible {
@@ -69,6 +90,7 @@ button.primary {
   color: var(--ink);
   font-weight: 600;
   letter-spacing: 0.04em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 button.ghost {
@@ -76,6 +98,29 @@ button.ghost {
   border-color: transparent;
   color: var(--muted);
   padding: 4px 8px;
+  box-shadow: none;
+}
+
+/* A room's button and the tools on a bar: raised, in the text colour, so
+   Research, Layout, Sculptor, Outliner and Focus read as things to press. */
+button.raised {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.2)), var(--panel-2);
+  border-color: var(--border);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.5);
+  padding: 5px 12px;
+}
+
+button.raised:hover {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+}
+
+button.raised.active,
+button.raised[aria-pressed='true'] {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.45);
 }
 
 button.ghost:hover {

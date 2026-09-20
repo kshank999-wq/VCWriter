@@ -143,7 +143,6 @@ describe('the title bar', () => {
         syncing={false}
         onSync={() => undefined}
         saveState="saved"
-        onSaveNow={() => undefined}
         onPreferences={() => undefined}
         {...extra}
       />,

@@ -50,6 +50,7 @@ export * from './import-lines.js';
 export * from './import-build.js';
 export * from './import-docx.js';
 export * from './collection.js';
+export * from './series-import.js';
 export * from './ebook-presets.js';
 export * from './ebook.js';
 export * from './ebook-preflight.js';

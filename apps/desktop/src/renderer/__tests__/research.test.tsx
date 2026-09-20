@@ -64,7 +64,6 @@ describe('the research window', () => {
         syncing={false}
         onSync={() => undefined}
         saveState="saved"
-        onSaveNow={() => undefined}
         onPreferences={() => undefined}
       />,
     );

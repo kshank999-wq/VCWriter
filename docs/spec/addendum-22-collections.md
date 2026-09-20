@@ -115,6 +115,60 @@ A short story typed in Word divides at *I*, *II*, *III*, so `opensChapter`
 now takes a **bare numeral set centred** as a section head, beside the
 heading styles and *Chapter N* it already read.
 
+## 4a. A series, or a collection, a file at a time
+
+Ken, 20 September:
+
+> This functionality could also work for importing episodic or series,
+> where it asks you for one after the other, so you import one and then it
+> leaves room for a title page for each … you will see a blank chapter
+> page or title page between each of the stories, or episode page, in
+> between each of the imports. It allows you to import in a series of
+> imports … divided and in the order that you want. So if you just want to
+> use VC Writer as a layout tool, importing existing manuscripts, you're
+> able to organize it correctly. So people who are editors can also use
+> this tool.
+
+Two things, and both are §4 widened rather than anything new.
+
+**Several files in one import.** *File ▸ Import a script…* takes several
+files. The first makes the project, exactly as it did; on a **series** or a
+**collection** each file after it is appended as the next episode or the
+next story, on a page of its own, and the dialog lists them **in the order
+they will go in** — the order chosen, or the order the arrows put them in,
+with a × to leave one out. The first is what the dialog shows (who is in
+it, where it happens), because the first is what the project is made from;
+moving another file to the top changes what is shown. On any other format
+a project is one document, and the rest are **said** to be left out —
+*2 more files were chosen and will be left out: a novel is one document* —
+rather than silently dropped, with the two formats that take several named
+in the sentence.
+
+**A series is added to the way a collection is.** *File ▸ Add episodes to
+the series…* is the same dialog as *Add stories to the collection…*
+(`AddStoriesDialog.tsx`, reading its words off the format): Final Draft
+documents, Word documents by their indents, or PDFs, one episode each,
+after the last, with the same ordered list. `appendImportedEpisode` in
+`series-import.ts` is to a series what `appendImportedStory` is to a
+collection — `materialiseScenes` underneath, so a scene comes in exactly
+as the script importer would have brought it; whoever speaks and is not
+yet in the cast joins it unfiled; and one **episode marker** on the first
+scene, with a **title page that claims its number** (`Episode 2`), which is
+where an episode is numbered (§17 of addendum 02) and is what keeps a
+later renumbering from moving it. A series built from its first script
+had scenes and no episode, so `ensureFirstEpisode` gives it one before the
+second is appended — without it the second would have been *Episode 1*.
+
+**The page between them is the marker's page.** An episode opens on its
+title page and a story on its chapter page; both already existed, and both
+are what the Layout room draws between the parts, so "a blank title page
+between each" needed nothing drawn — it is the leaf every episode and
+every story already has, empty until the writer fills it.
+
+The file readers moved out of the two dialogs into `read-import.ts`
+(`readProseFile`, `readScriptFile`), so *what is a .docx as a script* is
+answered once; `shifted` there is the one list reorder both dialogs use.
+
 ## 5. Laying it out
 
 Nothing in the Layout room changed. A story is a chapter opening, on a
@@ -149,3 +203,6 @@ the book. That this needed no code is the point of §1.
   new-project screen, the import dialog and the phone; *+ Story* on the
   timeline's bar and *Stories* over its row; the marker chip joining its
   parts; *File ▸ Add stories to the collection…* and the dialog behind it.
+- **Stage 4, a file at a time (§4a).** Several files in one import, in
+  the order listed; *Add episodes to the series…*; `appendImportedEpisode`,
+  `markEpisodeAt` and `ensureFirstEpisode` in `series-import.ts`.

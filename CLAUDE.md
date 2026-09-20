@@ -1164,7 +1164,11 @@ push live; the build takes a minute or two.
   faces a chapter is listed where it falls. Focus mode got a **Leave focus ·
   Esc** button and is dropped when a room opens or the page changes, and
   the title bar's *Close* (which closed the project) is gone; *File ▸ Close
-  project* remains.
+  project* remains. The title bar's **Save now** is gone too (it was *File ▸
+  Save* a second time), and the rooms and Focus are **raised buttons** — the
+  base `button` in `styles.css` is raised now, so *Chapter*, *Passage*, the
+  tools and the chips got the look without being touched, and `button.ghost`
+  is the one that stays flat; Focus draws pressed while it is on.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves
@@ -1243,7 +1247,20 @@ push live; the build takes a minute or two.
   each**, and a document's headings divide its story into sections and
   **never make stories** — the builder's per-heading markers are left out on
   purpose. `materialiseScenes` in `import-build.ts` is the one builder both
-  importers call. The Layout room needed no change (§5). The format is
+  importers call. **§4a is a series, or a collection, a file at a time**,
+  from Ken wanting the program usable as a layout tool by an editor with a
+  drawer of manuscripts: *Import a script…* takes several files, the first
+  makes the project and on a series or a collection each after it is the
+  next episode or story on a page of its own, **listed in the order they
+  will go in** with arrows to change it; on any other format the rest are
+  *said* to be left out rather than dropped. *Add episodes to the series…*
+  is the collection's dialog reading its words off the format, and
+  `appendImportedEpisode` in `series-import.ts` is `appendImportedStory`
+  for a series — one episode marker whose title page **claims its number**,
+  with `ensureFirstEpisode` giving a series built from its first script the
+  episode it did not have, or the second would be *Episode 1*. The page
+  between the parts is the marker's own page, so nothing new is drawn. The
+  file readers are `read-import.ts`, shared by both dialogs. The Layout room needed no change (§5). The format is
   offered as *Short stories and collections* and the noun table calls the
   work a *Collection*.
   `addendum-23-ebook-export.md` is **eBook export**, from Ken's own *eBook

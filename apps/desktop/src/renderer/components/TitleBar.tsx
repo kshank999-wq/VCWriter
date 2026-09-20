@@ -47,7 +47,6 @@ interface TitleBarProps {
   syncing: boolean;
   onSync(): void;
   saveState: string;
-  onSaveNow(): void;
   onPreferences(): void;
 }
 
@@ -80,7 +79,6 @@ export function TitleBar({
   syncing,
   onSync,
   saveState,
-  onSaveNow,
   onPreferences,
 }: TitleBarProps) {
   // Beats are named by their own window's title, and there can be any number
@@ -128,7 +126,7 @@ export function TitleBar({
         {writing ? (
           <button
             type="button"
-            className="ghost"
+            className="raised"
             title={`Research: everything the ${nouns.manuscript.toLowerCase()} is made from`}
             onClick={onOpenResearch}
           >
@@ -138,7 +136,7 @@ export function TitleBar({
         {writing && onOpenLayout ? (
           <button
             type="button"
-            className="ghost"
+            className="raised"
             title={`Layout: set the ${nouns.manuscript.toLowerCase()} as a book — the trim, the type, the pages in front and behind`}
             onClick={onOpenLayout}
           >
@@ -148,7 +146,7 @@ export function TitleBar({
         {writing ? (
           <button
             type="button"
-            className="ghost"
+            className="raised"
             title="Story Sculptor: log the major ideas, and keep refining them"
             onClick={onOpenSculptor}
           >
@@ -158,7 +156,7 @@ export function TitleBar({
         {writing && onOpenNarrative ? (
           <button
             type="button"
-            className="ghost"
+            className="raised"
             title="Narrative map: the branching graph, laid out from the graph itself"
             onClick={onOpenNarrative}
           >
@@ -168,7 +166,7 @@ export function TitleBar({
         {writing ? (
           <button
             type="button"
-            className="ghost"
+            className="raised"
             title={`Outliner: arrange what you have into ${nouns.unitPlural.toLowerCase()} and ${nouns.subPlural.toLowerCase()}`}
             onClick={onOpenOutliner}
           >
@@ -178,7 +176,7 @@ export function TitleBar({
         {writing ? (
           <button
             type="button"
-            className={focusMode ? 'ghost active' : 'ghost'}
+            className={focusMode ? 'raised active' : 'raised'}
             title="Focus mode (Ctrl/Cmd+Shift+F)"
             aria-pressed={focusMode}
             onClick={onFocus}
@@ -197,10 +195,9 @@ export function TitleBar({
             {syncing ? 'Syncing…' : account.signedIn ? 'Sync' : 'Sign in'}
           </button>
         ) : null}
+        {/* What the file is doing, said quietly; saving is File ▸ Save, and
+            the button that duplicated it is gone (Ken). */}
         <span className={`save-state ${saveState}`}>{SAVE_LABEL[saveState]}</span>
-        <button type="button" className="ghost" onClick={onSaveNow}>
-          Save now
-        </button>
         <button
           type="button"
           className="ghost"

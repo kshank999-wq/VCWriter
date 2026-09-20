@@ -90,7 +90,19 @@ particular section being in the workspace: **Research**, which opens the
 research window (§7), and a chip for each section that is currently in a
 window of its own, which brings it back. Research used to be a tab beside
 the Script, which meant that taking the Script to another monitor took
-research with it; that was wrong, and it lives here now.
+research with it; that was wrong, and it lives here now. The rooms —
+Research, Layout, Sculptor, Outliner, the narrative map — and **Focus** are
+drawn as **raised buttons**, from Ken: they are the things a writer's eye
+looks for on the bar, and a flat word among flat words is not found. The
+raised look is one rule in `styles.css` (a gradient over the panel colour,
+a highlight along the top edge, a shadow under; pressed sinks it), and it
+is the base `button`, so the manuscript bar's *Chapter* and *Passage*, the
+timeline's tools and the chips wear it without being told; `button.ghost`
+is the one that stays flat, being a word that acts rather than a button.
+Focus, while it is on, is drawn pressed. The **Save now** button that sat
+beside the save state is gone: it was *File ▸ Save* (`Ctrl/Cmd+S`) a
+second time, and the state word (*Saved*, *Unsaved changes*) says all the
+bar needs to.
 
 The strip along the top of each section — its name, the menu of places, and
 the control that takes it out — is 18px and carries nothing else, because a

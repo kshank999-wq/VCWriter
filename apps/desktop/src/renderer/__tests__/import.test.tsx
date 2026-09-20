@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { castByCategory, type ProjectFile } from '@vcwriter/domain';
+import { castByCategory, episodes, type ProjectFile } from '@vcwriter/domain';
 import { ImportDialog } from '../components/ImportDialog';
 import { MENUS } from '../menus';
 import { buildDocx, wordParagraph } from './zip-fixture';
@@ -43,11 +43,24 @@ const fileNamed = (name: string, body: string | ArrayBuffer): File => {
   return made;
 };
 
-const choose = (name: string, body: string | ArrayBuffer) => {
+const chooseMany = (files: File[]) => {
   const picker = screen.getByLabelText('Script file') as HTMLInputElement;
-  Object.defineProperty(picker, 'files', { value: [fileNamed(name, body)], configurable: true });
+  Object.defineProperty(picker, 'files', { value: files, configurable: true });
   fireEvent.change(picker);
 };
+
+const choose = (name: string, body: string | ArrayBuffer) => chooseMany([fileNamed(name, body)]);
+
+/** A second script, for a series brought in a file at a time. */
+const WRECK = `<?xml version="1.0" encoding="UTF-8"?>
+<FinalDraft DocumentType="Script" Version="5">
+<Content>
+<Paragraph Type="Scene Heading"><Text>EXT. HARBOUR - DAY</Text></Paragraph>
+<Paragraph Type="Character"><Text>DR HALE</Text></Paragraph>
+<Paragraph Type="Dialogue"><Text>She was here before us.</Text></Paragraph>
+</Content>
+<TitlePage><Content><Paragraph><Text>THE WRECK</Text></Paragraph></Content></TitlePage>
+</FinalDraft>`;
 
 /** A novel typed in Word: a title, chapter headings, a paragraph set in its own face. */
 const NOVEL = () =>
@@ -182,6 +195,54 @@ describe('importing a script', () => {
     choose('broken.fdx', '<html><body>not a script</body></html>');
     await screen.findByRole('alert');
     expect(screen.getByRole('alert').textContent).toMatch(/not a Final Draft document/);
+  });
+
+  /**
+   * Several files at once (addendum 22 §4a): on a series the first makes
+   * the project and each after it is the next episode, in the order listed.
+   */
+  it('brings a series in a file at a time, each episode on a page of its own, in the order listed', async () => {
+    const made: ProjectFile[] = [];
+    render(<ImportDialog open onClose={() => {}} onImported={(file) => made.push(file)} />);
+    chooseMany([fileNamed('lighthouse.fdx', FDX), fileNamed('wreck.fdx', WRECK), fileNamed('notes.txt', 'x')]);
+    await screen.findByText('Who is in it');
+    // A screenplay is one document: the rest are said to be left out.
+    expect(screen.getByRole('note').textContent).toMatch(/One more file was chosen and will be left out/);
+    expect(screen.getByText(/notes.txt: That is not a Final Draft document/)).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Format'), { target: { value: 'series' } });
+    const order = await screen.findByLabelText('Files in order');
+    expect([...order.querySelectorAll('.import-order-title')].map((node) => node.textContent)).toEqual(['1. THE LIGHTHOUSE', '2. THE WRECK']);
+    // The arrows put them in the order wanted; the first is what is shown.
+    fireEvent.click(screen.getByRole('button', { name: 'Move THE WRECK up' }));
+    expect([...order.querySelectorAll('.import-order-title')].map((node) => node.textContent)).toEqual(['1. THE WRECK', '2. THE LIGHTHOUSE']);
+    await waitFor(() => expect(document.querySelector('.import-found .muted.small')?.textContent).toBe('THE WRECK'));
+    fireEvent.click(screen.getByRole('button', { name: 'Move THE WRECK down' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(made).toHaveLength(1));
+    const file = made[0]!;
+    expect(file.project.format).toBe('series');
+    expect(file.project.title).toBe('THE LIGHTHOUSE');
+    expect(episodes(file).map((episode) => [episode.label, episode.title])).toEqual([
+      ['EPISODE 1', 'THE LIGHTHOUSE'],
+      ['EPISODE 2', 'THE WRECK'],
+    ]);
+    expect(episodes(file)[1]?.units.map((unit) => unit.title)).toEqual(['EXT. HARBOUR - DAY']);
+    expect(file.characters.map((person) => person.name)).toContain('DR HALE');
+  });
+
+  it('leaves a file out when asked, and imports one file as it always did', async () => {
+    const made: ProjectFile[] = [];
+    render(<ImportDialog open onClose={() => {}} onImported={(file) => made.push(file)} />);
+    chooseMany([fileNamed('lighthouse.fdx', FDX), fileNamed('wreck.fdx', WRECK)]);
+    await screen.findByText('Who is in it');
+    fireEvent.change(screen.getByLabelText('Format'), { target: { value: 'series' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Leave out THE WRECK' }));
+    expect(screen.queryByLabelText('Files in order')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(made).toHaveLength(1));
+    expect(episodes(made[0]!).map((episode) => episode.title)).toEqual(['THE LIGHTHOUSE']);
   });
 
   it('is on the File menu', () => {
