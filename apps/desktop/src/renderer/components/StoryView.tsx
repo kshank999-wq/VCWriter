@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   beatsForUnit,
+  carveBeat,
+  carveUnit,
   isProseFormat,
   nounsFor,
   numbersDivisions,
@@ -148,6 +150,60 @@ export function StoryView({
   const [ownZoom, setOwnZoom] = useState(1);
   const [ownStyle, setOwnStyle] = useState<PageStyle>(DEFAULT_PAGE_STYLE);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  /**
+   * Dividing the manuscript where the writer points (addendum 21 §10): a
+   * chapter or a passage from two clicks, *where it starts* and *where it
+   * ends*. Held here because the clicks land on element rows drawn by
+   * every beat body, and the range crosses them. `from` is the start once
+   * chosen; the second click ends it, the story is cut, and the tool
+   * resets — Ken's words. Escape puts it down.
+   */
+  const [divide, setDivide] = useState<{ kind: 'unit' | 'beat'; from: string | null } | null>(null);
+  const [divideNote, setDivideNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!divide) return undefined;
+    const keys = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setDivide(null);
+        setDivideNote(null);
+      }
+    };
+    window.addEventListener('keydown', keys);
+    return () => window.removeEventListener('keydown', keys);
+  }, [divide]);
+  // The chosen start is lit on the page; imperative, because the rows are
+  // drawn by the beat bodies and one class on one node is all this needs.
+  useEffect(() => {
+    if (!divide?.from) return undefined;
+    const node = document.querySelector(`[data-element-id="${divide.from}"]`);
+    node?.classList.add('divide-start');
+    return () => node?.classList.remove('divide-start');
+  }, [divide]);
+  const pickForDivide = (event: React.MouseEvent) => {
+    if (!divide) return;
+    const row = (event.target as HTMLElement).closest('[data-element-id]');
+    if (!row) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const elementId = row.getAttribute('data-element-id') ?? '';
+    if (!divide.from) {
+      setDivide({ ...divide, from: elementId });
+      return;
+    }
+    const kind = divide.kind;
+    const from = divide.from;
+    setDivide(null);
+    onUpdate((current) => {
+      const made = kind === 'unit' ? carveUnit(current, from, elementId) : carveBeat(current, from, elementId);
+      if (typeof made === 'string') {
+        setDivideNote(made);
+        return current;
+      }
+      const noun = kind === 'unit' ? nouns.unit : nouns.sub;
+      setDivideNote(`${noun} made from ${made.elements} ${made.elements === 1 ? 'paragraph' : 'paragraphs'}.`);
+      return made.file;
+    });
+  };
   /**
    * The beat a piece of on-deck work is hovering over (addendum 08 §13).
    *
@@ -396,10 +452,12 @@ export function StoryView({
 
   return (
     <div
+      onClickCapture={divide ? pickForDivide : undefined}
       className={[
         'story script-view',
         focusMode ? 'focus' : '',
         paged ? 'paged' : '',
+        divide ? 'dividing' : '',
         style.on ? 'own-paper' : '',
         // Each imported paragraph in its own face and size (addendum 21 §3).
         style.face === IMPORTED_FACE ? 'as-imported' : '',
@@ -437,6 +495,48 @@ export function StoryView({
             ⚙
           </button>
           <span className="muted">{paged ? 'Pages' : 'Continuous'}</span>
+          {/* Dividing where the writer points (addendum 21 §10), on prose,
+              where an imported book needs its chapters and passages put
+              where they belong. A script's scenes are its sluglines. */}
+          {prose ? (
+            <span className="divide-tools" role="group" aria-label="Divide the manuscript">
+              <button
+                type="button"
+                className={divide?.kind === 'unit' ? 'chip on' : 'chip'}
+                aria-pressed={divide?.kind === 'unit'}
+                title={`Make a ${nouns.unit.toLowerCase()} from a stretch of the manuscript: click where it starts, then where it ends`}
+                onClick={() => {
+                  setDivideNote(null);
+                  setDivide(divide?.kind === 'unit' ? null : { kind: 'unit', from: null });
+                }}
+              >
+                {nouns.unit}
+              </button>
+              <button
+                type="button"
+                className={divide?.kind === 'beat' ? 'chip on' : 'chip'}
+                aria-pressed={divide?.kind === 'beat'}
+                title={`Make a ${nouns.sub.toLowerCase()} from a stretch of the manuscript: click where it starts, then where it ends`}
+                onClick={() => {
+                  setDivideNote(null);
+                  setDivide(divide?.kind === 'beat' ? null : { kind: 'beat', from: null });
+                }}
+              >
+                {nouns.sub}
+              </button>
+              {divide ? (
+                <span className="divide-note" role="status">
+                  {divide.from
+                    ? `Now click the paragraph where the ${(divide.kind === 'unit' ? nouns.unit : nouns.sub).toLowerCase()} ends. Esc to stop.`
+                    : `Click the paragraph where the ${(divide.kind === 'unit' ? nouns.unit : nouns.sub).toLowerCase()} starts.`}
+                </span>
+              ) : divideNote ? (
+                <span className="divide-note muted" role="status">
+                  {divideNote}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
           {paged ? (
             <label className="script-zoom">
               <span className="muted">Page</span>

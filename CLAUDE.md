@@ -1197,6 +1197,22 @@ push live; the build takes a minute or two.
   listing chapter headings as *places* and a picture drawn as a red warning;
   §8 says what is deliberately not read (tables as cells, no footnotes or
   tracked changes, a mid-sentence face change read as the paragraph's).
+  **§10 is dividing what came in**, from Ken importing a short story and
+  finding chapters in strange places and a page break at every paragraph:
+  the manuscript carried a **typed page number at the foot of every page**
+  and the bare-numeral rule made a chapter of each. `pageNumberParagraphs`
+  drops integers that count up by one within a page's worth of words (900)
+  of each other, three or more in a row — a chapter's worth of words
+  between is what tells *1, 2, 3* the chapters from *1, 2, 3* the pages;
+  `BARE_LABEL` (a numeral, roman numeral or number word alone on a line,
+  centred or not) opens a chapter with an **empty title**, the number being
+  derived; and `passagesFrom` cuts a prose section into passages at scene
+  breaks and near 700 words, each titled with its opening words. And the
+  tool: **Chapter** and **Passage** on the manuscript bar — press one, click
+  where it starts, click where it ends, and it is cut and the tool puts
+  itself down. `dividing.ts` builds `carveUnit`/`carveBeat` from two
+  primitives, split-before and merge-in, so nothing about the words can
+  change, and the tests read the manuscript back in order after every cut.
   `addendum-22-collections.md` is **Short stories and collections**, from
   Ken's ask for a collection of stories laid out as a book. **Built.** §1 is
   the audit and it paid a **tenth** time: a short-story project's unit was

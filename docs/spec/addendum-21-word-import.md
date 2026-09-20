@@ -197,3 +197,59 @@ No migration: `face`, `size` and `align` ride in the element's existing
   nowhere the story happens — and a picture arriving was drawn in red as a
   warning. The chapter headings are no longer places and the pictures are a
   count.
+
+## 10. Dividing what came in
+
+Ken imported a short story and found the manuscript cut in strange places
+and breaking to a new page at nearly every paragraph. Both had one cause:
+the manuscript carried a typed page number at the foot of every page, and
+§4's rule — *a bare numeral set centred opens a chapter* — made a chapter
+of each. The fixes are three readings and one tool.
+
+**Page numbers are not the book's words.** `pageNumberParagraphs` finds
+bare integers that count up by one, each within a page's worth of words
+(900) of the last, three or more in a row, and `docxToProse` leaves them
+out and says how many it left. A chapter numbered *1, 2, 3* counts up too,
+with a chapter's worth of words between — which is the whole of what tells
+the two apart, and why the distance is measured in words rather than
+paragraphs. *Page 12* says what it is on its own.
+
+**A label that is only a number is a chapter, wherever it stands.**
+`BARE_LABEL` is a numeral, a roman numeral or a number word alone on its
+line — *3*, *II*, *Seven*, *Twenty-one* — centred or not, since a
+manuscript sets them left as often as centred; a digit is asked about only
+once the page numbers are out. Its title is **empty**: the number is
+derived from where the chapter falls (addendum 02 §12a), so `chapterName`
+hands back nothing and the leaf prints the number it works out, which is
+what makes moving chapter nine make it chapter eight.
+
+**A section arrives as passages.** A prose section used to be one beat
+holding every paragraph, which is a timeline with nothing on it to move
+and a Story Grid with one row. `passagesFrom` cuts it at every scene break
+— the one place the writer said the story pauses — and, where a stretch
+runs on, before the paragraph that would carry it past a passage's worth
+(`PASSAGE_WORDS`, 700) once it has 200 behind it, never leaving a stub of
+a few lines at the end. Each passage is titled with its opening words: a
+name to find it by, authoring metadata never printed (spec §5.3). Both
+importers read the same function, so a story added to a collection
+arrives the same way.
+
+**Dividing where the writer points.** Reading is not cutting, and a
+writer can see at once where the reader was wrong. The manuscript bar on a
+prose format carries **Chapter** and **Passage** (the noun table's words,
+so a textbook says *Section* and *Subsection*): press one, click the
+paragraph where it starts, click the paragraph where it ends, and the
+story is cut so that stretch is a chapter — a unit with a marker, in the
+story where the stretch was, on the timeline at once — or a passage of its
+own. When the second click lands the tool puts itself down and says what
+it did, in Ken's words. `dividing.ts` builds both from two primitives,
+**split before an element** and **merge the neighbour in**, because a
+range is exactly those: a cut at its start, a cut after its end, whatever
+fell between joined into one. What stood before the start stays; what
+stood after the end becomes the unit (or beat) that follows; units the
+range swallows whole are joined in and their markers go with them, since
+the range has one marker and it is this one; the ends may be clicked
+either way round; a passage will not cross a chapter and says so. Nothing
+about the words changes — no element edited, reordered or lost — and the
+tests read the manuscript back in order before and after every cut.
+

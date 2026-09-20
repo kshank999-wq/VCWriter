@@ -19,6 +19,7 @@ import {
   docxToProse,
   docxToScript,
   opensChapter,
+  passagesFrom,
   readDocx,
   readLaidOutLines,
   walkXml,
@@ -350,7 +351,8 @@ describe('building a project from a Word document', () => {
     // A chapter heading is a marker, not a line of the manuscript.
     expect(file.markers.map((marker) => marker.title)).toEqual(['The Road', '']);
     expect(file.markers.every((marker) => marker.kind === 'chapter')).toBe(true);
-    const elements = file.beats[0]!.manuscript.elements;
+    // The section arrives as passages now (§10): read them together.
+    const elements = file.beats.flatMap((beat) => beat.manuscript.elements);
     expect(elements.some((element) => element.type === 'scene_heading')).toBe(false);
 
     // The face and size travel into the element.
@@ -464,5 +466,78 @@ describe('the book set as imported', () => {
     const blocks = bookBlocks(file).filter((block) => block.kind === 'paragraph');
     expect(blocks[0]?.face).toBeUndefined();
     expect(blocks[1]).toMatchObject({ face: 'Garamond', size: 14, align: 'right' });
+  });
+});
+
+describe('a manuscript with typed page numbers and bare labels (§10)', () => {
+  const body = (words: number, seed: string) => Array.from({ length: words }, (_, i) => `${seed}${i}`).join(' ');
+
+  it('drops the page numbers that count up a page apart, and keeps the chapter numbers that do not', () => {
+    const doc = document(
+      [
+        para('One', { align: 'center' }),
+        para(body(300, 'a')),
+        para('1', { align: 'center' }),
+        para(body(300, 'b')),
+        para('2', { align: 'center' }),
+        para(body(300, 'c')),
+        para('3'),
+        para('Two'),
+        para(body(300, 'd')),
+        para('4', { align: 'center' }),
+        para(body(50, 'e')),
+      ].join(''),
+    );
+    const read = readDocx({ document: doc });
+    const script = docxToProse(read);
+    expect(script.warnings.some((warning) => /4 typed page numbers were left out/.test(warning))).toBe(true);
+    // Two chapters, labelled One and Two, and no chapter called 3.
+    expect(script.scenes.map((scene) => scene.heading)).toEqual(['One', 'Two']);
+    const texts = script.scenes.flatMap((scene) => scene.elements.map((element) => element.text));
+    expect(texts.some((text) => /^[0-9]+$/.test(text))).toBe(false);
+    // The words on either side of a page number are still there.
+    expect(texts.some((text) => text.startsWith('b0 '))).toBe(true);
+  });
+
+  it('reads a numeral, a roman numeral or a number word alone on a line as a chapter, centred or not', () => {
+    const base = { text: '', plain: '', styleId: '', styleName: '', outline: null, align: 'left' as const, indentLeft: 0, firstLine: 0, face: null, size: null, caps: false, pageBreakBefore: false, list: false, pictures: [] };
+    for (const label of ['II', '3', '3.', 'Seven', 'Twenty-one', 'twelve']) {
+      expect(opensChapter({ ...base, plain: label, text: label }), label).toBe(true);
+    }
+    expect(opensChapter({ ...base, plain: 'Seven ships', text: 'Seven ships' })).toBe(false);
+    // Three chapters numbered 1, 2, 3 with a chapter's worth of words between are chapters, not pages.
+    const doc = document([para('1'), para(body(1200, 'a')), para('2'), para(body(1200, 'b')), para('3'), para(body(1200, 'c'))].join(''));
+    const script = docxToProse(readDocx({ document: doc }));
+    expect(script.scenes.map((scene) => scene.heading)).toEqual(['1', '2', '3']);
+    expect(script.warnings.some((warning) => /page numbers/.test(warning))).toBe(false);
+  });
+
+  it('builds a bare label into a chapter whose number is derived and whose title is empty, cut into passages', () => {
+    const doc = document(
+      [para('One', { align: 'center' }), para(body(500, 'a')), para(body(500, 'b')), para('* * *', { align: 'center' }), para(body(100, 'c')), para('Two'), para(body(30, 'd'))].join(''),
+    );
+    const built = buildProjectFromImport(docxToProse(readDocx({ document: doc })), { format: 'novel' });
+    expect(built.file.markers.map((marker) => marker.title)).toEqual(['', '']);
+    const first = built.file.units.find((unit) => unit.id === built.file.markers[0]!.unitId)!;
+    const beats = built.file.beats.filter((beat) => beat.unitId === first.id);
+    // 500 + 500 words: the second paragraph starts a new passage; the scene break ends it; the stub after stands alone.
+    expect(beats.map((beat) => beat.manuscript.elements.map((element) => element.type))).toEqual([['paragraph'], ['paragraph', 'scene_break'], ['paragraph']]);
+    expect(beats[0]?.title).toBe('a0 a1 a2 a3 a4 a5…');
+  });
+});
+
+describe('passages from a section’s elements', () => {
+  const p = (text: string) => ({ id: newId(), type: 'paragraph' as const, text, characterId: null, attributes: {} });
+  const words = (n: number) => Array.from({ length: n }, (_, i) => `w${i}`).join(' ');
+
+  it('cuts at scene breaks, then near a passage’s worth of words, never leaving a stub', () => {
+    const cut = passagesFrom([p(words(300)), p(words(300)), p(words(300)), p(words(50)), { id: newId(), type: 'scene_break', text: '', characterId: null, attributes: {} }, p(words(20))]);
+    expect(cut.map((passage) => passage.elements.length)).toEqual([2, 3, 1]);
+    // A stub with no break before it joins the passage before.
+    const stub = passagesFrom([p(words(400)), p(words(400)), p(words(30))]);
+    expect(stub.map((passage) => passage.elements.length)).toEqual([1, 2]);
+    const small = passagesFrom([p(words(100)), p(words(100))]);
+    expect(small).toHaveLength(1);
+    expect(passagesFrom([])).toEqual([{ elements: [], title: '' }]);
   });
 });

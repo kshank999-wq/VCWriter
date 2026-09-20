@@ -605,16 +605,75 @@ export const docxToScript = (doc: DocxDocument, options: { title?: string } = {}
 
 const BREAK_MARK = /^[\s*#~_\-—–•·.]{1,12}$/;
 
-/** A section numbered and nothing else — *II*, *3.* — the way a short story divides. */
-const BARE_NUMBER = /^([IVXLC]+|[0-9]+)\.?$/;
+/**
+ * A section labelled with a number and nothing else, the way a short story
+ * or a manuscript divides (§10): *II*, *3.*, *Seven*, *Twenty-one*. A
+ * digit is only a label once the page numbers are known (below), because a
+ * *3* alone on a line is more often the foot of page three.
+ */
+export const BARE_LABEL =
+  /^(?:(?:[IVXLC]+|[0-9]{1,3})\.?|(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?)$/i;
 
-/** Whether a paragraph opens a chapter (§4): a top heading, *Chapter N*, a bare numeral set centred, or a page break with a short line after it. */
+/** A typed page number: a bare integer, or *Page 12*, or *12 of 300*. */
+const PAGE_NUMBER = /^(?:page\s+)?([0-9]{1,4})(?:\s+(?:of|\/)\s*[0-9]{1,4})?$/i;
+
+/** More words than fall on a manuscript page: two bare numbers further apart than this are not consecutive pages. */
+const WORDS_PER_PAGE_AT_MOST = 900;
+
+/**
+ * Which paragraphs are page numbers the writer typed into the text (§10):
+ * bare integers that count up by one, each within a page's worth of words
+ * of the last, three or more in a row. A chapter numbered *1, 2, 3* counts
+ * up too, but with a chapter's worth of words between — which is the whole
+ * of what tells them apart, and why the distance is measured in words.
+ * Ken's manuscript carried one at the foot of every page, and every one of
+ * them had become a chapter.
+ */
+export const pageNumberParagraphs = (paragraphs: readonly DocxParagraph[]): Set<number> => {
+  const candidates: { index: number; value: number; wordsBefore: number }[] = [];
+  let words = 0;
+  paragraphs.forEach((paragraph, index) => {
+    const match = paragraph.pictures.length === 0 ? PAGE_NUMBER.exec(paragraph.plain) : null;
+    if (match) {
+      candidates.push({ index, value: Number(match[1]), wordsBefore: words });
+      words = 0;
+      return;
+    }
+    words += paragraph.plain.trim().length === 0 ? 0 : paragraph.plain.trim().split(/\s+/).length;
+  });
+  const out = new Set<number>();
+  let run: typeof candidates = [];
+  const close = () => {
+    if (run.length >= 3) for (const one of run) out.add(one.index);
+    run = [];
+  };
+  for (const candidate of candidates) {
+    const last = run[run.length - 1];
+    if (last && candidate.value === last.value + 1 && candidate.wordsBefore <= WORDS_PER_PAGE_AT_MOST) run.push(candidate);
+    else {
+      close();
+      run = [candidate];
+    }
+    // *Page 12* says what it is on its own.
+    if (/^page\s/i.test(paragraphs[candidate.index]?.plain ?? '')) out.add(candidate.index);
+  }
+  close();
+  return out;
+};
+
+/**
+ * Whether a paragraph opens a chapter (§4, §10): a top heading, *Chapter N*,
+ * a label that is only a number — a numeral, a roman numeral or a number
+ * word alone on its line, centred or not — or a page break with a short
+ * line after it. A bare digit is asked about only once the page numbers
+ * have been taken out, which `docxToProse` does first.
+ */
 export const opensChapter = (paragraph: DocxParagraph): boolean => {
   if (paragraph.pictures.length > 0) return false;
   if (paragraph.outline === 0) return true;
   const short = paragraph.plain.length > 0 && paragraph.plain.length <= 60;
   if (short && CHAPTER_HEAD.test(paragraph.plain)) return true;
-  if (paragraph.align === 'center' && BARE_NUMBER.test(paragraph.plain)) return true;
+  if (BARE_LABEL.test(paragraph.plain.trim())) return true;
   if (paragraph.pageBreakBefore && short && (paragraph.caps || paragraph.align === 'center')) return true;
   return false;
 };
@@ -640,8 +699,14 @@ export const docxToProse = (doc: DocxDocument, options: { title?: string } = {})
   const warnings: string[] = [];
   let title = options.title ?? '';
   let author = '';
+  // The page numbers the writer typed are not the book's words (§10).
+  const pageNumbers = pageNumberParagraphs(doc.paragraphs);
+  if (pageNumbers.size > 0) {
+    warnings.push(`${pageNumbers.size} typed page numbers were left out: a page number is not a line of the book, and each had been reading as a chapter.`);
+  }
 
   doc.paragraphs.forEach((paragraph, index) => {
+    if (pageNumbers.has(index)) return;
     // A title at the very top is the book's, not a chapter.
     if (index === 0 && paragraph.styleName === 'title' && paragraph.pictures.length === 0) {
       title = paragraph.plain;

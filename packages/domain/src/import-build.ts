@@ -10,6 +10,7 @@ import { storyMarkerSchema } from './entities/structure.js';
 import { createProjectFile } from './project-file.js';
 import { characterCategoriesInOrder } from './characters.js';
 import { CHAPTER_HEAD, bareCue, type ImportedScript } from './importing.js';
+import { BARE_LABEL } from './import-docx.js';
 import type { ProjectFile } from './project-file.js';
 import { defaultUnitKind } from './project-file.js';
 import { defaultMarkerKind } from './markers.js';
@@ -152,6 +153,56 @@ export interface Materialised {
   words: number;
 }
 
+/** Where a passage is cut (addendum 21 §10): at a scene break always, otherwise near this many words, at a paragraph. */
+export const PASSAGE_WORDS = { target: 700, least: 200 } as const;
+
+const openingWords = (text: string, count = 6): string => {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '';
+  return words.length <= count ? words.join(' ') : `${words.slice(0, count).join(' ')}…`;
+};
+
+/**
+ * A section's elements as passages (addendum 21 §10). A scene break ends a
+ * passage — it is the one place the writer has said the story pauses — and
+ * a stretch with none is cut at a paragraph once it has a passage's worth of
+ * words, never leaving a stub of a few lines at the end. Each passage is
+ * titled with its opening words, which is authoring metadata and never
+ * printed: a name to find it by on the timeline, not a line of the book.
+ */
+export const passagesFrom = (elements: readonly ManuscriptElement[]): { elements: ManuscriptElement[]; title: string }[] => {
+  const out: { elements: ManuscriptElement[]; title: string }[] = [];
+  let current: ManuscriptElement[] = [];
+  let words = 0;
+  const close = () => {
+    if (current.length === 0) return;
+    const first = current.find((element) => element.type === 'paragraph' || element.type === 'blockquote' || element.type === 'heading');
+    out.push({ elements: current, title: openingWords(first?.text ?? '') });
+    current = [];
+    words = 0;
+  };
+  for (const element of elements) {
+    if (element.type === 'scene_break') {
+      current.push(element);
+      close();
+      continue;
+    }
+    const count = wordsIn(element.text);
+    // Cut before a paragraph that would carry the passage past its
+    // measure, once there is a passage's worth behind it.
+    if (words >= PASSAGE_WORDS.least && words + count > PASSAGE_WORDS.target && (element.type === 'paragraph' || element.type === 'heading')) close();
+    current.push(element);
+    words += count;
+  }
+  // A stub at the end joins the passage before it, unless a scene break stood between.
+  if (current.length > 0 && words < PASSAGE_WORDS.least && out.length > 0 && out[out.length - 1]!.elements[out[out.length - 1]!.elements.length - 1]?.type !== 'scene_break') {
+    out[out.length - 1]!.elements.push(...current);
+  } else {
+    close();
+  }
+  return out.length > 0 ? out : [{ elements: [], title: '' }];
+};
+
 /**
  * The scenes of a read script as records: a unit per scene, a beat per unit
  * holding the elements, the pictures as assets, and on a prose format a
@@ -281,20 +332,28 @@ export const materialiseScenes = (script: ImportedScript, options: MaterialiseOp
       );
     }
 
-    beats.push(
-      beatSchema.parse({
-        id: newId<BeatId>(),
-        projectId,
-        unitId,
-        title: '',
-        status: 'written',
-        orderKey: orderKeyBetween(null, null),
-        manuscript: { elements },
-        revisionName: 'Imported',
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      }),
-    );
+    // A prose section arrives as passages rather than one long beat
+    // (addendum 21 §10): cut at each scene break and, where a stretch runs
+    // long, at a paragraph near a passage's worth of words. A script's
+    // scene stays one beat, as it always has.
+    const passages = prose ? passagesFrom(elements) : [{ elements, title: '' }];
+    const keys = initialOrderKeys(Math.max(1, passages.length));
+    passages.forEach((passage, at) => {
+      beats.push(
+        beatSchema.parse({
+          id: newId<BeatId>(),
+          projectId,
+          unitId,
+          title: passage.title,
+          status: 'written',
+          orderKey: keys[at] ?? orderKeyBetween(null, null),
+          manuscript: { elements: passage.elements },
+          revisionName: 'Imported',
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        }),
+      );
+    });
   });
 
   return { units, beats, markers, assets, words };
@@ -439,6 +498,10 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
  */
 export const chapterName = (heading: string): string => {
   const trimmed = heading.trim();
+  // A label that is only a number — *3*, *II*, *Seven* — names nothing: the
+  // number is derived from where the chapter falls (addendum 02 §12a), so
+  // the title is empty and the leaf prints the number it works out.
+  if (BARE_LABEL.test(trimmed)) return '';
   const head = CHAPTER_HEAD.exec(trimmed);
   if (!head) return trimmed;
   return trimmed

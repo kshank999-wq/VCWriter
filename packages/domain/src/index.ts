@@ -75,6 +75,7 @@ export * from './book-plan.js';
 export * from './book-pages.js';
 export * from './print-book.js';
 export * from './mutations.js';
+export * from './dividing.js';
 export * from './render.js';
 export * from './editing.js';
 export * from './reformat.js';

@@ -649,6 +649,7 @@ export function BeatBody({
           </div>
         ) : null}
         <div
+          data-element-id={element.id as string}
           className={[
             `element element-${element.type}`,
             // How the document it came from set it (addendum 21 §3), honoured

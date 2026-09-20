@@ -132,7 +132,7 @@ describe('stories in a collection', () => {
 });
 
 describe('a section head in a Word document', () => {
-  it('is a bare numeral set centred', () => {
+  it('is a bare numeral alone on its line', () => {
     const base = {
       text: '',
       plain: '',
@@ -151,7 +151,8 @@ describe('a section head in a Word document', () => {
     };
     expect(opensChapter({ ...base, plain: 'II', text: 'II' })).toBe(true);
     expect(opensChapter({ ...base, plain: '3.', text: '3.' })).toBe(true);
-    expect(opensChapter({ ...base, plain: 'II', text: 'II', align: 'left' })).toBe(false);
+    // Wherever it stands, since addendum 21 §10: a manuscript sets its labels left as often as centred.
+    expect(opensChapter({ ...base, plain: 'II', text: 'II', align: 'left' })).toBe(true);
     expect(opensChapter({ ...base, plain: 'I am here.', text: 'I am here.' })).toBe(false);
   });
 });
