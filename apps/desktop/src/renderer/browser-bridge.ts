@@ -9,6 +9,7 @@ import {
   renderPrintDocumentHtml,
   renderSheetDocumentHtml,
   serializeProjectFile,
+  suggestedBookFileName,
   suggestedExportFileName,
   type ProjectFile,
   type LearningSuggestion,
@@ -149,10 +150,54 @@ const documentFor = (input: PrintInput): string => {
   return renderPrintDocumentHtml(input.file, options);
 };
 
+const escapeHtml = (value: string): string =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** What the print window is showing, in words: for the banner and the tab. */
+const describeDocument = (input: PrintInput): { name: string; what: string } => {
+  const title = input.file.project.title || 'Untitled';
+  if (input.kind === 'book') {
+    const pages = (input.html ?? '').split('class="bk-page').length - 1;
+    const paper = input.paper ? `${input.paper.width} × ${input.paper.height} in` : 'its trim';
+    return { name: suggestedBookFileName(title).replace(/\.pdf$/, ''), what: `${title} as a book — ${pages} ${pages === 1 ? 'page' : 'pages'} at ${paper}, every page as it stands in the Layout room` };
+  }
+  return { name: suggestedExportFileName(input.file).replace(/\.pdf$/, ''), what: `${title} — ${input.kind ?? 'the script'}` };
+};
+
+/**
+ * A browser has no `printToPDF`; its print dialog is the only way to a file.
+ * The dialog belongs to the browser, so what it stamps on a page — the date,
+ * the tab's title, the URL, a page count — is its own setting and not ours,
+ * and with a printer chosen (rather than *Save as PDF*) it uses that
+ * printer's paper and margins over the document's `@page`. Ken saw exactly
+ * that: the book on Letter with a date in the corner and `about:blank` at
+ * the foot, and nothing on the screen saying what the thing was. So the
+ * window now says: a banner above the pages, on the screen and never in the
+ * print, names the document and says what to choose; and the tab is named
+ * as the file should be, since *Save as PDF* takes its file name from it.
+ */
+const withBanner = (html: string, description: { name: string; what: string }): string => {
+  const banner =
+    `<style>
+      .vcw-print-banner { font: 14px/1.45 system-ui, sans-serif; background: #1f2430; color: #f4f4f6; padding: 12px 18px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+      .vcw-print-banner strong { font-weight: 600; }
+      .vcw-print-banner span { opacity: 0.85; }
+      .vcw-print-banner button { font: inherit; padding: 6px 14px; border-radius: 6px; border: 0; background: #d6b25e; color: #1f2430; cursor: pointer; }
+      @media print { .vcw-print-banner { display: none !important; } }
+    </style>
+    <div class="vcw-print-banner" role="note">
+      <strong>${escapeHtml(description.what)}.</strong>
+      <span>To keep it as a PDF: choose <b>Save as PDF</b> as the destination, and under <i>More settings</i> turn <b>Headers and footers</b> off. The file is named ${escapeHtml(description.name)}.pdf.</span>
+      <button type="button" onclick="window.print()">Save as PDF…</button>
+    </div>`;
+  const titled = html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(description.name)}</title>`);
+  return titled.includes('<body>') ? titled.replace('<body>', `<body>${banner}`) : `${banner}${titled}`;
+};
+
 const printDocument = (input: PrintInput): boolean => {
   const popup = window.open('', '_blank');
   if (!popup) return false;
-  popup.document.write(documentFor(input));
+  popup.document.write(withBanner(documentFor(input), describeDocument(input)));
   popup.document.close();
   popup.focus();
   popup.print();
