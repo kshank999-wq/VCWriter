@@ -1217,8 +1217,9 @@ push live; the build takes a minute or two.
   `addendum-23-ebook-export.md` is **eBook export**, from Ken's own *eBook
   Export Engine* dev spec: one EPUB 3.3 from the laid-out book, with store
   presets for Kindle, Apple, NOOK, Kobo, Google Play, Draft2Digital and
-  IngramSpark. **Phases 1 and 2 built**; §8 says what is not (EPUBCheck,
-  fixed layout, footnotes, fonts, retailer APIs). §1 is the audit and it
+  IngramSpark. **Phases 1 to 4 built**; §8 says what is not (EPUBCheck
+  in-app, footnotes, fonts, media overlays, retailer APIs, any conformance
+  claim). §1 is the audit and it
   paid an **eleventh** time: the spec's *intermediate representation* is
   `bookBlocks` (addendum 20 §5), so `ebook.ts` is a **second reader of the
   same blocks** — a file per part and per chapter (per story in a
@@ -1241,7 +1242,39 @@ push live; the build takes a minute or two.
   rather than pretending. *Export as eBook…* is in the Layout bar; the
   dialog is the preflight, errors hold the button, and `saveExport` on the
   bridge makes a *Title - eBook Export* folder holding the EPUB, the cover
-  beside it, a report and `metadata.json`.
+  beside it, `export-report.html` and `metadata.json`. **Phase 3** (§9) is
+  the *Preview* tab — `ebook-preview.ts` shows the package's **own files**
+  at the size of a Kindle, a Kobo, a phone or a tablet, the stylesheet
+  inlined and the pictures put back, a reflowable section set in columns
+  the width of the screen and turned one at a time, which is what a reading
+  system does and not what any one does exactly, said at the foot —
+  `packagedCheck`, Ken's *preflight again after packaging*, which reads the
+  central directory back (mimetype first, stored and exact; every file once;
+  lengths and checksums as written) and inflates nothing; the HTML report;
+  Kindle Previewer opened where `main/kindle-previewer.ts` finds it
+  installed, absent in the browser; and `ebook-corpus.test.ts`, whose books
+  all pass **EPUBCheck 5.2.1 with 0/0**. **Phase 4** (§10, §11) is the
+  **fixed-layout book**, `ebook-fixed.ts`, a **third reader — of the pages**
+  rather than the blocks: one XHTML per laid page at the trim from the same
+  `renderBookPage` the screen draws, sides on the spine, the room's own
+  stylesheet, offered only once the room has laid the pages, its two limits
+  said rather than hidden (faces not embedded, so lines may fall differently
+  within a page; a book of text is warned against in Ken's words, and each
+  store's stance is a `fixedLayout` rule). `ebook.ts` was split for it:
+  `imageBank`, `coverOf`, `accessibilityMeta` and `finishPackage` serve
+  both. And **every accessibility claim is read off the package** —
+  `alternativeText` only when no picture still owes a description, a
+  picture owing one unless the writer typed it (`altText`, editable from
+  the dialog's *Pictures* list) or marked the **figure** decorative
+  (`markFigureDecorative`, on the element, since one picture can be an
+  ornament here and a figure there); no conformance claim, because a
+  certification is not a reading. The browser preview's *Export the book…*
+  goes through the browser's print dialog, the only road to a file there,
+  and Ken's screenshot showed what that costs when a printer rather than
+  *Save as PDF* is chosen — Letter paper, a date and `about:blank` stamped
+  by the browser, nothing saying what the thing was — so the print window
+  now carries a screen-only banner naming the document and what to choose,
+  and its tab is the file name.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

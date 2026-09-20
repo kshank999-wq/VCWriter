@@ -220,6 +220,12 @@ export interface BookBlock {
   /** The picture, on a figure or a plate. */
   assetId?: string | null;
   caption?: string;
+  /**
+   * A figure the writer marked decorative (addendum 23 §11): an ornament a
+   * reader who cannot see it loses nothing by, so it needs no description
+   * and the eBook says so. Read off the element; the printed book ignores it.
+   */
+  decorative?: boolean;
   /** The first paragraph after a chapter opening, which the style may set differently. */
   opensChapter?: boolean;
   /** The part this block belongs to, where it belongs to one. */
@@ -386,6 +392,7 @@ export interface FigureInset extends BookFigurePlacement {
   figureId: string;
   assetId: string | null;
   caption: string;
+  decorative: boolean;
 }
 
 export const INSET_SPAN = { min: 0.2, max: 0.6, default: 0.4 } as const;
@@ -412,6 +419,8 @@ export interface BookFigure {
   assetName: string;
   placement: BookFigurePlacement;
   chapterTitle: string;
+  /** Marked decorative for the eBook (addendum 23 §11). */
+  decorative: boolean;
 }
 
 export const bookFigures = (file: ProjectFile): BookFigure[] => {
@@ -435,12 +444,39 @@ export const bookFigures = (file: ProjectFile): BookFigure[] => {
           assetName: (assetId && names.get(assetId)) || '',
           placement: figurePlacement(element),
           chapterTitle,
+          decorative: element.attributes.decorative === true,
         });
       }
     }
   }
   return out;
 };
+
+/**
+ * Say whether a figure is decorative (addendum 23 §11): an ornament a
+ * reader who cannot see it loses nothing by. On the element's attributes,
+ * like its placement; off means the picture needs a description, which is
+ * the default because a picture nobody has looked at is not known to be
+ * decoration.
+ */
+export const markFigureDecorative = (file: ProjectFile, elementId: string, decorative: boolean): ProjectFile => ({
+  ...file,
+  beats: file.beats.map((beat) =>
+    beat.manuscript.elements.some((element) => element.id === elementId)
+      ? {
+          ...beat,
+          manuscript: {
+            ...beat.manuscript,
+            elements: beat.manuscript.elements.map((element) => {
+              if (element.id !== elementId) return element;
+              const { decorative: _was, ...rest } = element.attributes;
+              return { ...element, attributes: decorative ? { ...rest, decorative: true } : rest };
+            }),
+          },
+        }
+      : beat,
+  ),
+});
 
 /**
  * Place a figure in the book. Written on the element's attributes, which
@@ -491,6 +527,7 @@ const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensCha
         unbreakable: true,
         assetId: typeof element.attributes.assetId === 'string' ? element.attributes.assetId : null,
         caption: element.text,
+        decorative: element.attributes.decorative === true,
       });
     default:
       // A script's elements have no place in a book; a prose project has none.
@@ -586,6 +623,7 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
               figureId: pending.id,
               assetId: pending.assetId ?? null,
               caption: pending.caption ?? '',
+              decorative: pending.decorative === true,
             };
             made.unbreakable = true;
           } else {

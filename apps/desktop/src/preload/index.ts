@@ -179,6 +179,13 @@ export interface VcWriterApi {
     paper?: { width: number; height: number };
   }): Promise<DesktopApiResult<boolean>>;
   appInfo(): Promise<DesktopApiResult<{ version: string; platform: string }>>;
+  /**
+   * Whether Amazon's Kindle Previewer is on this computer (addendum 23 §9),
+   * and opening an exported EPUB in it. Absent in the browser, where there
+   * is no computer to look on; the panel then says KDP recommends it.
+   */
+  kindlePreviewer?(): Promise<DesktopApiResult<{ installed: boolean; path: string | null }>>;
+  openInKindlePreviewer?(epubPath: string): Promise<DesktopApiResult<boolean>>;
 
   /**
    * Whether this bridge has exactly one project and should open it on start.
@@ -383,6 +390,8 @@ const api: VcWriterApi = {
   saveExport: (input) => ipcRenderer.invoke('project:saveExport', input),
   print: (input) => ipcRenderer.invoke('project:print', input),
   appInfo: () => ipcRenderer.invoke('app:version'),
+  kindlePreviewer: () => ipcRenderer.invoke('app:kindlePreviewer'),
+  openInKindlePreviewer: (epubPath) => ipcRenderer.invoke('app:openInKindlePreviewer', epubPath),
   accountStatus: () => ipcRenderer.invoke('cloud:status'),
   requestSignInCode: (email) => ipcRenderer.invoke('cloud:requestCode', email),
   verifySignInCode: (input) => ipcRenderer.invoke('cloud:verifyCode', input),

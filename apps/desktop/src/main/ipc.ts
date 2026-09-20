@@ -42,6 +42,7 @@ import {
 import { deviceFingerprint, deviceName, devicePlatform } from './device';
 import { checkForUpdate, downloadUpdate, runInstaller, type DownloadedUpdate, type UpdateStatus } from './updater';
 import { reportError, reportingSettings, setReportingEnabled } from './reporting';
+import { kindlePreviewerStatus, openInKindlePreviewer } from './kindle-previewer';
 import {
   PROJECT_EXTENSION,
   listSnapshots,
@@ -702,4 +703,21 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
   );
 
   ipcMain.handle('app:version', () => ok({ version: app.getVersion(), platform: process.platform }));
+
+  // Kindle Previewer (addendum 23 §9): where it is installed, and the EPUB opened in it.
+  ipcMain.handle('app:kindlePreviewer', async (): Promise<DesktopApiResult<{ installed: boolean; path: string | null }>> => {
+    try {
+      return ok(await kindlePreviewerStatus());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+  ipcMain.handle('app:openInKindlePreviewer', async (_event, epubPath: string): Promise<DesktopApiResult<boolean>> => {
+    try {
+      const refusal = await openInKindlePreviewer(epubPath);
+      return refusal ? { ok: false, error: refusal } : ok(true);
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
 };

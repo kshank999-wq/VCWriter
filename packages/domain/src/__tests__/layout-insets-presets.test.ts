@@ -142,6 +142,7 @@ describe('a figure cut into the text (stage 6)', () => {
         assetName: 'harbour.png',
         placement: { place: 'left', span: 0.4 },
         chapterTitle: 'The Road',
+        decorative: false,
       },
     ]);
   });

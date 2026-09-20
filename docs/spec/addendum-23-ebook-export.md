@@ -5,8 +5,9 @@ is going to before anything is written, and delivered with its cover and a
 report beside it. Nothing about a page survives the journey, and the
 preflight says so.*
 
-Status: phases 1 and 2 of Ken's spec built, 19 September 2026; §9 says
-what each stage does and §8 what is deliberately not built.
+Status: phases 1 to 4 of Ken's spec built, 20 September 2026; §9 says
+what each stage does, §10 is the fixed-layout book, §11 the accessibility
+reading, and §8 what is deliberately not built.
 
 ## 0. Where it came from
 
@@ -124,20 +125,29 @@ says what to do at the store.
 
 ## 8. What is deliberately not done
 
-- **EPUBCheck** is not run. It is a Java program; the desktop does not
-  carry a JVM. The report says to run it before uploading where the store
-  insists.
-- **Fixed-layout EPUB.** Ken's spec says not to build it for novels and
-  collections, and every format that reaches the Layout room is one.
+- **EPUBCheck** is not run inside the program. It is a Java program; the
+  desktop does not carry a JVM. The check after packaging (§9) reads the
+  archive back and the report says to run EPUBCheck before uploading where
+  the store insists; it has been run by hand over every book in the corpus.
 - **Footnotes and endnotes.** The manuscript has no element for them, so
   there is nothing to carry. When one exists it becomes a block, and the
   block becomes EPUB note semantics here.
 - **Embedded fonts.** A licence question the program cannot answer for the
-  writer; the reader's face is used and the log says so.
-- **Kindle Previewer handoff** and **retailer APIs**, which the spec puts
-  in phases 3 and 5.
+  writer; the reader's face is used and the log says so. This is also the
+  fixed-layout book's one honest limitation (§10).
+- **Media overlays and enhanced books.** Phase 4's *if product direction
+  requires*: an overlay is recorded speech synchronised to the text, and
+  the program records nobody's speech — its read-back voices (spec §10)
+  are synthesised on the desk and never kept. When a recording exists
+  there is something to synchronise.
+- **Retailer APIs**, which the spec puts in phase 5 and keeps apart from
+  file export for good reasons of its own.
 - **Image re-encoding.** A picture is carried as it is in the library and
   never upscaled; a picture past a store's limit is an error that names it.
+- **A conformance claim.** The package says what it truthfully can about
+  its accessibility (§11) and never that it conforms to EPUB Accessibility
+  or WCAG: conformance is a certification of the whole book, which no
+  program that has not read it can give.
 
 ## 9. What each stage built
 
@@ -164,3 +174,107 @@ says what to do at the store.
   order — so the navigation document now sits in the spine after the front
   matter, as the visible contents page. The program still does not ship a
   JVM, so the preflight's last note stands.
+- **Stage 4, the device preview (phase 3).** `ebook-preview.ts` and
+  `EbookPreview.tsx`: the *Preview* tab of the dialog shows the package's
+  own files — the XHTML the store receives, its stylesheet inlined and its
+  pictures put back, and nothing else — in a frame the size of a screen a
+  reader holds (a 6.8″ Kindle, a 6″ Kobo or NOOK, a phone, a tablet, in the
+  CSS pixels a reading app lays out), with the reader's type size in the
+  reader's hand and the sections turned a screen at a time. The screens
+  are an honest approximation: a reflowable file is set in columns the
+  width of the device and counted by the flow's width, which is what a
+  reading system does and not what any one of them does exactly, and the
+  foot of the panel says so. A fixed-layout page is scaled to fit, as every
+  reader scales it — and a blank verso shows blank, because it is.
+- **Stage 5, Kindle Previewer (phase 3).** `main/kindle-previewer.ts` and
+  two optional methods on the bridge: where Amazon installs the Previewer
+  is looked in, and after writing for any store the panel offers *Open in
+  Kindle Previewer* where it is installed; for Kindle it says otherwise
+  that KDP recommends it. Absent in the browser, where there is no
+  computer to look on. Nothing is downloaded and nothing is asked of
+  Amazon.
+- **Stage 6, the report and the check after packaging (phase 3).**
+  `ebookReportHtml` writes `export-report.html` beside the book — target,
+  layout, files and their sizes, the findings by severity, what was done on
+  the way, every part of the package with its type and size, every picture
+  with its description or the want of one, and the store's checklist.
+  `packagedCheck` is Ken's *preflight again after packaging*, and it is
+  about the archive rather than the book: the central directory is read
+  back and the mimetype must be first, stored and exact, every file the
+  package meant to write must be there once, and each one's length and
+  checksum must be what was handed to the writer. Nothing is inflated. The
+  panel says the result after writing and the report carries it.
+- **Stage 7, the regression corpus (phase 3).** `ebook-corpus.test.ts`:
+  a twenty-chapter novel; smart quotes, dashes, ellipses, accents and four
+  non-Latin scripts; several authors; pictures and a cover; parts before
+  and after the story; a collection with a written and an imported story;
+  and every store preset on one book. Each must export with nothing
+  blocking, pass the packaged check, carry no markup an XML parser refuses,
+  and come out the same twice. The same books were written to disk and run
+  through **EPUBCheck 5.2.1: 0 errors, 0 warnings** on each, the
+  fixed-layout ones included. It found one thing the tests had not — a
+  part and the chapter opening under it on one page listed that page twice
+  in the EPUB 2 contents, which that reader refuses — so a fixed page is
+  named once. Hyperlinks and notes are in Ken's list and not in the corpus,
+  the manuscript having no element for either.
+- **Stage 8, the fixed-layout book (phase 4).** §10.
+- **Stage 9, the accessibility reading (phase 4).** §11.
+
+## 10. The fixed-layout book
+
+Ken's §15 says when: an illustrated book, a comic, a children's book, work
+where the composition must stay exact — and never a novel merely because
+it has a trim. So the reflowable book stays the default and the
+recommendation, and *Fixed layout* is a second choice on the dialog, offered
+only once the Layout room has laid the pages, because that is what it is
+made of.
+
+`ebook-fixed.ts` is a **third reader**: where the reflowable book reads the
+*blocks*, this reads the *pages* — the same `renderBookPage` markup the
+screen draws and the PDF prints, one XHTML document per page at the trim in
+CSS pixels, with the viewport the pre-paginated layout requires, `rendition:
+layout` on the package, and each page's side (verso left, recto right, the
+cover centred) on its spine item, so a reader that shows spreads shows the
+right ones. Page numbers, running heads and blank versos are **kept**, this
+time: they are part of the page. The pictures a page draws as data URLs are
+moved into the package's files with the alt text the page gave them, and
+the page's stylesheet is the room's own — the same custom properties, the
+same rules — so the page on the device is the page in the room. The two
+exporters share everything below the content: the image bank, the cover,
+the accessibility reading and `finishPackage`, which writes the navigation,
+the package document, the container and the mimetype for either. The
+contents lists the first page of each part and the page each chapter opens
+on, read off the pages, so a chapter that moved lists where it now is.
+
+Two honest limits, said rather than hidden. **The faces are not embedded**
+(§8): a reader without the book's face sets each page in its own, and the
+lines may fall differently *within* the page; the log says so. And **a
+book of text should not be fixed**: the preflight warns when fewer than
+half the pages carry a picture, in Ken's own words about a reader who can
+no longer change the type size, and each store's stance is a rule
+(`fixedLayout` on the preset — Draft2Digital refuses it, an error; NOOK and
+IngramSpark reach fewer shelves with it, a warning).
+
+## 11. What the package says about itself
+
+Ken's §16 asks for accessibility metadata *when VC Writer can truthfully
+determine it*, and the rule here is that **every claim is read off the
+package**. The modes come from whether there are pictures;
+`accessModeSufficient: textual` and `alternativeText` are claimed only when
+no picture still owes a description; `displayTransformability` only on a
+book the reader may reflow; `structuralNavigation` because the headings
+are real and the contents lists them; and the summary is a sentence about
+this book. No conformance is claimed (§8).
+
+A picture owes a description unless the writer gave one or marked the
+figure **decorative** — the spec's *allow decorative designation*. The
+description is the picture's, in the library (`altText`, edited from the
+dialog's *Pictures* list, which is where the preflight's warning finally
+has somewhere to act); decorative is the *figure's*, on the element beside
+its placement (`markFigureDecorative`, no migration), because the same
+picture can be an ornament in one place and a figure that carries meaning
+in another. A decorative figure is written with an empty alt and a
+presentation role, a chapter device the same, and neither is counted
+against the book. `needsDescription` on a package image is the one thing
+the preflight and the metadata read, so they cannot disagree.
+

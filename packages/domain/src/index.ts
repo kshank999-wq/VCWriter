@@ -53,6 +53,8 @@ export * from './collection.js';
 export * from './ebook-presets.js';
 export * from './ebook.js';
 export * from './ebook-preflight.js';
+export * from './ebook-fixed.js';
+export * from './ebook-preview.js';
 export * from './zip-write.js';
 export * from './xml-walk.js';
 export * from './markers.js';

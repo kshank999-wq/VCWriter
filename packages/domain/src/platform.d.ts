@@ -12,6 +12,10 @@ declare class TextEncoder {
   encode(input?: string): Uint8Array;
 }
 
+declare class TextDecoder {
+  decode(input?: Uint8Array): string;
+}
+
 declare class CompressionStream {
   constructor(format: 'deflate' | 'deflate-raw' | 'gzip');
 }

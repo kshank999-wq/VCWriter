@@ -37,6 +37,11 @@ export interface EbookRules {
   requiresIsbn: boolean;
   /** An EPUB 2 table of contents is written beside the EPUB 3 one, for older readers. */
   includeNcx: boolean;
+  /**
+   * Whether the store takes a fixed-layout EPUB (§10): `yes`, `limited`
+   * where it does but reaches fewer readers or shelves, `no` where it refuses.
+   */
+  fixedLayout: 'yes' | 'limited' | 'no';
   /** What to do at the retailer once the files exist. */
   checklist: string[];
 }
@@ -58,6 +63,7 @@ export const EBOOK_RULES: Record<EbookTarget, EbookRules> = {
     requiresSeparateCover: true,
     requiresIsbn: false,
     includeNcx: true,
+    fixedLayout: 'yes',
     checklist: ['Upload the EPUB to each store; upload the cover file where the store asks for one separately.'],
   }),
   kindle: rules({
@@ -74,6 +80,7 @@ export const EBOOK_RULES: Record<EbookTarget, EbookRules> = {
     requiresSeparateCover: true,
     requiresIsbn: false,
     includeNcx: true,
+    fixedLayout: 'yes',
     checklist: [
       'Open the EPUB in Kindle Previewer before uploading; KDP recommends it.',
       'Upload the cover file on the KDP form (ideal 2560 × 1600 px, JPEG or TIFF, RGB).',
@@ -93,6 +100,7 @@ export const EBOOK_RULES: Record<EbookTarget, EbookRules> = {
     requiresSeparateCover: true,
     requiresIsbn: false,
     includeNcx: false,
+    fixedLayout: 'yes',
     checklist: ['Upload the EPUB and the cover in Apple Books for Authors or iTunes Producer.'],
   }),
   nook: rules({
@@ -109,6 +117,7 @@ export const EBOOK_RULES: Record<EbookTarget, EbookRules> = {
     requiresSeparateCover: true,
     requiresIsbn: false,
     includeNcx: true,
+    fixedLayout: 'limited',
     checklist: ['Upload the EPUB and the cover on B&N Press.'],
   }),
   kobo: rules({
@@ -125,6 +134,7 @@ export const EBOOK_RULES: Record<EbookTarget, EbookRules> = {
     requiresSeparateCover: true,
     requiresIsbn: false,
     includeNcx: true,
+    fixedLayout: 'yes',
     checklist: ['Upload the EPUB and the cover (portrait, about 3:4) on Kobo Writing Life.'],
   }),
   google: rules({
@@ -141,6 +151,7 @@ export const EBOOK_RULES: Record<EbookTarget, EbookRules> = {
     requiresSeparateCover: true,
     requiresIsbn: false,
     includeNcx: true,
+    fixedLayout: 'yes',
     checklist: [
       'Upload the EPUB on the Play Books Partner Center.',
       'To offer the printed layout too, export the book as a PDF from the Layout room and upload it beside the EPUB.',
@@ -160,6 +171,7 @@ export const EBOOK_RULES: Record<EbookTarget, EbookRules> = {
     requiresSeparateCover: true,
     requiresIsbn: false,
     includeNcx: true,
+    fixedLayout: 'no',
     checklist: ['Upload the EPUB as your own file on Draft2Digital, and the cover on the cover step.'],
   }),
   ingram: rules({
@@ -176,6 +188,7 @@ export const EBOOK_RULES: Record<EbookTarget, EbookRules> = {
     requiresSeparateCover: true,
     requiresIsbn: true,
     includeNcx: true,
+    fixedLayout: 'limited',
     checklist: ['Upload the EPUB as the interior and the JPEG as the cover on IngramSpark.'],
   }),
 };

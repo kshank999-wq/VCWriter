@@ -6,7 +6,7 @@ import { nowIso } from './entities/common.js';
 import { ebookRulesFor, type EbookRules } from './ebook-presets.js';
 import { writeZip } from './zip-write.js';
 import type { ProjectFile } from './project-file.js';
-import type { BookPart, EbookSettings } from './entities/book.js';
+import type { BookPart, BookSettings, EbookSettings } from './entities/book.js';
 import type { Asset } from './entities/asset.js';
 
 /**
@@ -24,7 +24,12 @@ import type { Asset } from './entities/asset.js';
  * trim — and the log says so.
  *
  * One package for every store. What differs between stores is checked by
- * the preflight against `ebook-presets.ts`, never built twice here.
+ * the preflight against `ebook-presets.ts`, never built twice here. And
+ * the fixed-layout book (`ebook-fixed.ts`, §10) is a third reader — of the
+ * *pages* rather than the blocks — that shares everything below the
+ * content: the image bank, the cover, the accessibility reading and
+ * `finishPackage`, which writes the navigation, the package document, the
+ * container and the mimetype for either.
  */
 
 // --------------------------------------------------------------- metadata
@@ -42,6 +47,8 @@ export interface EbookMetadata {
   /** UTC, to the second, as EPUB wants it. */
   modified: string;
 }
+
+export type EbookLayout = 'reflowable' | 'fixed';
 
 const splitAuthors = (author: string): string[] =>
   author
@@ -92,6 +99,8 @@ export interface EbookSection {
   href: string;
   title: string;
   kind: 'cover' | 'front' | 'body' | 'chapter' | 'back';
+  /** On a fixed-layout page: which side of the spread it is (§10). */
+  spread?: 'left' | 'right' | 'center';
 }
 
 export interface EbookImage {
@@ -99,12 +108,22 @@ export interface EbookImage {
   href: string;
   mediaType: string;
   data: Uint8Array;
+  /** As it came, for the preview, which shows the file without unzipping it. */
+  dataUrl: string;
+  /** The library picture it is, where it is one; the screen edits its description there. */
+  assetId: string | null;
   alt: string;
   width: number;
   height: number;
   name: string;
-  /** Whether a writer gave it a description; the preflight asks. */
+  /** Whether a writer gave it a description. */
   described: boolean;
+  /**
+   * Whether the book still owes it one (§11): undescribed, and used
+   * somewhere the writer did not mark decorative. The preflight asks this
+   * rather than `described`, because an ornament needs no words.
+   */
+  needsDescription: boolean;
 }
 
 export interface EbookCover extends EbookImage {
@@ -112,22 +131,32 @@ export interface EbookCover extends EbookImage {
   fileName: string;
 }
 
+export interface EbookNavItem {
+  href: string;
+  title: string;
+}
+
 export interface EbookPackage {
   metadata: EbookMetadata;
   rules: EbookRules;
+  layout: EbookLayout;
   entries: EpubEntry[];
   sections: EbookSection[];
   images: EbookImage[];
   cover: EbookCover | null;
+  /** The contents, as the navigation document lists them. */
+  nav: EbookNavItem[];
   /** What was done to the book on the way, one sentence each. */
   log: string[];
   /** `The Lighthouse.epub` */
   fileName: string;
   /** Bytes before compression, for the size checks. */
   size: number;
+  /** On a fixed-layout book: how many pages, and how many carry a picture. */
+  pages: { count: number; pictured: number; width: number; height: number } | null;
 }
 
-const escapeXml = (value: string): string =>
+export const escapeXml = (value: string): string =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const renderSpans = (spans: InlineSpan[], text: string): string => {
@@ -152,8 +181,12 @@ const lines = (text: string): string =>
     .join('');
 
 /** A file name a filesystem and a zip both take: letters, digits, dashes. */
+const LIGATURES: Record<string, string> = { æ: 'ae', Æ: 'AE', ø: 'o', Ø: 'O', œ: 'oe', Œ: 'OE', ß: 'ss', ð: 'd', Ð: 'D', þ: 'th', Þ: 'Th', ł: 'l', Ł: 'L', đ: 'd', Đ: 'D' };
+
 export const safeName = (text: string, fallback = 'book'): string => {
   const slug = text
+    // The letters a decomposition leaves alone, spelt out rather than dropped.
+    .replace(/[æÆøØœŒßðÐþÞłŁđĐ]/g, (letter) => LIGATURES[letter] ?? letter)
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^A-Za-z0-9]+/g, '-')
@@ -162,7 +195,7 @@ export const safeName = (text: string, fallback = 'book'): string => {
   return slug.length > 0 ? slug : fallback;
 };
 
-const EXTENSIONS: Record<string, string> = {
+export const IMAGE_EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/gif': 'gif',
@@ -175,7 +208,7 @@ export const decodeDataUrl = (url: string): { mediaType: string; bytes: Uint8Arr
   const match = /^data:([^;,]+);base64,(.*)$/s.exec(url.trim());
   if (!match) return null;
   const mediaType = (match[1] as string).toLowerCase();
-  if (!(mediaType in EXTENSIONS)) return null;
+  if (!(mediaType in IMAGE_EXTENSIONS)) return null;
   try {
     const binary = atob((match[2] as string).replace(/\s+/g, ''));
     const bytes = new Uint8Array(binary.length);
@@ -205,6 +238,268 @@ const EPUB_TYPES: Record<string, string> = {
   plate: 'bodymatter',
 };
 
+// ------------------------------------------------------------ the pictures
+
+export interface ImageBank {
+  images: EbookImage[];
+  /**
+   * A picture by a key of the caller's, named in the order first used.
+   * `meaningful` false is a decorative use, which asks for no description.
+   */
+  take(key: string, dataUrl: string, alt: string, name: string, width: number, height: number, described: boolean, meaningful?: boolean): EbookImage | null;
+  /** A picture from the library, by asset id; the fallback is the alt where the asset has none. */
+  asset(assetId: string | null | undefined, fallbackAlt: string, decorative?: boolean): EbookImage | null;
+}
+
+export const imageBank = (assets: ReadonlyMap<string, Asset>, log: string[]): ImageBank => {
+  const images: EbookImage[] = [];
+  const byKey = new Map<string, EbookImage>();
+  const take: ImageBank['take'] = (key, dataUrl, alt, name, width, height, described, meaningful = true) => {
+    const known = byKey.get(key);
+    if (known) {
+      if (meaningful && !known.described) known.needsDescription = true;
+      return known;
+    }
+    const decoded = decodeDataUrl(dataUrl);
+    if (!decoded) {
+      log.push(`The picture "${name}" is in a form an eBook cannot carry and was left out.`);
+      return null;
+    }
+    const index = images.length + 1;
+    const image: EbookImage = {
+      id: `img-${String(index).padStart(3, '0')}`,
+      href: `images/img-${String(index).padStart(3, '0')}.${IMAGE_EXTENSIONS[decoded.mediaType]}`,
+      mediaType: decoded.mediaType,
+      data: decoded.bytes,
+      dataUrl,
+      assetId: key.startsWith('asset:') ? key.slice('asset:'.length) : null,
+      alt,
+      width,
+      height,
+      name,
+      described,
+      needsDescription: !described && meaningful,
+    };
+    images.push(image);
+    byKey.set(key, image);
+    return image;
+  };
+  const asset: ImageBank['asset'] = (assetId, fallbackAlt, decorative = false) => {
+    if (!assetId) return null;
+    const one = assets.get(assetId);
+    if (!one || one.kind !== 'image' || one.data.length === 0) {
+      log.push('A figure named a picture the library no longer holds and was left out.');
+      return null;
+    }
+    const described = one.altText.trim().length > 0;
+    return take(`asset:${assetId}`, one.data, described ? one.altText.trim() : fallbackAlt, one.name || 'picture', one.width, one.height, described, !decorative);
+  };
+  return { images, take, asset };
+};
+
+/** The cover: the chosen picture, or the project's key art, or none. */
+export const coverOf = (
+  file: ProjectFile,
+  settings: BookSettings,
+  assets: ReadonlyMap<string, Asset>,
+  metadata: EbookMetadata,
+  log: string[],
+): EbookCover | null => {
+  const coverAssetId = settings.ebook.coverAssetId ?? file.project.posterAssetId ?? null;
+  if (!coverAssetId) return null;
+  const asset = assets.get(coverAssetId as string);
+  const decoded = asset && asset.kind === 'image' ? decodeDataUrl(asset.data) : null;
+  if (!asset || !decoded) {
+    log.push('The chosen cover is not a picture an eBook can carry and was left out.');
+    return null;
+  }
+  const extension = IMAGE_EXTENSIONS[decoded.mediaType] as string;
+  if (!settings.ebook.coverAssetId) log.push("The project's key art stands as the cover, no cover having been chosen.");
+  return {
+    id: 'cover-image',
+    href: `images/cover.${extension}`,
+    mediaType: decoded.mediaType,
+    data: decoded.bytes,
+    dataUrl: asset.data,
+    assetId: asset.id as string,
+    alt: `Cover of ${metadata.title}`,
+    width: asset.width,
+    height: asset.height,
+    name: asset.name,
+    described: true,
+    needsDescription: false,
+    fileName: `${safeName(metadata.title)}-cover.${extension}`,
+  };
+};
+
+// ------------------------------------------------------- the document shell
+
+/** An XHTML content document: escaped, closed, namespaced, the stylesheet linked. */
+export const xhtmlDocument = (input: { lang: string; title: string; css: string; body: string; head?: string }): string =>
+  `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${escapeXml(input.lang)}" lang="${escapeXml(input.lang)}">\n<head>\n<meta charset="utf-8"/>\n<title>${escapeXml(input.title)}</title>\n${input.head ?? ''}<link rel="stylesheet" type="text/css" href="${input.css}"/>\n</head>\n<body>\n${input.body}\n</body>\n</html>\n`;
+
+/**
+ * What the package may truthfully say about its own accessibility (§11).
+ * Every claim is read off the package: the modes from whether there are
+ * pictures, `alternativeText` only when no picture still owes a
+ * description, `displayTransformability` only on a book the reader may
+ * reflow, and the summary in words. No conformance claim is made — EPUB
+ * Accessibility conformance is a certification of the whole book, which no
+ * program that has not read it can give.
+ */
+export const accessibilityMeta = (images: readonly EbookImage[], cover: EbookCover | null, layout: EbookLayout): string => {
+  const pictures = images.length > 0 || cover !== null;
+  const allDescribed = images.every((image) => !image.needsDescription);
+  const summary =
+    layout === 'fixed'
+      ? `Fixed layout: every page as laid, which the reader scales rather than reflows. ${pictures ? (allDescribed ? 'Every picture is described.' : 'Some pictures are not described.') : 'No pictures.'}`
+      : `Reflowable text with a table of contents and real headings${
+          !pictures ? '; no pictures.' : allDescribed ? '; every picture is described.' : '; some pictures are not described.'
+        }`;
+  return [
+    `<meta property="schema:accessMode">textual</meta>`,
+    pictures ? `<meta property="schema:accessMode">visual</meta>` : '',
+    allDescribed ? `<meta property="schema:accessModeSufficient">textual</meta>` : '',
+    `<meta property="schema:accessibilityFeature">tableOfContents</meta>`,
+    `<meta property="schema:accessibilityFeature">readingOrder</meta>`,
+    `<meta property="schema:accessibilityFeature">structuralNavigation</meta>`,
+    layout === 'reflowable' ? `<meta property="schema:accessibilityFeature">displayTransformability</meta>` : '',
+    pictures && allDescribed ? `<meta property="schema:accessibilityFeature">alternativeText</meta>` : '',
+    `<meta property="schema:accessibilityHazard">none</meta>`,
+    `<meta property="schema:accessibilitySummary">${escapeXml(summary)}</meta>`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+};
+
+export interface PackageDraft {
+  metadata: EbookMetadata;
+  rules: EbookRules;
+  layout: EbookLayout;
+  /** The reading order, without the navigation document (added here where it belongs in it). */
+  sections: EbookSection[];
+  /** The content documents, in the reading order, with their ids. */
+  content: EpubEntry[];
+  images: EbookImage[];
+  cover: EbookCover | null;
+  /** What the navigation document lists. */
+  nav: EbookNavItem[];
+  /** Where the body starts, for the landmarks. */
+  firstBody: EbookSection | null;
+  /** The navigation document stands in the reading order after the front matter, as a visible contents page. */
+  navInSpine: boolean;
+  /** The stylesheet: its path under OEBPS and its text. */
+  css: { href: string; text: string };
+  /** Package-level `rendition:` and other `meta` lines beyond the standard set. */
+  extraMeta?: string[];
+  log: string[];
+  fileName: string;
+  pages: EbookPackage['pages'];
+}
+
+/**
+ * From the content to the package: the navigation document (and the EPUB 2
+ * one where the store wants it), the stylesheet, the pictures, the package
+ * document, the container and the mimetype, and the size.
+ */
+export const finishPackage = (draft: PackageDraft): EbookPackage => {
+  const { metadata, rules, layout, images, cover, log } = draft;
+  const lang = escapeXml(metadata.language);
+  const sections = draft.sections.slice();
+  const entries: EpubEntry[] = draft.content.slice();
+
+  const navSection: EbookSection = { id: 'nav', href: 'toc.xhtml', title: 'Contents', kind: 'front' };
+  if (draft.navInSpine) {
+    const lastFront = sections.reduce((found, section, index) => (section.kind === 'front' ? index : found), -1);
+    sections.splice(lastFront + 1, 0, navSection);
+  }
+
+  // ---- navigation
+  const landmarks = [
+    cover ? `<li><a epub:type="cover" href="text/000-cover.xhtml">Cover</a></li>` : '',
+    draft.navInSpine ? `<li><a epub:type="toc" href="toc.xhtml">Contents</a></li>` : '',
+    draft.firstBody ? `<li><a epub:type="bodymatter" href="${draft.firstBody.href}">${escapeXml(draft.firstBody.title)}</a></li>` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const nav =
+    `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${lang}" lang="${lang}">\n<head>\n<meta charset="utf-8"/>\n<title>Contents</title>\n<link rel="stylesheet" type="text/css" href="${draft.css.href}"/>\n</head>\n<body>\n` +
+    `<nav epub:type="toc" id="toc">\n<h1>Contents</h1>\n<ol>\n${draft.nav.map((item) => `<li><a href="${item.href}">${escapeXml(item.title)}</a></li>`).join('\n')}\n</ol>\n</nav>\n` +
+    `<nav epub:type="landmarks" hidden="hidden">\n<h1>Landmarks</h1>\n<ol>\n${landmarks}\n</ol>\n</nav>\n</body>\n</html>\n`;
+  entries.push({ path: 'OEBPS/toc.xhtml', mediaType: 'application/xhtml+xml', id: 'nav', properties: 'nav', data: nav });
+
+  if (rules.includeNcx) {
+    const points = draft.nav
+      .map(
+        (item, index) =>
+          `<navPoint id="np-${index + 1}" playOrder="${index + 1}"><navLabel><text>${escapeXml(item.title)}</text></navLabel><content src="${item.href}"/></navPoint>`,
+      )
+      .join('\n');
+    entries.push({
+      path: 'OEBPS/toc.ncx',
+      mediaType: 'application/x-dtbncx+xml',
+      id: 'ncx',
+      data:
+        `<?xml version="1.0" encoding="UTF-8"?>\n<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">\n<head>\n<meta name="dtb:uid" content="${escapeXml(metadata.identifier.urn)}"/>\n<meta name="dtb:depth" content="1"/>\n<meta name="dtb:totalPageCount" content="0"/>\n<meta name="dtb:maxPageNumber" content="0"/>\n</head>\n` +
+        `<docTitle><text>${escapeXml(metadata.title)}</text></docTitle>\n<navMap>\n${points}\n</navMap>\n</ncx>\n`,
+    });
+  }
+
+  // ---- stylesheet and pictures
+  entries.push({ path: `OEBPS/${draft.css.href}`, mediaType: 'text/css', id: 'css', data: draft.css.text });
+  for (const image of images) entries.push({ path: `OEBPS/${image.href}`, mediaType: image.mediaType, id: image.id, data: image.data });
+  if (cover) entries.push({ path: `OEBPS/${cover.href}`, mediaType: cover.mediaType, id: cover.id, properties: 'cover-image', data: cover.data });
+
+  // ---- the package document
+  const creators = metadata.authors
+    .map((author, index) => `<dc:creator id="creator-${index + 1}">${escapeXml(author)}</dc:creator>\n<meta refines="#creator-${index + 1}" property="role" scheme="marc:relators">aut</meta>`)
+    .join('\n');
+  const optional = [
+    metadata.publisher ? `<dc:publisher>${escapeXml(metadata.publisher)}</dc:publisher>` : '',
+    metadata.published ? `<dc:date>${escapeXml(metadata.published)}</dc:date>` : '',
+    metadata.description ? `<dc:description>${escapeXml(metadata.description)}</dc:description>` : '',
+    metadata.rights ? `<dc:rights>${escapeXml(metadata.rights)}</dc:rights>` : '',
+    metadata.series
+      ? `<meta property="belongs-to-collection" id="series">${escapeXml(metadata.series.name)}</meta>\n<meta refines="#series" property="collection-type">series</meta>${
+          metadata.series.number ? `\n<meta refines="#series" property="group-position">${escapeXml(metadata.series.number)}</meta>` : ''
+        }`
+      : '',
+    cover ? `<meta name="cover" content="cover-image"/>` : '',
+    ...(draft.extraMeta ?? []),
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const manifest = entries
+    .filter((entry) => entry.id)
+    .map(
+      (entry) =>
+        `<item id="${entry.id}" href="${escapeXml(entry.path.replace(/^OEBPS\//, ''))}" media-type="${entry.mediaType}"${entry.properties ? ` properties="${entry.properties}"` : ''}/>`,
+    )
+    .join('\n');
+  const spine = sections
+    .map((section) => `<itemref idref="${section.id}"${section.spread ? ` properties="rendition:page-spread-${section.spread}"` : ''}/>`)
+    .join('\n');
+  const prefix = layout === 'fixed' ? ' prefix="rendition: http://www.idpf.org/vocab/rendition/#"' : '';
+  const opf =
+    `<?xml version="1.0" encoding="UTF-8"?>\n<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id" xml:lang="${lang}"${prefix}>\n` +
+    `<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">\n<dc:identifier id="pub-id">${escapeXml(metadata.identifier.urn)}</dc:identifier>\n<dc:title id="title">${escapeXml(metadata.title)}</dc:title>\n${creators}\n<dc:language>${lang}</dc:language>\n<meta property="dcterms:modified">${escapeXml(metadata.modified)}</meta>\n${optional}\n${accessibilityMeta(images, cover, layout)}\n</metadata>\n` +
+    `<manifest>\n${manifest}\n</manifest>\n<spine${rules.includeNcx ? ' toc="ncx"' : ''}>\n${spine}\n</spine>\n</package>\n`;
+
+  const container = `<?xml version="1.0" encoding="UTF-8"?>\n<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">\n<rootfiles>\n<rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>\n</rootfiles>\n</container>\n`;
+
+  const all: EpubEntry[] = [
+    { path: 'mimetype', mediaType: 'application/epub+zip', data: 'application/epub+zip', stored: true },
+    { path: 'META-INF/container.xml', mediaType: 'application/xml', data: container },
+    { path: 'OEBPS/content.opf', mediaType: 'application/oebps-package+xml', data: opf },
+    ...entries,
+  ];
+
+  const encoder = new TextEncoder();
+  const size = all.reduce((total, entry) => total + (typeof entry.data === 'string' ? encoder.encode(entry.data).length : entry.data.length), 0);
+
+  return { metadata, rules, layout, entries: all, sections, images, cover, nav: draft.nav, log, fileName: draft.fileName, size, pages: draft.pages };
+};
+
 // ---------------------------------------------------------------- building
 
 interface Draft {
@@ -230,79 +525,21 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
   const log: string[] = [];
   const parts = new Map<string, BookPart>(partsOf(file).map((part) => [part.id, part]));
   const assets = new Map<string, Asset>(file.assets.map((asset) => [asset.id as string, asset]));
-
-  // ---- pictures, named in the order they are first used
-  const images: EbookImage[] = [];
-  const imageByKey = new Map<string, EbookImage>();
-  const takeImage = (key: string, dataUrl: string, alt: string, name: string, width: number, height: number, described: boolean): EbookImage | null => {
-    const known = imageByKey.get(key);
-    if (known) return known;
-    const decoded = decodeDataUrl(dataUrl);
-    if (!decoded) {
-      log.push(`The picture "${name}" is in a form an eBook cannot carry and was left out.`);
-      return null;
-    }
-    const index = images.length + 1;
-    const image: EbookImage = {
-      id: `img-${String(index).padStart(3, '0')}`,
-      href: `images/img-${String(index).padStart(3, '0')}.${EXTENSIONS[decoded.mediaType]}`,
-      mediaType: decoded.mediaType,
-      data: decoded.bytes,
-      alt,
-      width,
-      height,
-      name,
-      described,
-    };
-    images.push(image);
-    imageByKey.set(key, image);
-    return image;
-  };
-  const assetImage = (assetId: string | null | undefined, fallbackAlt: string): EbookImage | null => {
-    if (!assetId) return null;
-    const asset = assets.get(assetId);
-    if (!asset || asset.kind !== 'image' || asset.data.length === 0) {
-      log.push('A figure named a picture the library no longer holds and was left out.');
-      return null;
-    }
-    const described = asset.altText.trim().length > 0;
-    return takeImage(`asset:${assetId}`, asset.data, described ? asset.altText.trim() : fallbackAlt, asset.name || 'picture', asset.width, asset.height, described);
-  };
-  const figure = (image: EbookImage | null, caption: string, cls: string): string => {
+  const bank = imageBank(assets, log);
+  const figure = (image: EbookImage | null, caption: string, cls: string, decorative = false): string => {
     if (!image) return '';
     const cap = caption.trim().length > 0 ? `<figcaption>${escapeXml(caption.trim())}</figcaption>` : '';
-    return `<figure class="${cls}"><img src="../${image.href}" alt="${escapeXml(image.alt)}"/>${cap}</figure>`;
+    const img = decorative
+      ? `<img src="../${image.href}" alt="" role="presentation"/>`
+      : `<img src="../${image.href}" alt="${escapeXml(image.alt)}"/>`;
+    return `<figure class="${cls}">${img}${cap}</figure>`;
   };
 
-  // ---- the cover
-  let cover: EbookCover | null = null;
-  const coverAssetId = settings.ebook.coverAssetId ?? file.project.posterAssetId ?? null;
-  if (coverAssetId) {
-    const asset = assets.get(coverAssetId as string);
-    const decoded = asset && asset.kind === 'image' ? decodeDataUrl(asset.data) : null;
-    if (asset && decoded) {
-      const extension = EXTENSIONS[decoded.mediaType] as string;
-      cover = {
-        id: 'cover-image',
-        href: `images/cover.${extension}`,
-        mediaType: decoded.mediaType,
-        data: decoded.bytes,
-        alt: `Cover of ${metadata.title}`,
-        width: asset.width,
-        height: asset.height,
-        name: asset.name,
-        described: true,
-        fileName: `${safeName(metadata.title)}-cover.${extension}`,
-      };
-      if (!settings.ebook.coverAssetId) log.push("The project's key art stands as the cover, no cover having been chosen.");
-    } else {
-      log.push('The chosen cover is not a picture an eBook can carry and was left out.');
-    }
-  }
+  const cover = coverOf(file, settings, assets, metadata, log);
 
   // ---- the sections, from the blocks
   const drafts: Draft[] = [];
-  let current: Draft | null = null;
+  let current = null as Draft | null;
   let chapters = 0;
   let opening: string | null = null;
   const openingClass = settings.opening === 'small_caps' ? ' opens-small-caps' : settings.opening === 'drop_cap' ? ' opens-drop' : '';
@@ -310,6 +547,13 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
   const begin = (draft: Omit<Draft, 'html'>) => {
     current = { ...draft, html: [] };
     drafts.push(current);
+    return current;
+  };
+  const body = () => {
+    if (!current) {
+      current = begin({ id: 'body', slug: 'body', title: metadata.title, kind: 'body', epubType: 'bodymatter' });
+      opening = openingClass;
+    }
     return current;
   };
 
@@ -354,7 +598,7 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
         break;
       case 'title_page': {
         const art = titlePage.titleImage
-          ? figure(takeImage('title-art', titlePage.titleImage, titlePage.title || metadata.title, 'title art', 0, 0, true), '', 'title-art')
+          ? figure(bank.take('title-art', titlePage.titleImage, titlePage.title || metadata.title, 'title art', 0, 0, true), '', 'title-art')
           : `<h1 class="book-title">${escapeXml(titlePage.title || metadata.title)}</h1>`;
         const author = metadata.authors.length > 0 ? `<p class="author">${escapeXml(metadata.authors.join(', '))}</p>` : '';
         const imprint = metadata.publisher ? `<p class="imprint">${escapeXml(metadata.publisher)}</p>` : '';
@@ -371,7 +615,7 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
         else current?.html.push(`<h1 class="part-title">${escapeXml(block.title ?? current.title)}</h1>`);
         break;
       case 'plate':
-        current?.html.push(figure(assetImage(block.assetId, block.caption ?? ''), block.caption ?? '', 'plate'));
+        current?.html.push(figure(bank.asset(block.assetId, block.caption ?? ''), block.caption ?? '', 'plate'));
         break;
       case 'chapter_opening': {
         chapters += 1;
@@ -392,8 +636,9 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
             : `<h1 class="chapter-title">${escapeXml(title)}</h1>`;
         draft.html.push(head);
         if (leaf?.image) {
-          const device = takeImage(`device:${draft.id}`, leaf.image.dataUrl, leaf.image.name || 'chapter device', leaf.image.name || 'device', 0, 0, false);
-          if (device) draft.html.push(`<p class="device"><img src="../${device.href}" alt="${escapeXml(device.alt)}"/></p>`);
+          // A chapter device is an ornament: it asks for no description.
+          const device = bank.take(`device:${draft.id}`, leaf.image.dataUrl, leaf.image.name || 'chapter device', leaf.image.name || 'device', 0, 0, false, false);
+          if (device) draft.html.push(`<p class="device"><img src="../${device.href}" alt="" role="presentation"/></p>`);
         }
         if (leaf?.epigraph.trim()) draft.html.push(`<blockquote class="epigraph">${lines(leaf.epigraph)}</blockquote>`);
         if (leaf?.summary.trim()) draft.html.push(`<p class="summary">${escapeXml(leaf.summary.trim())}</p>`);
@@ -401,31 +646,27 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
         break;
       }
       case 'paragraph': {
-        if (!current) {
-          current = begin({ id: 'body', slug: 'body', title: metadata.title, kind: 'body', epubType: 'bodymatter' });
-          opening = openingClass;
-        }
+        const draft = body();
         const first = opening !== null ? ` first${opening}` : '';
         opening = null;
         const align = block.align ? ` ${block.align}` : '';
         let inset = '';
         if (block.inset) {
-          const image = assetImage(block.inset.assetId, block.inset.caption || 'figure');
+          const image = bank.asset(block.inset.assetId, block.inset.caption || 'figure', block.inset.decorative);
           if (image) {
             const cap = block.inset.caption.trim() ? `<span class="cap">${escapeXml(block.inset.caption.trim())}</span>` : '';
-            inset = `<span class="inset inset-${block.inset.place}" style="width:${Math.round(block.inset.span * 100)}%"><img src="../${image.href}" alt="${escapeXml(image.alt)}"/>${cap}</span>`;
+            const img = block.inset.decorative ? `<img src="../${image.href}" alt="" role="presentation"/>` : `<img src="../${image.href}" alt="${escapeXml(image.alt)}"/>`;
+            inset = `<span class="inset inset-${block.inset.place}" style="width:${Math.round(block.inset.span * 100)}%">${img}${cap}</span>`;
           }
         }
-        current.html.push(`<p class="p${first}${align}">${inset}${renderSpans(block.spans, block.text)}</p>`);
+        draft.html.push(`<p class="p${first}${align}">${inset}${renderSpans(block.spans, block.text)}</p>`);
         break;
       }
       case 'heading':
-        if (!current) current = begin({ id: 'body', slug: 'body', title: metadata.title, kind: 'body', epubType: 'bodymatter' });
-        current.html.push(`<h2 class="heading">${renderSpans(block.spans, block.text)}</h2>`);
+        body().html.push(`<h2 class="heading">${renderSpans(block.spans, block.text)}</h2>`);
         break;
       case 'blockquote':
-        if (!current) current = begin({ id: 'body', slug: 'body', title: metadata.title, kind: 'body', epubType: 'bodymatter' });
-        current.html.push(`<blockquote><p>${renderSpans(block.spans, block.text)}</p></blockquote>`);
+        body().html.push(`<blockquote><p>${renderSpans(block.spans, block.text)}</p></blockquote>`);
         break;
       case 'scene_break':
         // A separator that reads as one, never an empty paragraph or three.
@@ -433,8 +674,7 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
         opening = null;
         break;
       case 'figure':
-        if (!current) current = begin({ id: 'body', slug: 'body', title: metadata.title, kind: 'body', epubType: 'bodymatter' });
-        current.html.push(figure(assetImage(block.assetId, block.caption ?? 'figure'), block.caption ?? '', 'figure'));
+        body().html.push(figure(bank.asset(block.assetId, block.caption ?? 'figure', block.decorative), block.caption ?? '', 'figure', block.decorative));
         break;
       case 'contents':
       case 'index':
@@ -445,138 +685,38 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
   }
 
   const kept = drafts.filter((draft) => draft.html.join('').trim().length > 0);
-  const lang = escapeXml(metadata.language);
-  const xhtml = (title: string, body: string): string =>
-    `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${lang}" lang="${lang}">\n<head>\n<meta charset="utf-8"/>\n<title>${escapeXml(title)}</title>\n<link rel="stylesheet" type="text/css" href="../css/book.css"/>\n</head>\n<body>\n${body}\n</body>\n</html>\n`;
-
   const sections: EbookSection[] = [];
-  const entries: EpubEntry[] = [];
+  const content: EpubEntry[] = [];
 
   if (cover) {
     sections.push({ id: 'cover', href: 'text/000-cover.xhtml', title: 'Cover', kind: 'cover' });
-    entries.push({
+    content.push({
       path: 'OEBPS/text/000-cover.xhtml',
       mediaType: 'application/xhtml+xml',
       id: 'cover',
-      data: xhtml('Cover', `<section epub:type="cover" id="cover"><img class="cover" src="../${cover.href}" alt="${escapeXml(cover.alt)}"/></section>`),
+      data: xhtmlDocument({
+        lang: metadata.language,
+        title: 'Cover',
+        css: '../css/book.css',
+        body: `<section epub:type="cover" id="cover"><img class="cover" src="../${cover.href}" alt="${escapeXml(cover.alt)}"/></section>`,
+      }),
     });
   }
   kept.forEach((draft, index) => {
     const href = `text/${String(index + 1).padStart(3, '0')}-${draft.slug}.xhtml`;
     sections.push({ id: draft.id, href, title: draft.title, kind: draft.kind });
-    entries.push({
+    content.push({
       path: `OEBPS/${href}`,
       mediaType: 'application/xhtml+xml',
       id: draft.id,
-      data: xhtml(draft.title, `<section epub:type="${draft.epubType}" id="${draft.id}">\n${draft.html.join('\n')}\n</section>`),
+      data: xhtmlDocument({
+        lang: metadata.language,
+        title: draft.title,
+        css: '../css/book.css',
+        body: `<section epub:type="${draft.epubType}" id="${draft.id}">\n${draft.html.join('\n')}\n</section>`,
+      }),
     });
   });
-
-  // The navigation document stands in the reading order after the front
-  // matter, as the visible contents page: a landmark may only point at a
-  // page a reader can turn to.
-  const lastFront = sections.reduce((found, section, index) => (section.kind === 'front' ? index : found), -1);
-  const navSection: EbookSection = { id: 'nav', href: 'toc.xhtml', title: 'Contents', kind: 'front' };
-  sections.splice(lastFront + 1, 0, navSection);
-
-  // ---- navigation
-  const listed = sections.filter((section) => section.kind !== 'cover' && section.id !== 'nav');
-  const firstBody = sections.find((section) => section.kind === 'chapter' || section.kind === 'body');
-  const landmarks = [
-    cover ? `<li><a epub:type="cover" href="text/000-cover.xhtml">Cover</a></li>` : '',
-    `<li><a epub:type="toc" href="toc.xhtml">Contents</a></li>`,
-    firstBody ? `<li><a epub:type="bodymatter" href="${firstBody.href}">${escapeXml(firstBody.title)}</a></li>` : '',
-  ]
-    .filter(Boolean)
-    .join('\n');
-  const nav =
-    `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${lang}" lang="${lang}">\n<head>\n<meta charset="utf-8"/>\n<title>Contents</title>\n<link rel="stylesheet" type="text/css" href="css/book.css"/>\n</head>\n<body>\n` +
-    `<nav epub:type="toc" id="toc">\n<h1>Contents</h1>\n<ol>\n${listed.map((section) => `<li><a href="${section.href}">${escapeXml(section.title)}</a></li>`).join('\n')}\n</ol>\n</nav>\n` +
-    `<nav epub:type="landmarks" hidden="hidden">\n<h1>Landmarks</h1>\n<ol>\n${landmarks}\n</ol>\n</nav>\n</body>\n</html>\n`;
-  entries.push({ path: 'OEBPS/toc.xhtml', mediaType: 'application/xhtml+xml', id: 'nav', properties: 'nav', data: nav });
-
-  if (rules.includeNcx) {
-    const points = listed
-      .map(
-        (section, index) =>
-          `<navPoint id="np-${index + 1}" playOrder="${index + 1}"><navLabel><text>${escapeXml(section.title)}</text></navLabel><content src="${section.href}"/></navPoint>`,
-      )
-      .join('\n');
-    entries.push({
-      path: 'OEBPS/toc.ncx',
-      mediaType: 'application/x-dtbncx+xml',
-      id: 'ncx',
-      data:
-        `<?xml version="1.0" encoding="UTF-8"?>\n<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">\n<head>\n<meta name="dtb:uid" content="${escapeXml(metadata.identifier.urn)}"/>\n<meta name="dtb:depth" content="1"/>\n<meta name="dtb:totalPageCount" content="0"/>\n<meta name="dtb:maxPageNumber" content="0"/>\n</head>\n` +
-        `<docTitle><text>${escapeXml(metadata.title)}</text></docTitle>\n<navMap>\n${points}\n</navMap>\n</ncx>\n`,
-    });
-  }
-
-  // ---- stylesheet: small, relative, the reader's face left alone
-  entries.push({ path: 'OEBPS/css/book.css', mediaType: 'text/css', id: 'css', data: EBOOK_CSS });
-
-  // ---- pictures
-  for (const image of images) entries.push({ path: `OEBPS/${image.href}`, mediaType: image.mediaType, id: image.id, data: image.data });
-  if (cover) entries.push({ path: `OEBPS/${cover.href}`, mediaType: cover.mediaType, id: cover.id, properties: 'cover-image', data: cover.data });
-
-  // ---- the package document
-  const creators = metadata.authors
-    .map((author, index) => `<dc:creator id="creator-${index + 1}">${escapeXml(author)}</dc:creator>\n<meta refines="#creator-${index + 1}" property="role" scheme="marc:relators">aut</meta>`)
-    .join('\n');
-  const optional = [
-    metadata.publisher ? `<dc:publisher>${escapeXml(metadata.publisher)}</dc:publisher>` : '',
-    metadata.published ? `<dc:date>${escapeXml(metadata.published)}</dc:date>` : '',
-    metadata.description ? `<dc:description>${escapeXml(metadata.description)}</dc:description>` : '',
-    metadata.rights ? `<dc:rights>${escapeXml(metadata.rights)}</dc:rights>` : '',
-    metadata.series
-      ? `<meta property="belongs-to-collection" id="series">${escapeXml(metadata.series.name)}</meta>\n<meta refines="#series" property="collection-type">series</meta>${
-          metadata.series.number ? `\n<meta refines="#series" property="group-position">${escapeXml(metadata.series.number)}</meta>` : ''
-        }`
-      : '',
-    cover ? `<meta name="cover" content="cover-image"/>` : '',
-  ]
-    .filter(Boolean)
-    .join('\n');
-  const everyImageDescribed = images.every((image) => image.described);
-  const access = [
-    `<meta property="schema:accessMode">textual</meta>`,
-    images.length > 0 || cover ? `<meta property="schema:accessMode">visual</meta>` : '',
-    `<meta property="schema:accessModeSufficient">textual</meta>`,
-    `<meta property="schema:accessibilityFeature">tableOfContents</meta>`,
-    `<meta property="schema:accessibilityFeature">readingOrder</meta>`,
-    images.length > 0 && everyImageDescribed ? `<meta property="schema:accessibilityFeature">alternativeText</meta>` : '',
-    `<meta property="schema:accessibilityHazard">none</meta>`,
-    `<meta property="schema:accessibilitySummary">${escapeXml(
-      images.length === 0
-        ? 'Text with a table of contents; no images.'
-        : everyImageDescribed
-          ? 'Text with a table of contents; every image is described.'
-          : 'Text with a table of contents; some images are not described.',
-    )}</meta>`,
-  ]
-    .filter(Boolean)
-    .join('\n');
-  const manifest = entries
-    .filter((entry) => entry.id)
-    .map(
-      (entry) =>
-        `<item id="${entry.id}" href="${escapeXml(entry.path.replace(/^OEBPS\//, ''))}" media-type="${entry.mediaType}"${entry.properties ? ` properties="${entry.properties}"` : ''}/>`,
-    )
-    .join('\n');
-  const spine = sections.map((section) => `<itemref idref="${section.id}"/>`).join('\n');
-  const opf =
-    `<?xml version="1.0" encoding="UTF-8"?>\n<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id" xml:lang="${lang}">\n` +
-    `<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">\n<dc:identifier id="pub-id">${escapeXml(metadata.identifier.urn)}</dc:identifier>\n<dc:title id="title">${escapeXml(metadata.title)}</dc:title>\n${creators}\n<dc:language>${lang}</dc:language>\n<meta property="dcterms:modified">${escapeXml(metadata.modified)}</meta>\n${optional}\n${access}\n</metadata>\n` +
-    `<manifest>\n${manifest}\n</manifest>\n<spine${rules.includeNcx ? ' toc="ncx"' : ''}>\n${spine}\n</spine>\n</package>\n`;
-
-  const container = `<?xml version="1.0" encoding="UTF-8"?>\n<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">\n<rootfiles>\n<rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>\n</rootfiles>\n</container>\n`;
-
-  const all: EpubEntry[] = [
-    { path: 'mimetype', mediaType: 'application/epub+zip', data: 'application/epub+zip', stored: true },
-    { path: 'META-INF/container.xml', mediaType: 'application/xml', data: container },
-    { path: 'OEBPS/content.opf', mediaType: 'application/oebps-package+xml', data: opf },
-    ...entries,
-  ];
 
   log.unshift(
     'Page numbers, running heads and blank versos were left out: a reflowable book has no pages.',
@@ -584,20 +724,23 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
     'The face and size are the reader’s; no font was embedded.',
   );
 
-  const encoder = new TextEncoder();
-  const size = all.reduce((total, entry) => total + (typeof entry.data === 'string' ? encoder.encode(entry.data).length : entry.data.length), 0);
-
-  return {
+  const listed = sections.filter((section) => section.kind !== 'cover');
+  return finishPackage({
     metadata,
     rules,
-    entries: all,
+    layout: 'reflowable',
     sections,
-    images,
+    content,
+    images: bank.images,
     cover,
+    nav: listed.map((section) => ({ href: section.href, title: section.title })),
+    firstBody: sections.find((section) => section.kind === 'chapter' || section.kind === 'body') ?? null,
+    navInSpine: true,
+    css: { href: 'css/book.css', text: EBOOK_CSS },
     log,
     fileName: `${safeName(metadata.title)}.epub`,
-    size,
-  };
+    pages: null,
+  });
 };
 
 /** The package as bytes: the mimetype first and stored, the rest deflated. */

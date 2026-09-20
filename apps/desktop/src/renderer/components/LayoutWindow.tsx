@@ -170,7 +170,13 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       {/* The measuring box (§4): the browser sets each block here, out of
           sight, and the domain reads the count of lines back. */}
       <div ref={box} className="bk-measure" aria-hidden="true" />
-      <EbookExportDialog open={ebookOpen} file={file} onClose={() => setEbookOpen(false)} onUpdate={onUpdate} />
+      <EbookExportDialog
+        open={ebookOpen}
+        file={file}
+        laid={laying ? { pages: laying.laid.pages, blocks: laying.blocks, context: laying.context } : null}
+        onClose={() => setEbookOpen(false)}
+        onUpdate={onUpdate}
+      />
 
       <header className="sculptor-bar">
         <h2>Layout</h2>

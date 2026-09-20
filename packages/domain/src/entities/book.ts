@@ -137,6 +137,11 @@ export const ebookSettingsSchema = z.object({
   coverAssetId: z.string().nullable().default(null),
   /** The retailer the last export was made for. */
   target: z.string().default('universal'),
+  /**
+   * Reflowable, the store's recommendation for a novel, or fixed: every
+   * page as the Layout room laid it, for an illustrated book (addendum 23 §10).
+   */
+  layout: z.enum(['reflowable', 'fixed']).default('reflowable'),
 });
 export type EbookSettings = z.infer<typeof ebookSettingsSchema>;
 
