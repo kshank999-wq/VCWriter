@@ -8969,7 +8969,7 @@ a.talk-mark:hover {
   font-size: 12px;
 }
 
-.layout-part > span:first-child {
+.layout-part > .layout-part-name {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -13939,3 +13939,102 @@ dialog.chapter-page-dialog {
 /* ---- Layout: figures in the rail and the picked one on the page (addendum 20 §8) ---- */
 .layout-sheet [data-figure] { cursor: pointer; }
 .layout-figure input[type='range'] { width: 100%; }
+
+/* The right-click menu, everywhere (ContextMenu.tsx): at the pointer, over
+   whatever it came from, closed by a press anywhere else. */
+.context-menu {
+  position: fixed;
+  z-index: 70;
+  min-width: 220px;
+  max-width: 300px;
+  padding: 4px;
+  display: grid;
+  gap: 1px;
+  background: var(--panel);
+  border: 1px solid var(--gold-deep, var(--border));
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.context-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  box-shadow: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.context-item:hover:not(:disabled),
+.context-item:focus-visible {
+  background: var(--panel-2);
+  color: var(--gold);
+  outline: none;
+}
+.context-item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.context-item.danger:hover:not(:disabled) {
+  color: #e08a8a;
+}
+.context-rule {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 3px 6px;
+}
+
+/* A track's empty slot and its tail while a beat is being dragged: a place
+   a beat can land to become a scene of its own. */
+.slot.takes-beat {
+  outline: 1px dashed color-mix(in srgb, var(--gold) 55%, transparent);
+  outline-offset: -3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.slot.takes-beat.drop-before,
+.slot.takes-beat.drop-after {
+  background: color-mix(in srgb, var(--gold) 14%, transparent);
+  outline-color: var(--gold);
+}
+.slot-hint {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-deep, var(--gold));
+  pointer-events: none;
+}
+
+/* The Layout rail (§9): add at the top, rows that drag, × on a part. */
+.layout-rail-head { margin: 0 0 10px; }
+.layout-add { width: 100%; justify-content: space-between; display: flex; font-size: 11.5px; padding: 7px 10px; }
+.layout-part-row { display: flex; align-items: center; gap: 2px; }
+.layout-part-row .layout-part { flex: 1; min-width: 0; }
+.layout-part-remove { opacity: 0; padding: 0 5px; color: var(--muted); }
+.layout-part-row:hover .layout-part-remove,
+.layout-part-remove:focus-visible { opacity: 1; }
+.layout-part-remove:hover { color: #e08a8a; }
+.layout-grip { color: var(--muted); font-size: 10px; cursor: grab; }
+.layout-leaf-row { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 3px 4px 3px 12px; border-left: 2px dotted var(--border); margin: 2px 0 2px 8px; }
+.layout-leaf-name { display: flex; gap: 4px; align-items: baseline; white-space: nowrap; line-height: 1.25; }
+.layout-leaf-name .muted { font-size: 11px; }
+.layout-leaf-name .small { font-size: 10px; }
+.layout-leaf-row .layout-story-actions { padding: 0; white-space: nowrap; }
+.layout-story-row.drop-before,
+.layout-part-row.drop-before,
+.layout-drop-end.drop-before { box-shadow: inset 0 2px 0 var(--gold); }
+.layout-drop-end { padding: 6px 8px; font-size: 10.5px; color: var(--muted); border: 1px dashed var(--border); border-radius: 4px; text-align: center; }
+
+/* The inspector's folds (§9): a heading that is a button. */
+.layout-fold { padding-bottom: 6px; }
+.layout-fold-head { width: 100%; display: flex; justify-content: space-between; align-items: center; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 10px; margin: 4px 0 2px; color: var(--gold); }
+.layout-fold-arrow { color: var(--muted); }
+.layout-fold-body { padding-top: 2px; }

@@ -88,7 +88,10 @@ numbers, its name, its sections and words. One click goes to it; two open
 **its own page**, the leaf the story opens on (the chapter page, opened on
 that story), because a story in a collection has a page of its own the way
 an episode has a title page. **+ New story** at the foot is `beginStory`,
-as many as the writer wants.
+as many as the writer wants. In the Layout room the stories are the rail's
+chapters, each with its *Story page* row before it, and a story **drags**
+there to move it in the collection as a block (`moveChapterBlock`, addendum
+20 §9), its sections with it.
 
 ## 4. Adding stories from documents
 

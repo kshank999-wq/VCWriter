@@ -3,6 +3,7 @@ import {
   defaultMarkerKind,
   markerNoun,
   addBeat,
+  beatIntoNewUnit,
   beatsForUnit,
   moveBeat,
   moveTrack,
@@ -17,6 +18,7 @@ import {
   threadLayout,
   timecode,
   setupTrack,
+  splitUnit,
   thematicTracks,
   type SetupTrackRow,
   type ThematicTrackRow,
@@ -43,6 +45,7 @@ import {
   isCollection,
 } from '@vcwriter/domain';
 import { InlineText } from './InlineText';
+import { ContextMenu, type MenuEntry } from './ContextMenu';
 import { STATUS_GLYPH } from './status';
 import { adjustForSameList, dropClass, edgeFor, indexForDrop, useDragDrop, type DropEdge } from '../drag';
 
@@ -283,6 +286,18 @@ export function MasterTimeline({
     drag.end();
   };
 
+  /**
+   * A beat dropped where no scene of this track stands — another track's
+   * slot, or past the last scene — becomes a scene of its own there
+   * (from Ken: *drag a beat into a new lane and it creates a new scene*).
+   */
+  const dropBeatIntoNewUnit = (toTrackId: TrackId, storyIndex: number) => {
+    const payload = drag.payload;
+    if (payload?.kind !== 'beat') return;
+    onUpdate((current) => beatIntoNewUnit(current, payload.id, { trackId: toTrackId, index: storyIndex }).file);
+    drag.end();
+  };
+
   const dropTrackAt = (targetIndex: number) => {
     const payload = drag.payload;
     if (payload?.kind !== 'track') return;
@@ -509,6 +524,7 @@ export function MasterTimeline({
               onUpdate={onUpdate}
               onDropUnit={dropUnitAt}
               onDropBeat={dropBeatAt}
+              onDropBeatIntoNewUnit={dropBeatIntoNewUnit}
               onDropTrack={dropTrackAt}
               onTrackKeys={reorderKeys((direction) => moveTrackByKeyboard(track.id, direction))}
               unitKeys={(unitId) => reorderKeys((direction, shift) => moveUnitByKeyboard(unitId, track.id, direction, shift))}
@@ -739,6 +755,7 @@ interface TrackRowProps {
   onUpdate: MasterTimelineProps['onUpdate'];
   onDropUnit(toTrackId: TrackId, index: number): void;
   onDropBeat(toUnitId: StructuralUnitId, index: number): void;
+  onDropBeatIntoNewUnit(toTrackId: TrackId, storyIndex: number): void;
   onDropTrack(index: number): void;
   onTrackKeys(event: React.KeyboardEvent): void;
   unitKeys(unitId: StructuralUnitId): (event: React.KeyboardEvent) => void;
@@ -769,6 +786,7 @@ function TrackRow({
   onUpdate,
   onDropUnit,
   onDropBeat,
+  onDropBeatIntoNewUnit,
   onDropTrack,
   onTrackKeys,
   unitKeys,
@@ -780,6 +798,34 @@ function TrackRow({
   // And, on a book that numbers them, the numbers each card would print
   // (addendum 16 §15) — counted, so dragging a card across renumbers both.
   const numbers = structureNumbers(file);
+  /** The right-click on a scene or a beat (addendum 02 §6a): one menu for both, at the pointer. */
+  const [menu, setMenu] = useState<{ x: number; y: number; label: string; entries: MenuEntry[] } | null>(null);
+  const unitWord = nouns.unit.toLowerCase();
+  const subWord = nouns.sub.toLowerCase();
+  const beatMenu = (unitId: StructuralUnitId, beat: Beat, index: number): MenuEntry[] => [
+    ...(onOpenBeat ? [{ label: `Open the ${subWord}`, onPick: () => onOpenBeat(beat.id) }] : []),
+    {
+      label: `Split the ${unitWord} before this ${subWord}`,
+      disabled: index === 0 ? `It is the first ${subWord} of the ${unitWord} already` : null,
+      onPick: () => onUpdate((current) => splitUnit(current, unitId, beat.id).file),
+    },
+    { label: `Carry it into a new ${unitWord}`, onPick: () => onUpdate((current) => beatIntoNewUnit(current, beat.id).file) },
+    'rule',
+    { label: `Remove the ${subWord}`, danger: true, onPick: () => onUpdate((current) => removeBeat(current, beat.id)) },
+  ];
+  const unitMenu = (unitId: StructuralUnitId, collapsed: boolean): MenuEntry[] => [
+    ...(onOpenUnit ? [{ label: `Open the ${unitWord}`, onPick: () => onOpenUnit(unitId) }] : []),
+    { label: `Add a ${subWord}`, onPick: () => onUpdate((current) => addBeat(current, { unitId, title: `New ${subWord}` }).file) },
+    { label: collapsed ? 'Expand' : 'Collapse', onPick: () => onUpdate((current) => updateUnit(current, unitId, { collapsed: !collapsed })) },
+    'rule',
+    { label: `Remove the ${unitWord} and its ${nouns.subPlural.toLowerCase()}`, danger: true, onPick: () => onUpdate((current) => removeUnit(current, unitId)) },
+  ];
+  const openMenu = (event: React.MouseEvent, label: string, entries: MenuEntry[]) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setMenu({ x: event.clientX, y: event.clientY, label, entries });
+  };
+  const takingBeat = drag.payload?.kind === 'beat';
   const unitDragOver = (event: React.DragEvent, overId: string, orientation: 'horizontal' | 'vertical' = 'horizontal') => {
     if (drag.payload?.kind !== 'unit') return false;
     event.preventDefault();
@@ -882,11 +928,29 @@ function TrackRow({
           return (
             <div
               key={unit.id}
-              className={`slot${atPlayhead}${dropClass(drag.dropTarget, `${track.id}:${unit.id}`)}`}
-              onDragOver={(event) => unitDragOver(event, `${track.id}:${unit.id}`)}
+              className={`slot${atPlayhead}${takingBeat ? ' takes-beat' : ''}${dropClass(drag.dropTarget, `${track.id}:${unit.id}`)}`}
+              onDragOver={(event) => {
+                if (takingBeat) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  drag.hover(`${track.id}:${unit.id}`, 'before');
+                  return;
+                }
+                unitDragOver(event, `${track.id}:${unit.id}`);
+              }}
               onDragLeave={() => drag.clearHover(`${track.id}:${unit.id}`)}
-              onDrop={(event) => dropWithEdge(event, span.index)}
-            />
+              onDrop={(event) => {
+                if (takingBeat) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onDropBeatIntoNewUnit(track.id, span.index);
+                  return;
+                }
+                dropWithEdge(event, span.index);
+              }}
+            >
+              {takingBeat ? <span className="slot-hint">+ {unitWord}</span> : null}
+            </div>
           );
         }
         const beats = beatsForUnit(file, unit.id);
@@ -915,6 +979,7 @@ function TrackRow({
                 if (first) onSelectBeat(first.id);
               }}
               onDoubleClick={() => onOpenUnit?.(unit.id)}
+              onContextMenu={(event) => openMenu(event, `What to do with this ${unitWord}`, unitMenu(unit.id, Boolean(collapsed)))}
               onDragStart={(event) => {
                 event.stopPropagation();
                 drag.begin({ kind: 'unit', id: unit.id, fromTrackId: track.id }, event);
@@ -1025,6 +1090,10 @@ function TrackRow({
                       event.stopPropagation();
                       onDropBeat(unit.id, indexForDrop(beatIndex, edgeFor(event)));
                     }}
+                    onContextMenu={(event) => {
+                      onSelectBeat(beat.id);
+                      openMenu(event, `What to do with this ${subWord}`, beatMenu(unit.id, beat, beatIndex));
+                    }}
                   >
                     <button
                       type="button"
@@ -1084,19 +1153,27 @@ function TrackRow({
 
       {/* Dropping past the last scene appends to the story, in this track. */}
       <div
-        className={`slot tail${dropClass(drag.dropTarget, `${track.id}:tail`)}`}
+        className={`slot tail${takingBeat ? ' takes-beat' : ''}${dropClass(drag.dropTarget, `${track.id}:tail`)}`}
         onDragOver={(event) => {
-          if (drag.payload?.kind !== 'unit') return;
+          if (drag.payload?.kind !== 'unit' && !takingBeat) return;
           event.preventDefault();
           drag.hover(`${track.id}:tail`, 'after');
         }}
         onDragLeave={() => drag.clearHover(`${track.id}:tail`)}
         onDrop={(event) => {
+          if (takingBeat) {
+            event.preventDefault();
+            onDropBeatIntoNewUnit(track.id, spans.length);
+            return;
+          }
           if (drag.payload?.kind !== 'unit') return;
           event.preventDefault();
           onDropUnit(track.id, spans.length);
         }}
-      />
+      >
+        {takingBeat && !shortForm ? <span className="slot-hint">+ new {unitWord}</span> : null}
+      </div>
+      {menu ? <ContextMenu x={menu.x} y={menu.y} label={menu.label} entries={menu.entries} onClose={() => setMenu(null)} /> : null}
     </>
   );
 }

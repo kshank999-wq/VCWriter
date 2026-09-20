@@ -1,10 +1,10 @@
-import { addBeat, addMarker, moveBeat, removeBeat, removeUnit, splitUnit, updateBeat } from './mutations.js';
+import { addBeat, addMarker, addUnit, moveBeat, removeBeat, removeUnit, splitUnit, updateBeat } from './mutations.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { defaultMarkerKind } from './markers.js';
 import type { ProjectFile } from './project-file.js';
 import type { Beat, StructuralUnit } from './entities/structure.js';
 import type { ManuscriptElement } from './entities/manuscript.js';
-import type { BeatId, StoryMarkerId, StructuralUnitId } from './ids.js';
+import type { BeatId, StoryMarkerId, StructuralUnitId, TrackId } from './ids.js';
 
 /**
  * Dividing a manuscript where the writer points (addendum 21 §10).
@@ -219,4 +219,30 @@ export const carveBeat = (file: ProjectFile, oneId: string, otherId: string, opt
   }
   if (options.title !== undefined) working = updateBeat(working, beatId, { title: options.title });
   return { file: working, beatId, elements: count };
+};
+
+/**
+ * Carry a beat into a scene of its own (addendum 02 §6a, from Ken: *drag a
+ * beat into a new lane and it creates a new scene*). The new unit stands
+ * right after the one the beat came from in the story, on the track asked
+ * for or the beat's own, and the beat is its only beat. What is left behind
+ * is left as it is — a unit with no beats is a unit the writer can see is
+ * empty and remove, where removing it silently would take a name and a
+ * marker they may want.
+ */
+export const beatIntoNewUnit = (
+  file: ProjectFile,
+  beatId: BeatId,
+  options: { trackId?: TrackId; title?: string; index?: number } = {},
+): { file: ProjectFile; unitId: StructuralUnitId } => {
+  const beat = file.beats.find((candidate) => candidate.id === beatId);
+  if (!beat) throw new Error(`Beat ${beatId} is not in the project`);
+  const from = file.units.find((unit) => unit.id === beat.unitId);
+  if (!from) throw new Error(`Beat ${beatId} is in no unit`);
+  const order = unitsInStoryOrder(file);
+  const at = order.findIndex((unit) => unit.id === from.id);
+  // Where in the story: asked for (a drop on a track's empty slot), or
+  // straight after the unit the beat came from.
+  const made = addUnit(file, { trackId: options.trackId ?? from.trackId, title: options.title ?? '', index: options.index ?? at + 1 });
+  return { file: moveBeat(made.file, { beatId, toUnitId: made.unit.id, index: 0 }), unitId: made.unit.id };
 };

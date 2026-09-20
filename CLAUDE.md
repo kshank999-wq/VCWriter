@@ -1168,7 +1168,24 @@ push live; the build takes a minute or two.
   Save* a second time), and the rooms and Focus are **raised buttons** — the
   base `button` in `styles.css` is raised now, so *Chapter*, *Passage*, the
   tools and the chips got the look without being touched, and `button.ghost`
-  is the one that stays flat; Focus draws pressed while it is on.
+  is the one that stays flat; Focus draws pressed while it is on. **§6a of
+  addendum 02 is the right-click, everywhere**: `ContextMenu.tsx` is the one
+  menu the manuscript's lines, the timeline's beats and scenes and the
+  Layout rail open at the pointer — an item that cannot be done *now* is
+  greyed with the reason in its title, one that does not apply is absent —
+  and on a line it offers *Split the scene here* and *New beat from here*
+  (the noun table's words) before what the writing can become. A beat
+  **dragged onto a track's tail or an empty slot becomes a scene of its
+  own** there (`beatIntoNewUnit`), the tails lighting up *+ new scene*
+  while a beat is in the air. **Stage 8 of Layout** (addendum 20 §9) is the
+  rail Ken asked for: *+ Add a part* at the top as a menu (with *A new
+  story* on a collection), × on every part row asked once inline, a
+  *Chapter page* row between the chapters carrying the creator and *+
+  Picture facing*, parts dragged within their half (`placePart`) and a
+  chapter dragged as a block (`moveChapterBlock`, only the moved units
+  rekeyed) — the one thing the rail does to the story order, done by moving
+  the sections — and the inspector's four groups behind `Fold` headings
+  drawn as raised buttons, open or shut per machine.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves
@@ -1210,8 +1227,11 @@ push live; the build takes a minute or two.
   between is what tells *1, 2, 3* the chapters from *1, 2, 3* the pages;
   `BARE_LABEL` (a numeral, roman numeral or number word alone on a line,
   centred or not) opens a chapter with an **empty title**, the number being
-  derived; and `passagesFrom` cuts a prose section into passages at scene
-  breaks and near 700 words, each titled with its opening words. And the
+  derived; and `beatsFrom` makes **a beat of every paragraph** (Ken's
+  second, plainer ask, replacing the 700-word passages: a paragraph is the
+  unit a scene is split at and a beat dragged), a heading opening the beat
+  after it and a scene break ending the one before, each titled with its
+  opening words. And the
   tool: **Chapter** and **Passage** on the manuscript bar — press one, click
   where it starts, click where it ends, and it is cut and the tool puts
   itself down. `dividing.ts` builds `carveUnit`/`carveBeat` from two

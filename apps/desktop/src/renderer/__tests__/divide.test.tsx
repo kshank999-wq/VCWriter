@@ -88,6 +88,33 @@ describe('dividing from the bar', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 
+  /** The right-click on a line (addendum 02 §6a): the story cut where the writer points. */
+  it('splits the chapter, or the passage, at a line from its right-click, and says why not on a first line', () => {
+    render(<Book start={novel()} />);
+    // The paragraphs' own boxes: the chapter's and the beats' names are textboxes too.
+    const box = (id: string) => screen.getByDisplayValue(`Paragraph ${id}.`);
+    fireEvent.contextMenu(box('a'), { clientX: 20, clientY: 20 });
+    const first = screen.getByRole('menuitem', { name: 'Split the chapter here' }) as HTMLButtonElement;
+    expect(first.disabled).toBe(true);
+    expect(first.title).toMatch(/already opens the chapter/);
+    expect((screen.getByRole('menuitem', { name: 'New passage from here' }) as HTMLButtonElement).disabled).toBe(true);
+    // The writing's own items are still there.
+    expect(screen.getByRole('menuitem', { name: 'Add to a character’s characterization…' })).toBeDefined();
+    fireEvent.keyDown(first, { key: 'Escape' });
+
+    fireEvent.contextMenu(box('c'), { clientX: 20, clientY: 20 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New passage from here' }));
+    let file = latest as ProjectFile;
+    expect(beatsForUnit(file, file.units[0]!.id).map((beat) => beat.manuscript.elements.map((element) => element.id))).toEqual([['a', 'b'], ['c', 'd'], ['e', 'f', 'g', 'h']]);
+
+    fireEvent.contextMenu(box('f'), { clientX: 20, clientY: 20 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Split the chapter here' }));
+    file = latest as ProjectFile;
+    const order = unitsInStoryOrder(file);
+    expect(order).toHaveLength(2);
+    expect(beatsForUnit(file, order[1]!.id).flatMap((beat) => beat.manuscript.elements.map((element) => element.id))).toEqual(['f', 'g', 'h']);
+  });
+
   it('is absent on a screenplay', () => {
     render(<Book start={createProjectFile({ title: 'S', format: 'screenplay' })} />);
     expect(screen.queryByRole('button', { name: 'Scene' })).toBeNull();

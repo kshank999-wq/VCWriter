@@ -159,9 +159,10 @@ describe('importing a script', () => {
     expect(file.project.format).toBe('novel');
     expect(file.units.map((unit) => unit.title)).toEqual(['Chapter One: The Road', 'Chapter Two']);
     expect(file.markers.map((marker) => marker.title)).toEqual(['The Road', '']);
-    const elements = file.beats[0]!.manuscript.elements;
-    expect(elements.map((element) => element.type)).toEqual(['paragraph', 'paragraph']);
-    expect(elements[1]?.attributes).toEqual({ face: 'Garamond', size: 14 });
+    // A beat per paragraph (addendum 21 §10): the chapter's two paragraphs are two beats.
+    const chapter = file.beats.filter((beat) => beat.unitId === file.units[0]!.id);
+    expect(chapter.map((beat) => beat.manuscript.elements.map((element) => element.type))).toEqual([['paragraph'], ['paragraph']]);
+    expect(chapter[1]?.manuscript.elements[0]?.attributes).toEqual({ face: 'Garamond', size: 14 });
   });
 
   it('reads a Word screenplay by where its paragraphs sit', async () => {

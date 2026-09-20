@@ -157,6 +157,30 @@ export const movePart = (file: ProjectFile, partId: string, direction: -1 | 1): 
   return writeParts(file, next);
 };
 
+/**
+ * Put a part before another, or at the end of its half. The halves hold:
+ * a part dragged onto the other half is left where it was, since the story
+ * stands between them and nothing crosses it.
+ */
+export const placePart = (file: ProjectFile, partId: string, beforePartId: string | null): ProjectFile => {
+  if (partId === beforePartId) return file;
+  const parts = partsOf(file);
+  const moving = parts.find((part) => part.id === partId);
+  if (!moving) return file;
+  const half = halfOf(moving);
+  const rest = parts.filter((part) => part.id !== partId);
+  let at: number;
+  if (beforePartId === null) {
+    const last = rest.map((part) => halfOf(part)).lastIndexOf(half);
+    at = last === -1 ? (half === 'front' ? 0 : rest.length) : last + 1;
+  } else {
+    const target = rest.find((part) => part.id === beforePartId);
+    if (!target || halfOf(target) !== half) return file;
+    at = rest.indexOf(target);
+  }
+  return writeParts(file, [...rest.slice(0, at), moving, ...rest.slice(at)]);
+};
+
 /** Whether a kind can still be added: once-only kinds the book already has cannot. */
 export const mayAdd = (file: ProjectFile, kind: PartKind): boolean =>
   !PART_INFO[kind].once || !partsOf(file).some((part) => part.kind === kind);

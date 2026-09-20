@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { ContextMenu, type MenuEntry } from './ContextMenu';
 import { EbookExportDialog } from './EbookExportDialog';
 import {
   ADDABLE_KINDS,
@@ -11,6 +12,7 @@ import {
   PART_INFO,
   TRIM_PRESETS,
   addPart,
+  beginStory,
   bookMetrics,
   bookVars,
   contentsDivisions,
@@ -19,9 +21,12 @@ import {
   halfOf,
   mayAdd,
   measureWarning,
+  moveChapterBlock,
   movePart,
+  opensOnLeaf,
   partTitle,
   partsOf,
+  placePart,
   removePart,
   renderBookHtml,
   renderBookPage,
@@ -34,6 +39,7 @@ import {
   type PartKind,
   type ProjectFile,
   isCollection,
+  chapterLeafContent,
   BOOK_PRESET_NAMES,
   BOOK_PRESETS,
   INSET_SPAN,
@@ -92,6 +98,11 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const [ebookOpen, setEbookOpen] = useState(false);
   const [selectedFigureId, setSelectedFigureId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  /** The Add a part menu, open at the button (§9). */
+  const [addMenu, setAddMenu] = useState<{ x: number; y: number } | null>(null);
+  /** What the rail is dragging: a part within its half, or a chapter as a block. */
+  const [dragging, setDragging] = useState<{ kind: 'part' | 'chapter'; id: string } | null>(null);
+  const [over, setOver] = useState<string | null>(null);
 
   const parts = useMemo(() => partsOf(file), [file]);
   const selected = parts.find((part) => part.id === selectedPartId) ?? null;
@@ -173,7 +184,84 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const figures = bookFigures(file);
   /** A collection's divisions are stories (addendum 22); the rail says so. */
   const noun = isCollection(file.project.format) ? 'Story' : 'Chapter';
+  const nounPlural = isCollection(file.project.format) ? 'stories' : 'chapters';
   const selectedFigure = figures.find((figure) => figure.elementId === selectedFigureId) ?? null;
+
+  /** What the Add a part menu offers: every kind the book can still take, and on a collection a new story. */
+  const addEntries: MenuEntry[] = [
+    ...ADDABLE_KINDS.filter((kind) => mayAdd(file, kind)).map((kind) => ({
+      label: `${PART_INFO[kind].name} — ${PART_INFO[kind].note}`,
+      onPick: () =>
+        onUpdate((current) => {
+          const made = addPart(current, kind);
+          if (made.partId) setSelectedPartId(made.partId);
+          return made.file;
+        }),
+    })),
+    ...(isCollection(file.project.format)
+      ? ['rule' as const, { label: 'A new story — on a section of its own, at the end', onPick: () => onUpdate((current) => beginStory(current, { title: 'New story' }).file) }]
+      : []),
+  ];
+
+  /** A part's row: pressable, draggable within its half, and removable. */
+  const partRow = (part: BookPart) => (
+    <PartRow
+      key={part.id}
+      part={part}
+      selected={part.id === selectedPartId}
+      over={over === `part:${part.id}`}
+      onSelect={() => {
+        setSelectedPartId(part.id);
+        goToPart(part.id);
+      }}
+      onRemove={() => {
+        if (selectedPartId === part.id) setSelectedPartId(null);
+        onUpdate((current) => removePart(current, part.id));
+      }}
+      onDragStart={() => setDragging({ kind: 'part', id: part.id })}
+      onDragEnd={() => {
+        setDragging(null);
+        setOver(null);
+      }}
+      onDragOver={(event) => {
+        if (dragging?.kind !== 'part' || dragging.id === part.id) return;
+        event.preventDefault();
+        setOver(`part:${part.id}`);
+      }}
+      onDragLeave={() => setOver((current) => (current === `part:${part.id}` ? null : current))}
+      onDrop={(event) => {
+        if (dragging?.kind !== 'part') return;
+        event.preventDefault();
+        const moving = dragging.id;
+        onUpdate((current) => placePart(current, moving, part.id));
+        setDragging(null);
+        setOver(null);
+      }}
+    />
+  );
+
+  /** Where a dragged part lands to go last in its half. */
+  const endZone = (half: 'front' | 'back') => (
+    <li
+      key={`end-${half}`}
+      className={`layout-drop-end${over === `part:end:${half}` ? ' drop-before' : ''}`}
+      onDragOver={(event) => {
+        event.preventDefault();
+        setOver(`part:end:${half}`);
+      }}
+      onDragLeave={() => setOver((current) => (current === `part:end:${half}` ? null : current))}
+      onDrop={(event) => {
+        if (dragging?.kind !== 'part') return;
+        event.preventDefault();
+        const moving = dragging.id;
+        onUpdate((current) => placePart(current, moving, null));
+        setDragging(null);
+        setOver(null);
+      }}
+    >
+      Last of the {half} matter
+    </li>
+  );
 
   return (
     <div className="layout-room" role="dialog" aria-label="Layout">
@@ -221,60 +309,57 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
 
       <div className="layout-body">
         <aside className="layout-rail">
+          {/* Adding is the first thing on the rail (§9, from Ken): one
+              button, a menu of every kind the book can still take, a new
+              story on a collection among them. */}
+          <div className="layout-rail-head">
+            <button
+              type="button"
+              className="raised layout-add"
+              aria-label="Add a part"
+              aria-haspopup="menu"
+              onClick={(event) => {
+                const box = event.currentTarget.getBoundingClientRect();
+                setAddMenu({ x: box.left, y: box.bottom + 4 });
+              }}
+            >
+              + Add a part <span aria-hidden="true">▾</span>
+            </button>
+          </div>
+          {addMenu ? <ContextMenu x={addMenu.x} y={addMenu.y} label="Parts to add" entries={addEntries} onClose={() => setAddMenu(null)} /> : null}
+
           <h3>Front matter</h3>
-          <ul className="layout-parts">
+          <ul className="layout-parts" aria-label="Front matter">
             {parts
               .filter((part) => halfOf(part) === 'front')
-              .map((part) => (
-                <PartRow
-                  key={part.id}
-                  part={part}
-                  selected={part.id === selectedPartId}
-                  onSelect={() => {
-                    setSelectedPartId(part.id);
-                    goToPart(part.id);
-                  }}
-                />
-              ))}
+              .map((part) => partRow(part))}
+            {dragging?.kind === 'part' && halfOf(parts.find((part) => part.id === dragging.id) as BookPart) === 'front' ? endZone('front') : null}
           </ul>
+
           <h3>The story</h3>
-          <ul className="layout-parts layout-story">
+          <ul className="layout-parts layout-story" aria-label="The story">
             {divisions.length === 0 ? (
-              <li className="muted small">No chapters yet: the story runs as one.</li>
+              <li className="muted small">No {nounPlural} yet: the story runs as one.</li>
             ) : (
               divisions.map((placed) => {
                 const id = placed.marker.id as string;
                 const at = laying?.laid.where.get(id);
                 const facing = platesBefore.get(id) ?? [];
+                const leaf = opensOnLeaf(chapterLeafContent(file, placed));
+                const title = placed.label || placed.marker.title.trim() || noun;
                 return (
                   <Fragment key={id}>
                     {/* A picture on the page facing this chapter: a plate the
                         writer put before it, listed where it falls (§9). */}
-                    {facing.map((part) => (
-                      <PartRow
-                        key={part.id}
-                        part={part}
-                        selected={part.id === selectedPartId}
-                        onSelect={() => {
-                          setSelectedPartId(part.id);
-                          goToPart(part.id);
-                        }}
-                      />
-                    ))}
-                    <li className="layout-story-row">
-                      <button
-                        type="button"
-                        className="ghost layout-part"
-                        title={`${noun} of the manuscript. Its order is the story's, set in the Outliner and on the tracks.`}
-                        onClick={() => {
-                          setSelectedPartId(null);
-                          goToPart(id);
-                        }}
-                      >
-                        <span>{placed.label || placed.marker.title.trim() || noun}</span>
-                        <span className="muted">{placed.label ? placed.marker.title.trim() : ''}</span>
-                        <span className="muted layout-page-no">{at && at.numbering === 'arabic' ? at.number : ''}</span>
-                      </button>
+                    {facing.map((part) => partRow(part))}
+                    {/* The page between the parts of the book (§9, from Ken):
+                        the leaf this chapter opens on, made with the chapter
+                        page creator, or a full-page picture before it. */}
+                    <li className="layout-leaf-row">
+                      <span className="layout-leaf-name">
+                        <span className="muted">{noun} page</span>
+                        <span className="muted small">· {leaf ? 'a leaf of its own' : 'above the first paragraph'}</span>
+                      </span>
                       <span className="layout-story-actions">
                         {onOpenChapterPage ? (
                           <button
@@ -302,10 +387,71 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                         </button>
                       </span>
                     </li>
+                    <li
+                      className={`layout-story-row${over === `chapter:${id}` ? ' drop-before' : ''}`}
+                      draggable
+                      onDragStart={(event) => {
+                        event.dataTransfer.effectAllowed = 'move';
+                        event.dataTransfer.setData('text/plain', id);
+                        setDragging({ kind: 'chapter', id });
+                      }}
+                      onDragEnd={() => {
+                        setDragging(null);
+                        setOver(null);
+                      }}
+                      onDragOver={(event) => {
+                        if (dragging?.kind !== 'chapter' || dragging.id === id) return;
+                        event.preventDefault();
+                        setOver(`chapter:${id}`);
+                      }}
+                      onDragLeave={() => setOver((current) => (current === `chapter:${id}` ? null : current))}
+                      onDrop={(event) => {
+                        if (dragging?.kind !== 'chapter') return;
+                        event.preventDefault();
+                        const moving = dragging.id;
+                        onUpdate((current) => moveChapterBlock(current, moving as never, placed.marker.id));
+                        setDragging(null);
+                        setOver(null);
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="ghost layout-part"
+                        title={`${noun} of the manuscript. Drag it to move it in the story, its ${isCollection(file.project.format) ? 'sections' : 'scenes'} with it.`}
+                        onClick={() => {
+                          setSelectedPartId(null);
+                          goToPart(id);
+                        }}
+                      >
+                        <span className="layout-grip" aria-hidden="true">⠿</span>
+                        <span className="layout-part-name">{title}</span>
+                        <span className="muted">{placed.label ? placed.marker.title.trim() : ''}</span>
+                        <span className="muted layout-page-no">{at && at.numbering === 'arabic' ? at.number : ''}</span>
+                      </button>
+                    </li>
                   </Fragment>
                 );
               })
             )}
+            {dragging?.kind === 'chapter' ? (
+              <li
+                className={`layout-drop-end${over === 'chapter:end' ? ' drop-before' : ''}`}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setOver('chapter:end');
+                }}
+                onDragLeave={() => setOver((current) => (current === 'chapter:end' ? null : current))}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const moving = dragging.id;
+                  onUpdate((current) => moveChapterBlock(current, moving as never, null));
+                  setDragging(null);
+                  setOver(null);
+                }}
+              >
+                Last in the story
+              </li>
+            ) : null}
           </ul>
           {figures.length > 0 ? (
             <>
@@ -323,7 +469,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                         goToPart(figure.elementId);
                       }}
                     >
-                      <span>{figure.caption.trim() || figure.assetName || 'Figure'}</span>
+                      <span className="layout-part-name">{figure.caption.trim() || figure.assetName || 'Figure'}</span>
                       <span className="muted">{PLACE_WORDS[figure.placement.place]}</span>
                     </button>
                   </li>
@@ -332,49 +478,17 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
             </>
           ) : null}
           <h3>Back matter</h3>
-          <ul className="layout-parts">
+          <ul className="layout-parts" aria-label="Back matter">
             {parts
               .filter((part) => halfOf(part) === 'back')
-              .map((part) => (
-                <PartRow
-                  key={part.id}
-                  part={part}
-                  selected={part.id === selectedPartId}
-                  onSelect={() => {
-                    setSelectedPartId(part.id);
-                    goToPart(part.id);
-                  }}
-                />
-              ))}
+              .map((part) => partRow(part))}
+            {dragging?.kind === 'part' && halfOf(parts.find((part) => part.id === dragging.id) as BookPart) === 'back' ? endZone('back') : null}
           </ul>
-          <label className="field">
-            <span>Add a part</span>
-            <select
-              aria-label="Add a part"
-              value=""
-              onChange={(event) => {
-                const kind = event.target.value as PartKind;
-                if (!kind) return;
-                onUpdate((current) => {
-                  const made = addPart(current, kind);
-                  if (made.partId) setSelectedPartId(made.partId);
-                  return made.file;
-                });
-              }}
-            >
-              <option value="">Choose one…</option>
-              {ADDABLE_KINDS.filter((kind) => mayAdd(file, kind)).map((kind) => (
-                <option key={kind} value={kind}>
-                  {PART_INFO[kind].name} — {PART_INFO[kind].note}
-                </option>
-              ))}
-            </select>
-          </label>
           <p className="muted small">
             The story is the manuscript in story order, {chapterCount}{' '}
-            {isCollection(file.project.format) ? (chapterCount === 1 ? 'story' : 'stories') : chapterCount === 1 ? 'chapter' : 'chapters'};
-            nothing here reorders it. Between them go a picture on the facing page or the {noun.toLowerCase()}’s own page; the type
-            and the trim are on the right.
+            {isCollection(file.project.format) ? (chapterCount === 1 ? 'story' : 'stories') : chapterCount === 1 ? 'chapter' : 'chapters'}.
+            Drag a {noun.toLowerCase()} to move it, or a part within its half; × takes a part out. Between the {nounPlural} go
+            a picture on the facing page or the {noun.toLowerCase()}’s own page; the type and the trim are on the right.
           </p>
         </aside>
 
@@ -449,11 +563,16 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           ) : null}
           {settings && laying ? (
             <>
-              <TrimSection laying={laying} write={write} />
-              <TypeSection settings={settings} write={write} />
-              <FurnitureSection settings={settings} write={write} />
-              <section className="layout-section">
-                <h3>{isCollection(file.project.format) ? 'Story openings' : 'Chapter openings'}</h3>
+              <Fold id="trim" title="Trim & margins">
+                <TrimSection laying={laying} write={write} />
+              </Fold>
+              <Fold id="type" title="Type">
+                <TypeSection settings={settings} write={write} />
+              </Fold>
+              <Fold id="furniture" title="Running heads & page numbers">
+                <FurnitureSection settings={settings} write={write} />
+              </Fold>
+              <Fold id="openings" title={isCollection(file.project.format) ? 'Story openings' : 'Chapter openings'}>
                 <p className="muted small">
                   The number, the name, the face and the drop are set once for the book in{' '}
                   <em>File ▸ Chapter page…</em>. A chapter page carrying a device, a summary or an epigraph opens on a
@@ -464,7 +583,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                     {noun} page…
                   </button>
                 ) : null}
-              </section>
+              </Fold>
             </>
           ) : null}
         </aside>
@@ -482,20 +601,93 @@ const describeSpread = (pages: BookPage[], spread: number): string => {
   return `Sheets ${spread * 2}–${Math.min(spread * 2 + 1, pages.length)} of ${pages.length} · ${say(left)} · ${say(right)}`;
 };
 
-function PartRow({ part, selected, onSelect }: { part: BookPart; selected: boolean; onSelect(): void }) {
-  const info = PART_INFO[part.kind];
+/**
+ * A group of the inspector's settings behind a heading drawn as a button
+ * (§9, from Ken): press it and the group folds, so the trim, the type and
+ * the running heads read as three things rather than one long column.
+ * Whether each is open is a preference of the machine, not of the book.
+ */
+function Fold({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  const [open, setOpen] = usePreference(`layout.fold.${id}`, true);
   return (
-    <li>
+    <section className={open ? 'layout-section layout-fold open' : 'layout-section layout-fold'}>
+      <button type="button" className="raised layout-fold-head" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span>{title}</span>
+        <span className="layout-fold-arrow" aria-hidden="true">
+          {open ? '▾' : '▸'}
+        </span>
+      </button>
+      {open ? <div className="layout-fold-body">{children}</div> : null}
+    </section>
+  );
+}
+
+function PartRow({
+  part,
+  selected,
+  over,
+  onSelect,
+  onRemove,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+}: {
+  part: BookPart;
+  selected: boolean;
+  over: boolean;
+  onSelect(): void;
+  onRemove(): void;
+  onDragStart(): void;
+  onDragEnd(): void;
+  onDragOver(event: React.DragEvent): void;
+  onDragLeave(): void;
+  onDrop(event: React.DragEvent): void;
+}) {
+  const info = PART_INFO[part.kind];
+  const [asking, setAsking] = useState(false);
+  return (
+    <li
+      className={`layout-part-row${over ? ' drop-before' : ''}`}
+      draggable
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', part.id);
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
       <button
         type="button"
         className={selected ? 'ghost layout-part selected' : 'ghost layout-part'}
         aria-pressed={selected}
-        title={info.note}
+        title={`${info.note}. Drag to move it within the ${halfOf(part) === 'front' ? 'front' : 'back'} matter.`}
         onClick={onSelect}
       >
-        <span>{partTitle(part)}</span>
+        <span className="layout-grip" aria-hidden="true">⠿</span>
+        <span className="layout-part-name">{partTitle(part)}</span>
         <span className="muted">{info.carries === 'reading' ? 'read' : info.carries === 'plate' ? 'picture' : ''}</span>
       </button>
+      {/* × takes the part out (§9, from Ken): asked once inline, because a
+          copyright notice somebody typed goes with it. */}
+      {asking ? (
+        <span className="layout-ask">
+          <button type="button" className="ghost small danger" onClick={onRemove}>
+            Remove
+          </button>
+          <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+            Keep
+          </button>
+        </span>
+      ) : (
+        <button type="button" className="ghost small layout-part-remove" aria-label={`Remove ${partTitle(part)}`} title="Take this part out of the book" onClick={() => setAsking(true)}>
+          ×
+        </button>
+      )}
     </li>
   );
 }
@@ -587,8 +779,7 @@ function TrimSection({ laying, write }: { laying: Laying; write(patch: Partial<B
     );
   };
   return (
-    <section className="layout-section">
-      <h3>Trim &amp; margins</h3>
+    <>
       <label className="field">
         <span>Trim size</span>
         <select
@@ -648,7 +839,7 @@ function TrimSection({ laying, write }: { laying: Laying; write(patch: Partial<B
       </div>
       <p className="small layout-geometry">{describeGeometry(geometry, settings.face)}</p>
       {warning ? <p className="small layout-warning">{warning}</p> : null}
-    </section>
+    </>
   );
 }
 
@@ -712,8 +903,7 @@ function FigureSection({
 function TypeSection({ settings, write }: { settings: BookSettings; write(patch: Partial<BookSettings>): void }) {
   const preset = bookPresetOf(settings);
   return (
-    <section className="layout-section">
-      <h3>Type</h3>
+    <>
       {/* The three presets (§6): a whole style at once, and what is in force
           is read back from the fields rather than stored, so a change by
           hand reads as custom by itself. */}
@@ -818,14 +1008,13 @@ function TypeSection({ settings, write }: { settings: BookSettings; write(patch:
         <input type="checkbox" checked={settings.hyphenate} onChange={(event) => write({ hyphenate: event.target.checked })} />{' '}
         Hyphenate
       </label>
-    </section>
+    </>
   );
 }
 
 function FurnitureSection({ settings, write }: { settings: BookSettings; write(patch: Partial<BookSettings>): void }) {
   return (
-    <section className="layout-section">
-      <h3>Running heads &amp; page numbers</h3>
+    <>
       <div className="layout-two">
         <label className="field">
           <span>Left-hand pages carry</span>
@@ -877,7 +1066,7 @@ function FurnitureSection({ settings, write }: { settings: BookSettings; write(p
       <p className="muted small">
         The words in the running heads are read from the book and the chapters; nothing about them is typed here.
       </p>
-    </section>
+    </>
   );
 }
 

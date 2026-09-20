@@ -733,6 +733,53 @@ becomes one, with the caret between them, and come off again if the line is
 re-typed as something else — what the writer wrote is the words, not the
 punctuation. One left half-open closes itself when the writer leaves it.
 
+## 6a. The right-click, everywhere, and a beat carried into a new scene
+
+Ken, 20 September: *there needs to be a right-click menu pop-up when you
+select a beat, to split a scene at that point, just like in a screenplay.
+That needs to be universal across the entire program — when you select
+something, you have the tools in a right-click menu to edit it. And you
+should be able to drag a beat into a new lane and it'll create a new scene
+or section.*
+
+**One menu.** `ContextMenu.tsx` is the right-click for the whole program:
+the manuscript's lines, the timeline's beats and scenes, the Layout rail's
+*Add a part* and the Sculptor's cards all open it at the pointer, so a menu
+looks and behaves the same wherever it comes up — a press anywhere else
+closes it, so does a scroll (a menu pinned to a place on the screen is
+wrong the moment the page moves under it), Escape closes it, the arrows
+walk it, and it opens leftwards near the right edge. An item that cannot
+be done *right now* is **greyed with the reason in its title**, never
+dropped — *Split the scene here* on a scene's first line tells the writer
+why nothing would happen — while an item that does not apply to this kind
+of thing at all is absent, the program's rule.
+
+**On a line of the manuscript** (`BeatBody.tsx`, so it works everywhere the
+manuscript is edited): *Split the scene here* (the noun table's word, so a
+novel says *chapter* and a textbook *section*) makes the line the first of
+a new scene, exactly as a screenplay's, and *New beat from here* cuts the
+beat — `splitUnitBefore` and `splitBeatBefore` from `dividing.ts`, the
+same primitives the bar's Chapter and Passage tools are built from. Then a
+rule, and what the writing can become: characterization, an index entry,
+a setup or a payoff, a theme or a motif, a research link, a figure. An
+empty line still opens the menu, the splits being about where the line
+stands rather than what is on it; the writing items are greyed on it.
+
+**On the timeline** (`MasterTimeline.tsx`): a beat's right-click offers
+*Open*, *Split the scene before this beat* (`splitUnit`, greyed on the
+first), *Carry it into a new scene* and *Remove*; a scene's offers *Open*,
+*Add a beat*, *Collapse* and *Remove the scene and its beats*.
+
+**A beat dragged into a new scene.** While a beat is in the air, every
+track's tail and every empty slot — the story positions where another
+track's scene stands — light up with *+ new scene*, and a beat dropped
+there becomes a scene of its own, on that track, at that story position:
+`beatIntoNewUnit` in `dividing.ts`, a new unit holding only that beat,
+right after the one it came from where no position was asked for. What is
+left behind is left as it is — a scene emptied of its last beat stays
+standing, empty and visible, where removing it silently would take a name
+and a marker the writer may want.
+
 ## 7. The research window
 
 Research is where the material is kept **before, during and after** it is

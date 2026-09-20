@@ -189,6 +189,10 @@ No migration: `face`, `size` and `align` ride in the element's existing
   the format changes, and counts chapters, paragraphs, headings and
   pictures for a book; the research importer reads it as markdown with its
   pictures; the Welcome button says *Final Draft, Word or PDF*.
+- **Stage 5, a beat per paragraph (§10).** `beatsFrom` in place of the
+  700-word passages; the manuscript right-click's *Split the chapter here*
+  and *New passage from here* (addendum 02 §6a) are what a paragraph-sized
+  beat is for.
 - **Stage 4, honouring it.** *As imported* on the Write page and in the
   Layout room (§3).
 - **Driven in Chromium**, which found two things the tests had not: the
@@ -223,16 +227,21 @@ derived from where the chapter falls (addendum 02 §12a), so `chapterName`
 hands back nothing and the leaf prints the number it works out, which is
 what makes moving chapter nine make it chapter eight.
 
-**A section arrives as passages.** A prose section used to be one beat
-holding every paragraph, which is a timeline with nothing on it to move
-and a Story Grid with one row. `passagesFrom` cuts it at every scene break
-— the one place the writer said the story pauses — and, where a stretch
-runs on, before the paragraph that would carry it past a passage's worth
-(`PASSAGE_WORDS`, 700) once it has 200 behind it, never leaving a stub of
-a few lines at the end. Each passage is titled with its opening words: a
-name to find it by, authoring metadata never printed (spec §5.3). Both
-importers read the same function, so a story added to a collection
-arrives the same way.
+**A section arrives as a beat per paragraph.** A prose section used to be
+one beat holding every paragraph, which is a timeline with nothing on it to
+move and a Story Grid with one row; the first fix cut it into *passages*
+near 700 words, and Ken's second ask was plainer — *each story in its own
+section, and each paragraph into a beat* — because a paragraph is the unit
+a writer splits a scene at, drags into a new one and points the right-click
+at, so it should arrive as the unit the timeline works in. `beatsFrom`
+makes a beat of every paragraph, blockquote and figure; a heading inside a
+section opens the beat the paragraph after it is in, a heading alone not
+being a beat; a scene break rides at the end of the beat before it, being
+where the writer said that stretch pauses. Each beat is titled with its
+opening words: a name to find it by, authoring metadata never printed
+(spec §5.3). Both importers read the same function, so a story added to a
+collection arrives the same way, and a story is its section, or its
+sections where its headings divide it.
 
 **Dividing where the writer points.** Reading is not cutting, and a
 writer can see at once where the reader was wrong. The manuscript bar on a

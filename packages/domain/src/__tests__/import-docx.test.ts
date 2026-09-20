@@ -19,7 +19,7 @@ import {
   docxToProse,
   docxToScript,
   opensChapter,
-  passagesFrom,
+  beatsFrom,
   readDocx,
   readLaidOutLines,
   walkXml,
@@ -512,7 +512,7 @@ describe('a manuscript with typed page numbers and bare labels (§10)', () => {
     expect(script.warnings.some((warning) => /page numbers/.test(warning))).toBe(false);
   });
 
-  it('builds a bare label into a chapter whose number is derived and whose title is empty, cut into passages', () => {
+  it('builds a bare label into a chapter whose number is derived and whose title is empty, a beat per paragraph', () => {
     const doc = document(
       [para('One', { align: 'center' }), para(body(500, 'a')), para(body(500, 'b')), para('* * *', { align: 'center' }), para(body(100, 'c')), para('Two'), para(body(30, 'd'))].join(''),
     );
@@ -520,24 +520,29 @@ describe('a manuscript with typed page numbers and bare labels (§10)', () => {
     expect(built.file.markers.map((marker) => marker.title)).toEqual(['', '']);
     const first = built.file.units.find((unit) => unit.id === built.file.markers[0]!.unitId)!;
     const beats = built.file.beats.filter((beat) => beat.unitId === first.id);
-    // 500 + 500 words: the second paragraph starts a new passage; the scene break ends it; the stub after stands alone.
+    // A beat per paragraph; the scene break rides at the end of the one before it.
     expect(beats.map((beat) => beat.manuscript.elements.map((element) => element.type))).toEqual([['paragraph'], ['paragraph', 'scene_break'], ['paragraph']]);
     expect(beats[0]?.title).toBe('a0 a1 a2 a3 a4 a5…');
   });
 });
 
-describe('passages from a section’s elements', () => {
+describe('beats from a section’s elements', () => {
   const p = (text: string) => ({ id: newId(), type: 'paragraph' as const, text, characterId: null, attributes: {} });
-  const words = (n: number) => Array.from({ length: n }, (_, i) => `w${i}`).join(' ');
+  const brk = () => ({ id: newId(), type: 'scene_break' as const, text: '', characterId: null, attributes: {} });
+  const h = (text: string) => ({ id: newId(), type: 'heading' as const, text, characterId: null, attributes: {} });
 
-  it('cuts at scene breaks, then near a passage’s worth of words, never leaving a stub', () => {
-    const cut = passagesFrom([p(words(300)), p(words(300)), p(words(300)), p(words(50)), { id: newId(), type: 'scene_break', text: '', characterId: null, attributes: {} }, p(words(20))]);
-    expect(cut.map((passage) => passage.elements.length)).toEqual([2, 3, 1]);
-    // A stub with no break before it joins the passage before.
-    const stub = passagesFrom([p(words(400)), p(words(400)), p(words(30))]);
-    expect(stub.map((passage) => passage.elements.length)).toEqual([1, 2]);
-    const small = passagesFrom([p(words(100)), p(words(100))]);
-    expect(small).toHaveLength(1);
-    expect(passagesFrom([])).toEqual([{ elements: [], title: '' }]);
+  it('makes a beat of every paragraph, a heading opening the beat after it and a break ending the one before', () => {
+    const cut = beatsFrom([p('The lamp had been in the family longer than anyone said.'), p('She had never trusted the wiring.'), brk(), h('Later'), p('It was dark.'), p('Then it was not.')]);
+    expect(cut.map((beat) => beat.elements.map((element) => element.type))).toEqual([
+      ['paragraph'],
+      ['paragraph', 'scene_break'],
+      ['heading', 'paragraph'],
+      ['paragraph'],
+    ]);
+    expect(cut[0]?.title).toBe('The lamp had been in the…');
+    expect(cut[2]?.title).toBe('Later');
+    // A break before anything opens the first beat rather than being lost.
+    expect(beatsFrom([brk(), p('a')]).map((beat) => beat.elements.map((element) => element.type))).toEqual([['scene_break'], ['paragraph']]);
+    expect(beatsFrom([])).toEqual([{ elements: [], title: '' }]);
   });
 });

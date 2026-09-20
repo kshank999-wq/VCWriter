@@ -231,25 +231,39 @@ Opened from **Layout** on the title bar, beside Research, and absent rather
 than greyed on every format that is not prose. In its own window like every
 other room (addendum 02 §8). Three regions:
 
-- **The parts**, down the left: front matter, the story's chapters (read,
-  not draggable), back matter; a part is selected to edit it, added from a
-  list, removed with an ask, and reordered within its half. **Between the
-  chapters** is where a book is dressed, and Ken found the way to it
-  unintuitive — a plate was added from the list at the foot and pointed at
-  its chapter in the inspector, and once placed it was listed nowhere. Each
-  chapter's row now carries the two things that go between chapters: **+
-  Picture facing** adds a plate before that chapter and selects it, so the
-  inspector is asking for the picture; **Chapter page…** (*Story page…* on a
-  collection) opens the chapter-page dialog *on that chapter*. A plate that
-  faces a chapter is listed in the story, where it falls; one at the back
-  stays in the back matter. The type and the trim stay on the right, and
-  the foot of the rail says so.
+- **The parts**, down the left. **+ Add a part** is the first thing on
+  the rail (from Ken: *the add-a-part should be at the top, like a menu
+  item*), a raised button opening the right-click menu (addendum 02 §6a)
+  with every kind the book can still take, each with its note, and on a
+  collection *A new story*. Under it the front matter, the story, the
+  figures and the back matter. **Every part row carries a ×** — half
+  title, title page, copyright, contents, all of them — which asks once
+  inline (a copyright notice somebody typed goes with it) and takes the
+  part out; the menu offers it back. **Rows drag**: a part within its
+  half (`placePart`, the story standing between the halves and nothing
+  crossing it), and a chapter — a story in a collection — **as a block**
+  (`moveChapterBlock`, its sections in their order, only the units that
+  moved getting a new key), which is the one thing the rail does to the
+  story order and it does it by moving the sections, since a chapter is
+  where its sections fall. **Between the chapters** is where a book is
+  dressed, and the rail shows the page there: a *Chapter page* row (*Story
+  page* on a collection) before each chapter saying how it opens — *a leaf
+  of its own* where its page carries a device, a summary or an epigraph
+  (`opensOnLeaf`), *above the first paragraph* otherwise — with **Chapter
+  page…** opening the chapter-page dialog on that chapter and **+ Picture
+  facing** adding a full-page plate before it, selected so the inspector is
+  asking for the picture. A plate that faces a chapter is listed where it
+  falls; one at the back stays in the back matter.
 - **The spreads**, in the middle: two facing pages at a time, the verso on
   the left, at a zoom, with a slider along the foot. The page the writer is
   looking at is the page the PDF will have, because both come off one laying.
-- **The inspector**, on the right: *Trim & margins* (§3), *Type* (§6),
-  *Running heads & folios* (§7), *Chapter openings* (a button to the dialog),
-  and the selected part's own fields.
+- **The inspector**, on the right: the selected part's own fields, then
+  four **folds** — *Trim & margins* (§3), *Type* (§6), *Running heads &
+  page numbers* (§7), *Chapter openings* (a button to the dialog) — each
+  behind a heading drawn as a raised button with a disclosure arrow (from
+  Ken: *these need to be collapsible, the titles bigger, so it's more
+  organised*); whether each is open is a preference of the machine, not of
+  the book.
 
 **Export the book…** is in the room's bar, and it is the only place the book
 is exported from; *File ▸ Export PDF* stays the manuscript's.
@@ -410,3 +424,12 @@ counted as five — one line too many on such paragraphs, and a last line
 alone at the head of the next page that the cutter's widow rule could not
 see, because by its count there was no widow. The box reads the fractional
 height now, with a tenth of a line of slack for what rounding is left.
+
+### Stage 8 — the rail and the folds
+
+From Ken after laying out a collection: *+ Add a part* at the top as a
+menu; × on every part; the page between the chapters shown as a row of its
+own with the chapter-page creator and a full-page picture on it; parts and
+chapters dragged to reorder (`placePart`, `moveChapterBlock`); and the
+inspector's four groups folded behind button headings (`Fold`, a
+preference per machine). §9 says what each does.

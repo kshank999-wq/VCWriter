@@ -153,9 +153,6 @@ export interface Materialised {
   words: number;
 }
 
-/** Where a passage is cut (addendum 21 §10): at a scene break always, otherwise near this many words, at a paragraph. */
-export const PASSAGE_WORDS = { target: 700, least: 200 } as const;
-
 const openingWords = (text: string, count = 6): string => {
   const words = text.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return '';
@@ -163,43 +160,44 @@ const openingWords = (text: string, count = 6): string => {
 };
 
 /**
- * A section's elements as passages (addendum 21 §10). A scene break ends a
- * passage — it is the one place the writer has said the story pauses — and
- * a stretch with none is cut at a paragraph once it has a passage's worth of
- * words, never leaving a stub of a few lines at the end. Each passage is
- * titled with its opening words, which is authoring metadata and never
- * printed: a name to find it by on the timeline, not a line of the book.
+ * A section's elements as beats, **one paragraph each** (addendum 21 §10,
+ * as Ken asked for it the second time): a paragraph is the unit a writer
+ * moves, splits a scene at and drags into a new one, so it arrives as the
+ * unit the timeline works in. A heading inside a section opens the beat
+ * the paragraph after it is in, since a heading alone is not a beat; a
+ * scene break rides at the end of the beat before it, being where the
+ * writer said that stretch pauses. Each beat is titled with its opening
+ * words, which is authoring metadata and never printed: a name to find it
+ * by on the timeline, not a line of the book.
  */
-export const passagesFrom = (elements: readonly ManuscriptElement[]): { elements: ManuscriptElement[]; title: string }[] => {
+export const beatsFrom = (elements: readonly ManuscriptElement[]): { elements: ManuscriptElement[]; title: string }[] => {
   const out: { elements: ManuscriptElement[]; title: string }[] = [];
-  let current: ManuscriptElement[] = [];
-  let words = 0;
+  let open: ManuscriptElement[] = [];
   const close = () => {
-    if (current.length === 0) return;
-    const first = current.find((element) => element.type === 'paragraph' || element.type === 'blockquote' || element.type === 'heading');
-    out.push({ elements: current, title: openingWords(first?.text ?? '') });
-    current = [];
-    words = 0;
+    if (open.length === 0) return;
+    const first = open.find((element) => element.type === 'paragraph' || element.type === 'blockquote' || element.type === 'heading');
+    out.push({ elements: open, title: openingWords(first?.text ?? '') });
+    open = [];
   };
   for (const element of elements) {
     if (element.type === 'scene_break') {
-      current.push(element);
-      close();
+      // Ends the beat before it; with nothing before, it opens the next.
+      if (out.length > 0 && open.length === 0) out[out.length - 1]!.elements.push(element);
+      else {
+        open.push(element);
+        close();
+      }
       continue;
     }
-    const count = wordsIn(element.text);
-    // Cut before a paragraph that would carry the passage past its
-    // measure, once there is a passage's worth behind it.
-    if (words >= PASSAGE_WORDS.least && words + count > PASSAGE_WORDS.target && (element.type === 'paragraph' || element.type === 'heading')) close();
-    current.push(element);
-    words += count;
-  }
-  // A stub at the end joins the passage before it, unless a scene break stood between.
-  if (current.length > 0 && words < PASSAGE_WORDS.least && out.length > 0 && out[out.length - 1]!.elements[out[out.length - 1]!.elements.length - 1]?.type !== 'scene_break') {
-    out[out.length - 1]!.elements.push(...current);
-  } else {
+    if (element.type === 'heading') {
+      close();
+      open.push(element);
+      continue;
+    }
+    open.push(element);
     close();
   }
+  close();
   return out.length > 0 ? out : [{ elements: [], title: '' }];
 };
 
@@ -332,11 +330,10 @@ export const materialiseScenes = (script: ImportedScript, options: MaterialiseOp
       );
     }
 
-    // A prose section arrives as passages rather than one long beat
-    // (addendum 21 §10): cut at each scene break and, where a stretch runs
-    // long, at a paragraph near a passage's worth of words. A script's
-    // scene stays one beat, as it always has.
-    const passages = prose ? passagesFrom(elements) : [{ elements, title: '' }];
+    // A prose section arrives as a beat per paragraph (addendum 21 §10),
+    // so the timeline's unit is the writer's. A script's scene stays one
+    // beat, as it always has.
+    const passages = prose ? beatsFrom(elements) : [{ elements, title: '' }];
     const keys = initialOrderKeys(Math.max(1, passages.length));
     passages.forEach((passage, at) => {
       beats.push(

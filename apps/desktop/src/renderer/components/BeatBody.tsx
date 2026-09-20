@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { ContextMenu, type MenuEntry } from './ContextMenu';
 import {
   dictationKind,
   startDictation,
@@ -19,6 +20,7 @@ import {
   castNamesForBeat,
   cueSuggestions,
   notedCast,
+  nounsFor,
   hasExtension,
   withExtension,
   cuesInOrder,
@@ -37,6 +39,7 @@ import {
   headingsSoFar,
   isDual,
   layoutForFile,
+  locateElement,
   markForIndex,
   newId,
   onEnter,
@@ -52,6 +55,8 @@ import {
   reformatText,
   setDualDialogue,
   setupsBoard,
+  splitBeatBefore,
+  splitUnitBefore,
   tagPassage,
   styleShortcuts,
   subHeadingsUnder,
@@ -743,7 +748,8 @@ export function BeatBody({
                 const input = event.currentTarget;
                 const picked = input.value.slice(input.selectionStart, input.selectionEnd).trim();
                 const text = picked.length > 0 ? picked : element.text.trim();
-                if (text.length === 0) return;
+                // An empty line still opens the menu: the splits are about
+                // where the line stands, not what is on it.
                 event.preventDefault();
                 setCaught({ x: event.clientX, y: event.clientY, elementId: element.id, text });
               }}
@@ -768,6 +774,52 @@ export function BeatBody({
         </div>
       </Fragment>
     );
+  };
+
+  /**
+   * The right-click on a line (addendum 02 §6a): what the writing can
+   * become, and — first, because it is what a writer reaching for the
+   * menu most often wants — where the story can be cut. *Split the scene
+   * here* makes this line the first of a new scene, exactly as a
+   * screenplay's; *New passage from here* cuts the beat. Both are greyed
+   * with the reason on a line that already opens its scene or its beat.
+   */
+  const writingMenu = (at: { elementId: ManuscriptElementId; text: string }): MenuEntry[] => {
+    const nouns = nounsFor(format);
+    const place = locateElement(file, at.elementId as string);
+    const firstOfUnit = place ? place.beatIndex === 0 && place.index === 0 : true;
+    const firstOfBeat = place ? place.index === 0 : true;
+    const none = at.text.length === 0 ? 'Nothing on this line yet' : null;
+    const entries: MenuEntry[] = [
+      {
+        label: `Split the ${nouns.unit.toLowerCase()} here`,
+        disabled: firstOfUnit ? `This line already opens the ${nouns.unit.toLowerCase()}` : null,
+        onPick: () => onUpdate((current) => splitUnitBefore(current, at.elementId as string).file),
+      },
+      {
+        label: `New ${nouns.sub.toLowerCase()} from here`,
+        disabled: firstOfBeat ? `This line already opens the ${nouns.sub.toLowerCase()}` : null,
+        onPick: () => onUpdate((current) => splitBeatBefore(current, at.elementId as string).file),
+      },
+      'rule',
+      { label: 'Add to a character’s characterization…', disabled: none, onPick: () => setFiling({ elementId: at.elementId, text: at.text }) },
+    ];
+    // An index is a book's, so a screenplay is never offered one (addendum
+    // 10 §2): a stack of scripts each numbering from its own page one has no
+    // single page 34 for an entry to point at.
+    if (hasBookIndex(file.project.format)) entries.push({ label: 'Index this…', disabled: none, onPick: () => setIndexing({ elementId: at.elementId, text: at.text }) });
+    entries.push(
+      { label: 'Make this a setup or a payoff…', disabled: none, onPick: () => setPlanting({ text: at.text }) },
+      { label: 'Tag a theme or a motif…', disabled: none, onPick: () => setTagging({ elementId: at.elementId, text: at.text }) },
+      { label: 'Add to Research ▸ Links…', disabled: none, onPick: () => setThreading({ elementId: at.elementId, text: at.text }) },
+    );
+    // A figure belongs to a book with pictures in it. Absent rather than
+    // greyed everywhere else, and absent on a book whose library is empty:
+    // *put a figure here* with nothing to put is not an offer.
+    if (isInstructional(file.project.format) && graphicsInOrder(file).length > 0) {
+      entries.push({ label: 'Put a figure here…', onPick: () => setPlacing({ elementId: at.elementId }) });
+    }
+    return entries;
   };
 
   return (
@@ -860,59 +912,11 @@ export function BeatBody({
       ) : null}
 
       {caught ? (
-        <CaughtMenu
+        <ContextMenu
           x={caught.x}
           y={caught.y}
-          onPick={() => {
-            setFiling({ elementId: caught.elementId, text: caught.text });
-            setCaught(null);
-          }}
-          // An index is a book's, so a screenplay is never offered one
-          // (addendum 10 §2): a stack of scripts each numbering from its own
-          // page one has no single page 34 for an entry to point at.
-          onIndex={
-            hasBookIndex(file.project.format)
-              ? () => {
-                  setIndexing({ elementId: caught.elementId, text: caught.text });
-                  setCaught(null);
-                }
-              : null
-          }
-          onPlant={
-            readOnly
-              ? null
-              : () => {
-                  setPlanting({ text: caught.text });
-                  setCaught(null);
-                }
-          }
-          onTag={
-            readOnly
-              ? null
-              : () => {
-                  setTagging({ elementId: caught.elementId, text: caught.text });
-                  setCaught(null);
-                }
-          }
-          onThread={
-            readOnly
-              ? null
-              : () => {
-                  setThreading({ elementId: caught.elementId, text: caught.text });
-                  setCaught(null);
-                }
-          }
-          // A figure belongs to a book with pictures in it. Absent rather than
-          // greyed everywhere else, and absent on a book whose library is
-          // empty: *put a figure here* with nothing to put is not an offer.
-          onFigure={
-            readOnly || !isInstructional(file.project.format) || graphicsInOrder(file).length === 0
-              ? null
-              : () => {
-                  setPlacing({ elementId: caught.elementId });
-                  setCaught(null);
-                }
-          }
+          label="What to do with this writing"
+          entries={writingMenu(caught)}
           onClose={() => setCaught(null)}
         />
       ) : null}
@@ -1141,100 +1145,6 @@ function FigureRow({
   );
 }
 
-/**
- * The menu the right-click opens on a line of the manuscript.
- *
- * Electron gives a renderer no context menu of its own, so nothing is being
- * taken away here, and a menu that grew Cut/Copy/Paste would be reimplementing
- * the platform badly. What joins the list is only ever *filing this passage
- * somewhere* — which is what a right-click on writing is for.
- *
- * The index item is absent rather than disabled on a screenplay: a greyed line
- * says *you cannot do this yet*, and the true thing is that this format has no
- * index at all.
- */
-function CaughtMenu({
-  x,
-  y,
-  onPick,
-  onIndex,
-  onPlant,
-  onTag,
-  onThread,
-  onFigure,
-  onClose,
-}: {
-  x: number;
-  y: number;
-  onPick(): void;
-  onIndex: (() => void) | null;
-  onPlant: (() => void) | null;
-  onTag: (() => void) | null;
-  onThread: (() => void) | null;
-  onFigure: (() => void) | null;
-  onClose(): void;
-}) {
-  const panel = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    panel.current?.querySelector('button')?.focus();
-    const away = () => onClose();
-    // Any click elsewhere, and any scroll, closes it: a menu pinned to a
-    // position on screen is wrong the moment the page moves under it.
-    window.addEventListener('pointerdown', away);
-    window.addEventListener('scroll', away, true);
-    return () => {
-      window.removeEventListener('pointerdown', away);
-      window.removeEventListener('scroll', away, true);
-    };
-  }, [onClose]);
-
-  return (
-    <div
-      ref={panel}
-      className="caught-menu"
-      role="menu"
-      aria-label="What to do with this writing"
-      style={{ left: x, top: y }}
-      onPointerDown={(event) => event.stopPropagation()}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          onClose();
-        }
-      }}
-    >
-      <button type="button" role="menuitem" className="caught-item" onClick={onPick}>
-        Add to a character’s characterization…
-      </button>
-      {onIndex ? (
-        <button type="button" role="menuitem" className="caught-item" onClick={onIndex}>
-          Index this…
-        </button>
-      ) : null}
-      {onPlant ? (
-        <button type="button" role="menuitem" className="caught-item" onClick={onPlant}>
-          Make this a setup or a payoff…
-        </button>
-      ) : null}
-      {onTag ? (
-        <button type="button" role="menuitem" className="caught-item" onClick={onTag}>
-          Tag a theme or a motif…
-        </button>
-      ) : null}
-      {onThread ? (
-        <button type="button" role="menuitem" className="caught-item" onClick={onThread}>
-          Add to Research ▸ Links…
-        </button>
-      ) : null}
-      {onFigure ? (
-        <button type="button" role="menuitem" className="caught-item" onClick={onFigure}>
-          Put a figure here…
-        </button>
-      ) : null}
-    </div>
-  );
-}
 
 /**
  * Turning a passage into characterization without leaving the page (addendum 08

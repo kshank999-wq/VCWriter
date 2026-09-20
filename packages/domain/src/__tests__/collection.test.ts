@@ -10,6 +10,7 @@ import {
   describeCollection,
   isCollection,
   markerNoun,
+  moveChapterBlock,
   nounsFor,
   opensChapter,
   placedMarkers,
@@ -92,6 +93,28 @@ describe('stories in a collection', () => {
     expect(stories[1]?.sections).toHaveLength(1);
     expect(storiesOf(createProjectFile({ title: 'N', format: 'novel' }))).toEqual([]);
     expect(describeCollection(file)).toBe('2 stories · 3 sections · 0 words');
+  });
+
+  it('moves a story as a block, before another or to the end, its sections keeping their order', () => {
+    let file = createProjectFile({ title: 'Tales', format: 'short_story' });
+    const road = beginStory(file, { title: 'The Road' });
+    file = addUnit(road.file, { trackId: file.tracks[0]!.id, title: 'Road II' }).file;
+    const harbour = beginStory(file, { title: 'The Harbour' });
+    const lamp = beginStory(harbour.file, { title: 'The Lamp' });
+    file = lamp.file;
+    const titles = (one: ProjectFile) => storiesOf(one).map((story) => [story.placed.marker.title, story.sections.map((unit) => unit.title)]);
+    expect(titles(file)).toEqual([['The Road', ['', 'Road II']], ['The Harbour', ['']], ['The Lamp', ['']]]);
+
+    const lampFirst = moveChapterBlock(file, lamp.markerId, road.markerId);
+    expect(titles(lampFirst)).toEqual([['The Lamp', ['']], ['The Road', ['', 'Road II']], ['The Harbour', ['']]]);
+    // Only the units that moved were touched.
+    expect(lampFirst.units.filter((unit) => unit.orderKey !== file.units.find((was) => was.id === unit.id)?.orderKey)).toHaveLength(1);
+
+    const roadLast = moveChapterBlock(file, road.markerId, null);
+    expect(titles(roadLast)).toEqual([['The Harbour', ['']], ['The Lamp', ['']], ['The Road', ['', 'Road II']]]);
+    expect(moveChapterBlock(file, road.markerId, road.markerId)).toBe(file);
+    // The opening section, which no story owns, stays where it was.
+    expect(unitsInStoryOrder(roadLast)[0]?.id).toBe(unitsInStoryOrder(file)[0]?.id);
   });
 
   it('adds an imported document as one story after the last, its headings as sections', () => {

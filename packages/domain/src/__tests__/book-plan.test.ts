@@ -13,6 +13,7 @@ import {
   opensOnLeaf,
   paragraphsOf,
   partsOf,
+  placePart,
   removePart,
   setChapterPage,
   tracksInOrder,
@@ -114,6 +115,21 @@ describe('the parts', () => {
   it('reads paragraphs off a text part by its blank lines', () => {
     expect(paragraphsOf('One.\n\nTwo.\n\n\nThree.')).toEqual(['One.', 'Two.', 'Three.']);
     expect(paragraphsOf('  ')).toEqual([]);
+  });
+});
+
+describe('placing a part by drag', () => {
+  it('puts a part before another in its half, or at the end of its half, and never across the story', () => {
+    const { file } = chaptered();
+    const kinds = (one: ProjectFile) => partsOf(one).map((part) => part.kind);
+    // Contents dragged above the title page.
+    expect(kinds(placePart(file, 'default:contents', 'default:title_page'))).toEqual(['half_title', 'contents', 'title_page', 'copyright', 'about_the_author']);
+    // Half title dragged to the end of the front matter.
+    expect(kinds(placePart(file, 'default:half_title', null))).toEqual(['title_page', 'copyright', 'contents', 'half_title', 'about_the_author']);
+    // A front part cannot be dropped into the back matter, nor onto itself.
+    expect(placePart(file, 'default:contents', 'default:about_the_author')).toBe(file);
+    expect(placePart(file, 'default:contents', 'default:contents')).toBe(file);
+    expect(placePart(file, 'nope', null)).toBe(file);
   });
 });
 

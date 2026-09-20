@@ -3,6 +3,7 @@ import {
   addBeat,
   addMarker,
   addUnit,
+  beatIntoNewUnit,
   beatsForUnit,
   carveBeat,
   carveUnit,
@@ -135,5 +136,32 @@ describe('a passage from a start and an end', () => {
   it('will not cross a chapter', () => {
     const cut = splitUnitBefore(novel(), 'e').file;
     expect(carveBeat(cut, 'c', 'f')).toMatch(/cannot cross/);
+  });
+});
+
+describe('a beat carried into a scene of its own', () => {
+  it('makes a new unit right after the beat’s, on its track, holding only that beat', () => {
+    const file = novel();
+    const second = beatsForUnit(file, file.units[0]!.id)[1]!;
+    const made = beatIntoNewUnit(file, second.id, { title: 'Later' });
+    const order = unitsInStoryOrder(made.file);
+    expect(order.map((unit) => unit.id)).toEqual([file.units[0]!.id, made.unitId]);
+    expect(order[1]?.trackId).toBe(file.units[0]!.trackId);
+    expect(order[1]?.title).toBe('Later');
+    expect(beatsForUnit(made.file, made.unitId).map((beat) => beat.id)).toEqual([second.id]);
+    expect(beatsForUnit(made.file, file.units[0]!.id)).toHaveLength(1);
+    expect(reading(made.file)).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+  });
+
+  it('lands on the track asked for, and leaves an emptied unit standing', () => {
+    let file = novel();
+    const track = addUnit(file, { trackId: file.tracks[0]!.id }).file;
+    file = track;
+    const only = addBeat(file, { unitId: unitsInStoryOrder(file)[1]!.id, title: 'alone' });
+    file = only.file;
+    const made = beatIntoNewUnit(file, only.beat.id, { trackId: file.tracks[0]!.id });
+    expect(unitsInStoryOrder(made.file)).toHaveLength(3);
+    expect(beatsForUnit(made.file, unitsInStoryOrder(made.file)[1]!.id)).toHaveLength(0);
+    expect(beatsForUnit(made.file, made.unitId).map((beat) => beat.title)).toEqual(['alone']);
   });
 });

@@ -1,5 +1,7 @@
 import { addBeat, addMarker, addUnit, moveBeat, moveUnit } from './mutations.js';
 import { beatsForUnit, tracksInOrder, unitsInStoryOrder } from './selectors.js';
+import { orderKeyBetween } from './ordering.js';
+import { nowIso } from './entities/common.js';
 import { findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf } from './outline.js';
 import { claimedInScript, retitleScript } from './planning.js';
 import type { Outline, OutlineItem } from './entities/outline.js';
@@ -340,6 +342,43 @@ export const chapterSpan = (file: ProjectFile, markerId: StoryMarkerId): Structu
   );
   const end = order.findIndex((unit, at) => at > start && starts.has(unit.id as string));
   return order.slice(start, end === -1 ? order.length : end);
+};
+
+/**
+ * Move a chapter — a story in a collection — as a block (addendum 22 §3):
+ * its span goes, in its own order, to stand before another chapter's span
+ * or at the end of the story, and only the units that moved get a new key.
+ * The rail's drag reads this; the Outliner's *Move the chapter to match* is
+ * the same idea pointed at a row. Nothing is stored about the chapter but
+ * where its sections fall, which is why moving them is moving it.
+ */
+export const moveChapterBlock = (file: ProjectFile, markerId: StoryMarkerId, beforeMarkerId: StoryMarkerId | null): ProjectFile => {
+  if (markerId === beforeMarkerId) return file;
+  const span = chapterSpan(file, markerId);
+  if (span.length === 0) return file;
+  const moving = new Set(span.map((unit) => unit.id as string));
+  const rest = unitsInStoryOrder(file).filter((unit) => !moving.has(unit.id as string));
+  let at = rest.length;
+  if (beforeMarkerId !== null) {
+    const target = file.markers.find((marker) => marker.id === beforeMarkerId);
+    if (!target) return file;
+    at = rest.findIndex((unit) => unit.id === target.unitId);
+    if (at === -1) return file;
+  }
+  let before = at > 0 ? (rest[at - 1]?.orderKey ?? null) : null;
+  const after = rest[at]?.orderKey ?? null;
+  const timestamp = nowIso();
+  const keys = new Map<string, string>();
+  for (const unit of span) {
+    const key = orderKeyBetween(before, after);
+    keys.set(unit.id as string, key);
+    before = key;
+  }
+  return {
+    ...file,
+    project: { ...file.project, updatedAt: timestamp },
+    units: file.units.map((unit) => (keys.has(unit.id as string) ? { ...unit, orderKey: keys.get(unit.id as string)!, updatedAt: timestamp } : unit)),
+  };
 };
 
 /**

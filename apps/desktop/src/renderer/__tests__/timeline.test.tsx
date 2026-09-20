@@ -6,7 +6,9 @@ import {
   addTrack,
   addSetupPayoff,
   addSetupPoint,
+  addBeat,
   addUnit,
+  beatsForUnit,
   beatsInStoryOrder,
   createProjectFile,
   tracksInOrder,
@@ -178,6 +180,86 @@ describe('master timeline', () => {
     fireEvent.click(within(block as HTMLElement).getByTitle('Add beat'));
     fireEvent.click(within(block as HTMLElement).getByText('New beat'));
     expect(container.querySelectorAll('.ruler-cell:not(.tail)')[1]!.className).toContain('playhead');
+  });
+
+  /**
+   * The right-click on a beat and on a scene (addendum 02 §6a, from Ken):
+   * the tools to edit what was pointed at, at the pointer.
+   */
+  it('splits a scene before a beat from the beat’s right-click, refusing on the first', () => {
+    let initial = twoTracks();
+    const opening = unitsInStoryOrder(initial)[0]!;
+    initial = addBeat(initial, { unitId: opening.id, title: 'Second beat' }).file;
+    let latest: ProjectFile = initial;
+    render(
+      <Harness initial={initial}>
+        {(file, update, selected, select) => {
+          latest = file;
+          return (
+            <MasterTimeline file={file} selectedBeatId={selected} onSelectBeat={select} onUpdate={update} pixelsPerPage={120} onZoom={() => undefined} inspectorOpen onToggleInspector={() => undefined} onAddScene={() => undefined} onAddBeat={() => undefined} onAddTrack={() => undefined} onAddAct={() => undefined} onOpenTrack={() => undefined} />
+          );
+        }}
+      </Harness>,
+    );
+    fireEvent.contextMenu(screen.getByText('Opening beat').closest('li') as HTMLElement, { clientX: 40, clientY: 40 });
+    const split = screen.getByRole('menuitem', { name: 'Split the scene before this beat' }) as HTMLButtonElement;
+    expect(split.disabled).toBe(true);
+    expect(split.title).toMatch(/first beat of the scene already/);
+    fireEvent.keyDown(split, { key: 'Escape' });
+    expect(screen.queryByRole('menu')).toBeNull();
+
+    fireEvent.contextMenu(screen.getByText('Second beat').closest('li') as HTMLElement, { clientX: 40, clientY: 40 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Split the scene before this beat' }));
+    expect(unitsInStoryOrder(latest)).toHaveLength(2);
+    expect(beatsForUnit(latest, unitsInStoryOrder(latest)[1]!.id).map((beat) => beat.title)).toEqual(['Second beat']);
+    expect(screen.queryByRole('menu')).toBeNull();
+
+    // The scene's own menu, and its remove.
+    fireEvent.contextMenu(screen.getAllByText(/Opening Scene/)[0]!.closest('header') as HTMLElement, { clientX: 40, clientY: 40 });
+    expect(screen.getByRole('menuitem', { name: 'Add a beat' })).toBeDefined();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Remove the scene and its beats' }));
+    expect(unitsInStoryOrder(latest)).toHaveLength(1);
+  });
+
+  it('makes a scene of a beat dropped past the last scene, or on another track’s empty slot', () => {
+    let initial = twoTracks();
+    const opening = unitsInStoryOrder(initial)[0]!;
+    initial = addBeat(initial, { unitId: opening.id, title: 'Second beat' }).file;
+    let latest: ProjectFile = initial;
+    render(
+      <Harness initial={initial}>
+        {(file, update, selected, select) => {
+          latest = file;
+          return (
+            <MasterTimeline file={file} selectedBeatId={selected} onSelectBeat={select} onUpdate={update} pixelsPerPage={120} onZoom={() => undefined} inspectorOpen onToggleInspector={() => undefined} onAddScene={() => undefined} onAddBeat={() => undefined} onAddTrack={() => undefined} onAddAct={() => undefined} onOpenTrack={() => undefined} />
+          );
+        }}
+      </Harness>,
+    );
+    const beat = screen.getByText('Second beat').closest('li') as HTMLElement;
+    fireEvent.dragStart(beat, { dataTransfer: { setData: () => undefined } });
+    // While a beat is in the air, the tails say where it may land.
+    const tails = document.querySelectorAll('.slot.tail.takes-beat');
+    expect(tails).toHaveLength(2);
+    expect(tails[0]?.textContent).toBe('+ new scene');
+    fireEvent.dragOver(tails[0]!);
+    fireEvent.drop(tails[0]!);
+    const order = unitsInStoryOrder(latest);
+    expect(order).toHaveLength(2);
+    expect(order[1]?.trackId).toBe(tracksInOrder(latest)[0]?.id);
+    expect(beatsForUnit(latest, order[1]!.id).map((beat) => beat.title)).toEqual(['Second beat']);
+    expect(beatsForUnit(latest, order[0]!.id).map((beat) => beat.title)).toEqual(['Opening beat']);
+
+    // Dropped on the subplot's empty slot at the opening scene's position: a scene there, on that track.
+    const first = screen.getByText('Opening beat').closest('li') as HTMLElement;
+    fireEvent.dragStart(first, { dataTransfer: { setData: () => undefined } });
+    const slot = document.querySelector('.slot.takes-beat:not(.tail)') as HTMLElement;
+    fireEvent.dragOver(slot);
+    fireEvent.drop(slot);
+    const after = unitsInStoryOrder(latest);
+    expect(after).toHaveLength(3);
+    expect(after[0]?.trackId).toBe(tracksInOrder(latest)[1]?.id);
+    expect(beatsForUnit(latest, after[0]!.id).map((beat) => beat.title)).toEqual(['Opening beat']);
   });
 
   it('offers the toolbar actions', () => {
