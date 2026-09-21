@@ -111,6 +111,30 @@ out*, a number means *the writer said*. The room shows the derived value in
 the box either way, greyed where it is derived, so the writer can see what
 they would be overriding.
 
+## 3a. What the book is called
+
+From Ken, after laying one out: *it is taking it from the actual saved file
+name, and that is ending up on the tops of the pages.* He was right, and it
+was worse than the running heads — a project is named when it is made, and
+an **import names it after the file on disk**, so `lamp-manuscript-final-v3`
+was on every verso, on the contents page, on the title page, in the eBook's
+metadata and on the exported PDF.
+
+**One reading, `bookNames`** (`book-layout.ts`): the title the writer gave
+the book, and the project's name only as the fallback. Everything that
+names the book asks it — the running heads, the contents, the chapter
+fallback, the title page, the copyright notice, the eBook and the exported
+file — so none of them can disagree, and naming the book once fixes all of
+them at the same moment.
+
+**It is set in Book settings and nowhere else**, under *The book*: the
+title, the author and the publisher, the three names that run through the
+whole book. The project's own name is the **placeholder**, so it is clear
+which is showing, and the project keeps that name — renaming the book does
+not rename the file. The title page's part dialog shows what it will print
+and has a button to *Book settings…* rather than a second box for the same
+field, because a second box is a second answer.
+
 ## 4. The browser measures and the domain decides where the pages fall
 
 The honest constraint. Where a line of proportional type breaks depends on
@@ -302,7 +326,8 @@ other room (addendum 02 §8). Three regions:
   looking at is the page the PDF will have, because both come off one laying.
 - **Book settings…**, on the bar (from Ken: *a book settings button in
   the top toolbar, because this is going to apply to the entire book*):
-  everything that runs all the way through — *Trim, margins & spine* (§3),
+  everything that runs all the way through — **The book** (§3a), *Trim,
+  margins & spine* (§3),
   *Type* (§6), *Running heads & page numbers* (§7), *Chapter openings* (a
   button to the dialog) — in one dialog in the middle of the screen, each
   group behind a heading drawn as a raised button with a disclosure arrow
@@ -327,14 +352,12 @@ other room (addendum 02 §8). Three regions:
   picture just placed fell on. Double-clicking a chapter's opening page
   opens the chapter-page dialog instead, and pressing a picture cut into a
   part on the spread opens that part. **The half title and the title page
-  are designed there** (from Ken: *it forces you to use the name of the
-  saved file; the pop-up needs options for different templates, a way to
-  redo the wording and the fonts, and stylize the page*): the **wording** —
-  the book's title, a line under it, the author, the publisher — is typed
-  on the part and is the title page's own (`settings.titlePage`, so *File ▸
-  Title page…* and these pages cannot disagree), empty meaning the
-  project's, which a project made from a file was given from the file's
-  name; **Import full page art…** makes the page a picture edge to edge
+  are designed there** (from Ken: *the pop-up needs options for different
+  templates, a way to redo the wording and the fonts, and stylize the
+  page*): the page says what it will print and sends the writer to **The
+  book** for the title and the author (§3a), since those run all the way
+  through; a **line under the title** is the title page's own and is typed
+  there; **Import full page art…** makes the page a picture edge to edge
   with the words in it (`assetId` on the part, drawn by the plate's rule);
   and a **page style** (`part-style.ts`) — a *template* for where the block
   sits and how it is ranged (Classic, Centred, High and left, Low and left,

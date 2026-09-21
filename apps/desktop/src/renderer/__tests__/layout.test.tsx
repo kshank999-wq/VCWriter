@@ -6,6 +6,7 @@ import {
   addBeat,
   addMarker,
   addUnit,
+  bookNames,
   bookSettingsOf,
   createProjectFile,
   beginStory,
@@ -282,19 +283,37 @@ describe('the room', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Type' }));
   });
 
-  it('types the book’s title on the half title and the title page, over the project’s name, and takes full-page art', async () => {
+  it('names the book in Book settings, so the running heads stop printing the file’s name', () => {
+    render(<Harness initial={novel()} />);
+    // The project is named for its file, and that is what the pages carry.
+    expect(bookNames(latest as ProjectFile).title).toBe('The Lamp');
+    openBookSettings();
+    const dialog = screen.getByRole('dialog', { name: 'Book settings' });
+    fireEvent.change(within(dialog).getByLabelText('Book title'), { target: { value: 'The Drowned Bell' } });
+    fireEvent.change(within(dialog).getByLabelText('Author'), { target: { value: 'M. Shank' } });
+    fireEvent.change(within(dialog).getByLabelText('Publisher'), { target: { value: 'Lantern Press' } });
+    const file = latest as ProjectFile;
+    expect(bookNames(file)).toEqual({ title: 'The Drowned Bell', author: 'M. Shank', imprint: 'Lantern Press' });
+    // The project keeps its own name; only the book is renamed.
+    expect(file.project.title).toBe('The Lamp');
+    expect(within(dialog).getByText(/Empty means the project’s own name/)).toBeDefined();
+  });
+
+  it('says on the title page what it will print and sends the writer to Book settings, and takes full-page art', async () => {
     render(<Harness initial={novel()} />);
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
     fireEvent.click(rail.getByRole('button', { name: /^Title page/ }));
-    // Nothing says "nothing to type on it" any more: the title is typed here.
+    // Nothing says "nothing to type on it" any more, and the names are not offered twice.
     expect(screen.queryByText(/nothing to type on it/)).toBeNull();
-    fireEvent.change(screen.getByLabelText('Book title'), { target: { value: 'The Lamp' } });
+    expect(screen.queryByLabelText('Book title')).toBeNull();
+    expect(document.querySelector('.layout-inspector')?.textContent).toMatch(/This page prints/);
     fireEvent.change(screen.getByLabelText('Under the title'), { target: { value: 'A novel' } });
-    fireEvent.change(screen.getByLabelText('Author on the title page'), { target: { value: 'M. Shank' } });
-    fireEvent.change(screen.getByLabelText('Publisher'), { target: { value: 'Lantern Press' } });
+    expect((latest as ProjectFile).settings.titlePage.episode).toBe('A novel');
+    // The button opens the one place the names are set.
+    fireEvent.click(within(document.querySelector('.layout-inspector') as HTMLElement).getByRole('button', { name: 'Book settings…' }));
+    expect(screen.getByRole('dialog', { name: 'Book settings' }).hasAttribute('open')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Close book settings' }));
     let file = latest as ProjectFile;
-    expect(file.settings.titlePage).toMatchObject({ title: 'The Lamp', episode: 'A novel', author: 'M. Shank' });
-    expect(bookSettingsOf(file).imprint).toBe('Lantern Press');
     // The page's style: a template places it, a hand change reads as custom.
     expect((screen.getByLabelText('Page template') as HTMLSelectElement).value).toBe('classic');
     fireEvent.change(screen.getByLabelText('Page template'), { target: { value: 'high_left' } });
@@ -318,10 +337,10 @@ describe('the room', () => {
     expect(screen.getByRole('button', { name: 'Import other full page art…' })).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Set the words instead' }));
     expect(partsOf(latest as ProjectFile).find((part) => part.kind === 'title_page')!.assetId).toBeNull();
-    // The half title types the title too, and nothing else.
+    // The half title says what it prints too, and offers no subtitle.
     fireEvent.click(rail.getByRole('button', { name: /^Half title/ }));
-    expect((screen.getByLabelText('Book title') as HTMLInputElement).value).toBe('The Lamp');
-    expect(screen.queryByLabelText('Author on the title page')).toBeNull();
+    expect(document.querySelector('.layout-inspector')?.textContent).toMatch(/This page prints/);
+    expect(screen.queryByLabelText('Under the title')).toBeNull();
   });
 
   it('opens the chapter page from its row, and takes a leaf off after asking', () => {

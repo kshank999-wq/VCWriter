@@ -31,6 +31,7 @@ import {
   PART_TEMPLATES,
   PART_TEMPLATE_WORDS,
   bookSettingsOf,
+  bookNames,
   paragraphsOf,
   partHasStyle,
   partOfInset,
@@ -234,7 +235,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
     if (!laying) return;
     setBusy(true);
     setMessage(null);
-    const html = renderBookHtml(laying.laid.pages, laying.blocks, laying.context, file.project.title);
+    const html = renderBookHtml(laying.laid.pages, laying.blocks, laying.context, bookNames(file).title);
     const { trim } = laying.geometry;
     const result = await window.vcwriter.exportPdf({
       file,
@@ -447,6 +448,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           write={write}
           noun={noun}
           divisions={divisions}
+          onUpdate={onUpdate}
           onOpenChapterPage={openChapterPage}
           onClose={() => setBookSettingsOpen(false)}
         />
@@ -464,11 +466,15 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           setPartDialogId(null);
           setSelectedPartId(null);
         }}
+        onOpenBookSettings={() => {
+          setPartDialogId(null);
+          setBookSettingsOpen(true);
+        }}
       />
 
       <header className="sculptor-bar">
         <h2>Layout</h2>
-        <span className="muted small">{file.project.title}</span>
+        <span className="muted small">{bookNames(file).title}</span>
         <span className="toolbar-spacer" />
         {laying ? (
           <span className="muted small layout-count">
@@ -804,7 +810,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           ) : null}
           {selected ? (
             <>
-              <PartFields file={file} part={selected} onUpdate={onUpdate} onDone={() => setSelectedPartId(null)} />
+              <PartFields file={file} part={selected} onUpdate={onUpdate} onDone={() => setSelectedPartId(null)} onOpenBookSettings={() => setBookSettingsOpen(true)} />
               <p className="muted small">
                 <button type="button" className="ghost small" onClick={() => setPartDialogId(selected.id)}>
                   Open the page…
@@ -1119,6 +1125,7 @@ function BookSettingsDialog({
   write,
   noun,
   divisions,
+  onUpdate,
   onOpenChapterPage,
   onClose,
 }: {
@@ -1126,6 +1133,7 @@ function BookSettingsDialog({
   file: ProjectFile;
   laying: Laying;
   write(patch: Partial<BookSettings>): void;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   noun: string;
   divisions: ReturnType<typeof contentsDivisions>;
   onOpenChapterPage?(markerId: string): void;
@@ -1138,7 +1146,7 @@ function BookSettingsDialog({
       <header>
         <div className="track-dialog-title">
           <strong>Book settings</strong>
-          <span className="muted small">{file.project.title} · the whole book, all the way through</span>
+          <span className="muted small">{bookNames(file).title} · the whole book, all the way through</span>
         </div>
         <button type="button" className="ghost" aria-label="Close book settings" onClick={onClose}>
           ×
@@ -1146,6 +1154,46 @@ function BookSettingsDialog({
       </header>
       {open ? (
         <div className="layout-book-dialog-body">
+          {/* What the book is called (§9, from Ken: *it is taking it from
+              the actual saved file name, and that is ending up on the tops
+              of the pages*). The title runs all the way through — the
+              running heads, the contents, the title page, the eBook and the
+              exported file all read it — so it belongs here and nowhere
+              else; empty means the project's name, which an import took
+              from the file on disk, and that is the placeholder. */}
+          <Fold id="names" title="The book">
+            <label className="field">
+              <span>Book title</span>
+              <input
+                aria-label="Book title"
+                placeholder={file.project.title}
+                value={file.settings.titlePage.title}
+                onChange={(event) => onUpdate((current) => setTitlePage(current, { title: event.target.value }))}
+              />
+            </label>
+            <label className="field">
+              <span>Author</span>
+              <input
+                aria-label="Author"
+                placeholder={file.project.author || 'Nobody yet'}
+                value={file.settings.titlePage.author}
+                onChange={(event) => onUpdate((current) => setTitlePage(current, { author: event.target.value }))}
+              />
+            </label>
+            <label className="field">
+              <span>Publisher</span>
+              <input
+                aria-label="Publisher"
+                placeholder="Nothing under the author"
+                value={settings.imprint}
+                onChange={(event) => write({ imprint: event.target.value })}
+              />
+            </label>
+            <p className="muted small">
+              The title is on the running heads, the contents page, the title page, the eBook and the exported file. Empty means the
+              project’s own name, <em>{file.project.title}</em>, which an imported book took from its file.
+            </p>
+          </Fold>
           <Fold id="trim" title="Trim, margins & spine">
             <TrimSection laying={laying} write={write} />
           </Fold>
@@ -1188,6 +1236,7 @@ function PartDialog({
   onUpdate,
   onClose,
   onRemoved,
+  onOpenBookSettings,
 }: {
   file: ProjectFile;
   part: BookPart | null;
@@ -1195,6 +1244,7 @@ function PartDialog({
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   onClose(): void;
   onRemoved(): void;
+  onOpenBookSettings?(): void;
 }) {
   const dialog = useModal(part !== null);
   /** The picture last touched, so the page beside the fields turns to where it fell. */
@@ -1215,7 +1265,7 @@ function PartDialog({
           </header>
           <div className="layout-part-dialog-body">
             <div className="layout-part-dialog-fields">
-              <PartFields file={file} part={part} onUpdate={onUpdate} onDone={onRemoved} />
+              <PartFields file={file} part={part} onUpdate={onUpdate} onDone={onRemoved} onOpenBookSettings={onOpenBookSettings} />
               {partTakesInsets(part.kind) ? <PartPictures file={file} part={part} onUpdate={onUpdate} onTouched={setTouched} /> : null}
             </div>
             <PagePreview laying={laying} partId={part.id} focus={focus} />
@@ -1693,12 +1743,9 @@ function FurnitureSection({ settings, write }: { settings: BookSettings; write(p
         <input type="checkbox" checked={settings.chaptersOpenRecto} onChange={(event) => write({ chaptersOpenRecto: event.target.checked })} />{' '}
         Every chapter opens on a right-hand page
       </label>
-      <label className="field">
-        <span>Publisher, on the title page</span>
-        <input aria-label="Publisher" value={settings.imprint} onChange={(event) => write({ imprint: event.target.value })} />
-      </label>
       <p className="muted small">
-        The words in the running heads are read from the book and the chapters; nothing about them is typed here.
+        The words in the running heads are read from the book and the chapters; nothing about them is typed here. What the book is
+        called, and by whom, is under <em>The book</em> above.
       </p>
     </>
   );
@@ -1709,11 +1756,14 @@ function PartFields({
   part,
   onUpdate,
   onDone,
+  onOpenBookSettings,
 }: {
   file: ProjectFile;
   part: BookPart;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   onDone(): void;
+  /** The book's title and author are set there, not here (§9). */
+  onOpenBookSettings?(): void;
 }) {
   const info = PART_INFO[part.kind];
   const library = graphicsInOrder(file);
@@ -1758,55 +1808,32 @@ function PartFields({
         </label>
       ) : (
         <>
-          {/* The half title and the title page print the book's title, which
-              a project made from a file was given from the file's name (§9,
-              from Ken): the title is typed here, and it is the title page's,
-              so the two pages and File ▸ Title page… cannot disagree. */}
-          <label className="field">
-            <span>Book title</span>
-            <input
-              aria-label="Book title"
-              placeholder={file.project.title}
-              value={file.settings.titlePage.title}
-              onChange={(event) => onUpdate((current) => setTitlePage(current, { title: event.target.value }))}
-            />
-          </label>
-          {part.kind === 'title_page' ? (
-            <>
-              <label className="field">
-                <span>Under the title</span>
-                <input
-                  aria-label="Under the title"
-                  placeholder="A subtitle — A novel, Stories — or nothing"
-                  value={file.settings.titlePage.episode}
-                  onChange={(event) => onUpdate((current) => setTitlePage(current, { episode: event.target.value }))}
-                />
-              </label>
-              <label className="field">
-                <span>Author</span>
-                <input
-                  aria-label="Author on the title page"
-                  placeholder={file.project.author}
-                  value={file.settings.titlePage.author}
-                  onChange={(event) => onUpdate((current) => setTitlePage(current, { author: event.target.value }))}
-                />
-              </label>
-              <label className="field">
-                <span>Publisher</span>
-                <input
-                  aria-label="Publisher"
-                  placeholder="Nothing under the author"
-                  value={bookSettingsOf(file).imprint}
-                  onChange={(event) => onUpdate((current) => setBookSettings(current, { imprint: event.target.value }))}
-                />
-              </label>
-            </>
-          ) : null}
+          {/* The book's title and author run all the way through, so they
+              are in Book settings and not here (§9, from Ken); this page
+              says what it will print and where that is set, rather than
+              offering a second box for the same field. */}
           <p className="muted small">
-            Empty means the project’s own, <em>{file.project.title}</em>
-            {part.kind === 'title_page' ? ` by ${file.project.author || 'nobody yet'}` : ''}. A logotype in place of the title is under{' '}
-            <em>File ▸ Title page…</em>.
+            This page prints <em>{bookNames(file).title}</em>
+            {part.kind === 'title_page' ? ` by ${bookNames(file).author || 'nobody yet'}` : ''}. The title and the author are the
+            whole book’s, under <em>Book settings…</em> in the bar.
           </p>
+          {onOpenBookSettings ? (
+            <button type="button" className="ghost small" onClick={onOpenBookSettings}>
+              Book settings…
+            </button>
+          ) : null}
+          {part.kind === 'title_page' ? (
+            <label className="field">
+              <span>Under the title</span>
+              <input
+                aria-label="Under the title"
+                placeholder="A subtitle — A novel, Stories — or nothing"
+                value={file.settings.titlePage.episode}
+                onChange={(event) => onUpdate((current) => setTitlePage(current, { episode: event.target.value }))}
+              />
+            </label>
+          ) : null}
+          <p className="muted small">A logotype in place of the title is under <em>File ▸ Title page…</em>.</p>
           {/* The page as a piece of art, brought in whole (§8, from Ken: *the
               title page also needs to be able to take a full page piece of
               art*): the picture is the page, edge to edge, the title in it. */}

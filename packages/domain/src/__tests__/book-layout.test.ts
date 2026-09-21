@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   TRIM_PRESETS,
+  addBeat,
+  bookBlocks,
+  bookNames,
   bookSettingsOf,
   createProjectFile,
   defaultTrimFor,
@@ -14,8 +17,11 @@ import {
   gutterFor,
   measureWarning,
   setBookSettings,
+  setTitlePage,
   trimOf,
   trimPresetOf,
+  unitsInStoryOrder,
+  updateBeat,
 } from '../index.js';
 
 /**
@@ -28,6 +34,36 @@ import {
  */
 
 const novel = () => createProjectFile({ title: 'The Lamp', format: 'novel' });
+
+describe('what the book is called', () => {
+  it('is the writer\u2019s title where they gave one, and the project\u2019s name \u2014 the file\u2019s \u2014 only as the fallback', () => {
+    // An imported project is named for the file it came from, and that is
+    // what every page carried until the book could be named (\u00a79).
+    const file = createProjectFile({ title: 'the-lamp-final-v3', format: 'novel', author: 'M. Shank' });
+    expect(bookNames(file)).toEqual({ title: 'the-lamp-final-v3', author: 'M. Shank', imprint: '' });
+    const named = setBookSettings(setTitlePage(file, { title: 'The Drowned Bell', author: 'Mara Shank' }), { imprint: 'Lantern Press' });
+    expect(bookNames(named)).toEqual({ title: 'The Drowned Bell', author: 'Mara Shank', imprint: 'Lantern Press' });
+    // The project keeps its own name: only the book was renamed.
+    expect(named.project.title).toBe('the-lamp-final-v3');
+    // Spaces are not a title, so the fallback still stands.
+    expect(bookNames(setTitlePage(named, { title: '   ' })).title).toBe('the-lamp-final-v3');
+  });
+
+  it('is what the running heads carry, in place of the file\u2019s name', () => {
+    let file = createProjectFile({ title: 'the-lamp-final-v3', format: 'novel', author: 'M. Shank' });
+    const beat = addBeat(file, { unitId: unitsInStoryOrder(file)[0]!.id, title: 'b' });
+    file = updateBeat(beat.file, beat.beat.id, {
+      manuscript: { elements: [{ id: 'p1' as never, type: 'paragraph', text: 'The lamp.', characterId: null, attributes: {} }] },
+    });
+    // Before it is named, every page carries the file's name: the bug.
+    const before = bookBlocks(file).find((block) => block.kind === 'paragraph')!;
+    expect(before.chapterTitle).toBe('the-lamp-final-v3');
+    // Named in Book settings, the running head carries the book.
+    file = setTitlePage(file, { title: 'The Drowned Bell' });
+    const after = bookBlocks(file).find((block) => block.kind === 'paragraph')!;
+    expect(after.chapterTitle).toBe('The Drowned Bell');
+  });
+});
 
 describe('the trim', () => {
   it('is the format’s until somebody chooses one', () => {

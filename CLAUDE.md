@@ -1235,7 +1235,18 @@ push live; the build takes a minute or two.
   removable** (its name opens the page; a leaf carries a × that asks), the
   part rows' × is visible rather than hover-only, a popped-out room owns its
   own `ChapterPageDialog` so the row works there, and the **rail drags**
-  (`useSplit`, 288px by default, half an inch wider than before).
+  (`useSplit`, 288px by default, half an inch wider than before). §3a is
+  **what the book is called**, from Ken: a project is named when it is made
+  and an **import names it after the file on disk**, so
+  `lamp-manuscript-final-v3` was on every running head, the contents, the
+  title page, the eBook's metadata and the exported PDF. `bookNames` in
+  `book-layout.ts` is the **one reading** — the writer's title, the
+  project's name only as the fallback — and everything that names the book
+  asks it, so naming it once fixes all of them at the same moment. It is
+  typed in **Book settings ▸ The book** and nowhere else (the title page's
+  dialog says what it will print and has a button there instead of a second
+  box), the project's name being the placeholder; renaming the book never
+  renames the project.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

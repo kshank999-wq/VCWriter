@@ -1,6 +1,6 @@
 import { isFullPageArt } from './chapter-style.js';
 import { bookBlocks, partsOf, partTitle, type BookBlock } from './book-plan.js';
-import { bookSettingsOf, trimOf } from './book-layout.js';
+import { bookNames, bookSettingsOf, trimOf } from './book-layout.js';
 import { parseInline, type InlineSpan } from './entities/inline.js';
 import { titlePageOf } from './entities/title-page.js';
 import { nowIso } from './entities/common.js';
@@ -65,8 +65,8 @@ export const ebookMetadataOf = (file: ProjectFile, options: { modified?: string 
   const titlePage = titlePageOf(file.project, file.settings);
   const isbn = own.isbn.replace(/[^0-9Xx]/g, '');
   return {
-    title: (titlePage.title || file.project.title).trim() || 'Untitled',
-    authors: splitAuthors(titlePage.author || file.project.author),
+    title: bookNames(file).title.trim() || 'Untitled',
+    authors: splitAuthors(bookNames(file).author),
     language: own.language.trim() || 'en-US',
     identifier: isbn.length > 0
       ? { scheme: 'isbn', value: isbn, urn: `urn:isbn:${isbn}` }

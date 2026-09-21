@@ -3,7 +3,7 @@ import type { ManuscriptElement } from './entities/manuscript.js';
 import { parseInline, type InlineSpan } from './entities/inline.js';
 import { chapterLeafContent } from './chapter-style.js';
 import { contentsDivisions, type ChapterPageContent, type PlacedMarker } from './markers.js';
-import { bookSettingsOf, setBookSettings } from './book-layout.js';
+import { bookNames, bookSettingsOf, setBookSettings } from './book-layout.js';
 import { beatsInScript, unitsInStoryOrder } from './selectors.js';
 import { newId } from './ids.js';
 import { partHasStyle, partStyleOf, type PartStyle } from './part-style.js';
@@ -526,7 +526,7 @@ export const bookFigures = (file: ProjectFile): BookFigure[] => {
   const names = new Map(file.assets.map((asset) => [asset.id as string, asset.name]));
   const divisions = new Map<string, PlacedMarker>(contentsDivisions(file).map((placed) => [placed.marker.unitId as string, placed]));
   const out: BookFigure[] = [];
-  let chapterTitle = file.project.title;
+  let chapterTitle = bookNames(file).title;
   for (const unit of unitsInStoryOrder(file)) {
     if (!unit.inScript) continue;
     const placed = divisions.get(unit.id as string);
@@ -643,7 +643,7 @@ const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensCha
 export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   const settings = bookSettingsOf(file);
   const parts = partsOf(file);
-  const bookTitle = file.project.title;
+  const bookTitle = bookNames(file).title;
   const out: BookBlock[] = [];
 
   for (const part of frontParts(parts)) out.push(...partBlocks(part, 'roman', bookTitle));

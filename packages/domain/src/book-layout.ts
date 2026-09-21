@@ -8,6 +8,7 @@ import {
 import type { ProjectFormat } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
 import { nowIso } from './entities/common.js';
+import { titlePageOf } from './entities/title-page.js';
 
 /**
  * The trim size, and everything worked out from it (addendum 20 §3).
@@ -62,6 +63,27 @@ export const trimPresetOf = (trim: Trim): TrimPreset | null =>
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 0.005;
 
 // ---------------------------------------------------------------- settings
+
+/**
+ * What the book is called, by whom, and who publishes it (§9, from Ken:
+ * *it is taking it from the actual saved file name, and that is ending up
+ * on the tops of the pages*).
+ *
+ * **One reading, everywhere the book names itself**: the running heads, the
+ * contents page, the chapter fallback, the title page, the copyright
+ * notice, the eBook's metadata and the exported file all ask this, so they
+ * cannot disagree. The writer's own title wins; the project's name — which
+ * an import took from the file on disk — is only the fallback, and is
+ * shown as the placeholder so it is clear which is which.
+ */
+export const bookNames = (file: ProjectFile): { title: string; author: string; imprint: string } => {
+  const page = titlePageOf(file.project, file.settings);
+  return {
+    title: page.title.trim() || file.project.title,
+    author: page.author.trim() || file.project.author,
+    imprint: bookSettingsOf(file).imprint,
+  };
+};
 
 export const bookSettingsOf = (file: ProjectFile): BookSettings =>
   bookSettingsSchema.parse(file.settings.book ?? {});
