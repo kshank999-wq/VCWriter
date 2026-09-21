@@ -89,9 +89,31 @@ export const PART_KINDS = [
 export const partKindSchema = z.enum(PART_KINDS);
 export type PartKind = z.infer<typeof partKindSchema>;
 
+/**
+ * A picture cut into a text part's words (addendum 20 §8, from Ken): an
+ * inset beside a paragraph of a foreword or an afterword, as against an art
+ * page, which is the whole page. It names the paragraph it cuts into by its
+ * place in the part's text, so it is the same inset the manuscript's figure
+ * makes and the cutter needs no second rule for it.
+ */
+export const partInsetSchema = z.object({
+  id: z.string(),
+  /** The picture: an id in the graphics library. */
+  assetId: z.string().nullable().default(null),
+  /** Which paragraph it cuts into, counted from nought. */
+  paragraph: z.number().int().min(0).default(0),
+  place: z.enum(['left', 'right']).default('left'),
+  /** The fraction of the measure it takes, 0.2 to 0.6. */
+  span: z.number().min(0.2).max(0.6).default(0.4),
+  caption: z.string().default(''),
+});
+export type PartInset = z.infer<typeof partInsetSchema>;
+
 export const bookPartSchema = z.object({
   id: z.string(),
   kind: partKindSchema,
+  /** Pictures cut into the text, on a text part that has paragraphs. */
+  insets: z.array(partInsetSchema).default([]),
   /** The heading as it prints; empty means the kind's own name. */
   title: z.string().default(''),
   /**

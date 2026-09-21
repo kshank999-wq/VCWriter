@@ -7,6 +7,7 @@ import {
   derivedLeading,
   derivedMargins,
   describeGeometry,
+  describeSpine,
   describeTrim,
   estimatedPages,
   geometryOf,
@@ -70,6 +71,16 @@ describe('the margins', () => {
     const thick = derivedMargins({ width: 6, height: 9 }, 600);
     expect(thick.inside).toBeGreaterThan(thin.inside);
     expect(thick.outside).toBe(thin.outside);
+  });
+
+  it('say what the spine takes and when it next widens, and that a typed inside margin takes the working-out away', () => {
+    const settings = bookSettingsOf(novel());
+    const thin = describeSpine(geometryOf(settings, 'novel', 120));
+    expect(thin).toContain('an extra ⅛ in for the spine, worked out from 120 pages');
+    expect(thin).toContain('Past 150 pages it widens to ¼ in by itself.');
+    expect(describeSpine(geometryOf(settings, 'novel', 900))).toContain('It is at its widest.');
+    const typed = setBookSettings(novel(), { margins: { inside: 1, outside: null, top: null, bottom: null } });
+    expect(describeSpine(geometryOf(bookSettingsOf(typed), 'novel', 120))).toContain('The inside margin is typed, so nothing is being added for the spine');
   });
 
   it('never go under three-eighths, which is what a printer trims to', () => {

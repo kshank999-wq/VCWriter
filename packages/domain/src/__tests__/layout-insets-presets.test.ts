@@ -3,6 +3,13 @@ import {
   BOOK_PRESETS,
   addMarker,
   addPart,
+  addPartInset,
+  partOfInset,
+  partTakesInsets,
+  partsOf,
+  removePartInset,
+  updatePart,
+  updatePartInset,
   applyBookPreset,
   bookBlocks,
   bookFigures,
@@ -145,6 +152,41 @@ describe('a figure cut into the text (stage 6)', () => {
     const bare = renderBookBlock(bookBlocks(empty).find((block) => block.kind === 'plate')!, contextFor(empty));
     expect(bare).toContain('<div class="bk-display bk-plate">');
     expect(bare).toContain('No picture chosen');
+  });
+
+  it('cuts a picture into a paragraph of a foreword, the same inset the manuscript makes, and keeps it when the paragraph goes', () => {
+    let file = addPart(novel(), 'foreword', { text: 'One.\n\nTwo, with the picture beside it.\n\nThree.' }).file;
+    const foreword = partsOf(file).find((part) => part.kind === 'foreword')!;
+    expect(partTakesInsets('foreword')).toBe(true);
+    expect(partTakesInsets('dedication')).toBe(false);
+    expect(partTakesInsets('contents')).toBe(false);
+    const made = addPartInset(file, foreword.id, { assetId: '22222222-2222-4222-8222-222222222222', paragraph: 1, place: 'right', span: 0.9, caption: 'At the harbour' });
+    file = made.file;
+    expect(made.insetId).not.toBeNull();
+    const blocks = bookBlocks(file).filter((block) => block.partId === foreword.id);
+    expect(blocks.map((block) => (block.inset ? 'paragraph+inset' : block.kind))).toEqual(['part_opening', 'paragraph', 'paragraph+inset', 'paragraph']);
+    const cut = blocks[2]!;
+    expect(cut.inset).toMatchObject({ place: 'right', span: 0.6, figureId: made.insetId, caption: 'At the harbour' });
+    expect(cut.unbreakable).toBe(true);
+    const html = renderBookBlock(cut, contextFor(file));
+    expect(html).toContain('<p class="bk-p bk-has-inset">');
+    expect(html).toContain(`<span class="bk-inset bk-inset-right" data-figure="${made.insetId}" style="width:60%">`);
+    expect(partOfInset(file, made.insetId!)?.id).toBe(foreword.id);
+    // The text shortened under it: the picture rides in the last paragraph rather than vanishing.
+    const shorter = updatePart(file, foreword.id, { text: 'Only one paragraph now.' });
+    const last = bookBlocks(shorter).filter((block) => block.partId === foreword.id);
+    expect(last.map((block) => Boolean(block.inset))).toEqual([false, true]);
+    // No paragraph at all: nothing to cut into, and the picture waits.
+    const empty = updatePart(file, foreword.id, { text: '' });
+    expect(bookBlocks(empty).filter((block) => block.partId === foreword.id).some((block) => block.inset)).toBe(false);
+    // Moved to the left and narrower, then taken out.
+    const moved = updatePartInset(file, foreword.id, made.insetId!, { place: 'left', span: 0.25 });
+    expect(bookBlocks(moved).find((block) => block.inset)!.inset).toMatchObject({ place: 'left', span: 0.25 });
+    const gone = removePartInset(moved, foreword.id, made.insetId!);
+    expect(bookBlocks(gone).some((block) => block.inset)).toBe(false);
+    // A part with no paragraphs to speak of refuses one.
+    const dedication = addPart(file, 'dedication', { text: 'For M.' });
+    expect(addPartInset(dedication.file, dedication.partId!, {}).insetId).toBeNull();
   });
 
   it('lists the figures for the rail with where each sits', () => {

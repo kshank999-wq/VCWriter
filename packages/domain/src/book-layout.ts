@@ -345,6 +345,25 @@ const fraction = (inches: number): string => {
   return whole === 0 ? tail : `${whole}${glyph ? '' : ' '}${tail}`;
 };
 
+/**
+ * The spine, in words (§3, from Ken: *there's an adjustment made to
+ * compensate at the centre spine, and it should be automatic*). It is: the
+ * inside margin carries the outside plus what the binding swallows, read
+ * from the page count every time the book is laid, and the sentence says
+ * what it carries now and when it next widens — or that a typed inside
+ * margin has taken the working-out away.
+ */
+export const describeSpine = (geometry: BookGeometry): string => {
+  if (geometry.overridden.inside) {
+    return 'The inside margin is typed, so nothing is being added for the spine. Clear it to have the allowance worked out from the page count again.';
+  }
+  const gutter = gutterFor(geometry.pages);
+  const tiers = [150, 300, 500, 700];
+  const next = tiers.find((tier) => geometry.pages <= tier);
+  const growth = next === undefined ? 'It is at its widest.' : `Past ${next} pages it widens to ${fraction(gutterFor(next + 1))} in by itself.`;
+  return `The inside margin carries an extra ${fraction(gutter)} in for the spine, worked out from ${geometry.pages} ${geometry.pages === 1 ? 'page' : 'pages'}, so the text clears the binding on every page. ${growth}`;
+};
+
 /** A trim as a printer names it: *5½ × 8½ in*, or the preset's name. */
 export const describeTrim = (trim: Trim): string => trimPresetOf(trim)?.name ?? `${fraction(trim.width)} × ${fraction(trim.height)} in`;
 

@@ -1,4 +1,4 @@
-import { PART_KINDS, bookPartSchema, type BookPart, type PartKind } from './entities/book.js';
+import { PART_KINDS, bookPartSchema, partInsetSchema, type BookPart, type PartInset, type PartKind } from './entities/book.js';
 import type { ManuscriptElement } from './entities/manuscript.js';
 import { parseInline, type InlineSpan } from './entities/inline.js';
 import { chapterLeafContent } from './chapter-style.js';
@@ -190,6 +190,51 @@ export const placePart = (file: ProjectFile, partId: string, beforePartId: strin
 export const mayAdd = (file: ProjectFile, kind: PartKind): boolean =>
   !PART_INFO[kind].once || !partsOf(file).some((part) => part.kind === kind);
 
+// ------------------------------------------------------- pictures in a part
+
+/**
+ * Whether a kind's words run as paragraphs a picture can cut into (§8): the
+ * prose parts do; a dedication, an epigraph and a copyright notice stand
+ * alone on a page of their own, and a reading part has no words at all.
+ */
+export const partTakesInsets = (kind: PartKind): boolean =>
+  PART_INFO[kind].carries === 'text' && kind !== 'dedication' && kind !== 'epigraph' && kind !== 'copyright';
+
+const withInsets = (file: ProjectFile, partId: string, change: (insets: PartInset[]) => PartInset[]): ProjectFile =>
+  writeParts(
+    file,
+    partsOf(file).map((part) => (part.id === partId ? bookPartSchema.parse({ ...part, insets: change(part.insets) }) : part)),
+  );
+
+const clampSpan = (span: number | undefined): number =>
+  Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, span ?? INSET_SPAN.default));
+
+/** Cut a picture into a part's text, beside the paragraph named (nought is the first). */
+export const addPartInset = (
+  file: ProjectFile,
+  partId: string,
+  input: Partial<Omit<PartInset, 'id'>> = {},
+): { file: ProjectFile; insetId: string | null } => {
+  const part = partsOf(file).find((one) => one.id === partId);
+  if (!part || !partTakesInsets(part.kind)) return { file, insetId: null };
+  const inset = partInsetSchema.parse({ ...input, span: clampSpan(input.span), id: newId() as string });
+  return { file: withInsets(file, partId, (insets) => [...insets, inset]), insetId: inset.id };
+};
+
+export const updatePartInset = (file: ProjectFile, partId: string, insetId: string, patch: Partial<Omit<PartInset, 'id'>>): ProjectFile =>
+  withInsets(file, partId, (insets) =>
+    insets.map((inset) =>
+      inset.id === insetId ? partInsetSchema.parse({ ...inset, ...patch, span: clampSpan(patch.span ?? inset.span) }) : inset,
+    ),
+  );
+
+export const removePartInset = (file: ProjectFile, partId: string, insetId: string): ProjectFile =>
+  withInsets(file, partId, (insets) => insets.filter((inset) => inset.id !== insetId));
+
+/** The part a picture on the page belongs to, by the inset's id, for a press on the spread. */
+export const partOfInset = (file: ProjectFile, insetId: string): BookPart | undefined =>
+  partsOf(file).find((part) => part.insets.some((inset) => inset.id === insetId));
+
 // ------------------------------------------------------------------ blocks
 
 export type BlockKind =
@@ -379,7 +424,8 @@ const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle:
         title,
         chapterTitle: title,
       });
-      const paragraphs = paragraphsOf(part.text).map((text, index) =>
+      const words = paragraphsOf(part.text);
+      const paragraphs = words.map((text, index) =>
         block({
           id: `${part.id}:${index}`,
           kind: 'paragraph',
@@ -391,6 +437,23 @@ const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle:
           opensChapter: index === 0,
         }),
       );
+      // A picture cut into the text (§8) rides in the paragraph it names —
+      // the last one where the text has grown shorter than the number, so a
+      // cut paragraph never takes its picture with it. With no paragraph
+      // there is nothing to cut into, and the picture waits.
+      for (const inset of part.insets) {
+        const target = paragraphs[Math.min(inset.paragraph, paragraphs.length - 1)];
+        if (!target || target.inset) continue;
+        target.inset = {
+          place: inset.place,
+          span: inset.span,
+          figureId: inset.id,
+          assetId: inset.assetId,
+          caption: inset.caption,
+          decorative: false,
+        };
+        target.unbreakable = true;
+      }
       return [opening, ...paragraphs];
     }
   }

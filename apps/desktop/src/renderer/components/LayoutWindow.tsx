@@ -13,11 +13,13 @@ import {
   TRIM_PRESETS,
   addGraphic,
   addPart,
+  addPartInset,
   beginStory,
   bookMetrics,
   bookVars,
   contentsDivisions,
   describeGeometry,
+  describeSpine,
   graphicsInOrder,
   halfOf,
   mayAdd,
@@ -25,10 +27,16 @@ import {
   moveChapterBlock,
   movePart,
   opensOnLeaf,
+  paragraphsOf,
+  partOfInset,
+  partTakesInsets,
   partTitle,
   partsOf,
   placePart,
   removePart,
+  removePartInset,
+  updatePartInset,
+  type PartInset,
   renderBookHtml,
   renderBookPage,
   setBookSettings,
@@ -51,6 +59,7 @@ import {
   type BookFigure,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
+import { useModal } from '../use-modal';
 import { usePreference } from '../use-split';
 import { readPicture } from '../read-picture';
 import { useBookLaying, type Laying } from '../book-typeset';
@@ -112,6 +121,10 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const [zoom, setZoom] = usePreference('layout.zoom', 0.55);
   const [busy, setBusy] = useState(false);
   const [ebookOpen, setEbookOpen] = useState(false);
+  /** Book settings (§9, from Ken): the whole book at once, in a dialog off the bar. */
+  const [bookSettingsOpen, setBookSettingsOpen] = useState(false);
+  /** The part opened in a dialog of its own, by a double-click (§9). */
+  const [partDialogId, setPartDialogId] = useState<string | null>(null);
   const [selectedFigureId, setSelectedFigureId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   /** The Add a part menu, open at the button (§9). */
@@ -131,6 +144,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
 
   const parts = useMemo(() => partsOf(file), [file]);
   const selected = parts.find((part) => part.id === selectedPartId) ?? null;
+  const opened = parts.find((part) => part.id === partDialogId) ?? null;
   const divisions = useMemo(() => contentsDivisions(file), [file]);
   /** The plates the writer put before each chapter, by the chapter (§9). */
   const platesBefore = useMemo(() => {
@@ -283,6 +297,29 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       : []),
   ];
 
+  /**
+   * A page on the spread, double-clicked (§9, from Ken: *double click the
+   * front matter or whatever page*): a part's page opens the part, a
+   * chapter's opening opens the chapter page.
+   */
+  const openPage = (page: BookPage) => {
+    if (!laying) return;
+    const blocks = new Map(laying.blocks.map((block) => [block.id, block]));
+    for (const piece of page.pieces) {
+      const block = blocks.get(piece.blockId);
+      if (!block) continue;
+      if (block.partId) {
+        setSelectedPartId(block.partId);
+        setPartDialogId(block.partId);
+        return;
+      }
+      if (block.kind === 'chapter_opening' && onOpenChapterPage) {
+        onOpenChapterPage(block.id);
+        return;
+      }
+    }
+  };
+
   /** A part's row: pressable, draggable within its half, and removable. */
   const partRow = (part: BookPart) => (
     <PartRow
@@ -293,6 +330,11 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       onSelect={() => {
         setSelectedPartId(part.id);
         goToPart(part.id);
+      }}
+      onOpen={() => {
+        setSelectedPartId(part.id);
+        goToPart(part.id);
+        setPartDialogId(part.id);
       }}
       onRemove={() => {
         if (selectedPartId === part.id) setSelectedPartId(null);
@@ -368,6 +410,30 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         onUpdate={onUpdate}
       />
 
+      {settings && laying ? (
+        <BookSettingsDialog
+          open={bookSettingsOpen}
+          file={file}
+          laying={laying}
+          write={write}
+          noun={noun}
+          divisions={divisions}
+          onOpenChapterPage={onOpenChapterPage}
+          onClose={() => setBookSettingsOpen(false)}
+        />
+      ) : null}
+      <PartDialog
+        file={file}
+        part={opened}
+        laying={laying}
+        onUpdate={onUpdate}
+        onClose={() => setPartDialogId(null)}
+        onRemoved={() => {
+          setPartDialogId(null);
+          setSelectedPartId(null);
+        }}
+      />
+
       <header className="sculptor-bar">
         <h2>Layout</h2>
         <span className="muted small">{file.project.title}</span>
@@ -378,6 +444,19 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
             story
           </span>
         ) : null}
+        {/* The whole book at once (§9, from Ken): the trim, the margins, the
+            type, the running heads and the page numbers apply all the way
+            through, so they are one dialog off the bar rather than a column
+            beside every part. */}
+        <button
+          type="button"
+          className="tool"
+          disabled={!laying}
+          title="The trim, the margins and the spine, the type, the running heads and the page numbers: the whole book at once"
+          onClick={() => setBookSettingsOpen(true)}
+        >
+          Book settings…
+        </button>
         <button
           type="button"
           className="tool"
@@ -572,8 +651,9 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           <p className="muted small">
             The story is the manuscript in story order, {chapterCount}{' '}
             {isCollection(file.project.format) ? (chapterCount === 1 ? 'story' : 'stories') : chapterCount === 1 ? 'chapter' : 'chapters'}.
-            Drag a {noun.toLowerCase()} to move it, or a part within its half; × takes a part out. Between the {nounPlural} go
-            a picture on the facing page or the {noun.toLowerCase()}’s own page; the type and the trim are on the right.
+            Drag a {noun.toLowerCase()} to move it, or a part within its half; × takes a part out; double-click a part to open its
+            page. Between the {nounPlural} go a picture on the facing page or the {noun.toLowerCase()}’s own page. The trim, the type
+            and the running heads are the whole book’s, under <em>Book settings…</em> in the bar.
           </p>
         </aside>
 
@@ -584,9 +664,18 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               spread={spread}
               zoom={zoom}
               onPickFigure={(figureId) => {
+                // A picture cut into a part's text belongs to the part, and
+                // opens it; the manuscript's figures go to the inspector.
+                const owner = partOfInset(file, figureId);
+                if (owner) {
+                  setSelectedPartId(owner.id);
+                  setPartDialogId(owner.id);
+                  return;
+                }
                 setSelectedPartId(null);
                 setSelectedFigureId(figureId);
               }}
+              onOpenPage={openPage}
             />
           ) : (
             <p className="muted empty-state">Setting the book…</p>
@@ -644,32 +733,23 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
             />
           ) : null}
           {selected ? (
-            <PartFields file={file} part={selected} onUpdate={onUpdate} onDone={() => setSelectedPartId(null)} />
-          ) : null}
-          {settings && laying ? (
             <>
-              <Fold id="trim" title="Trim & margins">
-                <TrimSection laying={laying} write={write} />
-              </Fold>
-              <Fold id="type" title="Type">
-                <TypeSection settings={settings} write={write} />
-              </Fold>
-              <Fold id="furniture" title="Running heads & page numbers">
-                <FurnitureSection settings={settings} write={write} />
-              </Fold>
-              <Fold id="openings" title={isCollection(file.project.format) ? 'Story openings' : 'Chapter openings'}>
-                <p className="muted small">
-                  The number, the name, the face and the drop are set once for the book in{' '}
-                  <em>File ▸ Chapter page…</em>. A chapter page carrying a device, a summary or an epigraph opens on a
-                  leaf of its own; one carrying only its number and name opens above its first paragraph.
-                </p>
-                {onOpenChapterPage && divisions[0] ? (
-                  <button type="button" className="ghost small" onClick={() => onOpenChapterPage(divisions[0]!.marker.id as string)}>
-                    {noun} page…
-                  </button>
-                ) : null}
-              </Fold>
+              <PartFields file={file} part={selected} onUpdate={onUpdate} onDone={() => setSelectedPartId(null)} />
+              <p className="muted small">
+                <button type="button" className="ghost small" onClick={() => setPartDialogId(selected.id)}>
+                  Open the page…
+                </button>{' '}
+                to see it set{partTakesInsets(selected.kind) ? ' and cut pictures into its text' : ''}.
+              </p>
             </>
+          ) : null}
+          {!selected && !selectedFigure ? (
+            // Nothing chosen: the column says what it is for rather than
+            // standing empty, the book-wide settings having moved to the bar.
+            <p className="muted small layout-inspector-hint">
+              Choose a part on the left to edit it here, or double-click one — or a page — to open it. The trim, the margins,
+              the type and the running heads are the whole book’s, under <em>Book settings…</em> in the bar.
+            </p>
           ) : null}
         </aside>
       </div>
@@ -712,6 +792,7 @@ function PartRow({
   selected,
   over,
   onSelect,
+  onOpen,
   onRemove,
   onDragStart,
   onDragEnd,
@@ -723,6 +804,8 @@ function PartRow({
   selected: boolean;
   over: boolean;
   onSelect(): void;
+  /** A double-click: the part opened in a dialog of its own (§9). */
+  onOpen(): void;
   onRemove(): void;
   onDragStart(): void;
   onDragEnd(): void;
@@ -752,10 +835,11 @@ function PartRow({
         aria-pressed={selected}
         title={
           halfOf(part) === 'body'
-            ? `${info.note}. It faces its chapter; Where, in the inspector, moves it.`
-            : `${info.note}. Drag to move it within the ${halfOf(part) === 'front' ? 'front' : 'back'} matter.`
+            ? `${info.note}. Double-click to open it. It faces its chapter; Where moves it.`
+            : `${info.note}. Double-click to open it. Drag to move it within the ${halfOf(part) === 'front' ? 'front' : 'back'} matter.`
         }
         onClick={onSelect}
+        onDoubleClick={onOpen}
       >
         <span className="layout-grip" aria-hidden="true">⠿</span>
         <span className="layout-part-name">{partTitle(part)}</span>
@@ -782,7 +866,20 @@ function PartRow({
 }
 
 /** The two facing pages, drawn from the same markup the PDF prints (§4). */
-function Spreads({ laying, spread, zoom, onPickFigure }: { laying: Laying; spread: number; zoom: number; onPickFigure(figureId: string): void }) {
+function Spreads({
+  laying,
+  spread,
+  zoom,
+  onPickFigure,
+  onOpenPage,
+}: {
+  laying: Laying;
+  spread: number;
+  zoom: number;
+  onPickFigure(figureId: string): void;
+  /** A double-click on a page (§9): whatever the page belongs to opens. */
+  onOpenPage(page: BookPage): void;
+}) {
   const { pageWidthPx, pageHeightPx } = bookMetrics(laying.geometry);
   const blocks = useMemo(() => new Map(laying.blocks.map((block) => [block.id, block])), [laying.blocks]);
   const pages = laying.laid.pages;
@@ -804,6 +901,8 @@ function Spreads({ laying, spread, zoom, onPickFigure }: { laying: Laying; sprea
           const hit = (event.target as HTMLElement).closest('[data-figure]');
           if (hit) onPickFigure(hit.getAttribute('data-figure') ?? '');
         }}
+        onDoubleClick={() => onOpenPage(page)}
+        title="Double-click to open what this page belongs to"
         // The page's own markup, from the one builder the export reads too;
         // every string in it was escaped there.
         dangerouslySetInnerHTML={{ __html: renderBookPage(page, blocks, laying.context) }}
@@ -927,8 +1026,384 @@ function TrimSection({ laying, write }: { laying: Laying; write(patch: Partial<B
         {margin('bottom', 'Bottom')}
       </div>
       <p className="small layout-geometry">{describeGeometry(geometry, settings.face)}</p>
+      {/* The spine (§3, from Ken): what the binding takes is worked out from
+          the page count every time the book is laid, and said here so nobody
+          hunts for a switch. */}
+      <p className="small layout-geometry layout-spine">{describeSpine(geometry)}</p>
       {warning ? <p className="small layout-warning">{warning}</p> : null}
     </>
+  );
+}
+
+/**
+ * Book settings (§9, from Ken: *a book settings button in the top toolbar,
+ * because this applies to the entire book*): the trim, the margins and the
+ * spine, the type, the running heads and the page numbers, and the chapter
+ * openings — everything that runs all the way through — in one dialog in
+ * the middle of the screen, behind the same folds the inspector had.
+ */
+function BookSettingsDialog({
+  open,
+  file,
+  laying,
+  write,
+  noun,
+  divisions,
+  onOpenChapterPage,
+  onClose,
+}: {
+  open: boolean;
+  file: ProjectFile;
+  laying: Laying;
+  write(patch: Partial<BookSettings>): void;
+  noun: string;
+  divisions: ReturnType<typeof contentsDivisions>;
+  onOpenChapterPage?(markerId: string): void;
+  onClose(): void;
+}) {
+  const dialog = useModal(open);
+  const settings = laying.settings;
+  return (
+    <dialog ref={dialog} className="track-dialog layout-book-dialog" aria-label="Book settings" onClose={onClose}>
+      <header>
+        <div className="track-dialog-title">
+          <strong>Book settings</strong>
+          <span className="muted small">{file.project.title} · the whole book, all the way through</span>
+        </div>
+        <button type="button" className="ghost" aria-label="Close book settings" onClick={onClose}>
+          ×
+        </button>
+      </header>
+      {open ? (
+        <div className="layout-book-dialog-body">
+          <Fold id="trim" title="Trim, margins & spine">
+            <TrimSection laying={laying} write={write} />
+          </Fold>
+          <Fold id="type" title="Type">
+            <TypeSection settings={settings} write={write} />
+          </Fold>
+          <Fold id="furniture" title="Running heads & page numbers">
+            <FurnitureSection settings={settings} write={write} />
+          </Fold>
+          <Fold id="openings" title={isCollection(file.project.format) ? 'Story openings' : 'Chapter openings'}>
+            <p className="muted small">
+              The number, the name, the face and the drop are set once for the book in <em>File ▸ Chapter page…</em>. A chapter
+              page carrying a device, a summary or an epigraph opens on a leaf of its own; one carrying only its number and name
+              opens above its first paragraph.
+            </p>
+            {onOpenChapterPage && divisions[0] ? (
+              <button type="button" className="ghost small" onClick={() => onOpenChapterPage(divisions[0]!.marker.id as string)}>
+                {noun} page…
+              </button>
+            ) : null}
+          </Fold>
+        </div>
+      ) : null}
+    </dialog>
+  );
+}
+
+/**
+ * A part in a dialog of its own (§9, from Ken: *double click the front
+ * matter or whatever page … in a dialog box that pops up in the centre, and
+ * you can see the type of page formatting*): its fields on the left, the
+ * pictures cut into its text under them, and on the right the page as the
+ * book sets it — the same markup the spread draws and the PDF prints, so
+ * what is seen here is what will be printed.
+ */
+function PartDialog({
+  file,
+  part,
+  laying,
+  onUpdate,
+  onClose,
+  onRemoved,
+}: {
+  file: ProjectFile;
+  part: BookPart | null;
+  laying: Laying | null;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  onClose(): void;
+  onRemoved(): void;
+}) {
+  const dialog = useModal(part !== null);
+  /** The picture last touched, so the page beside the fields turns to where it fell. */
+  const [touched, setTouched] = useState<string | null>(null);
+  const focus = touched === 'newest' ? (part?.insets[part.insets.length - 1]?.id ?? null) : touched;
+  return (
+    <dialog ref={dialog} className="track-dialog layout-part-dialog" aria-label="Part" onClose={onClose}>
+      {part ? (
+        <>
+          <header>
+            <div className="track-dialog-title">
+              <strong>{partTitle(part)}</strong>
+              <span className="muted small">{PART_INFO[part.kind].note}</span>
+            </div>
+            <button type="button" className="ghost" aria-label="Close the part" onClick={onClose}>
+              ×
+            </button>
+          </header>
+          <div className="layout-part-dialog-body">
+            <div className="layout-part-dialog-fields">
+              <PartFields file={file} part={part} onUpdate={onUpdate} onDone={onRemoved} />
+              {partTakesInsets(part.kind) ? <PartPictures file={file} part={part} onUpdate={onUpdate} onTouched={setTouched} /> : null}
+            </div>
+            <PagePreview laying={laying} partId={part.id} focus={focus} />
+          </div>
+        </>
+      ) : null}
+    </dialog>
+  );
+}
+
+/**
+ * The pictures cut into a part's text (§8, from Ken: *placing a graphic on
+ * a page is different from a page graphic — drop in graphics that cut into
+ * the text*). Each one names the paragraph it sits beside, the side and
+ * how much of the measure it takes; the picture comes from a file, or from
+ * the library where it is already in the book.
+ */
+function PartPictures({
+  file,
+  part,
+  onUpdate,
+  onTouched,
+}: {
+  file: ProjectFile;
+  part: BookPart;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  /** Which picture was just added ('newest') or changed, so the page beside turns to it. */
+  onTouched(insetId: string): void;
+}) {
+  const library = graphicsInOrder(file);
+  const pictures = new Map(file.assets.map((asset) => [asset.id as string, asset]));
+  const paragraphs = paragraphsOf(part.text);
+  const picker = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const partId = part.id;
+  const patchInset = (insetId: string, patch: Partial<Omit<PartInset, 'id'>>) => {
+    onUpdate((current) => updatePartInset(current, partId, insetId, patch));
+    onTouched(insetId);
+  };
+  const takeFile = async (picked: File | undefined) => {
+    setError(null);
+    if (!picked) return;
+    if (!picked.type.startsWith('image/')) {
+      setError('That is not a picture file.');
+      return;
+    }
+    try {
+      const read = await readPicture(picked);
+      onUpdate((current) => {
+        const added = addGraphic(current, { name: picked.name, ...read });
+        return addPartInset(added.file, partId, { assetId: added.asset.id }).file;
+      });
+      onTouched('newest');
+    } catch {
+      setError('That file could not be read.');
+    }
+  };
+  const nothingToCutInto = paragraphs.length === 0;
+  return (
+    <section className="layout-section layout-part-pictures">
+      <h3>Pictures cut into the text</h3>
+      <p className="muted small">
+        A picture beside a paragraph, the words running round it — not the whole page, which is an art page. It cuts in at the
+        left or the right, at a fraction of the measure.
+      </p>
+      <input
+        ref={picker}
+        type="file"
+        accept="image/*"
+        aria-label="Part picture file"
+        hidden
+        onChange={(event) => {
+          void takeFile(event.target.files?.[0]);
+          event.target.value = '';
+        }}
+      />
+      {part.insets.length > 0 ? (
+        <ul className="layout-insets" aria-label="Pictures cut into the text">
+          {part.insets.map((inset, index) => {
+            const asset = inset.assetId ? pictures.get(inset.assetId) : undefined;
+            return (
+              <li key={inset.id} className="layout-inset-row">
+                <span className="layout-inset-thumb" aria-hidden="true">
+                  {asset ? <img src={asset.data} alt="" /> : <span className="muted small">no picture</span>}
+                </span>
+                <span className="layout-inset-fields">
+                  <label className="field">
+                    <span>Picture</span>
+                    <select aria-label={`Picture ${index + 1}`} value={inset.assetId ?? ''} onChange={(event) => patchInset(inset.id, { assetId: event.target.value || null })}>
+                      <option value="">None</option>
+                      {library.map((one) => (
+                        <option key={one.id as string} value={one.id as string}>
+                          {one.name || one.caption || 'Untitled'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>Beside paragraph</span>
+                    <select
+                      aria-label={`Picture ${index + 1} paragraph`}
+                      value={Math.min(inset.paragraph, Math.max(0, paragraphs.length - 1))}
+                      onChange={(event) => patchInset(inset.id, { paragraph: Number(event.target.value) })}
+                    >
+                      {paragraphs.map((text, at) => (
+                        <option key={at} value={at}>
+                          {at + 1} — {text.slice(0, 32)}
+                          {text.length > 32 ? '…' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <span className="layout-two">
+                    <label className="field">
+                      <span>Side</span>
+                      <select aria-label={`Picture ${index + 1} side`} value={inset.place} onChange={(event) => patchInset(inset.id, { place: event.target.value as 'left' | 'right' })}>
+                        <option value="left">Left</option>
+                        <option value="right">Right</option>
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Width · {Math.round(inset.span * 100)}% of the measure</span>
+                      <input
+                        type="range"
+                        min={Math.round(INSET_SPAN.min * 100)}
+                        max={Math.round(INSET_SPAN.max * 100)}
+                        step={5}
+                        aria-label={`Picture ${index + 1} width`}
+                        value={Math.round(inset.span * 100)}
+                        onChange={(event) => patchInset(inset.id, { span: Number(event.target.value) / 100 })}
+                      />
+                    </label>
+                  </span>
+                  <label className="field">
+                    <span>Caption</span>
+                    <input aria-label={`Picture ${index + 1} caption`} value={inset.caption} onChange={(event) => patchInset(inset.id, { caption: event.target.value })} />
+                  </label>
+                </span>
+                <button
+                  type="button"
+                  className="ghost small layout-part-remove"
+                  aria-label={`Take picture ${index + 1} out`}
+                  title="Take this picture out of the text; it stays in the library"
+                  onClick={() => onUpdate((current) => removePartInset(current, partId, inset.id))}
+                >
+                  ×
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      {nothingToCutInto ? (
+        <p className="muted small">Write a paragraph first: a picture cuts into the text beside it.</p>
+      ) : (
+        <div className="layout-plate-pick">
+          <button type="button" className="raised small" title="A picture from a file on this computer; it joins the book's pictures under Research ▸ Graphics" onClick={() => picker.current?.click()}>
+            + Picture from a file…
+          </button>
+          {library.length > 0 ? (
+            <select
+              aria-label="Picture already in the book"
+              value=""
+              onChange={(event) => {
+                const assetId = event.target.value;
+                if (!assetId) return;
+                onUpdate((current) => addPartInset(current, partId, { assetId }).file);
+                onTouched('newest');
+              }}
+            >
+              <option value="">+ One already in the book…</option>
+              {library.map((one) => (
+                <option key={one.id as string} value={one.id as string}>
+                  {one.name || one.caption || 'Untitled'}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {error ? (
+            <span className="error small" role="alert">
+              {error}
+            </span>
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * The part's pages as the book sets them (§9): every page the part falls
+ * on, drawn from the laying with the same builder the spread and the PDF
+ * read, at a size that fits beside the fields. Re-laid as the words
+ * change, so a picture cut in is seen cut in.
+ */
+function PagePreview({ laying, partId, focus }: { laying: Laying | null; partId: string; focus: string | null }) {
+  const [at, setAt] = useState(0);
+  const blocks = useMemo(() => new Map((laying?.blocks ?? []).map((block) => [block.id, block])), [laying]);
+  const pages = useMemo(
+    () =>
+      (laying?.laid.pages ?? []).filter((page) =>
+        page.pieces.some((piece) => {
+          const block = blocks.get(piece.blockId);
+          return block !== undefined && (block.id === partId || block.partId === partId);
+        }),
+      ),
+    [laying, blocks, partId],
+  );
+  // A picture just placed is on some page of the part: turn to it, once
+  // the laying has caught up, so the writer sees it cut in where it fell.
+  useEffect(() => {
+    if (!focus) return;
+    const index = pages.findIndex((page) => page.pieces.some((piece) => blocks.get(piece.blockId)?.inset?.figureId === focus));
+    if (index >= 0) setAt(index);
+  }, [focus, pages, blocks]);
+  if (!laying) return <div className="layout-page-preview muted small">Setting the page…</div>;
+  const { pageWidthPx, pageHeightPx } = bookMetrics(laying.geometry);
+  const scale = Math.min(1, 540 / pageHeightPx, 420 / pageWidthPx);
+  const page = pages[Math.min(at, Math.max(0, pages.length - 1))];
+  const vars = {
+    ...bookVars(laying.context),
+    '--bk-page-width': `${pageWidthPx}px`,
+    '--bk-page-height': `${pageHeightPx}px`,
+  } as React.CSSProperties;
+  return (
+    <div className="layout-page-preview" aria-label="The page as set">
+      {page ? (
+        <>
+          <div className="layout-page-preview-box" style={{ width: pageWidthPx * scale, height: pageHeightPx * scale }}>
+            <div className="layout-spread" style={{ ...vars, transform: `scale(${scale})` }}>
+              {/* The page's own markup, every string in it escaped by the builder. */}
+              <div className="layout-sheet" dangerouslySetInnerHTML={{ __html: renderBookPage(page, blocks, laying.context) }} />
+            </div>
+          </div>
+          <div className="layout-page-preview-foot">
+            <button type="button" className="ghost small" aria-label="Previous page of the part" disabled={at <= 0} onClick={() => setAt((current) => Math.max(0, current - 1))}>
+              ←
+            </button>
+            <span className="muted small">
+              {page.folio ? `Page ${page.folio}` : 'Unnumbered page'} · {pages.length === 1 ? 'the whole part' : `${Math.min(at, pages.length - 1) + 1} of ${pages.length} pages`}
+              {' · '}
+              {page.side === 'recto' ? 'a right-hand page' : 'a left-hand page'}
+            </span>
+            <button
+              type="button"
+              className="ghost small"
+              aria-label="Next page of the part"
+              disabled={at >= pages.length - 1}
+              onClick={() => setAt((current) => Math.min(pages.length - 1, current + 1))}
+            >
+              →
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className="muted small">This part has no page yet: it is set once it has something on it.</p>
+      )}
+    </div>
   );
 }
 

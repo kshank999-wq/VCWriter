@@ -14076,3 +14076,27 @@ dialog.chapter-page-dialog {
 .layout-fold-body { padding-top: 2px; }
 
 .layout-plate-pick { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; flex-wrap: wrap; }
+
+/* Book settings (§9): the whole book at once, in a dialog off the bar. */
+dialog.layout-book-dialog { width: min(720px, calc(100vw - 48px)); }
+.layout-book-dialog-body { padding: 10px 18px 14px; max-height: calc(100vh - 140px); overflow: auto; }
+.layout-book-dialog-body .layout-section:last-child { border-bottom: 0; }
+.layout-inspector-hint { line-height: 1.5; }
+.layout-spine { margin-top: 4px; }
+
+/* A part in a dialog of its own (§9): its fields, its pictures, its page. */
+dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
+.layout-part-dialog-body { display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 20px; padding: 12px 18px 14px; max-height: calc(100vh - 140px); overflow: auto; }
+.layout-part-dialog-fields { min-width: 0; }
+.layout-part-dialog-fields .layout-section:last-child { border-bottom: 0; }
+.layout-page-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
+.layout-page-preview-box { position: relative; overflow: hidden; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.45); }
+.layout-page-preview-box .layout-spread { position: absolute; left: 0; top: 0; transform-origin: top left; }
+.layout-page-preview-foot { display: flex; align-items: center; gap: 8px; }
+.layout-insets { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.layout-inset-row { display: grid; grid-template-columns: 56px 1fr auto; gap: 10px; align-items: start; padding: 8px; border: 1px solid var(--border); border-radius: 4px; }
+.layout-inset-row .layout-part-remove { opacity: 1; }
+.layout-inset-thumb { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: var(--ink); border-radius: 3px; overflow: hidden; text-align: center; }
+.layout-inset-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.layout-inset-fields { display: grid; gap: 6px; min-width: 0; }
+.layout-inset-fields .layout-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

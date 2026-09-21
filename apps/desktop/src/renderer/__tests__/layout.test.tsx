@@ -157,8 +157,29 @@ describe('the room', () => {
     expect(plate.beforeMarkerId).toBe((latest as ProjectFile).markers[0]!.id);
   });
 
+  /** The book-wide settings live behind one button on the bar (§9). */
+  const openBookSettings = () => fireEvent.click(screen.getByRole('button', { name: 'Book settings…' }));
+
+  it('keeps the whole book’s settings behind Book settings… on the bar, and out of the part column', () => {
+    render(<Harness initial={novel()} />);
+    // Nothing chosen: the column says where the book-wide settings went.
+    expect(screen.queryByLabelText('Trim size')).toBeNull();
+    expect(document.querySelector('.layout-inspector-hint')?.textContent).toMatch(/under Book settings… in the bar/);
+    openBookSettings();
+    const dialog = screen.getByRole('dialog', { name: 'Book settings' });
+    expect(dialog.hasAttribute('open')).toBe(true);
+    expect(within(dialog).getByLabelText('Trim size')).toBeDefined();
+    expect(within(dialog).getByLabelText('Body face')).toBeDefined();
+    expect(within(dialog).getByRole('button', { name: 'Running heads & page numbers' })).toBeDefined();
+    // The spine is worked out and said, with nothing to set.
+    expect(within(dialog).getByText(/for the spine, worked out from \d+ pages?/)).toBeDefined();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close book settings' }));
+    expect(dialog.hasAttribute('open')).toBe(false);
+  });
+
   it('writes the trim and says what was worked out from it', () => {
     render(<Harness initial={novel()} />);
+    openBookSettings();
     fireEvent.change(screen.getByLabelText('Trim size'), { target: { value: '6x9' } });
     expect(bookSettingsOf(latest as ProjectFile).trim).toEqual({ width: 6, height: 9 });
     expect(screen.getByText(/6 × 9 in\. Margins worked out from the trim/)).toBeDefined();
@@ -168,6 +189,7 @@ describe('the room', () => {
 
   it('takes a typed margin, says so, and lets it go again', () => {
     render(<Harness initial={novel()} />);
+    openBookSettings();
     fireEvent.change(screen.getByLabelText('Outside margin in inches'), { target: { value: '1' } });
     expect(bookSettingsOf(latest as ProjectFile).margins.outside).toBe(1);
     expect(screen.getByText(/outside 1 in \(typed\)/)).toBeDefined();
@@ -244,6 +266,7 @@ describe('the room', () => {
 
   it('folds a group of settings behind its heading, and remembers', () => {
     render(<Harness initial={novel()} />);
+    openBookSettings();
     const head = screen.getByRole('button', { name: 'Type' });
     expect(head.getAttribute('aria-expanded')).toBe('true');
     expect(screen.getByLabelText('Body face')).toBeDefined();
@@ -254,8 +277,57 @@ describe('the room', () => {
     expect(screen.getByLabelText('Trim size')).toBeDefined();
     cleanup();
     render(<Harness initial={novel()} />);
+    openBookSettings();
     expect(screen.getByRole('button', { name: 'Type' }).getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(screen.getByRole('button', { name: 'Type' }));
+  });
+
+  it('opens a part in a dialog of its own on a double-click, with its page beside the fields', async () => {
+    render(<Harness initial={novel()} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.doubleClick(rail.getByRole('button', { name: /^Half title/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Part' });
+    expect(dialog.hasAttribute('open')).toBe(true);
+    expect(dialog.querySelector('header strong')?.textContent).toBe('Half title');
+    // The page as set: the same markup the spread draws.
+    await waitFor(() => expect(dialog.querySelector('.layout-page-preview .bk-page')).not.toBeNull());
+    expect(within(dialog).getByText(/a right-hand page/)).toBeDefined();
+    // A half title has no words to cut a picture into, so the pictures are absent rather than refused.
+    expect(within(dialog).queryByText('Pictures cut into the text')).toBeNull();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close the part' }));
+    expect(dialog.hasAttribute('open')).toBe(false);
+  });
+
+  it('cuts a picture into a foreword’s text from the part’s dialog, beside the paragraph chosen', async () => {
+    render(<Harness initial={novel()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add a part' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /^Foreword/ }));
+    const foreword = partsOf(latest as ProjectFile).find((part) => part.kind === 'foreword')!;
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.doubleClick(rail.getByRole('button', { name: /^Foreword/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Part' });
+    // No paragraph yet: nothing to cut into, said rather than offered.
+    expect(within(dialog).getByText(/Write a paragraph first/)).toBeDefined();
+    fireEvent.change(within(dialog).getByLabelText("The part's text"), { target: { value: 'One.\n\nTwo, beside the picture.\n\nThree.' } });
+    const picker = within(dialog).getByLabelText('Part picture file') as HTMLInputElement;
+    const art = new File(['PNG bytes'], 'harbour.png', { type: 'image/png' });
+    Object.defineProperty(picker, 'files', { value: [art], configurable: true });
+    fireEvent.change(picker);
+    await waitFor(() => expect(partsOf(latest as ProjectFile).find((part) => part.id === foreword.id)!.insets).toHaveLength(1));
+    let file = latest as ProjectFile;
+    expect(file.assets![0]!.name).toBe('harbour.png');
+    expect(partsOf(file).find((part) => part.id === foreword.id)!.insets[0]!.assetId).toBe(file.assets![0]!.id);
+    // Beside the second paragraph, at the right, narrower.
+    fireEvent.change(within(dialog).getByLabelText('Picture 1 paragraph'), { target: { value: '1' } });
+    fireEvent.change(within(dialog).getByLabelText('Picture 1 side'), { target: { value: 'right' } });
+    fireEvent.change(within(dialog).getByLabelText('Picture 1 width'), { target: { value: '25' } });
+    file = latest as ProjectFile;
+    expect(partsOf(file).find((part) => part.id === foreword.id)!.insets[0]).toMatchObject({ paragraph: 1, place: 'right', span: 0.25 });
+    // Taken out again; the picture stays in the library.
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Take picture 1 out' }));
+    file = latest as ProjectFile;
+    expect(partsOf(file).find((part) => part.id === foreword.id)!.insets).toHaveLength(0);
+    expect(file.assets).toHaveLength(1);
   });
 
   it('draws two facing pages from the laid book, with the running furniture', () => {

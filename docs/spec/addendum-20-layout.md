@@ -90,6 +90,14 @@ and **every other measurement is worked out from it**, in `book-layout.ts`:
   with the **inside margin growing with the page count**, because a thick
   book's gutter swallows more. Nothing here is stored: a book that grows from
   two hundred pages to four hundred widens its own gutter with nothing run.
+  This is the **spine allowance** Ken asked for (*there's an adjustment made
+  to compensate at the centre spine, and it should be automatic*): the
+  inside margin is the outside plus what the binding takes at that page
+  count, read from the laid count every time the book is laid — the laying
+  runs again when the count crosses a tier, so the margin is never a guess
+  — and `describeSpine` says under the margins what it carries now and
+  when it next widens, so nobody hunts for a switch. A typed inside margin
+  takes the working-out away, and the sentence says that instead.
 - **The text block**, what is left; **lines per page**, the block's height
   over the leading; the **measure** in characters, which the room says out
   loud because a measure over about seventy-five characters is hard to read
@@ -222,6 +230,19 @@ Three kinds, and two of them exist:
   read from an attribute on the element that only the book honours. The
   renderer measures a wrapped paragraph the same way it measures any other,
   with the float in place, so the domain's rule needs no change.
+- A **picture cut into a part's text** (from Ken: *placing a graphic on a
+  page is different than adding a page graphic — drop in graphics that
+  will cut into the text*): an inset on a foreword, a preface, an afterword
+  or any prose part, held on the part as `insets` — the picture, which
+  paragraph it sits beside, the side and the fraction of the measure. It
+  becomes **the same `inset` the manuscript's figure makes** on the
+  paragraph's block, so the cutter, the renderer, the PDF and the eBook
+  needed no second rule for it. It names the paragraph by its place in the
+  text; where the text has grown shorter than the number the picture rides
+  in the last paragraph rather than vanishing, and with no paragraph at all
+  it waits, the screen saying *write a paragraph first*. A dedication, an
+  epigraph and a copyright notice take none (`partTakesInsets`), standing
+  alone on a page of their own.
 - An **art page** (the `plate` kind): a picture that *is* the page, edge to
   edge past the margins to the trim, with nothing set over it — from Ken:
   *a title page or an index that is artwork, imported at the size of the
@@ -279,13 +300,33 @@ other room (addendum 02 §8). Three regions:
 - **The spreads**, in the middle: two facing pages at a time, the verso on
   the left, at a zoom, with a slider along the foot. The page the writer is
   looking at is the page the PDF will have, because both come off one laying.
-- **The inspector**, on the right: the selected part's own fields, then
-  four **folds** — *Trim & margins* (§3), *Type* (§6), *Running heads &
-  page numbers* (§7), *Chapter openings* (a button to the dialog) — each
-  behind a heading drawn as a raised button with a disclosure arrow (from
-  Ken: *these need to be collapsible, the titles bigger, so it's more
-  organised*); whether each is open is a preference of the machine, not of
-  the book.
+- **Book settings…**, on the bar (from Ken: *a book settings button in
+  the top toolbar, because this is going to apply to the entire book*):
+  everything that runs all the way through — *Trim, margins & spine* (§3),
+  *Type* (§6), *Running heads & page numbers* (§7), *Chapter openings* (a
+  button to the dialog) — in one dialog in the middle of the screen, each
+  group behind a heading drawn as a raised button with a disclosure arrow
+  (from Ken, earlier: *these need to be collapsible, the titles bigger, so
+  it's more organised*); whether each is open is a preference of the
+  machine, not of the book. They used to be a column beside every part,
+  which read as if they belonged to the part.
+- **The inspector**, on the right, is now the selection's alone: the
+  chosen part's fields, or a chosen figure's placement, and when nothing is
+  chosen a sentence saying what it is for and where the book-wide settings
+  went.
+- **A part opens in a dialog of its own** on a double-click — on its row
+  in the rail, or on its page on the spread (from Ken: *double click the
+  front matter or whatever page … in a dialog box that pops up in the
+  centre, and you can see the type of page formatting*): its fields on the
+  left, **Pictures cut into the text** under them on a prose part (§8: from
+  a file, or one already in the book; beside which paragraph, which side,
+  how wide, a caption; × takes one out and the picture stays in the
+  library), and on the right **the page as the book sets it** — every page
+  the part falls on, drawn from the laying with the same builder the spread
+  and the PDF read, turned with arrows and turned by itself to the page a
+  picture just placed fell on. Double-clicking a chapter's opening page
+  opens the chapter-page dialog instead, and pressing a picture cut into a
+  part on the spread opens that part.
 
 **Export the book…** is in the room's bar, and it is the only place the book
 is exported from; *File ▸ Export PDF* stays the manuscript's.
@@ -458,4 +499,10 @@ preference per machine). §9 says what each does. Then, from Ken again: the
 plate became the **art page** — the picture the whole page, edge to edge,
 no caption on it (§8) — added in one act to the front matter, the back or
 facing a chapter, from one file dialog (§9), with `inFront` on the part the
-only new field and no migration.
+only new field and no migration. And then: the book-wide settings moved
+off the inspector into **Book settings…** on the bar, a part opens **in a
+dialog of its own** on a double-click with its page set beside its fields,
+**pictures cut into a part's text** (`insets` on the part, the manuscript's
+inset reused whole), and the **spine allowance said in words**
+(`describeSpine`) — it was already automatic, and the ask was answered by
+making it visible. No migration: the insets ride in the part's JSON.

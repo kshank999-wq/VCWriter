@@ -1203,7 +1203,25 @@ push live; the build takes a minute or two.
   `inFront` on the part is the only new field (`halfOf` reads the chapter
   first), no migration, `read-picture.ts` the one reader, and *Research ▸
   Graphics* is every prose format's rather than the textbook's alone,
-  because Ken asked *where is the library*.
+  because Ken asked *where is the library*. Then the room was
+  **rearranged around what applies to the whole book** (§9): the trim, the
+  margins, the type and the running heads are **Book settings…** on the
+  bar, one centred dialog behind the same `Fold` headings, and the
+  inspector is the selection's alone; **a part opens in a dialog of its
+  own on a double-click** (its row, or its page on the spread) with its
+  fields on the left and **the page as the book sets it** on the right —
+  `PagePreview` draws the part's laid pages with `renderBookPage`, the one
+  builder, so what is seen is what prints; and **pictures cut into a part's
+  text** are `insets` on the part (`addPartInset`, `partTakesInsets`,
+  `partOfInset` in `book-plan.ts`), which `partBlocks` turns into **the
+  manuscript figure's own `inset`** on the paragraph's block, so the
+  cutter, the print and the eBook needed no second rule — the twelfth time
+  the general mechanism was already there. A picture names its paragraph
+  by position and rides in the last one where the text has grown shorter.
+  The **spine allowance was already automatic** (`gutterFor` from the laid
+  page count, re-laid across a tier); Ken's ask was answered by
+  `describeSpine` saying under the margins what it carries and when it next
+  widens.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves
