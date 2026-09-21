@@ -47,6 +47,8 @@ import {
   setChapterPage,
   setTitlePage,
   updatePartInset,
+  type BookFigurePlacement,
+  type FigureSide,
   type PartInset,
   type PartStyle,
   type PartTemplate,
@@ -66,6 +68,7 @@ import {
   BOOK_PRESET_NAMES,
   BOOK_PRESETS,
   INSET_SPAN,
+  INSET_STANDOFF,
   PRESET_INFO,
   bookFigures,
   bookPresetOf,
@@ -149,6 +152,12 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const openChapterPage = onOpenChapterPage ?? ((markerId: string) => setOwnChapterPage(markerId));
   /** The chapter page being asked about before it is taken off (§9). */
   const [clearing, setClearing] = useState<string | null>(null);
+  /**
+   * Drawing a picture's box on the page (§8a, from Ken: *you draw a box and
+   * then the text moves around the box*): which figure is waiting for its
+   * rectangle. The drag says how wide it is and which side it cuts in at.
+   */
+  const [drawing, setDrawing] = useState<string | null>(null);
   /**
    * The rail's width (§9, from Ken: *the left side toolbar needs to be
    * dragged out, and by default a half inch wider*): a divider the writer
@@ -752,6 +761,15 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                 setSelectedFigureId(figureId);
               }}
               onOpenPage={openPage}
+              drawing={drawing}
+              onDrawn={(placement) => {
+                const figureId = drawing;
+                if (!figureId) return;
+                setDrawing(null);
+                setSelectedPartId(null);
+                setSelectedFigureId(figureId);
+                onUpdate((current) => placeBookFigure(current, figureId, placement));
+              }}
             />
           ) : (
             <p className="muted empty-state">Setting the book…</p>
@@ -804,8 +822,13 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           {selectedFigure ? (
             <FigureSection
               figure={selectedFigure}
+              drawing={drawing === selectedFigure.elementId}
               onPlace={(placement) => onUpdate((current) => placeBookFigure(current, selectedFigure.elementId, placement))}
-              onDone={() => setSelectedFigureId(null)}
+              onDraw={() => setDrawing((current) => (current === selectedFigure.elementId ? null : selectedFigure.elementId))}
+              onDone={() => {
+                setDrawing(null);
+                setSelectedFigureId(null);
+              }}
             />
           ) : null}
           {selected ? (
@@ -948,6 +971,8 @@ function Spreads({
   zoom,
   onPickFigure,
   onOpenPage,
+  drawing,
+  onDrawn,
 }: {
   laying: Laying;
   spread: number;
@@ -955,7 +980,13 @@ function Spreads({
   onPickFigure(figureId: string): void;
   /** A double-click on a page (§9): whatever the page belongs to opens. */
   onOpenPage(page: BookPage): void;
+  /** The figure whose box is being drawn (§8a), or null. */
+  drawing: string | null;
+  onDrawn(placement: BookFigurePlacement): void;
 }) {
+  /** The rectangle being dragged, in the sheet's own pixels, and which sheet. */
+  const [box, setBox] = useState<{ key: string; x: number; y: number; w: number; h: number } | null>(null);
+  const start = useRef<{ key: string; sheet: HTMLElement; x: number; y: number } | null>(null);
   const { pageWidthPx, pageHeightPx } = bookMetrics(laying.geometry);
   const blocks = useMemo(() => new Map(laying.blocks.map((block) => [block.id, block])), [laying.blocks]);
   const pages = laying.laid.pages;
@@ -966,23 +997,76 @@ function Spreads({
     '--bk-page-width': `${pageWidthPx}px`,
     '--bk-page-height': `${pageHeightPx}px`,
   } as React.CSSProperties;
+
+  /**
+   * The box the writer drew, read against the text block it was drawn over
+   * (§8a): how much of the measure it covers, and which side of the measure
+   * it sits on. The picture keeps its own proportions, so the height is not
+   * taken — a box drawn tall and thin makes a narrow picture, not a squashed
+   * one, which is what a float does.
+   */
+  const finish = () => {
+    const drawn = box;
+    const from = start.current;
+    start.current = null;
+    setBox(null);
+    if (!drawing || !drawn || !from || drawn.w < 8) return;
+    const text = from.sheet.querySelector('.bk-text') as HTMLElement | null;
+    const sheetRect = from.sheet.getBoundingClientRect();
+    const textRect = (text ?? from.sheet).getBoundingClientRect();
+    const inset = textRect.left - sheetRect.left;
+    const width = textRect.width || sheetRect.width;
+    const span = Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, drawn.w / width));
+    const place = drawn.x + drawn.w / 2 < inset + width / 2 ? 'left' : 'right';
+    onDrawn({ place, span, side: 'either', standoff: INSET_STANDOFF.default });
+  };
+
   const draw = (page: BookPage | null, key: string) =>
     page ? (
       <div
         key={key}
-        className="layout-sheet"
+        className={drawing ? 'layout-sheet layout-sheet-drawing' : 'layout-sheet'}
+        style={{ width: pageWidthPx, height: pageHeightPx }}
         onClick={(event) => {
           // A figure on the page is tagged with its element id (§8); pressing
           // it picks it for the inspector, whichever page it fell on.
+          if (drawing) return;
           const hit = (event.target as HTMLElement).closest('[data-figure]');
           if (hit) onPickFigure(hit.getAttribute('data-figure') ?? '');
         }}
-        onDoubleClick={() => onOpenPage(page)}
-        title="Double-click to open what this page belongs to"
-        // The page's own markup, from the one builder the export reads too;
-        // every string in it was escaped there.
-        dangerouslySetInnerHTML={{ __html: renderBookPage(page, blocks, laying.context) }}
-      />
+        onDoubleClick={() => {
+          if (!drawing) onOpenPage(page);
+        }}
+        onPointerDown={(event) => {
+          if (!drawing) return;
+          const sheet = event.currentTarget as HTMLElement;
+          const rect = sheet.getBoundingClientRect();
+          event.preventDefault();
+          sheet.setPointerCapture(event.pointerId);
+          const x = (event.clientX - rect.left) / zoom;
+          const y = (event.clientY - rect.top) / zoom;
+          start.current = { key, sheet, x, y };
+          setBox({ key, x, y, w: 0, h: 0 });
+        }}
+        onPointerMove={(event) => {
+          const from = start.current;
+          if (!drawing || !from || from.key !== key) return;
+          const rect = from.sheet.getBoundingClientRect();
+          const x = (event.clientX - rect.left) / zoom;
+          const y = (event.clientY - rect.top) / zoom;
+          setBox({ key, x: Math.min(from.x, x), y: Math.min(from.y, y), w: Math.abs(x - from.x), h: Math.abs(y - from.y) });
+        }}
+        onPointerUp={finish}
+        onPointerCancel={finish}
+        title={drawing ? 'Drag a box where the picture goes; the text will run round it' : 'Double-click to open what this page belongs to'}
+      >
+        {/* The page's own markup, from the one builder the export reads too;
+            every string in it was escaped there. */}
+        <div className="layout-sheet-ink" dangerouslySetInnerHTML={{ __html: renderBookPage(page, blocks, laying.context) }} />
+        {box && box.key === key ? (
+          <div className="layout-draw-box" style={{ left: box.x, top: box.y, width: box.w, height: box.h }} aria-hidden="true" />
+        ) : null}
+      </div>
     ) : (
       <div key={key} className="layout-sheet layout-no-sheet" style={{ width: pageWidthPx, height: pageHeightPx }} />
     );
@@ -1527,26 +1611,49 @@ function PagePreview({ laying, partId, focus }: { laying: Laying | null; partId:
   );
 }
 
-const PLACE_WORDS: Record<'measure' | 'left' | 'right', string> = {
+/** An illustrated page, or a picture cut into the text (§8, §8a). */
+const PLACE_WORDS: Record<BookFigurePlacement['place'], string> = {
   measure: 'across the measure',
   left: 'cut in at the left',
   right: 'cut in at the right',
+  page: 'a page of its own',
 };
 
-/** Where a figure sits in the book (§8): across the measure, or cut into the text at a side. */
+const SIDE_WORDS: Record<FigureSide, string> = {
+  either: 'Whichever page it falls on',
+  verso: 'Always a left-hand page',
+  recto: 'Always a right-hand page',
+};
+
+/**
+ * Where a figure sits in the book (§8, §8a): across the measure, cut into
+ * the text at a side, or an **illustrated page** of its own inside the
+ * story, on the left or the right of the spread.
+ *
+ * The box is **drawn on the page** (from Ken: *you draw a box and then the
+ * text moves around the box*): pressing *Draw the box* puts the spread in
+ * a drawing mode, and the rectangle says how much of the measure the
+ * picture takes and which side it cuts in at. The picture keeps its own
+ * proportions, so only the width and the side are read off the drag.
+ */
 function FigureSection({
   figure,
+  drawing,
   onPlace,
+  onDraw,
   onDone,
 }: {
   figure: BookFigure;
-  onPlace(placement: { place: 'measure' | 'left' | 'right'; span: number }): void;
+  drawing: boolean;
+  onPlace(placement: BookFigurePlacement): void;
+  onDraw(): void;
   onDone(): void;
 }) {
-  const { place, span } = figure.placement;
+  const { place, span, side, standoff } = figure.placement;
+  const cut = place === 'left' || place === 'right';
   return (
     <section className="layout-section layout-figure">
-      <h3>Figure</h3>
+      <h3>Picture</h3>
       <p className="muted small">
         {figure.caption.trim() || figure.assetName || 'A figure'}
         {figure.chapterTitle ? ` · in ${figure.chapterTitle}` : ''}. The manuscript prints it across the measure; the
@@ -1554,27 +1661,76 @@ function FigureSection({
       </p>
       <label className="field">
         <span>Place</span>
-        <select aria-label="Figure place" value={place} onChange={(event) => onPlace({ place: event.target.value as 'measure' | 'left' | 'right', span })}>
+        <select
+          aria-label="Figure place"
+          value={place}
+          onChange={(event) => onPlace({ ...figure.placement, place: event.target.value as BookFigurePlacement['place'] })}
+        >
           <option value="measure">Across the measure</option>
           <option value="left">Cut into the text, at the left</option>
           <option value="right">Cut into the text, at the right</option>
+          <option value="page">A page of its own, inside the story</option>
         </select>
       </label>
-      {place !== 'measure' ? (
-        <label className="field">
-          <span>Width, {Math.round(span * 100)}% of the measure</span>
-          <input
-            type="range"
-            aria-label="Figure width"
-            min={Math.round(INSET_SPAN.min * 100)}
-            max={Math.round(INSET_SPAN.max * 100)}
-            step={5}
-            value={Math.round(span * 100)}
-            onChange={(event) => onPlace({ place, span: Number(event.target.value) / 100 })}
-          />
-        </label>
+      {place === 'page' ? (
+        <>
+          <label className="field">
+            <span>Which page</span>
+            <select aria-label="Which page" value={side} onChange={(event) => onPlace({ ...figure.placement, side: event.target.value as FigureSide })}>
+              {(['either', 'verso', 'recto'] as FigureSide[]).map((one) => (
+                <option key={one} value={one}>
+                  {SIDE_WORDS[one]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="muted small">
+            The picture fills the page, edge to edge, where it stands in the writing — no running head over it and no page number
+            on it. Asking for a side may leave the page before it blank, which is what a facing illustration means.
+          </p>
+        </>
       ) : null}
-      <p className="muted small">The text after it wraps beside the picture; a paragraph carrying one is never split across a page.</p>
+      {cut ? (
+        <>
+          <label className="field">
+            <span>Width, {Math.round(span * 100)}% of the measure</span>
+            <input
+              type="range"
+              aria-label="Figure width"
+              min={Math.round(INSET_SPAN.min * 100)}
+              max={Math.round(INSET_SPAN.max * 100)}
+              step={5}
+              value={Math.round(span * 100)}
+              onChange={(event) => onPlace({ ...figure.placement, span: Number(event.target.value) / 100 })}
+            />
+          </label>
+          {/* The border the text keeps around it (§8a, from Ken). */}
+          <label className="field">
+            <span>Border, {standoff.toFixed(1)} ems of clear space</span>
+            <input
+              type="range"
+              aria-label="Border round the picture"
+              min={Math.round(INSET_STANDOFF.min * 10)}
+              max={Math.round(INSET_STANDOFF.max * 10)}
+              step={1}
+              value={Math.round(standoff * 10)}
+              onChange={(event) => onPlace({ ...figure.placement, standoff: Number(event.target.value) / 10 })}
+            />
+          </label>
+          <p className="muted small">The text after it runs round the picture; a paragraph carrying one is never split across a page.</p>
+        </>
+      ) : null}
+      <div className="layout-plate-pick">
+        <button
+          type="button"
+          className={drawing ? 'raised small selected' : 'raised small'}
+          aria-pressed={drawing}
+          title="Drag a box on the page where the picture goes; its width and the side it lands on are taken from the box"
+          onClick={onDraw}
+        >
+          {drawing ? 'Drawing — drag on the page' : 'Draw the box…'}
+        </button>
+      </div>
       <div className="layout-part-actions">
         <button type="button" className="ghost small" onClick={onDone}>
           Done

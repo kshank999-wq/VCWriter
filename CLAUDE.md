@@ -1246,7 +1246,26 @@ push live; the build takes a minute or two.
   typed in **Book settings ▸ The book** and nowhere else (the title page's
   dialog says what it will print and has a button there instead of a second
   box), the project's name being the placeholder; renaming the book never
-  renames the project.
+  renames the project. **§8a is pictures inside the story**, from Ken
+  laying out a children's book, and the audit paid a **thirteenth** time:
+  a picture inside the story **is a figure**, which the manuscript has had
+  since addendum 16 §9 and which already stands where the writer put it —
+  so it is two more readings of `figurePlacement` and no new record. A
+  figure is now *across the measure*, *cut in at a side*, or **a page of
+  its own**: `bookPlace: 'page'` with `bookSide`, whose block is `display`
+  with `starts` at `page`, `verso` or `recto` — the cutter already
+  understood all three — so **asking for a side may leave the page before
+  it blank, which is what a facing illustration is**, and the screen says
+  so rather than letting the blank read as a fault. It draws through the
+  **art page's own markup**, one way for a picture to be a page wherever
+  it came from. The **border** is `bookStandoff` in ems of the body size,
+  and **only what differs from the default is stored**. The **box is drawn
+  on the page** (*Draw the box…*, a drag over the spread): read against
+  the **text block** rather than the paper, so the same drag means the
+  same thing at any zoom or trim, and the **height is not taken** — a
+  picture keeps its proportions, which is what a float does. *Put a
+  picture here…* on the manuscript right-click is every prose format's
+  now rather than the textbook's alone.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

@@ -278,6 +278,56 @@ Three kinds, and two of them exist:
   shape is cropped to it rather than boxed, since a border of paper around a
   painted page is the one thing nobody who made one wants.
 
+## 8a. Pictures inside the story
+
+From Ken, laying out a children's book: *the ability to add an illustrated
+facing page on one side or the other; and a small illustration inside the
+text where the text wraps around it like a magazine — you draw a box and
+the text moves around the box and gives a little bit of a border.*
+
+**A picture inside the story is a figure**, which the manuscript has had
+since addendum 16 §9 and which already stands exactly where the writer put
+it. So none of this is a new record: it is two more readings of
+`figurePlacement`, the thirteenth time the mechanism was already there and
+merely narrow in vocabulary. A figure now sits in one of four places:
+
+| Place | What the book does | Stored |
+| --- | --- | --- |
+| Across the measure | The manuscript's own behaviour, a picture the width of the text | nothing |
+| Cut in at the left, at the right | A float inside the next paragraph, the text running round it | `bookPlace`, `bookSpan`, `bookStandoff` |
+| A page of its own | The picture fills the page edge to edge where it stands, on the side asked for | `bookPlace: 'page'`, `bookSide` |
+
+**An illustrated page is a page, so it says which side.** *Whichever page
+it falls on*, *always a left-hand page*, *always a right-hand page* — the
+block's `starts` is `page`, `verso` or `recto`, which the cutter already
+understood, so asking for a side may leave the page before it blank. That
+is what a facing illustration *is*, and the screen says so rather than
+letting the blank look like a fault. The page carries **no running head
+and no folio**, the art page's rule, and it draws through the art page's
+own markup: one way for a picture to be a page, whether it came from the
+front matter or from the middle of chapter nine.
+
+**The border is the writer's** (`bookStandoff`, in ems of the body size, so
+it holds at any trim and any type size), and **only what differs from the
+default is written down** — a figure at the usual border stores nothing
+about it.
+
+**The box is drawn on the page.** *Draw the box…* on the picture's fields
+puts the spread in a drawing mode; dragging a rectangle over a page says
+how much of the measure the picture takes and which side of the measure it
+cuts in at. The rectangle is read against the **text block** it was drawn
+over rather than against the paper, so the same drag means the same thing
+at any zoom and any trim. The **height is not taken**: a picture keeps its
+own proportions, and a box drawn tall and thin makes a narrow picture
+rather than a squashed one, which is what a float does. The sliders remain,
+because a writer who knows they want a third of the measure should not have
+to draw it.
+
+**Putting a picture in is on the manuscript's right-click**, on every prose
+format rather than the textbook alone — a children's book is a novel with
+pictures — and absent on a book whose library is empty, since *put a
+picture here* with nothing to put is not an offer.
+
 ## 9. The room
 
 Opened from **Layout** on the title bar, beside Research, and absent rather
@@ -558,3 +608,9 @@ picture, the summary and the epigraph off), the × on a part row is visible
 rather than shown on hover, and a room in a window of its own owns a
 chapter-page dialog so the row works there too; and **the rail drags**
 (`useSplit`, half an inch wider than it was by default). No migration.
+And then §8a: **pictures inside the story** — an illustrated page of its
+own on the side asked for, a border round a picture cut into the text, and
+a **box drawn on the page** that says how wide it is and which side it
+sits on. All of it is the figure the manuscript already had, placed two
+more ways; no migration, and the half title, the title page, the
+dedication and the epigraph share one page style.

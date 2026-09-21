@@ -454,6 +454,8 @@ const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle:
         target.inset = {
           place: inset.place,
           span: inset.span,
+          side: 'either',
+          standoff: inset.standoff,
           figureId: inset.id,
           assetId: inset.assetId,
           caption: inset.caption,
@@ -476,13 +478,28 @@ const setting = (element: ManuscriptElement): Pick<BookBlock, 'face' | 'size' | 
   return out;
 };
 
-/** Where a figure sits in the book: across the measure, or cut into the text at a side. */
-export type FigurePlace = 'measure' | 'left' | 'right';
+/**
+ * Where a figure sits in the book (§8): across the measure, cut into the
+ * text at a side, or **the page itself** — an illustrated page inside the
+ * story (§8a, from Ken), which is the same record standing where the
+ * writer already put the figure rather than a second kind of thing.
+ */
+export type FigurePlace = 'measure' | 'left' | 'right' | 'page';
+
+/** Which page an illustrated page falls on: the left, the right, or whichever comes. */
+export type FigureSide = 'either' | 'verso' | 'recto';
 
 export interface BookFigurePlacement {
   place: FigurePlace;
   /** The fraction of the measure an inset takes, 0.2 to 0.6. */
   span: number;
+  /** For a page: which side of the spread it lands on. */
+  side: FigureSide;
+  /**
+   * The white space the text keeps clear around an inset, in ems of the
+   * body size (§8a, from Ken: *gives a little bit of a border*).
+   */
+  standoff: number;
 }
 
 export interface FigureInset extends BookFigurePlacement {
@@ -495,6 +512,7 @@ export interface FigureInset extends BookFigurePlacement {
 }
 
 export const INSET_SPAN = { min: 0.2, max: 0.6, default: 0.4 } as const;
+export const INSET_STANDOFF = { min: 0, max: 3, default: 1 } as const;
 
 /**
  * A figure's placement, read off its element (§8). The manuscript prints
@@ -504,9 +522,19 @@ export const INSET_SPAN = { min: 0.2, max: 0.6, default: 0.4 } as const;
 export const figurePlacement = (element: ManuscriptElement): BookFigurePlacement => {
   const place = element.attributes.bookPlace;
   const span = element.attributes.bookSpan;
-  const chosen: FigurePlace = place === 'left' || place === 'right' ? place : 'measure';
+  const side = element.attributes.bookSide;
+  const standoff = element.attributes.bookStandoff;
+  const chosen: FigurePlace = place === 'left' || place === 'right' || place === 'page' ? place : 'measure';
   const fraction = typeof span === 'number' && Number.isFinite(span) ? Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, span)) : INSET_SPAN.default;
-  return { place: chosen, span: fraction };
+  return {
+    place: chosen,
+    span: fraction,
+    side: side === 'verso' || side === 'recto' ? side : 'either',
+    standoff:
+      typeof standoff === 'number' && Number.isFinite(standoff)
+        ? Math.min(INSET_STANDOFF.max, Math.max(INSET_STANDOFF.min, standoff))
+        : INSET_STANDOFF.default,
+  };
 };
 
 /** A figure in the book, for the rail: where it is and what it shows. */
@@ -582,7 +610,10 @@ export const markFigureDecorative = (file: ProjectFile, elementId: string, decor
  * the manuscript carries and never reads; *across the measure* clears them,
  * so an unplaced figure and one put back read the same.
  */
-export const placeBookFigure = (file: ProjectFile, elementId: string, placement: BookFigurePlacement): ProjectFile => ({
+/** What a caller must say to place a figure: where, and anything else it is changing. */
+export type FigurePlacementInput = Pick<BookFigurePlacement, 'place'> & Partial<BookFigurePlacement>;
+
+export const placeBookFigure = (file: ProjectFile, elementId: string, placement: FigurePlacementInput): ProjectFile => ({
   ...file,
   beats: file.beats.map((beat) =>
     beat.manuscript.elements.some((element) => element.id === elementId)
@@ -592,11 +623,19 @@ export const placeBookFigure = (file: ProjectFile, elementId: string, placement:
             ...beat.manuscript,
             elements: beat.manuscript.elements.map((element) => {
               if (element.id !== elementId) return element;
-              const { bookPlace: _place, bookSpan: _span, ...rest } = element.attributes;
-              const attributes =
-                placement.place === 'measure'
-                  ? rest
-                  : { ...rest, bookPlace: placement.place, bookSpan: Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, placement.span)) };
+              const { bookPlace: _place, bookSpan: _span, bookSide: _side, bookStandoff: _off, ...rest } = element.attributes;
+              if (placement.place === 'measure') return { ...element, attributes: rest };
+              const attributes: Record<string, string | number | boolean> = { ...rest, bookPlace: placement.place };
+              if (placement.place === 'page') {
+                // A page needs no width and no standoff: it is the page.
+                if (placement.side && placement.side !== 'either') attributes.bookSide = placement.side;
+              } else {
+                attributes.bookSpan = Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, placement.span ?? INSET_SPAN.default));
+                const standoff = Math.min(INSET_STANDOFF.max, Math.max(INSET_STANDOFF.min, placement.standoff ?? INSET_STANDOFF.default));
+                // Only what differs from the default is written down, so a
+                // document says what the writer chose and nothing else.
+                if (standoff !== INSET_STANDOFF.default) attributes.bookStandoff = standoff;
+              }
               return { ...element, attributes };
             }),
           },
@@ -617,17 +656,25 @@ const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensCha
       return block({ id, kind: 'blockquote', numbering: 'arabic', text: element.text, spans: parseInline(element.text), chapterTitle, ...set });
     case 'scene_break':
       return block({ id, kind: 'scene_break', numbering: 'arabic', chapterTitle, unbreakable: true, keepWithNext: true });
-    case 'figure':
+    case 'figure': {
+      // An illustrated page inside the story (§8a): a page of its own, on
+      // the side the writer asked for, with no running head over it.
+      const placed = figurePlacement(element);
+      const page = placed.place === 'page';
       return block({
         id,
         kind: 'figure',
         numbering: 'arabic',
         chapterTitle,
         unbreakable: true,
+        display: page,
+        folio: !page,
+        starts: page ? (placed.side === 'verso' ? 'verso' : placed.side === 'recto' ? 'recto' : 'page') : 'none',
         assetId: typeof element.attributes.assetId === 'string' ? element.attributes.assetId : null,
         caption: element.text,
         decorative: element.attributes.decorative === true,
       });
+    }
     default:
       // A script's elements have no place in a book; a prose project has none.
       return null;
@@ -707,7 +754,9 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
         // for it. With nothing to cut into, it stands across the measure.
         if (made.kind === 'figure') {
           const placement = figurePlacement(element);
-          if (placement.place !== 'measure') {
+          // A page stands where it is; only an inset waits for a paragraph
+          // to cut into.
+          if (placement.place === 'left' || placement.place === 'right') {
             if (pending) out.push(pending);
             pending = made;
             continue;
@@ -719,6 +768,8 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
             made.inset = {
               place: placement.place as 'left' | 'right',
               span: placement.span,
+              side: placement.side,
+              standoff: placement.standoff,
               figureId: pending.id,
               assetId: pending.assetId ?? null,
               caption: pending.caption ?? '',

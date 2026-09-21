@@ -86,7 +86,7 @@ describe('a figure cut into the text (stage 6)', () => {
   it('stands across the measure until placed, and the manuscript never reads the placement', () => {
     const file = novel();
     const figure = file.beats[0]!.manuscript.elements[1]!;
-    expect(figurePlacement(figure)).toEqual({ place: 'measure', span: 0.4 });
+    expect(figurePlacement(figure)).toEqual({ place: 'measure', span: 0.4, side: 'either', standoff: 1 });
     const kinds = bookBlocks(file).map((block) => `${block.kind}${block.inset ? '+inset' : ''}`);
     expect(kinds.filter((kind) => kind.startsWith('paragraph') || kind === 'figure')).toEqual(['paragraph', 'figure', 'paragraph', 'paragraph']);
   });
@@ -109,7 +109,7 @@ describe('a figure cut into the text (stage 6)', () => {
 
   it('clamps the span, and across the measure clears what was written', () => {
     let file = placeBookFigure(novel(), 'f1', { place: 'right', span: 0.9 });
-    expect(figurePlacement(file.beats[0]!.manuscript.elements[1]!)).toEqual({ place: 'right', span: 0.6 });
+    expect(figurePlacement(file.beats[0]!.manuscript.elements[1]!)).toEqual({ place: 'right', span: 0.6, side: 'either', standoff: 1 });
     file = placeBookFigure(file, 'f1', { place: 'measure', span: 0.4 });
     expect(file.beats[0]!.manuscript.elements[1]!.attributes).toEqual({ assetId: '22222222-2222-4222-8222-222222222222' });
   });
@@ -133,7 +133,7 @@ describe('a figure cut into the text (stage 6)', () => {
     const wrapped = bookBlocks(file).find((block) => block.inset)!;
     const html = renderBookBlock(wrapped, contextFor(file));
     expect(html).toContain('<p class="bk-p bk-has-inset">');
-    expect(html).toContain('<span class="bk-inset bk-inset-right" data-figure="f1" style="width:30%">');
+    expect(html).toContain('<span class="bk-inset bk-inset-right" data-figure="f1" style="width:30%;--bk-standoff:1.00em">');
     expect(html).toContain('aspect-ratio:1200 / 800');
     expect(html).toContain('<span class="bk-inset-caption">The harbour at dusk</span>');
     expect(html).toContain('Two, beside the picture.</p>');
@@ -170,7 +170,7 @@ describe('a figure cut into the text (stage 6)', () => {
     expect(cut.unbreakable).toBe(true);
     const html = renderBookBlock(cut, contextFor(file));
     expect(html).toContain('<p class="bk-p bk-has-inset">');
-    expect(html).toContain(`<span class="bk-inset bk-inset-right" data-figure="${made.insetId}" style="width:60%">`);
+    expect(html).toContain(`<span class="bk-inset bk-inset-right" data-figure="${made.insetId}" style="width:60%;--bk-standoff:1.00em">`);
     expect(partOfInset(file, made.insetId!)?.id).toBe(foreword.id);
     // The text shortened under it: the picture rides in the last paragraph rather than vanishing.
     const shorter = updatePart(file, foreword.id, { text: 'Only one paragraph now.' });
@@ -189,6 +189,48 @@ describe('a figure cut into the text (stage 6)', () => {
     expect(addPartInset(dedication.file, dedication.partId!, {}).insetId).toBeNull();
   });
 
+  it('makes a picture a page of its own inside the story, on the side asked for, with no head or folio', () => {
+    const base = novel();
+    // Across the measure, it flows with the text and carries a folio.
+    const flowing = bookBlocks(base).find((block) => block.kind === 'figure')!;
+    expect(flowing.display).toBe(false);
+    expect(flowing.folio).toBe(true);
+    expect(flowing.starts).toBe('none');
+    // A page of its own: display, no folio, and it does not wait for a paragraph.
+    const paged = placeBookFigure(base, 'f1', { place: 'page', span: 0.4, side: 'either', standoff: 1 });
+    const blocks = bookBlocks(paged);
+    const page = blocks.find((block) => block.kind === 'figure')!;
+    expect(page.display).toBe(true);
+    expect(page.folio).toBe(false);
+    expect(page.starts).toBe('page');
+    expect(blocks.some((block) => block.inset)).toBe(false);
+    // It stands where the writer put it: between the paragraphs it was written between.
+    const kinds = blocks.filter((block) => block.kind === 'paragraph' || block.kind === 'figure').map((block) => block.kind);
+    expect(kinds).toEqual(['paragraph', 'figure', 'paragraph', 'paragraph']);
+    // A side is a side of the spread, and it is stored as one word.
+    const versoFile = placeBookFigure(base, 'f1', { place: 'page', span: 0.4, side: 'verso', standoff: 1 });
+    expect(bookBlocks(versoFile).find((block) => block.kind === 'figure')!.starts).toBe('verso');
+    expect(figurePlacement(versoFile.beats[0]!.manuscript.elements[1]!)).toMatchObject({ place: 'page', side: 'verso' });
+    expect(bookBlocks(placeBookFigure(base, 'f1', { place: 'page', span: 0.4, side: 'recto', standoff: 1 })).find((block) => block.kind === 'figure')!.starts).toBe('recto');
+    // The picture is the page, edge to edge, the art page's own rule.
+    const html = renderBookBlock(page, contextFor(paged));
+    expect(html).toContain('bk-plate-art');
+    expect(html).toContain('data-figure="f1"');
+    expect(html).not.toContain('bk-caption');
+  });
+
+  it('keeps the border the writer asked for round a picture cut into the text', () => {
+    const wide = placeBookFigure(novel(), 'f1', { place: 'right', span: 0.3, side: 'either', standoff: 2 });
+    expect(figurePlacement(wide.beats[0]!.manuscript.elements[1]!).standoff).toBe(2);
+    const html = renderBookBlock(bookBlocks(wide).find((block) => block.inset)!, contextFor(wide));
+    expect(html).toContain('--bk-standoff:2.00em');
+    // It is clamped to what a page can take, and a figure across the measure keeps none.
+    const huge = placeBookFigure(novel(), 'f1', { place: 'left', span: 0.4, side: 'either', standoff: 99 });
+    expect(figurePlacement(huge.beats[0]!.manuscript.elements[1]!).standoff).toBe(3);
+    const plain = placeBookFigure(huge, 'f1', { place: 'measure', span: 0.4, side: 'either', standoff: 2 });
+    expect(plain.beats[0]!.manuscript.elements[1]!.attributes).toEqual({ assetId: '22222222-2222-4222-8222-222222222222' });
+  });
+
   it('lists the figures for the rail with where each sits', () => {
     const file = placeBookFigure(novel(), 'f1', { place: 'left', span: 0.4 });
     expect(bookFigures(file)).toEqual([
@@ -198,7 +240,7 @@ describe('a figure cut into the text (stage 6)', () => {
         caption: 'The harbour at dusk',
         assetId: '22222222-2222-4222-8222-222222222222',
         assetName: 'harbour.png',
-        placement: { place: 'left', span: 0.4 },
+        placement: { place: 'left', span: 0.4, side: 'either', standoff: 1 },
         chapterTitle: 'The Road',
         decorative: false,
       },

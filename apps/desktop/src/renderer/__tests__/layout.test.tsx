@@ -11,6 +11,7 @@ import {
   createProjectFile,
   beginStory,
   contentsDivisions,
+  figurePlacement,
   partsOf,
   setChapterPage,
   storiesOf,
@@ -176,6 +177,76 @@ describe('the room', () => {
     expect(within(dialog).getByText(/for the spine, worked out from \d+ pages?/)).toBeDefined();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Close book settings' }));
     expect(dialog.hasAttribute('open')).toBe(false);
+  });
+
+  it('gives a picture a page of its own inside the story, and a border when it is cut into the text', () => {
+    let start = novel();
+    const beat = start.beats[0]!;
+    start = updateBeat(start, beat.id, {
+      manuscript: {
+        elements: [
+          { id: 'p-0' as never, type: 'paragraph', text: 'Chapter 1 begins.', characterId: null, attributes: {} },
+          { id: 'f-1' as never, type: 'figure', text: 'The harbour', characterId: null, attributes: { assetId: 'a1' } },
+          { id: 'p-x' as never, type: 'paragraph', text: 'And carries on.', characterId: null, attributes: {} },
+        ],
+      },
+    });
+    render(<Harness initial={start} />);
+    // The figure is on the rail; choosing it opens the picture's own fields.
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.click(rail.getByRole('button', { name: /The harbour/ }));
+    expect((screen.getByLabelText('Figure place') as HTMLSelectElement).value).toBe('measure');
+    // A page of its own, on the left-hand side of the spread.
+    fireEvent.change(screen.getByLabelText('Figure place'), { target: { value: 'page' } });
+    fireEvent.change(screen.getByLabelText('Which page'), { target: { value: 'verso' } });
+    let placed = figurePlacement((latest as ProjectFile).beats[0]!.manuscript.elements[1]!);
+    expect(placed).toMatchObject({ place: 'page', side: 'verso' });
+    expect(screen.getByText(/The picture fills the page, edge to edge/)).toBeDefined();
+    // Cut into the text instead: a width and a border, and no side question.
+    fireEvent.change(screen.getByLabelText('Figure place'), { target: { value: 'right' } });
+    expect(screen.queryByLabelText('Which page')).toBeNull();
+    fireEvent.change(screen.getByLabelText('Border round the picture'), { target: { value: '20' } });
+    placed = figurePlacement((latest as ProjectFile).beats[0]!.manuscript.elements[1]!);
+    expect(placed).toMatchObject({ place: 'right', standoff: 2 });
+  });
+
+  it('draws the picture’s box on the page, taking its width and its side from the drag', () => {
+    let start = novel();
+    const beat = start.beats[0]!;
+    start = updateBeat(start, beat.id, {
+      manuscript: {
+        elements: [
+          { id: 'p-0' as never, type: 'paragraph', text: 'Chapter 1 begins.', characterId: null, attributes: {} },
+          { id: 'f-1' as never, type: 'figure', text: 'The harbour', characterId: null, attributes: { assetId: 'a1' } },
+          { id: 'p-x' as never, type: 'paragraph', text: 'And carries on.', characterId: null, attributes: {} },
+        ],
+      },
+    });
+    render(<Harness initial={start} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.click(rail.getByRole('button', { name: /The harbour/ }));
+    const draw = screen.getByRole('button', { name: 'Draw the box…' });
+    expect(draw.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(draw);
+    // The spread says it is waiting for a box.
+    const sheet = document.querySelector('.layout-sheet-drawing') as HTMLElement;
+    expect(sheet).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Drawing — drag on the page' })).toBeDefined();
+    // jsdom measures nothing, so the sheet is given a rectangle to be read against.
+    const rect = { left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    sheet.getBoundingClientRect = () => rect;
+    sheet.setPointerCapture = () => undefined;
+    // A box on the right-hand half, a third of the page across.
+    fireEvent.pointerDown(sheet, { clientX: 240, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(sheet, { clientX: 360, clientY: 300, pointerId: 1 });
+    expect(document.querySelector('.layout-draw-box')).not.toBeNull();
+    fireEvent.pointerUp(sheet, { clientX: 360, clientY: 300, pointerId: 1 });
+    const placed = figurePlacement((latest as ProjectFile).beats[0]!.manuscript.elements[1]!);
+    expect(placed.place).toBe('right');
+    expect(placed.span).toBeGreaterThan(0.2);
+    // The drawing is over, and the box is gone.
+    expect(document.querySelector('.layout-draw-box')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Draw the box…' })).toBeDefined();
   });
 
   it('writes the trim and says what was worked out from it', () => {

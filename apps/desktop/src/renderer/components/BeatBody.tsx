@@ -36,6 +36,7 @@ import {
   groupManuscript,
   hasBookIndex,
   isInstructional,
+  isProseFormat,
   headingsSoFar,
   isDual,
   layoutForFile,
@@ -813,11 +814,12 @@ export function BeatBody({
       { label: 'Tag a theme or a motif…', disabled: none, onPick: () => setTagging({ elementId: at.elementId, text: at.text }) },
       { label: 'Add to Research ▸ Links…', disabled: none, onPick: () => setThreading({ elementId: at.elementId, text: at.text }) },
     );
-    // A figure belongs to a book with pictures in it. Absent rather than
-    // greyed everywhere else, and absent on a book whose library is empty:
-    // *put a figure here* with nothing to put is not an offer.
-    if (isInstructional(file.project.format) && graphicsInOrder(file).length > 0) {
-      entries.push({ label: 'Put a figure here…', onPick: () => setPlacing({ elementId: at.elementId }) });
+    // A picture belongs to any book with pictures in it — a children's book
+    // as much as a textbook (addendum 20 §8a). Absent rather than greyed on
+    // a script, and absent on a book whose library is empty: *put a picture
+    // here* with nothing to put is not an offer.
+    if (isProseFormat(file.project.format) && graphicsInOrder(file).length > 0) {
+      entries.push({ label: `Put a ${isInstructional(file.project.format) ? 'figure' : 'picture'} here…`, onPick: () => setPlacing({ elementId: at.elementId }) });
     }
     return entries;
   };

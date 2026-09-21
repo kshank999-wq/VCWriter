@@ -105,6 +105,8 @@ export const partInsetSchema = z.object({
   place: z.enum(['left', 'right']).default('left'),
   /** The fraction of the measure it takes, 0.2 to 0.6. */
   span: z.number().min(0.2).max(0.6).default(0.4),
+  /** The white space the text keeps clear around it, in ems of the body size. */
+  standoff: z.number().min(0).max(3).default(1),
   caption: z.string().default(''),
 });
 export type PartInset = z.infer<typeof partInsetSchema>;

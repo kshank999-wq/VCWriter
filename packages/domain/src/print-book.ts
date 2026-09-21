@@ -274,6 +274,12 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
     }
     case 'figure': {
       const picture = block.assetId ? context.pictures.get(block.assetId) : undefined;
+      // An illustrated page inside the story (§8a): the picture is the page,
+      // edge to edge past the margins, the same rule an art page follows.
+      if (block.display) {
+        if (picture) return `<div class="bk-display bk-plate bk-plate-art" data-figure="${escapeHtml(block.id)}"><img class="bk-plate-image" alt="${escapeHtml(picture.altText || block.caption || '')}" src="${escapeHtml(picture.data)}" /></div>`;
+        return `<div class="bk-display bk-plate" data-figure="${escapeHtml(block.id)}"><div class="bk-plate-missing">Picture missing</div></div>`;
+      }
       const image = picture
         ? `<img class="bk-figure-image" alt="${escapeHtml(picture.altText || block.caption || '')}" src="${escapeHtml(picture.data)}" />`
         : '<div class="bk-figure-missing">Picture missing</div>';
@@ -334,7 +340,11 @@ const insetMarkup = (inset: FigureInset, context: BookRenderContext): string => 
     ? `<img class="bk-inset-image" alt="${escapeHtml(picture.altText || inset.caption || '')}" style="${ratio}" src="${escapeHtml(picture.data)}" />`
     : '<span class="bk-figure-missing">Picture missing</span>';
   const caption = inset.caption.trim() ? `<span class="bk-inset-caption">${escapeHtml(inset.caption)}</span>` : '';
-  return `<span class="bk-inset bk-inset-${inset.place}" data-figure="${escapeHtml(inset.figureId)}" style="width:${Math.round(inset.span * 100)}%">${image}${caption}</span>`;
+  // The border the text keeps around it (§8a, from Ken: *gives a little bit
+  // of a border*): the writer's, in ems of the body size, so it holds at any
+  // trim and any type size.
+  const gap = `--bk-standoff:${inset.standoff.toFixed(2)}em`;
+  return `<span class="bk-inset bk-inset-${inset.place}" data-figure="${escapeHtml(inset.figureId)}" style="width:${Math.round(inset.span * 100)}%;${gap}">${image}${caption}</span>`;
 };
 
 /** The text block's class, and the measuring box's: the paragraph style rides on it. */
@@ -412,8 +422,8 @@ export const BOOK_STYLES = `
   .bk-break { margin: 0; height: calc(var(--bk-lead) * 3); line-height: calc(var(--bk-lead) * 3); text-align: center; letter-spacing: 0.5em; }
   .bk-figure { margin: 0; padding-bottom: var(--bk-lead); text-align: center; }
   .bk-p.bk-has-inset { display: flow-root; }
-  .bk-inset { float: left; margin: 0.15em 1em 0.2em 0; }
-  .bk-inset.bk-inset-right { float: right; margin: 0.15em 0 0.2em 1em; }
+  .bk-inset { float: left; margin: 0.15em var(--bk-standoff, 1em) var(--bk-standoff, 1em) 0; }
+  .bk-inset.bk-inset-right { float: right; margin: 0.15em 0 var(--bk-standoff, 1em) var(--bk-standoff, 1em); }
   .bk-inset-image { display: block; width: 100%; height: auto; }
   .bk-inset-caption { display: block; font-size: 0.8em; line-height: 1.25; text-align: center; margin-top: 0.3em; }
   .bk-inset .bk-figure-missing { display: flex; height: calc(var(--bk-lead) * 5); }
