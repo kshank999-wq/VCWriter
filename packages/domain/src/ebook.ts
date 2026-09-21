@@ -236,7 +236,6 @@ const EPUB_TYPES: Record<string, string> = {
   glossary: 'glossary',
   about_the_author: 'backmatter',
   also_by: 'backmatter',
-  plate: 'bodymatter',
 };
 
 // ------------------------------------------------------------ the pictures
@@ -582,8 +581,11 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
         id: partKey(part),
         slug: safeName(part.kind.replace(/_/g, '-')),
         title: partTitle(part),
-        kind: part.kind === 'plate' ? 'body' : front ? 'front' : 'back',
-        epubType: EPUB_TYPES[part.kind] ?? (front ? 'frontmatter' : 'backmatter'),
+        // An art page is wherever it stands: facing a chapter it is body
+        // matter, otherwise the half the writer put it in.
+        kind: part.kind === 'plate' && part.beforeMarkerId ? 'body' : front ? 'front' : 'back',
+        epubType:
+          part.kind === 'plate' ? (part.beforeMarkerId ? 'bodymatter' : front ? 'frontmatter' : 'backmatter') : (EPUB_TYPES[part.kind] ?? (front ? 'frontmatter' : 'backmatter')),
       });
     } else if (part && current && current.id === partKey(part) && (part.kind === 'contents' || part.kind === 'index')) {
       continue;

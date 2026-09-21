@@ -157,7 +157,7 @@ around them**.
 | Epilogue, afterword, acknowledgements, glossary | Prose after the story | its text |
 | About the author, also by | The back pages | its text |
 | Index | The index, read | position only |
-| Plate | A full-page picture, anchored before a chapter | the asset and a caption |
+| Art page | A picture that fills the page, edge to edge, in the front matter, at the back or facing a chapter | the asset, where it stands, and a description that prints nowhere |
 
 Two rules shape it. **The story is not a part**: it is the manuscript, its
 order is the story order, and nothing in the room reorders it — the
@@ -222,8 +222,16 @@ Three kinds, and two of them exist:
   read from an attribute on the element that only the book honours. The
   renderer measures a wrapped paragraph the same way it measures any other,
   with the float in place, so the domain's rule needs no change.
-- A **plate**: a full-page picture, a part anchored *before a chapter*, so
-  that moving the chapter moves the plate.
+- An **art page** (the `plate` kind): a picture that *is* the page, edge to
+  edge past the margins to the trim, with nothing set over it — from Ken:
+  *a title page or an index that is artwork, imported at the size of the
+  page, and it fills the page automatically*. It stands in the front matter,
+  at the back, or *before a chapter*, so that moving the chapter moves the
+  page (`halfOf` reads the chapter first and `inFront` after). Its
+  description prints nowhere: the eBook reads it to a reader who cannot see
+  the picture, and the library shows it. A picture that is not the page's
+  shape is cropped to it rather than boxed, since a border of paper around a
+  painted page is the one thing nobody who made one wants.
 
 ## 9. The room
 
@@ -251,16 +259,23 @@ other room (addendum 02 §8). Three regions:
   of its own* where its page carries a device, a summary or an epigraph
   (`opensOnLeaf`), *above the first paragraph* otherwise — with **Chapter
   page…** opening the chapter-page dialog on that chapter and **+ Picture
-  facing** adding a full-page plate before it, selected so the inspector is
-  asking for the picture. A plate that faces a chapter is listed where it
-  falls; one at the back stays in the back matter. **A plate's picture
-  comes straight from a file** (from Ken: *can't we just find the picture
-  and load it? Or where is the library?*): *Choose a picture…* on the
-  plate's fields reads the file, puts it in the graphics library and sets
-  it on the plate in one act, the library select beneath offering what is
-  already in the book; and the library itself — *Research ▸ Graphics*,
-  which had been the textbook's alone — is now every prose format's, since
-  a novel with plates has pictures too.
+  facing** opening the file dialog for an art page before it. **An art page
+  is one act wherever it goes** (from Ken: *it should be just as easy to
+  add a plate in the front matter, the back matter or the story area, and
+  it should cover the entire page*): the *Add a part* menu offers *Art page
+  in the front matter* and *Art page at the back*, the chapter's row offers
+  *+ Picture facing*, and all three open the same file dialog — the picture
+  joins the graphics library, a page is made for it where it was asked for,
+  the room turns to that page, and the inspector's *Where* moves it between
+  the three places afterwards. **Nothing is made until a picture arrives**,
+  so a cancelled dialog leaves no empty page behind, and the plain kind is
+  not on the menu, a blank art page being nothing. An art page that faces a
+  chapter is listed where it falls; the others in their half. (This grew
+  out of *can't we just find the picture and load it? Or where is the
+  library?* — the library, *Research ▸ Graphics*, had been the textbook's
+  alone and is every prose format's now, since a novel with art pages has
+  pictures too; the library select on the page's fields still offers what
+  is already in the book.)
 - **The spreads**, in the middle: two facing pages at a time, the verso on
   the left, at a zoom, with a slider along the foot. The page the writer is
   looking at is the page the PDF will have, because both come off one laying.
@@ -439,4 +454,8 @@ menu; × on every part; the page between the chapters shown as a row of its
 own with the chapter-page creator and a full-page picture on it; parts and
 chapters dragged to reorder (`placePart`, `moveChapterBlock`); and the
 inspector's four groups folded behind button headings (`Fold`, a
-preference per machine). §9 says what each does.
+preference per machine). §9 says what each does. Then, from Ken again: the
+plate became the **art page** — the picture the whole page, edge to edge,
+no caption on it (§8) — added in one act to the front matter, the back or
+facing a chapter, from one file dialog (§9), with `inFront` on the part the
+only new field and no migration.

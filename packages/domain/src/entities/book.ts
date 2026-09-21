@@ -101,13 +101,24 @@ export const bookPartSchema = z.object({
   text: z.string().default(''),
   /** The picture, for a plate: an id in the graphics library. */
   assetId: z.string().nullable().default(null),
-  /** A plate's caption, under the picture. */
+  /**
+   * A plate's description. Nothing prints on the page — the art is the page
+   * (§8, from Ken) — but the eBook reads it to a reader who cannot see the
+   * picture, and the library shows it.
+   */
   caption: z.string().default(''),
   /**
    * A plate's place: before the chapter with this marker id, so moving the
-   * chapter moves the plate (§8). Null means among the back matter.
+   * chapter moves the plate (§8). Null means among the front matter or the
+   * back, which `inFront` decides.
    */
   beforeMarkerId: z.string().nullable().default(null),
+  /**
+   * A plate with no chapter to face stands in the front matter when this is
+   * set, at the back otherwise (§9, from Ken: a title page or an index that
+   * is a piece of art has to be able to go where those go).
+   */
+  inFront: z.boolean().default(false),
 });
 export type BookPart = z.infer<typeof bookPartSchema>;
 

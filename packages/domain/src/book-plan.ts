@@ -62,7 +62,7 @@ export const PART_INFO: Record<PartKind, PartKindInfo> = {
   about_the_author: info('about_the_author', 'About the author', 'text', 'back', true, 'a short biography'),
   also_by: info('also_by', 'Also by', 'text', 'back', true, 'the author’s other books'),
   index: info('index', 'Index', 'reading', 'back', true, 'the marks the writer placed, with their pages'),
-  plate: info('plate', 'Plate', 'plate', 'either', false, 'a full-page picture, before a chapter'),
+  plate: info('plate', 'Art page', 'plate', 'either', false, 'a picture that fills the page, edge to edge'),
 };
 
 export const partInfo = (kind: PartKind): PartKindInfo => PART_INFO[kind];
@@ -85,11 +85,16 @@ export const defaultParts = (): BookPart[] =>
 /** The plan as it stands: the writer's, or the default until they touch it. */
 export const partsOf = (file: ProjectFile): BookPart[] => bookSettingsOf(file).parts ?? defaultParts();
 
-/** Which half a part stands in. A plate before a chapter is in the story. */
+/**
+ * Which half a part stands in. A plate before a chapter is in the story; one
+ * with no chapter to face is in the front matter if it says so, at the back
+ * otherwise (§9).
+ */
 export const halfOf = (part: BookPart): 'front' | 'body' | 'back' => {
   const half = PART_INFO[part.kind].half;
   if (half !== 'either') return half;
-  return part.beforeMarkerId ? 'body' : 'back';
+  if (part.beforeMarkerId) return 'body';
+  return part.inFront ? 'front' : 'back';
 };
 
 export const frontParts = (parts: readonly BookPart[]): BookPart[] => parts.filter((part) => halfOf(part) === 'front');

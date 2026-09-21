@@ -5,6 +5,7 @@ import {
   addPart,
   addUnit,
   bookBlocks,
+  bookPartSchema,
   createProjectFile,
   defaultParts,
   halfOf,
@@ -103,13 +104,28 @@ describe('the parts', () => {
     expect(partsOf(gone).some((part) => part.kind === 'about_the_author')).toBe(false);
   });
 
-  it('puts a plate in the story when it is anchored to a chapter, and at the back otherwise', () => {
+  it('puts an art page in the story when it faces a chapter, in the front matter when it says so, and at the back otherwise', () => {
     const { file, markers } = chaptered();
     const anchored = addPart(file, 'plate', { beforeMarkerId: markers[1]! });
     const loose = addPart(anchored.file, 'plate');
-    const parts = partsOf(loose.file);
+    const front = addPart(loose.file, 'plate', { inFront: true });
+    const parts = partsOf(front.file);
     expect(halfOf(parts.find((part) => part.id === anchored.partId)!)).toBe('body');
     expect(halfOf(parts.find((part) => part.id === loose.partId)!)).toBe('back');
+    expect(halfOf(parts.find((part) => part.id === front.partId)!)).toBe('front');
+    // The front one lands last among the front matter, and a chapter wins over the flag.
+    const kinds = parts.map((part) => part.kind);
+    expect(kinds.indexOf('plate')).toBe(kinds.indexOf('contents') + 1);
+    expect(halfOf(bookPartSchema.parse({ id: 'x', kind: 'plate', inFront: true, beforeMarkerId: markers[0]! }))).toBe('body');
+    // It drags within the front matter and never across the story.
+    const moved = placePart(front.file, front.partId!, 'default:half_title');
+    expect(partsOf(moved).map((part) => part.kind).slice(0, 2)).toEqual(['plate', 'half_title']);
+    expect(placePart(front.file, front.partId!, 'default:about_the_author')).toBe(front.file);
+    // Its page is the picture and nothing else: no caption is set.
+    const withArt = updatePart(front.file, front.partId!, { assetId: 'asset-1', caption: 'The harbour at dawn' });
+    const block = bookBlocks(withArt).find((one) => one.kind === 'plate')!;
+    expect(block.display).toBe(true);
+    expect(block.folio).toBe(false);
   });
 
   it('reads paragraphs off a text part by its blank lines', () => {

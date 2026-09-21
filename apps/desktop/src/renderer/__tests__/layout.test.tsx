@@ -95,42 +95,66 @@ describe('the room', () => {
     expect(rail.getAllByText(/above the first paragraph/)).toHaveLength(2);
   });
 
-  it('puts a picture on the page facing a chapter, and opens the chapter’s own page, from the chapter’s row', () => {
+  /** Feed the room's one art-page picker a file, as the file dialog would. */
+  const chooseArt = (name: string) => {
+    const picker = screen.getByLabelText('Art page file') as HTMLInputElement;
+    const art = new File(['PNG bytes'], name, { type: 'image/png' });
+    Object.defineProperty(picker, 'files', { value: [art], configurable: true });
+    fireEvent.change(picker);
+  };
+
+  it('puts a picture on the page facing a chapter from a file, and opens the chapter’s own page, from the chapter’s row', async () => {
     const opened: string[] = [];
     render(<Harness initial={novel()} onOpenChapterPage={(markerId) => opened.push(markerId)} />);
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
     // Two chapters, two of each action.
     expect(rail.getAllByRole('button', { name: '+ Picture facing' })).toHaveLength(2);
     fireEvent.click(rail.getAllByRole('button', { name: '+ Picture facing' })[1]!);
-    const plate = partsOf(latest as ProjectFile).find((part) => part.kind === 'plate');
-    expect(plate?.beforeMarkerId).toBe((latest as ProjectFile).markers[1]?.id);
-    // Listed where it falls, before the second chapter, and selected for its picture.
+    // Nothing is made until a picture arrives: a cancelled dialog leaves no empty page.
+    expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'plate')).toBe(false);
+    chooseArt('facing-two.png');
+    await waitFor(() => expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'plate')).toBe(true));
+    const file = latest as ProjectFile;
+    const plate = partsOf(file).find((part) => part.kind === 'plate')!;
+    expect(plate.beforeMarkerId).toBe(file.markers[1]?.id);
+    expect(plate.assetId).toBe(file.assets![0]!.id);
+    expect(file.assets![0]!.name).toBe('facing-two.png');
+    // Listed where it falls, before the second chapter, and selected.
     const names = rail.getAllByRole('button').map((button) => button.textContent ?? '');
-    expect(names.findIndex((name) => name.includes('Platepicture'))).toBeGreaterThan(-1);
-    expect(names.findIndex((name) => name.includes('Platepicture'))).toBeLessThan(names.findIndex((name) => name.includes('Chapter 2')));
-    expect(screen.getByLabelText('Plate picture')).toBeDefined();
-    expect((screen.getByLabelText('Plate place') as HTMLSelectElement).value).toBe(plate?.beforeMarkerId);
+    expect(names.findIndex((name) => name.includes('Art pagepicture'))).toBeGreaterThan(-1);
+    expect(names.findIndex((name) => name.includes('Art pagepicture'))).toBeLessThan(names.findIndex((name) => name.includes('Chapter 2')));
+    expect((screen.getByLabelText('Plate place') as HTMLSelectElement).value).toBe(plate.beforeMarkerId);
+    expect(screen.getByRole('button', { name: 'Choose another picture…' })).toBeDefined();
     fireEvent.click(rail.getAllByRole('button', { name: 'Chapter page…' })[0]!);
-    expect(opened).toEqual([(latest as ProjectFile).markers[0]?.id]);
+    expect(opened).toEqual([file.markers[0]?.id]);
   });
 
-  it('takes a plate’s picture straight from a file, putting it in the library and on the plate', async () => {
+  it('adds an art page to the front matter or the back from the menu, the picture filling the page wherever it goes', async () => {
     render(<Harness initial={novel()} />);
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    fireEvent.click(rail.getAllByRole('button', { name: '+ Picture facing' })[0]!);
-    // Nothing in the library yet: the select says so and the button is the way in.
-    expect(screen.getByRole('button', { name: 'Choose a picture…' })).toBeDefined();
-    expect((screen.getByLabelText('Plate picture') as HTMLSelectElement).options[0]!.textContent).toMatch(/None yet/);
-    const picker = screen.getByLabelText('Plate picture file') as HTMLInputElement;
-    const art = new File(['PNG bytes'], 'facing-one.png', { type: 'image/png' });
-    Object.defineProperty(picker, 'files', { value: [art], configurable: true });
-    fireEvent.change(picker);
-    await waitFor(() => expect((latest as ProjectFile).assets).toHaveLength(1));
-    const file = latest as ProjectFile;
-    expect(file.assets![0]!.name).toBe('facing-one.png');
-    const plate = partsOf(file).find((part) => part.kind === 'plate');
-    expect(plate?.assetId).toBe(file.assets![0]!.id);
-    expect(screen.getByRole('button', { name: 'Choose another picture…' })).toBeDefined();
+    fireEvent.click(rail.getByRole('button', { name: 'Add a part' }));
+    const menu = within(screen.getByRole('menu', { name: 'Parts to add' }));
+    // The plain kind is not offered; the two places are, and each opens the picker.
+    expect(menu.queryByRole('menuitem', { name: /^Art page — / })).toBeNull();
+    fireEvent.click(menu.getByRole('menuitem', { name: /^Art page in the front matter/ }));
+    chooseArt('title-art.png');
+    await waitFor(() => expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'plate')).toBe(true));
+    let plate = partsOf(latest as ProjectFile).find((part) => part.kind === 'plate')!;
+    expect(plate.inFront).toBe(true);
+    expect(plate.beforeMarkerId).toBeNull();
+    expect(within(rail.getByRole('list', { name: 'Front matter' })).getByRole('button', { name: /^Art page/ })).toBeDefined();
+    expect((screen.getByLabelText('Plate place') as HTMLSelectElement).value).toBe('front');
+    // The description prints nowhere and the fields say so.
+    expect(screen.getByLabelText('Art page description')).toBeDefined();
+    expect(screen.getByText(/The picture is the page, edge to edge/)).toBeDefined();
+    // Where moves it: to the back, and to face a chapter.
+    fireEvent.change(screen.getByLabelText('Plate place'), { target: { value: 'back' } });
+    plate = partsOf(latest as ProjectFile).find((part) => part.kind === 'plate')!;
+    expect(plate.inFront).toBe(false);
+    expect(within(rail.getByRole('list', { name: 'Back matter' })).getByRole('button', { name: /^Art page/ })).toBeDefined();
+    fireEvent.change(screen.getByLabelText('Plate place'), { target: { value: (latest as ProjectFile).markers[0]!.id }, });
+    plate = partsOf(latest as ProjectFile).find((part) => part.kind === 'plate')!;
+    expect(plate.beforeMarkerId).toBe((latest as ProjectFile).markers[0]!.id);
   });
 
   it('writes the trim and says what was worked out from it', () => {

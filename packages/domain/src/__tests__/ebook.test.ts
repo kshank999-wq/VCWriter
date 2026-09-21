@@ -217,7 +217,7 @@ describe('the eBook package', () => {
     const pkg = ebookOf(file);
     expect(pkg.log.join(' ')).toMatch(/index was left out/);
     expect(pkg.sections.some((section) => section.title === 'Index')).toBe(false);
-    const plate = pkg.sections.find((section) => section.title === 'Plate');
+    const plate = pkg.sections.find((section) => section.title === 'Art page');
     expect(plate).toBeDefined();
     expect(entry(pkg, `OEBPS/${plate!.href}`)).toContain('<figure class="plate"><img src="../images/img-001.png"');
     // One picture, however many times it is used.

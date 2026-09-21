@@ -91,6 +91,20 @@ const OPENING_WORDS: Record<(typeof OPENINGS)[number], string> = {
 /** The spread a sheet is on: the first leaf stands alone, then pairs. */
 const spreadOfSheet = (sheet: number): number => (sheet <= 1 ? 0 : Math.floor(sheet / 2));
 
+/** Where an art page is going: among the front matter, at the back, or facing a chapter. */
+type ArtTarget = { kind: 'front' } | { kind: 'back' } | { kind: 'before'; markerId: string };
+
+/** The page a part, or a figure, first appears on in a laying. */
+const pageOf = (laying: Laying, id: string): BookPage | undefined => {
+  const blocks = new Map(laying.blocks.map((block) => [block.id, block]));
+  return laying.laid.pages.find((candidate) =>
+    candidate.pieces.some((piece) => {
+      const block = blocks.get(piece.blockId);
+      return block !== undefined && (block.id === id || block.partId === id || block.inset?.figureId === id);
+    }),
+  );
+};
+
 export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenChapterPage }: LayoutWindowProps) {
   const { laying, box } = useBookLaying(file, open);
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
@@ -105,6 +119,15 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   /** What the rail is dragging: a part within its half, or a chapter as a block. */
   const [dragging, setDragging] = useState<{ kind: 'part' | 'chapter'; id: string } | null>(null);
   const [over, setOver] = useState<string | null>(null);
+  /**
+   * The one picker for an art page (§9, from Ken: *it should be just as
+   * easy to add a plate in the front matter, the back matter or the story*).
+   * Where the page will go is decided before the picker opens and read back
+   * when the file arrives; nothing is made until it does, so a cancelled
+   * dialog leaves no empty page behind.
+   */
+  const artPicker = useRef<HTMLInputElement>(null);
+  const artTarget = useRef<ArtTarget>({ kind: 'back' });
 
   const parts = useMemo(() => partsOf(file), [file]);
   const selected = parts.find((part) => part.id === selectedPartId) ?? null;
@@ -124,6 +147,20 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   useEffect(() => {
     if (spread >= spreadCount) setSpread(Math.max(0, spreadCount - 1));
   }, [spread, spreadCount]);
+
+  /**
+   * A page just made is turned to once the laying has it: the pages are
+   * re-laid after the document changes, so the turn waits for the page to
+   * exist rather than looking for it in the laying that came before.
+   */
+  const turnTo = useRef<string | null>(null);
+  useEffect(() => {
+    if (!laying || !turnTo.current) return;
+    const page = pageOf(laying, turnTo.current);
+    if (!page) return;
+    turnTo.current = null;
+    setSpread(spreadOfSheet(page.sheet));
+  }, [laying]);
 
   // ← and → turn the pages.
   useEffect(() => {
@@ -146,13 +183,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   /** The page a part first appears on, so choosing it turns to it. */
   const goToPart = (partId: string) => {
     if (!laying) return;
-    const blocks = new Map(laying.blocks.map((block) => [block.id, block]));
-    const page = laying.laid.pages.find((candidate) =>
-      candidate.pieces.some((piece) => {
-        const block = blocks.get(piece.blockId);
-        return block !== undefined && (block.id === partId || block.partId === partId || block.inset?.figureId === partId);
-      }),
-    );
+    const page = pageOf(laying, partId);
     if (page) setSpread(spreadOfSheet(page.sheet));
   };
 
@@ -189,9 +220,53 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const nounPlural = isCollection(file.project.format) ? 'stories' : 'chapters';
   const selectedFigure = figures.find((figure) => figure.elementId === selectedFigureId) ?? null;
 
-  /** What the Add a part menu offers: every kind the book can still take, and on a collection a new story. */
+  /** Open the picker for an art page that will go here. */
+  const importArt = (target: ArtTarget) => {
+    artTarget.current = target;
+    artPicker.current?.click();
+  };
+
+  /**
+   * The picture arrives: it joins the graphics library — the one place the
+   * book's pictures live, reachable from Research ▸ Graphics — and a page
+   * is made for it where the writer asked, in one act, so a writer with a
+   * picture on disk never has to know the library exists to use one.
+   */
+  const takeArt = async (picked: File | undefined) => {
+    if (!picked) return;
+    if (!picked.type.startsWith('image/')) {
+      setMessage('That is not a picture file.');
+      return;
+    }
+    const target = artTarget.current;
+    try {
+      const read = await readPicture(picked);
+      onUpdate((current) => {
+        const added = addGraphic(current, { name: picked.name, ...read });
+        const made = addPart(added.file, 'plate', {
+          assetId: added.asset.id,
+          inFront: target.kind === 'front',
+          beforeMarkerId: target.kind === 'before' ? target.markerId : null,
+        });
+        if (made.partId) {
+          setSelectedPartId(made.partId);
+          turnTo.current = made.partId;
+        }
+        return made.file;
+      });
+      setMessage(null);
+    } catch {
+      setMessage('That file could not be read.');
+    }
+  };
+
+  /**
+   * What the Add a part menu offers: every kind the book can still take, an
+   * art page for either half — the picker, not a blank page, being what a
+   * press opens — and on a collection a new story.
+   */
   const addEntries: MenuEntry[] = [
-    ...ADDABLE_KINDS.filter((kind) => mayAdd(file, kind)).map((kind) => ({
+    ...ADDABLE_KINDS.filter((kind) => kind !== 'plate' && mayAdd(file, kind)).map((kind) => ({
       label: `${PART_INFO[kind].name} — ${PART_INFO[kind].note}`,
       onPick: () =>
         onUpdate((current) => {
@@ -200,6 +275,9 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           return made.file;
         }),
     })),
+    'rule',
+    { label: `${PART_INFO.plate.name} in the front matter — ${PART_INFO.plate.note}, from a file…`, onPick: () => importArt({ kind: 'front' }) },
+    { label: `${PART_INFO.plate.name} at the back — ${PART_INFO.plate.note}, from a file…`, onPick: () => importArt({ kind: 'back' }) },
     ...(isCollection(file.project.format)
       ? ['rule' as const, { label: 'A new story — on a section of its own, at the end', onPick: () => onUpdate((current) => beginStory(current, { title: 'New story' }).file) }]
       : []),
@@ -271,6 +349,17 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       {/* The measuring box (§4): the browser sets each block here, out of
           sight, and the domain reads the count of lines back. */}
       <div ref={box} className="bk-measure" aria-hidden="true" />
+      <input
+        ref={artPicker}
+        type="file"
+        accept="image/*"
+        aria-label="Art page file"
+        hidden
+        onChange={(event) => {
+          void takeArt(event.target.files?.[0]);
+          event.target.value = '';
+        }}
+      />
       <EbookExportDialog
         open={ebookOpen}
         file={file}
@@ -376,14 +465,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                         <button
                           type="button"
                           className="ghost small"
-                          title={`A full-page picture on the page facing this ${noun.toLowerCase()}`}
-                          onClick={() =>
-                            onUpdate((current) => {
-                              const made = addPart(current, 'plate', { beforeMarkerId: id });
-                              if (made.partId) setSelectedPartId(made.partId);
-                              return made.file;
-                            })
-                          }
+                          title={`A picture that fills the page facing this ${noun.toLowerCase()}, edge to edge, from a file`}
+                          onClick={() => importArt({ kind: 'before', markerId: id })}
                         >
                           + Picture facing
                         </button>
@@ -667,7 +750,11 @@ function PartRow({
         type="button"
         className={selected ? 'ghost layout-part selected' : 'ghost layout-part'}
         aria-pressed={selected}
-        title={`${info.note}. Drag to move it within the ${halfOf(part) === 'front' ? 'front' : 'back'} matter.`}
+        title={
+          halfOf(part) === 'body'
+            ? `${info.note}. It faces its chapter; Where, in the inspector, moves it.`
+            : `${info.note}. Drag to move it within the ${halfOf(part) === 'front' ? 'front' : 'back'} matter.`
+        }
         onClick={onSelect}
       >
         <span className="layout-grip" aria-hidden="true">⠿</span>
@@ -1174,15 +1261,35 @@ function PartFields({
               ))}
             </select>
           </label>
-          <p className="muted small">The book’s pictures are kept under Research ▸ Graphics, where each can be named and described.</p>
+          <p className="muted small">
+            The picture is the page, edge to edge: a title page or an index made as a piece of art carries its own words. The book’s pictures are kept under
+            Research ▸ Graphics.
+          </p>
           <label className="field">
-            <span>Caption</span>
-            <input aria-label="Plate caption" value={part.caption} onChange={(event) => patch({ caption: event.target.value })} />
+            <span>Description</span>
+            <input
+              aria-label="Art page description"
+              placeholder="For a reader who cannot see it; prints nowhere"
+              value={part.caption}
+              onChange={(event) => patch({ caption: event.target.value })}
+            />
           </label>
           <label className="field">
             <span>Where</span>
-            <select aria-label="Plate place" value={part.beforeMarkerId ?? ''} onChange={(event) => patch({ beforeMarkerId: event.target.value || null })}>
-              <option value="">At the back</option>
+            {/* Three places, one control: the front matter, the back, or
+                facing a chapter — the same page wherever it goes. */}
+            <select
+              aria-label="Plate place"
+              value={part.beforeMarkerId ?? (part.inFront ? 'front' : 'back')}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (value === 'front') patch({ inFront: true, beforeMarkerId: null });
+                else if (value === 'back') patch({ inFront: false, beforeMarkerId: null });
+                else patch({ beforeMarkerId: value });
+              }}
+            >
+              <option value="front">In the front matter</option>
+              <option value="back">At the back</option>
               {chapters.map((placed) => (
                 <option key={placed.marker.id as string} value={placed.marker.id as string}>
                   Before {placed.label}

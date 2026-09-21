@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BOOK_PRESETS,
   addMarker,
+  addPart,
   applyBookPreset,
   bookBlocks,
   bookFigures,
@@ -129,6 +130,21 @@ describe('a figure cut into the text (stage 6)', () => {
     expect(html).toContain('aspect-ratio:1200 / 800');
     expect(html).toContain('<span class="bk-inset-caption">The harbour at dusk</span>');
     expect(html).toContain('Two, beside the picture.</p>');
+  });
+
+  it('draws an art page as the picture alone, edge to edge, with its description spoken and never printed', () => {
+    const file = addPart(novel(), 'plate', { assetId: '22222222-2222-4222-8222-222222222222', caption: 'The harbour at dawn', inFront: true }).file;
+    const plate = bookBlocks(file).find((block) => block.kind === 'plate')!;
+    const html = renderBookBlock(plate, contextFor(file));
+    expect(html).toContain('<div class="bk-display bk-plate bk-plate-art">');
+    expect(html).toContain('alt="The harbour"');
+    expect(html).not.toContain('bk-caption');
+    expect(html).not.toContain('The harbour at dawn');
+    // Without a picture there is nothing to fill the page with, and it says so.
+    const empty = addPart(novel(), 'plate', { caption: 'Missing' }).file;
+    const bare = renderBookBlock(bookBlocks(empty).find((block) => block.kind === 'plate')!, contextFor(empty));
+    expect(bare).toContain('<div class="bk-display bk-plate">');
+    expect(bare).toContain('No picture chosen');
   });
 
   it('lists the figures for the rail with where each sits', () => {

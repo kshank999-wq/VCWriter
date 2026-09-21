@@ -138,12 +138,16 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
       return `<div class="bk-display bk-copyright"><p class="bk-small">${escapeHtml(text).replace(/\n/g, '<br />')}</p></div>`;
     }
     case 'plate': {
+      // An art page (§8, from Ken): the picture is the page, edge to edge past
+      // the margins to the trim, and nothing is set over it — a title page or
+      // an index made as a piece of art carries its own words. The caption
+      // is the picture's description for a reader who cannot see it, and
+      // prints nowhere.
       const picture = block.assetId ? context.pictures.get(block.assetId) : undefined;
       const image = picture
         ? `<img class="bk-plate-image" alt="${escapeHtml(picture.altText || block.caption || '')}" src="${escapeHtml(picture.data)}" />`
         : '<div class="bk-plate-missing">No picture chosen</div>';
-      const caption = (block.caption ?? '').trim().length > 0 ? `<p class="bk-caption">${escapeHtml(block.caption ?? '')}</p>` : '';
-      return `<div class="bk-display bk-plate">${image}${caption}</div>`;
+      return `<div class="bk-display bk-plate${picture ? ' bk-plate-art' : ''}">${image}</div>`;
     }
     default:
       // A dedication or an epigraph: the words alone, a third of the way down.
@@ -392,7 +396,9 @@ export const BOOK_STYLES = `
   .bk-inset-image { display: block; width: 100%; height: auto; }
   .bk-inset-caption { display: block; font-size: 0.8em; line-height: 1.25; text-align: center; margin-top: 0.3em; }
   .bk-inset .bk-figure-missing { display: flex; height: calc(var(--bk-lead) * 5); }
-  .bk-figure-image, .bk-plate-image { display: block; width: 100%; height: auto; }
+  .bk-figure-image { display: block; width: 100%; height: auto; }
+  .bk-plate-art { position: absolute; inset: 0; padding: 0; height: auto; overflow: hidden; }
+  .bk-plate-image { display: block; width: 100%; height: 100%; object-fit: cover; }
   .bk-figure-missing, .bk-plate-missing { height: calc(var(--bk-lead) * 8); border: 1px dashed #999; color: #777; display: flex; align-items: center; justify-content: center; font-size: 0.85em; }
   .bk-caption { margin: 0; padding-top: calc(var(--bk-lead) * 0.5); font-size: 0.85em; text-align: center; font-style: italic; }
   .bk-opening { padding-top: calc(var(--bk-lead) * 8); padding-bottom: calc(var(--bk-lead) * 2); font-family: var(--chapter-face, var(--bk-face)); }

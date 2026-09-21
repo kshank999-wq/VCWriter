@@ -1191,11 +1191,19 @@ push live; the build takes a minute or two.
   chapter dragged as a block (`moveChapterBlock`, only the moved units
   rekeyed) — the one thing the rail does to the story order, done by moving
   the sections — and the inspector's four groups behind `Fold` headings
-  drawn as raised buttons, open or shut per machine. A plate's picture comes
-  **straight from a file** (*Choose a picture…*, which puts it in the
-  library and on the plate in one act; `read-picture.ts` is the one reader),
-  and *Research ▸ Graphics* is every prose format's now rather than the
-  textbook's alone, because Ken asked *where is the library*.
+  drawn as raised buttons, open or shut per machine. The plate is the **art
+  page** now (§8): the picture *is* the page, edge to edge to the trim
+  (`.bk-plate-art`, the chapter art's rule), nothing set over it and no
+  caption printed — a title page or an index made as artwork carries its own
+  words — and it is **one act wherever it goes** (§9): *Art page in the
+  front matter* and *Art page at the back* on the Add-a-part menu and *+
+  Picture facing* on a chapter's row all open the room's one file dialog,
+  the picture joins the library, the page is made where it was asked for
+  and the room turns to it; nothing is made until a picture arrives.
+  `inFront` on the part is the only new field (`halfOf` reads the chapter
+  first), no migration, `read-picture.ts` the one reader, and *Research ▸
+  Graphics* is every prose format's rather than the textbook's alone,
+  because Ken asked *where is the library*.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves
