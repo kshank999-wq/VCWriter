@@ -1,3 +1,4 @@
+import { isFullPageArt } from './chapter-style.js';
 import { bookBlocks, partsOf, partTitle, type BookBlock } from './book-plan.js';
 import { bookSettingsOf, trimOf } from './book-layout.js';
 import { parseInline, type InlineSpan } from './entities/inline.js';
@@ -634,8 +635,15 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
           label && name
             ? `<h1 class="chapter-title"><span class="chapter-label">${escapeXml(label)}</span><br/><span class="chapter-name">${escapeXml(name)}</span></h1>`
             : `<h1 class="chapter-title">${escapeXml(title)}</h1>`;
+        // Full-page art (addendum 19 §7) goes before the heading, at the
+        // width of the screen: a reflowable book has no page to fill, so the
+        // art leads and the heading follows it for the reader who cannot see.
+        const art = leaf && isFullPageArt(leaf) && leaf.image
+          ? bank.take(`device:${draft.id}`, leaf.image.dataUrl, leaf.image.name || 'chapter art', leaf.image.name || 'art', 0, 0, false, false)
+          : null;
+        if (art) draft.html.push(`<p class="device full-art"><img src="../${art.href}" alt="" role="presentation"/></p>`);
         draft.html.push(head);
-        if (leaf?.image) {
+        if (leaf?.image && !art) {
           // A chapter device is an ornament: it asks for no description.
           const device = bank.take(`device:${draft.id}`, leaf.image.dataUrl, leaf.image.name || 'chapter device', leaf.image.name || 'device', 0, 0, false, false);
           if (device) draft.html.push(`<p class="device"><img src="../${device.href}" alt="" role="presentation"/></p>`);

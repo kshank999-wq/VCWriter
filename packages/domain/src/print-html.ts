@@ -8,8 +8,7 @@ import {
   chapterPageStyleOf,
   chapterPageStyleSchema,
   chapterStyleAttr,
-  type ChapterPageStyle,
-} from './chapter-style.js';
+  type ChapterPageStyle, isFullPageArt } from './chapter-style.js';
 import type { PageStamp } from './attribution.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -330,6 +329,13 @@ const renderChapterPage = (page: Page, isProse: boolean, options: PrintOptions):
   const summary = chapter.summary.trim().length > 0 ? `<p class="chapter-summary">${escapeHtml(chapter.summary)}</p>` : '';
   // The template says where the picture goes (addendum 19 §7); the words keep
   // their order — heading, epigraph, summary — whichever it is.
+  // Full-page art: the picture is the page, edge to edge, and nothing is
+  // set over it — the number and the name are in the art (addendum 19 §7).
+  if (isFullPageArt(chapter) && chapter.image) {
+    return `<section class="page chapter-page chapter-art-page${isProse ? ' prose' : ''}" style="${style}">${stampOf(page, options)}${pageNumber(page, options)}
+  <img class="chapter-art" alt="${escapeHtml(chapter.image.name)}" src="${escapeHtml(chapter.image.dataUrl)}" />
+</section>`;
+  }
   const parts =
     chapter.template === 'graphic_top'
       ? [graphic, heading, epigraph, summary]
@@ -582,6 +588,8 @@ const STYLES = `
     letter-spacing: var(--chapter-title-tracking);
   }
   .chapter-device { display: block; margin: 2em auto 0; max-width: 100%; }
+  .chapter-art-page { position: relative; padding: 0; overflow: hidden; }
+  .chapter-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .chapter-device:first-child { margin-top: 0; }
   /* The summary is reading matter (addendum 19 §7): the reading face, at a
      reading measure, whatever the heading wears. */

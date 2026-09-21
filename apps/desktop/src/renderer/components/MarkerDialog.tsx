@@ -77,6 +77,7 @@ function Body({
   const numbering = markerNumbering(file);
   const [imageError, setImageError] = useState<string | null>(null);
   const picker = useRef<HTMLInputElement>(null);
+  const artPicker = useRef<HTMLInputElement>(null);
 
   const patchPage = (patch: Parameters<typeof setChapterPage>[2]) =>
     onUpdate((current) => setChapterPage(current, marker.id, patch));
@@ -86,7 +87,7 @@ function Body({
    * project is a text file that syncs, so this is deliberately small: a
    * printer's ornament or a small illustration, not a photograph.
    */
-  const chooseImage = (fileList: FileList | null) => {
+  const chooseImage = (fileList: FileList | null, as: 'device' | 'full_page' = 'device') => {
     const picked = fileList?.[0];
     if (!picked) return;
     if (picked.size > MAX_CHAPTER_IMAGE_BYTES) {
@@ -96,7 +97,9 @@ function Body({
     const reader = new FileReader();
     reader.onload = () => {
       setImageError(null);
-      patchPage({ image: { dataUrl: String(reader.result), name: picked.name, width: 40 } });
+      // Full-page art fills the page and makes this chapter's template say so.
+      if (as === 'full_page') patchPage({ image: { dataUrl: String(reader.result), name: picked.name, width: 100 }, template: 'full_page' });
+      else patchPage({ image: { dataUrl: String(reader.result), name: picked.name, width: 40 } });
     };
     reader.onerror = () => setImageError('That file could not be read.');
     reader.readAsDataURL(picked);
@@ -238,6 +241,21 @@ function Body({
                   />
                   <button type="button" className="ghost" onClick={() => picker.current?.click()}>
                     {marker.page.image ? 'Change the graphic' : 'Add a graphic'}
+                  </button>
+                  {/* The page as a piece of art, brought in whole (addendum 19 §7). */}
+                  <input
+                    ref={artPicker}
+                    type="file"
+                    accept="image/*"
+                    aria-label="Full page art file"
+                    hidden
+                    onChange={(event) => {
+                      chooseImage(event.target.files, 'full_page');
+                      event.target.value = '';
+                    }}
+                  />
+                  <button type="button" className="ghost" title="A picture that is the whole page, edge to edge" onClick={() => artPicker.current?.click()}>
+                    Import full page art…
                   </button>
                   {marker.page.image ? (
                     <>

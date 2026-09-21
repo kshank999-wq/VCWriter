@@ -166,7 +166,17 @@ export const CHAPTER_TEMPLATE_WORDS: Record<ChapterTemplate, { name: string; say
   graphic_top: { name: 'Graphic at the top', says: 'The picture first, then the heading and the summary under it.' },
   graphic_middle: { name: 'Graphic in the middle', says: 'The heading, the picture, then the summary.' },
   graphic_bottom: { name: 'Graphic at the bottom', says: 'The heading and the summary, the picture at the foot.' },
+  full_page: { name: 'Full-page art', says: 'The picture is the page, edge to edge; the number and the name are drawn into it.' },
 };
+
+/**
+ * Whether a leaf is its picture and nothing else (the *full_page*
+ * template with a picture to fill it). A full-page template with no
+ * picture yet draws as the middle one, so choosing the template before
+ * importing the art leaves a page that still reads.
+ */
+export const isFullPageArt = (chapter: Pick<ChapterPageContent, 'template' | 'image'>): boolean =>
+  chapter.template === 'full_page' && chapter.image !== null;
 
 /**
  * The template a chapter page draws with: its own where it has said so, the

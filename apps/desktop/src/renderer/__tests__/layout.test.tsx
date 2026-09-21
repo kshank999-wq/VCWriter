@@ -11,6 +11,7 @@ import {
   beginStory,
   contentsDivisions,
   partsOf,
+  setChapterPage,
   storiesOf,
   tracksInOrder,
   unitsInStoryOrder,
@@ -222,6 +223,30 @@ describe('the room', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Next spread' }));
     expect(document.querySelector('.bk-page.verso')).not.toBeNull();
     expect(document.querySelector('.bk-page.recto')).not.toBeNull();
+  });
+
+  it('sets a chapter whose page is full-page art as the art alone, edge to edge', () => {
+    let file = novel();
+    const marker = file.markers[1]!;
+    file = setChapterPage(file, marker.id, {
+      include: true,
+      template: 'full_page',
+      image: { dataUrl: 'data:image/png;base64,ART0', name: 'The Return, painted', width: 100 },
+      summary: 'Never set over the art.',
+    });
+    render(<Harness initial={file} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    expect(rail.getAllByText(/a leaf of its own/)).toHaveLength(1);
+    // Turn until the art's page is on the spread.
+    const next = screen.getByRole('button', { name: 'Next spread' });
+    let found: Element | null = null;
+    for (let turn = 0; turn < 12 && !found; turn += 1) {
+      found = document.querySelector('.bk-leaf-art .bk-chapter-art');
+      if (!found) fireEvent.click(next);
+    }
+    expect(found).not.toBeNull();
+    expect(found!.getAttribute('alt')).toBe('The Return, painted');
+    expect(document.querySelector('.bk-leaf-art .bk-chapter-summary')).toBeNull();
   });
 
   it('has the one way to export the book', () => {

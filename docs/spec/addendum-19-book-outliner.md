@@ -201,6 +201,26 @@ a quotation set in the display face, and a summary is prose about the chapter
 set in the reading face at a reading size. A different field with a different
 type treatment, not a rename.
 
+**Full-page art** (from Ken, 21 September: *an option to add a full page
+graphic so you can import artwork for that particular chapter page, instead
+of just a graphic at the top or the bottom — call it import full page art;
+you create the page as an art piece and bring it in and it fits the entire
+page*). A fourth template, `full_page`: the picture **is** the page, edge to
+edge past the margins to the trim, and **nothing is set over it** — the
+number and the name are whatever the art carries, which is what making the
+page as a piece of art means. **Import full page art…** in the chapter-page
+dialog (and on the timeline's marker) reads the file and, in the same act,
+makes this chapter's template *full-page art*: a picture that is the page
+and then having to say so is two steps for one decision. On a book the art
+joins the library, where every picture lives, and the page holds its id;
+on a novel it is the page's own illustration at the full width. The
+template with no picture yet draws as the middle one rather than as an
+empty page (`isFullPageArt` asks for both), so choosing it first leaves a
+page that still reads. The print, the Layout room's page and the fixed-layout
+eBook all draw it as the whole page; the reflowable eBook, having no page
+to fill, puts the art first at the width of the screen with the heading
+after it, for the reader who cannot see the art.
+
 **The three templates.** Graphic at the top, in the middle or at the bottom,
 the title and the summary placed around it. Where the graphic sits is layout,
 so the template is a **book setting** — set once, every chapter page follows

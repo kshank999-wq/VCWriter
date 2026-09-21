@@ -1086,7 +1086,13 @@ push live; the build takes a minute or two.
   and nothing else, `acceptSummary` is the one act that reaches `summary`
   and hands back what it replaced, and `summaryRefusal` is the chapter's own
   reason (nothing under it yet), the account's being said once at the foot.
-  §1 is the
+  **Full-page art** is the fourth template (`full_page`, from Ken): the
+  picture *is* the page, edge to edge, with nothing set over it — the number
+  and the name are in the art — and **Import full page art…** in the
+  chapter-page dialog and on the marker reads the file and sets the template
+  in one act, the art joining the library on a book; `isFullPageArt` wants
+  the template *and* a picture, so the template alone still draws as the
+  middle one. §1 is the
   audit and it paid a
   **ninth** time: a `chapter` **story marker** *is* a chapter — it already sits
   above units, carries the chapter page and drives the contents page — so the

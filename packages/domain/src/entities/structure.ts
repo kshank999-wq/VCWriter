@@ -361,10 +361,13 @@ export type StoryMarkerKind = z.infer<typeof storyMarkerKindSchema>;
  */
 /**
  * Where the graphic sits on a chapter page (addendum 19 §7): at the top, in
- * the middle between the heading and the words under it, or at the foot.
- * Where it sits is layout, so the book chooses once and a chapter may differ.
+ * the middle between the heading and the words under it, at the foot — or,
+ * from Ken, **the whole page**: the picture is the page, made elsewhere as a
+ * piece of art with the number and the name drawn into it, and nothing is
+ * set over it. Where it sits is layout, so the book chooses once and a
+ * chapter may differ.
  */
-export const CHAPTER_TEMPLATES = ['graphic_top', 'graphic_middle', 'graphic_bottom'] as const;
+export const CHAPTER_TEMPLATES = ['graphic_top', 'graphic_middle', 'graphic_bottom', 'full_page'] as const;
 export const chapterTemplateSchema = z.enum(CHAPTER_TEMPLATES);
 export type ChapterTemplate = z.infer<typeof chapterTemplateSchema>;
 

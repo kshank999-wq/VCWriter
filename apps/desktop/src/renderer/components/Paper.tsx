@@ -9,8 +9,7 @@ import {
   type IndexHeading,
   type IndexPage,
   type InlineSpan,
-  type Page,
-} from '@vcwriter/domain';
+  type Page, isFullPageArt } from '@vcwriter/domain';
 import { TitleSheet } from './TitleSheet';
 
 /**
@@ -242,6 +241,15 @@ export function ChapterLeaf({
   ) : null;
   const epigraph = chapter.epigraph.trim().length > 0 ? <p className="chapter-leaf-epigraph">{chapter.epigraph}</p> : null;
   const summary = chapter.summary.trim().length > 0 ? <p className="chapter-leaf-summary">{chapter.summary}</p> : null;
+  // Full-page art (addendum 19 §7): the picture is the page and nothing is
+  // set over it — the number and the name are drawn into the art.
+  if (isFullPageArt(chapter) && chapter.image) {
+    return (
+      <div className="chapter-leaf-block full_page" style={type}>
+        <img className="chapter-leaf-art" src={chapter.image.dataUrl} alt={chapter.image.name} />
+      </div>
+    );
+  }
   // The template says where the picture goes (addendum 19 §7); the words keep
   // their order whichever it is — the same order the printed page uses.
   return (

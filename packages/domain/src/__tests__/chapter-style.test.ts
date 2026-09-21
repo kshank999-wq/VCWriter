@@ -5,6 +5,7 @@ import {
   addUnit,
   chapterChoices,
   chapterLeafContent,
+  isFullPageArt,
   chapterPageStyleOf,
   chapterPagesEverywhere,
   chapterStyleAttr,
@@ -249,6 +250,29 @@ describe('the page for a book', () => {
     expect(order(renderPrintDocumentHtml(next))).toEqual(['chapter-device', 'chapter-head', 'chapter-summary']);
     next = setChapterPageStyle(next, { template: 'graphic_bottom' });
     expect(order(renderPrintDocumentHtml(next))).toEqual(['chapter-head', 'chapter-summary', 'chapter-device']);
+  });
+
+  it('draws full-page art as the page, edge to edge, with nothing set over it', () => {
+    const { file, markerIds } = textbook();
+    const art = { dataUrl: 'data:image/png;base64,ART0', name: 'Chapter one, painted', width: 100 };
+    const painted = setChapterPage(file, markerIds[0]! as never, { template: 'full_page', image: art, summary: 'Never printed on the art.' });
+    const leaf = leafOf(painted, markerIds[0]!);
+    expect(leaf.template).toBe('full_page');
+    expect(isFullPageArt(leaf)).toBe(true);
+    const html = renderPrintDocumentHtml(painted);
+    const page = html.slice(html.indexOf('class="page chapter-page chapter-art-page'));
+    expect(page).toContain('class="chapter-art"');
+    expect(page).toContain('alt="Chapter one, painted"');
+    // No heading, no summary, no block: the art is the page.
+    const section = page.slice(0, page.indexOf('</section>'));
+    expect(section).not.toContain('chapter-block');
+    expect(section).not.toContain('class="chapter-summary"');
+    // The other chapter, following the book, is untouched.
+    expect(leafOf(painted, markerIds[1]!).template).toBe('graphic_middle');
+    // The template without a picture yet draws as the middle one rather than as an empty page.
+    const bare = setChapterPage(file, markerIds[0]! as never, { template: 'full_page', summary: 'The summary.' });
+    expect(isFullPageArt(leafOf(bare, markerIds[0]!))).toBe(false);
+    expect(renderPrintDocumentHtml(bare)).toContain('class="chapter-block"');
   });
 
   it('takes the picture from the library by id, so a replaced diagram is replaced here too', () => {

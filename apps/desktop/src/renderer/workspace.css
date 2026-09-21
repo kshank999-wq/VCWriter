@@ -3710,6 +3710,26 @@ dialog.marker-dialog {
   margin-top: 0;
 }
 
+/* Full-page art (addendum 19 §7): the picture is the page, edge to edge. */
+.chapter-leaf-sheet,
+.paper.chapter-leaf {
+  position: relative;
+  overflow: hidden;
+}
+
+.chapter-leaf-block.full_page {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+}
+
+.chapter-leaf-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* The summary is reading matter (addendum 19 §7): the reading face at a
    reading measure, whatever the heading wears — the same custom properties
    the printed page carries. */
@@ -11312,6 +11332,22 @@ dialog.chapter-page-dialog {
 
 .chapter-template-sketch.graphic_bottom .sketch-graphic {
   order: 3;
+}
+
+.chapter-template-sketch.full_page {
+  padding: 0;
+  gap: 0;
+}
+
+.chapter-template-sketch.full_page .sketch-graphic {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.chapter-template-sketch.full_page .sketch-head,
+.chapter-template-sketch.full_page .sketch-words {
+  display: none;
 }
 
 .chapter-template-name {

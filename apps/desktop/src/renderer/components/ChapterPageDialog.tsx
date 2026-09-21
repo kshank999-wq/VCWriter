@@ -6,6 +6,7 @@ import {
   TYPE_CASES,
   TYPE_FACES,
   acceptSummary,
+  addGraphic,
   chapterChoices,
   chapterLeafContent,
   chapterPageStyleOf,
@@ -117,6 +118,7 @@ function Body({
   );
   const [imageError, setImageError] = useState<string | null>(null);
   const picker = useRef<HTMLInputElement>(null);
+  const artPicker = useRef<HTMLInputElement>(null);
 
   // A chapter that has gone — deleted while this was open — falls back to the
   // first rather than leaving the right-hand side drawing nothing.
@@ -208,6 +210,38 @@ function Body({
     }
     const reader = new FileReader();
     reader.onload = () => patchPage({ image: { dataUrl: String(reader.result), name: picked.name, width: 40 } });
+    reader.readAsDataURL(picked);
+  };
+
+  /**
+   * Import full page art (addendum 19 §7, from Ken): the page made elsewhere
+   * as a piece of art, brought in whole. It fills the page edge to edge and
+   * nothing is set over it, so this chapter's template becomes *full-page
+   * art* in the same act — choosing a picture that is the page and then
+   * having to say so is two steps for one decision. On a book the picture
+   * joins the library, where every picture lives; on a novel it is the
+   * page's own illustration.
+   */
+  const takeFullPageArt = (picked: File | undefined) => {
+    setImageError(null);
+    if (!picked || !marker) return;
+    if (picked.size > MAX_CHAPTER_IMAGE_BYTES) {
+      setImageError('That art is too large — the project is a text file that syncs. Try one under 5MB.');
+      return;
+    }
+    const markerId = marker.id;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result);
+      onUpdate((current) => {
+        if (isInstructional(current.project.format)) {
+          const added = addGraphic(current, { name: picked.name, data: dataUrl });
+          return setChapterPage(added.file, markerId, { assetId: added.asset.id, template: 'full_page' });
+        }
+        return setChapterPage(current, markerId, { image: { dataUrl, name: picked.name, width: 100 }, template: 'full_page' });
+      });
+    };
+    reader.onerror = () => setImageError('That file could not be read.');
     reader.readAsDataURL(picked);
   };
 
@@ -494,7 +528,7 @@ function Body({
                     </select>
                   </label>
                 ) : null}
-                {book && marker.page.assetId ? (
+                {book && marker.page.assetId && templateOf(file, marker) !== 'full_page' ? (
                   <label className="field">
                     <span>How wide — {marker.page.graphicWidth}% of the page</span>
                     <input
@@ -514,6 +548,33 @@ function Body({
                   hidden
                   onChange={(event) => takeImage(event.target.files?.[0])}
                 />
+                <input
+                  ref={artPicker}
+                  type="file"
+                  accept="image/*"
+                  aria-label="Full page art file"
+                  hidden
+                  onChange={(event) => {
+                    takeFullPageArt(event.target.files?.[0]);
+                    event.target.value = '';
+                  }}
+                />
+                {/* The page as a piece of art, brought in whole (addendum 19 §7). */}
+                <button
+                  type="button"
+                  className="raised small"
+                  title="A picture that is the whole page, edge to edge: the number and the name are in the art, and nothing is set over it"
+                  onClick={() => artPicker.current?.click()}
+                >
+                  Import full page art…
+                </button>
+                {templateOf(file, marker) === 'full_page' ? (
+                  <p className="muted small">
+                    {chapterLeafContent(file, placed!).image
+                      ? 'This page is its art, edge to edge; the number and the name are whatever the art carries.'
+                      : 'Full-page art, with no picture yet: the page draws as the middle template until one is imported.'}
+                  </p>
+                ) : null}
                 {book && marker.page.assetId ? null : (
                   <button type="button" className="ghost small" onClick={() => picker.current?.click()}>
                     {marker.page.image ? 'Change the illustration' : book ? 'Or add a picture of its own' : 'Add an illustration'}
@@ -521,6 +582,8 @@ function Body({
                 )}
                 {marker.page.image && !(book && marker.page.assetId) ? (
                   <>
+                    {/* Width means nothing on a page that is its art. */}
+                    {templateOf(file, marker) !== 'full_page' ? (
                     <label className="field">
                       <span>How wide — {marker.page.image.width}% of the page</span>
                       <input
@@ -534,6 +597,7 @@ function Body({
                         }
                       />
                     </label>
+                    ) : null}
                     <button type="button" className="ghost small danger" onClick={() => patchPage({ image: null })}>
                       Remove it
                     </button>

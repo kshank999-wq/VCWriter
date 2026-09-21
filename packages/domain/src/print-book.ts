@@ -1,6 +1,6 @@
 import type { BookSettings } from './entities/book.js';
 import type { InlineSpan } from './entities/inline.js';
-import { chapterPageStyleSchema, chapterStyleAttr, type ChapterPageStyle } from './chapter-style.js';
+import { chapterPageStyleSchema, chapterStyleAttr, type ChapterPageStyle, isFullPageArt } from './chapter-style.js';
 import { faceStackOf, type BookGeometry } from './book-layout.js';
 import type { BookBlock, FigureInset } from './book-plan.js';
 import type { BookContentsRow, BookPage } from './book-pages.js';
@@ -178,6 +178,11 @@ const openingMarkup = (block: BookBlock, context: BookRenderContext): string => 
     head.push(`<p class="bk-chapter-title">${escapeHtml(block.title)}</p>`);
   }
   const heading = head.length > 0 ? `<div class="bk-chapter-head">${head.join('')}</div>` : '';
+  if (block.leaf && chapter && isFullPageArt(chapter) && chapter.image) {
+    // Full-page art (addendum 19 §7): the picture is the page, past the
+    // margins to the trim, and nothing is set over it.
+    return `<div class="bk-display bk-leaf bk-leaf-art"><img class="bk-chapter-art" alt="${escapeHtml(chapter.image.name)}" src="${escapeHtml(chapter.image.dataUrl)}" /></div>`;
+  }
   if (block.leaf && chapter) {
     // The leaf as the chapter-page dialog designed it: number, name, device, epigraph, summary.
     const graphic = chapter.image
@@ -396,6 +401,8 @@ export const BOOK_STYLES = `
   .bk-chapter-title { margin: 0.6em 0 0; font-size: var(--chapter-title-size); font-weight: var(--chapter-title-weight); font-style: var(--chapter-title-style); text-transform: var(--chapter-title-case); font-variant-caps: var(--chapter-title-variant); letter-spacing: var(--chapter-title-tracking); line-height: 1.25; }
   .bk-leaf { padding-top: var(--chapter-drop, 2.5in); height: 100%; font-family: var(--chapter-face, var(--bk-face)); }
   .bk-chapter-device { display: block; margin: 1.5em auto 0; max-width: 100%; }
+  .bk-leaf-art { position: absolute; inset: 0; padding: 0; height: auto; overflow: hidden; }
+  .bk-chapter-art { display: block; width: 100%; height: 100%; object-fit: cover; }
   .bk-chapter-epigraph { margin: 2em 0 0; white-space: pre-wrap; font-size: var(--chapter-epigraph-size); font-style: var(--chapter-epigraph-style); }
   .bk-chapter-summary { margin: 2em auto 0; max-width: 34em; white-space: pre-wrap; text-align: left; font-family: var(--bk-face); font-size: var(--chapter-summary-size); line-height: 1.5; }
   .bk-display { height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; }

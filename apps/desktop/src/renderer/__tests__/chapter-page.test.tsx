@@ -170,9 +170,9 @@ describe('the chapter page for a book', () => {
     render(<Harness start={textbook()} onFile={(file) => (seen = file)} />);
     fireEvent.click(screen.getByText('Give every chapter a page'));
 
-    // Three tiles; the book's is the middle until chosen otherwise.
+    // Four tiles; the book's is the middle until chosen otherwise.
     const tiles = within(screen.getByRole('radiogroup', { name: 'Template' })).getAllByRole('radio');
-    expect(tiles).toHaveLength(3);
+    expect(tiles).toHaveLength(4);
     expect(tiles[1]!.getAttribute('aria-checked')).toBe('true');
     fireEvent.click(tiles[0]!);
     expect(chapterPageStyleOf(seen as unknown as ProjectFile).template).toBe('graphic_top');
@@ -197,6 +197,53 @@ describe('the chapter page for a book', () => {
     // The width is the page's own; the picture stays one picture in the file.
     expect((seen as unknown as ProjectFile).markers[0]!.page.assetId).toBe(asset.id);
     expect((seen as unknown as ProjectFile).markers[0]!.page.image).toBeNull();
+  });
+});
+
+/**
+ * Import full page art (addendum 19 §7, from Ken): the page made elsewhere
+ * as a piece of art, brought in whole, and the chapter's template says so
+ * in the same act.
+ */
+describe('full page art', () => {
+  const pick = (name: string) => {
+    const picker = screen.getByLabelText('Full page art file') as HTMLInputElement;
+    const art = new File(['PNG bytes'], name, { type: 'image/png' });
+    Object.defineProperty(picker, 'files', { value: [art], configurable: true });
+    fireEvent.change(picker);
+  };
+
+  it('fills the page on a novel, and says the template is now the art', async () => {
+    let seen: ProjectFile | null = null;
+    render(<Harness start={book(['One', 'Two'])} onFile={(file) => (seen = file)} />);
+    fireEvent.click(screen.getByText('Give every chapter a page'));
+    fireEvent.click(screen.getByRole('button', { name: 'Import full page art…' }));
+    pick('one-painted.png');
+    await waitFor(() => expect((seen as unknown as ProjectFile).markers[0]!.page.template).toBe('full_page'));
+    const page = (seen as unknown as ProjectFile).markers[0]!.page;
+    expect(page.image?.name).toBe('one-painted.png');
+    expect(page.image?.width).toBe(100);
+    expect(page.image?.dataUrl.startsWith('data:image/png;base64,')).toBe(true);
+    // The other chapter still follows the book.
+    expect((seen as unknown as ProjectFile).markers[1]!.page.template).toBe('book');
+    // The sheet draws the art and nothing else.
+    const sheet = within(screen.getByLabelText('The page'));
+    expect(sheet.getByRole('img').className).toBe('chapter-leaf-art');
+    expect(sheet.queryByText('One')).toBeNull();
+    expect(screen.getByText(/This page is its art, edge to edge/)).toBeTruthy();
+  });
+
+  it('puts the art in the library on a book, where every picture lives', async () => {
+    let seen: ProjectFile | null = null;
+    render(<Harness start={book(['Geometric optics'], 'instructional')} onFile={(file) => (seen = file)} />);
+    fireEvent.click(screen.getByText('Give every chapter a page'));
+    pick('optics-plate.png');
+    await waitFor(() => expect((seen as unknown as ProjectFile).markers[0]!.page.template).toBe('full_page'));
+    const file = seen as unknown as ProjectFile;
+    expect(file.assets).toHaveLength(1);
+    expect(file.assets![0]!.name).toBe('optics-plate.png');
+    expect(file.markers[0]!.page.assetId).toBe(file.assets![0]!.id);
+    expect(file.markers[0]!.page.image).toBeNull();
   });
 });
 
