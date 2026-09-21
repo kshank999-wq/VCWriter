@@ -2,6 +2,7 @@ import type { BookSettings } from './entities/book.js';
 import type { InlineSpan } from './entities/inline.js';
 import { chapterPageStyleSchema, chapterStyleAttr, type ChapterPageStyle, isFullPageArt } from './chapter-style.js';
 import { faceStackOf, type BookGeometry } from './book-layout.js';
+import { partStyleAttr } from './part-style.js';
 import type { BookBlock, FigureInset } from './book-plan.js';
 import type { BookContentsRow, BookPage } from './book-pages.js';
 import { runsText, type BookIndex } from './book-index.js';
@@ -121,17 +122,37 @@ export const pictureLines = (
 };
 
 /** The half title, the title page, the copyright, a dedication: pages of a few words. */
+/** A page that is a picture and nothing else, drawn to the trim: an art page, or a title page brought in whole. */
+const fullPageArt = (picture: BookPicture, alt: string): string =>
+  `<div class="bk-display bk-plate bk-plate-art"><img class="bk-plate-image" alt="${escapeHtml(picture.altText || alt)}" src="${escapeHtml(picture.data)}" /></div>`;
+
 const displayInner = (block: BookBlock, context: BookRenderContext): string => {
   const { names, titlePage } = context;
+  // A designed page (addendum 20 §9) carries its style as custom properties
+  // on the page's box, and a spacer whose height is the drop — a share of
+  // the page rather than of its width, which is what a percentage padding
+  // would have measured.
+  const styled = block.partStyle ? ` style="${partStyleAttr(block.partStyle, context.settings.face)}"` : '';
+  const drop = '<div class="bk-drop"></div>';
   switch (block.kind) {
-    case 'half_title':
-      return `<div class="bk-display bk-half"><p class="bk-book-title">${escapeHtml(titlePage.title || names.title)}</p></div>`;
+    case 'half_title': {
+      // The page as a piece of art, edge to edge (§8, from Ken): the title
+      // is in the art, so nothing is set over it.
+      const whole = block.assetId ? context.pictures.get(block.assetId) : undefined;
+      if (whole) return fullPageArt(whole, titlePage.title || names.title);
+      return `<div class="bk-display bk-half"${styled}>${drop}<p class="bk-book-title">${escapeHtml(titlePage.title || names.title)}</p></div>`;
+    }
     case 'title_page': {
+      const whole = block.assetId ? context.pictures.get(block.assetId) : undefined;
+      if (whole) return fullPageArt(whole, titlePage.title || names.title);
       const art = titlePage.titleImage
         ? `<img class="bk-title-art" alt="${escapeHtml(titlePage.title || names.title)}" src="${escapeHtml(titlePage.titleImage)}" />`
         : `<p class="bk-book-title">${escapeHtml(titlePage.title || names.title)}</p>`;
+      // The line under the title (a subtitle, *A novel*): the title page's
+      // own field, which a series fills with its episode.
+      const subtitle = (titlePage.episode ?? '').trim().length > 0 ? `<p class="bk-subtitle">${escapeHtml(titlePage.episode)}</p>` : '';
       const imprint = names.imprint.trim().length > 0 ? `<p class="bk-imprint">${escapeHtml(names.imprint)}</p>` : '';
-      return `<div class="bk-display bk-title">${art}<p class="bk-author">${escapeHtml(titlePage.author || names.author)}</p>${imprint}</div>`;
+      return `<div class="bk-display bk-title"${styled}>${drop}${art}${subtitle}<p class="bk-author">${escapeHtml(titlePage.author || names.author)}</p>${imprint}</div>`;
     }
     case 'copyright': {
       const text = block.text.trim().length > 0 ? block.text : `Copyright © ${names.author}`.trim();
@@ -151,7 +172,7 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
     }
     default:
       // A dedication or an epigraph: the words alone, a third of the way down.
-      return `<div class="bk-display bk-words">${block.text
+      return `<div class="bk-display bk-words"${styled}>${drop}${block.text
         .split(/\n/)
         .map((line) => `<p>${escapeHtml(line)}</p>`)
         .join('')}</div>`;
@@ -411,8 +432,14 @@ export const BOOK_STYLES = `
   .bk-chapter-art { display: block; width: 100%; height: 100%; object-fit: cover; }
   .bk-chapter-epigraph { margin: 2em 0 0; white-space: pre-wrap; font-size: var(--chapter-epigraph-size); font-style: var(--chapter-epigraph-style); }
   .bk-chapter-summary { margin: 2em auto 0; max-width: 34em; white-space: pre-wrap; text-align: left; font-family: var(--bk-face); font-size: var(--chapter-summary-size); line-height: 1.5; }
+  .bk-page.display .bk-text { height: 100%; }
   .bk-display { height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; }
-  .bk-display.bk-half, .bk-display.bk-title, .bk-display.bk-words { padding-top: 30%; }
+  .bk-display.bk-half, .bk-display.bk-title, .bk-display.bk-words { align-items: var(--pt-items, center); text-align: var(--pt-align, center); font-family: var(--pt-face, var(--bk-face)); }
+  .bk-drop { flex: 0 0 var(--pt-drop, 30%); }
+  .bk-display .bk-book-title { font-size: var(--pt-title-size, 2.2em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, normal); letter-spacing: var(--pt-title-tracking, 0.02em); border-bottom: var(--pt-rule, none); padding-bottom: 0.15em; }
+  .bk-display .bk-author, .bk-display .bk-subtitle, .bk-display .bk-imprint { font-size: var(--pt-line-size, 1.1em); text-transform: var(--pt-line-case, uppercase); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, normal); letter-spacing: var(--pt-line-tracking, 0.12em); }
+  .bk-subtitle { margin: 0.8em 0 0; }
+  .bk-display .bk-words p { font-size: var(--pt-title-size, 1em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, italic); letter-spacing: var(--pt-title-tracking, 0); }
   .bk-display.bk-copyright { justify-content: flex-end; align-items: flex-start; text-align: left; }
   .bk-display.bk-plate { justify-content: center; }
   .bk-book-title { margin: 0; font-size: 2.2em; line-height: 1.15; letter-spacing: 0.02em; }

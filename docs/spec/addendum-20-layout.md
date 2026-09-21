@@ -326,7 +326,27 @@ other room (addendum 02 §8). Three regions:
   and the PDF read, turned with arrows and turned by itself to the page a
   picture just placed fell on. Double-clicking a chapter's opening page
   opens the chapter-page dialog instead, and pressing a picture cut into a
-  part on the spread opens that part.
+  part on the spread opens that part. **The half title and the title page
+  are designed there** (from Ken: *it forces you to use the name of the
+  saved file; the pop-up needs options for different templates, a way to
+  redo the wording and the fonts, and stylize the page*): the **wording** —
+  the book's title, a line under it, the author, the publisher — is typed
+  on the part and is the title page's own (`settings.titlePage`, so *File ▸
+  Title page…* and these pages cannot disagree), empty meaning the
+  project's, which a project made from a file was given from the file's
+  name; **Import full page art…** makes the page a picture edge to edge
+  with the words in it (`assetId` on the part, drawn by the plate's rule);
+  and a **page style** (`part-style.ts`) — a *template* for where the block
+  sits and how it is ranged (Classic, Centred, High and left, Low and left,
+  Low and right), a *face* (the book's, or one of the book faces for this
+  page alone), the title's line and the lines under it in the chapter
+  page's controls, and a rule — stored on the part, a dedication and an
+  epigraph taking the same. **The template is read back from the
+  placement, never stored**, so a hand change reads as *Custom* by itself,
+  the book preset's rule; `partStyleVars` is the one place the custom
+  properties mean anything, and the drop is a share of the page's height
+  (a spacer in the flex column) rather than the percentage padding the old
+  page used, which measured against the width.
 
 **Export the book…** is in the room's bar, and it is the only place the book
 is exported from; *File ▸ Export PDF* stays the manuscript's.
@@ -505,4 +525,13 @@ dialog of its own** on a double-click with its page set beside its fields,
 **pictures cut into a part's text** (`insets` on the part, the manuscript's
 inset reused whole), and the **spine allowance said in words**
 (`describeSpine`) — it was already automatic, and the ask was answered by
-making it visible. No migration: the insets ride in the part's JSON.
+making it visible. No migration: the insets ride in the part's JSON. Then,
+from Ken using it: the **half title and title page are designed in the
+part dialog** — wording, full-page art, a template, a face and the lines
+of type (`part-style.ts`, `style` on the part, the template read back and
+never stored); **the chapter-page row is editable and removable** (its
+name opens the page, a leaf of its own carries a × that asks and takes the
+picture, the summary and the epigraph off), the × on a part row is visible
+rather than shown on hover, and a room in a window of its own owns a
+chapter-page dialog so the row works there too; and **the rail drags**
+(`useSplit`, half an inch wider than it was by default). No migration.

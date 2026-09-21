@@ -114,6 +114,12 @@ export const bookPartSchema = z.object({
   kind: partKindSchema,
   /** Pictures cut into the text, on a text part that has paragraphs. */
   insets: z.array(partInsetSchema).default([]),
+  /**
+   * How the page is set, on a half title, a title page, a dedication or an
+   * epigraph (addendum 20 §9): a patch over the kind's defaults, read by
+   * `partStyleOf` in `part-style.ts`. Empty means the kind's own look.
+   */
+  style: z.record(z.unknown()).default({}),
   /** The heading as it prints; empty means the kind's own name. */
   title: z.string().default(''),
   /**

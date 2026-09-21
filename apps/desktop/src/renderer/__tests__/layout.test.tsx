@@ -282,6 +282,68 @@ describe('the room', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Type' }));
   });
 
+  it('types the book’s title on the half title and the title page, over the project’s name, and takes full-page art', async () => {
+    render(<Harness initial={novel()} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.click(rail.getByRole('button', { name: /^Title page/ }));
+    // Nothing says "nothing to type on it" any more: the title is typed here.
+    expect(screen.queryByText(/nothing to type on it/)).toBeNull();
+    fireEvent.change(screen.getByLabelText('Book title'), { target: { value: 'The Lamp' } });
+    fireEvent.change(screen.getByLabelText('Under the title'), { target: { value: 'A novel' } });
+    fireEvent.change(screen.getByLabelText('Author on the title page'), { target: { value: 'M. Shank' } });
+    fireEvent.change(screen.getByLabelText('Publisher'), { target: { value: 'Lantern Press' } });
+    let file = latest as ProjectFile;
+    expect(file.settings.titlePage).toMatchObject({ title: 'The Lamp', episode: 'A novel', author: 'M. Shank' });
+    expect(bookSettingsOf(file).imprint).toBe('Lantern Press');
+    // The page's style: a template places it, a hand change reads as custom.
+    expect((screen.getByLabelText('Page template') as HTMLSelectElement).value).toBe('classic');
+    fireEvent.change(screen.getByLabelText('Page template'), { target: { value: 'high_left' } });
+    file = latest as ProjectFile;
+    const title = partsOf(file).find((part) => part.kind === 'title_page')!;
+    expect(title.style).toMatchObject({ align: 'left', drop: 10 });
+    fireEvent.change(screen.getByLabelText('How far down the page'), { target: { value: '20' } });
+    expect((screen.getByLabelText('Page template') as HTMLSelectElement).value).toBe('custom');
+    fireEvent.change(screen.getByLabelText('Title size'), { target: { value: '36' } });
+    expect((partsOf(latest as ProjectFile).find((part) => part.kind === 'title_page')!.style as { title: { size: number } }).title.size).toBe(36);
+    fireEvent.click(screen.getByRole('button', { name: 'Back to the page’s own look' }));
+    expect(partsOf(latest as ProjectFile).find((part) => part.kind === 'title_page')!.style).toEqual({});
+    // Full-page art: the picture joins the library and becomes the page.
+    const picker = screen.getByLabelText('Title art file') as HTMLInputElement;
+    const art = new File(['PNG bytes'], 'title-art.png', { type: 'image/png' });
+    Object.defineProperty(picker, 'files', { value: [art], configurable: true });
+    fireEvent.change(picker);
+    await waitFor(() => expect((latest as ProjectFile).assets).toHaveLength(1));
+    file = latest as ProjectFile;
+    expect(partsOf(file).find((part) => part.kind === 'title_page')!.assetId).toBe(file.assets![0]!.id);
+    expect(screen.getByRole('button', { name: 'Import other full page art…' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Set the words instead' }));
+    expect(partsOf(latest as ProjectFile).find((part) => part.kind === 'title_page')!.assetId).toBeNull();
+    // The half title types the title too, and nothing else.
+    fireEvent.click(rail.getByRole('button', { name: /^Half title/ }));
+    expect((screen.getByLabelText('Book title') as HTMLInputElement).value).toBe('The Lamp');
+    expect(screen.queryByLabelText('Author on the title page')).toBeNull();
+  });
+
+  it('opens the chapter page from its row, and takes a leaf off after asking', () => {
+    const opened: string[] = [];
+    let file = novel();
+    file = setChapterPage(file, file.markers[0]!.id, { epigraph: 'A lamp is a lamp.' });
+    render(<Harness initial={file} onOpenChapterPage={(markerId) => opened.push(markerId)} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    expect(rail.getAllByText(/a leaf of its own/)).toHaveLength(1);
+    // The row's name opens the page; the × asks, then takes the leaf off.
+    fireEvent.click(rail.getAllByRole('button', { name: /^Chapter page.*a leaf of its own/ })[0]!);
+    expect(opened).toEqual([file.markers[0]!.id]);
+    fireEvent.click(rail.getByRole('button', { name: 'Take the chapter page off' }));
+    fireEvent.click(rail.getByRole('button', { name: 'Take it off' }));
+    expect((latest as ProjectFile).markers[0]!.page.epigraph).toBe('');
+    expect(rail.queryByText(/a leaf of its own/)).toBeNull();
+    // The rail has a divider to drag, starting half an inch wider than it was.
+    const divider = screen.getByRole('separator', { name: 'Rail width' });
+    expect(divider).toBeDefined();
+    expect((document.querySelector('.layout-rail') as HTMLElement).style.flex).toBe('0 0 288px');
+  });
+
   it('opens a part in a dialog of its own on a double-click, with its page beside the fields', async () => {
     render(<Harness initial={novel()} />);
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);

@@ -8948,6 +8948,8 @@ a.talk-mark:hover {
   display: flex;
 }
 
+.layout-body > .divider.vertical { flex: 0 0 7px; }
+
 .layout-rail {
   flex: 0 0 240px;
   border-right: 1px solid var(--border);
@@ -14054,13 +14056,16 @@ dialog.chapter-page-dialog {
 .layout-add { width: 100%; justify-content: space-between; display: flex; font-size: 11.5px; padding: 7px 10px; }
 .layout-part-row { display: flex; align-items: center; gap: 2px; }
 .layout-part-row .layout-part { flex: 1; min-width: 0; }
-.layout-part-remove { opacity: 0; padding: 0 5px; color: var(--muted); }
+.layout-part-remove { opacity: 0.55; padding: 0 5px; color: var(--muted); }
 .layout-part-row:hover .layout-part-remove,
+.layout-leaf-row:hover .layout-part-remove,
 .layout-part-remove:focus-visible { opacity: 1; }
 .layout-part-remove:hover { color: #e08a8a; }
 .layout-grip { color: var(--muted); font-size: 10px; cursor: grab; }
 .layout-leaf-row { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 3px 4px 3px 12px; border-left: 2px dotted var(--border); margin: 2px 0 2px 8px; }
-.layout-leaf-name { display: flex; gap: 4px; align-items: baseline; white-space: nowrap; line-height: 1.25; }
+.layout-leaf-head { display: flex; align-items: center; gap: 2px; width: 100%; }
+.layout-leaf-name { display: flex; gap: 4px; align-items: baseline; white-space: nowrap; line-height: 1.25; padding: 1px 4px; flex: 1; min-width: 0; justify-content: flex-start; text-align: left; }
+.layout-leaf-name:hover .muted { color: var(--gold); }
 .layout-leaf-name .muted { font-size: 11px; }
 .layout-leaf-name .small { font-size: 10px; }
 .layout-leaf-row .layout-story-actions { padding: 0; white-space: nowrap; }
@@ -14100,3 +14105,7 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
 .layout-inset-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .layout-inset-fields { display: grid; gap: 6px; min-width: 0; }
 .layout-inset-fields .layout-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* A designed page's style (§9): the chapter page's line controls, in a narrower column. */
+.layout-page-style .chapter-line-style { flex-wrap: wrap; gap: 6px 8px; }
+.layout-page-style .chapter-line-label { flex: 1 0 100%; }

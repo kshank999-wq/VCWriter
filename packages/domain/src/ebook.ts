@@ -597,15 +597,26 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
 
     switch (block.kind) {
       case 'half_title':
+        if (block.assetId && bank.asset(block.assetId, titlePage.title || metadata.title)) {
+          current?.html.push(figure(bank.asset(block.assetId, titlePage.title || metadata.title), '', 'title-art'));
+          break;
+        }
         current?.html.push(`<h1 class="book-title">${escapeXml(titlePage.title || metadata.title)}</h1>`);
         break;
       case 'title_page': {
+        // A title page brought in whole as art (addendum 20 §8) is the
+        // picture alone; the words are in it.
+        if (block.assetId && bank.asset(block.assetId, titlePage.title || metadata.title)) {
+          current?.html.push(figure(bank.asset(block.assetId, titlePage.title || metadata.title), '', 'title-art'));
+          break;
+        }
         const art = titlePage.titleImage
           ? figure(bank.take('title-art', titlePage.titleImage, titlePage.title || metadata.title, 'title art', 0, 0, true), '', 'title-art')
           : `<h1 class="book-title">${escapeXml(titlePage.title || metadata.title)}</h1>`;
+        const subtitle = (titlePage.episode ?? '').trim().length > 0 ? `<p class="subtitle">${escapeXml(titlePage.episode)}</p>` : '';
         const author = metadata.authors.length > 0 ? `<p class="author">${escapeXml(metadata.authors.join(', '))}</p>` : '';
         const imprint = metadata.publisher ? `<p class="imprint">${escapeXml(metadata.publisher)}</p>` : '';
-        current?.html.push(`${art}${author}${imprint}`);
+        current?.html.push(`${art}${subtitle}${author}${imprint}`);
         break;
       }
       case 'copyright': {

@@ -87,7 +87,7 @@ export function ChapterPageDialog({ file, open, initialMarkerId = null, onClose,
   );
 }
 
-const CASE_WORDS: Record<TypeCase, string> = {
+export const CASE_WORDS: Record<TypeCase, string> = {
   as_typed: 'As typed',
   capitals: 'CAPITALS',
   small_caps: 'Small caps',
@@ -739,8 +739,8 @@ function Body({
   );
 }
 
-/** The three controls one line of type needs, and no more. */
-function Line({
+/** The three controls one line of type needs, and no more. Shared with the Layout room's part pages. */
+export function Line({
   label,
   style,
   tracking = true,

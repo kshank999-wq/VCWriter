@@ -27,16 +27,29 @@ import {
   moveChapterBlock,
   movePart,
   opensOnLeaf,
+  PART_FACES,
+  PART_TEMPLATES,
+  PART_TEMPLATE_WORDS,
+  bookSettingsOf,
   paragraphsOf,
+  partHasStyle,
   partOfInset,
+  partStyleOf,
+  partTemplateOf,
+  partTemplatePatch,
   partTakesInsets,
   partTitle,
   partsOf,
   placePart,
   removePart,
   removePartInset,
+  setChapterPage,
+  setTitlePage,
   updatePartInset,
   type PartInset,
+  type PartStyle,
+  type PartTemplate,
+  type StoryMarkerId,
   renderBookHtml,
   renderBookPage,
   setBookSettings,
@@ -59,8 +72,9 @@ import {
   type BookFigure,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
+import { ChapterPageDialog, Line } from './ChapterPageDialog';
 import { useModal } from '../use-modal';
-import { usePreference } from '../use-split';
+import { usePreference, useSplit } from '../use-split';
 import { readPicture } from '../read-picture';
 import { useBookLaying, type Laying } from '../book-typeset';
 
@@ -125,6 +139,21 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const [bookSettingsOpen, setBookSettingsOpen] = useState(false);
   /** The part opened in a dialog of its own, by a double-click (§9). */
   const [partDialogId, setPartDialogId] = useState<string | null>(null);
+  /**
+   * The chapter-page dialog, opened here when the room is in a window of its
+   * own and has no workspace to ask (§9): a room on the other monitor must
+   * not be able to do less than the panel it came out of.
+   */
+  const [ownChapterPage, setOwnChapterPage] = useState<string | null>(null);
+  const openChapterPage = onOpenChapterPage ?? ((markerId: string) => setOwnChapterPage(markerId));
+  /** The chapter page being asked about before it is taken off (§9). */
+  const [clearing, setClearing] = useState<string | null>(null);
+  /**
+   * The rail's width (§9, from Ken: *the left side toolbar needs to be
+   * dragged out, and by default a half inch wider*): a divider the writer
+   * drags, remembered per machine, starting half an inch wider than it was.
+   */
+  const rail = useSplit({ key: 'layout.rail', initial: 288, min: 200, reserve: 720, axis: 'x' });
   const [selectedFigureId, setSelectedFigureId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   /** The Add a part menu, open at the button (§9). */
@@ -313,8 +342,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         setPartDialogId(block.partId);
         return;
       }
-      if (block.kind === 'chapter_opening' && onOpenChapterPage) {
-        onOpenChapterPage(block.id);
+      if (block.kind === 'chapter_opening') {
+        openChapterPage(block.id);
         return;
       }
     }
@@ -418,10 +447,13 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           write={write}
           noun={noun}
           divisions={divisions}
-          onOpenChapterPage={onOpenChapterPage}
+          onOpenChapterPage={openChapterPage}
           onClose={() => setBookSettingsOpen(false)}
         />
       ) : null}
+      {onOpenChapterPage ? null : (
+        <ChapterPageDialog file={file} open={ownChapterPage !== null} initialMarkerId={ownChapterPage} onClose={() => setOwnChapterPage(null)} onUpdate={onUpdate} />
+      )}
       <PartDialog
         file={file}
         part={opened}
@@ -478,7 +510,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       </header>
 
       <div className="layout-body">
-        <aside className="layout-rail">
+        <aside className="layout-rail" style={{ flex: `0 0 ${rail.size}px` }}>
           {/* Adding is the first thing on the rail (§9, from Ken): one
               button, a menu of every kind the book can still take, a new
               story on a collection among them. */}
@@ -526,25 +558,62 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                         the leaf this chapter opens on, made with the chapter
                         page creator, or a full-page picture before it. */}
                     <li className="layout-leaf-row">
-                      <span className="layout-leaf-name">
-                        <span className="muted">{noun} page</span>
-                        <span className="muted small">· {leaf ? 'a leaf of its own' : 'above the first paragraph'}</span>
+                      {/* The row is the way in (§9, from Ken: *there's no way
+                          to edit these*): its name opens the page, and a leaf
+                          of its own carries a × that takes the page off. */}
+                      <span className="layout-leaf-head">
+                        <button
+                          type="button"
+                          className="ghost layout-leaf-name"
+                          title={`Open the page this ${noun.toLowerCase()} opens on: its name, an epigraph, a picture, how it is set`}
+                          onClick={() => openChapterPage(id)}
+                        >
+                          <span className="muted">{noun} page</span>
+                          <span className="muted small">· {leaf ? 'a leaf of its own' : 'above the first paragraph'}</span>
+                        </button>
+                        {leaf ? (
+                          clearing === id ? (
+                            <span className="layout-ask">
+                              <button
+                                type="button"
+                                className="ghost small danger"
+                                onClick={() => {
+                                  onUpdate((current) => setChapterPage(current, id as StoryMarkerId, { image: null, summary: '', epigraph: '' }));
+                                  setClearing(null);
+                                }}
+                              >
+                                Take it off
+                              </button>
+                              <button type="button" className="ghost small" onClick={() => setClearing(null)}>
+                                Keep
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="ghost small layout-part-remove"
+                              aria-label={`Take the ${noun.toLowerCase()} page off`}
+                              title={`Take the picture, the summary and the epigraph off this page, so the ${noun.toLowerCase()} opens above its first paragraph again`}
+                              onClick={() => setClearing(id)}
+                            >
+                              ×
+                            </button>
+                          )
+                        ) : null}
                       </span>
                       <span className="layout-story-actions">
-                        {onOpenChapterPage ? (
-                          <button
-                            type="button"
-                            className="ghost small"
-                            title={`The page this ${noun.toLowerCase()} opens on: its name, an epigraph, a picture, how it is set`}
-                            onClick={() => onOpenChapterPage(id)}
-                          >
-                            {noun} page…
-                          </button>
-                        ) : null}
                         <button
                           type="button"
                           className="ghost small"
-                          title={`A picture that fills the page facing this ${noun.toLowerCase()}, edge to edge, from a file`}
+                          title={`The page this ${noun.toLowerCase()} opens on: its name, an epigraph, a picture, how it is set`}
+                          onClick={() => openChapterPage(id)}
+                        >
+                          {noun} page…
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost small"
+                          title={`A picture that fills the page facing this ${noun.toLowerCase()}, edge to edge, from a file. It is listed above this row once chosen; × takes it out.`}
                           onClick={() => importArt({ kind: 'before', markerId: id })}
                         >
                           + Picture facing
@@ -656,6 +725,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
             and the running heads are the whole book’s, under <em>Book settings…</em> in the bar.
           </p>
         </aside>
+        <div className="divider vertical" role="separator" aria-label="Rail width" aria-orientation="vertical" title="Drag to widen the rail" {...rail.dividerProps} />
 
         <div className="layout-stage">
           {laying ? (
@@ -1686,7 +1756,89 @@ function PartFields({
           <span>Heading</span>
           <input aria-label="The part's heading" placeholder={info.name} value={part.title} onChange={(event) => patch({ title: event.target.value })} />
         </label>
-      ) : null}
+      ) : (
+        <>
+          {/* The half title and the title page print the book's title, which
+              a project made from a file was given from the file's name (§9,
+              from Ken): the title is typed here, and it is the title page's,
+              so the two pages and File ▸ Title page… cannot disagree. */}
+          <label className="field">
+            <span>Book title</span>
+            <input
+              aria-label="Book title"
+              placeholder={file.project.title}
+              value={file.settings.titlePage.title}
+              onChange={(event) => onUpdate((current) => setTitlePage(current, { title: event.target.value }))}
+            />
+          </label>
+          {part.kind === 'title_page' ? (
+            <>
+              <label className="field">
+                <span>Under the title</span>
+                <input
+                  aria-label="Under the title"
+                  placeholder="A subtitle — A novel, Stories — or nothing"
+                  value={file.settings.titlePage.episode}
+                  onChange={(event) => onUpdate((current) => setTitlePage(current, { episode: event.target.value }))}
+                />
+              </label>
+              <label className="field">
+                <span>Author</span>
+                <input
+                  aria-label="Author on the title page"
+                  placeholder={file.project.author}
+                  value={file.settings.titlePage.author}
+                  onChange={(event) => onUpdate((current) => setTitlePage(current, { author: event.target.value }))}
+                />
+              </label>
+              <label className="field">
+                <span>Publisher</span>
+                <input
+                  aria-label="Publisher"
+                  placeholder="Nothing under the author"
+                  value={bookSettingsOf(file).imprint}
+                  onChange={(event) => onUpdate((current) => setBookSettings(current, { imprint: event.target.value }))}
+                />
+              </label>
+            </>
+          ) : null}
+          <p className="muted small">
+            Empty means the project’s own, <em>{file.project.title}</em>
+            {part.kind === 'title_page' ? ` by ${file.project.author || 'nobody yet'}` : ''}. A logotype in place of the title is under{' '}
+            <em>File ▸ Title page…</em>.
+          </p>
+          {/* The page as a piece of art, brought in whole (§8, from Ken: *the
+              title page also needs to be able to take a full page piece of
+              art*): the picture is the page, edge to edge, the title in it. */}
+          <input
+            ref={picturePicker}
+            type="file"
+            accept="image/*"
+            aria-label="Title art file"
+            hidden
+            onChange={(event) => {
+              void takePicture(event.target.files?.[0]);
+              event.target.value = '';
+            }}
+          />
+          <div className="layout-plate-pick">
+            <button type="button" className="raised small" title="A picture that is the whole page, edge to edge, with the title in it; it joins the book's pictures under Research ▸ Graphics" onClick={() => picturePicker.current?.click()}>
+              {part.assetId ? 'Import other full page art…' : 'Import full page art…'}
+            </button>
+            {part.assetId ? (
+              <button type="button" className="ghost small danger" onClick={() => patch({ assetId: null })}>
+                Set the words instead
+              </button>
+            ) : null}
+            {pictureError ? (
+              <span className="error small" role="alert">
+                {pictureError}
+              </span>
+            ) : null}
+          </div>
+          {part.assetId ? <p className="muted small">The art is the page: nothing is set over it, the title and the author being in the picture.</p> : null}
+        </>
+      )}
       {info.carries === 'text' ? (
         <label className="field">
           <span>Text</span>
@@ -1699,7 +1851,8 @@ function PartFields({
           />
         </label>
       ) : null}
-      {info.carries === 'reading' ? (
+      {partHasStyle(part.kind) ? <PageStyle part={part} onUpdate={onUpdate} /> : null}
+      {info.carries === 'reading' && part.kind !== 'half_title' && part.kind !== 'title_page' ? (
         <p className="muted small">Read from the book every time; there is nothing to type on it.</p>
       ) : null}
       {info.carries === 'plate' ? (
@@ -1809,6 +1962,83 @@ function PartFields({
           Done
         </button>
       </div>
+    </section>
+  );
+}
+
+/**
+ * How a designed page is set (§9, from Ken: *options for different
+ * templates, a way to redo the wording and the fonts, and stylize the
+ * page*): a template for where the block sits, a face, the title's line
+ * and the lines under it, and a rule — the chapter page's controls pointed
+ * at this one page. The template is read back from the placement, never
+ * stored, so a hand change reads as *Custom* by itself.
+ */
+function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (current: ProjectFile) => ProjectFile): void }) {
+  const style = partStyleOf(part);
+  const template = partTemplateOf(style);
+  const words = part.kind === 'dedication' || part.kind === 'epigraph';
+  const partId = part.id;
+  const write = (patch: Partial<PartStyle>) =>
+    onUpdate((current) => {
+      const now = partsOf(current).find((one) => one.id === partId) ?? part;
+      return updatePart(current, partId, { style: { ...partStyleOf(now), ...patch } });
+    });
+  return (
+    <section className="layout-section layout-page-style">
+      <h3>Page style</h3>
+      <label className="field">
+        <span>Template</span>
+        <select
+          aria-label="Page template"
+          value={template ?? 'custom'}
+          onChange={(event) => {
+            const chosen = event.target.value as PartTemplate | 'custom';
+            if (chosen !== 'custom') write(partTemplatePatch(chosen));
+          }}
+        >
+          {PART_TEMPLATES.map((one) => (
+            <option key={one} value={one}>
+              {PART_TEMPLATE_WORDS[one].name}
+            </option>
+          ))}
+          {template === null ? <option value="custom">Custom — placed by hand</option> : null}
+        </select>
+      </label>
+      <p className="muted small">{template ? PART_TEMPLATE_WORDS[template].says : 'Where the block sits was set by hand below; choose a template to place it again.'}</p>
+      <label className="field">
+        <span>Down the page · {style.drop}%</span>
+        <input type="range" min={0} max={80} step={2} aria-label="How far down the page" value={style.drop} onChange={(event) => write({ drop: Number(event.target.value) })} />
+      </label>
+      <label className="field">
+        <span>Ranged</span>
+        <select aria-label="Page alignment" value={style.align} onChange={(event) => write({ align: event.target.value as PartStyle['align'] })}>
+          <option value="left">Left</option>
+          <option value="center">Centred</option>
+          <option value="right">Right</option>
+        </select>
+      </label>
+      <label className="field">
+        <span>Face</span>
+        <select aria-label="Page face" value={style.face} onChange={(event) => write({ face: event.target.value as PartStyle['face'] })}>
+          {PART_FACES.map((one) => (
+            <option key={one} value={one}>
+              {one === 'book' ? 'The book’s own face' : `${FACE_NAMES[one]} — ${FACE_NOTES[one]}`}
+            </option>
+          ))}
+        </select>
+      </label>
+      <Line label={words ? 'The words' : 'Title'} style={style.title} onPatch={(patch) => write({ title: { ...style.title, ...patch } })} />
+      {part.kind === 'title_page' ? <Line label="Lines under it" style={style.line} onPatch={(patch) => write({ line: { ...style.line, ...patch } })} /> : null}
+      {words ? null : (
+        <label className="check">
+          <input type="checkbox" aria-label="A rule under the title" checked={style.rule} onChange={(event) => write({ rule: event.target.checked })} />
+          <span>A rule under the title</span>
+        </label>
+      )}
+      <button type="button" className="ghost small" onClick={() => onUpdate((current) => updatePart(current, partId, { style: {} }))}>
+        Back to the page’s own look
+      </button>
     </section>
   );
 }

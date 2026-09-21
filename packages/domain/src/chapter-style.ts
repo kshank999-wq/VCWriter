@@ -57,7 +57,7 @@ const FACE_STACKS: Record<TypeFace, string> = {
 };
 
 /** One line of type on the page: how big, how cased, how weighted. */
-const lineStyleSchema = z.object({
+export const lineStyleSchema = z.object({
   /** In points, because this prints. */
   size: z.number().min(6).max(72).default(12),
   case: typeCaseSchema.default('as_typed'),

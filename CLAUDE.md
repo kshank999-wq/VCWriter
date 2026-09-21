@@ -1221,7 +1221,21 @@ push live; the build takes a minute or two.
   The **spine allowance was already automatic** (`gutterFor` from the laid
   page count, re-laid across a tier); Ken's ask was answered by
   `describeSpine` saying under the margins what it carries and when it next
-  widens.
+  widens. Then, from Ken using it: the **half title and the title page are
+  designed in the part dialog** — the wording (`settings.titlePage`, the one
+  place, so *File ▸ Title page…* agrees; empty means the project's, which an
+  import named from the file), *Import full page art…* (`assetId` on the
+  part, drawn by the art page's rule), and a **page style** in
+  `packages/domain/src/part-style.ts` (`style` on the part; a template read
+  back from the placement and never stored, a face, the title's line and the
+  lines under it in the chapter page's `Line` control, a rule; a dedication
+  and an epigraph take the same). The drop is a spacer in the page's flex
+  column, a share of the *height*, where the old `padding-top: 30%`
+  measured against the width. The **chapter-page row is editable and
+  removable** (its name opens the page; a leaf carries a × that asks), the
+  part rows' × is visible rather than hover-only, a popped-out room owns its
+  own `ChapterPageDialog` so the row works there, and the **rail drags**
+  (`useSplit`, 288px by default, half an inch wider than before).
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

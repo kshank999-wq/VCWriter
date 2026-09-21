@@ -6,6 +6,7 @@ import { contentsDivisions, type ChapterPageContent, type PlacedMarker } from '.
 import { bookSettingsOf, setBookSettings } from './book-layout.js';
 import { beatsInScript, unitsInStoryOrder } from './selectors.js';
 import { newId } from './ids.js';
+import { partHasStyle, partStyleOf, type PartStyle } from './part-style.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -304,6 +305,8 @@ export interface BookBlock {
   opensChapter?: boolean;
   /** The part this block belongs to, where it belongs to one. */
   partId?: string;
+  /** How a designed page is set (addendum 20 §9), resolved from the part. */
+  partStyle?: PartStyle;
   /**
    * A figure cut into this paragraph at the left or the right (§8), at a
    * fraction of the measure. The figure is the manuscript's; where it sits
@@ -353,10 +356,13 @@ export const opensOnLeaf = (leaf: ChapterPageContent): boolean =>
 const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle: string): BookBlock[] => {
   const title = partTitle(part);
   switch (part.kind) {
+    // Either may be a piece of art brought in whole (§8, from Ken): the
+    // asset on the part is the page, and the printer draws it edge to edge
+    // in place of the typed title.
     case 'half_title':
-      return [block({ id: part.id, kind: 'half_title', numbering, starts: 'recto', display: true, folio: false, partId: part.id, unbreakable: true })];
+      return [block({ id: part.id, kind: 'half_title', numbering, starts: 'recto', display: true, folio: false, partId: part.id, unbreakable: true, assetId: part.assetId, partStyle: partStyleOf(part) })];
     case 'title_page':
-      return [block({ id: part.id, kind: 'title_page', numbering, starts: 'recto', display: true, folio: false, partId: part.id, unbreakable: true })];
+      return [block({ id: part.id, kind: 'title_page', numbering, starts: 'recto', display: true, folio: false, partId: part.id, unbreakable: true, assetId: part.assetId, partStyle: partStyleOf(part) })];
     case 'copyright':
       return [
         block({
@@ -405,9 +411,10 @@ const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle:
           folio: false,
           unbreakable: true,
           partId: part.id,
-          title: part.kind === 'epigraph' ? '' : '',
+          title: '',
           text: part.text,
           spans: parseInline(part.text),
+          partStyle: partHasStyle(part.kind) ? partStyleOf(part) : undefined,
         }),
       ];
     default: {
