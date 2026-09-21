@@ -14074,3 +14074,5 @@ dialog.chapter-page-dialog {
 .layout-fold-head { width: 100%; display: flex; justify-content: space-between; align-items: center; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 10px; margin: 4px 0 2px; color: var(--gold); }
 .layout-fold-arrow { color: var(--muted); }
 .layout-fold-body { padding-top: 2px; }
+
+.layout-plate-pick { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; flex-wrap: wrap; }

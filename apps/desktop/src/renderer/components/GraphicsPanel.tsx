@@ -12,6 +12,7 @@ import {
   type BeatId,
   type ProjectFile,
 } from '@vcwriter/domain';
+import { readPicture } from '../read-picture';
 
 /**
  * The graphics library (addendum 16 §9).
@@ -32,23 +33,6 @@ interface GraphicsPanelProps {
   /** Go and look at a figure where it sits. Absent in the popped-out window. */
   onGoToBeat?(beatId: BeatId): void;
 }
-
-/** Reads a dropped or chosen file into a data URI and its own dimensions. */
-const readPicture = (file: File): Promise<{ data: string; width: number; height: number }> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Could not read the file.'));
-    reader.onload = () => {
-      const data = String(reader.result ?? '');
-      const image = new Image();
-      // The size is read from the picture rather than asked for: a figure's
-      // height on the page follows from its aspect ratio (§9).
-      image.onload = () => resolve({ data, width: image.naturalWidth, height: image.naturalHeight });
-      image.onerror = () => resolve({ data, width: 0, height: 0 });
-      image.src = data;
-    };
-    reader.readAsDataURL(file);
-  });
 
 export function GraphicsPanel({ file, onUpdate, onGoToBeat }: GraphicsPanelProps) {
   const graphics = useMemo(() => graphicsInOrder(file), [file]);

@@ -253,7 +253,14 @@ other room (addendum 02 §8). Three regions:
   page…** opening the chapter-page dialog on that chapter and **+ Picture
   facing** adding a full-page plate before it, selected so the inspector is
   asking for the picture. A plate that faces a chapter is listed where it
-  falls; one at the back stays in the back matter.
+  falls; one at the back stays in the back matter. **A plate's picture
+  comes straight from a file** (from Ken: *can't we just find the picture
+  and load it? Or where is the library?*): *Choose a picture…* on the
+  plate's fields reads the file, puts it in the graphics library and sets
+  it on the plate in one act, the library select beneath offering what is
+  already in the book; and the library itself — *Research ▸ Graphics*,
+  which had been the textbook's alone — is now every prose format's, since
+  a novel with plates has pictures too.
 - **The spreads**, in the middle: two facing pages at a time, the verso on
   the left, at a zoom, with a slider along the foot. The page the writer is
   looking at is the page the PDF will have, because both come off one laying.

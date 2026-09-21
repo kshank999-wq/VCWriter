@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ContextMenu, type MenuEntry } from './ContextMenu';
 import { EbookExportDialog } from './EbookExportDialog';
 import {
@@ -11,6 +11,7 @@ import {
   OPENINGS,
   PART_INFO,
   TRIM_PRESETS,
+  addGraphic,
   addPart,
   beginStory,
   bookMetrics,
@@ -51,6 +52,7 @@ import {
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
 import { usePreference } from '../use-split';
+import { readPicture } from '../read-picture';
 import { useBookLaying, type Laying } from '../book-typeset';
 
 /**
@@ -1085,7 +1087,34 @@ function PartFields({
   const library = graphicsInOrder(file);
   const chapters = contentsDivisions(file);
   const [asking, setAsking] = useState(false);
+  const [pictureError, setPictureError] = useState<string | null>(null);
+  const picturePicker = useRef<HTMLInputElement>(null);
   const patch = (fields: Partial<Omit<BookPart, 'id' | 'kind'>>) => onUpdate((current) => updatePart(current, part.id, fields));
+  /**
+   * A plate's picture straight from a file (§9, from Ken: *can't we just
+   * find the picture and load it?*). It goes into the graphics library —
+   * the one place the book's pictures live, reachable from Research ▸
+   * Graphics — and the plate takes it in the same act, so a writer with a
+   * picture on disk never has to know the library exists to use one.
+   */
+  const takePicture = async (picked: File | undefined) => {
+    setPictureError(null);
+    if (!picked) return;
+    if (!picked.type.startsWith('image/')) {
+      setPictureError('That is not a picture file.');
+      return;
+    }
+    try {
+      const read = await readPicture(picked);
+      const partId = part.id;
+      onUpdate((current) => {
+        const added = addGraphic(current, { name: picked.name, ...read });
+        return updatePart(added.file, partId, { assetId: added.asset.id });
+      });
+    } catch {
+      setPictureError('That file could not be read.');
+    }
+  };
   return (
     <section className="layout-section layout-part-fields">
       <h3>{info.name}</h3>
@@ -1113,10 +1142,31 @@ function PartFields({
       ) : null}
       {info.carries === 'plate' ? (
         <>
+          <input
+            ref={picturePicker}
+            type="file"
+            accept="image/*"
+            aria-label="Plate picture file"
+            hidden
+            onChange={(event) => {
+              void takePicture(event.target.files?.[0]);
+              event.target.value = '';
+            }}
+          />
+          <div className="layout-plate-pick">
+            <button type="button" className="raised small" title="A picture from a file on this computer; it joins the book's pictures under Research ▸ Graphics" onClick={() => picturePicker.current?.click()}>
+              {part.assetId ? 'Choose another picture…' : 'Choose a picture…'}
+            </button>
+            {pictureError ? (
+              <span className="error small" role="alert">
+                {pictureError}
+              </span>
+            ) : null}
+          </div>
           <label className="field">
-            <span>Picture, from the library</span>
+            <span>{library.length > 0 ? 'Or one already in the book' : 'Pictures already in the book'}</span>
             <select aria-label="Plate picture" value={part.assetId ?? ''} onChange={(event) => patch({ assetId: event.target.value || null })}>
-              <option value="">Choose one…</option>
+              <option value="">{library.length === 0 ? 'None yet — choose a picture above' : 'Choose one…'}</option>
               {library.map((asset) => (
                 <option key={asset.id as string} value={asset.id as string}>
                   {asset.name || asset.caption || 'Untitled'}
@@ -1124,6 +1174,7 @@ function PartFields({
               ))}
             </select>
           </label>
+          <p className="muted small">The book’s pictures are kept under Research ▸ Graphics, where each can be named and described.</p>
           <label className="field">
             <span>Caption</span>
             <input aria-label="Plate caption" value={part.caption} onChange={(event) => patch({ caption: event.target.value })} />

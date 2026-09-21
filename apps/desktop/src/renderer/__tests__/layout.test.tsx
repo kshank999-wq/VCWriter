@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
   addBeat,
   addMarker,
@@ -112,6 +112,25 @@ describe('the room', () => {
     expect((screen.getByLabelText('Plate place') as HTMLSelectElement).value).toBe(plate?.beforeMarkerId);
     fireEvent.click(rail.getAllByRole('button', { name: 'Chapter page…' })[0]!);
     expect(opened).toEqual([(latest as ProjectFile).markers[0]?.id]);
+  });
+
+  it('takes a plate’s picture straight from a file, putting it in the library and on the plate', async () => {
+    render(<Harness initial={novel()} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.click(rail.getAllByRole('button', { name: '+ Picture facing' })[0]!);
+    // Nothing in the library yet: the select says so and the button is the way in.
+    expect(screen.getByRole('button', { name: 'Choose a picture…' })).toBeDefined();
+    expect((screen.getByLabelText('Plate picture') as HTMLSelectElement).options[0]!.textContent).toMatch(/None yet/);
+    const picker = screen.getByLabelText('Plate picture file') as HTMLInputElement;
+    const art = new File(['PNG bytes'], 'facing-one.png', { type: 'image/png' });
+    Object.defineProperty(picker, 'files', { value: [art], configurable: true });
+    fireEvent.change(picker);
+    await waitFor(() => expect((latest as ProjectFile).assets).toHaveLength(1));
+    const file = latest as ProjectFile;
+    expect(file.assets![0]!.name).toBe('facing-one.png');
+    const plate = partsOf(file).find((part) => part.kind === 'plate');
+    expect(plate?.assetId).toBe(file.assets![0]!.id);
+    expect(screen.getByRole('button', { name: 'Choose another picture…' })).toBeDefined();
   });
 
   it('writes the trim and says what was worked out from it', () => {

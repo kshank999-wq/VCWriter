@@ -23,6 +23,7 @@ import {
   updateResearchCategory,
   updateResearchItem,
   isInstructional,
+  isProseFormat,
   nounsFor,
   type ApprovalDecision,
   type BeatId,
@@ -82,7 +83,7 @@ type Selection =
   | { kind: 'locations' }
   /** The story-relationship timeline (addendum 15) — every track at once. */
   | { kind: 'links' }
-  /** The graphics library (addendum 16 §9). Instructional books only. */
+  /** The graphics library (addendum 16 §9): every prose format's, since a novel has plates. */
   | { kind: 'graphics' }
   /** Bringing notes and pictures in (addendum 16 §4). Instructional books only. */
   | { kind: 'importer' }
@@ -213,6 +214,7 @@ export function ResearchBody({
    * A professor is not offered a Character Creator to ignore.
    */
   const instructional = isInstructional(file.project.format);
+  const prose = isProseFormat(file.project.format);
   const views = useMemo(() => viewsFor(file.project.format), [file.project.format]);
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
@@ -536,28 +538,32 @@ export function ResearchBody({
           <h4>Also</h4>
           <ul className="research-views">
             {instructional ? (
-              <>
-                <li>
-                  <button
-                    type="button"
-                    className={selection.kind === 'importer' ? 'folder-row selected' : 'folder-row'}
-                    title="Bring in notes, documents and pictures"
-                    onClick={() => setSelection({ kind: 'importer' })}
-                  >
-                    <span className="folder-name">Import</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    className={selection.kind === 'graphics' ? 'folder-row selected' : 'folder-row'}
-                    onClick={() => setSelection({ kind: 'graphics' })}
-                  >
-                    <span className="folder-name">Graphics</span>
-                    <span className="count muted">{(file.assets ?? []).length}</span>
-                  </button>
-                </li>
-              </>
+              <li>
+                <button
+                  type="button"
+                  className={selection.kind === 'importer' ? 'folder-row selected' : 'folder-row'}
+                  title="Bring in notes, documents and pictures"
+                  onClick={() => setSelection({ kind: 'importer' })}
+                >
+                  <span className="folder-name">Import</span>
+                </button>
+              </li>
+            ) : null}
+            {/* The graphics library is every book's (addendum 20 §9): a
+                novel's plates and chapter art live here too, so the Layout
+                room's *from the library* has somewhere a writer can find. */}
+            {prose ? (
+              <li>
+                <button
+                  type="button"
+                  className={selection.kind === 'graphics' ? 'folder-row selected' : 'folder-row'}
+                  title="The book’s pictures: plates, chapter art and figures"
+                  onClick={() => setSelection({ kind: 'graphics' })}
+                >
+                  <span className="folder-name">Graphics</span>
+                  <span className="count muted">{(file.assets ?? []).length}</span>
+                </button>
+              </li>
             ) : null}
             {/* Absent rather than greyed on a book (addendum 16 §3): a plot
                 track, a planted setup and a place read off a slugline are

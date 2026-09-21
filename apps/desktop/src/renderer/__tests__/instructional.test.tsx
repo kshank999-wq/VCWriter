@@ -380,6 +380,12 @@ describe('the research menu on a book', () => {
     expect(screen.getByText('Used in the script')).toBeTruthy();
   });
 
+  it('offers the graphics library on a novel too, and the importer only on a book', () => {
+    research(createProjectFile({ title: 'A Novel', format: 'novel' }));
+    expect(screen.getByText('Graphics')).toBeTruthy();
+    expect(screen.queryByText('Import')).toBeNull();
+  });
+
   it('leaves a screenplay’s menu exactly as it was', () => {
     research(createProjectFile({ title: 'A Film', format: 'screenplay' }));
     for (const kept of ['Plots', 'Setups & payoffs', 'Locations', 'Character map', 'Character review']) {

@@ -1191,7 +1191,11 @@ push live; the build takes a minute or two.
   chapter dragged as a block (`moveChapterBlock`, only the moved units
   rekeyed) — the one thing the rail does to the story order, done by moving
   the sections — and the inspector's four groups behind `Fold` headings
-  drawn as raised buttons, open or shut per machine.
+  drawn as raised buttons, open or shut per machine. A plate's picture comes
+  **straight from a file** (*Choose a picture…*, which puts it in the
+  library and on the plate in one act; `read-picture.ts` is the one reader),
+  and *Research ▸ Graphics* is every prose format's now rather than the
+  textbook's alone, because Ken asked *where is the library*.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves
