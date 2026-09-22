@@ -2114,36 +2114,6 @@ function PartFields({
             </label>
           ) : null}
           <p className="muted small">A logotype in place of the title is under <em>File ▸ Title page…</em>.</p>
-          {/* The page as a piece of art, brought in whole (§8, from Ken: *the
-              title page also needs to be able to take a full page piece of
-              art*): the picture is the page, edge to edge, the title in it. */}
-          <input
-            ref={picturePicker}
-            type="file"
-            accept="image/*"
-            aria-label="Title art file"
-            hidden
-            onChange={(event) => {
-              void takePicture(event.target.files?.[0]);
-              event.target.value = '';
-            }}
-          />
-          <div className="layout-plate-pick">
-            <button type="button" className="raised small" title="A picture that is the whole page, edge to edge, with the title in it; it joins the book's pictures under Research ▸ Graphics" onClick={() => picturePicker.current?.click()}>
-              {part.assetId ? 'Import other full page art…' : 'Import full page art…'}
-            </button>
-            {part.assetId ? (
-              <button type="button" className="ghost small danger" onClick={() => patch({ assetId: null })}>
-                Set the words instead
-              </button>
-            ) : null}
-            {pictureError ? (
-              <span className="error small" role="alert">
-                {pictureError}
-              </span>
-            ) : null}
-          </div>
-          {part.assetId ? <p className="muted small">The art is the page: nothing is set over it, the title and the author being in the picture.</p> : null}
         </>
       )}
       {info.carries === 'text' ? (
@@ -2157,6 +2127,42 @@ function PartFields({
             onChange={(event) => patch({ text: event.target.value })}
           />
         </label>
+      ) : null}
+      {/* The page as a piece of art, brought in whole (§8, from Ken: *the
+          title page also needs to be able to take a full page piece of art*).
+          Every **designed** page takes one — a dedication and an epigraph
+          among them (§7a) — because the words are in the picture whichever
+          page it is, and the print draws all four the same way. */}
+      {partHasStyle(part.kind) ? (
+        <>
+          <input
+            ref={picturePicker}
+            type="file"
+            accept="image/*"
+            aria-label="Title art file"
+            hidden
+            onChange={(event) => {
+              void takePicture(event.target.files?.[0]);
+              event.target.value = '';
+            }}
+          />
+          <div className="layout-plate-pick">
+            <button type="button" className="raised small" title="A picture that is the whole page, edge to edge, with the words in it; it joins the book's pictures under Research ▸ Graphics" onClick={() => picturePicker.current?.click()}>
+              {part.assetId ? 'Import other full page art…' : 'Import full page art…'}
+            </button>
+            {part.assetId ? (
+              <button type="button" className="ghost small danger" onClick={() => patch({ assetId: null })}>
+                Set the words instead
+              </button>
+            ) : null}
+            {pictureError ? (
+              <span className="error small" role="alert">
+                {pictureError}
+              </span>
+            ) : null}
+          </div>
+          {part.assetId ? <p className="muted small">The art is the page: nothing is set over it, the words being in the picture.</p> : null}
+        </>
       ) : null}
       {partHasStyle(part.kind) ? <PageStyle part={part} onUpdate={onUpdate} /> : null}
       {info.carries === 'reading' && part.kind !== 'half_title' && part.kind !== 'title_page' ? (
@@ -2335,14 +2341,20 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
           ))}
         </select>
       </label>
-      <Line label={words ? 'The words' : 'Title'} style={style.title} onPatch={(patch) => write({ title: { ...style.title, ...patch } })} />
-      {part.kind === 'title_page' ? <Line label="Lines under it" style={style.line} onPatch={(patch) => write({ line: { ...style.line, ...patch } })} /> : null}
-      {words ? null : (
-        <label className="check">
-          <input type="checkbox" aria-label="A rule under the title" checked={style.rule} onChange={(event) => write({ rule: event.target.checked })} />
-          <span>A rule under the title</span>
-        </label>
-      )}
+      <Line label={words ? 'The first line' : 'Title'} style={style.title} onPatch={(patch) => write({ title: { ...style.title, ...patch } })} />
+      {/* The lines under it (§7a, from Ken: *the epigraph and dedication pages
+          need the same style options*). They were the title page's alone, so an
+          epigraph's attribution and a dedication's second line could not be set
+          apart from the words above them. They start as those words, so a page
+          made before this is unchanged. */}
+      {part.kind === 'title_page' || words ? (
+        <Line label="Lines under it" style={style.line} onPatch={(patch) => write({ line: { ...style.line, ...patch } })} />
+      ) : null}
+      {words ? <p className="muted small">The first line of the text is the words; anything under it — an attribution, a second line — is set by the pair above.</p> : null}
+      <label className="check">
+        <input type="checkbox" aria-label="A rule under the title" checked={style.rule} onChange={(event) => write({ rule: event.target.checked })} />
+        <span>A rule under the {words ? 'words' : 'title'}</span>
+      </label>
       <button type="button" className="ghost small" onClick={() => onUpdate((current) => updatePart(current, partId, { style: {} }))}>
         Back to the page’s own look
       </button>

@@ -69,8 +69,17 @@ export const partHasStyle = (kind: PartKind): boolean =>
 const KIND_DEFAULTS: Partial<Record<PartKind, PartStylePatch>> = {
   half_title: { title: { size: 24, case: 'as_typed', bold: false, italic: false, tracking: 2 } },
   title_page: {},
-  dedication: { title: { size: 11, case: 'as_typed', bold: false, italic: true, tracking: 0 } },
-  epigraph: { title: { size: 11, case: 'as_typed', bold: false, italic: true, tracking: 0 } },
+  // The lines under the words start as the words (§7a): an epigraph's
+  // attribution and a dedication's second line are set the same until somebody
+  // says otherwise, so a page made before there were two styles is unchanged.
+  dedication: {
+    title: { size: 11, case: 'as_typed', bold: false, italic: true, tracking: 0 },
+    line: { size: 11, case: 'as_typed', bold: false, italic: true, tracking: 0 },
+  },
+  epigraph: {
+    title: { size: 11, case: 'as_typed', bold: false, italic: true, tracking: 0 },
+    line: { size: 11, case: 'as_typed', bold: false, italic: true, tracking: 0 },
+  },
 };
 
 /** The part's style as it stands: what it stored over its kind's defaults. */

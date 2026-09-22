@@ -142,3 +142,59 @@ describe('a designed page', () => {
     expect(words).toContain('bk-book-title');
   });
 });
+
+/**
+ * The epigraph and the dedication (addendum 20 §7a, from Ken: *the epigraph
+ * and dedication pages need the same style options*).
+ *
+ * Three things were withheld from exactly these two kinds while the half
+ * title and the title page had them: a style for the lines under the words,
+ * a rule, and a page of art.
+ */
+describe('the epigraph and the dedication', () => {
+  const withWords = (kind: 'epigraph' | 'dedication', text: string) => {
+    const file = novel();
+    const made = addPart(file, kind, { text });
+    return made.file;
+  };
+
+  it('sets the lines under the words apart from the words', () => {
+    const file = withWords('epigraph', 'The bell rang across the water twice.\n— W. H. Auden');
+    const block = bookBlocks(file).find((one) => one.partId === partsOf(file).find((p) => p.kind === 'epigraph')?.id)!;
+    const html = renderBookBlock(block, contextFor(file));
+    // The first line is the words; everything under it is an attribution.
+    expect(html).toContain('<p>The bell rang across the water twice.</p>');
+    expect(html).toContain('<p class="bk-words-under">— W. H. Auden</p>');
+  });
+
+  it('starts with both lines set the same, so an older page is unchanged', () => {
+    const file = withWords('dedication', 'For Mara\nwho heard the bell first');
+    const style = partStyleOf(partsOf(file).find((one) => one.kind === 'dedication')!);
+    // The lines under the words default to the words rather than to the title
+    // page's tracked capitals, which is what the page always drew.
+    expect(style.line).toEqual(style.title);
+    expect(style.line.size).toBe(11);
+    expect(style.line.italic).toBe(true);
+  });
+
+  it('takes a rule, which was the title page’s alone', () => {
+    const file = withWords('epigraph', 'The bell rang.');
+    const part = partsOf(file).find((one) => one.kind === 'epigraph')!;
+    const ruled = updatePart(file, part.id, { style: { ...partStyleOf(part), rule: true } });
+    const vars = partStyleVars(partStyleOf(partsOf(ruled).find((one) => one.kind === 'epigraph')!), 'old_style');
+    expect(vars['--pt-rule']).toBe('1px solid currentColor');
+  });
+
+  it('takes a page of art, the words being in the picture', () => {
+    const file = withWords('dedication', 'For Mara');
+    const part = partsOf(file).find((one) => one.kind === 'dedication')!;
+    const arted = updatePart(file, part.id, { assetId: file.assets[0]!.id as string });
+    const block = bookBlocks(arted).find((one) => one.partId === part.id)!;
+    const html = renderBookBlock(block, contextFor(arted));
+    // The art page's own markup, the same one every designed page draws.
+    expect(html).toContain('bk-plate-art');
+    expect(html).toContain('<img class="bk-plate-image"');
+    // Nothing is set over it.
+    expect(html).not.toContain('For Mara<');
+  });
+});

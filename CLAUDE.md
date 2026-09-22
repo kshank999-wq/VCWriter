@@ -1361,7 +1361,25 @@ push live; the build takes a minute or two.
   *nothing about them is typed here*. `openingLines` is that number, and the
   two drops sit together — the leaf's in **inches**, being a page of its own,
   and the opening's in **lines of the body**, because what it has to look
-  right against is the text under it. **§8a is pictures inside the story**, from Ken
+  right against is the text under it. **The epigraph and the dedication got it too**, from Ken:
+  three things were withheld from **exactly those two kinds** while the half
+  title and the title page had them, and a fourth was broken. **The lines under
+  the words** were `kind === 'title_page'` alone, so an attribution or a second
+  line could not be set apart from the words above it; they take the title
+  page's own shape (the first line is the words, everything under it the lines
+  under them) and **start as those words**, so a page made before this is
+  unchanged — the title page's tracked capitals would have been absurd on a
+  dedication. **A rule** was `words ? null`, excluded for no reason books
+  agree with. **A page of art** sat inside the half-title/title-page branch and
+  is lifted to every *designed* page, the words being in the picture whichever
+  page it is. And **the one option they did have was dead**: driving the real
+  page found the variable arriving on the box and nothing moving, because the
+  stylesheet said `.bk-display .bk-words p` with a **descendant combinator**
+  while `bk-display` and `bk-words` are two classes on **one element** — so the
+  rule had never matched and the *words* control had been doing nothing since it
+  shipped (the neighbours are fine, `.bk-book-title` and `.bk-author` really
+  being children). One space deleted; the defaults are what the dead rule fell
+  back to, so nothing existing moves. **§8a is pictures inside the story**, from Ken
   laying out a children's book, and the audit paid a **thirteenth** time:
   a picture inside the story **is a figure**, which the manuscript has had
   since addendum 16 §9 and which already stands where the writer put it —

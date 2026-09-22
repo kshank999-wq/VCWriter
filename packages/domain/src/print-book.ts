@@ -173,12 +173,20 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
         : '<div class="bk-plate-missing">Picture goes here</div>';
       return `<div class="bk-display bk-plate${picture ? ' bk-plate-art' : ''}">${image}</div>`;
     }
-    default:
-      // A dedication or an epigraph: the words alone, a third of the way down.
+    default: {
+      // A dedication or an epigraph. The page may be a piece of art like any
+      // other designed page (§7a), the words being in the picture.
+      const whole = block.assetId ? context.pictures.get(block.assetId) : undefined;
+      if (whole) return fullPageArt(whole, block.text.split(/\n/)[0] ?? '');
+      // The words, a third of the way down: the **first line** carries the
+      // title's style and the rest the lines-under-it style, which is the
+      // title page's own rule — an epigraph's attribution and a dedication's
+      // second line are what those lines are.
       return `<div class="bk-display bk-words"${styled}>${drop}${block.text
         .split(/\n/)
-        .map((line) => `<p>${escapeHtml(line)}</p>`)
+        .map((line, index) => `<p${index === 0 ? '' : ' class="bk-words-under"'}>${escapeHtml(line)}</p>`)
         .join('')}</div>`;
+    }
   }
 };
 
@@ -466,7 +474,14 @@ export const BOOK_STYLES = `
   .bk-display .bk-book-title { font-size: var(--pt-title-size, 2.2em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, normal); letter-spacing: var(--pt-title-tracking, 0.02em); border-bottom: var(--pt-rule, none); padding-bottom: 0.15em; }
   .bk-display .bk-author, .bk-display .bk-subtitle, .bk-display .bk-imprint { font-size: var(--pt-line-size, 1.1em); text-transform: var(--pt-line-case, uppercase); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, normal); letter-spacing: var(--pt-line-tracking, 0.12em); }
   .bk-subtitle { margin: 0.8em 0 0; }
-  .bk-display .bk-words p { font-size: var(--pt-title-size, 1em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, italic); letter-spacing: var(--pt-title-tracking, 0); }
+  /* One selector, not two: bk-display and bk-words are on the same element,
+     so the descendant form that stood here matched nothing and the page's own
+     type was never honoured at all (§7a). The defaults are what the dead rule
+     fell back to, so a page made before this draws as it did. */
+  .bk-display.bk-words p { font-size: var(--pt-title-size, 1em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, italic); letter-spacing: var(--pt-title-tracking, 0); }
+  /* The lines under the words: an epigraph's attribution, a dedication's
+     second line. They start as the words and are set apart from here. */
+  .bk-display.bk-words p.bk-words-under { font-size: var(--pt-line-size, 1em); text-transform: var(--pt-line-case, none); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, italic); letter-spacing: var(--pt-line-tracking, 0); }
   .bk-display.bk-copyright { justify-content: flex-end; align-items: flex-start; text-align: left; }
   .bk-display.bk-plate { justify-content: center; }
   .bk-book-title { margin: 0; font-size: 2.2em; line-height: 1.15; letter-spacing: 0.02em; }

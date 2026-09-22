@@ -416,6 +416,8 @@ const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle:
           title: '',
           text: part.text,
           spans: parseInline(part.text),
+          // The page may be a piece of art like any other designed page (§7a).
+          assetId: part.assetId,
           partStyle: partHasStyle(part.kind) ? partStyleOf(part) : undefined,
         }),
       ];

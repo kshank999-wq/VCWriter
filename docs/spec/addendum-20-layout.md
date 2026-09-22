@@ -466,6 +466,50 @@ the two drops now sit together: the leaf's in **inches**, because it is a page
 of its own, and the opening's in **lines of the body**, because what it has to
 look right against is the text under it. Eight is what it always drew.
 
+### The epigraph and the dedication, the same way
+
+From Ken: *the epigraph and dedication pages need the same style options.*
+
+Three things were withheld from **exactly these two kinds** while the half
+title and the title page had them, and a fourth turned out to be broken.
+
+**The lines under the words.** *Lines under it* was `part.kind ===
+'title_page'` alone, so an epigraph's attribution and a dedication's second
+line could not be set apart from the words above them — every line took the
+one style. They are the title page's own shape: **the first line is the words
+and everything under it is the lines under them**, which is not a guess but the
+rule that page already follows. They **start as the words** (`KIND_DEFAULTS`
+gains a `line` equal to each kind's `title`), so a page made before this is
+unchanged; the title page's tracked capitals would have been absurd on a
+dedication.
+
+**A rule.** `{words ? null : …}` — these two kinds alone could not have one.
+Books put a rule under an epigraph; there was no reason for the exclusion.
+
+**A page of art.** The picker sat inside the half-title/title-page branch, so a
+dedication as a piece of artwork was impossible. It is lifted out to every
+**designed** page, because the words are in the picture whichever page it is
+and the print draws all four through `fullPageArt`. The block now carries
+`assetId` for these kinds too.
+
+**And the one option they did have was dead.** Driving the real page found the
+attribution taking the body size however it was set — the variable arrived on
+the box (`--pt-line-size: 8pt`) and nothing moved. The cause is in code this
+change did not write: the stylesheet said
+
+```
+.bk-display .bk-words p { font-size: var(--pt-title-size, 1em); … }
+```
+
+with a **descendant combinator**, and `bk-display` and `bk-words` are two
+classes on **one element** — so the rule had never matched anything, and the
+*words* control on the dedication and epigraph dialogs had been doing nothing
+since it shipped. The neighbouring rules are fine because `.bk-book-title` and
+`.bk-author` really are children. One space deleted. The defaults are exactly
+what the dead rule fell back to (11 pt italic, inherited), so no existing page
+moves; only a writer who had changed the control and seen nothing happen now
+gets what they asked for.
+
 ## 8. Graphics
 
 Three kinds, and two of them exist:
