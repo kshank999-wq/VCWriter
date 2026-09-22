@@ -1407,7 +1407,22 @@ push live; the build takes a minute or two.
   **wrapper**, so the entries take it by inheritance and a sub-entry's `0.92em`
   stays a share of the entry rather than of the body. Fourteen point over
   eleven, the running heads' caveat a second time: a book whose body is not
-  eleven point is the one thing that reads differently. **§8a is pictures inside the story**, from Ken
+  eleven point is the one thing that reads differently. **And the index's
+  letter dividers**, from Ken straight after — the one thing left on that page
+  whose look was not the writer's: `.bk-index-letter` was `font-weight: 700`
+  and nothing else, so an A and a B were **the entries in bold**, taking their
+  size, case, tracking and slope. It is the running heads' argument a **third**
+  time and lands the same way — a divider is **a line of type**, so `divider`
+  is a third `LineStyle` on the part rather than a new vocabulary, overriding
+  every property the wrapper hands down instead of inheriting most of them, and
+  an index sets **three** lines where a contents page sets two.
+  `partHasDividers` is a **predicate rather than `kind === 'index'` in the
+  component**, the print and the dialog having to agree about which page has
+  them, and a contents page being in the book's own order has nothing to divide
+  it by. The default is what the stylesheet drew (bold at the reading size), so
+  an untouched index is unchanged; from here the size is the divider's own,
+  which is the point — setting the entries to 9 pt leaves the letters where
+  they are. **§8a is pictures inside the story**, from Ken
   laying out a children's book, and the audit paid a **thirteenth** time:
   a picture inside the story **is a figure**, which the manuscript has had
   since addendum 16 §9 and which already stands where the writer put it —

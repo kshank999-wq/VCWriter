@@ -8,6 +8,7 @@ import {
   createProjectFile,
   geometryOf,
   partPlacement,
+  partHasDividers,
   partHasStyle,
   partStyleOf,
   partStyleVars,
@@ -311,5 +312,40 @@ describe('the contents page and the index', () => {
     expect(html).toContain('--pt-title-size:16pt');
     expect(html).toContain('--pt-title-variant:small-caps');
     expect(html).toContain('lamps');
+  });
+  it('gives the index letter dividers of their own, and no other page any', () => {
+    // An A and a B are a third kind of line on that page rather than a bold
+    // entry (§7a). A contents page is in the book's own order, so there is
+    // nothing to divide it by.
+    expect(partHasDividers('index')).toBe(true);
+    for (const kind of ['contents', 'half_title', 'title_page', 'dedication', 'epigraph', 'copyright'] as const) {
+      expect(partHasDividers(kind)).toBe(false);
+    }
+  });
+
+  it('starts the dividers as the stylesheet drew them, bold at the reading size', () => {
+    const style = partStyleOf(partsOf(addPart(novel(), 'index').file).find((one) => one.kind === 'index')!);
+    expect(style.divider).toEqual({ size: 11, case: 'as_typed', bold: true, italic: false, tracking: 0 });
+  });
+
+  it('sets the dividers apart from the entries, which is the point of separating them', () => {
+    const file = addPart(novel(), 'index').file;
+    const part = partsOf(file).find((one) => one.kind === 'index')!;
+    const style = partStyleOf(part);
+    const set = updatePart(file, part.id, {
+      style: {
+        ...style,
+        line: { ...style.line, size: 9 },
+        divider: { ...style.divider, size: 13, case: 'small_caps', bold: false, tracking: 20 },
+      },
+    });
+    const block = bookBlocks(set).find((one) => one.kind === 'index')!;
+    const html = renderBookBlock(block, laid(set));
+    // The two say different things, which they could not before.
+    expect(html).toContain('--pt-line-size:9pt');
+    expect(html).toContain('--pt-divider-size:13pt');
+    expect(html).toContain('--pt-divider-variant:small-caps');
+    expect(html).toContain('--pt-divider-weight:400');
+    expect(html).toContain('--pt-divider-tracking:0.2em');
   });
 });

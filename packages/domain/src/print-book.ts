@@ -510,7 +510,11 @@ export const BOOK_STYLES = `
   .bk-contents-label { flex: none; min-width: 6em; }
   .bk-contents-title { flex: 1; }
   .bk-contents-page { flex: none; min-width: 2.5em; text-align: right; }
-  .bk-index-letter { margin: 0; padding-top: var(--bk-lead); font-weight: 700; }
+  /* The letter dividers are a third kind of line on the page and not the
+     entries under them (§7a), so they override every property the wrapper
+     hands down rather than taking the entries' and differing only in weight.
+     The fallbacks are what the rule said before: bold, at the reading size. */
+  .bk-index-letter { margin: 0; padding-top: var(--bk-lead); font-size: var(--pt-divider-size, 1em); text-transform: var(--pt-divider-case, none); font-variant-caps: var(--pt-divider-variant, normal); font-weight: var(--pt-divider-weight, 700); font-style: var(--pt-divider-style, normal); letter-spacing: var(--pt-divider-tracking, 0); }
   .bk-index-entry { margin: 0; padding-left: 1.5em; text-indent: -1.5em; }
   .bk-index-sub { padding-left: 3em; }
   /* The furniture reads the book's own settings (§7a): what used to be

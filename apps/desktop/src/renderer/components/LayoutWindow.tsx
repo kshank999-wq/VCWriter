@@ -40,6 +40,7 @@ import {
   bookNames,
   paragraphsOf,
   partHasStyle,
+  partHasDividers,
   partPlacement,
   partOfInset,
   partStyleOf,
@@ -2375,6 +2376,12 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
           entries under the heading, which is the same pair said of a list. */}
       {part.kind === 'title_page' || words || flows ? (
         <Line label={flows ? 'The entries' : 'Lines under it'} style={style.line} onPatch={(patch) => write({ line: { ...style.line, ...patch } })} />
+      ) : null}
+      {/* The letter dividers (§7a, from Ken: *separate out the letter
+          dividers*). An index's A and B are a third kind of line rather than
+          a bold entry, and the index is the only page that has any. */}
+      {partHasDividers(part.kind) ? (
+        <Line label="The letter dividers" style={style.divider} onPatch={(patch) => write({ divider: { ...style.divider, ...patch } })} />
       ) : null}
       {words ? <p className="muted small">The first line of the text is the words; anything under it — an attribution, a second line — is set by the pair above.</p> : null}
       <label className="check">

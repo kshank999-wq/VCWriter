@@ -48,6 +48,14 @@ export const partStyleSchema = z.object({
   title: lineStyleSchema.default({ size: 24, tracking: 2 }),
   /** The lines under the title: a subtitle, the author, the publisher. */
   line: lineStyleSchema.default({ size: 12, case: 'capitals', tracking: 12 }),
+  /**
+   * The letter dividers of an index — the A, the B — which are a third kind of
+   * line on that page and not the entries under them (§7a). The default is
+   * what the stylesheet drew, bold at the reading size, so an index nobody has
+   * touched is unchanged; the kinds that have no dividers ignore it, the way
+   * the foot-hung and flowing pages ignore the drop.
+   */
+  divider: lineStyleSchema.default({ size: 11, bold: true }),
   /** A rule under the title. */
   rule: z.boolean().default(false),
 });
@@ -89,6 +97,16 @@ export const partHasStyle = (kind: PartKind): boolean =>
 export type PartPlacement = 'block' | 'foot' | 'flows';
 export const partPlacement = (kind: PartKind): PartPlacement =>
   kind === 'copyright' ? 'foot' : kind === 'contents' || kind === 'index' ? 'flows' : 'block';
+
+/**
+ * Whether the page divides its entries under **letters** (§7a, from Ken:
+ * *separate out the letter dividers*). The index does and nothing else does —
+ * a contents page is in the book's own order, so there is nothing to divide
+ * it by. It is a predicate rather than `kind === 'index'` written into the
+ * screen, so the print and the dialog cannot disagree about which page has
+ * them.
+ */
+export const partHasDividers = (kind: PartKind): boolean => kind === 'index';
 
 /**
  * What each kind looks like until somebody touches it — exactly what the
@@ -163,6 +181,7 @@ export const partStyleVars = (style: PartStyle, bookFace: BookFace): Record<stri
   '--pt-rule': style.rule ? '1px solid currentColor' : 'none',
   ...lineVars('title', style.title),
   ...lineVars('line', style.line),
+  ...lineVars('divider', style.divider),
 });
 
 /** The same, as a `style` attribute's text. */

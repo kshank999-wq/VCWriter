@@ -571,6 +571,35 @@ with the running heads, that is a size in points where there was a share of
 the body, so a book whose body is not eleven point is the one thing that reads
 differently — and by a couple of per cent.
 
+#### The letter dividers
+
+From Ken, after seeing the above: *separate out the letter dividers.*
+
+They were the one thing left on that page whose look was not the writer's.
+`.bk-index-letter` was `font-weight: 700` and nothing else, so an index's A and
+its B were **the entries in bold** — they took the entries' size, case,
+tracking and slope, and differed from them only in weight.
+
+That is the running heads' argument a third time, and it lands the same way: a
+letter divider is **a line of type**, so it is a third `LineStyle` on the part
+(`divider`) rather than a new vocabulary, and it overrides every property the
+wrapper hands down instead of inheriting most of them. An index page therefore
+sets three lines — the heading, the entries, the dividers — where a contents
+page sets two.
+
+Two decisions. **`partHasDividers` is a predicate rather than `kind ===
+'index'` written into the screen**, because the print and the dialog have to
+agree about which page has them — and a contents page is in the book's own
+order, so there is nothing to divide it by. And **the default is exactly what
+the stylesheet drew**, bold at the reading size, so an index nobody has
+touched is unchanged; the before-and-after measured on the real page is what
+proves it.
+
+The size is the divider's own from here, which is the point of separating
+them: setting the entries to 9 pt now leaves the letters where they are. Only
+a book whose entries were resized since the change above could notice that,
+and that change is a few hours old.
+
 ## 8. Graphics
 
 Three kinds, and two of them exist:
