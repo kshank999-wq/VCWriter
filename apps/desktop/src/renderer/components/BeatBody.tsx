@@ -59,6 +59,8 @@ import {
   splitBeatBefore,
   splitUnitBefore,
   tagPassage,
+  themesInOrder,
+  motifsInOrder,
   styleShortcuts,
   subHeadingsUnder,
   toggleInline,
@@ -1652,7 +1654,8 @@ function TagThematic({
   const [motifType, setMotifType] = useState<MotifType>('visual');
   const [note, setNote] = useState('');
 
-  const list = kind === 'theme' ? (file.themes ?? []) : (file.motifs ?? []);
+  // The readings, so something deleted cannot be tagged (addendum 24 §2).
+  const list = kind === 'theme' ? themesInOrder(file) : motifsInOrder(file);
   // Choosing a kind changes what the list is, so the selection goes with it —
   // a theme id left standing in a motif picker is a control that lies.
   const chosen = list.find((one) => (one.id as string) === ownerId) ?? list[0] ?? null;

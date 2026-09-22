@@ -5,6 +5,7 @@ import {
   addMotif,
   addTheme,
   countOf,
+  motifsInOrder,
   motifsOfTheme,
   noteOccurrence,
   occurrencesOf,
@@ -12,6 +13,7 @@ import {
   removeMotif,
   removeTheme,
   describeDeleting,
+  themesInOrder,
   themesOfMotif,
   unrelateMotifFromTheme,
   untagPassage,
@@ -65,8 +67,11 @@ export function ThemesPanel({ file, onUpdate, onGoTo }: ThemesPanelProps) {
   const [motifId, setMotifId] = useState<ResearchMotifId | null>(null);
   const [draft, setDraft] = useState('');
 
-  const themes = file.themes ?? [];
-  const motifs = file.motifs ?? [];
+  // The readings rather than the collections: a buried record keeps its place
+  // in the file (addendum 24 §2), so `file.themes` still holds what was
+  // deleted — and this list drew it, which is the fault §2 warns about.
+  const themes = themesInOrder(file);
+  const motifs = motifsInOrder(file);
   const theme = themes.find((one) => one.id === themeId) ?? themes[0] ?? null;
   const motif = motifs.find((one) => one.id === motifId) ?? motifs[0] ?? null;
 
@@ -105,28 +110,28 @@ export function ThemesPanel({ file, onUpdate, onGoTo }: ThemesPanelProps) {
         </div>
 
         <ul className="item-list">
-          {(kind === 'theme' ? themes : motifs).map((one) => {
-            const met = countOf(file, kind, one.id as string);
-            const chosen = kind === 'theme' ? one.id === theme?.id : one.id === motif?.id;
-            return (
-              <li key={one.id}>
-                <button
-                  type="button"
-                  className={chosen ? 'item selected' : 'item'}
-                  onClick={() =>
-                    kind === 'theme'
-                      ? setThemeId(one.id as ResearchThemeId)
-                      : setMotifId(one.id as ResearchMotifId)
-                  }
-                >
-                  <span className="item-title">{one.name || 'Untitled'}</span>
-                  {/* A fact, with no opinion about whether it is enough. */}
-                  <span className="muted count">{met.total}</span>
-                  {met.orphans > 0 ? <span className="thematic-lost">{met.orphans} lost</span> : null}
-                </button>
-              </li>
-            );
-          })}
+          {(kind === 'theme' ? themes : motifs).map((one) => (
+            <ThematicRow
+              key={one.id}
+              file={file}
+              kind={kind}
+              id={one.id as string}
+              name={one.name}
+              chosen={kind === 'theme' ? one.id === theme?.id : one.id === motif?.id}
+              onChoose={() =>
+                kind === 'theme'
+                  ? setThemeId(one.id as ResearchThemeId)
+                  : setMotifId(one.id as ResearchMotifId)
+              }
+              onDelete={() =>
+                onUpdate((current) =>
+                  kind === 'theme'
+                    ? removeTheme(current, one.id as ResearchThemeId)
+                    : removeMotif(current, one.id as ResearchMotifId),
+                )
+              }
+            />
+          ))}
         </ul>
 
         <form
@@ -184,9 +189,6 @@ export function ThemesPanel({ file, onUpdate, onGoTo }: ThemesPanelProps) {
             <StateRow
               state={theme.state}
               onChange={(state) => onUpdate((current) => updateTheme(current, theme.id, { state }))}
-              onRemove={() => onUpdate((current) => removeTheme(current, theme.id))}
-              removeLabel="Delete this theme"
-              note={describeDeleting(file, { kind: 'theme', id: theme.id as string })}
             />
 
             {/* Its motifs, named as a relationship and never as a merge. */}
@@ -268,9 +270,6 @@ export function ThemesPanel({ file, onUpdate, onGoTo }: ThemesPanelProps) {
             <StateRow
               state={motif.state}
               onChange={(state) => onUpdate((current) => updateMotif(current, motif.id, { state }))}
-              onRemove={() => onUpdate((current) => removeMotif(current, motif.id))}
-              removeLabel="Delete this motif"
-              note={describeDeleting(file, { kind: 'motif', id: motif.id as string })}
             />
 
             <h3>Themes it belongs to</h3>
@@ -345,22 +344,14 @@ export function ThemesPanel({ file, onUpdate, onGoTo }: ThemesPanelProps) {
   );
 }
 
-/** The state and the way out, shared by both kinds — the one thing that is. */
+/** The state, shared by both kinds — the one field that is. */
 function StateRow({
   state,
   onChange,
-  onRemove,
-  removeLabel,
-  note,
 }: {
   state: ThematicState;
   onChange(state: ThematicState): void;
-  onRemove(): void;
-  removeLabel: string;
-  /** What deleting costs, in the graveyard's own words. */
-  note: string;
 }) {
-  const [asking, setAsking] = useState(false);
   return (
     <div className="thematic-state">
       <label className="field">
@@ -373,26 +364,82 @@ function StateRow({
           ))}
         </select>
       </label>
-      {/* §3 asks that removal be confirmed and that it be clear what goes with
-          it. What goes is the taggings; the writing is untouched. The sentence
-          itself is the graveyard's — its taggings are kept, so restoring gives
-          back what was there, and saying they were cut would be a promise the
-          graveyard could not keep. */}
-      {asking ? (
-        <div className="thematic-confirm">
-          <span className="muted small">{note}</span>
-          <button type="button" className="ghost small danger" onClick={onRemove}>
-            Remove it
-          </button>
-          <button type="button" className="ghost small" onClick={() => setAsking(false)}>
-            Keep it
-          </button>
-        </div>
-      ) : (
-        <button type="button" className="ghost small danger" onClick={() => setAsking(true)}>
-          {removeLabel}
-        </button>
-      )}
     </div>
+  );
+}
+
+/**
+ * A theme or a motif on the list, with the × on it (addendum 24 §5d).
+ *
+ * The delete used to sit in the detail beside *How it is going*, where Ken did
+ * not find it — a delete belongs on **the row of the thing it deletes**, which
+ * is where he has asked for it on a story, an episode and the cast. There is
+ * one of them rather than two, because two controls for one act on one screen
+ * is two answers to *how do I get rid of this*.
+ *
+ * §3 asks that removal be confirmed and that what goes with it be clear. What
+ * goes is the taggings, and they are **kept** rather than cut, which is what
+ * lets restoring give back what was there — so the sentence is the graveyard's
+ * own rather than this screen's.
+ */
+function ThematicRow({
+  file,
+  kind,
+  id,
+  name,
+  chosen,
+  onChoose,
+  onDelete,
+}: {
+  file: ProjectFile;
+  kind: ThematicKind;
+  id: string;
+  name: string;
+  chosen: boolean;
+  onChoose(): void;
+  onDelete(): void;
+}) {
+  const [asking, setAsking] = useState(false);
+  const met = countOf(file, kind, id);
+  return (
+    <li>
+      <div className="item-row">
+        <button type="button" className={chosen ? 'item selected' : 'item'} onClick={onChoose}>
+          <span className="item-title">{name || 'Untitled'}</span>
+          {/* A fact, with no opinion about whether it is enough. */}
+          <span className="muted count">{met.total}</span>
+          {met.orphans > 0 ? <span className="thematic-lost">{met.orphans} lost</span> : null}
+        </button>
+        <button
+          type="button"
+          className="ghost small danger item-x"
+          aria-label={`Delete ${name || 'Untitled'}`}
+          title={`Delete ${name || 'Untitled'}`}
+          onClick={() => setAsking(true)}
+        >
+          ×
+        </button>
+      </div>
+      {asking ? (
+        <div className="row-ask">
+          <span className="muted small">{describeDeleting(file, { kind, id })}</span>
+          <span className="row-ask-buttons">
+            <button
+              type="button"
+              className="ghost small danger"
+              onClick={() => {
+                onDelete();
+                setAsking(false);
+              }}
+            >
+              Delete
+            </button>
+            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+              Keep
+            </button>
+          </span>
+        </div>
+      ) : null}
+    </li>
   );
 }

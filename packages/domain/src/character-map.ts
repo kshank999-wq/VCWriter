@@ -1,3 +1,4 @@
+import { workingCast } from './characters.js';
 import {
   peopleSpeakingIn,
   relationshipName,
@@ -295,11 +296,8 @@ export const characterMap = (input: {
   ].filter((one): one is Set<string> => one !== null);
   const allowed = limits.length === 0 ? null : limits;
 
-  const cast = file.characters
-    .filter(
-      (person) =>
-        !person.archived && (!allowed || allowed.every((set) => set.has(person.id as string))),
-    )
+  const cast = workingCast(file)
+    .filter((person) => !allowed || allowed.every((set) => set.has(person.id as string)))
     .sort((a, b) => a.name.localeCompare(b.name));
   const present = new Set(cast.map((person) => person.id as string));
 

@@ -47,7 +47,6 @@ export function LocationsPanel({ file, onUpdate, onGoToUnit }: LocationsPanelPro
   const unrecorded = useMemo(() => placesWithoutRecords(file), [file]);
   const [chosenId, setChosenId] = useState<LocationId | null>(null);
   const [draft, setDraft] = useState('');
-  const [asking, setAsking] = useState(false);
 
   const chosen = locations.find((one) => one.id === chosenId) ?? locations[0] ?? null;
   const scenes = chosen ? usedIn(file, chosen.id) : [];
@@ -60,25 +59,16 @@ export function LocationsPanel({ file, onUpdate, onGoToUnit }: LocationsPanelPro
         </div>
 
         <ul className="item-list">
-          {locations.map((one) => {
-            const used = timesUsed(file, one.id);
-            return (
-              <li key={one.id}>
-                <button
-                  type="button"
-                  className={one.id === chosen?.id ? 'item selected' : 'item'}
-                  onClick={() => setChosenId(one.id)}
-                >
-                  <span className="item-title">{one.name || 'Unnamed'}</span>
-                  <span className="muted small">{one.setting}</span>
-                  {/* A fact, not a grade: a place written once is not a fault. */}
-                  <span className={used === 0 ? 'locations-unused' : 'muted count'}>
-                    {used === 0 ? 'not used' : used}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
+          {locations.map((one) => (
+            <LocationRow
+              key={one.id}
+              file={file}
+              location={one}
+              chosen={one.id === chosen?.id}
+              onChoose={() => setChosenId(one.id)}
+              onDelete={() => onUpdate((current) => removeLocation(current, one.id))}
+            />
+          ))}
         </ul>
 
         <form
@@ -254,37 +244,6 @@ export function LocationsPanel({ file, onUpdate, onGoToUnit }: LocationsPanelPro
                 />
                 <span>Put away</span>
               </label>
-              {asking ? (
-                <span className="locations-confirm">
-                  {/* The scenes are this screen's own fact — a writer removing
-                      a place wants to know the headings survive it — and where
-                      it goes is the graveyard's sentence rather than a second
-                      copy of one. */}
-                  <span className="muted small">
-                    {scenes.length > 0
-                      ? `${scenes.length} ${scenes.length === 1 ? 'scene names' : 'scenes name'} it, and their headings keep the name. `
-                      : 'Nothing uses it. '}
-                    {describeDeleting(file, { kind: 'location', id: chosen.id as string })}
-                  </span>
-                  <button
-                    type="button"
-                    className="ghost small danger"
-                    onClick={() => {
-                      onUpdate((current) => removeLocation(current, chosen.id));
-                      setAsking(false);
-                    }}
-                  >
-                    Remove it
-                  </button>
-                  <button type="button" className="ghost small" onClick={() => setAsking(false)}>
-                    Keep it
-                  </button>
-                </span>
-              ) : (
-                <button type="button" className="ghost small danger" onClick={() => setAsking(true)}>
-                  Remove this location
-                </button>
-              )}
             </div>
           </>
         ) : (
@@ -292,5 +251,78 @@ export function LocationsPanel({ file, onUpdate, onGoToUnit }: LocationsPanelPro
         )}
       </section>
     </div>
+  );
+}
+
+/**
+ * A place on the list, with the × on it (addendum 24 §5d).
+ *
+ * It used to be *Remove this location* at the foot of the detail, which is a
+ * scroll away from the row a writer is pointing at; the row is where every
+ * other delete in the room now lives. The question keeps this screen's own
+ * fact — the scenes that name it keep their headings — ahead of the
+ * graveyard's sentence, because that is the thing somebody removing a place
+ * is actually worried about.
+ */
+function LocationRow({
+  file,
+  location,
+  chosen,
+  onChoose,
+  onDelete,
+}: {
+  file: ProjectFile;
+  location: { id: LocationId; name: string; setting: string };
+  chosen: boolean;
+  onChoose(): void;
+  onDelete(): void;
+}) {
+  const [asking, setAsking] = useState(false);
+  const used = timesUsed(file, location.id);
+  return (
+    <li>
+      <div className="item-row">
+        <button type="button" className={chosen ? 'item selected' : 'item'} onClick={onChoose}>
+          <span className="item-title">{location.name || 'Unnamed'}</span>
+          <span className="muted small">{location.setting}</span>
+          {/* A fact, not a grade: a place written once is not a fault. */}
+          <span className={used === 0 ? 'locations-unused' : 'muted count'}>{used === 0 ? 'not used' : used}</span>
+        </button>
+        <button
+          type="button"
+          className="ghost small danger item-x"
+          aria-label={`Delete ${location.name || 'Unnamed'}`}
+          title={`Delete ${location.name || 'Unnamed'}`}
+          onClick={() => setAsking(true)}
+        >
+          ×
+        </button>
+      </div>
+      {asking ? (
+        <div className="row-ask">
+          <span className="muted small">
+            {used > 0
+              ? `${used} ${used === 1 ? 'scene names' : 'scenes name'} it, and their headings keep the name. `
+              : 'Nothing uses it. '}
+            {describeDeleting(file, { kind: 'location', id: location.id as string })}
+          </span>
+          <span className="row-ask-buttons">
+            <button
+              type="button"
+              className="ghost small danger"
+              onClick={() => {
+                onDelete();
+                setAsking(false);
+              }}
+            >
+              Delete
+            </button>
+            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+              Keep
+            </button>
+          </span>
+        </div>
+      ) : null}
+    </li>
   );
 }

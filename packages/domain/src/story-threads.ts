@@ -1,3 +1,4 @@
+import { workingCast } from './characters.js';
 import { beatsForUnit } from './selectors.js';
 import { storyLayout, timelineArcs, type StoryLayout, type StorySpan, type TimelineArc } from './story-layout.js';
 import type { Beat, Track } from './entities/structure.js';
@@ -117,9 +118,9 @@ export const threadLayout = (
   // Characters the writer has created but who have not spoken yet still get
   // a colour, after those who have, so their first line does not reshuffle
   // everyone else.
-  for (const character of file.characters) {
+  for (const character of workingCast(file)) {
     const name = character.name.trim().toUpperCase();
-    if (name.length > 0 && !order.includes(name) && !character.archived) order.push(name);
+    if (name.length > 0 && !order.includes(name)) order.push(name);
   }
 
   const colours = new Map(order.map((name, position) => [name, characterColour(position)]));

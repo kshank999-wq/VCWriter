@@ -203,7 +203,7 @@ export const timesUsed = (file: ProjectFile, locationId: LocationId): number =>
 export const locationOfScene = (file: ProjectFile, unitId: StructuralUnitId): Location | null => {
   const heading = sceneHeadingOf(file, unitId);
   if (!heading || heading.place.length === 0) return null;
-  return (file.locations ?? []).find((one) => one.name === heading.place) ?? null;
+  return locationsInOrder(file, true).find((one) => one.name === heading.place) ?? null;
 };
 
 /**
@@ -214,7 +214,7 @@ export const locationOfScene = (file: ProjectFile, unitId: StructuralUnitId): Lo
  * the script has started.
  */
 export const placesWithoutRecords = (file: ProjectFile): string[] => {
-  const known = new Set((file.locations ?? []).map((one) => one.name));
+  const known = new Set(locationsInOrder(file, true).map((one) => one.name));
   const found = new Map<string, true>();
   for (const unit of unitsInStoryOrder(file)) {
     const heading = sceneHeadingOf(file, unit.id);

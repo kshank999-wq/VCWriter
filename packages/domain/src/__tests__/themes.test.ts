@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  describeThematics,
   destroyMotif,
   destroyTheme,
   motifsInOrder,
@@ -18,6 +19,7 @@ import {
   relateMotifToTheme,
   removeMotif,
   removeTheme,
+  restoreFromGraveyard,
   tagPassage,
   thematicTracks,
   thematicWorkIn,
@@ -124,6 +126,66 @@ describe('two kinds, all the way down', () => {
     expect(after.usageLinks.filter((link) => link.ownerKind === 'motif')).toHaveLength(1);
     // The writing is untouched, which is the only thing that would be a loss.
     expect(after.beats.find((one) => one.id === beatIds[0])!.manuscript.elements[0]!.text).toBe('One.');
+  });
+});
+
+/**
+ * The graveyard's cost (addendum 24 §2): a buried record keeps its place in
+ * the collection, so **every reading has to ask**. `themesInOrder` did and
+ * five others did not, which drew a deleted theme on the list, on the
+ * timeline, under its motif, in the count and in the tagging menu.
+ */
+describe('a buried theme is gone from every reading, not merely from its list', () => {
+  it('leaves the list, the tracks, the related motifs, the count and what a beat carries', () => {
+    const { file: made, beatIds } = book(['One.']);
+    let file = made;
+    const theme = addTheme(file, { name: 'What a town owes its dead' });
+    file = theme.file;
+    const motif = addMotif(file, { name: 'the bell', motifType: 'sound' });
+    file = motif.file;
+    file = relateMotifToTheme(file, theme.theme.id, motif.motif.id);
+    file = tagPassage(file, { kind: 'theme', ownerId: theme.theme.id as string, beatId: beatIds[0]! }).file;
+    file = tagPassage(file, { kind: 'motif', ownerId: motif.motif.id as string, beatId: beatIds[0]! }).file;
+
+    // Everything reads it while it is there.
+    expect(themesInOrder(file)).toHaveLength(1);
+    expect(thematicTracks(file).themes).toHaveLength(1);
+    expect(themesOfMotif(file, motif.motif.id)).toHaveLength(1);
+    expect(thematicWorkIn(file, beatIds[0]!).themes).toHaveLength(1);
+    expect(describeThematics(file)).toContain('1 theme');
+
+    const after = removeTheme(file, theme.theme.id);
+    expect(themesInOrder(after)).toHaveLength(0);
+    expect(thematicTracks(after).themes).toHaveLength(0);
+    expect(themesOfMotif(after, motif.motif.id)).toHaveLength(0);
+    expect(thematicWorkIn(after, beatIds[0]!).themes).toHaveLength(0);
+    expect(describeThematics(after)).toContain('0 themes');
+    // The motif is untouched by any of it, and so is the writing.
+    expect(thematicTracks(after).motifs).toHaveLength(1);
+    expect(after.beats.find((one) => one.id === beatIds[0])!.manuscript.elements[0]!.text).toBe('One.');
+
+    // And it all comes back, which is what keeping the links was for.
+    const back = restoreFromGraveyard(after, { kind: 'theme', id: theme.theme.id as string });
+    expect(themesOfMotif(back, motif.motif.id)).toHaveLength(1);
+    expect(thematicWorkIn(back, beatIds[0]!).themes).toHaveLength(1);
+  });
+
+  it('does the same for a motif', () => {
+    const { file: made, beatIds } = book(['One.']);
+    let file = made;
+    const theme = addTheme(file, { name: 'Grief' });
+    file = theme.file;
+    const motif = addMotif(file, { name: 'the bell', motifType: 'sound' });
+    file = motif.file;
+    file = relateMotifToTheme(file, theme.theme.id, motif.motif.id);
+    file = tagPassage(file, { kind: 'motif', ownerId: motif.motif.id as string, beatId: beatIds[0]! }).file;
+
+    const after = removeMotif(file, motif.motif.id);
+    expect(motifsInOrder(after)).toHaveLength(0);
+    expect(thematicTracks(after).motifs).toHaveLength(0);
+    expect(motifsOfTheme(after, theme.theme.id)).toHaveLength(0);
+    expect(thematicWorkIn(after, beatIds[0]!).motifs).toHaveLength(0);
+    expect(describeThematics(after)).toContain('0 motifs');
   });
 });
 

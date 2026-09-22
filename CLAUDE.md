@@ -1832,6 +1832,30 @@ push live; the build takes a minute or two.
   while their Creator was open left the room pointed at them** — nothing lit in
   the menu, a nameless folder in the middle — so the selection falls back to
   where the writer came from and the Creator's lookup asks `living`.
+  **§5d is themes and motifs**, from Ken — and there was one, *Delete this
+  theme* in the detail, so the ask is really about **where a delete lives**.
+  The answer his last four asks have converged on is **on the row of the thing
+  it deletes**, hidden until the row is pointed at, asking inline; the old
+  control in the detail is **gone rather than kept beside it**, two controls
+  for one act on one screen being two answers to *how do I get rid of this*.
+  Locations moved the same way in the same change, being the last list with
+  its delete in a detail pane. `.item-row`/`.item-x` are the shape and
+  `.row-ask` the question under a narrow row, one rule for the side menu and
+  the lists alike. **Driving it caught the thing worth more than the
+  feature**: deleting a theme *left it on the list*, because `ThemesPanel` read
+  `file.themes` rather than `themesInOrder` and a buried record keeps its place
+  in the collection (§2). Five more readings had the same hole
+  (`motifsOfTheme`, `themesOfMotif`, `thematicWorkIn`, `describeThematics`,
+  `thematicTracks`) plus the tagging menu and the research menu's count — so a
+  deleted theme was on the list, on the timeline, under its motif, in the count
+  and in the menu a writer tags from. The lesson is that **applying the
+  predicate in a module's main reading is not applying it in the module**. The
+  cast had it worse, their delete being an hour old: six places wrote
+  `!person.archived` for themselves, which was the whole answer while a delete
+  really deleted, so `workingCast` — *not deleted and not put away* — is now
+  the one reading the map, the arc track, the voices, the cross-arc offers, a
+  Sculptor card's cast and the colour order ask. What pins it is a test that
+  walks **every** reading rather than the list the delete came off.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

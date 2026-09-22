@@ -1,3 +1,4 @@
+import { workingCast } from './characters.js';
 import { unitsInStoryOrder } from './selectors.js';
 import { sceneHeadingOf } from './scene-heading.js';
 import { setupTrack } from './setups.js';
@@ -264,8 +265,7 @@ const thematicRows = (file: ProjectFile): TimelineRow[] => {
  */
 const arcRows = (file: ProjectFile): TimelineRow[] => {
   const rows: TimelineRow[] = [];
-  for (const character of file.characters) {
-    if (character.archived) continue;
+  for (const character of workingCast(file)) {
     const points = file.arcPoints.filter((point) => (point.characterId as string) === (character.id as string));
     if (points.length === 0) continue;
 

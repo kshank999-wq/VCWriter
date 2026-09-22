@@ -1,3 +1,4 @@
+import { onlyLiving } from './graveyard.js';
 import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
 import { initialOrderKeys, orderKeyBetween } from './ordering.js';
@@ -451,7 +452,9 @@ export const updateNode = (
  */
 export const castOnNode = (file: ProjectFile, node: SculptorNode): Character[] => {
   const wanted = new Set(node.characterIds as string[]);
-  return file.characters.filter((character) => wanted.has(character.id as string));
+  // `onlyLiving` rather than the collection: a node keeps the ids of people
+  // who have been deleted, so that they come back with them (addendum 24 §2).
+  return onlyLiving(file.characters).filter((character) => wanted.has(character.id as string));
 };
 
 /** Put somebody on a card, or take them off it. Idempotent either way. */

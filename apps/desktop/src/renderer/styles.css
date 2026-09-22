@@ -495,6 +495,35 @@ button.item:hover {
   background: var(--bg);
 }
 
+/* A list row with a delete on it (addendum 24 §5d): the name takes the room
+   and the × waits until the row is pointed at — hidden rather than absent, so
+   the keyboard still reaches it. */
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.item-row > button.item {
+  flex: 1;
+  min-width: 0;
+}
+
+/* It holds its place while hidden, so pointing at a row does not shuffle the
+   name under the pointer — and it is narrow, because that place is taken from
+   the name. */
+.item-x {
+  flex: 0 0 auto;
+  opacity: 0;
+  padding: 2px 5px;
+  line-height: 1;
+}
+
+.item-row:hover .item-x,
+.item-row:focus-within .item-x {
+  opacity: 1;
+}
+
 button.item.selected {
   background: var(--bg);
   border-color: var(--accent);

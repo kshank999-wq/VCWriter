@@ -1,3 +1,4 @@
+import { workingCast } from './characters.js';
 import { speechSegmentsForProject, speechSegmentsForUnit, type SpeechSegment } from './render.js';
 import type { VoiceAssignment } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
@@ -163,8 +164,8 @@ export const suggestVoiceAssignments = (
     return fallback;
   };
 
-  for (const character of file.characters) {
-    if (character.voice || character.archived) continue;
+  for (const character of workingCast(file)) {
+    if (character.voice) continue;
     suggestions[character.id] = toAssignment(nextVoice());
   }
 

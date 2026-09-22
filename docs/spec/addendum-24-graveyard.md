@@ -176,6 +176,51 @@ middle column drew a nameless folder — so the selection falls back to where
 the writer came from, and the Creator's own lookup asks `living` rather than
 merely finding the record.
 
+## 5d. Themes and motifs, and where a delete lives
+
+From Ken: *I need a delete for themes and motifs too*. There was one —
+*Delete this theme* in the detail, beside **How it is going** — so the ask is
+really about **where a delete lives**, and the answer the room has been
+converging on through his last four asks is: **on the row of the thing it
+deletes**, hidden until the row is pointed at, asking inline. A story, an
+episode and the cast all got that; themes, motifs and locations had theirs at
+the foot of a detail pane, which is a scroll away from what a writer is
+pointing at.
+
+So the × is on the list row, and the old control in the detail is **gone
+rather than kept beside it**: two controls for one act on one screen is two
+answers to *how do I get rid of this*. The locations panel moved the same way
+in the same change — it was the only list left with its delete in the detail,
+and leaving it there would have made the room half-consistent for no reason
+anybody could state. `.item-row` and `.item-x` are the shape, so the next list
+that needs one adds no rules; `.row-ask` is the question under a narrow row,
+one rule for the side menu and the lists alike.
+
+### The fault it uncovered
+
+Driving the screen caught something worth more than the feature: **deleting a
+theme left it on the list**. `ThemesPanel` read `file.themes` rather than
+`themesInOrder`, and a buried record *keeps its place in the collection* (§2)
+— so it was still drawn. Five more readings had the same hole:
+`motifsOfTheme`, `themesOfMotif`, `thematicWorkIn`, `describeThematics` and
+`thematicTracks`, plus the tagging menu in `BeatBody` and the count in the
+research menu. A deleted theme was on the list, on the timeline, under its
+motif, in the count and in the menu a writer tags from.
+
+This is exactly the cost §2 names — *every list must not show the buried* —
+and the lesson is that **applying the predicate in the module's main reading
+is not the same as applying it in the module**. The characters had it too, and
+worse, because their delete only shipped an hour earlier: six places wrote
+`!person.archived` for themselves, which was the whole answer while a delete
+really deleted and is half of one now. `workingCast` in `characters.ts` is
+that half made whole — *not deleted and not put away* — and the map, the arc
+track, the voices, the cross-arc offers, a Sculptor card's cast and the
+colour order read it. A location the script still names can be adopted again
+after its record is deleted, which is the same fix pointed at `locationsInOrder`.
+
+What pins it is a test that walks **every** reading rather than the list the
+delete came off.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -189,3 +234,6 @@ merely finding the record.
 - `describeDeleting` and `hangingOn`, read by all six screens that ask before
   a delete; the × on the cast rows in the side menu and the ask on the cast
   panel's own.
+- The × on a list row (`.item-row`, `.item-x`, `.row-ask`) for themes, motifs
+  and locations, with the detail's own delete taken out; `workingCast`, and
+  every themes reading routed through `themesInOrder`/`motifsInOrder`.

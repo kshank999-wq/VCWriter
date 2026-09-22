@@ -100,10 +100,22 @@ export const castByCategory = (file: ProjectFile, includeArchived = false): Cast
 export const castInCueOrder = (file: ProjectFile): string[] =>
   castByCategory(file).flatMap((group) => group.characters.map((character) => character.name));
 
+/**
+ * The cast a writer is working with: **not deleted and not put away**.
+ *
+ * The one reading for *everywhere a person is listed* — the map, the arc
+ * track, a card's cast, the voices offered, who an arc can be linked to.
+ * Those all wrote `!person.archived` for themselves, which was the whole
+ * answer while a delete really deleted; since the graveyard it is half of one,
+ * and half an answer draws somebody the writer has deleted.
+ */
+export const workingCast = (file: ProjectFile): Character[] =>
+  onlyLiving(file.characters).filter((character) => !character.archived);
+
 /** The people under a set of headings — what an episode's carry-over asks for. */
 export const charactersIn = (file: ProjectFile, categoryIds: readonly string[]): Character[] => {
   const wanted = new Set(categoryIds);
-  return file.characters.filter((character) => !character.archived && wanted.has(character.categoryId as string));
+  return workingCast(file).filter((character) => wanted.has(character.categoryId as string));
 };
 
 /**

@@ -199,14 +199,16 @@ export const motifsOfTheme = (file: ProjectFile, themeId: ResearchThemeId): Rese
   const wanted = new Set(
     (file.themeMotifLinks ?? []).filter((link) => link.themeId === themeId).map((link) => link.motifId as string),
   );
-  return (file.motifs ?? []).filter((motif) => wanted.has(motif.id as string));
+  // Off `motifsInOrder` rather than the collection: a buried motif keeps its
+  // links (addendum 24 §2), so reading the collection here would list one.
+  return motifsInOrder(file).filter((motif) => wanted.has(motif.id as string));
 };
 
 export const themesOfMotif = (file: ProjectFile, motifId: ResearchMotifId): ResearchTheme[] => {
   const wanted = new Set(
     (file.themeMotifLinks ?? []).filter((link) => link.motifId === motifId).map((link) => link.themeId as string),
   );
-  return (file.themes ?? []).filter((theme) => wanted.has(theme.id as string));
+  return themesInOrder(file).filter((theme) => wanted.has(theme.id as string));
 };
 
 // ---------------------------------------------------------------- tagging
@@ -362,15 +364,15 @@ export const thematicWorkIn = (
   const themeIds = new Set(here.filter((link) => link.ownerKind === 'theme').map((link) => link.ownerId));
   const motifIds = new Set(here.filter((link) => link.ownerKind === 'motif').map((link) => link.ownerId));
   return {
-    themes: (file.themes ?? []).filter((theme) => themeIds.has(theme.id as string)),
-    motifs: (file.motifs ?? []).filter((motif) => motifIds.has(motif.id as string)),
+    themes: themesInOrder(file).filter((theme) => themeIds.has(theme.id as string)),
+    motifs: motifsInOrder(file).filter((motif) => motifIds.has(motif.id as string)),
   };
 };
 
 /** One line about the module, for the menu. */
 export const describeThematics = (file: ProjectFile): string => {
-  const themes = (file.themes ?? []).length;
-  const motifs = (file.motifs ?? []).length;
+  const themes = themesInOrder(file).length;
+  const motifs = motifsInOrder(file).length;
   if (themes + motifs === 0) return 'Nothing named yet.';
   return `${themes} ${themes === 1 ? 'theme' : 'themes'} · ${motifs} ${motifs === 1 ? 'motif' : 'motifs'}`;
 };
@@ -426,10 +428,10 @@ export const thematicTracks = (
   });
 
   return {
-    themes: (file.themes ?? [])
+    themes: themesInOrder(file)
       .filter((theme) => theme.state !== 'set_aside')
       .map((theme) => rowFor('theme', theme.id as string, theme.name || 'Untitled theme', '')),
-    motifs: (file.motifs ?? [])
+    motifs: motifsInOrder(file)
       .filter((motif) => motif.state !== 'set_aside')
       .map((motif) => rowFor('motif', motif.id as string, motif.name || 'Untitled motif', motif.motifType)),
   };

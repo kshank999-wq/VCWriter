@@ -96,7 +96,9 @@ describe('the library', () => {
     const current = useLocationInScene(made.file, ids[0]!, made.location.id);
     render(<Panel start={current} />);
 
-    fireEvent.click(screen.getByText('Remove this location'));
+    // On the row rather than at the foot of the detail (addendum 24 §5d).
+    expect(screen.queryByText('Remove this location')).toBeNull();
+    fireEvent.click(screen.getByLabelText('Delete MILLER HOUSE'));
     // The scenes keep their headings — this screen's own fact — and where the
     // record goes is the graveyard's sentence, said the same way everywhere.
     expect(screen.getByText(/their headings keep the name/)).toBeTruthy();

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import {
+  motifsInOrder,
   themesInOrder,
   graveyard,
   addBeat,
@@ -201,10 +202,13 @@ describe('the screen', () => {
   it('asks before removing, and says what goes with it', () => {
     let seen: ProjectFile | null = null;
     render(<Panel start={tagged().file} onFile={(one) => (seen = one)} />);
-    fireEvent.click(screen.getByText('Delete this theme'));
+    // The × is on the row of the thing it deletes (addendum 24 §5d), which is
+    // where every other delete in the room is, and there is only the one.
+    expect(screen.queryByText('Delete this theme')).toBeNull();
+    fireEvent.click(screen.getByLabelText('Delete What a town owes its dead'));
 
     expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
-    fireEvent.click(screen.getByText('Remove it'));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
     const after = seen as unknown as ProjectFile;
     // Off the list, in the graveyard, and its taggings **kept** — which is
@@ -213,6 +217,26 @@ describe('the screen', () => {
     expect(graveyard(after).map((row) => row.word)).toEqual(['Theme']);
     expect(after.usageLinks.filter((one) => one.ownerKind === 'theme')).toHaveLength(1);
     // The motif's occurrences are untouched.
+    expect(after.usageLinks.filter((one) => one.ownerKind === 'motif')).toHaveLength(2);
+  });
+
+  it('deletes a motif the same way, from its own row on its own tab', () => {
+    let seen: ProjectFile | null = null;
+    render(<Panel start={tagged().file} onFile={(one) => (seen = one)} />);
+    fireEvent.click(screen.getByRole('tab', { name: /Motifs/ }));
+
+    fireEvent.click(screen.getByLabelText('Delete the bell'));
+    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+    // Keeping it is a real answer: nothing has happened yet.
+    fireEvent.click(screen.getByRole('button', { name: 'Keep' }));
+    expect(motifsInOrder(seen as unknown as ProjectFile)).toHaveLength(1);
+
+    fireEvent.click(screen.getByLabelText('Delete the bell'));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    const after = seen as unknown as ProjectFile;
+    expect(motifsInOrder(after)).toHaveLength(0);
+    expect(graveyard(after).map((row) => row.word)).toEqual(['Motif']);
+    // Its occurrences are kept, which is what lets it come back whole.
     expect(after.usageLinks.filter((one) => one.ownerKind === 'motif')).toHaveLength(2);
   });
 });

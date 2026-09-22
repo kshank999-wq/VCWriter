@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { id, nowIso, orderKey, timestamps } from './entities/common.js';
 import { storyEntityRefSchema } from './entities/links.js';
-import { charactersCalled } from './characters.js';
+import { charactersCalled, workingCast } from './characters.js';
 import { orderKeyBetween } from './ordering.js';
 import { newId } from './ids.js';
 import type {
@@ -1786,8 +1786,8 @@ export const otherArcPoints = (
   file: ProjectFile,
   characterId: CharacterId,
 ): { characterId: CharacterId; characterName: string; points: ArcPoint[] }[] =>
-  file.characters
-    .filter((person) => !person.archived && (person.id as string) !== (characterId as string))
+  workingCast(file)
+    .filter((person) => (person.id as string) !== (characterId as string))
     .map((person) => ({
       characterId: person.id,
       characterName: person.name,

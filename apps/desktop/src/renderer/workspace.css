@@ -11687,12 +11687,6 @@ dialog.chapter-page-dialog {
   flex-wrap: wrap;
 }
 
-.thematic-confirm {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
 
 .thematic-related {
   list-style: none;
@@ -12160,12 +12154,6 @@ dialog.chapter-page-dialog {
 }
 
 .locations-actions,
-.locations-confirm {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
 
 /* The picker, beside the heading it fills in. */
 .scene-location {
@@ -14211,9 +14199,10 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
 
 /* The graveyard (addendum 24): the plainest list in the room, because
    somebody who arrives here has just made a mistake and wants one button. */
-/* Asking, in the side menu: under the row it is about, since the menu is too
-   narrow to put a sentence beside one. */
-.research-ask {
+/* Asking about a delete, under the row it is about rather than beside it:
+   a menu and a list are both too narrow to hold a sentence on the row. One
+   rule, because the question is the same question wherever it is asked. */
+.row-ask {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -14222,7 +14211,7 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
   margin: 2px 0 4px;
 }
 
-.research-ask-buttons {
+.row-ask-buttons {
   display: flex;
   gap: 6px;
 }

@@ -4,6 +4,8 @@ import {
   describeDeleting,
   graveyardCount,
   removeCharacter,
+  motifsInOrder,
+  themesInOrder,
   addResearchCategory,
   addResearchItem,
   approveCapture,
@@ -643,7 +645,7 @@ export function ResearchBody({
                 onClick={() => setSelection({ kind: 'thematics' })}
               >
                 <span className="folder-name">Themes &amp; motifs</span>
-                <span className="count muted">{(file.themes ?? []).length + (file.motifs ?? []).length}</span>
+                <span className="count muted">{themesInOrder(file).length + motifsInOrder(file).length}</span>
               </button>
             </li>
             <li>
@@ -1003,9 +1005,9 @@ function CastMenuRow({
         </button>
       </div>
       {asking ? (
-        <div className="research-ask">
+        <div className="row-ask">
           <span className="muted small">{describeDeleting(file, { kind: 'character', id: person.id as string })}</span>
-          <span className="research-ask-buttons">
+          <span className="row-ask-buttons">
             <button
               type="button"
               className="ghost small danger"
