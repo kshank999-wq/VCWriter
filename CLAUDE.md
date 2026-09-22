@@ -1422,7 +1422,26 @@ push live; the build takes a minute or two.
   it by. The default is what the stylesheet drew (bold at the reading size), so
   an untouched index is unchanged; from here the size is the divider's own,
   which is the point — setting the entries to 9 pt leaves the letters where
-  they are. **§8a is pictures inside the story**, from Ken
+  they are. **And the prose parts**, from Ken (*the about the author page needs
+  the same style options*), which is the one of these that found a **wrong
+  reason rather than a missing feature**: `partHasStyle` refused them because
+  *a foreword's body is the book's body text and should stay it*, and that is
+  **a statement about the default mistaken for one about the permission** —
+  what a page should *start* as and whether a writer may depart from it are two
+  questions. So the predicate collapses to **a part is designed unless it is a
+  plate**, and `partPlacement` gains `prose` (a heading at the head, paragraphs
+  running on, no block to place). Two things make it safe: **the style starts
+  as the book's own** through a `base` `partStyleOf` now takes — the chapter
+  opening for the heading, the body size for the words, both of them settings
+  the writer may already have changed, so a static default would have moved an
+  existing page the moment the control appeared — and **only what differs from
+  that base is drawn**, so an untouched part carries no style on its blocks at
+  all and the markup of an existing book is byte for byte what it was, which is
+  what let the whole suite pass with one assertion edited. The words are
+  **declarations on their own paragraphs** rather than the body rule learning to
+  read a variable: `.bk-p` is the hottest rule in the book and the story has no
+  business being reachable from a back-matter control, which a test asserts over
+  every other paragraph. **§8a is pictures inside the story**, from Ken
   laying out a children's book, and the audit paid a **thirteenth** time:
   a picture inside the story **is a figure**, which the manuscript has had
   since addendum 16 §9 and which already stands where the writer put it —

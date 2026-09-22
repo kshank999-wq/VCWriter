@@ -37,11 +37,13 @@ import {
   PART_TEMPLATES,
   PART_TEMPLATE_WORDS,
   bookSettingsOf,
+  chapterPageStyleSchema,
   bookNames,
   paragraphsOf,
   partHasStyle,
   partHasDividers,
   partPlacement,
+  proseStyleBase,
   partOfInset,
   partStyleOf,
   partTemplateOf,
@@ -2166,7 +2168,7 @@ function PartFields({
           {part.assetId ? <p className="muted small">The art is the page: nothing is set over it, the words being in the picture.</p> : null}
         </>
       ) : null}
-      {partHasStyle(part.kind) ? <PageStyle part={part} onUpdate={onUpdate} /> : null}
+      {partHasStyle(part.kind) ? <PageStyle part={part} file={file} onUpdate={onUpdate} /> : null}
       {info.carries === 'reading' && part.kind !== 'half_title' && part.kind !== 'title_page' ? (
         <p className="muted small">Read from the book every time; there is nothing to type on it.</p>
       ) : null}
@@ -2289,8 +2291,13 @@ function PartFields({
  * at this one page. The template is read back from the placement, never
  * stored, so a hand change reads as *Custom* by itself.
  */
-function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (current: ProjectFile) => ProjectFile): void }) {
-  const style = partStyleOf(part);
+function PageStyle({ part, file, onUpdate }: { part: BookPart; file: ProjectFile; onUpdate(mutate: (current: ProjectFile) => ProjectFile): void }) {
+  /* A prose part starts as the book's own — its chapter opening for the
+     heading, its body for the words (§7a) — so the controls open on what the
+     page already prints and every field is an override of it. The print
+     resolves the same way, so the screen and the page agree. */
+  const base = proseStyleBase(chapterPageStyleSchema.parse(file.settings.chapterPageStyle ?? {}), bookSettingsOf(file).size);
+  const style = partStyleOf(part, base);
   const template = partTemplateOf(style);
   const words = part.kind === 'dedication' || part.kind === 'epigraph';
   /* Where a designed page sits is what the page **is** rather than a choice
@@ -2300,11 +2307,15 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
   const placement = partPlacement(part.kind);
   const atFoot = placement === 'foot';
   const flows = placement === 'flows';
+  /* A prose part — a foreword, an afterword, *About the author*: a heading at
+     the head and paragraphs running on under it, so there is no block to
+     place either, and what is set is the heading and the words. */
+  const prose = placement === 'prose';
   const partId = part.id;
   const write = (patch: Partial<PartStyle>) =>
     onUpdate((current) => {
       const now = partsOf(current).find((one) => one.id === partId) ?? part;
-      return updatePart(current, partId, { style: { ...partStyleOf(now), ...patch } });
+      return updatePart(current, partId, { style: { ...partStyleOf(now, base), ...patch } });
     });
   return (
     <section className="layout-section layout-page-style">
@@ -2318,7 +2329,13 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
           block: the heading stands at the head and the entries follow. Everything else about it is set here.
         </p>
       ) : null}
-      {atFoot || flows ? null : (
+      {prose ? (
+        <p className="muted small">
+          The heading stands at the head of the page and the words run on under it, for as many pages as they take — so there is
+          nowhere to place a block. This page starts as the book’s own; anything set here is this page’s alone.
+        </p>
+      ) : null}
+      {atFoot || flows || prose ? null : (
       <>
       <label className="field">
         <span>Template</span>
@@ -2346,7 +2363,7 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
       </>
       )}
       <label className="field">
-        <span>{flows ? 'The heading, ranged' : 'Ranged'}</span>
+        <span>{flows || prose ? 'The heading, ranged' : 'Ranged'}</span>
         <select aria-label="Page alignment" value={style.align} onChange={(event) => write({ align: event.target.value as PartStyle['align'] })}>
           <option value="left">Left</option>
           <option value="center">Centred</option>
@@ -2364,7 +2381,7 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
         </select>
       </label>
       <Line
-        label={atFoot ? 'The small print' : flows ? 'The heading' : words ? 'The first line' : 'Title'}
+        label={atFoot ? 'The small print' : flows || prose ? 'The heading' : words ? 'The first line' : 'Title'}
         style={style.title}
         onPatch={(patch) => write({ title: { ...style.title, ...patch } })}
       />
@@ -2374,8 +2391,12 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
           apart from the words above them. They start as those words, so a page
           made before this is unchanged. On a page that flows they are the
           entries under the heading, which is the same pair said of a list. */}
-      {part.kind === 'title_page' || words || flows ? (
-        <Line label={flows ? 'The entries' : 'Lines under it'} style={style.line} onPatch={(patch) => write({ line: { ...style.line, ...patch } })} />
+      {part.kind === 'title_page' || words || flows || prose ? (
+        <Line
+          label={flows ? 'The entries' : prose ? 'The words' : 'Lines under it'}
+          style={style.line}
+          onPatch={(patch) => write({ line: { ...style.line, ...patch } })}
+        />
       ) : null}
       {/* The letter dividers (§7a, from Ken: *separate out the letter
           dividers*). An index's A and B are a third kind of line rather than
@@ -2386,7 +2407,7 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
       {words ? <p className="muted small">The first line of the text is the words; anything under it — an attribution, a second line — is set by the pair above.</p> : null}
       <label className="check">
         <input type="checkbox" aria-label="A rule under the title" checked={style.rule} onChange={(event) => write({ rule: event.target.checked })} />
-        <span>A rule under the {atFoot ? 'small print' : flows ? 'heading' : words ? 'words' : 'title'}</span>
+        <span>A rule under the {atFoot ? 'small print' : flows || prose ? 'heading' : words ? 'words' : 'title'}</span>
       </label>
       <button type="button" className="ghost small" onClick={() => onUpdate((current) => updatePart(current, partId, { style: {} }))}>
         Back to the page’s own look

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { BOOK_FACES, type BookFace, type BookPart, type PartKind } from './entities/book.js';
-import { lineStyleSchema, lineStyleVars, type LineStyle } from './chapter-style.js';
+import { lineStyleSchema, lineStyleVars, type ChapterPageStyle, type LineStyle } from './chapter-style.js';
 import { FACE_STACKS } from './book-layout.js';
 
 /**
@@ -67,18 +67,18 @@ export type PartStylePatch = z.infer<typeof partStylePatchSchema>;
 
 /**
  * The kinds whose page **prints type of its own** and is therefore designed
- * (§7a). Not a plate, which is a picture; and not the prose parts — a
- * foreword's body *is* the book's body text and should stay it, which is the
- * line this predicate draws.
+ * (§7a) — which is every part but a **plate**, a plate being a picture edge to
+ * edge with no type on it at all.
+ *
+ * This once excluded the prose parts too, on the ground that a foreword's body
+ * *is* the book's body text and should stay it. That was a **statement about
+ * the default mistaken for a statement about the permission** (from Ken: *the
+ * about the author page needs the same style options*). A prose part's heading
+ * and words still start as the book's, so nothing drawn before this moves; a
+ * writer who wants the biography a size smaller than the story can now say so,
+ * which is the whole difference.
  */
-export const partHasStyle = (kind: PartKind): boolean =>
-  kind === 'half_title' ||
-  kind === 'title_page' ||
-  kind === 'dedication' ||
-  kind === 'epigraph' ||
-  kind === 'copyright' ||
-  kind === 'contents' ||
-  kind === 'index';
+export const partHasStyle = (kind: PartKind): boolean => kind !== 'plate';
 
 /**
  * How a designed page sits, which is what the page **is** rather than a choice
@@ -93,10 +93,19 @@ export const partHasStyle = (kind: PartKind): boolean =>
  * - `flows`: the contents and the index. They run to as many pages as they
  *   need, so there is no single block to place; the heading stands at the head
  *   and the entries follow.
+ * - `prose`: a foreword, an afterword, *About the author*. Its heading stands
+ *   at the head of the page and its paragraphs run on under it, for as many
+ *   pages as they take — the same reason `flows` has no block to place.
  */
-export type PartPlacement = 'block' | 'foot' | 'flows';
+export type PartPlacement = 'block' | 'foot' | 'flows' | 'prose';
 export const partPlacement = (kind: PartKind): PartPlacement =>
-  kind === 'copyright' ? 'foot' : kind === 'contents' || kind === 'index' ? 'flows' : 'block';
+  kind === 'copyright'
+    ? 'foot'
+    : kind === 'contents' || kind === 'index'
+      ? 'flows'
+      : kind === 'half_title' || kind === 'title_page' || kind === 'dedication' || kind === 'epigraph' || kind === 'plate'
+        ? 'block'
+        : 'prose';
 
 /**
  * Whether the page divides its entries under **letters** (§7a, from Ken:
@@ -152,9 +161,21 @@ const KIND_DEFAULTS: Partial<Record<PartKind, PartStylePatch>> = {
   },
 };
 
-/** The part's style as it stands: what it stored over its kind's defaults. */
-export const partStyleOf = (part: Pick<BookPart, 'kind' | 'style'>): PartStyle =>
-  partStyleSchema.parse({ ...(KIND_DEFAULTS[part.kind] ?? {}), ...part.style });
+/**
+ * The part's style as it stands: what it stored, over its kind's defaults,
+ * over a **base** the caller supplies.
+ *
+ * The base exists for the prose parts (§7a). What a foreword's heading and
+ * words look like today is the *book's* — the chapter-opening style and the
+ * body — and those are settings the writer may already have changed, so a
+ * static default would move an existing page the moment the control appeared.
+ * Passing the book's own values as the floor makes the offered style start as
+ * exactly what is on the page, and a stored field is an override of it, which
+ * is `minimumSetups`' shape and the margins'. The dialog resolves the same way
+ * it is printed, so the screen and the page cannot say different things.
+ */
+export const partStyleOf = (part: Pick<BookPart, 'kind' | 'style'>, base: PartStylePatch = {}): PartStyle =>
+  partStyleSchema.parse({ ...base, ...(KIND_DEFAULTS[part.kind] ?? {}), ...part.style });
 
 /** Which template the style matches, or null where the alignment or the drop was changed by hand. */
 export const partTemplateOf = (style: Pick<PartStyle, 'align' | 'drop'>): PartTemplate | null =>
@@ -164,6 +185,23 @@ export const partTemplateOf = (style: Pick<PartStyle, 'align' | 'drop'>): PartTe
 export const partTemplatePatch = (template: PartTemplate): Pick<PartStyle, 'align' | 'drop'> => ({
   align: PART_TEMPLATE_WORDS[template].align,
   drop: PART_TEMPLATE_WORDS[template].drop,
+});
+
+/**
+ * What a prose part looks like **before anybody sets it** — which is not a
+ * constant but the book's own two answers: its heading is drawn with the
+ * chapter-opening style and its words with the body (§7a). Handed to
+ * `partStyleOf` as the floor, so *About the author* opens on exactly what the
+ * page already prints and every field is an override from there.
+ *
+ * The chapter face's `manuscript` means *the book's own* inside a book, which
+ * is `book` in this vocabulary — the older spelling of the same intent, as
+ * `chapterStyleVars` reads it.
+ */
+export const proseStyleBase = (chapter: Pick<ChapterPageStyle, 'face' | 'title'>, bodySize: number): PartStylePatch => ({
+  face: chapter.face === 'manuscript' || chapter.face === 'book' || chapter.face === 'serif' ? 'book' : chapter.face,
+  title: chapter.title,
+  line: { size: bodySize, case: 'as_typed', bold: false, italic: false, tracking: 0 },
 });
 
 const lineVars = (name: string, one: LineStyle): Record<string, string> => lineStyleVars(`--pt-${name}`, one);

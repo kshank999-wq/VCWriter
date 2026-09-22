@@ -1,7 +1,7 @@
 import type { BookSettings } from './entities/book.js';
 import type { InlineSpan } from './entities/inline.js';
-import { chapterPageStyleSchema, chapterStyleAttr, type ChapterPageStyle, isFullPageArt } from './chapter-style.js';
-import { faceStackOf, type BookGeometry } from './book-layout.js';
+import { chapterPageStyleSchema, chapterStyleAttr, lineStyleVars, type ChapterPageStyle, isFullPageArt } from './chapter-style.js';
+import { FACE_STACKS, faceStackOf, type BookGeometry } from './book-layout.js';
 import { partStyleAttr } from './part-style.js';
 import { headSideClass, runningHeadStyleOf, runningStyleVars } from './running-heads.js';
 import type { BookBlock, FigureInset } from './book-plan.js';
@@ -234,8 +234,22 @@ const openingMarkup = (block: BookBlock, context: BookRenderContext): string => 
     return `<div class="bk-display bk-leaf" style="text-align:${chapter.align};${style}">${parts.filter(Boolean).join('')}</div>`;
   }
   // The opening above the first paragraph: dropped a third of the way down.
-  const align = chapter?.align ?? 'center';
-  return `<div class="bk-opening" style="text-align:${align};${style}">${heading}</div>`;
+  // A prose part's heading carries the page's own style over the book's
+  // chapter opening (§7a) — the same `--chapter-*` names rather than a second
+  // set, so there is one answer to how the heading is set and the part is
+  // simply the nearer one. Its resolved values are what the dialog shows.
+  const align = chapter?.align ?? block.partStyle?.align ?? 'center';
+  const own = block.partStyle
+    ? Object.entries({
+        '--chapter-face': FACE_STACKS[block.partStyle.face === 'book' ? context.settings.face : block.partStyle.face] ?? '',
+        ...lineStyleVars('--chapter-title', block.partStyle.title),
+        '--chapter-rule': block.partStyle.rule ? '1px solid currentColor' : 'none',
+      })
+        .filter(([, value]) => value !== '')
+        .map(([name, value]) => `${name}:${value}`)
+        .join(';')
+    : '';
+  return `<div class="bk-opening" style="text-align:${align};${style}${own ? `;${own}` : ''}">${heading}</div>`;
 };
 
 /**
@@ -261,6 +275,22 @@ export const blockStyle = (block: BookBlock, context: BookRenderContext): string
       const lines = Math.max(1, Math.ceil(block.size / context.geometry.size - 0.001));
       if (lines > 1) rules.push(`line-height:calc(var(--bk-lead) * ${lines})`);
     }
+  }
+  // A paragraph of a designed prose part (§7a): set from the page's own line
+  // style, as concrete declarations on that paragraph alone. The body rule is
+  // left exactly as it is, so a page of the story cannot be reached from here.
+  if (block.partStyle && block.kind === 'paragraph') {
+    const one = block.partStyle.line;
+    const face = FACE_STACKS[block.partStyle.face === 'book' ? context.settings.face : block.partStyle.face];
+    if (face) rules.push(`font-family:${face}`);
+    rules.push(
+      `font-size:${(one.size * PX_PER_PT).toFixed(3)}px`,
+      `text-transform:${one.case === 'capitals' ? 'uppercase' : 'none'}`,
+      `font-variant-caps:${one.case === 'small_caps' ? 'small-caps' : 'normal'}`,
+      `font-weight:${one.bold ? 700 : 400}`,
+      `font-style:${one.italic ? 'italic' : 'normal'}`,
+      `letter-spacing:${one.tracking / 100}em`,
+    );
   }
   if (block.align) rules.push(`text-align:${block.align}`, 'text-indent:0');
   return rules.length > 0 ? ` style="${rules.join(';')}"` : '';

@@ -14,6 +14,7 @@ import {
   partStyleVars,
   partTemplateOf,
   partTemplatePatch,
+  proseStyleBase,
   partsOf,
   renderBookBlock,
   setTitlePage,
@@ -65,13 +66,12 @@ const contextFor = (file: ProjectFile): BookRenderContext => {
 };
 
 describe('a designed page', () => {
-  it('is every page that prints type of its own, and not a plate or a page of prose', () => {
-    for (const kind of ['half_title', 'title_page', 'dedication', 'epigraph', 'copyright', 'contents', 'index'] as const) {
+  it('is every page that prints type of its own, which is everything but a plate', () => {
+    for (const kind of ['half_title', 'title_page', 'dedication', 'epigraph', 'copyright', 'contents', 'index', 'foreword', 'about_the_author'] as const) {
       expect(partHasStyle(kind)).toBe(true);
     }
-    // A foreword's body *is* the book's body text and should stay it, and a
-    // plate is a picture: the line the predicate draws (§7a).
-    expect(partHasStyle('foreword')).toBe(false);
+    // A plate is a picture edge to edge with no type on it at all: the one
+    // line the predicate still draws (§7a).
     expect(partHasStyle('plate')).toBe(false);
   });
 
@@ -347,5 +347,70 @@ describe('the contents page and the index', () => {
     expect(html).toContain('--pt-divider-variant:small-caps');
     expect(html).toContain('--pt-divider-weight:400');
     expect(html).toContain('--pt-divider-tracking:0.2em');
+  });
+});
+
+
+/**
+ * A prose part (addendum 20 §7a, from Ken: *the about the author page needs
+ * the same style options*). The predicate used to refuse these on the ground
+ * that a foreword's body *is* the book's body text — a statement about the
+ * **default** mistaken for one about the **permission**.
+ */
+describe('a prose part', () => {
+  const withBio = (text: string) => {
+    const file = novel();
+    const part = partsOf(file).find((one) => one.kind === 'about_the_author')!;
+    return { file: updatePart(file, part.id, { text }), partId: part.id };
+  };
+  const BIO = 'Mara Shank grew up on the coast.\n\nShe lives at the end of a lane.';
+
+  it('is designed, and is neither a block nor a flowing list', () => {
+    expect(partHasStyle('about_the_author')).toBe(true);
+    for (const kind of ['about_the_author', 'foreword', 'afterword', 'glossary', 'also_by'] as const) {
+      expect(partPlacement(kind)).toBe('prose');
+    }
+  });
+
+  it('opens on the book’s own heading and body rather than a default nobody chose', () => {
+    const file = novel();
+    const chapter = chapterPageStyleSchema.parse({ title: { size: 19, case: 'small_caps' }, face: 'sans' });
+    const base = proseStyleBase(chapter, 12);
+    const part = partsOf(file).find((one) => one.kind === 'about_the_author')!;
+    const style = partStyleOf(part, base);
+    // The heading is the chapter opening's, the words are the body's.
+    expect(style.title.size).toBe(19);
+    expect(style.title.case).toBe('small_caps');
+    expect(style.line.size).toBe(12);
+    expect(style.face).toBe('sans');
+  });
+
+  it('draws nothing of its own until somebody sets something, so an existing book is byte for byte what it was', () => {
+    const { file } = withBio(BIO);
+    const blocks = bookBlocks(file);
+    const mine = blocks.filter((one) => one.partId?.includes('about_the_author'));
+    expect(mine.length).toBeGreaterThan(1);
+    for (const block of mine) expect(block.partStyle).toBeUndefined();
+    const html = mine.map((block) => renderBookBlock(block, contextFor(file))).join('');
+    expect(html).not.toContain('font-size:');
+  });
+
+  it('sets its heading and its words apart, and reaches no paragraph of the story', () => {
+    const { file, partId } = withBio(BIO);
+    const part = partsOf(file).find((one) => one.id === partId)!;
+    const set = updatePart(file, partId, { style: { ...partStyleOf(part), line: { size: 9, case: 'as_typed', bold: false, italic: true, tracking: 0 } } });
+    const blocks = bookBlocks(set);
+    const context = contextFor(set);
+    const mine = blocks.filter((one) => one.partId === partId && one.kind === 'paragraph');
+    expect(mine.length).toBe(2);
+    for (const block of mine) {
+      const html = renderBookBlock(block, context);
+      expect(html).toContain('font-size:12.000px');
+      expect(html).toContain('font-style:italic');
+    }
+    // The story is untouched: this is the risk of setting a paragraph at all,
+    // so it is asserted over every paragraph rather than the ones nearby.
+    const story = blocks.filter((one) => one.kind === 'paragraph' && one.partId !== partId);
+    for (const block of story) expect(renderBookBlock(block, context)).not.toContain('font-size:');
   });
 });

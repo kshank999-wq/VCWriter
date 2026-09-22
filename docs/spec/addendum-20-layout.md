@@ -600,6 +600,40 @@ them: setting the entries to 9 pt now leaves the letters where they are. Only
 a book whose entries were resized since the change above could notice that,
 and that change is a few hours old.
 
+#### The prose parts, and a default mistaken for a permission
+
+From Ken: *the about the author page needs the same style options.*
+
+`partHasStyle` refused it, and the reason given was that a foreword's body
+**is** the book's body text and should stay it. That reason was wrong, and the
+way it was wrong is the part worth keeping: it is **a statement about the
+default mistaken for a statement about the permission**. What a prose part
+should *start* as is the book's own type. Whether a writer may depart from it
+is a different question, and the answer is obviously yes — a biography set a
+size smaller than the story is ordinary book design.
+
+So the predicate collapses to one line: **a part is designed unless it is a
+plate**, a plate being a picture edge to edge with no type on it at all.
+`partPlacement` gains `prose` — a heading at the head and paragraphs running
+on under it, so there is no block to place and the template and the drop are
+absent for the flowing pages' reason. The **heading** takes the title style and
+the **words** take the line style, the same pair a fourth time.
+
+Two things make it safe. **The style starts as the book's**, through a `base`
+`partStyleOf` now takes: the chapter-opening style for the heading and the body
+size for the words, both of them settings the writer may already have changed,
+so a static default would have moved an existing page the moment the control
+appeared. And **only what differs from that base is drawn** — a part nobody has
+touched carries no style on its blocks at all, so the markup of a book made
+before this is byte for byte what it was, which is what let the whole domain
+suite pass with one assertion edited.
+
+The words are set as **declarations on their own paragraphs** rather than by
+teaching the body rule to read a variable. `.bk-p` is the hottest rule in the
+book and the story has no business being reachable from a back-matter control;
+a test asserts that setting the biography leaves every other paragraph in the
+book without so much as a `font-size`.
+
 ## 8. Graphics
 
 Three kinds, and two of them exist:

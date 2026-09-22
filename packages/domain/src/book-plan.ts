@@ -1,12 +1,12 @@
 import { PART_KINDS, bookPartSchema, partInsetSchema, type BookPart, type PartInset, type PartKind } from './entities/book.js';
 import type { ManuscriptElement } from './entities/manuscript.js';
 import { parseInline, type InlineSpan } from './entities/inline.js';
-import { chapterLeafContent } from './chapter-style.js';
+import { chapterLeafContent, chapterPageStyleSchema, type LineStyle } from './chapter-style.js';
 import { contentsDivisions, type ChapterPageContent, type PlacedMarker } from './markers.js';
 import { bookNames, bookSettingsOf, setBookSettings } from './book-layout.js';
 import { beatsInScript, unitsInStoryOrder } from './selectors.js';
 import { newId } from './ids.js';
-import { partHasStyle, partStyleOf, type PartStyle } from './part-style.js';
+import { partHasStyle, partStyleOf, proseStyleBase, type PartStyle, type PartStylePatch } from './part-style.js';
 import { isCollection } from './formats.js';
 import type { BookPage } from './book-pages.js';
 import type { ProjectFile } from './project-file.js';
@@ -355,7 +355,18 @@ export const paragraphsOf = (text: string): string[] =>
 export const opensOnLeaf = (leaf: ChapterPageContent): boolean =>
   leaf.image !== null || leaf.summary.trim().length > 0 || leaf.epigraph.trim().length > 0;
 
-const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle: string): BookBlock[] => {
+/** Two line styles saying the same thing, so nothing need be drawn for one. */
+const sameLine = (a: LineStyle, b: LineStyle): boolean =>
+  a.size === b.size && a.case === b.case && a.bold === b.bold && a.italic === b.italic && a.tracking === b.tracking;
+
+const partBlocks = (
+  part: BookPart,
+  numbering: 'roman' | 'arabic',
+  chapterTitle: string,
+  // What a prose part's heading and words look like before anybody sets them:
+  // the book's chapter opening and its body (§7a).
+  prose: PartStylePatch = {},
+): BookBlock[] => {
   const title = partTitle(part);
   switch (part.kind) {
     // Either may be a piece of art brought in whole (§8, from Ken): the
@@ -427,6 +438,16 @@ const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle:
     default: {
       // Prose before or after the story: a heading at the head of a right-hand
       // page, and the paragraphs following on the same page.
+      // A designed page like every other that prints type (§7a). The style
+      // starts as the book's own, and **only what differs from it is drawn**:
+      // a part that has been left alone carries no style at all, so the markup
+      // of a book made before the control existed is byte for byte what it
+      // was. The heading and the words are asked separately, because setting
+      // one is no reason to write declarations over the other.
+      const base = partStyleOf({ kind: part.kind, style: {} }, prose);
+      const style = partStyleOf(part, prose);
+      const headingOwn = sameLine(style.title, base.title) && style.face === base.face && style.align === base.align && style.rule === base.rule ? undefined : style;
+      const wordsOwn = sameLine(style.line, base.line) && style.face === base.face ? undefined : style;
       const opening = block({
         id: part.id,
         kind: 'part_opening',
@@ -437,6 +458,7 @@ const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle:
         partId: part.id,
         title,
         chapterTitle: title,
+        partStyle: headingOwn,
       });
       const words = paragraphsOf(part.text);
       const paragraphs = words.map((text, index) =>
@@ -449,6 +471,10 @@ const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle:
           partId: part.id,
           chapterTitle: title,
           opensChapter: index === 0,
+          // The words take the page's own line style; the print sets each
+          // paragraph from it rather than the body rule reading a variable,
+          // so nothing about the story's paragraphs changes.
+          partStyle: wordsOwn,
         }),
       );
       // A picture cut into the text (§8) rides in the paragraph it names —
@@ -773,9 +799,13 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   const settings = bookSettingsOf(file);
   const parts = partsOf(file);
   const bookTitle = bookNames(file).title;
+  // What a prose part starts as: the book's chapter opening for its heading
+  // and the book's body for its words (§7a), so nothing drawn before the
+  // control existed moves.
+  const prose = proseStyleBase(chapterPageStyleSchema.parse(file.settings.chapterPageStyle ?? {}), settings.size);
   const out: BookBlock[] = [];
 
-  for (const part of frontParts(parts)) out.push(...partBlocks(part, 'roman', bookTitle));
+  for (const part of frontParts(parts)) out.push(...partBlocks(part, 'roman', bookTitle, prose));
 
   const platesBefore = new Map<string, BookPart[]>();
   for (const part of parts) {
@@ -893,6 +923,6 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   }
   if (pending) out.push(pending);
 
-  for (const part of backParts(parts)) out.push(...partBlocks(part, 'arabic', bookTitle));
+  for (const part of backParts(parts)) out.push(...partBlocks(part, 'arabic', bookTitle, prose));
   return out;
 };
