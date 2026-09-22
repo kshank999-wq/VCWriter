@@ -1246,7 +1246,29 @@ push live; the build takes a minute or two.
   typed in **Book settings ▸ The book** and nowhere else (the title page's
   dialog says what it will print and has a button there instead of a second
   box), the project's name being the placeholder; renaming the book never
-  renames the project. **§8a is pictures inside the story**, from Ken
+  renames the project. **§3b is the floor under the margins**, from Ken with
+  *please verify* attached — *margins for novels should be standard with at
+  least .75″ on the open edge and .9 on the bound edge* — and he was right by
+  more than he said: §3's proportion of the trim gave the open edge **at most
+  5/8 on every novel trim there is** (1/2 on a 5 × 8), the bound edge reached
+  7/8 only on a 6 × 9, and 36 of 45 trim × thickness combinations fell under
+  one of his figures, only the two workbook trims clearing either. The reason
+  is that **the ink does not shrink with the paper**: a tenth of the width is
+  right on a 7 × 10 and too little on a paperback, because what a thumb covers
+  and what a binding swallows are the same size whatever the trim. So the
+  proportion still decides a **wide** page and `LEAST_OUTSIDE = 0.75` /
+  `LEAST_INSIDE = 0.9375` decide a narrow one — both on the **sixteenth** the
+  module speaks in so they print as fractions, and his 0.9 rounded **up**,
+  a margin rounded down to meet a minimum not having met it. The spine
+  allowance still grows *over* the floor (it is added to the outside and then
+  floored, so a 5.5 × 8.5 goes 15/16 → 1 in at 151 pages → 1 3/8 at 900), a
+  typed margin still wins, and the cost is a tighter measure — the 5 × 8 now
+  sets 45 characters, which is `measureWarning`'s to say rather than something
+  to quietly widen the margins back for. His *title centred* was measured on
+  the real page rather than assumed: the story title is already exactly centred
+  **on the text block**, and what is visible is that it is not centred on the
+  **paper**, by half the gutter, which is correct bookbinding and is what the
+  0.9-against-0.75 asks for. **§8a is pictures inside the story**, from Ken
   laying out a children's book, and the audit paid a **thirteenth** time:
   a picture inside the story **is a figure**, which the manuscript has had
   since addendum 16 §9 and which already stands where the writer put it —

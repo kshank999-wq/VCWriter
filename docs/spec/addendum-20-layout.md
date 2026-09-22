@@ -135,6 +135,62 @@ not rename the file. The title page's part dialog shows what it will print
 and has a button to *Book settings…* rather than a second box for the same
 field, because a second box is a second answer.
 
+## 3b. The margins have a floor
+
+From Ken, with *please verify* attached: *margins for novels should be
+standard with at least .75″ on the open edge and .9 on the bound edge.*
+
+Verified, and he was right by more than he said. §3's rule was a proportion
+of the trim and nothing else, and on the trims a novel is actually printed at
+that proportion is too small:
+
+| trim | outside, before | inside at 250pp, before |
+| --- | --- | --- |
+| 5 × 8 | 1/2 | 3/4 |
+| 5.25 × 8 | 9/16 | 13/16 |
+| 5.5 × 8.5 | 9/16 | 13/16 |
+| 6 × 9 | 5/8 | 7/8 |
+
+The open edge **never reached 3/4 on any novel trim**, and the bound edge
+reached 7/8 only on the largest of them. Across every trim in the list at
+every thickness, 36 of 45 combinations fell under one of his two figures;
+only the two workbook trims (7 × 10, 8.5 × 11) cleared either.
+
+The reason the proportion fails is worth keeping, because it is the same
+reason the chapter-page type is a book setting rather than a per-chapter one:
+**the ink does not shrink with the paper**. A tenth of the width is a fine
+margin on a 7 × 10 and too little on a paperback, because what a thumb covers
+and what a binding swallows are the same size whatever the trim is.
+
+So the proportion still decides a **wide** page and a floor decides a narrow
+one — `Math.max` and nothing cleverer, in `derivedMargins`:
+
+```
+LEAST_OUTSIDE = 0.75
+LEAST_INSIDE  = 0.9375
+```
+
+Both floors are kept on the **sixteenth** the rest of the module speaks in, so
+they print as fractions: 3/4 on the open edge, 15/16 on the bound one, which
+is Ken's 0.9 rounded **up** rather than down — a margin rounded down to meet a
+minimum has not met it.
+
+Three things follow and are all wanted. The **spine allowance still grows
+over the floor**, because it is added to the outside and then floored, not
+instead of it: a 5.5 × 8.5 sits at 15/16 up to 150 pages, 1 in at 151, 1 1/8
+at 400, 1 3/8 at 900. A **typed margin still wins**, the floor being part of
+the working-out and an override being the writer's. And the **measure gets
+tighter**, which is the cost: the 5 × 8 now sets 45 characters, the narrowest
+in the list, and that is `measureWarning`'s to say rather than something to
+quietly widen the margins back for.
+
+Ken's second half — *title centred* — was measured on the real page rather
+than assumed, and the story title was already exactly centred **on the text
+block** (0px off, 79px of block either side of it). What is visible is that
+it is not centred on the **paper**, by half the gutter, because the inside
+margin is wider than the outside. That is correct bookbinding, and it is
+what his own 0.9-against-0.75 asks for.
+
 ## 4. The browser measures and the domain decides where the pages fall
 
 The honest constraint. Where a line of proportional type breaks depends on

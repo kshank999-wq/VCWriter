@@ -264,20 +264,42 @@ export const gutterFor = (pages: number): number => {
 };
 
 /**
+ * The least a printed book's side margins may be (§3a, from Ken: *margins
+ * for novels should be standard with at least .75 in on the open edge and
+ * .9 on the bound edge*).
+ *
+ * He was right, and by more than he said: the proportional rule below gave
+ * the **open edge at most 5/8 in on every novel trim there is** — 1/2 on a
+ * 5 × 8 — and the bound edge reached 7/8 only on a 6 × 9 of 250 pages. Only
+ * the two workbook trims cleared either floor. A tenth of the width is a
+ * fine proportion on a 7 × 10 and too little on a paperback, because the
+ * ink is the same size whatever the paper is: what a thumb covers and what
+ * a binding swallows do not shrink with the trim.
+ *
+ * So the proportion still decides a **wide** page and a floor decides a
+ * narrow one. Both floors are kept on the sixteenth the rest of this module
+ * speaks in, so they print as fractions: 3/4 on the open edge, 15/16 on the
+ * bound one, which is Ken's 0.9 rounded up rather than down.
+ */
+export const LEAST_OUTSIDE = 0.75;
+export const LEAST_INSIDE = 0.9375;
+
+/**
  * The margins a trim proposes (§3): the outside a tenth of the width, the
  * head a twelfth of the height, the foot a little more than the head so the
  * block sits high on the page as a book's does, and the inside the outside
- * plus the gutter. Never less than three-eighths at any edge, which is what
- * a printer will trim to.
+ * plus the gutter — each of the sides never less than the floor above.
+ * The head and the foot keep the three-eighths a printer will trim to,
+ * nothing binding or being thumbed there.
  */
 export const derivedMargins = (
   trim: Trim,
   pages: number,
 ): { inside: number; outside: number; top: number; bottom: number } => {
-  const outside = Math.max(0.375, sixteenth(trim.width * 0.105));
+  const outside = Math.max(LEAST_OUTSIDE, sixteenth(trim.width * 0.105));
   const top = Math.max(0.375, sixteenth(trim.height * 0.083));
   const bottom = Math.max(0.375, sixteenth(trim.height * 0.097));
-  const inside = sixteenth(outside + gutterFor(pages));
+  const inside = Math.max(LEAST_INSIDE, sixteenth(outside + gutterFor(pages)));
   return { inside, outside, top, bottom };
 };
 

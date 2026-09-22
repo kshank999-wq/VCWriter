@@ -8,6 +8,8 @@ import {
   createProjectFile,
   defaultTrimFor,
   derivedLeading,
+  LEAST_INSIDE,
+  LEAST_OUTSIDE,
   derivedMargins,
   describeGeometry,
   describeSpine,
@@ -91,13 +93,38 @@ describe('the trim', () => {
 });
 
 describe('the margins', () => {
-  it('follow from the trim by proportion, to the sixteenth', () => {
+  it('follow from the trim by proportion, to the sixteenth, and never below the floor', () => {
     const margins = derivedMargins({ width: 6, height: 9 }, 250);
-    expect(margins.outside).toBe(0.625);
+    // The head and the foot are the proportion: nothing binds or is thumbed there.
     expect(margins.top).toBe(0.75);
     expect(margins.bottom).toBe(0.875);
-    // Inside is outside plus the gutter a 250-page book needs.
-    expect(margins.inside).toBe(0.875);
+    // The sides are the floor where the proportion falls under it (§3a): a
+    // tenth of six inches is 5/8, which is too little for a thumb.
+    expect(margins.outside).toBe(LEAST_OUTSIDE);
+    expect(margins.inside).toBe(LEAST_OUTSIDE + gutterFor(250));
+
+    // A wide trim keeps the proportion, the floor never being reached.
+    const big = derivedMargins({ width: 8.5, height: 11 }, 250);
+    expect(big.outside).toBeGreaterThan(LEAST_OUTSIDE);
+  });
+
+  it('keeps every trim above the floor at every thickness (§3a, from Ken)', () => {
+    for (const trim of [
+      { width: 5, height: 8 },
+      { width: 5.25, height: 8 },
+      { width: 5.5, height: 8.5 },
+      { width: 6, height: 9 },
+      { width: 5.06, height: 7.81 },
+      { width: 7, height: 10 },
+    ]) {
+      for (const pages of [1, 80, 150, 300, 500, 700, 1200]) {
+        const margins = derivedMargins(trim, pages);
+        expect(margins.outside).toBeGreaterThanOrEqual(LEAST_OUTSIDE);
+        expect(margins.inside).toBeGreaterThanOrEqual(LEAST_INSIDE);
+        // The bound edge always clears the open one by the gutter at least.
+        expect(margins.inside).toBeGreaterThan(margins.outside);
+      }
+    }
   });
 
   it('widen the gutter as the book thickens, with nothing run', () => {
@@ -132,8 +159,9 @@ describe('the margins', () => {
     const geometry = geometryOf(bookSettingsOf(file), 'novel', 250);
     expect(geometry.margins.outside).toBe(1);
     expect(geometry.overridden).toEqual({ inside: false, outside: true, top: false, bottom: false });
-    // The inside is still worked out, and from the derived outside rather than the typed one.
-    expect(geometry.margins.inside).toBe(0.875);
+    // The inside is still worked out, and from the derived outside rather
+    // than the typed one — so it is the floor plus this thickness's gutter.
+    expect(geometry.margins.inside).toBe(LEAST_OUTSIDE + gutterFor(250));
     expect(describeGeometry(geometry, 'old_style')).toContain('outside 1 in (typed)');
     expect(describeGeometry(geometry, 'old_style')).toContain('Margins partly typed');
   });
