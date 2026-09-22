@@ -10,7 +10,7 @@ import {
   boardsOf,
   carryNodeToOutline,
   canPromote,
-  chapterSpan,
+  divisionSpan,
   createOutline,
   filterOutline,
   findOutline,
@@ -1224,7 +1224,7 @@ function Promotion({
           : promoted.marker.title.trim() || 'Untitled';
     // What a chapter covers is read off the markers every time (addendum 19
     // §2): move a section into the stretch and the count follows.
-    const covers = promoted.kind === 'marker' ? chapterSpan(file, promoted.marker.id).length : 0;
+    const covers = promoted.kind === 'marker' ? divisionSpan(file, promoted.marker.id).length : 0;
     return (
       <section className="outline-promotion in-script">
         <p className="small">

@@ -1048,7 +1048,7 @@ push live; the build takes a minute or two.
   `promoteChapter` in `outline-binding.ts` promotes the sections and then
   places a `chapter` marker on the first, with `BindingTarget` in
   `planning.ts` carrying the two-way rename to a marker. **What a chapter
-  covers is `chapterSpan`, a reading** from the marker to the next chapter's,
+  covers is `divisionSpan`, a reading** from the marker to the next chapter's,
   which is what lets a second chapter land after the whole of the first and
   *Move the chapter to match* move the span as a block. Found on the way:
   `removeTrack` never let the plans go of what left with the track, and a
@@ -1081,7 +1081,7 @@ push live; the build takes a minute or two.
   the preview and both dialogs' sheets. Stage 5 is the **suggested summary**,
   `chapter-summary.ts` and no route of its own: `chapterTextFor` is the
   learning-aid reading pointed one level up (every section the chapter
-  covers, by `chapterSpan`), sent through the existing learning-aid route
+  covers, by `divisionSpan`), sent through the existing learning-aid route
   and bridge with kind `summary`; `offerSummary` writes `suggestedSummary`
   and nothing else, `acceptSummary` is the one act that reaches `summary`
   and hands back what it replaced, and `summaryRefusal` is the chapter's own
@@ -1673,7 +1673,7 @@ push live; the build takes a minute or two.
   you, are you sure?*): the Layout rail grew a × for this complaint already,
   and the **Stories rail in the workspace** — where somebody who has just done
   it is actually standing — had not. `removeDivision` and `divisionRemoval` in
-  `outline-binding.ts` are **one act and one sentence** beside `chapterSpan`,
+  `outline-binding.ts` are **one act and one sentence** beside `divisionSpan`,
   which already owns what a division covers, and `removeBookRow` /
   `whatGoesWithRow` call them rather than keeping a second copy — which also
   took out a private *story or chapter?* that `FormatNouns.division` exists to
@@ -1687,6 +1687,15 @@ push live; the build takes a minute or two.
   Layout rail had been saying it too, one fix serving both. The × is **in the
   box, hidden until hover or focus** (hidden rather than absent, so the
   keyboard reaches it) and **asks inline** with that sentence beside it.
+  **§7a is the episode rail**, from Ken, and the rail was the easy half:
+  wiring it found that an episode marker's kind is `episode` and
+  **`chapterSpan` read `chapter` outright**, so an episode spanned to the end
+  of the series and removing one would have taken every scene after it. The
+  name had already stretched — a collection's *stories* are chapter-kind, so
+  `collection.ts` called `chapterSpan` for a story and carried a comment
+  explaining why — so it is **`divisionSpan`** now, ending at the next marker
+  **of the marker's own kind**: identical for every caller that existed (all
+  of them chapter-kind) and correct for the one that was not.
   `addendum-23-ebook-export.md` is **eBook export**, from Ken's own *eBook
   Export Engine* dev spec: one EPUB 3.3 from the laid-out book, with store
   presets for Kindle, Apple, NOOK, Kobo, Google Play, Draft2Digital and

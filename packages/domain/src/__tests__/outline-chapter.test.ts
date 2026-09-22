@@ -3,7 +3,7 @@ import {
   addItem,
   beatsForUnit,
   canPromote,
-  chapterSpan,
+  divisionSpan,
   createOutline,
   createProjectFile,
   findOutline,
@@ -173,8 +173,8 @@ describe('what a chapter can become', () => {
     const two = promoteRow(one.file, outline.id, second.itemId!);
 
     expect(unitsInStoryOrder(two.file).map((unit) => unit.title)).toEqual(['Light', 'Lenses', 'Waves']);
-    expect(chapterSpan(two.file, one.markerId!).map((unit) => unit.title)).toEqual(['Light', 'Lenses']);
-    expect(chapterSpan(two.file, two.markerId!).map((unit) => unit.title)).toEqual(['Waves']);
+    expect(divisionSpan(two.file, one.markerId!).map((unit) => unit.title)).toEqual(['Light', 'Lenses']);
+    expect(divisionSpan(two.file, two.markerId!).map((unit) => unit.title)).toEqual(['Waves']);
   });
 
   it('puts a section added to a promoted chapter after that chapter’s last section', () => {

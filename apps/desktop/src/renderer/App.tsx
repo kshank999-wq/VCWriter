@@ -1296,6 +1296,11 @@ export default function App() {
             setTitlePageOpen(true);
           }}
           onNew={() => setNewEpisodeOpen(true)}
+          onRemove={(episode) => {
+            const going = new Set(episode.units.map((unit) => unit.id as string));
+            if (selectedBeat && going.has(selectedBeat.unitId as string)) setSelectedBeatId(null);
+            project.update((current) => removeDivision(current, episode.marker.id));
+          }}
         />
       ) : null}
 

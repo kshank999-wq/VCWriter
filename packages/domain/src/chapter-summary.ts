@@ -1,6 +1,6 @@
 import { nowIso } from './entities/common.js';
 import { beatsForUnit } from './selectors.js';
-import { chapterSpan } from './outline-binding.js';
+import { divisionSpan } from './outline-binding.js';
 import { sectionTextFor } from './learning.js';
 import type { ProjectFile } from './project-file.js';
 import type { StoryMarkerId } from './ids.js';
@@ -29,7 +29,7 @@ export const CHAPTER_TEXT_LIMIT = 40_000;
  * order, each under its own title, and nothing else — not the chapter page's
  * own words, not the next chapter, not the research.
  *
- * Which sections a chapter covers is `chapterSpan`'s reading of the markers,
+ * Which sections a chapter covers is `divisionSpan`'s reading of the markers,
  * so a section dragged into the chapter is read and one dragged out is not,
  * with nothing run. A long chapter is cut at the route's cap on a paragraph
  * boundary, and `chapterTextIsCut` says so, because a summary written from
@@ -37,7 +37,7 @@ export const CHAPTER_TEXT_LIMIT = 40_000;
  */
 export const chapterTextFor = (file: ProjectFile, markerId: StoryMarkerId): string => {
   const parts: string[] = [];
-  for (const unit of chapterSpan(file, markerId)) {
+  for (const unit of divisionSpan(file, markerId)) {
     const sections = beatsForUnit(file, unit.id)
       .map((beat) => {
         const words = sectionTextFor(file, beat.id);
@@ -57,7 +57,7 @@ export const chapterTextFor = (file: ProjectFile, markerId: StoryMarkerId): stri
 /** Whether the chapter's words ran past what one reading can take. */
 export const chapterTextIsCut = (file: ProjectFile, markerId: StoryMarkerId): boolean => {
   let length = 0;
-  for (const unit of chapterSpan(file, markerId)) {
+  for (const unit of divisionSpan(file, markerId)) {
     for (const beat of beatsForUnit(file, unit.id)) length += sectionTextFor(file, beat.id).length + 4;
   }
   return length > CHAPTER_TEXT_LIMIT;

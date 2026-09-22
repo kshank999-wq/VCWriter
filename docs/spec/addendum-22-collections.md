@@ -26,7 +26,7 @@ short-story project's unit is already a **Section**, and its markers are
 already the chapter-kind marker every prose format has — the one that sits
 above units, carries a page of its own, drives the contents page and, since
 addendum 20, opens a chapter in the Layout room. What a marker *covers* is
-already a reading, `chapterSpan`, from its marker to the next.
+already a reading, `divisionSpan`, from its marker to the next.
 
 So the whole of "a book full of short stories divided into chapters" was
 standing: put a marker at the head of each story and the Layout room lays
@@ -311,7 +311,7 @@ accident is standing.
 
 **One act, so the two rails cannot promise different things.**
 `removeDivision` and `divisionRemoval` in `outline-binding.ts` are the act
-and the sentence, beside `chapterSpan`, which already owns what a division
+and the sentence, beside `divisionSpan`, which already owns what a division
 covers; `removeBookRow` and `whatGoesWithRow` call them instead of keeping a
 second copy. That also took out a private *story or chapter?* the Layout rail
 was still carrying — `FormatNouns.division` exists to answer that, and §6a
@@ -339,6 +339,26 @@ never removes on the press — it asks inline, with `divisionRemoval`'s sentence
 beside it, because what a × does to a story with words in it is not what it
 does to one added by accident and the writer should read which before
 pressing again.
+
+### §7a. The episode rail, and a name that had stretched
+
+From Ken: *yes, add it to the episode rail too.*
+
+The rail was the easy half. Wiring it up found the hard one: an episode
+marker's kind is `episode`, not `chapter`, and **`chapterSpan` read
+`chapter` outright** — so an episode's span ran to the end of the series
+instead of stopping at the next episode, and removing one would have taken
+every scene after it.
+
+The name had already stretched past what it says: a collection's *stories*
+are chapter-kind markers, so `collection.ts` was calling `chapterSpan` for a
+story and carrying a comment to explain why. It is **`divisionSpan`** now,
+ending at the next marker **of the marker's own kind** — identical for every
+caller that existed, because all of them passed chapter-kind markers, and
+correct for the one that did not.
+
+Measured on a three-episode series: *Pilot* spans its own two scenes rather
+than all six, and removing the middle episode takes two units, not four.
 
 ## 8. What each stage built
 

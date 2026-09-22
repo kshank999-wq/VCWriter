@@ -83,7 +83,7 @@ export const numbersDivisions = (file: ProjectFile): boolean => {
  *
  * **Three levels once there is a chapter** (addendum 19 §6). A chapter is a
  * `chapter` marker, and a unit belongs to the last chapter whose marker fell
- * at or before it — the same reading `chapterSpan` makes — so chapter 2's
+ * at or before it — the same reading `divisionSpan` makes — so chapter 2's
  * first section is 2.1 and its first subsection 2.1.1, and dragging chapter
  * four above chapter two renumbers everything under both with nothing run.
  * A book with no chapters numbers as it always has: the third level appears

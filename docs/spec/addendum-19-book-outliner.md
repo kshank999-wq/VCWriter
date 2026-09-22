@@ -397,7 +397,7 @@ Letting go is the same shape as a scene's: `removeMarker` unbinds the row,
 bound, and only when the last section goes does the marker go and the row
 return to a plan. `unpromoteRow` leaves the marker, for §10's reason.
 
-**What a chapter covers is read, never stored**: `chapterSpan` walks the
+**What a chapter covers is read, never stored**: `divisionSpan` walks the
 story order from the marker's unit to the next chapter marker's, so a section
 dragged into the stretch is in the chapter with nothing run. That reading is
 what places things. `indexAmong` now takes *where a sibling stands* as a
@@ -430,7 +430,7 @@ being the fact.
 **What it does.** `structureNumbers` grows a third map, `chapters`, keyed by
 marker id, and once a book has a chapter marker its units number `1.1`,
 `1.2`, `2.1` under the chapter whose marker fell at or before them — the same
-reading `chapterSpan` makes — and their subsections `1.1.1`. A book with no
+reading `divisionSpan` makes — and their subsections `1.1.1`. A book with no
 chapters numbers as it always has, so nothing changes for an existing project
 until its first chapter is placed. **A unit before the first chapter carries
 no number**, and nothing under it does either. `numberOfChapter` reads one.
@@ -534,7 +534,7 @@ was three fields and one resolving function.
 its own: the learning-aid route of addendum 16 §6b already writes a summary
 from a section's words, and a chapter's overview is **the same reading
 pointed one level up**. `chapterTextFor` gathers the words of every section
-the chapter covers — `chapterSpan`'s reading of the markers, so a section
+the chapter covers — `divisionSpan`'s reading of the markers, so a section
 dragged into the chapter is read and one dragged out is not — each under its
 title, the chapter page's own words and the next chapter left out, and cut
 at the route's cap on a paragraph boundary with `chapterTextIsCut` saying so.

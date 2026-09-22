@@ -4,7 +4,7 @@ import { storyMarkerSchema } from './entities/structure.js';
 import { addMarker, addUnit } from './mutations.js';
 import { unitsInStoryOrder } from './selectors.js';
 import { placedMarkers, type PlacedMarker } from './markers.js';
-import { chapterSpan } from './outline-binding.js';
+import { divisionSpan } from './outline-binding.js';
 import { isCollection } from './formats.js';
 import { chapterName, materialiseScenes } from './import-build.js';
 import type { ProjectFile } from './project-file.js';
@@ -21,7 +21,7 @@ import type { CharacterId, StoryMarkerId, StructuralUnitId, TrackId } from './id
  * Nothing new is stored: a collection is a project whose markers are read as
  * stories, which is what lets the Layout room set one as it sets a novel (a
  * story to a chapter, the contents page listing them) and the timeline draw
- * them where the chapters would be. What a story *covers* is `chapterSpan`,
+ * them where the chapters would be. What a story *covers* is `divisionSpan`,
  * a reading from its marker to the next.
  */
 
@@ -41,7 +41,7 @@ export const storiesOf = (file: ProjectFile): Story[] => {
   return placedMarkers(file)
     .filter((placed) => placed.marker.kind === 'chapter')
     .map((placed) => {
-      const sections = chapterSpan(file, placed.marker.id);
+      const sections = divisionSpan(file, placed.marker.id);
       const ids = new Set(sections.map((unit) => unit.id as string));
       const words = file.beats
         .filter((beat) => ids.has(beat.unitId as string))

@@ -60,6 +60,7 @@ describe('the episode rail', () => {
         onGo={() => {}}
         onOpenTitlePage={() => {}}
         onNew={() => {}}
+        onRemove={() => {}}
       />,
     );
     expect(container.querySelector('.episode-rail')).toBeNull();
@@ -71,7 +72,7 @@ describe('the episode rail', () => {
     file = addEpisode(file, { title: 'The Wreck' }).file;
 
     render(
-      <EpisodeRail file={file} open onOpen={() => {}} currentUnitId={null} onGo={() => {}} onOpenTitlePage={() => {}} onNew={() => {}} />,
+      <EpisodeRail file={file} open onOpen={() => {}} currentUnitId={null} onGo={() => {}} onOpenTitlePage={() => {}} onNew={() => {}} onRemove={() => {}} />,
     );
     const rows = document.querySelectorAll('.episode-row');
     expect(rows).toHaveLength(2);
@@ -97,6 +98,7 @@ describe('the episode rail', () => {
         onGo={(episode) => went.push(episode)}
         onOpenTitlePage={() => {}}
         onNew={() => {}}
+        onRemove={() => {}}
       />,
     );
     expect(document.querySelectorAll('.episode-row')[1]?.className).toContain('current');
@@ -107,7 +109,7 @@ describe('the episode rail', () => {
 
   it('is a tab and nothing more while it is shut', () => {
     render(
-      <EpisodeRail file={series()} open={false} onOpen={() => {}} currentUnitId={null} onGo={() => {}} onOpenTitlePage={() => {}} onNew={() => {}} />,
+      <EpisodeRail file={series()} open={false} onOpen={() => {}} currentUnitId={null} onGo={() => {}} onOpenTitlePage={() => {}} onNew={() => {}} onRemove={() => {}} />,
     );
     expect(screen.getByText('Episodes')).toBeTruthy();
     expect(document.querySelector('.episode-rail-body')).toBeNull();
@@ -435,5 +437,34 @@ describe('the contents page in the preview', () => {
     expect(screen.queryByLabelText('Contents')).toBeNull();
     // The covers are its own switch, and are still there.
     expect(screen.getByLabelText('Title page: Episode 1')).toBeDefined();
+  });
+
+  /**
+   * The × on an episode (addendum 22 §7a): the Stories rail's, and the same
+   * sentence, an episode and a story being one kind of thing with two nouns.
+   */
+  it('asks before removing an episode, and says what would go', () => {
+    let file = addEpisode(series(), { title: 'Pilot' }).file;
+    file = addEpisode(file, { title: 'The Wreck' }).file;
+    const removed: string[] = [];
+    render(
+      <EpisodeRail
+        file={file}
+        open
+        onOpen={() => {}}
+        currentUnitId={null}
+        onGo={() => {}}
+        onOpenTitlePage={() => {}}
+        onNew={() => {}}
+        onRemove={(episode) => removed.push(episode.title)}
+      />,
+    );
+    const xs = screen.getAllByRole('button', { name: /^Remove / });
+    expect(xs.length).toBeGreaterThan(0);
+    fireEvent.click(xs[xs.length - 1]!);
+    expect(removed).toEqual([]);
+    expect(screen.getByText(/Nothing is written in it, so the episode/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep' }));
+    expect(removed).toEqual([]);
   });
 });

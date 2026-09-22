@@ -1,7 +1,7 @@
 import { contentsDivisions, type PlacedMarker } from './markers.js';
 import { beatsInScript } from './selectors.js';
 import { removeFigure } from './instructional.js';
-import { chapterSpan, divisionRemoval, removeDivision } from './outline-binding.js';
+import { divisionSpan, divisionRemoval, removeDivision } from './outline-binding.js';
 import { isCollection } from './formats.js';
 import { bookFigures, halfOf, partTitle, partsOf, removePart, type BookFigure } from './book-plan.js';
 import type { BookPart } from './entities/book.js';
@@ -143,7 +143,7 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
     // A collection's story carries its chapters; every other format's
     // chapter is the marker itself and has nothing under it.
     if (chapters) {
-      for (const unit of chapterSpan(file, placed.marker.id).slice(1)) {
+      for (const unit of divisionSpan(file, placed.marker.id).slice(1)) {
         if (unit.title.trim().length > 0) rows.push(sectionRow(unit));
       }
     }

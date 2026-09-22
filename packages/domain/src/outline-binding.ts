@@ -164,7 +164,7 @@ const unitPlaces = (file: ProjectFile): PlaceOf => {
   const order = unitsInStoryOrder(file).map((unit) => unit.id as string);
   return (other) => {
     if (other.boundMarkerId !== null) {
-      const span = chapterSpan(file, other.boundMarkerId).map((unit) => order.indexOf(unit.id as string));
+      const span = divisionSpan(file, other.boundMarkerId).map((unit) => order.indexOf(unit.id as string));
       return span.length === 0 ? null : { first: span[0] as number, last: span[span.length - 1] as number };
     }
     const anchor = anchorUnitOf(file, other);
@@ -328,18 +328,28 @@ export const unpromoteRow = (file: ProjectFile, outlineId: OutlineId, itemId: Ou
  * The units a chapter marker covers, read off the story order: from the unit
  * it starts on up to the next chapter's, or to the end (addendum 19 §2).
  *
- * **Never stored.** Which sections a chapter holds is a fact about where the
- * markers fall, so moving a section into the stretch puts it in the chapter
+ * **Never stored.** Which sections a division holds is a fact about where the
+ * markers fall, so moving a section into the stretch puts it in the division
  * with nothing run — the same absence the section numbers rest on.
+ *
+ * It was `chapterSpan` while a chapter and a collection's story — both of
+ * them chapter-kind markers — were all that asked; `collection.ts` had to
+ * carry a comment explaining why a *story* read a *chapter*'s span, which is
+ * the name having stretched past what it says. An **episode** is a different
+ * kind, so the rename came with the fix (addendum 22 §7a).
  */
-export const chapterSpan = (file: ProjectFile, markerId: StoryMarkerId): StructuralUnit[] => {
+export const divisionSpan = (file: ProjectFile, markerId: StoryMarkerId): StructuralUnit[] => {
   const marker = file.markers.find((candidate) => candidate.id === markerId);
   if (!marker) return [];
   const order = unitsInStoryOrder(file);
   const start = order.findIndex((unit) => unit.id === marker.unitId);
   if (start === -1) return [];
+  // It ends at the next marker **of its own kind**. It read `chapter`
+  // outright while chapters and a collection's stories were the only callers
+  // — both of them chapter-kind — and an episode, which is not, would have
+  // run to the end of the series rather than stopping at the next episode.
   const starts = new Set(
-    file.markers.filter((one) => one.kind === 'chapter' && one.id !== markerId).map((one) => one.unitId as string),
+    file.markers.filter((one) => one.kind === marker.kind && one.id !== markerId).map((one) => one.unitId as string),
   );
   const end = order.findIndex((unit, at) => at > start && starts.has(unit.id as string));
   return order.slice(start, end === -1 ? order.length : end);
@@ -352,7 +362,7 @@ export const chapterSpan = (file: ProjectFile, markerId: StoryMarkerId): Structu
  * flag: writing a word in it changes the answer with nothing run.
  */
 const emptyDivision = (file: ProjectFile, markerId: StoryMarkerId): boolean =>
-  chapterSpan(file, markerId).every((unit) =>
+  divisionSpan(file, markerId).every((unit) =>
     beatsForUnit(file, unit.id).every((beat) => beat.manuscript.elements.every((element) => element.text.trim().length === 0)),
   );
 
@@ -384,7 +394,7 @@ const isFirstDivision = (file: ProjectFile, markerId: StoryMarkerId): boolean =>
  */
 export const divisionRemoval = (file: ProjectFile, markerId: StoryMarkerId): string => {
   const noun = nounsFor(file.project.format).division.toLowerCase();
-  const sections = chapterSpan(file, markerId);
+  const sections = divisionSpan(file, markerId);
   if (emptyDivision(file, markerId)) {
     return `Nothing is written in it, so the ${noun} and its empty ${sections.length === 1 ? 'section' : 'sections'} go.`;
   }
@@ -409,7 +419,7 @@ export const divisionRemoval = (file: ProjectFile, markerId: StoryMarkerId): str
 export const removeDivision = (file: ProjectFile, markerId: StoryMarkerId): ProjectFile => {
   const marker = file.markers.find((candidate) => candidate.id === markerId);
   if (!marker) return file;
-  const sections = emptyDivision(file, markerId) ? chapterSpan(file, markerId) : [];
+  const sections = emptyDivision(file, markerId) ? divisionSpan(file, markerId) : [];
   let next = removeMarker(file, markerId);
   for (const unit of sections) next = removeUnit(next, unit.id);
   return next;
@@ -425,7 +435,7 @@ export const removeDivision = (file: ProjectFile, markerId: StoryMarkerId): Proj
  */
 export const moveChapterBlock = (file: ProjectFile, markerId: StoryMarkerId, beforeMarkerId: StoryMarkerId | null): ProjectFile => {
   if (markerId === beforeMarkerId) return file;
-  const span = chapterSpan(file, markerId);
+  const span = divisionSpan(file, markerId);
   if (span.length === 0) return file;
   const moving = new Set(span.map((unit) => unit.id as string));
   const rest = unitsInStoryOrder(file).filter((unit) => !moving.has(unit.id as string));
@@ -620,14 +630,14 @@ export const followOutline = (file: ProjectFile, outlineId: OutlineId, itemId: O
  * twice however the block and its neighbours were interleaved.
  */
 const followChapter = (file: ProjectFile, item: OutlineItem, siblings: readonly OutlineItem[]): ProjectFile => {
-  const block = chapterSpan(file, item.boundMarkerId as StoryMarkerId).map((unit) => unit.id as string);
+  const block = divisionSpan(file, item.boundMarkerId as StoryMarkerId).map((unit) => unit.id as string);
   if (block.length === 0) return file;
   const moving = new Set(block);
 
   /** The units a sibling stands for, first to last, or nothing for a plan. */
   const spanOf = (sibling: OutlineItem): string[] => {
     if (sibling.boundMarkerId !== null) {
-      return chapterSpan(file, sibling.boundMarkerId).map((unit) => unit.id as string).filter((id) => !moving.has(id));
+      return divisionSpan(file, sibling.boundMarkerId).map((unit) => unit.id as string).filter((id) => !moving.has(id));
     }
     const anchor = anchorUnitOf(file, sibling);
     return anchor === null || moving.has(anchor) ? [] : [anchor];

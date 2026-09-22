@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import {
   castOf,
+  divisionRemoval,
   episodes as episodesOf,
   type Episode,
   type ProjectFile,
@@ -19,6 +21,9 @@ import {
  *
  * One click goes to an episode; two open **its own title page**, because an
  * episode is a script that goes out on its own and has its own front page.
+ * A **×** on the row takes one out again — the Stories rail's, and the same
+ * `divisionRemoval` sentence (addendum 22 §7a), since an episode and a story
+ * are one kind of thing with two nouns.
  */
 
 interface EpisodeRailProps {
@@ -31,9 +36,10 @@ interface EpisodeRailProps {
   /** Two clicks open the episode's own title page (addendum 02 §17). */
   onOpenTitlePage(episode: Episode): void;
   onNew(): void;
+  onRemove(episode: Episode): void;
 }
 
-export function EpisodeRail({ file, open, onOpen, currentUnitId, onGo, onOpenTitlePage, onNew }: EpisodeRailProps) {
+export function EpisodeRail({ file, open, onOpen, currentUnitId, onGo, onOpenTitlePage, onNew, onRemove }: EpisodeRailProps) {
   if (file.project.format !== 'series') return null;
   const episodes = episodesOf(file);
   const here = currentUnitId
@@ -64,32 +70,16 @@ export function EpisodeRail({ file, open, onOpen, currentUnitId, onGo, onOpenTit
               {episodes.map((episode) => {
                 const cast = castOf(file, episode);
                 return (
-                  <li key={episode.marker.id}>
-                    <button
-                      type="button"
-                      className={here?.marker.id === episode.marker.id ? 'episode-row current' : 'episode-row'}
-                      aria-current={here?.marker.id === episode.marker.id ? 'true' : undefined}
-                      title={`Go to ${episode.label} · double-click for its title page`}
-                      onClick={() => onGo(episode)}
-                      onDoubleClick={() => onOpenTitlePage(episode)}
-                    >
-                      <span className="episode-label">{episode.label}</span>
-                      <span className="episode-title">{episode.title || 'Untitled'}</span>
-                      <span className="episode-figures muted">
-                        {episode.units.length} {episode.units.length === 1 ? 'scene' : 'scenes'} ·{' '}
-                        {episode.words.toLocaleString()} {episode.words === 1 ? 'word' : 'words'}
-                      </span>
-                      {cast.length > 0 ? (
-                        <span className="episode-cast muted">
-                          {cast
-                            .slice(0, 4)
-                            .map((person) => person.name)
-                            .join(' · ')}
-                          {cast.length > 4 ? ` +${cast.length - 4}` : ''}
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
+                  <EpisodeRow
+                    key={episode.marker.id}
+                    episode={episode}
+                    cast={cast.map((person) => person.name)}
+                    current={here?.marker.id === episode.marker.id}
+                    comfort={divisionRemoval(file, episode.marker.id)}
+                    onGo={() => onGo(episode)}
+                    onOpenTitlePage={() => onOpenTitlePage(episode)}
+                    onRemove={() => onRemove(episode)}
+                  />
                 );
               })}
             </ul>
@@ -101,5 +91,79 @@ export function EpisodeRail({ file, open, onOpen, currentUnitId, onGo, onOpenTit
         </div>
       ) : null}
     </aside>
+  );
+}
+
+/**
+ * One episode. The × is hidden until the row is hovered or holds focus, and
+ * asks before anything goes — `divisionRemoval` says what that is, so this
+ * rail and the Stories rail cannot promise different things.
+ */
+function EpisodeRow({
+  episode,
+  cast,
+  current,
+  comfort,
+  onGo,
+  onOpenTitlePage,
+  onRemove,
+}: {
+  episode: Episode;
+  cast: string[];
+  current: boolean;
+  comfort: string;
+  onGo(): void;
+  onOpenTitlePage(): void;
+  onRemove(): void;
+}) {
+  const [asking, setAsking] = useState(false);
+  const name = episode.title || 'Untitled';
+  return (
+    <li className={asking ? 'episode-item asking' : 'episode-item'}>
+      <button
+        type="button"
+        className={current ? 'episode-row current' : 'episode-row'}
+        aria-current={current ? 'true' : undefined}
+        title={`Go to ${episode.label} · double-click for its title page`}
+        onClick={onGo}
+        onDoubleClick={onOpenTitlePage}
+      >
+        <span className="episode-label">{episode.label}</span>
+        <span className="episode-title">{name}</span>
+        <span className="episode-figures muted">
+          {episode.units.length} {episode.units.length === 1 ? 'scene' : 'scenes'} · {episode.words.toLocaleString()}{' '}
+          {episode.words === 1 ? 'word' : 'words'}
+        </span>
+        {cast.length > 0 ? (
+          <span className="episode-cast muted">
+            {cast.slice(0, 4).join(' · ')}
+            {cast.length > 4 ? ` +${cast.length - 4}` : ''}
+          </span>
+        ) : null}
+      </button>
+      {asking ? (
+        <div className="episode-ask">
+          <p className="muted small">{comfort}</p>
+          <div className="episode-ask-buttons">
+            <button type="button" className="ghost small danger" onClick={onRemove}>
+              Remove
+            </button>
+            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+              Keep
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="ghost small episode-remove"
+          aria-label={`Remove ${episode.label}`}
+          title="Take this episode out of the series"
+          onClick={() => setAsking(true)}
+        >
+          ×
+        </button>
+      )}
+    </li>
   );
 }
