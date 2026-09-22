@@ -5,12 +5,31 @@ import {
   bookRows,
   buildProjectFromImport,
   paginateProject,
+  chapterPageStyleSchema,
+  geometryOf,
   removeBookRow,
+  renderBookBlock,
+  bookSettingsOf,
   storiesOf,
   textToProse,
   whatGoesWithRow,
+  type BookRenderContext,
   type ProjectFile,
 } from '../index.js';
+
+/** Enough of a render context to set one block; the type is the book's own. */
+const contextFor = (file: ProjectFile): BookRenderContext =>
+  ({
+    settings: bookSettingsOf(file),
+    geometry: geometryOf(bookSettingsOf(file), file.project.format, 100),
+    chapterStyle: chapterPageStyleSchema.parse({}),
+    paragraphStyle: 'indented',
+    pictures: new Map(),
+    names: { title: 'The Lamp', author: '', imprint: '' },
+    titlePage: { title: '', author: '', titleImage: '' },
+    contents: [],
+    index: null,
+  }) as unknown as BookRenderContext;
 
 /**
  * Chapters inside a story (addendum 22 §6), from Ken: *divide short stories
@@ -108,11 +127,28 @@ describe('a story and its chapters', () => {
     }
   });
 
-  it('leaves a novel’s headings running on, a chapter there being a marker of its own', () => {
+  it('sets the numeral the way any chapter opening is set, down the page and centred', () => {
+    const file = collection();
+    const blocks = bookBlocks(file);
+    const head = blocks.find((block) => block.kind === 'heading')!;
+    const html = renderBookBlock(head, contextFor(file));
+    // The chapter opening's own markup, not a second style beside it: the
+    // drop down the page and the number's type come from the book.
+    expect(html).toContain('class="bk-opening"');
+    expect(html).toContain('text-align:center');
+    expect(html).toContain('<p class="bk-chapter-label">II</p>');
+    expect(html).not.toContain('bk-heading"');
+    // A heading that runs on in the prose is left as it was.
+    const running = { ...head, starts: 'none' as const };
+    expect(renderBookBlock(running, contextFor(file))).toContain('<p class="bk-heading"');
+  });
+
+  it('leaves a novel alone: there a heading is a chapter marker of its own', () => {
     const file = buildProjectFromImport(textToProse(STORY, { title: 'The Lamp' }), { format: 'novel', title: 'The Lamp' }).file;
-    for (const block of bookBlocks(file).filter((one) => one.kind === 'heading')) {
-      expect(block.starts).toBe('none');
-    }
+    // The numerals became chapter markers on the way in, so there is no
+    // heading in the manuscript for this rule to reach at all.
+    expect(bookBlocks(file).filter((one) => one.kind === 'heading')).toHaveLength(0);
+    expect(bookBlocks(file).filter((one) => one.kind === 'chapter_opening').length).toBeGreaterThan(1);
   });
 
   it('lists a story’s chapters under it on the contents page', () => {

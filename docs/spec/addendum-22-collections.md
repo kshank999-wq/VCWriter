@@ -233,10 +233,15 @@ Two decisions about how it prints. A chapter inside a story starts a **new
 page and never a forced recto** — the *story* opens on a right-hand page
 where the book says so, but a chapter that did the same would leave a blank
 verso between every numeral, which in a ten-page story is most of the paper.
-And the heading is **set as a chapter opening** — centred, with air above it,
-the first line in the book's opening style — because a numeral left in the
-running weight at the top of a page reads as a stray line rather than as a
-division.
+And the numeral **opens the way any chapter opens**: not a style of its own
+beside the chapter opening's, but `.bk-opening` itself — the same drop down
+the page, the same centring, and the number in the type the book sets for a
+chapter number (`settings.chapterPageStyle`, addendum 02 §12a's *the look
+belongs to the book*). The first draft gave it a private style with a third
+of the drop, and Ken read it back as wanting more space above; the fix was
+not a bigger number in that style but **deleting the style**, because *how
+far down the page does a chapter begin* is one question and two answers to
+it drift.
 
 A collection numbers nothing (§2), so on the contents page the heading stands
 where a *title* stands rather than out in the number's column, which is where

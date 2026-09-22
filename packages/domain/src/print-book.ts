@@ -266,9 +266,19 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
     }
     case 'heading':
       // A heading that opens a page is a chapter inside a story (addendum 22
-      // §6) and is set as one: centred, with air above it. A heading that
+      // §6), so it opens **the way any chapter opens**: the same markup, the
+      // same drop down the page, and the number in the type the book sets
+      // for a chapter number. One answer to *how does a chapter begin*
+      // rather than a second style beside it that drifts. A heading that
       // runs on in the prose is left as it was.
-      return `<p class="bk-heading${block.starts === 'none' ? '' : ' bk-heading-opens'}"${style}>${renderSpans(block.spans, block.text)}</p>`;
+      if (block.starts !== 'none') {
+        return (
+          `<div class="bk-opening" style="text-align:center;${chapterStyleFor(context)}">` +
+          `<div class="bk-chapter-head"><p class="bk-chapter-label">${renderSpans(block.spans, block.text)}</p></div>` +
+          '</div>'
+        );
+      }
+      return `<p class="bk-heading"${style}>${renderSpans(block.spans, block.text)}</p>`;
     case 'blockquote':
       return `<p class="bk-quote"${style}>${renderSpans(block.spans, block.text)}</p>`;
     case 'scene_break': {
@@ -421,7 +431,6 @@ export const BOOK_STYLES = `
   .bk-p.bk-small_caps::first-line { font-variant-caps: small-caps; letter-spacing: 0.04em; }
   .bk-p.bk-drop_cap::first-letter { float: left; font-size: calc(var(--bk-lead) * 3); line-height: calc(var(--bk-lead) * 3); padding-right: 0.08em; margin-top: -0.06em; }
   .bk-heading { margin: 0; padding-top: var(--bk-lead); font-weight: 700; text-align: left; }
-  .bk-heading-opens { text-align: center; font-weight: 400; letter-spacing: 0.12em; padding-top: calc(var(--bk-lead) * 3); padding-bottom: calc(var(--bk-lead) * 2); }
   .bk-quote { margin: 0; padding: 0 2em; text-align: var(--bk-align); }
   .bk-break { margin: 0; height: calc(var(--bk-lead) * 3); line-height: calc(var(--bk-lead) * 3); text-align: center; letter-spacing: 0.5em; }
   .bk-figure { margin: 0; padding-bottom: var(--bk-lead); text-align: center; }

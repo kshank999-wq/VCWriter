@@ -1436,9 +1436,13 @@ push live; the build takes a minute or two.
   chapter inside a story starts a **new page and never a forced recto** — the
   *story* keeps the book's recto rule, but a chapter doing the same leaves a
   blank verso between every numeral, which in a ten-page story is most of the
-  paper — and the heading is **set as a chapter opening**, centred with air
-  above it, a numeral left in the running weight reading as a stray line
-  rather than a division. A collection numbers nothing, so on the contents
+  paper — and the numeral **opens the way any chapter opens**, `.bk-opening`
+  itself rather than a style beside it: the same drop down the page, the same
+  centring, the number in the type the book sets for a chapter number. The
+  first draft gave it a private style with a third of the drop and Ken asked
+  for more space above; the fix was **deleting the style**, not enlarging a
+  number in it, because *how far down the page does a chapter begin* is one
+  question and two answers to it drift. A collection numbers nothing, so on the contents
   page the heading stands where a **title** stands rather than out in the
   number's column, which is where the first draft drew it and where it hung
   outside the text block.
