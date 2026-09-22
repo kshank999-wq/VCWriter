@@ -18,6 +18,7 @@ import {
   storyLayout,
   threadLayout,
   timelineArcs,
+  removeDivision,
   type BeatId,
   type TrackId,
   type ProjectFile,
@@ -1314,6 +1315,14 @@ export default function App() {
           onNew={() => {
             addStoryAtEnd();
             setEpisodeRailOpen(true);
+          }}
+          onRemove={(story) => {
+            // The selection may be inside the story that is going, so it is
+            // let go first: a beat that no longer exists leaves the workspace
+            // pointing at nothing.
+            const going = new Set(story.sections.map((unit) => unit.id as string));
+            if (selectedBeat && going.has(selectedBeat.unitId as string)) setSelectedBeatId(null);
+            project.update((current) => removeDivision(current, story.placed.marker.id));
           }}
         />
       ) : null}

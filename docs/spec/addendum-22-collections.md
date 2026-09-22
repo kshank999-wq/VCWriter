@@ -298,7 +298,49 @@ type preset said *chapters on either page*, and a preset describes **type**
 rather than a format's vocabulary, so it now says *openings* — true of every
 format, and no format-specific prose in the domain.
 
-## 7. What each stage built
+## 7. Removing a story
+
+From Ken: *I added a story by accident. I need the ability to remove a story
+also. Maybe a little X in the box when you hover over it. And then when you
+hit the X, it asks you, are you sure?*
+
+The Layout rail had already grown a × for the same complaint (addendum 20
+§9a). The **Stories rail in the workspace** — the menu down the right-hand
+side — had not, and that is where somebody who has just added a story by
+accident is standing.
+
+**One act, so the two rails cannot promise different things.**
+`removeDivision` and `divisionRemoval` in `outline-binding.ts` are the act
+and the sentence, beside `chapterSpan`, which already owns what a division
+covers; `removeBookRow` and `whatGoesWithRow` call them instead of keeping a
+second copy. That also took out a private *story or chapter?* the Layout rail
+was still carrying — `FormatNouns.division` exists to answer that, and §6a
+missed this one.
+
+**Removing a story is not deleting the writing.** The answer has two halves,
+read every time rather than stored:
+
+- Where **nothing is written in it**, the story and its empty sections go.
+  That is the one Ken hit, and it is a reading — putting a word in it changes
+  the answer with nothing run.
+- Where there **are** words, only the break goes. The sections join the story
+  before and not a word is cut.
+
+Unifying the two rails found a **sentence that was not true**: removing the
+*first* story promised its sections would *join the one before*, and there is
+nothing before the first. The words survived either way — the bug was the
+promise, not the behaviour — so the first division now says its sections stay
+where they are, ahead of what is now the first story. The Layout rail had
+been saying the wrong thing too, and one fix served both.
+
+The × is **in the box and hidden until the row is hovered or holds focus**,
+as asked; hidden rather than absent, so the keyboard can still reach it. It
+never removes on the press — it asks inline, with `divisionRemoval`'s sentence
+beside it, because what a × does to a story with words in it is not what it
+does to one added by accident and the writer should read which before
+pressing again.
+
+## 8. What each stage built
 
 - **Stage 1, the reading.** `isCollection`, the noun table's *Collection*,
   `markerNoun` taking the format, `defaultMarkerNumbering` giving a

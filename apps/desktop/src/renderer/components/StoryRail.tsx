@@ -1,4 +1,5 @@
-import { isCollection, storiesOf, type ProjectFile, type Story } from '@vcwriter/domain';
+import { useState } from 'react';
+import { divisionRemoval, isCollection, storiesOf, type ProjectFile, type Story } from '@vcwriter/domain';
 
 /**
  * The stories, down the right-hand edge of a collection (addendum 22 §3).
@@ -9,7 +10,13 @@ import { isCollection, storiesOf, type ProjectFile, type Story } from '@vcwriter
  * name, how many sections and words it has. One click goes to it; two open
  * its own page, the leaf the story opens on, because a story in a
  * collection has a page of its own the way an episode has a title page.
- * **+ New story** starts one on a section of its own at the end.
+ * **+ New story** starts one on a section of its own at the end, and a **×**
+ * on the row takes one out again (§7, from Ken: *I added a story by accident.
+ * I need the ability to remove a story also… when you hit the X, it asks you,
+ * are you sure?*). It is the Layout rail's × in the workspace: hidden until
+ * the row is under the pointer or holding focus, asked once inline with what
+ * would go said beside it, and `divisionRemoval` is the one place that
+ * sentence comes from, so the two rails cannot promise different things.
  *
  * Absent on every other format rather than empty: a novel has chapters and
  * a screenplay has neither.
@@ -24,9 +31,10 @@ interface StoryRailProps {
   onGo(story: Story): void;
   onOpenPage(story: Story): void;
   onNew(): void;
+  onRemove(story: Story): void;
 }
 
-export function StoryRail({ file, open, onOpen, currentUnitId, onGo, onOpenPage, onNew }: StoryRailProps) {
+export function StoryRail({ file, open, onOpen, currentUnitId, onGo, onOpenPage, onNew, onRemove }: StoryRailProps) {
   if (!isCollection(file.project.format)) return null;
   const stories = storiesOf(file);
   const here = currentUnitId ? stories.find((story) => story.sections.some((unit) => (unit.id as string) === currentUnitId)) : undefined;
@@ -54,23 +62,15 @@ export function StoryRail({ file, open, onOpen, currentUnitId, onGo, onOpenPage,
                 const id = story.placed.marker.id as string;
                 const current = here?.placed.marker.id === story.placed.marker.id;
                 return (
-                  <li key={id}>
-                    <button
-                      type="button"
-                      className={current ? 'episode-row current' : 'episode-row'}
-                      aria-current={current ? 'true' : undefined}
-                      title={`Go to ${story.placed.marker.title.trim() || 'this story'} · double-click for its page`}
-                      onClick={() => onGo(story)}
-                      onDoubleClick={() => onOpenPage(story)}
-                    >
-                      {story.placed.label ? <span className="episode-label">{story.placed.label}</span> : null}
-                      <span className="episode-title">{story.placed.marker.title.trim() || 'Untitled'}</span>
-                      <span className="episode-figures muted">
-                        {story.sections.length} {story.sections.length === 1 ? 'section' : 'sections'} · {story.words.toLocaleString()}{' '}
-                        {story.words === 1 ? 'word' : 'words'}
-                      </span>
-                    </button>
-                  </li>
+                  <StoryRow
+                    key={id}
+                    story={story}
+                    current={current}
+                    comfort={divisionRemoval(file, story.placed.marker.id)}
+                    onGo={() => onGo(story)}
+                    onOpenPage={() => onOpenPage(story)}
+                    onRemove={() => onRemove(story)}
+                  />
                 );
               })}
             </ul>
@@ -82,5 +82,73 @@ export function StoryRail({ file, open, onOpen, currentUnitId, onGo, onOpenPage,
         </div>
       ) : null}
     </aside>
+  );
+}
+
+/**
+ * One story. The × is hidden until the row is hovered or holds focus — Ken's
+ * *a little X in the box when you hover over it* — and never removes on the
+ * press: it asks, with `divisionRemoval`'s sentence beside it, because what a
+ * × does to a story that has words in it is not what it does to one added by
+ * accident, and the writer should read which before pressing again.
+ */
+function StoryRow({
+  story,
+  current,
+  comfort,
+  onGo,
+  onOpenPage,
+  onRemove,
+}: {
+  story: Story;
+  current: boolean;
+  comfort: string;
+  onGo(): void;
+  onOpenPage(): void;
+  onRemove(): void;
+}) {
+  const [asking, setAsking] = useState(false);
+  const name = story.placed.marker.title.trim() || 'Untitled';
+  return (
+    <li className={asking ? 'episode-item asking' : 'episode-item'}>
+      <button
+        type="button"
+        className={current ? 'episode-row current' : 'episode-row'}
+        aria-current={current ? 'true' : undefined}
+        title={`Go to ${story.placed.marker.title.trim() || 'this story'} · double-click for its page`}
+        onClick={onGo}
+        onDoubleClick={onOpenPage}
+      >
+        {story.placed.label ? <span className="episode-label">{story.placed.label}</span> : null}
+        <span className="episode-title">{name}</span>
+        <span className="episode-figures muted">
+          {story.sections.length} {story.sections.length === 1 ? 'section' : 'sections'} · {story.words.toLocaleString()}{' '}
+          {story.words === 1 ? 'word' : 'words'}
+        </span>
+      </button>
+      {asking ? (
+        <div className="episode-ask">
+          <p className="muted small">{comfort}</p>
+          <div className="episode-ask-buttons">
+            <button type="button" className="ghost small danger" onClick={onRemove}>
+              Remove
+            </button>
+            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+              Keep
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="ghost small episode-remove"
+          aria-label={`Remove ${name}`}
+          title="Take this story out of the collection"
+          onClick={() => setAsking(true)}
+        >
+          ×
+        </button>
+      )}
+    </li>
   );
 }

@@ -1668,6 +1668,25 @@ push live; the build takes a minute or two.
   describes **type** rather than a format's vocabulary, so it says
   *openings* — true of every format, and no format-specific prose in the
   domain.
+  **§7 is removing a story**, from Ken (*I added a story by accident… maybe a
+  little X in the box when you hover over it… when you hit the X, it asks
+  you, are you sure?*): the Layout rail grew a × for this complaint already,
+  and the **Stories rail in the workspace** — where somebody who has just done
+  it is actually standing — had not. `removeDivision` and `divisionRemoval` in
+  `outline-binding.ts` are **one act and one sentence** beside `chapterSpan`,
+  which already owns what a division covers, and `removeBookRow` /
+  `whatGoesWithRow` call them rather than keeping a second copy — which also
+  took out a private *story or chapter?* that `FormatNouns.division` exists to
+  answer and §6a had missed. **Removing a story is not deleting the writing**:
+  where nothing is written in it the story and its empty sections go (the
+  accident, and a **reading** — a word in it changes the answer with nothing
+  run), and where there are words only the break goes. Unifying the two rails
+  found a **sentence that was not true** — removing the *first* story promised
+  its sections would *join the one before*, and there is nothing before the
+  first; the words survived either way, so the bug was the promise, and the
+  Layout rail had been saying it too, one fix serving both. The × is **in the
+  box, hidden until hover or focus** (hidden rather than absent, so the
+  keyboard reaches it) and **asks inline** with that sentence beside it.
   `addendum-23-ebook-export.md` is **eBook export**, from Ken's own *eBook
   Export Engine* dev spec: one EPUB 3.3 from the laid-out book, with store
   presets for Kindle, Apple, NOOK, Kobo, Google Play, Draft2Digital and

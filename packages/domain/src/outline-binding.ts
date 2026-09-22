@@ -1,6 +1,7 @@
-import { addBeat, addMarker, addUnit, moveBeat, moveUnit } from './mutations.js';
+import { addBeat, addMarker, addUnit, moveBeat, moveUnit, removeMarker, removeUnit } from './mutations.js';
 import { beatsForUnit, tracksInOrder, unitsInStoryOrder } from './selectors.js';
 import { orderKeyBetween } from './ordering.js';
+import { nounsFor } from './formats.js';
 import { nowIso } from './entities/common.js';
 import { findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf } from './outline.js';
 import { claimedInScript, retitleScript } from './planning.js';
@@ -342,6 +343,76 @@ export const chapterSpan = (file: ProjectFile, markerId: StoryMarkerId): Structu
   );
   const end = order.findIndex((unit, at) => at > start && starts.has(unit.id as string));
   return order.slice(start, end === -1 ? order.length : end);
+};
+
+/**
+ * Whether nothing at all is written in a division — the story somebody
+ * started by accident (addendum 22 §7, from Ken: *I added a story by
+ * accident. I need the ability to remove a story also*). A **reading**, not a
+ * flag: writing a word in it changes the answer with nothing run.
+ */
+const emptyDivision = (file: ProjectFile, markerId: StoryMarkerId): boolean =>
+  chapterSpan(file, markerId).every((unit) =>
+    beatsForUnit(file, unit.id).every((beat) => beat.manuscript.elements.every((element) => element.text.trim().length === 0)),
+  );
+
+/** Whether no other division starts earlier in the story order. */
+const isFirstDivision = (file: ProjectFile, markerId: StoryMarkerId): boolean => {
+  const order = unitsInStoryOrder(file).map((unit) => unit.id as string);
+  const at = (id: StoryMarkerId): number => {
+    const marker = file.markers.find((one) => one.id === id);
+    return marker ? order.indexOf(marker.unitId as string) : -1;
+  };
+  const mine = at(markerId);
+  if (mine === -1) return false;
+  return file.markers
+    .filter((one) => one.kind === 'chapter' && one.id !== markerId)
+    .every((one) => {
+      const where = order.indexOf(one.unitId as string);
+      return where === -1 || where > mine;
+    });
+};
+
+/**
+ * What goes if this division is removed, in the writer's own nouns (§7).
+ *
+ * The honest answer has two halves and neither is *delete the story*: where
+ * something is written, **the break goes and the words stay**, joining the
+ * division before, because a heading is not the writing under it; where
+ * nothing is written, the division and its empty sections go, which is the
+ * one Ken hit. Which of the two it is is read every time rather than asked.
+ */
+export const divisionRemoval = (file: ProjectFile, markerId: StoryMarkerId): string => {
+  const noun = nounsFor(file.project.format).division.toLowerCase();
+  const sections = chapterSpan(file, markerId);
+  if (emptyDivision(file, markerId)) {
+    return `Nothing is written in it, so the ${noun} and its empty ${sections.length === 1 ? 'section' : 'sections'} go.`;
+  }
+  const one = sections.length === 1;
+  // There is nothing before the first one to join, so the words simply stay
+  // where they are and stand ahead of what is now the first. Saying *joins
+  // the one before* there would be a promise about a place that does not
+  // exist — the words survive either way, but only one of the two sentences
+  // is true.
+  if (isFirstDivision(file, markerId)) {
+    return `The ${noun} break goes. ${one ? 'Its section stays' : 'Its sections stay'} where ${one ? 'it is' : 'they are'}, ahead of the first ${noun}; not a word is cut.`;
+  }
+  return `The ${noun} break goes. ${one ? 'Its section joins' : 'Its sections join'} the one before; not a word is cut.`;
+};
+
+/**
+ * Take a division out: the marker, and its sections too where nothing is
+ * written in them. One act, so the Stories rail in the workspace and the
+ * Layout rail cannot disagree about what a × does — `divisionRemoval` has
+ * already said it in words.
+ */
+export const removeDivision = (file: ProjectFile, markerId: StoryMarkerId): ProjectFile => {
+  const marker = file.markers.find((candidate) => candidate.id === markerId);
+  if (!marker) return file;
+  const sections = emptyDivision(file, markerId) ? chapterSpan(file, markerId) : [];
+  let next = removeMarker(file, markerId);
+  for (const unit of sections) next = removeUnit(next, unit.id);
+  return next;
 };
 
 /**

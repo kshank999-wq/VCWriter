@@ -4429,6 +4429,44 @@ dialog.reports {
   flex: 1;
 }
 
+/* A story's row and its × (addendum 22 §7). The × sits in the box rather
+   than beside it, and is drawn only while the row is under the pointer or
+   holds focus — hidden, never absent, so the keyboard can still reach it. */
+.episode-item {
+  position: relative;
+}
+
+.episode-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 0 5px;
+  line-height: 1.4;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.episode-item:hover .episode-remove,
+.episode-remove:focus-visible {
+  opacity: 1;
+}
+
+.episode-ask {
+  margin-top: 4px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.episode-ask p {
+  margin: 0 0 6px;
+}
+
+.episode-ask-buttons {
+  display: flex;
+  gap: 6px;
+}
+
 .episode-row {
   width: 100%;
   display: flex;

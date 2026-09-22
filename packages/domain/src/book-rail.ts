@@ -1,14 +1,13 @@
 import { contentsDivisions, type PlacedMarker } from './markers.js';
 import { beatsInScript } from './selectors.js';
-import { removeMarker, removeUnit } from './mutations.js';
 import { removeFigure } from './instructional.js';
-import { chapterSpan } from './outline-binding.js';
+import { chapterSpan, divisionRemoval, removeDivision } from './outline-binding.js';
 import { isCollection } from './formats.js';
 import { bookFigures, halfOf, partTitle, partsOf, removePart, type BookFigure } from './book-plan.js';
 import type { BookPart } from './entities/book.js';
 import type { StructuralUnit } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
-import type { BeatId, ManuscriptElementId, StoryMarkerId } from './ids.js';
+import type { BeatId, ManuscriptElementId } from './ids.js';
 
 /**
  * The rail: the book as one list, in the order it is bound (§9a, from Ken —
@@ -170,22 +169,14 @@ export const whatGoesWithRow = (file: ProjectFile, row: BookRow): string => {
   if (row.kind === 'section') return 'The chapter break goes. Its words join the chapter before; not a word is cut.';
   const marker = row.placed?.marker;
   if (!marker) return '';
-  const noun = isCollection(file.project.format) ? 'story' : 'chapter';
-  const sections = chapterSpan(file, marker.id);
-  if (emptyChapter(file, row)) return `Nothing is written in it, so the ${noun} and its empty ${sections.length === 1 ? 'section' : 'sections'} go.`;
-  const words = sections.length === 1 ? 'Its section joins' : 'Its sections join';
-  return `The ${noun} break goes. ${words} the one before; not a word is cut.`;
+  // One answer, wherever a division is removed from (addendum 22 §7): the
+  // Stories rail in the workspace asks the same function, so a × here and a ×
+  // there cannot promise different things. It also reads the noun off the
+  // format table, where this held a private *story or chapter?* of its own.
+  return divisionRemoval(file, marker.id);
 };
 
 /** Whether a chapter has nothing written in it — the one added by accident. */
-const emptyChapter = (file: ProjectFile, row: BookRow): boolean => {
-  const marker = row.placed?.marker;
-  if (!marker) return false;
-  return chapterSpan(file, marker.id).every((unit) =>
-    beatsInScript(file, unit.id).every((beat) => beat.manuscript.elements.every((element) => element.text.trim().length === 0)),
-  );
-};
-
 /**
  * Take a row out of the book. One act for every kind of row, because the
  * rail is one list: a × means the same thing wherever it is pressed, and
@@ -204,11 +195,7 @@ export const removeBookRow = (file: ProjectFile, row: BookRow): ProjectFile => {
   if (row.kind === 'section') return row.unit ? clearSectionHead(file, row.unit) : file;
   const marker = row.placed?.marker;
   if (!marker) return file;
-  const empty = emptyChapter(file, row);
-  const sections = empty ? chapterSpan(file, marker.id) : [];
-  let next = removeMarker(file, marker.id as StoryMarkerId);
-  for (const unit of sections) next = removeUnit(next, unit.id);
-  return next;
+  return removeDivision(file, marker.id);
 };
 
 /**

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   addUnit,
+  removeDivision,
+  divisionRemoval,
+  addBeat,
   appendImportedStory,
   beginStory,
   buildProjectFromImport,
@@ -12,6 +15,7 @@ import {
   markerNoun,
   moveChapterBlock,
   nounsFor,
+  type ProjectFile,
   opensChapter,
   placedMarkers,
   storiesOf,
@@ -219,5 +223,76 @@ describe('importing one story or many (addendum 22 §2)', () => {
     const texts = file.beats.flatMap((beat) => beat.manuscript.elements.map((element) => `${element.type}:${element.text}`));
     expect(texts).toContain('heading:Later');
     expect(texts).not.toContain('heading:The Harbour');
+  });
+});
+
+/**
+ * Removing a division (addendum 22 §7, from Ken: *I added a story by
+ * accident. I need the ability to remove a story also*). One act and one
+ * sentence, read by the Stories rail in the workspace and by the Layout rail.
+ */
+describe('removing a story', () => {
+  const written = (text: string) => {
+    let file = beginStory(createProjectFile({ title: 'Tales', format: 'short_story' }), { title: 'The Road' }).file;
+    const made = beginStory(file, { title: 'The Harbour' });
+    file = made.file;
+    const beat = addBeat(file, { unitId: made.unitId, title: 'One' });
+    return {
+      ...beat.file,
+      beats: beat.file.beats.map((one) =>
+        one.id === beat.beat.id ? { ...one, manuscript: { elements: [{ id: 'e1', type: 'action' as const, text, attributes: {} }] } } : one,
+      ),
+    } as ProjectFile;
+  };
+
+  it('takes an empty story and its empty sections, which is the one added by accident', () => {
+    let file = beginStory(createProjectFile({ title: 'Tales', format: 'short_story' }), { title: 'The Road' }).file;
+    const made = beginStory(file, { title: 'By Accident' });
+    file = made.file;
+    expect(divisionRemoval(file, made.markerId)).toContain('Nothing is written in it');
+    const after = removeDivision(file, made.markerId);
+    expect(storiesOf(after).map((story) => story.placed.marker.title)).toEqual(['The Road']);
+    // Its empty section went with it rather than being left behind.
+    expect(after.units.length).toBe(file.units.length - 1);
+  });
+
+  it('takes only the break where a story has words, and never a word', () => {
+    const file = written('The harbour was empty.');
+    const harbour = storiesOf(file).find((story) => story.placed.marker.title === 'The Harbour')!;
+    expect(divisionRemoval(file, harbour.placed.marker.id)).toContain('joins the one before');
+    const after = removeDivision(file, harbour.placed.marker.id);
+    expect(storiesOf(after).map((story) => story.placed.marker.title)).toEqual(['The Road']);
+    expect(after.beats.flatMap((beat) => beat.manuscript.elements).some((element) => element.text === 'The harbour was empty.')).toBe(true);
+    expect(after.units.length).toBe(file.units.length);
+  });
+
+  it('does not promise the first story joins one before it, there being none', () => {
+    // The words have to be in the *first* story for this to be the question.
+    const road = beginStory(createProjectFile({ title: 'Tales', format: 'short_story' }), { title: 'The Road' });
+    const withSecond = beginStory(road.file, { title: 'The Harbour' }).file;
+    const beat = addBeat(withSecond, { unitId: road.unitId, title: 'One' });
+    const file = {
+      ...beat.file,
+      beats: beat.file.beats.map((one) =>
+        one.id === beat.beat.id
+          ? { ...one, manuscript: { elements: [{ id: 'e1', type: 'action' as const, text: 'The road went on.', attributes: {} }] } }
+          : one,
+      ),
+    } as ProjectFile;
+    const first = storiesOf(file)[0]!;
+    const sentence = divisionRemoval(file, first.placed.marker.id);
+    expect(sentence).not.toContain('the one before');
+    expect(sentence).toContain('ahead of the first story');
+    // The words survive either way; only one of the two sentences is true.
+    const after = removeDivision(file, first.placed.marker.id);
+    expect(after.beats.flatMap((beat) => beat.manuscript.elements).length).toBe(
+      file.beats.flatMap((beat) => beat.manuscript.elements).length,
+    );
+  });
+
+  it('says it in the format’s own word, rather than a private story-or-chapter', () => {
+    const novel = createProjectFile({ title: 'A novel', format: 'novel' });
+    const made = beginStory(novel, { title: 'One' });
+    expect(divisionRemoval(made.file, made.markerId)).toContain('chapter');
   });
 });
