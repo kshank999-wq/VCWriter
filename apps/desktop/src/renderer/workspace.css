@@ -14149,3 +14149,9 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
 /* The page in hand (§9a): outlined, so the buttons that act on it say which
    page they mean without a sentence saying so. */
 .layout-sheet-chosen { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* A chapter inside a story (addendum 22 §6): under its story, in the reading
+   weight rather than the story's, because the story is the division of the
+   book and the chapter is a division of the story. */
+.layout-rail-section .layout-part { font-size: 11.5px; }
+.layout-rail-section .layout-grip { min-width: 0; }

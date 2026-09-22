@@ -338,18 +338,40 @@ export interface BookContentsRow {
   label: string;
   title: string;
   page: number;
+  /** How far in it sits: a chapter inside a story is under it (addendum 22 §6). */
+  depth: number;
 }
 
+/**
+ * The contents page, read off the blocks (§5) — and, on a collection, a
+ * story's chapters under it (addendum 22 §6).
+ *
+ * Which heading is a chapter is not asked of the format here: it is asked of
+ * the block, and **a heading that opens a page of its own is a division**.
+ * That is true by construction — `bookBlocks` gives a heading a page only
+ * where it opens a chapter inside a story — so a novel's running headings
+ * stay out of the contents without this having to know what a novel is.
+ */
 export const bookContentsOf = (blocks: readonly BookBlock[], laid: LaidBook): BookContentsRow[] =>
   blocks
-    .filter((block) => block.kind === 'chapter_opening' || block.kind === 'part_opening')
-    .filter((block) => block.kind === 'chapter_opening' || (block.title ?? '').length > 0)
+    .filter((block) => {
+      if (block.kind === 'chapter_opening') return true;
+      if (block.kind === 'part_opening') return (block.title ?? '').length > 0;
+      return block.kind === 'heading' && block.starts !== 'none' && block.text.trim().length > 0;
+    })
     .map((block) => {
       const at = laid.where.get(block.id);
+      const page = at && at.numbering === 'arabic' ? at.number : 0;
+      // A chapter inside a story has no number — a collection numbers
+      // nothing — so its heading goes where a title goes and the row is
+      // indented under its story. Put in the label's column it would hang
+      // outside the text block, which is where the first draft drew it.
+      if (block.kind === 'heading') return { label: '', title: block.text.trim(), page, depth: 1 };
       return {
         label: block.chapter?.label ?? '',
         title: block.chapter ? block.chapter.title : block.title ?? '',
-        page: at && at.numbering === 'arabic' ? at.number : 0,
+        page,
+        depth: 0,
       };
     });
 

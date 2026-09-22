@@ -6,6 +6,7 @@ import { chapterSpan } from './outline-binding.js';
 import { isCollection } from './formats.js';
 import { bookFigures, halfOf, partTitle, partsOf, removePart, type BookFigure } from './book-plan.js';
 import type { BookPart } from './entities/book.js';
+import type { StructuralUnit } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
 import type { BeatId, ManuscriptElementId, StoryMarkerId } from './ids.js';
 
@@ -40,7 +41,7 @@ import type { BeatId, ManuscriptElementId, StoryMarkerId } from './ids.js';
  * rail with nothing run.
  */
 
-export type BookRowKind = 'part' | 'chapter' | 'picture';
+export type BookRowKind = 'part' | 'chapter' | 'picture' | 'section';
 
 export interface BookRow {
   /** The part's id, the marker's, or the figure's element id — what `where` is keyed by. */
@@ -50,6 +51,8 @@ export interface BookRow {
   part?: BookPart;
   placed?: PlacedMarker;
   figure?: BookFigure;
+  /** The section, on a collection's chapter inside a story (addendum 22 §6). */
+  unit?: StructuralUnit;
   /** What the row says. Never a sentence. */
   title: string;
   /** The number a chapter prints before its name, where it has one. */
@@ -80,6 +83,23 @@ const partRow = (file: ProjectFile, part: BookPart, depth: number): BookRow => (
   draggable: true,
 });
 
+/**
+ * A chapter inside a story (addendum 22 §6, from Ken). In a collection the
+ * chapter-kind marker is the story, so a chapter within one is its section —
+ * listed under it, named by the heading the page prints, and not draggable,
+ * because moving a chapter inside a story is moving the writing and that is
+ * the Outliner's to do.
+ */
+const sectionRow = (unit: StructuralUnit): BookRow => ({
+  id: unit.id as string,
+  kind: 'section',
+  unit,
+  title: unit.title.trim(),
+  label: '',
+  depth: 1,
+  draggable: false,
+});
+
 const figureRow = (figure: BookFigure, depth: number): BookRow => ({
   id: figure.elementId,
   kind: 'picture',
@@ -100,7 +120,8 @@ const figureRow = (figure: BookFigure, depth: number): BookRow => ({
 export const bookRows = (file: ProjectFile): BookRow[] => {
   const parts = partsOf(file);
   const figures = bookFigures(file);
-  const noun = isCollection(file.project.format) ? 'Story' : 'Chapter';
+  const chapters = isCollection(file.project.format);
+  const noun = chapters ? 'Story' : 'Chapter';
   const rows: BookRow[] = [];
 
   for (const part of parts) if (halfOf(part) === 'front') rows.push(partRow(file, part, 0));
@@ -120,6 +141,13 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
       depth: 0,
       draggable: true,
     });
+    // A collection's story carries its chapters; every other format's
+    // chapter is the marker itself and has nothing under it.
+    if (chapters) {
+      for (const unit of chapterSpan(file, placed.marker.id).slice(1)) {
+        if (unit.title.trim().length > 0) rows.push(sectionRow(unit));
+      }
+    }
     for (const figure of figures) if (figure.markerId === id) rows.push(figureRow(figure, 1));
   }
 
@@ -139,6 +167,7 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
 export const whatGoesWithRow = (file: ProjectFile, row: BookRow): string => {
   if (row.kind === 'part') return row.part?.kind === 'plate' ? 'The page goes; the picture stays in the library.' : 'The page goes.';
   if (row.kind === 'picture') return 'The picture comes out of the writing; it stays in the library.';
+  if (row.kind === 'section') return 'The chapter break goes. Its words join the chapter before; not a word is cut.';
   const marker = row.placed?.marker;
   if (!marker) return '';
   const noun = isCollection(file.project.format) ? 'story' : 'chapter';
@@ -169,6 +198,10 @@ export const removeBookRow = (file: ProjectFile, row: BookRow): ProjectFile => {
     if (!figure) return file;
     return removeFigure(file, figure.beatId as BeatId, figure.elementId as ManuscriptElementId);
   }
+  // A chapter inside a story is its section's heading and nothing else, so
+  // taking it out is taking the heading off: the words stay where they are
+  // and run on into the chapter before, which is what a reader would see.
+  if (row.kind === 'section') return row.unit ? clearSectionHead(file, row.unit) : file;
   const marker = row.placed?.marker;
   if (!marker) return file;
   const empty = emptyChapter(file, row);
@@ -176,4 +209,28 @@ export const removeBookRow = (file: ProjectFile, row: BookRow): ProjectFile => {
   let next = removeMarker(file, marker.id as StoryMarkerId);
   for (const unit of sections) next = removeUnit(next, unit.id);
   return next;
+};
+
+/**
+ * Take the heading off a section so it stops opening a chapter (§6). The
+ * title goes with it, because the title *is* the heading here — the rail,
+ * the contents page and the printed page all read the one thing.
+ */
+const clearSectionHead = (file: ProjectFile, unit: StructuralUnit): ProjectFile => {
+  const heads = new Set(
+    beatsInScript(file, unit.id)
+      .flatMap((beat) => beat.manuscript.elements)
+      .filter((element) => element.type === 'heading')
+      .slice(0, 1)
+      .map((element) => element.id as string),
+  );
+  return {
+    ...file,
+    units: file.units.map((one) => (one.id === unit.id ? { ...one, title: '' } : one)),
+    beats: file.beats.map((beat) =>
+      beat.unitId === unit.id
+        ? { ...beat, manuscript: { ...beat.manuscript, elements: beat.manuscript.elements.filter((element) => !heads.has(element.id as string)) } }
+        : beat,
+    ),
+  };
 };

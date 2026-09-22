@@ -940,7 +940,9 @@ function RailRow({
         className={selected ? 'ghost layout-part selected' : 'ghost layout-part'}
         aria-pressed={selected}
         title={
-          row.kind === 'picture'
+          row.kind === 'section'
+            ? 'A chapter inside this story. Its heading opens the page; × takes the break off and the words run on.'
+            : row.kind === 'picture'
             ? 'A picture in the writing. It stands where it stands there; draw its box on another page to move it.'
             : row.kind === 'chapter'
               ? 'Drag it to move it in the book. Double-click to set the page it opens on.'

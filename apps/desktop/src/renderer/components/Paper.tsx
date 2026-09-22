@@ -121,7 +121,7 @@ function ContentsLeaf({ contents }: { contents: ContentsPage }) {
             {/* The sections under a chapter, indented (addendum 19 §6), with
                 the number the page itself carries. */}
             {entry.sections.map((section) => (
-              <div key={section.number} className="contents-row contents-section">
+              <div key={`${section.number}:${section.title}:${section.page}`} className="contents-row contents-section">
                 <span className="contents-label">{section.number}</span>
                 <span className="contents-title">{section.title}</span>
                 <span className="contents-sheet">{section.page}</span>

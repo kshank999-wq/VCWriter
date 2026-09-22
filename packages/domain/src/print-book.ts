@@ -265,7 +265,10 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
       return `<p class="${cls}"${style}>${block.inset ? insetMarkup(block.inset, context) : ''}${renderSpans(block.spans, block.text)}</p>`;
     }
     case 'heading':
-      return `<p class="bk-heading"${style}>${renderSpans(block.spans, block.text)}</p>`;
+      // A heading that opens a page is a chapter inside a story (addendum 22
+      // §6) and is set as one: centred, with air above it. A heading that
+      // runs on in the prose is left as it was.
+      return `<p class="bk-heading${block.starts === 'none' ? '' : ' bk-heading-opens'}"${style}>${renderSpans(block.spans, block.text)}</p>`;
     case 'blockquote':
       return `<p class="bk-quote"${style}>${renderSpans(block.spans, block.text)}</p>`;
     case 'scene_break': {
@@ -294,7 +297,7 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
       const rows = context.contents
         .map(
           (row) =>
-            `<div class="bk-contents-row"><span class="bk-contents-label">${escapeHtml(row.label)}</span>` +
+            `<div class="bk-contents-row${row.depth ? ' bk-contents-under' : ''}"><span class="bk-contents-label">${escapeHtml(row.label)}</span>` +
             `<span class="bk-contents-title">${escapeHtml(row.title)}</span>` +
             `<span class="bk-contents-page">${row.page > 0 ? row.page : ''}</span></div>`,
         )
@@ -418,6 +421,7 @@ export const BOOK_STYLES = `
   .bk-p.bk-small_caps::first-line { font-variant-caps: small-caps; letter-spacing: 0.04em; }
   .bk-p.bk-drop_cap::first-letter { float: left; font-size: calc(var(--bk-lead) * 3); line-height: calc(var(--bk-lead) * 3); padding-right: 0.08em; margin-top: -0.06em; }
   .bk-heading { margin: 0; padding-top: var(--bk-lead); font-weight: 700; text-align: left; }
+  .bk-heading-opens { text-align: center; font-weight: 400; letter-spacing: 0.12em; padding-top: calc(var(--bk-lead) * 3); padding-bottom: calc(var(--bk-lead) * 2); }
   .bk-quote { margin: 0; padding: 0 2em; text-align: var(--bk-align); }
   .bk-break { margin: 0; height: calc(var(--bk-lead) * 3); line-height: calc(var(--bk-lead) * 3); text-align: center; letter-spacing: 0.5em; }
   .bk-figure { margin: 0; padding-bottom: var(--bk-lead); text-align: center; }
@@ -460,6 +464,7 @@ export const BOOK_STYLES = `
   .bk-words p { margin: 0; font-style: italic; }
   .bk-part-title { margin: 0; padding: calc(var(--bk-lead) * 4) 0 calc(var(--bk-lead) * 2); text-align: center; font-size: 1.3em; letter-spacing: 0.12em; text-transform: uppercase; line-height: var(--bk-lead); }
   .bk-contents-row { display: flex; gap: 1em; align-items: baseline; }
+  .bk-contents-under { padding-left: 2em; font-size: 0.92em; }
   .bk-contents-label { flex: none; min-width: 6em; }
   .bk-contents-title { flex: 1; }
   .bk-contents-page { flex: none; min-width: 2.5em; text-align: right; }

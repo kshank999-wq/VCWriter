@@ -7,6 +7,7 @@ import { bookNames, bookSettingsOf, setBookSettings } from './book-layout.js';
 import { beatsInScript, unitsInStoryOrder } from './selectors.js';
 import { newId } from './ids.js';
 import { partHasStyle, partStyleOf, type PartStyle } from './part-style.js';
+import { isCollection } from './formats.js';
 import type { BookPage } from './book-pages.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -784,6 +785,8 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   );
   let chapterTitle = bookTitle;
   let opensChapter = false;
+  /** On a collection a story's sections are its chapters (addendum 22 §6). */
+  const chapters = isCollection(file.project.format);
   let pending: BookBlock | null = null;
   const elementById = new Map<string, ManuscriptElement>(
     file.beats.flatMap((beat) => beat.manuscript.elements.map((element) => [element.id as string, element] as const)),
@@ -819,11 +822,32 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
       );
       opensChapter = true;
     }
+    // A chapter inside a story (addendum 22 §6, from Ken: *divide short
+    // stories into chapters at the Roman numerals*). In a collection the
+    // chapter-kind marker is the **story**, so a division inside one is its
+    // section — and what makes that section read as a chapter is not a
+    // second record but where it falls: a heading that opens a section
+    // starts a new page, the way a chapter opening does. The running head
+    // stays the story's, because a reader turning the page wants to know
+    // which story they are in and not which numeral.
+    let atSectionHead = chapters && !placed;
     for (const beat of beatsInScript(file, unit.id)) {
       for (const element of beat.manuscript.elements) {
         if (element.text.trim().length === 0 && element.type !== 'scene_break' && element.type !== 'figure') continue;
         const made = elementBlock(element, chapterTitle, opensChapter && element.type === 'paragraph');
         if (!made) continue;
+        if (atSectionHead) {
+          atSectionHead = false;
+          if (made.kind === 'heading') {
+            // A new page, never a forced recto: the **story** opens on a
+            // right-hand page where the book says so, but a chapter inside
+            // one that did the same would leave a blank verso between every
+            // numeral, which in a ten-page story is most of the paper.
+            made.starts = 'page';
+            made.keepWithNext = true;
+            opensChapter = true;
+          }
+        }
         // A figure cut into the text (§8) waits for the paragraph it cuts
         // into, and rides in that block: the renderer measures the wrapped
         // paragraph with the float in place, so the cutter needs no rule

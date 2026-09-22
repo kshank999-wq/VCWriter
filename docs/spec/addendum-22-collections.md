@@ -180,6 +180,68 @@ if it has one; the running head on a recto is the story's title; the
 contents page lists the stories with the page each begins on; the export is
 the book. That this needed no code is the point of §1.
 
+## 6. Chapters inside a story
+
+From Ken, using it: *divide short stories into chapters at the Roman
+numerals.* He had imported a story whose divisions were **II**, **III**,
+**IV**, and they came in as prose.
+
+Two things were wrong, and only one of them was a design question.
+
+### Plain text was not being read at all
+
+The Word reader has divided at a chapter heading and at a bare numeral since
+addendum 21 §10. A `.txt` or `.md` file went through a three-line splitter in
+the renderer that had never heard of either, so the whole story arrived as
+**one undivided block** with the numerals sitting in it as paragraphs. That
+is a straight bug, and it is most of what Ken saw.
+
+`textToProse` in `packages/domain/src/import-text.ts` reads plain text the
+way `docxToProse` reads a document, and `CHAPTER_HEAD`, `BARE_LABEL` and
+`pageNumberParagraphs` moved into `importing.ts` so **both readers ask one
+rule**. A typed page number at the foot of every page is dropped here too, by
+the same counting-up reading. What plain text cannot say is not guessed at:
+it carries no styles, so a line opens a division only by **what it says** and
+by standing alone — which means a story's title line stays a line of prose,
+because there is no signal that says otherwise and the file name has already
+named the story.
+
+### A chapter inside a story is its section
+
+§2 says a story is a chapter-kind marker over its sections. So a chapter
+*within* a story cannot be another chapter-kind marker — that is the *one
+story became three* mistake §2 was written to stop. It is the **section**,
+which has been the second level all along.
+
+Nothing new is stored. What makes a section read as a chapter is **where it
+falls**: its heading opens a new page. That is one branch in `bookBlocks`,
+and three readings follow it without being told anything:
+
+- **The contents page lists it under its story**, indented — `bookContentsOf`
+  for the Layout room and `contentsOf` for the manuscript print. Neither asks
+  the format: they ask the *block*, and **a heading that opens a page of its
+  own is a division**, which is true by construction. A novel's running
+  headings stay out of the contents without either reading knowing what a
+  novel is.
+- **The Layout rail sits it under its story** (`bookRows`, depth 1), not
+  draggable — moving a chapter inside a story is moving the writing, and that
+  is the Outliner's.
+- **The × takes the break off**: the heading and the title go, the words run
+  on into the chapter before, and not a word is cut.
+
+Two decisions about how it prints. A chapter inside a story starts a **new
+page and never a forced recto** — the *story* opens on a right-hand page
+where the book says so, but a chapter that did the same would leave a blank
+verso between every numeral, which in a ten-page story is most of the paper.
+And the heading is **set as a chapter opening** — centred, with air above it,
+the first line in the book's opening style — because a numeral left in the
+running weight at the top of a page reads as a stray line rather than as a
+division.
+
+A collection numbers nothing (§2), so on the contents page the heading stands
+where a *title* stands rather than out in the number's column, which is where
+the first draft drew it and where it hung outside the text block.
+
 ## 6. What is deliberately not done
 
 - **Sections within a story are not numbered by the program.** A story's

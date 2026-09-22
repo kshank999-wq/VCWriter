@@ -434,7 +434,9 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
             projectId,
             unitId: units[0].id,
             kind: 'chapter',
-            title: firstHeading || title,
+            // The document's own name before the project's: each file is a
+            // story, and a collection's first file names the book as well.
+            title: firstHeading || script.title.trim() || title,
             createdAt: timestamp,
             updatedAt: timestamp,
           }),

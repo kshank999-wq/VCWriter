@@ -49,6 +49,7 @@ export * from './import-fdx.js';
 export * from './import-lines.js';
 export * from './import-build.js';
 export * from './import-docx.js';
+export * from './import-text.js';
 export * from './collection.js';
 export * from './series-import.js';
 export * from './ebook-presets.js';

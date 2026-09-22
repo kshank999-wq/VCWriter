@@ -93,6 +93,77 @@ export const importedElements = (script: ImportedScript): ImportedElement[] =>
 export const CHAPTER_HEAD =
   /^(chapter|part|book)\s+([0-9]+|[ivxlcdm]+|(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?)\b/i;
 
+
+// ------------------------------------------------- how a document divides
+
+/**
+ * What both importers need of a paragraph to ask these questions: the words
+ * it holds, and whether it is a picture. A Word paragraph is one of these
+ * and so is a paragraph of plain text, which is the whole reason the rules
+ * below live here rather than in either reader.
+ */
+export interface PlainParagraph {
+  plain: string;
+  pictures?: readonly unknown[];
+}
+
+/**
+ * A section labelled with a number and nothing else, the way a short story
+ * or a manuscript divides (§10): *II*, *3.*, *Seven*, *Twenty-one*. A
+ * digit is only a label once the page numbers are known (below), because a
+ * *3* alone on a line is more often the foot of page three.
+ */
+export const BARE_LABEL =
+  /^(?:(?:[IVXLC]+|[0-9]{1,3})\.?|(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?)$/i;
+
+/** A typed page number: a bare integer, or *Page 12*, or *12 of 300*. */
+const PAGE_NUMBER = /^(?:page\s+)?([0-9]{1,4})(?:\s+(?:of|\/)\s*[0-9]{1,4})?$/i;
+
+/** More words than fall on a manuscript page: two bare numbers further apart than this are not consecutive pages. */
+const WORDS_PER_PAGE_AT_MOST = 900;
+
+/**
+ * Which paragraphs are page numbers the writer typed into the text (§10):
+ * bare integers that count up by one, each within a page's worth of words
+ * of the last, three or more in a row. A chapter numbered *1, 2, 3* counts
+ * up too, but with a chapter's worth of words between — which is the whole
+ * of what tells them apart, and why the distance is measured in words.
+ * Ken's manuscript carried one at the foot of every page, and every one of
+ * them had become a chapter.
+ */
+export const pageNumberParagraphs = (paragraphs: readonly PlainParagraph[]): Set<number> => {
+  const candidates: { index: number; value: number; wordsBefore: number }[] = [];
+  let words = 0;
+  paragraphs.forEach((paragraph, index) => {
+    const match = (paragraph.pictures?.length ?? 0) === 0 ? PAGE_NUMBER.exec(paragraph.plain) : null;
+    if (match) {
+      candidates.push({ index, value: Number(match[1]), wordsBefore: words });
+      words = 0;
+      return;
+    }
+    words += paragraph.plain.trim().length === 0 ? 0 : paragraph.plain.trim().split(/\s+/).length;
+  });
+  const out = new Set<number>();
+  let run: typeof candidates = [];
+  const close = () => {
+    if (run.length >= 3) for (const one of run) out.add(one.index);
+    run = [];
+  };
+  for (const candidate of candidates) {
+    const last = run[run.length - 1];
+    if (last && candidate.value === last.value + 1 && candidate.wordsBefore <= WORDS_PER_PAGE_AT_MOST) run.push(candidate);
+    else {
+      close();
+      run = [candidate];
+    }
+    // *Page 12* says what it is on its own.
+    if (/^page\s/i.test(paragraphs[candidate.index]?.plain ?? '')) out.add(candidate.index);
+  }
+  close();
+  return out;
+};
+
+
 export const bareCue = (cue: string): string =>
   cue
     .replace(/\s*\((?:[^)]*)\)\s*$/, '')

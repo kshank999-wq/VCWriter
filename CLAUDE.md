@@ -1406,6 +1406,42 @@ push live; the build takes a minute or two.
   file readers are `read-import.ts`, shared by both dialogs. The Layout room needed no change (§5). The format is
   offered as *Short stories and collections* and the noun table calls the
   work a *Collection*.
+  **§6 is chapters inside a story**, from Ken using it: *divide short stories
+  into chapters at the Roman numerals*. Two things were wrong and only one
+  was a design question. **Plain text was not being read at all**: the Word
+  reader has divided at a chapter heading and a bare numeral since addendum
+  21 §10, but a `.txt` went through a three-line splitter in the renderer
+  that had never heard of either, so the story arrived as **one undivided
+  block** with the numerals sitting in it as prose — a straight bug, and most
+  of what he saw. `textToProse` in `packages/domain/src/import-text.ts` reads
+  plain text the way `docxToProse` reads a document, and `CHAPTER_HEAD`,
+  `BARE_LABEL` and `pageNumberParagraphs` moved into `importing.ts` so **both
+  readers ask one rule**. Plain text carries no styles, so a line opens a
+  division only by **what it says** and by standing alone — a story's title
+  line stays prose, because nothing says otherwise and the file name has
+  already named the story. Then the design: §2 says a story **is** a
+  chapter-kind marker, so a chapter *within* one cannot be another — that is
+  the *one story became three* mistake §2 exists to stop. It is the
+  **section**, which has been the second level all along, and **nothing new
+  is stored**: what makes a section read as a chapter is *where it falls*,
+  its heading opening a new page. One branch in `bookBlocks`, and three
+  readings follow without being told — the contents page lists it under its
+  story (`bookContentsOf` for Layout, `contentsOf` for the print, **neither
+  asking the format**: they ask the block, and *a heading that opens a page
+  of its own is a division*, true by construction, so a novel's running
+  headings stay out without either reading knowing what a novel is), the
+  Layout rail sits it under its story at depth 1 and not draggable (moving a
+  chapter inside a story is moving the writing, which is the Outliner's), and
+  the × takes the break off with the words running on. Two print decisions: a
+  chapter inside a story starts a **new page and never a forced recto** — the
+  *story* keeps the book's recto rule, but a chapter doing the same leaves a
+  blank verso between every numeral, which in a ten-page story is most of the
+  paper — and the heading is **set as a chapter opening**, centred with air
+  above it, a numeral left in the running weight reading as a stray line
+  rather than a division. A collection numbers nothing, so on the contents
+  page the heading stands where a **title** stands rather than out in the
+  number's column, which is where the first draft drew it and where it hung
+  outside the text block.
   `addendum-23-ebook-export.md` is **eBook export**, from Ken's own *eBook
   Export Engine* dev spec: one EPUB 3.3 from the laid-out book, with store
   presets for Kindle, Apple, NOOK, Kobo, Google Play, Draft2Digital and

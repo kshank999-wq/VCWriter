@@ -1,4 +1,4 @@
-import { docxToProse, docxToScript, readDocx, readFinalDraft, readLaidOutLines, summarise, type ImportedScript } from '@vcwriter/domain';
+import { docxToProse, docxToScript, readDocx, readFinalDraft, readLaidOutLines, textToProse, type ImportedScript } from '@vcwriter/domain';
 
 /**
  * Reading a file for an import (addendum 21, addendum 22 §4): the host turns
@@ -10,24 +10,13 @@ import { docxToProse, docxToScript, readDocx, readFinalDraft, readLaidOutLines, 
 
 export const bareName = (name: string): string => name.replace(/\.[^.]+$/, '');
 
-/** A plain-text file as one story: its paragraphs, divided by blank lines. */
+/**
+ * A plain-text file as prose: its headings divide it, the same rule the Word
+ * reader asks (addendum 22 §6). It used to arrive as one undivided block,
+ * which is why a short story's Roman numerals were not recognised.
+ */
 export const plainStory = (name: string, text: string): ImportedScript =>
-  summarise({
-    title: bareName(name),
-    author: '',
-    scenes: [
-      {
-        heading: '',
-        elements: text
-          .split(/\n\s*\n/)
-          .map((paragraph) => paragraph.replace(/\s*\n\s*/g, ' ').trim())
-          .filter((paragraph) => paragraph.length > 0)
-          .map((paragraph) => ({ type: 'paragraph' as const, text: paragraph })),
-      },
-    ],
-    warnings: [],
-    source: 'text',
-  });
+  textToProse(text, { title: bareName(name) });
 
 /** A file read as prose: a Word document by its headings, or plain text. */
 export const readProseFile = async (chosen: File): Promise<ImportedScript> => {

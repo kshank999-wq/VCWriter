@@ -26,7 +26,7 @@ import type { ParagraphStyle, ProjectFormat, ScriptFormat } from './entities/pro
 import type { ProjectFile } from './project-file.js';
 import type { StructuralUnitId } from './ids.js';
 import type { StructuralUnit } from './entities/structure.js';
-import { isProseFormat } from './formats.js';
+import { isCollection, isProseFormat } from './formats.js';
 import { structureNumbers } from './numbering.js';
 
 /**
@@ -1352,6 +1352,8 @@ const contentsOf = (
   // the next chapter's — with the number the page itself carries, read from
   // `structureNumbers` so the two cannot disagree. Empty everywhere else.
   const numbers = structureNumbers(file).units;
+  /** A collection lists each story's chapters under it (addendum 22 §6). */
+  const chaptersInStories = isCollection(file.project.format);
   // Which chapter a unit falls in is its place in the story order, never how
   // many lines went in ahead of it: a book being planned has units with no
   // prose yet, and every one of those counts the same number of lines.
@@ -1366,16 +1368,26 @@ const contentsOf = (
     const next = runs[position_ + 1];
     const until = next ? placeOf(next.placed.marker.unitId as string) : Number.POSITIVE_INFINITY;
     const opened = own.find((page) => page.number > 0)?.number ?? 0;
+    // On a collection a story's sections are its chapters (addendum 22 §6):
+    // there is no numbering to read, so what stands in the number's place is
+    // the section's own title — *II*, *III* — which is the heading the page
+    // itself prints. The first section of a story is the story's own
+    // opening and is not listed under it.
     const sections =
-      numbers.size === 0
+      numbers.size === 0 && !chaptersInStories
         ? []
         : starts
             .filter((start) => {
               const place = placeOf(start.unit.id as string);
-              return place >= first && place < until && numbers.has(start.unit.id as string);
+              if (place < first || place >= until) return false;
+              if (chaptersInStories) return place > first && start.unit.title.trim().length > 0;
+              return numbers.has(start.unit.id as string);
             })
             .map((start) => ({
-              number: numbers.get(start.unit.id as string) as string,
+              // A collection numbers nothing, so the heading goes where a
+              // title goes rather than in the number's column, which would
+              // hang it outside the text block.
+              number: chaptersInStories ? '' : (numbers.get(start.unit.id as string) as string),
               title: start.unit.title,
               // A section with nothing written in it has no line of its own
               // to be found on, so it stands where the chapter's flow stands:
