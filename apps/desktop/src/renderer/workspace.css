@@ -4573,6 +4573,12 @@ dialog.new-episode {
   gap: 8px;
 }
 
+/* Asking about a delete takes the whole row rather than the last column of
+   it: a sentence in a 120px cell is five words a line. */
+.cast-row .graveyard-ask {
+  grid-column: 1 / -1;
+}
+
 .cast-name {
   font-size: 12px;
   color: var(--text);
@@ -14205,6 +14211,22 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
 
 /* The graveyard (addendum 24): the plainest list in the room, because
    somebody who arrives here has just made a mistake and wants one button. */
+/* Asking, in the side menu: under the row it is about, since the menu is too
+   narrow to put a sentence beside one. */
+.research-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 8px 6px 14px;
+  border-left: 2px solid var(--gold-deep);
+  margin: 2px 0 4px;
+}
+
+.research-ask-buttons {
+  display: flex;
+  gap: 6px;
+}
+
 .research-graveyard {
   margin-top: 10px;
   padding-top: 8px;

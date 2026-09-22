@@ -4,6 +4,7 @@ import {
   addCharacterCategory,
   castByCategory,
   characterCategoriesInOrder,
+  describeDeleting,
   removeCharacter,
   removeCharacterCategory,
   renameCharacterCategory,
@@ -119,6 +120,7 @@ export function CastPanel({ file, onUpdate, onOpenCreator }: CastPanelProps) {
               {group.characters.map((person) => (
                 <CastRow
                   key={person.id}
+                  file={file}
                   person={person}
                   headings={headings}
                   onUpdate={onUpdate}
@@ -151,16 +153,19 @@ export function CastPanel({ file, onUpdate, onOpenCreator }: CastPanelProps) {
 }
 
 function CastRow({
+  file,
   person,
   headings,
   onUpdate,
   onOpenCreator,
 }: {
+  file: ProjectFile;
   person: Character;
   headings: ReturnType<typeof characterCategoriesInOrder>;
   onUpdate: CastPanelProps['onUpdate'];
   onOpenCreator?(characterId: CharacterId): void;
 }) {
+  const [asking, setAsking] = useState(false);
   return (
     <li
       className="cast-row"
@@ -219,14 +224,36 @@ function CastRow({
           Build
         </button>
       ) : null}
-      <button
-        type="button"
-        className="ghost small"
-        aria-label={`Remove ${person.name}`}
-        onClick={() => onUpdate((current) => removeCharacter(current, person.id))}
-      >
-        ×
-      </button>
+      {/* A character is a lot of work — traits, characterization, an arc, who
+          they are to everybody else — so the × asks, and what it says is the
+          graveyard's own sentence rather than this screen's. */}
+      {asking ? (
+        <span className="graveyard-ask">
+          <span className="muted small">{describeDeleting(file, { kind: 'character', id: person.id as string })}</span>
+          <button
+            type="button"
+            className="ghost small danger"
+            onClick={() => {
+              onUpdate((current) => removeCharacter(current, person.id));
+              setAsking(false);
+            }}
+          >
+            Delete
+          </button>
+          <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+            Keep
+          </button>
+        </span>
+      ) : (
+        <button
+          type="button"
+          className="ghost small"
+          aria-label={`Remove ${person.name}`}
+          onClick={() => setAsking(true)}
+        >
+          ×
+        </button>
+      )}
     </li>
   );
 }

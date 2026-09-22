@@ -10,6 +10,7 @@ import {
   reopenPayoff,
   ref,
   deleteSetupPayoff,
+  describeDeleting,
   setSetupPayoffArchived,
   setupReadiness,
   setupsBoard,
@@ -353,7 +354,9 @@ export function SetupsPanel({ file, currentBeatId, onUpdate, onGoTo }: SetupsPan
                   deleting one is a decision about the record. */}
               {asking ? (
                 <span className="graveyard-ask">
-                  <span className="muted small">It goes to the graveyard, and can be restored from there.</span>
+                  <span className="muted small">
+                    {describeDeleting(file, { kind: 'setupPayoff', id: selected.id as string })}
+                  </span>
                   <button
                     type="button"
                     className="ghost small danger"

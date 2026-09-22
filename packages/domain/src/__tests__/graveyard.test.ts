@@ -17,10 +17,12 @@ import {
   addThread,
   castByCategory,
   createProjectFile,
+  describeDeleting,
   describeEmptying,
   emptyGraveyard,
   graveyard,
   graveyardCount,
+  hangingOn,
   locationsInOrder,
   removeCharacter,
   removeLocation,
@@ -157,6 +159,32 @@ describe('the graveyard', () => {
     expect(graveyard(deleted).map((row) => row.word)).toEqual(['Setup & payoff']);
     const back = restoreFromGraveyard(deleted, { kind: 'setupPayoff', id: record.id as string });
     expect(setupsBoard(back)).toHaveLength(1);
+  });
+
+  /**
+   * One sentence, wherever a delete is asked about. The two facts in it are
+   * the module's rather than any screen's, and the second is the one a writer
+   * most needs: deleting a character leaves every cue.
+   */
+  it('says the same thing about a delete wherever it is asked, and says more where something hangs off it', () => {
+    let file = addCharacter(project(), { name: 'Mara' });
+    const mara = file.characters[file.characters.length - 1]!;
+    const alone = describeDeleting(file, { kind: 'character', id: mara.id as string });
+    expect(alone).toContain('graveyard');
+    expect(alone).toContain('Not a word of the writing is cut');
+    expect(alone).not.toContain('filed under it');
+
+    // A location with nothing on it gets the same sentence, which is the point.
+    const made = addLocation(file, { name: 'The Miller House' });
+    expect(describeDeleting(made.file, { kind: 'location', id: made.location.id as string })).toBe(alone);
+
+    // Once something points at them, the sentence says so — and what it
+    // promises is exactly what restoring gives back.
+    file = addCharacter(file, { name: 'Ben' });
+    const ben = file.characters[file.characters.length - 1]!;
+    file = linkEntities(file, { from: ref('character', mara.id), to: ref('character', ben.id) });
+    expect(describeDeleting(file, { kind: 'character', id: mara.id as string })).toContain('filed under it');
+    expect(hangingOn(file, { kind: 'character', id: mara.id as string })).toBe(1);
   });
 
   /**

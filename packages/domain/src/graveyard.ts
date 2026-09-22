@@ -191,19 +191,53 @@ export const restoreFromGraveyard = (file: ProjectFile, ref: BuriedRef): Project
  * would have to be reached from here, and those modules already import this
  * one.
  */
+const pointsAt = (file: ProjectFile, ids: ReadonlySet<string>) => ({
+  links: (file.links ?? []).filter((link) => ids.has(link.from.id as string) || ids.has(link.to.id as string)),
+  usageLinks: (file.usageLinks ?? []).filter((link) => ids.has(link.ownerId as string)),
+  themeMotifLinks: (file.themeMotifLinks ?? []).filter(
+    (link) => ids.has(link.themeId as string) || ids.has(link.motifId as string),
+  ),
+});
+
 const withoutWhatPointedAt = (file: ProjectFile, ids: ReadonlySet<string>): ProjectFile => {
   if (ids.size === 0) return file;
+  const going = pointsAt(file, ids);
+  const kept = <T>(list: readonly T[] | undefined, taken: readonly T[]): T[] => {
+    const out = new Set<T>(taken);
+    return (list ?? []).filter((one) => !out.has(one));
+  };
   return {
     ...file,
-    links: (file.links ?? []).filter(
-      (link) => !ids.has(link.from.id as string) && !ids.has(link.to.id as string),
-    ),
-    usageLinks: (file.usageLinks ?? []).filter((link) => !ids.has(link.ownerId as string)),
-    themeMotifLinks: (file.themeMotifLinks ?? []).filter(
-      (link) => !ids.has(link.themeId as string) && !ids.has(link.motifId as string),
-    ),
+    links: kept(file.links, going.links),
+    usageLinks: kept(file.usageLinks, going.usageLinks),
+    themeMotifLinks: kept(file.themeMotifLinks, going.themeMotifLinks),
   } as ProjectFile;
 };
+
+/**
+ * How much hangs off a record — what restoring gives back, and what destroying
+ * would take. **The same reading both acts use**, so the sentence a writer is
+ * shown before a delete cannot claim something the module does not do.
+ */
+export const hangingOn = (file: ProjectFile, ref: BuriedRef): number => {
+  const going = pointsAt(file, new Set([ref.id]));
+  return going.links.length + going.usageLinks.length + going.themeMotifLinks.length;
+};
+
+/**
+ * What a delete costs, said before it is pressed — **the one copy of it**.
+ *
+ * Five screens had written this sentence for themselves, which is five answers
+ * to *where does this go* waiting to disagree the next time one of them is
+ * edited. Both of its facts are the module's rather than any screen's: nothing
+ * here is destroyed, and **nothing here is manuscript** — deleting a character
+ * leaves every cue, and deleting a location leaves every heading — so a writer
+ * being asked can be told that in the same words wherever they are asked.
+ */
+export const describeDeleting = (file: ProjectFile, ref: BuriedRef): string =>
+  hangingOn(file, ref) > 0
+    ? 'It goes to the graveyard, with what is filed under it, and can be restored from there. Not a word of the writing is cut.'
+    : 'It goes to the graveyard, and can be restored from there. Not a word of the writing is cut.';
 
 /**
  * Empty the graveyard: **the one act in the module that destroys anything**,

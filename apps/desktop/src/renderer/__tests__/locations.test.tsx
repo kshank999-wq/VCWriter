@@ -97,8 +97,10 @@ describe('the library', () => {
     render(<Panel start={current} />);
 
     fireEvent.click(screen.getByText('Remove this location'));
-    // The scenes keep their headings; only the record goes.
-    expect(screen.getByText(/Their headings keep the name/)).toBeTruthy();
+    // The scenes keep their headings — this screen's own fact — and where the
+    // record goes is the graveyard's sentence, said the same way everywhere.
+    expect(screen.getByText(/their headings keep the name/)).toBeTruthy();
+    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
   });
 
   it('says the defaults are defaults', () => {

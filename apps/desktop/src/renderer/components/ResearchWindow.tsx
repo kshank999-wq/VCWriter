@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
 import {
   deleteResearchItem,
+  describeDeleting,
   graveyardCount,
+  removeCharacter,
   addResearchCategory,
   addResearchItem,
   approveCapture,
@@ -26,10 +28,12 @@ import {
   updateResearchItem,
   isInstructional,
   isProseFormat,
+  living,
   nounsFor,
   type ApprovalDecision,
   type BeatId,
   type CaptureItem,
+  type Character,
   type CharacterId,
   type ProjectFile,
   type ProjectFormat,
@@ -380,10 +384,23 @@ export function ResearchBody({
     setDragging(null);
   };
 
+  // `living` rather than a plain find: deleting somebody while their Creator
+  // is open must close it, or the one screen in the room still showing them
+  // would be the one the writer is looking at.
   const creator =
     selection.kind === 'creator'
-      ? (file.characters.find((person) => person.id === selection.id) ?? null)
+      ? (file.characters.find((person) => person.id === selection.id && living(person)) ?? null)
       : null;
+
+  // …and the room goes back where they came from rather than staying pointed
+  // at somebody who is not there: a selection with nobody behind it drew a
+  // nameless folder in the middle and lit nothing in the menu.
+  useEffect(() => {
+    if (selection.kind !== 'creator') return;
+    if (file.characters.some((person) => person.id === selection.id && living(person))) return;
+    setSelection(cameFrom ?? { kind: 'view', view: 'all' });
+    setCameFrom(null);
+  }, [file, selection, cameFrom]);
 
   /**
    * Open somebody, remembering where the writer was. Called from the cast in
@@ -503,42 +520,25 @@ export function ResearchBody({
               <h4>Character Creator</h4>
               <ul className="research-views research-cast">
                 {cast.map((person) => (
-                  <li key={person.id}>
-                    <button
-                      type="button"
-                      // A note from the phone dropped here is filed *about*
-                      // them — never as a second person of the same name.
-                      onDragOver={(event) => {
-                        if (dragging?.kind === 'capture') event.preventDefault();
-                      }}
-                      onDrop={() => {
-                        const capture = draggedCapture();
-                        setDragging(null);
-                        if (capture) {
-                          void placeCapture(capture, { kind: 'about_character', characterId: person.id });
-                        }
-                      }}
-                      className={
-                        selection.kind === 'creator' && selection.id === person.id
-                          ? 'folder-row selected'
-                          : 'folder-row'
+                  <CastMenuRow
+                    key={person.id}
+                    file={file}
+                    person={person}
+                    chosen={selection.kind === 'creator' && selection.id === person.id}
+                    waiting={onDeck[person.id as string] ?? 0}
+                    onOpen={() => openCreator(person.id)}
+                    onDragOver={(event) => {
+                      if (dragging?.kind === 'capture') event.preventDefault();
+                    }}
+                    onDrop={() => {
+                      const capture = draggedCapture();
+                      setDragging(null);
+                      if (capture) {
+                        void placeCapture(capture, { kind: 'about_character', characterId: person.id });
                       }
-                      aria-current={
-                        selection.kind === 'creator' && selection.id === person.id ? 'true' : undefined
-                      }
-                      title={`Build ${person.name}: traits, how they show, and what is still on deck`}
-                      onClick={() => openCreator(person.id)}
-                    >
-                      <span className="folder-name">{person.name}</span>
-                      {/* Nothing waiting is not worth a nought beside every
-                          name; something waiting is worth saying. */}
-                      {(onDeck[person.id as string] ?? 0) > 0 ? (
-                        <span className="count muted" title="Waiting to be shown">
-                          {onDeck[person.id as string]}
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
+                    }}
+                    onUpdate={onUpdate}
+                  />
                 ))}
               </ul>
             </>
@@ -938,6 +938,94 @@ export function ResearchBody({
 const flatten = (folders: ResearchFolder[]): ResearchFolder[] =>
   folders.flatMap((folder) => [folder, ...flatten(folder.children)]);
 
+/**
+ * Somebody in the cast, in the side menu.
+ *
+ * The row carries the delete because **this is where a writer meets the cast**
+ * — the panel inside the Characters folder has had one all along, and a person
+ * added by accident is added from here. It is the folders' own shape: the name
+ * opens them, the × waits until the row is pointed at, and it asks in the
+ * graveyard's words rather than this menu's.
+ */
+function CastMenuRow({
+  file,
+  person,
+  chosen,
+  waiting,
+  onOpen,
+  onDragOver,
+  onDrop,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  person: Character;
+  chosen: boolean;
+  waiting: number;
+  onOpen(): void;
+  onDragOver(event: DragEvent<HTMLElement>): void;
+  onDrop(): void;
+  onUpdate: ResearchWindowProps['onUpdate'];
+}) {
+  const [asking, setAsking] = useState(false);
+  return (
+    <li>
+      <div
+        className={chosen ? 'folder-row selected' : 'folder-row'}
+        aria-current={chosen ? 'true' : undefined}
+        // A note from the phone dropped here is filed *about* them — never as
+        // a second person of the same name.
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+      >
+        <button
+          type="button"
+          className="folder-open folder-name"
+          title={`Build ${person.name}: traits, how they show, and what is still on deck`}
+          onClick={onOpen}
+        >
+          {person.name}
+        </button>
+        {/* Nothing waiting is not worth a nought beside every name; something
+            waiting is worth saying. */}
+        {waiting > 0 ? (
+          <span className="count muted" title="Waiting to be shown">
+            {waiting}
+          </span>
+        ) : null}
+        <button
+          type="button"
+          className="ghost danger"
+          aria-label={`Delete ${person.name}`}
+          title={`Delete ${person.name}`}
+          onClick={() => setAsking(true)}
+        >
+          ×
+        </button>
+      </div>
+      {asking ? (
+        <div className="research-ask">
+          <span className="muted small">{describeDeleting(file, { kind: 'character', id: person.id as string })}</span>
+          <span className="research-ask-buttons">
+            <button
+              type="button"
+              className="ghost small danger"
+              onClick={() => {
+                onUpdate((current) => removeCharacter(current, person.id));
+                setAsking(false);
+              }}
+            >
+              Delete
+            </button>
+            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+              Keep
+            </button>
+          </span>
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
 function FolderNode({
   folder,
   selection,
@@ -1156,7 +1244,7 @@ function Detail({
             they are two different things a writer means (addendum 24 §1) —
             and it can exist at all because there is now somewhere for a
             mistake to land. It asks, and says where it goes. */}
-        <DeleteNote item={item} onUpdate={onUpdate} />
+        <DeleteNote file={file} item={item} onUpdate={onUpdate} />
       </div>
 
       {where.length > 0 ? (
@@ -1223,9 +1311,11 @@ function Plots({ file, onUpdate }: { file: ProjectFile; onUpdate: ResearchWindow
  * can exist, so the sentence is the reassurance rather than the threat.
  */
 function DeleteNote({
+  file,
   item,
   onUpdate,
 }: {
+  file: ProjectFile;
   item: ResearchItem;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
 }) {
@@ -1239,7 +1329,7 @@ function DeleteNote({
   }
   return (
     <span className="graveyard-ask">
-      <span className="muted small">It goes to the graveyard, and can be restored from there.</span>
+      <span className="muted small">{describeDeleting(file, { kind: 'researchItem', id: item.id as string })}</span>
       <button
         type="button"
         className="ghost small danger"

@@ -11,6 +11,7 @@ import {
   relateMotifToTheme,
   removeMotif,
   removeTheme,
+  describeDeleting,
   themesOfMotif,
   unrelateMotifFromTheme,
   untagPassage,
@@ -185,6 +186,7 @@ export function ThemesPanel({ file, onUpdate, onGoTo }: ThemesPanelProps) {
               onChange={(state) => onUpdate((current) => updateTheme(current, theme.id, { state }))}
               onRemove={() => onUpdate((current) => removeTheme(current, theme.id))}
               removeLabel="Delete this theme"
+              note={describeDeleting(file, { kind: 'theme', id: theme.id as string })}
             />
 
             {/* Its motifs, named as a relationship and never as a merge. */}
@@ -268,6 +270,7 @@ export function ThemesPanel({ file, onUpdate, onGoTo }: ThemesPanelProps) {
               onChange={(state) => onUpdate((current) => updateMotif(current, motif.id, { state }))}
               onRemove={() => onUpdate((current) => removeMotif(current, motif.id))}
               removeLabel="Delete this motif"
+              note={describeDeleting(file, { kind: 'motif', id: motif.id as string })}
             />
 
             <h3>Themes it belongs to</h3>
@@ -348,11 +351,14 @@ function StateRow({
   onChange,
   onRemove,
   removeLabel,
+  note,
 }: {
   state: ThematicState;
   onChange(state: ThematicState): void;
   onRemove(): void;
   removeLabel: string;
+  /** What deleting costs, in the graveyard's own words. */
+  note: string;
 }) {
   const [asking, setAsking] = useState(false);
   return (
@@ -368,15 +374,13 @@ function StateRow({
         </select>
       </label>
       {/* §3 asks that removal be confirmed and that it be clear what goes with
-          it. What goes is the taggings; the writing is untouched. */}
+          it. What goes is the taggings; the writing is untouched. The sentence
+          itself is the graveyard's — its taggings are kept, so restoring gives
+          back what was there, and saying they were cut would be a promise the
+          graveyard could not keep. */}
       {asking ? (
         <div className="thematic-confirm">
-          {/* It goes to the graveyard and its taggings go with it — kept, so
-              restoring gives back what was there (addendum 24). Saying they
-              were cut would be a promise the graveyard could not keep. */}
-          <span className="muted small">
-            It goes to the graveyard, with its taggings, and can be restored from there. The writing is untouched.
-          </span>
+          <span className="muted small">{note}</span>
           <button type="button" className="ghost small danger" onClick={onRemove}>
             Remove it
           </button>

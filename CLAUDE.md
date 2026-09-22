@@ -1787,9 +1787,9 @@ push live; the build takes a minute or two.
   time a fact about the work is a reading rather than a column. §4 is the
   screen, last in the research menu under the folders, and **the two acts that
   destroy are the two that ask**; nothing ages out on a timer. §5 is what is
-  deliberately absent: the manuscript (a scene has snapshots), a story or
-  chapter break (removing one deletes nothing, so there is nothing to bury),
-  and a story or chapter break (removing one deletes nothing). Notes and setups
+  deliberately absent: the manuscript (a scene has snapshots) and a story or
+  chapter break (removing one deletes nothing, so there is nothing to bury).
+  Notes and setups
   had no delete when it shipped and one was not invented unasked; Ken then
   asked, so **§5a** is `deleteResearchItem` and `deleteSetupPayoff` — the first
   delete either has ever had, which is the right order, a shelf with only
@@ -1805,6 +1805,33 @@ push live; the build takes a minute or two.
   names it — none of it varies by kind), which is also why it lives in
   `graveyard.ts` and imports nothing: a per-module destroyer would have to be
   reached from here, and those modules already import this one.
+  **§5c is characters and locations**, from Ken — and half of it was already
+  standing, which is worth saying rather than rebuilding: **a location has had
+  a delete with its own ask since the module was built**, and it has gone to
+  the graveyard since §2. The character gap was not where it looked. The
+  delete **existed and asked nothing** (`CastPanel`'s × removed somebody on one
+  click), which was survivable while the answer was *gone* and is worse now,
+  because a control that silently does something reversible teaches a writer to
+  distrust the one that does not. And it was **in the wrong place**: the cast
+  panel is inside the Characters folder while the side menu's *Character
+  Creator* section is where a writer meets the cast, so the × is on the menu
+  row too, in the folders' own shape, with the question under the row because
+  the menu is too narrow to put a sentence beside one. The sentence itself is
+  now **the graveyard's** — five screens had written *it goes to the graveyard*
+  for themselves, which is five answers waiting to disagree, so
+  `describeDeleting` is the one copy and both facts in it are the module's:
+  nothing here is destroyed, and **nothing here is manuscript** (deleting a
+  character leaves every cue, deleting a location leaves every heading), which
+  is what a writer most needs to hear and what no screen should promise on its
+  own. `hangingOn` is the same reading `withoutWhatPointedAt` applies, so what
+  the sentence says is carried can only be what restoring gives back; a screen
+  may still put **its own** fact in front of it, as the locations panel does
+  with how many scenes name the place. Driving the real room caught two things
+  1656 tests did not: the cast row is a four-column grid, so the question was
+  laid out five words to the line in a 120px cell, and **deleting somebody
+  while their Creator was open left the room pointed at them** — nothing lit in
+  the menu, a nameless folder in the middle — so the selection falls back to
+  where the writer came from and the Creator's lookup asks `living`.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

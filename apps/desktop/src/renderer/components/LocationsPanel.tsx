@@ -4,6 +4,7 @@ import {
   TIMES,
   addDescription,
   addLocation,
+  describeDeleting,
   describeLocations,
   locationsInOrder,
   placesWithoutRecords,
@@ -255,10 +256,15 @@ export function LocationsPanel({ file, onUpdate, onGoToUnit }: LocationsPanelPro
               </label>
               {asking ? (
                 <span className="locations-confirm">
+                  {/* The scenes are this screen's own fact — a writer removing
+                      a place wants to know the headings survive it — and where
+                      it goes is the graveyard's sentence rather than a second
+                      copy of one. */}
                   <span className="muted small">
                     {scenes.length > 0
-                      ? `${scenes.length} ${scenes.length === 1 ? 'scene names' : 'scenes name'} it. Their headings keep the name; only the record goes.`
-                      : 'Nothing uses it.'}
+                      ? `${scenes.length} ${scenes.length === 1 ? 'scene names' : 'scenes name'} it, and their headings keep the name. `
+                      : 'Nothing uses it. '}
+                    {describeDeleting(file, { kind: 'location', id: chosen.id as string })}
                   </span>
                   <button
                     type="button"

@@ -97,7 +97,6 @@ project after a month should find what they deleted still there.
   nothing — the words stay — so there would be nothing to put in the
   graveyard, and a row for it would be a promise about an act that did not
   take anything.
-- **A story or a chapter break** — see above.
 
 Research notes and setups & payoffs had no delete when the graveyard shipped,
 only archive, and one was not invented for them unasked. Ken then asked
@@ -135,6 +134,48 @@ that varies by kind. It is also why it lives in `graveyard.ts` and imports
 nothing — a per-module destroyer would have to be reached from here, and those
 modules already import this one.
 
+## 5c. A delete for characters and locations, and one sentence for all of them
+
+From Ken: *I need a delete for characters and locations too*. Half of it was
+already standing and saying so is the point of the audit habit — **a location
+has had a delete since the module was built**, with its own inline ask, and it
+has gone to the graveyard since §2. What was missing was characters, and the
+gap was not where it looked.
+
+**The delete existed and asked nothing.** `CastPanel`'s row has always carried
+a ×, and it removed somebody on one click with no question — which was
+survivable while the answer was *gone* and is worse now, because a control
+that silently does something reversible teaches a writer to distrust the one
+that does not. It asks now.
+
+**And it was in the wrong place.** The cast panel lives inside the Characters
+folder; the side menu's *Character Creator* section is where a writer actually
+meets the cast, and is where somebody added by accident was added. So the ×
+is on the menu row too, in the folders' own shape — the name opens them, the ×
+waits until the row is pointed at, the question sits under the row because the
+menu is too narrow to put a sentence beside one.
+
+**The sentence is the graveyard's.** Five screens had written *it goes to the
+graveyard* for themselves by this point, which is five answers waiting to
+disagree the next time one is edited, so `describeDeleting` is the one copy.
+Both facts in it belong to this module rather than to any screen: nothing here
+is destroyed, and **nothing here is manuscript** — deleting a character leaves
+every cue and deleting a location leaves every heading, which is the thing a
+writer most needs to hear and the thing no screen should get to promise on its
+own. `hangingOn` is the same reading `withoutWhatPointedAt` applies, so what
+the sentence says is carried can only be what restoring gives back. A screen
+may still put **its own** fact in front of it — the locations panel says how
+many scenes name the place, which is §2's *usedIn* and nothing the graveyard
+knows about.
+
+Driving the real room caught two things the tests did not. The cast panel's
+row is a four-column grid, so the question was laid out in a 120px cell five
+words to the line; it spans the row now. And **deleting somebody while their
+Creator was open left the room pointed at them** — the menu lit nothing, the
+middle column drew a nameless folder — so the selection falls back to where
+the writer came from, and the Creator's own lookup asks `living` rather than
+merely finding the record.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -145,3 +186,6 @@ modules already import this one.
 - The seven readings filtered, and five deletes routed to the graveyard with
   their destructive versions kept for it to call.
 - `GraveyardPanel.tsx` and the menu entry.
+- `describeDeleting` and `hangingOn`, read by all six screens that ask before
+  a delete; the × on the cast rows in the side menu and the ask on the cast
+  panel's own.

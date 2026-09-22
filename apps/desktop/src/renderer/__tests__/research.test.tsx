@@ -6,7 +6,9 @@ import {
   addCharacter,
   addResearchCategory,
   addResearchItem,
+  castByCategory,
   createProjectFile,
+  graveyard,
   type ProjectFile,
 } from '@vcwriter/domain';
 import { ResearchWindow } from '../components/ResearchWindow';
@@ -217,6 +219,43 @@ describe('the cast in the side menu', () => {
 
     fireEvent.click(side.getByRole('button', { name: /^MARA/ }));
     expect(screen.getByRole('button', { name: 'Relationships' }).getAttribute('aria-current')).toBe('page');
+  });
+
+  /**
+   * From Ken: *I need a delete for characters and locations too*. The menu is
+   * where a writer meets the cast, so it is where somebody added by accident
+   * is got rid of — and it asks first, in the graveyard's own words.
+   */
+  it('deletes somebody from their row in the menu, after asking, and they wait in the graveyard', () => {
+    let seen: ProjectFile | null = null;
+    function Watched() {
+      const [file, setFile] = useState(withCast());
+      seen = file;
+      return (
+        <ResearchWindow
+          file={file}
+          open
+          currentBeatId={null}
+          onClose={() => undefined}
+          onUpdate={(mutate) => setFile((current) => mutate(current))}
+        />
+      );
+    }
+    render(<Watched />);
+    const side = within(screen.getByLabelText('Research folders'));
+
+    fireEvent.click(side.getByRole('button', { name: 'Delete MARA' }));
+    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+
+    // Nothing has gone while the question is on the screen.
+    expect(castByCategory(seen as unknown as ProjectFile).flatMap((group) => group.characters)).toHaveLength(2);
+
+    fireEvent.click(side.getByRole('button', { name: 'Delete' }));
+    const after = seen as unknown as ProjectFile;
+    expect(castByCategory(after).flatMap((group) => group.characters).map((one) => one.name)).toEqual(['DEAKINS']);
+    expect(graveyard(after).map((row) => row.name)).toEqual(['MARA']);
+    // Off the menu, and waiting where it can be put back.
+    expect(side.queryByRole('button', { name: /^MARA/ })).toBeNull();
   });
 
   it('opens somebody from a right-click on their row in the cast', () => {
