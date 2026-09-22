@@ -1386,11 +1386,28 @@ push live; the build takes a minute or two.
   tracking or rule. It is a designed page now with one difference that is the
   page rather than a choice: **it hangs at the foot**, a notice floating a third
   of the way down not being a copyright page and the block being long enough
-  that a drop from the head would push it off, so `partHangsAtFoot` makes the
-  **template and the drop absent** on it (*absent rather than greyed*) with a
+  that a drop from the head would push it off, so the template and the drop are
+  **absent** on it (*absent rather than greyed*) with a
   sentence saying where the page sits, while everything about its type is the
   writer's. Nine point where the stylesheet said `0.8em` — the running heads'
-  rule again, furniture not growing because the body did. **§8a is pictures inside the story**, from Ken
+  rule again, furniture not growing because the body did. **And the contents
+  page and the index**, from Ken, the last two with the same gap: their whole
+  look was `.bk-part-title` at `1.3em` in tracked capitals over entries at
+  whatever the body happened to be, so a book in a sans face printed a serif
+  contents heading. The predicate is a **rule rather than a list** now — a
+  part is designed where its page **prints type of its own**, which is not a
+  plate (a picture) and not the prose parts (a foreword's body *is* the book's
+  body text and should stay it) — and `partHangsAtFoot` became
+  **`partPlacement`**, there being three answers rather than two: `block`,
+  `foot`, `flows`. **The contents and the index flow**, running to as many
+  pages as they need, so there is no single block on a page to place and the
+  template and the drop are absent for the copyright page's reason. The
+  **title** style is the heading and the **line** style is the entries — the
+  same pair said of a list rather than a second vocabulary — and it sits on the
+  **wrapper**, so the entries take it by inheritance and a sub-entry's `0.92em`
+  stays a share of the entry rather than of the body. Fourteen point over
+  eleven, the running heads' caveat a second time: a book whose body is not
+  eleven point is the one thing that reads differently. **§8a is pictures inside the story**, from Ken
   laying out a children's book, and the audit paid a **thirteenth** time:
   a picture inside the story **is a figure**, which the manuscript has had
   since addendum 16 §9 and which already stands where the writer put it —

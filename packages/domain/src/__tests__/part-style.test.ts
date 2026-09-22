@@ -7,7 +7,7 @@ import {
   chapterPageStyleSchema,
   createProjectFile,
   geometryOf,
-  partHangsAtFoot,
+  partPlacement,
   partHasStyle,
   partStyleOf,
   partStyleVars,
@@ -64,12 +64,12 @@ const contextFor = (file: ProjectFile): BookRenderContext => {
 };
 
 describe('a designed page', () => {
-  it('is the half title, the title page, a dedication and an epigraph, and nothing read or written', () => {
-    expect(partHasStyle('half_title')).toBe(true);
-    expect(partHasStyle('title_page')).toBe(true);
-    expect(partHasStyle('dedication')).toBe(true);
-    expect(partHasStyle('epigraph')).toBe(true);
-    expect(partHasStyle('contents')).toBe(false);
+  it('is every page that prints type of its own, and not a plate or a page of prose', () => {
+    for (const kind of ['half_title', 'title_page', 'dedication', 'epigraph', 'copyright', 'contents', 'index'] as const) {
+      expect(partHasStyle(kind)).toBe(true);
+    }
+    // A foreword's body *is* the book's body text and should stay it, and a
+    // plate is a picture: the line the predicate draws (§7a).
     expect(partHasStyle('foreword')).toBe(false);
     expect(partHasStyle('plate')).toBe(false);
   });
@@ -213,9 +213,9 @@ describe('the copyright page', () => {
     // Which is what the page *is* rather than a choice: a copyright block a
     // third of the way down is not a copyright page, and it is long enough
     // that a drop would push it off the foot.
-    expect(partHangsAtFoot('copyright')).toBe(true);
+    expect(partPlacement('copyright')).toBe('foot');
     for (const kind of ['half_title', 'title_page', 'dedication', 'epigraph'] as const) {
-      expect(partHangsAtFoot(kind)).toBe(false);
+      expect(partPlacement(kind)).toBe('block');
     }
   });
 
@@ -244,5 +244,72 @@ describe('the copyright page', () => {
     expect(html).toContain('Helvetica');
     // The notice itself is untouched; only how it is set changed.
     expect(html).toContain('Copyright © M. Shank');
+  });
+});
+
+/**
+ * The contents page and the index (addendum 20 §7a, from Ken: *the contents
+ * page needs the same style options*). They are designed pages that **flow**:
+ * the heading and the entries are the writer's, while the template and the
+ * drop are absent, there being no single block on a page to place.
+ */
+describe('the contents page and the index', () => {
+  const laid = (file: ProjectFile): BookRenderContext => ({
+    ...contextFor(file),
+    contents: [
+      { label: '1', title: 'The Lamp', page: 3, depth: 0 },
+      { label: '', title: 'A room above the shop', page: 4, depth: 1 },
+    ],
+    index: { letters: [{ letter: 'L', headings: [{ term: 'lamps', runs: [{ from: 3, to: 4, principal: false }], subEntries: [] }] }] },
+  }) as unknown as BookRenderContext;
+
+  it('are designed pages, and the two whose placement is the page rather than a choice', () => {
+    expect(partHasStyle('contents')).toBe(true);
+    expect(partHasStyle('index')).toBe(true);
+    expect(partPlacement('contents')).toBe('flows');
+    expect(partPlacement('index')).toBe('flows');
+  });
+
+  it('start as the stylesheet drew them: a tracked capital heading over entries at the reading size', () => {
+    const file = addPart(novel(), 'contents').file;
+    const style = partStyleOf(partsOf(file).find((one) => one.kind === 'contents')!);
+    // 1.3em of an eleven-point body, in capitals, tracked open.
+    expect(style.title.size).toBe(14);
+    expect(style.title.case).toBe('capitals');
+    expect(style.title.tracking).toBe(12);
+    expect(style.line.size).toBe(11);
+    expect(style.line.case).toBe('as_typed');
+  });
+
+  it('carry their own type to the page, heading and entries apart', () => {
+    const file = addPart(novel(), 'contents').file;
+    const part = partsOf(file).find((one) => one.kind === 'contents')!;
+    const style = partStyleOf(part);
+    const set = updatePart(file, part.id, {
+      style: { ...style, face: 'sans', align: 'left', rule: true, title: { ...style.title, size: 18 }, line: { ...style.line, size: 10, italic: true } },
+    });
+    const block = bookBlocks(set).find((one) => one.kind === 'contents')!;
+    const html = renderBookBlock(block, laid(set));
+    expect(html).toContain('--pt-title-size:18pt');
+    expect(html).toContain('--pt-line-size:10pt');
+    expect(html).toContain('--pt-line-style:italic');
+    expect(html).toContain('--pt-align:left');
+    expect(html).toContain('--pt-rule:1px solid currentColor');
+    expect(html).toContain('Helvetica');
+    // The rows themselves are untouched; only how they are set changed.
+    expect(html).toContain('The Lamp');
+    expect(html).toContain('A room above the shop');
+  });
+
+  it('gives the index the same style, which nothing could reach before', () => {
+    const file = addPart(novel(), 'index').file;
+    const part = partsOf(file).find((one) => one.kind === 'index')!;
+    const style = partStyleOf(part);
+    const set = updatePart(file, part.id, { style: { ...style, title: { ...style.title, size: 16, case: 'small_caps' } } });
+    const block = bookBlocks(set).find((one) => one.kind === 'index')!;
+    const html = renderBookBlock(block, laid(set));
+    expect(html).toContain('--pt-title-size:16pt');
+    expect(html).toContain('--pt-title-variant:small-caps');
+    expect(html).toContain('lamps');
   });
 });

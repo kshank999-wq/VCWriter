@@ -314,6 +314,11 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
       if (block.kind === 'part_opening' && block.display) return displayInner(block, context);
       return openingMarkup(block, context);
     case 'contents': {
+      // A designed page like the other five (§7a), but one that **flows**:
+      // the heading and the entries are set by the writer, while the template
+      // and the drop are absent, there being no single block on a page to
+      // place — the list runs to as many pages as it needs.
+      const styled = block.partStyle ? ` style="${partStyleAttr(block.partStyle, context.settings.face)}"` : '';
       const rows = context.contents
         .map(
           (row) =>
@@ -322,10 +327,11 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
             `<span class="bk-contents-page">${row.page > 0 ? row.page : ''}</span></div>`,
         )
         .join('');
-      return `<div class="bk-contents"><p class="bk-part-title">${escapeHtml(block.title ?? 'Contents')}</p>${rows}</div>`;
+      return `<div class="bk-contents"${styled}><p class="bk-part-title">${escapeHtml(block.title ?? 'Contents')}</p>${rows}</div>`;
     }
     case 'index': {
       const index = context.index;
+      const styled = block.partStyle ? ` style="${partStyleAttr(block.partStyle, context.settings.face)}"` : '';
       const letters = index
         ? index.letters
             .map(
@@ -343,7 +349,7 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
             )
             .join('')
         : '';
-      return `<div class="bk-index"><p class="bk-part-title">${escapeHtml(block.title ?? 'Index')}</p>${letters}</div>`;
+      return `<div class="bk-index"${styled}><p class="bk-part-title">${escapeHtml(block.title ?? 'Index')}</p>${letters}</div>`;
     }
     default:
       return displayInner(block, context);
@@ -493,7 +499,12 @@ export const BOOK_STYLES = `
   .bk-small { font-size: 0.8em; line-height: 1.4; margin: 0; }
   .bk-display.bk-copyright .bk-small { font-size: var(--pt-title-size, 0.8em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, normal); letter-spacing: var(--pt-title-tracking, 0); border-bottom: var(--pt-rule, none); padding-bottom: 0.15em; }
   .bk-words p { margin: 0; font-style: italic; }
-  .bk-part-title { margin: 0; padding: calc(var(--bk-lead) * 4) 0 calc(var(--bk-lead) * 2); text-align: center; font-size: 1.3em; letter-spacing: 0.12em; text-transform: uppercase; line-height: var(--bk-lead); }
+  /* The contents and the index are designed pages that **flow** (§7a): the
+     style sits on the wrapper, so the entries take the line style by
+     inheritance and a sub-entry's 0.92em stays a share of the entry rather
+     than of the body. The heading takes the title style over the top. */
+  .bk-contents, .bk-index { font-family: var(--pt-face, var(--bk-face)); font-size: var(--pt-line-size, 1em); text-transform: var(--pt-line-case, none); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, normal); letter-spacing: var(--pt-line-tracking, 0); }
+  .bk-part-title { margin: 0; padding: calc(var(--bk-lead) * 4) 0 calc(var(--bk-lead) * 2); text-align: var(--pt-align, center); font-size: var(--pt-title-size, 1.3em); letter-spacing: var(--pt-title-tracking, 0.12em); text-transform: var(--pt-title-case, uppercase); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, normal); border-bottom: var(--pt-rule, none); line-height: var(--bk-lead); }
   .bk-contents-row { display: flex; gap: 1em; align-items: baseline; }
   .bk-contents-under { padding-left: 2em; font-size: 0.92em; }
   .bk-contents-label { flex: none; min-width: 6em; }

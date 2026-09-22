@@ -57,19 +57,38 @@ export type PartStyle = z.infer<typeof partStyleSchema>;
 export const partStylePatchSchema = partStyleSchema.partial();
 export type PartStylePatch = z.infer<typeof partStylePatchSchema>;
 
-/** The kinds whose page is designed rather than read or written. */
+/**
+ * The kinds whose page **prints type of its own** and is therefore designed
+ * (§7a). Not a plate, which is a picture; and not the prose parts — a
+ * foreword's body *is* the book's body text and should stay it, which is the
+ * line this predicate draws.
+ */
 export const partHasStyle = (kind: PartKind): boolean =>
-  kind === 'half_title' || kind === 'title_page' || kind === 'dedication' || kind === 'epigraph' || kind === 'copyright';
+  kind === 'half_title' ||
+  kind === 'title_page' ||
+  kind === 'dedication' ||
+  kind === 'epigraph' ||
+  kind === 'copyright' ||
+  kind === 'contents' ||
+  kind === 'index';
 
 /**
- * Whether the page **hangs at the foot** rather than being dropped from the
- * head (§7a). The copyright page is the one that does, and it is what the page
- * *is* rather than a choice: a copyright block floating a third of the way
- * down is not a copyright page, and the block is long enough that a drop
- * would push it off the foot. So the template and the drop are **absent**
- * on it rather than offered and wrong — everything about its type is not.
+ * How a designed page sits, which is what the page **is** rather than a choice
+ * the writer makes (§7a) — so the template and the drop are **absent** on the
+ * two that are not a block, rather than offered and wrong.
+ *
+ * - `block`: a few words placed on a page of their own, dropped from the head.
+ *   The template and the drop are theirs.
+ * - `foot`: the copyright page. A notice floating a third of the way down is
+ *   not a copyright page, and the block is long enough that a drop would push
+ *   it off the foot.
+ * - `flows`: the contents and the index. They run to as many pages as they
+ *   need, so there is no single block to place; the heading stands at the head
+ *   and the entries follow.
  */
-export const partHangsAtFoot = (kind: PartKind): boolean => kind === 'copyright';
+export type PartPlacement = 'block' | 'foot' | 'flows';
+export const partPlacement = (kind: PartKind): PartPlacement =>
+  kind === 'copyright' ? 'foot' : kind === 'contents' || kind === 'index' ? 'flows' : 'block';
 
 /**
  * What each kind looks like until somebody touches it — exactly what the
@@ -98,6 +117,20 @@ const KIND_DEFAULTS: Partial<Record<PartKind, PartStylePatch>> = {
     align: 'left',
     title: { size: 9, case: 'as_typed', bold: false, italic: false, tracking: 0 },
     line: { size: 9, case: 'as_typed', bold: false, italic: false, tracking: 0 },
+  },
+  // The heading over the entries, and the entries: what the stylesheet drew
+  // before either could be set — 1.3em of an eleven-point body, tracked open
+  // and in capitals, over entries at the reading size (§7a). Points rather
+  // than a share of the body, which is what a designed page is set in
+  // everywhere else here; a book whose body is not eleven point is the one
+  // thing that reads differently, as it was for the running heads.
+  contents: {
+    title: { size: 14, case: 'capitals', bold: false, italic: false, tracking: 12 },
+    line: { size: 11, case: 'as_typed', bold: false, italic: false, tracking: 0 },
+  },
+  index: {
+    title: { size: 14, case: 'capitals', bold: false, italic: false, tracking: 12 },
+    line: { size: 11, case: 'as_typed', bold: false, italic: false, tracking: 0 },
   },
 };
 

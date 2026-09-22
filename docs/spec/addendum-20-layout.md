@@ -533,6 +533,44 @@ The size is **9 pt** where the stylesheet said `0.8em` — 8.8 pt at an
 eleven-point body. That is the running heads' rule again: this is furniture,
 and furniture does not grow because the body did.
 
+### The contents page and the index, the same way
+
+From Ken: *the contents page needs the same style options.*
+
+Same gap, the last two pages that had it. `partHasStyle` refused both, so
+their whole look was in the stylesheet — `.bk-part-title` at `1.3em`, in
+capitals, tracked, centred, over entries at whatever size the body happened
+to be. A book set in a sans face printed a serif contents heading, and there
+was nowhere to say otherwise.
+
+The predicate is now a **rule rather than a list**: a part is designed where
+its page **prints type of its own**. Not a plate, which is a picture; and not
+the prose parts, because a foreword's body *is* the book's body text and
+should stay it. That is the line `partHasStyle` draws, and it names all seven.
+
+`partHangsAtFoot` was a yes-or-no about one page, and there are now three
+answers, so it is **`partPlacement`** — `block`, `foot`, `flows`. A designed
+page's placement is what the page **is** rather than a choice, which is why
+the template and the drop are **absent** on the two that are not a block of
+words: the copyright page hangs at the foot, and the contents and the index
+**flow** over as many pages as they need, so there is no single block on a
+page to place. The heading stands at the head and the entries follow, and the
+screen says so.
+
+Everything about their type is the writer's, in the pair the other designed
+pages already use: the **title** style is the heading, the **line** style is
+the entries — one record said of a list rather than a second vocabulary. The
+style sits on the wrapper rather than on each row, so the entries take it by
+inheritance and a sub-entry's `0.92em` stays a share of the entry rather than
+of the body; the heading takes the title style over the top. The alignment is
+the heading's, the entries keeping their leader layout.
+
+The defaults are what the stylesheet drew: **14 pt** for the heading (1.3em of
+an eleven-point body), in capitals, tracked open, over **11 pt** entries. As
+with the running heads, that is a size in points where there was a share of
+the body, so a book whose body is not eleven point is the one thing that reads
+differently — and by a couple of per cent.
+
 ## 8. Graphics
 
 Three kinds, and two of them exist:

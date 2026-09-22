@@ -383,9 +383,10 @@ const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle:
         }),
       ];
     case 'contents':
-      return [block({ id: part.id, kind: 'contents', numbering, starts: 'recto', partId: part.id, title, chapterTitle: title })];
+      // A designed page (§7a): the heading and the entries are the writer's.
+      return [block({ id: part.id, kind: 'contents', numbering, starts: 'recto', partId: part.id, title, chapterTitle: title, partStyle: partStyleOf(part) })];
     case 'index':
-      return [block({ id: part.id, kind: 'index', numbering, starts: 'recto', partId: part.id, title, chapterTitle: title })];
+      return [block({ id: part.id, kind: 'index', numbering, starts: 'recto', partId: part.id, title, chapterTitle: title, partStyle: partStyleOf(part) })];
     case 'plate':
       return [
         block({
