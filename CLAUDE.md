@@ -1307,7 +1307,41 @@ push live; the build takes a minute or two.
   measured rather than assumed: it was already exactly centred **on the text
   block**, and what is visible is that it is not centred on the **paper**, by
   half the gutter — correct bookbinding, and what the standard asks for on
-  every row. **§8a is pictures inside the story**, from Ken
+  every row. **§7a is the furniture**, from Ken: *the running headers and
+  footers need to be adjustable*. The gap was wider than the word suggests —
+  §7 gave four dropdowns and **nothing about how any of it looks**, with a
+  sentence under them admitting it (*nothing about them is typed here*) — and
+  the look was fixed **inconsistently**: the stylesheet set the running head at
+  `0.8em` in capitals, then set the *recto* in italic with the capitals off,
+  so the two sides differed for a reason neither could state, neither could be
+  changed, and a book set in a sans face still printed a serif head. The audit
+  paid a **fourteenth** time: a running head is **a line of type**, and
+  `LineStyle` has been the record for that since the chapter page, read again
+  by the front matter's pages — so `runningHeadStyle` is three `LineStyle`s and
+  a face, no new vocabulary, and `lineStyleVars` came out of `chapter-style.ts`
+  as the one place that decides what a line's fields mean (two private copies
+  before; this would have been the third). Three decisions carry it. **Three
+  lines rather than one** — the verso, the recto and the folio are set
+  separately, because the hard-coded difference between the first two was a
+  real convention rather than an accident, so the **defaults are exactly what
+  the stylesheet printed** and the whole domain suite passed without a test
+  being edited, which is the proof. **One list of contents for both sides**,
+  where there were two enums neither of which could say why it refused the
+  other's, now five with `custom` among them — the writer's own words, a series
+  name or a part's — whose box is **absent rather than greyed** unless that side
+  carries them, a box for words the page will not print being a control that
+  lies. And **a size in points rather than a share of the body**: `0.8em` grew
+  when the body grew, and a running head is furniture rather than text; this is
+  the one thing an existing book reads differently, and only off 11 pt. Two
+  smaller ones: the head gained a **place** (centred, outer or inner), whose
+  absence was the plainer asymmetry — the footer could be placed and the header
+  could not — with `headSideClass` reading which physical side that is from the
+  page; and the folio gained **`none`**, a book with no page numbers at all,
+  which still *counts* its pages (the contents and the index read the count)
+  and merely prints none. Deliberately **not** adjustable: how far into the
+  margin they sit, which stays `margin / 2` clamped to §3b's quarter inch,
+  because a control there can only put a running head under the printer's
+  blade. **§8a is pictures inside the story**, from Ken
   laying out a children's book, and the audit paid a **thirteenth** time:
   a picture inside the story **is a figure**, which the manuscript has had
   since addendum 16 §9 and which already stands where the writer put it —

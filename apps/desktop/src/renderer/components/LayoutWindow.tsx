@@ -8,6 +8,12 @@ import {
   FACE_NAMES,
   FACE_NOTES,
   FOLIO_PLACES,
+  FOLIO_PLACE_WORDS,
+  HEAD_CONTENTS,
+  HEAD_CONTENT_WORDS,
+  HEAD_PLACES,
+  HEAD_PLACE_WORDS,
+  runningHeadStyleOf,
   OPENINGS,
   PART_INFO,
   TRIM_PRESETS,
@@ -49,6 +55,7 @@ import {
   updatePartInset,
   type BookFigurePlacement,
   type FigureSide,
+  type LineStyle,
   type PartInset,
   type PartStyle,
   type PartTemplate,
@@ -112,12 +119,6 @@ interface LayoutWindowProps {
   /** File ▸ Chapter page…, opened on the chapter asked for. Absent in a window of its own. */
   onOpenChapterPage?(markerId: string): void;
 }
-
-const FOLIO_WORDS: Record<(typeof FOLIO_PLACES)[number], string> = {
-  foot_outside: 'Foot, outside corner',
-  foot_centre: 'Foot, centred',
-  head_outside: 'Head, outside corner',
-};
 
 const OPENING_WORDS: Record<(typeof OPENINGS)[number], string> = {
   none: 'Nothing special',
@@ -1912,45 +1913,108 @@ function TypeSection({ settings, write, noun }: { settings: BookSettings; write(
   );
 }
 
+/**
+ * The running heads and the folios (§7a, from Ken: *the running headers and
+ * footers need to be adjustable*). There used to be four dropdowns and a
+ * sentence saying nothing about them could be typed. Now each side says what
+ * it likes — the writer's own words among the choices — and all three lines
+ * are set here, the same `Line` control the chapter page uses.
+ */
 function FurnitureSection({ settings, write, noun, nounPlural }: { settings: BookSettings; write(patch: Partial<BookSettings>): void; noun: string; nounPlural: string }) {
+  const heads = settings.runningHeads;
+  const style = runningHeadStyleOf(settings);
+  const setHeads = (patch: Partial<BookSettings['runningHeads']>) => write({ runningHeads: { ...heads, ...patch } });
+  const setLine = (which: 'verso' | 'recto' | 'folio', patch: Partial<LineStyle>) =>
+    write({ runningHeadStyle: { ...style, [which]: { ...style[which], ...patch } } });
+  /** The words a side carries, named for the format rather than for a novel. */
+  const contentWords = (one: (typeof HEAD_CONTENTS)[number]) =>
+    one === 'chapter' ? `The ${noun.toLowerCase()}’s title` : HEAD_CONTENT_WORDS[one];
+  const sideFields = (side: 'verso' | 'recto') => {
+    const carries = side === 'verso' ? heads.verso : heads.recto;
+    const typed = side === 'verso' ? heads.versoText : heads.rectoText;
+    const label = side === 'verso' ? 'Left-hand pages carry' : 'Right-hand pages carry';
+    return (
+      <div className="layout-head-side">
+        <label className="field">
+          <span>{label}</span>
+          <select
+            aria-label={`${side === 'verso' ? 'Verso' : 'Recto'} running head`}
+            value={carries}
+            onChange={(event) => setHeads({ [side]: event.target.value } as Partial<BookSettings['runningHeads']>)}
+          >
+            {HEAD_CONTENTS.map((one) => (
+              <option key={one} value={one}>
+                {contentWords(one)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {/* Absent rather than greyed: a box for words the page will not print
+            is a control that lies about what it does. */}
+        {carries === 'custom' ? (
+          <label className="field">
+            <span className="muted small">The words</span>
+            <input
+              type="text"
+              aria-label={`${side === 'verso' ? 'Verso' : 'Recto'} running head words`}
+              value={typed}
+              placeholder="What these pages should say"
+              onChange={(event) => setHeads({ [`${side}Text`]: event.target.value } as Partial<BookSettings['runningHeads']>)}
+            />
+          </label>
+        ) : null}
+      </div>
+    );
+  };
   return (
     <>
       <div className="layout-two">
+        {sideFields('verso')}
+        {sideFields('recto')}
+      </div>
+      <div className="layout-two">
         <label className="field">
-          <span>Left-hand pages carry</span>
+          <span>Running heads sit</span>
           <select
-            aria-label="Verso running head"
-            value={settings.runningHeads.verso}
-            onChange={(event) => write({ runningHeads: { ...settings.runningHeads, verso: event.target.value as BookSettings['runningHeads']['verso'] } })}
+            aria-label="Running head place"
+            value={heads.place}
+            onChange={(event) => setHeads({ place: event.target.value as BookSettings['runningHeads']['place'] })}
           >
-            <option value="author">The author</option>
-            <option value="title">The book’s title</option>
-            <option value="none">Nothing</option>
+            {HEAD_PLACES.map((place) => (
+              <option key={place} value={place}>
+                {HEAD_PLACE_WORDS[place]}
+              </option>
+            ))}
           </select>
         </label>
         <label className="field">
-          <span>Right-hand pages carry</span>
-          <select
-            aria-label="Recto running head"
-            value={settings.runningHeads.recto}
-            onChange={(event) => write({ runningHeads: { ...settings.runningHeads, recto: event.target.value as BookSettings['runningHeads']['recto'] } })}
-          >
-            <option value="chapter">The {noun.toLowerCase()}’s title</option>
-            <option value="title">The book’s title</option>
-            <option value="none">Nothing</option>
+          <span>Page number</span>
+          <select aria-label="Page number place" value={settings.folio} onChange={(event) => write({ folio: event.target.value as BookSettings['folio'] })}>
+            {FOLIO_PLACES.map((place) => (
+              <option key={place} value={place}>
+                {FOLIO_PLACE_WORDS[place]}
+              </option>
+            ))}
           </select>
         </label>
       </div>
       <label className="field">
-        <span>Page number</span>
-        <select aria-label="Page number place" value={settings.folio} onChange={(event) => write({ folio: event.target.value as BookSettings['folio'] })}>
-          {FOLIO_PLACES.map((place) => (
-            <option key={place} value={place}>
-              {FOLIO_WORDS[place]}
+        <span>Set in</span>
+        <select
+          aria-label="Running head face"
+          value={style.face}
+          onChange={(event) => write({ runningHeadStyle: { ...style, face: event.target.value as (typeof PART_FACES)[number] } })}
+        >
+          {PART_FACES.map((face) => (
+            <option key={face} value={face}>
+              {face === 'book' ? 'The book’s face' : FACE_NAMES[face]}
             </option>
           ))}
         </select>
       </label>
+      <Line label="Left-hand head" style={style.verso} onPatch={(patch) => setLine('verso', patch)} />
+      <Line label="Right-hand head" style={style.recto} onPatch={(patch) => setLine('recto', patch)} />
+      {settings.folio !== 'none' ? <Line label="Page number" style={style.folio} onPatch={(patch) => setLine('folio', patch)} /> : null}
       <label className="check">
         <input type="checkbox" checked={settings.folioOnOpening} onChange={(event) => write({ folioOnOpening: event.target.checked })} />{' '}
         A {noun.toLowerCase()} opening shows its number
@@ -1960,8 +2024,8 @@ function FurnitureSection({ settings, write, noun, nounPlural }: { settings: Boo
         Every {noun.toLowerCase()} opens on a right-hand page
       </label>
       <p className="muted small">
-        The words in the running heads are read from the book and its {nounPlural.toLowerCase()}; nothing about them is typed here. What the book is
-        called, and by whom, is under <em>The book</em> above.
+        A head carrying the book or its {nounPlural.toLowerCase()} reads its words from them; what the book is called, and by whom, is under{' '}
+        <em>The book</em> above. A head keeps a quarter inch clear of the paper’s edge whatever is set here, or the printer’s trim would take it off.
       </p>
     </>
   );

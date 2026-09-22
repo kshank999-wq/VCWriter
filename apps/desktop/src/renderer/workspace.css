@@ -9129,6 +9129,14 @@ a.talk-mark:hover {
   gap: 0 10px;
 }
 
+/* A running head's side: what it carries, and — only where that is the
+   writer's own words — a box to type them in (§7a). */
+.layout-head-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .layout-margin-row {
   display: flex;
   gap: 4px;

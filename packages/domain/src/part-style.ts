@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { BOOK_FACES, type BookFace, type BookPart, type PartKind } from './entities/book.js';
-import { lineStyleSchema, type LineStyle } from './chapter-style.js';
+import { lineStyleSchema, lineStyleVars, type LineStyle } from './chapter-style.js';
 import { FACE_STACKS } from './book-layout.js';
 
 /**
@@ -87,14 +87,7 @@ export const partTemplatePatch = (template: PartTemplate): Pick<PartStyle, 'alig
   drop: PART_TEMPLATE_WORDS[template].drop,
 });
 
-const lineVars = (name: string, one: LineStyle): Record<string, string> => ({
-  [`--pt-${name}-size`]: `${one.size}pt`,
-  [`--pt-${name}-case`]: one.case === 'capitals' ? 'uppercase' : 'none',
-  [`--pt-${name}-variant`]: one.case === 'small_caps' ? 'small-caps' : 'normal',
-  [`--pt-${name}-weight`]: one.bold ? '700' : '400',
-  [`--pt-${name}-style`]: one.italic ? 'italic' : 'normal',
-  [`--pt-${name}-tracking`]: `${one.tracking / 100}em`,
-});
+const lineVars = (name: string, one: LineStyle): Record<string, string> => lineStyleVars(`--pt-${name}`, one);
 
 /**
  * The style as CSS custom properties: the one place that decides what they

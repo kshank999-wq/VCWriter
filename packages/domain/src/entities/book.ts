@@ -44,14 +44,29 @@ export const OPENINGS = ['none', 'small_caps', 'drop_cap'] as const;
 export const openingSchema = z.enum(OPENINGS);
 export type Opening = z.infer<typeof openingSchema>;
 
-/** What a running head carries on each side (§7). */
-export const versoHeadSchema = z.enum(['author', 'title', 'none']);
-export const rectoHeadSchema = z.enum(['chapter', 'title', 'none']);
-export type VersoHead = z.infer<typeof versoHeadSchema>;
-export type RectoHead = z.infer<typeof rectoHeadSchema>;
+/**
+ * What a running head carries (§7a). **One list for both sides**, where
+ * there used to be two that differed — the verso could not carry the chapter
+ * and the recto could not carry the author, for no reason either side could
+ * state. `custom` is the writer's own words, which nothing else could say.
+ */
+export const HEAD_CONTENTS = ['author', 'title', 'chapter', 'custom', 'none'] as const;
+export const headContentSchema = z.enum(HEAD_CONTENTS);
+export type HeadContent = z.infer<typeof headContentSchema>;
 
-/** Where the page number sits (§7). */
-export const FOLIO_PLACES = ['foot_outside', 'foot_centre', 'head_outside'] as const;
+/** Kept for what already reads them; both are the one list now. */
+export const versoHeadSchema = headContentSchema;
+export const rectoHeadSchema = headContentSchema;
+export type VersoHead = HeadContent;
+export type RectoHead = HeadContent;
+
+/** Where a running head sits across the page (§7a). */
+export const HEAD_PLACES = ['centre', 'outside', 'inside'] as const;
+export const headPlaceSchema = z.enum(HEAD_PLACES);
+export type HeadPlace = z.infer<typeof headPlaceSchema>;
+
+/** Where the page number sits (§7). `none` prints no folio at all. */
+export const FOLIO_PLACES = ['foot_outside', 'foot_centre', 'head_outside', 'none'] as const;
 export const folioPlaceSchema = z.enum(FOLIO_PLACES);
 export type FolioPlace = z.infer<typeof folioPlaceSchema>;
 
@@ -213,13 +228,24 @@ export const bookSettingsSchema = z.object({
   chaptersOpenRecto: z.boolean().default(true),
   runningHeads: z
     .object({
-      verso: versoHeadSchema.default('author'),
-      recto: rectoHeadSchema.default('chapter'),
+      verso: headContentSchema.default('author'),
+      recto: headContentSchema.default('chapter'),
+      /** The words each side carries where it carries `custom`. */
+      versoText: z.string().default(''),
+      rectoText: z.string().default(''),
+      /** Where the head sits across the page, the folio's place's counterpart. */
+      place: headPlaceSchema.default('centre'),
     })
     .default({}),
   folio: folioPlaceSchema.default('foot_outside'),
   /** A chapter opening carries its number at the foot, whatever the folio's place. */
   folioOnOpening: z.boolean().default(true),
+  /**
+   * How the running heads and the folios are set (§7a). Held loosely here and
+   * parsed by `runningHeadStyleOf`, so the schema of a line stays in one
+   * module rather than being spelled out a second time in the entity.
+   */
+  runningHeadStyle: z.unknown().nullable().default(null),
   /** The publisher's name, on the title page and the copyright page. */
   imprint: z.string().default(''),
   /** The front and back matter, in order (§5). Absent means the default plan. */

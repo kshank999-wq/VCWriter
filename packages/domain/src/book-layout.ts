@@ -162,7 +162,7 @@ export const BOOK_PRESETS: Record<BookPreset, PresetFields> = {
     // it is also the book's default, so a new book reads as Classic.
     ornament: '',
     chaptersOpenRecto: true,
-    runningHeads: { verso: 'author', recto: 'chapter' },
+    runningHeads: { verso: 'author', recto: 'chapter', versoText: '', rectoText: '', place: 'centre' },
     folio: 'foot_outside',
     folioOnOpening: true,
   },
@@ -175,7 +175,7 @@ export const BOOK_PRESETS: Record<BookPreset, PresetFields> = {
     opening: 'drop_cap',
     ornament: '',
     chaptersOpenRecto: false,
-    runningHeads: { verso: 'title', recto: 'chapter' },
+    runningHeads: { verso: 'title', recto: 'chapter', versoText: '', rectoText: '', place: 'centre' },
     folio: 'head_outside',
     folioOnOpening: false,
   },
@@ -188,7 +188,7 @@ export const BOOK_PRESETS: Record<BookPreset, PresetFields> = {
     opening: 'none',
     ornament: '',
     chaptersOpenRecto: true,
-    runningHeads: { verso: 'title', recto: 'chapter' },
+    runningHeads: { verso: 'title', recto: 'chapter', versoText: '', rectoText: '', place: 'centre' },
     folio: 'foot_centre',
     folioOnOpening: true,
   },
@@ -206,7 +206,9 @@ export const bookPresetOf = (settings: BookSettings): BookPreset | null => {
     const fields = BOOK_PRESETS[preset];
     const same = (Object.keys(fields) as (keyof PresetFields)[]).every((key) =>
       key === 'runningHeads'
-        ? settings.runningHeads.verso === fields.runningHeads.verso && settings.runningHeads.recto === fields.runningHeads.recto
+        ? settings.runningHeads.verso === fields.runningHeads.verso &&
+          settings.runningHeads.recto === fields.runningHeads.recto &&
+          settings.runningHeads.place === fields.runningHeads.place
         : settings[key] === fields[key],
     );
     if (same) return preset;

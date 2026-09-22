@@ -3,6 +3,7 @@ import type { InlineSpan } from './entities/inline.js';
 import { chapterPageStyleSchema, chapterStyleAttr, type ChapterPageStyle, isFullPageArt } from './chapter-style.js';
 import { faceStackOf, type BookGeometry } from './book-layout.js';
 import { partStyleAttr } from './part-style.js';
+import { headSideClass, runningHeadStyleOf, runningStyleVars } from './running-heads.js';
 import type { BookBlock, FigureInset } from './book-plan.js';
 import type { BookContentsRow, BookPage } from './book-pages.js';
 import { runsText, type BookIndex } from './book-index.js';
@@ -99,6 +100,8 @@ export const bookVars = (context: BookRenderContext): Record<string, string> => 
     '--bk-align': context.settings.justify ? 'justify' : 'left',
     '--bk-hyphens': context.settings.hyphenate ? 'auto' : 'manual',
     '--bk-indent': context.settings.size > 0 ? '1.5em' : '0',
+    // The furniture: how the running heads and the folios are set (§7a).
+    ...runningStyleVars(runningHeadStyleOf(context.settings), context.settings.face),
   };
 };
 
@@ -398,7 +401,9 @@ export const renderBookPage = (
       return `<div class="bk-piece" style="height:${height.toFixed(3)}px"><div class="bk-clip" style="margin-top:-${shift.toFixed(3)}px">${inner}</div></div>`;
     })
     .join('');
-  const head = page.runningHead ? `<div class="bk-running ${page.side}">${escapeHtml(page.runningHead)}</div>` : '';
+  const head = page.runningHead
+    ? `<div class="bk-running ${page.side} ${headSideClass(context.settings.runningHeads.place, page.side)}">${escapeHtml(page.runningHead)}</div>`
+    : '';
   const folio = page.folio ? `<div class="${folioClass(page, context.settings)}">${escapeHtml(page.folio)}</div>` : '';
   const classes = ['bk-page', page.side, page.blank ? 'blank' : '', page.display ? 'display' : ''].filter(Boolean).join(' ');
   return `<section class="${classes}" data-sheet="${page.sheet}">${head}<div class="${textClass(context)}">${pieces}</div>${folio}</section>`;
@@ -480,9 +485,16 @@ export const BOOK_STYLES = `
   .bk-index-letter { margin: 0; padding-top: var(--bk-lead); font-weight: 700; }
   .bk-index-entry { margin: 0; padding-left: 1.5em; text-indent: -1.5em; }
   .bk-index-sub { padding-left: 3em; }
-  .bk-running { position: absolute; top: var(--bk-head); left: 0; right: 0; text-align: center; font-size: 0.8em; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1; }
-  .bk-running.recto { font-style: italic; text-transform: none; letter-spacing: 0.02em; }
-  .bk-folio { position: absolute; font-size: 0.85em; line-height: 1; }
+  /* The furniture reads the book's own settings (§7a): what used to be
+     hard-coded here — the size, the case, the tracking, and the verso's
+     capitals against the recto's italic — is the writer's now. */
+  .bk-running { position: absolute; top: var(--bk-head); left: var(--bk-outside); right: var(--bk-outside); line-height: 1; font-family: var(--bk-run-face, var(--bk-face)); }
+  .bk-running.centre { text-align: center; }
+  .bk-running.left { text-align: left; }
+  .bk-running.right { text-align: right; }
+  .bk-running.verso { font-size: var(--bk-run-verso-size); text-transform: var(--bk-run-verso-case); font-variant-caps: var(--bk-run-verso-variant); font-weight: var(--bk-run-verso-weight); font-style: var(--bk-run-verso-style); letter-spacing: var(--bk-run-verso-tracking); }
+  .bk-running.recto { font-size: var(--bk-run-recto-size); text-transform: var(--bk-run-recto-case); font-variant-caps: var(--bk-run-recto-variant); font-weight: var(--bk-run-recto-weight); font-style: var(--bk-run-recto-style); letter-spacing: var(--bk-run-recto-tracking); }
+  .bk-folio { position: absolute; line-height: 1; font-family: var(--bk-run-face, var(--bk-face)); font-size: var(--bk-run-folio-size); text-transform: var(--bk-run-folio-case); font-variant-caps: var(--bk-run-folio-variant); font-weight: var(--bk-run-folio-weight); font-style: var(--bk-run-folio-style); letter-spacing: var(--bk-run-folio-tracking); }
   .bk-folio.foot { bottom: var(--bk-foot); }
   .bk-folio.head { top: var(--bk-head); }
   .bk-folio.left { left: var(--bk-outside); }

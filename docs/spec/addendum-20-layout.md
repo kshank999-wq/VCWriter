@@ -369,6 +369,71 @@ and a chapter opening carries a folio only where the style says so. None of
 the text is stored: the chapter's title is the marker's, and the book's title
 is the project's.
 
+## 7a. The furniture is the writer's
+
+From Ken, after laying a book out: *the running headers and footers need to be
+adjustable.*
+
+He was right, and the gap was wider than the word suggests. §7 gave four
+dropdowns — what each side carries, where the page number sits, whether an
+opening shows one — and **nothing at all about how any of it looks**, with a
+sentence under them admitting it: *the words in the running heads are read from
+the book and its chapters; nothing about them is typed here.*
+
+Worse, the look was not merely fixed, it was fixed **inconsistently**. The
+print stylesheet set `.bk-running` at `0.8em`, in capitals, tracked a twelfth
+of an em; then set `.bk-running.recto` in italic with the capitals off and the
+tracking nearly closed. The verso and the recto looked different for a reason
+neither could state, neither could be changed, and a book set throughout in a
+sans face still printed a serif running head.
+
+The audit paid a **fourteenth** time. A running head is **a line of type**, and
+`LineStyle` — size, case, weight, slope, tracking — has been the record for
+that since the chapter page (addendum 02 §12a), read again by the front
+matter's pages (§9). So there is no new vocabulary: `runningHeadStyle` is three
+`LineStyle`s and a face. On the way, `lineStyleVars` came out of
+`chapter-style.ts` as the one place that decides what a line's fields *mean* —
+it was two private copies, in the chapter style and the part style, and this
+would have been the third.
+
+Three decisions carry it.
+
+**Three lines rather than one.** The verso, the recto and the folio are set
+separately, because the hard-coded difference between the first two was a real
+convention rather than an accident — the author's name in capitals against the
+chapter's in italic. Collapsing them into one style would have changed every
+existing book on the next open. So the **defaults are exactly what the
+stylesheet printed**, and what was hidden is now the writer's to see and to
+change. The whole domain suite passed without a single test being edited, which
+is the proof.
+
+**One list of contents for both sides.** There were two enums — the verso could
+carry the author or the title, the recto the chapter or the title — and neither
+side could state why it was refused the other's. Both now offer the same five,
+`custom` among them: the writer's own words, a series name or a part's, which
+nothing else could say. The words box is **absent rather than greyed** unless
+that side carries them, a box for words the page will not print being a control
+that lies.
+
+**A size in points, not a share of the body.** `0.8em` grew when the body grew.
+A running head is furniture rather than text, and a book set a point larger does
+not want a larger running head. This is the one thing about an existing book
+that reads differently, and only where the body is not 11 pt.
+
+Two smaller ones. The head gained a **place** — centred, at the outer edge or at
+the inner — which is the folio's own setting and whose absence was the plainer
+asymmetry: the footer could be placed and the header could not. `headSideClass`
+reads which physical side that is from the page, the outside of a verso being
+its left edge and of a recto its right. And the folio gained **`none`**: a book
+with no page numbers at all, which there was no way to ask for. It still
+*counts* its pages — the contents and the index are read off the count — it
+just prints none.
+
+The one thing deliberately **not** adjustable is how far into the margin the
+head and the folio sit. That is `margin / 2` and clamped to the quarter inch
+§3b tests, because a control there can only put a running head under the
+printer's blade.
+
 ## 8. Graphics
 
 Three kinds, and two of them exist:

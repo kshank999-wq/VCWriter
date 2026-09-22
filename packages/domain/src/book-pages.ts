@@ -3,6 +3,7 @@ import type { BookGeometry } from './book-layout.js';
 import type { BookBlock } from './book-plan.js';
 import { bookIndex, type BookIndex } from './book-index.js';
 import { toRoman } from './markers.js';
+import { headTextFor, showsFolio, type RunningNames } from './running-heads.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -65,11 +66,12 @@ export interface LaidBook {
   arabic: number;
 }
 
-/** The names the running heads may carry (§7). */
-export interface RunningNames {
-  title: string;
-  author: string;
-}
+/**
+ * The names the running heads may carry (§7). Declared where the heads are
+ * decided and re-exported here, so there is one of it — everything that has
+ * always imported it from this module still can.
+ */
+export type { RunningNames } from './running-heads.js';
 
 /** Fewest lines of a paragraph that may stand alone at the foot or the head of a page. */
 const KEEP = 2;
@@ -222,19 +224,6 @@ const fillPage = (
   };
 };
 
-const headFor = (
-  side: 'verso' | 'recto',
-  settings: BookSettings,
-  names: RunningNames,
-  chapterTitle: string,
-): string => {
-  if (side === 'verso') {
-    const what = settings.runningHeads.verso;
-    return what === 'author' ? names.author : what === 'title' ? names.title : '';
-  }
-  const what = settings.runningHeads.recto;
-  return what === 'chapter' ? chapterTitle : what === 'title' ? names.title : '';
-};
 
 /**
  * Lay the whole book. The first leaf is a recto, as in every book; after it
@@ -264,7 +253,9 @@ export const layPages = (
     let number = 0;
     if (numbering === 'roman') number = ++roman;
     else number = ++arabic;
-    const shows = !filled.blank && filled.folio;
+    // A book set to carry no page numbers still counts its pages — the
+    // contents and the index are read off the count — it just prints none.
+    const shows = !filled.blank && filled.folio && showsFolio(settings.folio);
     const folio = shows ? (numbering === 'roman' ? toRoman(number).toLowerCase() : String(number)) : '';
     for (const piece of filled.pieces) {
       if (!where.has(piece.blockId)) where.set(piece.blockId, { numbering, number });
@@ -281,7 +272,7 @@ export const layPages = (
       numbering: filled.blank ? 'none' : numbering,
       number,
       folio,
-      runningHead: filled.blank || filled.display || opens ? '' : headFor(side, settings, names, filled.chapterTitle),
+      runningHead: filled.blank || filled.display || opens ? '' : headTextFor(side, settings, names, filled.chapterTitle),
       chapterTitle: filled.chapterTitle,
       display: filled.display,
       blank: filled.blank,

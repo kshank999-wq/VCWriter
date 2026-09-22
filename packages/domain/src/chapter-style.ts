@@ -131,17 +131,27 @@ export const setChapterLineStyle = (
  * stylesheet on both sides declares nothing but `var(--chapter-…)`, and this
  * is the only place that decides what those mean.
  */
+/**
+ * One line's style as CSS custom properties under a caller's prefix — the
+ * one place that decides what a `LineStyle` means, wherever it is set.
+ *
+ * The chapter page, the front matter's pages and the running heads all set a
+ * line, so all three ask this; a private copy per module is a second answer
+ * waiting to drift the next time a field is added.
+ */
+export const lineStyleVars = (prefix: string, one: LineStyle): Record<string, string> => ({
+  [`${prefix}-size`]: `${one.size}pt`,
+  [`${prefix}-case`]: one.case === 'capitals' ? 'uppercase' : 'none',
+  // Small caps is a font variant rather than a transform, so it is its own
+  // property: the two do different things and setting both would shout.
+  [`${prefix}-variant`]: one.case === 'small_caps' ? 'small-caps' : 'normal',
+  [`${prefix}-weight`]: one.bold ? '700' : '400',
+  [`${prefix}-style`]: one.italic ? 'italic' : 'normal',
+  [`${prefix}-tracking`]: `${one.tracking / 100}em`,
+});
+
 export const chapterStyleVars = (style: ChapterPageStyle): Record<string, string> => {
-  const line = (name: string, one: LineStyle): Record<string, string> => ({
-    [`--chapter-${name}-size`]: `${one.size}pt`,
-    [`--chapter-${name}-case`]: one.case === 'capitals' ? 'uppercase' : 'none',
-    // Small caps is a font variant rather than a transform, so it is its own
-    // property: the two do different things and setting both would shout.
-    [`--chapter-${name}-variant`]: one.case === 'small_caps' ? 'small-caps' : 'normal',
-    [`--chapter-${name}-weight`]: one.bold ? '700' : '400',
-    [`--chapter-${name}-style`]: one.italic ? 'italic' : 'normal',
-    [`--chapter-${name}-tracking`]: `${one.tracking / 100}em`,
-  });
+  const line = (name: string, one: LineStyle): Record<string, string> => lineStyleVars(`--chapter-${name}`, one);
   return {
     '--chapter-face': FACE_STACKS[style.face],
     '--chapter-drop': `${style.dropInches}in`,

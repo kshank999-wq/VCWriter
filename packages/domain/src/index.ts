@@ -76,6 +76,7 @@ export * from './book-layout.js';
 export * from './book-plan.js';
 export * from './book-rail.js';
 export * from './part-style.js';
+export * from './running-heads.js';
 export * from './book-pages.js';
 export * from './print-book.js';
 export * from './mutations.js';
