@@ -221,6 +221,42 @@ after its record is deleted, which is the same fix pointed at `locationsInOrder`
 What pins it is a test that walks **every** reading rather than the list the
 delete came off.
 
+## 5e. Plots and threads
+
+From Ken: *I need a delete for plots and threads too*. Both had one, and both
+were wrong in a different way.
+
+**A thread's delete was a fold away and its sentence had stopped being true.**
+It sat at the foot of a thread's opened body as *Remove this link*, saying
+*N moments go with it. The writing stays* — which was right when it was
+written and became a lie the day burying started **keeping** the moments so
+that restoring could give the thread back whole. It is on the row now, in
+§5d's shape, saying `describeDeleting`. That is the argument for one sentence
+in one place made concrete: a screen that writes its own copy goes on saying
+it long after the module has changed its mind.
+
+**A plot's delete asked nothing and cut the writing.** The × on the timeline's
+track head removed the track *and every scene and beat on it* on a single
+click, with the whole warning in a `title` attribute — the most destructive
+control in the product behaving like the least — and Research ▸ Plots, where
+a writer who made a plot by accident actually looks, had no delete at all.
+
+**A track is not a graveyard record and will not become one** (§5's line, read
+for structure): burying a plot would have to bury its scenes and its beats,
+and the manuscript is deliberately not in here. So the promise the rest of the
+room keeps is kept another way, in `packages/domain/src/tracks.ts`: **the plot
+goes and the writing stays**. `dissolveTrack` moves its scenes to another
+track at exactly the story positions they already hold — a scene's position is
+the project's, not the track's — and that is the offer a writer is given
+first. Cutting a subplot whole is still possible, because dropping a subplot
+is a real act, but it is the *second* button and it says how many scenes it
+takes. An empty track (the accident) is one press and one short sentence.
+
+`trackRemoval` is the one reading both screens ask, so the timeline and the
+Research list cannot promise different things, and the last track is **refused
+with a sentence** rather than by a control that fails — the × is absent there,
+since a button that can only refuse is a button that lies.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -237,3 +273,6 @@ delete came off.
 - The × on a list row (`.item-row`, `.item-x`, `.row-ask`) for themes, motifs
   and locations, with the detail's own delete taken out; `workingCast`, and
   every themes reading routed through `themesInOrder`/`motifsInOrder`.
+- `tracks.ts` — `trackRemoval` and `dissolveTrack` — with the × on the plot's
+  row in Research and the timeline's own × asking in the same words; the
+  thread's delete moved to its row and its sentence replaced by the module's.

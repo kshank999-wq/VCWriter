@@ -1392,6 +1392,7 @@ dialog.scene-dialog > header.off {
 }
 
 .track-head {
+  position: relative;
   border-left: 3px solid var(--gold-deep);
   min-height: 44px;
   padding-left: 0;
@@ -1406,6 +1407,24 @@ dialog.scene-dialog > header.off {
 .track-head:hover .grip,
 .track-head .grip:focus-visible {
   opacity: 1;
+}
+
+/* The plot's question on the timeline: out of the head's flow, because the
+   head is a sticky 44px cell and the sentence names scenes. */
+.track-ask {
+  position: absolute;
+  top: 100%;
+  left: 4px;
+  z-index: 40;
+  width: 288px;
+  background: var(--panel);
+  border: 1px solid var(--gold-deep);
+  border-left-width: 2px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  text-transform: none;
+  letter-spacing: normal;
+  font-family: var(--body);
+  font-size: 12px;
 }
 
 .track-head .twisty {
@@ -12443,6 +12462,18 @@ dialog.chapter-page-dialog {
   gap: 4px;
 }
 
+/* The row a thread's name and its × share (addendum 24 §5e). */
+.links-thread-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.links-thread-row > .links-thread-head {
+  flex: 1;
+  min-width: 0;
+}
+
 .links-thread-head {
   display: flex;
   align-items: baseline;
@@ -12515,14 +12546,6 @@ dialog.chapter-page-dialog {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-}
-
-.links-thread-actions,
-.links-confirm {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 
 .links-inspector {
@@ -14213,7 +14236,14 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
 
 .row-ask-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+}
+
+/* A label never breaks mid-phrase: *Move them* over two lines reads as two
+   controls. */
+.row-ask-buttons button {
+  white-space: nowrap;
 }
 
 .research-graveyard {

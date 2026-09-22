@@ -11,6 +11,7 @@ import {
   momentsOf,
   nodeOn,
   removeMoment,
+  describeDeleting,
   removeThread,
   noteMoment,
   storyMap,
@@ -503,16 +504,51 @@ function ThreadRow({
 
   return (
     <li className="links-thread">
-      <button
-        type="button"
-        className="links-thread-head"
-        aria-expanded={open}
-        onClick={() => setOpen((was) => !was)}
-      >
-        <span className="fold-mark">{open ? '▾' : '▸'}</span>
-        <span className="links-thread-name">{thread.name || 'Untitled link'}</span>
-        <span className="muted small">{describeThread(file, thread)}</span>
-      </button>
+      {/* The × is on the row (addendum 24 §5d), not at the foot of the body a
+          fold away — and it asks in the graveyard's own words, which the old
+          sentence here could no longer say truthfully: the moments are
+          **kept** now, so that restoring gives the thread back whole. */}
+      <div className="links-thread-row">
+        <button
+          type="button"
+          className="links-thread-head"
+          aria-expanded={open}
+          onClick={() => setOpen((was) => !was)}
+        >
+          <span className="fold-mark">{open ? '▾' : '▸'}</span>
+          <span className="links-thread-name">{thread.name || 'Untitled link'}</span>
+          <span className="muted small">{describeThread(file, thread)}</span>
+        </button>
+        <button
+          type="button"
+          className="ghost small danger item-x"
+          aria-label={`Delete ${thread.name || 'Untitled link'}`}
+          title={`Delete ${thread.name || 'Untitled link'}`}
+          onClick={() => setAsking(true)}
+        >
+          ×
+        </button>
+      </div>
+      {asking ? (
+        <div className="row-ask">
+          <span className="muted small">{describeDeleting(file, { kind: 'thread', id: threadId as string })}</span>
+          <span className="row-ask-buttons">
+            <button
+              type="button"
+              className="ghost small danger"
+              onClick={() => {
+                onUpdate((current) => removeThread(current, threadId));
+                setAsking(false);
+              }}
+            >
+              Delete
+            </button>
+            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+              Keep
+            </button>
+          </span>
+        </div>
+      ) : null}
 
       {open ? (
         <div className="links-thread-body">
@@ -636,34 +672,6 @@ function ThreadRow({
             </div>
           ) : null}
 
-          <div className="links-thread-actions">
-            {asking ? (
-              <span className="links-confirm">
-                <span className="muted small">
-                  {moments.length === 0
-                    ? 'Nothing is marked under it.'
-                    : `${moments.length} ${moments.length === 1 ? 'moment goes' : 'moments go'} with it. The writing stays.`}
-                </span>
-                <button
-                  type="button"
-                  className="ghost small danger"
-                  onClick={() => {
-                    onUpdate((current) => removeThread(current, threadId));
-                    setAsking(false);
-                  }}
-                >
-                  Remove it
-                </button>
-                <button type="button" className="ghost small" onClick={() => setAsking(false)}>
-                  Keep it
-                </button>
-              </span>
-            ) : (
-              <button type="button" className="ghost small danger" onClick={() => setAsking(true)}>
-                Remove this link
-              </button>
-            )}
-          </div>
         </div>
       ) : null}
     </li>

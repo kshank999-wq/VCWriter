@@ -66,6 +66,7 @@ export * from './themes.js';
 export * from './polarity.js';
 export * from './locations.js';
 export * from './threads.js';
+export * from './tracks.js';
 export * from './instructional.js';
 export * from './learning.js';
 export * from './note-import.js';

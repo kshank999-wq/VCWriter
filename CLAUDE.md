@@ -1856,6 +1856,29 @@ push live; the build takes a minute or two.
   the one reading the map, the arc track, the voices, the cross-arc offers, a
   Sculptor card's cast and the colour order ask. What pins it is a test that
   walks **every** reading rather than the list the delete came off.
+  **§5e is plots and threads**, from Ken, and both had a delete that was wrong
+  in a different way. **A thread's was a fold away and its sentence had stopped
+  being true** — *N moments go with it. The writing stays*, which was right
+  when written and became a lie the day burying started **keeping** the moments
+  so restoring could give the thread back whole; it is on the row now, saying
+  `describeDeleting`, which is the one-sentence argument made concrete: a
+  screen that writes its own copy goes on saying it long after the module has
+  changed its mind. **A plot's asked nothing and cut the writing** — the × on
+  the timeline's track head removed the track *and every scene and beat on it*
+  on one click with the whole warning in a `title`, the most destructive
+  control in the product behaving like the least, while Research ▸ Plots (where
+  somebody who made a plot by accident looks) had none at all. **A track is not
+  a graveyard record and will not become one**: burying a plot would have to
+  bury its scenes, and the manuscript is deliberately out of there — so
+  `packages/domain/src/tracks.ts` keeps the room's promise another way, **the
+  plot goes and the writing stays**. `dissolveTrack` moves its scenes to
+  another track at the story positions they already hold (a scene's position is
+  the project's, not the track's) and is the offer made first; cutting a
+  subplot whole is still there as the *second* button, saying how many scenes
+  it takes. `trackRemoval` is the one reading both screens ask, so the timeline
+  and the Research list cannot promise different things, and the last track is
+  **refused with a sentence** with no × at all, a button that can only refuse
+  being one that lies.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

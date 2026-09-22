@@ -11,9 +11,11 @@ import {
   addUnit,
   createProjectFile,
   dependOn,
+  graveyard,
   momentsOf,
   recordPayoff,
   ref,
+  threadsInOrder,
   unitsInStoryOrder,
   updateBeat,
   updateThread,
@@ -211,12 +213,28 @@ describe('a link, opened', () => {
     expect(screen.getByLabelText('Dependent moment')).toBeTruthy();
   });
 
-  it('says what removing it takes, and that the writing stays', () => {
+  /**
+   * The delete is on the row rather than a fold away at the foot of the body
+   * (addendum 24 §5d), and what it says is the graveyard's own sentence — the
+   * old one promised *the moments go with it*, which stopped being true when
+   * burying started keeping them so that restoring could give them back.
+   */
+  it('deletes from its own row, saying where it goes, and keeps its moments', () => {
+    let seen: ProjectFile | null = null;
     const made = threaded();
-    render(<Board start={made.file} />);
-    openLink('The key');
-    fireEvent.click(screen.getByText('Remove this link'));
-    expect(screen.getByText(/The writing stays/)).toBeTruthy();
+    render(<Board start={made.file} onFile={(one) => (seen = one)} />);
+    expect(screen.queryByText('Remove this link')).toBeNull();
+
+    fireEvent.click(screen.getByLabelText('Delete The key'));
+    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+    expect(screen.getByText(/Not a word of the writing is cut/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    const after = seen as unknown as ProjectFile;
+    expect(threadsInOrder(after)).toHaveLength(0);
+    expect(graveyard(after).map((row) => row.word)).toEqual(['Thread']);
+    // Kept, which is what makes restoring give back the thread it was.
+    expect(momentsOf(after, made.threadId)).toHaveLength(3);
   });
 
   it('renames once and the timeline follows, because nothing copied the name', () => {

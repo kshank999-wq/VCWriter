@@ -4,6 +4,9 @@ import {
   describeDeleting,
   graveyardCount,
   removeCharacter,
+  removeTrack,
+  dissolveTrack,
+  trackRemoval,
   motifsInOrder,
   themesInOrder,
   addResearchCategory,
@@ -36,6 +39,7 @@ import {
   type BeatId,
   type CaptureItem,
   type Character,
+  type Track,
   type CharacterId,
   type ProjectFile,
   type ProjectFormat,
@@ -1266,7 +1270,33 @@ function Plots({ file, onUpdate }: { file: ProjectFile; onUpdate: ResearchWindow
   return (
     <ul className="research-plots">
       {tracksInOrder(file).map((track) => (
-        <li key={track.id}>
+        <PlotRow key={track.id} file={file} track={track} onUpdate={onUpdate} />
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * One plot, with the × on its row (addendum 24 §5e).
+ *
+ * A track is **not** a graveyard record — burying one would have to bury its
+ * scenes — so the promise the rest of the room keeps is kept here another way:
+ * the safe answer comes first and says where the scenes go, and cutting the
+ * writing is the second offer rather than what a bare × does.
+ */
+function PlotRow({
+  file,
+  track,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  track: Track;
+  onUpdate: ResearchWindowProps['onUpdate'];
+}) {
+  const [asking, setAsking] = useState(false);
+  const removal = trackRemoval(file, track.id);
+  return (
+    <li>
           <div className="research-plot-head">
             <input
               type="color"
@@ -1292,8 +1322,66 @@ function Plots({ file, onUpdate }: { file: ProjectFile; onUpdate: ResearchWindow
                 </option>
               ))}
             </select>
-            <span className="count muted">{file.units.filter((unit) => unit.trackId === track.id).length}</span>
+            <span className="count muted">{removal.sceneCount}</span>
+            {/* The last plot keeps no ×: it cannot go, and a control that
+                refuses every time is one that lies about what it does. */}
+            {removal.allowed ? (
+              <button
+                type="button"
+                className="ghost small danger item-x"
+                aria-label={`Delete ${track.name}`}
+                title={`Delete ${track.name}`}
+                onClick={() => setAsking(true)}
+              >
+                ×
+              </button>
+            ) : null}
           </div>
+          {asking ? (
+            <div className="row-ask">
+              <span className="muted small">{removal.sentence}</span>
+              <span className="row-ask-buttons">
+                {removal.sceneCount > 0 && removal.moveTo ? (
+                  <>
+                    <button
+                      type="button"
+                      className="small"
+                      onClick={() => {
+                        onUpdate((current) => dissolveTrack(current, track.id));
+                        setAsking(false);
+                      }}
+                    >
+                      Move them and delete the plot
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost small danger"
+                      onClick={() => {
+                        onUpdate((current) => removeTrack(current, track.id));
+                        setAsking(false);
+                      }}
+                    >
+                      Delete the writing too
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="ghost small danger"
+                    onClick={() => {
+                      onUpdate((current) => dissolveTrack(current, track.id));
+                      setAsking(false);
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
+                <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+                  Keep
+                </button>
+              </span>
+            </div>
+          ) : null}
           <textarea
             rows={2}
             aria-label={`What ${track.name} is about`}
@@ -1302,8 +1390,6 @@ function Plots({ file, onUpdate }: { file: ProjectFile; onUpdate: ResearchWindow
             onChange={(event) => onUpdate((current) => updateTrack(current, track.id, { description: event.target.value }))}
           />
         </li>
-      ))}
-    </ul>
   );
 }
 

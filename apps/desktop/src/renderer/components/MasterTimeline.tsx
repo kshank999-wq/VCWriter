@@ -10,6 +10,8 @@ import {
   moveUnit,
   removeBeat,
   removeTrack,
+  dissolveTrack,
+  trackRemoval,
   removeMarker,
   removeUnit,
   avSheet,
@@ -800,6 +802,8 @@ function TrackRow({
   const numbers = structureNumbers(file);
   /** The right-click on a scene or a beat (addendum 02 §6a): one menu for both, at the pointer. */
   const [menu, setMenu] = useState<{ x: number; y: number; label: string; entries: MenuEntry[] } | null>(null);
+  const [askingRemove, setAskingRemove] = useState(false);
+  const removal = trackRemoval(file, track.id);
   const unitWord = nouns.unit.toLowerCase();
   const subWord = nouns.sub.toLowerCase();
   const beatMenu = (unitId: StructuralUnitId, beat: Beat, index: number): MenuEntry[] => [
@@ -907,15 +911,69 @@ function TrackRow({
           </>
         )}
         <span className="count muted">{units.length}</span>
+        {/* It **asks** now (addendum 24 §5e). It used to delete the plot and
+            every scene on it on one click, with the whole warning in a
+            `title`, which is the most destructive control in the product
+            behaving like the least. The question is the domain's, so this and
+            the Research list cannot promise different things. */}
         {trackCount > 1 && !shortForm ? (
           <button
             type="button"
             className="ghost danger"
-            title={`Remove track and its ${noun}s`}
-            onClick={() => onUpdate((current) => removeTrack(current, track.id))}
+            aria-label={`Delete plot ${track.name}`}
+            title={`Delete ${track.name}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              setAskingRemove(true);
+            }}
           >
             ×
           </button>
+        ) : null}
+        {askingRemove ? (
+          <div className="row-ask track-ask" onClick={(event) => event.stopPropagation()}>
+            <span className="muted small">{removal.sentence}</span>
+            <span className="row-ask-buttons">
+              {removal.sceneCount > 0 && removal.moveTo ? (
+                <>
+                  <button
+                    type="button"
+                    className="small"
+                    onClick={() => {
+                      onUpdate((current) => dissolveTrack(current, track.id));
+                      setAskingRemove(false);
+                    }}
+                  >
+                    Move them
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost small danger"
+                    onClick={() => {
+                      onUpdate((current) => removeTrack(current, track.id));
+                      setAskingRemove(false);
+                    }}
+                  >
+                    Delete the writing too
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="ghost small danger"
+                  onClick={() => {
+                    onUpdate((current) => dissolveTrack(current, track.id));
+                    setAskingRemove(false);
+                  }}
+                >
+                  Delete
+                </button>
+              )}
+              <button type="button" className="ghost small" onClick={() => setAskingRemove(false)}>
+                Keep
+              </button>
+            </span>
+          </div>
         ) : null}
       </header>
 

@@ -6,9 +6,12 @@ import {
   addCharacter,
   addResearchCategory,
   addResearchItem,
+  addTrack,
+  addUnit,
   castByCategory,
   createProjectFile,
   graveyard,
+  tracksInOrder,
   type ProjectFile,
 } from '@vcwriter/domain';
 import { ResearchWindow } from '../components/ResearchWindow';
@@ -153,6 +156,52 @@ describe('the research window', () => {
     expect(side.queryByText('New folder')).toBeNull();
     // Mike's note is untouched by any of it.
     expect(screen.getByText('Wears his father’s coat')).toBeDefined();
+  });
+
+  /**
+   * From Ken: *I need a delete for plots and threads too*. A plot is a track,
+   * which is structure rather than a research record, so it never goes to the
+   * graveyard — and the promise the room keeps everywhere else is kept here by
+   * **moving the scenes rather than cutting them** (addendum 24 §5e).
+   */
+  it('deletes a plot from its row, keeping every scene on it', () => {
+    let seen: ProjectFile | null = null;
+    function Watched() {
+      let start = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
+      const made = addTrack(start, { name: 'Subplot', kind: 'subplot' });
+      start = made.file;
+      const scene = addUnit(start, { trackId: made.track.id, title: 'Her mother calls' });
+      start = scene.file;
+      const [file, setFile] = useState(start);
+      seen = file;
+      return (
+        <ResearchWindow
+          file={file}
+          open
+          currentBeatId={null}
+          onClose={() => undefined}
+          onUpdate={(mutate) => setFile((current) => mutate(current))}
+        />
+      );
+    }
+    render(<Watched />);
+    fireEvent.click(screen.getByRole('button', { name: /^Plots/ }));
+
+    fireEvent.click(screen.getByLabelText('Delete Subplot'));
+    // One sentence: what is on it, and where those scenes would go.
+    expect(screen.getByText(/1 scene is on it\. They can move to Main Plot/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move them and delete the plot' }));
+    const after = seen as unknown as ProjectFile;
+    expect(tracksInOrder(after).map((track) => track.name)).toEqual(['Main Plot']);
+    // Not a word cut: the scene is on the remaining plot.
+    expect(after.units.map((unit) => unit.title)).toContain('Her mother calls');
+  });
+
+  it('will not offer to delete the only plot, there being nowhere for scenes to live', () => {
+    render(<Harness initial={withNotes()} />);
+    fireEvent.click(screen.getByRole('button', { name: /^Plots/ }));
+    expect(screen.queryByLabelText('Delete Main Plot')).toBeNull();
   });
 
   it('keeps the plots and the setups in the same menu', () => {
