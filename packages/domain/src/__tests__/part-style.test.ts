@@ -7,6 +7,7 @@ import {
   chapterPageStyleSchema,
   createProjectFile,
   geometryOf,
+  partHangsAtFoot,
   partHasStyle,
   partStyleOf,
   partStyleVars,
@@ -196,5 +197,52 @@ describe('the epigraph and the dedication', () => {
     expect(html).toContain('<img class="bk-plate-image"');
     // Nothing is set over it.
     expect(html).not.toContain('For Mara<');
+  });
+});
+
+/**
+ * The copyright page (addendum 20 §7a, from Ken: *the copyright page needs the
+ * same style options*). It was the one designed page with **no style at all** —
+ * `partHasStyle` refused it and its look was in the stylesheet.
+ */
+describe('the copyright page', () => {
+  const withNotice = (text: string) => addPart(novel(), 'copyright', { text }).file;
+
+  it('is a designed page now, and the only one that hangs at the foot', () => {
+    expect(partHasStyle('copyright')).toBe(true);
+    // Which is what the page *is* rather than a choice: a copyright block a
+    // third of the way down is not a copyright page, and it is long enough
+    // that a drop would push it off the foot.
+    expect(partHangsAtFoot('copyright')).toBe(true);
+    for (const kind of ['half_title', 'title_page', 'dedication', 'epigraph'] as const) {
+      expect(partHangsAtFoot(kind)).toBe(false);
+    }
+  });
+
+  it('starts as the small print the stylesheet drew, ranged left', () => {
+    const style = partStyleOf(partsOf(withNotice('Copyright © M. Shank')).find((one) => one.kind === 'copyright')!);
+    expect(style.align).toBe('left');
+    expect(style.title.italic).toBe(false);
+    expect(style.title.case).toBe('as_typed');
+    // Nine point where the stylesheet said 0.8em — 8.8 at an eleven-point
+    // body — because furniture does not grow when the body does.
+    expect(style.title.size).toBe(9);
+  });
+
+  it('carries its own type to the page, where nothing could reach before', () => {
+    const file = withNotice('Copyright © M. Shank\nAll rights reserved.');
+    const part = partsOf(file).find((one) => one.kind === 'copyright')!;
+    const set = updatePart(file, part.id, {
+      style: { ...partStyleOf(part), face: 'sans', align: 'center', rule: true, title: { ...partStyleOf(part).title, size: 7, case: 'capitals' } },
+    });
+    const block = bookBlocks(set).find((one) => one.partId === part.id)!;
+    const html = renderBookBlock(block, contextFor(set));
+    expect(html).toContain('--pt-title-size:7pt');
+    expect(html).toContain('--pt-title-case:uppercase');
+    expect(html).toContain('--pt-align:center');
+    expect(html).toContain('--pt-rule:1px solid currentColor');
+    expect(html).toContain('Helvetica');
+    // The notice itself is untouched; only how it is set changed.
+    expect(html).toContain('Copyright © M. Shank');
   });
 });

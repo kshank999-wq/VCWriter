@@ -510,6 +510,29 @@ what the dead rule fell back to (11 pt italic, inherited), so no existing page
 moves; only a writer who had changed the control and seen nothing happen now
 gets what they asked for.
 
+### The copyright page, the same way
+
+From Ken: *the copyright page needs the same style options.*
+
+It was the one designed page with **no style at all**. `partHasStyle` refused
+it outright, so the Page style section never appeared, and its whole look was
+three declarations in the print stylesheet: ranged left, at the foot, `0.8em`.
+There was no face, no size, no case, no weight, no tracking and no rule.
+
+It is a designed page now, with one difference that is the page rather than a
+choice. **It hangs at the foot**, which is what a copyright page is: a notice
+floating a third of the way down is not one, and the block is long enough —
+the notice, the ISBN, the edition, the printer — that a drop from the head
+would push it off the page. So `partHangsAtFoot` makes the **template and the
+drop absent** on it, the project's *absent rather than greyed* rule, with a
+sentence saying where the page sits. Everything about its **type** is the
+writer's: the face, the small print's size, case, weight, slope and tracking,
+whether it is ranged left or centred, and a rule.
+
+The size is **9 pt** where the stylesheet said `0.8em` — 8.8 pt at an
+eleven-point body. That is the running heads' rule again: this is furniture,
+and furniture does not grow because the body did.
+
 ## 8. Graphics
 
 Three kinds, and two of them exist:

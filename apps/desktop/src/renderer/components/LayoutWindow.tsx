@@ -40,6 +40,7 @@ import {
   bookNames,
   paragraphsOf,
   partHasStyle,
+  partHangsAtFoot,
   partOfInset,
   partStyleOf,
   partTemplateOf,
@@ -2291,6 +2292,10 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
   const style = partStyleOf(part);
   const template = partTemplateOf(style);
   const words = part.kind === 'dedication' || part.kind === 'epigraph';
+  /* The copyright page hangs at the foot, which is what the page is rather
+     than a choice (§7a), so the template and the drop are absent on it —
+     offering them would move it somewhere no copyright page sits. */
+  const atFoot = partHangsAtFoot(part.kind);
   const partId = part.id;
   const write = (patch: Partial<PartStyle>) =>
     onUpdate((current) => {
@@ -2300,6 +2305,11 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
   return (
     <section className="layout-section layout-page-style">
       <h3>Page style</h3>
+      {atFoot ? (
+        <p className="muted small">This page hangs at the foot, where a copyright page goes. Everything else about it is set here.</p>
+      ) : null}
+      {atFoot ? null : (
+      <>
       <label className="field">
         <span>Template</span>
         <select
@@ -2323,6 +2333,8 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
         <span>Down the page · {style.drop}%</span>
         <input type="range" min={0} max={80} step={2} aria-label="How far down the page" value={style.drop} onChange={(event) => write({ drop: Number(event.target.value) })} />
       </label>
+      </>
+      )}
       <label className="field">
         <span>Ranged</span>
         <select aria-label="Page alignment" value={style.align} onChange={(event) => write({ align: event.target.value as PartStyle['align'] })}>
@@ -2341,7 +2353,7 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
           ))}
         </select>
       </label>
-      <Line label={words ? 'The first line' : 'Title'} style={style.title} onPatch={(patch) => write({ title: { ...style.title, ...patch } })} />
+      <Line label={atFoot ? 'The small print' : words ? 'The first line' : 'Title'} style={style.title} onPatch={(patch) => write({ title: { ...style.title, ...patch } })} />
       {/* The lines under it (§7a, from Ken: *the epigraph and dedication pages
           need the same style options*). They were the title page's alone, so an
           epigraph's attribution and a dedication's second line could not be set
@@ -2353,7 +2365,7 @@ function PageStyle({ part, onUpdate }: { part: BookPart; onUpdate(mutate: (curre
       {words ? <p className="muted small">The first line of the text is the words; anything under it — an attribution, a second line — is set by the pair above.</p> : null}
       <label className="check">
         <input type="checkbox" aria-label="A rule under the title" checked={style.rule} onChange={(event) => write({ rule: event.target.checked })} />
-        <span>A rule under the {words ? 'words' : 'title'}</span>
+        <span>A rule under the {atFoot ? 'small print' : words ? 'words' : 'title'}</span>
       </label>
       <button type="button" className="ghost small" onClick={() => onUpdate((current) => updatePart(current, partId, { style: {} }))}>
         Back to the page’s own look

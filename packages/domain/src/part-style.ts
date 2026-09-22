@@ -59,7 +59,17 @@ export type PartStylePatch = z.infer<typeof partStylePatchSchema>;
 
 /** The kinds whose page is designed rather than read or written. */
 export const partHasStyle = (kind: PartKind): boolean =>
-  kind === 'half_title' || kind === 'title_page' || kind === 'dedication' || kind === 'epigraph';
+  kind === 'half_title' || kind === 'title_page' || kind === 'dedication' || kind === 'epigraph' || kind === 'copyright';
+
+/**
+ * Whether the page **hangs at the foot** rather than being dropped from the
+ * head (§7a). The copyright page is the one that does, and it is what the page
+ * *is* rather than a choice: a copyright block floating a third of the way
+ * down is not a copyright page, and the block is long enough that a drop
+ * would push it off the foot. So the template and the drop are **absent**
+ * on it rather than offered and wrong — everything about its type is not.
+ */
+export const partHangsAtFoot = (kind: PartKind): boolean => kind === 'copyright';
 
 /**
  * What each kind looks like until somebody touches it — exactly what the
@@ -79,6 +89,15 @@ const KIND_DEFAULTS: Partial<Record<PartKind, PartStylePatch>> = {
   epigraph: {
     title: { size: 11, case: 'as_typed', bold: false, italic: true, tracking: 0 },
     line: { size: 11, case: 'as_typed', bold: false, italic: true, tracking: 0 },
+  },
+  // Small print ranged left at the foot, which is what the page drew before
+  // it could be set at all. Nine point where the stylesheet said `0.8em` — 8.8
+  // at an eleven-point body — because this is furniture and does not grow when
+  // the body does, which is the running heads' rule (§7a).
+  copyright: {
+    align: 'left',
+    title: { size: 9, case: 'as_typed', bold: false, italic: false, tracking: 0 },
+    line: { size: 9, case: 'as_typed', bold: false, italic: false, tracking: 0 },
   },
 };
 

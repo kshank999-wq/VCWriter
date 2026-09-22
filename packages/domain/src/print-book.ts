@@ -159,7 +159,7 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
     }
     case 'copyright': {
       const text = block.text.trim().length > 0 ? block.text : `Copyright © ${names.author}`.trim();
-      return `<div class="bk-display bk-copyright"><p class="bk-small">${escapeHtml(text).replace(/\n/g, '<br />')}</p></div>`;
+      return `<div class="bk-display bk-copyright"${styled}><p class="bk-small">${escapeHtml(text).replace(/\n/g, '<br />')}</p></div>`;
     }
     case 'plate': {
       // An art page (§8, from Ken): the picture is the page, edge to edge past
@@ -482,13 +482,16 @@ export const BOOK_STYLES = `
   /* The lines under the words: an epigraph's attribution, a dedication's
      second line. They start as the words and are set apart from here. */
   .bk-display.bk-words p.bk-words-under { font-size: var(--pt-line-size, 1em); text-transform: var(--pt-line-case, none); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, italic); letter-spacing: var(--pt-line-tracking, 0); }
-  .bk-display.bk-copyright { justify-content: flex-end; align-items: flex-start; text-align: left; }
+  /* It hangs at the foot, which is what a copyright page is (§7a); everything
+     else about it is the writer's, the same as the other designed pages. */
+  .bk-display.bk-copyright { justify-content: flex-end; align-items: var(--pt-items, flex-start); text-align: var(--pt-align, left); font-family: var(--pt-face, var(--bk-face)); }
   .bk-display.bk-plate { justify-content: center; }
   .bk-book-title { margin: 0; font-size: 2.2em; line-height: 1.15; letter-spacing: 0.02em; }
   .bk-author { margin: 2em 0 0; font-size: 1.1em; letter-spacing: 0.12em; text-transform: uppercase; }
   .bk-imprint { margin-top: auto; padding-bottom: 1em; font-size: 0.85em; letter-spacing: 0.15em; text-transform: uppercase; }
   .bk-title-art { max-width: 80%; max-height: 40%; }
   .bk-small { font-size: 0.8em; line-height: 1.4; margin: 0; }
+  .bk-display.bk-copyright .bk-small { font-size: var(--pt-title-size, 0.8em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, normal); letter-spacing: var(--pt-title-tracking, 0); border-bottom: var(--pt-rule, none); padding-bottom: 0.15em; }
   .bk-words p { margin: 0; font-style: italic; }
   .bk-part-title { margin: 0; padding: calc(var(--bk-lead) * 4) 0 calc(var(--bk-lead) * 2); text-align: center; font-size: 1.3em; letter-spacing: 0.12em; text-transform: uppercase; line-height: var(--bk-lead); }
   .bk-contents-row { display: flex; gap: 1em; align-items: baseline; }

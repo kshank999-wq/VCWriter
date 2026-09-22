@@ -378,6 +378,8 @@ const partBlocks = (part: BookPart, numbering: 'roman' | 'arabic', chapterTitle:
           unbreakable: true,
           text: part.text,
           spans: parseInline(part.text),
+          // A designed page like the other four (§7a); it hangs at the foot.
+          partStyle: partStyleOf(part),
         }),
       ];
     case 'contents':

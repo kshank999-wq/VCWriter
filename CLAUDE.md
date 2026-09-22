@@ -1379,7 +1379,18 @@ push live; the build takes a minute or two.
   rule had never matched and the *words* control had been doing nothing since it
   shipped (the neighbours are fine, `.bk-book-title` and `.bk-author` really
   being children). One space deleted; the defaults are what the dead rule fell
-  back to, so nothing existing moves. **§8a is pictures inside the story**, from Ken
+  back to, so nothing existing moves. **And the copyright page**, from Ken, which was the one
+  designed page with **no style at all** — `partHasStyle` refused it, so the
+  section never appeared, and its whole look was three declarations in the
+  stylesheet (ranged left, at the foot, `0.8em`): no face, size, case, weight,
+  tracking or rule. It is a designed page now with one difference that is the
+  page rather than a choice: **it hangs at the foot**, a notice floating a third
+  of the way down not being a copyright page and the block being long enough
+  that a drop from the head would push it off, so `partHangsAtFoot` makes the
+  **template and the drop absent** on it (*absent rather than greyed*) with a
+  sentence saying where the page sits, while everything about its type is the
+  writer's. Nine point where the stylesheet said `0.8em` — the running heads'
+  rule again, furniture not growing because the body did. **§8a is pictures inside the story**, from Ken
   laying out a children's book, and the audit paid a **thirteenth** time:
   a picture inside the story **is a figure**, which the manuscript has had
   since addendum 16 §9 and which already stands where the writer put it —
