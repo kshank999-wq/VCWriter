@@ -353,6 +353,31 @@ describe('the room', () => {
     expect(unitsInStoryOrder(latest as ProjectFile).map((unit) => unit.title)).toEqual(['The Return', 'Chapter One']);
   });
 
+  it('sets how a division’s heading looks in Book settings, under the format’s own word', () => {
+    render(<Harness initial={novel()} />);
+    openBookSettings();
+    const dialog = screen.getByRole('dialog', { name: 'Book settings' });
+    // The fold is named for what this format divides into (§6a), and stands open.
+    expect(within(dialog).getByRole('button', { name: 'Chapter openings' })).toBeDefined();
+    // The setting itself, not a sentence pointing at another dialog.
+    expect(within(dialog).getByRole('heading', { name: 'How every chapter page is set' })).toBeDefined();
+    expect(within(dialog).getByLabelText('Chapter page face')).toBeDefined();
+    fireEvent.change(within(dialog).getByLabelText('Chapter page drop'), { target: { value: '3.4' } });
+    expect(bookNames(latest as ProjectFile)).toBeDefined();
+    expect((latest as ProjectFile).settings.chapterPageStyle?.dropInches).toBe(3.4);
+  });
+
+  it('calls a collection’s divisions stories, everywhere the word is used', () => {
+    let file = createProjectFile({ title: 'Tales', format: 'short_story' });
+    file = beginStory(file, { title: 'The Road' }).file;
+    render(<Harness initial={file} onOpenChapterPage={() => undefined} />);
+    openBookSettings();
+    const dialog = screen.getByRole('dialog', { name: 'Book settings' });
+    expect(within(dialog).getByRole('button', { name: 'Story openings' })).toBeDefined();
+    expect(within(dialog).getByRole('heading', { name: 'How every story page is set' })).toBeDefined();
+    expect(dialog.textContent).not.toMatch(/chapter/i);
+  });
+
   it('draws a box with nothing in it, and fills it afterwards', async () => {
     render(<Harness initial={novel()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));

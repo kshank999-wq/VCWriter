@@ -64,6 +64,7 @@ import {
   type PartKind,
   type ProjectFile,
   isCollection,
+  nounsFor,
   chapterLeafContent,
   BOOK_PRESET_NAMES,
   BOOK_PRESETS,
@@ -85,7 +86,7 @@ import {
   type PagePlace,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
-import { ChapterPageDialog, Line } from './ChapterPageDialog';
+import { ChapterPageDialog, ChapterStyleFields, Line } from './ChapterPageDialog';
 import { useModal } from '../use-modal';
 import { usePreference, useSplit } from '../use-split';
 import { readPicture } from '../read-picture';
@@ -314,8 +315,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   };
 
   const figures = bookFigures(file);
-  /** A collection's divisions are stories (addendum 22); the room says so. */
-  const noun = isCollection(file.project.format) ? 'Story' : 'Chapter';
+  /** What this format calls a division — Chapter, Story, Episode (§6a). */
+  const { division: noun, divisionPlural: nounPlural } = nounsFor(file.project.format);
   const selectedFigure = figures.find((figure) => figure.elementId === selectedRowId) ?? null;
 
   /**
@@ -554,6 +555,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           laying={laying}
           write={write}
           noun={noun}
+          nounPlural={nounPlural}
           divisions={divisions}
           onUpdate={onUpdate}
           onOpenChapterPage={openChapterPage}
@@ -1238,6 +1240,7 @@ function BookSettingsDialog({
   laying,
   write,
   noun,
+  nounPlural,
   divisions,
   onUpdate,
   onOpenChapterPage,
@@ -1249,6 +1252,7 @@ function BookSettingsDialog({
   write(patch: Partial<BookSettings>): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   noun: string;
+  nounPlural: string;
   divisions: ReturnType<typeof contentsDivisions>;
   onOpenChapterPage?(markerId: string): void;
   onClose(): void;
@@ -1312,20 +1316,25 @@ function BookSettingsDialog({
             <TrimSection laying={laying} write={write} />
           </Fold>
           <Fold id="type" title="Type">
-            <TypeSection settings={settings} write={write} />
+            <TypeSection settings={settings} write={write} noun={noun} />
           </Fold>
           <Fold id="furniture" title="Running heads & page numbers">
-            <FurnitureSection settings={settings} write={write} />
+            <FurnitureSection settings={settings} write={write} noun={noun} nounPlural={nounPlural} />
           </Fold>
-          <Fold id="openings" title={isCollection(file.project.format) ? 'Story openings' : 'Chapter openings'}>
+          {/* How a division's heading is set (§6a, from Ken: *the story titles
+              should be adjustable with a setting*). It used to be a sentence
+              pointing at another dialog, which is not a setting. The fields
+              are the chapter-page dialog's own component, so the two cannot
+              disagree about what a heading looks like. */}
+          <Fold id="openings" title={`${noun} openings`}>
+            <ChapterStyleFields file={file} onUpdate={onUpdate} marker={null} />
             <p className="muted small">
-              The number, the name, the face and the drop are set once for the book in <em>File ▸ Chapter page…</em>. A chapter
-              page carrying a device, a summary or an epigraph opens on a leaf of its own; one carrying only its number and name
-              opens above its first paragraph.
+              A {noun.toLowerCase()} page carrying a device, a summary or an epigraph opens on a leaf of its own; one
+              carrying only its number and name opens above its first paragraph.
             </p>
             {onOpenChapterPage && divisions[0] ? (
               <button type="button" className="ghost small" onClick={() => onOpenChapterPage(divisions[0]!.marker.id as string)}>
-                {noun} page…
+                Open one {noun.toLowerCase()}’s own page…
               </button>
             ) : null}
           </Fold>
@@ -1791,7 +1800,7 @@ function FigureSection({
   );
 }
 
-function TypeSection({ settings, write }: { settings: BookSettings; write(patch: Partial<BookSettings>): void }) {
+function TypeSection({ settings, write, noun }: { settings: BookSettings; write(patch: Partial<BookSettings>): void; noun: string }) {
   const preset = bookPresetOf(settings);
   return (
     <>
@@ -1866,8 +1875,8 @@ function TypeSection({ settings, write }: { settings: BookSettings; write(patch:
         </label>
       </div>
       <label className="field">
-        <span>A chapter’s first paragraph</span>
-        <select aria-label="Chapter opening paragraph" value={settings.opening} onChange={(event) => write({ opening: event.target.value as BookSettings['opening'] })}>
+        <span>A {noun.toLowerCase()}’s first paragraph</span>
+        <select aria-label={`${noun} opening paragraph`} value={settings.opening} onChange={(event) => write({ opening: event.target.value as BookSettings['opening'] })}>
           {OPENINGS.map((opening) => (
             <option key={opening} value={opening}>
               {OPENING_WORDS[opening]}
@@ -1903,7 +1912,7 @@ function TypeSection({ settings, write }: { settings: BookSettings; write(patch:
   );
 }
 
-function FurnitureSection({ settings, write }: { settings: BookSettings; write(patch: Partial<BookSettings>): void }) {
+function FurnitureSection({ settings, write, noun, nounPlural }: { settings: BookSettings; write(patch: Partial<BookSettings>): void; noun: string; nounPlural: string }) {
   return (
     <>
       <div className="layout-two">
@@ -1926,7 +1935,7 @@ function FurnitureSection({ settings, write }: { settings: BookSettings; write(p
             value={settings.runningHeads.recto}
             onChange={(event) => write({ runningHeads: { ...settings.runningHeads, recto: event.target.value as BookSettings['runningHeads']['recto'] } })}
           >
-            <option value="chapter">The chapter’s title</option>
+            <option value="chapter">The {noun.toLowerCase()}’s title</option>
             <option value="title">The book’s title</option>
             <option value="none">Nothing</option>
           </select>
@@ -1944,14 +1953,14 @@ function FurnitureSection({ settings, write }: { settings: BookSettings; write(p
       </label>
       <label className="check">
         <input type="checkbox" checked={settings.folioOnOpening} onChange={(event) => write({ folioOnOpening: event.target.checked })} />{' '}
-        A chapter opening shows its number
+        A {noun.toLowerCase()} opening shows its number
       </label>
       <label className="check">
         <input type="checkbox" checked={settings.chaptersOpenRecto} onChange={(event) => write({ chaptersOpenRecto: event.target.checked })} />{' '}
-        Every chapter opens on a right-hand page
+        Every {noun.toLowerCase()} opens on a right-hand page
       </label>
       <p className="muted small">
-        The words in the running heads are read from the book and the chapters; nothing about them is typed here. What the book is
+        The words in the running heads are read from the book and its {nounPlural.toLowerCase()}; nothing about them is typed here. What the book is
         called, and by whom, is under <em>The book</em> above.
       </p>
     </>

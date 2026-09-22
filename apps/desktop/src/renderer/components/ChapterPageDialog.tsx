@@ -10,6 +10,7 @@ import {
   chapterChoices,
   chapterLeafContent,
   chapterPageStyleOf,
+  type StoryMarker,
   chapterPagesEverywhere,
   chapterTextFor,
   chapterTextIsCut,
@@ -22,6 +23,7 @@ import {
   setChapterPage,
   setChapterPageStyle,
   summaryRefusal,
+  nounsFor,
   templateOf,
   updateMarker,
   type AssetId,
@@ -614,108 +616,10 @@ function Body({
 
           {/* The look, and it is the book's. Said on the heading rather than
               left to be discovered by styling one and finding all of them
-              changed. */}
-          <section>
-            <h3>How every chapter page is set</h3>
-            <p className="muted small">
-              One look for the whole book — a chapter whose heading is in a different face reads as a
-              mistake rather than as a design.
-            </p>
-
-            <label className="field">
-              <span>Face</span>
-              <select
-                aria-label="Face"
-                value={style.face}
-                onChange={(event) => onUpdate((current) => setChapterPageStyle(current, { face: event.target.value as TypeFace }))}
-              >
-                {TYPE_FACES.map((face) => (
-                  <option key={face} value={face}>
-                    {FACE_WORDS[face]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <Line
-              label="The number"
-              style={style.number}
-              onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'number', patch))}
-            />
-            <Line
-              label="The name"
-              style={style.title}
-              onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'title', patch))}
-            />
-            <Line
-              label="The lines under it"
-              style={style.epigraph}
-              tracking={false}
-              onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'epigraph', patch))}
-            />
-            {book ? (
-              <Line
-                label="The summary"
-                style={style.summary}
-                tracking={false}
-                onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'summary', patch))}
-              />
-            ) : null}
-
-            {/* The three templates as tiles (addendum 19 §7). Layout is the
-                book's: set once, every chapter page follows, and the sheet
-                beside them is what prints. */}
-            <div className="chapter-template-tiles" role="radiogroup" aria-label="Template">
-              {CHAPTER_TEMPLATES.map((one) => (
-                <button
-                  key={one}
-                  type="button"
-                  role="radio"
-                  aria-checked={style.template === one}
-                  className={style.template === one ? 'chapter-template-tile on' : 'chapter-template-tile'}
-                  title={CHAPTER_TEMPLATE_WORDS[one].says}
-                  onClick={() => onUpdate((current) => setChapterPageStyle(current, { template: one }))}
-                >
-                  <span className={`chapter-template-sketch ${one}`} aria-hidden="true">
-                    <i className="sketch-graphic" />
-                    <i className="sketch-head" />
-                    <i className="sketch-words" />
-                  </span>
-                  <span className="chapter-template-name">{CHAPTER_TEMPLATE_WORDS[one].name}</span>
-                </button>
-              ))}
-            </div>
-            {marker && marker.page.template !== 'book' ? (
-              <p className="muted small">
-                This chapter has its own — {CHAPTER_TEMPLATE_WORDS[templateOf(file, marker)].name.toLowerCase()}. Every
-                other chapter follows the book.
-              </p>
-            ) : null}
-
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={style.rule}
-                onChange={(event) => onUpdate((current) => setChapterPageStyle(current, { rule: event.target.checked }))}
-              />
-              <span>A rule under the heading</span>
-            </label>
-
-            <label className="field">
-              <span>How far down the page — {style.dropInches.toFixed(1)}″</span>
-              <input
-                type="range"
-                aria-label="Drop"
-                min={0}
-                max={6}
-                step={0.1}
-                value={style.dropInches}
-                onChange={(event) =>
-                  onUpdate((current) => setChapterPageStyle(current, { dropInches: Number(event.target.value) }))
-                }
-              />
-            </label>
-          </section>
+              changed. The same fields stand in Layout's Book settings, from
+              one component, because *how every chapter page is set* applies
+              to the whole book and a second copy would be a second answer. */}
+          <ChapterStyleFields file={file} onUpdate={onUpdate} marker={marker ?? null} />
         </div>
 
         {/* The sheet, at the shape it will print. The same component the
@@ -740,6 +644,137 @@ function Body({
 }
 
 /** The three controls one line of type needs, and no more. Shared with the Layout room's part pages. */
+/**
+ * How every chapter page is set (addendum 02 §12a): the face, the lines, the
+ * template, the rule and the drop — all of them the **book's** rather than
+ * one chapter's, which is why they stand together under one heading.
+ *
+ * It is a component rather than markup inside the dialog because Layout's
+ * **Book settings** shows the same fields (addendum 22 §6a, from Ken: *the
+ * story titles should be adjustable with a setting*). What applies to the
+ * whole book belongs where the whole book is set, and one component in two
+ * places cannot disagree about what a chapter heading looks like.
+ */
+export function ChapterStyleFields({
+  file,
+  onUpdate,
+  marker,
+}: {
+  file: ProjectFile;
+  onUpdate: ChapterPageDialogProps['onUpdate'];
+  /** The chapter being looked at, where there is one: it may override the template. */
+  marker: StoryMarker | null;
+}) {
+  const style = chapterPageStyleOf(file);
+  const book = isInstructional(file.project.format);
+  const nouns = nounsFor(file.project.format);
+  const unit = nouns.division.toLowerCase();
+  return (
+    <section>
+      <h3>How every {unit} page is set</h3>
+      <p className="muted small">
+        One look for the whole book — a {unit} whose heading is in a different face reads as a mistake
+        rather than as a design.
+      </p>
+
+      <label className="field">
+        <span>Face</span>
+        <select
+          aria-label={`${nouns.division} page face`}
+          value={style.face}
+          onChange={(event) => onUpdate((current) => setChapterPageStyle(current, { face: event.target.value as TypeFace }))}
+        >
+          {TYPE_FACES.map((face) => (
+            <option key={face} value={face}>
+              {FACE_WORDS[face]}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <Line
+        label="The number"
+        style={style.number}
+        onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'number', patch))}
+      />
+      <Line
+        label="The name"
+        style={style.title}
+        onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'title', patch))}
+      />
+      <Line
+        label="The lines under it"
+        style={style.epigraph}
+        tracking={false}
+        onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'epigraph', patch))}
+      />
+      {book ? (
+        <Line
+          label="The summary"
+          style={style.summary}
+          tracking={false}
+          onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'summary', patch))}
+        />
+      ) : null}
+
+      {/* The three templates as tiles (addendum 19 §7). Layout is the
+          book's: set once, every chapter page follows. */}
+      <div className="chapter-template-tiles" role="radiogroup" aria-label="Template">
+        {CHAPTER_TEMPLATES.map((one) => (
+          <button
+            key={one}
+            type="button"
+            role="radio"
+            aria-checked={style.template === one}
+            className={style.template === one ? 'chapter-template-tile on' : 'chapter-template-tile'}
+            title={CHAPTER_TEMPLATE_WORDS[one].says}
+            onClick={() => onUpdate((current) => setChapterPageStyle(current, { template: one }))}
+          >
+            <span className={`chapter-template-sketch ${one}`} aria-hidden="true">
+              <i className="sketch-graphic" />
+              <i className="sketch-head" />
+              <i className="sketch-words" />
+            </span>
+            <span className="chapter-template-name">{CHAPTER_TEMPLATE_WORDS[one].name}</span>
+          </button>
+        ))}
+      </div>
+      {marker && marker.page.template !== 'book' ? (
+        <p className="muted small">
+          This {unit} has its own — {CHAPTER_TEMPLATE_WORDS[templateOf(file, marker)].name.toLowerCase()}. Every other{' '}
+          {unit} follows the book.
+        </p>
+      ) : null}
+
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={style.rule}
+          onChange={(event) => onUpdate((current) => setChapterPageStyle(current, { rule: event.target.checked }))}
+        />
+        <span>A rule under the heading</span>
+      </label>
+
+      <label className="field">
+        <span>How far down the page — {style.dropInches.toFixed(1)}″</span>
+        <input
+          type="range"
+          aria-label={`${nouns.division} page drop`}
+          min={0}
+          max={6}
+          step={0.1}
+          value={style.dropInches}
+          onChange={(event) => onUpdate((current) => setChapterPageStyle(current, { dropInches: Number(event.target.value) }))}
+        />
+      </label>
+      <p className="muted small">
+        The drop is the page a {unit} opens on with a leaf of its own. A {unit} that opens above its first
+        paragraph keeps the book’s own opening depth.
+      </p>
+    </section>
+  );
+}
+
 export function Line({
   label,
   style,

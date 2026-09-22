@@ -1446,6 +1446,33 @@ push live; the build takes a minute or two.
   page the heading stands where a **title** stands rather than out in the
   number's column, which is where the first draft drew it and where it hung
   outside the text block.
+  **§6a is the story titles as a setting**, from Ken: *the story titles
+  should be adjustable with a setting*. They already were — the face, the
+  sizes, the case, the weight and the tracking of a division's heading have
+  lived in `settings.chapterPageStyle` since addendum 02 §12a — but Layout's
+  *Book settings ▸ Story openings* held a **sentence** saying so and pointing
+  at *File ▸ Chapter page…*, and a sentence pointing at another dialog is not
+  a setting. `ChapterStyleFields` is that dialog's own section lifted into a
+  component and rendered in both places, one component because two copies are
+  two answers to *what does a heading look like*; §9's own rule decided it —
+  what applies to the whole book belongs where the whole book is set. Naming
+  the fold caught the rest: `LayoutWindow` and the chapter-page dialog each
+  held a private `isCollection(format) ? 'Story' : 'Chapter'`, and five more
+  places in Book settings said *chapter* outright (*a chapter's first
+  paragraph*, *the chapter's title*, *a chapter opening shows its number*,
+  *every chapter opens on a right-hand page*, the sentence under the running
+  heads), every one of them wrong on a collection. `FormatNouns` now carries
+  **`division` / `divisionPlural`** — Chapter, Story, Episode, Act — and they
+  all read it; it is deliberately **not** `unit`, a collection's unit being a
+  Section and its division a Story, which is the distinction §2 rests on, and
+  a `series` entry joined at the same time because `defaultMarkerKind` has
+  said *episode* since addendum 05 and the table had no word for it. The test
+  walks the whole Book settings dialog on a collection and asserts *chapter*
+  appears nowhere. One thing kept its own wording rather than reading the
+  table: the *Modern* preset said *chapters on either page*, and a preset
+  describes **type** rather than a format's vocabulary, so it says
+  *openings* — true of every format, and no format-specific prose in the
+  domain.
   `addendum-23-ebook-export.md` is **eBook export**, from Ken's own *eBook
   Export Engine* dev spec: one EPUB 3.3 from the laid-out book, with store
   presets for Kindle, Apple, NOOK, Kobo, Google Play, Draft2Digital and

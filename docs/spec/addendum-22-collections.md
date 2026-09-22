@@ -259,6 +259,45 @@ the first draft drew it and where it hung outside the text block.
   the Outliner's *Move the chapter to match* (addendum 19) already moves a
   span as a block, and a story is a span.
 
+## 6a. The story titles are a setting, where the settings are
+
+From Ken: *the story titles should be adjustable with a setting.*
+
+They already were — the face, the sizes, the case, the weight and the
+tracking of a division's heading have lived in `settings.chapterPageStyle`
+since addendum 02 §12a, and they are the book's rather than one chapter's.
+What was wrong is **where**: Layout's *Book settings ▸ Story openings* held a
+**sentence** saying they were set in *File ▸ Chapter page…*, and a sentence
+pointing at another dialog is not a setting.
+
+So the fields moved to where the book is set. `ChapterStyleFields` is the
+chapter-page dialog's own section lifted into a component, rendered in both
+places — one component, because two copies would be two answers to *what does
+a heading look like*. §9's own rule decided it: what applies to the whole
+book belongs where the whole book is set.
+
+### A format's word for what it divides into
+
+Naming that fold caught the rest. `LayoutWindow` and the chapter-page dialog
+each held a private `isCollection(format) ? 'Story' : 'Chapter'`, and five
+more places in Book settings said *chapter* outright — *a chapter's first
+paragraph*, *the chapter's title*, *a chapter opening shows its number*,
+*every chapter opens on a right-hand page*, and the sentence under the
+running heads. On a collection every one of them was wrong.
+
+`FormatNouns` now carries **`division` / `divisionPlural`** — Chapter, Story,
+Episode, Act — and they all read it. It is deliberately **not** `unit`: a
+collection's unit is a Section and its division is a Story, which is the
+distinction §2 rests on. A `series` entry joined the table at the same time,
+because `defaultMarkerKind` has said *episode* since addendum 05 and the
+table had no word for it. The test walks the whole Book settings dialog on a
+collection and asserts the word *chapter* appears nowhere in it.
+
+One thing kept its own wording rather than reading the table: the *Modern*
+type preset said *chapters on either page*, and a preset describes **type**
+rather than a format's vocabulary, so it now says *openings* — true of every
+format, and no format-specific prose in the domain.
+
 ## 7. What each stage built
 
 - **Stage 1, the reading.** `isCollection`, the noun table's *Collection*,

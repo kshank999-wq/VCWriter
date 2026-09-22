@@ -81,6 +81,16 @@ export interface FormatNouns {
   /** What sits inside one: Beat, Passage, Section. */
   sub: string;
   subPlural: string;
+  /**
+   * What the book is divided into where a marker divides it: Chapter, Story,
+   * Episode, Act. **Not the unit** — a collection's unit is a Section and its
+   * division is a Story — which is why it is its own word rather than one
+   * borrowed from `unit`. Layout and the chapter-page dialog both name it,
+   * and each held a private `isCollection(...) ? 'Story' : 'Chapter'` until
+   * this entry existed.
+   */
+  division: string;
+  divisionPlural: string;
   /** The whole manuscript, as a surface: Script, Manuscript, Book. */
   manuscript: string;
   /** What the project is, for a title bar or a new-project screen. */
@@ -92,16 +102,30 @@ const SCRIPT_NOUNS: FormatNouns = {
   unitPlural: 'Scenes',
   sub: 'Beat',
   subPlural: 'Beats',
+  division: 'Act',
+  divisionPlural: 'Acts',
   manuscript: 'Script',
   work: 'Script',
 };
 
 const NOUNS: Partial<Record<ProjectFormat, FormatNouns>> = {
+  /**
+   * A series is a script in every respect but one: what a marker divides it
+   * into is an **episode**, which `defaultMarkerKind` has always said and
+   * which this table had no word for until now.
+   */
+  series: {
+    ...SCRIPT_NOUNS,
+    division: 'Episode',
+    divisionPlural: 'Episodes',
+  },
   novel: {
     unit: 'Chapter',
     unitPlural: 'Chapters',
     sub: 'Passage',
     subPlural: 'Passages',
+    division: 'Chapter',
+    divisionPlural: 'Chapters',
     manuscript: 'Manuscript',
     work: 'Novel',
   },
@@ -115,6 +139,8 @@ const NOUNS: Partial<Record<ProjectFormat, FormatNouns>> = {
     unitPlural: 'Sections',
     sub: 'Passage',
     subPlural: 'Passages',
+    division: 'Story',
+    divisionPlural: 'Stories',
     manuscript: 'Manuscript',
     work: 'Collection',
   },
@@ -137,6 +163,8 @@ const NOUNS: Partial<Record<ProjectFormat, FormatNouns>> = {
     unitPlural: 'Sections',
     sub: 'Subsection',
     subPlural: 'Subsections',
+    division: 'Chapter',
+    divisionPlural: 'Chapters',
     manuscript: 'Book',
     work: 'Book',
   },

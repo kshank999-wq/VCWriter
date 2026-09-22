@@ -196,7 +196,7 @@ export const BOOK_PRESETS: Record<BookPreset, PresetFields> = {
 
 export const PRESET_INFO: Record<BookPreset, { name: string; about: string }> = {
   classic: { name: 'Classic', about: 'old-style serif, small capitals to open, a blank line between scenes, folios at the outer foot' },
-  modern: { name: 'Modern', about: 'transitional serif, a drop cap, chapters on either page, folios at the outer head' },
+  modern: { name: 'Modern', about: 'transitional serif, a drop cap, openings on either page, folios at the outer head' },
   textbook: { name: 'Textbook', about: 'sans serif, ragged right, no hyphenation, folios at the centre foot' },
 };
 
