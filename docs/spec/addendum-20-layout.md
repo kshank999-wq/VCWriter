@@ -434,6 +434,38 @@ head and the folio sit. That is `margin / 2` and clamped to the quarter inch
 §3b tests, because a control there can only put a running head under the
 printer's blade.
 
+### The chapter openings, the same way
+
+From Ken, straight after: *the chapter openings need the same style options.*
+
+Two gaps, and both are this section's shape pointed at the next fold down.
+
+**The face was three generic names and one of them lied.** *Manuscript*,
+*serif*, *sans* — so a chapter opening could not be set in the book's own face
+by name, nor in two of the faces the book itself offers. And `manuscript`
+**secretly meant the book's face** inside a book: `chapterStyleFor` in the print
+stack overrode `--chapter-face` after `chapterStyleAttr` had already decided it,
+so the word on the screen and the type on the page said different things. The
+running heads had just got this right with an explicit `book`, so the list is
+now theirs — the book's own face, the five it offers, and `manuscript` for the
+Courier a script's chapter leaf actually wants. The override is gone:
+`chapterStyleVars` takes the body face and resolves it, which is `partStyleVars`'
+shape and one answer instead of two.
+
+Nothing about an existing book changes. `manuscript` still resolves to the body
+face where there is a book, being the older spelling of the same intent, and
+`serif` still parses — it is the name old-style had, kept out of the offered
+list as history rather than as a second answer.
+
+**The opening's drop was hard-coded, and the screen admitted it.**
+`.bk-opening` was `calc(var(--bk-lead) * 8)`, and under the drop slider the room
+said *a chapter that opens above its first paragraph keeps the book's own
+opening depth* — which is an admission, not a setting, exactly like the running
+heads' *nothing about them is typed here*. `openingLines` is that number, and
+the two drops now sit together: the leaf's in **inches**, because it is a page
+of its own, and the opening's in **lines of the body**, because what it has to
+look right against is the text under it. Eight is what it always drew.
+
 ## 8. Graphics
 
 Three kinds, and two of them exist:

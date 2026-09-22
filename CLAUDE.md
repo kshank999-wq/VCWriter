@@ -1341,7 +1341,27 @@ push live; the build takes a minute or two.
   and merely prints none. Deliberately **not** adjustable: how far into the
   margin they sit, which stays `margin / 2` clamped to §3b's quarter inch,
   because a control there can only put a running head under the printer's
-  blade. **§8a is pictures inside the story**, from Ken
+  blade. **The chapter openings got the same treatment**, from Ken
+  straight after: two gaps, both §7a's shape pointed at the next fold down.
+  **The face was three generic names and one of them lied** — *manuscript*,
+  *serif*, *sans*, so an opening could not be set in the book's own face by
+  name nor in two of the faces the book offers, and `manuscript` **secretly
+  meant the book's face** inside a book, `chapterStyleFor` overriding
+  `--chapter-face` *after* `chapterStyleAttr` had decided it, so the word on
+  the screen and the type on the page disagreed. The list is the running
+  heads' now and the override is gone: `chapterStyleVars` takes the body face
+  and resolves it, which is `partStyleVars`' shape and one answer instead of
+  two. Nothing about an existing book changes — `manuscript` still resolves to
+  the body face where there is a book, being the older spelling of the same
+  intent, and `serif` still parses, kept out of the offered list as history
+  rather than as a second answer. **The opening's drop was hard-coded and the
+  screen admitted it**: `.bk-opening` was `calc(var(--bk-lead) * 8)` and the
+  room said *a chapter that opens above its first paragraph keeps the book's
+  own opening depth*, which is an admission and not a setting, exactly like
+  *nothing about them is typed here*. `openingLines` is that number, and the
+  two drops sit together — the leaf's in **inches**, being a page of its own,
+  and the opening's in **lines of the body**, because what it has to look
+  right against is the text under it. **§8a is pictures inside the story**, from Ken
   laying out a children's book, and the audit paid a **thirteenth** time:
   a picture inside the story **is a figure**, which the manuscript has had
   since addendum 16 §9 and which already stands where the writer put it —

@@ -38,22 +38,39 @@ export const typeCaseSchema = z.enum(TYPE_CASES);
 export type TypeCase = z.infer<typeof typeCaseSchema>;
 
 /**
- * The faces offered.
+ * The faces offered (§7a, from Ken: *the chapter openings need the same style
+ * options*).
  *
- * Three, named by what they are for rather than by a font that may not be
- * installed: the printing resolves each to a stack ending in a generic family,
- * so a page set here prints on a machine that has none of them.
+ * There were three — *manuscript*, *serif*, *sans* — and a chapter opening
+ * could not be set in the book's own face by name, nor in two of the faces the
+ * book itself offers. Worse, `manuscript` **secretly meant the book's face**
+ * inside a book: the print stack overrode `--chapter-face` after the fact, so
+ * the word on the screen and the type on the page said different things. The
+ * running heads had already got this right with an explicit `book`, so this is
+ * that list: the book's own face, the five it offers, and `manuscript` for the
+ * Courier a script's chapter leaf actually wants.
+ *
+ * `serif` is kept out of the offered list and still parses, being stored in
+ * projects made before this — history rather than a second answer. It resolves
+ * to old-style, which is the stack it always drew.
  */
-export const TYPE_FACES = ['manuscript', 'serif', 'sans'] as const;
-export const typeFaceSchema = z.enum(TYPE_FACES);
+export const TYPE_FACES = ['book', 'old_style', 'transitional', 'modern', 'sans', 'manuscript'] as const;
+/** What a stored value may be: the list above, plus the name `serif` used to have. */
+export const typeFaceSchema = z.enum([...TYPE_FACES, 'serif'] as const);
 export type TypeFace = z.infer<typeof typeFaceSchema>;
 
 const FACE_STACKS: Record<TypeFace, string> = {
-  // What the rest of the manuscript is set in, so a chapter page that says
-  // nothing looks like the book it is in.
+  // `book` is resolved against the book's own face before this is read; the
+  // manuscript's is what is left where there is no book, which is right —
+  // a script's chapter leaf is Courier like the rest of it.
+  book: "'Courier New', Courier, ui-monospace, monospace",
   manuscript: "'Courier New', Courier, ui-monospace, monospace",
-  serif: "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif",
+  old_style: "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif",
+  transitional: "Baskerville, 'Libre Baskerville', 'Times New Roman', Times, serif",
+  modern: "Didot, 'Bodoni MT', 'Bodoni 72', Georgia, serif",
   sans: "'Helvetica Neue', Helvetica, Arial, ui-sans-serif, sans-serif",
+  // Stored before the list widened; the stack it always drew.
+  serif: "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif",
 };
 
 /** One line of type on the page: how big, how cased, how weighted. */
@@ -69,6 +86,9 @@ export const lineStyleSchema = z.object({
 export type LineStyle = z.infer<typeof lineStyleSchema>;
 
 export const chapterPageStyleSchema = z.object({
+  // `manuscript` rather than `book` so a project made before the list widened
+  // draws as it did: inside a book the print already swapped it for the body
+  // face, and outside one it is the Courier a script wants.
   face: typeFaceSchema.default('manuscript'),
   /** "Chapter Nine" — the derived number, and the noun in front of it. */
   number: lineStyleSchema.default({ size: 12, case: 'capitals', tracking: 20 }),
@@ -95,6 +115,18 @@ export const chapterPageStyleSchema = z.object({
    * about a third of the way down in most books, which is where this starts.
    */
   dropInches: z.number().min(0).max(6).default(2.5),
+  /**
+   * How far down a chapter opening sits where it opens **above its first
+   * paragraph** rather than on a leaf of its own, in lines of the body (§7a).
+   *
+   * This was `calc(var(--bk-lead) * 8)` in the print stylesheet, and the
+   * screen said so out loud — *a chapter that opens above its first paragraph
+   * keeps the book's own opening depth* — which is an admission rather than a
+   * setting. Lines rather than inches, because what it has to look right
+   * against is the text under it, and that is measured in lines. Eight is
+   * what it always drew.
+   */
+  openingLines: z.number().min(0).max(24).default(8),
 });
 export type ChapterPageStyle = z.infer<typeof chapterPageStyleSchema>;
 
@@ -150,11 +182,23 @@ export const lineStyleVars = (prefix: string, one: LineStyle): Record<string, st
   [`${prefix}-tracking`]: `${one.tracking / 100}em`,
 });
 
-export const chapterStyleVars = (style: ChapterPageStyle): Record<string, string> => {
+/**
+ * `bookFace` is the stack the book's own body is set in, where the caller is
+ * a book — what `book` as the face resolves to (§7a). The print used to patch
+ * this on afterwards, which made the word on the screen and the type on the
+ * page disagree; now the one function knows, and a manuscript print that
+ * passes nothing gets Courier, which is what a script's leaf wants.
+ */
+export const chapterStyleVars = (style: ChapterPageStyle, bookFace?: string): Record<string, string> => {
   const line = (name: string, one: LineStyle): Record<string, string> => lineStyleVars(`--chapter-${name}`, one);
   return {
-    '--chapter-face': FACE_STACKS[style.face],
+    // `manuscript` is the older spelling of the same intent and is stored in
+    // projects made before `book` existed, so both resolve to the body face
+    // where there is a book — an existing chapter page draws exactly as it did.
+    '--chapter-face': (style.face === 'book' || style.face === 'manuscript') && bookFace ? bookFace : FACE_STACKS[style.face],
     '--chapter-drop': `${style.dropInches}in`,
+    /** A chapter opening above its first paragraph, in lines of the body. */
+    '--chapter-opening-lines': `${style.openingLines}`,
     // The same drop as a share of the sheet, for a preview drawn smaller than
     // paper: CSS cannot divide a length by a length, and a small sheet whose
     // block dropped a literal two and a half inches would be blank.
@@ -220,8 +264,8 @@ export const chapterLeafContent = (file: ProjectFile, placed: PlacedMarker): Cha
 };
 
 /** The same, as an inline `style="…"` for the printed document. */
-export const chapterStyleAttr = (style: ChapterPageStyle): string =>
-  Object.entries(chapterStyleVars(style))
+export const chapterStyleAttr = (style: ChapterPageStyle, bookFace?: string): string =>
+  Object.entries(chapterStyleVars(style, bookFace))
     .map(([name, value]) => `${name}:${value}`)
     .join(';');
 

@@ -115,12 +115,15 @@ describe('what belongs to the chapter and what belongs to the book', () => {
   it('sets the type once, for the whole book', () => {
     let seen: ProjectFile | null = null;
     render(<Harness start={book(['One', 'Two'])} onFile={(file) => (seen = file)} />);
-    fireEvent.change(screen.getByLabelText('Face'), { target: { value: 'serif' } });
+    // The list is the running heads' now (§7a): the book's own face by name
+    // and the five it offers. `serif` is the name old-style had before it
+    // widened and is no longer offered, though it still parses.
+    fireEvent.change(screen.getByLabelText('Face'), { target: { value: 'old_style' } });
     fireEvent.change(screen.getByLabelText('The name size'), { target: { value: '24' } });
     fireEvent.click(screen.getByLabelText('The name italic'));
 
     const style = chapterPageStyleOf(seen as unknown as ProjectFile);
-    expect(style.face).toBe('serif');
+    expect(style.face).toBe('old_style');
     expect(style.title.size).toBe(24);
     expect(style.title.italic).toBe(true);
     // Nowhere to disagree with it chapter by chapter.

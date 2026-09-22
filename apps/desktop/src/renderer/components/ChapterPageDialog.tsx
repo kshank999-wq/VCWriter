@@ -95,10 +95,20 @@ export const CASE_WORDS: Record<TypeCase, string> = {
   small_caps: 'Small caps',
 };
 
+/**
+ * The faces on offer (§7a). The list is the running heads' — the book's own
+ * face by name, and the five it offers — plus the manuscript's Courier, which
+ * is what a script's chapter leaf wants. `serif` is not offered: it is the
+ * name old-style had before the list widened, and it still parses.
+ */
 const FACE_WORDS: Record<TypeFace, string> = {
-  manuscript: 'The manuscript’s',
-  serif: 'Serif',
+  book: 'The book’s face',
+  old_style: 'Old-style serif',
+  transitional: 'Transitional serif',
+  modern: 'Modern serif',
   sans: 'Sans serif',
+  manuscript: 'The manuscript’s',
+  serif: 'Old-style serif',
 };
 
 function Body({
@@ -767,9 +777,24 @@ export function ChapterStyleFields({
           onChange={(event) => onUpdate((current) => setChapterPageStyle(current, { dropInches: Number(event.target.value) }))}
         />
       </label>
+      <label className="field">
+        <span>
+          Above the first paragraph — {style.openingLines} {style.openingLines === 1 ? 'line' : 'lines'}
+        </span>
+        <input
+          type="range"
+          aria-label={`${nouns.division} opening drop`}
+          min={0}
+          max={16}
+          step={1}
+          value={style.openingLines}
+          onChange={(event) => onUpdate((current) => setChapterPageStyle(current, { openingLines: Number(event.target.value) }))}
+        />
+      </label>
       <p className="muted small">
-        The drop is the page a {unit} opens on with a leaf of its own. A {unit} that opens above its first
-        paragraph keeps the book’s own opening depth.
+        The first is the page a {unit} opens on with a leaf of its own, in inches; the second is a {unit} that
+        opens above its first paragraph, in lines of the body — what it has to look right against is the text
+        under it.
       </p>
     </section>
   );

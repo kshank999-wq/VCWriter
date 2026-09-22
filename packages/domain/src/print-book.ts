@@ -188,12 +188,11 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
  * the text is in the book's face — so a chapter page that never chose a face
  * is set in the body's rather than in Courier.
  */
-const chapterStyleFor = (context: BookRenderContext): string => {
-  const style = chapterStyleAttr(context.chapterStyle);
-  return context.chapterStyle.face === 'manuscript'
-    ? `${style};--chapter-face:${faceStackOf(context.settings.face)}`
-    : style;
-};
+const chapterStyleFor = (context: BookRenderContext): string =>
+  // The book's own face, handed to the one function that decides what the
+  // properties mean (§7a). It used to be patched on afterwards, here, which
+  // let the word on the screen and the type on the page disagree.
+  chapterStyleAttr(context.chapterStyle, faceStackOf(context.settings.face));
 
 const openingMarkup = (block: BookBlock, context: BookRenderContext): string => {
   const chapter = block.chapter;
@@ -450,7 +449,7 @@ export const BOOK_STYLES = `
   .bk-plate-image { display: block; width: 100%; height: 100%; object-fit: cover; }
   .bk-figure-missing, .bk-plate-missing { height: calc(var(--bk-lead) * 8); border: 1px dashed #999; color: #777; display: flex; align-items: center; justify-content: center; font-size: 0.85em; }
   .bk-caption { margin: 0; padding-top: calc(var(--bk-lead) * 0.5); font-size: 0.85em; text-align: center; font-style: italic; }
-  .bk-opening { padding-top: calc(var(--bk-lead) * 8); padding-bottom: calc(var(--bk-lead) * 2); font-family: var(--chapter-face, var(--bk-face)); }
+  .bk-opening { padding-top: calc(var(--bk-lead) * var(--chapter-opening-lines, 8)); padding-bottom: calc(var(--bk-lead) * 2); font-family: var(--chapter-face, var(--bk-face)); }
   .bk-chapter-head { display: inline-block; border-bottom: var(--chapter-rule, none); padding-bottom: 0.35em; }
   .bk-chapter-label { margin: 0; font-size: var(--chapter-number-size); font-weight: var(--chapter-number-weight); font-style: var(--chapter-number-style); text-transform: var(--chapter-number-case); font-variant-caps: var(--chapter-number-variant); letter-spacing: var(--chapter-number-tracking); line-height: 1.3; }
   .bk-chapter-title { margin: 0.6em 0 0; font-size: var(--chapter-title-size); font-weight: var(--chapter-title-weight); font-style: var(--chapter-title-style); text-transform: var(--chapter-title-case); font-variant-caps: var(--chapter-title-variant); letter-spacing: var(--chapter-title-tracking); line-height: 1.25; }

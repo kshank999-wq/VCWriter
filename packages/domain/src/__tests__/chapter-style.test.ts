@@ -10,6 +10,8 @@ import {
   chapterPagesEverywhere,
   chapterStyleAttr,
   chapterStyleVars,
+  TYPE_FACES,
+  chapterPageStyleSchema,
   createProjectFile,
   moveUnit,
   paginateProject,
@@ -289,5 +291,56 @@ describe('the page for a book', () => {
     expect(leafOf(gone, markerIds[0]!).image).toBeNull();
     // And the printed page carries the library's picture.
     expect(renderPrintDocumentHtml(chosen)).toContain('alt="A ray bending"');
+  });
+});
+
+/**
+ * The chapter openings' style options (addendum 20 §7a, from Ken: *the chapter
+ * openings need the same style options*).
+ *
+ * Two gaps, both the running heads' shape: the face was three generic names
+ * with `manuscript` secretly meaning the book's face, and the drop of an
+ * opening above its first paragraph was hard-coded in the stylesheet with the
+ * screen admitting it.
+ */
+describe('the chapter openings’ style options', () => {
+  it('offers the book’s own face by name, and the faces the book offers', () => {
+    expect([...TYPE_FACES]).toEqual(['book', 'old_style', 'transitional', 'modern', 'sans', 'manuscript']);
+    const file = createProjectFile({ title: 'The Lamp', format: 'novel' });
+    const body = "Baskerville, 'Libre Baskerville', 'Times New Roman', Times, serif";
+    // `book` is resolved by the caller's body face rather than patched on after.
+    const own = chapterStyleVars(chapterPageStyleOf(setChapterPageStyle(file, { face: 'book' })), body);
+    expect(own['--chapter-face']).toBe(body);
+    // A face chosen for the heading alone is its own, whatever the book is in.
+    const modern = chapterStyleVars(chapterPageStyleOf(setChapterPageStyle(file, { face: 'modern' })), body);
+    expect(modern['--chapter-face']).toContain('Didot');
+    // Where there is no book — a script's leaf — `book` is the manuscript's.
+    expect(chapterStyleVars(chapterPageStyleOf(setChapterPageStyle(file, { face: 'book' })))['--chapter-face']).toContain('Courier');
+  });
+
+  it('keeps every older spelling drawing exactly as it did', () => {
+    const file = createProjectFile({ title: 'The Lamp', format: 'novel' });
+    const body = "Didot, 'Bodoni MT', 'Bodoni 72', Georgia, serif";
+    // `manuscript` meant the book's face inside a book, by an override applied
+    // after the fact. It still does, in the one function now.
+    const older = chapterStyleVars(chapterPageStyleOf(setChapterPageStyle(file, { face: 'manuscript' })), body);
+    expect(older['--chapter-face']).toBe(body);
+    // `serif` is the name old-style had; it still parses and draws the same stack.
+    const legacy = chapterPageStyleSchema.parse({ face: 'serif' });
+    expect(legacy.face).toBe('serif');
+    expect(chapterStyleVars(legacy, body)['--chapter-face']).toContain('Iowan');
+  });
+
+  it('gives an opening above the first paragraph a drop of its own, in lines', () => {
+    const file = createProjectFile({ title: 'The Lamp', format: 'novel' });
+    // Eight is what the stylesheet hard-coded, so a book that never chooses is
+    // unchanged; the property is what the print multiplies the leading by.
+    expect(chapterPageStyleOf(file).openingLines).toBe(8);
+    expect(chapterStyleVars(chapterPageStyleOf(file))['--chapter-opening-lines']).toBe('8');
+    const deeper = chapterPageStyleOf(setChapterPageStyle(file, { openingLines: 14 }));
+    expect(chapterStyleVars(deeper)['--chapter-opening-lines']).toBe('14');
+    // It is the leaf's drop's sibling, not its replacement: they are different
+    // pages and measured in different units.
+    expect(deeper.dropInches).toBe(2.5);
   });
 });
