@@ -82,19 +82,62 @@ describe('the room', () => {
     expect(items('screenplay')).not.toContain('window.layout');
   });
 
-  it('lists the parts in front of the story and behind it, and the chapters between', () => {
+  /** The rail's rows, in order, as a reader would read them down the list. */
+  const railRows = (): string[] =>
+    Array.from(document.querySelectorAll('.layout-tree .layout-part .layout-part-name')).map((one) => one.textContent ?? '');
+
+  /** One row by its name — the button carries a grip before it, so the text is matched. */
+  const railRow = (name: string): HTMLElement => {
+    const found = Array.from(document.querySelectorAll('.layout-tree .layout-part .layout-part-name')).find(
+      (one) => one.textContent === name,
+    );
+    if (!found) throw new Error(`No row called ${name}`);
+    return found.closest('button') as HTMLElement;
+  };
+
+  /** Turn the spread until a page of the story is up, and choose it. */
+  const chooseStoryPage = (): HTMLElement => {
+    const next = screen.getByRole('button', { name: 'Next spread' });
+    for (let turn = 0; turn < 14; turn += 1) {
+      const story = (Array.from(document.querySelectorAll('.layout-sheet:not(.layout-no-sheet)')) as HTMLElement[]).find((one) =>
+        one.querySelector('.bk-p'),
+      );
+      if (story) {
+        fireEvent.click(story);
+        return story;
+      }
+      fireEvent.click(next);
+    }
+    throw new Error('No page of the story was found');
+  };
+
+  it('is one list in the order the book is bound, with no headings and nothing else said', () => {
     render(<Harness initial={novel()} />);
-    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    expect(rail.getByRole('button', { name: /^Half title/ })).toBeDefined();
-    expect(rail.getByRole('button', { name: /^Title page/ })).toBeDefined();
-    expect(rail.getByRole('button', { name: /^Contents/ })).toBeDefined();
-    expect(rail.getByRole('button', { name: /^About the author/ })).toBeDefined();
-    expect(rail.getByRole('button', { name: /^Chapter 1/ })).toBeDefined();
-    expect(rail.getByRole('button', { name: /^Chapter 2/ })).toBeDefined();
-    expect(rail.getByText(/Drag a chapter to move it/)).toBeDefined();
-    // The page between the parts of the book: one row per chapter, saying how it opens.
-    expect(rail.getAllByText('Chapter page')).toHaveLength(2);
-    expect(rail.getAllByText(/above the first paragraph/)).toHaveLength(2);
+    expect(railRows()).toEqual(['Half title', 'Title page', 'Copyright', 'Contents', 'The Lamp', 'The Return', 'About the author']);
+    // The three headings and the sentence under them are gone (§9a, from Ken).
+    const rail = document.querySelector('.layout-rail') as HTMLElement;
+    expect(rail.querySelectorAll('h3')).toHaveLength(0);
+    expect(rail.textContent).not.toMatch(/Front matter|Back matter|above the first paragraph|Picture facing/);
+    // One list, and everything in it is one row.
+    expect(rail.querySelectorAll('ul')).toHaveLength(1);
+    expect(within(rail).getByRole('list', { name: 'The book' })).toBeDefined();
+  });
+
+  it('sits a picture under the chapter it is in, and says nothing about the kind', () => {
+    let start = novel();
+    start = updateBeat(start, start.beats[0]!.id, {
+      manuscript: {
+        elements: [
+          { id: 'p-0' as never, type: 'paragraph', text: 'Chapter 1 begins.', characterId: null, attributes: {} },
+          { id: 'f-1' as never, type: 'figure', text: 'The harbour', characterId: null, attributes: { assetId: 'a1' } },
+        ],
+      },
+    });
+    render(<Harness initial={start} />);
+    expect(railRows()).toEqual(['Half title', 'Title page', 'Copyright', 'Contents', 'The Lamp', 'The harbour', 'The Return', 'About the author']);
+    const picture = document.querySelector('.layout-rail-picture') as HTMLElement;
+    expect(picture.textContent).toContain('The harbour');
+    expect(picture.style.paddingLeft).toBe('16px');
   });
 
   /** Feed the room's one art-page picker a file, as the file dialog would. */
@@ -105,58 +148,42 @@ describe('the room', () => {
     fireEvent.change(picker);
   };
 
-  it('puts a picture on the page facing a chapter from a file, and opens the chapter’s own page, from the chapter’s row', async () => {
+  it('opens the chapter’s own page on a double-click of its row', () => {
     const opened: string[] = [];
     render(<Harness initial={novel()} onOpenChapterPage={(markerId) => opened.push(markerId)} />);
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    // Two chapters, two of each action.
-    expect(rail.getAllByRole('button', { name: '+ Picture facing' })).toHaveLength(2);
-    fireEvent.click(rail.getAllByRole('button', { name: '+ Picture facing' })[1]!);
-    // Nothing is made until a picture arrives: a cancelled dialog leaves no empty page.
-    expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'plate')).toBe(false);
-    chooseArt('facing-two.png');
-    await waitFor(() => expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'plate')).toBe(true));
-    const file = latest as ProjectFile;
-    const plate = partsOf(file).find((part) => part.kind === 'plate')!;
-    expect(plate.beforeMarkerId).toBe(file.markers[1]?.id);
-    expect(plate.assetId).toBe(file.assets![0]!.id);
-    expect(file.assets![0]!.name).toBe('facing-two.png');
-    // Listed where it falls, before the second chapter, and selected.
-    const names = rail.getAllByRole('button').map((button) => button.textContent ?? '');
-    expect(names.findIndex((name) => name.includes('Art pagepicture'))).toBeGreaterThan(-1);
-    expect(names.findIndex((name) => name.includes('Art pagepicture'))).toBeLessThan(names.findIndex((name) => name.includes('Chapter 2')));
-    expect((screen.getByLabelText('Plate place') as HTMLSelectElement).value).toBe(plate.beforeMarkerId);
-    expect(screen.getByRole('button', { name: 'Choose another picture…' })).toBeDefined();
-    fireEvent.click(rail.getAllByRole('button', { name: 'Chapter page…' })[0]!);
-    expect(opened).toEqual([file.markers[0]?.id]);
+    void rail;
+    fireEvent.doubleClick(railRow('The Lamp'));
+    expect(opened).toEqual([(latest as ProjectFile).markers[0]!.id]);
   });
 
-  it('adds an art page to the front matter or the back from the menu, the picture filling the page wherever it goes', async () => {
+  it('puts a picture into the page in hand, at the top of it, with the words moving down', async () => {
     render(<Harness initial={novel()} />);
-    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    fireEvent.click(rail.getByRole('button', { name: 'Add a part' }));
-    const menu = within(screen.getByRole('menu', { name: 'Parts to add' }));
-    // The plain kind is not offered; the two places are, and each opens the picker.
-    expect(menu.queryByRole('menuitem', { name: /^Art page — / })).toBeNull();
-    fireEvent.click(menu.getByRole('menuitem', { name: /^Art page in the front matter/ }));
-    chooseArt('title-art.png');
-    await waitFor(() => expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'plate')).toBe(true));
-    let plate = partsOf(latest as ProjectFile).find((part) => part.kind === 'plate')!;
-    expect(plate.inFront).toBe(true);
-    expect(plate.beforeMarkerId).toBeNull();
-    expect(within(rail.getByRole('list', { name: 'Front matter' })).getByRole('button', { name: /^Art page/ })).toBeDefined();
-    expect((screen.getByLabelText('Plate place') as HTMLSelectElement).value).toBe('front');
-    // The description prints nowhere and the fields say so.
-    expect(screen.getByLabelText('Art page description')).toBeDefined();
-    expect(screen.getByText(/The picture is the page, edge to edge/)).toBeDefined();
-    // Where moves it: to the back, and to face a chapter.
-    fireEvent.change(screen.getByLabelText('Plate place'), { target: { value: 'back' } });
-    plate = partsOf(latest as ProjectFile).find((part) => part.kind === 'plate')!;
-    expect(plate.inFront).toBe(false);
-    expect(within(rail.getByRole('list', { name: 'Back matter' })).getByRole('button', { name: /^Art page/ })).toBeDefined();
-    fireEvent.change(screen.getByLabelText('Plate place'), { target: { value: (latest as ProjectFile).markers[0]!.id }, });
-    plate = partsOf(latest as ProjectFile).find((part) => part.kind === 'plate')!;
-    expect(plate.beforeMarkerId).toBe((latest as ProjectFile).markers[0]!.id);
+    // Nothing chosen: the button refuses and says what to do first.
+    const add = screen.getByRole('button', { name: '+ Picture' });
+    expect(add.getAttribute('title')).toMatch(/Choose a page first/);
+    // Choosing a page on the spread puts it in hand and outlines it.
+    const sheet = document.querySelector('.layout-sheet:not(.layout-no-sheet)') as HTMLElement;
+    fireEvent.click(sheet);
+    await waitFor(() => expect(document.querySelector('.layout-sheet-chosen')).not.toBeNull());
+
+    // Turn to a page of the story, where a picture can land.
+    chooseStoryPage();
+    const before = (latest as ProjectFile).beats[0]!.manuscript.elements.length;
+    fireEvent.click(screen.getByRole('button', { name: '+ Picture' }));
+    // Nothing is made until a picture arrives: a cancelled dialog leaves nothing.
+    expect((latest as ProjectFile).beats.flatMap((beat) => beat.manuscript.elements).some((one) => one.type === 'figure')).toBe(false);
+    chooseArt('harbour.png');
+    await waitFor(() =>
+      expect((latest as ProjectFile).beats.flatMap((beat) => beat.manuscript.elements).some((one) => one.type === 'figure')).toBe(true),
+    );
+    const file = latest as ProjectFile;
+    const beat = file.beats.find((one) => one.manuscript.elements.some((element) => element.type === 'figure'))!;
+    expect(beat.manuscript.elements.length).toBeGreaterThan(before - 1);
+    // It went in before what was on the page, so the words moved down.
+    const at = beat.manuscript.elements.findIndex((one) => one.type === 'figure');
+    expect(beat.manuscript.elements[at + 1]?.type).toBe('paragraph');
+    expect(file.assets![0]!.name).toBe('harbour.png');
   });
 
   /** The book-wide settings live behind one button on the bar (§9). */
@@ -194,7 +221,7 @@ describe('the room', () => {
     render(<Harness initial={start} />);
     // The figure is on the rail; choosing it opens the picture's own fields.
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    fireEvent.click(rail.getByRole('button', { name: /The harbour/ }));
+    fireEvent.click(rail.getByRole('button', { name: /^The harbour/ }));
     expect((screen.getByLabelText('Figure place') as HTMLSelectElement).value).toBe('measure');
     // A page of its own, on the left-hand side of the spread.
     fireEvent.change(screen.getByLabelText('Figure place'), { target: { value: 'page' } });
@@ -224,13 +251,15 @@ describe('the room', () => {
     });
     render(<Harness initial={start} />);
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    fireEvent.click(rail.getByRole('button', { name: /The harbour/ }));
+    fireEvent.click(rail.getByRole('button', { name: /^The harbour/ }));
     const draw = screen.getByRole('button', { name: 'Draw the box…' });
     expect(draw.getAttribute('aria-pressed')).toBe('false');
+    // The box is drawn on a page of the story, which is where a figure can go.
+    const story = chooseStoryPage();
     fireEvent.click(draw);
     // The spread says it is waiting for a box.
-    const sheet = document.querySelector('.layout-sheet-drawing') as HTMLElement;
-    expect(sheet).not.toBeNull();
+    const sheet = story;
+    expect(sheet.classList.contains('layout-sheet-drawing')).toBe(true);
     expect(screen.getByRole('button', { name: 'Drawing — drag on the page' })).toBeDefined();
     // jsdom measures nothing, so the sheet is given a rectangle to be read against.
     const rect = { left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
@@ -271,7 +300,7 @@ describe('the room', () => {
 
   it('adds a part, edits its words, and removes it after asking', () => {
     render(<Harness initial={novel()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add a part' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
     fireEvent.click(screen.getByRole('menuitem', { name: /^Dedication/ }));
     expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'dedication')).toBe(true);
     fireEvent.change(screen.getByLabelText("The part's text"), { target: { value: 'For M.' } });
@@ -283,12 +312,14 @@ describe('the room', () => {
 
   it('offers a once-only part only once', () => {
     render(<Harness initial={novel()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add a part' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
     const options = screen.getAllByRole('menuitem').map((item) => item.textContent ?? '');
     expect(options.some((option) => option.startsWith('Contents'))).toBe(false);
     expect(options.some((option) => option.startsWith('Preface'))).toBe(true);
     // A novel is not offered a new story.
-    expect(options.some((option) => option.startsWith('A new story'))).toBe(false);
+    expect(options.some((option) => option.startsWith('New story'))).toBe(false);
+    // A kind is offered by its name alone: the note in the margin is gone (§9a).
+    expect(options).toContain('Preface');
   });
 
   it('takes a part out from its row, after asking', () => {
@@ -298,7 +329,7 @@ describe('the room', () => {
     fireEvent.click(rail.getByRole('button', { name: 'Remove' }));
     expect(partsOf(latest as ProjectFile).map((part) => part.kind)).not.toContain('copyright');
     // And it can come back from the menu.
-    fireEvent.click(screen.getByRole('button', { name: 'Add a part' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
     expect(screen.getAllByRole('menuitem').some((item) => (item.textContent ?? '').startsWith('Copyright'))).toBe(true);
   });
 
@@ -322,18 +353,77 @@ describe('the room', () => {
     expect(unitsInStoryOrder(latest as ProjectFile).map((unit) => unit.title)).toEqual(['The Return', 'Chapter One']);
   });
 
-  it('offers a new story on a collection, and lists the stories with a page between them', () => {
+  it('draws a box with nothing in it, and fills it afterwards', async () => {
+    render(<Harness initial={novel()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    const story = chooseStoryPage();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Draw a box for a picture…' }));
+    expect(story.classList.contains('layout-sheet-drawing')).toBe(true);
+    const rect = { left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    story.getBoundingClientRect = () => rect;
+    story.setPointerCapture = () => undefined;
+    fireEvent.pointerDown(story, { clientX: 240, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(story, { clientX: 360, clientY: 300, pointerId: 1 });
+    fireEvent.pointerUp(story, { clientX: 360, clientY: 300, pointerId: 1 });
+
+    // A figure with no picture in it: the box holds its place and says so.
+    const box = (latest as ProjectFile).beats.flatMap((beat) => beat.manuscript.elements).find((one) => one.type === 'figure');
+    expect(box).toBeDefined();
+    expect(box!.attributes.assetId).toBeUndefined();
+    expect(figurePlacement(box!).place).toBe('right');
+    expect(screen.getByRole('heading', { name: 'An empty box' })).toBeDefined();
+
+    // And the picture goes in afterwards, which is the order Ken asked for.
+    fireEvent.click(screen.getByRole('button', { name: 'Choose a picture…' }));
+    chooseArt('harbour.png');
+    await waitFor(() => {
+      const filled = (latest as ProjectFile).beats.flatMap((beat) => beat.manuscript.elements).find((one) => one.id === box!.id);
+      expect(filled!.attributes.assetId).toBe((latest as ProjectFile).assets![0]!.id);
+    });
+  });
+
+  it('brings a picture page to face the chapter it is dropped on', async () => {
+    render(<Harness initial={novel()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Picture on a page of its own…' }));
+    // Nothing was chosen, so the menu refuses rather than guessing a page.
+    expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'plate')).toBe(false);
+
+    // A front-matter page in hand makes an art page there instead.
+    const sheet = document.querySelector('.layout-sheet:not(.layout-no-sheet)') as HTMLElement;
+    fireEvent.click(sheet);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Picture on a page of its own…' }));
+    chooseArt('plate.png');
+    await waitFor(() => expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'plate')).toBe(true));
+    expect(partsOf(latest as ProjectFile).find((part) => part.kind === 'plate')!.inFront).toBe(true);
+    // Its row is named after the picture rather than after the kind (§9a).
+    expect(railRows()).toContain('plate.png');
+
+    // Dragged onto a chapter, it comes to face that chapter.
+    const drag = (from: HTMLElement, to: HTMLElement) => {
+      fireEvent.dragStart(from, { dataTransfer: { setData: () => undefined } });
+      fireEvent.dragOver(to);
+      fireEvent.drop(to);
+      fireEvent.dragEnd(from);
+    };
+    drag(railRow('plate.png').closest('li') as HTMLElement, railRow('The Return').closest('li') as HTMLElement);
+    const plate = partsOf(latest as ProjectFile).find((part) => part.kind === 'plate')!;
+    expect(plate.beforeMarkerId).toBe((latest as ProjectFile).markers[1]!.id);
+    // And it is listed where it falls: just before that chapter.
+    const rows = railRows();
+    expect(rows.indexOf('plate.png')).toBe(rows.indexOf('The Return') - 1);
+  });
+
+  it('lists a collection’s stories as rows of the same list', () => {
     let file = createProjectFile({ title: 'Tales', format: 'short_story' });
     file = beginStory(file, { title: 'The Road' }).file;
     file = beginStory(file, { title: 'The Harbour' }).file;
     render(<Harness initial={file} onOpenChapterPage={() => undefined} />);
-    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    expect(rail.getAllByText('Story page')).toHaveLength(2);
-    expect(rail.getAllByRole('button', { name: 'Story page…' })).toHaveLength(2);
-    expect(rail.getAllByRole('button', { name: '+ Picture facing' })).toHaveLength(2);
-    fireEvent.click(screen.getByRole('button', { name: 'Add a part' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /^A new story/ }));
-    expect(storiesOf(latest as ProjectFile).map((story) => story.placed.marker.title)).toEqual(['The Road', 'The Harbour', 'New story']);
+    expect(railRows()).toContain('The Road');
+    expect(railRows()).toContain('The Harbour');
+    const rail = document.querySelector('.layout-rail') as HTMLElement;
+    expect(rail.textContent).not.toMatch(/Story page|Picture facing/);
   });
 
   it('folds a group of settings behind its heading, and remembers', () => {
@@ -414,24 +504,34 @@ describe('the room', () => {
     expect(screen.queryByLabelText('Under the title')).toBeNull();
   });
 
-  it('opens the chapter page from its row, and takes a leaf off after asking', () => {
-    const opened: string[] = [];
-    let file = novel();
-    file = setChapterPage(file, file.markers[0]!.id, { epigraph: 'A lamp is a lamp.' });
-    render(<Harness initial={file} onOpenChapterPage={(markerId) => opened.push(markerId)} />);
+  it('takes a chapter out and keeps every word, after saying what goes', () => {
+    render(<Harness initial={novel()} />);
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    expect(rail.getAllByText(/a leaf of its own/)).toHaveLength(1);
-    // The row's name opens the page; the × asks, then takes the leaf off.
-    fireEvent.click(rail.getAllByRole('button', { name: /^Chapter page.*a leaf of its own/ })[0]!);
-    expect(opened).toEqual([file.markers[0]!.id]);
-    fireEvent.click(rail.getByRole('button', { name: 'Take the chapter page off' }));
-    fireEvent.click(rail.getByRole('button', { name: 'Take it off' }));
-    expect((latest as ProjectFile).markers[0]!.page.epigraph).toBe('');
-    expect(rail.queryByText(/a leaf of its own/)).toBeNull();
+    fireEvent.click(rail.getByRole('button', { name: 'Remove The Return' }));
+    expect(rail.getByText(/not a word is cut/)).toBeDefined();
+    fireEvent.click(rail.getByRole('button', { name: 'Remove' }));
+    expect(contentsDivisions(latest as ProjectFile).map((placed) => placed.marker.title)).toEqual(['The Lamp']);
+    // The words are still there: the sections joined the chapter before them.
+    expect((latest as ProjectFile).beats.flatMap((beat) => beat.manuscript.elements.map((one) => one.text))).toContain('Chapter 2 begins.');
     // The rail has a divider to drag, starting half an inch wider than it was.
-    const divider = screen.getByRole('separator', { name: 'Rail width' });
-    expect(divider).toBeDefined();
+    expect(screen.getByRole('separator', { name: 'Rail width' })).toBeDefined();
     expect((document.querySelector('.layout-rail') as HTMLElement).style.flex).toBe('0 0 288px');
+  });
+
+  it('takes a story added by accident away whole, its empty section with it', () => {
+    let file = createProjectFile({ title: 'Tales', format: 'short_story' });
+    file = beginStory(file, { title: 'The Road' }).file;
+    render(<Harness initial={file} onOpenChapterPage={() => undefined} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New story' }));
+    expect(storiesOf(latest as ProjectFile).map((story) => story.placed.marker.title)).toEqual(['The Road', 'New story']);
+    const units = (latest as ProjectFile).units.length;
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.click(rail.getByRole('button', { name: 'Remove New story' }));
+    expect(rail.getByText(/Nothing is written in it/)).toBeDefined();
+    fireEvent.click(rail.getByRole('button', { name: 'Remove' }));
+    expect(storiesOf(latest as ProjectFile).map((story) => story.placed.marker.title)).toEqual(['The Road']);
+    expect((latest as ProjectFile).units.length).toBe(units - 1);
   });
 
   it('opens a part in a dialog of its own on a double-click, with its page beside the fields', async () => {
@@ -452,7 +552,7 @@ describe('the room', () => {
 
   it('cuts a picture into a foreword’s text from the part’s dialog, beside the paragraph chosen', async () => {
     render(<Harness initial={novel()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add a part' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
     fireEvent.click(screen.getByRole('menuitem', { name: /^Foreword/ }));
     const foreword = partsOf(latest as ProjectFile).find((part) => part.kind === 'foreword')!;
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
@@ -502,8 +602,6 @@ describe('the room', () => {
       summary: 'Never set over the art.',
     });
     render(<Harness initial={file} />);
-    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    expect(rail.getAllByText(/a leaf of its own/)).toHaveLength(1);
     // Turn until the art's page is on the spread.
     const next = screen.getByRole('button', { name: 'Next spread' });
     let found: Element | null = null;

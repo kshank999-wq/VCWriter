@@ -1993,7 +1993,7 @@ function PutAFigureHere({
         assetId: chosen.id as AssetId,
         afterElementId,
         caption: words,
-      }),
+      }).file,
     );
     onClose();
   };

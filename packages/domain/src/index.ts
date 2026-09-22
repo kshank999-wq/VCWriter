@@ -73,6 +73,7 @@ export * from './chapter-summary.js';
 export * from './entities/book.js';
 export * from './book-layout.js';
 export * from './book-plan.js';
+export * from './book-rail.js';
 export * from './part-style.js';
 export * from './book-pages.js';
 export * from './print-book.js';

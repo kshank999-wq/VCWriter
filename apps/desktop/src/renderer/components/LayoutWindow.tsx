@@ -72,8 +72,17 @@ import {
   PRESET_INFO,
   bookFigures,
   bookPresetOf,
+  bookRows,
+  moveFigureBefore,
+  pagePlace,
   placeBookFigure,
+  placeFigure,
+  removeBookRow,
+  setFigurePicture,
+  whatGoesWithRow,
   type BookFigure,
+  type BookRow,
+  type PagePlace,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
 import { ChapterPageDialog, Line } from './ChapterPageDialog';
@@ -87,7 +96,7 @@ import { useBookLaying, type Laying } from '../book-typeset';
  * the middle, the inspector on the right.
  *
  * Nothing here edits a word of the manuscript, stores a page number or a
- * margin it worked out, or reorders the story (§10). What it writes is the
+ * margin it worked out, or reorders the story (§9a). What it writes is the
  * book's settings and the book's parts; what it draws is what `layPages`
  * decided from what the browser measured (§4).
  */
@@ -118,8 +127,40 @@ const OPENING_WORDS: Record<(typeof OPENINGS)[number], string> = {
 /** The spread a sheet is on: the first leaf stands alone, then pairs. */
 const spreadOfSheet = (sheet: number): number => (sheet <= 1 ? 0 : Math.floor(sheet / 2));
 
-/** Where an art page is going: among the front matter, at the back, or facing a chapter. */
-type ArtTarget = { kind: 'front' } | { kind: 'back' } | { kind: 'before'; markerId: string };
+/** Where a picture the writer is choosing will go, decided before the picker opens. */
+type ArtTarget =
+  | { kind: 'front' }
+  | { kind: 'back' }
+  | { kind: 'before'; markerId: string }
+  /** Into the story, before this element: across the measure, or a page of its own. */
+  | { kind: 'story'; elementId: string; as: 'measure' | 'page' }
+  /** Into a part: cut into its words where it has them, a page of its own where it has not. */
+  | { kind: 'part'; partId: string; as: 'measure' | 'page' }
+  /** Into a box already drawn and still empty (§9a). */
+  | { kind: 'fill'; elementId: string };
+
+/** The box drawn before anything has been chosen to go in it (§9a). */
+const NEW_BOX = 'new';
+
+/** A page that stands on nothing, before the book has been laid. */
+const EMPTY_PLACE: PagePlace = { elementId: null, partId: null, markerId: null };
+
+/** i, ii, iii — the front matter's numbers, for the rail. */
+const roman = (value: number): string => {
+  const parts: [number, string][] = [
+    [1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'],
+    [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i'],
+  ];
+  let left = value;
+  let out = '';
+  for (const [size, word] of parts) {
+    while (left >= size) {
+      out += word;
+      left -= size;
+    }
+  }
+  return out;
+};
 
 /** The page a part, or a figure, first appears on in a laying. */
 const pageOf = (laying: Laying, id: string): BookPage | undefined => {
@@ -134,7 +175,19 @@ const pageOf = (laying: Laying, id: string): BookPage | undefined => {
 
 export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenChapterPage }: LayoutWindowProps) {
   const { laying, box } = useBookLaying(file, open);
-  const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
+  /**
+   * What is chosen (§9a): one selection for the whole room, because the rail
+   * is one list. A row's id is a part's, a chapter's or a figure's, so the
+   * inspector reads whichever it turns out to be rather than the room keeping
+   * three selections that can disagree.
+   */
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  /**
+   * The page in hand (§9a, from Ken: *you select a page in the layout view
+   * and then add picture*). A sheet number, because a page is not a record —
+   * what is *on* it is read back through `pagePlace` at the moment of use.
+   */
+  const [selectedSheet, setSelectedSheet] = useState<number | null>(null);
   const [spread, setSpread] = useState(0);
   const [zoom, setZoom] = usePreference('layout.zoom', 0.55);
   const [busy, setBusy] = useState(false);
@@ -153,9 +206,11 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   /** The chapter page being asked about before it is taken off (§9). */
   const [clearing, setClearing] = useState<string | null>(null);
   /**
-   * Drawing a picture's box on the page (§8a, from Ken: *you draw a box and
-   * then the text moves around the box*): which figure is waiting for its
-   * rectangle. The drag says how wide it is and which side it cuts in at.
+   * Drawing a picture's box on the page (§8a, §9a, from Ken: *you should be
+   * able to draw a box in a page and it will create a graphics box… and then
+   * add a graphic to it*). The drag says how wide the box is and which side
+   * it cuts in at; `'new'` makes the box first and leaves the picture for
+   * afterwards, which is the order he asked for.
    */
   const [drawing, setDrawing] = useState<string | null>(null);
   /**
@@ -164,17 +219,15 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
    * drags, remembered per machine, starting half an inch wider than it was.
    */
   const rail = useSplit({ key: 'layout.rail', initial: 288, min: 200, reserve: 720, axis: 'x' });
-  const [selectedFigureId, setSelectedFigureId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  /** The Add a part menu, open at the button (§9). */
+  /** The Add menu, open at the button (§9a). */
   const [addMenu, setAddMenu] = useState<{ x: number; y: number } | null>(null);
   /** What the rail is dragging: a part within its half, or a chapter as a block. */
   const [dragging, setDragging] = useState<{ kind: 'part' | 'chapter'; id: string } | null>(null);
   const [over, setOver] = useState<string | null>(null);
   /**
-   * The one picker for an art page (§9, from Ken: *it should be just as
-   * easy to add a plate in the front matter, the back matter or the story*).
-   * Where the page will go is decided before the picker opens and read back
+   * The one picker for every picture the room takes in (§9, §9a). What the
+   * picture will become is decided before the picker opens and read back
    * when the file arrives; nothing is made until it does, so a cancelled
    * dialog leaves no empty page behind.
    */
@@ -182,18 +235,12 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const artTarget = useRef<ArtTarget>({ kind: 'back' });
 
   const parts = useMemo(() => partsOf(file), [file]);
-  const selected = parts.find((part) => part.id === selectedPartId) ?? null;
+  /** The book as one list (§9a): the rail, and the room's one selection. */
+  const rows = useMemo(() => bookRows(file), [file]);
+  const selectedRow = rows.find((row) => row.id === selectedRowId) ?? null;
+  const selected = selectedRow?.part ?? null;
   const opened = parts.find((part) => part.id === partDialogId) ?? null;
   const divisions = useMemo(() => contentsDivisions(file), [file]);
-  /** The plates the writer put before each chapter, by the chapter (§9). */
-  const platesBefore = useMemo(() => {
-    const map = new Map<string, BookPart[]>();
-    for (const part of parts) {
-      if (part.kind !== 'plate' || !part.beforeMarkerId) continue;
-      map.set(part.beforeMarkerId, [...(map.get(part.beforeMarkerId) ?? []), part]);
-    }
-    return map;
-  }, [parts]);
 
   const pages = laying?.laid.pages ?? [];
   const spreadCount = Math.max(1, Math.ceil((pages.length + 1) / 2));
@@ -266,24 +313,53 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
     }
   };
 
-  const chapterCount = divisions.length;
   const figures = bookFigures(file);
-  /** A collection's divisions are stories (addendum 22); the rail says so. */
+  /** A collection's divisions are stories (addendum 22); the room says so. */
   const noun = isCollection(file.project.format) ? 'Story' : 'Chapter';
-  const nounPlural = isCollection(file.project.format) ? 'stories' : 'chapters';
-  const selectedFigure = figures.find((figure) => figure.elementId === selectedFigureId) ?? null;
+  const selectedFigure = figures.find((figure) => figure.elementId === selectedRowId) ?? null;
 
-  /** Open the picker for an art page that will go here. */
+  /**
+   * What the page in hand stands on (§9a). Everything that adds a picture
+   * asks this and nothing else, so *add it to this page* means one thing
+   * wherever it is pressed.
+   */
+  const place = laying && selectedSheet !== null ? pagePlace(laying.laid.pages, laying.blocks, selectedSheet) : EMPTY_PLACE;
+  /** What the page in hand is called in the book, for the buttons that act on it. */
+  const chosen = pages.find((one) => one.sheet === selectedSheet);
+  const chosenPage =
+    !chosen || chosen.numbering === 'none'
+      ? 'this page'
+      : `page ${chosen.numbering === 'roman' ? roman(chosen.number) : chosen.number}`;
+
+  /** Open the picker for a picture that will become this. */
   const importArt = (target: ArtTarget) => {
     artTarget.current = target;
     artPicker.current?.click();
   };
 
   /**
+   * A picture into the page in hand (§9a, from Ken: *you click on a page, you
+   * click on a button that says add picture… to that page, and it scoots all
+   * the text down*).
+   *
+   * There is one act and it reads where it lands. In the story a picture is a
+   * figure put in before the first thing on the page, so the page opens with
+   * it and the words move down; in a part with words it is cut into the text;
+   * and where the page has neither it is a page of its own. None of that is a
+   * choice the writer makes — it is what *here* means at each of those three
+   * places.
+   */
+  const importPicture = (as: 'measure' | 'page') => {
+    if (place.elementId) importArt({ kind: 'story', elementId: place.elementId, as });
+    else if (place.partId) importArt({ kind: 'part', partId: place.partId, as });
+    else importArt({ kind: 'back' });
+  };
+
+  /**
    * The picture arrives: it joins the graphics library — the one place the
-   * book's pictures live, reachable from Research ▸ Graphics — and a page
-   * is made for it where the writer asked, in one act, so a writer with a
-   * picture on disk never has to know the library exists to use one.
+   * book's pictures live, reachable from Research ▸ Graphics — and is put
+   * where the writer asked, in one act, so a writer with a picture on disk
+   * never has to know the library exists to use one.
    */
   const takeArt = async (picked: File | undefined) => {
     if (!picked) return;
@@ -296,13 +372,48 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       const read = await readPicture(picked);
       onUpdate((current) => {
         const added = addGraphic(current, { name: picked.name, ...read });
+        const assetId = added.asset.id;
+
+        if (target.kind === 'fill') return setFigurePicture(added.file, target.elementId, assetId as string);
+
+        if (target.kind === 'story') {
+          const beat = added.file.beats.find((one) => one.manuscript.elements.some((element) => (element.id as string) === target.elementId));
+          if (!beat) return added.file;
+          const made = placeFigure(added.file, {
+            beatId: beat.id,
+            assetId,
+            beforeElementId: target.elementId as never,
+            attributes: target.as === 'page' ? { bookPlace: 'page' } : {},
+          });
+          if (made.elementId) {
+            setSelectedRowId(made.elementId as string);
+            turnTo.current = made.elementId as string;
+          }
+          return made.file;
+        }
+
+        if (target.kind === 'part') {
+          const part = partsOf(added.file).find((one) => one.id === target.partId);
+          // A picture cut into a part's own words, where its words take one.
+          if (part && target.as === 'measure' && partTakesInsets(part.kind)) {
+            setSelectedRowId(part.id);
+            return addPartInset(added.file, part.id, { assetId: assetId as string }).file;
+          }
+          const made = addPart(added.file, 'plate', { assetId, inFront: part ? halfOf(part) === 'front' : false });
+          if (made.partId) {
+            setSelectedRowId(made.partId);
+            turnTo.current = made.partId;
+          }
+          return made.file;
+        }
+
         const made = addPart(added.file, 'plate', {
-          assetId: added.asset.id,
+          assetId,
           inFront: target.kind === 'front',
           beforeMarkerId: target.kind === 'before' ? target.markerId : null,
         });
         if (made.partId) {
-          setSelectedPartId(made.partId);
+          setSelectedRowId(made.partId);
           turnTo.current = made.partId;
         }
         return made.file;
@@ -314,115 +425,102 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   };
 
   /**
-   * What the Add a part menu offers: every kind the book can still take, an
-   * art page for either half — the picker, not a blank page, being what a
-   * press opens — and on a collection a new story.
+   * What the Add menu offers (§9a). A picture first, because that is what a
+   * writer in this room wants most often; then the divisions; then the parts
+   * of the book, which are what the menu used to be entirely.
    */
   const addEntries: MenuEntry[] = [
+    {
+      label: 'Picture…',
+      disabled: place.elementId || place.partId ? null : 'Choose a page first',
+      onPick: () => importPicture('measure'),
+    },
+    {
+      label: 'Picture on a page of its own…',
+      disabled: place.elementId || place.partId ? null : 'Choose a page first',
+      onPick: () => importPicture('page'),
+    },
+    {
+      label: 'Draw a box for a picture…',
+      disabled: laying ? null : 'The book is still being set',
+      onPick: () => setDrawing(NEW_BOX),
+    },
+    'rule',
+    ...(isCollection(file.project.format)
+      ? [{ label: 'New story', onPick: () => onUpdate((current) => beginStory(current, { title: 'New story' }).file) }]
+      : []),
     ...ADDABLE_KINDS.filter((kind) => kind !== 'plate' && mayAdd(file, kind)).map((kind) => ({
-      label: `${PART_INFO[kind].name} — ${PART_INFO[kind].note}`,
+      label: PART_INFO[kind].name,
       onPick: () =>
         onUpdate((current) => {
           const made = addPart(current, kind);
-          if (made.partId) setSelectedPartId(made.partId);
+          if (made.partId) setSelectedRowId(made.partId);
           return made.file;
         }),
     })),
-    'rule',
-    { label: `${PART_INFO.plate.name} in the front matter — ${PART_INFO.plate.note}, from a file…`, onPick: () => importArt({ kind: 'front' }) },
-    { label: `${PART_INFO.plate.name} at the back — ${PART_INFO.plate.note}, from a file…`, onPick: () => importArt({ kind: 'back' }) },
-    ...(isCollection(file.project.format)
-      ? ['rule' as const, { label: 'A new story — on a section of its own, at the end', onPick: () => onUpdate((current) => beginStory(current, { title: 'New story' }).file) }]
-      : []),
   ];
 
-  /**
-   * A page on the spread, double-clicked (§9, from Ken: *double click the
-   * front matter or whatever page*): a part's page opens the part, a
-   * chapter's opening opens the chapter page.
-   */
-  const openPage = (page: BookPage) => {
+  /** Choosing a row turns to its page and puts that page in hand (§9a). */
+  const selectRow = (row: BookRow) => {
+    setSelectedRowId(row.id);
     if (!laying) return;
-    const blocks = new Map(laying.blocks.map((block) => [block.id, block]));
-    for (const piece of page.pieces) {
-      const block = blocks.get(piece.blockId);
-      if (!block) continue;
-      if (block.partId) {
-        setSelectedPartId(block.partId);
-        setPartDialogId(block.partId);
-        return;
-      }
-      if (block.kind === 'chapter_opening') {
-        openChapterPage(block.id);
-        return;
-      }
-    }
+    const page = pageOf(laying, row.id);
+    if (!page) return;
+    setSpread(spreadOfSheet(page.sheet));
+    setSelectedSheet(page.sheet);
   };
 
-  /** A part's row: pressable, draggable within its half, and removable. */
-  const partRow = (part: BookPart) => (
-    <PartRow
-      key={part.id}
-      part={part}
-      selected={part.id === selectedPartId}
-      over={over === `part:${part.id}`}
-      onSelect={() => {
-        setSelectedPartId(part.id);
-        goToPart(part.id);
-      }}
-      onOpen={() => {
-        setSelectedPartId(part.id);
-        goToPart(part.id);
-        setPartDialogId(part.id);
-      }}
-      onRemove={() => {
-        if (selectedPartId === part.id) setSelectedPartId(null);
-        onUpdate((current) => removePart(current, part.id));
-      }}
-      onDragStart={() => setDragging({ kind: 'part', id: part.id })}
-      onDragEnd={() => {
-        setDragging(null);
-        setOver(null);
-      }}
-      onDragOver={(event) => {
-        if (dragging?.kind !== 'part' || dragging.id === part.id) return;
-        event.preventDefault();
-        setOver(`part:${part.id}`);
-      }}
-      onDragLeave={() => setOver((current) => (current === `part:${part.id}` ? null : current))}
-      onDrop={(event) => {
-        if (dragging?.kind !== 'part') return;
-        event.preventDefault();
-        const moving = dragging.id;
-        onUpdate((current) => placePart(current, moving, part.id));
-        setDragging(null);
-        setOver(null);
-      }}
-    />
-  );
+  /**
+   * A double-click (§9a, from Ken: *if you want to format a page differently,
+   * you should be able to double click on that page, and there should be a
+   * dialog box*). Each row opens the one thing that sets its page.
+   */
+  const openRow = (row: BookRow) => {
+    selectRow(row);
+    if (row.kind === 'part') setPartDialogId(row.id);
+    else if (row.kind === 'chapter') openChapterPage(row.id);
+  };
 
-  /** Where a dragged part lands to go last in its half. */
-  const endZone = (half: 'front' | 'back') => (
-    <li
-      key={`end-${half}`}
-      className={`layout-drop-end${over === `part:end:${half}` ? ' drop-before' : ''}`}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setOver(`part:end:${half}`);
-      }}
-      onDragLeave={() => setOver((current) => (current === `part:end:${half}` ? null : current))}
-      onDrop={(event) => {
-        if (dragging?.kind !== 'part') return;
-        event.preventDefault();
-        const moving = dragging.id;
-        onUpdate((current) => placePart(current, moving, null));
-        setDragging(null);
-        setOver(null);
-      }}
-    >
-      Last of the {half} matter
-    </li>
-  );
+  /** The same, for a press on a page of the spread. */
+  const openPage = (page: BookPage) => {
+    if (!laying) return;
+    const at = pagePlace(laying.laid.pages, laying.blocks, page.sheet);
+    if (at.partId) {
+      setSelectedRowId(at.partId);
+      setPartDialogId(at.partId);
+      return;
+    }
+    if (at.markerId) openChapterPage(at.markerId);
+  };
+
+  /**
+   * A drop on a row (§9a, from Ken: *just reorder things by dragging them
+   * around in the actual left menu*). One drag, three landings, each of them
+   * the thing the book already understood: a part moves within its half, a
+   * chapter moves with its sections, and a picture page dropped on a chapter
+   * comes to face that chapter.
+   */
+  const dropOn = (row: BookRow) => {
+    const moving = dragging;
+    if (!moving || moving.id === row.id) return;
+    onUpdate((current) => {
+      if (moving.kind === 'chapter') {
+        return row.kind === 'chapter' ? moveChapterBlock(current, moving.id as never, row.placed?.marker.id ?? null) : current;
+      }
+      const part = partsOf(current).find((one) => one.id === moving.id);
+      if (!part) return current;
+      // A picture page dropped on a chapter faces that chapter.
+      if (part.kind === 'plate' && row.kind === 'chapter') return updatePart(current, part.id, { beforeMarkerId: row.id, inFront: false });
+      if (row.kind !== 'part' || !row.part) return current;
+      // One dropped on a chapter's own picture page comes out of the story.
+      if (halfOf(part) === 'body' && halfOf(row.part) !== 'body') {
+        return placePart(updatePart(current, part.id, { beforeMarkerId: null, inFront: halfOf(row.part) === 'front' }), part.id, row.id);
+      }
+      return placePart(current, part.id, row.id);
+    });
+    setDragging(null);
+    setOver(null);
+  };
 
   return (
     <div className="layout-room" role="dialog" aria-label="Layout">
@@ -473,7 +571,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         onClose={() => setPartDialogId(null)}
         onRemoved={() => {
           setPartDialogId(null);
-          setSelectedPartId(null);
+          setSelectedRowId(null);
         }}
         onOpenBookSettings={() => {
           setPartDialogId(null);
@@ -526,219 +624,79 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
 
       <div className="layout-body">
         <aside className="layout-rail" style={{ flex: `0 0 ${rail.size}px` }}>
-          {/* Adding is the first thing on the rail (§9, from Ken): one
-              button, a menu of every kind the book can still take, a new
-              story on a collection among them. */}
+          {/* Adding is the first thing on the rail (§9a, from Ken): a
+              picture into the page in hand, and a menu for everything else.
+              Both do the same act — the button is the one people find. */}
           <div className="layout-rail-head">
             <button
               type="button"
               className="raised layout-add"
-              aria-label="Add a part"
+              disabled={!laying}
+              title={
+                place.elementId || place.partId
+                  ? `A picture at the top of ${chosenPage}. The words move down.`
+                  : 'Choose a page first: the picture goes at the top of it.'
+              }
+              onClick={() => importPicture('measure')}
+            >
+              + Picture
+            </button>
+            <button
+              type="button"
+              className="raised layout-add"
+              aria-label="Add to the book"
               aria-haspopup="menu"
               onClick={(event) => {
                 const box = event.currentTarget.getBoundingClientRect();
                 setAddMenu({ x: box.left, y: box.bottom + 4 });
               }}
             >
-              + Add a part <span aria-hidden="true">▾</span>
+              + Add <span aria-hidden="true">▾</span>
             </button>
           </div>
-          {addMenu ? <ContextMenu x={addMenu.x} y={addMenu.y} label="Parts to add" entries={addEntries} onClose={() => setAddMenu(null)} /> : null}
+          {addMenu ? <ContextMenu x={addMenu.x} y={addMenu.y} label="Add to the book" entries={addEntries} onClose={() => setAddMenu(null)} /> : null}
 
-          <h3>Front matter</h3>
-          <ul className="layout-parts" aria-label="Front matter">
-            {parts
-              .filter((part) => halfOf(part) === 'front')
-              .map((part) => partRow(part))}
-            {dragging?.kind === 'part' && halfOf(parts.find((part) => part.id === dragging.id) as BookPart) === 'front' ? endZone('front') : null}
+          {/* The book as one list, in the order it is bound (§9a). No
+              headings, no notes: a row is its name and its page. */}
+          <ul className="layout-parts layout-tree" aria-label="The book">
+            {rows.map((row) => {
+              // The page it lands on, read off the laid page rather than off
+              // `where`: a picture cut into a paragraph rides inside it, so
+              // `where` has no entry of its own for it.
+              const at = laying ? pageOf(laying, row.id) : undefined;
+              return (
+                <RailRow
+                  key={row.id}
+                  row={row}
+                  page={!at || at.numbering === 'none' ? '' : at.numbering === 'roman' ? roman(at.number) : String(at.number)}
+                  selected={row.id === selectedRowId}
+                  over={over === row.id}
+                  comfort={whatGoesWithRow(file, row)}
+                  onSelect={() => selectRow(row)}
+                  onOpen={() => openRow(row)}
+                  onRemove={() => {
+                    if (selectedRowId === row.id) setSelectedRowId(null);
+                    onUpdate((current) => removeBookRow(current, row));
+                  }}
+                  onDragStart={() => setDragging({ kind: row.kind === 'chapter' ? 'chapter' : 'part', id: row.id })}
+                  onDragEnd={() => {
+                    setDragging(null);
+                    setOver(null);
+                  }}
+                  onDragOver={(event) => {
+                    if (!dragging || dragging.id === row.id) return;
+                    event.preventDefault();
+                    setOver(row.id);
+                  }}
+                  onDragLeave={() => setOver((current) => (current === row.id ? null : current))}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    dropOn(row);
+                  }}
+                />
+              );
+            })}
           </ul>
-
-          <h3>The story</h3>
-          <ul className="layout-parts layout-story" aria-label="The story">
-            {divisions.length === 0 ? (
-              <li className="muted small">No {nounPlural} yet: the story runs as one.</li>
-            ) : (
-              divisions.map((placed) => {
-                const id = placed.marker.id as string;
-                const at = laying?.laid.where.get(id);
-                const facing = platesBefore.get(id) ?? [];
-                const leaf = opensOnLeaf(chapterLeafContent(file, placed));
-                const title = placed.label || placed.marker.title.trim() || noun;
-                return (
-                  <Fragment key={id}>
-                    {/* A picture on the page facing this chapter: a plate the
-                        writer put before it, listed where it falls (§9). */}
-                    {facing.map((part) => partRow(part))}
-                    {/* The page between the parts of the book (§9, from Ken):
-                        the leaf this chapter opens on, made with the chapter
-                        page creator, or a full-page picture before it. */}
-                    <li className="layout-leaf-row">
-                      {/* The row is the way in (§9, from Ken: *there's no way
-                          to edit these*): its name opens the page, and a leaf
-                          of its own carries a × that takes the page off. */}
-                      <span className="layout-leaf-head">
-                        <button
-                          type="button"
-                          className="ghost layout-leaf-name"
-                          title={`Open the page this ${noun.toLowerCase()} opens on: its name, an epigraph, a picture, how it is set`}
-                          onClick={() => openChapterPage(id)}
-                        >
-                          <span className="muted">{noun} page</span>
-                          <span className="muted small">· {leaf ? 'a leaf of its own' : 'above the first paragraph'}</span>
-                        </button>
-                        {leaf ? (
-                          clearing === id ? (
-                            <span className="layout-ask">
-                              <button
-                                type="button"
-                                className="ghost small danger"
-                                onClick={() => {
-                                  onUpdate((current) => setChapterPage(current, id as StoryMarkerId, { image: null, summary: '', epigraph: '' }));
-                                  setClearing(null);
-                                }}
-                              >
-                                Take it off
-                              </button>
-                              <button type="button" className="ghost small" onClick={() => setClearing(null)}>
-                                Keep
-                              </button>
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              className="ghost small layout-part-remove"
-                              aria-label={`Take the ${noun.toLowerCase()} page off`}
-                              title={`Take the picture, the summary and the epigraph off this page, so the ${noun.toLowerCase()} opens above its first paragraph again`}
-                              onClick={() => setClearing(id)}
-                            >
-                              ×
-                            </button>
-                          )
-                        ) : null}
-                      </span>
-                      <span className="layout-story-actions">
-                        <button
-                          type="button"
-                          className="ghost small"
-                          title={`The page this ${noun.toLowerCase()} opens on: its name, an epigraph, a picture, how it is set`}
-                          onClick={() => openChapterPage(id)}
-                        >
-                          {noun} page…
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost small"
-                          title={`A picture that fills the page facing this ${noun.toLowerCase()}, edge to edge, from a file. It is listed above this row once chosen; × takes it out.`}
-                          onClick={() => importArt({ kind: 'before', markerId: id })}
-                        >
-                          + Picture facing
-                        </button>
-                      </span>
-                    </li>
-                    <li
-                      className={`layout-story-row${over === `chapter:${id}` ? ' drop-before' : ''}`}
-                      draggable
-                      onDragStart={(event) => {
-                        event.dataTransfer.effectAllowed = 'move';
-                        event.dataTransfer.setData('text/plain', id);
-                        setDragging({ kind: 'chapter', id });
-                      }}
-                      onDragEnd={() => {
-                        setDragging(null);
-                        setOver(null);
-                      }}
-                      onDragOver={(event) => {
-                        if (dragging?.kind !== 'chapter' || dragging.id === id) return;
-                        event.preventDefault();
-                        setOver(`chapter:${id}`);
-                      }}
-                      onDragLeave={() => setOver((current) => (current === `chapter:${id}` ? null : current))}
-                      onDrop={(event) => {
-                        if (dragging?.kind !== 'chapter') return;
-                        event.preventDefault();
-                        const moving = dragging.id;
-                        onUpdate((current) => moveChapterBlock(current, moving as never, placed.marker.id));
-                        setDragging(null);
-                        setOver(null);
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="ghost layout-part"
-                        title={`${noun} of the manuscript. Drag it to move it in the story, its ${isCollection(file.project.format) ? 'sections' : 'scenes'} with it.`}
-                        onClick={() => {
-                          setSelectedPartId(null);
-                          goToPart(id);
-                        }}
-                      >
-                        <span className="layout-grip" aria-hidden="true">⠿</span>
-                        <span className="layout-part-name">{title}</span>
-                        <span className="muted">{placed.label ? placed.marker.title.trim() : ''}</span>
-                        <span className="muted layout-page-no">{at && at.numbering === 'arabic' ? at.number : ''}</span>
-                      </button>
-                    </li>
-                  </Fragment>
-                );
-              })
-            )}
-            {dragging?.kind === 'chapter' ? (
-              <li
-                className={`layout-drop-end${over === 'chapter:end' ? ' drop-before' : ''}`}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setOver('chapter:end');
-                }}
-                onDragLeave={() => setOver((current) => (current === 'chapter:end' ? null : current))}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  const moving = dragging.id;
-                  onUpdate((current) => moveChapterBlock(current, moving as never, null));
-                  setDragging(null);
-                  setOver(null);
-                }}
-              >
-                Last in the story
-              </li>
-            ) : null}
-          </ul>
-          {figures.length > 0 ? (
-            <>
-              <h3>Figures</h3>
-              <ul className="layout-parts layout-figures">
-                {figures.map((figure) => (
-                  <li key={figure.elementId}>
-                    <button
-                      type="button"
-                      className={figure.elementId === selectedFigureId ? 'ghost layout-part selected' : 'ghost layout-part'}
-                      title="A figure in the manuscript. Where it sits in the book is set here; the manuscript prints it across the measure."
-                      onClick={() => {
-                        setSelectedPartId(null);
-                        setSelectedFigureId(figure.elementId);
-                        goToPart(figure.elementId);
-                      }}
-                    >
-                      <span className="layout-part-name">{figure.caption.trim() || figure.assetName || 'Figure'}</span>
-                      <span className="muted">{PLACE_WORDS[figure.placement.place]}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
-          <h3>Back matter</h3>
-          <ul className="layout-parts" aria-label="Back matter">
-            {parts
-              .filter((part) => halfOf(part) === 'back')
-              .map((part) => partRow(part))}
-            {dragging?.kind === 'part' && halfOf(parts.find((part) => part.id === dragging.id) as BookPart) === 'back' ? endZone('back') : null}
-          </ul>
-          <p className="muted small">
-            The story is the manuscript in story order, {chapterCount}{' '}
-            {isCollection(file.project.format) ? (chapterCount === 1 ? 'story' : 'stories') : chapterCount === 1 ? 'chapter' : 'chapters'}.
-            Drag a {noun.toLowerCase()} to move it, or a part within its half; × takes a part out; double-click a part to open its
-            page. Between the {nounPlural} go a picture on the facing page or the {noun.toLowerCase()}’s own page. The trim, the type
-            and the running heads are the whole book’s, under <em>Book settings…</em> in the bar.
-          </p>
         </aside>
         <div className="divider vertical" role="separator" aria-label="Rail width" aria-orientation="vertical" title="Drag to widen the rail" {...rail.dividerProps} />
 
@@ -753,22 +711,55 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                 // opens it; the manuscript's figures go to the inspector.
                 const owner = partOfInset(file, figureId);
                 if (owner) {
-                  setSelectedPartId(owner.id);
+                  setSelectedRowId(owner.id);
                   setPartDialogId(owner.id);
                   return;
                 }
-                setSelectedPartId(null);
-                setSelectedFigureId(figureId);
+                setSelectedRowId(figureId);
               }}
+              selectedSheet={selectedSheet}
+              onPickPage={setSelectedSheet}
               onOpenPage={openPage}
               drawing={drawing}
-              onDrawn={(placement) => {
-                const figureId = drawing;
-                if (!figureId) return;
+              onDrawn={(placement, sheet) => {
+                const what = drawing;
+                if (!what || !laying) return;
                 setDrawing(null);
-                setSelectedPartId(null);
-                setSelectedFigureId(figureId);
-                onUpdate((current) => placeBookFigure(current, figureId, placement));
+                setSelectedSheet(sheet);
+                const at = pagePlace(laying.laid.pages, laying.blocks, sheet);
+                // A box drawn where the story is not cannot hold a figure:
+                // the parts carry their pictures themselves.
+                if (!at.elementId) {
+                  setMessage('Draw the box on a page of the story: the front and back pages carry their own pictures.');
+                  return;
+                }
+                if (what === NEW_BOX) {
+                  // The box first, the picture afterwards (§9a, from Ken).
+                  onUpdate((current) => {
+                    const beat = current.beats.find((one) => one.manuscript.elements.some((element) => (element.id as string) === at.elementId));
+                    if (!beat) return current;
+                    const made = placeFigure(current, {
+                      beatId: beat.id,
+                      beforeElementId: at.elementId as never,
+                      attributes: {
+                        bookPlace: placement.place,
+                        bookSpan: placement.span ?? INSET_SPAN.default,
+                        ...(placement.standoff !== undefined && placement.standoff !== INSET_STANDOFF.default ? { bookStandoff: placement.standoff } : {}),
+                      },
+                    });
+                    if (made.elementId) setSelectedRowId(made.elementId as string);
+                    return made.file;
+                  });
+                  return;
+                }
+                setSelectedRowId(what);
+                // Drawing the box on another page moves the picture there,
+                // rather than leaving it where it was and lying about it.
+                const alreadyHere = pageOf(laying, what)?.sheet === sheet;
+                onUpdate((current) => {
+                  const moved = alreadyHere || at.elementId === what ? current : moveFigureBefore(current, what, at.elementId as string);
+                  return placeBookFigure(moved, what, placement);
+                });
               }}
             />
           ) : (
@@ -825,15 +816,16 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               drawing={drawing === selectedFigure.elementId}
               onPlace={(placement) => onUpdate((current) => placeBookFigure(current, selectedFigure.elementId, placement))}
               onDraw={() => setDrawing((current) => (current === selectedFigure.elementId ? null : selectedFigure.elementId))}
+              onFill={() => importArt({ kind: 'fill', elementId: selectedFigure.elementId })}
               onDone={() => {
                 setDrawing(null);
-                setSelectedFigureId(null);
+                setSelectedRowId(null);
               }}
             />
           ) : null}
           {selected ? (
             <>
-              <PartFields file={file} part={selected} onUpdate={onUpdate} onDone={() => setSelectedPartId(null)} onOpenBookSettings={() => setBookSettingsOpen(true)} />
+              <PartFields file={file} part={selected} onUpdate={onUpdate} onDone={() => setSelectedRowId(null)} onOpenBookSettings={() => setBookSettingsOpen(true)} />
               <p className="muted small">
                 <button type="button" className="ghost small" onClick={() => setPartDialogId(selected.id)}>
                   Open the page…
@@ -846,8 +838,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
             // Nothing chosen: the column says what it is for rather than
             // standing empty, the book-wide settings having moved to the bar.
             <p className="muted small layout-inspector-hint">
-              Choose a part on the left to edit it here, or double-click one — or a page — to open it. The trim, the margins,
-              the type and the running heads are the whole book’s, under <em>Book settings…</em> in the bar.
+              Choose a page, on the left or on the spread. <em>+ Picture</em> puts one at the top of it and the words move
+              down; a double-click opens it. The whole book’s settings are under <em>Book settings…</em> in the bar.
             </p>
           ) : null}
         </aside>
@@ -886,10 +878,20 @@ function Fold({ id, title, children }: { id: string; title: string; children: Re
   );
 }
 
-function PartRow({
-  part,
+/**
+ * One row of the rail (§9a, from Ken): a grip, a name, its page, and a ×.
+ *
+ * The same row draws a part, a chapter and a picture, because on the rail
+ * they are the same kind of thing — something in the book, at a place in it.
+ * What each one *is* it says by where it sits and how far in it sits; the
+ * margin says nothing else, which is the whole of the revision.
+ */
+function RailRow({
+  row,
+  page,
   selected,
   over,
+  comfort,
   onSelect,
   onOpen,
   onRemove,
@@ -899,11 +901,15 @@ function PartRow({
   onDragLeave,
   onDrop,
 }: {
-  part: BookPart;
+  row: BookRow;
+  /** The page it begins on, where the book has been laid. */
+  page: string;
   selected: boolean;
   over: boolean;
+  /** What goes with it, said once, while the × is being asked about. */
+  comfort: string;
   onSelect(): void;
-  /** A double-click: the part opened in a dialog of its own (§9). */
+  /** A double-click: the page opened to be set (§9a). */
   onOpen(): void;
   onRemove(): void;
   onDragStart(): void;
@@ -912,15 +918,16 @@ function PartRow({
   onDragLeave(): void;
   onDrop(event: React.DragEvent): void;
 }) {
-  const info = PART_INFO[part.kind];
   const [asking, setAsking] = useState(false);
   return (
     <li
-      className={`layout-part-row${over ? ' drop-before' : ''}`}
-      draggable
+      className={`layout-rail-row layout-rail-${row.kind}${over ? ' drop-before' : ''}${asking ? ' layout-rail-asking' : ''}`}
+      style={row.depth ? { paddingLeft: `${row.depth * 16}px` } : undefined}
+      draggable={row.draggable}
       onDragStart={(event) => {
+        if (!row.draggable) return;
         event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', part.id);
+        event.dataTransfer.setData('text/plain', row.id);
         onDragStart();
       }}
       onDragEnd={onDragEnd}
@@ -933,21 +940,29 @@ function PartRow({
         className={selected ? 'ghost layout-part selected' : 'ghost layout-part'}
         aria-pressed={selected}
         title={
-          halfOf(part) === 'body'
-            ? `${info.note}. Double-click to open it. It faces its chapter; Where moves it.`
-            : `${info.note}. Double-click to open it. Drag to move it within the ${halfOf(part) === 'front' ? 'front' : 'back'} matter.`
+          row.kind === 'picture'
+            ? 'A picture in the writing. It stands where it stands there; draw its box on another page to move it.'
+            : row.kind === 'chapter'
+              ? 'Drag it to move it in the book. Double-click to set the page it opens on.'
+              : 'Drag it to move it. Double-click to open the page.'
         }
         onClick={onSelect}
         onDoubleClick={onOpen}
       >
-        <span className="layout-grip" aria-hidden="true">⠿</span>
-        <span className="layout-part-name">{partTitle(part)}</span>
-        <span className="muted">{info.carries === 'reading' ? 'read' : info.carries === 'plate' ? 'picture' : ''}</span>
+        <span className="layout-grip" aria-hidden="true">
+          {row.draggable ? '⠿' : ''}
+        </span>
+        {row.label ? <span className="muted layout-rail-label">{row.label}</span> : null}
+        <span className="layout-part-name">{row.title}</span>
+        <span className="muted layout-page-no">{page}</span>
       </button>
-      {/* × takes the part out (§9, from Ken): asked once inline, because a
-          copyright notice somebody typed goes with it. */}
+      {/* × comes off every row (§9a, from Ken: *I added a new story on
+          accident, and there's no way to get rid of it*). Asked once inline,
+          with what would go said beside it, because a chapter's words are
+          not the chapter's to take. */}
       {asking ? (
         <span className="layout-ask">
+          <span className="muted small layout-ask-why">{comfort}</span>
           <button type="button" className="ghost small danger" onClick={onRemove}>
             Remove
           </button>
@@ -956,7 +971,13 @@ function PartRow({
           </button>
         </span>
       ) : (
-        <button type="button" className="ghost small layout-part-remove" aria-label={`Remove ${partTitle(part)}`} title="Take this part out of the book" onClick={() => setAsking(true)}>
+        <button
+          type="button"
+          className="ghost small layout-part-remove"
+          aria-label={`Remove ${row.title}`}
+          title="Take it out of the book"
+          onClick={() => setAsking(true)}
+        >
           ×
         </button>
       )}
@@ -970,6 +991,8 @@ function Spreads({
   spread,
   zoom,
   onPickFigure,
+  selectedSheet,
+  onPickPage,
   onOpenPage,
   drawing,
   onDrawn,
@@ -978,15 +1001,18 @@ function Spreads({
   spread: number;
   zoom: number;
   onPickFigure(figureId: string): void;
+  /** The page in hand (§9a): outlined, so a writer can see which one the buttons mean. */
+  selectedSheet: number | null;
+  onPickPage(sheet: number): void;
   /** A double-click on a page (§9): whatever the page belongs to opens. */
   onOpenPage(page: BookPage): void;
-  /** The figure whose box is being drawn (§8a), or null. */
+  /** The figure whose box is being drawn (§8a), `'new'` for one not yet made (§9a), or null. */
   drawing: string | null;
-  onDrawn(placement: BookFigurePlacement): void;
+  onDrawn(placement: BookFigurePlacement, sheet: number): void;
 }) {
   /** The rectangle being dragged, in the sheet's own pixels, and which sheet. */
   const [box, setBox] = useState<{ key: string; x: number; y: number; w: number; h: number } | null>(null);
-  const start = useRef<{ key: string; sheet: HTMLElement; x: number; y: number } | null>(null);
+  const start = useRef<{ key: string; sheet: HTMLElement; x: number; y: number; page: BookPage } | null>(null);
   const { pageWidthPx, pageHeightPx } = bookMetrics(laying.geometry);
   const blocks = useMemo(() => new Map(laying.blocks.map((block) => [block.id, block])), [laying.blocks]);
   const pages = laying.laid.pages;
@@ -1018,19 +1044,21 @@ function Spreads({
     const width = textRect.width || sheetRect.width;
     const span = Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, drawn.w / width));
     const place = drawn.x + drawn.w / 2 < inset + width / 2 ? 'left' : 'right';
-    onDrawn({ place, span, side: 'either', standoff: INSET_STANDOFF.default });
+    onDrawn({ place, span, side: 'either', standoff: INSET_STANDOFF.default }, from.page.sheet);
   };
 
   const draw = (page: BookPage | null, key: string) =>
     page ? (
       <div
         key={key}
-        className={drawing ? 'layout-sheet layout-sheet-drawing' : 'layout-sheet'}
+        className={`layout-sheet${drawing ? ' layout-sheet-drawing' : ''}${page.sheet === selectedSheet ? ' layout-sheet-chosen' : ''}`}
         style={{ width: pageWidthPx, height: pageHeightPx }}
+        aria-label={`Page ${page.sheet}`}
         onClick={(event) => {
-          // A figure on the page is tagged with its element id (§8); pressing
-          // it picks it for the inspector, whichever page it fell on.
+          // A press puts the page in hand (§9a), and a press on a figure —
+          // tagged with its element id (§8) — picks the figure too.
           if (drawing) return;
+          onPickPage(page.sheet);
           const hit = (event.target as HTMLElement).closest('[data-figure]');
           if (hit) onPickFigure(hit.getAttribute('data-figure') ?? '');
         }}
@@ -1045,7 +1073,7 @@ function Spreads({
           sheet.setPointerCapture(event.pointerId);
           const x = (event.clientX - rect.left) / zoom;
           const y = (event.clientY - rect.top) / zoom;
-          start.current = { key, sheet, x, y };
+          start.current = { key, sheet, x, y, page };
           setBox({ key, x, y, w: 0, h: 0 });
         }}
         onPointerMove={(event) => {
@@ -1058,7 +1086,7 @@ function Spreads({
         }}
         onPointerUp={finish}
         onPointerCancel={finish}
-        title={drawing ? 'Drag a box where the picture goes; the text will run round it' : 'Double-click to open what this page belongs to'}
+        title={drawing ? 'Drag a box where the picture goes; the text will run round it' : 'Choose this page; double-click to open what it belongs to'}
       >
         {/* The page's own markup, from the one builder the export reads too;
             every string in it was escaped there. */}
@@ -1641,24 +1669,37 @@ function FigureSection({
   drawing,
   onPlace,
   onDraw,
+  onFill,
   onDone,
 }: {
   figure: BookFigure;
   drawing: boolean;
   onPlace(placement: BookFigurePlacement): void;
   onDraw(): void;
+  /** Put a picture in a box that has none yet (§9a). */
+  onFill(): void;
   onDone(): void;
 }) {
   const { place, span, side, standoff } = figure.placement;
   const cut = place === 'left' || place === 'right';
+  const empty = figure.assetId === null;
   return (
     <section className="layout-section layout-figure">
-      <h3>Picture</h3>
-      <p className="muted small">
-        {figure.caption.trim() || figure.assetName || 'A figure'}
-        {figure.chapterTitle ? ` · in ${figure.chapterTitle}` : ''}. The manuscript prints it across the measure; the
-        book puts it where you say.
-      </p>
+      <h3>{empty ? 'An empty box' : 'Picture'}</h3>
+      {/* The box before its picture (§9a, from Ken: *you should be able to
+          move that around until it’s correct and then add a graphic to
+          it*): it holds its place on the page and says what it still wants. */}
+      {empty ? (
+        <p className="muted small">
+          It holds its space on the page. Choose what goes in it, or draw the box again to move it or resize it.
+        </p>
+      ) : (
+        <p className="muted small">
+          {figure.caption.trim() || figure.assetName || 'A figure'}
+          {figure.chapterTitle ? ` · in ${figure.chapterTitle}` : ''}. The manuscript prints it across the measure; the
+          book puts it where you say.
+        </p>
+      )}
       <label className="field">
         <span>Place</span>
         <select
@@ -1723,9 +1764,17 @@ function FigureSection({
       <div className="layout-plate-pick">
         <button
           type="button"
+          className="raised small"
+          title="Choose a picture from a file. It joins the graphics library and goes in this box."
+          onClick={onFill}
+        >
+          {empty ? 'Choose a picture…' : 'Another picture…'}
+        </button>
+        <button
+          type="button"
           className={drawing ? 'raised small selected' : 'raised small'}
           aria-pressed={drawing}
-          title="Drag a box on the page where the picture goes; its width and the side it lands on are taken from the box"
+          title="Drag a box on the page where the picture goes; its width and the side it lands on are taken from the box. Drawn on another page, it moves the picture there."
           onClick={onDraw}
         >
           {drawing ? 'Drawing — drag on the page' : 'Draw the box…'}

@@ -424,6 +424,95 @@ other room (addendum 02 §8). Three regions:
 **Export the book…** is in the room's bar, and it is the only place the book
 is exported from; *File ▸ Export PDF* stays the manuscript's.
 
+## 9a. The rail as one linear tree
+
+From Ken, after using the room: *this has become way too complicated to make
+this workable… this should be simple linear workflow… we don't need to divide
+up front matter and back matter, we should be able to just add them as a
+linear tree… there shouldn't be all this extra wording.* He read the rail back
+in his own words — *art page, picture, story page above the first paragraph,
+story page, picture facing* — and said people would not work it out.
+
+He was right, and the reason is worth keeping. §9's rail grew a heading per
+half and, between every pair of chapters, a **second row** that existed only
+to carry two buttons and a sentence about how the chapter opened. None of
+that says *where anything is in the book*, which is the one question a rail
+answers.
+
+**One list, one row per thing, in the order it is bound** — `bookRows` in
+`packages/domain/src/book-rail.ts`. Two rules hold it there.
+
+**Containment is depth, never a heading.** The front matter, the story and
+the back matter are not three lists; they are the order. A picture inside a
+chapter sits under it because it is in it, and that is the only nesting the
+rail has. A picture page a writer put before a chapter is listed where it
+falls, which is before it.
+
+**A row is its name and its page, and nothing else.** No note, no state, no
+pair of buttons. What a row *is* it says by where it sits; what can be done
+to it is done from the selection. A picture page is named after its
+**picture** rather than after the word *Art page*, because the writer knows
+what they imported. Nothing is stored: the list is read from the parts, the
+markers and the manuscript every time, so cutting a chapter takes its
+pictures off the rail with nothing run.
+
+### A × on every row
+
+*I added a new story on accident, and there's no way to get rid of it.*
+`removeBookRow` is one act for every kind of row, and `whatGoesWithRow` says
+what would go before it does. A chapter is the one that needs saying, and the
+answer is the honest one: **the chapter break goes and the words stay**, its
+sections joining the chapter before — *unless nothing is written in it*, which
+is the chapter somebody added by accident, and then its empty sections go with
+it. That distinction is a reading, not a flag.
+
+### Select a page, add a picture to it
+
+*You select a page in the layout view and then add picture. It should be that
+simple… and it scoots all the text down.*
+
+A page is not a record — it is where the laying happened to cut — so a press
+on one is answered by reading what is **on** it. `pagePlace` gives the
+manuscript element the page opens with, the part it belongs to, and the
+chapter in force. A picture added to the page goes in **before that element**,
+so the page opens with the picture and the words move down. That is the whole
+mechanism, and it needs nothing stored about pages at all.
+
+One act, read where it lands: in the story it is a figure; in a part with
+words it is cut into the text; where the page has neither it is a page of its
+own. None of that is a choice the writer makes — it is what *here* means at
+each of those three places. The chosen page is **outlined on the spread**, and
+the button's tooltip names it, so nothing has to say in the margin which page
+is meant.
+
+### The box before the picture
+
+*You should be able to draw a box in a page and it will create a graphics box.
+You should be able to move that around until it's correct and then add a
+graphic to it.*
+
+Stage 6's drawing needed a figure first, which is the order backwards.
+**Draw a box for a picture…** on the Add menu now makes the figure itself —
+a figure with **no picture**, which the print stack has always drawn as a
+box holding its space (the words are *Picture goes here*, not *Picture
+missing*, because a box drawn on purpose is not a fault). *Choose a picture…*
+fills it afterwards. Drawing the box again on **another page moves the
+picture there** (`moveFigureBefore`) rather than leaving it where it was and
+lying about it — a box is where the picture goes, so drawing it elsewhere is
+how it is moved.
+
+### Dragging, and the double-click
+
+One drag, three landings, each of them something the book already understood:
+a part moves within its half, a chapter moves with its sections, and **a
+picture page dropped on a chapter comes to face that chapter**. A figure in
+the writing is not draggable and says so: it stands where the writing puts
+it, and the drawn box is how it moves.
+
+A double-click opens the one thing that sets that page — a part's dialog, a
+chapter's own page — from the row or from the page on the spread, which are
+the same act.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

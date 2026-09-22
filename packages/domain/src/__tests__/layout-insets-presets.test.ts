@@ -151,7 +151,7 @@ describe('a figure cut into the text (stage 6)', () => {
     const empty = addPart(novel(), 'plate', { caption: 'Missing' }).file;
     const bare = renderBookBlock(bookBlocks(empty).find((block) => block.kind === 'plate')!, contextFor(empty));
     expect(bare).toContain('<div class="bk-display bk-plate">');
-    expect(bare).toContain('No picture chosen');
+    expect(bare).toContain('Picture goes here');
   });
 
   it('cuts a picture into a paragraph of a foreword, the same inset the manuscript makes, and keeps it when the paragraph goes', () => {
@@ -242,6 +242,7 @@ describe('a figure cut into the text (stage 6)', () => {
         assetName: 'harbour.png',
         placement: { place: 'left', span: 0.4, side: 'either', standoff: 1 },
         chapterTitle: 'The Road',
+        markerId: file.markers[0]!.id,
         decorative: false,
       },
     ]);

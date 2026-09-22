@@ -1266,6 +1266,49 @@ push live; the build takes a minute or two.
   picture keeps its proportions, which is what a float does. *Put a
   picture here…* on the manuscript right-click is every prose format's
   now rather than the textbook's alone.
+  **§9a is the rail as one linear tree**, from Ken after using the room —
+  *this has become way too complicated to make this workable… this should
+  be simple linear workflow… there shouldn't be all this extra wording* —
+  and he read the old rail back in his own words, *art page, picture, story
+  page above the first paragraph, story page, picture facing*. He was right,
+  and the reason is worth keeping: §9's rail grew a heading per half and,
+  between every pair of chapters, a **second row that existed only to carry
+  two buttons and a sentence**, none of which says where anything is in the
+  book. `bookRows` in `packages/domain/src/book-rail.ts` is **one list, one
+  row per thing, in the order it is bound**, held there by two rules.
+  **Containment is depth, never a heading** — the front matter, the story and
+  the back matter are not three lists, they are the order, and the only
+  nesting is a picture under the chapter it is in. And **a row is its name
+  and its page and nothing else**: no note, no state, no pair of buttons,
+  what a row *is* said by where it sits, and a picture page named after its
+  **picture** rather than after the words *Art page*. Nothing is stored, so
+  cutting a chapter takes its pictures off the rail with nothing run. **A ×
+  comes off every row** (*I added a new story on accident, and there's no
+  way to get rid of it*): `removeBookRow` is one act for every kind, and
+  `whatGoesWithRow` says what would go first — for a chapter the honest
+  answer is that **the break goes and the words stay**, its sections joining
+  the one before, *unless nothing is written in it*, which is the chapter
+  added by accident and is a reading rather than a flag. **Select a page,
+  add a picture to it**: a page is not a record, it is where the laying
+  happened to cut, so `pagePlace` answers a press by reading what is *on*
+  it, and a picture goes in **before the element the page opens with** — the
+  page then opens with the picture and the words move down, which is the
+  whole mechanism and stores nothing about pages. One act read where it
+  lands (a figure in the story, an inset in a part with words, a page of its
+  own where the page has neither), and the chosen page is **outlined on the
+  spread** so nothing has to say in the margin which page is meant. **The
+  box comes before the picture** now (*draw a box in a page and it will
+  create a graphics box… and then add a graphic to it*): *Draw a box for a
+  picture…* makes a figure with **no picture**, which the print stack has
+  always drawn as a box holding its space — the words are *Picture goes
+  here* rather than *Picture missing*, a box drawn on purpose not being a
+  fault — and drawing it again on another page **moves the picture there**
+  (`moveFigureBefore`) rather than lying about where it is. One drag, three
+  landings the book already understood: a part within its half, a chapter
+  with its sections, and **a picture page dropped on a chapter comes to face
+  that chapter**; a figure in the writing is not draggable and says so. A
+  double-click opens the one thing that sets that page, from the row or from
+  the page on the spread, which are the same act.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

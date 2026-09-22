@@ -86,7 +86,7 @@ describe('the graphics library', () => {
   it('flags a picture that is in the book with nothing said about it', () => {
     const { file, beatId } = book();
     const made = addGraphic(file, { name: 'prism.png', data: DOT });
-    const current = placeFigure(made.file, { beatId, assetId: made.asset.id });
+    const current = placeFigure(made.file, { beatId, assetId: made.asset.id }).file;
 
     render(<Graphics start={current} />);
     expect(screen.getByText('no description')).toBeTruthy();
@@ -96,7 +96,7 @@ describe('the graphics library', () => {
   it('lists where a picture ended up, numbered in reading order', () => {
     const { file, beatId } = book();
     const made = addGraphic(file, { name: 'prism.png', data: DOT, altText: 'A prism.' });
-    const current = placeFigure(made.file, { beatId, assetId: made.asset.id, caption: 'The split beam' });
+    const current = placeFigure(made.file, { beatId, assetId: made.asset.id, caption: 'The split beam' }).file;
 
     render(<Graphics start={current} />);
     expect(screen.getByText(/Where it is used \(1\)/)).toBeTruthy();
@@ -107,7 +107,7 @@ describe('the graphics library', () => {
   it('says what removing a picture leaves behind before it removes it', () => {
     const { file, beatId } = book();
     const made = addGraphic(file, { name: 'prism.png', data: DOT });
-    const current = placeFigure(made.file, { beatId, assetId: made.asset.id });
+    const current = placeFigure(made.file, { beatId, assetId: made.asset.id }).file;
 
     render(<Graphics start={current} />);
     fireEvent.click(screen.getByText('Remove this graphic'));
@@ -428,7 +428,7 @@ describe('a figure in the manuscript', () => {
 
   it('draws the picture, its number and its caption where the author put it', () => {
     const made = withPicture();
-    const current = placeFigure(made.file, { beatId: made.beatId, assetId: made.assetId, caption: 'The split beam' });
+    const current = placeFigure(made.file, { beatId: made.beatId, assetId: made.assetId, caption: 'The split beam' }).file;
 
     render(<Writing start={current} beatId={made.beatId} />);
     expect(screen.getByText('Figure 1')).toBeTruthy();
@@ -438,7 +438,7 @@ describe('a figure in the manuscript', () => {
 
   it('keeps the figure standing when its picture leaves the library, and says so', () => {
     const made = withPicture();
-    let current = placeFigure(made.file, { beatId: made.beatId, assetId: made.assetId });
+    let current = placeFigure(made.file, { beatId: made.beatId, assetId: made.assetId }).file;
     current = removeGraphic(current, made.assetId);
 
     render(<Writing start={current} beatId={made.beatId} />);

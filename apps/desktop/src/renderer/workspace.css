@@ -7346,7 +7346,7 @@ dialog.preferences .field {
   background: var(--panel);
 }
 
-/* The views row (§10): how the board is being read, under the toolbar that
+/* The views row (§9a): how the board is being read, under the toolbar that
    says what is being made. */
 .sculpt-views {
   position: relative;
@@ -7477,7 +7477,7 @@ dialog.preferences .field {
   transform-origin: 0 0;
 }
 
-/* The mini-map (§10). Bottom right of the canvas, over the board rather than
+/* The mini-map (§9a). Bottom right of the canvas, over the board rather than
    beside it: it is only there while the board is bigger than the window, and
    a control that comes and goes may not be allowed to reflow everything else
    when it does. */
@@ -7596,7 +7596,7 @@ dialog.preferences .field {
   border-right-width: 3px;
 }
 
-/* Outside what the writer asked to see (§10). Faint rather than hidden, and
+/* Outside what the writer asked to see (§9a). Faint rather than hidden, and
    still clickable: focus dims the rest so the shape of the whole board is
    still legible around the part being read. */
 .sculpt-node.dimmed {
@@ -13011,7 +13011,7 @@ dialog.chapter-page-dialog {
 }
 
 /* Why there is no Suggest button, said once at the foot of the aids rather
-   than three times beside three absent ones (§10). */
+   than three times beside three absent ones (§9a). */
 .aids-why {
   margin: 0;
   padding-top: 2px;
@@ -14118,3 +14118,34 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
 /* A designed page's style (§9): the chapter page's line controls, in a narrower column. */
 .layout-page-style .chapter-line-style { flex-wrap: wrap; gap: 6px 8px; }
 .layout-page-style .chapter-line-label { flex: 1 0 100%; }
+
+/* The rail as one linear tree (addendum 20 §9a, from Ken): a row is a grip,
+   a name and its page. Depth is the only nesting, and it is drawn by the
+   row's own padding rather than by a heading. */
+.layout-tree { gap: 1px; }
+.layout-rail-head { display: flex; gap: 6px; flex-wrap: wrap; }
+.layout-rail-head .layout-add { flex: 1; width: auto; justify-content: center; }
+.layout-rail-row { display: flex; align-items: center; gap: 2px; }
+.layout-rail-row .layout-part { flex: 1; min-width: 0; }
+.layout-rail-row:hover .layout-part-remove,
+.layout-rail-row .layout-part-remove:focus-visible { opacity: 1; }
+.layout-rail-row.drop-before { box-shadow: inset 0 2px 0 var(--gold); }
+.layout-rail-label { font-size: 10.5px; min-width: 1.4em; }
+/* A picture inside the writing reads quieter than the chapter above it, and
+   carries no grip, because it stands where the writing puts it. */
+.layout-rail-picture .layout-part { font-size: 11px; color: var(--muted); }
+.layout-rail-picture .layout-grip { min-width: 0; }
+.layout-rail-chapter .layout-part-name { font-weight: 600; }
+.layout-rail-row .layout-ask { display: flex; align-items: baseline; justify-content: flex-start; gap: 10px; flex-wrap: wrap; padding: 0 8px 4px; }
+.layout-rail-row .layout-ask button { flex: none; width: auto; padding: 1px 6px; }
+.layout-rail-row .layout-ask .small { font-size: 10.5px; }
+/* The sentence takes a line of its own; the two answers share the next. It
+   needs a class rather than `.small`, which the buttons carry too. */
+.layout-ask-why { flex-basis: 100%; line-height: 1.35; }
+/* While the × is being asked about, the row stacks: the question needs a
+   line of its own, and a chapter's answer is a sentence rather than a word. */
+.layout-rail-asking { flex-direction: column; align-items: stretch; background: var(--panel-2, rgba(255, 255, 255, 0.05)); border-radius: 4px; }
+
+/* The page in hand (§9a): outlined, so the buttons that act on it say which
+   page they mean without a sentence saying so. */
+.layout-sheet-chosen { outline: 2px solid var(--gold); outline-offset: 2px; }

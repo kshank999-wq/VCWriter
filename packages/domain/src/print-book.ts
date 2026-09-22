@@ -167,7 +167,7 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
       const picture = block.assetId ? context.pictures.get(block.assetId) : undefined;
       const image = picture
         ? `<img class="bk-plate-image" alt="${escapeHtml(picture.altText || block.caption || '')}" src="${escapeHtml(picture.data)}" />`
-        : '<div class="bk-plate-missing">No picture chosen</div>';
+        : '<div class="bk-plate-missing">Picture goes here</div>';
       return `<div class="bk-display bk-plate${picture ? ' bk-plate-art' : ''}">${image}</div>`;
     }
     default:
@@ -278,11 +278,11 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
       // edge to edge past the margins, the same rule an art page follows.
       if (block.display) {
         if (picture) return `<div class="bk-display bk-plate bk-plate-art" data-figure="${escapeHtml(block.id)}"><img class="bk-plate-image" alt="${escapeHtml(picture.altText || block.caption || '')}" src="${escapeHtml(picture.data)}" /></div>`;
-        return `<div class="bk-display bk-plate" data-figure="${escapeHtml(block.id)}"><div class="bk-plate-missing">Picture missing</div></div>`;
+        return `<div class="bk-display bk-plate" data-figure="${escapeHtml(block.id)}"><div class="bk-plate-missing">Picture goes here</div></div>`;
       }
       const image = picture
         ? `<img class="bk-figure-image" alt="${escapeHtml(picture.altText || block.caption || '')}" src="${escapeHtml(picture.data)}" />`
-        : '<div class="bk-figure-missing">Picture missing</div>';
+        : '<div class="bk-figure-missing">Picture goes here</div>';
       const caption = (block.caption ?? '').trim() ? `<p class="bk-caption">${escapeHtml(block.caption ?? '')}</p>` : '';
       return `<div class="bk-figure" data-figure="${escapeHtml(block.id)}">${image}${caption}</div>`;
     }
@@ -338,7 +338,7 @@ const insetMarkup = (inset: FigureInset, context: BookRenderContext): string => 
   const ratio = picture && picture.width > 0 && picture.height > 0 ? `aspect-ratio:${picture.width} / ${picture.height};` : '';
   const image = picture
     ? `<img class="bk-inset-image" alt="${escapeHtml(picture.altText || inset.caption || '')}" style="${ratio}" src="${escapeHtml(picture.data)}" />`
-    : '<span class="bk-figure-missing">Picture missing</span>';
+    : '<span class="bk-figure-missing">Picture goes here</span>';
   const caption = inset.caption.trim() ? `<span class="bk-inset-caption">${escapeHtml(inset.caption)}</span>` : '';
   // The border the text keeps around it (§8a, from Ken: *gives a little bit
   // of a border*): the writer's, in ems of the body size, so it holds at any

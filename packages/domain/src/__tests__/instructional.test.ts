@@ -104,7 +104,7 @@ describe('a figure is an element of the manuscript', () => {
   it('sits where it was put, and reads in manuscript order', () => {
     let file = book();
     const made = addGraphic(file, picture(400, 300));
-    file = placeFigure(made.file, { beatId: sectionAt(made.file, 1).id, assetId: made.asset.id });
+    file = placeFigure(made.file, { beatId: sectionAt(made.file, 1).id, assetId: made.asset.id }).file;
 
     const figures = figuresInOrder(file);
     expect(figures).toHaveLength(1);
@@ -115,9 +115,9 @@ describe('a figure is an element of the manuscript', () => {
   it('renumbers when a chapter moves, with nothing stored', () => {
     let file = book();
     const one = addGraphic(file, { ...picture(400, 300), name: 'first.png' });
-    file = placeFigure(one.file, { beatId: sectionAt(one.file, 0).id, assetId: one.asset.id });
+    file = placeFigure(one.file, { beatId: sectionAt(one.file, 0).id, assetId: one.asset.id }).file;
     const two = addGraphic(file, { ...picture(400, 300), name: 'second.png' });
-    file = placeFigure(two.file, { beatId: sectionAt(two.file, 2).id, assetId: two.asset.id });
+    file = placeFigure(two.file, { beatId: sectionAt(two.file, 2).id, assetId: two.asset.id }).file;
 
     expect(figuresInOrder(file).map((f) => f.asset!.name)).toEqual(['first.png', 'second.png']);
 
@@ -131,7 +131,7 @@ describe('a figure is an element of the manuscript', () => {
   it('keeps the picture in the library when the figure is cut', () => {
     let file = book();
     const made = addGraphic(file, picture(400, 300));
-    file = placeFigure(made.file, { beatId: sectionAt(made.file, 0).id, assetId: made.asset.id });
+    file = placeFigure(made.file, { beatId: sectionAt(made.file, 0).id, assetId: made.asset.id }).file;
     const figure = figuresInOrder(file)[0]!;
 
     const after = removeFigure(file, figure.beatId, figure.elementId);
@@ -144,7 +144,7 @@ describe('a figure is an element of the manuscript', () => {
   it('keeps the figure when the picture is deleted, and says the picture has gone', () => {
     let file = book();
     const made = addGraphic(file, picture(400, 300));
-    file = placeFigure(made.file, { beatId: sectionAt(made.file, 0).id, assetId: made.asset.id });
+    file = placeFigure(made.file, { beatId: sectionAt(made.file, 0).id, assetId: made.asset.id }).file;
 
     const after = removeGraphic(file, made.asset.id);
     const figures = figuresInOrder(after);
@@ -157,7 +157,7 @@ describe('a figure is an element of the manuscript', () => {
   it('takes its caption from the picture, and then keeps its own', () => {
     let file = book();
     const made = addGraphic(file, { ...picture(400, 300), caption: 'A histogram' });
-    file = placeFigure(made.file, { beatId: sectionAt(made.file, 0).id, assetId: made.asset.id });
+    file = placeFigure(made.file, { beatId: sectionAt(made.file, 0).id, assetId: made.asset.id }).file;
     expect(figuresInOrder(file)[0]!.caption).toBe('A histogram');
 
     // Editing the library's caption does not rewrite a placement.
@@ -168,8 +168,8 @@ describe('a figure is an element of the manuscript', () => {
   it('says where one picture is used, so removing it can say what it costs', () => {
     let file = book();
     const made = addGraphic(file, picture(400, 300));
-    file = placeFigure(made.file, { beatId: sectionAt(made.file, 0).id, assetId: made.asset.id });
-    file = placeFigure(file, { beatId: sectionAt(file, 2).id, assetId: made.asset.id });
+    file = placeFigure(made.file, { beatId: sectionAt(made.file, 0).id, assetId: made.asset.id }).file;
+    file = placeFigure(file, { beatId: sectionAt(file, 2).id, assetId: made.asset.id }).file;
     // One picture, two placements — which is why the caption lives on both.
     expect(placementsOf(file, made.asset.id)).toHaveLength(2);
   });
@@ -224,7 +224,7 @@ describe('a figure’s height is a reading of the picture', () => {
 
     const made = addGraphic(file, picture(400, 400));
     const after = paginateProject(
-      placeFigure(made.file, { beatId: sectionAt(made.file, 0).id, assetId: made.asset.id }),
+      placeFigure(made.file, { beatId: sectionAt(made.file, 0).id, assetId: made.asset.id }).file,
     );
     // A square figure on a 60-column page is most of a page tall, so it pushes.
     expect(after.length).toBeGreaterThanOrEqual(before);
@@ -235,7 +235,7 @@ describe('what the library owes', () => {
   it('counts what is placed and what has no description', () => {
     let file = book();
     const made = addGraphic(file, picture(400, 300));
-    file = placeFigure(made.file, { beatId: sectionAt(made.file, 0).id, assetId: made.asset.id });
+    file = placeFigure(made.file, { beatId: sectionAt(made.file, 0).id, assetId: made.asset.id }).file;
 
     expect(figuresWithoutAltText(file)).toHaveLength(1);
     expect(describeGraphics(file)).toMatch(/1 graphic · 1 placed · 1 without a description/);

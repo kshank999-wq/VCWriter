@@ -94,30 +94,48 @@ export const graphicsInOrder = (file: ProjectFile): Asset[] =>
  *
  * `afterElementId` is where it goes; null puts it at the top of the section,
  * which is what dropping a graphic onto a section rather than into it means.
+ * `beforeElementId` is the other end of the same question, and is what the
+ * Layout room asks: a picture added to a page goes in before the first thing
+ * on it, so the page opens with the picture and the words move down.
+ *
+ * The picture may be left out. A figure with none is the box Ken draws
+ * before he has chosen what goes in it — it holds its space on the page and
+ * reads as a picture not yet chosen, which is already how a figure whose
+ * picture was deleted reads.
  */
 export const placeFigure = (
   file: ProjectFile,
-  input: { beatId: BeatId; assetId: AssetId; afterElementId?: ManuscriptElementId | null; caption?: string },
-): ProjectFile => {
+  input: {
+    beatId: BeatId;
+    assetId?: AssetId | null;
+    afterElementId?: ManuscriptElementId | null;
+    beforeElementId?: ManuscriptElementId | null;
+    caption?: string;
+    attributes?: Record<string, string | number | boolean>;
+  },
+): { file: ProjectFile; elementId: ManuscriptElementId | null } => {
   const beat = file.beats.find((one) => one.id === input.beatId);
-  const asset = (file.assets ?? []).find((one) => one.id === input.assetId);
-  if (!beat || !asset) return file;
+  const asset = input.assetId ? (file.assets ?? []).find((one) => one.id === input.assetId) : undefined;
+  if (!beat || (input.assetId && !asset)) return { file, elementId: null };
 
   const figure: ManuscriptElement = {
     id: newId<ManuscriptElementId>(),
     type: 'figure',
-    text: input.caption ?? asset.caption,
+    text: input.caption ?? asset?.caption ?? '',
     characterId: null,
-    attributes: { assetId: asset.id as string },
+    attributes: { ...(input.attributes ?? {}), ...(asset ? { assetId: asset.id as string } : {}) },
   };
 
   const elements = beat.manuscript.elements;
+  const before = input.beforeElementId
+    ? elements.findIndex((one) => (one.id as string) === (input.beforeElementId as string))
+    : -1;
   const after = input.afterElementId
     ? elements.findIndex((one) => (one.id as string) === (input.afterElementId as string))
     : -1;
-  const at = after < 0 ? 0 : after + 1;
+  const at = before >= 0 ? before : after < 0 ? 0 : after + 1;
 
-  return {
+  const next = {
     ...file,
     beats: file.beats.map((one) =>
       one.id === beat.id
@@ -129,6 +147,7 @@ export const placeFigure = (
         : one,
     ),
   };
+  return { file: next, elementId: figure.id };
 };
 
 /** Take a figure out of the manuscript. The picture stays in the library. */
@@ -142,6 +161,29 @@ export const removeFigure = (file: ProjectFile, beatId: BeatId, elementId: Manus
           updatedAt: nowIso(),
         }
       : one,
+  ),
+});
+
+/**
+ * Put a picture in a figure that has none — the box drawn before anything was
+ * chosen to go in it. The caption is left alone: the writer may have written
+ * one against the space before the picture arrived.
+ */
+export const setFigurePicture = (file: ProjectFile, elementId: string, assetId: string): ProjectFile => ({
+  ...file,
+  beats: file.beats.map((beat) =>
+    beat.manuscript.elements.some((element) => (element.id as string) === elementId)
+      ? {
+          ...beat,
+          manuscript: {
+            ...beat.manuscript,
+            elements: beat.manuscript.elements.map((element) =>
+              (element.id as string) === elementId ? { ...element, attributes: { ...element.attributes, assetId } } : element,
+            ),
+          },
+          updatedAt: nowIso(),
+        }
+      : beat,
   ),
 });
 

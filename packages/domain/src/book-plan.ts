@@ -7,6 +7,7 @@ import { bookNames, bookSettingsOf, setBookSettings } from './book-layout.js';
 import { beatsInScript, unitsInStoryOrder } from './selectors.js';
 import { newId } from './ids.js';
 import { partHasStyle, partStyleOf, type PartStyle } from './part-style.js';
+import type { BookPage } from './book-pages.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -546,6 +547,12 @@ export interface BookFigure {
   assetName: string;
   placement: BookFigurePlacement;
   chapterTitle: string;
+  /**
+   * The chapter it falls in, so the rail can sit it under the chapter it is
+   * in rather than walking the manuscript a second time to find out. Null
+   * before the first chapter, where it belongs to none.
+   */
+  markerId: string | null;
   /** Marked decorative for the eBook (addendum 23 §11). */
   decorative: boolean;
 }
@@ -555,10 +562,14 @@ export const bookFigures = (file: ProjectFile): BookFigure[] => {
   const divisions = new Map<string, PlacedMarker>(contentsDivisions(file).map((placed) => [placed.marker.unitId as string, placed]));
   const out: BookFigure[] = [];
   let chapterTitle = bookNames(file).title;
+  let markerId: string | null = null;
   for (const unit of unitsInStoryOrder(file)) {
     if (!unit.inScript) continue;
     const placed = divisions.get(unit.id as string);
-    if (placed) chapterTitle = placed.marker.title.trim() || placed.label || chapterTitle;
+    if (placed) {
+      chapterTitle = placed.marker.title.trim() || placed.label || chapterTitle;
+      markerId = placed.marker.id as string;
+    }
     for (const beat of beatsInScript(file, unit.id)) {
       for (const element of beat.manuscript.elements) {
         if (element.type !== 'figure') continue;
@@ -571,6 +582,7 @@ export const bookFigures = (file: ProjectFile): BookFigure[] => {
           assetName: (assetId && names.get(assetId)) || '',
           placement: figurePlacement(element),
           chapterTitle,
+          markerId,
           decorative: element.attributes.decorative === true,
         });
       }
@@ -643,6 +655,70 @@ export const placeBookFigure = (file: ProjectFile, elementId: string, placement:
       : beat,
   ),
 });
+
+/**
+ * What a page on the spread stands on (§9a, from Ken: *you select a page in
+ * the layout view and then add picture… and it scoots all the text down*).
+ *
+ * A page is not a record — it is where the laying happened to cut — so a
+ * press on one is answered by reading what is *on* it: the first block, and
+ * through it the part or the manuscript element the page begins with. A
+ * picture put in before that element makes the page start with the picture
+ * and pushes everything after it down, which is the whole of what Ken asked
+ * for and needs nothing stored about pages at all.
+ */
+export interface PagePlace {
+  /** The manuscript element the page opens with, where it is in the story. */
+  elementId: string | null;
+  /** The part the page belongs to, where it is in the front or back matter. */
+  partId: string | null;
+  /** The chapter in force on it. */
+  markerId: string | null;
+}
+
+export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock[], sheet: number): PagePlace => {
+  const page = pages.find((one) => one.sheet === sheet);
+  const index = new Map(blocks.map((block) => [block.id, block]));
+  const place: PagePlace = { elementId: null, partId: null, markerId: null };
+  if (!page) return place;
+  // The chapter in force is read from the last opening at or before the page,
+  // so a page in the middle of a chapter still knows which chapter it is in.
+  for (const block of blocks) {
+    if (block.kind !== 'chapter_opening') continue;
+    const at = pages.find((one) => one.pieces.some((piece) => piece.blockId === block.id));
+    if (at && at.sheet <= sheet) place.markerId = block.id;
+  }
+  for (const piece of page.pieces) {
+    const block = index.get(piece.blockId);
+    if (!block) continue;
+    if (block.partId && !place.partId) place.partId = block.partId;
+    if (BODY_KINDS.has(block.kind) && !place.elementId) place.elementId = block.id;
+  }
+  return place;
+};
+
+/** The block kinds whose id is a manuscript element's. */
+const BODY_KINDS = new Set<BlockKind>(['paragraph', 'heading', 'blockquote', 'scene_break', 'figure']);
+
+/**
+ * Move a figure so it stands just before another element, wherever in the
+ * manuscript that is. This is what re-drawing a picture's box on a different
+ * page means: the box is where the picture goes, so drawing it elsewhere
+ * moves the picture rather than making a second one.
+ */
+export const moveFigureBefore = (file: ProjectFile, elementId: string, beforeElementId: string): ProjectFile => {
+  if (elementId === beforeElementId) return file;
+  const from = file.beats.find((beat) => beat.manuscript.elements.some((element) => (element.id as string) === elementId));
+  const moving = from?.manuscript.elements.find((element) => (element.id as string) === elementId);
+  if (!from || !moving) return file;
+  const beats = file.beats.map((beat) => {
+    const elements = beat.manuscript.elements.filter((element) => (element.id as string) !== elementId);
+    const at = elements.findIndex((element) => (element.id as string) === beforeElementId);
+    if (at === -1) return beat.id === from.id ? { ...beat, manuscript: { ...beat.manuscript, elements } } : beat;
+    return { ...beat, manuscript: { ...beat.manuscript, elements: [...elements.slice(0, at), moving, ...elements.slice(at)] } };
+  });
+  return { ...file, beats };
+};
 
 const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensChapter: boolean): BookBlock | null => {
   const id = element.id as string;
