@@ -11,7 +11,7 @@ import {
   contentsDivisions,
   estimatedPages,
   geometryOf,
-  gutterFor,
+  insideFor,
   layPages,
   pictureLines,
   projectStats,
@@ -153,7 +153,12 @@ export const layBook = (file: ProjectFile, box: HTMLElement): Laying => {
   };
 
   let laying = once(pages);
-  if (gutterFor(laying.laid.pages.length) !== gutterFor(pages)) {
+  // The estimate decided the gutter, and the laid count may sit in a different
+  // tier of the standard's band — so where the inside margin would come out
+  // differently, lay it again on the real count. The trim decides the band, so
+  // it is asked rather than a page count alone.
+  const trim = laying.geometry.trim;
+  if (insideFor(trim, laying.laid.pages.length) !== insideFor(trim, pages)) {
     pages = laying.laid.pages.length;
     laying = once(pages);
   }

@@ -200,8 +200,10 @@ describe('the room', () => {
     expect(within(dialog).getByLabelText('Trim size')).toBeDefined();
     expect(within(dialog).getByLabelText('Body face')).toBeDefined();
     expect(within(dialog).getByRole('button', { name: 'Running heads & page numbers' })).toBeDefined();
-    // The spine is worked out and said, with nothing to set.
-    expect(within(dialog).getByText(/for the spine, worked out from \d+ pages?/)).toBeDefined();
+    // The spine is worked out and said, with nothing to set — and the sentence
+    // names which row of the standard the trim falls in (§3b).
+    expect(within(dialog).getByText(/The standard for a .+ puts the inside margin between/)).toBeDefined();
+    expect(within(dialog).getByText(/more than the fore-edge for the spine/)).toBeDefined();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Close book settings' }));
     expect(dialog.hasAttribute('open')).toBe(false);
   });

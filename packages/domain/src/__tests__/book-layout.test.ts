@@ -8,9 +8,10 @@ import {
   createProjectFile,
   defaultTrimFor,
   derivedLeading,
-  LEAST_INSIDE,
-  LEAST_OUTSIDE,
+  MARGIN_STANDARD,
   derivedMargins,
+  insideFor,
+  trimClassOf,
   describeGeometry,
   describeSpine,
   describeTrim,
@@ -93,57 +94,91 @@ describe('the trim', () => {
 });
 
 describe('the margins', () => {
-  it('follow from the trim by proportion, to the sixteenth, and never below the floor', () => {
-    const margins = derivedMargins({ width: 6, height: 9 }, 250);
-    // The head and the foot are the proportion: nothing binds or is thumbed there.
-    expect(margins.top).toBe(0.75);
-    expect(margins.bottom).toBe(0.875);
-    // The sides are the floor where the proportion falls under it (§3a): a
-    // tenth of six inches is 5/8, which is too little for a thumb.
-    expect(margins.outside).toBe(LEAST_OUTSIDE);
-    expect(margins.inside).toBe(LEAST_OUTSIDE + gutterFor(250));
-
-    // A wide trim keeps the proportion, the floor never being reached.
-    const big = derivedMargins({ width: 8.5, height: 11 }, 250);
-    expect(big.outside).toBeGreaterThan(LEAST_OUTSIDE);
+  /** The trims the standard names, by the row each falls in. */
+  it('read the page size rather than a proportion of it (§3b, from Ken)', () => {
+    expect(trimClassOf({ width: 4.25, height: 6.87 })).toBe('pocket');
+    expect(trimClassOf({ width: 5, height: 8 })).toBe('pocket');
+    expect(trimClassOf({ width: 5.06, height: 7.81 })).toBe('pocket'); // B format
+    expect(trimClassOf({ width: 5.25, height: 8 })).toBe('digest');
+    expect(trimClassOf({ width: 5.5, height: 8.5 })).toBe('digest');
+    expect(trimClassOf({ width: 5.83, height: 8.27 })).toBe('digest'); // A5
+    expect(trimClassOf({ width: 6, height: 9 })).toBe('trade');
+    expect(trimClassOf({ width: 6.14, height: 9.21 })).toBe('trade'); // Royal
+    expect(trimClassOf({ width: 7, height: 10 })).toBe('large');
+    expect(trimClassOf({ width: 8.5, height: 11 })).toBe('large');
   });
 
-  it('keeps every trim above the floor at every thickness (§3a, from Ken)', () => {
-    for (const trim of [
-      { width: 5, height: 8 },
-      { width: 5.25, height: 8 },
-      { width: 5.5, height: 8.5 },
-      { width: 6, height: 9 },
-      { width: 5.06, height: 7.81 },
-      { width: 7, height: 10 },
-    ]) {
+  it('match the published table on each of its three rows', () => {
+    // Pocket / mass market: inside 5/8–3/4, outside 1/2, top 1/2, bottom 5/8.
+    const pocket = derivedMargins({ width: 5, height: 8 }, 120);
+    expect(pocket).toEqual({ inside: 0.625, outside: 0.5, top: 0.5, bottom: 0.625 });
+    expect(derivedMargins({ width: 5, height: 8 }, 900).inside).toBe(0.75);
+
+    // Digest / small novel: inside 3/4–7/8, the rest the middle of their ranges.
+    const digest = derivedMargins({ width: 5.5, height: 8.5 }, 120);
+    expect(digest).toEqual({ inside: 0.75, outside: 0.5625, top: 0.5625, bottom: 0.6875 });
+    expect(derivedMargins({ width: 5.5, height: 8.5 }, 900).inside).toBe(0.875);
+
+    // US trade: inside 3/4 up, outside 5/8, and the standard's own page
+    // schedule — 3/4 to 150, its 0.825 (13/16 to the sixteenth) to 300, 7/8 on.
+    const trade = (pages: number) => derivedMargins({ width: 6, height: 9 }, pages);
+    expect(trade(120)).toEqual({ inside: 0.75, outside: 0.625, top: 0.6875, bottom: 0.8125 });
+    expect(trade(250).inside).toBe(0.8125);
+    expect(trade(400).inside).toBe(0.875);
+  });
+
+  it('keep the standard’s three rules on every trim at every thickness', () => {
+    for (const preset of TRIM_PRESETS) {
       for (const pages of [1, 80, 150, 300, 500, 700, 1200]) {
-        const margins = derivedMargins(trim, pages);
-        expect(margins.outside).toBeGreaterThanOrEqual(LEAST_OUTSIDE);
-        expect(margins.inside).toBeGreaterThanOrEqual(LEAST_INSIDE);
-        // The bound edge always clears the open one by the gutter at least.
+        const margins = derivedMargins(preset, pages);
+        // The thumb factor: a fore-edge under half an inch puts a thumb on the words.
+        expect(margins.outside).toBeGreaterThanOrEqual(0.5);
+        // The gutter: the bound edge always clears the open one.
         expect(margins.inside).toBeGreaterThan(margins.outside);
+        // Optical centring: the foot is wider than the head, or the block sinks.
+        expect(margins.bottom).toBeGreaterThan(margins.top);
       }
     }
   });
 
-  it('widen the gutter as the book thickens, with nothing run', () => {
-    expect(gutterFor(100)).toBeLessThan(gutterFor(400));
-    expect(gutterFor(400)).toBeLessThan(gutterFor(800));
-    const thin = derivedMargins({ width: 6, height: 9 }, 100);
-    const thick = derivedMargins({ width: 6, height: 9 }, 600);
-    expect(thick.inside).toBeGreaterThan(thin.inside);
-    expect(thick.outside).toBe(thin.outside);
+  it('widen the gutter as the book thickens, and never past the band', () => {
+    const trim = { width: 6, height: 9 };
+    expect(insideFor(trim, 100)).toBeLessThan(insideFor(trim, 400));
+    expect(insideFor(trim, 400)).toBeLessThan(insideFor(trim, 800));
+    expect(insideFor(trim, 800)).toBe(MARGIN_STANDARD.trade.insideMost);
+    // A pocket book's band is the narrowest, so it tops out soonest — a fifth
+    // of a 4¼ in page on each side is what the old flat floor cost it.
+    const pocketTrim = { width: 5, height: 8 };
+    expect(insideFor(pocketTrim, 800)).toBe(MARGIN_STANDARD.pocket.insideMost);
+    expect(insideFor(pocketTrim, 800)).toBeLessThan(insideFor(trim, 800));
+    // The fore-edge is a fact about the trim alone and never moves with the count.
+    expect(derivedMargins(trim, 100).outside).toBe(derivedMargins(trim, 900).outside);
   });
 
-  it('say what the spine takes and when it next widens, and that a typed inside margin takes the working-out away', () => {
-    const settings = bookSettingsOf(novel());
+  it('say which standard is in force, what the spine takes, and when it next widens', () => {
+    const settings = bookSettingsOf(novel()); // 5½ × 8½, a digest
     const thin = describeSpine(geometryOf(settings, 'novel', 120));
-    expect(thin).toContain('an extra ⅛ in for the spine, worked out from 120 pages');
-    expect(thin).toContain('Past 150 pages it widens to ¼ in by itself.');
-    expect(describeSpine(geometryOf(settings, 'novel', 900))).toContain('It is at its widest.');
+    expect(thin).toContain('The standard for a digest paperback puts the inside margin between ¾ and ⅞ in.');
+    expect(thin).toContain('At 120 pages it is ¾ in, which is 3/16 in more than the fore-edge for the spine');
+    expect(thin).toContain('Past 150 pages it widens to 13/16 in by itself.');
+    expect(describeSpine(geometryOf(settings, 'novel', 900))).toContain('It is as wide as the standard takes it.');
     const typed = setBookSettings(novel(), { margins: { inside: 1, outside: null, top: null, bottom: null } });
     expect(describeSpine(geometryOf(bookSettingsOf(typed), 'novel', 120))).toContain('The inside margin is typed, so nothing is being added for the spine');
+  });
+
+  it('give a page larger than the standard describes a fore-edge to match', () => {
+    // The table's widest row is a workbook; a custom trim past that would take
+    // a workbook's margins and look starved, so the sides grow with the paper
+    // — and the gutter grows with them rather than being eaten by them.
+    const huge = derivedMargins({ width: 11, height: 17 }, 250);
+    expect(huge.outside).toBeGreaterThan(MARGIN_STANDARD.large.outside);
+    expect(huge.inside - huge.outside).toBe(
+      insideFor({ width: 11, height: 17 }, 250) - MARGIN_STANDARD.large.outside,
+    );
+    // And it bites on nothing in the list.
+    for (const preset of TRIM_PRESETS) {
+      expect(derivedMargins(preset, 250).outside).toBe(MARGIN_STANDARD[trimClassOf(preset)].outside);
+    }
   });
 
   it('never go under three-eighths, which is what a printer trims to', () => {
@@ -159,9 +194,9 @@ describe('the margins', () => {
     const geometry = geometryOf(bookSettingsOf(file), 'novel', 250);
     expect(geometry.margins.outside).toBe(1);
     expect(geometry.overridden).toEqual({ inside: false, outside: true, top: false, bottom: false });
-    // The inside is still worked out, and from the derived outside rather
-    // than the typed one — so it is the floor plus this thickness's gutter.
-    expect(geometry.margins.inside).toBe(LEAST_OUTSIDE + gutterFor(250));
+    // The inside is still worked out, and from the standard rather than from
+    // the typed outside — a typed edge is one edge and not a new rule.
+    expect(geometry.margins.inside).toBe(insideFor({ width: 6, height: 9 }, 250));
     expect(describeGeometry(geometry, 'old_style')).toContain('outside 1 in (typed)');
     expect(describeGeometry(geometry, 'old_style')).toContain('Margins partly typed');
   });
@@ -170,11 +205,13 @@ describe('the margins', () => {
 describe('the page', () => {
   it('holds as many lines as the text block over the leading', () => {
     const geometry = geometryOf(bookSettingsOf(novel()), 'novel', 200);
-    // 5.5 × 8.5: top 0.6875 + bottom 0.8125 leaves 7 in; 11 on 15 pt is 33 lines.
+    // 5.5 × 8.5 is a digest: top 9/16 + bottom 11/16 leaves 7¼ in, and 11 on
+    // 15 pt is 34 lines. The standard's head and foot are shallower than the
+    // proportion that stood here before, so the page holds a line more.
     expect(geometry.leading).toBe(derivedLeading(11));
     expect(derivedLeading(11)).toBe(15);
-    expect(geometry.text.height).toBeCloseTo(7, 5);
-    expect(geometry.linesPerPage).toBe(33);
+    expect(geometry.text.height).toBeCloseTo(7.25, 5);
+    expect(geometry.linesPerPage).toBe(34);
   });
 
   it('says the measure in characters, and warns when a line is too long or too short', () => {
@@ -196,7 +233,7 @@ describe('the page', () => {
     const said = describeGeometry(geometry, 'old_style');
     expect(said).toContain('5½ × 8½ in');
     expect(said).toContain('worked out from the trim and 200 pages');
-    expect(said).toContain('33 lines of old-style serif at 11 on 15 pt');
+    expect(said).toContain('34 lines of old-style serif at 11 on 15 pt');
   });
 
   it('guesses a page count before anything is laid, and says so in the name', () => {

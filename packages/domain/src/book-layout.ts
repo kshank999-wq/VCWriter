@@ -251,56 +251,134 @@ export interface BookGeometry {
 const sixteenth = (inches: number): number => Math.round(inches * 16) / 16;
 
 /**
- * The extra a thick book needs on the inside, because the binding swallows
- * it. The tiers are the ones print-on-demand houses publish, which is the
- * one place a number here comes from outside this file.
+ * The margins, from the published standard (§3b, from Ken: *the proportions
+ * need to be appropriate for the book size, here is the standard*).
+ *
+ * The rule here was a **proportion of the trim** and it was wrong twice over,
+ * in opposite directions, which is why a proportion cannot do this job. It
+ * gave a paperback too little (a tenth of a 5 in page is 1/2 in of fore-edge
+ * whatever the book weighs) and a wide page too much. A floor over the top of
+ * it — the last attempt — only moved the error: one pair of numbers for every
+ * trim gave a mass-market paperback 3/4 in of fore-edge out of 4¼ in of paper,
+ * which is a fifth of the page thrown away on each side.
+ *
+ * **The standard is a band per page size, not a proportion and not a floor.**
+ * A bigger page takes a bigger margin, but not in proportion — the jump from a
+ * pocket book to a trade paperback is a quarter of an inch of trim and an
+ * eighth of an inch of margin. So this is a table, read by the size of the
+ * page:
+ *
+ * | page size            | inside / gutter | outside | top   | bottom  |
+ * | -------------------- | --------------- | ------- | ----- | ------- |
+ * | pocket / mass market | 5/8 – 3/4       | 1/2     | 1/2   | 5/8     |
+ * | digest / small novel | 3/4 – 7/8       | 1/2–5/8 | 1/2–5/8 | 5/8–3/4 |
+ * | US trade             | 3/4 – 9/10      | 1/2–5/8 | 5/8–3/4 | 3/4–7/8 |
+ *
+ * Three rules decide where in a band a book lands, and all three are the
+ * standard's own:
+ *
+ * **The thicker the book, the wider the gutter** — the inside walks its band
+ * as the page count rises, which is the one margin that is not a fact about
+ * the trim alone. On a trade paperback the walk is the standard's own
+ * schedule: 3/4 in to 150 pages, 13/16 to 300 (its 0.825, said as the nearest
+ * sixteenth), 7/8 past that.
+ *
+ * **The thumb factor** — the outside is never under 1/2 in, or a reader's
+ * thumb sits on the words. It is the bottom of every band above rather than a
+ * value anything computes.
+ *
+ * **Optical centring** — the foot is always wider than the head, or the block
+ * looks as though it is sinking down the page.
+ *
+ * Everything lands on the sixteenth the rest of this module speaks in, so a
+ * margin prints as a fraction a printer can set. Where a band gives a range
+ * this takes its middle, the ends of a range being the standard's tolerance
+ * rather than two different right answers.
  */
-export const gutterFor = (pages: number): number => {
-  if (pages <= 150) return 0.125;
-  if (pages <= 300) return 0.25;
-  if (pages <= 500) return 0.375;
-  if (pages <= 700) return 0.5;
-  return 0.625;
+export type TrimClass = 'pocket' | 'digest' | 'trade' | 'large';
+
+export interface MarginStandard {
+  /** What a printer calls a page this size. */
+  name: string;
+  outside: number;
+  top: number;
+  bottom: number;
+  /** The gutter band: a thin book at one end, a thick one at the other. */
+  insideLeast: number;
+  insideMost: number;
+}
+
+export const MARGIN_STANDARD: Record<TrimClass, MarginStandard> = {
+  pocket: { name: 'a pocket paperback', outside: 0.5, top: 0.5, bottom: 0.625, insideLeast: 0.625, insideMost: 0.75 },
+  digest: { name: 'a digest paperback', outside: 0.5625, top: 0.5625, bottom: 0.6875, insideLeast: 0.75, insideMost: 0.875 },
+  trade: { name: 'a trade paperback', outside: 0.625, top: 0.6875, bottom: 0.8125, insideLeast: 0.75, insideMost: 0.9375 },
+  // The standard stops at 6 × 9, novels being what it is written for. A
+  // workbook is extrapolated from the same shape, said here rather than
+  // pretending the table covers it.
+  large: { name: 'a textbook or a workbook', outside: 0.75, top: 0.75, bottom: 0.875, insideLeast: 0.875, insideMost: 1.125 },
 };
 
 /**
- * The least a printed book's side margins may be (§3a, from Ken: *margins
- * for novels should be standard with at least .75 in on the open edge and
- * .9 on the bound edge*).
- *
- * He was right, and by more than he said: the proportional rule below gave
- * the **open edge at most 5/8 in on every novel trim there is** — 1/2 on a
- * 5 × 8 — and the bound edge reached 7/8 only on a 6 × 9 of 250 pages. Only
- * the two workbook trims cleared either floor. A tenth of the width is a
- * fine proportion on a 7 × 10 and too little on a paperback, because the
- * ink is the same size whatever the paper is: what a thumb covers and what
- * a binding swallows do not shrink with the trim.
- *
- * So the proportion still decides a **wide** page and a floor decides a
- * narrow one. Both floors are kept on the sixteenth the rest of this module
- * speaks in, so they print as fractions: 3/4 on the open edge, 15/16 on the
- * bound one, which is Ken's 0.9 rounded up rather than down.
+ * Which of the four a trim is, **by area** rather than by width: how much
+ * paper is in the hand is what the standard's rows are about, and a tall
+ * narrow page and a short wide one of the same area take the same margins.
+ * The boundaries fall between the presets — a B format and a 5 × 8 are
+ * pocket books, a 5¼ × 8 and an A5 are digest, a Royal is trade.
  */
-export const LEAST_OUTSIDE = 0.75;
-export const LEAST_INSIDE = 0.9375;
+export const trimClassOf = (trim: Trim): TrimClass => {
+  const area = trim.width * trim.height;
+  if (area <= 41) return 'pocket';
+  if (area <= 50) return 'digest';
+  if (area <= 60) return 'trade';
+  return 'large';
+};
+
+/** The page counts the gutter widens at, and where a count falls among them. */
+const PAGE_TIERS = [150, 300, 500, 700] as const;
+const tierOf = (pages: number): number => {
+  const found = PAGE_TIERS.findIndex((tier) => pages <= tier);
+  return found === -1 ? PAGE_TIERS.length : found;
+};
 
 /**
- * The margins a trim proposes (§3): the outside a tenth of the width, the
- * head a twelfth of the height, the foot a little more than the head so the
- * block sits high on the page as a book's does, and the inside the outside
- * plus the gutter — each of the sides never less than the floor above.
- * The head and the foot keep the three-eighths a printer will trim to,
- * nothing binding or being thumbed there.
+ * The inside margin: the band's low end for a thin book, a sixteenth more at
+ * each tier, and never past the band's top. A book that grows from two
+ * hundred pages to four hundred widens its own gutter with nothing run.
+ */
+export const insideFor = (trim: Trim, pages: number): number => {
+  const band = MARGIN_STANDARD[trimClassOf(trim)];
+  return Math.min(band.insideMost, band.insideLeast + tierOf(pages) / 16);
+};
+
+/** What the inside carries over the outside — the spine allowance itself. */
+export const gutterFor = (trim: Trim, pages: number): number =>
+  insideFor(trim, pages) - MARGIN_STANDARD[trimClassOf(trim)].outside;
+
+/**
+ * A page larger than the standard describes. The table's widest row is a
+ * workbook; a custom trim bigger than that would take a workbook's margins
+ * and look starved, so the old proportion comes back as a **floor on the
+ * sides alone** — the two edges a thumb and a binding take. The coefficient
+ * is set so this never bites on any trim in the list.
+ */
+const OVERSIZE = 0.088;
+
+/**
+ * The margins a trim proposes (§3, §3b): the table above, read by the size of
+ * the page and the thickness of the book. Nothing is stored — a trim changed
+ * in the room re-reads the whole of this.
  */
 export const derivedMargins = (
   trim: Trim,
   pages: number,
 ): { inside: number; outside: number; top: number; bottom: number } => {
-  const outside = Math.max(LEAST_OUTSIDE, sixteenth(trim.width * 0.105));
-  const top = Math.max(0.375, sixteenth(trim.height * 0.083));
-  const bottom = Math.max(0.375, sixteenth(trim.height * 0.097));
-  const inside = Math.max(LEAST_INSIDE, sixteenth(outside + gutterFor(pages)));
-  return { inside, outside, top, bottom };
+  const band = MARGIN_STANDARD[trimClassOf(trim)];
+  const outside = Math.max(band.outside, sixteenth(trim.width * OVERSIZE));
+  const standard = insideFor(trim, pages);
+  // Where the page was too big for the table and the fore-edge grew, the
+  // gutter grows with it rather than being eaten by it.
+  const inside = Math.max(standard, outside + (standard - band.outside));
+  return { inside, outside, top: band.top, bottom: band.bottom };
 };
 
 /** The leading a size proposes: a third again, to the nearest half point. */
@@ -401,11 +479,20 @@ export const describeSpine = (geometry: BookGeometry): string => {
   if (geometry.overridden.inside) {
     return 'The inside margin is typed, so nothing is being added for the spine. Clear it to have the allowance worked out from the page count again.';
   }
-  const gutter = gutterFor(geometry.pages);
-  const tiers = [150, 300, 500, 700];
-  const next = tiers.find((tier) => geometry.pages <= tier);
-  const growth = next === undefined ? 'It is at its widest.' : `Past ${next} pages it widens to ${fraction(gutterFor(next + 1))} in by itself.`;
-  return `The inside margin carries an extra ${fraction(gutter)} in for the spine, worked out from ${geometry.pages} ${geometry.pages === 1 ? 'page' : 'pages'}, so the text clears the binding on every page. ${growth}`;
+  const { trim, pages } = geometry;
+  const band = MARGIN_STANDARD[trimClassOf(trim)];
+  const gutter = gutterFor(trim, pages);
+  const next = PAGE_TIERS.find((tier) => pages <= tier);
+  const wider = next === undefined ? null : insideFor(trim, next + 1);
+  const growth =
+    wider === null || wider === insideFor(trim, pages)
+      ? 'It is as wide as the standard takes it.'
+      : `Past ${next} pages it widens to ${fraction(wider)} in by itself.`;
+  return (
+    `The standard for ${band.name} puts the inside margin between ${fraction(band.insideLeast)} and ${fraction(band.insideMost)} in. ` +
+    `At ${pages} ${pages === 1 ? 'page' : 'pages'} it is ${fraction(geometry.margins.inside)} in, which is ${fraction(gutter)} in more than the ` +
+    `fore-edge for the spine, so the text clears the binding on every page. ${growth}`
+  );
 };
 
 /** A trim as a printer names it: *5½ × 8½ in*, or the preset's name. */

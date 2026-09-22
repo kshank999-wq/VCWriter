@@ -135,61 +135,89 @@ not rename the file. The title page's part dialog shows what it will print
 and has a button to *Book settings…* rather than a second box for the same
 field, because a second box is a second answer.
 
-## 3b. The margins have a floor
+## 3b. The margins are a standard, not a proportion and not a floor
 
-From Ken, with *please verify* attached: *margins for novels should be
-standard with at least .75″ on the open edge and .9 on the bound edge.*
+From Ken, in two goes. First: *margins for novels should be standard with at
+least .75" on the open edge and .9 on the bound edge — please verify.* Then,
+after seeing that built: *the proportions need to be appropriate for the book
+size, here is the standard* — with the published table, and the core rules
+under it.
 
-Verified, and he was right by more than he said. §3's rule was a proportion
-of the trim and nothing else, and on the trims a novel is actually printed at
-that proportion is too small:
+**The table is the rule now, and it corrects both earlier answers, including
+his own first figures.** Worth writing down, because the same mistake was made
+twice in opposite directions.
 
-| trim | outside, before | inside at 250pp, before |
-| --- | --- | --- |
-| 5 × 8 | 1/2 | 3/4 |
-| 5.25 × 8 | 9/16 | 13/16 |
-| 5.5 × 8.5 | 9/16 | 13/16 |
-| 6 × 9 | 5/8 | 7/8 |
+§3's original rule was a **proportion** of the trim. It gave a paperback too
+little: a tenth of a 5 in page is 1/2 in of fore-edge whatever the book
+weighs. So the first fix put a **floor** under it — one pair of numbers, 3/4
+and 15/16, for every trim there is. That moved the error rather than fixing
+it: a mass-market paperback got 3/4 in of fore-edge out of 4¼ in of paper,
+which is a fifth of the page thrown away on each side, and the 5 × 8's measure
+fell to 45 characters.
 
-The open edge **never reached 3/4 on any novel trim**, and the bound edge
-reached 7/8 only on the largest of them. Across every trim in the list at
-every thickness, 36 of 45 combinations fell under one of his two figures;
-only the two workbook trims (7 × 10, 8.5 × 11) cleared either.
+A proportion is wrong because the ink does not shrink with the paper. A single
+floor is wrong because the **paper does not stop mattering**. The published
+standard is neither: it is **a band per page size**.
 
-The reason the proportion fails is worth keeping, because it is the same
-reason the chapter-page type is a book setting rather than a per-chapter one:
-**the ink does not shrink with the paper**. A tenth of the width is a fine
-margin on a 7 × 10 and too little on a paperback, because what a thumb covers
-and what a binding swallows are the same size whatever the trim is.
+| page size | inside / gutter | outside | top | bottom |
+| --- | --- | --- | --- | --- |
+| pocket / mass market (4.25 × 6.87 – 5 × 8) | 5/8 – 3/4 | 1/2 | 1/2 | 5/8 |
+| digest / small novel (5.5 × 8.5) | 3/4 – 7/8 | 1/2 – 5/8 | 1/2 – 5/8 | 5/8 – 3/4 |
+| US trade (6 × 9) | 3/4 – 9/10 | 1/2 – 5/8 | 5/8 – 3/4 | 3/4 – 7/8 |
 
-So the proportion still decides a **wide** page and a floor decides a narrow
-one — `Math.max` and nothing cleverer, in `derivedMargins`:
+The jump from a pocket book to a trade paperback is a quarter inch of trim and
+an eighth of an inch of margin — which no proportion produces, and which is
+the whole point.
 
-```
-LEAST_OUTSIDE = 0.75
-LEAST_INSIDE  = 0.9375
-```
+`MARGIN_STANDARD` in `book-layout.ts` is that table, and `trimClassOf` says
+which row a trim falls in. It reads the **area** rather than the width: how
+much paper is in the hand is what the rows are about, and it puts a B format
+and a 5 × 8 in the pocket row, a 5¼ × 8 and an A5 in the digest, a Royal with
+the 6 × 9.
 
-Both floors are kept on the **sixteenth** the rest of the module speaks in, so
-they print as fractions: 3/4 on the open edge, 15/16 on the bound one, which
-is Ken's 0.9 rounded **up** rather than down — a margin rounded down to meet a
-minimum has not met it.
+Three rules decide where inside a band a book lands, and all three are the
+standard's own:
 
-Three things follow and are all wanted. The **spine allowance still grows
-over the floor**, because it is added to the outside and then floored, not
-instead of it: a 5.5 × 8.5 sits at 15/16 up to 150 pages, 1 in at 151, 1 1/8
-at 400, 1 3/8 at 900. A **typed margin still wins**, the floor being part of
-the working-out and an override being the writer's. And the **measure gets
-tighter**, which is the cost: the 5 × 8 now sets 45 characters, the narrowest
-in the list, and that is `measureWarning`'s to say rather than something to
-quietly widen the margins back for.
+- **The thicker the book, the wider the gutter.** The inside walks its band as
+  the page count rises — the one margin that is not a fact about the trim
+  alone. On a trade paperback the walk is the standard's own schedule: 3/4 in
+  to 150 pages, 13/16 to 300 (its 0.825, said as the nearest sixteenth), 7/8
+  past that. Nothing is stored, so a book that grows re-reads its own gutter.
+- **The thumb factor.** The outside is never under 1/2 in. It is the bottom of
+  every band rather than a number anything computes.
+- **Optical centring.** The foot is always wider than the head. A test asserts
+  it on every trim at every thickness, along with the other two.
 
-Ken's second half — *title centred* — was measured on the real page rather
-than assumed, and the story title was already exactly centred **on the text
-block** (0px off, 79px of block either side of it). What is visible is that
-it is not centred on the **paper**, by half the gutter, because the inside
-margin is wider than the outside. That is correct bookbinding, and it is
-what his own 0.9-against-0.75 asks for.
+Where a band gives a range this takes its **middle**, the ends being the
+standard's tolerance rather than two different right answers. Everything lands
+on the **sixteenth**, so a margin prints as a fraction a printer can set —
+which is why the standard's 0.825 appears as 13/16.
+
+Two things the table does not cover are said here rather than pretended:
+
+- **A workbook.** The standard stops at 6 × 9, novels being what it is written
+  for, so the `large` row (7 × 10, 8½ × 11) is extrapolated from the same shape
+  and labelled as such in the code.
+- **A page bigger than that.** A custom trim past a workbook would take a
+  workbook's margins and look starved, so the old proportion returns as a
+  floor on the **sides alone** — the two edges a thumb and a binding take —
+  with a coefficient set so it bites on nothing in the preset list, and the
+  gutter grows with the fore-edge rather than being eaten by it.
+
+`describeSpine` now names the row in force (*the standard for a digest
+paperback puts the inside margin between ¾ and ⅞ in*), because a writer
+looking at a derived number should be able to see which standard produced it.
+
+What it comes to: the novel trims now set **52 to 66 characters** to the line,
+where the floor had the 5 × 8 at 45 and the old proportion had the 6 × 9 at
+76. The head and foot are shallower than the proportion was, so a 5½ × 8½
+holds 34 lines where it held 33.
+
+Ken's *title centred*, from the first go, was measured on the real page rather
+than assumed: the story title was already exactly centred **on the text
+block**. What is visible is that it is not centred on the **paper**, by half
+the gutter, because the inside margin is wider than the outside. That is
+correct bookbinding and the standard asks for it on every row.
 
 ## 4. The browser measures and the domain decides where the pages fall
 
