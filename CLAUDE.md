@@ -1757,6 +1757,41 @@ push live; the build takes a minute or two.
   by the browser, nothing saying what the thing was — so the print window
   now carries a screen-only banner naming the document and what to choose,
   and its tab is the file name.
+  `addendum-24-graveyard.md` is **the graveyard**, from Ken: *anything that
+  gets removed or deleted, instead of deleting it permanently, it goes to the
+  graveyard, just in case you accidentally delete something, you can restore
+  it*. **Built**, scoped to **Research's own records** — the seven a writer
+  meets as a row in a list with a delete, and the ones with no other safety
+  net. §1 is the decision it rests on, and the audit set it up: **six of the
+  seven already carry `archived`**, so reusing it would have been the shortest
+  change in the file and would have been wrong — **archived is a writer saying
+  they are done with something, the graveyard is a writer saying they did not
+  mean that**. Two intentions, so two fields; one field would put a
+  deliberately archived setup beside an accidentally deleted note and make
+  *Restore* mean two things on one list. It is addendum 09 §2's trap read from
+  the other end: **a state is not a mistake**. §2 is the mechanism: deleting
+  stamps `deletedAt` and **nothing leaves its collection**, which is what makes
+  restoring a promise the module can keep — every usage link, story link and
+  tag still points at an id that still exists, so putting something back is
+  *clearing a field* rather than reassembling a record and everything that
+  referred to it. It follows that **a delete must stop cutting what hangs off
+  the record**: `removeThread` took its nodes and arrows and `removeCharacter`
+  took its links, and a thread restored without its moments is an empty name —
+  so those are `destroyThread`/`destroyCharacter` now and **only the graveyard
+  calls them**. The cost is that every list must not show the buried, so
+  **`living` is the one predicate** and each module's own reading applies it
+  (`castByCategory`, `locationsInOrder`, `themesInOrder`, `motifsInOrder`,
+  `threadsInOrder`, `setupsBoard`, the four research readings) — a missed
+  filter is then a failing test rather than a deleted note still on the shelf.
+  §3: **the graveyard is a reading**, newest first, stored nowhere — the sixth
+  time a fact about the work is a reading rather than a column. §4 is the
+  screen, last in the research menu under the folders, and **the two acts that
+  destroy are the two that ask**; nothing ages out on a timer. §5 is what is
+  deliberately absent: the manuscript (a scene has snapshots), a story or
+  chapter break (removing one deletes nothing, so there is nothing to bury),
+  and **research notes and setups have no delete today** — only archive — so
+  nothing can reach the graveyard from those two yet, and a destructive control
+  nobody asked for was not invented for them.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

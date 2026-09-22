@@ -1,4 +1,5 @@
 import { newId } from './ids.js';
+import { onlyLiving, sendToGraveyard } from './graveyard.js';
 import { nowIso } from './entities/common.js';
 import { beatsForUnit, findUnit, unitsInStoryOrder } from './selectors.js';
 import { usageLinkSchema, type UsageLink } from './character-creator.js';
@@ -83,7 +84,14 @@ export const updateTheme = (
  * writing — the passage is untouched, which is the only thing that would be a
  * loss.
  */
-export const removeTheme = (file: ProjectFile, themeId: ResearchThemeId): ProjectFile => ({
+  // Deleting sends it to the graveyard rather than destroying it
+  // (addendum 24): it keeps its place and gains a stamp, so everything
+  // pointing at it goes on pointing at it and restoring is clearing a field.
+export const removeTheme = (file: ProjectFile, themeId: ResearchThemeId): ProjectFile =>
+  sendToGraveyard(file, { kind: 'theme', id: themeId as string });
+
+/** Gone for good, used only when the graveyard is emptied. */
+export const destroyTheme = (file: ProjectFile, themeId: ResearchThemeId): ProjectFile => ({
   ...file,
   themes: (file.themes ?? []).filter((theme) => theme.id !== themeId),
   themeMotifLinks: (file.themeMotifLinks ?? []).filter((link) => link.themeId !== themeId),
@@ -122,7 +130,14 @@ export const updateMotif = (
   ),
 });
 
-export const removeMotif = (file: ProjectFile, motifId: ResearchMotifId): ProjectFile => ({
+  // Deleting sends it to the graveyard rather than destroying it
+  // (addendum 24): it keeps its place and gains a stamp, so everything
+  // pointing at it goes on pointing at it and restoring is clearing a field.
+export const removeMotif = (file: ProjectFile, motifId: ResearchMotifId): ProjectFile =>
+  sendToGraveyard(file, { kind: 'motif', id: motifId as string });
+
+/** Gone for good, used only when the graveyard is emptied. */
+export const destroyMotif = (file: ProjectFile, motifId: ResearchMotifId): ProjectFile => ({
   ...file,
   motifs: (file.motifs ?? []).filter((motif) => motif.id !== motifId),
   themeMotifLinks: (file.themeMotifLinks ?? []).filter((link) => link.motifId !== motifId),
@@ -172,6 +187,14 @@ export const unrelateMotifFromTheme = (
 });
 
 /** The motifs of a theme, and the themes of a motif. Separate lists, by design. */
+/**
+ * Every theme, and every motif, that is still in the project (addendum 24).
+ * The screens read these rather than the collections, so a buried one is off
+ * the list without every panel remembering to ask.
+ */
+export const themesInOrder = (file: ProjectFile): ResearchTheme[] => onlyLiving(file.themes ?? []);
+export const motifsInOrder = (file: ProjectFile): ResearchMotif[] => onlyLiving(file.motifs ?? []);
+
 export const motifsOfTheme = (file: ProjectFile, themeId: ResearchThemeId): ResearchMotif[] => {
   const wanted = new Set(
     (file.themeMotifLinks ?? []).filter((link) => link.themeId === themeId).map((link) => link.motifId as string),

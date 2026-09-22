@@ -51,6 +51,12 @@ export const setupPayoffStatusSchema = z.enum(['open', 'established', 'resolved'
 export type SetupPayoffStatus = z.infer<typeof setupPayoffStatusSchema>;
 
 export const setupPayoffSchema = z.object({
+  /**
+   * In the graveyard since (addendum 24): a delete stamps this and the record
+   * keeps its place, so everything pointing at it goes on pointing at it and
+   * restoring is clearing the field. `null` is the ordinary state.
+   */
+  deletedAt: z.string().datetime({ offset: true }).nullable().default(null),
   id: id<SetupPayoffId>(),
   projectId: id<ProjectId>(),
   title: z.string().min(1),

@@ -184,7 +184,7 @@ export function ThemesPanel({ file, onUpdate, onGoTo }: ThemesPanelProps) {
               state={theme.state}
               onChange={(state) => onUpdate((current) => updateTheme(current, theme.id, { state }))}
               onRemove={() => onUpdate((current) => removeTheme(current, theme.id))}
-              removeLabel="Remove this theme and its taggings"
+              removeLabel="Delete this theme"
             />
 
             {/* Its motifs, named as a relationship and never as a merge. */}
@@ -267,7 +267,7 @@ export function ThemesPanel({ file, onUpdate, onGoTo }: ThemesPanelProps) {
               state={motif.state}
               onChange={(state) => onUpdate((current) => updateMotif(current, motif.id, { state }))}
               onRemove={() => onUpdate((current) => removeMotif(current, motif.id))}
-              removeLabel="Remove this motif and its taggings"
+              removeLabel="Delete this motif"
             />
 
             <h3>Themes it belongs to</h3>
@@ -371,7 +371,12 @@ function StateRow({
           it. What goes is the taggings; the writing is untouched. */}
       {asking ? (
         <div className="thematic-confirm">
-          <span className="muted small">Its taggings go with it. The writing is untouched.</span>
+          {/* It goes to the graveyard and its taggings go with it — kept, so
+              restoring gives back what was there (addendum 24). Saying they
+              were cut would be a promise the graveyard could not keep. */}
+          <span className="muted small">
+            It goes to the graveyard, with its taggings, and can be restored from there. The writing is untouched.
+          </span>
           <button type="button" className="ghost small danger" onClick={onRemove}>
             Remove it
           </button>

@@ -1,4 +1,5 @@
 import { newId } from './ids.js';
+import { sendToGraveyard } from './graveyard.js';
 import { orderKeyForIndex } from './ordering.js';
 // Where the plan and the script meet: a scene bound to a node on a board, or
 // to a row in an outline, is the same object as it.
@@ -772,7 +773,14 @@ export const updateCharacter = (
   });
 };
 
-export const removeCharacter = (file: ProjectFile, characterId: CharacterId): ProjectFile => {
+export const removeCharacter = (file: ProjectFile, characterId: CharacterId): ProjectFile =>
+  // To the graveyard rather than gone (addendum 24). The links are **kept**,
+  // which is the whole point: restoring somebody has to give back who they
+  // were related to, and links cut on the way out could not be put back.
+  touchProject(sendToGraveyard(file, { kind: 'character', id: characterId as string }));
+
+/** Gone for good, with everything that pointed at them. The graveyard's own act. */
+export const destroyCharacter = (file: ProjectFile, characterId: CharacterId): ProjectFile => {
   const removed = new Set<string>([characterId]);
   return touchProject({
     ...file,

@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import {
+  themesInOrder,
+  graveyard,
   addBeat,
   addMotif,
   addTheme,
@@ -199,14 +201,17 @@ describe('the screen', () => {
   it('asks before removing, and says what goes with it', () => {
     let seen: ProjectFile | null = null;
     render(<Panel start={tagged().file} onFile={(one) => (seen = one)} />);
-    fireEvent.click(screen.getByText('Remove this theme and its taggings'));
+    fireEvent.click(screen.getByText('Delete this theme'));
 
-    expect(screen.getByText(/The writing is untouched/)).toBeTruthy();
+    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
     fireEvent.click(screen.getByText('Remove it'));
 
     const after = seen as unknown as ProjectFile;
-    expect(after.themes).toHaveLength(0);
-    expect(after.usageLinks.filter((one) => one.ownerKind === 'theme')).toHaveLength(0);
+    // Off the list, in the graveyard, and its taggings **kept** — which is
+    // what lets it be restored whole (addendum 24).
+    expect(themesInOrder(after)).toHaveLength(0);
+    expect(graveyard(after).map((row) => row.word)).toEqual(['Theme']);
+    expect(after.usageLinks.filter((one) => one.ownerKind === 'theme')).toHaveLength(1);
     // The motif's occurrences are untouched.
     expect(after.usageLinks.filter((one) => one.ownerKind === 'motif')).toHaveLength(2);
   });

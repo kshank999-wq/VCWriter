@@ -29,6 +29,12 @@ export type CharacterCategory = z.infer<typeof characterCategorySchema>;
  * category; that is a link, not a copy.
  */
 export const characterSchema = z.object({
+  /**
+   * In the graveyard since (addendum 24): a delete stamps this and the record
+   * keeps its place, so everything pointing at it goes on pointing at it and
+   * restoring is clearing the field. `null` is the ordinary state.
+   */
+  deletedAt: z.string().datetime({ offset: true }).nullable().default(null),
   id: id<CharacterId>(),
   projectId: id<ProjectId>(),
   name: z.string().min(1),

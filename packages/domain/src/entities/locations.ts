@@ -25,6 +25,12 @@ export const locationDescriptionSchema = z.object({
 export type LocationDescription = z.infer<typeof locationDescriptionSchema>;
 
 export const locationSchema = z.object({
+  /**
+   * In the graveyard since (addendum 24): a delete stamps this and the record
+   * keeps its place, so everything pointing at it goes on pointing at it and
+   * restoring is clearing the field. `null` is the ordinary state.
+   */
+  deletedAt: z.string().datetime({ offset: true }).nullable().default(null),
   id: id<LocationId>(),
   projectId: id<ProjectId>(),
   /** The canonical name, as the heading prints it: MILLER HOUSE. */

@@ -1,4 +1,5 @@
 import { newId } from './ids.js';
+import { onlyLiving, sendToGraveyard } from './graveyard.js';
 import { nowIso } from './entities/common.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { parseSceneHeading, sceneHeadingOf, setSceneHeading } from './scene-heading.js';
@@ -97,7 +98,14 @@ export const renameLocation = (
   return next;
 };
 
-export const removeLocation = (file: ProjectFile, locationId: LocationId): ProjectFile => ({
+  // Deleting sends it to the graveyard rather than destroying it
+  // (addendum 24): it keeps its place and gains a stamp, so everything
+  // pointing at it goes on pointing at it and restoring is clearing a field.
+export const removeLocation = (file: ProjectFile, locationId: LocationId): ProjectFile =>
+  sendToGraveyard(file, { kind: 'location', id: locationId as string });
+
+/** Gone for good, used only when the graveyard is emptied. */
+export const destroyLocation = (file: ProjectFile, locationId: LocationId): ProjectFile => ({
   ...file,
   locations: (file.locations ?? []).filter((location) => location.id !== locationId),
 });
@@ -168,7 +176,7 @@ export const removeDescription = (
 
 /** The active locations, alphabetically — the order a picker wants. */
 export const locationsInOrder = (file: ProjectFile, includeArchived = false): Location[] =>
-  (file.locations ?? [])
+  onlyLiving(file.locations ?? [])
     .filter((one) => includeArchived || !one.archived)
     .sort((a, b) => a.name.localeCompare(b.name));
 

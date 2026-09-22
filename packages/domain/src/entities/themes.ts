@@ -29,6 +29,12 @@ export const thematicStateSchema = z.enum(THEMATIC_STATES);
 export type ThematicState = z.infer<typeof thematicStateSchema>;
 
 export const researchThemeSchema = z.object({
+  /**
+   * In the graveyard since (addendum 24): a delete stamps this and the record
+   * keeps its place, so everything pointing at it goes on pointing at it and
+   * restoring is clearing the field. `null` is the ordinary state.
+   */
+  deletedAt: z.string().datetime({ offset: true }).nullable().default(null),
   id: id<ResearchThemeId>(),
   projectId: id<ProjectId>(),
   name: z.string().default(''),
@@ -69,6 +75,12 @@ export const motifTypeSchema = z.enum(MOTIF_TYPES);
 export type MotifType = z.infer<typeof motifTypeSchema>;
 
 export const researchMotifSchema = z.object({
+  /**
+   * In the graveyard since (addendum 24): a delete stamps this and the record
+   * keeps its place, so everything pointing at it goes on pointing at it and
+   * restoring is clearing the field. `null` is the ordinary state.
+   */
+  deletedAt: z.string().datetime({ offset: true }).nullable().default(null),
   id: id<ResearchMotifId>(),
   projectId: id<ProjectId>(),
   name: z.string().default(''),

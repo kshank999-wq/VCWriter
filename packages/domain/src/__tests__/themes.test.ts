@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  destroyMotif,
+  destroyTheme,
+  motifsInOrder,
+  themesInOrder,
   addBeat,
   addMotif,
   addTheme,
@@ -110,8 +114,13 @@ describe('two kinds, all the way down', () => {
     file = tagPassage(file, { kind: 'theme', ownerId: theme.theme.id as string, beatId: beatIds[0]! }).file;
     file = tagPassage(file, { kind: 'motif', ownerId: motif.motif.id as string, beatId: beatIds[0]! }).file;
 
+    // Removing buries it (addendum 24) and **keeps** its occurrences, which
+    // is what makes restoring able to give back what was there; destroying
+    // is the act that takes them, and only the graveyard runs it.
     const after = removeTheme(file, theme.theme.id);
-    expect(after.usageLinks.filter((link) => link.ownerKind === 'theme')).toHaveLength(0);
+    expect(themesInOrder(after)).toHaveLength(0);
+    expect(after.usageLinks.filter((link) => link.ownerKind === 'theme')).toHaveLength(1);
+    expect(destroyTheme(after, theme.theme.id).usageLinks.filter((link) => link.ownerKind === 'theme')).toHaveLength(0);
     expect(after.usageLinks.filter((link) => link.ownerKind === 'motif')).toHaveLength(1);
     // The writing is untouched, which is the only thing that would be a loss.
     expect(after.beats.find((one) => one.id === beatIds[0])!.manuscript.elements[0]!.text).toBe('One.');
@@ -345,7 +354,7 @@ describe('the round trip', () => {
 });
 
 describe('removing a motif', () => {
-  it('takes its occurrences and its link to a theme', () => {
+  it('takes its occurrences and its link to a theme, once it is destroyed', () => {
     const { file: made, beatIds } = book(['One.']);
     let file = made;
     const theme = addTheme(file, { name: 'A theme' });
@@ -355,7 +364,14 @@ describe('removing a motif', () => {
     file = relateMotifToTheme(file, theme.theme.id, motif.motif.id);
     file = tagPassage(file, { kind: 'motif', ownerId: motif.motif.id as string, beatId: beatIds[0]! }).file;
 
-    const after = removeMotif(file, motif.motif.id);
+    // Buried first: off the list, but everything it had is kept so it can
+    // come back whole (addendum 24).
+    const buriedFile = removeMotif(file, motif.motif.id);
+    expect(motifsInOrder(buriedFile)).toHaveLength(0);
+    expect(buriedFile.themeMotifLinks).toHaveLength(1);
+    expect(buriedFile.usageLinks).toHaveLength(1);
+
+    const after = destroyMotif(buriedFile, motif.motif.id);
     expect(after.motifs).toHaveLength(0);
     expect(after.themeMotifLinks).toHaveLength(0);
     expect(after.usageLinks).toHaveLength(0);

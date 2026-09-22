@@ -1,4 +1,5 @@
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
+import { onlyLiving } from './graveyard.js';
 import { derivedSetupPayoffStatus } from './entities/setups.js';
 import type { SetupPayoff, SetupPoint } from './entities/setups.js';
 import type { StoryEntityRef } from './entities/links.js';
@@ -178,7 +179,7 @@ export interface ReadyRow {
 }
 
 export const setupsBoard = (file: ProjectFile, archived = false): ReadyRow[] =>
-  file.setupsPayoffs
+  onlyLiving(file.setupsPayoffs)
     .filter((record) => record.archived === archived)
     .map((record) => ({ record, readiness: setupReadiness(file, record) }))
     .sort((a, b) => {

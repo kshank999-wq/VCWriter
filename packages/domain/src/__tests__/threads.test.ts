@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  destroyThread,
   addBeat,
   addMoment,
   addThread,
@@ -14,7 +15,6 @@ import {
   momentsOf,
   moveUnit,
   removeMoment,
-  removeThread,
   storyMap,
   threadsInOrder,
   toRows,
@@ -139,7 +139,7 @@ describe('a thread', () => {
     current = dependOn(current, second, first);
     expect(current.links).toHaveLength(1);
 
-    const after = removeThread(current, made.thread.id);
+    const after = destroyThread(current, made.thread.id);
     expect(after.threads).toHaveLength(0);
     expect(after.usageLinks.filter((one) => one.ownerKind === 'thread')).toHaveLength(0);
     expect(after.links).toHaveLength(0);

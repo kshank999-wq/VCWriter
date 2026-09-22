@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  graveyardCount,
   addResearchCategory,
   addResearchItem,
   approveCapture,
@@ -42,6 +43,7 @@ import { InlineText } from './InlineText';
 import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
 import { GraphicsPanel } from './GraphicsPanel';
+import { GraveyardPanel } from './GraveyardPanel';
 import { ImportNotesPanel } from './ImportNotesPanel';
 import { LinksTimeline } from './LinksTimeline';
 import { LocationsPanel } from './LocationsPanel';
@@ -93,6 +95,8 @@ type Selection =
   | { kind: 'review' }
   /** What the phone caught, waiting to be placed (addendum 09 §9). */
   | { kind: 'mobile' }
+  /** What has been deleted and can still be put back (addendum 24). */
+  | { kind: 'graveyard' }
   /**
    * Somebody open in the Character Creator (addendum 08 §5).
    *
@@ -258,6 +262,8 @@ export function ResearchBody({
     [captures],
   );
 
+  // How many are waiting in the graveyard, for the menu's count.
+  const buried = graveyardCount(file);
   const tree = useMemo(() => researchTree(file), [file]);
   const folders = useMemo(() => flatten(tree), [tree]);
 
@@ -404,6 +410,8 @@ export function ResearchBody({
       ? (views.find((entry) => entry.view === selection.view)?.label ?? 'Research')
       : selection.kind === 'mobile'
       ? 'Mobile App'
+      : selection.kind === 'graveyard'
+      ? 'Graveyard'
       : selection.kind === 'charmap'
         ? 'Character map'
         : selection.kind === 'review'
@@ -708,6 +716,24 @@ export function ResearchBody({
               />
             ))}
           </ul>
+
+          {/* Last of all, which is where Ken asked for it (addendum 24): it is
+              not a place work is kept, it is where work waits after a
+              mistake, so it sits under everything rather than among it. */}
+          <ul className="research-tree research-graveyard">
+            <li>
+              <button
+                type="button"
+                className={selection.kind === 'graveyard' ? 'folder-row selected' : 'folder-row'}
+                aria-pressed={selection.kind === 'graveyard'}
+                title="What has been deleted, and how to put it back"
+                onClick={() => setSelection({ kind: 'graveyard' })}
+              >
+                <span className="folder-name">Graveyard</span>
+                {buried > 0 ? <span className="count muted">{buried}</span> : null}
+              </button>
+            </li>
+          </ul>
         </nav>
 
         {/* What is in it — or, when somebody is being built, them. */}
@@ -746,7 +772,9 @@ export function ResearchBody({
             selection.kind === 'importer' ||
             selection.kind === 'charmap' ||
             selection.kind === 'review' ||
-            selection.kind === 'mobile' ? null : (
+            selection.kind === 'mobile' ||
+            // A count of *notes* means nothing on a screen that is not notes.
+            selection.kind === 'graveyard' ? null : (
               <span className="muted">
                 {items.length} {items.length === 1 ? 'note' : 'notes'}
                 {query.length > 0 ? ' found' : ''}
@@ -792,6 +820,10 @@ export function ResearchBody({
             />
           ) : selection.kind === 'plots' ? (
             <Plots file={file} onUpdate={onUpdate} />
+          ) : selection.kind === 'graveyard' ? (
+            <div className="research-embedded">
+              <GraveyardPanel file={file} onUpdate={onUpdate} />
+            </div>
           ) : selection.kind === 'graphics' ? (
             <div className="research-embedded">
               <GraphicsPanel

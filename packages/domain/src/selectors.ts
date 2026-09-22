@@ -1,4 +1,5 @@
 import { sortByOrderKey } from './ordering.js';
+import { onlyLiving } from './graveyard.js';
 import { isUnresolved } from './entities/setups.js';
 import { countWords } from './entities/manuscript.js';
 import { refEquals, type StoryEntityRef, type StoryLink } from './entities/links.js';
@@ -162,8 +163,12 @@ export const researchItemsIn = (
   options: { query?: string; includeDescendants?: boolean } = {},
 ): ResearchItem[] => {
   const query = options.query ?? '';
+  // The graveyard is not a view (addendum 24): a buried note is out of every
+  // one of these, including *archived*, because being put away and being
+  // deleted are two different things a writer did.
+  const live = onlyLiving(file.researchItems);
   if ('view' in where) {
-    const items = file.researchItems.filter((item) => {
+    const items = live.filter((item) => {
       if (where.view === 'archived') return item.archived;
       if (item.archived) return false;
       if (where.view === 'used') return item.usage === 'used';
@@ -177,7 +182,7 @@ export const researchItemsIn = (
   // filed here comes before what is filed in the folders under it.
   const folders = options.includeDescendants === false ? [where.categoryId] : researchSubtree(file, where.categoryId);
   const place = new Map(folders.map((id, index) => [id as string, index]));
-  const items = file.researchItems.filter(
+  const items = live.filter(
     (item) => !item.archived && place.has(item.categoryId) && matches(item, query),
   );
   return sortByOrderKey(items).sort(
@@ -192,7 +197,7 @@ export const researchItemsForCategory = (
   options: { usage?: 'used' | 'unused'; includeArchived?: boolean } = {},
 ): ResearchItem[] =>
   sortByOrderKey(
-    file.researchItems.filter(
+    onlyLiving(file.researchItems).filter(
       (item) =>
         item.categoryId === categoryId &&
         (options.includeArchived || !item.archived) &&
@@ -202,10 +207,10 @@ export const researchItemsForCategory = (
 
 /** Working inventory of material not yet incorporated into the story (§7.2). */
 export const unusedResearch = (file: ProjectFile): ResearchItem[] =>
-  sortByOrderKey(file.researchItems.filter((item) => item.usage === 'unused' && !item.archived));
+  sortByOrderKey(onlyLiving(file.researchItems).filter((item) => item.usage === 'unused' && !item.archived));
 
 export const usedResearch = (file: ProjectFile): ResearchItem[] =>
-  sortByOrderKey(file.researchItems.filter((item) => item.usage === 'used' && !item.archived));
+  sortByOrderKey(onlyLiving(file.researchItems).filter((item) => item.usage === 'used' && !item.archived));
 
 /** Setups the writer has not yet paid off, and payoffs not yet established (§7.3). */
 export const unresolvedSetupsPayoffs = (file: ProjectFile): SetupPayoff[] =>

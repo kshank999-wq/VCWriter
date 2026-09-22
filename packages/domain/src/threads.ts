@@ -1,4 +1,5 @@
 import { newId } from './ids.js';
+import { onlyLiving, sendToGraveyard } from './graveyard.js';
 import { nowIso } from './entities/common.js';
 import { beatsForUnit, findUnit, unitsInStoryOrder } from './selectors.js';
 import { pinUsage, unpinUsage } from './character-creator.js';
@@ -72,7 +73,13 @@ export const updateThread = (
  * being unfiled. The dependencies go because an edge between two moments that
  * no longer exist is not a relationship, it is a dangling pair of ids.
  */
-export const removeThread = (file: ProjectFile, threadId: StoryThreadId): ProjectFile => {
+export const removeThread = (file: ProjectFile, threadId: StoryThreadId): ProjectFile =>
+  // To the graveyard (addendum 24), and its nodes and arrows stay: a thread
+  // restored without the moments it was made of would be an empty name.
+  sendToGraveyard(file, { kind: 'thread', id: threadId as string });
+
+/** Gone for good, with its nodes and arrows. The graveyard's own act. */
+export const destroyThread = (file: ProjectFile, threadId: StoryThreadId): ProjectFile => {
   const nodeIds = new Set(
     file.usageLinks
       .filter((link) => link.ownerKind === 'thread' && link.ownerId === (threadId as string))
@@ -88,7 +95,7 @@ export const removeThread = (file: ProjectFile, threadId: StoryThreadId): Projec
 
 /** Active threads, newest last — the order they were made, which is the order they happened. */
 export const threadsInOrder = (file: ProjectFile, includeArchived = false): StoryThread[] =>
-  (file.threads ?? []).filter((thread) => includeArchived || !thread.archived);
+  onlyLiving(file.threads ?? []).filter((thread) => includeArchived || !thread.archived);
 
 // ------------------------------------------------------------------ moments
 

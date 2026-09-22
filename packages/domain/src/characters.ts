@@ -1,4 +1,5 @@
 import { sortByOrderKey } from './ordering.js';
+import { onlyLiving } from './graveyard.js';
 import { beatsInStoryOrder } from './selectors.js';
 import type { ProjectFile } from './project-file.js';
 import type { ProjectFormat } from './entities/project.js';
@@ -72,7 +73,9 @@ export interface CastGroup {
  * an empty one is where the next character goes.
  */
 export const castByCategory = (file: ProjectFile, includeArchived = false): CastGroup[] => {
-  const people = file.characters.filter((character) => includeArchived || !character.archived);
+  // A buried character is out of the cast whatever `includeArchived` says
+  // (addendum 24): archived and deleted are two different things.
+  const people = onlyLiving(file.characters).filter((character) => includeArchived || !character.archived);
   const byName = (a: Character, b: Character) => a.name.localeCompare(b.name);
 
   const groups: CastGroup[] = characterCategoriesInOrder(file).map((category) => ({

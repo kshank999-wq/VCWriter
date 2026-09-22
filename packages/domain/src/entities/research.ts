@@ -69,6 +69,12 @@ export const researchUsageSchema = z.enum(['unused', 'used']);
 export type ResearchUsage = z.infer<typeof researchUsageSchema>;
 
 export const researchItemSchema = z.object({
+  /**
+   * In the graveyard since (addendum 24): a delete stamps this and the record
+   * keeps its place, so everything pointing at it goes on pointing at it and
+   * restoring is clearing the field. `null` is the ordinary state.
+   */
+  deletedAt: z.string().datetime({ offset: true }).nullable().default(null),
   id: id<ResearchItemId>(),
   projectId: id<ProjectId>(),
   categoryId: id<ResearchCategoryId>(),
