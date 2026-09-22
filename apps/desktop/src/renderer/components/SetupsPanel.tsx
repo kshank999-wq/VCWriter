@@ -59,8 +59,6 @@ const STRENGTHS: readonly SetupStrength[] = ['planned', 'written', 'weak'];
 export function SetupsPanel({ file, currentBeatId, onUpdate, onGoTo }: SetupsPanelProps) {
   const [scope, setScope] = useState<'active' | 'archived'>('active');
   const [selectedId, setSelectedId] = useState<SetupPayoffId | null>(null);
-  /** Whether the delete is asking. */
-  const [asking, setAsking] = useState(false);
   const [draftSetup, setDraftSetup] = useState('');
   const [draftPayoff, setDraftPayoff] = useState('');
 
@@ -107,19 +105,15 @@ export function SetupsPanel({ file, currentBeatId, onUpdate, onGoTo }: SetupsPan
 
         <ul className="item-list">
           {rows.map(({ record, readiness: read }) => (
-            <li key={record.id}>
-              <button
-                type="button"
-                className={selected?.id === record.id ? 'item selected' : 'item'}
-                onClick={() => setSelectedId(record.id)}
-                title={read.says}
-              >
-                {/* The light, visible without opening the record (§10). */}
-                <span className={`setup-light ${read.light}`} aria-label={read.light === 'green' ? 'Prepared' : 'Under-prepared'} />
-                <span className="item-title">{record.title}</span>
-                <span className="muted count">{read.count}</span>
-              </button>
-            </li>
+            <SetupRow
+              key={record.id}
+              file={file}
+              record={record}
+              read={read}
+              chosen={selected?.id === record.id}
+              onChoose={() => setSelectedId(record.id)}
+              onDelete={() => onUpdate((current) => deleteSetupPayoff(current, record.id))}
+            />
           ))}
         </ul>
         {records.length === 0 ? (
@@ -349,33 +343,6 @@ export function SetupsPanel({ file, currentBeatId, onUpdate, onGoTo }: SetupsPan
               >
                 {selected.archived ? 'Restore to active' : 'Archive'}
               </button>
-              {/* Beside *Archive*, never instead of it (addendum 24 §1):
-                  archiving a resolved record is a decision about the work,
-                  deleting one is a decision about the record. */}
-              {asking ? (
-                <span className="graveyard-ask">
-                  <span className="muted small">
-                    {describeDeleting(file, { kind: 'setupPayoff', id: selected.id as string })}
-                  </span>
-                  <button
-                    type="button"
-                    className="ghost small danger"
-                    onClick={() => {
-                      onUpdate((current) => deleteSetupPayoff(current, selected.id));
-                      setAsking(false);
-                    }}
-                  >
-                    Delete
-                  </button>
-                  <button type="button" className="ghost small" onClick={() => setAsking(false)}>
-                    Keep
-                  </button>
-                </span>
-              ) : (
-                <button type="button" className="ghost" onClick={() => setAsking(true)}>
-                  Delete
-                </button>
-              )}
               {locationLabel ? <span className="muted">Current beat: {locationLabel}</span> : null}
             </div>
           </>
@@ -384,5 +351,77 @@ export function SetupsPanel({ file, currentBeatId, onUpdate, onGoTo }: SetupsPan
         )}
       </section>
     </div>
+  );
+}
+
+/**
+ * One payoff on the list, with the × on it (addendum 24 §5d).
+ *
+ * It was *Delete* beside *Archive* in the detail, which is where §5a put it
+ * and where Ken did not find it — the delete belongs on the row of the thing
+ * it deletes, like every other list in the room. **Archive stays in the
+ * detail**, because it is not the same act: putting a resolved payoff away is
+ * a decision about the work, deleting the record is a decision about the
+ * record, and §1 is the whole reason the two are separate fields.
+ */
+function SetupRow({
+  file,
+  record,
+  read,
+  chosen,
+  onChoose,
+  onDelete,
+}: {
+  file: ProjectFile;
+  record: { id: SetupPayoffId; title: string };
+  read: { light: string; count: string; says: string };
+  chosen: boolean;
+  onChoose(): void;
+  onDelete(): void;
+}) {
+  const [asking, setAsking] = useState(false);
+  return (
+    <li>
+      <div className="item-row">
+        <button type="button" className={chosen ? 'item selected' : 'item'} onClick={onChoose} title={read.says}>
+          {/* The light, visible without opening the record (§10). */}
+          <span
+            className={`setup-light ${read.light}`}
+            aria-label={read.light === 'green' ? 'Prepared' : 'Under-prepared'}
+          />
+          <span className="item-title">{record.title}</span>
+          <span className="muted count">{read.count}</span>
+        </button>
+        <button
+          type="button"
+          className="ghost small danger item-x"
+          aria-label={`Delete ${record.title}`}
+          title={`Delete ${record.title}`}
+          onClick={() => setAsking(true)}
+        >
+          ×
+        </button>
+      </div>
+      {asking ? (
+        <div className="row-ask">
+          <span className="muted small">{describeDeleting(file, { kind: 'setupPayoff', id: record.id as string })}</span>
+          <span className="row-ask-buttons">
+            <button
+              type="button"
+              className="ghost small danger"
+              onClick={() => {
+                onDelete();
+                setAsking(false);
+              }}
+            >
+              Delete
+            </button>
+            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+              Keep
+            </button>
+          </span>
+        </div>
+      ) : null}
+    </li>
   );
 }

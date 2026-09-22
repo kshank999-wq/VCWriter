@@ -257,6 +257,28 @@ Research list cannot promise different things, and the last track is **refused
 with a sentence** rather than by a control that fails — the × is absent there,
 since a button that can only refuse is a button that lies.
 
+## 5f. Setups and payoffs, and the pattern in the asks
+
+From Ken: *I need a delete for setups and payoffs too*. There was one — §5a
+built it a day earlier — and it was **beside *Archive* in the detail**, which
+is where §5a deliberately put it and where he did not find it. It is on the
+row now.
+
+That is the fourth ask in a row where the answer was *it exists, in the wrong
+place*, and the pattern is worth writing down rather than rediscovering:
+**where a writer looks for a delete is the row of the thing, not the pane that
+describes it**. §5a's reasoning was sound about *which* control it should
+stand beside and wrong about *where the pair should be*, because Archive and
+Delete are not a pair at all — putting a resolved payoff away is a decision
+about the work, deleting the record is a decision about the record, and §1 is
+the whole reason those are two fields. So **Archive stays in the detail** and
+the × goes on the row, which is not a compromise but the two acts landing
+where each belongs.
+
+Nothing else changed: the sentence was already `describeDeleting`, the act was
+already `deleteSetupPayoff`, and the record's points ride inside it and come
+back with it.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -276,3 +298,4 @@ since a button that can only refuse is a button that lies.
 - `tracks.ts` — `trackRemoval` and `dissolveTrack` — with the × on the plot's
   row in Research and the timeline's own × asking in the same words; the
   thread's delete moved to its row and its sentence replaced by the module's.
+- The setups & payoffs × on its row, with Archive left in the detail.

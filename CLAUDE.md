@@ -1879,6 +1879,17 @@ push live; the build takes a minute or two.
   and the Research list cannot promise different things, and the last track is
   **refused with a sentence** with no × at all, a button that can only refuse
   being one that lies.
+  **§5f is setups and payoffs**, from Ken — and there was one, §5a's, *beside
+  Archive in the detail*, where he did not find it. It is on the row now, and
+  the thing worth keeping is the **pattern in four asks running**: each time
+  the answer was *it exists, in the wrong place*, so **where a writer looks for
+  a delete is the row of the thing, not the pane that describes it**. §5a was
+  right about which control it should stand beside and wrong that the pair
+  should be anywhere together — Archive and Delete are **not** a pair, putting
+  a resolved payoff away being a decision about the work and deleting the
+  record a decision about the record, which is §1's own distinction. So
+  Archive stays in the detail and the × goes on the row: not a compromise, two
+  acts landing where each belongs.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

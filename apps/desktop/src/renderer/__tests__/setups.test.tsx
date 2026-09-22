@@ -8,8 +8,10 @@ import {
   addSetupPoint,
   addUnit,
   createProjectFile,
+  graveyard,
   recordPayoff,
   ref,
+  setupsBoard,
   type BeatId,
   type ManuscriptElementId,
   type ProjectFile,
@@ -129,6 +131,33 @@ function Writing({
   const beat = file.beats.find((one) => one.id === beatId)!;
   return <BeatBody file={file} beat={beat} onUpdate={(mutate) => setFile((current) => mutate(current))} />;
 }
+
+/**
+ * From Ken: *I need a delete for setups and payoffs too*. There was one, added
+ * a day earlier — beside *Archive* in the detail, where he did not find it.
+ * It is on the row now (addendum 24 §5d); *Archive* stays in the detail,
+ * because putting a resolved payoff away and deleting the record are two acts.
+ */
+describe('deleting a payoff', () => {
+  it('asks from the row, says where it goes, and keeps Archive where it was', () => {
+    let seen: ProjectFile | null = null;
+    const { file } = script();
+    const start = addSetupPayoff(file, { title: 'The gun', description: '' });
+    render(<Panel start={start} onFile={(one) => (seen = one)} />);
+
+    // The detail's Delete is gone; one act, on the row of the thing it deletes.
+    expect(screen.getByText('Archive')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+
+    fireEvent.click(screen.getByLabelText('Delete The gun'));
+    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    const after = seen as unknown as ProjectFile;
+    expect(setupsBoard(after)).toHaveLength(0);
+    expect(graveyard(after).map((row) => row.word)).toEqual(['Setup & payoff']);
+  });
+});
 
 describe('planting one from the writing', () => {
   it('offers it on the right-click and makes a record and a point in one act', () => {
