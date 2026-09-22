@@ -1284,8 +1284,26 @@ push live; the build takes a minute or two.
   with a coefficient that bites on nothing in the preset list. `describeSpine`
   names the row in force, a derived number being worth little if you cannot see
   which standard made it. The novel trims now set **52–66 characters** to the
-  line (the floor had the 5 × 8 at 45), and the shallower head and foot give a
-  5½ × 8½ 34 lines where it held 33. His *title centred* from the first go was
+  line (the floor had the 5 × 8 at 45). **The head and the foot break at
+  5½ × 8½** rather than by trim row, from Ken after the table: the standard
+  ranges them over the whole book (top 1/2–3/4, foot 5/8–7/8) and then splits
+  it, **5½ × 8½ and smaller taking the bottom of both** to maximise reading
+  space and 6 × 9 and larger the middle so the block is not swallowed by white
+  — so it is the one place the middle-of-the-range rule does not apply, and
+  **pocket and digest share a head and a foot while their sides differ**,
+  because *how tall is the page* and *where is the thumb* are not the same
+  question and need not break at the same size. That gave a 5½ × 8½ 35 lines
+  where the proportion gave 33. The third rule — **a running head or folio
+  clears the paper's edge by 1/4 in**, or the printer's trim takes it off — was
+  already right and **was not tested**, which is right by accident:
+  `headFromTop`/`footFromBottom` are `Math.max(0.25, margin / 2)`, and what the
+  test now pins is that those are the **clear space itself rather than a
+  baseline** (`.bk-running` is set solid and positioned by `top`, so it is the
+  distance to the near side of the line). The doc comment said *baseline* and was
+  wrong — a baseline at 1/4 in puts the ascenders 0.14 in from the edge and
+  breaks the very rule the field exists for. Measured on the page: the head
+  clears by exactly 0.25 in at 5½ × 8½ (the minimum, met exactly, being half a
+  1/2 in margin) and 0.34 in at 6 × 9. His *title centred* from the first go was
   measured rather than assumed: it was already exactly centred **on the text
   block**, and what is visible is that it is not centred on the **paper**, by
   half the gutter — correct bookbinding, and what the standard asks for on

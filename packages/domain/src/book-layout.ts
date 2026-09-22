@@ -237,9 +237,12 @@ export interface BookGeometry {
   /** About how many characters fit on a line at this size and face. */
   measure: number;
   /**
-   * Where the running head's baseline and the folio's sit, as a distance from
-   * the paper's top and bottom edges. Halfway into the margin, so the head
-   * neither crowds the text nor the edge.
+   * Where the running head and the folio sit, as the distance from the paper's
+   * edge to the **near side of the line** — the top of the head's box and the
+   * bottom of the folio's, both set solid, so this is the clear space itself
+   * rather than a baseline. Halfway into the margin, so the line neither
+   * crowds the text nor the edge, and never under the quarter inch a printer's
+   * trim can take off (§3b).
    */
   headFromTop: number;
   footFromBottom: number;
@@ -293,7 +296,23 @@ const sixteenth = (inches: number): number => Math.round(inches * 16) / 16;
  * Everything lands on the sixteenth the rest of this module speaks in, so a
  * margin prints as a fraction a printer can set. Where a band gives a range
  * this takes its middle, the ends of a range being the standard's tolerance
- * rather than two different right answers.
+ * rather than two different right answers — **except the head and the foot**,
+ * which the standard ranges over the whole of a book (top 1/2 to 3/4, foot 5/8
+ * to 7/8) and then breaks in two rather than by trim row:
+ *
+ * - **5½ × 8½ and smaller** take the **bottom** of both, 1/2 and 5/8, because
+ *   on a small page the point is to maximise the reading space.
+ * - **6 × 9 and larger** take the middle of 5/8–3/4 and 3/4–7/8, so the text
+ *   block is not swallowed by white borders.
+ *
+ * That break is why pocket and digest carry the same head and foot while their
+ * sides differ: the question a head answers is *how tall is the page*, and the
+ * question a fore-edge answers is *where is the thumb*.
+ *
+ * The third rule the standard states about the head and the foot is about what
+ * sits **inside** them, and it is kept in `geometryOf` rather than here: a
+ * running head or a folio must clear the paper's edge by **at least 1/4 in**
+ * or the printer's trim can take it off.
  */
 export type TrimClass = 'pocket' | 'digest' | 'trade' | 'large';
 
@@ -309,8 +328,11 @@ export interface MarginStandard {
 }
 
 export const MARGIN_STANDARD: Record<TrimClass, MarginStandard> = {
+  // The head and the foot break at 5½ × 8½ rather than at each row (§3b): up
+  // to that size the standard takes the **bottom** of its own range, to
+  // maximise reading space on a small page, so pocket and digest share them.
   pocket: { name: 'a pocket paperback', outside: 0.5, top: 0.5, bottom: 0.625, insideLeast: 0.625, insideMost: 0.75 },
-  digest: { name: 'a digest paperback', outside: 0.5625, top: 0.5625, bottom: 0.6875, insideLeast: 0.75, insideMost: 0.875 },
+  digest: { name: 'a digest paperback', outside: 0.5625, top: 0.5, bottom: 0.625, insideLeast: 0.75, insideMost: 0.875 },
   trade: { name: 'a trade paperback', outside: 0.625, top: 0.6875, bottom: 0.8125, insideLeast: 0.75, insideMost: 0.9375 },
   // The standard stops at 6 × 9, novels being what it is written for. A
   // workbook is extrapolated from the same shape, said here rather than

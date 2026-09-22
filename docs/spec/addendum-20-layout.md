@@ -193,6 +193,50 @@ standard's tolerance rather than two different right answers. Everything lands
 on the **sixteenth**, so a margin prints as a fraction a printer can set —
 which is why the standard's 0.825 appears as 13/16.
 
+### The head and the foot break at 5½ × 8½
+
+From Ken, after the table: the standard ranges the head and the foot over the
+**whole book** — top 1/2 to 3/4, foot 5/8 to 7/8 — and then breaks them in two
+rather than by trim row:
+
+- **5½ × 8½ and smaller** take the **bottom** of both, 1/2 and 5/8, because on
+  a small page the point is to maximise the reading space.
+- **6 × 9 and larger** take the middle of 5/8–3/4 and 3/4–7/8, so the text
+  block is not swallowed by white borders.
+
+So this is the one place the middle-of-the-range rule above does not apply, and
+the reason is worth keeping: **pocket and digest carry the same head and foot
+while their sides differ**, because the question a head answers is *how tall is
+the page* and the question a fore-edge answers is *where is the thumb*. They
+are not the same question and they do not have to break at the same size.
+
+It cost the digest row a sixteenth off each of the head and the foot, which is
+two more lines on a 5½ × 8½ page: 35 where the first draft of this section gave
+34 and the old proportion gave 33.
+
+### A running head clears the paper's edge by a quarter inch
+
+The standard's third rule about the head and the foot is about what sits
+**inside** them rather than how deep they are: a running head or a folio must
+keep 1/4 in of clear space to the physical edge, or the printer's trim can take
+it off.
+
+This was already right and **was not tested**, which is the same thing as being
+right by accident. `headFromTop` and `footFromBottom` are
+`Math.max(0.25, margin / 2)` — halfway into the margin, and never under the
+quarter inch. What the test now pins is the part a reader has to take on trust:
+that those two numbers are the **clear space itself** and not a baseline. They
+are, because `.bk-running` and `.bk-folio` are set solid (`line-height: 1`) and
+positioned by `top` and `bottom`, so the number is the distance to the near
+side of the line. The doc comment said *baseline* and was wrong; a baseline at
+1/4 in would put the ascenders about 0.14 in from the edge and break the rule
+the field was there to keep.
+
+Measured on the real page at 5½ × 8½: the head clears the top edge by exactly
+0.25 in — the minimum, met exactly, because the head sits at half of a 1/2 in
+margin — and has 0.128 in between it and the text block; the folio clears the
+foot by 0.313 in. On a 6 × 9 the head clears by 0.34 in.
+
 Two things the table does not cover are said here rather than pretended:
 
 - **A workbook.** The standard stops at 6 × 9, novels being what it is written

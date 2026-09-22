@@ -116,7 +116,7 @@ describe('the margins', () => {
 
     // Digest / small novel: inside 3/4–7/8, the rest the middle of their ranges.
     const digest = derivedMargins({ width: 5.5, height: 8.5 }, 120);
-    expect(digest).toEqual({ inside: 0.75, outside: 0.5625, top: 0.5625, bottom: 0.6875 });
+    expect(digest).toEqual({ inside: 0.75, outside: 0.5625, top: 0.5, bottom: 0.625 });
     expect(derivedMargins({ width: 5.5, height: 8.5 }, 900).inside).toBe(0.875);
 
     // US trade: inside 3/4 up, outside 5/8, and the standard's own page
@@ -139,6 +139,55 @@ describe('the margins', () => {
         expect(margins.bottom).toBeGreaterThan(margins.top);
       }
     }
+  });
+
+  it('break the head and the foot at 5½ × 8½ rather than by trim row', () => {
+    // Up to that size the standard takes the bottom of its own range, to
+    // maximise reading space — so pocket and digest share a head and a foot
+    // while their sides differ.
+    for (const trim of [{ width: 5, height: 8 }, { width: 5.5, height: 8.5 }, { width: 5.83, height: 8.27 }]) {
+      const margins = derivedMargins(trim, 250);
+      expect(margins.top).toBe(0.5);
+      expect(margins.bottom).toBe(0.625);
+    }
+    // 6 × 9 and larger take the middle, so the block is not swallowed by white.
+    const trade = derivedMargins({ width: 6, height: 9 }, 250);
+    expect(trade.top).toBe(0.6875);
+    expect(trade.bottom).toBe(0.8125);
+    expect(derivedMargins({ width: 5, height: 8 }, 250).outside).not.toBe(derivedMargins({ width: 5.5, height: 8.5 }, 250).outside);
+
+    // And every trim stays inside the standard's whole-book ranges.
+    for (const preset of TRIM_PRESETS) {
+      const margins = derivedMargins(preset, 250);
+      if (trimClassOf(preset) === 'large') continue; // extrapolated past the table
+      expect(margins.top).toBeGreaterThanOrEqual(0.5);
+      expect(margins.top).toBeLessThanOrEqual(0.75);
+      expect(margins.bottom).toBeGreaterThanOrEqual(0.625);
+      expect(margins.bottom).toBeLessThanOrEqual(0.875);
+    }
+  });
+
+  it('keep a running head and a folio a quarter inch clear of the paper’s edge', () => {
+    // The printer's trim takes anything nearer, so this is the one rule about
+    // the head that is about what sits *inside* the margin rather than its
+    // depth. `headFromTop` is the near side of the line, not a baseline: the
+    // head is set solid and positioned by its box, so it is the clear space.
+    const settings = bookSettingsOf(novel());
+    for (const preset of TRIM_PRESETS) {
+      for (const pages of [1, 250, 1200]) {
+        const geometry = geometryOf({ ...settings, trim: preset }, 'novel', pages);
+        expect(geometry.headFromTop).toBeGreaterThanOrEqual(0.25);
+        expect(geometry.footFromBottom).toBeGreaterThanOrEqual(0.25);
+        // And it sits inside the margin rather than over the text block.
+        expect(geometry.headFromTop).toBeLessThan(geometry.margins.top);
+        expect(geometry.footFromBottom).toBeLessThan(geometry.margins.bottom);
+      }
+    }
+    // A typed margin too shallow to hold one still clears the edge.
+    const shallow = setBookSettings(novel(), { margins: { inside: null, outside: null, top: 0.3, bottom: 0.3 } });
+    const geometry = geometryOf(bookSettingsOf(shallow), 'novel', 250);
+    expect(geometry.headFromTop).toBe(0.25);
+    expect(geometry.footFromBottom).toBe(0.25);
   });
 
   it('widen the gutter as the book thickens, and never past the band', () => {
@@ -205,13 +254,14 @@ describe('the margins', () => {
 describe('the page', () => {
   it('holds as many lines as the text block over the leading', () => {
     const geometry = geometryOf(bookSettingsOf(novel()), 'novel', 200);
-    // 5.5 × 8.5 is a digest: top 9/16 + bottom 11/16 leaves 7¼ in, and 11 on
-    // 15 pt is 34 lines. The standard's head and foot are shallower than the
-    // proportion that stood here before, so the page holds a line more.
+    // 5.5 × 8.5 is a digest: top ½ + bottom ⅝ leaves 7⅜ in, and 11 on 15 pt
+    // is 35 lines. At this size and under, the standard takes the bottom of
+    // its head and foot ranges to maximise the reading space — two lines more
+    // than the proportion that stood here before.
     expect(geometry.leading).toBe(derivedLeading(11));
     expect(derivedLeading(11)).toBe(15);
-    expect(geometry.text.height).toBeCloseTo(7.25, 5);
-    expect(geometry.linesPerPage).toBe(34);
+    expect(geometry.text.height).toBeCloseTo(7.375, 5);
+    expect(geometry.linesPerPage).toBe(35);
   });
 
   it('says the measure in characters, and warns when a line is too long or too short', () => {
@@ -233,7 +283,7 @@ describe('the page', () => {
     const said = describeGeometry(geometry, 'old_style');
     expect(said).toContain('5½ × 8½ in');
     expect(said).toContain('worked out from the trim and 200 pages');
-    expect(said).toContain('34 lines of old-style serif at 11 on 15 pt');
+    expect(said).toContain('35 lines of old-style serif at 11 on 15 pt');
   });
 
   it('guesses a page count before anything is laid, and says so in the name', () => {
