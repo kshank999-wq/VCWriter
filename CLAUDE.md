@@ -1789,9 +1789,22 @@ push live; the build takes a minute or two.
   destroy are the two that ask**; nothing ages out on a timer. §5 is what is
   deliberately absent: the manuscript (a scene has snapshots), a story or
   chapter break (removing one deletes nothing, so there is nothing to bury),
-  and **research notes and setups have no delete today** — only archive — so
-  nothing can reach the graveyard from those two yet, and a destructive control
-  nobody asked for was not invented for them.
+  and a story or chapter break (removing one deletes nothing). Notes and setups
+  had no delete when it shipped and one was not invented unasked; Ken then
+  asked, so **§5a** is `deleteResearchItem` and `deleteSetupPayoff` — the first
+  delete either has ever had, which is the right order, a shelf with only
+  *archive* on it being the safer screen while there was nowhere for a mistake
+  to land. **Delete stands beside Archive rather than replacing it**, §1
+  arriving in the interface, and each asks once saying **where the record is
+  going** rather than warning. **§5b is a fault in the first version**, found
+  building §5a: `emptyGraveyard` and `forgetOne` filtered the collections and
+  nothing else, so emptying left a story link pointing at a character who no
+  longer existed. Burying keeps all of that on purpose; **destroying has to
+  take it**, so `withoutWhatPointedAt` is written **once and generically** (a
+  story link that refers to it, a usage link it owns, a theme–motif link that
+  names it — none of it varies by kind), which is also why it lives in
+  `graveyard.ts` and imports nothing: a per-module destroyer would have to be
+  reached from here, and those modules already import this one.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

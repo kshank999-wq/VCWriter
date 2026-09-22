@@ -773,6 +773,26 @@ export const updateCharacter = (
   });
 };
 
+/**
+ * Delete a research note (addendum 24 §5, from Ken: *add a delete to research
+ * notes and setups too*). It goes to the graveyard, which is why this is the
+ * first delete a note has ever had — a shelf with nothing but *archive* on it
+ * was the safer screen while there was nowhere for a mistake to land.
+ *
+ * **Archiving it is still there and still means something else**: put away is
+ * a decision about the work, deleted is a decision about the record.
+ */
+export const deleteResearchItem = (file: ProjectFile, itemId: ResearchItemId): ProjectFile =>
+  touchProject(sendToGraveyard(file, { kind: 'researchItem', id: itemId as string }));
+
+/**
+ * Delete a setup-and-payoff record. Its setup points ride inside it, so they
+ * go and come back with it; the beats they point at are the manuscript's and
+ * are never touched.
+ */
+export const deleteSetupPayoff = (file: ProjectFile, recordId: SetupPayoffId): ProjectFile =>
+  touchProject(sendToGraveyard(file, { kind: 'setupPayoff', id: recordId as string }));
+
 export const removeCharacter = (file: ProjectFile, characterId: CharacterId): ProjectFile =>
   // To the graveyard rather than gone (addendum 24). The links are **kept**,
   // which is the whole point: restoring somebody has to give back who they

@@ -9,6 +9,7 @@ import {
   removeSetupPoint,
   reopenPayoff,
   ref,
+  deleteSetupPayoff,
   setSetupPayoffArchived,
   setupReadiness,
   setupsBoard,
@@ -57,6 +58,8 @@ const STRENGTHS: readonly SetupStrength[] = ['planned', 'written', 'weak'];
 export function SetupsPanel({ file, currentBeatId, onUpdate, onGoTo }: SetupsPanelProps) {
   const [scope, setScope] = useState<'active' | 'archived'>('active');
   const [selectedId, setSelectedId] = useState<SetupPayoffId | null>(null);
+  /** Whether the delete is asking. */
+  const [asking, setAsking] = useState(false);
   const [draftSetup, setDraftSetup] = useState('');
   const [draftPayoff, setDraftPayoff] = useState('');
 
@@ -345,6 +348,31 @@ export function SetupsPanel({ file, currentBeatId, onUpdate, onGoTo }: SetupsPan
               >
                 {selected.archived ? 'Restore to active' : 'Archive'}
               </button>
+              {/* Beside *Archive*, never instead of it (addendum 24 §1):
+                  archiving a resolved record is a decision about the work,
+                  deleting one is a decision about the record. */}
+              {asking ? (
+                <span className="graveyard-ask">
+                  <span className="muted small">It goes to the graveyard, and can be restored from there.</span>
+                  <button
+                    type="button"
+                    className="ghost small danger"
+                    onClick={() => {
+                      onUpdate((current) => deleteSetupPayoff(current, selected.id));
+                      setAsking(false);
+                    }}
+                  >
+                    Delete
+                  </button>
+                  <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+                    Keep
+                  </button>
+                </span>
+              ) : (
+                <button type="button" className="ghost" onClick={() => setAsking(true)}>
+                  Delete
+                </button>
+              )}
               {locationLabel ? <span className="muted">Current beat: {locationLabel}</span> : null}
             </div>
           </>

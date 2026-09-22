@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  deleteResearchItem,
   graveyardCount,
   addResearchCategory,
   addResearchItem,
@@ -1151,6 +1152,11 @@ function Detail({
         >
           {item.archived ? 'Take back out' : 'Put away'}
         </button>
+        {/* Delete stands beside *Put away* rather than replacing it, because
+            they are two different things a writer means (addendum 24 §1) —
+            and it can exist at all because there is now somewhere for a
+            mistake to land. It asks, and says where it goes. */}
+        <DeleteNote item={item} onUpdate={onUpdate} />
       </div>
 
       {where.length > 0 ? (
@@ -1208,5 +1214,45 @@ function Plots({ file, onUpdate }: { file: ProjectFile; onUpdate: ResearchWindow
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Delete a note (addendum 24 §5). It asks, and what it says is where the note
+ * is going rather than a warning — the graveyard is the reason this control
+ * can exist, so the sentence is the reassurance rather than the threat.
+ */
+function DeleteNote({
+  item,
+  onUpdate,
+}: {
+  item: ResearchItem;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+}) {
+  const [asking, setAsking] = useState(false);
+  if (!asking) {
+    return (
+      <button type="button" className="ghost" onClick={() => setAsking(true)}>
+        Delete
+      </button>
+    );
+  }
+  return (
+    <span className="graveyard-ask">
+      <span className="muted small">It goes to the graveyard, and can be restored from there.</span>
+      <button
+        type="button"
+        className="ghost small danger"
+        onClick={() => {
+          onUpdate((current) => deleteResearchItem(current, item.id));
+          setAsking(false);
+        }}
+      >
+        Delete
+      </button>
+      <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+        Keep
+      </button>
+    </span>
   );
 }

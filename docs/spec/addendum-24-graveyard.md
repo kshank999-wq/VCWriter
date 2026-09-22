@@ -97,11 +97,43 @@ project after a month should find what they deleted still there.
   nothing — the words stay — so there would be nothing to put in the
   graveyard, and a row for it would be a promise about an act that did not
   take anything.
-- **Research notes and setups & payoffs have no delete today**, only archive.
-  The graveyard is wired to receive them the moment one exists, and the
-  entities carry the field, but nothing can reach it from those two screens
-  yet. A delete was not invented for them: adding a destructive control
-  nobody asked for is not what this change is.
+- **A story or a chapter break** — see above.
+
+Research notes and setups & payoffs had no delete when the graveyard shipped,
+only archive, and one was not invented for them unasked. Ken then asked
+(*add a delete to research notes and setups too*), so §5a is that.
+
+## 5a. A delete for notes and setups
+
+`deleteResearchItem` and `deleteSetupPayoff`, both straight to the graveyard.
+They are the first delete either record has ever had, and that is the right
+order: a shelf with nothing but *archive* on it was the safer screen while
+there was nowhere for a mistake to land.
+
+On both screens **Delete stands beside Archive rather than replacing it**,
+which is §1 arriving in the interface — put away is a decision about the work,
+deleted is a decision about the record, and a writer who meant one should not
+be offered the other. Each asks once inline, and what it says is **where the
+record is going** rather than a warning: the graveyard is the reason the
+control can exist, so the sentence is the reassurance.
+
+A setup record's points ride inside it, so they go and come back with it; the
+beats they point at are the manuscript's and are never touched.
+
+## 5b. Destroying takes what pointed at the record
+
+A fault in the graveyard as first shipped, found while building §5a.
+`emptyGraveyard` and `forgetOne` filtered the collections and nothing else, so
+emptying left a story link pointing at a character who no longer existed.
+
+Burying keeps all of that on purpose — it is what makes restoring able to give
+back what was there — but **destroying has to take it**.
+`withoutWhatPointedAt` is that, written **once and generically** rather than
+as a destroyer per kind: what hangs off a record is a story link that refers
+to it, a usage link it owns and a theme–motif link that names it, and none of
+that varies by kind. It is also why it lives in `graveyard.ts` and imports
+nothing — a per-module destroyer would have to be reached from here, and those
+modules already import this one.
 
 ## 6. What was built
 

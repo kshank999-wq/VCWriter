@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  researchCategoriesInOrder,
+  setupsBoard,
+  setResearchArchived,
+  researchItemsIn,
+  ref,
+  linkEntities,
+  forgetOne,
+  deleteSetupPayoff,
+  deleteResearchItem,
+  addSetupPayoff,
+  addResearchItem,
   addCharacter,
   addLocation,
   addTheme,
@@ -112,5 +123,62 @@ describe('the graveyard', () => {
     const back = restoreFromGraveyard(gone, { kind: 'theme', id: made.theme.id as string });
     expect(themesInOrder(back).map((one) => one.name)).toEqual(['Grief']);
     expect(graveyard(back)).toEqual([]);
+  });
+
+  /**
+   * From Ken: *add a delete to research notes and setups too*. Neither had
+   * one — archive was all there was — which was the safer screen while there
+   * was nowhere for a mistake to land.
+   */
+  it('deletes a research note to the graveyard, and archiving it still means something else', () => {
+    const start = project();
+    const folder = researchCategoriesInOrder(start)[0]!;
+    const made = { file: addResearchItem(start, { categoryId: folder.id, title: 'A note', body: 'Something.' }) };
+    const item = made.file.researchItems[made.file.researchItems.length - 1]!;
+
+    const archived = setResearchArchived(made.file, item.id, true);
+    expect(graveyardCount(archived)).toBe(0);
+
+    const deleted = deleteResearchItem(made.file, item.id);
+    expect(graveyard(deleted).map((row) => row.word)).toEqual(['Note']);
+    expect(researchItemsIn(deleted, { view: 'all' })).toHaveLength(0);
+    // And out of *archived* too, which is the point of them being two things.
+    expect(researchItemsIn(deleted, { view: 'archived' })).toHaveLength(0);
+
+    const back = restoreFromGraveyard(deleted, { kind: 'researchItem', id: item.id as string });
+    expect(researchItemsIn(back, { view: 'all' })).toHaveLength(1);
+  });
+
+  it('deletes a setup-and-payoff record to the graveyard', () => {
+    const made = addSetupPayoff(project(), { title: 'The bell' });
+    const record = made.setupsPayoffs[made.setupsPayoffs.length - 1]!;
+    const deleted = deleteSetupPayoff(made, record.id);
+    expect(setupsBoard(deleted)).toHaveLength(0);
+    expect(graveyard(deleted).map((row) => row.word)).toEqual(['Setup & payoff']);
+    const back = restoreFromGraveyard(deleted, { kind: 'setupPayoff', id: record.id as string });
+    expect(setupsBoard(back)).toHaveLength(1);
+  });
+
+  /**
+   * Burying keeps the links, which is what makes restoring whole. Destroying
+   * has to take them, or emptying leaves a link pointing at a record that no
+   * longer exists — which is what it did when the graveyard first shipped.
+   */
+  it('takes what pointed at a record only when the record is destroyed, never when it is buried', () => {
+    let file = addCharacter(project(), { name: 'Mara' });
+    const mara = file.characters[file.characters.length - 1]!;
+    file = addCharacter(file, { name: 'Ben' });
+    const ben = file.characters[file.characters.length - 1]!;
+    file = linkEntities(file, { from: ref('character', mara.id), to: ref('character', ben.id) });
+    expect(file.links).toHaveLength(1);
+
+    const buriedFile = removeCharacter(file, mara.id);
+    // Kept, so restoring gives back who they were related to.
+    expect(buriedFile.links).toHaveLength(1);
+    expect(restoreFromGraveyard(buriedFile, { kind: 'character', id: mara.id as string }).links).toHaveLength(1);
+
+    // Gone once the record is, by either door.
+    expect(emptyGraveyard(buriedFile).links).toHaveLength(0);
+    expect(forgetOne(buriedFile, { kind: 'character', id: mara.id as string }).links).toHaveLength(0);
   });
 });

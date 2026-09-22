@@ -177,6 +177,35 @@ export const sendToGraveyard = (file: ProjectFile, ref: BuriedRef, at: string = 
 export const restoreFromGraveyard = (file: ProjectFile, ref: BuriedRef): ProjectFile => stamp(file, ref, null);
 
 /**
+ * What goes with a record that is destroyed for good.
+ *
+ * Burying keeps all of this, which is the whole of §2 — the links are what
+ * make restoring able to give back what was there. **Destroying has to take
+ * it**, or emptying the graveyard leaves a story link pointing at a character
+ * who no longer exists, which is the fault this function was written to fix.
+ *
+ * Written **once, generically**, rather than as a destroyer per kind: what
+ * hangs off a record is a story link that refers to it, a usage link it owns
+ * and a theme–motif link that names it, and none of that varies by kind. It
+ * is also why this lives here and imports nothing — a per-module destroyer
+ * would have to be reached from here, and those modules already import this
+ * one.
+ */
+const withoutWhatPointedAt = (file: ProjectFile, ids: ReadonlySet<string>): ProjectFile => {
+  if (ids.size === 0) return file;
+  return {
+    ...file,
+    links: (file.links ?? []).filter(
+      (link) => !ids.has(link.from.id as string) && !ids.has(link.to.id as string),
+    ),
+    usageLinks: (file.usageLinks ?? []).filter((link) => !ids.has(link.ownerId as string)),
+    themeMotifLinks: (file.themeMotifLinks ?? []).filter(
+      (link) => !ids.has(link.themeId as string) && !ids.has(link.motifId as string),
+    ),
+  } as ProjectFile;
+};
+
+/**
  * Empty the graveyard: **the one act in the module that destroys anything**,
  * and the only reason it exists is that a graveyard nobody can empty is a
  * project that grows forever. It is deliberate, it is asked for, and it is
@@ -184,20 +213,24 @@ export const restoreFromGraveyard = (file: ProjectFile, ref: BuriedRef): Project
  * back to a project after a month should find what they deleted still there.
  */
 export const emptyGraveyard = (file: ProjectFile): ProjectFile => {
+  const going = new Set<string>();
   let next = file;
   for (const kind of BURIED_KINDS) {
     const key = COLLECTION[kind];
     const list = (next[key] ?? []) as unknown as Burialble[];
+    for (const record of list) if (!living(record)) going.add(record.id);
     next = { ...next, [key]: list.filter((record) => living(record)) } as ProjectFile;
   }
-  return next;
+  return withoutWhatPointedAt(next, going);
 };
 
 /** Take one row out for good, without emptying the rest. */
 export const forgetOne = (file: ProjectFile, ref: BuriedRef): ProjectFile => {
   const key = COLLECTION[ref.kind];
   const list = (file[key] ?? []) as unknown as Burialble[];
-  return { ...file, [key]: list.filter((record) => record.id !== ref.id) } as ProjectFile;
+  if (!list.some((record) => record.id === ref.id)) return file;
+  const next = { ...file, [key]: list.filter((record) => record.id !== ref.id) } as ProjectFile;
+  return withoutWhatPointedAt(next, new Set([ref.id]));
 };
 
 /**
