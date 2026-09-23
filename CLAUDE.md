@@ -1649,6 +1649,32 @@ push live; the build takes a minute or two.
   the pane *after* the divider, a second copy of the drag with its sign flipped
   being a second answer to how far the pointer moved; the spread re-fits as it
   moves, because §9e reads the stage rather than a number.
+  **§9g is two numbers on the screen that were not the book's**, found by
+  reading the room's dialogs. The **page count**: the bar said *13 pages* while
+  the margin sentence beside it said *worked out from the trim and 9 pages* —
+  `estimatedPages` breaks the circle (the gutter needs a count, the count needs
+  the gutter) and `layBook` re-lays at the true count only when it lands in
+  another tier of the band, so the guess survived into the sentences;
+  `countedAt` stops it at the door, and nothing about the margins moves because
+  the re-lay is skipped **exactly when** `insideFor` agrees at both counts and
+  the inside margin is the only one a count reaches. The **chapter-page
+  preview**: a letter-size sheet with fixed margins in Courier whatever the
+  book was, under a comment reading *the shape it will print* — true when
+  written, false from the day Layout existed, which is addendum 24 §5e's lesson
+  one layer down (**a comment keeps its own copy of a rule as readily as a
+  screen**). §9c had put the drop in that dialog *so a writer sets it while
+  looking at the page*, and the page was eleven inches of typewriter paper.
+  `chapterSheetVars` gives the sheet the book's trim, margins and face and
+  `bookFaceOf` resolves the book's face on the leaf. Two details invisible when
+  wrong: **a percentage padding resolves against the containing block's
+  *width*** even at the top (the old sheet divided by the height and drew the
+  drop at three quarters of where it meant to), and **the drop is from the top
+  of the paper**, so the block's own padding carries the drop *less the top
+  margin* over the text block's width. The drop-as-a-share moved out of
+  `chapterStyleVars` — how tall the sheet is, is the sheet's business, and that
+  is where the hard-coded eleven inches was hiding — as did the summary's face,
+  Courier in a book as well as a manuscript where the reading face is the
+  book's.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

@@ -1181,6 +1181,60 @@ it; writing the drag a second time with its sign flipped would be a second
 answer to how far the pointer moved. It is remembered per machine, and the
 spread re-fits as it moves, because §9e reads the stage rather than a number.
 
+## 9g. Two things on the screen that were not the book's
+
+Not from Ken — found by opening the room's dialogs and reading them. Both are
+the same fault: a number the screen stated that was **not the book's**.
+
+### The page count
+
+The bar said *13 pages* and the margin sentence beside it said *worked out
+from the trim and 9 pages*; the spine sentence said *at 9 pages*. Two numbers
+for one book, a few inches apart.
+
+`estimatedPages` exists to break a circle — the gutter needs a page count and
+the page count needs the gutter — and `layBook` lays the book at the guess,
+then lays it again only when the true count would land in a different tier of
+the standard's band. Where it does not, the geometry keeps the guess, and the
+guess was what the sentences read. The guess now stops at the door: `countedAt`
+tells the geometry the count the book has. Nothing about the margins moves,
+and that is provable rather than hopeful — the re-lay is skipped exactly when
+`insideFor` gives the same answer at both counts, and the inside margin is the
+only one a page count reaches.
+
+### The sheet a chapter page is judged on
+
+The preview in *Chapter page…* was a letter-size sheet with fixed margins, set
+in Courier, whatever the book was. The comment over it read *the shape it will
+print* — true the day it was written, false from the day the Layout room
+existed, and still sitting there: a comment keeping its own copy of a rule
+long after the module changed its mind, which is addendum 24 §5e's lesson one
+layer down.
+
+So §9c put the drop and the template in that dialog, *so a writer sets them
+while looking at the page*, and the page they were looking at was eleven
+inches of typewriter paper. `chapterSheetVars` gives the sheet the book's
+trim, the book's margins and the book's face, and `bookFaceOf` resolves *the
+book's face* on the leaf itself, which the preview had never done.
+
+Two details are worth keeping, because both are invisible when wrong — the
+page still looks like a page, with the heading in the wrong place.
+
+- **A percentage padding resolves against the containing block's *width***,
+  even at the top. The old sheet divided its drop by eleven inches of height
+  and drew it at three quarters of where it meant to; every share here is over
+  the trim's width.
+- **The drop is from the top of the paper**, so what the block's own padding
+  carries is the drop *less the top margin*, over the width of the text block
+  it sits in — which is the box that padding measures against.
+
+The **drop as a share** moved out of `chapterStyleVars` while this was done:
+how tall the sheet is, is the sheet's business rather than the style's, and
+that is where the hard-coded eleven inches had been hiding. So did the
+summary's face, which was Courier in a book as well as in a manuscript — the
+reading face is the book's where there is a book, which is what the printed
+book has always used.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

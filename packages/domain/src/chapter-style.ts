@@ -1,11 +1,13 @@
 import { z } from 'zod';
-import { faceStackOf, fontOf } from './book-layout.js';
+import { bookSettingsOf, estimatedPages, faceStackOf, fontOf, geometryOf } from './book-layout.js';
+import { projectStats } from './selectors.js';
 import type { BookFont } from './entities/book.js';
 import type { ProjectFile } from './project-file.js';
 import { nowIso } from './entities/common.js';
 import { chapterTemplateSchema, type ChapterTemplate, type StoryMarker } from './entities/structure.js';
 import {
   chapterPageContent,
+  contentsDivisions,
   hasChapterPages,
   placedMarkers,
   type ChapterPageContent,
@@ -240,18 +242,80 @@ export const chapterStyleVars = (
     '--chapter-drop': `${style.dropInches}in`,
     /** A chapter opening above its first paragraph, in lines of the body. */
     '--chapter-opening-lines': `${style.openingLines}`,
-    // The same drop as a share of the sheet, for a preview drawn smaller than
-    // paper: CSS cannot divide a length by a length, and a small sheet whose
-    // block dropped a literal two and a half inches would be blank.
-    '--chapter-drop-ratio': `${((style.dropInches / 11) * 100).toFixed(2)}%`,
     '--chapter-rule': style.rule ? '1px solid currentColor' : 'none',
-    // The reading face, whatever the heading wears (addendum 19 §7).
-    '--chapter-summary-face': FACE_STACKS.manuscript,
+    // The reading face, whatever the heading wears (addendum 19 §7) — which in
+    // a book is the book's own body face and in a manuscript is Courier. It
+    // was Courier either way, so the dialog's preview drew a typeset book's
+    // summary in a typewriter face the printed book never uses (§9g).
+    '--chapter-summary-face': bookFace ?? FACE_STACKS.manuscript,
     ...line('number', style.number),
     ...line('title', style.title),
     ...line('epigraph', style.epigraph),
     ...line('summary', style.summary),
   };
+};
+
+/**
+ * The sheet a chapter page is **judged on** (addendum 20 §9g): the book's page.
+ *
+ * The dialog's preview was a letter-size sheet in Courier with fixed margins,
+ * and the comment over it said *the shape it will print* — true when it was
+ * written and false the day the Layout room existed. So a writer set *how far
+ * down the page* to 2½ in and judged it against eleven inches of paper while
+ * the book printed eight and a half, in a face the preview never showed. The
+ * drop was the worst of it: 2½ in is 23% of a letter page and 29% of a digest
+ * one, so the preview drew the heading higher than the book prints it.
+ *
+ * The **drop as a share** lives here rather than in `chapterStyleVars`,
+ * because how tall the sheet is, is the sheet's business and not the style's —
+ * that is where the hard-coded eleven inches had been hiding. The margins are
+ * read at the estimated page count, which the room's own first pass uses: the
+ * only margin a count reaches is the inside one, and an eighth of an inch of
+ * gutter on a sheet drawn 280 pixels wide is under half a pixel.
+ */
+export const chapterSheetVars = (file: ProjectFile, style: ChapterPageStyle): Record<string, string> => {
+  const settings = bookSettingsOf(file);
+  const geometry = geometryOf(
+    settings,
+    file.project.format,
+    estimatedPages(projectStats(file).wordCount, contentsDivisions(file).length),
+  );
+  const { trim, margins } = geometry;
+  /**
+   * An inch of the page, as a percentage.
+   *
+   * Over the trim's **width** whichever edge it is on, because a percentage
+   * padding in CSS resolves against the containing block's width even at the
+   * top — the trap the old sheet fell into, dividing its drop by eleven inches
+   * of height and landing at three quarters of where it meant to.
+   */
+  const share = (inches: number) => `${((inches / trim.width) * 100).toFixed(2)}%`;
+  return {
+    '--leaf-ratio': `${trim.width} / ${trim.height}`,
+    '--leaf-top': share(margins.top),
+    // A chapter opens on a recto, so the gutter is on the left of the sheet.
+    '--leaf-left': share(margins.inside),
+    '--leaf-right': share(margins.outside),
+    '--leaf-face': faceStackOf(settings.face, settings.fonts),
+    /**
+     * The drop, for a sheet drawn smaller than paper — CSS cannot divide a
+     * length by a length, and a block dropped a literal 2½ in would fall off
+     * a 285-pixel page.
+     *
+     * Measured from the **top margin** and over the **text block's** width,
+     * because that is the box the block's padding resolves against; the drop
+     * itself is from the top of the paper, so the margin already spent comes
+     * off first. Getting this wrong is invisible — the page still looks like a
+     * page, with the heading in the wrong place.
+     */
+    '--chapter-drop-ratio': `${((Math.max(0, style.dropInches - margins.top) / geometry.text.width) * 100).toFixed(2)}%`,
+  };
+};
+
+/** The face the book sets its body in, for a preview that must not lie about the type. */
+export const bookFaceOf = (file: ProjectFile): string => {
+  const settings = bookSettingsOf(file);
+  return faceStackOf(settings.face, settings.fonts);
 };
 
 // ------------------------------------------------ the page for a book (§7)

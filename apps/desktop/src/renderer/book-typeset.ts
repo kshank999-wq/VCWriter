@@ -162,7 +162,29 @@ export const layBook = (file: ProjectFile, box: HTMLElement): Laying => {
     pages = laying.laid.pages.length;
     laying = once(pages);
   }
-  return laying;
+  return countedAt(laying, laying.laid.pages.length);
+};
+
+/**
+ * Say the count the book **has** rather than the guess that decided the gutter
+ * (§9g).
+ *
+ * `estimatedPages` exists only to break a circle — the gutter needs a page
+ * count and the page count needs the gutter — and once the circle is closed
+ * the guess has no business surviving into what the screen reads. It did: the
+ * bar said *13 pages* while the margin sentence beside it said *worked out
+ * from the trim and 9 pages*, and the spine sentence said *at 9 pages*. Two
+ * numbers for one book, on one screen.
+ *
+ * Nothing about the margins moves. The pass above only skips a re-lay when
+ * `insideFor` gives the same answer at both counts, and the inside margin is
+ * the only one a page count reaches, so the geometry at the real count is the
+ * geometry already in hand — with its `pages` told the truth.
+ */
+const countedAt = (laying: Laying, pages: number): Laying => {
+  if (laying.geometry.pages === pages) return laying;
+  const geometry = { ...laying.geometry, pages };
+  return { ...laying, geometry, context: { ...laying.context, geometry } };
 };
 
 /**

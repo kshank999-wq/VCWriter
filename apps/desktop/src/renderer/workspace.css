@@ -3685,12 +3685,16 @@ dialog.marker-dialog {
 }
 
 .chapter-leaf-sheet {
-  aspect-ratio: 8.5 / 11;
+  /* The book's own page (§9g): the trim's shape, its margins as shares of it,
+     and the face it is set in, all declared by the screen that draws it. The
+     fallbacks are the manuscript page this was fixed at, for a surface with no
+     book to ask. */
+  aspect-ratio: var(--leaf-ratio, 8.5 / 11);
   background: var(--panel-2);
   border: 1px solid var(--border);
-  padding: 14% 12% 0;
+  padding: var(--leaf-top, 14%) var(--leaf-right, 12%) 0 var(--leaf-left, 12%);
   box-sizing: border-box;
-  font-family: 'Courier New', Courier, ui-monospace, monospace;
+  font-family: var(--leaf-face, 'Courier New', Courier, ui-monospace, monospace);
   font-size: 11px;
 }
 

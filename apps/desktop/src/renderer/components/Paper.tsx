@@ -218,9 +218,17 @@ function IndexLeaf({ index }: { index: IndexPage }) {
 export function ChapterLeaf({
   chapter,
   style,
+  face,
 }: {
   chapter: ChapterPageContent;
   style?: ChapterPageStyle;
+  /**
+   * The book's own body face, where the caller has one (addendum 20 §9g) —
+   * what `book` as the face resolves to, exactly as the print resolves it. A
+   * manuscript preview passes nothing and gets Courier, which is what a
+   * script's leaf wants.
+   */
+  face?: string;
 }) {
   // The same custom properties the printed page carries, from the same
   // function — which is the whole of why the preview can be believed. The
@@ -228,6 +236,7 @@ export function ChapterLeaf({
   // here, exactly as the print does it (addendum 20 §9c).
   const type = chapterStyleVars(
     chapterStyleWith(style ?? chapterPageStyleSchema.parse({}), chapter.placement),
+    face,
   ) as React.CSSProperties;
   const head = chapter.label.length > 0 || chapter.title.length > 0;
   const heading = head ? (

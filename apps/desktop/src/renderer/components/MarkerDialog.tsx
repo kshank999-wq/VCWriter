@@ -4,6 +4,8 @@ import {
   MAX_CHAPTER_IMAGE_BYTES,
   chapterLeafContent,
   chapterPageStyleOf,
+  chapterSheetVars,
+  bookFaceOf,
   hasChapterPages,
   markerNumbering,
   placedMarkers,
@@ -320,9 +322,9 @@ function Body({
             {/* The same component the preview and the printed page draw, in
                 the book's own type — a second copy of this markup was a second
                 answer to *what will it look like*. */}
-            <div className="chapter-leaf-sheet">
+            <div className="chapter-leaf-sheet" style={chapterSheetVars(file, chapterPageStyleOf(file)) as React.CSSProperties}>
               {marker.page.include ? (
-                <ChapterLeaf chapter={preview} style={chapterPageStyleOf(file)} />
+                <ChapterLeaf chapter={preview} style={chapterPageStyleOf(file)} face={bookFaceOf(file)} />
               ) : (
                 <p className="muted">This chapter runs straight on from the last one.</p>
               )}

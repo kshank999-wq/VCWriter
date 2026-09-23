@@ -10,6 +10,8 @@ import {
   chapterChoices,
   chapterLeafContent,
   chapterPageStyleOf,
+  chapterSheetVars,
+  bookFaceOf,
   chapterPlacementOf,
   placesItself,
   type StoryMarker,
@@ -162,6 +164,13 @@ function Body({
     [file, chosen],
   );
   const style = chapterPageStyleOf(file);
+  /**
+   * The preview sheet, at the book's own trim, margins and face (§9g) — it was
+   * a letter page in Courier whatever the book was set to, which made the drop
+   * the writer is setting here read higher than it prints.
+   */
+  const leafSheet = useMemo(() => chapterSheetVars(file, style) as React.CSSProperties, [file, style]);
+  const leafFace = useMemo(() => bookFaceOf(file), [file]);
   const marker = placed?.marker;
   /**
    * A book's page has a summary and takes its picture from the library
@@ -643,9 +652,9 @@ function Body({
           {book && offer && !offer.available && offer.reason ? (
             <p className="muted small aids-why">{offer.reason}</p>
           ) : null}
-          <div className="chapter-leaf-sheet">
+          <div className="chapter-leaf-sheet" style={leafSheet}>
             {marker && marker.page.include ? (
-              <ChapterLeaf chapter={chapterLeafContent(file, placed!)} style={style} />
+              <ChapterLeaf chapter={chapterLeafContent(file, placed!)} style={style} face={leafFace} />
             ) : (
               <p className="muted">This chapter runs straight on from the last one.</p>
             )}

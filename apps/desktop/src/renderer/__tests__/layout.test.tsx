@@ -357,6 +357,25 @@ describe('the room', () => {
     expect(screen.getByLabelText('Inspector width')).toBeDefined();
   });
 
+  /**
+   * One book, one page count (§9g). `estimatedPages` guesses a count from the
+   * words because the gutter needs one before the book is laid; the guess used
+   * to survive into the sentences, so the bar said *13 pages* while the margin
+   * sentence beside it said *worked out from the trim and 9 pages*.
+   */
+  it('says the count the book has, not the guess the gutter was worked out from', () => {
+    render(<Harness initial={novel()} />);
+    const laid = document.querySelector('.layout-count')?.textContent ?? '';
+    const count = Number(laid.match(/^(\d+)/)?.[1]);
+    expect(count).toBeGreaterThan(0);
+
+    openBookSettings();
+    const dialog = screen.getByRole('dialog', { name: 'Book settings' });
+    const said = dialog.textContent ?? '';
+    expect(said).toContain(`the trim and ${count} page`);
+    expect(said).toContain(`At ${count} page`);
+  });
+
   it('writes the trim and says what was worked out from it', () => {
     render(<Harness initial={novel()} />);
     openBookSettings();

@@ -10,6 +10,9 @@ import {
   chapterPagesEverywhere,
   chapterStyleAttr,
   chapterStyleVars,
+  chapterSheetVars,
+  bookFaceOf,
+  setBookSettings,
   TYPE_FACES,
   chapterPageStyleSchema,
   createProjectFile,
@@ -358,5 +361,49 @@ describe('the chapter openings’ style options', () => {
     // It is the leaf's drop's sibling, not its replacement: they are different
     // pages and measured in different units.
     expect(deeper.dropInches).toBe(2.5);
+  });
+  /**
+   * The sheet the leaf is judged on is the **book's page** (addendum 20 §9g).
+   *
+   * It was a letter-size sheet in Courier with fixed margins whatever the book
+   * was set to, and the drop was the worst of it: 2½ in is 23% of eleven
+   * inches and 29% of eight and a half, so the preview drew the heading higher
+   * than the book prints it.
+   */
+  it('draws the preview sheet at the book’s trim, margins and drop', () => {
+    const file = createProjectFile({ title: 'The Lamp', format: 'novel' });
+    const style = chapterPageStyleOf(file);
+    const digest = chapterSheetVars(file, style);
+    expect(digest['--leaf-ratio']).toBe('5.5 / 8.5');
+    const asFraction = (said: string) => Number.parseFloat(said) / 100;
+    // Every share is over the trim's **width**, because that is what a
+    // percentage padding measures against even at the top of a box.
+    expect(asFraction(digest['--leaf-top']!) * 5.5).toBeCloseTo(0.5, 3);
+    // And the heading lands 2½ in down the paper: the top margin, then the
+    // block's own padding over the text block it sits in.
+    const down = 0.5 + asFraction(digest['--chapter-drop-ratio']!) * (5.5 - 0.75 - 0.5625);
+    expect(down).toBeCloseTo(2.5, 3);
+    // The gutter is on the left of a recto, and wider than the fore-edge.
+    expect(Number.parseFloat(digest['--leaf-left']!)).toBeGreaterThan(Number.parseFloat(digest['--leaf-right']!));
+
+    // A different trim is a different sheet, with nothing stored.
+    const workbook = chapterSheetVars(setBookSettings(file, { trim: { width: 8.5, height: 11 } }), style);
+    expect(workbook['--leaf-ratio']).toBe('8.5 / 11');
+    expect(workbook['--chapter-drop-ratio']).not.toBe(digest['--chapter-drop-ratio']);
+  });
+
+  /** And in the book's own face, which the preview never showed. */
+  it('resolves the book’s face for a leaf that asks for it', () => {
+    const file = setBookSettings(createProjectFile({ title: 'The Lamp', format: 'novel' }), { face: 'garamond' });
+    const face = bookFaceOf(file);
+    expect(face).toMatch(/Garamond/);
+    const asked = chapterStyleVars({ ...chapterPageStyleOf(file), face: 'book' }, face);
+    expect(asked['--chapter-face']).toBe(face);
+    // A caller with no book to offer still gets the manuscript's Courier.
+    expect(chapterStyleVars({ ...chapterPageStyleOf(file), face: 'book' })['--chapter-face']).toMatch(/Courier/);
+    // And the summary is the reading face: the book's in a book, Courier in a
+    // manuscript — it was Courier in both, which the printed book never was.
+    expect(chapterStyleVars(chapterPageStyleOf(file), face)['--chapter-summary-face']).toBe(face);
+    expect(chapterStyleVars(chapterPageStyleOf(file))['--chapter-summary-face']).toMatch(/Courier/);
   });
 });
