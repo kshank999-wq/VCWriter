@@ -780,6 +780,52 @@ left behind is left as it is — a scene emptied of its last beat stays
 standing, empty and visible, where removing it silently would take a name
 and a marker the writer may want.
 
+## 6b. Joining several into one, and splitting where the cursor is
+
+From Ken: *you should be able to shift click several beats and we need a
+right-click pop-up menu… in this one it'll be merge. But if you're within a
+beat and you right-click, you can split a beat at that point, where the cursor
+is at. And that should be true for scripts, series, anything that has beats or
+sections, even in the one for textbooks, so in the subsections, you should be
+able to either join those.*
+
+Half of it was standing. The right-click menu on a beat is §6a's, the split at
+the cursor has been on the manuscript's own menu since addendum 21, and
+`dividing.ts` has held **split before an element** and **merge the neighbour
+in** since the divide tools. What was missing is the act a writer actually
+performs: picking a **run** and joining it.
+
+**Shift picks the run, and it is a range from the selection.** The far end is
+held by the track and the near end is the project's own chosen beat, so an
+ordinary click clears the run and the two can never disagree. The marked beats
+are tinted, because a menu that says *Merge 3 beats* over a screen showing no
+three beats is a menu nobody trusts.
+
+**The domain answers before the act can be asked for.** `beatsJoin` and
+`unitsJoin` return either a refusal a writer can act on — *They do not follow
+one another*, *They are in different ones* — or the sentence saying what
+joining would do: *3 beats become one, called Opening beat. Not a word is
+cut.* `joinBeats` and `joinUnits` refuse the same things again, so a caller
+cannot get past the reading by not reading it. It is `trackRemoval`'s shape,
+and the promise is the one the cuts already make: **not a word moves**.
+
+Two rules are worth keeping. A run must be **adjacent** — joining the first and
+the third would have to carry the second's writing along with it, which is a
+reordering nobody asked for. And two units on **different tracks** are not
+joined, because the story order runs across the tracks and joining those would
+take a scene off its subplot silently. A break carried by an absorbed unit goes
+with it, which is the one thing a writer would not guess, so it is the thing
+the sentence says.
+
+None of it names a format. Every menu reads `nounsFor`, so this is *Merge 3
+beats* on a screenplay, *Merge 3 passages* in a novel and *Merge 3
+subsections* in a textbook, and *Join it into the section before* one level up,
+with nothing written twice.
+
+The menu grew a **note** for it: what an item would do, said under its label
+rather than in a hover nobody sees. The item is still named by its label alone,
+so a menu can be found by what its items are called.
+
 ## 7. The research window
 
 Research is where the material is kept **before, during and after** it is

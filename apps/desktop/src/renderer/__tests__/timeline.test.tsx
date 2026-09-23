@@ -221,6 +221,54 @@ describe('master timeline', () => {
     expect(unitsInStoryOrder(latest)).toHaveLength(1);
   });
 
+  /**
+   * Shift picks a run, and the right-click joins it (addendum 02 §6b, from
+   * Ken: *you should be able to shift click several beats… and in this one
+   * it'll be merge*). What is protected is that not a word moves.
+   */
+  it('picks a run of beats with shift and merges it from the right-click', () => {
+    let initial = twoTracks();
+    const opening = unitsInStoryOrder(initial)[0]!;
+    initial = addBeat(initial, { unitId: opening.id, title: 'Second beat' }).file;
+    initial = addBeat(initial, { unitId: opening.id, title: 'Third beat' }).file;
+    let latest: ProjectFile = initial;
+    render(
+      <Harness initial={initial}>
+        {(file, update, selected, select) => {
+          latest = file;
+          return (
+            <MasterTimeline file={file} selectedBeatId={selected} onSelectBeat={select} onUpdate={update} pixelsPerPage={120} onZoom={() => undefined} inspectorOpen onToggleInspector={() => undefined} onAddScene={() => undefined} onAddBeat={() => undefined} onAddTrack={() => undefined} onAddAct={() => undefined} onOpenTrack={() => undefined} />
+          );
+        }}
+      </Harness>,
+    );
+    const row = (title: string) => screen.getByText(title).closest('button') as HTMLElement;
+
+    // One beat alone cannot be merged, and the menu says why rather than hiding it.
+    fireEvent.click(row('Opening beat'));
+    fireEvent.contextMenu(row('Opening beat').closest('li') as HTMLElement, { clientX: 40, clientY: 40 });
+    const alone = screen.getByRole('menuitem', { name: 'Merge beats' }) as HTMLButtonElement;
+    expect(alone.disabled).toBe(true);
+    expect(alone.title).toMatch(/two or more/);
+    fireEvent.keyDown(alone, { key: 'Escape' });
+
+    // Shift takes the run from the chosen beat to this one, and it is drawn.
+    fireEvent.click(row('Second beat'), { shiftKey: true });
+    expect(row('Opening beat').className).toMatch(/marked/);
+    expect(row('Second beat').className).toMatch(/marked/);
+    expect(row('Third beat').className).not.toMatch(/marked/);
+
+    // A right-click inside the run keeps it, and the merge says what it does.
+    fireEvent.contextMenu(row('Second beat').closest('li') as HTMLElement, { clientX: 40, clientY: 40 });
+    const merge = screen.getByRole('menuitem', { name: 'Merge 2 beats' }) as HTMLButtonElement;
+    expect(merge.disabled).toBe(false);
+    expect(document.querySelector('.context-item-note')?.textContent).toMatch(/2 beats become one/);
+    fireEvent.click(merge);
+
+    const after = beatsForUnit(latest, opening.id);
+    expect(after.map((beat) => beat.title)).toEqual(['Opening beat', 'Third beat']);
+  });
+
   it('makes a scene of a beat dropped past the last scene, or on another track’s empty slot', () => {
     let initial = twoTracks();
     const opening = unitsInStoryOrder(initial)[0]!;

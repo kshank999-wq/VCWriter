@@ -14493,3 +14493,25 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
   gap: 6px;
   margin: 8px 0;
 }
+
+/* What an item would do, said under it (addendum 02 §6b) — for the ones
+   whose answer is not the label, and for a greyed one's reason, which in a
+   `title` is easy to miss. */
+.context-item-note {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  margin-top: 2px;
+  white-space: normal;
+  max-width: 24em;
+}
+
+/* A run picked with shift, on the track (addendum 02 §6b). It has to read at
+   a glance against the one selected row beside it, so it is a tint and a
+   border rather than an inset shadow a coloured beat would overwrite. */
+.beat-row.marked,
+.beat-row.marked.coloured {
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+  border-color: var(--gold-deep);
+}

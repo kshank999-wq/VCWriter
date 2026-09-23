@@ -4,6 +4,11 @@ import {
   markerNoun,
   addBeat,
   beatIntoNewUnit,
+  beatsJoin,
+  unitsInStoryOrder,
+  joinBeats,
+  unitsJoin,
+  joinUnits,
   beatsForUnit,
   moveBeat,
   moveTrack,
@@ -803,27 +808,88 @@ function TrackRow({
   /** The right-click on a scene or a beat (addendum 02 §6a): one menu for both, at the pointer. */
   const [menu, setMenu] = useState<{ x: number; y: number; label: string; entries: MenuEntry[] } | null>(null);
   const [askingRemove, setAskingRemove] = useState(false);
+  /** The far end of a run picked with shift (§6b); the near end is the selection. */
+  const [markedTo, setMarkedTo] = useState<BeatId | null>(null);
   const removal = trackRemoval(file, track.id);
   const unitWord = nouns.unit.toLowerCase();
   const subWord = nouns.sub.toLowerCase();
-  const beatMenu = (unitId: StructuralUnitId, beat: Beat, index: number): MenuEntry[] => [
-    ...(onOpenBeat ? [{ label: `Open the ${subWord}`, onPick: () => onOpenBeat(beat.id) }] : []),
-    {
-      label: `Split the ${unitWord} before this ${subWord}`,
-      disabled: index === 0 ? `It is the first ${subWord} of the ${unitWord} already` : null,
-      onPick: () => onUpdate((current) => splitUnit(current, unitId, beat.id).file),
-    },
-    { label: `Carry it into a new ${unitWord}`, onPick: () => onUpdate((current) => beatIntoNewUnit(current, beat.id).file) },
-    'rule',
-    { label: `Remove the ${subWord}`, danger: true, onPick: () => onUpdate((current) => removeBeat(current, beat.id)) },
-  ];
-  const unitMenu = (unitId: StructuralUnitId, collapsed: boolean): MenuEntry[] => [
-    ...(onOpenUnit ? [{ label: `Open the ${unitWord}`, onPick: () => onOpenUnit(unitId) }] : []),
-    { label: `Add a ${subWord}`, onPick: () => onUpdate((current) => addBeat(current, { unitId, title: `New ${subWord}` }).file) },
-    { label: collapsed ? 'Expand' : 'Collapse', onPick: () => onUpdate((current) => updateUnit(current, unitId, { collapsed: !collapsed })) },
-    'rule',
-    { label: `Remove the ${unitWord} and its ${nouns.subPlural.toLowerCase()}`, danger: true, onPick: () => onUpdate((current) => removeUnit(current, unitId)) },
-  ];
+  /**
+   * The run picked with shift (addendum 02 §6b, from Ken: *you should be able
+   * to shift click several beats… and in this one it'll be merge*).
+   *
+   * It is held here rather than beside the project's own selection because it
+   * is a **range from** that selection: one end is always the selected beat,
+   * so an ordinary click clears it and the two can never disagree.
+   */
+  const markedRun = (unitId: StructuralUnitId): BeatId[] => {
+    if (!markedTo || !selectedBeatId) return [];
+    const order = beatsForUnit(file, unitId);
+    const from = order.findIndex((one) => one.id === selectedBeatId);
+    const to = order.findIndex((one) => one.id === markedTo);
+    // Either end elsewhere means there is no run on this unit, which is what
+    // keeps a stale mark from lighting up a scene the writer has left.
+    if (from < 0 || to < 0) return [];
+    return order.slice(Math.min(from, to), Math.max(from, to) + 1).map((one) => one.id);
+  };
+  /** The run where this beat is in it, and this beat alone where it is not. */
+  const marked = (beat: Beat, unitId: StructuralUnitId): BeatId[] => {
+    const run = markedRun(unitId);
+    return run.includes(beat.id) ? run : [beat.id];
+  };
+
+  const beatMenu = (unitId: StructuralUnitId, beat: Beat, index: number): MenuEntry[] => {
+    const run = marked(beat, unitId);
+    const offer = beatsJoin(file, run, subWord);
+    return [
+      ...(onOpenBeat ? [{ label: `Open the ${subWord}`, onPick: () => onOpenBeat(beat.id) }] : []),
+      {
+        label: `Split the ${unitWord} before this ${subWord}`,
+        disabled: index === 0 ? `It is the first ${subWord} of the ${unitWord} already` : null,
+        onPick: () => onUpdate((current) => splitUnit(current, unitId, beat.id).file),
+      },
+      { label: `Carry it into a new ${unitWord}`, onPick: () => onUpdate((current) => beatIntoNewUnit(current, beat.id).file) },
+      // Joining what is marked. Greyed with the reason rather than absent: the
+      // writer has just picked something, and *why not* is what they need.
+      {
+        label: offer.may ? `Merge ${run.length} ${nouns.subPlural.toLowerCase()}` : `Merge ${nouns.subPlural.toLowerCase()}`,
+        disabled: offer.may ? null : offer.why,
+        note: offer.may ? offer.says : null,
+        onPick: () =>
+          onUpdate((current) => {
+            const joined = joinBeats(current, run);
+            return typeof joined === 'string' ? current : joined;
+          }),
+      },
+      'rule',
+      { label: `Remove the ${subWord}`, danger: true, onPick: () => onUpdate((current) => removeBeat(current, beat.id)) },
+    ];
+  };
+  const unitMenu = (unitId: StructuralUnitId, collapsed: boolean): MenuEntry[] => {
+    // The one before it in the story, which is what *join these* means at this
+    // level: a section absorbed into the section above it (§6b, from Ken:
+    // *in the subsections, you should be able to either join those*).
+    const order = unitsInStoryOrder(file).filter((one) => one.trackId === track.id);
+    const at = order.findIndex((one) => one.id === unitId);
+    const before = at > 0 ? order[at - 1]! : null;
+    const offer = before ? unitsJoin(file, [before.id, unitId], unitWord) : { may: false as const, why: `It is the first ${unitWord} on the track.` };
+    return [
+      ...(onOpenUnit ? [{ label: `Open the ${unitWord}`, onPick: () => onOpenUnit(unitId) }] : []),
+      { label: `Add a ${subWord}`, onPick: () => onUpdate((current) => addBeat(current, { unitId, title: `New ${subWord}` }).file) },
+      { label: collapsed ? 'Expand' : 'Collapse', onPick: () => onUpdate((current) => updateUnit(current, unitId, { collapsed: !collapsed })) },
+      {
+        label: `Join it into the ${unitWord} before`,
+        disabled: offer.may ? null : offer.why,
+        note: offer.may ? offer.says : null,
+        onPick: () =>
+          onUpdate((current) => {
+            const joined = before ? joinUnits(current, [before.id, unitId]) : current;
+            return typeof joined === 'string' ? current : joined;
+          }),
+      },
+      'rule',
+      { label: `Remove the ${unitWord} and its ${nouns.subPlural.toLowerCase()}`, danger: true, onPick: () => onUpdate((current) => removeUnit(current, unitId)) },
+    ];
+  };
   const openMenu = (event: React.MouseEvent, label: string, entries: MenuEntry[]) => {
     event.preventDefault();
     event.stopPropagation();
@@ -1149,19 +1215,35 @@ function TrackRow({
                       onDropBeat(unit.id, indexForDrop(beatIndex, edgeFor(event)));
                     }}
                     onContextMenu={(event) => {
-                      onSelectBeat(beat.id);
+                      // A right-click inside the marked run leaves it alone —
+                      // collapsing it to one would throw away what the writer
+                      // just picked, which is the thing they are about to act
+                      // on. Outside it, it chooses this beat as any click does.
+                      if (!marked(beat, unit.id).includes(beat.id)) {
+                        setMarkedTo(null);
+                        onSelectBeat(beat.id);
+                      }
                       openMenu(event, `What to do with this ${subWord}`, beatMenu(unit.id, beat, beatIndex));
                     }}
                   >
                     <button
                       type="button"
-                      className={`beat-row${beat.id === selectedBeatId ? ' selected' : ''}${beat.color ? ' coloured' : ''}${
-                        beat.inScript ? '' : ' off'
-                      }`}
+                      className={`beat-row${beat.id === selectedBeatId ? ' selected' : ''}${
+                        markedRun(unit.id).includes(beat.id) ? ' marked' : ''
+                      }${beat.color ? ' coloured' : ''}${beat.inScript ? '' : ' off'}`}
                       style={beat.color ? ({ '--beat-colour': beat.color } as React.CSSProperties) : undefined}
                       aria-current={beat.id === selectedBeatId ? 'true' : undefined}
                       title={`${beat.status} · double-click to open · Alt+↑/↓ to reorder · Alt+Shift+↑/↓ to move between ${noun}s`}
-                      onClick={() => onSelectBeat(beat.id)}
+                      onClick={(event) => {
+                        // Shift takes the run from the one already chosen to
+                        // this one; an ordinary click is one beat and clears
+                        // the run, so what is marked is never a surprise.
+                        if (event.shiftKey && selectedBeatId && selectedBeatId !== beat.id) setMarkedTo(beat.id);
+                        else {
+                          setMarkedTo(null);
+                          onSelectBeat(beat.id);
+                        }
+                      }}
                       onDoubleClick={() => onOpenBeat?.(beat.id)}
                       onKeyDown={beatKeys(beat)}
                     >

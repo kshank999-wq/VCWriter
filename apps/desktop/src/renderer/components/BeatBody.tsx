@@ -788,7 +788,7 @@ export function BeatBody({
    * become, and — first, because it is what a writer reaching for the
    * menu most often wants — where the story can be cut. *Split the scene
    * here* makes this line the first of a new scene, exactly as a
-   * screenplay's; *New passage from here* cuts the beat. Both are greyed
+   * screenplay's; *Split the passage here* cuts the beat. Both are greyed
    * with the reason on a line that already opens its scene or its beat.
    */
   const writingMenu = (at: { elementId: ManuscriptElementId; text: string }): MenuEntry[] => {
@@ -801,11 +801,18 @@ export function BeatBody({
       {
         label: `Split the ${nouns.unit.toLowerCase()} here`,
         disabled: firstOfUnit ? `This line already opens the ${nouns.unit.toLowerCase()}` : null,
+        note: firstOfUnit ? null : `The words from here become a ${nouns.unit.toLowerCase()} of their own.`,
         onPick: () => onUpdate((current) => splitUnitBefore(current, at.elementId as string).file),
       },
       {
-        label: `New ${nouns.sub.toLowerCase()} from here`,
+        // Named for what it does, beside the cut above it (§6b, from Ken:
+        // *if you're within a beat and you right-click, you can split a beat
+        // at that point, where the cursor is at*). It read *New beat from
+        // here*, which is the same act described from the other end and did
+        // not read as the pair it is.
+        label: `Split the ${nouns.sub.toLowerCase()} here`,
         disabled: firstOfBeat ? `This line already opens the ${nouns.sub.toLowerCase()}` : null,
+        note: firstOfBeat ? null : `The words from here become a ${nouns.sub.toLowerCase()} of their own.`,
         onPick: () => onUpdate((current) => splitBeatBefore(current, at.elementId as string).file),
       },
       'rule',

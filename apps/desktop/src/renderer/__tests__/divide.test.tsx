@@ -97,13 +97,13 @@ describe('dividing from the bar', () => {
     const first = screen.getByRole('menuitem', { name: 'Split the chapter here' }) as HTMLButtonElement;
     expect(first.disabled).toBe(true);
     expect(first.title).toMatch(/already opens the chapter/);
-    expect((screen.getByRole('menuitem', { name: 'New passage from here' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('menuitem', { name: 'Split the passage here' }) as HTMLButtonElement).disabled).toBe(true);
     // The writing's own items are still there.
     expect(screen.getByRole('menuitem', { name: 'Add to a character’s characterization…' })).toBeDefined();
     fireEvent.keyDown(first, { key: 'Escape' });
 
     fireEvent.contextMenu(box('c'), { clientX: 20, clientY: 20 });
-    fireEvent.click(screen.getByRole('menuitem', { name: 'New passage from here' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Split the passage here' }));
     let file = latest as ProjectFile;
     expect(beatsForUnit(file, file.units[0]!.id).map((beat) => beat.manuscript.elements.map((element) => element.id))).toEqual([['a', 'b'], ['c', 'd'], ['e', 'f', 'g', 'h']]);
 

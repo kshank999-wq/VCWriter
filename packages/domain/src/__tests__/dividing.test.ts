@@ -4,6 +4,10 @@ import {
   addMarker,
   addUnit,
   beatIntoNewUnit,
+  beatsJoin,
+  joinBeats,
+  unitsJoin,
+  joinUnits,
   beatsForUnit,
   carveBeat,
   carveUnit,
@@ -163,5 +167,95 @@ describe('a beat carried into a scene of its own', () => {
     expect(unitsInStoryOrder(made.file)).toHaveLength(3);
     expect(beatsForUnit(made.file, unitsInStoryOrder(made.file)[1]!.id)).toHaveLength(0);
     expect(beatsForUnit(made.file, made.unitId).map((beat) => beat.title)).toEqual(['alone']);
+  });
+});
+
+/**
+ * Joining several into one (addendum 02 §6b, from Ken: *you should be able to
+ * shift click several beats… and in this one it'll be merge*).
+ *
+ * What is protected is the same thing the cuts protect: **not a word moves**.
+ * The reading refuses before the act can be asked for, and the sentence it
+ * refuses with is one a writer can act on.
+ */
+describe('joining', () => {
+  /** Three passages in one scene: a–b, c–d, e–h. */
+  const three = (): ProjectFile => {
+    let file = novel();
+    const unit = file.units[0]!;
+    const cut = splitBeatBefore(file, 'c');
+    file = cut.file;
+    return updateBeat(file, beatsForUnit(file, unit.id)[0]!.id, { title: 'first' });
+  };
+
+  it('joins a run of beats into the first, keeping its name and every word', () => {
+    const file = three();
+    const unit = file.units[0]!;
+    const beats = beatsForUnit(file, unit.id);
+    expect(beats.map((beat) => beat.manuscript.elements.map((element) => element.id))).toEqual([['a', 'b'], ['c', 'd'], ['e', 'f', 'g', 'h']]);
+
+    const offer = beatsJoin(file, [beats[0]!.id, beats[1]!.id], 'passage');
+    expect(offer.may).toBe(true);
+    if (offer.may) {
+      expect(offer.says).toContain('2 passages become one');
+      expect(offer.says).toContain('called first');
+      expect(offer.says).toContain('Not a word is cut');
+    }
+
+    const joined = joinBeats(file, [beats[0]!.id, beats[1]!.id]);
+    expect(typeof joined).not.toBe('string');
+    if (typeof joined === 'string') return;
+    const after = beatsForUnit(joined, unit.id);
+    expect(after).toHaveLength(2);
+    expect(after[0]!.title).toBe('first');
+    expect(after.map((beat) => beat.manuscript.elements.map((element) => element.id))).toEqual([['a', 'b', 'c', 'd'], ['e', 'f', 'g', 'h']]);
+    // The whole manuscript reads exactly as it did, which is the promise.
+    expect(reading(joined)).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+  });
+
+  it('refuses in a sentence rather than reordering anybody’s writing', () => {
+    const file = three();
+    const beats = beatsForUnit(file, file.units[0]!.id);
+    const one = beatsJoin(file, [beats[0]!.id]);
+    expect(one).toEqual({ may: false, why: 'Choose two or more to join them.' });
+    // The first and the third would have to carry the second's words with
+    // them, which is a reordering nobody asked for.
+    const apart = beatsJoin(file, [beats[0]!.id, beats[2]!.id]);
+    expect(apart).toEqual({ may: false, why: 'They do not follow one another.' });
+    expect(joinBeats(file, [beats[0]!.id, beats[2]!.id])).toBe('They do not follow one another.');
+
+    // And two in different scenes are two scenes' business.
+    const made = addUnit(file, { trackId: file.units[0]!.trackId, title: 'Elsewhere' });
+    const other = addBeat(made.file, { unitId: made.unit.id, title: 'over there' });
+    expect(beatsJoin(other.file, [beats[0]!.id, other.beat.id])).toEqual({
+      may: false,
+      why: 'They are in different ones. Join what is in one at a time.',
+    });
+  });
+
+  /** The same act one level up — a script's scenes, a textbook's sections. */
+  it('joins units, and says when a break goes with them', () => {
+    let file = novel();
+    const cut = splitUnitBefore(file, 'f');
+    file = cut.file;
+    const order = unitsInStoryOrder(file);
+    expect(order).toHaveLength(2);
+    // A break on the second one is the thing a writer would not guess at.
+    file = addMarker(file, { unitId: order[1]!.id, kind: 'chapter', title: 'Two' }).file;
+
+    const offer = unitsJoin(file, [order[0]!.id, order[1]!.id], 'section');
+    expect(offer.may).toBe(true);
+    if (offer.may) {
+      expect(offer.says).toContain('2 sections become one');
+      expect(offer.says).toContain('One break goes with them');
+    }
+
+    const joined = joinUnits(file, [order[0]!.id, order[1]!.id]);
+    expect(typeof joined).not.toBe('string');
+    if (typeof joined === 'string') return;
+    expect(unitsInStoryOrder(joined)).toHaveLength(1);
+    expect(reading(joined)).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+    // The break the second carried is gone; the first's is untouched.
+    expect(contentsDivisions(joined)).toHaveLength(1);
   });
 });

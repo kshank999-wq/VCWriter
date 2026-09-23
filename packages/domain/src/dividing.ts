@@ -246,3 +246,109 @@ export const beatIntoNewUnit = (
   const made = addUnit(file, { trackId: options.trackId ?? from.trackId, title: options.title ?? '', index: options.index ?? at + 1 });
   return { file: moveBeat(made.file, { beatId, toUnitId: made.unit.id, index: 0 }), unitId: made.unit.id };
 };
+
+// ------------------------------------------------- joining several into one
+
+/**
+ * Joining several into one (addendum 02 §6b, from Ken: *you should be able to
+ * shift click several beats… and in this one it'll be merge*).
+ *
+ * The primitives at the top of this file already join **one** neighbour in;
+ * what a writer picks on the screen is a **run**, so these fold that act over
+ * the run and answer, before it is done, whether it can be and what it would
+ * cost. The pair — a reading that refuses in a sentence, and an act that
+ * cannot be asked for what the reading refused — is the shape the room's other
+ * two-step acts already have (`trackRemoval`, `divisionRemoval`).
+ *
+ * **Not a word is cut**, which is what makes this safe to offer on a
+ * right-click: the first of the run keeps its name, its status and its colour,
+ * and takes the others' writing in order behind its own.
+ */
+
+/** Where a run of beats stands, in the unit they share, or a sentence saying why not. */
+const beatRun = (file: ProjectFile, beatIds: readonly BeatId[]): { unitId: StructuralUnitId; beats: Beat[] } | string => {
+  const wanted = [...new Set(beatIds.map((id) => id as string))];
+  if (wanted.length < 2) return 'Choose two or more to join them.';
+  const found = wanted.map((id) => file.beats.find((beat) => (beat.id as string) === id));
+  if (found.some((beat) => beat === undefined)) return 'One of them is no longer in the project.';
+  const beats = found as Beat[];
+  const unitId = beats[0]!.unitId;
+  if (beats.some((beat) => beat.unitId !== unitId)) return 'They are in different ones. Join what is in one at a time.';
+  // Adjacent, in the order they are written: joining the first and the third
+  // would have to carry the second's writing with it, which is a reordering
+  // rather than a join — and one nobody asked for.
+  const order = beatsForUnit(file, unitId);
+  const at = beats.map((beat) => order.findIndex((one) => one.id === beat.id)).sort((a, b) => a - b);
+  if (at.some((index, step) => step > 0 && index !== at[step - 1]! + 1)) return 'They do not follow one another.';
+  return { unitId, beats: at.map((index) => order[index]!) };
+};
+
+/** Why these beats cannot be joined, or **what joining them would do**. */
+export const beatsJoin = (
+  file: ProjectFile,
+  beatIds: readonly BeatId[],
+  noun = 'beat',
+): { may: false; why: string } | { may: true; says: string } => {
+  const run = beatRun(file, beatIds);
+  if (typeof run === 'string') return { may: false, why: run };
+  const kept = run.beats[0]!;
+  const named = kept.title.trim();
+  return {
+    may: true,
+    says: `${run.beats.length} ${noun}s become one${named ? `, called ${named}` : ''}. Not a word is cut.`,
+  };
+};
+
+/** Join a run of beats into the first of them, or hand back the refusal. */
+export const joinBeats = (file: ProjectFile, beatIds: readonly BeatId[]): ProjectFile | string => {
+  const run = beatRun(file, beatIds);
+  if (typeof run === 'string') return run;
+  const keep = run.beats[0]!.id;
+  let working = file;
+  for (const beat of run.beats.slice(1)) working = mergeBeatInto(working, keep, beat.id);
+  return working;
+};
+
+/** The same for units — a script's scenes, a textbook's sections. */
+const unitRun = (file: ProjectFile, unitIds: readonly StructuralUnitId[]): StructuralUnit[] | string => {
+  const wanted = [...new Set(unitIds.map((id) => id as string))];
+  if (wanted.length < 2) return 'Choose two or more to join them.';
+  const order = unitsInStoryOrder(file);
+  const at = wanted.map((id) => order.findIndex((unit) => (unit.id as string) === id)).sort((a, b) => a - b);
+  if (at.some((index) => index < 0)) return 'One of them is no longer in the project.';
+  if (at.some((index, step) => step > 0 && index !== at[step - 1]! + 1)) return 'They do not follow one another in the story.';
+  const units = at.map((index) => order[index]!);
+  // The story order runs across the tracks, so two units next to each other in
+  // it may be on different subplots; joining those would take one off its
+  // track without being asked.
+  if (units.some((unit) => unit.trackId !== units[0]!.trackId)) return 'They are on different tracks.';
+  return units;
+};
+
+export const unitsJoin = (
+  file: ProjectFile,
+  unitIds: readonly StructuralUnitId[],
+  noun = 'scene',
+): { may: false; why: string } | { may: true; says: string } => {
+  const run = unitRun(file, unitIds);
+  if (typeof run === 'string') return { may: false, why: run };
+  const named = run[0]!.title.trim();
+  // A break carried by one of the absorbed units goes with it, which is the
+  // one thing a writer would not guess, so it is the thing that is said.
+  const breaks = run.slice(1).filter((unit) => file.markers.some((marker) => marker.unitId === unit.id)).length;
+  return {
+    may: true,
+    says:
+      `${run.length} ${noun}s become one${named ? `, called ${named}` : ''}. Not a word is cut.` +
+      (breaks > 0 ? ` ${breaks === 1 ? 'One break goes' : `${breaks} breaks go`} with them.` : ''),
+  };
+};
+
+export const joinUnits = (file: ProjectFile, unitIds: readonly StructuralUnitId[]): ProjectFile | string => {
+  const run = unitRun(file, unitIds);
+  if (typeof run === 'string') return run;
+  const keep = run[0]!.id;
+  let working = file;
+  for (const unit of run.slice(1)) working = mergeUnitInto(working, keep, unit.id);
+  return working;
+};

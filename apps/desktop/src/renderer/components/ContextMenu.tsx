@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useId } from 'react';
 
 /**
  * The right-click menu, one component for the whole program (from Ken:
@@ -21,6 +21,13 @@ export interface MenuItem {
   onPick(): void;
   /** Said as the reason, and the item is greyed. */
   disabled?: string | null;
+  /**
+   * What picking it would do, said under the label — the room's habit of
+   * saying before it does, for an item where the answer is not the label
+   * (*3 beats become one. Not a word is cut*). A greyed item says its reason
+   * here instead, where `disabled`'s hover is easy to miss.
+   */
+  note?: string | null;
   /** Drawn red: the thing goes. */
   danger?: boolean;
 }
@@ -45,6 +52,8 @@ const placed = (x: number, y: number, width = 260, height = 320): { left: number
 
 export function ContextMenu({ x, y, label, entries, onClose }: ContextMenuProps) {
   const panel = useRef<HTMLDivElement>(null);
+  /** For joining an item to the note under it. */
+  const id = useId();
 
   useEffect(() => {
     panel.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
@@ -94,12 +103,22 @@ export function ContextMenu({ x, y, label, entries, onClose }: ContextMenuProps)
             className={entry.danger ? 'context-item danger' : 'context-item'}
             disabled={Boolean(entry.disabled)}
             title={entry.disabled ?? undefined}
+            // The item is still named by its label; the note is a
+            // description, so a menu can be found by what its items are
+            // called rather than by what they happen to say underneath.
+            aria-label={entry.label}
+            aria-describedby={entry.disabled || entry.note ? `${id}-note-${index}` : undefined}
             onClick={() => {
               entry.onPick();
               onClose();
             }}
           >
-            {entry.label}
+            <span className="context-item-label">{entry.label}</span>
+            {entry.disabled || entry.note ? (
+              <span className="context-item-note" id={`${id}-note-${index}`}>
+                {entry.disabled ?? entry.note}
+              </span>
+            ) : null}
           </button>
         ),
       )}

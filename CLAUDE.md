@@ -80,6 +80,34 @@ push live; the build takes a minute or two.
   like*. Case is a real setting rather than a change to the letters (*small
   caps* is `font-variant-caps`), and unlike the title page everything here saves
   as you type, because a look is tuned against the sheet beside it.
+  **§6b is joining several into one**, from Ken (*you should be able to shift
+  click several beats… in this one it'll be merge… if you're within a beat and
+  you right-click, you can split a beat at that point… even in the one for
+  textbooks, so in the subsections, you should be able to either join those*).
+  Half of it stood — §6a's menu, the split at the cursor on the manuscript's
+  own menu, and `dividing.ts`'s **split before an element** and **merge the
+  neighbour in** since the divide tools — so what was missing is the act a
+  writer performs: picking a **run** and joining it. **Shift picks the run and
+  it is a range from the selection** (the far end on the track, the near end
+  the project's chosen beat, so an ordinary click clears it and the two cannot
+  disagree), and the marked beats are **tinted**, a menu saying *Merge 3 beats*
+  over a screen showing no three being one nobody trusts. **The domain answers
+  before the act can be asked for**: `beatsJoin`/`unitsJoin` give a refusal a
+  writer can act on or the sentence *3 beats become one, called Opening beat.
+  Not a word is cut*, and `joinBeats`/`joinUnits` refuse the same things again
+  so a caller cannot get past the reading by not reading it — `trackRemoval`'s
+  shape, with the cuts' own promise that **not a word moves**. Two rules: a run
+  must be **adjacent** (joining the first and the third would carry the
+  second's writing along, a reordering nobody asked for) and two units on
+  **different tracks** are not joined (the story order runs across them, so it
+  would take a scene off its subplot silently); a break on an absorbed unit
+  goes with it, which is what a writer would not guess and so is what the
+  sentence says. **Nothing names a format** — every menu reads `nounsFor`, so
+  it is *Merge 3 beats* on a screenplay, *3 passages* in a novel and *3
+  subsections* in a textbook, with *Join it into the section before* one level
+  up. `ContextMenu` grew a **note** for it: what an item would do, said under
+  its label rather than in a hover nobody sees, with the item still **named by
+  its label alone** so a menu can be found by what its items are called.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
   1–7 (the board and its two nodes, the structure column, the layout rule
   with scenes, beats, the columns the writer defines, binding a node to a real
