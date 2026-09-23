@@ -134,6 +134,21 @@ push live; the build takes a minute or two.
   is now at **both levels**: shift-click a run of sections for *Merge 2 scenes*,
   *Join it into the scene before* with nothing marked, the run taken **along the
   track** because the story order runs across them.
+  **§6d is the writing screen moving**, from Ken (*when you open a beat you
+  should be able to grab the top bar and drag it around and be able to drag it
+  to another screen if you want*), and the whole of it is that this is **two
+  gestures and not one**: a page drawn inside a window cannot leave it, so the
+  bar moves the screen **on the desk** and §8's ⧉ beside the × puts it **on the
+  other monitor**. A `<dialog>` is centred by the browser, so being moved is
+  the one state that places it; `BeatDialog` holds a left and a top while the
+  pointer is down. Three decisions: **where it stands is kept nowhere** (not in
+  the project, which is the writing, and not on the machine either — a screen
+  that opens where it was left a fortnight ago is one you go looking for), the
+  bar is a handle **only where it can be** (absent in the beat's own window,
+  and the cursor says so, a bar that moves and one that does not looking
+  alike), and **a control is a control** — a press on the name, the draft
+  picker or *In script* is that control's and never the start of a drag, or
+  naming a beat would slide the screen out from under the pointer.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
   1–7 (the board and its two nodes, the structure column, the layout rule
   with scenes, beats, the columns the writer defines, binding a node to a real
@@ -1754,6 +1769,42 @@ push live; the build takes a minute or two.
   settings ▸ openings*, beside the type those headings are set in, because it
   applies to every division and §9's rule puts what applies to the whole book
   where the whole book is set.
+  **§9i is putting a page in, and the leaves that print nothing**, from Ken
+  in three goes. It opens with a straight fault: §6's chapters inside a story
+  are sections and the story's marker sits on the first, so `bookRows` sliced
+  that row off — true of the **section** and false of the **chapter whose
+  numeral is on it**, which is why a book of three numerals showed two and
+  began at *II.* §9h's fold is now on **every division** rather than on a
+  chapter, since a collection's numerals are sections, joined to their pages
+  by the `unitId` §9b already put on the block. Then the drag: **an art page
+  is a part and a part has nowhere to be between page six and page seven**,
+  which is the whole of *it goes to the bottom* — a picture that is a page of
+  its own is a **figure**, standing where it stands in the writing, so a drop
+  on a page row is `plateIntoStory` (the figure made before the element the
+  page opens with, the part removed: one picture in one place) and a figure
+  already in the writing only moves, as `moveFigureBefore` has since the box
+  could be redrawn. **Both halves of Ken's arithmetic were already true and
+  neither was visible**: `layPages` counts every leaf unconditionally and only
+  `shows` consults the folio, so a picture page has always been page seven
+  printing nothing. What was missing is the leaf **behind** it —
+  `bookBackBlank` on the element, the same shape as every other `book…`
+  attribute the manuscript carries and never reads, putting a `blank` block
+  after the picture's: `display` so it takes a page, `folio` off so it prints
+  none, counted because counting is what the cutter does to everything. 44,
+  45, 46, 47 with numbers on 44 and 47 alone. **The answer goes with the
+  page** — `placeBookFigure` clears it when the picture stops being one, a
+  cut-in picture having no back leaf and an invisible setting being the worse
+  surprise. **A blank page the writer puts in is the same mechanism pointed
+  the other way** (`bookBlankBefore`, a `blank` block *before* the element),
+  so the words slide with nothing written to make them, and it is said of the
+  **writing** rather than of a page — a page not being a record, so it moves
+  when the writing moves and goes when the paragraph goes. The block carries
+  `blankFor`, which is what lets the page's own screen offer to take it back:
+  **a leaf the cutter left is not the writer's to remove there**, and a button
+  that can only refuse is one that lies. Three blank pages, three reasons, and
+  the screen says which — *you put it here*, *the back of the picture before
+  it*, or *the page before a chapter that opens on a right-hand page* — with a
+  button under the first alone.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

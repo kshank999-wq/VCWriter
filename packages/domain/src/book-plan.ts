@@ -8,6 +8,7 @@ import { beatsInScript, unitsInStoryOrder } from './selectors.js';
 import { newId } from './ids.js';
 import { partHasStyle, partStyleOf, proseStyleBase, type PartStyle, type PartStylePatch } from './part-style.js';
 import { isCollection } from './formats.js';
+import { placeFigure } from './instructional.js';
 import type { BookPage } from './book-pages.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -253,7 +254,15 @@ export type BlockKind =
   | 'blockquote'
   | 'scene_break'
   | 'figure'
-  | 'plate';
+  | 'plate'
+  /**
+   * A leaf left deliberately empty (§9i, from Ken: *when you enter an
+   * illustration, you need an option for the back page to be blank, so the
+   * illustration doesn't bleed through*). It is a block rather than the
+   * cutter's own blank because it is the **writer's**: theirs to ask for,
+   * theirs to take away, and named on the rail where the cutter's is not.
+   */
+  | 'blank';
 
 /** Where a block begins on the page (§5's conventions). */
 export type BlockStart = 'none' | 'page' | 'recto' | 'verso';
@@ -317,6 +326,13 @@ export interface BookBlock {
    * doing nothing while every other row worked.
    */
   unitId?: string;
+  /**
+   * On a `blank` block the writer put in (§9i): the element it stands before,
+   * so the page's own row can offer to take it away again. A blank leaf the
+   * cutter left, and the one behind a picture, carry none — neither is the
+   * writer's to remove there.
+   */
+  blankFor?: string;
   /** How a designed page is set (addendum 20 §9), resolved from the part. */
   partStyle?: PartStyle;
   /**
@@ -562,6 +578,60 @@ export const INSET_STANDOFF = { min: 0, max: 3, default: 1 } as const;
  * every figure across the measure and never looks at this; only the book
  * does. Absent means across the measure.
  */
+/**
+ * Whether the leaf behind a picture page is left blank (§9i). Like every other
+ * `book…` attribute the manuscript carries it and never reads it: a figure
+ * printed across the measure in the manuscript has no back page to leave.
+ */
+export const backBlank = (element: ManuscriptElement): boolean => element.attributes?.bookBackBlank === true;
+
+/**
+ * Whether a blank page stands **before** this element (§9i, from Ken: *you
+ * should be able to select a page… and insert a blank page… and it will slide
+ * what was on that page to the next page*).
+ *
+ * The same shape as `backBlank` and for the same reason: a page is not a
+ * record, so a blank one is said of the writing it interrupts. The sliding
+ * needs nothing — the leaf takes a page and everything after it moves down.
+ */
+export const blankBefore = (element: ManuscriptElement): boolean => element.attributes?.bookBlankBefore === true;
+
+/** Put a blank page in before this element, or take it away again. */
+export const setBlankBefore = (file: ProjectFile, elementId: string, blank: boolean): ProjectFile => ({
+  ...file,
+  beats: file.beats.map((beat) => ({
+    ...beat,
+    manuscript: {
+      ...beat.manuscript,
+      elements: beat.manuscript.elements.map((element) => {
+        if ((element.id as string) !== elementId) return element;
+        const attributes = { ...element.attributes };
+        if (blank) attributes.bookBlankBefore = true;
+        else delete attributes.bookBlankBefore;
+        return { ...element, attributes };
+      }),
+    },
+  })),
+});
+
+/** Ask for that leaf, or stop asking. Only what differs from the default is stored. */
+export const setBackBlank = (file: ProjectFile, elementId: string, blank: boolean): ProjectFile => ({
+  ...file,
+  beats: file.beats.map((beat) => ({
+    ...beat,
+    manuscript: {
+      ...beat.manuscript,
+      elements: beat.manuscript.elements.map((element) => {
+        if ((element.id as string) !== elementId) return element;
+        const attributes = { ...element.attributes };
+        if (blank) attributes.bookBackBlank = true;
+        else delete attributes.bookBackBlank;
+        return { ...element, attributes };
+      }),
+    },
+  })),
+});
+
 export const figurePlacement = (element: ManuscriptElement): BookFigurePlacement => {
   const place = element.attributes.bookPlace;
   const span = element.attributes.bookSpan;
@@ -597,6 +667,8 @@ export interface BookFigure {
   markerId: string | null;
   /** Marked decorative for the eBook (addendum 23 §11). */
   decorative: boolean;
+  /** The leaf behind it left blank (§9i). Meaningless off a picture page. */
+  backBlank: boolean;
 }
 
 export const bookFigures = (file: ProjectFile): BookFigure[] => {
@@ -626,6 +698,7 @@ export const bookFigures = (file: ProjectFile): BookFigure[] => {
           chapterTitle,
           markerId,
           decorative: element.attributes.decorative === true,
+          backBlank: backBlank(element),
         });
       }
     }
@@ -677,12 +750,23 @@ export const placeBookFigure = (file: ProjectFile, elementId: string, placement:
             ...beat.manuscript,
             elements: beat.manuscript.elements.map((element) => {
               if (element.id !== elementId) return element;
-              const { bookPlace: _place, bookSpan: _span, bookSide: _side, bookStandoff: _off, ...rest } = element.attributes;
+              // The back leaf goes with the page: a picture cut into the text
+              // has no back page to leave, so an answer left behind on it
+              // would come back the next time it was made a page again.
+              const {
+                bookPlace: _place,
+                bookSpan: _span,
+                bookSide: _side,
+                bookStandoff: _off,
+                bookBackBlank: _back,
+                ...rest
+              } = element.attributes;
               if (placement.place === 'measure') return { ...element, attributes: rest };
               const attributes: Record<string, string | number | boolean> = { ...rest, bookPlace: placement.place };
               if (placement.place === 'page') {
                 // A page needs no width and no standoff: it is the page.
                 if (placement.side && placement.side !== 'either') attributes.bookSide = placement.side;
+                if (element.attributes.bookBackBlank === true) attributes.bookBackBlank = true;
               } else {
                 attributes.bookSpan = Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, placement.span ?? INSET_SPAN.default));
                 const standoff = Math.min(INSET_STANDOFF.max, Math.max(INSET_STANDOFF.min, placement.standoff ?? INSET_STANDOFF.default));
@@ -760,10 +844,28 @@ export interface BookPageRow {
   says: string;
   /** The chapter in force, so the rail can sit it under one. */
   markerId: string | null;
+  /**
+   * The division in force one level down (§6b): a collection's chapter is a
+   * **section**, so its pages are found by the unit rather than by a marker.
+   * The rail folds a row on whichever of the two it stands for.
+   */
+  unitId: string | null;
   /** The part it belongs to, where it is front or back matter rather than story. */
   partId: string | null;
   /** The picture that **is** the page, where it is one — what the inspector edits. */
   figureId: string | null;
+  /**
+   * The manuscript element the page opens with (§9i): where a picture dropped
+   * on this page goes in, which is `pagePlace`'s answer for one sheet.
+   */
+  elementId: string | null;
+  /**
+   * Where this page is a blank leaf the *writer* put in (§9i): the element it
+   * stands before, which is what taking it away again needs. Null on a leaf
+   * the cutter left and on the back of a picture, neither being this page's
+   * to remove.
+   */
+  blankFor: string | null;
   blank: boolean;
 }
 
@@ -773,15 +875,26 @@ export const bookPageRows = (
 ): BookPageRow[] => {
   const index = new Map(blocks.map((block) => [block.id, block]));
   let marker: string | null = null;
+  let unit: string | null = null;
   return pages.map((page) => {
     const on = page.pieces.map((piece) => index.get(piece.blockId)).filter((block): block is BookBlock => block !== undefined);
     const opening = on.find((block) => block.kind === 'chapter_opening');
     if (opening) marker = opening.id;
+    // `unitId` is on the first block of each unit (§9b), which is how a row
+    // finds the page it opens on; read in order it is also what says which
+    // division a page in the middle of one belongs to.
+    const opened = on.find((block) => block.unitId !== undefined);
+    if (opened) unit = opened.unitId ?? null;
     const part = on.find((block) => block.partId !== undefined);
     // A picture is a page of its own where its block takes the whole page,
     // which is the same `display` the print reads — not a second rule.
     const art = on.find((block) => block.kind === 'figure' && block.display);
-    const says = page.blank
+    // The leaf asked for behind a picture (§9i). The cutter leaves a page
+    // empty of its own accord too, and to a reader they are one thing: a
+    // page with nothing on it. So the row says the same of both.
+    const leaf = on.find((block) => block.kind === 'blank');
+    const empty = page.blank || leaf !== undefined;
+    const says = empty
       ? 'Blank'
       : art
         ? 'Picture'
@@ -795,9 +908,12 @@ export const bookPageRows = (
       folio: page.folio,
       says,
       markerId: part ? null : marker,
+      unitId: part ? null : unit,
       partId: part?.partId ?? null,
       figureId: art?.id ?? null,
-      blank: page.blank,
+      elementId: on.find((block) => BODY_KINDS.has(block.kind))?.id ?? null,
+      blankFor: leaf?.blankFor ?? null,
+      blank: empty,
     };
   });
 };
@@ -969,6 +1085,30 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
         if (element.text.trim().length === 0 && element.type !== 'scene_break' && element.type !== 'figure') continue;
         const made = elementBlock(element, chapterTitle, opensChapter && element.type === 'paragraph');
         if (!made) continue;
+        // A blank page the writer put in (§9i, from Ken: *insert a blank page
+        // … and it will slide what was on that page to the next page*). It is
+        // an attribute on the element the page opens with, so it moves with
+        // the writing and nothing about pages is stored; the sliding is the
+        // whole mechanism, there being nothing else to do.
+        if (blankBefore(element)) {
+          if (pending) {
+            out.push(pending);
+            pending = null;
+          }
+          out.push(
+            block({
+              id: `${element.id as string}:before`,
+              kind: 'blank',
+              numbering: 'arabic',
+              starts: 'page',
+              display: true,
+              folio: false,
+              unbreakable: true,
+              chapterTitle,
+              blankFor: element.id as string,
+            }),
+          );
+        }
         if (atUnitHead) {
           atUnitHead = false;
           made.unitId = unit.id as string;
@@ -991,6 +1131,26 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
         // for it. With nothing to cut into, it stands across the measure.
         if (made.kind === 'figure') {
           const placement = figurePlacement(element);
+          // The leaf behind a picture page, where the writer asked for one
+          // (§9i). It follows the picture rather than preceding it, which is
+          // what *back page* means, and it counts in the numbering and prints
+          // nothing — the same two facts as the picture itself.
+          if (placement.place === 'page' && backBlank(element)) {
+            out.push(made);
+            out.push(
+              block({
+                id: `${element.id as string}:back`,
+                kind: 'blank',
+                numbering: 'arabic',
+                starts: 'page',
+                display: true,
+                folio: false,
+                unbreakable: true,
+                chapterTitle,
+              }),
+            );
+            continue;
+          }
           // A page stands where it is; only an inset waits for a paragraph
           // to cut into.
           if (placement.place === 'left' || placement.place === 'right') {
@@ -1027,4 +1187,44 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
 
   for (const part of backParts(parts)) out.push(...partBlocks(part, 'arabic', bookTitle, prose));
   return out;
+};
+
+/**
+ * Bring a picture page into the story, at a page (§9i, from Ken: *when I
+ * insert a picture it goes to the bottom, but it doesn't allow me to drag it
+ * up and place it… I can drag it in between the pages, and it will change the
+ * numbering of the pages*).
+ *
+ * An **art page is a part** — front matter, back matter, or facing a chapter —
+ * and a part has nowhere to stand between page six and page seven of chapter
+ * three. A **figure a page of its own** (§8a) does: it stands where it is in
+ * the writing, which is what a place among the pages means. So dropping a
+ * picture page on a page is a conversion rather than a move, and this is it:
+ * the part goes, and its picture becomes a figure standing before the element
+ * that page opens with.
+ *
+ * Nothing is stored about pages either way. The picture lands where it lands
+ * because of what it stands in front of, so the numbering follows by itself —
+ * which is Ken's *the illustration will be page seven and the story picks up
+ * at eight*, and is what `layPages` has always done with a page that carries
+ * no folio: it **counts** and prints nothing.
+ */
+export const plateIntoStory = (
+  file: ProjectFile,
+  partId: string,
+  beforeElementId: string,
+): { file: ProjectFile; elementId: string | null } => {
+  const part = partsOf(file).find((one) => one.id === partId);
+  if (!part || part.kind !== 'plate') return { file, elementId: null };
+  const beat = file.beats.find((one) => one.manuscript.elements.some((element) => (element.id as string) === beforeElementId));
+  if (!beat) return { file, elementId: null };
+  const made = placeFigure(file, {
+    beatId: beat.id,
+    assetId: (part.assetId ?? null) as never,
+    beforeElementId: beforeElementId as never,
+    caption: part.title.trim(),
+    attributes: { bookPlace: 'page' },
+  });
+  if (!made.elementId) return { file, elementId: null };
+  return { file: removePart(made.file, partId), elementId: made.elementId as string };
 };

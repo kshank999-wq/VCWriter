@@ -105,10 +105,13 @@ import {
   markerNumbering,
   type MarkerNumbering,
   bookPageRows,
+  plateIntoStory,
   type BookPageRow,
   placeBookFigure,
   placeFigure,
   removeBookRow,
+  setBackBlank,
+  setBlankBefore,
   setFigurePicture,
   whatGoesWithRow,
   type BookFigure,
@@ -629,6 +632,38 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   };
 
   /**
+   * A drop on a **page** (§9i, from Ken: *when I insert a picture it goes to
+   * the bottom, but it doesn't allow me to drag it up and place it… I can drag
+   * it in between the pages, and it will change the numbering*).
+   *
+   * An art page is a **part**, and a part stands in the front matter, at the
+   * back, or facing a chapter — it has nowhere to be between page six and page
+   * seven. A figure that is a page of its own does, so dropping one on a page
+   * turns it into that: `plateIntoStory`. A picture already in the writing
+   * only moves, which `moveFigureBefore` has done since the box could be
+   * redrawn. Either way nothing about pages is stored and the numbering
+   * follows from where the picture now stands.
+   */
+  const dropOnPage = (page: BookPageRow) => {
+    const moving = dragging;
+    setDragging(null);
+    setOver(null);
+    if (!moving || !page.elementId || moving.id === page.figureId) return;
+    onUpdate((current) => {
+      const figure = bookFigures(current).find((one) => one.elementId === moving.id);
+      if (figure) return moveFigureBefore(current, figure.elementId, page.elementId as string);
+      const part = partsOf(current).find((one) => one.id === moving.id);
+      if (part?.kind !== 'plate') return current;
+      const made = plateIntoStory(current, part.id, page.elementId as string);
+      if (made.elementId) {
+        setSelectedRowId(made.elementId);
+        turnTo.current = made.elementId;
+      }
+      return made.file;
+    });
+  };
+
+  /**
    * A drop on a row (§9a, from Ken: *just reorder things by dragging them
    * around in the actual left menu*). One drag, three landings, each of them
    * the thing the book already understood: a part moves within its half, a
@@ -818,12 +853,21 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               // `where`: a picture cut into a paragraph rides inside it, so
               // `where` has no entry of its own for it.
               const at = laying ? pageOf(laying, row.id) : undefined;
-              const under = row.kind === 'chapter' && openChapters.includes(row.id) ? pageRows.filter((one) => one.markerId === row.id) : [];
+              // Every division folds, not only a top-level chapter (§9i, from
+              // Ken: *if I select chapter three and it has eight pages, when I
+              // toggle the arrow I should see pages one to eight*). A
+              // collection's chapter is a **section**, so its pages are found
+              // by the unit; a chapter elsewhere is the marker's.
+              const divides = row.kind === 'chapter' || row.kind === 'section';
+              const under =
+                divides && openChapters.includes(row.id)
+                  ? pageRows.filter((one) => (row.kind === 'section' ? one.unitId === row.id : one.markerId === row.id))
+                  : [];
               return (
                 <Fragment key={row.id}>
                 <RailRow
                   row={row}
-                  {...(row.kind === 'chapter'
+                  {...(divides
                     ? {
                         open: openChapters.includes(row.id),
                         onToggle: () =>
@@ -863,7 +907,22 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                     in hand — which is what makes a picture land where it was
                     asked for rather than on the chapter. */}
                 {under.map((one) => (
-                  <li key={`page-${one.sheet}`} className="layout-rail-row layout-rail-page">
+                  <li
+                    key={`page-${one.sheet}`}
+                    className={`layout-rail-row layout-rail-page${over === `page-${one.sheet}` ? ' drop-before' : ''}`}
+                    // A picture dragged onto a page lands there (§9i, from
+                    // Ken: *it doesn't allow me to drag it up and place it*).
+                    onDragOver={(event) => {
+                      if (!dragging || !one.elementId) return;
+                      event.preventDefault();
+                      setOver(`page-${one.sheet}`);
+                    }}
+                    onDragLeave={() => setOver((current) => (current === `page-${one.sheet}` ? null : current))}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      dropOnPage(one);
+                    }}
+                  >
                     <button
                       type="button"
                       className={`layout-rail-name${selectedSheet === one.sheet ? ' on' : ''}`}
@@ -1076,9 +1135,14 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           {storyPage ? (
             <StoryPageSection
               page={storyPage}
+              // Why a blank leaf is blank is a reading of the page before it,
+              // and the two reasons are different acts: one the cutter's, one
+              // the writer's own (§9i).
+              behindPicture={pageRows.find((one) => one.sheet === storyPage.sheet - 1)?.says === 'Picture'}
               drawing={drawing === NEW_BOX}
               onPut={() => importPicture('page')}
               onDraw={() => setDrawing(NEW_BOX)}
+              onBlank={(elementId, blank) => onUpdate((current) => setBlankBefore(current, elementId, blank))}
               onDone={() => setSelectedSheet(null)}
             />
           ) : null}
@@ -1089,6 +1153,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               onPlace={(placement) => onUpdate((current) => placeBookFigure(current, selectedFigure.elementId, placement))}
               onDraw={() => setDrawing((current) => (current === selectedFigure.elementId ? null : selectedFigure.elementId))}
               onFill={() => importArt({ kind: 'fill', elementId: selectedFigure.elementId })}
+              onBackBlank={(blank) => onUpdate((current) => setBackBlank(current, selectedFigure.elementId, blank))}
               onDone={() => {
                 setDrawing(null);
                 setSelectedRowId(null);
@@ -2151,15 +2216,21 @@ function PlacingHandle({
  */
 function StoryPageSection({
   page,
+  behindPicture,
   drawing,
   onPut,
   onDraw,
+  onBlank,
   onDone,
 }: {
   page: BookPageRow;
+  /** A blank leaf standing behind a picture page, asked for rather than left (§9i). */
+  behindPicture: boolean;
   drawing: boolean;
   onPut(): void;
   onDraw(): void;
+  /** Put a blank leaf in before an element, or take one away (§9i). */
+  onBlank(elementId: string, blank: boolean): void;
   onDone(): void;
 }) {
   return (
@@ -2169,19 +2240,44 @@ function StoryPageSection({
         {page.figureId
           ? 'A picture stands on it. How it sits is below.'
           : page.blank
-            ? 'It is blank — the page before a chapter that opens on a right-hand page.'
+            ? // Three blank pages, three reasons, and only one of them the
+              // writer's — a page that says the wrong one is a page nobody
+              // can work out how to be rid of.
+              page.blankFor
+              ? 'It is blank because you put it here. It counts as a page and prints no number.'
+              : behindPicture
+                ? 'It is blank — the back of the picture before it, kept empty so nothing shows through. It counts as a page and prints no number.'
+                : 'It is blank — the page before a chapter that opens on a right-hand page.'
             : page.says === 'Chapter opens'
               ? 'The chapter opens on it. A picture put here goes in before it, and the chapter moves down.'
               : 'Story text. A picture put here goes in before the words on it, and they move down.'}
       </p>
       {page.figureId ? null : (
         <div className="layout-page-acts">
-          <button type="button" className="small" onClick={onPut}>
-            Put a picture on this page…
-          </button>
-          <button type="button" className={drawing ? 'small on' : 'small'} onClick={onDraw}>
-            {drawing ? 'Drawing the box…' : 'Draw a box for a picture…'}
-          </button>
+          {page.blank ? null : (
+            <>
+              <button type="button" className="small" onClick={onPut}>
+                Put a picture on this page…
+              </button>
+              <button type="button" className={drawing ? 'small on' : 'small'} onClick={onDraw}>
+                {drawing ? 'Drawing the box…' : 'Draw a box for a picture…'}
+              </button>
+            </>
+          )}
+          {/* A blank page (§9i, from Ken: *insert a blank page… and it will
+              slide what was on that page to the next page*). Offered where
+              there is writing to stand before; on a leaf the writer put in,
+              the same button takes it away, which is the only place it can
+              be found again. */}
+          {page.blankFor ? (
+            <button type="button" className="small" onClick={() => onBlank(page.blankFor as string, false)}>
+              Take this blank page away
+            </button>
+          ) : page.elementId ? (
+            <button type="button" className="small" onClick={() => onBlank(page.elementId as string, true)}>
+              Put a blank page here…
+            </button>
+          ) : null}
         </div>
       )}
       <p className="muted small">
@@ -2202,6 +2298,7 @@ function FigureSection({
   onPlace,
   onDraw,
   onFill,
+  onBackBlank,
   onDone,
 }: {
   figure: BookFigure;
@@ -2210,9 +2307,12 @@ function FigureSection({
   onDraw(): void;
   /** Put a picture in a box that has none yet (§9a). */
   onFill(): void;
+  /** Ask for the leaf behind a picture page, or stop asking (§9i). */
+  onBackBlank(blank: boolean): void;
   onDone(): void;
 }) {
   const { place, span, side, standoff } = figure.placement;
+  const backBlank = figure.backBlank;
   const cut = place === 'left' || place === 'right';
   const empty = figure.assetId === null;
   return (
@@ -2257,9 +2357,25 @@ function FigureSection({
               ))}
             </select>
           </label>
+          {/* The leaf behind it (§9i, from Ken: *you need to have an option
+              for the back page to be blank, so the illustration doesn't bleed
+              through*). It counts in the numbering and prints nothing, the
+              same two facts as the picture page itself. */}
+          <label className="field field-check">
+            <input
+              type="checkbox"
+              aria-label="Leave the back of the page blank"
+              checked={backBlank}
+              onChange={(event) => onBackBlank(event.target.checked)}
+            />
+            <span>Leave the back of the page blank</span>
+          </label>
           <p className="muted small">
             The picture fills the page, edge to edge, where it stands in the writing — no running head over it and no page number
             on it. Asking for a side may leave the page before it blank, which is what a facing illustration means.
+            {backBlank
+              ? ' The leaf behind it is left empty so nothing shows through; it counts as a page and prints no number either.'
+              : ''}
           </p>
         </>
       ) : null}

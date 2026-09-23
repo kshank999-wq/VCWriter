@@ -631,6 +631,10 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
       case 'plate':
         current?.html.push(figure(bank.asset(block.assetId, block.caption ?? ''), block.caption ?? '', 'plate'));
         break;
+      // A blank leaf is a fact about a page (§9i), and nothing about a page
+      // survives into a reflowable book — the log has said so since phase 1.
+      case 'blank':
+        break;
       case 'chapter_opening': {
         chapters += 1;
         const leaf = block.chapter;

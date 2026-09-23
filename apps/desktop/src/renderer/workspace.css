@@ -2840,6 +2840,16 @@ dialog.writer-dialog::backdrop {
   border-left: 4px solid var(--gold-deep);
 }
 
+/* The bar is the handle where the screen can be moved (§6d): said by the
+   pointer, since a bar that moves and one that does not look the same. */
+.writer-bar-grab {
+  cursor: grab;
+}
+
+.writer-bar-grab:active {
+  cursor: grabbing;
+}
+
 .writer-caption {
   font-size: 10px;
   text-transform: uppercase;

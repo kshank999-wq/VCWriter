@@ -887,6 +887,36 @@ taken **along the track** rather than along the story, because the story order
 runs across the tracks and a run picked through a subplot would offer to join
 scenes that are not neighbours on the screen.
 
+## 6d. The writing screen moves
+
+From Ken: *when you open a beat, you should be able to grab the top bar and
+drag it around and be able to drag it to another screen if you want.*
+
+That is **two gestures and not one**, and the difference is the whole of what
+was built. A page drawn inside a window cannot leave it; what leaves is a
+window of its own, which §8's ⧉ has made since the workspace grew satellites.
+So the bar moves the screen **on the desk**, and the button beside the × puts
+it **on the other monitor**, and saying that in one sentence would have meant
+building something that could not be done.
+
+The move itself is small. A `<dialog>` is centred by the browser, so being
+moved is the one state that places it; the bar hands `BeatDialog` a pointer and
+it holds a left and a top while the pointer is down. Three decisions.
+
+**Where it stands is kept nowhere.** Not in the project, which is the writing,
+and not on the machine either — a screen that opens where a writer left it a
+fortnight ago is one they have to go looking for. Opening a different beat is a
+fresh screen and it opens centred, which is where a dialog belongs until
+somebody says otherwise.
+
+**The bar is a handle only where it can be** — absent in the beat's own window,
+which has nothing to move within and a real title bar already. The cursor says
+so, a bar that moves and a bar that does not otherwise looking identical.
+
+**A control is a control.** The bar carries the beat's name, the draft picker
+and *In script*; a press on any of them is that control's and never the start
+of a drag, or naming a beat would slide the screen out from under the pointer.
+
 ## 7. The research window
 
 Research is where the material is kept **before, during and after** it is

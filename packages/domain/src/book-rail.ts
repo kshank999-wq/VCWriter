@@ -142,8 +142,17 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
     });
     // A collection's story carries its chapters; every other format's
     // chapter is the marker itself and has nothing under it.
+    //
+    // **Every titled section, the first one included** (§6b, from Ken: *the
+    // first chapter has a Roman numeral I with a period, but it still doesn't
+    // recognize it in the layout*). It used to drop the first, on the reading
+    // that the story's own marker sits there and the story's row already
+    // stands for it — true of the section, and not of the **chapter** whose
+    // numeral is on it. An imported story whose first heading is `I.` had that
+    // numeral nowhere on the rail while every numeral after it was listed,
+    // which is the one place a reader would notice a chapter had gone.
     if (chapters) {
-      for (const unit of divisionSpan(file, placed.marker.id).slice(1)) {
+      for (const unit of divisionSpan(file, placed.marker.id)) {
         if (unit.title.trim().length > 0) rows.push(sectionRow(unit));
       }
     }

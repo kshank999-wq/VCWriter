@@ -206,6 +206,10 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
       const text = block.text.trim().length > 0 ? block.text : `Copyright © ${names.author}`.trim();
       return `<div class="bk-display bk-copyright"${styled}><p class="bk-small">${escapeHtml(text).replace(/\n/g, '<br />')}</p></div>`;
     }
+    // A leaf left deliberately blank (§9i): it holds the page and prints
+    // nothing at all — no words, no running head, no number.
+    case 'blank':
+      return '<div class="bk-display bk-blank"></div>';
     case 'plate': {
       // An art page (§8, from Ken): the picture is the page, edge to edge past
       // the margins to the trim, and nothing is set over it — a title page or

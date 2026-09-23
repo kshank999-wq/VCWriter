@@ -286,3 +286,40 @@ describe('the pages of a chapter', () => {
     expect(rows.filter((row) => row.says === 'Picture')).toHaveLength(1);
   });
 });
+
+/**
+ * A picture page counts and prints nothing (addendum 20 §9i, from Ken: *the
+ * illustration will count as a numbered page but there'll be no printing of
+ * the page number on that page… if you have page six and the opposite page is
+ * an illustration, the illustration will be page seven and the story picks up
+ * at eight*).
+ *
+ * This is what `layPages` has always done — the count advances on every page
+ * and only *printing* the number asks whether the block carries a folio — so
+ * the test exists to hold it rather than to change it. Ken named the rule; a
+ * rule nobody has written down is one the next change can take away.
+ */
+describe('a page that carries no number', () => {
+  it('still counts, so the story picks up after it', () => {
+    const art = make({ id: 'art1', kind: 'figure', display: true, folio: false, starts: 'page', unbreakable: true, chapterTitle: 'Chapter 1' });
+    const blocks = [...chapter(1, [1, 2, 3]), art, ...chapter(2, [1])];
+    const counts: Record<string, number> = {};
+    for (const block of blocks) counts[block.id] = block.kind === 'paragraph' ? LINES : 6;
+    const laid = layPages(blocks, measure(counts), geometry(), settings(), names);
+
+    const at = laid.pages.findIndex((page) => page.pieces.some((piece) => piece.blockId === 'art1'));
+    expect(at).toBeGreaterThan(0);
+    const before = laid.pages[at - 1]!;
+    const picture = laid.pages[at]!;
+    const after = laid.pages[at + 1];
+
+    // It prints no number of its own…
+    expect(picture.folio).toBe('');
+    // …and it is still the next number: six, then the picture is seven, and
+    // whatever follows is eight.
+    expect(picture.number).toBe(before.number + 1);
+    if (after) expect(after.number).toBe(picture.number + 1);
+    // Nothing else is set over it either.
+    expect(picture.runningHead).toBe('');
+  });
+});

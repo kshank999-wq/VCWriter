@@ -1283,6 +1283,88 @@ nowhere near the room a book is laid out in. It applies to every division in
 the book, so §9's own rule puts it in *Book settings ▸ openings*, beside the
 type those headings are set in.
 
+## 9i. Putting a page in, and the leaves that print nothing
+
+From Ken, after §9h, in three goes. First: *the first chapter has a Roman
+numeral I with a period, but it still doesn't recognise it in the layout… in
+the chapter it needs to be like an outline form in the left-hand menu, with a
+drop-down arrow that will give you every page in that… and you should be able
+to select a page in the actual book view window and insert a blank page, a
+picture for artwork, and it will slide what was on that page to the next
+page.* Then, seeing the picture land at the end of the book: *when I insert a
+picture it goes to the bottom, but it doesn't allow me to drag it up and place
+it… I can drag it in between the pages, and it will change the numbering of
+the pages… the illustration will count as a numbered page but there'll be no
+printing of the page number on that page… so if you have page six and the
+opposite page is an illustration, the illustration will be page seven, and
+when the story picks up the text again that will be page eight.* And then:
+*when you enter an illustration, you need to have an option for the back page
+to be blank, so the illustration doesn't bleed through… a checkbox for blank
+back page. The blank back page will be counted as a page in the numbering
+scheme, but there will be no number printed on that page.*
+
+### The missing numeral
+
+A straight fault. §6's chapters inside a story are sections, and the story's
+own marker sits on the first of them — so `bookRows` listed a story's sections
+with `.slice(1)`, on the reasoning that the first is the story. That is true of
+the **section** and false of the **chapter whose numeral is on it**: the row it
+dropped was `I.`, which is why a book with three numerals showed two and
+started at `II.`. The slice is gone; a story and the chapter that opens it are
+two rows saying two different things, which is what the rail is for.
+
+### Every page under its chapter
+
+§9h gave a chapter's rows to `bookPageRows` and the rail folded a **chapter**
+open. Ken asked it of a section, which on a collection is where the numerals
+are, so the fold is on **every division** now — `unitId` on the row, which
+§9b put on the block for the same reason, joins a section to its pages without
+a second reading.
+
+### A picture dragged onto a page
+
+An art page is a **part**, and a part stands in the front matter, at the back,
+or facing a chapter — it has nowhere to be *between page six and page seven*,
+which is exactly why it went to the bottom. A picture that is a page of its
+own does have somewhere: it is a figure, standing where it stands in the
+writing. So dropping one on a page row is `plateIntoStory` — the figure is
+made before the element the page opens with and the part is removed, which is
+one picture in one place rather than two records agreeing. A figure already in
+the writing only **moves**, which `moveFigureBefore` has done since the box
+could be redrawn.
+
+### The two facts about a page that prints nothing
+
+Both halves of Ken's arithmetic were already true and neither was visible.
+`layPages` counts **every** leaf — `number = ++arabic`, unconditionally — and
+only `shows` consults whether a page prints its folio, so a picture page has
+always been page seven with nothing on it. What was missing is the leaf behind
+it: `bookBackBlank` on the element, the same shape as every other `book…`
+attribute the manuscript carries and never reads, which puts a `blank` block
+after the picture's. It is `display`, so it takes a page; its `folio` is off,
+so it prints none; and it counts because counting is what `layPages` does to
+everything. 44, 45, 46, 47 with numbers on 44 and 47 alone.
+
+The answer **goes with the page**: `placeBookFigure` clears it when the
+picture stops being one, a picture cut into the text having no back leaf to
+leave and an answer left behind on it being a setting nobody can see.
+
+### A blank page the writer puts in
+
+`bookBlankBefore`, the same mechanism pointed the other way: a `blank` block
+**before** the element, so the words on that page slide to the next and the
+sliding needs nothing written to make it happen. Two things follow. It is said
+of the **writing** rather than of a page, because a page is not a record — so
+it moves when the writing moves, and cutting the paragraph takes it. And the
+block carries `blankFor`, which is what lets the page's own screen offer to
+take it away again: a blank leaf the **cutter** left, before a chapter that
+opens on a recto, is not the writer's to remove there, and a button that
+cannot keep its word is worse than none.
+
+Three blank pages, three reasons, and the screen says which: *you put it
+here*, *the back of the picture before it*, or *the page before a chapter that
+opens on a right-hand page*. Only the first has a button under it.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

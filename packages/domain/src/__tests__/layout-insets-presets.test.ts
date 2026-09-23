@@ -244,6 +244,7 @@ describe('a figure cut into the text (stage 6)', () => {
         chapterTitle: 'The Road',
         markerId: file.markers[0]!.id,
         decorative: false,
+        backBlank: false,
       },
     ]);
   });

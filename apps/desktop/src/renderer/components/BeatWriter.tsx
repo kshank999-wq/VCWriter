@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   countWords,
   draftText,
@@ -38,6 +38,15 @@ export interface BeatWriterProps {
   onClose?(): void;
   /** Offered where it can be honoured: the workspace, not a satellite window. */
   onPopOut?(): void;
+  /**
+   * Grab the bar and move the screen (addendum 02 §6d, from Ken: *when you
+   * open a beat you should be able to grab the top bar and drag it around*).
+   *
+   * Absent in a window of its own, where there is nothing to move it within
+   * and the window's own title bar already does it — which is also the answer
+   * to *drag it to another screen*, the ⧉ beside this making that window.
+   */
+  onGrab?(event: ReactPointerEvent<HTMLElement>): void;
 }
 
 /**
@@ -57,7 +66,7 @@ export interface BeatWriterProps {
  * about the beat — colour, status, links, what it sets up — is the
  * inspector's business, and stays out of the way of the page.
  */
-export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut }: BeatWriterProps) {
+export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, onGrab }: BeatWriterProps) {
   const unit = findUnit(file, beat.unitId);
   const track = unit ? findTrack(file, unit.trackId) : undefined;
   const [naming, setNaming] = useState(false);
@@ -135,7 +144,17 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut }
     <>
       <ManuscriptDataLists file={file} />
 
-      <header className="writer-bar" style={{ borderLeftColor: beat.color ?? track?.color }}>
+      <header
+        className={onGrab ? 'writer-bar writer-bar-grab' : 'writer-bar'}
+        style={{ borderLeftColor: beat.color ?? track?.color }}
+        // The name, the draft and the switches are controls: a press on one
+        // is that control's, never the start of a drag.
+        onPointerDown={(event) => {
+          if (!onGrab) return;
+          if ((event.target as HTMLElement).closest('input, button, select, textarea, label')) return;
+          onGrab(event);
+        }}
+      >
         <span className="writer-caption muted">{nouns.sub} name</span>
         <input
           className="writer-name"
