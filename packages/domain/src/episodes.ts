@@ -9,6 +9,7 @@ import { countWords } from './entities/manuscript.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { markerNumber, markerNoun, markerNumbering as numberingOf } from './markers.js';
 import { castByCategory, castInCueOrder, charactersCalled, charactersIn } from './characters.js';
+import { workingSetups } from './setups.js';
 import type { ProjectFile } from './project-file.js';
 import type { Beat, Track, StructuralUnit, StoryMarker } from './entities/structure.js';
 import type { Character } from './entities/character.js';
@@ -309,10 +310,10 @@ export const addEpisode = (
     updatedAt: timestamp,
   });
 
+  // And a deleted promise was carried into the next episode, where it would
+  // have arrived owing something nobody could see (addendum 24 §5i).
   const owed = carry.openSetups
-    ? file.setupsPayoffs.filter(
-        (record) => !record.archived && (record.status === 'open' || record.status === 'established'),
-      )
+    ? workingSetups(file).filter((record) => record.status === 'open' || record.status === 'established')
     : [];
 
   const marker = storyMarkerSchema.parse({

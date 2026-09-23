@@ -212,9 +212,18 @@ export const unusedResearch = (file: ProjectFile): ResearchItem[] =>
 export const usedResearch = (file: ProjectFile): ResearchItem[] =>
   sortByOrderKey(onlyLiving(file.researchItems).filter((item) => item.usage === 'used' && !item.archived));
 
-/** Setups the writer has not yet paid off, and payoffs not yet established (§7.3). */
+/**
+ * Setups the writer has not yet paid off, and payoffs not yet established
+ * (§7.3).
+ *
+ * `onlyLiving` because what the project *owes* is read from here — the home
+ * page's figure and the reports' — and a deleted promise is not owed
+ * (addendum 24 §5i). Not `workingSetups`: putting one away is a different
+ * statement from deleting it, and an archived record that is still unresolved
+ * has always counted here.
+ */
 export const unresolvedSetupsPayoffs = (file: ProjectFile): SetupPayoff[] =>
-  file.setupsPayoffs.filter(isUnresolved);
+  onlyLiving(file.setupsPayoffs).filter(isUnresolved);
 
 /** Every link touching `target`, in either direction. */
 export const linksFor = (file: ProjectFile, target: StoryEntityRef): StoryLink[] =>

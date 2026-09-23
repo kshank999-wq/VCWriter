@@ -395,6 +395,38 @@ that lists a person and asserts a deleted one is off it. §5d's own test did
 this for the domain; the renderer had none, which is exactly why six
 surfaces could be wrong with the suite green.
 
+## 5j. Setups and payoffs again, and the rule generalised
+
+From Ken: *I need a delete for setups and payoffs too*. §5f put it on the row
+and driving the room confirms it: press the ×, answer the question, the record
+goes and the menu count falls.
+
+**And the promise stayed everywhere else.** A deleted setup went on drawing its
+arc across the timeline, counting among what the project still owes on the home
+page, riding into the next episode's *Still owed* note, and showing in the
+scene that carried it. Four readings, every one writing `!record.archived` for
+itself — §5i's fault in the next module along, one day later.
+
+So `workingSetups` is `workingCast`'s twin, and the rule §5i stated for
+components is now stated for everything:
+
+> **No reading decides for itself which records exist.** A module owns one
+> function that says what it has — `workingCast`, `workingSetups`,
+> `locationsInOrder`, `themesInOrder` — and everything else, in the domain or
+> on a screen, asks it.
+
+One reading is deliberately **`onlyLiving` rather than `workingSetups`**:
+`unresolvedSetupsPayoffs`, which answers *what does this project still owe*. An
+archived record that is still unresolved has always counted there, and putting
+a promise away is a different statement from deleting it — §1's distinction,
+which is the thing that stops this becoming a blanket filter applied without
+thinking.
+
+`setups-surfaces.test.ts` is the domain twin of §5i's `cast-surfaces`: it walks
+every reading, and each assertion checks the record **was** there before the
+delete, so a test that would pass against a reading that never showed anything
+cannot slip through.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -426,3 +458,6 @@ surfaces could be wrong with the suite green.
   Relationships tab — plus `onlyLiving` on that picker's notes and setups, and
   `setupsBoard` behind the two setup counts; `cast-surfaces.test.tsx` walks
   them all.
+- `workingSetups` in `setups.ts`, read by the timeline's arcs, what a scene
+  carries and what a new episode is owed, with `onlyLiving` on what the project
+  owes; `setups-surfaces.test.ts` walks those.

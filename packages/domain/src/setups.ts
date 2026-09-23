@@ -168,6 +168,20 @@ const sentenceFor = (input: {
 };
 
 /**
+ * The records a writer is working with: **not deleted and not put away**.
+ *
+ * `workingCast`'s twin (addendum 24 §5i), and here for the same reason: four
+ * readings outside this file wrote `!record.archived` for themselves — the
+ * timeline's arcs, what the project owes, what a new episode carries and what
+ * a scene is carrying — which was the whole answer while a delete really
+ * deleted and is half of one since the graveyard. **A reading may not decide
+ * for itself which records exist**; that is this function's job, and every
+ * shape of setups reading is built on it.
+ */
+export const workingSetups = (file: ProjectFile): SetupPayoff[] =>
+  onlyLiving(file.setupsPayoffs).filter((record) => !record.archived);
+
+/**
  * Every record's readiness, worst first.
  *
  * What the list is for: a writer opening this wants the under-prepared ones,
@@ -180,7 +194,7 @@ export interface ReadyRow {
 
 export const setupsBoard = (file: ProjectFile, archived = false): ReadyRow[] =>
   onlyLiving(file.setupsPayoffs)
-    .filter((record) => record.archived === archived)
+    .filter((record) => Boolean(record.archived) === archived)
     .map((record) => ({ record, readiness: setupReadiness(file, record) }))
     .sort((a, b) => {
       // Red before green, then the furthest short of the minimum.

@@ -1,5 +1,6 @@
 import { beatsForUnit } from './selectors.js';
 import { speakersIn } from './story-threads.js';
+import { workingSetups } from './setups.js';
 import type { SetupPayoff, SetupPoint } from './entities/setups.js';
 import type { StoryEntityRef } from './entities/links.js';
 import type { ProjectFile } from './project-file.js';
@@ -44,8 +45,8 @@ export const promisesIn = (
   );
   const unitId = 'unitId' in where ? (where.unitId as string) : null;
   const found: Promise_[] = [];
-  for (const record of file.setupsPayoffs) {
-    if (record.archived) continue;
+  // Ditto: a scene went on saying it carried a promise that had been deleted.
+  for (const record of workingSetups(file)) {
     for (const point of record.setups) {
       if (refMatches(point.location, beatIds, unitId)) found.push({ record, role: 'setup', point });
     }

@@ -1,5 +1,6 @@
 import { layoutForFile, paginateElements } from './pagination.js';
 import { beatsForUnit, beatsInScript, tracksInOrder, markersInStoryOrder, unitsInStoryOrder } from './selectors.js';
+import { workingSetups } from './setups.js';
 import type { Track, StoryMarker, StructuralUnit } from './entities/structure.js';
 import type { StoryEntityRef } from './entities/links.js';
 import type { ProjectFile } from './project-file.js';
@@ -123,8 +124,9 @@ export const timelineArcs = (file: ProjectFile): TimelineArc[] => {
   const order = new Map(unitsInStoryOrder(file).map((unit, index) => [unit.id as string, index]));
   const arcs: TimelineArc[] = [];
 
-  for (const record of file.setupsPayoffs) {
-    if (record.archived) continue;
+  // `workingSetups`, not a filter of our own: a deleted record went on drawing
+  // its arc across the timeline (addendum 24 §5i).
+  for (const record of workingSetups(file)) {
     const payoffIndex = storyIndexOf(file, order, record.payoff?.location ?? null);
     for (const point of record.setups) {
       const fromIndex = storyIndexOf(file, order, point.location);

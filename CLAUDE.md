@@ -1950,6 +1950,25 @@ push live; the build takes a minute or two.
   asserts a deleted one is off it; the domain had such a test since §5d and the
   renderer had none, which is why six surfaces could be wrong with the suite
   green.
+  **§5j is setups and payoffs again**, from Ken, and §5f's × on the row works —
+  driving the room, the record goes and the menu count falls. **The promise
+  stayed everywhere else**: a deleted setup went on drawing its arc across the
+  timeline, counting among what the project owes on the home page, riding into
+  the next episode's *Still owed* note and showing in the scene that carried
+  it — four readings, every one writing `!record.archived` for itself, which is
+  §5i's fault in the next module a day later. `workingSetups` is
+  `workingCast`'s twin, and the rule is now stated for everything rather than
+  for components: **no reading decides for itself which records exist** — a
+  module owns one function that says what it has (`workingCast`,
+  `workingSetups`, `locationsInOrder`, `themesInOrder`) and everything else,
+  in the domain or on a screen, asks it. One reading is deliberately
+  **`onlyLiving` rather than `workingSetups`**: `unresolvedSetupsPayoffs`,
+  which answers *what does this project still owe*, where an archived but
+  unresolved record has always counted — §1's distinction, and the thing that
+  stops this becoming a blanket filter applied without thinking.
+  `setups-surfaces.test.ts` is `cast-surfaces`' domain twin, and each
+  assertion checks the record **was** there before the delete, so a reading
+  that never showed anything cannot pass by accident.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
