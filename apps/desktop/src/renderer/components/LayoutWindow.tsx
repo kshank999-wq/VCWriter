@@ -296,6 +296,14 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   // cut off. Only a machine that has never dragged the divider takes this:
   // `useSplit` remembers, so nobody's own width is overwritten.
   const rail = useSplit({ key: 'layout.rail', initial: 360, min: 220, reserve: 720, axis: 'x' });
+  /**
+   * The inspector's width (§9f). It was a fixed 320px column, which on a
+   * 1280-wide window is a quarter of the screen the writer cannot argue with —
+   * and since §9e that quarter is a quarter less book. It drags like the rail,
+   * from the other end: `from: 'end'` so the same gesture sizes the pane after
+   * the divider rather than the one before it.
+   */
+  const inspector = useSplit({ key: 'layout.inspector', initial: 320, min: 240, reserve: 560, axis: 'x', from: 'end' });
   const [message, setMessage] = useState<string | null>(null);
   /** The Add menu, open at the button (§9a). */
   const [addMenu, setAddMenu] = useState<{ x: number; y: number } | null>(null);
@@ -801,6 +809,12 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               );
             })}
           </ul>
+          {/* What is left of the old column's paragraph (§9f): the two
+              gestures, and nothing else. It said three things, and two of them
+              — what *+ Picture* does and where the book's settings are — were
+              labels for buttons already on the screen. These two cannot be
+              seen, so they are said, once, under the list they are about. */}
+          <p className="muted small layout-rail-note">A page can be chosen on the spread too. A double-click opens it.</p>
         </aside>
         <div className="divider vertical" role="separator" aria-label="Rail width" aria-orientation="vertical" title="Drag to widen the rail" {...rail.dividerProps} />
 
@@ -964,7 +978,22 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           </div>
         </div>
 
-        <aside className="layout-inspector">
+        {/* The inspector is the selection's, so with nothing chosen there is
+            no column (§9f): it stood holding one paragraph, and on a small
+            window that paragraph cost a quarter of the screen — which since
+            §9e is a quarter less book. Absent rather than empty. */}
+        {selected || selectedFigure ? (
+          <div
+            className="divider vertical"
+            role="separator"
+            aria-label="Inspector width"
+            aria-orientation="vertical"
+            title="Drag to widen the inspector"
+            {...inspector.dividerProps}
+          />
+        ) : null}
+        {selected || selectedFigure ? (
+        <aside className="layout-inspector" style={{ flex: `0 0 ${inspector.size}px` }}>
           {selectedFigure ? (
             <FigureSection
               figure={selectedFigure}
@@ -989,15 +1018,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               </p>
             </>
           ) : null}
-          {!selected && !selectedFigure ? (
-            // Nothing chosen: the column says what it is for rather than
-            // standing empty, the book-wide settings having moved to the bar.
-            <p className="muted small layout-inspector-hint">
-              Choose a page, on the left or on the spread. <em>+ Picture</em> puts one at the top of it and the words move
-              down; a double-click opens it. The whole book’s settings are under <em>Book settings…</em> in the bar.
-            </p>
-          ) : null}
         </aside>
+        ) : null}
       </div>
     </div>
   );

@@ -1635,6 +1635,20 @@ push live; the build takes a minute or two.
   **new**: the old `layout.zoom` held 0.55 on every machine that had opened the
   room, and that was not somebody choosing a zoom but the only size it could be
   read at.
+  **§9f is the inspector**, from Ken after §9e: it was a fixed 320px column
+  standing whether or not anything was chosen, and with nothing chosen it held
+  **one paragraph** naming *+ Picture* and *Book settings…*, both of them
+  labelled buttons already on the screen — a quarter of a 1280-wide window,
+  which since §9e is a quarter less book (a page 211px wide with the column,
+  370 without). **With nothing chosen there is no column**: the inspector is
+  the selection's, which §9 said and the screen did not do, so *absent rather
+  than greyed* pointed at a panel. What the paragraph said is one line under
+  the rail cut to the two gestures a writer cannot see — *A page can be chosen
+  on the spread too. A double-click opens it.* And **the column drags like the
+  rail**: `useSplit` took a **`from: 'end'`** option so the same gesture sizes
+  the pane *after* the divider, a second copy of the drag with its sign flipped
+  being a second answer to how far the pointer moved; the spread re-fits as it
+  moves, because §9e reads the stage rather than a number.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

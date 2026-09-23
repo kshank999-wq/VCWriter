@@ -1155,6 +1155,32 @@ machine that had opened the room, and 0.55 was not somebody choosing a zoom —
 it was the only size the room could be read at. Carrying it over would have
 hidden this from the one machine that had used the room.
 
+## 9f. The inspector is the selection's
+
+From Ken, after §9e: *fix the inspector column too.*
+
+It was a fixed 320-pixel column that stood whether or not anything was
+chosen, and with nothing chosen it held **one paragraph** — a sentence naming
+*+ Picture* and *Book settings…*, both of them labelled buttons already on the
+screen. On a 1280-wide window that paragraph cost a quarter of the room, and
+since §9e a quarter of the room is a quarter less book: the page measured
+211 pixels wide with the column standing and 370 without it.
+
+Two changes, and the first is the one that matters.
+
+**With nothing chosen there is no column.** The inspector is the selection's,
+which §9 already said and the screen did not do. Absent rather than empty, the
+room's own rule pointed at a panel instead of a menu item. What the paragraph
+said is now one line under the rail, cut to the two things a writer cannot see
+for themselves — *A page can be chosen on the spread too. A double-click opens
+it.* The other two halves were labels for buttons standing a few inches away.
+
+**The column drags, like the rail.** `useSplit` took a `from: 'end'` option so
+the same gesture sizes the pane *after* the divider rather than the one before
+it; writing the drag a second time with its sign flipped would be a second
+answer to how far the pointer moved. It is remembered per machine, and the
+spread re-fits as it moves, because §9e reads the stage rather than a number.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

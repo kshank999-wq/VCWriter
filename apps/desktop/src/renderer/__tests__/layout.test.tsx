@@ -205,9 +205,10 @@ describe('the room', () => {
 
   it('keeps the whole book’s settings behind Book settings… on the bar, and out of the part column', () => {
     render(<Harness initial={novel()} />);
-    // Nothing chosen: the column says where the book-wide settings went.
+    // Nothing chosen: there is no column at all (§9f), and the book-wide
+    // settings are a button on the bar rather than a sentence pointing at one.
     expect(screen.queryByLabelText('Trim size')).toBeNull();
-    expect(document.querySelector('.layout-inspector-hint')?.textContent).toMatch(/under Book settings… in the bar/);
+    expect(document.querySelector('.layout-inspector')).toBeNull();
     openBookSettings();
     const dialog = screen.getByRole('dialog', { name: 'Book settings' });
     expect(dialog.hasAttribute('open')).toBe(true);
@@ -332,6 +333,28 @@ describe('the room', () => {
       // @ts-expect-error restoring jsdom's own getters
       delete HTMLElement.prototype.clientHeight;
     }
+  });
+
+  /**
+   * The inspector is the selection's (§9f). It used to stand whatever was
+   * chosen, holding one paragraph, which on a small window cost a quarter of
+   * the screen — and since §9e a quarter of the screen is a quarter less book.
+   */
+  it('has no inspector column until something is chosen, and drags when there is one', () => {
+    render(<Harness initial={novel()} />);
+    expect(document.querySelector('.layout-inspector')).toBeNull();
+    expect(screen.queryByLabelText('Inspector width')).toBeNull();
+    // What the column used to say is one line under the list it is about, and
+    // the two halves that were labels for buttons already on screen are gone.
+    const note = document.querySelector('.layout-rail-note') as HTMLElement;
+    expect(note.textContent).toMatch(/chosen on the spread/);
+    expect(note.textContent).not.toMatch(/Picture|Book settings/);
+
+    // Choosing a part brings the column and its divider.
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.click(rail.getByRole('button', { name: /^Half title/ }));
+    expect(document.querySelector('.layout-inspector')).not.toBeNull();
+    expect(screen.getByLabelText('Inspector width')).toBeDefined();
   });
 
   it('writes the trim and says what was worked out from it', () => {

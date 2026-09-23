@@ -62,6 +62,14 @@ interface SplitOptions {
   reserve: number;
   /** `x`: the divider moves left–right and sizes a column. `y`: up–down, a row. */
   axis?: 'x' | 'y';
+  /**
+   * Which pane the size belongs to. `start` is the default and sizes the one
+   * before the divider — a left rail, a top row. `end` sizes the one *after*
+   * it, which is what a right-hand column needs; without it the same drag
+   * would have to be written a second time with its sign flipped, and a second
+   * copy of a gesture is a second answer to how far it moved.
+   */
+  from?: 'start' | 'end';
 }
 
 /**
@@ -69,7 +77,7 @@ interface SplitOptions {
  * neither side can be dragged out of existence; it is remembered per machine.
  * The divider element's parent is the container the size is measured in.
  */
-export const useSplit = ({ key, initial, min, reserve, axis = 'x' }: SplitOptions) => {
+export const useSplit = ({ key, initial, min, reserve, axis = 'x', from = 'start' }: SplitOptions) => {
   const [stored, setStored] = usePreference<number | null>(key, null);
   // The live size during a drag is state; storage is written once, on release.
   const [live, setLive] = useState<number | null>(null);
@@ -95,11 +103,13 @@ export const useSplit = ({ key, initial, min, reserve, axis = 'x' }: SplitOption
     (event: React.PointerEvent<HTMLElement>) => {
       if (!dragging.current || !container.current) return;
       const box = container.current.getBoundingClientRect();
-      const along = axis === 'x' ? event.clientX - box.left : event.clientY - box.top;
       const total = axis === 'x' ? box.width : box.height;
-      setLive(Math.round(Math.min(Math.max(along, min), total - reserve)));
+      const along = axis === 'x' ? event.clientX - box.left : event.clientY - box.top;
+      // An end-anchored pane grows as the divider moves the other way.
+      const size = from === 'end' ? total - along : along;
+      setLive(Math.round(Math.min(Math.max(size, min), total - reserve)));
     },
-    [axis, min, reserve],
+    [axis, from, min, reserve],
   );
 
   const onPointerUp = useCallback(() => {

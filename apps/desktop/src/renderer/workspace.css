@@ -9265,6 +9265,7 @@ a.talk-mark:hover {
 }
 
 .layout-inspector {
+  /* Width from `useSplit` inline (§9f); the column is absent with nothing chosen. */
   flex: 0 0 320px;
   border-left: 1px solid var(--border);
   background: var(--panel);
@@ -14275,7 +14276,7 @@ dialog.chapter-page-dialog {
 dialog.layout-book-dialog { width: min(720px, calc(100vw - 48px)); }
 .layout-book-dialog-body { padding: 10px 18px 14px; max-height: calc(100vh - 140px); overflow: auto; }
 .layout-book-dialog-body .layout-section:last-child { border-bottom: 0; }
-.layout-inspector-hint { line-height: 1.5; }
+.layout-rail-note { line-height: 1.5; margin: 14px 2px 0; }
 .layout-spine { margin-top: 4px; }
 
 /* A part in a dialog of its own (§9): its fields, its pictures, its page. */
