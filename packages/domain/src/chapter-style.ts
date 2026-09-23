@@ -2,7 +2,14 @@ import { z } from 'zod';
 import type { ProjectFile } from './project-file.js';
 import { nowIso } from './entities/common.js';
 import { chapterTemplateSchema, type ChapterTemplate, type StoryMarker } from './entities/structure.js';
-import { chapterPageContent, hasChapterPages, placedMarkers, type ChapterPageContent, type PlacedMarker } from './markers.js';
+import {
+  chapterPageContent,
+  hasChapterPages,
+  placedMarkers,
+  type ChapterPageContent,
+  type ChapterPlacement,
+  type PlacedMarker,
+} from './markers.js';
 import type { StoryMarkerId } from './ids.js';
 
 /**
@@ -263,6 +270,36 @@ export const templateOf = (file: ProjectFile, marker: StoryMarker): ChapterTempl
   !marker.page.template || marker.page.template === 'book' ? chapterPageStyleOf(file).template : marker.page.template;
 
 /**
+ * How one page is **placed** — its rule, its drop and the air over its first
+ * paragraph — the page's own where it has said, the book's otherwise
+ * (addendum 20 §9c).
+ *
+ * `templateOf`'s shape, and the one function that resolves it: the print, the
+ * preview and the dialog all ask this, so what a writer is shown while
+ * dragging a slider is what the book will print.
+ */
+export const chapterPlacementOf = (file: ProjectFile, marker: StoryMarker): ChapterPlacement => {
+  const book = chapterPageStyleOf(file);
+  const page = marker.page;
+  return {
+    rule: page.rule ?? book.rule,
+    dropInches: page.dropInches ?? book.dropInches,
+    openingLines: page.openingLines ?? book.openingLines,
+  };
+};
+
+/** Whether this page places itself at all, for the screen to say so. */
+export const placesItself = (marker: StoryMarker): boolean =>
+  (marker.page.template ?? 'book') !== 'book' ||
+  marker.page.rule !== null ||
+  marker.page.dropInches !== null ||
+  marker.page.openingLines !== null;
+
+/** The book's style with one page's placement written over it. */
+export const chapterStyleWith = (style: ChapterPageStyle, placement?: ChapterPlacement): ChapterPageStyle =>
+  placement ? { ...style, ...placement } : style;
+
+/**
  * The leaf as it will draw, with everything resolved that the marker alone
  * cannot resolve: the template, which may be the book's, and the picture,
  * which on a book comes from the library by id (addendum 19 §7).
@@ -280,6 +317,7 @@ export const chapterLeafContent = (file: ProjectFile, placed: PlacedMarker): Cha
   return {
     ...content,
     template: templateOf(file, placed.marker),
+    placement: chapterPlacementOf(file, placed.marker),
     image: asset ? { dataUrl: asset.data, name: asset.altText || asset.name, width: page.graphicWidth } : content.image,
   };
 };

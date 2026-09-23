@@ -400,6 +400,25 @@ export const chapterPageSchema = z.object({
    */
   template: z.enum(['book', ...CHAPTER_TEMPLATES]).default('book'),
   /**
+   * How this page is **placed**, or null for *use the book's* (addendum 20
+   * §9c, from Ken: these are page settings rather than book settings).
+   *
+   * The template's shape, and the split is the one §9c rests on: **placement
+   * belongs to the page and type belongs to the book**. Where a chapter's
+   * picture sits, how far down its heading falls and how much air stands over
+   * its first paragraph are decisions about one page, and a writer setting a
+   * book moves them page by page. The *face*, the sizes, the case, the weight
+   * and the tracking stay book-wide, because a reader who turns to chapter
+   * nine and finds its heading in another face has found a mistake rather
+   * than a design (addendum 02 §12a, unchanged).
+   *
+   * Null rather than a number, so a page nobody has touched follows the book
+   * and goes on following it when the book changes.
+   */
+  rule: z.boolean().nullable().default(null),
+  dropInches: z.number().min(0).max(6).nullable().default(null),
+  openingLines: z.number().min(0).max(16).nullable().default(null),
+  /**
    * A picture from the book's graphics library (addendum 19 §7), by id, so
    * replacing a diagram in the library replaces it here too and there is one
    * answer to *where are my graphics*. Null means the page uses `image`, the

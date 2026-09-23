@@ -364,9 +364,16 @@ describe('the room', () => {
     // The setting itself, not a sentence pointing at another dialog.
     expect(within(dialog).getByRole('heading', { name: 'How every chapter page is set' })).toBeDefined();
     expect(within(dialog).getByLabelText('Chapter page face')).toBeDefined();
-    fireEvent.change(within(dialog).getByLabelText('Chapter page drop'), { target: { value: '3.4' } });
+    fireEvent.change(within(dialog).getByLabelText('The number size'), { target: { value: '20' } });
     expect(bookNames(latest as ProjectFile)).toBeDefined();
-    expect((latest as ProjectFile).settings.chapterPageStyle?.dropInches).toBe(3.4);
+    expect((latest as ProjectFile).settings.chapterPageStyle?.number?.size).toBe(20);
+
+    // And **not** how it is placed (addendum 20 §9c, from Ken): where the
+    // picture sits, how far down the heading falls and the air over the first
+    // paragraph belong to the page, and are set by double-clicking it.
+    expect(within(dialog).queryByLabelText('How far down the page')).toBeNull();
+    expect(within(dialog).queryByRole('radiogroup', { name: 'Template' })).toBeNull();
+    expect(dialog.textContent).toMatch(/double-click it in the book/);
   });
 
   it('calls a collection’s divisions stories, everywhere the word is used', () => {

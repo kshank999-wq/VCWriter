@@ -973,6 +973,45 @@ corner is in the way. The foot's own small ← and → are gone — two answers 
 beside the spread also meant centring it in the viewport, which it had never
 been: it hugged the top, so the arrows sat well below the page they turn.
 
+## 9c. Page settings: placement belongs to the page
+
+From Ken, looking at Book settings: *when you double click a page, these are
+the settings that need to be removed from book settings — and these are going
+to be page settings.*
+
+He is right, and the line the section draws is **placement against type**.
+
+- **Placement belongs to the page.** Where the picture sits, whether a rule
+  runs under the heading, how far down the page the heading falls and how much
+  air stands over the first paragraph are decisions about *one page*, and
+  somebody setting a book makes them page by page while looking at the page.
+- **Type belongs to the book.** The face, the sizes, the case, the weight and
+  the tracking stay book-wide, for addendum 02 §12a's reason, which has not
+  changed: a reader who turns to chapter nine and finds its heading in another
+  face has found a mistake rather than a design.
+
+So Book settings keeps *How every chapter page is set* — the face and the four
+lines — and says in one sentence where the rest went. The three sliders and the
+template tiles are now **This page**, in the dialog a page opens.
+
+The mechanism is `minimumSetups`' shape, which the template already had:
+`rule`, `dropInches` and `openingLines` join it on the marker's page as
+**nullable, null meaning *use the book's***. That is what makes a page nobody
+has touched go on following the book when the book changes — a copied number
+would freeze at whatever the book said the day the page was made.
+`chapterPlacementOf` is the one reading that resolves them, and the resolved
+placement rides on `ChapterPageContent`, so the print, the room's spread and
+the dialog's sheet all draw the same page. A block with no placement draws
+exactly as it always did, which is why nothing in an existing book moves.
+
+Two smaller things fell out. The per-chapter **select** (*Where the graphic
+sits*) is **gone**: the tiles now set the page, and two controls for one act on
+one screen are two answers to *where does the graphic go*. And the section
+**says which it is** rather than greying anything — *This page follows the
+book — graphic in the middle, 2.5″ down*, or *This page is set on its own*,
+with **Follow the book again** beside it, because handing a page back should be
+one press rather than three sliders returned by eye.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

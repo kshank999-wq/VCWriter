@@ -168,23 +168,56 @@ describe('the chapter page for a book', () => {
     expect(screen.queryByLabelText('Summary')).toBeNull();
   });
 
-  it('sets the template once for the book, and lets one chapter differ', () => {
+  /**
+   * The template is **this page's** (addendum 20 §9c, from Ken): the tiles
+   * set the page in hand rather than the book, and the book's is what a page
+   * that has said nothing follows. The select that used to sit beside them is
+   * gone — two controls for one act are two answers.
+   */
+  it('sets the template on this page, leaving every other chapter following the book', () => {
     let seen: ProjectFile | null = null;
     render(<Harness start={textbook()} onFile={(file) => (seen = file)} />);
     fireEvent.click(screen.getByText('Give every chapter a page'));
 
-    // Four tiles; the book's is the middle until chosen otherwise.
+    // Four tiles; the book's middle is what this page follows until chosen.
     const tiles = within(screen.getByRole('radiogroup', { name: 'Template' })).getAllByRole('radio');
     expect(tiles).toHaveLength(4);
     expect(tiles[1]!.getAttribute('aria-checked')).toBe('true');
-    fireEvent.click(tiles[0]!);
-    expect(chapterPageStyleOf(seen as unknown as ProjectFile).template).toBe('graphic_top');
+    expect(screen.getByText(/This page follows the book/)).toBeTruthy();
 
-    // This chapter alone, at the foot; the other still follows the book.
-    fireEvent.change(screen.getByLabelText('This chapter’s template'), { target: { value: 'graphic_bottom' } });
-    const markers = (seen as unknown as ProjectFile).markers;
-    expect(markers.map((marker) => marker.page.template)).toEqual(['graphic_bottom', 'book']);
-    expect(screen.getByText(/This chapter has its own — graphic at the bottom/)).toBeTruthy();
+    fireEvent.click(tiles[2]!);
+    // The page alone; the book is untouched and the other chapter with it.
+    expect(chapterPageStyleOf(seen as unknown as ProjectFile).template).toBe('graphic_middle');
+    expect((seen as unknown as ProjectFile).markers.map((marker) => marker.page.template)).toEqual([
+      'graphic_bottom',
+      'book',
+    ]);
+    expect(screen.getByText(/This page is set on its own/)).toBeTruthy();
+
+    // And it can be handed back.
+    fireEvent.click(screen.getByRole('button', { name: 'Follow the book again' }));
+    expect((seen as unknown as ProjectFile).markers[0]!.page.template).toBe('book');
+    expect(screen.getByText(/This page follows the book/)).toBeTruthy();
+  });
+
+  /**
+   * The drop and the rule are the page's too, and each starts as the book's —
+   * so a page nobody has touched moves when the book moves.
+   */
+  it('places the page on its own, starting from the book’s', () => {
+    let seen: ProjectFile | null = null;
+    render(<Harness start={textbook()} onFile={(file) => (seen = file)} />);
+    fireEvent.click(screen.getByText('Give every chapter a page'));
+
+    const drop = screen.getByLabelText('How far down the page') as HTMLInputElement;
+    expect(drop.value).toBe(String(chapterPageStyleOf(textbook()).dropInches));
+    fireEvent.change(drop, { target: { value: '4' } });
+
+    const marker = (seen as unknown as ProjectFile).markers[0]!;
+    expect(marker.page.dropInches).toBe(4);
+    // Nothing else moved: the book's is what every other page still reads.
+    expect(chapterPageStyleOf(seen as unknown as ProjectFile).dropInches).not.toBe(4);
+    expect((seen as unknown as ProjectFile).markers[1]!.page.dropInches).toBeNull();
   });
 
   it('takes the picture from the library and draws it on the sheet', () => {

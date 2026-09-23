@@ -1,6 +1,13 @@
 import type { BookSettings } from './entities/book.js';
 import type { InlineSpan } from './entities/inline.js';
-import { chapterPageStyleSchema, chapterStyleAttr, lineStyleVars, type ChapterPageStyle, isFullPageArt } from './chapter-style.js';
+import {
+  chapterPageStyleSchema,
+  chapterStyleAttr,
+  chapterStyleWith,
+  lineStyleVars,
+  type ChapterPageStyle,
+  isFullPageArt,
+} from './chapter-style.js';
 import { FACE_STACKS, faceStackOf, type BookGeometry } from './book-layout.js';
 import { partStyleAttr } from './part-style.js';
 import { headSideClass, runningHeadStyleOf, runningStyleVars } from './running-heads.js';
@@ -196,15 +203,20 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
  * the text is in the book's face — so a chapter page that never chose a face
  * is set in the body's rather than in Courier.
  */
-const chapterStyleFor = (context: BookRenderContext): string =>
+const chapterStyleFor = (context: BookRenderContext, block?: BookBlock): string =>
   // The book's own face, handed to the one function that decides what the
   // properties mean (§7a). It used to be patched on afterwards, here, which
   // let the word on the screen and the type on the page disagree.
-  chapterStyleAttr(context.chapterStyle, faceStackOf(context.settings.face));
+  //
+  // The **placement** is the page's where the page has said (§9c): the type
+  // is the book's for every chapter, and where the picture sits, how far down
+  // the heading falls and how much air stands over the first paragraph are
+  // this page's. A block with no placement draws exactly as it always did.
+  chapterStyleAttr(chapterStyleWith(context.chapterStyle, block?.chapter?.placement), faceStackOf(context.settings.face));
 
 const openingMarkup = (block: BookBlock, context: BookRenderContext): string => {
   const chapter = block.chapter;
-  const style = chapterStyleFor(context);
+  const style = chapterStyleFor(context, block);
   const head: string[] = [];
   if (chapter) {
     if (chapter.label.length > 0) head.push(`<p class="bk-chapter-label">${escapeHtml(chapter.label)}</p>`);

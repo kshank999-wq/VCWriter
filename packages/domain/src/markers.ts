@@ -268,6 +268,22 @@ export interface ChapterPageContent {
    * lines under it.
    */
   template: ChapterTemplate;
+  /**
+   * How the page is placed, resolved against the book (addendum 20 §9c).
+   *
+   * Set by `chapterLeafContent`, which knows the book's; **absent** when the
+   * content is read alone, and a caller with no placement uses the book's
+   * style unchanged — which is what every caller did before page settings
+   * existed, so nothing that has not been touched moves.
+   */
+  placement?: ChapterPlacement;
+}
+
+/** The three things a page places for itself (addendum 20 §9c). */
+export interface ChapterPlacement {
+  rule: boolean;
+  dropInches: number;
+  openingLines: number;
 }
 
 export const chapterPageContent = (placed: PlacedMarker): ChapterPageContent => ({

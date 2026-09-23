@@ -10,6 +10,8 @@ import {
   chapterChoices,
   chapterLeafContent,
   chapterPageStyleOf,
+  chapterPlacementOf,
+  placesItself,
   type StoryMarker,
   chapterPagesEverywhere,
   chapterTextFor,
@@ -490,26 +492,10 @@ function Body({
                 </div>
               ) : null}
 
-              {/* Where the picture sits is the book's, with this one chapter
-                  allowed to differ (addendum 19 §7): the override defaults to
-                  the book's, the way a setup's minimum defaults to the rule. */}
-              <label className="field">
-                <span>Where the graphic sits</span>
-                <select
-                  aria-label="This chapter’s template"
-                  value={marker.page.template}
-                  onChange={(event) =>
-                    patchPage({ template: event.target.value as 'book' | ChapterTemplate })
-                  }
-                >
-                  <option value="book">The book’s — {CHAPTER_TEMPLATE_WORDS[style.template].name.toLowerCase()}</option>
-                  {CHAPTER_TEMPLATES.map((one) => (
-                    <option key={one} value={one}>
-                      {CHAPTER_TEMPLATE_WORDS[one].name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {/* Where the picture sits is set by the tiles under *This page*
+                  (addendum 20 §9c). The select that used to stand here is
+                  gone: two controls for one act on one screen are two answers
+                  to *where does the graphic go*. */}
 
               <label className="field">
                 <span>On the page</span>
@@ -635,6 +621,7 @@ function Body({
               changed. The same fields stand in Layout's Book settings, from
               one component, because *how every chapter page is set* applies
               to the whole book and a second copy would be a second answer. */}
+          {marker ? <PagePlacementFields file={file} marker={marker} onUpdate={onUpdate} /> : null}
           <ChapterStyleFields file={file} onUpdate={onUpdate} marker={marker ?? null} />
         </div>
 
@@ -733,18 +720,61 @@ export function ChapterStyleFields({
         />
       ) : null}
 
-      {/* The three templates as tiles (addendum 19 §7). Layout is the
-          book's: set once, every chapter page follows. */}
+      <p className="muted small">
+        Where the picture sits on a {unit} page, how far down the heading falls and how much air stands over the
+        first paragraph belong to <em>that</em> page — double-click it in the book to set them.
+      </p>
+    </section>
+  );
+}
+
+/**
+ * How **one page** is placed (addendum 20 §9c, from Ken: *these are the
+ * settings that need to be removed from book settings … these are going to be
+ * page settings*).
+ *
+ * The split the section rests on: **placement belongs to the page and type
+ * belongs to the book**. Where a picture sits, how far down a heading falls
+ * and how much air stands over the first paragraph are decisions about one
+ * page, and a writer setting a book makes them page by page; the face and the
+ * sizes stay book-wide, because a reader who turns to chapter nine and finds
+ * its heading in another face has found a mistake rather than a design.
+ *
+ * Every control offers **the book's** as its starting point and says so, so a
+ * page nobody has touched follows the book and goes on following it.
+ */
+export function PagePlacementFields({
+  file,
+  marker,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  marker: StoryMarker;
+  onUpdate: ChapterPageDialogProps['onUpdate'];
+}) {
+  const book = chapterPageStyleOf(file);
+  const placement = chapterPlacementOf(file, marker);
+  const template = templateOf(file, marker);
+  const own = marker.page;
+  const nouns = nounsFor(file.project.format);
+  const unit = nouns.division.toLowerCase();
+  const patch = (page: Parameters<typeof setChapterPage>[2]) => onUpdate((current) => setChapterPage(current, marker.id, page));
+  return (
+    <section>
+      <h3>This page</h3>
+
+      {/* The four templates as tiles. The page's own where it has chosen one,
+          the book's otherwise — `minimumSetups`' shape (addendum 19 §7). */}
       <div className="chapter-template-tiles" role="radiogroup" aria-label="Template">
         {CHAPTER_TEMPLATES.map((one) => (
           <button
             key={one}
             type="button"
             role="radio"
-            aria-checked={style.template === one}
-            className={style.template === one ? 'chapter-template-tile on' : 'chapter-template-tile'}
+            aria-checked={template === one}
+            className={template === one ? 'chapter-template-tile on' : 'chapter-template-tile'}
             title={CHAPTER_TEMPLATE_WORDS[one].says}
-            onClick={() => onUpdate((current) => setChapterPageStyle(current, { template: one }))}
+            onClick={() => patch({ template: one })}
           >
             <span className={`chapter-template-sketch ${one}`} aria-hidden="true">
               <i className="sketch-graphic" />
@@ -755,46 +785,40 @@ export function ChapterStyleFields({
           </button>
         ))}
       </div>
-      {marker && marker.page.template !== 'book' ? (
-        <p className="muted small">
-          This {unit} has its own — {CHAPTER_TEMPLATE_WORDS[templateOf(file, marker)].name.toLowerCase()}. Every other{' '}
-          {unit} follows the book.
-        </p>
-      ) : null}
 
       <label className="check">
         <input
           type="checkbox"
-          checked={style.rule}
-          onChange={(event) => onUpdate((current) => setChapterPageStyle(current, { rule: event.target.checked }))}
+          checked={placement.rule}
+          onChange={(event) => patch({ rule: event.target.checked })}
         />
         <span>A rule under the heading</span>
       </label>
 
       <label className="field">
-        <span>How far down the page — {style.dropInches.toFixed(1)}″</span>
+        <span>How far down the page — {placement.dropInches.toFixed(1)}″</span>
         <input
           type="range"
-          aria-label={`${nouns.division} page drop`}
+          aria-label="How far down the page"
           min={0}
           max={6}
           step={0.1}
-          value={style.dropInches}
-          onChange={(event) => onUpdate((current) => setChapterPageStyle(current, { dropInches: Number(event.target.value) }))}
+          value={placement.dropInches}
+          onChange={(event) => patch({ dropInches: Number(event.target.value) })}
         />
       </label>
       <label className="field">
         <span>
-          Above the first paragraph — {style.openingLines} {style.openingLines === 1 ? 'line' : 'lines'}
+          Above the first paragraph — {placement.openingLines} {placement.openingLines === 1 ? 'line' : 'lines'}
         </span>
         <input
           type="range"
-          aria-label={`${nouns.division} opening drop`}
+          aria-label="Above the first paragraph"
           min={0}
           max={16}
           step={1}
-          value={style.openingLines}
-          onChange={(event) => onUpdate((current) => setChapterPageStyle(current, { openingLines: Number(event.target.value) }))}
+          value={placement.openingLines}
+          onChange={(event) => patch({ openingLines: Number(event.target.value) })}
         />
       </label>
       <p className="muted small">
@@ -802,6 +826,27 @@ export function ChapterStyleFields({
         opens above its first paragraph, in lines of the body — what it has to look right against is the text
         under it.
       </p>
+
+      {/* Said rather than shown by a greyed control: a page that has departed
+          from the book is a thing the writer wants to know, and putting it
+          back is one press rather than three sliders returned by eye. */}
+      {placesItself(marker) ? (
+        <p className="muted small">
+          This page is set on its own. Every other {unit} follows the book.{' '}
+          <button
+            type="button"
+            className="ghost link"
+            onClick={() => patch({ template: 'book', rule: null, dropInches: null, openingLines: null })}
+          >
+            Follow the book again
+          </button>
+        </p>
+      ) : (
+        <p className="muted small">
+          This page follows the book — {CHAPTER_TEMPLATE_WORDS[book.template].name.toLowerCase()}, {book.dropInches.toFixed(1)}″
+          down. Changing anything here sets this page alone.
+        </p>
+      )}
     </section>
   );
 }

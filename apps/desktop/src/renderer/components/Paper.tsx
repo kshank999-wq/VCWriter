@@ -2,6 +2,7 @@ import { Fragment } from 'react';
 import {
   chapterPageStyleSchema,
   chapterStyleVars,
+  chapterStyleWith,
   runsText,
   type ChapterPageContent,
   type ChapterPageStyle,
@@ -222,8 +223,12 @@ export function ChapterLeaf({
   style?: ChapterPageStyle;
 }) {
   // The same custom properties the printed page carries, from the same
-  // function — which is the whole of why the preview can be believed.
-  const type = chapterStyleVars(style ?? chapterPageStyleSchema.parse({})) as React.CSSProperties;
+  // function — which is the whole of why the preview can be believed. The
+  // page's own placement rides on the content and is written over the book's
+  // here, exactly as the print does it (addendum 20 §9c).
+  const type = chapterStyleVars(
+    chapterStyleWith(style ?? chapterPageStyleSchema.parse({}), chapter.placement),
+  ) as React.CSSProperties;
   const head = chapter.label.length > 0 || chapter.title.length > 0;
   const heading = head ? (
     <div className="chapter-leaf-head">
