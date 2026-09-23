@@ -312,6 +312,50 @@ behind it — so the next ask of this shape should find the control already in
 the right place, and if it does not, the thing to check first is whether the
 screen was ever wired to the rule at all.
 
+## 5h. Locations again, and the screen that could only make one
+
+From Ken: *I need a delete for locations too*. §5g said the next ask of this
+shape should find the control already in the right place, and it half did —
+the × has been on the location's row in Research since §5d, and it works.
+What it was not was **where a location is made**.
+
+**The scene's own dialog is the one screen that can put a place in the
+library** (addendum 14 §5: a writer sent to Research to name a house will type
+the heading by hand instead), and it could not take one out. So a name typed
+wrong while writing — *MILLER HOUES*, a place made twice under two spellings —
+was a trip to another room to undo, which is the failure §5f named from the
+other end: the delete existed, in a place the writer was not.
+
+So the × is on the picker, for the place the scene names. Three things decide
+its shape, and all three are the module's rules already written down:
+
+- **It never touches the heading.** A location fills a heading in and never
+  owns one (addendum 14 §1), so the record goes and *INT. MILLER HOUSE - DAY*
+  stays exactly as it is — which the sentence says **first**, ahead of the
+  graveyard's own, because that is what a writer at this screen is worried
+  about.
+- **There is nothing to un-choose.** Which place a scene uses is read from its
+  heading (§2), not stored — so the picker needs no *none*, and a buried record
+  simply stops matching.
+- **It is absent where the scene names no prepared place**, rather than present
+  and refusing: a × that could only refuse is a × that lies.
+
+Two things came out of building it, both invisible to the tests.
+
+**The menu was counting the buried.** The Locations row in the research side
+menu read `file.locations` and filtered for `archived` itself — the last
+surface in the room still doing its own counting — and a deleted record keeps
+its place in its collection (§2), so a place that had left every list went on
+being counted there. This is §5d's lesson one surface late: a module's own
+reading is the only thing that may be asked, and a count is a reading.
+
+**And the picker was laid out in a 110px cell.** `.scene-heading-fields` is a
+three-column grid and the picker was its fourth child, so it fell into the
+first column of a second row: the select overflowed, the × sat orphaned under
+it, and the question came out three words to the line — the cast row's fault
+(§5c) in a different grid. The picker spans the row now, which is also the
+truer arrangement: the library is not one of the three fields of a heading.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -334,3 +378,6 @@ screen was ever wired to the rule at all.
 - The setups & payoffs × on its row, with Archive left in the detail.
 - The note's × on its card, and `research-folders.ts` — `folderRemoval` — with
   the folder's × asking in its words.
+- The × in the scene dialog's `LocationPicker`, where a location can be made;
+  the research menu's Locations count routed through `locationsInOrder`; and
+  the picker given the whole of the heading row rather than one column of it.

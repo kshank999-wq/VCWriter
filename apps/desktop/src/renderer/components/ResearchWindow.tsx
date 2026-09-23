@@ -35,6 +35,7 @@ import {
   isInstructional,
   isProseFormat,
   living,
+  locationsInOrder,
   nounsFor,
   type ApprovalDecision,
   type BeatId,
@@ -619,9 +620,11 @@ export function ResearchBody({
                     onClick={() => setSelection({ kind: 'locations' })}
                   >
                     <span className="folder-name">Locations</span>
-                    <span className="count muted">
-                      {(file.locations ?? []).filter((one) => !one.archived).length}
-                    </span>
+                    {/* The module's own reading, not the raw collection: a
+                        deleted place keeps its place in `file.locations`
+                        (addendum 24 §2), so counting them here counted the
+                        buried — the §5d fault, one surface late. */}
+                    <span className="count muted">{locationsInOrder(file).length}</span>
                   </button>
                 </li>
               </>

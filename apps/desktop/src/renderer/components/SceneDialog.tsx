@@ -16,9 +16,11 @@ import {
   timecode,
   TIMES,
   addLocation,
+  describeDeleting,
   insertDescription,
   locationOfScene,
   locationsInOrder,
+  removeLocation,
   sceneGridSchema,
   setPolarity,
   useLocationInScene,
@@ -427,6 +429,13 @@ function HeadingFields({
  * **Nothing is inserted because a place was chosen.** §3.3 is explicit. The
  * description is a separate, named act, and what it puts in the scene is a
  * snapshot — the writer's prose from that moment on.
+ *
+ * **And what is made here can go from here** (addendum 24 §5h): this is the
+ * one screen that could put a place in the library, and until now the only way
+ * out of it was Research ▸ Locations — so a name typed wrong while writing was
+ * a trip to another room to undo. The × is the library's own, asking the same
+ * question, and the sentence leads with the thing a writer at this screen is
+ * actually worried about: the heading keeps the name.
  */
 function LocationPicker({
   file,
@@ -442,6 +451,7 @@ function LocationPicker({
   const places = locationsInOrder(file);
   const here = locationOfScene(file, unit.id);
   const [making, setMaking] = useState(false);
+  const [asking, setAsking] = useState(false);
   const [name, setName] = useState('');
 
   return (
@@ -468,6 +478,43 @@ function LocationPicker({
         ))}
         <option value="__new">New location…</option>
       </select>
+
+      {/* The × for the place this scene names, so a location made here can go
+          from here. It never touches the heading — that is the scene's. */}
+      {here && !disabled ? (
+        <button
+          type="button"
+          className="ghost small danger"
+          aria-label={`Delete ${here.name}`}
+          title={`Delete ${here.name}`}
+          onClick={() => setAsking(true)}
+        >
+          ×
+        </button>
+      ) : null}
+
+      {asking && here ? (
+        <span className="row-ask scene-location-ask">
+          <span className="muted small">
+            This scene’s heading keeps the name. {describeDeleting(file, { kind: 'location', id: here.id as string })}
+          </span>
+          <span className="row-ask-buttons">
+            <button
+              type="button"
+              className="ghost small danger"
+              onClick={() => {
+                onUpdate((current) => removeLocation(current, here.id));
+                setAsking(false);
+              }}
+            >
+              Delete
+            </button>
+            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+              Keep
+            </button>
+          </span>
+        </span>
+      ) : null}
 
       {/* Its prepared descriptions, where it has any. Inserting is its own
           press, and says what it does. */}

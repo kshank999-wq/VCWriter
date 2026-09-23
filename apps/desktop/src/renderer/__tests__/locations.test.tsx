@@ -8,14 +8,17 @@ import {
   addLocation,
   addUnit,
   createProjectFile,
+  locationsInOrder,
   sceneHeadingOf,
   setSceneHeading,
   timesUsed,
   unitsInStoryOrder,
   useLocationInScene,
   type ProjectFile,
+  type StructuralUnitId,
 } from '@vcwriter/domain';
 import { LocationsPanel } from '../components/LocationsPanel';
+import { SceneDialog } from '../components/SceneDialog';
 
 /**
  * The location library through the interface (addendum 14 §3).
@@ -109,6 +112,54 @@ describe('the library', () => {
     const { file } = script(1);
     render(<Panel start={addLocation(file, { name: 'Miller House' }).file} />);
     expect(screen.getByText(/Defaults for a heading, not facts about the place/)).toBeTruthy();
+  });
+});
+
+/**
+ * The picker in the scene's own dialog (addendum 24 §5h).
+ *
+ * This is the one screen that can put a place in the library, and it could not
+ * take one out — so a name typed wrong while writing meant a trip to Research
+ * to undo it. The × is the library's, and the question leads with the heading
+ * because that is what a writer at this screen is worried about.
+ */
+function Picker({ start, unitId, onFile }: { start: ProjectFile; unitId: StructuralUnitId; onFile?(file: ProjectFile): void }) {
+  const [file, setFile] = useState(start);
+  onFile?.(file);
+  return (
+    <SceneDialog
+      file={file}
+      unitId={unitId}
+      onClose={() => undefined}
+      onUpdate={(mutate) => setFile((current) => mutate(current))}
+    />
+  );
+}
+
+describe('the picker in the scene', () => {
+  it('deletes the place it names, and says the heading keeps the name', () => {
+    let seen: ProjectFile | null = null;
+    const { file, ids } = script(1);
+    const made = addLocation(file, { name: 'Miller House' });
+    const current = useLocationInScene(made.file, ids[0]!, made.location.id);
+    render(<Picker start={current} unitId={ids[0]!} onFile={(one) => (seen = one)} />);
+
+    fireEvent.click(screen.getByLabelText('Delete MILLER HOUSE'));
+    expect(screen.getByText(/This scene’s heading keeps the name/)).toBeTruthy();
+    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+
+    fireEvent.click(within(document.querySelector('.scene-location-ask') as HTMLElement).getByText('Delete'));
+    const after = seen as unknown as ProjectFile;
+    // The record is buried; the words in the scene are untouched.
+    expect(locationsInOrder(after)).toEqual([]);
+    expect(sceneHeadingOf(after, ids[0]!)!.place).toBe('MILLER HOUSE');
+  });
+
+  it('offers nothing to delete where the scene names no prepared place', () => {
+    const { file, ids } = script(1);
+    render(<Picker start={addLocation(file, { name: 'Miller House' }).file} unitId={ids[0]!} />);
+    // A × that could only refuse is a × that lies.
+    expect(screen.queryByLabelText('Delete MILLER HOUSE')).toBeNull();
   });
 });
 

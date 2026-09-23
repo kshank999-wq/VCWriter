@@ -12197,11 +12197,16 @@ dialog.chapter-page-dialog {
 .locations-actions,
 
 /* The picker, beside the heading it fills in. */
+/* The library sits under the three heading fields rather than in one of their
+   columns: it is not a field of the heading, and the 110px cell it used to
+   land in laid the question out three words to the line. */
 .scene-location {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+  grid-column: 1 / -1;
+  margin-top: 2px;
 }
 
 .scene-location select,
@@ -12216,6 +12221,12 @@ dialog.chapter-page-dialog {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* The heading's row wraps, so the question takes a line of its own rather
+   than being squeezed in beside the pickers (addendum 24 §5h). */
+.scene-location-ask {
+  flex-basis: 100%;
 }
 
 /* ------------------------------------------------------------------ Links

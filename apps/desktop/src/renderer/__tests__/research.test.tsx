@@ -6,11 +6,13 @@ import {
   addCharacter,
   addResearchCategory,
   addResearchItem,
+  addLocation,
   addTrack,
   addUnit,
   castByCategory,
   createProjectFile,
   graveyard,
+  removeLocation,
   tracksInOrder,
   type ProjectFile,
 } from '@vcwriter/domain';
@@ -356,5 +358,33 @@ describe('the cast in the side menu', () => {
     fireEvent.contextMenu(row);
     expect(screen.getByRole('navigation', { name: 'Character' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Character name: MARA' })).toBeDefined();
+  });
+});
+
+/**
+ * The count beside Locations in the menu (addendum 24 §5h).
+ *
+ * It was the one surface still counting `file.locations` for itself, and a
+ * buried record keeps its place in its collection — so a deleted place went on
+ * being counted here after it had left every list. The §5d lesson, one surface
+ * late: a module's own reading is the only thing that may be asked.
+ */
+describe('what the menu counts', () => {
+  it('stops counting a place that has been deleted', () => {
+    let file = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
+    const made = addLocation(file, { name: 'Miller House' });
+    file = addLocation(made.file, { name: 'The Boat' }).file;
+
+    const counted = () =>
+      Array.from(document.querySelectorAll('.research-side .folder-row'))
+        .find((one) => one.textContent?.startsWith('Locations'))!
+        .querySelector('.count')!.textContent;
+
+    render(<Harness initial={file} />);
+    expect(counted()).toBe('2');
+    cleanup();
+
+    render(<Harness initial={removeLocation(file, made.location.id)} />);
+    expect(counted()).toBe('1');
   });
 });

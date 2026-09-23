@@ -1906,6 +1906,27 @@ push live; the build takes a minute or two.
   with itself (*1 note move to Ideas*). **This is where the pattern stops
   paying**: every Research record now deletes the same way, so the next ask of
   this shape should find the control already in the right place.
+  **§5h is locations again**, from Ken, and §5g's promise half held: the × has
+  been on the location's row since §5d and works — it was simply not **where a
+  location is made**. **The scene's own dialog is the one screen that can put a
+  place in the library** (addendum 14 §5, so that a writer is not sent to
+  Research to name a house) and it could not take one out, so a name typed
+  wrong while writing meant a trip to another room to undo — §5f's fault from
+  the other end. The × is on the picker now, and three of the module's own
+  rules give it its shape: **it never touches the heading** (a location fills a
+  heading in and never owns one, so the sentence says *This scene's heading
+  keeps the name* **first**, ahead of the graveyard's), **there is nothing to
+  un-choose** (which place a scene uses is read from its heading, so the picker
+  needs no *none* and a buried record just stops matching), and it is **absent
+  where the scene names no prepared place**. Two things came out of building it
+  that no test could see. The research menu's Locations count read
+  `file.locations` and filtered `archived` itself — the last surface in the
+  room doing its own counting — so a **deleted place went on being counted**
+  there after leaving every list: §5d's lesson one surface late, a count being
+  a reading. And the picker was the fourth child of a **three-column grid**, so
+  it fell into a 110px cell and laid the question out three words to the line —
+  the cast row's fault (§5c) in another grid; it spans the row now, which is
+  also truer, the library not being one of the three fields of a heading.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
