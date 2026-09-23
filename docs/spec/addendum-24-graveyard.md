@@ -513,6 +513,54 @@ That is §5e's thread sentence exactly, one layer down — a comment writes its
 own copy of the rule as readily as a screen does, and goes on saying it just
 as long.
 
+## 5n. Plots and threads again, and the check that belongs in the act
+
+From Ken: *I need a delete for plots and threads too*. §5e built both — the
+plot's × on the track head and in Research, asking in `trackRemoval`'s words
+and offering `dissolveTrack` first, and the thread's × moved onto its row.
+Both still work, and the **plots half has nothing further to answer**: a track
+is not a graveyard kind and will not become one (§5e), so there is no buried
+track for a reading to miss and no name a writer can retype into a rival. The
+sweep over the threads was the third clean module running — everything asks
+`threadsInOrder`.
+
+Except **one count**, in the place the last three asks have taught us to look
+first: the research menu's Links entry wrote `(file.threads ?? []).filter((one)
+=> !one.archived)` for itself, so a deleted thread went on being counted an
+inch from the × that had just deleted it. That is §5h's locations count and
+§5k's folder counts a third time, and it is worth saying plainly that the
+fault keeps landing on a **count** rather than on a list: a list is somebody's
+reading and a count looks like arithmetic, so it is the thing a component
+feels entitled to do for itself.
+
+The rest is **§5m's duplicate by typed name, with the worse consequence**.
+Both ways into a thread take a name — the panel's inline form and the
+manuscript's *Add to Research ▸ Links…* — and neither could see that *The key*
+was in the graveyard. A theme's rival started empty beside an empty one; a
+thread's starts empty beside one that holds **the whole history**, because §2
+keeps a buried thread's moments so that restoring gives it back whole. So the
+writer who retypes the name gets a thread that does not know where the key was
+ever seen, and restoring the first leaves two of one name with the moments all
+on the wrong one.
+
+The decision worth keeping is **where the check goes**. §5m had to put it in
+both components, because the two screens each called `addTheme` directly and
+there was no single act to put it behind. Threads have one: `captureToThread`
+means *use this thread, or make one by this name*, which is exactly the
+question the graveyard has an answer to — so the check lives **in the act**,
+and no caller can forget it. The panel's own form, which does not go through
+that act, says the same thing in the same words, and its button reads *Put it
+back*. This is the general shape: **where a single domain act means "this one
+or a new one by this name", the check belongs in the act; only where the
+screens each build the record themselves does it belong on the screens.**
+
+One thing is deliberately left alone. `resolveRef` (`selectors.ts`) looks a
+thread up **by id, over the whole collection**, exactly as it does a character,
+a note or a setup — and it should. That is not a listing of what the writer
+has; it is the display of a link that still exists, pointing at a record that
+still exists, and answering *Missing element* there would be the one thing the
+graveyard promises is untrue.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -554,3 +602,7 @@ as long.
 - `buriedThematicNamed`, read by the tagging dialog and the themes panel so a
   typed name puts the buried record back rather than starting a rival; and
   `removeTheme`'s doc comment corrected.
+- `buriedThreadNamed`, checked **inside `captureToThread`** so no caller can
+  forget it, and said before the press on both the manuscript's dialog and the
+  panel's form; the research menu's Links count routed through
+  `threadsInOrder`.

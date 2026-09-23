@@ -2019,6 +2019,38 @@ push live; the build takes a minute or two.
   burying started keeping them — §5e's thread sentence one layer down, a
   comment writing its own copy of the rule as readily as a screen and saying it
   just as long.
+  **§5n is plots and threads again**, from Ken, and §5e built both — the plot's
+  × on the track head and in Research asking in `trackRemoval`'s words with
+  `dissolveTrack` offered first, the thread's × on its row. **The plots half
+  has nothing further to answer**: a track is not a graveyard kind and will not
+  become one, so there is no buried track for a reading to miss and no name a
+  writer can retype into a rival. The threads sweep was the third clean module
+  running — except **one count**, in the place the last three asks teach you to
+  look first: the research menu's Links entry wrote `!one.archived` for itself,
+  so a deleted thread went on being counted an inch from the × that deleted it.
+  §5h's locations count and §5k's folder counts a third time, and the pattern
+  is that the fault keeps landing on a **count** rather than a list — a list is
+  somebody's reading and a count looks like arithmetic, so it is the thing a
+  component feels entitled to do for itself. The rest is **§5m's duplicate by
+  typed name with the worse consequence**: a theme's rival starts empty beside
+  an empty one, a thread's starts empty beside one holding **the whole
+  history**, because §2 keeps a buried thread's moments so restoring gives it
+  back whole — so the writer who retypes *The key* gets a thread that does not
+  know where the key was ever seen, and restoring the first leaves two of one
+  name with every moment on the wrong one. The decision worth keeping is
+  **where the check goes**: §5m had to put it in both components because each
+  called `addTheme` directly, while threads have one act that means *use this
+  thread, or make one by this name* — so `buriedThreadNamed` is checked
+  **inside `captureToThread`** and no caller can forget it, the panel's own
+  form (which does not go through it) saying the same words with *Put it back*
+  on the button. The general shape: **where a single domain act means "this one
+  or a new one by this name", the check belongs in the act; only where the
+  screens each build the record themselves does it belong on the screens.**
+  Deliberately left alone: `resolveRef` looks a thread up **by id over the
+  whole collection**, as it does a character, a note and a setup, because that
+  is not a listing of what the writer has but the display of a link that still
+  exists pointing at a record that still exists — *Missing element* there would
+  be the one thing the graveyard promises is untrue.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

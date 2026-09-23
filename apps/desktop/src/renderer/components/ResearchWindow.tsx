@@ -10,6 +10,7 @@ import {
   trackRemoval,
   motifsInOrder,
   themesInOrder,
+  threadsInOrder,
   addResearchCategory,
   addResearchItem,
   approveCapture,
@@ -641,7 +642,7 @@ export function ResearchBody({
                 onClick={() => setSelection({ kind: 'links' })}
               >
                 <span className="folder-name">Links</span>
-                <span className="count muted">{(file.threads ?? []).filter((one) => !one.archived).length}</span>
+                <span className="count muted">{threadsInOrder(file).length}</span>
               </button>
             </li>
             {/* Named as one entry with two tabs behind it, rather than two

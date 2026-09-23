@@ -2,6 +2,8 @@ import { Fragment, useCallback, useMemo, useState } from 'react';
 import {
   MAP_TRACKS,
   addThread,
+  buriedThreadNamed,
+  restoreFromGraveyard,
   describeMap,
   describeThread,
   dependOn,
@@ -85,6 +87,8 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
   const [to, setTo] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const [newThread, setNewThread] = useState('');
+  // Said before the press, so the button's word is not a surprise (§5n).
+  const buriedNamed = buriedThreadNamed(file, newThread);
   /**
    * How much room the board has. Measured rather than assumed, because *whole
    * story* is a promise about the window and nothing else can keep it.
@@ -288,7 +292,13 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
               event.preventDefault();
               const name = newThread.trim();
               if (name.length === 0) return;
-              onUpdate((current) => addThread(current, { name }).file);
+              onUpdate((current) => {
+                // A thread of this name in the graveyard comes back rather
+                // than being made twice (addendum 24 §5n).
+                const buried = buriedThreadNamed(current, name);
+                if (buried) return restoreFromGraveyard(current, { kind: 'thread', id: buried.id as string });
+                return addThread(current, { name }).file;
+              });
               setNewThread('');
             }}
           >
@@ -298,8 +308,14 @@ export function LinksTimeline({ file, onUpdate, onGoToBeat }: LinksTimelineProps
               value={newThread}
               onChange={(event) => setNewThread(event.target.value)}
             />
-            <button type="submit">Add</button>
+            <button type="submit">{buriedNamed ? 'Put it back' : 'Add'}</button>
           </form>
+          {buriedNamed ? (
+            <p className="muted small">
+              {buriedNamed.name} is in the graveyard. This puts it back with its moments rather
+              than starting a second one.
+            </p>
+          ) : null}
           <p className="muted small">
             A moment is marked from the writing: right-click a line and choose{' '}
             <em>Add to Research ▸ Links</em>.

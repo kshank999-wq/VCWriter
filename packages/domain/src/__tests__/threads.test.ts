@@ -5,6 +5,7 @@ import {
   addMoment,
   addThread,
   addUnit,
+  buriedThreadNamed,
   captureToThread,
   createProjectFile,
   dependOn,
@@ -15,6 +16,7 @@ import {
   momentsOf,
   moveUnit,
   removeMoment,
+  removeThread,
   storyMap,
   threadsInOrder,
   toRows,
@@ -375,5 +377,74 @@ describe('a moment on a paragraph', () => {
       ),
     } as ProjectFile;
     expect(momentsOf(cut, made.thread.id)[0]!.resolved).toBe(false);
+  });
+});
+
+/**
+ * A deleted thread whose name is typed again (addendum 24 §5n).
+ *
+ * The sweep of this module found nothing — everything asks `threadsInOrder` —
+ * and what it found instead is §5m's fault with a worse consequence: a
+ * thread's **moments are kept when it is buried** (§2), so a second thread of
+ * the same name starts empty beside one holding the whole history.
+ *
+ * The check lives in `captureToThread` rather than in the screens, because
+ * that is the one act meaning *use this thread, or make one by this name* —
+ * so no caller can forget it.
+ */
+describe('a deleted thread whose name is typed again', () => {
+  const threaded = () => {
+    const { file, offset } = script(3);
+    const beats = [0, 1, 2].map((at) => beatAt(file, at, offset).id);
+    const made = captureToThread(file, { beatId: beats[0]!, name: 'The key' });
+    const withTwo = captureToThread(made.file, {
+      beatId: beats[1]!,
+      threadId: made.thread!.id,
+      note: 'the door',
+    });
+    return {
+      file: withTwo.file,
+      gone: removeThread(withTwo.file, made.thread!.id),
+      id: made.thread!.id,
+      beats,
+    };
+  };
+
+  it('is found by name, whatever the capitals', () => {
+    const { file, gone, id } = threaded();
+    expect(buriedThreadNamed(file, 'The key')).toBeNull();
+    expect(buriedThreadNamed(gone, '  the KEY ')?.id).toBe(id);
+    expect(buriedThreadNamed(gone, 'The keys')).toBeNull();
+  });
+
+  it('comes back with its moments rather than being made a second time', () => {
+    const { gone, id, beats } = threaded();
+    expect(threadsInOrder(gone)).toEqual([]);
+    // Its moments were kept when it was buried, which is what makes this worth
+    // doing rather than letting a fresh one be made.
+    expect(momentsOf(gone, id)).toHaveLength(2);
+
+    const after = captureToThread(gone, { beatId: beats[2]!, name: 'the key' });
+    expect(after.thread!.id).toBe(id);
+    expect(threadsInOrder(after.file).map((one) => one.name)).toEqual(['The key']);
+    expect(after.file.threads).toHaveLength(1);
+    // Two from before and the one just marked.
+    expect(momentsOf(after.file, id)).toHaveLength(3);
+  });
+
+  it('still makes a new one for a name nobody has used', () => {
+    const { gone, beats } = threaded();
+    const after = captureToThread(gone, { beatId: beats[2]!, name: 'The letter' });
+    expect(threadsInOrder(after.file).map((one) => one.name)).toEqual(['The letter']);
+    // And the buried one is still buried, not swept up by the new name.
+    expect(after.file.threads).toHaveLength(2);
+  });
+
+  it('keeps a thread chosen by id well clear of the name check', () => {
+    const { file, beats } = threaded();
+    const living = threadsInOrder(file)[0]!;
+    const after = captureToThread(file, { beatId: beats[2]!, threadId: living.id, name: 'ignored' });
+    expect(after.thread!.id).toBe(living.id);
+    expect(after.file.threads).toHaveLength(1);
   });
 });

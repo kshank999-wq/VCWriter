@@ -13,6 +13,7 @@ import {
   captureToThread,
   describeThread,
   threadsInOrder,
+  buriedThreadNamed,
   THREAD_RELATIONSHIPS,
   EXTENSIONS,
   EXTENSION_GROUPS,
@@ -1864,6 +1865,9 @@ function AddToThread({
 
   const chosen = threads.find((one) => one.id === threadId) ?? null;
   const making = threadId === '';
+  // `captureToThread` puts a buried thread of this name back rather than
+  // making a second (addendum 24 §5n); this says so before the press.
+  const alreadyBuried = making ? buriedThreadNamed(file, name) : null;
 
   const save = () => {
     if (making && name.trim().length === 0) return;
@@ -1920,10 +1924,18 @@ function AddToThread({
               onChange={(event) => setName(event.target.value)}
             />
           </label>
+          {alreadyBuried ? (
+            <p className="muted small">
+              {alreadyBuried.name} is in the graveyard. This puts it back with its moments rather
+              than starting a second one.
+            </p>
+          ) : null}
           {/* Only asked of a new thread, and only ever *sequence* by default:
               an order is not a cause, and nothing is drawn for a dependency
-              until the writer says what relies on what. */}
-          <label className="field">
+              until the writer says what relies on what. Absent where the
+              thread already exists: what its connectors mean is already
+              settled, and asking again would offer to change it by accident. */}
+          <label className="field" hidden={Boolean(alreadyBuried)}>
             <span>What the connectors mean</span>
             <select
               aria-label="Relationship"

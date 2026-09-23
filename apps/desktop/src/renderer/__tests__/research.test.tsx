@@ -8,11 +8,13 @@ import {
   addResearchItem,
   addLocation,
   addTrack,
+  addThread,
   addUnit,
   castByCategory,
   createProjectFile,
   graveyard,
   removeLocation,
+  removeThread,
   tracksInOrder,
   type ProjectFile,
 } from '@vcwriter/domain';
@@ -385,6 +387,27 @@ describe('what the menu counts', () => {
     cleanup();
 
     render(<Harness initial={removeLocation(file, made.location.id)} />);
+    expect(counted()).toBe('1');
+  });
+
+  // The same fault, one module along (addendum 24 §5n): Links wrote
+  // `!one.archived` for itself, so a deleted thread went on being counted
+  // beside the shelf it had just left.
+  it('stops counting a thread that has been deleted', () => {
+    let file = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
+    const made = addThread(file, { name: 'The key' });
+    file = addThread(made.file, { name: 'The bell' }).file;
+
+    const counted = () =>
+      Array.from(document.querySelectorAll('.research-side .folder-row'))
+        .find((one) => one.textContent?.startsWith('Links'))!
+        .querySelector('.count')!.textContent;
+
+    render(<Harness initial={file} />);
+    expect(counted()).toBe('2');
+    cleanup();
+
+    render(<Harness initial={removeThread(file, made.thread.id)} />);
     expect(counted()).toBe('1');
   });
 });

@@ -1,5 +1,5 @@
 import { newId } from './ids.js';
-import { onlyLiving, sendToGraveyard } from './graveyard.js';
+import { living, onlyLiving, restoreFromGraveyard, sendToGraveyard } from './graveyard.js';
 import { nowIso } from './entities/common.js';
 import { beatsForUnit, findUnit, unitsInStoryOrder } from './selectors.js';
 import { pinUsage, unpinUsage } from './character-creator.js';
@@ -96,6 +96,23 @@ export const destroyThread = (file: ProjectFile, threadId: StoryThreadId): Proje
 /** Active threads, newest last — the order they were made, which is the order they happened. */
 export const threadsInOrder = (file: ProjectFile, includeArchived = false): StoryThread[] =>
   onlyLiving(file.threads ?? []).filter((thread) => includeArchived || !thread.archived);
+
+/**
+ * A deleted thread already carrying this name (addendum 24 §5n).
+ *
+ * `buriedThematicNamed`'s twin (§5m), for the same reason and with the worse
+ * consequence: a thread's **moments are kept when it is buried** (§2), so a
+ * second thread of the same name starts empty beside one that holds the whole
+ * history, and restoring gives two — one of which knows where the key was
+ * seen and one of which does not.
+ */
+export const buriedThreadNamed = (file: ProjectFile, name: string): StoryThread | null => {
+  const wanted = name.trim().toLowerCase();
+  if (wanted.length === 0) return null;
+  return (
+    (file.threads ?? []).find((one) => !living(one) && one.name.trim().toLowerCase() === wanted) ?? null
+  );
+};
 
 // ------------------------------------------------------------------ moments
 
@@ -354,9 +371,17 @@ export const captureToThread = (
   const name = (input.name ?? '').trim();
   if (!existing && name.length === 0) return { file, thread: null, node: null };
 
+  // A thread of this name already in the graveyard comes **back** rather than
+  // being made a second time (addendum 24 §5n). The check lives here rather
+  // than in each screen because this is the one act that means *use this
+  // thread, or make one by this name* — so no caller can forget it, which is
+  // the difference from §5m, where the dialogs called `addTheme` directly.
+  const buried = existing ? null : buriedThreadNamed(file, name);
   const made = existing
     ? { file, thread: existing }
-    : addThread(file, { name, relationship: input.relationship ?? 'sequence' });
+    : buried
+      ? { file: restoreFromGraveyard(file, { kind: 'thread', id: buried.id as string }), thread: buried }
+      : addThread(file, { name, relationship: input.relationship ?? 'sequence' });
 
   const moment = addMoment(made.file, made.thread.id, {
     beatId: input.beatId,
