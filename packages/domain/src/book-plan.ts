@@ -748,6 +748,30 @@ const BODY_KINDS = new Set<BlockKind>(['paragraph', 'heading', 'blockquote', 'sc
  * page means: the box is where the picture goes, so drawing it elsewhere
  * moves the picture rather than making a second one.
  */
+/**
+ * Take a figure out of the manuscript, by its element alone (addendum 20 §9d).
+ *
+ * `removeFigure` wants the beat as well, which the room does not have: a page
+ * knows the elements standing on it and nothing about which beat they came
+ * from. Finding the beat here is the same walk `moveFigureBefore` already
+ * does, so this is that walk with nothing put back — what the **✗** on a box
+ * being placed presses, and the only thing that undoes drawing one.
+ *
+ * The picture itself is the library's and is not touched, which is the rule
+ * every figure has followed since addendum 16 §9: cutting a figure keeps the
+ * picture.
+ */
+export const removeBookFigure = (file: ProjectFile, elementId: string): ProjectFile => ({
+  ...file,
+  beats: file.beats.map((beat) => ({
+    ...beat,
+    manuscript: {
+      ...beat.manuscript,
+      elements: beat.manuscript.elements.filter((element) => (element.id as string) !== elementId),
+    },
+  })),
+});
+
 export const moveFigureBefore = (file: ProjectFile, elementId: string, beforeElementId: string): ProjectFile => {
   if (elementId === beforeElementId) return file;
   const from = file.beats.find((beat) => beat.manuscript.elements.some((element) => (element.id as string) === elementId));

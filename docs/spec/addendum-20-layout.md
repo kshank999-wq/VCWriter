@@ -1012,6 +1012,54 @@ book — graphic in the middle, 2.5″ down*, or *This page is set on its own*,
 with **Follow the book again** beside it, because handing a page back should be
 one press rather than three sliders returned by eye.
 
+## 9d. The custom graphic: draw it, slide it, keep it
+
+From Ken: *when you say add custom graphic, which should be an option, the menu
+disappears and allows you to draw a box where you want the graphic, and then
+the text will move around it. And then you can slide it around and watch the
+text move around it so you can get it placed perfectly … there will be an X or
+a check mark in the middle of the box.*
+
+Two halves of this already existed and two did not. *Draw a box for a
+picture…* (§9a) has made an empty box the text runs round since the rail was
+rebuilt, and choosing the picture afterwards has always been there. What was
+missing is **sliding it**, and **the two marks**.
+
+**The box being placed is drawn over the picture itself.** There is no ghost
+rectangle and no preview: the handle is measured off the figure wherever the
+laying put it, so dragging it moves the *figure*, the book is set again, and
+the handle lands back on it. That is the whole of *watch the text move around
+it* — what a writer sees is the book, not a picture of what the book might do.
+It costs a re-lay per drag, and it is what makes the gesture honest.
+
+**Sliding reads two things.** Across the measure it is the side the picture
+cuts in at; down the page it is **which paragraph it rides in**, which needs
+the room to know what block the pointer is over. The rendered children of a
+page's text stand in the same order as its pieces — the one builder writes them
+that way — so the nth child is the nth piece's block, and the join needs
+nothing added to the markup. A `data-` attribute on every paragraph would have
+been the obvious way and the wrong one: it changes what the print and the eBook
+emit, to answer a question only this room asks.
+
+**Placing is a state of the room and never of the figure.** Nothing about it
+is stored, so a project saved mid-drag reads as a box standing where it was let
+go; there is no *unplaced* flag for a later reader to wonder about. The ✗ is
+what undoes drawing one — `removeBookFigure`, the only act that takes a box
+away — and the picture in the library is untouched, which is the rule every
+figure has followed since addendum 16 §9.
+
+**And the way in is the page's own dialog.** *Add custom graphic…* stands in
+**This page** (§9c), it closes the dialog when pressed — the box is drawn on
+the spread the dialog was covering — and ✓ brings the page back with *Choose a
+picture…* waiting. It is **absent** from *File ▸ Chapter page…* opened over the
+workspace, where there is no spread to draw on.
+
+That last point forced a change worth naming: **the Layout room now owns its
+chapter-page dialog** rather than handing the chapter to the workspace. The old
+arrangement was fine while the dialog could do nothing the room had to help
+with; a control that draws on the spread behind it can only be offered by the
+screen holding that spread.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

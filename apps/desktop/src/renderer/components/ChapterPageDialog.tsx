@@ -46,6 +46,12 @@ interface ChapterPageDialogProps {
   initialMarkerId?: string | null;
   onClose(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  /**
+   * Draw a picture's box on this page (addendum 20 §9d). Given by the Layout
+   * room, where there is a spread to draw on; absent from *File ▸ Chapter
+   * page…*, and the button with it.
+   */
+  onDrawBox?: () => void;
 }
 
 /**
@@ -82,11 +88,13 @@ interface ChapterPageDialogProps {
  * leaf is a look being tuned against the sheet beside it, and a page that only
  * updated on a button would make that impossible to judge.
  */
-export function ChapterPageDialog({ file, open, initialMarkerId = null, onClose, onUpdate }: ChapterPageDialogProps) {
+export function ChapterPageDialog({ file, open, initialMarkerId = null, onClose, onUpdate, onDrawBox }: ChapterPageDialogProps) {
   const dialog = useModal(open);
   return (
     <dialog ref={dialog} className="track-dialog chapter-page-dialog" aria-label="Chapter page" onClose={onClose}>
-      {open ? <Body file={file} initialMarkerId={initialMarkerId} onClose={onClose} onUpdate={onUpdate} /> : null}
+      {open ? (
+        <Body file={file} initialMarkerId={initialMarkerId} onClose={onClose} onUpdate={onUpdate} {...(onDrawBox ? { onDrawBox } : {})} />
+      ) : null}
     </dialog>
   );
 }
@@ -124,11 +132,13 @@ function Body({
   initialMarkerId,
   onClose,
   onUpdate,
+  onDrawBox,
 }: {
   file: ProjectFile;
   initialMarkerId: string | null;
   onClose(): void;
   onUpdate: ChapterPageDialogProps['onUpdate'];
+  onDrawBox?: () => void;
 }) {
   const chapters = useMemo(() => chapterChoices(file), [file]);
   // The body mounts afresh each time the dialog opens, so the chapter asked
@@ -621,7 +631,7 @@ function Body({
               changed. The same fields stand in Layout's Book settings, from
               one component, because *how every chapter page is set* applies
               to the whole book and a second copy would be a second answer. */}
-          {marker ? <PagePlacementFields file={file} marker={marker} onUpdate={onUpdate} /> : null}
+          {marker ? <PagePlacementFields file={file} marker={marker} onUpdate={onUpdate} onDrawBox={onDrawBox} /> : null}
           <ChapterStyleFields file={file} onUpdate={onUpdate} marker={marker ?? null} />
         </div>
 
@@ -747,10 +757,19 @@ export function PagePlacementFields({
   file,
   marker,
   onUpdate,
+  onDrawBox,
 }: {
   file: ProjectFile;
   marker: StoryMarker;
   onUpdate: ChapterPageDialogProps['onUpdate'];
+  /**
+   * Put a picture into the page by drawing its box (addendum 20 §9d).
+   *
+   * Given by the Layout room and **absent everywhere else**: *File ▸ Chapter
+   * page…* opens this dialog over the workspace, where there is no spread to
+   * draw on, and a button that cannot be pressed is worse than no button.
+   */
+  onDrawBox?: () => void;
 }) {
   const book = chapterPageStyleOf(file);
   const placement = chapterPlacementOf(file, marker);
@@ -826,6 +845,19 @@ export function PagePlacementFields({
         opens above its first paragraph, in lines of the body — what it has to look right against is the text
         under it.
       </p>
+
+      {onDrawBox ? (
+        <div className="layout-plate-pick">
+          <button
+            type="button"
+            className="raised small"
+            title="Draw a box on the page where the picture goes; the text runs round it, and you can slide it until it is right."
+            onClick={onDrawBox}
+          >
+            Add custom graphic…
+          </button>
+        </div>
+      ) : null}
 
       {/* Said rather than shown by a greyed control: a page that has departed
           from the book is a thing the writer wants to know, and putting it

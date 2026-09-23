@@ -9184,6 +9184,54 @@ a.talk-mark:hover {
   opacity: 0.15;
 }
 
+/*
+ * The box being placed (addendum 20 §9d): drawn over the picture itself, so
+ * sliding it moves the figure and the text runs round it as you go.
+ */
+.layout-placing {
+  position: absolute;
+  z-index: 4;
+  cursor: grab;
+  border: 2px solid var(--gold);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+.layout-placing.sliding {
+  cursor: grabbing;
+}
+
+/* The two marks, in the middle of the box, as Ken asked. */
+.layout-placing-marks {
+  display: flex;
+  gap: 8px;
+}
+
+.layout-placing-mark {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.layout-placing-mark.keep {
+  color: var(--gold);
+}
+
+.layout-placing-mark.drop {
+  color: var(--danger);
+}
+
 .layout-foot {
   flex: 0 0 auto;
   display: flex;

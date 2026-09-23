@@ -86,6 +86,7 @@ import {
   bookPresetOf,
   bookRows,
   moveFigureBefore,
+  removeBookFigure,
   pagePlace,
   placeBookFigure,
   placeFigure,
@@ -206,12 +207,18 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   /** The part opened in a dialog of its own, by a double-click (§9). */
   const [partDialogId, setPartDialogId] = useState<string | null>(null);
   /**
-   * The chapter-page dialog, opened here when the room is in a window of its
-   * own and has no workspace to ask (§9): a room on the other monitor must
-   * not be able to do less than the panel it came out of.
+   * The chapter-page dialog, **the room's own** (§9, §9d).
+   *
+   * It used to be handed to the workspace where there was one, and only a
+   * popped-out room kept its own — which was fine while the dialog could do
+   * nothing the room had to help with. *Add custom graphic…* ended that: the
+   * box is drawn on the spread behind the dialog, so the only screen that can
+   * offer it is the one holding that spread. `onOpenChapterPage` is still
+   * given to Book settings, whose button is about the book rather than about
+   * a page in hand.
    */
   const [ownChapterPage, setOwnChapterPage] = useState<string | null>(null);
-  const openChapterPage = onOpenChapterPage ?? ((markerId: string) => setOwnChapterPage(markerId));
+  const openChapterPage = (markerId: string) => setOwnChapterPage(markerId);
   /** The chapter page being asked about before it is taken off (§9). */
   const [clearing, setClearing] = useState<string | null>(null);
   /**
@@ -222,6 +229,18 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
    * afterwards, which is the order he asked for.
    */
   const [drawing, setDrawing] = useState<string | null>(null);
+  /**
+   * The box just drawn, still being placed (addendum 20 §9d, from Ken: *you
+   * can slide it around and watch the text move around it so you can get it
+   * placed perfectly … there will be an X or a check mark in the middle of
+   * the box*).
+   *
+   * Placing is a **state of the room rather than of the figure**: nothing
+   * about it is stored, so a project saved mid-drag reads as a box standing
+   * where it was let go, and the ✗ is what undoes drawing one rather than a
+   * field the file has to carry.
+   */
+  const [placing, setPlacing] = useState<string | null>(null);
   /**
    * The rail's width (§9, from Ken: *the left side toolbar needs to be
    * dragged out, and by default a half inch wider*): a divider the writer
@@ -575,8 +594,21 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           onClose={() => setBookSettingsOpen(false)}
         />
       ) : null}
-      {onOpenChapterPage ? null : (
-        <ChapterPageDialog file={file} open={ownChapterPage !== null} initialMarkerId={ownChapterPage} onClose={() => setOwnChapterPage(null)} onUpdate={onUpdate} />
+      {(
+        <ChapterPageDialog
+          file={file}
+          open={ownChapterPage !== null}
+          initialMarkerId={ownChapterPage}
+          onClose={() => setOwnChapterPage(null)}
+          onUpdate={onUpdate}
+          // *Add custom graphic…* (§9d, from Ken: *the menu disappears and
+          // allows you to draw a box where you want the graphic*). The dialog
+          // goes, because a box is drawn on the page it is covering.
+          onDrawBox={() => {
+            setOwnChapterPage(null);
+            setDrawing(NEW_BOX);
+          }}
+        />
       )}
       <PartDialog
         file={file}
@@ -750,6 +782,30 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               selectedSheet={selectedSheet}
               onPickPage={setSelectedSheet}
               onOpenPage={openPage}
+              placing={placing}
+              onSlide={(place, beforeElementId) => {
+                const what = placing;
+                if (!what) return;
+                onUpdate((current) => {
+                  const moved = beforeElementId && beforeElementId !== what ? moveFigureBefore(current, what, beforeElementId) : current;
+                  return placeBookFigure(moved, what, { place });
+                });
+              }}
+              onKeep={() => {
+                // Where they wanted it: the box stays and the inspector asks
+                // for the picture, which is the *choose graphic browse* he
+                // described (§9d).
+                const what = placing;
+                setPlacing(null);
+                if (what) setSelectedRowId(what);
+              }}
+              onDrop={() => {
+                const what = placing;
+                setPlacing(null);
+                if (!what) return;
+                if (selectedRowId === what) setSelectedRowId(null);
+                onUpdate((current) => removeBookFigure(current, what));
+              }}
               drawing={drawing}
               onDrawn={(placement, sheet) => {
                 const what = drawing;
@@ -764,7 +820,10 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                   return;
                 }
                 if (what === NEW_BOX) {
-                  // The box first, the picture afterwards (§9a, from Ken).
+                  // The box first, the picture afterwards (§9a, from Ken) —
+                  // and it is **placed** before it is filled (§9d): the box
+                  // stays in hand with a ✗ and a ✓ on it until the writer
+                  // says it is where they want it.
                   onUpdate((current) => {
                     const beat = current.beats.find((one) => one.manuscript.elements.some((element) => (element.id as string) === at.elementId));
                     if (!beat) return current;
@@ -777,7 +836,10 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                         ...(placement.standoff !== undefined && placement.standoff !== INSET_STANDOFF.default ? { bookStandoff: placement.standoff } : {}),
                       },
                     });
-                    if (made.elementId) setSelectedRowId(made.elementId as string);
+                    if (made.elementId) {
+                      setSelectedRowId(made.elementId as string);
+                      setPlacing(made.elementId as string);
+                    }
                     return made.file;
                   });
                   return;
@@ -1020,6 +1082,10 @@ function Spreads({
   onOpenPage,
   drawing,
   onDrawn,
+  placing,
+  onSlide,
+  onKeep,
+  onDrop,
 }: {
   laying: Laying;
   spread: number;
@@ -1033,10 +1099,19 @@ function Spreads({
   /** The figure whose box is being drawn (§8a), `'new'` for one not yet made (§9a), or null. */
   drawing: string | null;
   onDrawn(placement: BookFigurePlacement, sheet: number): void;
+  /** The box being placed (§9d), which wears a ✗ and a ✓ and can be slid. */
+  placing: string | null;
+  /** Slid to a side, and before the element it was let go over. */
+  onSlide(place: 'left' | 'right', beforeElementId: string | null): void;
+  onKeep(): void;
+  onDrop(): void;
 }) {
   /** The rectangle being dragged, in the sheet's own pixels, and which sheet. */
   const [box, setBox] = useState<{ key: string; x: number; y: number; w: number; h: number } | null>(null);
   const start = useRef<{ key: string; sheet: HTMLElement; x: number; y: number; page: BookPage } | null>(null);
+  /** The two sheets on the screen, so the handle can be measured off them. */
+  const sheets = useRef<Record<string, HTMLElement | null>>({});
+  const [handles, setHandles] = useState<Record<string, { left: number; top: number; width: number; height: number } | null>>({});
   const { pageWidthPx, pageHeightPx } = bookMetrics(laying.geometry);
   const blocks = useMemo(() => new Map(laying.blocks.map((block) => [block.id, block])), [laying.blocks]);
   const pages = laying.laid.pages;
@@ -1071,10 +1146,65 @@ function Spreads({
     onDrawn({ place, span, side: 'either', standoff: INSET_STANDOFF.default }, from.page.sheet);
   };
 
+  /**
+   * Which block the pointer is over, on a page (§9d).
+   *
+   * The rendered children of `.bk-text` stand in the same order as the page's
+   * pieces — the one builder writes them that way — so the nth child is the
+   * nth piece's block. That join is what lets the box be slid **among the
+   * paragraphs** without the markup carrying an id for every one of them: a
+   * `data-` attribute on every paragraph would change what the print and the
+   * eBook emit, to answer a question only this room asks.
+   */
+  const blockUnder = (page: BookPage, sheetEl: HTMLElement, clientY: number): string | null => {
+    const text = sheetEl.querySelector('.bk-text');
+    if (!text) return null;
+    const kids = Array.from(text.children) as HTMLElement[];
+    for (let at = 0; at < kids.length; at += 1) {
+      if (clientY < kids[at]!.getBoundingClientRect().bottom) return page.pieces[at]?.blockId ?? null;
+    }
+    return page.pieces[page.pieces.length - 1]?.blockId ?? null;
+  };
+
+  /**
+   * The box being placed, drawn over the figure wherever the laying put it
+   * (§9d). It is read off the page rather than kept in state, so the moment
+   * the text re-flows the handle is on the picture again — which is what
+   * makes sliding it show the words moving rather than a box floating over a
+   * page that has not caught up.
+   */
+  const handleFor = (sheetEl: HTMLElement | null): { left: number; top: number; width: number; height: number } | null => {
+    if (!placing || !sheetEl) return null;
+    const mark = sheetEl.querySelector(`[data-figure="${CSS.escape(placing)}"]`) as HTMLElement | null;
+    if (!mark) return null;
+    const sheetRect = sheetEl.getBoundingClientRect();
+    const rect = mark.getBoundingClientRect();
+    return {
+      left: (rect.left - sheetRect.left) / zoom,
+      top: (rect.top - sheetRect.top) / zoom,
+      width: rect.width / zoom,
+      height: rect.height / zoom,
+    };
+  };
+
+  // The handle is measured after the page has drawn, and again whenever the
+  // laying, the zoom or the spread moves it — which is what makes the box
+  // follow the picture as the text re-flows around it.
+  useEffect(() => {
+    if (!placing) {
+      setHandles({});
+      return;
+    }
+    setHandles({ left: handleFor(sheets.current.left ?? null), right: handleFor(sheets.current.right ?? null) });
+  }, [placing, laying, zoom, spread]);
+
   const draw = (page: BookPage | null, key: string) =>
     page ? (
       <div
         key={key}
+        ref={(node) => {
+          sheets.current[key] = node;
+        }}
         className={`layout-sheet${drawing ? ' layout-sheet-drawing' : ''}${page.sheet === selectedSheet ? ' layout-sheet-chosen' : ''}`}
         style={{ width: pageWidthPx, height: pageHeightPx }}
         aria-label={`Page ${page.sheet}`}
@@ -1118,6 +1248,18 @@ function Spreads({
         {box && box.key === key ? (
           <div className="layout-draw-box" style={{ left: box.x, top: box.y, width: box.w, height: box.h }} aria-hidden="true" />
         ) : null}
+        <PlacingHandle
+          at={handles[key] ?? null}
+          onSlideTo={(clientX, clientY) => {
+            const sheetEl = sheets.current[key];
+            if (!sheetEl) return;
+            const text = sheetEl.querySelector('.bk-text') as HTMLElement | null;
+            const rect = (text ?? sheetEl).getBoundingClientRect();
+            onSlide(clientX < rect.left + rect.width / 2 ? 'left' : 'right', blockUnder(page, sheetEl, clientY));
+          }}
+          onKeep={onKeep}
+          onDrop={onDrop}
+        />
       </div>
     ) : (
       <div key={key} className="layout-sheet layout-no-sheet" style={{ width: pageWidthPx, height: pageHeightPx }} />
@@ -1683,6 +1825,65 @@ const SIDE_WORDS: Record<FigureSide, string> = {
   verso: 'Always a left-hand page',
   recto: 'Always a right-hand page',
 };
+
+/**
+ * The box being placed (addendum 20 §9d, from Ken: *you can slide it around
+ * and watch the text move around it so you can get it placed perfectly … and
+ * there will be an X or a check mark in the middle of the box*).
+ *
+ * It is drawn **over the picture where the laying put it**, so dragging it
+ * does not move a floating rectangle — it moves the figure, the book is set
+ * again, and the handle lands back on it. That is the difference between a
+ * preview and the thing itself, and the reason there is no separate ghost.
+ *
+ * The two marks sit **in the middle**, as he asked, and say which is which:
+ * ✗ takes the box away as though it had never been drawn, ✓ keeps it where it
+ * stands and asks for the picture.
+ */
+function PlacingHandle({
+  at,
+  onSlideTo,
+  onKeep,
+  onDrop,
+}: {
+  at: { left: number; top: number; width: number; height: number } | null;
+  onSlideTo(clientX: number, clientY: number): void;
+  onKeep(): void;
+  onDrop(): void;
+}) {
+  const [sliding, setSliding] = useState(false);
+  if (!at) return null;
+  return (
+    <div
+      className={sliding ? 'layout-placing sliding' : 'layout-placing'}
+      style={{ left: at.left, top: at.top, width: at.width, height: at.height }}
+      onPointerDown={(event) => {
+        // The marks are pressed rather than dragged; everything else in the
+        // box is the handle.
+        if ((event.target as HTMLElement).closest('button')) return;
+        event.preventDefault();
+        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+        setSliding(true);
+      }}
+      onPointerMove={(event) => {
+        if (!sliding) return;
+        onSlideTo(event.clientX, event.clientY);
+      }}
+      onPointerUp={() => setSliding(false)}
+      onPointerCancel={() => setSliding(false)}
+      title="Drag to slide the box; the text runs round it as you go"
+    >
+      <div className="layout-placing-marks">
+        <button type="button" className="layout-placing-mark drop" aria-label="Take the box away" title="Take the box away" onClick={onDrop}>
+          ✗
+        </button>
+        <button type="button" className="layout-placing-mark keep" aria-label="Keep the box here" title="Keep the box here, and choose a picture" onClick={onKeep}>
+          ✓
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Where a figure sits in the book (§8, §8a): across the measure, cut into

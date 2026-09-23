@@ -148,13 +148,25 @@ describe('the room', () => {
     fireEvent.change(picker);
   };
 
-  it('opens the chapter’s own page on a double-click of its row', () => {
+  /**
+   * The room opens the page **itself** (addendum 20 §9d).
+   *
+   * It used to hand the chapter to the workspace, and only a popped-out room
+   * kept its own dialog — fine while the dialog could do nothing the room had
+   * to help with. *Add custom graphic…* ended that: the box is drawn on the
+   * spread behind the dialog, so the only screen that can offer it is the one
+   * holding that spread.
+   */
+  it('opens the chapter’s own page on a double-click of its row, in the room', () => {
     const opened: string[] = [];
     render(<Harness initial={novel()} onOpenChapterPage={(markerId) => opened.push(markerId)} />);
-    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    void rail;
     fireEvent.doubleClick(railRow('The Lamp'));
-    expect(opened).toEqual([(latest as ProjectFile).markers[0]!.id]);
+
+    const dialog = screen.getByRole('dialog', { name: 'Chapter page' });
+    expect(dialog.hasAttribute('open')).toBe(true);
+    expect(within(dialog).getByRole('button', { name: 'Add custom graphic…' })).toBeDefined();
+    // The workspace is not asked to open one as well: two dialogs for one act.
+    expect(opened).toEqual([]);
   });
 
   it('puts a picture into the page in hand, at the top of it, with the words moving down', async () => {
@@ -366,7 +378,7 @@ describe('the room', () => {
     expect(within(dialog).getByLabelText('Chapter page face')).toBeDefined();
     fireEvent.change(within(dialog).getByLabelText('The number size'), { target: { value: '20' } });
     expect(bookNames(latest as ProjectFile)).toBeDefined();
-    expect((latest as ProjectFile).settings.chapterPageStyle?.number?.size).toBe(20);
+    expect((latest as ProjectFile).settings.chapterPageStyle?.number).toMatchObject({ size: 20 });
 
     // And **not** how it is placed (addendum 20 §9c, from Ken): where the
     // picture sits, how far down the heading falls and the air over the first
@@ -552,6 +564,31 @@ describe('the room', () => {
     // you can see everything*). A machine that has dragged it keeps its own.
     expect(screen.getByRole('separator', { name: 'Rail width' })).toBeDefined();
     expect((document.querySelector('.layout-rail') as HTMLElement).style.flex).toBe('0 0 360px');
+  });
+
+  /**
+   * The custom graphic (addendum 20 §9d, from Ken: *when you say add custom
+   * graphic … the menu disappears and allows you to draw a box where you want
+   * the graphic, and then the text will move around it*).
+   *
+   * The page dialog offers it, the dialog goes when it is pressed, and the
+   * room is left drawing. Sliding and the two marks are a pointer gesture over
+   * a laid page, which jsdom has no geometry for — they are driven in Chromium
+   * instead, and what is pinned here is the way in and the way out.
+   */
+  it('offers the custom graphic on the page, and leaves the room drawing', () => {
+    render(<Harness initial={novel()} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.doubleClick(rail.getByRole('button', { name: /^Chapter 1/ }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Chapter page' });
+    const draw = within(dialog).getByRole('button', { name: 'Add custom graphic…' });
+    fireEvent.click(draw);
+
+    // The dialog goes: the box is drawn on the spread it was covering.
+    expect(screen.queryByRole('dialog', { name: 'Chapter page' })?.hasAttribute('open')).not.toBe(true);
+    // And the room says it is waiting for the drag.
+    expect(document.querySelector('.layout-sheet-drawing')).toBeDefined();
   });
 
   /**

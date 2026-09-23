@@ -1526,6 +1526,64 @@ push live; the build takes a minute or two.
   screen. Putting them beside the spread meant centring it in the viewport,
   which it had never been — it hugged the top, so the arrows sat well below
   the page they turn.
+  **§6a is the six faces by name** — Garamond, Baskerville, Georgia, Caslon,
+  Gill Sans, Lato — from Ken. §6's list names a **kind** and these name a
+  **font**, and both belong for opposite reasons: a writer who knows they want
+  Garamond should not have to work out that it is an old-style serif, and one
+  who does not should not have to know what Garamond is. Offered **for a line
+  of type as well as for the body, in one list** (a heading in *Garamond* and a
+  page in *Garamond* being two fonts is the drift the room exists to stop), and
+  each a **stack** headed by the font asked for — §12's open question unchanged,
+  with **Lato and Caslon the two most likely to be missing**. The one part that
+  is not cosmetic is the **character width** each carries: Garamond sets narrow
+  at 0.44 em and Georgia wide at 0.50, which is why one wants a point more than
+  the other and why moving a book from Georgia to Garamond gains characters to
+  the line with the trim unchanged.
+  **§9c is page settings**, from Ken looking at Book settings — *when you
+  double click a page, these are the settings that need to be removed from book
+  settings, and these are going to be page settings*. The line it draws is
+  **placement against type**: where the picture sits, the rule, the drop and
+  the air over the first paragraph are decisions about **one page** and a
+  writer makes them page by page while looking at it; the face, the sizes, the
+  case, the weight and the tracking stay **book-wide** for addendum 02 §12a's
+  unchanged reason. The mechanism is the template's own shape — `rule`,
+  `dropInches` and `openingLines` join it on the marker's page as **nullable,
+  null meaning *use the book's*** — which is what makes an untouched page go on
+  following the book when the book changes, where a copied number would freeze.
+  `chapterPlacementOf` resolves them and the resolved placement rides on
+  `ChapterPageContent`, so the print, the spread and the dialog's sheet draw
+  the same page and a block with no placement draws exactly as it always did.
+  The per-chapter **select** is gone (the tiles do it; two controls for one act
+  are two answers), and the section **says which it is** — *This page follows
+  the book*, or *This page is set on its own* with **Follow the book again**.
+  **§9d is the custom graphic**, from Ken: *add custom graphic … the menu
+  disappears and allows you to draw a box where you want the graphic, and then
+  the text will move around it … you can slide it around and watch the text
+  move around it … there will be an X or a check mark in the middle of the
+  box*. Two halves existed (§9a's empty box, and choosing the picture after);
+  what was missing is **sliding** and **the marks**. **The box being placed is
+  drawn over the picture itself** — no ghost rectangle, the handle measured off
+  the figure wherever the laying put it, so dragging moves the *figure*, the
+  book is set again and the handle lands back on it. That is the whole of
+  *watch the text move around it*, it costs a re-lay per drag, and it is what
+  makes the gesture honest. **Sliding reads two things**: across the measure,
+  the side it cuts in at; down the page, **which paragraph it rides in** — and
+  the join is that a page's rendered children stand in the same order as its
+  pieces, so the nth child is the nth piece's block and **the markup needs
+  nothing added**; a `data-` attribute on every paragraph would change what the
+  print and the eBook emit to answer a question only this room asks.
+  **Placing is a state of the room and never of the figure**, so nothing is
+  stored and a project saved mid-drag reads as a box standing where it was let
+  go; **✗** is `removeBookFigure`, the only act that takes a box away, and the
+  library's picture is untouched. *Add custom graphic…* stands in **This
+  page**, closes the dialog when pressed (the box is drawn on the spread it was
+  covering) and **✓** brings the page back with *Choose a picture…* waiting;
+  it is **absent** from *File ▸ Chapter page…* over the workspace, there being
+  no spread to draw on. That forced one change worth naming: **the Layout room
+  now owns its chapter-page dialog** rather than handing the chapter to the
+  workspace — fine while the dialog could do nothing the room had to help with,
+  and wrong the moment it offered a control that draws on the spread behind
+  it.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves
