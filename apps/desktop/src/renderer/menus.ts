@@ -36,6 +36,8 @@ export type CommandId =
   | 'file.preferences'
   | 'file.close'
   // Editor
+  | 'editor.undo'
+  | 'editor.redo'
   | 'editor.find'
   | 'editor.replace'
   | 'editor.findNext'
@@ -153,6 +155,12 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
     id: 'editor',
     label: 'Editor',
     items: [
+      // Undo, for everything (addendum 02 §6c, from Ken). It is here rather
+      // than in File because taking something back is an edit, and this is the
+      // nearest thing this program has to an Edit menu.
+      { command: 'editor.undo', label: 'Undo', accelerator: 'CmdOrCtrl+Z' },
+      { command: 'editor.redo', label: 'Redo', accelerator: 'CmdOrCtrl+Shift+Z' },
+      null,
       { command: 'editor.find', label: 'Find…', accelerator: 'CmdOrCtrl+F' },
       { command: 'editor.findNext', label: 'Find next', accelerator: 'CmdOrCtrl+G' },
       { command: 'editor.replace', label: 'Find and replace…', accelerator: 'CmdOrCtrl+Alt+F' },

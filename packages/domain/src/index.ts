@@ -62,6 +62,7 @@ export * from './xml-walk.js';
 export * from './markers.js';
 export * from './setups.js';
 export * from './graveyard.js';
+export * from './history.js';
 export * from './themes.js';
 export * from './polarity.js';
 export * from './locations.js';

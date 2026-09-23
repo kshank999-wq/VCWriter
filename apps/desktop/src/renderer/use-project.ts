@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ProjectFile, ProjectFormat } from '@vcwriter/domain';
+import { isWritersAct, remember, type HistoryStep, type ProjectFile, type ProjectFormat } from '@vcwriter/domain';
 
 /**
  * Open project state plus autosave.
@@ -24,6 +24,16 @@ export interface UseProjectResult {
   openProjectAtPath(path: string): Promise<void>;
   /** Apply a domain mutation; the result is queued for autosave. */
   update(mutate: (current: ProjectFile) => ProjectFile): void;
+  /**
+   * Back one step, and forward again (addendum 02 §6c). Every act is a pure
+   * function of the document, so undo is the document before it rather than a
+   * per-act inverse — which is what makes *everything you do* true of an act
+   * built tomorrow as much as of one built today.
+   */
+  undo(): void;
+  redo(): void;
+  canUndo: boolean;
+  canRedo: boolean;
   /** Adopt a whole project wholesale — the result of a sync merge. */
   replace(next: ProjectFile): void;
   /**
@@ -50,8 +60,26 @@ export const useProject = (): UseProjectResult => {
   const hashRef = useRef<string | undefined>(undefined);
   const dirtyRef = useRef(false);
   const savesSinceSnapshotRef = useRef(0);
+  /**
+   * Undo and redo (addendum 02 §6c, from Ken). Refs for the same reason the
+   * file is one — nothing here may be torn down and rebuilt on a keystroke —
+   * with one small piece of state so the menu can grey what cannot be done.
+   */
+  const pastRef = useRef<HistoryStep[]>([]);
+  const futureRef = useRef<ProjectFile[]>([]);
+  const [steps, setSteps] = useState({ past: 0, future: 0 });
+  const saySteps = useCallback(() => {
+    setSteps({ past: pastRef.current.length, future: futureRef.current.length });
+  }, []);
+  /** A different document has a different history, and never the last one's. */
+  const forget = useCallback(() => {
+    pastRef.current = [];
+    futureRef.current = [];
+    setSteps({ past: 0, future: 0 });
+  }, []);
 
   const adopt = useCallback((next: { path: string; file: ProjectFile; contentHash: string }) => {
+    forget();
     pathRef.current = next.path;
     fileRef.current = next.file;
     hashRef.current = next.contentHash;
@@ -61,7 +89,7 @@ export const useProject = (): UseProjectResult => {
     setFile(next.file);
     setSaveState('saved');
     setError(null);
-  }, []);
+  }, [forget]);
 
   const flush = useCallback(async (): Promise<void> => {
     const currentPath = pathRef.current;
@@ -159,23 +187,75 @@ export const useProject = (): UseProjectResult => {
     // one author.
     const edited = mutate(current);
     const next = window.vcwriter.signWork?.(edited) ?? edited;
+    // What the writer did is what they can take back (§6c). The clock's
+    // once-a-minute tick is not one of those, and must not drop a step into
+    // the middle of a paragraph or throw the redo stack away while they type.
+    if (isWritersAct(current, next)) {
+      pastRef.current = remember(pastRef.current, current, next, Date.now());
+      futureRef.current = [];
+      saySteps();
+    }
     fileRef.current = next;
     dirtyRef.current = true;
     setFile(next);
     setSaveState('dirty');
-  }, []);
+  }, [saySteps]);
+
+  /**
+   * Back one step, and forward again (§6c).
+   *
+   * Every act in this program is a pure function of the document, so the step
+   * before one **is** the document before it — there is no inverse to write
+   * per act, and a module built tomorrow is undoable the day it is written.
+   * Going back is marked dirty like any other change, because the document on
+   * disk should be the one on the screen.
+   */
+  const step = useCallback(
+    (from: 'past' | 'future') => {
+      const current = fileRef.current;
+      if (!current) return;
+      if (from === 'past') {
+        const last = pastRef.current[pastRef.current.length - 1];
+        if (!last) return;
+        pastRef.current = pastRef.current.slice(0, -1);
+        futureRef.current = [...futureRef.current, current];
+        fileRef.current = last.file;
+        setFile(last.file);
+      } else {
+        const next = futureRef.current[futureRef.current.length - 1];
+        if (!next) return;
+        futureRef.current = futureRef.current.slice(0, -1);
+        pastRef.current = [...pastRef.current, { file: current, at: Date.now() }];
+        fileRef.current = next;
+        setFile(next);
+      }
+      dirtyRef.current = true;
+      setSaveState('dirty');
+      saySteps();
+    },
+    [saySteps],
+  );
+  const undo = useCallback(() => step('past'), [step]);
+  const redo = useCallback(() => step('future'), [step]);
 
   /**
    * Adopt a merged project after a sync. It is marked dirty so the next flush
    * writes the merge to disk — the file on this machine and the copy in the
    * cloud should not disagree once the writer has been told they agree.
    */
-  const replace = useCallback((next: ProjectFile) => {
-    fileRef.current = next;
-    dirtyRef.current = true;
-    setFile(next);
-    setSaveState('dirty');
-  }, []);
+  const replace = useCallback(
+    (next: ProjectFile) => {
+      // A merge from the cloud is not this writer's act, and taking it back
+      // would resurrect a document the other side has moved past — so the
+      // history starts again here rather than offering to undo somebody else.
+      forget();
+      fileRef.current = next;
+      dirtyRef.current = true;
+      setFile(next);
+      setSaveState('dirty');
+    },
+    [forget],
+  );
 
   const adoptLoaded = useCallback(
     (loaded: { path: string; file: ProjectFile; contentHash: string }) => {
@@ -186,6 +266,7 @@ export const useProject = (): UseProjectResult => {
 
   const closeProject = useCallback(() => {
     void flush().then(() => {
+      forget();
       pathRef.current = null;
       fileRef.current = null;
       hashRef.current = undefined;
@@ -193,7 +274,7 @@ export const useProject = (): UseProjectResult => {
       setFile(null);
       setSaveState('idle');
     });
-  }, [flush]);
+  }, [flush, forget]);
 
   return {
     path,
@@ -205,6 +286,10 @@ export const useProject = (): UseProjectResult => {
     openProject,
     openProjectAtPath,
     update,
+    undo,
+    redo,
+    canUndo: steps.past > 0,
+    canRedo: steps.future > 0,
     replace,
     adoptLoaded,
     saveNow: flush,

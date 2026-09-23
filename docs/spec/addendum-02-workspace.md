@@ -826,6 +826,67 @@ The menu grew a **note** for it: what an item would do, said under its label
 rather than in a hover nobody sees. The item is still named by its label alone,
 so a menu can be found by what its items are called.
 
+## 6c. Undo, for everything
+
+From Ken: *everything you do needs to be able to undo using control plus Z,
+back at least 10 steps.* And, of §6b: *we need to be able to do the same with
+sections — if we split a section, add a beat, we need to be able to click the
+two sections and re-merge them, and it needs to be true for all the modules
+that have this function.*
+
+There was **no undo at all**. What made it a day's work rather than a month's
+is one fact about this program: **every change to the document is a pure
+function of the document**, and every one of them goes through the same
+`update` in `use-project.ts`. So the step before an act *is the document before
+it*, and undo is a stack of documents rather than a stack of inverses. No
+module has to know undo exists, nothing has to describe how to take itself
+back, and **an act built tomorrow is undoable the day it is written** — which
+is the only way *everything you do* can be true rather than a list somebody
+maintains and forgets.
+
+Keeping whole documents is cheap for the same reason: a mutation rebuilds the
+collection it touches and shares the rest, so fifty steps is fifty small spines
+over one set of beats. Fifty rather than Ken's ten, because it costs almost
+nothing and ten is not many after a few minutes of rearranging.
+
+Two rules decide **what a step is**, and both are in `history.ts` where they
+can be tested.
+
+**The writer's acts, and not the program's.** The writing clock records a
+sitting once a minute through the same `update`; without `isWritersAct` that
+would drop an undo step into the middle of a paragraph and throw the redo stack
+away while somebody typed. It compares the top-level references — a mutation
+rebuilds one collection and shares the others — so it is exact, cheap, and
+**derived rather than listed**: a module built tomorrow is covered on the day
+it is written.
+
+**Typing is one step; an act is always its own.** A burst within 700ms folds
+into the step it continues, and the fold **keeps the earliest** of the run,
+because a writer who types a sentence and presses undo wants the sentence gone
+rather than its last letter. What stops an act folding into the typing before
+it is `shapeOf`: typing changes words and nothing else, while adding, removing,
+splitting or joining anything changes one of the counts. That is the case a
+plain timer gets wrong, and gets wrong exactly when a writer most wants their
+merge back.
+
+Two histories are deliberately dropped rather than offered: opening another
+project (a different document has a different history) and adopting a merge
+from the cloud (not this writer's act, and taking it back would resurrect a
+document the other side has moved past).
+
+`Ctrl`/`Cmd`+`Z` and `Ctrl`/`Cmd`+`Shift`+`Z`, and **Editor ▸ Undo / Redo** so
+it can be found. The keys are handled by the program rather than left to the
+field under the cursor, because a typed letter and a merge are both in the same
+stack already, and two undos on one screen would fight over which had happened
+last.
+
+And §6b's gesture is now at **both levels**: shift-click a run of sections and
+the scene's own right-click offers *Merge 2 scenes* with the same sentence,
+where with nothing marked it offers *Join it into the scene before*. The run is
+taken **along the track** rather than along the story, because the story order
+runs across the tracks and a run picked through a subplot would offer to join
+scenes that are not neighbours on the screen.
+
 ## 7. The research window
 
 Research is where the material is kept **before, during and after** it is

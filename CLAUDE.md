@@ -108,6 +108,32 @@ push live; the build takes a minute or two.
   up. `ContextMenu` grew a **note** for it: what an item would do, said under
   its label rather than in a hover nobody sees, with the item still **named by
   its label alone** so a menu can be found by what its items are called.
+  **§6c is undo, for everything**, from Ken (*everything you do needs to be
+  able to undo using control plus Z, back at least 10 steps*) — and there was
+  **none at all**. What made it a day's work is one fact: **every change to the
+  document is a pure function of the document** and every one goes through the
+  same `update`, so the step before an act *is the document before it* and undo
+  is a **stack of documents rather than of inverses** — no module knows undo
+  exists, nothing describes how to take itself back, and **an act built
+  tomorrow is undoable the day it is written**, which is the only way *everything
+  you do* is true rather than a list somebody forgets. Whole documents are cheap
+  for the same reason (a mutation rebuilds one collection and shares the rest);
+  **fifty** steps rather than ten. Two rules in `history.ts` decide what a step
+  is. **The writer's acts and not the program's** — the writing clock ticks
+  through `update` once a minute, so without `isWritersAct` a step lands mid
+  paragraph and the redo stack goes while somebody types; it compares top-level
+  references and is **derived rather than listed**, so a new module is covered
+  the day it is written. **Typing is one step and an act is always its own** —
+  a burst within 700ms folds and the fold **keeps the earliest** (undo takes the
+  sentence, not its last letter), while `shapeOf` stops an act folding into the
+  typing before it, which is what a plain timer gets wrong exactly when a writer
+  most wants their merge back. Two histories are **dropped**: another project
+  (a different document) and a cloud merge (not this writer's act). Ctrl/Cmd+Z
+  and +Shift+Z, plus *Editor ▸ Undo / Redo*; the keys are the program's rather
+  than the focused field's, both being in one stack already. And §6b's gesture
+  is now at **both levels**: shift-click a run of sections for *Merge 2 scenes*,
+  *Join it into the scene before* with nothing marked, the run taken **along the
+  track** because the story order runs across them.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
   1–7 (the board and its two nodes, the structure column, the layout rule
   with scenes, beats, the columns the writer defines, binding a node to a real

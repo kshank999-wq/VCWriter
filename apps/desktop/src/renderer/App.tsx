@@ -322,6 +322,22 @@ export default function App() {
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       const chord = (event.metaKey || event.ctrlKey) && event.shiftKey;
+      const mod = event.metaKey || event.ctrlKey;
+      // Undo, for everything (§6c, from Ken). It is handled here rather than
+      // left to the field under the cursor because every change to the
+      // document — a typed letter as much as a merge — goes through the same
+      // `update`, so one stack already holds both and two undos on one screen
+      // would fight over which had happened last.
+      if (mod && !event.shiftKey && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        project.undo();
+        return;
+      }
+      if ((mod && event.shiftKey && event.key.toLowerCase() === 'z') || (mod && event.key.toLowerCase() === 'y')) {
+        event.preventDefault();
+        project.redo();
+        return;
+      }
       if (chord && event.key.toLowerCase() === 'f') {
         event.preventDefault();
         setFocusMode((current) => !current);
@@ -342,7 +358,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [beats, selectedBeat, inspectorOpen, timelineOpen, setInspectorOpen, setTimelineOpen]);
+  }, [beats, selectedBeat, inspectorOpen, timelineOpen, setInspectorOpen, setTimelineOpen, project]);
 
   useEffect(() => {
     void window.vcwriter.accountStatus().then((result) => {
@@ -547,6 +563,12 @@ export default function App() {
           return setPreferencesOpen(true);
         case 'file.close':
           return project.closeProject();
+
+        // The same act the keys do (§6c): one undo for the whole program.
+        case 'editor.undo':
+          return project.undo();
+        case 'editor.redo':
+          return project.redo();
 
         case 'editor.find':
           return setFinding('find');

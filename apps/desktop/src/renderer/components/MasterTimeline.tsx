@@ -43,6 +43,7 @@ import {
   type ProjectFile,
   type StoryLayout,
   type StorySpan,
+  type StructuralUnit,
   type StructuralUnitId,
   type ThreadLayout,
   type TimelineArc,
@@ -810,6 +811,7 @@ function TrackRow({
   const [askingRemove, setAskingRemove] = useState(false);
   /** The far end of a run picked with shift (§6b); the near end is the selection. */
   const [markedTo, setMarkedTo] = useState<BeatId | null>(null);
+  const [markedUnitTo, setMarkedUnitTo] = useState<StructuralUnitId | null>(null);
   const removal = trackRemoval(file, track.id);
   const unitWord = nouns.unit.toLowerCase();
   const subWord = nouns.sub.toLowerCase();
@@ -835,6 +837,31 @@ function TrackRow({
   const marked = (beat: Beat, unitId: StructuralUnitId): BeatId[] => {
     const run = markedRun(unitId);
     return run.includes(beat.id) ? run : [beat.id];
+  };
+
+  /**
+   * The same gesture one level up (§6b, from Ken: *we need to be able to do
+   * the same with sections… we need to be able to click the two sections and
+   * re-merge them*).
+   *
+   * The far end is held here and the near end is the project's chosen unit, so
+   * a plain click clears it exactly as a beat's does. The run is taken along
+   * **this track** rather than along the story, because the story order runs
+   * across the tracks and a run picked through a subplot would offer to join
+   * scenes that are not neighbours on the screen.
+   */
+  const unitsHere = (): StructuralUnit[] => unitsInStoryOrder(file).filter((one) => one.trackId === track.id);
+  const markedUnits = (): StructuralUnitId[] => {
+    if (!markedUnitTo || !selectedUnitId) return [];
+    const order = unitsHere();
+    const from = order.findIndex((one) => one.id === selectedUnitId);
+    const to = order.findIndex((one) => one.id === markedUnitTo);
+    if (from < 0 || to < 0) return [];
+    return order.slice(Math.min(from, to), Math.max(from, to) + 1).map((one) => one.id);
+  };
+  const unitRunFor = (unitId: StructuralUnitId): StructuralUnitId[] => {
+    const run = markedUnits();
+    return run.includes(unitId) ? run : [unitId];
   };
 
   const beatMenu = (unitId: StructuralUnitId, beat: Beat, index: number): MenuEntry[] => {
@@ -868,21 +895,28 @@ function TrackRow({
     // The one before it in the story, which is what *join these* means at this
     // level: a section absorbed into the section above it (§6b, from Ken:
     // *in the subsections, you should be able to either join those*).
-    const order = unitsInStoryOrder(file).filter((one) => one.trackId === track.id);
+    const order = unitsHere();
     const at = order.findIndex((one) => one.id === unitId);
     const before = at > 0 ? order[at - 1]! : null;
-    const offer = before ? unitsJoin(file, [before.id, unitId], unitWord) : { may: false as const, why: `It is the first ${unitWord} on the track.` };
+    // What was picked with shift, or — where nothing was — this one and the
+    // one before it, which is what *join this in* means with a single click.
+    const run = unitRunFor(unitId);
+    const pair = run.length > 1 ? run : before ? [before.id, unitId] : [];
+    const offer =
+      pair.length > 1
+        ? unitsJoin(file, pair, unitWord)
+        : { may: false as const, why: `It is the first ${unitWord} on the track.` };
     return [
       ...(onOpenUnit ? [{ label: `Open the ${unitWord}`, onPick: () => onOpenUnit(unitId) }] : []),
       { label: `Add a ${subWord}`, onPick: () => onUpdate((current) => addBeat(current, { unitId, title: `New ${subWord}` }).file) },
       { label: collapsed ? 'Expand' : 'Collapse', onPick: () => onUpdate((current) => updateUnit(current, unitId, { collapsed: !collapsed })) },
       {
-        label: `Join it into the ${unitWord} before`,
+        label: run.length > 1 ? `Merge ${run.length} ${nouns.unitPlural.toLowerCase()}` : `Join it into the ${unitWord} before`,
         disabled: offer.may ? null : offer.why,
         note: offer.may ? offer.says : null,
         onPick: () =>
           onUpdate((current) => {
-            const joined = before ? joinUnits(current, [before.id, unitId]) : current;
+            const joined = pair.length > 1 ? joinUnits(current, pair) : current;
             return typeof joined === 'string' ? current : joined;
           }),
       },
@@ -1084,7 +1118,9 @@ function TrackRow({
         return (
           <article
             key={unit.id}
-            className={`block${collapsed ? ' collapsed' : ''}${atPlayhead}${chosen}${off}${dropClass(drag.dropTarget, unit.id)}`}
+            className={`block${collapsed ? ' collapsed' : ''}${atPlayhead}${chosen}${off}${
+              markedUnits().includes(unit.id) ? ' marked' : ''
+            }${dropClass(drag.dropTarget, unit.id)}`}
             style={{ borderTopColor: track.color }}
             title={unit.inScript ? undefined : `Switched off: not in the script`}
             onDragOver={(event) => unitDragOver(event, unit.id)}
@@ -1097,13 +1133,27 @@ function TrackRow({
               className="block-head"
               draggable
               title={onOpenUnit ? `Click to select this ${noun}, double-click to open it` : undefined}
-              onClick={() => {
+              onClick={(event) => {
+                if (event.shiftKey && selectedUnitId && selectedUnitId !== unit.id) {
+                  setMarkedUnitTo(unit.id);
+                  return;
+                }
+                setMarkedUnitTo(null);
                 onSelectUnit?.(unit.id, track.id);
                 const first = beats[0];
                 if (first) onSelectBeat(first.id);
               }}
               onDoubleClick={() => onOpenUnit?.(unit.id)}
-              onContextMenu={(event) => openMenu(event, `What to do with this ${unitWord}`, unitMenu(unit.id, Boolean(collapsed)))}
+              onContextMenu={(event) => {
+                // A right-click inside the run leaves it alone, as a beat's does.
+                if (!unitRunFor(unit.id).includes(unit.id) || markedUnits().length === 0) {
+                  if (!markedUnits().includes(unit.id)) {
+                    setMarkedUnitTo(null);
+                    onSelectUnit?.(unit.id, track.id);
+                  }
+                }
+                openMenu(event, `What to do with this ${unitWord}`, unitMenu(unit.id, Boolean(collapsed)));
+              }}
               onDragStart={(event) => {
                 event.stopPropagation();
                 drag.begin({ kind: 'unit', id: unit.id, fromTrackId: track.id }, event);

@@ -14515,3 +14515,9 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
   background: color-mix(in srgb, var(--gold) 16%, transparent);
   border-color: var(--gold-deep);
 }
+
+/* A run of scenes picked with shift (addendum 02 §6b). The same tint the
+   beats wear, so one gesture reads the same at both levels. */
+.block.marked > .block-head {
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+}

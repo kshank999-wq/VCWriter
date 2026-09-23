@@ -269,6 +269,47 @@ describe('master timeline', () => {
     expect(after.map((beat) => beat.title)).toEqual(['Opening beat', 'Third beat']);
   });
 
+  /**
+   * The same gesture one level up (§6b, from Ken: *we need to be able to do
+   * the same with sections… click the two sections and re-merge them*).
+   */
+  it('picks a run of scenes with shift and merges it, and joins a single one into the scene before', () => {
+    let initial = twoTracks();
+    const opening = unitsInStoryOrder(initial)[0]!;
+    const second = addUnit(initial, { trackId: opening.trackId, title: 'The Return', index: 1 });
+    initial = addBeat(second.file, { unitId: second.unit.id, title: 'over there' }).file;
+    let latest: ProjectFile = initial;
+    render(
+      <Harness initial={initial}>
+        {(file, update, selected, select) => {
+          latest = file;
+          return (
+            <MasterTimeline file={file} selectedBeatId={selected} onSelectBeat={select} onUpdate={update} pixelsPerPage={120} onZoom={() => undefined} inspectorOpen onToggleInspector={() => undefined} onAddScene={() => undefined} onAddBeat={() => undefined} onAddTrack={() => undefined} onAddAct={() => undefined} onOpenTrack={() => undefined} />
+          );
+        }}
+      </Harness>,
+    );
+    const head = (title: string) => screen.getAllByText(new RegExp(title))[0]!.closest('header') as HTMLElement;
+
+    // The first on its track has nothing before it, and says so rather than
+    // hiding the item.
+    fireEvent.contextMenu(head('Opening Scene'), { clientX: 40, clientY: 40 });
+    const first = screen.getByRole('menuitem', { name: /Join it into the scene before/ }) as HTMLButtonElement;
+    expect(first.disabled).toBe(true);
+    expect(first.title).toMatch(/first scene on the track/);
+    fireEvent.keyDown(first, { key: 'Escape' });
+
+    // The one after it joins in, and the menu says what that would do.
+    fireEvent.contextMenu(head('The Return'), { clientX: 40, clientY: 40 });
+    const join = screen.getByRole('menuitem', { name: /Join it into the scene before/ }) as HTMLButtonElement;
+    expect(join.disabled).toBe(false);
+    expect(document.querySelector('.context-item-note')?.textContent).toMatch(/2 scenes become one/);
+    fireEvent.click(join);
+    expect(unitsInStoryOrder(latest).filter((one) => one.trackId === opening.trackId)).toHaveLength(1);
+    // Not a word moves: the absorbed scene's beat is in the one that is left.
+    expect(beatsForUnit(latest, opening.id).map((beat) => beat.title)).toContain('over there');
+  });
+
   it('makes a scene of a beat dropped past the last scene, or on another track’s empty slot', () => {
     let initial = twoTracks();
     const opening = unitsInStoryOrder(initial)[0]!;
