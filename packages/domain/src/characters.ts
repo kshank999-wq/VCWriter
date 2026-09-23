@@ -1,5 +1,5 @@
 import { sortByOrderKey } from './ordering.js';
-import { onlyLiving } from './graveyard.js';
+import { living, onlyLiving } from './graveyard.js';
 import { beatsInStoryOrder } from './selectors.js';
 import type { ProjectFile } from './project-file.js';
 import type { ProjectFormat } from './entities/project.js';
@@ -149,6 +149,24 @@ export const charactersCalled = (file: ProjectFile, cue: string): Character[] =>
     [character.name, ...character.aliases].some((name) => cueKey(name) === key),
   );
 };
+
+/**
+ * Everybody **in the working cast** a cue could be (addendum 24 §5o).
+ *
+ * `charactersCalled`'s twin, and the pair is the §5l edge said of one module.
+ * That one answers *is this cue a person the project knows*, which is a
+ * question about the **script**, so it must count the buried — otherwise a
+ * deleted MARA's cue reads as an unknown name and `notedCast` files a second
+ * MARA beside her. This one answers *who is speaking here*, which is a
+ * question about the **cast**, so it must not.
+ *
+ * Three readings used to walk the first one and write `!person.archived` for
+ * themselves, which was the whole answer before the graveyard and half of one
+ * after it — so a deleted person went on speaking in a beat, standing in the
+ * review and being carried into the next episode.
+ */
+export const castCalled = (file: ProjectFile, cue: string): Character[] =>
+  charactersCalled(file, cue).filter((person) => living(person) && !person.archived);
 
 /** Whether the project already knows this person, by name or by an alias. */
 export const knowsCharacter = (file: ProjectFile, name: string): Character | null => {

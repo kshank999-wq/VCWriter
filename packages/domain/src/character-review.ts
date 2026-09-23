@@ -10,7 +10,7 @@ import {
   type CharacterWork,
   type UsageColour,
 } from './character-creator.js';
-import { charactersCalled } from './characters.js';
+import { castCalled, charactersCalled, workingCast } from './characters.js';
 import type {
   CharacterId,
   CharacterTraitId,
@@ -401,8 +401,7 @@ export const scriptPresence = (file: ProjectFile, filter: WorkFilter = {}): Pres
     if (!wanted(unitId)) continue;
     for (const element of beat.manuscript.elements) {
       if (element.type !== 'character') continue;
-      for (const person of charactersCalled(file, element.text)) {
-        if (person.archived) continue;
+      for (const person of castCalled(file, element.text)) {
         const key = person.id as string;
         if (!tally.has(key)) tally.set(key, new Map());
         const scenes = tally.get(key)!;
@@ -505,8 +504,10 @@ export const cuesWithoutCharacter = (file: ProjectFile): UnknownCue[] => {
  */
 export const castNeverSpoken = (file: ProjectFile): CharacterId[] => {
   const speaks = new Set(scriptPresence(file).map((row) => row.characterId as string));
-  return file.characters
-    .filter((person) => !person.archived && !speaks.has(person.id as string))
+  // `workingCast` rather than a filter of its own (addendum 24 §5o): this is a
+  // reading over the cast list, so somebody deleted is not in it.
+  return workingCast(file)
+    .filter((person) => !speaks.has(person.id as string))
     .map((person) => person.id);
 };
 

@@ -8,7 +8,7 @@ import type { TitlePage } from './entities/title-page.js';
 import { countWords } from './entities/manuscript.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { markerNumber, markerNoun, markerNumbering as numberingOf } from './markers.js';
-import { castByCategory, castInCueOrder, charactersCalled, charactersIn } from './characters.js';
+import { castByCategory, castCalled, castInCueOrder, charactersIn } from './characters.js';
 import { workingSetups } from './setups.js';
 import type { ProjectFile } from './project-file.js';
 import type { Beat, Track, StructuralUnit, StoryMarker } from './entities/structure.js';
@@ -231,8 +231,8 @@ export const castForNewEpisode = (file: ProjectFile, carry: EpisodeCarry): Chara
         // then matched whole. Testing whether a cue *starts with* the name
         // would carry MARA into the next episode because MARABEL spoke in
         // this one.
-        for (const person of charactersCalled(file, element.text)) {
-          if (!person.archived) cast.set(person.id as string, person.id);
+        for (const person of castCalled(file, element.text)) {
+          cast.set(person.id as string, person.id);
         }
       }
     }

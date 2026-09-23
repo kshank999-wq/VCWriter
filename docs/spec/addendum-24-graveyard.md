@@ -561,6 +561,51 @@ has; it is the display of a link that still exists, pointing at a record that
 still exists, and answering *Missing element* there would be the one thing the
 graveyard promises is untrue.
 
+## 5o. Characters again, and the last half of the module
+
+From Ken: *I need a delete for characters too* — the third ask about this one.
+§5c built the delete and the ask; §5i swept the six renderer surfaces that
+listed a person. This found the half neither looked at: the readings that start
+at the **manuscript** and arrive at a person.
+
+`peopleSpeakingIn`, `scriptPresence` and `castForNewEpisode` each walk the
+cues, ask `charactersCalled` who is speaking, and then write `!person.archived`
+for themselves — the whole answer before the graveyard and half of one after
+it. So a deleted character went on speaking in her beat, standing in the
+script-presence review and being carried into the next episode's cast, while
+being off every list in the program.
+
+A **fourth** turned up only by driving the real room, with 2100 tests green:
+`castNeverSpoken` — *in the cast, not yet speaking* — filtered the collection
+itself, so the Character review drew a deleted MARA under that heading a second
+after she left the menu beside it. It is the plainest case of all and the
+easiest to miss, because the word *cast* is in its name and it still went to
+`file.characters`; it asks `workingCast` now.
+
+The fix is **one reading rather than three filters**, but the shape of it is
+the interesting part, because §5l's edge turns out to be about *this module*
+more than about locations. The two questions look alike and are not:
+
+- *Is this cue somebody the project knows?* — a question about the **script**.
+  `charactersCalled` answers it over the **whole collection**, buried included,
+  and must: `cuesWithoutCharacter` and `notedCast` read it, and if a deleted
+  MARA's cue read as an unknown name, `notedCast` would file a second MARA
+  beside her. That is the delete becoming a duplicate again.
+- *Who is speaking here?* — a question about the **cast**. `castCalled` is that
+  one, and it is `charactersCalled` narrowed to the working cast.
+
+So the pair sit beside each other in `characters.ts` with the distinction
+written between them, which is the only way it survives the next person to read
+it. `cast-script-surfaces.test.ts` walks all six: the four that must lose her and
+the two that must keep her, each asserting she **was** there first, so a
+reading that never showed anything cannot pass by accident.
+
+**This closes the graveyard.** Every record that can be deleted has a delete on
+its own row, every reading over the writer's records asks its module's one
+function, every reading over the manuscript asks the whole collection, and both
+halves are pinned by a surfaces test per module. The next ask of this shape
+should find nothing.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -606,3 +651,7 @@ graveyard promises is untrue.
   forget it, and said before the press on both the manuscript's dialog and the
   panel's form; the research menu's Links count routed through
   `threadsInOrder`.
+- `castCalled` beside `charactersCalled`, with the distinction between them
+  written down, read by `peopleSpeakingIn`, `scriptPresence` and
+  `castForNewEpisode`; `cast-script-surfaces.test.ts` walks the three that must
+  lose a deleted person and the two that must keep her.

@@ -2051,6 +2051,35 @@ push live; the build takes a minute or two.
   is not a listing of what the writer has but the display of a link that still
   exists pointing at a record that still exists — *Missing element* there would
   be the one thing the graveyard promises is untrue.
+  **§5o is characters a third time, and it closes the module.** §5c built the
+  delete, §5i swept the six renderer surfaces that *listed* a person, and this
+  found the half neither looked at: the readings that start at the
+  **manuscript** and arrive at a person. `peopleSpeakingIn`, `scriptPresence`
+  and `castForNewEpisode` each walk the cues, ask `charactersCalled`, then
+  write `!person.archived` for themselves — so a deleted character went on
+  speaking in her beat, standing in the review and riding into the next
+  episode's cast while being off every list in the program. The fix is one
+  reading rather than three filters, and its shape is **§5l's edge, which turns
+  out to be about this module more than about locations**: *is this cue
+  somebody the project knows* is a question about the **script**, so
+  `charactersCalled` reads the **whole collection** and must (`notedCast` would
+  otherwise file a second MARA beside the buried one — the delete becoming a
+  duplicate again); *who is speaking here* is a question about the **cast**, so
+  `castCalled` is that one narrowed to the working cast. The pair sit beside
+  each other in `characters.ts` with the distinction written between them,
+  which is the only way it survives the next reader.
+  A **fourth** turned up only by driving the real room with 2100 tests green:
+  `castNeverSpoken` — *in the cast, not yet speaking* — filtered the collection
+  itself, so the Character review drew a deleted MARA under that heading a
+  second after she left the menu beside it; the plainest case of the lot and
+  the easiest to miss, because the word *cast* is in its name and it still went
+  to `file.characters`. `cast-script-surfaces.test.ts` walks all six — the four
+  that must lose her and the two that must keep her, each asserting she **was**
+  there first.
+  **The graveyard is done**: every deletable record has a delete on its own
+  row, every reading over the writer's records asks its module's one function,
+  every reading over the manuscript asks the whole collection, and both halves
+  are pinned by a surfaces test per module.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

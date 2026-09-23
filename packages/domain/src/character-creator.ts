@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { id, nowIso, orderKey, timestamps } from './entities/common.js';
 import { storyEntityRefSchema } from './entities/links.js';
-import { charactersCalled, workingCast } from './characters.js';
+import { castCalled, workingCast } from './characters.js';
 import { orderKeyBetween } from './ordering.js';
 import { newId } from './ids.js';
 import type {
@@ -1011,11 +1011,12 @@ export const peopleSpeakingIn = (file: ProjectFile, beat: Beat): CharacterId[] =
   const found: CharacterId[] = [];
   for (const element of beat.manuscript.elements) {
     if (element.type !== 'character') continue;
-    // `charactersCalled` is the cast list's own rule — extensions and the dual
-    // caret stripped, then matched whole. Matching a cue by its opening letters
-    // would put MARABEL's lines in MARA's scene.
-    for (const person of charactersCalled(file, element.text)) {
-      if (!person.archived && !found.includes(person.id)) found.push(person.id);
+    // `castCalled` is the cast list's own rule — extensions and the dual
+    // caret stripped, then matched whole — over the working cast, so somebody
+    // deleted does not go on speaking here (addendum 24 §5o). Matching a cue by
+    // its opening letters would put MARABEL's lines in MARA's scene.
+    for (const person of castCalled(file, element.text)) {
+      if (!found.includes(person.id)) found.push(person.id);
     }
   }
   return found;
