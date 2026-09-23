@@ -540,9 +540,37 @@ describe('the room', () => {
     expect(contentsDivisions(latest as ProjectFile).map((placed) => placed.marker.title)).toEqual(['The Lamp']);
     // The words are still there: the sections joined the chapter before them.
     expect((latest as ProjectFile).beats.flatMap((beat) => beat.manuscript.elements.map((one) => one.text))).toContain('Chapter 2 begins.');
-    // The rail has a divider to drag, starting half an inch wider than it was.
+    // The rail has a divider to drag, and starts wide enough to read a row
+    // whole (addendum 20 §9b, from Ken: *the left toolbar needs to be sized so
+    // you can see everything*). A machine that has dragged it keeps its own.
     expect(screen.getByRole('separator', { name: 'Rail width' })).toBeDefined();
-    expect((document.querySelector('.layout-rail') as HTMLElement).style.flex).toBe('0 0 288px');
+    expect((document.querySelector('.layout-rail') as HTMLElement).style.flex).toBe('0 0 360px');
+  });
+
+  /**
+   * Turning the leaf (addendum 20 §9b, from Ken: *next to the page on the left
+   * and next to the page on the right, let's put a large arrow*).
+   *
+   * They stand **beside** the spread rather than in the foot, and the foot's
+   * own small pair is gone: two answers to *turn the page* on one screen.
+   */
+  it('turns the page with an arrow either side of the spread', () => {
+    render(<Harness initial={novel()} />);
+
+    const back = screen.getByRole('button', { name: 'Previous spread' });
+    const on = screen.getByRole('button', { name: 'Next spread' });
+    const viewport = document.querySelector('.layout-viewport') as HTMLElement;
+    expect(viewport.contains(back)).toBe(true);
+    expect(viewport.contains(on)).toBe(true);
+    // Not in the foot, which keeps the scrubber for moving a long way at once.
+    const foot = document.querySelector('.layout-foot') as HTMLElement;
+    expect(foot.contains(back)).toBe(false);
+    expect(foot.querySelector('input[type="range"]')).toBeDefined();
+
+    // The first spread has nothing before it; turning once gives it one.
+    expect((back as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(on);
+    expect((back as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('takes a story added by accident away whole, its empty section with it', () => {

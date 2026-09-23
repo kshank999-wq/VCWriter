@@ -307,6 +307,16 @@ export interface BookBlock {
   opensChapter?: boolean;
   /** The part this block belongs to, where it belongs to one. */
   partId?: string;
+  /**
+   * The unit this block **opens**, on the first block of each one.
+   *
+   * `partId`'s twin for the story half, and it exists for one reason: the
+   * Layout rail lists a collection's chapters by their unit (addendum 22 §6),
+   * so without it nothing on a laid page carried that id and the row could
+   * neither show its page nor turn to it — a Roman numeral that sat there
+   * doing nothing while every other row worked.
+   */
+  unitId?: string;
   /** How a designed page is set (addendum 20 §9), resolved from the part. */
   partStyle?: PartStyle;
   /**
@@ -866,11 +876,19 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
     // stays the story's, because a reader turning the page wants to know
     // which story they are in and not which numeral.
     let atSectionHead = chapters && !placed;
+    // The first block of the unit carries it, whatever that block turns out
+    // to be: a section with a heading and one without both need a page the
+    // rail can find, and the heading is not guaranteed.
+    let atUnitHead = true;
     for (const beat of beatsInScript(file, unit.id)) {
       for (const element of beat.manuscript.elements) {
         if (element.text.trim().length === 0 && element.type !== 'scene_break' && element.type !== 'figure') continue;
         const made = elementBlock(element, chapterTitle, opensChapter && element.type === 'paragraph');
         if (!made) continue;
+        if (atUnitHead) {
+          atUnitHead = false;
+          made.unitId = unit.id as string;
+        }
         if (atSectionHead) {
           atSectionHead = false;
           if (made.kind === 'heading') {

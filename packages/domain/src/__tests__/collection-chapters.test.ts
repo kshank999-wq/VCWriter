@@ -182,4 +182,43 @@ describe('the chapters on the Layout rail', () => {
     // And the page stops opening there.
     expect(bookBlocks(after).filter((one) => one.kind === 'heading').map((one) => one.text)).toEqual(['III']);
   });
+
+  /**
+   * Addendum 20 §9b, from Ken: *when you select the Roman numeral under the
+   * story, it needs to pop to that page like the other pages do*.
+   *
+   * The rail lists a chapter inside a story by its **unit**, while the block
+   * that opens it carried the **heading element's** id — so nothing on a laid
+   * page held the row's id, and the row could neither show its page nor turn
+   * to it. `unitId` on the first block of each unit is what joins them, the
+   * way `partId` already joins a part's row to its page.
+   */
+  it('gives every chapter row a block on the page it opens', () => {
+    const file = collection();
+    const blocks = bookBlocks(file);
+    const rows = bookRows(file).filter((row) => row.kind === 'section');
+    expect(rows.map((row) => row.title)).toEqual(['II', 'III']);
+
+    for (const row of rows) {
+      const opener = blocks.find((block) => block.unitId === row.id);
+      expect(opener, `${row.title} has no block carrying its unit`).toBeDefined();
+      // It is the numeral itself, which is what opens the page.
+      expect(opener!.text).toBe(row.title);
+      expect(opener!.starts).toBe('page');
+    }
+
+    // One block per unit and never more, or the rail would find whichever
+    // page `find` reached first rather than the one it opens on.
+    const stamped = blocks.filter((block) => block.unitId !== undefined).map((block) => block.unitId);
+    expect(new Set(stamped).size).toBe(stamped.length);
+  });
+
+  it('gives a section with no heading one too, so its row still finds a page', () => {
+    const file = collection();
+    // The story's own first section is untitled and carries no numeral.
+    const first = storiesOf(file)[0]!.sections[0]!;
+    const opener = bookBlocks(file).find((block) => block.unitId === (first.id as string));
+    expect(opener).toBeDefined();
+    expect(opener!.kind).toBe('paragraph');
+  });
 });

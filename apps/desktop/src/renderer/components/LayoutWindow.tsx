@@ -174,7 +174,10 @@ const pageOf = (laying: Laying, id: string): BookPage | undefined => {
   return laying.laid.pages.find((candidate) =>
     candidate.pieces.some((piece) => {
       const block = blocks.get(piece.blockId);
-      return block !== undefined && (block.id === id || block.partId === id || block.inset?.figureId === id);
+      return (
+        block !== undefined &&
+        (block.id === id || block.partId === id || block.unitId === id || block.inset?.figureId === id)
+      );
     }),
   );
 };
@@ -224,7 +227,12 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
    * dragged out, and by default a half inch wider*): a divider the writer
    * drags, remembered per machine, starting half an inch wider than it was.
    */
-  const rail = useSplit({ key: 'layout.rail', initial: 288, min: 200, reserve: 720, axis: 'x' });
+  // Wide enough to read a row whole (from Ken: *the left toolbar needs to be
+  // sized so you can see everything*). A row carries a name, the page it opens
+  // on and a ×, and at 288 a story called *The Lamp and the Lighthouse* was
+  // cut off. Only a machine that has never dragged the divider takes this:
+  // `useSplit` remembers, so nobody's own width is overwritten.
+  const rail = useSplit({ key: 'layout.rail', initial: 360, min: 220, reserve: 720, axis: 'x' });
   const [message, setMessage] = useState<string | null>(null);
   /** The Add menu, open at the button (§9a). */
   const [addMenu, setAddMenu] = useState<{ x: number; y: number } | null>(null);
@@ -708,6 +716,21 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         <div className="divider vertical" role="separator" aria-label="Rail width" aria-orientation="vertical" title="Drag to widen the rail" {...rail.dividerProps} />
 
         <div className="layout-stage">
+          {/* A big arrow either side of the spread, the way pictures are
+              turned on a web page (§9b, from Ken). They stand **beside** the
+              spread rather than over it — a page being set is the thing to
+              look at, and an arrow laid across the corner of it is in the way.
+              The scrubber at the foot stays, for moving a long way at once. */}
+          <div className="layout-viewport">
+            <button
+              type="button"
+              className="layout-turn"
+              aria-label="Previous spread"
+              disabled={spread === 0}
+              onClick={() => setSpread((current) => Math.max(0, current - 1))}
+            >
+              <span aria-hidden="true">‹</span>
+            </button>
           {laying ? (
             <Spreads
               laying={laying}
@@ -772,16 +795,17 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           ) : (
             <p className="muted empty-state">Setting the book…</p>
           )}
-          <div className="layout-foot">
             <button
               type="button"
-              className="ghost"
-              aria-label="Previous spread"
-              disabled={spread === 0}
-              onClick={() => setSpread((current) => Math.max(0, current - 1))}
+              className="layout-turn"
+              aria-label="Next spread"
+              disabled={spread >= spreadCount - 1}
+              onClick={() => setSpread((current) => Math.min(spreadCount - 1, current + 1))}
             >
-              ←
+              <span aria-hidden="true">›</span>
             </button>
+          </div>
+          <div className="layout-foot">
             <input
               type="range"
               aria-label="Which spread"
@@ -790,15 +814,6 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               value={Math.min(spread, spreadCount - 1)}
               onChange={(event) => setSpread(Number(event.target.value))}
             />
-            <button
-              type="button"
-              className="ghost"
-              aria-label="Next spread"
-              disabled={spread >= spreadCount - 1}
-              onClick={() => setSpread((current) => Math.min(spreadCount - 1, current + 1))}
-            >
-              →
-            </button>
             <span className="muted small">{describeSpread(pages, spread)}</span>
             <label className="zoom">
               <span className="muted">Zoom</span>

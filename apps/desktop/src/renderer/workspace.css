@@ -9112,8 +9112,11 @@ a.talk-mark:hover {
   overflow: auto;
   padding: 24px;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  /* Centred both ways, so the spread sits where the turn arrows are rather
+     than at the top of a tall black field. `safe` keeps the top of a spread
+     taller than the window reachable instead of cutting it off. */
+  justify-content: safe center;
+  align-items: safe center;
 }
 
 .layout-spread-box {
@@ -9140,6 +9143,45 @@ a.talk-mark:hover {
 
 .layout-no-sheet {
   box-shadow: none;
+}
+
+/*
+ * Turning the leaf (addendum 20 §9b, from Ken): a large arrow either side of
+ * the spread, the way pictures are turned on a web page. It sits over the
+ * stage rather than beside it, so the spread keeps the whole width and the
+ * arrows stay put as the zoom changes.
+ */
+.layout-viewport {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.layout-turn {
+  flex: 0 0 auto;
+  align-self: center;
+  margin: 0 8px;
+  width: 44px;
+  height: 96px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  line-height: 1;
+  border-radius: 8px;
+  opacity: 0.7;
+}
+
+.layout-turn:hover:not(:disabled),
+.layout-turn:focus-visible {
+  opacity: 1;
+}
+
+.layout-turn:disabled {
+  opacity: 0.15;
 }
 
 .layout-foot {

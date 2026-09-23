@@ -1504,6 +1504,28 @@ push live; the build takes a minute or two.
   that chapter**; a figure in the writing is not draggable and says so. A
   double-click opens the one thing that sets that page, from the row or from
   the page on the spread, which are the same act.
+  **§9b is turning the pages, and a rail you can read**, from Ken after
+  setting a book. The rail opened at 288px, which fits *Copyright* and not
+  *The Lamp and the Lighthouse*; it opens at **360** now, and only on a
+  machine that has never dragged the divider, the width being remembered per
+  machine. **A chapter inside a story did nothing when chosen** — every other
+  row turns to its page and shows the page it opens on, and the Roman numerals
+  under a story showed neither. The cause is the join addendum 22 §6 left
+  open: the rail lists one of those by its **unit** while the block that opens
+  it is the **heading element** and carries that element's id, so nothing on
+  any laid page held the row's id. **`unitId` on `BookBlock`** joins them, set
+  on the *first* block of each unit (so the page found is the one it opens on)
+  and whatever that block is (a section with no heading still has a row), read
+  by `pageOf` the way `partId` already joins a part's row to its page — no
+  second reading, no unit-to-page map kept anywhere, nothing stored. **And the
+  pages turn with an arrow**: a large one either side of the spread, the way
+  pictures are turned on a web page, **beside** it rather than over it (a page
+  being set is the thing to look at, and an arrow across its corner is in the
+  way), with the scrubber left at the foot for moving a long way at once and
+  the foot's own small ← and → **gone**, two answers to *turn the page* on one
+  screen. Putting them beside the spread meant centring it in the viewport,
+  which it had never been — it hugged the top, so the arrows sat well below
+  the page they turn.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

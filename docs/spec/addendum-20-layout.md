@@ -906,6 +906,43 @@ A double-click opens the one thing that sets that page — a part's dialog, a
 chapter's own page — from the row or from the page on the spread, which are
 the same act.
 
+## 9b. Turning the pages, and a rail you can read
+
+Three things from Ken after setting a book in the room, and the middle one is
+a real fault rather than a preference.
+
+**The rail was too narrow.** It opened at 288px, which fits *Copyright* and
+not *The Lamp and the Lighthouse* — and a rail whose job is to list the book's
+parts by name cannot cut their names off. It opens at 360 now. Only a machine
+that has never dragged the divider takes it: the width is remembered per
+machine, so nobody's own setting is overwritten by the new default.
+
+**A chapter inside a story did nothing when chosen.** Every other row turns to
+its page and shows the page it opens on; the Roman numerals under a story
+showed no page and turned to nothing. The cause is exactly the join §6 of
+addendum 22 leaves open: the rail lists a chapter-inside-a-story by its
+**unit**, while the block that opens it is the **heading element** and carries
+that element's id — so nothing on any laid page held the row's id, and the room
+had no way to find the page. `unitId` on `BookBlock` is what joins them, set on
+the first block of each unit and read by the room the same way `partId` already
+joins a part's row to its page. It is set on the *first* block rather than on
+every one of them, so the page found is the page the section opens on; and on
+the first block whatever that block is, since a section with no heading still
+has a row and still needs a page.
+
+Worth noting what this did **not** need: no second reading, no map from units
+to pages kept anywhere, and nothing stored. The block already travels to the
+page; it simply was not carrying which section it began.
+
+**And the pages turn with an arrow.** A large arrow either side of the spread,
+the way pictures are turned on a web page, with the scrubber left at the foot
+for moving a long way at once. They stand **beside** the spread rather than
+over it: a page being set is the thing to look at, and an arrow laid across its
+corner is in the way. The foot's own small ← and → are gone — two answers to
+*turn the page* on one screen, and these are the answer. Putting the arrows
+beside the spread also meant centring it in the viewport, which it had never
+been: it hugged the top, so the arrows sat well below the page they turn.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.
