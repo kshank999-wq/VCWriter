@@ -4,6 +4,7 @@ import {
   THEMATIC_STATES,
   addMotif,
   addTheme,
+  buriedThematicNamed,
   countOf,
   motifsInOrder,
   motifsOfTheme,
@@ -12,6 +13,7 @@ import {
   relateMotifToTheme,
   removeMotif,
   removeTheme,
+  restoreFromGraveyard,
   describeDeleting,
   themesInOrder,
   themesOfMotif,
@@ -82,10 +84,18 @@ export function ThemesPanel({ file, onUpdate, onGoTo }: ThemesPanelProps) {
   );
   const count = ownerId ? countOf(file, kind, ownerId) : { total: 0, resolved: 0, orphans: 0 };
 
+  // One of this name in the graveyard (addendum 24 §5m): typing it again used
+  // to make a rival with its own occurrence list.
+  const alreadyBuried = buriedThematicNamed(file, kind, draft);
+
   const make = () => {
     const name = draft.trim();
     if (name.length === 0) return;
-    onUpdate((current) => (kind === 'theme' ? addTheme(current, { name }).file : addMotif(current, { name }).file));
+    onUpdate((current) => {
+      const buried = buriedThematicNamed(current, kind, name);
+      if (buried) return restoreFromGraveyard(current, { kind, id: buried.id as string });
+      return kind === 'theme' ? addTheme(current, { name }).file : addMotif(current, { name }).file;
+    });
     setDraft('');
   };
 
@@ -147,8 +157,16 @@ export function ThemesPanel({ file, onUpdate, onGoTo }: ThemesPanelProps) {
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
           />
-          <button type="submit">{kind === 'theme' ? 'Add theme' : 'Add motif'}</button>
+          <button type="submit">
+            {alreadyBuried ? 'Put it back' : kind === 'theme' ? 'Add theme' : 'Add motif'}
+          </button>
         </form>
+        {alreadyBuried ? (
+          <p className="muted small">
+            {alreadyBuried.name} is in the graveyard. This puts it back with everything that was
+            on it rather than starting a second one.
+          </p>
+        ) : null}
       </aside>
 
       <section className="thematics-detail">

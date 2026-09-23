@@ -1,5 +1,5 @@
 import { newId } from './ids.js';
-import { onlyLiving, sendToGraveyard } from './graveyard.js';
+import { living, onlyLiving, sendToGraveyard } from './graveyard.js';
 import { nowIso } from './entities/common.js';
 import { beatsForUnit, findUnit, unitsInStoryOrder } from './selectors.js';
 import { usageLinkSchema, type UsageLink } from './character-creator.js';
@@ -77,16 +77,18 @@ export const updateTheme = (
 });
 
 /**
- * Take a theme away, and its occurrences with it.
+ * Take a theme away — and its occurrences stay exactly where they are.
  *
- * §3 asks the question and this is the answer: an occurrence is a link *to* the
- * theme, so a theme that is gone leaves links to nothing. What survives is the
- * writing — the passage is untouched, which is the only thing that would be a
+ * The sentence here used to say the opposite (*and its occurrences with it*),
+ * which was true while a delete destroyed and became false the day burying
+ * started **keeping** them so restoring could give the theme back whole — the
+ * same fault as the thread's sentence in addendum 24 §5e, found in a comment
+ * rather than on a screen. `destroyTheme` below is the one that cuts them, and
+ * only the graveyard calls it.
+ *
+ * Either way the writing is untouched, which is the only thing that would be a
  * loss.
  */
-  // Deleting sends it to the graveyard rather than destroying it
-  // (addendum 24): it keeps its place and gains a stamp, so everything
-  // pointing at it goes on pointing at it and restoring is clearing a field.
 export const removeTheme = (file: ProjectFile, themeId: ResearchThemeId): ProjectFile =>
   sendToGraveyard(file, { kind: 'theme', id: themeId as string });
 
@@ -194,6 +196,32 @@ export const unrelateMotifFromTheme = (
  */
 export const themesInOrder = (file: ProjectFile): ResearchTheme[] => onlyLiving(file.themes ?? []);
 export const motifsInOrder = (file: ProjectFile): ResearchMotif[] => onlyLiving(file.motifs ?? []);
+
+/**
+ * A deleted theme or motif already carrying this name (addendum 24 §5m).
+ *
+ * The one reading in the module that must look at the **buried**, and it is
+ * the locations rule (§5l) in a module where the name is free text rather
+ * than a heading: both places that make one of these — the manuscript's *Tag
+ * a theme or a motif…* and the panel's own box — take a **typed name**, and
+ * neither could see that *Grief* was in the graveyard. Typing it again made a
+ * **second** Grief with its own occurrence list, and restoring the first left
+ * two of one name that nothing would ever reconcile — worse than the
+ * locations case, where at least a heading matched them up.
+ *
+ * Case and surrounding space are ignored, because a writer retyping a theme
+ * from memory is not promising to match its capitals.
+ */
+export const buriedThematicNamed = (
+  file: ProjectFile,
+  kind: ThematicKind,
+  name: string,
+): ResearchTheme | ResearchMotif | null => {
+  const wanted = name.trim().toLowerCase();
+  if (wanted.length === 0) return null;
+  const all = kind === 'theme' ? (file.themes ?? []) : (file.motifs ?? []);
+  return all.find((one) => !living(one) && one.name.trim().toLowerCase() === wanted) ?? null;
+};
 
 export const motifsOfTheme = (file: ProjectFile, themeId: ResearchThemeId): ResearchMotif[] => {
   const wanted = new Set(

@@ -61,6 +61,8 @@ import {
   tagPassage,
   themesInOrder,
   motifsInOrder,
+  buriedThematicNamed,
+  restoreFromGraveyard,
   styleShortcuts,
   subHeadingsUnder,
   toggleInline,
@@ -1661,6 +1663,11 @@ function TagThematic({
   const chosen = list.find((one) => (one.id as string) === ownerId) ?? list[0] ?? null;
   const targetId = chosen ? (chosen.id as string) : '';
 
+  // One of this name already in the graveyard (addendum 24 §5m). Typing it
+  // again used to make a second of it, with its own occurrence list and
+  // nothing to reconcile the two.
+  const alreadyBuried = targetId === '' ? buriedThematicNamed(file, kind, newName) : null;
+
   const save = () => {
     const name = newName.trim();
     if (targetId === '' && name.length === 0) return;
@@ -1668,7 +1675,13 @@ function TagThematic({
       let next = current;
       let owner = targetId;
       if (owner === '') {
-        if (kind === 'theme') {
+        const buried = buriedThematicNamed(next, kind, name);
+        if (buried) {
+          // Put the one that exists back rather than making a rival: it comes
+          // with everything that was on it, occurrences included.
+          next = restoreFromGraveyard(next, { kind, id: buried.id as string });
+          owner = buried.id as string;
+        } else if (kind === 'theme') {
           const made = addTheme(next, { name });
           next = made.file;
           owner = made.theme.id as string;
@@ -1748,9 +1761,18 @@ function TagThematic({
               onChange={(event) => setNewName(event.target.value)}
             />
           </label>
+          {/* Said before the press, so the button's word is not a surprise. */}
+          {alreadyBuried ? (
+            <p className="muted small">
+              {alreadyBuried.name} is in the graveyard. Tagging this puts it back rather than
+              starting a second one — it comes with everything that was on it.
+            </p>
+          ) : null}
+
           {/* A motif's own field, asked only of a motif — which is the whole of
-              why these are two kinds rather than one with a flag. */}
-          {kind === 'motif' ? (
+              why these are two kinds rather than one with a flag. Absent where
+              the record already exists: its kind is not being chosen again. */}
+          {kind === 'motif' && !alreadyBuried ? (
             <label className="field">
               <span>What kind of thing</span>
               <select

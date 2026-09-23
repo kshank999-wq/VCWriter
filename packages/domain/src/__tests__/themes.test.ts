@@ -9,6 +9,7 @@ import {
   addMotif,
   addTheme,
   addUnit,
+  buriedThematicNamed,
   countOf,
   createProjectFile,
   fromRows,
@@ -438,5 +439,55 @@ describe('removing a motif', () => {
     expect(after.themeMotifLinks).toHaveLength(0);
     expect(after.usageLinks).toHaveLength(0);
     expect(after.themes).toHaveLength(1);
+  });
+});
+
+/**
+ * A deleted theme or motif whose name is typed again (addendum 24 §5m).
+ *
+ * The sweep of this module found nothing — every reading already asks
+ * `themesInOrder`/`motifsInOrder` — so the hole is the locations one (§5l) in
+ * a module where the name is free text: both screens that make one of these
+ * take a typed name, and neither could see that *Grief* was already in the
+ * graveyard.
+ */
+describe('a deleted theme whose name is typed again', () => {
+  const buried = () => {
+    let file = createProjectFile({ title: 'The Bell', format: 'screenplay' });
+    file = addTheme(file, { name: 'Grief' }).file;
+    file = addMotif(file, { name: 'the bell' }).file;
+    const theme = file.themes[0]!;
+    const motif = file.motifs[0]!;
+    return { file, gone: removeTheme(removeMotif(file, motif.id), theme.id), theme, motif };
+  };
+
+  it('is found by name, whatever the capitals', () => {
+    const { file, gone, theme } = buried();
+    expect(buriedThematicNamed(file, 'theme', 'Grief')).toBeNull();
+    expect(buriedThematicNamed(gone, 'theme', '  grief ')?.id).toBe(theme.id);
+    expect(buriedThematicNamed(gone, 'theme', 'Grieving')).toBeNull();
+  });
+
+  it('is its own kind and never the other one', () => {
+    const { gone } = buried();
+    // Two kinds all the way down (addendum 12 §2): a motif called Grief would
+    // not be this theme, and a theme is not offered where a motif is wanted.
+    expect(buriedThematicNamed(gone, 'motif', 'Grief')).toBeNull();
+    expect(buriedThematicNamed(gone, 'theme', 'the bell')).toBeNull();
+    expect(buriedThematicNamed(gone, 'motif', 'the bell')).not.toBeNull();
+  });
+
+  it('comes back rather than being doubled, keeping what was on it', () => {
+    const { gone, theme } = buried();
+    const back = restoreFromGraveyard(gone, { kind: 'theme', id: theme.id as string });
+    expect(themesInOrder(back).map((one) => one.name)).toEqual(['Grief']);
+    expect(back.themes.filter((one) => one.name === 'Grief')).toHaveLength(1);
+    expect(buriedThematicNamed(back, 'theme', 'Grief')).toBeNull();
+  });
+
+  it('says nothing about a name nobody has used', () => {
+    const { gone } = buried();
+    expect(buriedThematicNamed(gone, 'theme', 'Debt')).toBeNull();
+    expect(buriedThematicNamed(gone, 'theme', '   ')).toBeNull();
   });
 });

@@ -11,6 +11,7 @@ import {
   addTheme,
   addUnit,
   createProjectFile,
+  removeTheme,
   tagPassage,
   updateBeat,
   type BeatId,
@@ -238,5 +239,53 @@ describe('the screen', () => {
     expect(graveyard(after).map((row) => row.word)).toEqual(['Motif']);
     // Its occurrences are kept, which is what lets it come back whole.
     expect(after.usageLinks.filter((one) => one.ownerKind === 'motif')).toHaveLength(2);
+  });
+});
+
+/**
+ * Typing the name of a deleted theme (addendum 24 §5m).
+ *
+ * The screen used to make a second one, with its own occurrence list and
+ * nothing that would ever reconcile the two — the locations duplicate (§5l)
+ * in a module where the name is free text rather than a heading.
+ */
+describe('a name that is already in the graveyard', () => {
+  const withBuried = () => {
+    let file: ProjectFile = createProjectFile({ title: 'The Bell', format: 'novel' });
+    file = addTheme(file, { name: 'Grief' }).file;
+    const theme = file.themes[0]!;
+    return { file: removeTheme(file, theme.id), theme };
+  };
+
+  it('puts the record back rather than starting a rival', () => {
+    let seen: ProjectFile | null = null;
+    const { file, theme } = withBuried();
+    render(<Panel start={file} onFile={(one) => (seen = one)} />);
+
+    // Nothing on the list, because it is deleted.
+    expect(themesInOrder(file)).toEqual([]);
+
+    fireEvent.change(screen.getByLabelText('New theme'), { target: { value: 'grief' } });
+    // The button says what the press will do before it is pressed.
+    expect(screen.getByText('Put it back')).toBeTruthy();
+    expect(screen.getByText(/is in the graveyard/)).toBeTruthy();
+
+    fireEvent.submit(screen.getByLabelText('New theme').closest('form') as HTMLFormElement);
+    const after = seen as unknown as ProjectFile;
+    expect(themesInOrder(after).map((one) => one.name)).toEqual(['Grief']);
+    // One record, and it is the one that was buried.
+    expect(after.themes).toHaveLength(1);
+    expect(after.themes[0]!.id).toBe(theme.id);
+  });
+
+  it('still makes a new one for a name nobody has used', () => {
+    let seen: ProjectFile | null = null;
+    const { file } = withBuried();
+    render(<Panel start={file} onFile={(one) => (seen = one)} />);
+
+    fireEvent.change(screen.getByLabelText('New theme'), { target: { value: 'Debt' } });
+    expect(screen.getByText('Add theme')).toBeTruthy();
+    fireEvent.submit(screen.getByLabelText('New theme').closest('form') as HTMLFormElement);
+    expect(themesInOrder(seen as unknown as ProjectFile).map((one) => one.name)).toEqual(['Debt']);
   });
 });

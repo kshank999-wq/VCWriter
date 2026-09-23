@@ -2001,6 +2001,24 @@ push live; the build takes a minute or two.
   list, *Deleted, but still in the script*, where the act is **Restore** rather
   than *Make a record*, there being a record with its descriptions, defaults
   and notes still on it.
+  **§5m is themes and motifs again**, from Ken, and the sweep found **nothing**
+  a second time running — everything asks `themesInOrder`/`motifsInOrder`. What
+  it found is **§5l's fault in a module where the name is free text**, and
+  worse for it: both screens that make one of these take a **typed name** (the
+  manuscript's *Tag a theme or a motif…* and the panel's box), and neither
+  could see that *Grief* was in the graveyard, so typing it again made a
+  **second** Grief with its own occurrence list — where locations at least had
+  a heading tying the two together, here nothing would ever reconcile them.
+  `buriedThematicNamed` is the reading both screens ask, the act is **Restore**
+  said before the press (*Put it back* on the button), case and space are
+  ignored because a writer retyping from memory is not promising to match
+  capitals, and the **kind is not**, two kinds all the way down meaning a motif
+  called Grief is not this theme. It also found **a sentence that had stopped
+  being true in a comment**: `removeTheme`'s doc said *take a theme away, and
+  its occurrences with it*, right while a delete destroyed and false the day
+  burying started keeping them — §5e's thread sentence one layer down, a
+  comment writing its own copy of the rule as readily as a screen and saying it
+  just as long.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

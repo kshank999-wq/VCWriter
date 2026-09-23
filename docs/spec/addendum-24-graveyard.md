@@ -483,6 +483,36 @@ What that stops offering is **said rather than silently dropped**:
 *Make a record* — the honest one, since there is a record and it still has its
 descriptions, its defaults and its notes.
 
+## 5m. Themes and motifs again, and the duplicate by typed name
+
+From Ken: *I need a delete for themes and motifs too*. §5d put the × on the
+row and fixed six readings; the sweep this time found **nothing**, the second
+clean module running — everything asks `themesInOrder`/`motifsInOrder`.
+
+What it found is **§5l's fault in a module where the name is free text**, and
+worse for it. Both screens that make one of these take a **typed name** — the
+manuscript's *Tag a theme or a motif…* and the panel's own box — and neither
+could see that *Grief* was already in the graveyard. Typing it again made a
+**second** Grief with its own occurrence list, and where locations at least
+had a scene heading tying the two together, here there is nothing that would
+ever reconcile them.
+
+`buriedThematicNamed` is the reading, and both screens ask it. The act is
+**Restore**, said before the press — the panel's button reads *Put it back*
+and the dialog says the tag will put it back rather than start a rival. Case
+and surrounding space are ignored, because a writer retyping a theme from
+memory is not promising to match its capitals; the **kind is not**, since two
+kinds all the way down (addendum 12 §2) means a motif called Grief is not this
+theme.
+
+And a **sentence that had stopped being true**, found in a comment rather than
+on a screen: `removeTheme`'s doc said *take a theme away, and its occurrences
+with it*, which was right while a delete destroyed and became false the day
+burying started keeping them so restoring could give the theme back whole.
+That is §5e's thread sentence exactly, one layer down — a comment writes its
+own copy of the rule as readily as a screen does, and goes on saying it just
+as long.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -521,3 +551,6 @@ descriptions, its defaults and its notes.
   boxes and the timeline's theme threads; `notes-surfaces.test.ts` walks those.
 - `placesWithoutRecords` counting the buried, and `buriedPlacesInScript` with
   its own list and a **Restore** on the locations panel.
+- `buriedThematicNamed`, read by the tagging dialog and the themes panel so a
+  typed name puts the buried record back rather than starting a rival; and
+  `removeTheme`'s doc comment corrected.
