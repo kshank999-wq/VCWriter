@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BOOK_FACES,
+  FACE_NAMES,
+  FACE_NOTES,
+  FACE_STACKS,
+  TYPE_FACES,
   TRIM_PRESETS,
   addBeat,
   bookBlocks,
@@ -289,5 +294,66 @@ describe('the page', () => {
   it('guesses a page count before anything is laid, and says so in the name', () => {
     expect(estimatedPages(60_000, 20)).toBe(230);
     expect(estimatedPages(0, 0)).toBe(1);
+  });
+});
+
+/**
+ * The faces, including the six Ken asked for by name (addendum 20 §6a).
+ *
+ * The four that were here name a **kind** — old-style, transitional, modern,
+ * sans — and these name a **font**. Both stay: a writer who knows they want
+ * Garamond should not have to work out which kind it is, and one who does not
+ * should not have to know what Garamond is.
+ */
+describe('the faces', () => {
+  const NAMED = ['garamond', 'baskerville', 'georgia', 'caslon', 'gill_sans', 'lato'] as const;
+
+  it('offers the six by name, and says what each is for', () => {
+    for (const face of NAMED) {
+      expect(BOOK_FACES).toContain(face);
+      // A name a writer would recognise, not the key.
+      expect(FACE_NAMES[face]).not.toMatch(/_/);
+      expect(FACE_NOTES[face].length).toBeGreaterThan(0);
+    }
+    expect(NAMED.map((face) => FACE_NAMES[face])).toEqual([
+      'Garamond',
+      'Baskerville',
+      'Georgia',
+      'Caslon',
+      'Gill Sans',
+      'Lato',
+    ]);
+  });
+
+  it('heads each stack with the font it is named after, and ends in a generic family', () => {
+    // A machine with none of the named fonts still prints the book, in its
+    // nearest serif or sans — which is why a stack rather than a file (§12).
+    const wanted: Record<string, RegExp> = {
+      garamond: /^Garamond,/,
+      baskerville: /^Baskerville,/,
+      georgia: /^Georgia,/,
+      caslon: /^'Adobe Caslon Pro',/,
+      gill_sans: /^'Gill Sans',/,
+      lato: /^Lato,/,
+    };
+    for (const face of NAMED) {
+      expect(FACE_STACKS[face]).toMatch(wanted[face]!);
+      expect(FACE_STACKS[face]).toMatch(/(?:^|[\s,])(serif|sans-serif)$/);
+    }
+  });
+
+  it('offers the same named faces for a line of type as for the body', () => {
+    // Two lists that must agree: a heading set in *Garamond* and a page set in
+    // *Garamond* being two different fonts is the bug this stops.
+    for (const face of NAMED) expect(TYPE_FACES).toContain(face);
+  });
+
+  it('gives every face a width, so the measure can be said in characters', () => {
+    const settings = setBookSettings(novel(), { trim: { width: 6, height: 9 } });
+    for (const face of BOOK_FACES) {
+      const geometry = geometryOf(bookSettingsOf(setBookSettings(settings, { face })), 'novel', 200);
+      expect(geometry.measure).toBeGreaterThan(30);
+      expect(geometry.measure).toBeLessThan(110);
+    }
   });
 });

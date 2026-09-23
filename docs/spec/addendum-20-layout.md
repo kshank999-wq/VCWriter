@@ -358,6 +358,36 @@ already, edited in *File ▸ Chapter page…*, and the room's chapter section is
 button to that dialog. Two places to set the same heading would be two
 answers.
 
+## 6a. The six faces by name
+
+From Ken: *several fonts I want to add that are standard — Garamond,
+Baskerville, Georgia, Caslon, Gill Sans and Lato.*
+
+§6's list names a **kind** — old-style serif, transitional, modern, sans — on
+the argument that naming what each is *for* makes picking easy. That argument
+holds and the list stays. These six name a **font**, and both belong for
+opposite reasons: a writer who knows they want Garamond should not have to work
+out that it is an old-style serif, and one who does not should not have to know
+what Garamond is.
+
+They are offered **for a line of type as well as for the body**, in one list,
+because a heading set in *Garamond* and a page set in *Garamond* being two
+different fonts is exactly the kind of drift the room exists to prevent.
+
+Each is a **stack headed by the font asked for and ending in a generic
+family**, which is §12's open question unchanged: a machine without Caslon
+prints the book in the nearest serif it has. Georgia is on nearly every machine
+there is; Garamond comes with Windows and Office, Baskerville and Gill Sans
+with macOS, and **Lato and Caslon are the two most likely to be missing**.
+Bundling the files would make every machine print the same and is still
+deferred — it is a licensing decision, not a technical one.
+
+The one thing that is not cosmetic: each face carries a **character width**, so
+the room can say how many characters fit the measure. Garamond sets narrow
+(0.44 em) and Georgia wide (0.50), which is most of why one wants a point more
+than the other to read the same — and why a book switched from Georgia to
+Garamond gains characters to the line without the trim changing.
+
 ## 7. Running heads and folios
 
 A running head is a reading: the verso carries one of *the book's title*,

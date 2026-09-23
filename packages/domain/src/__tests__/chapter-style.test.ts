@@ -305,7 +305,23 @@ describe('the page for a book', () => {
  */
 describe('the chapter openings’ style options', () => {
   it('offers the book’s own face by name, and the faces the book offers', () => {
-    expect([...TYPE_FACES]).toEqual(['book', 'old_style', 'transitional', 'modern', 'sans', 'manuscript']);
+    // The kinds, then the six asked for by name (addendum 20 §6a), then the
+    // manuscript's. One list with the body's, or a heading set in *Garamond*
+    // and a page set in *Garamond* could be two different fonts.
+    expect([...TYPE_FACES]).toEqual([
+      'book',
+      'old_style',
+      'transitional',
+      'modern',
+      'sans',
+      'garamond',
+      'baskerville',
+      'georgia',
+      'caslon',
+      'gill_sans',
+      'lato',
+      'manuscript',
+    ]);
     const file = createProjectFile({ title: 'The Lamp', format: 'novel' });
     const body = "Baskerville, 'Libre Baskerville', 'Times New Roman', Times, serif";
     // `book` is resolved by the caller's body face rather than patched on after.

@@ -114,6 +114,16 @@ export const FACE_STACKS: Record<BookFace, string> = {
   transitional: "Baskerville, 'Libre Baskerville', 'Times New Roman', Times, serif",
   modern: "Didot, 'Bodoni MT', 'Bodoni 72', Georgia, serif",
   sans: "'Helvetica Neue', Helvetica, Arial, ui-sans-serif, sans-serif",
+  // The six named faces (§6a). Each stack is headed by the font asked for and
+  // ends in a generic family, so a machine without it still prints the book —
+  // in the nearest thing it has, which the room says out loud rather than
+  // pretending otherwise.
+  garamond: "Garamond, 'EB Garamond', 'Adobe Garamond Pro', 'Cormorant Garamond', 'Apple Garamond', Georgia, serif",
+  baskerville: "Baskerville, 'Libre Baskerville', 'Baskerville Old Face', 'Times New Roman', Times, serif",
+  georgia: "Georgia, 'Times New Roman', Times, serif",
+  caslon: "'Adobe Caslon Pro', 'Libre Caslon Text', 'Big Caslon', 'Caslon', Georgia, serif",
+  gill_sans: "'Gill Sans', 'Gill Sans MT', 'Gill Sans Nova', Calibri, 'Trebuchet MS', ui-sans-serif, sans-serif",
+  lato: "Lato, 'Lato Regular', 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, ui-sans-serif, sans-serif",
   // The stack a paragraph falls back to where the document named no face.
   imported: "'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif",
 };
@@ -123,6 +133,12 @@ export const FACE_NAMES: Record<BookFace, string> = {
   transitional: 'Transitional serif',
   modern: 'Modern serif',
   sans: 'Sans serif',
+  garamond: 'Garamond',
+  baskerville: 'Baskerville',
+  georgia: 'Georgia',
+  caslon: 'Caslon',
+  gill_sans: 'Gill Sans',
+  lato: 'Lato',
   imported: 'As imported',
 };
 
@@ -131,6 +147,12 @@ export const FACE_NOTES: Record<BookFace, string> = {
   transitional: 'Baskerville, Times — a little crisper',
   modern: 'Didot, Bodoni — high contrast; best at larger sizes',
   sans: 'Helvetica — for a textbook or a manual',
+  garamond: 'The old-style classic; sets small, so give it a point more',
+  baskerville: 'Crisper than Garamond, and wider',
+  georgia: 'On nearly every machine there is — the safe choice',
+  caslon: 'When in doubt, set it in Caslon',
+  gill_sans: 'A humanist sans; a clean, English look',
+  lato: 'A modern sans; even and quiet at text sizes',
   imported: 'Each paragraph in the face and size its Word document gave it',
 };
 
@@ -418,6 +440,14 @@ const CHAR_EMS: Record<BookFace, number> = {
   transitional: 0.46,
   modern: 0.45,
   sans: 0.5,
+  // Garamond sets narrow and Georgia wide, which is most of why one needs a
+  // point more than the other to read the same.
+  garamond: 0.44,
+  baskerville: 0.46,
+  georgia: 0.5,
+  caslon: 0.46,
+  gill_sans: 0.47,
+  lato: 0.48,
   // Whatever the document said, which the sentence cannot know; the fallback's.
   imported: 0.47,
 };

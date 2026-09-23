@@ -54,7 +54,20 @@ export type TypeCase = z.infer<typeof typeCaseSchema>;
  * projects made before this — history rather than a second answer. It resolves
  * to old-style, which is the stack it always drew.
  */
-export const TYPE_FACES = ['book', 'old_style', 'transitional', 'modern', 'sans', 'manuscript'] as const;
+export const TYPE_FACES = [
+  'book',
+  'old_style',
+  'transitional',
+  'modern',
+  'sans',
+  'garamond',
+  'baskerville',
+  'georgia',
+  'caslon',
+  'gill_sans',
+  'lato',
+  'manuscript',
+] as const;
 /** What a stored value may be: the list above, plus the name `serif` used to have. */
 export const typeFaceSchema = z.enum([...TYPE_FACES, 'serif'] as const);
 export type TypeFace = z.infer<typeof typeFaceSchema>;
@@ -69,6 +82,14 @@ const FACE_STACKS: Record<TypeFace, string> = {
   transitional: "Baskerville, 'Libre Baskerville', 'Times New Roman', Times, serif",
   modern: "Didot, 'Bodoni MT', 'Bodoni 72', Georgia, serif",
   sans: "'Helvetica Neue', Helvetica, Arial, ui-sans-serif, sans-serif",
+  // The six by name (§6a). The same stacks the body offers, because a heading
+  // set in *Garamond* and a page set in *Garamond* have to be the same font.
+  garamond: "Garamond, 'EB Garamond', 'Adobe Garamond Pro', 'Cormorant Garamond', 'Apple Garamond', Georgia, serif",
+  baskerville: "Baskerville, 'Libre Baskerville', 'Baskerville Old Face', 'Times New Roman', Times, serif",
+  georgia: "Georgia, 'Times New Roman', Times, serif",
+  caslon: "'Adobe Caslon Pro', 'Libre Caslon Text', 'Big Caslon', 'Caslon', Georgia, serif",
+  gill_sans: "'Gill Sans', 'Gill Sans MT', 'Gill Sans Nova', Calibri, 'Trebuchet MS', ui-sans-serif, sans-serif",
+  lato: "Lato, 'Lato Regular', 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, ui-sans-serif, sans-serif",
   // Stored before the list widened; the stack it always drew.
   serif: "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif",
 };

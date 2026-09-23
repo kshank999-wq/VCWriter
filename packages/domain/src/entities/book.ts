@@ -35,7 +35,24 @@ export type Trim = z.infer<typeof trimSchema>;
  * from gave it (addendum 21 §3), falling back to old-style where one said
  * nothing.
  */
-export const BOOK_FACES = ['old_style', 'transitional', 'modern', 'sans', 'imported'] as const;
+export const BOOK_FACES = [
+  'old_style',
+  'transitional',
+  'modern',
+  'sans',
+  // Six faces asked for by name (addendum 20 §6a, from Ken). The four above
+  // name a **kind** and these name a **font**, which is the distinction worth
+  // keeping: a writer who knows they want Garamond should not have to work out
+  // that it is an old-style serif, and one who does not should not have to
+  // know what Garamond is.
+  'garamond',
+  'baskerville',
+  'georgia',
+  'caslon',
+  'gill_sans',
+  'lato',
+  'imported',
+] as const;
 export const bookFaceSchema = z.enum(BOOK_FACES);
 export type BookFace = z.infer<typeof bookFaceSchema>;
 

@@ -107,6 +107,12 @@ const FACE_WORDS: Record<TypeFace, string> = {
   transitional: 'Transitional serif',
   modern: 'Modern serif',
   sans: 'Sans serif',
+  garamond: 'Garamond',
+  baskerville: 'Baskerville',
+  georgia: 'Georgia',
+  caslon: 'Caslon',
+  gill_sans: 'Gill Sans',
+  lato: 'Lato',
   manuscript: 'The manuscript’s',
   serif: 'Old-style serif',
 };
