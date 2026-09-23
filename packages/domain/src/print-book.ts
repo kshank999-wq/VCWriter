@@ -8,7 +8,7 @@ import {
   type ChapterPageStyle,
   isFullPageArt,
 } from './chapter-style.js';
-import { FACE_STACKS, faceStackOf, type BookGeometry } from './book-layout.js';
+import { FACE_STACKS, faceStackOf, fontFaceCss, type BookGeometry } from './book-layout.js';
 import { partStyleAttr } from './part-style.js';
 import { headSideClass, runningHeadStyleOf, runningStyleVars } from './running-heads.js';
 import type { BookBlock, FigureInset } from './book-plan.js';
@@ -94,7 +94,7 @@ export const bookVars = (context: BookRenderContext): Record<string, string> => 
   const { leadPx, sizePx, measurePx } = bookMetrics(context.geometry);
   const { margins } = context.geometry;
   return {
-    '--bk-face': faceStackOf(context.settings.face),
+    '--bk-face': faceStackOf(context.settings.face, context.settings.fonts),
     '--bk-size': `${sizePx.toFixed(3)}px`,
     '--bk-lead': `${leadPx.toFixed(3)}px`,
     '--bk-measure': `${measurePx.toFixed(2)}px`,
@@ -108,7 +108,7 @@ export const bookVars = (context: BookRenderContext): Record<string, string> => 
     '--bk-hyphens': context.settings.hyphenate ? 'auto' : 'manual',
     '--bk-indent': context.settings.size > 0 ? '1.5em' : '0',
     // The furniture: how the running heads and the folios are set (§7a).
-    ...runningStyleVars(runningHeadStyleOf(context.settings), context.settings.face),
+    ...runningStyleVars(runningHeadStyleOf(context.settings), context.settings.face, context.settings.fonts),
   };
 };
 
@@ -142,7 +142,7 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
   // on the page's box, and a spacer whose height is the drop — a share of
   // the page rather than of its width, which is what a percentage padding
   // would have measured.
-  const styled = block.partStyle ? ` style="${partStyleAttr(block.partStyle, context.settings.face)}"` : '';
+  const styled = block.partStyle ? ` style="${partStyleAttr(block.partStyle, context.settings.face, context.settings.fonts)}"` : '';
   const drop = '<div class="bk-drop"></div>';
   switch (block.kind) {
     case 'half_title': {
@@ -212,7 +212,11 @@ const chapterStyleFor = (context: BookRenderContext, block?: BookBlock): string 
   // is the book's for every chapter, and where the picture sits, how far down
   // the heading falls and how much air stands over the first paragraph are
   // this page's. A block with no placement draws exactly as it always did.
-  chapterStyleAttr(chapterStyleWith(context.chapterStyle, block?.chapter?.placement), faceStackOf(context.settings.face));
+  chapterStyleAttr(
+    chapterStyleWith(context.chapterStyle, block?.chapter?.placement),
+    faceStackOf(context.settings.face, context.settings.fonts),
+    context.settings.fonts,
+  );
 
 const openingMarkup = (block: BookBlock, context: BookRenderContext): string => {
   const chapter = block.chapter;
@@ -253,7 +257,10 @@ const openingMarkup = (block: BookBlock, context: BookRenderContext): string => 
   const align = chapter?.align ?? block.partStyle?.align ?? 'center';
   const own = block.partStyle
     ? Object.entries({
-        '--chapter-face': FACE_STACKS[block.partStyle.face === 'book' ? context.settings.face : block.partStyle.face] ?? '',
+        '--chapter-face': faceStackOf(
+          block.partStyle.face === 'book' ? context.settings.face : block.partStyle.face,
+          context.settings.fonts,
+        ),
         ...lineStyleVars('--chapter-title', block.partStyle.title),
         '--chapter-rule': block.partStyle.rule ? '1px solid currentColor' : 'none',
       })
@@ -293,7 +300,7 @@ export const blockStyle = (block: BookBlock, context: BookRenderContext): string
   // left exactly as it is, so a page of the story cannot be reached from here.
   if (block.partStyle && block.kind === 'paragraph') {
     const one = block.partStyle.line;
-    const face = FACE_STACKS[block.partStyle.face === 'book' ? context.settings.face : block.partStyle.face];
+    const face = faceStackOf(block.partStyle.face === 'book' ? context.settings.face : block.partStyle.face, context.settings.fonts);
     if (face) rules.push(`font-family:${face}`);
     rules.push(
       `font-size:${(one.size * PX_PER_PT).toFixed(3)}px`,
@@ -360,7 +367,7 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
       // the heading and the entries are set by the writer, while the template
       // and the drop are absent, there being no single block on a page to
       // place — the list runs to as many pages as it needs.
-      const styled = block.partStyle ? ` style="${partStyleAttr(block.partStyle, context.settings.face)}"` : '';
+      const styled = block.partStyle ? ` style="${partStyleAttr(block.partStyle, context.settings.face, context.settings.fonts)}"` : '';
       const rows = context.contents
         .map(
           (row) =>
@@ -373,7 +380,7 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
     }
     case 'index': {
       const index = context.index;
-      const styled = block.partStyle ? ` style="${partStyleAttr(block.partStyle, context.settings.face)}"` : '';
+      const styled = block.partStyle ? ` style="${partStyleAttr(block.partStyle, context.settings.face, context.settings.fonts)}"` : '';
       const letters = index
         ? index.letters
             .map(
@@ -596,6 +603,7 @@ export const renderBookHtml = (
 <meta charset="utf-8" />
 <title>${escapeHtml(title || 'Untitled')}</title>
 <style>
+  ${fontFaceCss(context.settings.fonts)}
   @page { size: ${context.geometry.trim.width}in ${context.geometry.trim.height}in; margin: 0; }
   * { box-sizing: border-box; }
   body { margin: 0; background: #e9e9ec; ${vars}; }

@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
   BOOK_FACES,
+  MAX_FONT_BYTES,
+  addBookFont,
+  bookFontsOf,
+  faceOfFont,
+  fontBytes,
+  fontFaceCss,
+  fontFormatOf,
+  fontNameOf,
+  fontOf,
+  faceStackOf,
+  removeBookFont,
+  renameBookFont,
   FACE_NAMES,
   FACE_NOTES,
   FACE_STACKS,
@@ -355,5 +367,94 @@ describe('the faces', () => {
       expect(geometry.measure).toBeGreaterThan(30);
       expect(geometry.measure).toBeLessThan(110);
     }
+  });
+});
+
+/**
+ * A font the writer brought in (addendum 20 §6b, from Ken: *put an option to
+ * import a font … download a font, select it from a browse, and add it to
+ * your fonts*).
+ *
+ * This is §12's open question answered from the other end: we ship no font
+ * files, and a writer who has licensed one gives it to their own book. What
+ * the tests pin is that the file **travels in the project** and that a book
+ * whose font has gone still prints.
+ */
+describe('a font of the writer’s own', () => {
+  const FILE = 'data:font/ttf;base64,AAEAAAALAIAAAwAw';
+  const withFont = (name = 'EBGaramond-Regular.ttf') =>
+    addBookFont(novel(), { family: fontNameOf(name), fileName: name, format: fontFormatOf(name), data: FILE, bytes: 240_000 });
+
+  it('takes the file in, named after it until the writer says otherwise', () => {
+    const { file, font } = withFont();
+    expect(font).not.toBeNull();
+    // The name is the file's, tidied — *EBGaramond-Regular.ttf* is not a face.
+    expect(font!.family).toBe('EBGaramond Regular');
+    expect(font!.format).toBe('truetype');
+    expect(bookFontsOf(file)).toHaveLength(1);
+    // And importing never chooses it: two decisions, not one.
+    expect(bookSettingsOf(file).face).toBe(bookSettingsOf(novel()).face);
+  });
+
+  it('reads the format off the file’s name', () => {
+    expect(fontFormatOf('Sabon.woff2')).toBe('woff2');
+    expect(fontFormatOf('Sabon.woff')).toBe('woff');
+    expect(fontFormatOf('Sabon.otf')).toBe('opentype');
+    expect(fontFormatOf('Sabon.ttf')).toBe('truetype');
+  });
+
+  it('refuses a file too big to live in a project', () => {
+    const { file, font } = addBookFont(novel(), { family: 'Huge', data: FILE, bytes: MAX_FONT_BYTES + 1 });
+    expect(font).toBeNull();
+    expect(bookFontsOf(file)).toHaveLength(0);
+  });
+
+  it('sets the book in it, and prints it with the file inline', () => {
+    const made = withFont();
+    const file = setBookSettings(made.file, { face: faceOfFont(made.font!) });
+    const settings = bookSettingsOf(file);
+
+    // The face resolves to the font's own family, with a generic behind it so
+    // a machine that never got the file still prints the book.
+    const stack = faceStackOf(settings.face, settings.fonts);
+    expect(stack).toContain("'EBGaramond Regular'");
+    expect(stack).toMatch(/serif$/);
+    expect(fontOf(settings.face, settings.fonts)?.id).toBe(made.font!.id);
+
+    // And the document carries the file itself, which is what makes an
+    // exported PDF stand on its own.
+    const css = fontFaceCss(settings.fonts);
+    expect(css).toContain("font-family:'EBGaramond Regular'");
+    expect(css).toContain(FILE);
+    expect(css).toContain("format('truetype')");
+    expect(fontBytes(settings.fonts)).toBe(240_000);
+  });
+
+  it('renames it without touching what is set in it', () => {
+    const made = withFont();
+    const chosen = setBookSettings(made.file, { face: faceOfFont(made.font!) });
+    const after = renameBookFont(chosen, made.font!.id, 'EB Garamond');
+    // The face names the id, so the book follows the rename by itself.
+    expect(bookSettingsOf(after).face).toBe(faceOfFont(made.font!));
+    expect(faceStackOf(bookSettingsOf(after).face, bookSettingsOf(after).fonts)).toContain("'EB Garamond'");
+  });
+
+  /**
+   * The one that matters when a project is opened somewhere the font never
+   * reached, or the writer takes it out: **the page still prints**. A face
+   * naming a font that is not there falls all the way back rather than
+   * resolving to nothing.
+   */
+  it('falls back to the book’s serif when the font is gone', () => {
+    const made = withFont();
+    const chosen = setBookSettings(made.file, { face: faceOfFont(made.font!) });
+    const after = removeBookFont(chosen, made.font!.id);
+    const settings = bookSettingsOf(after);
+
+    expect(bookFontsOf(after)).toHaveLength(0);
+    // The face is still stored — putting the file back brings the book back.
+    expect(settings.face).toBe(faceOfFont(made.font!));
+    expect(faceStackOf(settings.face, settings.fonts)).toBe(FACE_STACKS.old_style);
+    expect(fontFaceCss(settings.fonts)).toBe('');
   });
 });

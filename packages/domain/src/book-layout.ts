@@ -1,13 +1,16 @@
 import {
   BOOK_FACES,
+  bookFontSchema,
   bookSettingsSchema,
   type BookFace,
+  type BookFont,
   type BookSettings,
   type Trim,
 } from './entities/book.js';
 import type { ProjectFormat } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
 import { nowIso } from './entities/common.js';
+import { newId } from './ids.js';
 import { titlePageOf } from './entities/title-page.js';
 
 /**
@@ -156,7 +159,104 @@ export const FACE_NOTES: Record<BookFace, string> = {
   imported: 'Each paragraph in the face and size its Word document gave it',
 };
 
-export const faceStackOf = (face: BookFace): string => FACE_STACKS[face] ?? FACE_STACKS.old_style;
+/**
+ * The stack a face resolves to — **the one place a face becomes type**
+ * (§6a, §6b).
+ *
+ * A face is one of the names in `BOOK_FACES` or `font:<id>`, an imported
+ * file (§6b). An imported one resolves to **its own family first and a
+ * generic after it**, so a book opened where the file did not travel still
+ * prints, in the nearest serif or sans rather than in nothing; and a face
+ * naming a font that has been removed falls all the way back, which is the
+ * same sentence said once.
+ */
+export const faceStackOf = (face: string, fonts: readonly BookFont[] = []): string => {
+  const own = fontOf(face, fonts);
+  if (own) return `'${own.family.replace(/'/g, '')}', ${own.serif ? 'serif' : 'sans-serif'}`;
+  return FACE_STACKS[face as BookFace] ?? FACE_STACKS.old_style;
+};
+
+/** The imported font a face names, where it names one. */
+export const fontOf = (face: string, fonts: readonly BookFont[] = []): BookFont | null => {
+  if (!face.startsWith('font:')) return null;
+  return fonts.find((one) => one.id === face.slice(5)) ?? null;
+};
+
+/** The face value that names this font, which is what a control stores. */
+export const faceOfFont = (font: Pick<BookFont, 'id'>): string => `font:${font.id}`;
+
+/**
+ * The `@font-face` rules a document needs, for the fonts it actually uses —
+ * **one builder for the screen and the print**, so a page set in Sabon on the
+ * spread is set in Sabon in the PDF. The file rides inline as a data URL,
+ * which is what makes the exported document stand on its own.
+ */
+export const fontFaceCss = (fonts: readonly BookFont[]): string =>
+  fonts
+    .map(
+      (font) =>
+        // The URL is quoted: a data URL is long and full of punctuation, and
+        // an unquoted `url()` token is the narrower grammar of the two.
+        `@font-face{font-family:'${font.family.replace(/'/g, '')}';src:url("${font.data}") format('${font.format}');font-display:block;}`,
+    )
+    .join('');
+
+/** How much of the project the fonts are, for the room to say out loud. */
+export const fontBytes = (fonts: readonly BookFont[]): number => fonts.reduce((total, font) => total + font.bytes, 0);
+
+/**
+ * A font file is kept **in the project**, which is a text file that syncs, so
+ * it is capped for `MAX_CHAPTER_IMAGE_BYTES`' reason. Four megabytes takes any
+ * ordinary text face and most display ones; a family of six weights at that
+ * size would make every save enormous, and the room says the total.
+ */
+export const MAX_FONT_BYTES = 4 * 1024 * 1024;
+
+/** The fonts the book carries, in the order they were brought in. */
+export const bookFontsOf = (file: ProjectFile): BookFont[] => bookSettingsOf(file).fonts ?? [];
+
+/**
+ * Bring a font in (§6b). It is **added and never chosen for the writer** —
+ * importing a face and setting the book in it are two decisions, and a book
+ * quietly re-set by opening a file dialog is the worse surprise.
+ */
+export const addBookFont = (
+  file: ProjectFile,
+  input: { family: string; fileName?: string; format?: BookFont['format']; data: string; bytes?: number; serif?: boolean },
+): { file: ProjectFile; font: BookFont | null } => {
+  const family = input.family.trim();
+  if (family.length === 0 || input.data.length === 0) return { file, font: null };
+  if ((input.bytes ?? 0) > MAX_FONT_BYTES) return { file, font: null };
+  const font = bookFontSchema.parse({ ...input, family, id: newId() as string });
+  return { file: setBookSettings(file, { fonts: [...bookFontsOf(file), font] }), font };
+};
+
+export const renameBookFont = (file: ProjectFile, fontId: string, family: string): ProjectFile =>
+  setBookSettings(file, {
+    fonts: bookFontsOf(file).map((one) => (one.id === fontId ? { ...one, family: family.trim() || one.family } : one)),
+  });
+
+/**
+ * Take a font out. **Anything set in it falls back to the book's old-style
+ * serif** rather than to nothing, which `faceStackOf` already does for a face
+ * naming a font that is not there — so this only has to forget the file, and
+ * the page goes on printing.
+ */
+export const removeBookFont = (file: ProjectFile, fontId: string): ProjectFile =>
+  setBookSettings(file, { fonts: bookFontsOf(file).filter((one) => one.id !== fontId) });
+
+/** What the format is, read off the file's name, for `@font-face`. */
+export const fontFormatOf = (fileName: string): BookFont['format'] => {
+  const end = fileName.toLowerCase().split('.').pop() ?? '';
+  if (end === 'woff2') return 'woff2';
+  if (end === 'woff') return 'woff';
+  if (end === 'otf') return 'opentype';
+  return 'truetype';
+};
+
+/** The file's name without its extension, which is what a font is called until renamed. */
+export const fontNameOf = (fileName: string): string =>
+  fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || 'Imported font';
 
 /**
  * The three presets (§6): a whole style set at once, every field changeable
@@ -475,7 +575,10 @@ export const geometryOf = (settings: BookSettings, format: ProjectFormat, pages:
   const size = settings.size;
   const leading = settings.leading ?? derivedLeading(size);
   const linesPerPage = Math.max(0, Math.floor((text.height * 72) / leading));
-  const measure = Math.round((text.width * 72) / (size * (CHAR_EMS[settings.face] ?? 0.47)));
+  // An imported font's width is unknown until it is set, so it reads as the
+  // old-style average — the measure is a sentence for the inspector rather
+  // than anything the cutter uses (§6b).
+  const measure = Math.round((text.width * 72) / (size * (CHAR_EMS[settings.face as BookFace] ?? 0.47)));
   return {
     trim,
     margins,
@@ -558,7 +661,7 @@ export const describeTrim = (trim: Trim): string => trimPresetOf(trim)?.name ?? 
  * *worked out* or *typed* for the margins, so a writer can see what an
  * override is overriding.
  */
-export const describeGeometry = (geometry: BookGeometry, face: BookFace): string => {
+export const describeGeometry = (geometry: BookGeometry, face: string, fonts: readonly BookFont[] = []): string => {
   const { margins, overridden } = geometry;
   const anyTyped = Object.values(overridden).some(Boolean);
   const how = anyTyped
@@ -568,7 +671,10 @@ export const describeGeometry = (geometry: BookGeometry, face: BookFace): string
     `${name} ${fraction(margins[name])} in${overridden[name] ? ' (typed)' : ''}`;
   return (
     `${describeTrim(geometry.trim)}. ${how}: ${edge('inside')}, ${edge('outside')}, ${edge('top')}, ${edge('bottom')}. ` +
-    `${geometry.linesPerPage} lines of ${FACE_NAMES[face].toLowerCase()} at ${geometry.size} on ${geometry.leading} pt, ` +
+    // An imported font is named rather than described: the table has no
+    // sentence for somebody else's face (§6b).
+    `${geometry.linesPerPage} lines of ${fontOf(face, fonts)?.family ?? FACE_NAMES[face as BookFace]?.toLowerCase() ?? 'the book’s face'} ` +
+    `at ${geometry.size} on ${geometry.leading} pt, ` +
     `about ${geometry.measure} characters to the line.`
   );
 };

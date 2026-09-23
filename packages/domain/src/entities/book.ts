@@ -56,6 +56,38 @@ export const BOOK_FACES = [
 export const bookFaceSchema = z.enum(BOOK_FACES);
 export type BookFace = z.infer<typeof bookFaceSchema>;
 
+/**
+ * A font the writer brought in themselves (addendum 20 §6b, from Ken: *put
+ * an option to import a font … so you can download a font and select it from
+ * a browse, and add it to your fonts*).
+ *
+ * This is §12's open question answered from the other end. Shipping font
+ * files with the program is a licensing decision that is not ours to make;
+ * a writer who has licensed Sabon can hand it to their own book, and the
+ * **file travels in the project** so the same book prints the same on the
+ * next machine — which is the whole point, since a stack resolves to
+ * whatever happens to be installed.
+ */
+export const bookFontSchema = z.object({
+  id: z.string(),
+  /** What it is called in the list. The file's name until the writer says otherwise. */
+  family: z.string(),
+  /** The file it came from, so a writer can tell two weights apart. */
+  fileName: z.string().default(''),
+  /** `woff2`, `woff`, `truetype`, `opentype` — what `@font-face` is told. */
+  format: z.enum(['woff2', 'woff', 'truetype', 'opentype']).default('truetype'),
+  /** The file itself, as a data URL. */
+  data: z.string(),
+  /** How big it was, so the room can say what the project is carrying. */
+  bytes: z.number().min(0).default(0),
+  /** Whether it reads as a serif, which is the fallback a missing file gets. */
+  serif: z.boolean().default(true),
+});
+export type BookFont = z.infer<typeof bookFontSchema>;
+
+/** A face is one of the names above, or `font:<id>` for an imported one. */
+export const faceValueSchema = z.union([bookFaceSchema, z.string().regex(/^font:/)]);
+
 /** What a chapter's first paragraph does (§6). */
 export const OPENINGS = ['none', 'small_caps', 'drop_cap'] as const;
 export const openingSchema = z.enum(OPENINGS);
@@ -231,7 +263,7 @@ export const bookSettingsSchema = z.object({
       bottom: inchesOrDerived,
     })
     .default({}),
-  face: bookFaceSchema.default('old_style'),
+  face: faceValueSchema.default('old_style'),
   /** Body size in points. */
   size: z.number().min(8).max(14).default(11),
   /** Leading in points; null is proposed from the size. */
@@ -267,5 +299,7 @@ export const bookSettingsSchema = z.object({
   imprint: z.string().default(''),
   /** The front and back matter, in order (§5). Absent means the default plan. */
   parts: z.array(bookPartSchema).nullable().default(null),
+  /** The fonts the writer imported (§6b). Empty until one is. */
+  fonts: z.array(bookFontSchema).default([]),
 });
 export type BookSettings = z.infer<typeof bookSettingsSchema>;

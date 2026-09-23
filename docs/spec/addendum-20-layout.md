@@ -388,6 +388,60 @@ the room can say how many characters fit the measure. Garamond sets narrow
 than the other to read the same — and why a book switched from Georgia to
 Garamond gains characters to the line without the trim changing.
 
+## 6b. A font of the writer's own
+
+From Ken: *put an option to import a font. So you can download a font. And
+select it from a browse. And be able to add it to your fonts.*
+
+This is **§12's first open question answered from the other end**. Shipping
+font files with the program is a licensing decision that is not ours to make,
+and §6a's stacks resolve to whatever happens to be installed — so a book set in
+Caslon prints in Caslon on one machine and in Georgia on the next. A writer who
+has licensed a face can now hand it to their own book, and **the file travels
+in the project**, which is the whole point: the same book sets the same
+everywhere, which no stack can promise.
+
+Four decisions carry it.
+
+**Importing never chooses the face.** Bringing a font in and setting the book
+in it are two decisions; a book quietly re-set by a file dialog is the worse
+surprise. The list offers **Use it** instead, and says *In use* once it is.
+
+**A face is a name or `font:<id>`,** and `faceStackOf` is the **one place a
+face becomes type**. That mattered more than it looks: the part styles and the
+running heads each carried their **own copy** of the face table, so an imported
+face would have set the story and left the front matter in whatever the copy
+held. Both ask the one resolver now — §7a's argument, arriving where a second
+answer would have been visible on the page.
+
+**A book whose font has gone still prints.** An imported face resolves to *its
+own family first and a generic after it*, and a face naming a font that is not
+there falls all the way back. The face is still stored, so putting the file
+back brings the book back; nothing is silently rewritten.
+
+**The room waits for the font before it believes its measurements.** A data URL
+is decoded *after* the first layout, so the first measurement is of the
+fallback — and a fallback that sets narrower puts the wrong number of lines on
+every page. `document.fonts.ready` and one more laying is the honest fix, and
+driving it proved the need: importing a display face took a nine-sheet book to
+eleven.
+
+The file is capped at **4 MB** for `MAX_CHAPTER_IMAGE_BYTES`' reason — the
+project is a text file that syncs — and the room says what the fonts are
+costing. Licensing is said once and not moralised about: embedding a font in a
+book you sell is a question for your licence rather than for us.
+
+Driving it found a real fault in code this did not write: the renderer's
+content-security policy allowed `data:` for **images and nothing else**, so
+`font-src` fell through to `default-src 'self'` and every imported font failed
+to load with a network error. `font-src 'self' data:` is the same widening
+`img-src` already had, for the same reason.
+
+**Deliberately not done:** the eBook does not embed these (§8 has said fonts
+are not embedded since phase 1, and an EPUB that carries a font is a separate
+licensing and packaging question). The exported **PDF does**, because the print
+document carries the file inline from the same builder the screen reads.
+
 ## 7. Running heads and folios
 
 A running head is a reading: the verso carries one of *the book's title*,

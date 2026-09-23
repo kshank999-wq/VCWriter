@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   bookBlocks,
   bookContentsOf,
@@ -198,6 +198,30 @@ export const useBookLaying = (file: ProjectFile, open: boolean): { laying: Layin
     if (!open || !box.current) return;
     setLaying(layBook(file, box.current));
     // The key is what the laying reads; the file is what it reads it from.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, open]);
+
+  /**
+   * And again once the fonts have arrived (addendum 20 §6b).
+   *
+   * An imported font is a data URL the browser decodes **after** the first
+   * layout, so the first measurement is of the fallback — and a fallback that
+   * sets narrower puts the wrong number of lines on every page. Waiting for
+   * `document.fonts.ready` and laying once more is the honest fix; where
+   * there are no fonts to wait for it settles at once and lays the same book
+   * twice, which costs one pass and nothing else.
+   */
+  useEffect(() => {
+    if (!open) return undefined;
+    const fonts = (document as Document & { fonts?: { ready: Promise<unknown> } }).fonts;
+    if (!fonts?.ready) return undefined;
+    let dropped = false;
+    void fonts.ready.then(() => {
+      if (!dropped && box.current) setLaying(layBook(file, box.current));
+    });
+    return () => {
+      dropped = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, open]);
 

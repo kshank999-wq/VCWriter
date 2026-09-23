@@ -1539,6 +1539,33 @@ push live; the build takes a minute or two.
   at 0.44 em and Georgia wide at 0.50, which is why one wants a point more than
   the other and why moving a book from Georgia to Garamond gains characters to
   the line with the trim unchanged.
+  **§6b is a font of the writer's own**, from Ken: *put an option to import a
+  font … download a font, select it from a browse, and add it to your fonts*.
+  It is **§12's first open question answered from the other end** — we ship no
+  font files, a stack resolves to whatever is installed, and a writer who has
+  licensed a face can hand it to their own book with **the file travelling in
+  the project**, which is the whole point. Four decisions. **Importing never
+  chooses the face** (two decisions, not one; the list offers *Use it*).
+  **A face is a name or `font:<id>`** and `faceStackOf` is the **one place a
+  face becomes type** — which mattered more than it looks, the part styles and
+  the running heads having each carried their **own copy** of the face table,
+  so an imported face would have set the story and left the front matter in
+  whatever the copy held (§7a's argument where a second answer shows on the
+  page). **A book whose font has gone still prints**: an imported face is its
+  own family then a generic, a face naming a font that is not there falls all
+  the way back, and the face is still stored so putting the file back brings
+  the book back. And **the room waits for the font before believing its
+  measurements** — a data URL decodes *after* the first layout, so the first
+  measurement is of the fallback; `document.fonts.ready` and one more laying,
+  and driving it proved the need, a display face taking a nine-sheet book to
+  eleven. Capped at **4 MB** for `MAX_CHAPTER_IMAGE_BYTES`' reason, with the
+  total said. Driving it found a fault in code it did not write: the
+  renderer's **CSP allowed `data:` for images and nothing else**, so
+  `font-src` fell through to `default-src 'self'` and every import failed with
+  a network error — `font-src 'self' data:` is `img-src`'s own widening.
+  **The eBook does not embed these** (§8's line since phase 1); the exported
+  **PDF does**, the print document carrying the file inline from the builder
+  the screen reads.
   **§9c is page settings**, from Ken looking at Book settings — *when you
   double click a page, these are the settings that need to be removed from book
   settings, and these are going to be page settings*. The line it draws is

@@ -86,6 +86,16 @@ import {
   bookPresetOf,
   bookRows,
   moveFigureBefore,
+  addBookFont,
+  bookFontsOf,
+  fontBytes,
+  fontFaceCss,
+  fontFormatOf,
+  fontNameOf,
+  faceOfFont,
+  removeBookFont,
+  renameBookFont,
+  MAX_FONT_BYTES,
   removeBookFigure,
   pagePlace,
   placeBookFigure,
@@ -97,6 +107,7 @@ import {
   type BookRow,
   type PagePlace,
 } from '@vcwriter/domain';
+import { readFont } from '../read-font';
 import { PopOutButton } from './PopOutButton';
 import { ChapterPageDialog, ChapterStyleFields, Line } from './ChapterPageDialog';
 import { useModal } from '../use-modal';
@@ -594,6 +605,11 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           onClose={() => setBookSettingsOpen(false)}
         />
       ) : null}
+      {/* The writer's own fonts, declared once for the whole room (§6b): the
+          spread draws with them and the hidden box **measures** with them, so
+          the pages fall where the PDF will put them. The same rules go into
+          the exported document, from the same builder. */}
+      <style>{fontFaceCss(bookFontsOf(file))}</style>
       {(
         <ChapterPageDialog
           file={file}
@@ -1379,7 +1395,7 @@ function TrimSection({ laying, write }: { laying: Laying; write(patch: Partial<B
         {margin('top', 'Top')}
         {margin('bottom', 'Bottom')}
       </div>
-      <p className="small layout-geometry">{describeGeometry(geometry, settings.face)}</p>
+      <p className="small layout-geometry">{describeGeometry(geometry, settings.face, settings.fonts)}</p>
       {/* The spine (§3, from Ken): what the binding takes is worked out from
           the page count every time the book is laid, and said here so nobody
           hunts for a switch. */}
@@ -1479,6 +1495,12 @@ function BookSettingsDialog({
           </Fold>
           <Fold id="type" title="Type">
             <TypeSection settings={settings} write={write} noun={noun} />
+          </Fold>
+          {/* The writer's own fonts (§6b, from Ken). Its own fold rather than
+              a corner of Type: importing a face is a thing done once and the
+              list of them is a thing to look at, while Type is set often. */}
+          <Fold id="fonts" title="Your fonts">
+            <FontsSection file={file} onUpdate={onUpdate} />
           </Fold>
           <Fold id="furniture" title="Running heads & page numbers">
             <FurnitureSection settings={settings} write={write} noun={noun} nounPlural={nounPlural} />
@@ -2021,6 +2043,120 @@ function FigureSection({
   );
 }
 
+/**
+ * The fonts the writer brought in (addendum 20 §6b, from Ken: *put an option
+ * to import a font … so you can download a font and select it from a browse,
+ * and add it to your fonts*).
+ *
+ * This is §12's open question answered from the other end — we do not ship
+ * font files, and a writer who has licensed one can hand it to their own
+ * book. **The file travels in the project**, which is the whole point: a
+ * stack resolves to whatever is installed, and an imported face prints the
+ * same on the next machine.
+ *
+ * Importing **never chooses the face**: bringing a font in and setting the
+ * book in it are two decisions, and a book quietly re-set by a file dialog is
+ * the worse surprise. The list says what to do next instead.
+ */
+function FontsSection({ file, onUpdate }: { file: ProjectFile; onUpdate: LayoutWindowProps['onUpdate'] }) {
+  const fonts = bookFontsOf(file);
+  const [trouble, setTrouble] = useState<string | null>(null);
+  const settings = bookSettingsOf(file);
+  const kb = (bytes: number) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`);
+  return (
+    <>
+      <p className="muted small">
+        A font you have downloaded and are licensed to use. It is kept in the project, so the book prints the same on
+        another machine — which a font merely installed here cannot promise.
+      </p>
+      <label className="field">
+        <span>Import a font file</span>
+        <input
+          type="file"
+          aria-label="Font file"
+          accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2"
+          onChange={async (event) => {
+            const chosen = event.target.files?.[0];
+            event.target.value = '';
+            if (!chosen) return;
+            setTrouble(null);
+            if (chosen.size > MAX_FONT_BYTES) {
+              setTrouble(`That file is ${kb(chosen.size)}. A font is kept inside the project, so ${kb(MAX_FONT_BYTES)} is the most one can be.`);
+              return;
+            }
+            const read = await readFont(chosen);
+            let made = false;
+            onUpdate((current) => {
+              const added = addBookFont(current, {
+                family: fontNameOf(chosen.name),
+                fileName: chosen.name,
+                format: fontFormatOf(chosen.name),
+                data: read.data,
+                bytes: read.bytes,
+              });
+              made = added.font !== null;
+              return added.file;
+            });
+            if (!made) setTrouble('That file could not be read as a font.');
+          }}
+        />
+      </label>
+      {trouble ? <p className="layout-message small">{trouble}</p> : null}
+
+      {fonts.length === 0 ? (
+        <p className="muted small">None yet. A .ttf, .otf, .woff or .woff2 file.</p>
+      ) : (
+        <ul className="layout-parts">
+          {fonts.map((font) => {
+            const inUse = settings.face === faceOfFont(font);
+            return (
+              <li key={font.id} className="layout-rail-row">
+                <div className="layout-part">
+                  {/* Renaming is what the list is for: a file called
+                      `EBGaramond-Regular.ttf` is *EB Garamond* in the book. */}
+                  <input
+                    className="layout-font-name"
+                    aria-label={`Name for ${font.fileName || font.family}`}
+                    value={font.family}
+                    style={{ fontFamily: `'${font.family}'` }}
+                    onChange={(event) => onUpdate((current) => renameBookFont(current, font.id, event.target.value))}
+                  />
+                  <span className="muted small">{kb(font.bytes)}</span>
+                </div>
+                <button
+                  type="button"
+                  className="ghost small"
+                  disabled={inUse}
+                  title={inUse ? 'The book is set in this one' : 'Set the book’s body text in this font'}
+                  onClick={() => onUpdate((current) => setBookSettings(current, { face: faceOfFont(font) }))}
+                >
+                  {inUse ? 'In use' : 'Use it'}
+                </button>
+                <button
+                  type="button"
+                  className="layout-part-remove"
+                  aria-label={`Remove ${font.family}`}
+                  title="Take it out of the project. Anything set in it falls back to the book’s serif."
+                  onClick={() => onUpdate((current) => removeBookFont(current, font.id))}
+                >
+                  ×
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {fonts.length > 0 ? (
+        <p className="muted small">
+          {fonts.length === 1 ? 'One font' : `${fonts.length} fonts`}, {kb(fontBytes(fonts))} of the project. They are in
+          the face lists above as well, for a heading or a running head. Embedding a font in a book you sell is a
+          licensing question, and the licence is yours rather than ours.
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 function TypeSection({ settings, write, noun }: { settings: BookSettings; write(patch: Partial<BookSettings>): void; noun: string }) {
   const preset = bookPresetOf(settings);
   return (
@@ -2048,10 +2184,16 @@ function TypeSection({ settings, write, noun }: { settings: BookSettings; write(
       </label>
       <label className="field">
         <span>Face</span>
-        <select aria-label="Body face" value={settings.face} onChange={(event) => write({ face: event.target.value as BookSettings['face'] })}>
+        <select aria-label="Body face" value={settings.face} onChange={(event) => write({ face: event.target.value })}>
           {BOOK_FACES.map((face) => (
             <option key={face} value={face}>
               {FACE_NAMES[face]} — {FACE_NOTES[face]}
+            </option>
+          ))}
+          {/* The writer's own, under the names we ship (§6b). */}
+          {(settings.fonts ?? []).map((font) => (
+            <option key={font.id} value={faceOfFont(font)}>
+              {font.family} — your own
             </option>
           ))}
         </select>

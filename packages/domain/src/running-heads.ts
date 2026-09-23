@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { lineStyleSchema, lineStyleVars, type LineStyle } from './chapter-style.js';
 import { PART_FACES } from './part-style.js';
-import { FACE_STACKS } from './book-layout.js';
+import { faceStackOf } from './book-layout.js';
+import type { BookFont } from './entities/book.js';
 import type { BookFace, BookSettings, FolioPlace, HeadContent, HeadPlace } from './entities/book.js';
 
 /**
@@ -71,8 +72,12 @@ export const runningHeadStyleOf = (settings: BookSettings): RunningHeadStyle =>
  * mean, read by the print, the spread and the eBook's fixed pages alike
  * (`chapterStyleVars`' rule). *Book* as the face means the book's body face.
  */
-export const runningStyleVars = (style: RunningHeadStyle, bookFace: BookFace): Record<string, string> => ({
-  '--bk-run-face': FACE_STACKS[style.face === 'book' ? bookFace : style.face] ?? FACE_STACKS.old_style,
+export const runningStyleVars = (
+  style: RunningHeadStyle,
+  bookFace: string,
+  fonts: readonly BookFont[] = [],
+): Record<string, string> => ({
+  '--bk-run-face': faceStackOf(style.face === 'book' ? bookFace : style.face, fonts),
   ...lineStyleVars('--bk-run-verso', style.verso),
   ...lineStyleVars('--bk-run-recto', style.recto),
   ...lineStyleVars('--bk-run-folio', style.folio),

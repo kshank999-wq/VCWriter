@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { faceStackOf, fontOf } from './book-layout.js';
+import type { BookFont } from './entities/book.js';
 import type { ProjectFile } from './project-file.js';
 import { nowIso } from './entities/common.js';
 import { chapterTemplateSchema, type ChapterTemplate, type StoryMarker } from './entities/structure.js';
@@ -217,13 +219,24 @@ export const lineStyleVars = (prefix: string, one: LineStyle): Record<string, st
  * page disagree; now the one function knows, and a manuscript print that
  * passes nothing gets Courier, which is what a script's leaf wants.
  */
-export const chapterStyleVars = (style: ChapterPageStyle, bookFace?: string): Record<string, string> => {
+export const chapterStyleVars = (
+  style: ChapterPageStyle,
+  bookFace?: string,
+  fonts: readonly BookFont[] = [],
+): Record<string, string> => {
   const line = (name: string, one: LineStyle): Record<string, string> => lineStyleVars(`--chapter-${name}`, one);
   return {
     // `manuscript` is the older spelling of the same intent and is stored in
     // projects made before `book` existed, so both resolve to the body face
     // where there is a book — an existing chapter page draws exactly as it did.
-    '--chapter-face': (style.face === 'book' || style.face === 'manuscript') && bookFace ? bookFace : FACE_STACKS[style.face],
+    // An imported font (§6b) is resolved by the one resolver; everything else
+    // is this module's own table, which holds the manuscript's Courier that
+    // the book's list has no word for.
+    '--chapter-face':
+      (style.face === 'book' || style.face === 'manuscript') && bookFace
+        ? bookFace
+        : (fontOf(style.face, fonts) ? faceStackOf(style.face, fonts) : FACE_STACKS[style.face as TypeFace]) ??
+          FACE_STACKS.old_style,
     '--chapter-drop': `${style.dropInches}in`,
     /** A chapter opening above its first paragraph, in lines of the body. */
     '--chapter-opening-lines': `${style.openingLines}`,
@@ -323,8 +336,12 @@ export const chapterLeafContent = (file: ProjectFile, placed: PlacedMarker): Cha
 };
 
 /** The same, as an inline `style="…"` for the printed document. */
-export const chapterStyleAttr = (style: ChapterPageStyle, bookFace?: string): string =>
-  Object.entries(chapterStyleVars(style, bookFace))
+export const chapterStyleAttr = (
+  style: ChapterPageStyle,
+  bookFace?: string,
+  fonts: readonly BookFont[] = [],
+): string =>
+  Object.entries(chapterStyleVars(style, bookFace, fonts))
     .map(([name, value]) => `${name}:${value}`)
     .join(';');
 

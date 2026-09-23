@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { BOOK_FACES, type BookFace, type BookPart, type PartKind } from './entities/book.js';
 import { lineStyleSchema, lineStyleVars, type ChapterPageStyle, type LineStyle } from './chapter-style.js';
-import { FACE_STACKS } from './book-layout.js';
+import { faceStackOf } from './book-layout.js';
+import type { BookFont } from './entities/book.js';
 
 /**
  * How a page of the front matter is set (addendum 20 §9, from Ken: *the
@@ -211,8 +212,15 @@ const lineVars = (name: string, one: LineStyle): Record<string, string> => lineS
  * mean, read by the print and the screen alike, the chapter page's rule.
  * *Book* as the face means the book's body face, which is passed in.
  */
-export const partStyleVars = (style: PartStyle, bookFace: BookFace): Record<string, string> => ({
-  '--pt-face': FACE_STACKS[style.face === 'book' ? bookFace : style.face] ?? FACE_STACKS.old_style,
+export const partStyleVars = (
+  style: PartStyle,
+  bookFace: string,
+  fonts: readonly BookFont[] = [],
+): Record<string, string> => ({
+  // `faceStackOf` rather than a copy of the table (§6b): a face may name an
+  // imported font, and a second resolver here would set the story in Sabon
+  // and the front matter in whatever the table happened to hold.
+  '--pt-face': faceStackOf(style.face === 'book' ? bookFace : style.face, fonts),
   '--pt-drop': `${style.drop}%`,
   '--pt-align': style.align,
   '--pt-items': style.align === 'left' ? 'flex-start' : style.align === 'right' ? 'flex-end' : 'center',
@@ -223,7 +231,7 @@ export const partStyleVars = (style: PartStyle, bookFace: BookFace): Record<stri
 });
 
 /** The same, as a `style` attribute's text. */
-export const partStyleAttr = (style: PartStyle, bookFace: BookFace): string =>
-  Object.entries(partStyleVars(style, bookFace))
+export const partStyleAttr = (style: PartStyle, bookFace: string, fonts: readonly BookFont[] = []): string =>
+  Object.entries(partStyleVars(style, bookFace, fonts))
     .map(([name, value]) => `${name}:${value}`)
     .join(';');

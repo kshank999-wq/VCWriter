@@ -8,6 +8,8 @@ import {
   addUnit,
   bookNames,
   bookSettingsOf,
+  bookFontsOf,
+  faceOfFont,
   createProjectFile,
   beginStory,
   contentsDivisions,
@@ -564,6 +566,48 @@ describe('the room', () => {
     // you can see everything*). A machine that has dragged it keeps its own.
     expect(screen.getByRole('separator', { name: 'Rail width' })).toBeDefined();
     expect((document.querySelector('.layout-rail') as HTMLElement).style.flex).toBe('0 0 360px');
+  });
+
+  /**
+   * A font of the writer's own (addendum 20 §6b, from Ken: *put an option to
+   * import a font … download a font, select it from a browse, and add it to
+   * your fonts*).
+   *
+   * The file is read by the host, so what is pinned here is the way in: the
+   * fold, the browse, the name it takes, and that it joins the face list
+   * without the book being re-set behind the writer's back.
+   */
+  it('takes a font in from a browse, and never chooses it for the writer', async () => {
+    render(<Harness initial={novel()} />);
+    openBookSettings();
+    const dialog = screen.getByRole('dialog', { name: 'Book settings' });
+    const before = bookSettingsOf(latest as ProjectFile).face;
+
+    expect(within(dialog).getByText(/None yet/)).toBeDefined();
+    const picker = within(dialog).getByLabelText('Font file') as HTMLInputElement;
+    const font = new File(['fake font bytes'], 'EBGaramond-Regular.ttf', { type: 'font/ttf' });
+    Object.defineProperty(picker, 'files', { value: [font], configurable: true });
+    fireEvent.change(picker);
+    await waitFor(() => expect(bookFontsOf(latest as ProjectFile)).toHaveLength(1));
+
+    // Named after the file, tidied, and the format read off its extension.
+    const added = bookFontsOf(latest as ProjectFile)[0]!;
+    expect(added.family).toBe('EBGaramond Regular');
+    expect(added.format).toBe('truetype');
+
+    // In the face list — and the book is still in what it was set in.
+    expect(within(dialog).getByRole('option', { name: /EBGaramond Regular — your own/ })).toBeDefined();
+    expect(bookSettingsOf(latest as ProjectFile).face).toBe(before);
+
+    // Until the writer says so.
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Use it' }));
+    expect(bookSettingsOf(latest as ProjectFile).face).toBe(faceOfFont(added));
+    expect(within(dialog).getByRole('button', { name: 'In use' })).toBeDefined();
+
+    // And taking it out leaves the book printing, in the fallback.
+    fireEvent.click(within(dialog).getByRole('button', { name: `Remove ${added.family}` }));
+    expect(bookFontsOf(latest as ProjectFile)).toHaveLength(0);
+    expect(within(dialog).getByText(/None yet/)).toBeDefined();
   });
 
   /**
