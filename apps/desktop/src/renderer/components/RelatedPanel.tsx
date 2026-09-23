@@ -3,7 +3,9 @@ import {
   linkEntities,
   relatedEntities,
   storyLinkTypeSchema,
+  onlyLiving,
   unlink,
+  workingCast,
   type ProjectFile,
   type StoryEntityRef,
   type StoryLinkType,
@@ -33,22 +35,27 @@ export function RelatedPanel({ file, target, onUpdate }: RelatedPanelProps) {
   const related = relatedEntities(file, target);
 
   const options = [
+    // Nothing buried is offered to link to: linking to a deleted record would
+    // make a link the graveyard then has to carry, and the reason it is not
+    // offered has nothing to do with which module it came from — hence
+    // `onlyLiving` and `workingCast` rather than three private filters, none
+    // of which mentioned the graveyard at all (addendum 24 §5i).
     {
       label: 'Research',
-      entries: file.researchItems
+      entries: onlyLiving(file.researchItems)
         .filter((item) => !item.archived)
         .map((item) => ({ value: `research_item:${item.id}`, label: item.title })),
     },
     {
       label: 'Characters',
-      entries: file.characters.map((character) => ({
+      entries: workingCast(file).map((character) => ({
         value: `character:${character.id}`,
         label: character.name,
       })),
     },
     {
       label: 'Setups & payoffs',
-      entries: file.setupsPayoffs
+      entries: onlyLiving(file.setupsPayoffs)
         .filter((record) => !record.archived)
         .map((record) => ({ value: `setup_payoff:${record.id}`, label: record.title })),
     },

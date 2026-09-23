@@ -8,6 +8,7 @@ import {
   sortVoices,
   suggestVoiceAssignments,
   toAssignment,
+  workingCast,
   type ProjectFile,
   type StructuralUnitId,
   type VoiceDescriptor,
@@ -197,9 +198,10 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
           </select>
         </li>
 
-        {file.characters
-          .filter((character) => !character.archived)
-          .map((character) => (
+        {/* `workingCast`, never a filter of our own: `!archived` was the whole
+            answer before the graveyard and is half of one now (addendum 24
+            §5i), so a deleted person kept a voice row here. */}
+        {workingCast(file).map((character) => (
             <li key={character.id}>
               <span className="voice-name">{character.name}</span>
               <select
@@ -226,7 +228,7 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
           ))}
       </ul>
 
-      {file.characters.length === 0 ? (
+      {workingCast(file).length === 0 ? (
         <p className="muted empty">Add characters to the project to give them voices.</p>
       ) : null}
     </div>

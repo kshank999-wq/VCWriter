@@ -356,6 +356,45 @@ it, and the question came out three words to the line — the cast row's fault
 (§5c) in a different grid. The picker spans the row now, which is also the
 truer arrangement: the library is not one of the three fields of a heading.
 
+## 5i. Characters again, and the half of a delete nobody sees
+
+From Ken: *I need a delete for characters too*. §5c built it — the × on the
+cast row in the side menu and the ask on the cast panel's own — and driving
+the real room confirms it works: press it, answer the question, and MARA
+leaves the menu.
+
+**She does not leave the program.** She was still in Read Back's list of
+voices, in the Related Elements picker a scene links through, in the
+character map's *Focus on*, in the review's filters, in the manuscript
+right-click's list of who to characterize, and in the Relationships tab's
+list of who somebody else can be related to. Six surfaces, and every one of
+them had written `!person.archived` for itself.
+
+This is **§5d's lesson arriving a third time, and the third time is the one
+worth writing down**. §5d found the fault in six *domain* readings and fixed
+it by building `workingCast` — *not deleted and not put away* — as the one
+reading; §5h found it in one *count*. What none of them did was look at the
+renderer, where the same six words had been typed six more times. So the
+rule is not *apply the predicate in the module*, which was §5d's wording and
+is too narrow. It is:
+
+> **A component may not decide who is in the cast.** If a screen writes a
+> filter over `file.characters`, that screen has a second answer, and it will
+> go on giving it long after the module has changed its mind.
+
+Two counts went the same way in the same change, for §5h's reason: Setups &
+payoffs was counting the buried in the research menu and in its own *Active
+(N)* tab, both by filtering the collection rather than asking `setupsBoard`.
+And the Related Elements picker was offering deleted notes and deleted setups
+as well as deleted people — three private filters in one list, none of which
+mentioned the graveyard — so it asks `onlyLiving` and `workingCast` now.
+Linking to a buried record would make a link the graveyard then has to carry.
+
+What pins it is `cast-surfaces.test.tsx`, which renders **every** component
+that lists a person and asserts a deleted one is off it. §5d's own test did
+this for the domain; the renderer had none, which is exactly why six
+surfaces could be wrong with the suite green.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -381,3 +420,9 @@ truer arrangement: the library is not one of the three fields of a heading.
 - The × in the scene dialog's `LocationPicker`, where a location can be made;
   the research menu's Locations count routed through `locationsInOrder`; and
   the picker given the whole of the heading row rather than one column of it.
+- `workingCast` in the six renderer surfaces that listed a person for
+  themselves — Read Back's voices, the Related Elements picker, the character
+  map's focus, the review's filters, the manuscript right-click's cast and the
+  Relationships tab — plus `onlyLiving` on that picker's notes and setups, and
+  `setupsBoard` behind the two setup counts; `cast-surfaces.test.tsx` walks
+  them all.

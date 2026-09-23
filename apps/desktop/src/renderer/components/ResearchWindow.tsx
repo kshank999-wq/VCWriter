@@ -36,6 +36,7 @@ import {
   isProseFormat,
   living,
   locationsInOrder,
+  setupsBoard,
   nounsFor,
   type ApprovalDecision,
   type BeatId,
@@ -606,9 +607,9 @@ export function ResearchBody({
                     onClick={() => setSelection({ kind: 'setups' })}
                   >
                     <span className="folder-name">Setups &amp; payoffs</span>
-                    <span className="count muted">
-                      {file.setupsPayoffs.filter((record) => !record.archived).length}
-                    </span>
+                    {/* The module's reading, for the Locations count's reason
+                        (addendum 24 §5h, §5i). */}
+                    <span className="count muted">{setupsBoard(file).length}</span>
                   </button>
                 </li>
                 {/* Places, as a first-class entry rather than a folder of notes:

@@ -87,9 +87,10 @@ export function SetupsPanel({ file, currentBeatId, onUpdate, onGoTo }: SetupsPan
                 className={scope === option ? 'tab selected' : 'tab'}
                 onClick={() => setScope(option)}
               >
-                {option === 'active'
-                  ? `Active (${file.setupsPayoffs.filter((record) => !record.archived).length})`
-                  : 'Archived'}
+                {/* `setupsBoard` is the module's reading and the only thing
+                    that may be counted: counting the collection counted the
+                    deleted too (addendum 24 §5i). */}
+                {option === 'active' ? `Active (${setupsBoard(file).length})` : 'Archived'}
               </button>
             ))}
           </div>

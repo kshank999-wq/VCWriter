@@ -50,6 +50,7 @@ import {
   updateRelationship,
   updateTrait,
   whereItAppears,
+  workingCast,
   type ArcLinkVerb,
   type ArcPoint,
   type ArcPointId,
@@ -1379,9 +1380,7 @@ function Relationships({
     () => relationshipsOf({ characterId: characterId as string, file }),
     [characterId, file],
   );
-  const others = file.characters.filter(
-    (person) => !person.archived && (person.id as string) !== (characterId as string),
-  );
+  const others = workingCast(file).filter((person) => (person.id as string) !== (characterId as string));
 
   const [toId, setToId] = useState<CharacterId | ''>('');
   const [kind, setKind] = useState<RelationshipKind>('friend');

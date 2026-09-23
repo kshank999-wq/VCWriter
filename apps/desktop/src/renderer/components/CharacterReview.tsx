@@ -12,6 +12,7 @@ import {
   scriptPresence,
   unitsInStoryOrder,
   unusedCharacterMaterial,
+  workingCast,
   type ArcPointKind,
   type CharacterId,
   type CharacterTraitId,
@@ -72,7 +73,7 @@ export function CharacterReview({ file, onOpenCreator }: CharacterReviewProps) {
   const [trackId, setTrackId] = useState<TrackId | ''>('');
   const [relatedTo, setRelatedTo] = useState<CharacterId | ''>('');
 
-  const cast = file.characters.filter((person) => !person.archived);
+  const cast = workingCast(file);
   const traits = file.characterTraits.filter(
     (trait) =>
       !trait.archived &&

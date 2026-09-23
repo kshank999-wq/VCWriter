@@ -12,6 +12,7 @@ import {
   removeRelationship,
   scenesForRange,
   updateRelationship,
+  workingCast,
   type CharacterId,
   type CharacterRelationship,
   type TrackId,
@@ -129,13 +130,14 @@ export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProp
             onChange={(event) => setFocusId(event.target.value as CharacterId)}
           >
             <option value="">Everybody</option>
-            {file.characters
-              .filter((person) => !person.archived)
-              .map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name}
-                </option>
-              ))}
+            {/* The map itself has read `workingCast` since §5d; this picker
+                beside it was still writing `!archived` for itself, so a
+                deleted person could be focused on and the map drew nobody. */}
+            {workingCast(file).map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.name}
+              </option>
+            ))}
           </select>
         </label>
 

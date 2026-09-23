@@ -83,6 +83,7 @@ import {
   type SetupPayoffId,
   type ThematicKind,
   type Typing,
+  workingCast,
 } from '@vcwriter/domain';
 
 interface BeatBodyProps {
@@ -1182,12 +1183,11 @@ function FileAsCharacterization({
   const here = useMemo(() => new Set(peopleInBeat(file, beat.id).map((id) => id as string)), [file, beat.id]);
   const cast = useMemo(
     () =>
-      file.characters
-        .filter((person) => !person.archived)
+      workingCast(file)
         // Whoever speaks in this beat first: a guess about what is likely, and
         // never a filter, since a beat can characterize somebody silent in it.
         .sort((a, b) => Number(here.has(b.id as string)) - Number(here.has(a.id as string))),
-    [file.characters, here],
+    [file, here],
   );
 
   const [characterId, setCharacterId] = useState<CharacterId | ''>(cast[0]?.id ?? '');

@@ -1927,6 +1927,29 @@ push live; the build takes a minute or two.
   it fell into a 110px cell and laid the question out three words to the line —
   the cast row's fault (§5c) in another grid; it spans the row now, which is
   also truer, the library not being one of the three fields of a heading.
+  **§5i is characters again**, from Ken, and §5c's delete works — driving the
+  room, MARA leaves the menu when the × is pressed. **She did not leave the
+  program**: six renderer surfaces still listed her — Read Back's voices, the
+  Related Elements picker, the character map's *Focus on*, the review's
+  filters, the manuscript right-click's cast and the Relationships tab's
+  *other person* — every one of them writing `!person.archived` for itself.
+  **This is §5d's lesson a third time, and the third time is the one worth
+  writing down**: §5d fixed six *domain* readings with `workingCast` and §5h
+  fixed one *count*, and neither looked at the renderer, where the same six
+  words had been typed six more times. So the rule is not *apply the predicate
+  in the module* — too narrow — but **a component may not decide who is in the
+  cast**: a screen that writes its own filter over `file.characters` holds a
+  second answer and goes on giving it after the module has changed its mind.
+  Two counts went with it for §5h's reason (Setups & payoffs counted the
+  buried in the research menu and in its own *Active (N)* tab, both filtering
+  the collection instead of asking `setupsBoard`), and the Related picker was
+  offering deleted **notes and setups** too — three private filters in one
+  list, now `onlyLiving` and `workingCast`, because linking to a buried record
+  makes a link the graveyard then has to carry.
+  `cast-surfaces.test.tsx` renders **every** component that lists a person and
+  asserts a deleted one is off it; the domain had such a test since §5d and the
+  renderer had none, which is why six surfaces could be wrong with the suite
+  green.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
