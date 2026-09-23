@@ -1,5 +1,5 @@
 import { newId } from './ids.js';
-import { onlyLiving, sendToGraveyard } from './graveyard.js';
+import { living, onlyLiving, sendToGraveyard } from './graveyard.js';
 import { nowIso } from './entities/common.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { parseSceneHeading, sceneHeadingOf, setSceneHeading } from './scene-heading.js';
@@ -206,22 +206,51 @@ export const locationOfScene = (file: ProjectFile, unitId: StructuralUnitId): Lo
   return locationsInOrder(file, true).find((one) => one.name === heading.place) ?? null;
 };
 
+/** Every place named in a scene heading, once each, in alphabetical order. */
+const placesInHeadings = (file: ProjectFile): string[] => {
+  const found = new Map<string, true>();
+  for (const unit of unitsInStoryOrder(file)) {
+    const heading = sceneHeadingOf(file, unit.id);
+    if (!heading || heading.place.length === 0) continue;
+    found.set(heading.place, true);
+  }
+  return [...found.keys()].sort();
+};
+
 /**
  * A place named in the script that has no record.
  *
  * Offered so a writer who has been typing headings can adopt them rather than
  * retyping them — which is the only honest way into a module that arrives after
  * the script has started.
+ *
+ * **A deleted record still counts as a record** (addendum 24 §5l). It is the
+ * one place in the module where the buried have to be looked at: the names come
+ * off the *headings*, which a delete never touches, so reading only the living
+ * would offer to adopt a place whose record is sitting in the graveyard — and
+ * adopting it would make a **second** record of the same name, after which
+ * restoring the first gives two and `locationOfScene` picks whichever sorts
+ * first. §2 promises that restoring gives back what was there; a duplicate
+ * made in the meantime is how that promise gets broken.
  */
 export const placesWithoutRecords = (file: ProjectFile): string[] => {
-  const known = new Set(locationsInOrder(file, true).map((one) => one.name));
-  const found = new Map<string, true>();
-  for (const unit of unitsInStoryOrder(file)) {
-    const heading = sceneHeadingOf(file, unit.id);
-    if (!heading || heading.place.length === 0 || known.has(heading.place)) continue;
-    found.set(heading.place, true);
-  }
-  return [...found.keys()].sort();
+  const known = new Set((file.locations ?? []).map((one) => one.name));
+  return placesInHeadings(file).filter((place) => !known.has(place));
+};
+
+/**
+ * Places the script still names whose record has been deleted.
+ *
+ * What `placesWithoutRecords` stops offering, said properly instead of
+ * silently dropped: the writer is not stuck, and the act on offer is
+ * **Restore** rather than *Make a record*, because there is a record and it
+ * has everything that was on it.
+ */
+export const buriedPlacesInScript = (file: ProjectFile): Location[] => {
+  const named = new Set(placesInHeadings(file));
+  return (file.locations ?? [])
+    .filter((one) => !living(one) && named.has(one.name))
+    .sort((a, b) => a.name.localeCompare(b.name));
 };
 
 // -------------------------------------------------------- using one in a scene

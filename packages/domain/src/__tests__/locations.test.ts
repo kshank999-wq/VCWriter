@@ -4,6 +4,7 @@ import {
   addDescription,
   addLocation,
   addUnit,
+  buriedPlacesInScript,
   createProjectFile,
   describeLocations,
   fromRows,
@@ -11,7 +12,9 @@ import {
   locationOfScene,
   locationsInOrder,
   placesWithoutRecords,
+  removeLocation,
   renameLocation,
+  restoreFromGraveyard,
   sceneHeadingOf,
   setSceneHeading,
   timesUsed,
@@ -217,5 +220,57 @@ describe('the round trip', () => {
     expect(back.locations[0]!.time).toBe('NIGHT');
     expect(back.locations[0]!.descriptions[0]!.title).toBe('Initial reveal');
     expect(back.locations[0]!.descriptions[0]!.body).toBe('The house leans west.');
+  });
+});
+
+/**
+ * A deleted place whose name the script still carries (addendum 24 §5l).
+ *
+ * The module's readings were already clean — everything asks
+ * `locationsInOrder` — so the hole was not a stale list but the one reading
+ * that must look at the **buried**: the names come off the headings, which a
+ * delete never touches, so `placesWithoutRecords` offered to adopt a place
+ * whose record was in the graveyard, and adopting it made a second record of
+ * the same name.
+ */
+describe('a deleted place the script still names', () => {
+  const named = () => {
+    const { file, ids } = script(2);
+    const made = addLocation(file, { name: 'Miller House' });
+    const used = useLocationInScene(made.file, ids[0]!, made.location.id);
+    return { file: used, gone: removeLocation(used, made.location.id), id: made.location.id, ids };
+  };
+
+  it('is not offered as a place with no record', () => {
+    const { file, gone } = named();
+    // Nothing to adopt before, and nothing to adopt after: the record exists.
+    expect(placesWithoutRecords(file)).toEqual([]);
+    expect(placesWithoutRecords(gone)).toEqual([]);
+  });
+
+  it('is named as deleted instead, so the offer is to restore it', () => {
+    const { file, gone } = named();
+    expect(buriedPlacesInScript(file)).toEqual([]);
+    expect(buriedPlacesInScript(gone).map((one) => one.name)).toEqual(['MILLER HOUSE']);
+
+    const back = restoreFromGraveyard(gone, { kind: 'location', id: gone.locations[0]!.id as string });
+    expect(locationsInOrder(back).map((one) => one.name)).toEqual(['MILLER HOUSE']);
+    expect(buriedPlacesInScript(back)).toEqual([]);
+  });
+
+  it('never ends up as two records of one name, which is what restoring promised against', () => {
+    const { gone, ids } = named();
+    // The scene still says MILLER HOUSE, and the record is buried.
+    expect(sceneHeadingOf(gone, ids[0]!)!.place).toBe('MILLER HOUSE');
+    const back = restoreFromGraveyard(gone, { kind: 'location', id: gone.locations[0]!.id as string });
+    expect(back.locations.filter((one) => one.name === 'MILLER HOUSE')).toHaveLength(1);
+    // And the scene is pointed at it again with nothing run.
+    expect(locationOfScene(back, ids[0]!)?.name).toBe('MILLER HOUSE');
+  });
+
+  it('still offers a place that genuinely has no record at all', () => {
+    const { gone, ids } = named();
+    const typed = setSceneHeading(gone, ids[1]!, { setting: 'EXT.', place: 'THE PIER', time: 'NIGHT' });
+    expect(placesWithoutRecords(typed)).toEqual(['THE PIER']);
   });
 });

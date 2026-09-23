@@ -449,6 +449,40 @@ with this fault should take ten minutes, and a fifth should not exist.
 `notes-surfaces.test.ts` walks all four readings, each assertion checking the
 note **was** there first, as §5j's does.
 
+## 5l. Locations again, and the one reading that must see the buried
+
+From Ken: *I need a delete for locations too*. §5h put the × on the picker in
+the scene dialog and §5d on the row in Research; both work.
+
+**And the sweep found nothing**, which is the first time in four modules —
+every locations surface already asks `locationsInOrder`, so there was no stale
+filter anywhere. That is `workingCast`, `workingSetups` and `workingNotes`
+paying off: the module had owned its reading from the start.
+
+What it found instead is the **opposite** fault, and a worse one.
+`placesWithoutRecords` — *a place named in the script that has no record*,
+offered so a writer can adopt headings they have already typed — built its
+list of known names from the **living** records. So after deleting MILLER
+HOUSE while a scene heading still said `INT. MILLER HOUSE - DAY`, the panel
+offered to *Make a record* for it, and pressing that made a **second** MILLER
+HOUSE beside the buried one. Restore the first and the project has two places
+of one name, with `locationOfScene` picking whichever sorts first.
+
+So the rule has an edge, and it is worth stating exactly:
+
+> **A reading over the writer's records asks the module's one function. A
+> reading over the *manuscript* asks the whole collection.** The names here
+> come off scene headings, which a delete never touches, so *is this place
+> already recorded* has to count the buried — or the delete quietly becomes a
+> way to duplicate a record and break §2's promise that restoring gives back
+> what was there.
+
+What that stops offering is **said rather than silently dropped**:
+`buriedPlacesInScript` is its own small reading and its own list on the panel,
+*Deleted, but still in the script*, where the act is **Restore** rather than
+*Make a record* — the honest one, since there is a record and it still has its
+descriptions, its defaults and its notes.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -485,3 +519,5 @@ note **was** there first, as §5j's does.
   owes; `setups-surfaces.test.ts` walks those.
 - `workingNotes` in `selectors.ts`, read by the folder counts, the room's idea
   boxes and the timeline's theme threads; `notes-surfaces.test.ts` walks those.
+- `placesWithoutRecords` counting the buried, and `buriedPlacesInScript` with
+  its own list and a **Restore** on the locations panel.

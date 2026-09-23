@@ -4,6 +4,7 @@ import {
   TIMES,
   addDescription,
   addLocation,
+  buriedPlacesInScript,
   describeDeleting,
   describeLocations,
   locationsInOrder,
@@ -11,6 +12,7 @@ import {
   removeDescription,
   removeLocation,
   renameLocation,
+  restoreFromGraveyard,
   timesUsed,
   updateDescription,
   updateLocation,
@@ -45,6 +47,7 @@ interface LocationsPanelProps {
 export function LocationsPanel({ file, onUpdate, onGoToUnit }: LocationsPanelProps) {
   const locations = useMemo(() => locationsInOrder(file, true), [file]);
   const unrecorded = useMemo(() => placesWithoutRecords(file), [file]);
+  const buried = useMemo(() => buriedPlacesInScript(file), [file]);
   const [chosenId, setChosenId] = useState<LocationId | null>(null);
   const [draft, setDraft] = useState('');
 
@@ -107,6 +110,35 @@ export function LocationsPanel({ file, onUpdate, onGoToUnit }: LocationsPanelPro
                     onClick={() => onUpdate((current) => addLocation(current, { name: place }).file)}
                   >
                     Make a record
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {/* Places the script still names whose record was deleted. These used
+            to fall in with the list above, where *Make a record* would have
+            made a second one of the same name (addendum 24 §5l) — so they are
+            their own list, and the act is the one that gives the record back
+            with everything on it. */}
+        {buried.length > 0 ? (
+          <div className="locations-found">
+            <h4>Deleted, but still in the script</h4>
+            <ul>
+              {buried.map((place) => (
+                <li key={place.id}>
+                  <span>{place.name}</span>
+                  <button
+                    type="button"
+                    className="ghost small"
+                    onClick={() =>
+                      onUpdate((current) =>
+                        restoreFromGraveyard(current, { kind: 'location', id: place.id as string }),
+                      )
+                    }
+                  >
+                    Restore
                   </button>
                 </li>
               ))}

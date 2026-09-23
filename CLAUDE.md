@@ -1982,6 +1982,25 @@ push live; the build takes a minute or two.
   The shape is now boringly the same each time, which is the point — a fourth
   module with this fault should take ten minutes and a fifth should not exist.
   `notes-surfaces.test.ts` walks all four readings.
+  **§5l is locations again**, from Ken, and the sweep found **nothing** — the
+  first time in four modules, every locations surface already asking
+  `locationsInOrder`, which is what `workingCast`/`workingSetups`/`workingNotes`
+  were for. What it found instead is the **opposite** fault and a worse one:
+  `placesWithoutRecords` — *a place named in the script that has no record*,
+  offered so a writer can adopt headings already typed — built its known names
+  from the **living**, so deleting MILLER HOUSE while a heading still said
+  `INT. MILLER HOUSE - DAY` offered *Make a record*, and pressing it made a
+  **second** MILLER HOUSE beside the buried one; restore the first and there
+  are two of one name with `locationOfScene` picking whichever sorts first. So
+  the rule has an edge worth stating: **a reading over the writer's records
+  asks the module's one function; a reading over the *manuscript* asks the
+  whole collection** — the names come off headings, which a delete never
+  touches, so *is this already recorded* must count the buried, or the delete
+  becomes a way to duplicate a record and break §2's promise. What that stops
+  offering is **said rather than dropped**: `buriedPlacesInScript` is its own
+  list, *Deleted, but still in the script*, where the act is **Restore** rather
+  than *Make a record*, there being a record with its descriptions, defaults
+  and notes still on it.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
