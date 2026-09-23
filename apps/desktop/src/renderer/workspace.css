@@ -9110,7 +9110,10 @@ a.talk-mark:hover {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 24px;
+  /* The padding is set inline from `SPREAD_INSET_PX`, which is the air
+     `spreadFit` allows for (§9e). It is deliberately not typed here: a second
+     number that had to agree with it would be a second answer to how big a
+     spread may be drawn. */
   display: flex;
   /* Centred both ways, so the spread sits where the turn arrows are rather
      than at the top of a tall black field. `safe` keeps the top of a spread

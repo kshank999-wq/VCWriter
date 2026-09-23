@@ -23,6 +23,9 @@ import {
   beginStory,
   bookMetrics,
   bookVars,
+  spreadFit,
+  PAGE_ZOOM,
+  SPREAD_INSET_PX,
   contentsDivisions,
   describeGeometry,
   describeSpine,
@@ -210,7 +213,37 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
    */
   const [selectedSheet, setSelectedSheet] = useState<number | null>(null);
   const [spread, setSpread] = useState(0);
-  const [zoom, setZoom] = usePreference('layout.zoom', 0.55);
+  /**
+   * How big the spread is drawn (§9e).
+   *
+   * **Null means fit**, which is `minimumSetups`' shape a fourth time: the
+   * room works the size out from the trim and the window it is in, and stores
+   * nothing, so widening the rail, resizing the window or changing the trim
+   * re-fits by itself. A number is a zoom the writer set by hand, and it is
+   * kept per machine until they press *Fit* again.
+   *
+   * The key is new on purpose: the old `layout.zoom` held 0.55 because that
+   * was the only size the room could be read at, which is not somebody
+   * choosing a zoom — carrying it over would hide this from the one machine
+   * that has used the room.
+   */
+  const [chosenZoom, setChosenZoom] = usePreference<number | null>('layout.pageZoom', null);
+  /**
+   * The stage the spread is drawn in, measured. A callback ref rather than a
+   * `useRef`, because the spreads are not rendered until the book has been
+   * laid — an effect on mount would find nothing there.
+   */
+  const [stage, setStage] = useState<HTMLDivElement | null>(null);
+  const [space, setSpace] = useState<{ width: number; height: number } | null>(null);
+  useEffect(() => {
+    if (!stage) return undefined;
+    const read = () => setSpace({ width: stage.clientWidth, height: stage.clientHeight });
+    read();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const watching = new ResizeObserver(read);
+    watching.observe(stage);
+    return () => watching.disconnect();
+  }, [stage]);
   const [busy, setBusy] = useState(false);
   const [ebookOpen, setEbookOpen] = useState(false);
   /** Book settings (§9, from Ken): the whole book at once, in a dialog off the bar. */
@@ -288,6 +321,14 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
 
   const pages = laying?.laid.pages ?? [];
   const spreadCount = Math.max(1, Math.ceil((pages.length + 1) / 2));
+  /**
+   * The size that fits, read every render from the trim and the space there
+   * is (§9e). Until the stage has been measured there is nothing to fit to,
+   * so the spread is drawn at the smallest the slider offers for one frame
+   * rather than at a number that would have to be undone.
+   */
+  const fit = laying && space ? spreadFit(laying.geometry, space) : PAGE_ZOOM.min;
+  const zoom = chosenZoom ?? fit;
   useEffect(() => {
     if (spread >= spreadCount) setSpread(Math.max(0, spreadCount - 1));
   }, [spread, spreadCount]);
@@ -784,6 +825,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               laying={laying}
               spread={spread}
               zoom={zoom}
+              stageRef={setStage}
               onPickFigure={(figureId) => {
                 // A picture cut into a part's text belongs to the part, and
                 // opens it; the manuscript's figures go to the inspector.
@@ -897,14 +939,27 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               <span className="muted">Zoom</span>
               <input
                 type="range"
-                min={25}
-                max={120}
-                step={5}
+                min={Math.round(PAGE_ZOOM.min * 100)}
+                max={Math.round(PAGE_ZOOM.max * 100)}
+                step={1}
                 value={Math.round(zoom * 100)}
                 aria-label="Page zoom"
-                onChange={(event) => setZoom(Number(event.target.value) / 100)}
+                onChange={(event) => setChosenZoom(Number(event.target.value) / 100)}
               />
             </label>
+            {/* Which of the two it is, said either way (§9e). While the spread
+                is fitted the word states it; once a zoom has been set by hand
+                the same place is the way back. Absent rather than greyed: a
+                button that can only refuse is one that lies. */}
+            {chosenZoom === null ? (
+              <span className="muted small">Fit</span>
+            ) : (
+              // Raised, because a flat one reads as the same word in the other
+              // state and the two states would look alike.
+              <button type="button" className="small" onClick={() => setChosenZoom(null)}>
+                Fit
+              </button>
+            )}
             {message ? <span className="small layout-message">{message}</span> : null}
           </div>
         </div>
@@ -1092,6 +1147,7 @@ function Spreads({
   laying,
   spread,
   zoom,
+  stageRef,
   onPickFigure,
   selectedSheet,
   onPickPage,
@@ -1106,6 +1162,8 @@ function Spreads({
   laying: Laying;
   spread: number;
   zoom: number;
+  /** The stage, handed back so the room can measure what the spread has to fit (§9e). */
+  stageRef(element: HTMLDivElement | null): void;
   onPickFigure(figureId: string): void;
   /** The page in hand (§9a): outlined, so a writer can see which one the buttons mean. */
   selectedSheet: number | null;
@@ -1281,7 +1339,10 @@ function Spreads({
       <div key={key} className="layout-sheet layout-no-sheet" style={{ width: pageWidthPx, height: pageHeightPx }} />
     );
   return (
-    <div className="layout-spreads">
+    // The padding is the inset `spreadFit` allows for, set from the one
+    // constant rather than typed again in the stylesheet — two numbers that
+    // had to agree would be two answers to how big a page may be drawn (§9e).
+    <div className="layout-spreads" ref={stageRef} style={{ padding: SPREAD_INSET_PX }}>
       <div
         className="layout-spread-box"
         style={{ width: pageWidthPx * 2 * zoom + 24, height: pageHeightPx * zoom + 24 }}

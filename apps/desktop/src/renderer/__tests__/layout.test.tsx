@@ -294,6 +294,46 @@ describe('the room', () => {
     expect(screen.getByRole('button', { name: 'Draw the box…' })).toBeDefined();
   });
 
+  /**
+   * How big the spread is drawn (§9e). The room opened at a stored 0.55
+   * whatever window it was opened in — a third of a wide screen, and more than
+   * a laptop could hold. It fits now, and *Fit* is a state the foot says out
+   * loud rather than a number the writer has to recognise.
+   */
+  it('fits the spread to the window, and says which of the two it is', () => {
+    // jsdom lays nothing out, so the stage is measured for it.
+    const client = (name: 'clientWidth' | 'clientHeight', value: number) =>
+      Object.defineProperty(HTMLElement.prototype, name, { configurable: true, value });
+    client('clientWidth', 1013);
+    client('clientHeight', 959);
+    try {
+      render(<Harness initial={novel()} />);
+      const zoom = screen.getByLabelText('Page zoom') as HTMLInputElement;
+      // Nothing was chosen, so the size is a reading: the word says so and
+      // there is nothing to press — absent rather than greyed.
+      expect(screen.getByText('Fit')).toBeDefined();
+      expect(screen.queryByRole('button', { name: 'Fit' })).toBeNull();
+      const fitted = Number(zoom.value) / 100;
+      expect(fitted).toBeGreaterThan(0.55);
+      // And what is drawn really is inside the space it was fitted to.
+      const box = document.querySelector('.layout-spread-box') as HTMLElement;
+      expect(Number.parseFloat(box.style.width)).toBeLessThanOrEqual(1013);
+      expect(Number.parseFloat(box.style.height)).toBeLessThanOrEqual(959);
+
+      // A zoom set by hand is the writer's, and the same place is the way back.
+      fireEvent.change(zoom, { target: { value: '40' } });
+      expect((screen.getByLabelText('Page zoom') as HTMLInputElement).value).toBe('40');
+      fireEvent.click(screen.getByRole('button', { name: 'Fit' }));
+      expect(Number((screen.getByLabelText('Page zoom') as HTMLInputElement).value) / 100).toBe(fitted);
+      expect(screen.queryByRole('button', { name: 'Fit' })).toBeNull();
+    } finally {
+      // @ts-expect-error restoring jsdom's own getters
+      delete HTMLElement.prototype.clientWidth;
+      // @ts-expect-error restoring jsdom's own getters
+      delete HTMLElement.prototype.clientHeight;
+    }
+  });
+
   it('writes the trim and says what was worked out from it', () => {
     render(<Harness initial={novel()} />);
     openBookSettings();

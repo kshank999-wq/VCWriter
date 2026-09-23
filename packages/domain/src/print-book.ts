@@ -89,6 +89,44 @@ export const bookMetrics = (geometry: BookGeometry) => ({
   pageHeightPx: geometry.trim.height * PX_PER_IN,
 });
 
+/** How far the room may scale a spread by hand, either way (§9e). */
+export const PAGE_ZOOM = { min: 0.25, max: 1.2 } as const;
+
+/** The air around the drawn spread: the stage's padding and the box's own inset. */
+export const SPREAD_INSET_PX = 12;
+const SPREAD_BOX_PX = 24;
+
+/**
+ * How big a spread has to be drawn to **fit the space there is** (§9e).
+ *
+ * The room opened at a stored 0.55 whatever it was opened in, which is a fixed
+ * number where a measurement belongs: on a wide screen the book was drawn at a
+ * third of the room it had, and on a laptop the same number overflowed and had
+ * to be scrolled sideways. It is the timeline's *Whole story means the whole
+ * story fits* (addendum 15 §2) said of a page.
+ *
+ * Two things about it are decisions rather than arithmetic. It is a
+ * **reading** — worked out from the trim and the window every time, stored
+ * nowhere — so widening the rail, resizing the window or changing the trim
+ * re-fits with nothing run. And it is measured on a **full spread whatever
+ * this sheet carries**, because a half title stands alone: fitting that one
+ * page would draw it at twice the size of the pages after it, and a book that
+ * changes size as you turn the page is worse than one drawn small.
+ */
+export const spreadFit = (
+  geometry: BookGeometry,
+  viewport: { width: number; height: number },
+): number => {
+  const { pageWidthPx, pageHeightPx } = bookMetrics(geometry);
+  const air = SPREAD_INSET_PX * 2 + SPREAD_BOX_PX;
+  const wide = (viewport.width - air) / (pageWidthPx * 2);
+  const tall = (viewport.height - air) / pageHeightPx;
+  // Down to the hundredth rather than to the nearest, so a rounding can never
+  // put the spread a pixel wider than the space it was fitted to.
+  const fitted = Math.floor(Math.min(wide, tall) * 100) / 100;
+  return Math.min(PAGE_ZOOM.max, Math.max(PAGE_ZOOM.min, fitted));
+};
+
 /** The custom properties every page and the measuring box declare. */
 export const bookVars = (context: BookRenderContext): Record<string, string> => {
   const { leadPx, sizePx, measurePx } = bookMetrics(context.geometry);

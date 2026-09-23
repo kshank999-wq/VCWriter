@@ -34,6 +34,10 @@ import {
   describeTrim,
   estimatedPages,
   geometryOf,
+  bookMetrics,
+  spreadFit,
+  PAGE_ZOOM,
+  SPREAD_INSET_PX,
   gutterFor,
   measureWarning,
   setBookSettings,
@@ -306,6 +310,73 @@ describe('the page', () => {
   it('guesses a page count before anything is laid, and says so in the name', () => {
     expect(estimatedPages(60_000, 20)).toBe(230);
     expect(estimatedPages(0, 0)).toBe(1);
+  });
+});
+
+/**
+ * How big the spread is drawn (addendum 20 §9e).
+ *
+ * The room opened at a stored 0.55 whatever window it was opened in, which
+ * drew a 5½ × 8½ book at a third of the space a wide screen had and overflowed
+ * a laptop's. Fitting is a **reading** of the trim against the window, so
+ * nothing here is stored and every one of these numbers changes by itself.
+ */
+describe('fitting the spread to the window', () => {
+  const geometry = () => geometryOf(bookSettingsOf(novel()), 'novel', 200);
+
+  it('fills the space it is given, and never overflows it', () => {
+    const page = geometry();
+    const { pageWidthPx, pageHeightPx } = bookMetrics(page);
+    for (const viewport of [
+      { width: 1013, height: 959 },
+      { width: 593, height: 709 },
+      { width: 1600, height: 500 },
+    ]) {
+      const zoom = spreadFit(page, viewport);
+      const air = SPREAD_INSET_PX * 2 + 24;
+      expect(pageWidthPx * 2 * zoom + air).toBeLessThanOrEqual(viewport.width);
+      expect(pageHeightPx * zoom + air).toBeLessThanOrEqual(viewport.height);
+    }
+  });
+
+  it('is bigger on a bigger window, which is the fault it fixes', () => {
+    const page = geometry();
+    const wide = spreadFit(page, { width: 1013, height: 959 });
+    const small = spreadFit(page, { width: 593, height: 709 });
+    // The stored 0.55 was both too small on the one and too big on the other.
+    expect(wide).toBeGreaterThan(0.55);
+    expect(small).toBeLessThan(0.55);
+    expect(wide).toBeGreaterThan(small);
+  });
+
+  /**
+   * A half title stands alone on its sheet, and fitting *that* page would draw
+   * it at twice the size of the pages after it. A book does not change size as
+   * it is read, so the fit is a full spread's whatever this sheet carries.
+   */
+  it('measures a full spread, so the pages stay one size all through', () => {
+    const page = geometry();
+    const { pageWidthPx } = bookMetrics(page);
+    const viewport = { width: 1013, height: 959 };
+    const both = spreadFit(page, viewport);
+    const oneAlone = (viewport.width - SPREAD_INSET_PX * 2 - 24) / pageWidthPx;
+    expect(both).toBeLessThan(oneAlone);
+  });
+
+  /** A window too small to hold the book at any useful size is scrolled, not shrunk away. */
+  it('stays inside the range the slider offers', () => {
+    const page = geometry();
+    expect(spreadFit(page, { width: 120, height: 120 })).toBe(PAGE_ZOOM.min);
+    expect(spreadFit(page, { width: 9000, height: 9000 })).toBe(PAGE_ZOOM.max);
+  });
+
+  /** A trim change is a re-fit with nothing run: the same window, a different book. */
+  it('re-reads when the trim changes', () => {
+    const settings = bookSettingsOf(novel());
+    const viewport = { width: 1013, height: 959 };
+    const digest = spreadFit(geometryOf(settings, 'novel', 200), viewport);
+    const workbook = spreadFit(geometryOf({ ...settings, trim: { width: 8.5, height: 11 } }, 'novel', 200), viewport);
+    expect(workbook).toBeLessThan(digest);
   });
 });
 

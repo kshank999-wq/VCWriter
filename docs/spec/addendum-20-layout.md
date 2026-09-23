@@ -1114,6 +1114,47 @@ arrangement was fine while the dialog could do nothing the room had to help
 with; a control that draws on the spread behind it can only be offered by the
 screen holding that spread.
 
+## 9e. The spread fits the window
+
+Not from Ken — found by opening the room and looking at it. The spread was
+drawn at a stored **0.55** whatever window it was opened in: on a 1700-wide
+screen the book stood 450 pixels tall in 960 of room, less than a third of the
+space it had, and on a 1280-wide laptop the *same number* was too big and the
+spread had to be scrolled sideways to be read. One fixed figure, wrong in
+opposite directions on the two screens anybody would use.
+
+It is addendum 15 §15's fault in another room — *Whole story means the whole
+story fits*, where a column measured from the window replaced one measured in
+the source — and it lands the same way: **the size that fits is a reading**.
+`spreadFit` in `print-book.ts` takes the geometry and the space there is and
+returns the scale; nothing is stored, so widening the rail, resizing the
+window or changing the trim re-fits with nothing run and no button to press.
+The room measures its own stage with a `ResizeObserver`, and the stage's
+padding is set inline from `SPREAD_INSET_PX` rather than typed into the
+stylesheet as well, because two numbers that have to agree are two answers to
+how big a page may be drawn.
+
+Two decisions inside it.
+
+**The fit is a full spread's, whatever this sheet carries.** A half title
+stands alone on its page, and fitting *that* page would draw it at twice the
+size of every page after it — a book that changes size as you turn it is worse
+than one drawn small.
+
+**A zoom set by hand is the writer's, and it is a different state that says so
+out loud.** `layout.pageZoom` holds null for *fit* and a number for a zoom
+somebody chose — `minimumSetups`' nullable shape a fourth time — and the foot
+says which: while fitting, the word **Fit** stands beside the slider as a
+statement; once a number has been set by hand, the same place is a raised
+**Fit** button that hands the page back. Absent rather than greyed, and raised
+rather than flat, because the same word in both states drawn the same way is
+two states that look alike.
+
+The preference is a **new key**. The old `layout.zoom` held 0.55 on any
+machine that had opened the room, and 0.55 was not somebody choosing a zoom —
+it was the only size the room could be read at. Carrying it over would have
+hidden this from the one machine that had used the room.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

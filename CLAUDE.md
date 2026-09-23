@@ -1611,6 +1611,30 @@ push live; the build takes a minute or two.
   workspace — fine while the dialog could do nothing the room had to help with,
   and wrong the moment it offered a control that draws on the spread behind
   it.
+  **§9e is the spread fitting the window**, not from Ken but from opening the
+  room and looking at it: the spread was drawn at a **stored 0.55** whatever
+  window it was in, so a 1700-wide screen showed the book at under a third of
+  the space it had and a 1280-wide laptop had to scroll the *same number*
+  sideways — one figure, wrong in opposite directions on the two screens
+  anybody uses. It is addendum 15 §15's *Whole story means the whole story
+  fits* in another room, and lands the same way: **the size that fits is a
+  reading**, `spreadFit` in `print-book.ts` over the geometry and the measured
+  stage, stored nowhere, so widening the rail, resizing the window or changing
+  the trim re-fits with nothing run. The stage's padding is set **inline from
+  `SPREAD_INSET_PX`** rather than typed into the stylesheet as well, two
+  numbers that must agree being two answers to how big a page may be drawn.
+  Two decisions: **the fit is a full spread's whatever this sheet carries**
+  (a half title stands alone, and fitting *that* page would draw it twice the
+  size of every page after it — a book that changes size as it is turned is
+  worse than one drawn small), and **a hand-set zoom is a different state that
+  says so out loud** — `layout.pageZoom` is null-means-fit (`minimumSetups`'
+  shape a fourth time) and the foot carries the word **Fit** as a statement
+  while fitting and a **raised** Fit button once a number has been chosen,
+  absent rather than greyed and raised rather than flat, because the same word
+  drawn the same way in both states is two states that look alike. The key is
+  **new**: the old `layout.zoom` held 0.55 on every machine that had opened the
+  room, and that was not somebody choosing a zoom but the only size it could be
+  read at.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves
