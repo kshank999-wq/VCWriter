@@ -1969,6 +1969,19 @@ push live; the build takes a minute or two.
   `setups-surfaces.test.ts` is `cast-surfaces`' domain twin, and each
   assertion checks the record **was** there before the delete, so a reading
   that never showed anything cannot pass by accident.
+  **§5k is research notes again**, from Ken, and §5g's × on the card works —
+  the card goes and the question is the graveyard's. **And the folder still
+  said two**: `researchTree`'s counts down the side menu, `ideasIn` (the room's
+  brainstorming boxes) and `themeThreads` (the theme rows on the timeline) each
+  wrote `!item.archived` for themselves. The count is the one that matters
+  most, being **the number beside the shelf the writer just deleted from** —
+  the reply to the press, an inch away from it, saying nothing happened.
+  `workingNotes` is the third of these after `workingCast` and
+  `workingSetups`, and together they are what §5j's rule asks for: a module
+  owns one function that says which records it has, and every reading asks it.
+  The shape is now boringly the same each time, which is the point — a fourth
+  module with this fault should take ten minutes and a fifth should not exist.
+  `notes-surfaces.test.ts` walks all four readings.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

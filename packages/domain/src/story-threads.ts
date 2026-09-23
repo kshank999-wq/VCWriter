@@ -1,5 +1,5 @@
 import { workingCast } from './characters.js';
-import { beatsForUnit } from './selectors.js';
+import { beatsForUnit, workingNotes } from './selectors.js';
 import { storyLayout, timelineArcs, type StoryLayout, type StorySpan, type TimelineArc } from './story-layout.js';
 import type { Beat, Track } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
@@ -157,7 +157,8 @@ const themeThreads = (file: ProjectFile, layout: StoryLayout): ThemeThread[] => 
   }
 
   const threads: ThemeThread[] = [];
-  const items = file.researchItems.filter((item) => !item.archived && themeCategories.has(item.categoryId));
+  // Ditto: a deleted note went on drawing its thread across the timeline.
+  const items = workingNotes(file).filter((item) => themeCategories.has(item.categoryId));
 
   items.forEach((item, position) => {
     const indexes = new Set<number>();

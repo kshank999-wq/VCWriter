@@ -427,6 +427,28 @@ every reading, and each assertion checks the record **was** there before the
 delete, so a test that would pass against a reading that never showed anything
 cannot slip through.
 
+## 5k. Research notes again, and the number beside the shelf
+
+From Ken: *I need a delete for research notes too*. §5g put the × in the
+card's corner and it works — driving the room, the card goes and the question
+is the graveyard's.
+
+**And the folder still said two.** Three readings wrote `!item.archived` for
+themselves: `researchTree`'s counts down the side menu, `ideasIn` (the room's
+brainstorming boxes) and `themeThreads` (the theme rows on the timeline). The
+count is the one that matters most here, because it is *the number beside the
+shelf the writer just deleted from* — the reply to the press, sitting an inch
+away from it, saying nothing happened.
+
+`workingNotes` is the third of these, after `workingCast` and `workingSetups`,
+and the three of them together are what §5j's rule asks for: **a module owns
+one function that says which records it has, and every reading asks it.** The
+shape is now boringly the same each time, which is the point — a fourth module
+with this fault should take ten minutes, and a fifth should not exist.
+
+`notes-surfaces.test.ts` walks all four readings, each assertion checking the
+note **was** there first, as §5j's does.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -461,3 +483,5 @@ cannot slip through.
 - `workingSetups` in `setups.ts`, read by the timeline's arcs, what a scene
   carries and what a new episode is owed, with `onlyLiving` on what the project
   owes; `setups-surfaces.test.ts` walks those.
+- `workingNotes` in `selectors.ts`, read by the folder counts, the room's idea
+  boxes and the timeline's theme threads; `notes-surfaces.test.ts` walks those.

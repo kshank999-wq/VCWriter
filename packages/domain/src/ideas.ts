@@ -2,7 +2,7 @@ import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
 import { orderKeyBetween } from './ordering.js';
 import { researchItemSchema } from './entities/research.js';
-import { researchItemsIn } from './selectors.js';
+import { researchItemsIn, workingNotes } from './selectors.js';
 import { seatName, type Seat } from './room.js';
 import { originNow } from './attribution.js';
 import type { ProjectFile } from './project-file.js';
@@ -48,8 +48,7 @@ export interface IdeaBox {
  * references a version, and a version is the whole project as it stood. What
  * the room wants to look at is the research in it.
  */
-export const ideasIn = (file: ProjectFile): ResearchItem[] =>
-  file.researchItems.filter((item) => !item.archived);
+export const ideasIn = (file: ProjectFile): ResearchItem[] => workingNotes(file);
 
 /**
  * Whose idea this is, for the colour.

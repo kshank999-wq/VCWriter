@@ -84,8 +84,10 @@ export const researchTree = (file: ProjectFile, includeArchived = false): Resear
   const categories = researchCategoriesInOrder(file, includeArchived);
   const known = new Set(categories.map((category) => category.id as string));
   const direct = new Map<string, number>();
-  for (const item of file.researchItems) {
-    if (item.archived) continue;
+  // The counts down the side menu. They were a filter of their own, so a
+  // deleted note went on being counted in its folder (addendum 24 §5k) —
+  // which is the first thing a writer sees after pressing the ×.
+  for (const item of workingNotes(file)) {
     direct.set(item.categoryId, (direct.get(item.categoryId) ?? 0) + 1);
   }
 
@@ -152,6 +154,19 @@ const matches = (item: ResearchItem, query: string): boolean => {
     item.tags.some((tag) => tag.toLowerCase().includes(needle))
   );
 };
+
+/**
+ * The notes a writer is working with: **not deleted and not put away**.
+ *
+ * `workingCast` and `workingSetups`' third (addendum 24 §5k), and here for
+ * their reason: three readings wrote `!item.archived` for themselves — the
+ * folder counts, the room's idea boxes and the theme threads on the timeline —
+ * which was the whole answer before the graveyard and is half of one now.
+ * **No reading decides for itself which records exist**; this is research's
+ * answer, and every shape of note reading is built on it.
+ */
+export const workingNotes = (file: ProjectFile): ResearchItem[] =>
+  onlyLiving(file.researchItems).filter((item) => !item.archived);
 
 /**
  * What the contents pane shows: a folder and everything under it, or one of
