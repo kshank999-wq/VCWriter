@@ -1694,7 +1694,12 @@ push live; the build takes a minute or two.
   reached from the page at last, saying *Nothing here changes the chapter or
   the book — only this page*. The double-click rule is now **what the page
   *is***: a part's page opens the part, the page a chapter opens on opens that
-  chapter's page, and an ordinary page of the story is neither and goes in hand.
+  chapter's page, and an ordinary page of the story is neither and goes in hand. And **how a division is numbered** (Numbers, Roman numerals,
+  Letters, Words, a symbol, none) — a setting since the markers were built,
+  reachable only by opening a marker on the **timeline** — is now in *Book
+  settings ▸ openings*, beside the type those headings are set in, because it
+  applies to every division and §9's rule puts what applies to the whole book
+  where the whole book is set.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

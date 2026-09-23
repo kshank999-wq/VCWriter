@@ -101,6 +101,9 @@ import {
   MAX_FONT_BYTES,
   removeBookFigure,
   pagePlace,
+  MARKER_NUMBERINGS,
+  markerNumbering,
+  type MarkerNumbering,
   bookPageRows,
   type BookPageRow,
   placeBookFigure,
@@ -1698,6 +1701,32 @@ function BookSettingsDialog({
               are the chapter-page dialog's own component, so the two cannot
               disagree about what a heading looks like. */}
           <Fold id="openings" title={`${noun} openings`}>
+            {/* How a division is numbered (§9h). It was reachable only by
+                opening a marker on the timeline, which is nowhere near the
+                room a book is set in — so a writer whose file divided at
+                Roman numerals had no way, here, to have the book print them.
+                It applies to every division, so §9's own rule puts it where
+                the whole book is set. */}
+            <label className="field">
+              <span>How they are numbered</span>
+              <select
+                aria-label="How divisions are numbered"
+                value={markerNumbering(file)}
+                onChange={(event) =>
+                  onUpdate((current) => ({
+                    ...current,
+                    settings: { ...current.settings, markerNumbering: event.target.value as MarkerNumbering },
+                  }))
+                }
+              >
+                {MARKER_NUMBERINGS.map((scheme) => (
+                  <option key={scheme.value} value={scheme.value}>
+                    {scheme.label}
+                    {scheme.example ? ` — ${scheme.example}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
             <ChapterStyleFields file={file} onUpdate={onUpdate} marker={null} />
             <p className="muted small">
               A {noun.toLowerCase()} page carrying a device, a summary or an epigraph opens on a leaf of its own; one

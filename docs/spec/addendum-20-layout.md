@@ -1275,6 +1275,14 @@ the part, the page a chapter opens on opens that chapter's page, and an
 ordinary page of the story is neither — it goes in hand instead. That is the
 whole of *trying to enter any information just changes title pages*.
 
+One more thing came out of the same complaint (*the Roman numeral number one is
+missing*). **How a division is numbered** — Numbers, Roman numerals, Letters,
+Words, a symbol, none — has been a setting since the markers were built, and
+the only way to reach it was to open a marker on the **timeline**, which is
+nowhere near the room a book is laid out in. It applies to every division in
+the book, so §9's own rule puts it in *Book settings ▸ openings*, beside the
+type those headings are set in.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.
