@@ -376,6 +376,38 @@ describe('the room', () => {
     expect(said).toContain(`At ${count} page`);
   });
 
+  /**
+   * A page of the story gets a screen of its own (§9h, from Ken: *when you
+   * click on a page it has a bunch of extra dialogue, like chapter pages…
+   * trying to enter any information just changes title pages*).
+   *
+   * It had none: a page belongs to no record, so a press fell through to the
+   * chapter in force or to the part whose pages it sat among.
+   */
+  it('drops a chapter down into its pages, and a page of the story does pictures and nothing else', () => {
+    render(<Harness initial={novel()} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+
+    // Folded to begin with: a chapter is one row until somebody asks.
+    expect(document.querySelectorAll('.layout-rail-page')).toHaveLength(0);
+    fireEvent.click(rail.getAllByLabelText(/^Show the pages of /)[0]!);
+    const pages = document.querySelectorAll('.layout-rail-page');
+    expect(pages.length).toBeGreaterThan(0);
+    // Each says what stands on it, which is how art is told from text.
+    expect(pages[0]!.textContent).toMatch(/Chapter opens|Text|Picture|Blank/);
+
+    // Choosing one puts that page in hand, and the column is the page's.
+    fireEvent.click(within(pages[0] as HTMLElement).getByRole('button'));
+    const inspector = document.querySelector('.layout-inspector') as HTMLElement;
+    expect(inspector).not.toBeNull();
+    expect(inspector.textContent).toMatch(/only this page/);
+    expect(within(inspector).getByRole('button', { name: 'Put a picture on this page…' })).toBeDefined();
+    // And nothing from the chapter's page or the book's settings is on it.
+    expect(within(inspector).queryByLabelText('Trim size')).toBeNull();
+    expect(within(inspector).queryByLabelText('The number size')).toBeNull();
+    expect(inspector.textContent).not.toMatch(/epigraph|Book title/i);
+  });
+
   it('writes the trim and says what was worked out from it', () => {
     render(<Harness initial={novel()} />);
     openBookSettings();

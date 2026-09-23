@@ -1675,6 +1675,26 @@ push live; the build takes a minute or two.
   is where the hard-coded eleven inches was hiding — as did the summary's face,
   Courier in a book as well as a manuscript where the reading face is the
   book's.
+  **§9h is a page of the story being a thing you can choose**, from Ken after
+  trying to put a full-page picture on a page he had picked (*it doesn't add
+  the picture, but it seems to remove pages… trying to enter any information
+  just changes title pages*). **One cause under all of it: a page of the story
+  belonged to no record**, so a press on one fell through to whatever did own
+  something — the part whose pages it sat among, or the chapter in force — and
+  a picture asked for on page nine landed on chapter two's leaf, which
+  paginates differently, which is the *pages disappear*. **`bookPageRows` gives
+  every page a row** saying in two words what stands on it (*Chapter opens*,
+  *Text*, *Picture*, *Blank*) with its chapter, its part and its figure; it is
+  `pagePlace` said for every sheet at once, so nothing is stored and a chapter
+  that grows a page grows a row with nothing run, and the rail folds a chapter
+  open to show them (which chapter is open is about this minute and is
+  remembered nowhere). **Choosing a page shows the page's own screen, which
+  does pictures and nothing else** — what is on it, the two ways to put a
+  picture there, and `FigureSection`'s place/side/width where there is one,
+  reached from the page at last, saying *Nothing here changes the chapter or
+  the book — only this page*. The double-click rule is now **what the page
+  *is***: a part's page opens the part, the page a chapter opens on opens that
+  chapter's page, and an ordinary page of the story is neither and goes in hand.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

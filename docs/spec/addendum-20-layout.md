@@ -1235,6 +1235,46 @@ summary's face, which was Courier in a book as well as in a manuscript — the
 reading face is the book's where there is a book, which is what the printed
 book has always used.
 
+## 9h. A page of the story is a thing you can choose
+
+From Ken, after trying to put a full-page picture on a page he had picked:
+*it doesn't add the picture, but it seems to remove pages… when you click on a
+page it has a bunch of extra dialogue, like chapter pages and that type of
+thing… trying to enter any information just changes title pages… the only
+thing that should be in there is the ability to put graphics on that page, and
+the adjustments of that graphic… you should be able to drop down each chapter
+and see how many pages, so you can select an individual page, not just a
+chapter, and on that page you can see which one is art and which one is not.*
+
+One cause under all of it. **A page of the story belonged to no record.** The
+rail named parts, chapters, sections and pictures, and a press on a page of
+the spread was answered by `pagePlace` falling through to whatever *did* own
+something: the part whose pages it sat among, or the chapter in force. So a
+double-click on page nine opened chapter two's page, typing in it changed the
+title page, and a picture asked for there landed on the chapter's own leaf —
+which paginates differently, and is the *pages seem to disappear*.
+
+Two things, and the first is a reading.
+
+**`bookPageRows` gives every page a row**, saying in two words what stands on
+it — *Chapter opens*, *Text*, *Picture*, *Blank* — with the chapter in force,
+the part where it is front or back matter, and the figure where the page is a
+picture. It is `pagePlace` said for every sheet at once, so nothing is stored
+and a chapter that grows a page grows a row with nothing run. The rail folds a
+chapter open to show them; which chapter is open is about this minute, so it
+is not remembered anywhere.
+
+**Choosing a page shows the page's own screen, and it does pictures and
+nothing else.** What is on the page, the two ways to put a picture there, and —
+where there is one — the place, the side and the width `FigureSection` has
+always had, reached from the page at last. It says so out loud: *Nothing here
+changes the chapter or the book — only this page.*
+
+And the double-click rule is now **what the page *is***: a part's page opens
+the part, the page a chapter opens on opens that chapter's page, and an
+ordinary page of the story is neither — it goes in hand instead. That is the
+whole of *trying to enter any information just changes title pages*.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

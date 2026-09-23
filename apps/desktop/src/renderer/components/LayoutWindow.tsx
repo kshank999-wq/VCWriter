@@ -101,6 +101,8 @@ import {
   MAX_FONT_BYTES,
   removeBookFigure,
   pagePlace,
+  bookPageRows,
+  type BookPageRow,
   placeBookFigure,
   placeFigure,
   removeBookRow,
@@ -212,6 +214,13 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
    * what is *on* it is read back through `pagePlace` at the moment of use.
    */
   const [selectedSheet, setSelectedSheet] = useState<number | null>(null);
+  /**
+   * The chapters whose pages are showing (§9h, from Ken: *you should be able
+   * to drop down each chapter and see how many pages*). A fold rather than a
+   * setting: which chapter somebody is looking into is about this minute, so
+   * it is not stored anywhere.
+   */
+  const [openChapters, setOpenChapters] = useState<string[]>([]);
   const [spread, setSpread] = useState(0);
   /**
    * How big the spread is drawn (§9e).
@@ -328,6 +337,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const divisions = useMemo(() => contentsDivisions(file), [file]);
 
   const pages = laying?.laid.pages ?? [];
+  /** Every page of the book with a word for what stands on it (§9h). */
+  const pageRows = useMemo(() => (laying ? bookPageRows(laying.laid.pages, laying.blocks) : []), [laying]);
   const spreadCount = Math.max(1, Math.ceil((pages.length + 1) / 2));
   /**
    * The size that fits, read every render from the trim and the space there
@@ -353,6 +364,10 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
     if (!page) return;
     turnTo.current = null;
     setSpread(spreadOfSheet(page.sheet));
+    // And the page in hand follows what was just made (§9h): a picture asked
+    // for on page nine lands on a page of its own, and leaving the old sheet
+    // chosen would leave the inspector describing the page before it.
+    setSelectedSheet(page.sheet);
   }, [laying]);
 
   // ← and → turn the pages.
@@ -417,6 +432,14 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
    * wherever it is pressed.
    */
   const place = laying && selectedSheet !== null ? pagePlace(laying.laid.pages, laying.blocks, selectedSheet) : EMPTY_PLACE;
+  /**
+   * The page in hand, where it is **inside the story** (§9h). A page in the
+   * front or back matter belongs to a part and the part's own fields are its
+   * screen; a page of the story belongs to nobody, which is why it had none.
+   */
+  const storyPage = pageRows.find((one) => one.sheet === selectedSheet && one.partId === null) ?? null;
+  /** The column stands for a part, a picture, or a page of the story (§9f, §9h). */
+  const showInspector = Boolean(selected || selectedFigure || storyPage);
   /** What the page in hand is called in the book, for the buttons that act on it. */
   const chosen = pages.find((one) => one.sheet === selectedSheet);
   const chosenPage =
@@ -574,7 +597,17 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
     else if (row.kind === 'chapter') openChapterPage(row.id);
   };
 
-  /** The same, for a press on a page of the spread. */
+  /**
+   * The same, for a press on a page of the spread.
+   *
+   * **A double-click opens what the page *is*** (§9h). A part's page opens the
+   * part; the page a chapter opens on opens that chapter's page. An ordinary
+   * page of the story is neither, and used to open the chapter in force
+   * anyway — which is how a writer double-clicking page nine found themselves
+   * editing chapter two, and how a picture asked for there landed on the
+   * chapter's leaf. It puts the page in hand instead, which is the screen
+   * §9h gives it.
+   */
   const openPage = (page: BookPage) => {
     if (!laying) return;
     const at = pagePlace(laying.laid.pages, laying.blocks, page.sheet);
@@ -583,7 +616,13 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       setPartDialogId(at.partId);
       return;
     }
-    if (at.markerId) openChapterPage(at.markerId);
+    const row = bookPageRows(laying.laid.pages, laying.blocks).find((one) => one.sheet === page.sheet);
+    if (row?.says === 'Chapter opens' && at.markerId) {
+      openChapterPage(at.markerId);
+      return;
+    }
+    setSelectedRowId(row?.figureId ?? null);
+    setSelectedSheet(page.sheet);
   };
 
   /**
@@ -776,10 +815,20 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               // `where`: a picture cut into a paragraph rides inside it, so
               // `where` has no entry of its own for it.
               const at = laying ? pageOf(laying, row.id) : undefined;
+              const under = row.kind === 'chapter' && openChapters.includes(row.id) ? pageRows.filter((one) => one.markerId === row.id) : [];
               return (
+                <Fragment key={row.id}>
                 <RailRow
-                  key={row.id}
                   row={row}
+                  {...(row.kind === 'chapter'
+                    ? {
+                        open: openChapters.includes(row.id),
+                        onToggle: () =>
+                          setOpenChapters((current) =>
+                            current.includes(row.id) ? current.filter((one) => one !== row.id) : [...current, row.id],
+                          ),
+                      }
+                    : {})}
                   page={!at || at.numbering === 'none' ? '' : at.numbering === 'roman' ? roman(at.number) : String(at.number)}
                   selected={row.id === selectedRowId}
                   over={over === row.id}
@@ -806,6 +855,28 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                     dropOn(row);
                   }}
                 />
+                {/* The chapter's own pages (§9h, from Ken): one row each,
+                    saying what stands on it, and choosing one puts *that* page
+                    in hand — which is what makes a picture land where it was
+                    asked for rather than on the chapter. */}
+                {under.map((one) => (
+                  <li key={`page-${one.sheet}`} className="layout-rail-row layout-rail-page">
+                    <button
+                      type="button"
+                      className={`layout-rail-name${selectedSheet === one.sheet ? ' on' : ''}`}
+                      aria-current={selectedSheet === one.sheet}
+                      onClick={() => {
+                        setSelectedRowId(one.figureId);
+                        setSelectedSheet(one.sheet);
+                        setSpread(spreadOfSheet(one.sheet));
+                      }}
+                    >
+                      <span className="layout-rail-title">{one.says}</span>
+                    </button>
+                    <span className="muted small layout-rail-page-no">{one.folio || '—'}</span>
+                  </li>
+                ))}
+                </Fragment>
               );
             })}
           </ul>
@@ -982,7 +1053,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
             no column (§9f): it stood holding one paragraph, and on a small
             window that paragraph cost a quarter of the screen — which since
             §9e is a quarter less book. Absent rather than empty. */}
-        {selected || selectedFigure ? (
+        {showInspector ? (
           <div
             className="divider vertical"
             role="separator"
@@ -992,8 +1063,22 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
             {...inspector.dividerProps}
           />
         ) : null}
-        {selected || selectedFigure ? (
+        {showInspector ? (
         <aside className="layout-inspector" style={{ flex: `0 0 ${inspector.size}px` }}>
+          {/* A page inside the story does pictures and nothing else (§9h, from
+              Ken: *the only thing that should be in there is the ability to
+              put graphics on that page, and the adjustments of that graphic*).
+              It used to open the chapter's page or the title page's fields,
+              which is how a picture asked for on page 9 landed on chapter 2. */}
+          {storyPage ? (
+            <StoryPageSection
+              page={storyPage}
+              drawing={drawing === NEW_BOX}
+              onPut={() => importPicture('page')}
+              onDraw={() => setDrawing(NEW_BOX)}
+              onDone={() => setSelectedSheet(null)}
+            />
+          ) : null}
           {selectedFigure ? (
             <FigureSection
               figure={selectedFigure}
@@ -1069,6 +1154,8 @@ function RailRow({
   selected,
   over,
   comfort,
+  open,
+  onToggle,
   onSelect,
   onOpen,
   onRemove,
@@ -1085,6 +1172,9 @@ function RailRow({
   over: boolean;
   /** What goes with it, said once, while the × is being asked about. */
   comfort: string;
+  /** A chapter's pages, showing or not (§9h). Absent on everything else. */
+  open?: boolean;
+  onToggle?(): void;
   onSelect(): void;
   /** A double-click: the page opened to be set (§9a). */
   onOpen(): void;
@@ -1112,6 +1202,20 @@ function RailRow({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
+      {/* The chapter's pages, folded (§9h). Absent rather than a dead arrow
+          on a row that has no pages under it. */}
+      {onToggle ? (
+        <button
+          type="button"
+          className="ghost small layout-rail-fold"
+          aria-expanded={open === true}
+          aria-label={`${open ? 'Hide' : 'Show'} the pages of ${row.title}`}
+          title="Its pages, one row each"
+          onClick={onToggle}
+        >
+          <span aria-hidden="true">{open ? '▾' : '▸'}</span>
+        </button>
+      ) : null}
       <button
         type="button"
         className={selected ? 'ghost layout-part selected' : 'ghost layout-part'}
@@ -2001,6 +2105,68 @@ function PlacingHandle({
  * picture takes and which side it cuts in at. The picture keeps its own
  * proportions, so only the width and the side are read off the drag.
  */
+/**
+ * A page inside the story (§9h, from Ken: *if I want to add a picture on a
+ * facing page, I should be able to click it, and the only thing that should be
+ * in there is the ability to put graphics on that page, and the adjustments of
+ * that graphic*).
+ *
+ * The room had no screen for one. A page of the story belongs to no record —
+ * it is where the laying cut — so a press on it fell through to the chapter in
+ * force, or to the part whose pages it sat among, and the writer's picture
+ * landed on the chapter page or their typing changed the title page. This is
+ * the missing screen, and it holds **pictures and nothing else**: what stands
+ * on the page, and the two ways to put a picture on it. Where there is one
+ * already, `FigureSection` below is the adjustments — the place, the side and
+ * the width it has always had, reached from the page at last.
+ */
+function StoryPageSection({
+  page,
+  drawing,
+  onPut,
+  onDraw,
+  onDone,
+}: {
+  page: BookPageRow;
+  drawing: boolean;
+  onPut(): void;
+  onDraw(): void;
+  onDone(): void;
+}) {
+  return (
+    <section className="layout-section layout-page-section">
+      <h3>{page.folio ? `Page ${page.folio}` : 'This page'}</h3>
+      <p className="muted small">
+        {page.figureId
+          ? 'A picture stands on it. How it sits is below.'
+          : page.blank
+            ? 'It is blank — the page before a chapter that opens on a right-hand page.'
+            : page.says === 'Chapter opens'
+              ? 'The chapter opens on it. A picture put here goes in before it, and the chapter moves down.'
+              : 'Story text. A picture put here goes in before the words on it, and they move down.'}
+      </p>
+      {page.figureId ? null : (
+        <div className="layout-page-acts">
+          <button type="button" className="small" onClick={onPut}>
+            Put a picture on this page…
+          </button>
+          <button type="button" className={drawing ? 'small on' : 'small'} onClick={onDraw}>
+            {drawing ? 'Drawing the box…' : 'Draw a box for a picture…'}
+          </button>
+        </div>
+      )}
+      <p className="muted small">
+        {/* The whole of what this screen is for, said once: nothing here
+            reaches the chapter's page or the book's settings. */}
+        Nothing here changes the chapter or the book — only this page.
+      </p>
+      <button type="button" className="ghost small" onClick={onDone}>
+        Done
+      </button>
+    </section>
+  );
+}
+
 function FigureSection({
   figure,
   drawing,

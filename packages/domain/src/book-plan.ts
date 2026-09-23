@@ -743,6 +743,66 @@ export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock
 const BODY_KINDS = new Set<BlockKind>(['paragraph', 'heading', 'blockquote', 'scene_break', 'figure']);
 
 /**
+ * One page of the book, for the rail (§9h, from Ken: *you should be able to
+ * drop down each chapter and see how many pages, so you can select an
+ * individual page… and on that page you can see which one is art and which
+ * one is not*).
+ *
+ * A page is still not a record — this is `pagePlace` said for every sheet at
+ * once and with a word for what stands on it, so nothing is stored and a
+ * chapter that grows a page grows a row with nothing run.
+ */
+export interface BookPageRow {
+  sheet: number;
+  /** The number it prints, roman or arabic, or empty where it prints none. */
+  folio: string;
+  /** What stands on it, in two or three words. Never a sentence. */
+  says: string;
+  /** The chapter in force, so the rail can sit it under one. */
+  markerId: string | null;
+  /** The part it belongs to, where it is front or back matter rather than story. */
+  partId: string | null;
+  /** The picture that **is** the page, where it is one — what the inspector edits. */
+  figureId: string | null;
+  blank: boolean;
+}
+
+export const bookPageRows = (
+  pages: readonly BookPage[],
+  blocks: readonly BookBlock[],
+): BookPageRow[] => {
+  const index = new Map(blocks.map((block) => [block.id, block]));
+  let marker: string | null = null;
+  return pages.map((page) => {
+    const on = page.pieces.map((piece) => index.get(piece.blockId)).filter((block): block is BookBlock => block !== undefined);
+    const opening = on.find((block) => block.kind === 'chapter_opening');
+    if (opening) marker = opening.id;
+    const part = on.find((block) => block.partId !== undefined);
+    // A picture is a page of its own where its block takes the whole page,
+    // which is the same `display` the print reads — not a second rule.
+    const art = on.find((block) => block.kind === 'figure' && block.display);
+    const says = page.blank
+      ? 'Blank'
+      : art
+        ? 'Picture'
+        : opening
+          ? 'Chapter opens'
+          : part
+            ? 'Page'
+            : 'Text';
+    return {
+      sheet: page.sheet,
+      folio: page.folio,
+      says,
+      markerId: part ? null : marker,
+      partId: part?.partId ?? null,
+      figureId: art?.id ?? null,
+      blank: page.blank,
+    };
+  });
+};
+
+/**
  * Move a figure so it stands just before another element, wherever in the
  * manuscript that is. This is what re-drawing a picture's box on a different
  * page means: the box is where the picture goes, so drawing it elsewhere

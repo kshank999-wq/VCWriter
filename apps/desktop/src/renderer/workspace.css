@@ -14448,3 +14448,48 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }
+
+/* A chapter's pages in the rail (addendum 20 §9h): one row each, folded under
+   the chapter, so a page can be chosen rather than only a chapter. */
+.layout-rail-fold {
+  flex: 0 0 auto;
+  width: 18px;
+  padding: 0;
+  opacity: 0.7;
+}
+
+.layout-rail-page {
+  padding-left: 34px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.layout-rail-page .layout-rail-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.layout-rail-page .layout-rail-name.on {
+  background: var(--panel-2);
+  color: var(--gold);
+}
+
+.layout-rail-page-no {
+  flex: 0 0 auto;
+}
+
+.layout-page-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}

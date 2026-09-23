@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bookContentsOf,
+  bookPageRows,
   bookSettingsSchema,
   geometryOf,
   layPages,
@@ -234,5 +235,54 @@ describe('balancing', () => {
     expect(verso.target).toBe(recto.target);
     // And no page is ever deeper than the block allows.
     for (const page of laid.pages) expect(page.depth).toBeLessThanOrEqual(LINES);
+  });
+});
+
+/**
+ * The pages of a chapter, for the rail (addendum 20 §9h, from Ken: *you
+ * should be able to drop down each chapter and see how many pages… and on
+ * that page you can see which one is art and which one is not*).
+ *
+ * The room could name a chapter and a part and nothing between them, so a
+ * press on a page in the story fell through to the chapter in force — which
+ * is how a picture asked for on page nine landed on chapter two's own leaf.
+ */
+describe('the pages of a chapter', () => {
+  const laid = (extra: BookBlock[] = []) => {
+    const blocks = [...front(), ...chapter(1, [1, 2, 3]), ...extra, ...chapter(2, [1, 2])];
+    const counts: Record<string, number> = { contents: 4 };
+    for (const block of blocks) counts[block.id] = counts[block.id] ?? (block.kind === 'paragraph' ? LINES : 6);
+    return { blocks, laid: layPages(blocks, measure(counts), geometry(), settings(), names) };
+  };
+
+  it('gives every page a row, under the chapter in force, saying what stands on it', () => {
+    const { blocks, laid: pages } = laid();
+    const rows = bookPageRows(pages.pages, blocks);
+    expect(rows).toHaveLength(pages.pages.length);
+    // Every page of the book is there once, in order, keyed by its sheet.
+    expect(rows.map((row) => row.sheet)).toEqual(pages.pages.map((page) => page.sheet));
+
+    const ofChapterOne = rows.filter((row) => row.markerId === 'ch1');
+    expect(ofChapterOne.length).toBeGreaterThan(1);
+    // The first of them is the one the chapter opens on; the rest are its text.
+    expect(ofChapterOne[0]!.says).toBe('Chapter opens');
+    expect(ofChapterOne.slice(1).every((row) => row.says === 'Text' || row.says === 'Blank')).toBe(true);
+    // The front matter belongs to a part rather than to a chapter, so the
+    // rail does not sit the half title under chapter one.
+    expect(rows.filter((row) => row.partId !== null).every((row) => row.markerId === null)).toBe(true);
+  });
+
+  it('names a picture page as one, and hands the rail the figure to edit', () => {
+    const art = make({ id: 'art1', kind: 'figure', display: true, folio: false, starts: 'page', unbreakable: true, chapterTitle: 'Chapter 1' });
+    const { blocks, laid: pages } = laid([art]);
+    const rows = bookPageRows(pages.pages, blocks);
+    const picture = rows.find((row) => row.figureId === 'art1');
+
+    expect(picture).toBeDefined();
+    expect(picture!.says).toBe('Picture');
+    // It is in chapter one, which is what lets the rail sit it under that row.
+    expect(picture!.markerId).toBe('ch1');
+    // And nothing else on the book claims to be a picture.
+    expect(rows.filter((row) => row.says === 'Picture')).toHaveLength(1);
   });
 });
