@@ -6,6 +6,7 @@ import {
   removeCharacter,
   removeTrack,
   dissolveTrack,
+  folderRemoval,
   trackRemoval,
   motifsInOrder,
   themesInOrder,
@@ -703,6 +704,7 @@ export function ResearchBody({
             {tree.map((folder) => (
               <FolderNode
                 key={folder.category.id}
+                file={file}
                 folder={folder}
                 selection={selection}
                 collapsed={collapsed}
@@ -883,33 +885,18 @@ export function ResearchBody({
           ) : (
             <ul className="research-cards" aria-label="Notes">
               {items.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className={item.id === selectedItemId ? 'research-card selected' : 'research-card'}
-                    style={{ borderLeftColor: folderOf(item)?.color ?? undefined }}
-                    aria-current={item.id === selectedItemId ? 'true' : undefined}
-                    draggable
-                    onDragStart={() => setDragging({ kind: 'item', id: item.id })}
-                    onDragEnd={() => setDragging(null)}
-                    onClick={() => setSelectedItemId(item.id)}
-                  >
-                    <span className="research-card-head">
-                      <span className="research-card-title">{item.title}</span>
-                      {item.usage === 'used' ? (
-                        <span className="used-mark" title="Used in the script">
-                          ✓
-                        </span>
-                      ) : null}
-                    </span>
-                    {item.body.trim().length > 0 ? <span className="research-card-body">{item.body}</span> : null}
-                    <span className="research-card-foot muted">
-                      {folderOf(item)?.name ?? ''}
-                      {item.tags.length > 0 ? ` · ${item.tags.join(', ')}` : ''}
-                      {item.archived ? ' · put away' : ''}
-                    </span>
-                  </button>
-                </li>
+                <NoteCard
+                  key={item.id}
+                  file={file}
+                  item={item}
+                  colour={folderOf(item)?.color ?? undefined}
+                  folderName={folderOf(item)?.name ?? ''}
+                  chosen={item.id === selectedItemId}
+                  onChoose={() => setSelectedItemId(item.id)}
+                  onDragStart={() => setDragging({ kind: 'item', id: item.id })}
+                  onDragEnd={() => setDragging(null)}
+                  onUpdate={onUpdate}
+                />
               ))}
             </ul>
           )}
@@ -1033,6 +1020,7 @@ function CastMenuRow({
 }
 
 function FolderNode({
+  file,
   folder,
   selection,
   collapsed,
@@ -1044,6 +1032,7 @@ function FolderNode({
   onDragEnd,
   onDrop,
 }: {
+  file: ProjectFile;
   folder: ResearchFolder;
   selection: Selection;
   collapsed: ReadonlySet<string>;
@@ -1058,6 +1047,8 @@ function FolderNode({
   const { category, children, total } = folder;
   const seeded = category.systemKey !== null;
   const shut = collapsed.has(category.id);
+  const [asking, setAsking] = useState(false);
+  const removal = folderRemoval(file, category.id);
   const chosen = selection.kind === 'folder' && selection.id === category.id;
 
   return (
@@ -1117,23 +1108,49 @@ function FolderNode({
         >
           +
         </button>
-        {seeded ? null : (
+        {/* It asks now (addendum 24 §5g). It used to remove the folder on one
+            click with the whole explanation in a `title`, which is the answer
+            to *what happened to my notes* given where nobody reads it. */}
+        {seeded && !removal.allowed ? null : (
           <button
             type="button"
             className="ghost danger"
-            title="Remove this folder; what is in it moves up"
+            title={`Delete ${category.name}`}
             aria-label={`Remove ${category.name}`}
-            onClick={() => onUpdate((current) => removeResearchCategory(current, category.id))}
+            onClick={() => setAsking(true)}
           >
             ×
           </button>
         )}
       </div>
+      {asking ? (
+        <div className="row-ask">
+          <span className="muted small">{removal.sentence}</span>
+          <span className="row-ask-buttons">
+            {removal.allowed ? (
+              <button
+                type="button"
+                className="ghost small danger"
+                onClick={() => {
+                  onUpdate((current) => removeResearchCategory(current, category.id));
+                  setAsking(false);
+                }}
+              >
+                Delete
+              </button>
+            ) : null}
+            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+              {removal.allowed ? 'Keep' : 'Close'}
+            </button>
+          </span>
+        </div>
+      ) : null}
       {shut || children.length === 0 ? null : (
         <ul>
           {children.map((child) => (
             <FolderNode
               key={child.category.id}
+              file={file}
               folder={child}
               selection={selection}
               collapsed={collapsed}
@@ -1250,7 +1267,6 @@ function Detail({
             they are two different things a writer means (addendum 24 §1) —
             and it can exist at all because there is now somewhere for a
             mistake to land. It asks, and says where it goes. */}
-        <DeleteNote file={file} item={item} onUpdate={onUpdate} />
       </div>
 
       {where.length > 0 ? (
@@ -1394,43 +1410,94 @@ function PlotRow({
 }
 
 /**
- * Delete a note (addendum 24 §5). It asks, and what it says is where the note
- * is going rather than a warning — the graveyard is the reason this control
- * can exist, so the sentence is the reassurance rather than the threat.
+ * A note, on the shelf (addendum 24 §5g).
+ *
+ * The delete was §5a's, in the detail beside *Put away*, which is the
+ * placement §5d moved every other list away from — a writer looking at the
+ * note they want rid of is looking at the **card**. So the × is on the card,
+ * waiting until it is pointed at, and *Put away* stays in the detail for the
+ * setups' reason: archiving is a decision about the work.
  */
-function DeleteNote({
+function NoteCard({
   file,
   item,
+  colour,
+  folderName,
+  chosen,
+  onChoose,
+  onDragStart,
+  onDragEnd,
   onUpdate,
 }: {
   file: ProjectFile;
-  item: ResearchItem;
+  item: ResearchItem & { usage?: string };
+  colour: string | undefined;
+  folderName: string;
+  chosen: boolean;
+  onChoose(): void;
+  onDragStart(): void;
+  onDragEnd(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
 }) {
   const [asking, setAsking] = useState(false);
-  if (!asking) {
-    return (
-      <button type="button" className="ghost" onClick={() => setAsking(true)}>
-        Delete
-      </button>
-    );
-  }
   return (
-    <span className="graveyard-ask">
-      <span className="muted small">{describeDeleting(file, { kind: 'researchItem', id: item.id as string })}</span>
-      <button
-        type="button"
-        className="ghost small danger"
-        onClick={() => {
-          onUpdate((current) => deleteResearchItem(current, item.id));
-          setAsking(false);
-        }}
-      >
-        Delete
-      </button>
-      <button type="button" className="ghost small" onClick={() => setAsking(false)}>
-        Keep
-      </button>
-    </span>
+    <li>
+      <div className="research-card-wrap">
+        <button
+          type="button"
+          className={chosen ? 'research-card selected' : 'research-card'}
+          style={{ borderLeftColor: colour }}
+          aria-current={chosen ? 'true' : undefined}
+          draggable
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onClick={onChoose}
+        >
+          <span className="research-card-head">
+            <span className="research-card-title">{item.title}</span>
+            {item.usage === 'used' ? (
+              <span className="used-mark" title="Used in the script">
+                ✓
+              </span>
+            ) : null}
+          </span>
+          {item.body.trim().length > 0 ? <span className="research-card-body">{item.body}</span> : null}
+          <span className="research-card-foot muted">
+            {folderName}
+            {item.tags.length > 0 ? ` · ${item.tags.join(', ')}` : ''}
+            {item.archived ? ' · put away' : ''}
+          </span>
+        </button>
+        <button
+          type="button"
+          className="ghost small danger card-x"
+          aria-label={`Delete ${item.title}`}
+          title={`Delete ${item.title}`}
+          onClick={() => setAsking(true)}
+        >
+          ×
+        </button>
+      </div>
+      {asking ? (
+        <div className="row-ask">
+          <span className="muted small">{describeDeleting(file, { kind: 'researchItem', id: item.id as string })}</span>
+          <span className="row-ask-buttons">
+            <button
+              type="button"
+              className="ghost small danger"
+              onClick={() => {
+                onUpdate((current) => deleteResearchItem(current, item.id));
+                setAsking(false);
+              }}
+            >
+              Delete
+            </button>
+            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+              Keep
+            </button>
+          </span>
+        </div>
+      ) : null}
+    </li>
   );
 }

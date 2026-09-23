@@ -152,10 +152,50 @@ describe('the research window', () => {
     fireEvent.click(screen.getByText('+ Folder'));
 
     expect(side.getByText('New folder')).toBeDefined();
+    // It asks now, and says where what is in it goes (addendum 24 §5g).
     fireEvent.click(side.getByLabelText('Remove New folder'));
+    expect(screen.getByText(/The folder goes\. Nothing is in it\./)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(side.queryByText('New folder')).toBeNull();
     // Mike's note is untouched by any of it.
     expect(screen.getByText('Wears his father’s coat')).toBeDefined();
+  });
+
+  /**
+   * From Ken: *I need a delete for research notes and folders too*. The note's
+   * delete was §5a's, in the detail beside *Put away*; it is on the card now
+   * (addendum 24 §5g), which is where a writer looking at the note they want
+   * rid of is looking.
+   */
+  it('deletes a note from its own card, and Put away stays in the detail', () => {
+    let seen: ProjectFile | null = null;
+    function Watched() {
+      const [file, setFile] = useState(withNotes());
+      seen = file;
+      return (
+        <ResearchWindow
+          file={file}
+          open
+          currentBeatId={null}
+          onClose={() => undefined}
+          onUpdate={(mutate) => setFile((current) => mutate(current))}
+        />
+      );
+    }
+    render(<Watched />);
+    const notes = () => within(screen.getByLabelText('Notes'));
+    fireEvent.click(notes().getByText('A revolver in the drawer'));
+    // One act, on the card; archiving is still the detail's.
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+    expect(within(screen.getByLabelText('Detail')).getByRole('button', { name: /put away/i })).toBeDefined();
+
+    fireEvent.click(screen.getByLabelText('Delete A revolver in the drawer'));
+    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    const after = seen as unknown as ProjectFile;
+    expect(notes().queryByText('A revolver in the drawer')).toBeNull();
+    expect(graveyard(after).map((row) => row.word)).toEqual(['Note']);
   });
 
   /**

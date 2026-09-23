@@ -9,6 +9,7 @@ import {
   updateResearchCategory,
 } from '../mutations.js';
 import { researchItemsIn, researchSubtree, researchTree } from '../selectors.js';
+import { folderRemoval } from '../research-folders.js';
 import { fromRows, toRows } from '../sync-mapping.js';
 
 /** Characters ▸ Mike ▸ Journey, with a note in each of the two deeper ones. */
@@ -105,5 +106,44 @@ describe('research as a tree', () => {
     const after = updateResearchCategory(file, mike.id, { name: 'Mike Sanchez', color: '#5b7fa6' });
     const found = after.researchCategories.find((category) => category.id === mike.id);
     expect([found?.name, found?.color]).toEqual(['Mike Sanchez', '#5b7fa6']);
+  });
+});
+
+/**
+ * The sentence a writer is shown before the press (addendum 24 §5g).
+ *
+ * **A folder is a shelf, not work**: everything in it moves up, so nothing is
+ * lost and nothing needs the graveyard — which the test above proves. What was
+ * missing is saying so *before* the folder goes, rather than in a `title`
+ * attribute nobody reads.
+ */
+describe('what removing a folder says it will do', () => {
+  it('names what moves and where it lands', () => {
+    const { file, characters, mike } = nested();
+    const reading = folderRemoval(file, mike.id);
+    expect(reading.allowed).toBe(true);
+    expect(reading.moveTo).toBe(characters.name);
+    expect(reading.sentence).toContain('1 note and 1 folder');
+    expect(reading.sentence).toContain(characters.name);
+    expect(reading.sentence).toContain('Nothing filed in it is lost');
+  });
+
+  it('agrees with itself about one thing moving and two', () => {
+    const { file, journey } = nested();
+    // One note under Journey, and nothing else.
+    expect(folderRemoval(file, journey.id).sentence).toContain('1 note moves to');
+  });
+
+  it('is plain about an empty one, which is the folder added by accident', () => {
+    const { file } = nested();
+    const made = addResearchCategory(file, { name: 'New folder' });
+    expect(folderRemoval(made.file, made.category.id).sentence).toBe('The folder goes. Nothing is in it.');
+  });
+
+  it('refuses a seeded shelf rather than offering a control that would fail', () => {
+    const { file, characters } = nested();
+    const reading = folderRemoval(file, characters.id);
+    expect(reading.allowed).toBe(false);
+    expect(reading.sentence).toContain('comes with');
   });
 });

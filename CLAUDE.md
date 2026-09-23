@@ -1890,6 +1890,22 @@ push live; the build takes a minute or two.
   record a decision about the record, which is §1's own distinction. So
   Archive stays in the detail and the × goes on the row: not a compromise, two
   acts landing where each belongs.
+  **§5g is notes and folders**, from Ken, and they are two different answers.
+  A **note's** delete was §5a's, in the detail beside *Put away*; it is on the
+  **card** now, the × in its corner, because somebody wanting rid of a note is
+  looking at the note. A **folder is a shelf, not work**: it has had a delete
+  all along and `removeResearchCategory` has always moved everything up to
+  where the folder was, so deleting one **takes nothing away** — §5e's plot
+  rule a second time — which is why a folder is **not** a graveyard kind and
+  will not become one, there being nothing to restore. What was missing was
+  **saying so before the press**: the whole explanation lived in a `title`
+  attribute (*what is in it moves up*), the answer to *what happened to my
+  notes* given where nobody reads it. `folderRemoval` is that sentence — what
+  moves, how much and which shelf it lands on — and it says the two refusals
+  the act already threw. Driving the screen caught the sentence disagreeing
+  with itself (*1 note move to Ideas*). **This is where the pattern stops
+  paying**: every Research record now deletes the same way, so the next ask of
+  this shape should find the control already in the right place.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

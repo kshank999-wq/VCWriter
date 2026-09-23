@@ -279,6 +279,39 @@ Nothing else changed: the sentence was already `describeDeleting`, the act was
 already `deleteSetupPayoff`, and the record's points ride inside it and come
 back with it.
 
+## 5g. Notes and folders, and the one that is not a record
+
+From Ken: *I need a delete for research notes and folders too*. Two different
+answers, because they are two different kinds of thing.
+
+**A note's delete was §5a's, in the detail beside *Put away***, which is the
+placement §5d moved every other list away from. It is on the **card** now —
+the × in the corner, waiting until the card is pointed at — because a writer
+who wants rid of a note is looking at the note. *Put away* stays in the
+detail, for §5f's reason.
+
+**A folder is a shelf, not work.** It has had a delete since the room was
+built, and `removeResearchCategory` has always moved everything up to where
+the folder was — so deleting one **takes nothing away**, which is §5e's rule
+about a plot arriving a second time. That is why a folder is **not** a
+graveyard kind and will not become one: there is nothing to restore, because
+nothing was lost. What was missing was **saying so before the press**: the
+whole explanation lived in a `title` attribute (*Remove this folder; what is
+in it moves up*), which is the answer to *what happened to my notes* given
+where nobody reads it. `folderRemoval` is that sentence — what moves, how
+much of it and which shelf it lands on — and it also carries the two refusals
+the act already had, so a seeded shelf and the last folder are **said** rather
+than thrown.
+
+Driving the screen caught the sentence disagreeing with itself: *1 note move
+to Ideas*, which is what a counted list joined to a fixed verb gives.
+
+**This is also where the pattern stops paying.** Every Research record now
+deletes the same way — × on the row or the card, one sentence, the graveyard
+behind it — so the next ask of this shape should find the control already in
+the right place, and if it does not, the thing to check first is whether the
+screen was ever wired to the rule at all.
+
 ## 6. What was built
 
 - `packages/domain/src/graveyard.ts` — the kinds, the predicate, the reading,
@@ -299,3 +332,5 @@ back with it.
   row in Research and the timeline's own × asking in the same words; the
   thread's delete moved to its row and its sentence replaced by the module's.
 - The setups & payoffs × on its row, with Archive left in the detail.
+- The note's × on its card, and `research-folders.ts` — `folderRemoval` — with
+  the folder's × asking in its words.
