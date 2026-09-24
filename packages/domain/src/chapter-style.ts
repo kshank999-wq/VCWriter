@@ -4,7 +4,13 @@ import { projectStats } from './selectors.js';
 import type { BookFont } from './entities/book.js';
 import type { ProjectFile } from './project-file.js';
 import { nowIso } from './entities/common.js';
-import { chapterTemplateSchema, type ChapterTemplate, type StoryMarker } from './entities/structure.js';
+import {
+  chapterLayoutIdSchema,
+  chapterTemplateSchema,
+  firstLineSchema,
+  type ChapterTemplate,
+  type StoryMarker,
+} from './entities/structure.js';
 import {
   chapterPageContent,
   contentsDivisions,
@@ -142,6 +148,21 @@ export const chapterPageStyleSchema = z.object({
    * under it — so a book that never chooses looks exactly as it did.
    */
   template: chapterTemplateSchema.default('graphic_middle'),
+  /**
+   * The book's chapter-opening layout (addendum 20 §14). Null means *read it
+   * off the template*, which is what every book made before this holds — so
+   * nothing is migrated and nothing moves. `chapter-layouts.ts` is the one
+   * place that knows what an id means.
+   */
+  layout: chapterLayoutIdSchema.nullable().default(null),
+  /**
+   * What happens to the chapter's first line: a drop cap, a small-caps
+   * lead-in, or neither. The **book's** and never a chapter's, because it is
+   * a convention rather than a decision about one page — a book where chapter
+   * four alone has a drop cap has a mistake in it. `plain` is what every book
+   * has always printed.
+   */
+  firstLine: firstLineSchema.default('plain'),
   /**
    * How far down the page the block sits, in inches. A chapter opening falls
    * about a third of the way down in most books, which is where this starts.

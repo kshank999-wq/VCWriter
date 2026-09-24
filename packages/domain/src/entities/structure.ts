@@ -371,6 +371,21 @@ export const CHAPTER_TEMPLATES = ['graphic_top', 'graphic_middle', 'graphic_bott
 export const chapterTemplateSchema = z.enum(CHAPTER_TEMPLATES);
 export type ChapterTemplate = z.infer<typeof chapterTemplateSchema>;
 
+/**
+ * How the opening page is laid out (addendum 20 §14, from Ken's own handoff).
+ * The ids live here beside the template because `chapter-layouts.ts` is what
+ * they *mean* and the schemas must not import it — `template` is the older
+ * spelling of four of these, read back rather than migrated.
+ */
+export const CHAPTER_LAYOUT_IDS = ['classic', 'top', 'mid', 'bottom', 'full', 'left', 'epi', 'bignum', 'art'] as const;
+export const chapterLayoutIdSchema = z.enum(CHAPTER_LAYOUT_IDS);
+export type ChapterLayoutId = z.infer<typeof chapterLayoutIdSchema>;
+
+/** What happens to a chapter's first line: a convention, so the book chooses once. */
+export const FIRST_LINE_KINDS = ['drop_cap', 'lead_in', 'plain'] as const;
+export const firstLineSchema = z.enum(FIRST_LINE_KINDS);
+export type FirstLine = z.infer<typeof firstLineSchema>;
+
 export const chapterPageSchema = z.object({
   /** Off: the chapter still exists, it just has no page of its own. */
   include: z.boolean().default(false),
@@ -399,6 +414,13 @@ export const chapterPageSchema = z.object({
    * picture can sit at the foot without every other chapter following.
    */
   template: z.enum(['book', ...CHAPTER_TEMPLATES]).default('book'),
+  /**
+   * This chapter's layout, or null for *use the book's* (addendum 20 §14) —
+   * `template`'s own shape, and the field that supersedes it. `layoutOf`
+   * reads the template where this is null, so a page made before there was a
+   * layout draws exactly as it did and nothing is migrated.
+   */
+  layout: chapterLayoutIdSchema.nullable().default(null),
   /**
    * How this page is **placed**, or null for *use the book's* (addendum 20
    * §9c, from Ken: these are page settings rather than book settings).

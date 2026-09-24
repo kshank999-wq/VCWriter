@@ -74,6 +74,7 @@ export * from './learning.js';
 export * from './note-import.js';
 export * from './story-map.js';
 export * from './chapter-style.js';
+export * from './chapter-layouts.js';
 export * from './chapter-summary.js';
 export * from './entities/book.js';
 export * from './book-layout.js';
