@@ -259,6 +259,27 @@ export const FIRST_LINES: ReadonlyArray<{ id: FirstLine; label: string; says: st
 /** How many words a lead-in takes. Five is the convention and the handoff's. */
 export const LEAD_IN_WORDS = 5;
 
+/**
+ * Where a chapter's first paragraph is cut, for the piece set apart.
+ *
+ * **One rule, two readers**: the print takes the cut and so does the preview
+ * sheet, so a writer choosing a drop cap sees the letter the book will set.
+ * A drop cap takes the first letter (with an opening quotation mark, so the
+ * quote does not become the cap); a lead-in takes the first few words.
+ * Nothing is cut where the paragraph is shorter than the piece asked for.
+ */
+export const firstLineCut = (text: string, first: FirstLine): number => {
+  if (first === 'plain' || text.trim().length === 0) return 0;
+  if (first === 'drop_cap') return /^["'“‘]/.test(text) ? 2 : 1;
+  let seen = 0;
+  for (let at = 0; at < text.length; at += 1) {
+    if (text[at] !== ' ') continue;
+    seen += 1;
+    if (seen >= LEAD_IN_WORDS) return at;
+  }
+  return 0;
+};
+
 // ------------------------------------------------------------- the settings
 
 /**

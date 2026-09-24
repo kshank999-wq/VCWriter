@@ -1,4 +1,4 @@
-import type { BookSettings } from './entities/book.js';
+import type { BookFont, BookSettings } from './entities/book.js';
 import type { InlineSpan } from './entities/inline.js';
 import {
   chapterPageStyleSchema,
@@ -10,8 +10,8 @@ import {
 } from './chapter-style.js';
 import {
   LAYOUT_OF_TEMPLATE,
-  LEAD_IN_WORDS,
   chapterLayout,
+  firstLineCut,
   type ChapterLayout,
   type ChapterSlot,
 } from './chapter-layouts.js';
@@ -358,32 +358,15 @@ const slotMarkup = (
 const firstLineMarkup = (block: BookBlock, first: 'drop_cap' | 'lead_in'): string => {
   const text = block.text;
   if (text.trim().length === 0) return renderSpans(block.spans, block.text);
-  const cut =
-    first === 'drop_cap'
-      ? // Past any opening quotation mark, so the quote does not become the cap.
-        /^["'“‘]/.test(text)
-        ? 2
-        : 1
-      : // The first few words, cut on the space after the LEAD_IN_WORDS'th, so
-        // a short opening sentence is not swallowed whole.
-        wordBreak(text, LEAD_IN_WORDS);
+  // The same cut the preview sheet takes, so a writer choosing a drop cap
+  // sees the letter the book will set (§14).
+  const cut = firstLineCut(text, first);
   if (cut <= 0 || cut >= text.length) return renderSpans(block.spans, block.text);
   const taken = escapeHtml(text.slice(0, cut));
   const rest = renderSpans(spansAfter(block.spans, cut), text.slice(cut));
   return first === 'drop_cap'
     ? `<span class="bk-drop-cap">${taken}</span>${rest}`
     : `<span class="bk-lead-in">${taken}</span>${rest}`;
-};
-
-/** Where the nth space falls, or 0 where the text has fewer words than that. */
-const wordBreak = (text: string, words: number): number => {
-  let seen = 0;
-  for (let at = 0; at < text.length; at += 1) {
-    if (text[at] !== ' ') continue;
-    seen += 1;
-    if (seen >= words) return at;
-  }
-  return 0;
 };
 
 /**
@@ -468,6 +451,30 @@ const openingMarkup = (block: BookBlock, context: BookRenderContext): string => 
   const wide = layout.graphic === 'bleed' ? ' bk-opening-bleed' : '';
   return `<div class="bk-opening bk-layout-${layout.id}${wide}" style="text-align:${layout.align === 'left' ? 'left' : align};${style}${own ? `;${own}` : ''}">${parts}</div>`;
 };
+
+/**
+ * A chapter opening on its own, for a preview sheet (§14).
+ *
+ * **The same function the printed page goes through.** Every screen that shows
+ * a writer what a chapter page will look like — the chapter-page dialog, the
+ * marker dialog, the layout dialog's live preview — draws this, so none of
+ * them can hold a second idea of where the picture sits. The renderer used to
+ * keep a React copy of the arrangement in `ChapterLeaf`, and it had already
+ * drifted: it knew three templates and could not draw a fourth.
+ *
+ * It takes only what the opening needs, so a caller with no book (a
+ * screenplay's marker preview) needs no `BookRenderContext`.
+ */
+export const renderChapterOpening = (
+  chapter: ChapterPageContent,
+  style: ChapterPageStyle,
+  face?: string,
+  fonts: readonly BookFont[] = [],
+): string =>
+  openingMarkup({ id: 'leaf', kind: 'chapter_opening', leaf: true, chapter, text: '', spans: [] } as unknown as BookBlock, {
+    chapterStyle: style,
+    settings: { face: face ?? 'manuscript', fonts },
+  } as unknown as BookRenderContext);
 
 /**
  * One block's markup. Set in the measuring box to find its height; set in a
@@ -678,6 +685,46 @@ export const renderBookPage = (
 };
 
 /** The stylesheet the pages read; the custom properties come from `bookVars`. */
+/**
+ * How a chapter opening is set, as CSS (addendum 20 §14).
+ *
+ * Split out of `BOOK_STYLES` so the **preview sheets can carry the same
+ * rules** — the chapter-page dialog, the marker dialog and the layout dialog
+ * all draw `renderChapterOpening`'s markup, and a second stylesheet for them
+ * would be a second answer to *what will this look like*, which is the fault
+ * `chapterStyleVars` was written to stop. `BOOK_STYLES` interpolates it, so
+ * there is one copy and the printed page cannot drift from the screen.
+ */
+export const CHAPTER_STYLES = `
+  .bk-opening { padding-top: calc(var(--bk-lead) * var(--chapter-opening-lines, 8)); padding-bottom: calc(var(--bk-lead) * 2); font-family: var(--chapter-face, var(--bk-face)); }
+  .bk-chapter-head { display: inline-block; border-bottom: var(--chapter-rule, none); padding-bottom: 0.35em; }
+  .bk-chapter-label { margin: 0; font-size: var(--chapter-number-size); font-weight: var(--chapter-number-weight); font-style: var(--chapter-number-style); text-transform: var(--chapter-number-case); font-variant-caps: var(--chapter-number-variant); letter-spacing: var(--chapter-number-tracking); line-height: 1.3; }
+  .bk-chapter-title { margin: 0.6em 0 0; font-size: var(--chapter-title-size); font-weight: var(--chapter-title-weight); font-style: var(--chapter-title-style); text-transform: var(--chapter-title-case); font-variant-caps: var(--chapter-title-variant); letter-spacing: var(--chapter-title-tracking); line-height: 1.25; }
+  .bk-leaf { padding-top: var(--chapter-drop, 2.5in); height: 100%; font-family: var(--chapter-face, var(--bk-face)); }
+  .bk-chapter-device { display: block; margin: 1.5em auto 0; max-width: 100%; }
+  .bk-leaf-art { position: absolute; inset: 0; padding: 0; height: auto; overflow: hidden; }
+  .bk-chapter-art { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .bk-chapter-epigraph { margin: 2em 0 0; white-space: pre-wrap; font-size: var(--chapter-epigraph-size); font-style: var(--chapter-epigraph-style); }
+  .bk-chapter-summary { margin: 2em auto 0; max-width: 34em; white-space: pre-wrap; text-align: left; font-family: var(--bk-face); font-size: var(--chapter-summary-size); line-height: 1.5; }
+  /* The layouts (addendum 20 §14). Each is the slot list drawn; nothing here
+     knows what a layout means, only how the pieces sit. */
+  .bk-layout-left { align-items: flex-start; }
+  .bk-layout-left .bk-chapter-head { border-bottom: none; }
+  .bk-layout-left .bk-chapter-label { font-size: calc(var(--chapter-number-size) * 1.6); line-height: 1; }
+  .bk-layout-bignum .bk-chapter-label { font-size: calc(var(--chapter-number-size) * 2.7); line-height: 1; }
+  .bk-chapter-slot-rule { width: 4em; height: 1px; margin: 0.5em 0 0.45em; background: currentColor; }
+  .bk-chapter-bleed { margin: 0 calc(-1 * var(--bk-outside)) 1.6em; }
+  .bk-chapter-bleed img { display: block; width: 100%; height: 33vh; max-height: 3in; object-fit: cover; }
+  .bk-opening-bleed { padding-top: 0; }
+  .bk-epigraph-apart { max-width: 22em; margin: 2.2em auto 0; text-align: center; }
+  /* A chapter's first line (§14). The cap is floated, so the lines beside it
+     run round; the lead-in is font-variant-caps, which is a real setting
+     rather than a change to the letters (addendum 02 §12a's rule). */
+  .bk-drop-cap { float: left; font-size: calc(var(--bk-lead) * 3); line-height: calc(var(--bk-lead) * 2.55); padding: 0.02em 0.08em 0 0; font-family: var(--chapter-face, var(--bk-face)); }
+  .bk-lead-in { font-variant-caps: small-caps; letter-spacing: 0.04em; }
+  .bk-first-drop_cap::after, .bk-first-lead_in::after { content: ''; display: block; clear: none; }
+`;
+
 export const BOOK_STYLES = `
   .bk-page {
     position: relative;
@@ -718,33 +765,7 @@ export const BOOK_STYLES = `
   .bk-plate-image { display: block; width: 100%; height: 100%; object-fit: cover; }
   .bk-figure-missing, .bk-plate-missing { height: calc(var(--bk-lead) * 8); border: 1px dashed #999; color: #777; display: flex; align-items: center; justify-content: center; font-size: 0.85em; }
   .bk-caption { margin: 0; padding-top: calc(var(--bk-lead) * 0.5); font-size: 0.85em; text-align: center; font-style: italic; }
-  .bk-opening { padding-top: calc(var(--bk-lead) * var(--chapter-opening-lines, 8)); padding-bottom: calc(var(--bk-lead) * 2); font-family: var(--chapter-face, var(--bk-face)); }
-  .bk-chapter-head { display: inline-block; border-bottom: var(--chapter-rule, none); padding-bottom: 0.35em; }
-  .bk-chapter-label { margin: 0; font-size: var(--chapter-number-size); font-weight: var(--chapter-number-weight); font-style: var(--chapter-number-style); text-transform: var(--chapter-number-case); font-variant-caps: var(--chapter-number-variant); letter-spacing: var(--chapter-number-tracking); line-height: 1.3; }
-  .bk-chapter-title { margin: 0.6em 0 0; font-size: var(--chapter-title-size); font-weight: var(--chapter-title-weight); font-style: var(--chapter-title-style); text-transform: var(--chapter-title-case); font-variant-caps: var(--chapter-title-variant); letter-spacing: var(--chapter-title-tracking); line-height: 1.25; }
-  .bk-leaf { padding-top: var(--chapter-drop, 2.5in); height: 100%; font-family: var(--chapter-face, var(--bk-face)); }
-  .bk-chapter-device { display: block; margin: 1.5em auto 0; max-width: 100%; }
-  .bk-leaf-art { position: absolute; inset: 0; padding: 0; height: auto; overflow: hidden; }
-  .bk-chapter-art { display: block; width: 100%; height: 100%; object-fit: cover; }
-  .bk-chapter-epigraph { margin: 2em 0 0; white-space: pre-wrap; font-size: var(--chapter-epigraph-size); font-style: var(--chapter-epigraph-style); }
-  .bk-chapter-summary { margin: 2em auto 0; max-width: 34em; white-space: pre-wrap; text-align: left; font-family: var(--bk-face); font-size: var(--chapter-summary-size); line-height: 1.5; }
-  /* The layouts (addendum 20 §14). Each is the slot list drawn; nothing here
-     knows what a layout means, only how the pieces sit. */
-  .bk-layout-left { align-items: flex-start; }
-  .bk-layout-left .bk-chapter-head { border-bottom: none; }
-  .bk-layout-left .bk-chapter-label { font-size: calc(var(--chapter-number-size) * 1.6); line-height: 1; }
-  .bk-layout-bignum .bk-chapter-label { font-size: calc(var(--chapter-number-size) * 2.7); line-height: 1; }
-  .bk-chapter-slot-rule { width: 4em; height: 1px; margin: 0.5em 0 0.45em; background: currentColor; }
-  .bk-chapter-bleed { margin: 0 calc(-1 * var(--bk-outside)) 1.6em; }
-  .bk-chapter-bleed img { display: block; width: 100%; height: 33vh; max-height: 3in; object-fit: cover; }
-  .bk-opening-bleed { padding-top: 0; }
-  .bk-epigraph-apart { max-width: 22em; margin: 2.2em auto 0; text-align: center; }
-  /* A chapter's first line (§14). The cap is floated, so the lines beside it
-     run round; the lead-in is font-variant-caps, which is a real setting
-     rather than a change to the letters (addendum 02 §12a's rule). */
-  .bk-drop-cap { float: left; font-size: calc(var(--bk-lead) * 3); line-height: calc(var(--bk-lead) * 2.55); padding: 0.02em 0.08em 0 0; font-family: var(--chapter-face, var(--bk-face)); }
-  .bk-lead-in { font-variant-caps: small-caps; letter-spacing: 0.04em; }
-  .bk-first-drop_cap::after, .bk-first-lead_in::after { content: ''; display: block; clear: none; }
+${CHAPTER_STYLES}
   .bk-page.display .bk-text { height: 100%; }
   .bk-display { height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; }
   .bk-display.bk-half, .bk-display.bk-title, .bk-display.bk-words { align-items: var(--pt-items, center); text-align: var(--pt-align, center); font-family: var(--pt-face, var(--bk-face)); }

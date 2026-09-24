@@ -14825,3 +14825,431 @@ dialog.layout-copyright-dialog::backdrop {
   flex: 0 0 auto;
   margin-left: 8px;
 }
+
+/* ------------------------------------------ the chapter opening layout (§14) */
+
+/*
+ * Ken's handoff draws this in fixed hexes (#1d1c21 surface, #e0b25b accent).
+ * They are the app's own tokens said another way, so the dialog uses the
+ * tokens: a screen painted in literal colours is the one screen that does not
+ * follow the writer's colour scheme, which is a second answer about what the
+ * program looks like.
+ */
+dialog.chapter-layout-dialog {
+  width: min(1200px, 96vw);
+  max-width: 96vw;
+  height: min(800px, 92vh);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  overflow: hidden;
+}
+
+/*
+ * A column, so the head and the foot take what they need and the body has the
+ * rest — a `calc(100% - 60px - 68px)` was a second copy of two heights and
+ * clipped the last control the moment the head wrapped to two lines.
+ *
+ * On `[open]` alone, because a bare `display: flex` **beats the browser's own
+ * `display: none` for a closed dialog** — which laid the whole dialog over the
+ * room and swallowed every click on the bar behind it. Invisible to a test
+ * and the first thing that happens when you open the room.
+ */
+dialog.chapter-layout-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+dialog.chapter-layout-dialog::backdrop {
+  background: rgb(0 0 0 / 55%);
+}
+
+.chl-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 60px;
+  padding: 0 10px 0 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
+.chl-head-words {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.chl-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.chl-head p {
+  margin: 2px 0 0;
+}
+
+.chl-which {
+  flex: 0 0 auto;
+  margin: 0;
+  max-width: 260px;
+}
+
+.chl-x {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.chl-head,
+.chl-foot {
+  flex: 0 0 auto;
+}
+
+.chl-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  gap: 24px;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.chl-controls {
+  flex: 0 0 640px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+}
+
+.chl-section {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.chl-section h3 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.chl-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chl-section-head h3 {
+  margin: 0;
+}
+
+.chl-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 22px;
+}
+
+/* The eight thumbnails, four across, as the handoff draws them. */
+.chl-thumbs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.chl-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 5px 8px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.chl-thumb.on {
+  border-color: var(--gold);
+  color: var(--text);
+  background: color-mix(in srgb, var(--gold) 10%, var(--panel-2));
+}
+
+/* The little page. Its pieces are the layout's slots, so a new layout draws
+   one without anything here being told about it. */
+.chl-t-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 56px;
+  height: 84px;
+  padding: 6px;
+  box-sizing: border-box;
+  background: #f4efe4;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.chl-t-page.left {
+  align-items: flex-start;
+}
+
+.chl-t-sink {
+  height: 9px;
+  flex: 0 0 auto;
+}
+
+.chl-t-num {
+  width: 10px;
+  height: 5px;
+  margin-bottom: 3px;
+  background: #3a3740;
+  flex: 0 0 auto;
+}
+
+.chl-t-num.big {
+  width: 20px;
+  height: 14px;
+}
+
+.chl-t-rule {
+  width: 22px;
+  height: 1px;
+  margin: 1px 0 3px;
+  background: #8f877a;
+  flex: 0 0 auto;
+}
+
+.chl-t-title {
+  width: 30px;
+  height: 3px;
+  background: #3a3740;
+  flex: 0 0 auto;
+}
+
+.chl-t-device {
+  width: 20px;
+  height: 12px;
+  margin: 4px 0;
+  border-radius: 1px;
+  background: var(--gold);
+  flex: 0 0 auto;
+}
+
+.chl-t-art {
+  align-self: stretch;
+  background: var(--gold);
+  flex: 0 0 auto;
+}
+
+.chl-t-art.bleed {
+  height: 26px;
+  margin: -6px -6px 5px;
+}
+
+.chl-t-art.page {
+  margin: -6px;
+  flex: 1 1 auto;
+}
+
+.chl-t-epi {
+  width: 24px;
+  height: 2px;
+  margin-top: 4px;
+  background: #8f877a;
+  flex: 0 0 auto;
+}
+
+.chl-t-body {
+  align-self: stretch;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.chl-t-body > span {
+  height: 2px;
+  background: #c4bcad;
+  flex: 0 0 auto;
+}
+
+.chl-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chl-pill {
+  min-width: 44px;
+  height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.chl-pill.on {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #1d1c21;
+}
+
+.chl-graphic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chl-preview {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chl-sheet-well {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.chl-sheet {
+  max-height: 100%;
+  width: auto;
+  height: 100%;
+}
+
+.chl-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 68px;
+  padding: 0 20px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
+.chl-spacer {
+  flex: 1 1 auto;
+}
+
+/* A rule between the number and the name, on a flush-left opening (§14). */
+.chapter-leaf-slot-rule {
+  width: 3.2em;
+  height: 1px;
+  margin: 0.45em 0 0.4em;
+  background: currentColor;
+}
+
+.chapter-leaf-block.layout-left {
+  text-align: left;
+}
+
+.chapter-leaf-block.layout-left .chapter-leaf-head {
+  border-bottom: none;
+}
+
+.chapter-leaf-block.layout-left .chapter-leaf-label {
+  font-size: calc(var(--chapter-number-size, 1em) * 1.6);
+  line-height: 1;
+}
+
+.chapter-leaf-block.layout-bignum .chapter-leaf-label {
+  font-size: calc(var(--chapter-number-size, 1em) * 2.4);
+  line-height: 1;
+}
+
+.chapter-leaf-bleed {
+  margin: 0 -14% 1.4em;
+  align-self: stretch;
+}
+
+.chapter-leaf-bleed img {
+  display: block;
+  width: 100%;
+  height: 3.2em;
+  object-fit: cover;
+}
+
+.chapter-leaf-epigraph.apart {
+  max-width: 20em;
+  margin: 2em auto 0;
+  text-align: center;
+}
+
+/* The chapter's own words under the opening (§14), so the sink and the first
+   line can be judged against something. The reading face at the sheet's
+   scale, indented as the book indents. The sheet clips them at the foot,
+   which is what a page does. */
+.chl-words {
+  margin-top: 1.6em;
+  text-align: left;
+  font-family: var(--leaf-face, inherit);
+  line-height: 1.5;
+}
+
+.chl-words p {
+  margin: 0;
+  text-indent: 1.4em;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.chl-words p.chl-word-first {
+  text-indent: 0;
+}
+
+.chl-drop-cap {
+  float: left;
+  font-size: 3.1em;
+  line-height: 0.82;
+  padding: 0.04em 0.09em 0 0;
+  font-family: var(--chapter-face, inherit);
+}
+
+.chl-lead-in {
+  font-variant-caps: small-caps;
+  letter-spacing: 0.04em;
+}
+
+.chl-overleaf {
+  margin: 2em 0 0;
+  text-align: center;
+  font-style: italic;
+  opacity: 0.55;
+}

@@ -136,6 +136,7 @@ import {
 import { readFont } from '../read-font';
 import { PopOutButton } from './PopOutButton';
 import { ChapterPageDialog, ChapterStyleFields, Line } from './ChapterPageDialog';
+import { ChapterLayoutDialog } from './ChapterLayoutDialog';
 import { useModal } from '../use-modal';
 import { usePreference, useSplit } from '../use-split';
 import { readPicture } from '../read-picture';
@@ -187,6 +188,8 @@ type ArtTarget =
 
 /** The box drawn before anything has been chosen to go in it (§9a). */
 const NEW_BOX = 'new';
+/** The layout dialog opened on no chapter in particular (§14). */
+const OPEN_LAYOUT = 'book';
 
 /**
  * What the three areas of a book are called (§9k). *The story* is named too,
@@ -334,6 +337,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
    * field the file has to carry.
    */
   const [placing, setPlacing] = useState<string | null>(null);
+  /** The chapter whose opening layout is being set (§14); OPEN_LAYOUT for the book's. */
+  const [layoutDialogId, setLayoutDialogId] = useState<string | null>(null);
   /**
    * The rail's width (§9, from Ken: *the left side toolbar needs to be
    * dragged out, and by default a half inch wider*): a divider the writer
@@ -780,6 +785,21 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       openings={
         pageFormat(page).label && !pageFormat(page).markerId ? (
           <Fold id="page-openings" title="How openings look">
+            {/* The **arrangement** is the layout dialog's (§14) and the type
+                is here: two questions, and the one that is answered by
+                looking at pictures of pages has a screen of its own. */}
+            <div className="layout-page-acts">
+              <button
+                type="button"
+                className="raised small"
+                onClick={() => {
+                  setPageDialogSheet(null);
+                  setLayoutDialogId(pageMarker(page) ?? OPEN_LAYOUT);
+                }}
+              >
+                Choose the layout…
+              </button>
+            </div>
             <ChapterStyleFields file={file} onUpdate={onUpdate} marker={null} onPage />
           </Fold>
         ) : null
@@ -795,6 +815,9 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
    * it took away the picture controls they were standing beside (§9m), so it
    * is the fields themselves, on this screen.
    */
+  /** The chapter a page opens, where it carries one — for a dialog to open on. */
+  const pageMarker = (page: BookPageRow): string | null => pageFormat(page).markerId;
+
   const pageFormat = (page: BookPageRow): { label: string | null; markerId: string | null } => {
     if (page.says !== 'Chapter opens') return { label: null, markerId: null };
     const opens = laying
@@ -947,6 +970,17 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           }}
         />
       )}
+      {/* How the opening is laid out (§14, from Ken's handoff): the eight
+          arrangements, with the page drawn beside them. It is a screen of its
+          own rather than another fold in Book settings, because picking a
+          layout is looking at pictures of pages. */}
+      <ChapterLayoutDialog
+        file={file}
+        open={layoutDialogId !== null}
+        initialMarkerId={layoutDialogId === OPEN_LAYOUT ? null : (layoutDialogId as never)}
+        onClose={() => setLayoutDialogId(null)}
+        onUpdate={onUpdate}
+      />
       <PartDialog
         file={file}
         part={opened}
@@ -1011,6 +1045,19 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           onClick={() => setBookSettingsOpen(true)}
         >
           Book settings…
+        </button>
+        {/* How a chapter opens (§14, from Ken's handoff). On the bar rather
+            than inside Book settings, because picking a layout is looking at
+            pictures of pages and a fold in a settings dialog is not where
+            anybody looks for that. */}
+        <button
+          type="button"
+          className="tool"
+          disabled={!laying}
+          title="Where the graphic goes, how the number is shown, how far down the page the chapter starts"
+          onClick={() => setLayoutDialogId(OPEN_LAYOUT)}
+        >
+          Chapter openings…
         </button>
         <button
           type="button"

@@ -1946,6 +1946,63 @@ push live; the build takes a minute or two.
   which is what keeps the box square-cornered and the picture unsquashed, and
   is why there is no *fill the box*: the box is never a shape the picture fails
   to fill.
+  **§14 is the chapter opening layout**, from Ken's own *Chapter Opening
+  Layout* handoff (a spec, a JSON of presets and an approved mockup): where the
+  graphic goes, how the number is shown, how far down the page the chapter
+  starts, how the first line is treated, with a live preview. **The audit paid
+  a sixteenth time** — four of the handoff's six settings fields were already
+  stored under other names (`numberStyle` is `markerNumbering`, which has
+  offered all four of its options and three more since the markers were built;
+  `sink` is `dropInches`; `graphicSize` is `graphicWidth`; `graphic` is
+  `assetId`) and **five of its eight layouts are the four `CHAPTER_TEMPLATES`
+  plus no graphic at all** — so what is new is the layout as one named thing,
+  three arrangements nobody could draw, and the drop cap. Three decisions. **A
+  layout is data and the renderer reads the data**: `CHAPTER_LAYOUTS` is a list
+  of **slots** and the print walks it, so there is no `if (layout === 'mid')`
+  in the print, the preview or the thumbnails — the handoff's *adding a layout
+  needs only a new entry* kept by construction. **`layout` is the answer and
+  `template` is its older spelling**: an existing book stores only where its
+  graphic goes, so `layoutOf` reads that back (nothing is migrated, no book
+  moves) and setting a layout **clears** the template rather than leaving two
+  fields to disagree — `manuscript`/`serif`'s shape when the face list widened.
+  **The named steps are read back, never stored**: Shallow/Standard/Deep are
+  inches on the page, one button lights where the number matches, and a typed
+  depth lights none rather than the nearest — `bookPresetOf`'s rule, and the
+  same for S/M/L over `graphicWidth`. What the slot walk had to keep: the
+  number, the rule and the title stay **one piece** inside `.bk-chapter-head`
+  (what carries the book's optional rule), so the four older layouts emit byte
+  for byte what they did and the suite passed with no print assertion edited —
+  the proof the older spelling is unchanged. **Every layout carries the
+  epigraph slot**, not only the epigraph one, an epigraph being something the
+  writer typed on *that chapter* and a layout that dropped it losing their
+  words for a reason nobody asked for; `epi` changes how it is set, never
+  whether. A **page of art** stays apart from a **bleeding header** (a band
+  with the heading under it is not a picture that *is* the page, which the book
+  has drawn since `full_page`), so nine layouts rather than eight. The **first
+  line** is the mechanism already being there a fifteenth time: `opensChapter`
+  has been on the paragraph block since the book was first laid out, so a drop
+  cap is a rendering of a paragraph the plan already marks and nothing new is
+  stored; `firstLineCut` is the one rule the print and the preview both take,
+  it cuts at a character rather than re-marking the text (a chapter opening on
+  an italic phrase keeps it), the cap takes an opening quotation mark with it,
+  and it is the **book's** and never a chapter's. `ChapterLayoutDialog.tsx` is
+  the screen — **Chapter openings…** on the Layout bar and from a page's own
+  panel — nine thumbnails from the same slot lists, the page beside them, in
+  the app's **tokens** rather than the handoff's fixed hexes, because a screen
+  painted in literal colours is the one screen that does not follow the
+  writer's colour scheme. The preview shows the chapter's **own first words**
+  under the opening (without them the sheet is a heading in space and the
+  first-line control shows nothing), and a chapter opening on a leaf says the
+  words are overleaf rather than drawing a page that does not exist. Changes
+  apply as they are made (§12a's *a look is tuned against the sheet beside
+  it*); *Every opening* is the one act that reaches work somebody did, so
+  `describeApplyToAll` says how many chapters set on their own would go and the
+  press asks inline. `ChapterLeaf` reads the slot list too, having kept a
+  private template ladder that knew three arrangements and could not draw a
+  fourth. Driving the real room caught the fault no test could: a bare
+  `display: flex` on the dialog **beats the browser's own `display: none` for a
+  closed `<dialog>`**, so it lay over the room and swallowed every click on the
+  bar behind it; it is on `[open]` now.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

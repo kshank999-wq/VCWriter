@@ -1,8 +1,11 @@
 import { Fragment } from 'react';
 import {
+  LAYOUT_OF_TEMPLATE,
+  chapterLayout,
   chapterPageStyleSchema,
   chapterStyleVars,
   chapterStyleWith,
+  isFullPageArt,
   runsText,
   type ChapterPageContent,
   type ChapterPageStyle,
@@ -10,7 +13,8 @@ import {
   type IndexHeading,
   type IndexPage,
   type InlineSpan,
-  type Page, isFullPageArt } from '@vcwriter/domain';
+  type Page,
+} from '@vcwriter/domain';
 import { TitleSheet } from './TitleSheet';
 
 /**
@@ -211,9 +215,21 @@ function IndexLeaf({ index }: { index: IndexPage }) {
 }
 
 /**
- * The leaf a chapter opens with (addendum 02 §11), drawn the same way the
- * print stylesheet draws it: the block a third of the way down the page,
- * with whatever the writer left switched on.
+ * The leaf a chapter opens with (addendum 02 §11), arranged by **the layout's
+ * own slot list** (addendum 20 §14).
+ *
+ * It used to hold a private `template === 'graphic_top' ? … : …` ladder, which
+ * knew three arrangements and could not draw a fourth — so a writer who set a
+ * flush-left opening would have been shown a centred one. The order of the
+ * pieces is read from `chapterLayout` now, which is the same list the print
+ * walks, so the two cannot disagree about **where anything goes**.
+ *
+ * What it still does for itself is the **size**: this sheet stands for a page
+ * at a few hundred pixels, and the printed rules are in points, so the
+ * stylesheet scales them. That is a real difference between a thumbnail and a
+ * page rather than a second opinion about the design — and where a preview has
+ * room to be the page at its true size, it draws `renderChapterOpening` and
+ * scales it instead, which is what the layout dialog does.
  */
 export function ChapterLeaf({
   chapter,
@@ -230,50 +246,74 @@ export function ChapterLeaf({
    */
   face?: string;
 }) {
-  // The same custom properties the printed page carries, from the same
-  // function — which is the whole of why the preview can be believed. The
-  // page's own placement rides on the content and is written over the book's
-  // here, exactly as the print does it (addendum 20 §9c).
   const type = chapterStyleVars(
     chapterStyleWith(style ?? chapterPageStyleSchema.parse({}), chapter.placement),
     face,
   ) as React.CSSProperties;
-  const head = chapter.label.length > 0 || chapter.title.length > 0;
-  const heading = head ? (
-    <div className="chapter-leaf-head">
-      {chapter.label.length > 0 ? <p className="chapter-leaf-label">{chapter.label}</p> : null}
-      {chapter.title.length > 0 ? <p className="chapter-leaf-title">{chapter.title}</p> : null}
-    </div>
-  ) : null;
-  const graphic = chapter.image ? (
-    <img
-      className="chapter-leaf-device"
-      src={chapter.image.dataUrl}
-      alt={chapter.image.name}
-      style={{ width: `${chapter.image.width}%` }}
-    />
-  ) : null;
-  const epigraph = chapter.epigraph.trim().length > 0 ? <p className="chapter-leaf-epigraph">{chapter.epigraph}</p> : null;
-  const summary = chapter.summary.trim().length > 0 ? <p className="chapter-leaf-summary">{chapter.summary}</p> : null;
+  const layout = chapterLayout(chapter.layout ?? LAYOUT_OF_TEMPLATE[chapter.template]);
+  const head = chapter.label.length > 0 || (!layout.hideTitle && chapter.title.length > 0);
+  const piece = (slot: string): React.ReactNode => {
+    switch (slot) {
+      case 'number':
+        // The number, the rule and the name are one block, as they are in the
+        // print: it is what carries the book's optional rule under the whole
+        // heading. The walk draws it where it meets the first of the three.
+        return head ? (
+          <div className="chapter-leaf-head" key="head">
+            {chapter.label.length > 0 ? <p className="chapter-leaf-label">{chapter.label}</p> : null}
+            {layout.rule && chapter.label.length > 0 ? <div className="chapter-leaf-slot-rule" /> : null}
+            {!layout.hideTitle && chapter.title.length > 0 ? <p className="chapter-leaf-title">{chapter.title}</p> : null}
+          </div>
+        ) : null;
+      case 'graphic':
+        if (!chapter.image) return null;
+        if (layout.graphic === 'bleed') {
+          return (
+            <div className="chapter-leaf-bleed" key="bleed">
+              <img src={chapter.image.dataUrl} alt={chapter.image.name} />
+            </div>
+          );
+        }
+        return (
+          <img
+            className="chapter-leaf-device"
+            key="device"
+            src={chapter.image.dataUrl}
+            alt={chapter.image.name}
+            style={{ width: `${chapter.image.width}%` }}
+          />
+        );
+      case 'epigraph':
+        return chapter.epigraph.trim().length > 0 ? (
+          <p className={layout.epigraphApart ? 'chapter-leaf-epigraph apart' : 'chapter-leaf-epigraph'} key="epigraph">
+            {chapter.epigraph}
+          </p>
+        ) : null;
+      case 'summary':
+        return chapter.summary.trim().length > 0 ? (
+          <p className="chapter-leaf-summary" key="summary">
+            {chapter.summary}
+          </p>
+        ) : null;
+      default:
+        return null;
+    }
+  };
   // Full-page art (addendum 19 §7): the picture is the page and nothing is
   // set over it — the number and the name are drawn into the art.
-  if (isFullPageArt(chapter) && chapter.image) {
+  if ((isFullPageArt(chapter) || layout.graphic === 'page') && chapter.image) {
     return (
       <div className="chapter-leaf-block full_page" style={type}>
         <img className="chapter-leaf-art" src={chapter.image.dataUrl} alt={chapter.image.name} />
       </div>
     );
   }
-  // The template says where the picture goes (addendum 19 §7); the words keep
-  // their order whichever it is — the same order the printed page uses.
   return (
-    <div className={`chapter-leaf-block ${chapter.template}`} style={{ textAlign: chapter.align, ...type }}>
-      {chapter.template === 'graphic_top' ? graphic : null}
-      {heading}
-      {chapter.template === 'graphic_middle' ? graphic : null}
-      {epigraph}
-      {summary}
-      {chapter.template === 'graphic_bottom' ? graphic : null}
+    <div
+      className={`chapter-leaf-block ${chapter.template} layout-${layout.id}`}
+      style={{ textAlign: layout.align === 'left' ? 'left' : chapter.align, ...type }}
+    >
+      {layout.slots.map((slot) => piece(slot))}
     </div>
   );
 }

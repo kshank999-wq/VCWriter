@@ -1673,6 +1673,113 @@ the box* to press: the box is never a shape the picture fails to fill. The
 text runs round it as the corner moves, the handle being measured off the
 figure after each laying (§9d).
 
+## 14. The chapter opening layout
+
+From Ken's own *Chapter Opening Layout* handoff — a spec, a `chapter-layouts.json`
+of presets and an approved mockup. Writers pick how a chapter's opening page
+looks: where a graphic goes, how the number is shown, how far down the page the
+chapter starts, and how the first line is treated, with a live preview.
+
+### 14.1 The audit
+
+Of the handoff's six-field settings model, **four fields were already stored
+under other names**: its `numberStyle` is `markerNumbering`, which has offered
+all four of its options and three more since the markers were built; its `sink`
+is `dropInches`; its `graphicSize` is `graphicWidth`; its `graphic` is
+`assetId`. And **five of its eight layouts** are the four `CHAPTER_TEMPLATES`
+plus *no graphic at all*.
+
+So what is new is the **layout as one named thing**, three arrangements nobody
+could draw (a bleeding header, a flush-left opening, a numeral alone), and the
+drop cap.
+
+### 14.2 Three decisions
+
+**A layout is data and the renderer reads the data.** `CHAPTER_LAYOUTS` in
+`chapter-layouts.ts` is a list of **slots** — the pieces in the order they are
+met down the page — and the print walks the list. There is no
+`if (layout === 'mid')` in the print, the preview or the thumbnails, which is
+the handoff's *adding a layout needs only a new entry* kept by construction.
+
+**`layout` is the answer and `template` is its older spelling.** An existing
+book stores only where its graphic goes, so `layoutOf` reads that back: a book
+made before this draws exactly as it did, nothing is migrated, and setting a
+layout **clears** the template rather than leaving two fields to disagree. It
+is the shape `manuscript`/`serif` took when the face list widened (§7a).
+
+**The named steps are read back, never stored.** Shallow, Standard and Deep are
+inches on the page; the buttons set them and one lights where the stored number
+matches, so a writer who typed a depth sees none of the three lit rather than a
+button lying about what will print. `bookPresetOf`'s rule (§7), and the same
+for S/M/L over `graphicWidth`.
+
+### 14.3 What the slot walk had to keep
+
+The number, the rule and the title stay **one piece** inside `.bk-chapter-head`,
+which is what carries the book's optional rule under the whole heading — so the
+four older layouts emit byte for byte the markup they always did, and the whole
+suite passed without a print assertion being edited. That is the proof the
+older spelling really is unchanged.
+
+**Every layout carries the epigraph slot**, not only the epigraph one: an
+epigraph is something the writer typed on *that chapter*, and a layout that
+dropped it would lose their words for a reason they never asked for. What `epi`
+changes is how it is set (its own measure, air round it), never whether.
+
+A **page of art** stays apart from a **bleeding header**: a band across the top
+with the heading under it is not a picture that *is* the page, and the book has
+drawn the second since `full_page`. Nine layouts, not eight.
+
+### 14.4 The first line
+
+`opensChapter` has been on the paragraph block since the book was first laid
+out, so a drop cap is a **rendering of a paragraph the plan already marks** and
+nothing new is stored. `firstLineCut` is the one rule both the print and the
+preview take, so a writer choosing a drop cap sees the letter the book will
+set. It cuts at a character rather than re-marking the text, so a chapter
+opening on an italic phrase keeps it; the cap takes an opening quotation mark
+with it, and a lead-in cuts on the fifth space. It is the **book's** and never a
+chapter's — a book where chapter four alone has a drop cap has a mistake in it.
+
+### 14.5 The screen
+
+`ChapterLayoutDialog.tsx`, reached from **Chapter openings…** on the Layout bar
+and from a page's own panel. Nine thumbnails drawn from the same slot lists,
+the controls beside them, and the page on the right.
+
+The handoff paints it in fixed hexes; it uses the app's **tokens**, because a
+screen painted in literal colours is the one screen that does not follow the
+writer's colour scheme. The preview shows the chapter's **own first words**
+under the opening — without them the sheet is a heading in space and the
+first-line control shows nothing at all — and a chapter that opens on a leaf of
+its own says the words are overleaf rather than drawing a page that does not
+exist.
+
+Changes apply as they are made, which is addendum 02 §12a's rule (*a look is
+tuned against the sheet beside it*); *Apply to* switches where the next one
+lands. **Every opening** is the one act that reaches work somebody did, so
+`describeApplyToAll` says how many chapters set on their own would be cleared,
+and the press asks inline.
+
+`ChapterLeaf` reads the slot list too. It kept a private template ladder that
+knew three arrangements and could not draw a fourth, so a writer setting a
+flush-left opening would have been shown a centred one. What it still does for
+itself is the **size** — a sheet standing for a page at a few hundred pixels
+against type measured in points — which is a real difference between a
+thumbnail and a page rather than a second opinion about the design.
+
+Driving the real room caught the fault no test could: a bare `display: flex` on
+the dialog **beats the browser's own `display: none` for a closed `<dialog>`**,
+so the whole thing was laid over the room and swallowed every click on the bar
+behind it. It is on `[open]` now.
+
+### 14.6 Not built
+
+*Save as preset* (the handoff allows deferring it), and the per-chapter
+`graphicSize` where a layout ignores it. The number style is the book's
+`markerNumbering` rather than a per-chapter field, deliberately: two controls
+deciding what a chapter prints would be two answers.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.
