@@ -462,6 +462,14 @@ export const copyrightPlaceholders = (part: BookPart, file: ProjectFile): number
   if (!page) return (part.text.match(PLACEHOLDER) ?? []).length;
   let count = 0;
   for (const line of copyrightLines(part, file)) count += (line.text.match(PLACEHOLDER) ?? []).length;
+  // An unfilled **binding** counts too, which is the handoff's own rule. A
+  // notice with no holder still prints — *Copyright © 2026* — and a notice
+  // with nobody in it is not a notice, so it is owed rather than silently
+  // accepted.
+  if (copyrightShows(page, 'notice')) {
+    if (page.holder.trim().length === 0 && bookNames(file).author.trim().length === 0) count += 1;
+    if (page.year.trim().length === 0) count += 1;
+  }
   if (copyrightShows(page, 'isbn')) {
     count += page.numbers.filter((one) => one.number.trim().length === 0 && one.format.trim().length > 0).length;
   }

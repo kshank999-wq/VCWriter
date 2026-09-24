@@ -325,3 +325,14 @@ describe('a book number', () => {
     expect(isbnLooksRight('not a number')).toBe(false);
   });
 });
+
+describe('a notice with nobody in it', () => {
+  it('is owed, because a copyright notice without a holder is not one', () => {
+    // It still *prints* — Copyright © 2026 — which is exactly why the footer
+    // has to say it is unfinished rather than reading as ready.
+    const file = write(createProjectFile({ title: 'The Lamp', format: 'novel' }), { holder: '', year: '2026' });
+    expect(copyrightPlaceholders(copyrightPart(file), file)).toBe(1);
+    const named = write(file, { holder: 'M. Shank' });
+    expect(copyrightPlaceholders(copyrightPart(named), named)).toBe(0);
+  });
+});

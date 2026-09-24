@@ -2003,6 +2003,42 @@ push live; the build takes a minute or two.
   `display: flex` on the dialog **beats the browser's own `display: none` for a
   closed `<dialog>`**, so it lay over the room and swallowed every click on the
   bar behind it; it is on `[open]` now.
+  **§15 is the copyright page's elements**, from Ken's *Copyright Page dialog*
+  handoff, the companion to §14's: each element its own box, switched on or
+  off, edited and reordered, from one of four standard orders, with the page
+  beside it. **The audit paid a seventeenth time** — ten of the twelve
+  elements were already fields on §9k's record (the two that were not,
+  permissions and the Library of Congress number, had been going into
+  *Anything else*), and its alignment and type size are the part's own
+  `LineStyle` — so what was missing is not the content but **the sequence**:
+  `copyrightLines` walked a hard-coded run of `say(…)` calls and a writer who
+  wanted the notice above the disclaimer could not have it. Three decisions.
+  **An element turned off is not an element left empty** — they look alike on
+  the page and mean different things (*I have no LCCN* against *I have one and
+  this book does not print it*), so `hidden` is its own field and switching
+  something off **keeps its words**, the graveyard's
+  `archived`-is-not-`deletedAt` argument pointed at a page. **Which preset is
+  in force is read back, never stored**: `presetOf` compares the order, the
+  hidden set, the position and the alignment against the four and answers null
+  for anything else, so moving one element reads *Custom* — `bookPresetOf`'s
+  rule, which the handoff asks for by name. And **two of its controls are
+  settings that already exist**, so the alignment and the type size write
+  `partStyleOf` rather than a second pair of fields, with the section saying
+  so. An empty `order` means the order this page has always printed in, so a
+  book made before this is unchanged. Three things moved: the block may sit at
+  the **top** or the **middle** as well as the foot (§7a hung it at the foot
+  and nowhere else, which was right about the default and wrong to be the only
+  answer); the **number line rides with the edition**, where a book prints it
+  and what the handoff's element is called; and **a notice with nobody in it is
+  owed**, since it prints either way — *Copyright © 2026* — which is why the
+  footer must say it is unfinished rather than read as ready.
+  `CopyrightPageDialog.tsx` wears §14's chrome (the same `chl-*` head, foot,
+  sections and pills, `cr-*` only for what is this page's own), and a row's
+  summary says what is there and what is missing **as such**, a `[HOLDER]`
+  invented on the row being a placeholder the counter at the foot cannot see;
+  an ISBN with a wrong check digit is marked and explained under the row while
+  an **empty** one is not marked at all, being a number the writer has not got
+  yet rather than a mistake.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

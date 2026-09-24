@@ -1780,6 +1780,85 @@ behind it. It is on `[open]` now.
 `markerNumbering` rather than a per-chapter field, deliberately: two controls
 deciding what a chapter prints would be two answers.
 
+## 15. The copyright page's elements
+
+From Ken's *Copyright Page dialog* handoff, the companion to §14's. Each
+element is its own box: switched on or off, edited, and reordered, starting
+from one of four standard orders, with the page drawn beside it.
+
+### 15.1 The audit
+
+**Ten of the handoff's twelve elements were already fields** on the record
+§9k built, and the two that were not — permissions and the Library of
+Congress number — had been going into *Anything else*. Its alignment and its
+type size are the part's own `LineStyle` (§7a). So what was missing is not the
+content but **the sequence**: `copyrightLines` walked a hard-coded run of
+`say(…)` calls, and a writer who wanted the notice above the disclaimer could
+not have it.
+
+### 15.2 Three decisions
+
+**An element turned off is not an element left empty.** They look alike on the
+printed page and mean different things — *I have no Library of Congress
+number* and *I have one and this book does not print it* — so `hidden` is its
+own field and switching something off **keeps its words**. It is the
+graveyard's `archived`-is-not-`deletedAt` argument pointed at a page.
+
+**Which preset is in force is read back, never stored.** `presetOf` compares
+the order, the hidden set, the position and the alignment against the four and
+answers null for anything else, so moving one element reads *Custom* rather
+than a preset that has stopped describing the page — `bookPresetOf`'s rule,
+which the handoff asks for by name.
+
+**Two of its controls are settings that already exist.** The alignment and the
+type size write `partStyleOf`, not a second pair of fields, and the section
+says so. A second control for either would be a second answer about how the
+page is set.
+
+### 15.3 What moved
+
+An empty `order` means *the order this page has always printed in*, so a book
+made before this reads unchanged and nothing is migrated — `layout`/`template`'s
+shape a second time.
+
+The block can sit at the **top** or the **middle** as well as the foot. §7a
+hung it at the foot and nowhere else, on the reading that a notice a third of
+the way down is not a copyright page and that the block is long enough to be
+pushed off the sheet. That was right about the **default** and wrong to make
+it the only answer.
+
+The **number line rides with the edition**, where it used to stand last under
+everything. It is where a book prints it, and it is what the handoff's element
+is called — *Edition & number line* — so it moves with it when the order
+changes. Still worked out, still nowhere to type one.
+
+A **notice with nobody in it is owed**. It prints either way — *Copyright ©
+2026* — which is exactly why the footer has to say it is unfinished rather
+than reading as ready; an unfilled binding counts, which is the handoff's own
+rule.
+
+### 15.4 The screen
+
+`CopyrightPageDialog.tsx`, in §14's chrome — the same `chl-*` head, foot,
+sections and pills, with `cr-*` only for what is this page's own. Two dialogs
+sharing one look rather than two copies of it.
+
+A row carries a grip, its name, a one-line summary of what it will print, a
+**Required** badge or a switch, and move buttons; the header expands it. The
+summary says what is there and what is missing **as such** — a `[HOLDER]`
+invented on the row would be a placeholder the counter at the foot cannot see.
+An ISBN with a wrong check digit is marked and explained under the row, and an
+**empty** one is not marked at all: it is a number the writer has not got yet,
+not a mistake.
+
+### 15.5 Not built
+
+*Save as preset*, and the drop zone's dpi warning (the barcode is chosen
+through the room's own file dialog, which has no dpi to read). Apply is not a
+button: every change is kept as it is made, and the page is drawn beside it —
+§12a's rule, and the handoff's Cancel would have to undo work the preview has
+already shown as done.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.
