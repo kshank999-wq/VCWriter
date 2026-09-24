@@ -1466,6 +1466,84 @@ chosen and the pointer is not in a field. Only the box goes; the file stays in
 the graphics library, which is what makes the key safe to give — and Ctrl+Z
 puts it back.
 
+## 9k. The three areas, and the copyright page
+
+From Ken: *I want to add the label back in front matter… a locked area. Those
+items from the list that are front matter will automatically populate that
+area, and those items that are back matter will automatically populate that
+area. But you can drag them around and reorder them… With the copyright page in
+particular, we need to have a special pop-up dialog box that is for the
+copyright information, that allows you to put all the information attached, but
+also include a graphic box at the bottom right-hand corner of the page for a
+barcode — in case there is no jacket on the actual book. For example, if the
+book is made of leather.*
+
+### Front matter, the story, back matter
+
+§9a took two headings out and this puts three back, which only looks like a
+reversal. What §9a removed were **rows that carried buttons and a sentence** and
+said nothing about where anything was. What a label says is the one thing no row
+can: **which part of the book you are in**. A writer looking at *Copyright* and
+*About the author* in one list has no way to see that the first is bound before
+the story and the second after it, and that is the fact the roman numerals in
+the margin are there to carry.
+
+They are **read and stored nowhere**: `halfOf` has decided a part's half since
+§5, everything in the story is the story, and `BookRow.half` carries it. So a
+part that changes half changes area with nothing run, which is the whole of
+Ken's *automatically populate*. The story is labelled too — two named halves
+around an unnamed middle reads as though the middle were left over.
+
+**Dropping on an area asks for that half.** `partToHalf` answers, and what it
+mostly answers is **no**: a copyright page is front matter *by being a copyright
+page*, so it is refused in a sentence rather than moved somewhere a book would
+print wrongly. The one kind that really moves is an **art page**, which belongs
+wherever the writer wants it — the reason `inFront` exists (§8).
+
+### The copyright page's own dialog
+
+It was the one page in the front matter whose content was **a block of free
+text**. Every other one either comes from a reading (the contents, the index) or
+is one thing said once (a dedication, an epigraph). A copyright page is a dozen
+separate facts in a settled order, and asking a writer to type them in the right
+order, in the right words, with the right punctuation, is asking them to know a
+convention the program already knows.
+
+`packages/domain/src/copyright-page.ts` is the module and three decisions carry
+it.
+
+**The fields are the page, and a field with nothing in it prints nothing.**
+There is no blank *ISBN:* line on a book without one and no separator left
+behind, which is what makes the record safe to leave mostly empty. It carries a
+**number per format**, because a paperback and an eBook are different books to a
+retailer and a page that holds one of them makes a writer choose which to leave
+off.
+
+**The number line is worked out and there is nowhere to type it.** A writer says
+which printing this is; the line drops a digit for each one after the first,
+which is the convention every printer reads. Typing it by hand is how a second
+printing ends up claiming to be the first — the same argument as the chapter
+number, the figure number and the page number before it.
+
+**An untouched page is untouched.** The record is null until a writer opens the
+dialog, and until then the page prints the free text it always printed. So no
+book made before this moves, which is `partStyleOf`'s rule (§7a) pointed at
+content rather than at type. Starting to use the fields carries the old words
+into *Anything else*, so nothing typed is lost by beginning.
+
+`copyrightLines` is the **one reading**: the printed book, the spread and the
+dialog's own list all ask it, so what a writer is looking at is what will be on
+the paper.
+
+### The barcode
+
+A picture in the graphics library, drawn at the **bottom right** of the page at
+a width the writer sets. It is a box for a barcode rather than a barcode the
+program draws, and that is deliberate: a retail barcode encodes the **price**
+as well as the number, which the book does not know. It is **absent rather than
+boxed** where there is no picture — an empty rectangle would print on the
+finished book.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

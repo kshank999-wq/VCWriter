@@ -213,6 +213,17 @@ export const bookPartSchema = z.object({
    * is a piece of art has to be able to go where those go).
    */
   inFront: z.boolean().default(false),
+  /**
+   * The copyright page's own fields (addendum 20 §9k): the notice, the
+   * numbers, the publisher, the edition, the disclaimer, the printing and a
+   * box for a barcode. Read through `copyright-page.ts`, which is the one
+   * place that turns them into the page.
+   *
+   * **Null until a writer opens the dialog**, and that is load-bearing: while
+   * it is null the page prints the free text it always printed, so no book
+   * made before this moves a millimetre.
+   */
+  copyright: z.record(z.unknown()).nullable().default(null),
 });
 export type BookPart = z.infer<typeof bookPartSchema>;
 

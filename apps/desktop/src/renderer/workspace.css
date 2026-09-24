@@ -14513,6 +14513,35 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
   color: var(--gold);
 }
 
+/* The book's three areas (§9k): a quiet heading over the rows that stand in
+   each, and a drop target for the half. */
+.layout-rail-area {
+  list-style: none;
+  margin: 10px 0 2px;
+  padding: 3px 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+
+.layout-rail-area:first-child {
+  margin-top: 0;
+  border-top: none;
+}
+
+.layout-rail-area.drop-before {
+  background: var(--panel-2);
+  color: var(--gold);
+}
+
+.layout-rail-refusal {
+  margin: 10px 2px 0;
+  color: #c98a2b;
+  line-height: 1.5;
+}
+
 /* One page of the story, opened by a double-click (§9j). Modest, because
    what it holds is the page's own controls and nothing more. */
 dialog.layout-page-dialog {
@@ -14573,4 +14602,97 @@ dialog.layout-page-dialog::backdrop {
    beats wear, so one gesture reads the same at both levels. */
 .block.marked > .block-head {
   background: color-mix(in srgb, var(--gold) 16%, transparent);
+}
+
+/* The copyright page's own dialog (addendum 20 §9k, from Ken): the fields on
+   the left, and what the page will print on the right, from the same reading
+   the printed book uses. */
+dialog.layout-copyright-dialog {
+  width: min(880px, calc(100vw - 48px));
+  max-width: none;
+  max-height: calc(100vh - 60px);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--text);
+  overflow: hidden;
+}
+
+dialog.layout-copyright-dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 70%, transparent);
+}
+
+.layout-copyright-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 18px;
+  padding: 0 16px 16px;
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+}
+
+.layout-copyright-fields {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+}
+
+.layout-copyright-fields h4 {
+  margin: 12px 0 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.layout-copyright-fields h4:first-child {
+  margin-top: 4px;
+}
+
+/* Two fields that belong together on one line, with room for a × after them. */
+.layout-copyright-pair {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+
+.layout-copyright-pair .field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.layout-number-line {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.layout-copyright-preview {
+  align-self: start;
+  position: sticky;
+  top: 0;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.layout-copyright-preview h4 {
+  margin: 0 0 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.layout-copyright-preview ol {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  line-height: 1.4;
 }

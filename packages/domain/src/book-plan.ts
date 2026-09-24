@@ -9,6 +9,7 @@ import { newId } from './ids.js';
 import { partHasStyle, partStyleOf, proseStyleBase, type PartStyle, type PartStylePatch } from './part-style.js';
 import { isCollection } from './formats.js';
 import { placeFigure } from './instructional.js';
+import { copyrightLines, copyrightOf, type CopyrightLine } from './copyright-page.js';
 import type { BookPage } from './book-pages.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -190,6 +191,36 @@ export const placePart = (file: ProjectFile, partId: string, beforePartId: strin
   return writeParts(file, [...rest.slice(0, at), moving, ...rest.slice(at)]);
 };
 
+/**
+ * Move a part into the front matter or the back (§9k, from Ken: *you can drag
+ * things into it*). The two areas are drop targets, and this is what a drop on
+ * one means.
+ *
+ * **Most parts have no choice and the refusal says so.** A copyright page is
+ * front matter and an index is back matter because that is what those pages
+ * are, not because of where they were dropped — so the act refuses in a
+ * sentence rather than moving something a book would print wrongly. What
+ * really moves is an **art page**, which is the one kind that belongs wherever
+ * a writer wants it, and that is `inFront`'s whole reason for existing (§8).
+ */
+export const partToHalf = (
+  file: ProjectFile,
+  partId: string,
+  half: 'front' | 'back',
+): { file: ProjectFile; refusal: string | null } => {
+  const part = partsOf(file).find((one) => one.id === partId);
+  if (!part) return { file, refusal: null };
+  if (halfOf(part) === half) return { file, refusal: null };
+  const fixed = PART_INFO[part.kind].half;
+  if (fixed !== 'either') {
+    const where = fixed === 'front' ? 'the front matter' : 'the back matter';
+    return { file, refusal: `${PART_INFO[part.kind].name} belongs in ${where}. That is what the page is, so it stays there.` };
+  }
+  // An art page facing a chapter comes out of the story to go to either half.
+  const moved = updatePart(file, partId, { inFront: half === 'front', beforeMarkerId: null });
+  return { file: placePart(moved, partId, null), refusal: null };
+};
+
 /** Whether a kind can still be added: once-only kinds the book already has cannot. */
 export const mayAdd = (file: ProjectFile, kind: PartKind): boolean =>
   !PART_INFO[kind].once || !partsOf(file).some((part) => part.kind === kind);
@@ -333,6 +364,14 @@ export interface BookBlock {
    * writer's to remove there.
    */
   blankFor?: string;
+  /**
+   * The copyright page's lines, built from its fields (§9k). The printer
+   * draws these where they are given and falls back to `text` where they are
+   * not, which is what keeps a page nobody has set exactly as it was.
+   */
+  copyright?: CopyrightLine[];
+  /** How wide the barcode prints on a copyright page, in inches (§9k). */
+  barcodeInches?: number | null;
   /** How a designed page is set (addendum 20 §9), resolved from the part. */
   partStyle?: PartStyle;
   /**
@@ -392,6 +431,9 @@ const partBlocks = (
   // What a prose part's heading and words look like before anybody sets them:
   // the book's chapter opening and its body (§7a).
   prose: PartStylePatch = {},
+  // The copyright page reads the book to fill its own blanks (§9k); every
+  // other part is built from itself alone.
+  file?: ProjectFile,
 ): BookBlock[] => {
   const title = partTitle(part);
   switch (part.kind) {
@@ -402,7 +444,12 @@ const partBlocks = (
       return [block({ id: part.id, kind: 'half_title', numbering, starts: 'recto', display: true, folio: false, partId: part.id, unbreakable: true, assetId: part.assetId, partStyle: partStyleOf(part) })];
     case 'title_page':
       return [block({ id: part.id, kind: 'title_page', numbering, starts: 'recto', display: true, folio: false, partId: part.id, unbreakable: true, assetId: part.assetId, partStyle: partStyleOf(part) })];
-    case 'copyright':
+    case 'copyright': {
+      // The page's own fields where the writer has used them (§9k), and the
+      // free text where they have not — one reading, so the print, the spread
+      // and the dialog's sheet cannot show three different pages.
+      const lines = file ? copyrightLines(part, file) : [];
+      const page = copyrightOf(part);
       return [
         block({
           id: part.id,
@@ -413,12 +460,16 @@ const partBlocks = (
           folio: false,
           partId: part.id,
           unbreakable: true,
-          text: part.text,
+          text: lines.length > 0 ? lines.map((line) => line.text).join('\n') : part.text,
           spans: parseInline(part.text),
+          copyright: lines,
+          assetId: page?.barcodeAssetId ?? null,
+          barcodeInches: page?.barcodeInches ?? null,
           // A designed page like the other four (§7a); it hangs at the foot.
           partStyle: partStyleOf(part),
         }),
       ];
+    }
     case 'contents':
       // A designed page (§7a): the heading and the entries are the writer's.
       return [block({ id: part.id, kind: 'contents', numbering, starts: 'recto', partId: part.id, title, chapterTitle: title, partStyle: partStyleOf(part) })];
@@ -1043,7 +1094,7 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   const prose = proseStyleBase(chapterPageStyleSchema.parse(file.settings.chapterPageStyle ?? {}), settings.size);
   const out: BookBlock[] = [];
 
-  for (const part of frontParts(parts)) out.push(...partBlocks(part, 'roman', bookTitle, prose));
+  for (const part of frontParts(parts)) out.push(...partBlocks(part, 'roman', bookTitle, prose, file));
 
   const platesBefore = new Map<string, BookPart[]>();
   for (const part of parts) {
@@ -1218,7 +1269,7 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   }
   if (pending) out.push(pending);
 
-  for (const part of backParts(parts)) out.push(...partBlocks(part, 'arabic', bookTitle, prose));
+  for (const part of backParts(parts)) out.push(...partBlocks(part, 'arabic', bookTitle, prose, file));
   return out;
 };
 

@@ -1842,6 +1842,41 @@ push live; the build takes a minute or two.
   page* went with it, having asked a question the gesture had already
   answered. And **Delete** takes a picture out, from its panel or the key,
   the file staying in the library.
+  **§9k is the three areas and the copyright page**, from Ken. **§9a took two
+  headings out and this puts three back**, which only looks like a reversal:
+  what §9a removed were rows carrying buttons and a sentence that said nothing
+  about where anything was, and what a label says is the one thing no row
+  can — **which part of the book you are in**, which is the fact the roman
+  numerals in the margin exist to carry. They are **read and stored
+  nowhere** (`halfOf` has decided a part's half since §5, `BookRow.half`
+  carries it), so a part that changes half changes area with nothing run,
+  which is Ken's *automatically populate*; the story is labelled too, two
+  named halves around an unnamed middle reading as though the middle were
+  left over. **A drop on an area asks for that half** and `partToHalf` mostly
+  answers **no** — a copyright page is front matter *by being a copyright
+  page*, so it is refused in a sentence rather than moved somewhere a book
+  would print wrongly, and the one kind that really moves is an **art page**,
+  which is what `inFront` exists for. The **copyright page** was the one page
+  in the front matter whose content was a **block of free text**, where every
+  other is either a reading or one thing said once; it is a dozen facts in a
+  settled order, and typing them means knowing a convention the program
+  knows. `copyright-page.ts` holds three decisions. **The fields are the page
+  and a field with nothing in it prints nothing** (no blank *ISBN:* line, no
+  separator left behind), with a **number per format** because a paperback
+  and an eBook are different books to a retailer. **The number line is worked
+  out and there is nowhere to type it** — a writer says which printing this
+  is and the line drops a digit for each one after, typing it by hand being
+  how a second printing claims to be the first, the same argument as the
+  chapter number and the page number before it. And **an untouched page is
+  untouched**: the record is null until the dialog is opened, so a book made
+  before this prints exactly what it printed, `partStyleOf`'s rule (§7a)
+  pointed at content rather than type — and starting carries the old words
+  into *Anything else*. `copyrightLines` is the **one reading**, asked by the
+  print, the spread and the dialog's own list. The **barcode** is a picture
+  from the library at the bottom right, a *box for* a barcode rather than one
+  the program draws, because a retail barcode encodes the **price** as well
+  as the number and the book does not know it; **absent rather than boxed**
+  with no picture, an empty rectangle being something that would print.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

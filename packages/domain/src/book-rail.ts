@@ -60,6 +60,18 @@ export interface BookRow {
   depth: number;
   /** Whether it may be dragged to somewhere else in the book. */
   draggable: boolean;
+  /**
+   * Which of the book's three areas it stands in (§9k, from Ken: *I want to
+   * add the label back in front matter… a locked area, those items from the
+   * list that are front matter will automatically populate that area*).
+   *
+   * It is **read from the row and stored nowhere**: `halfOf` already decided
+   * it for a part, and everything in the story is the story. So the areas
+   * cannot drift from what the book prints, and a part that changes half
+   * changes area with nothing run — which is the whole of *automatically
+   * populate*.
+   */
+  half: 'front' | 'body' | 'back';
 }
 
 /** A picture page's name is its picture's, a part having none of its own. */
@@ -74,6 +86,7 @@ const partRow = (file: ProjectFile, part: BookPart, depth: number): BookRow => (
   id: part.id,
   kind: 'part',
   part,
+  half: halfOf(part),
   title: part.kind === 'plate' ? plateName(file, part) : partTitle(part),
   label: '',
   depth,
@@ -93,6 +106,7 @@ const sectionRow = (unit: StructuralUnit): BookRow => ({
   id: unit.id as string,
   kind: 'section',
   unit,
+  half: 'body',
   title: unit.title.trim(),
   label: '',
   depth: 1,
@@ -103,6 +117,7 @@ const figureRow = (figure: BookFigure, depth: number): BookRow => ({
   id: figure.elementId,
   kind: 'picture',
   figure,
+  half: 'body',
   title: figure.caption.trim() || figure.assetName.trim() || 'Picture',
   label: '',
   depth,
@@ -135,6 +150,7 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
       id,
       kind: 'chapter',
       placed,
+      half: 'body',
       title: placed.marker.title.trim() || placed.label || noun,
       label: placed.marker.title.trim() ? placed.label : '',
       depth: 0,

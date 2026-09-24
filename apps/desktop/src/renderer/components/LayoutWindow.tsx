@@ -52,6 +52,21 @@ import {
   partTemplateOf,
   partTemplatePatch,
   partTakesInsets,
+  partToHalf,
+  addBookNumber,
+  beginCopyright,
+  copyrightLines,
+  copyrightOf,
+  describeCopyright,
+  numberLine,
+  removeBookNumber,
+  setBookNumber,
+  setCopyright,
+  BARCODE_INCHES,
+  FICTION_DISCLAIMER,
+  NUMBER_FORMATS,
+  RIGHTS_RESERVED,
+  type CopyrightPage,
   partTitle,
   partsOf,
   placePart,
@@ -165,10 +180,23 @@ type ArtTarget =
   /** Into a part: cut into its words where it has them, a page of its own where it has not. */
   | { kind: 'part'; partId: string; as: 'measure' | 'page' }
   /** Into a box already drawn and still empty (§9a). */
-  | { kind: 'fill'; elementId: string };
+  | { kind: 'fill'; elementId: string }
+  /** The barcode box on the copyright page (§9k). */
+  | { kind: 'barcode'; partId: string };
 
 /** The box drawn before anything has been chosen to go in it (§9a). */
 const NEW_BOX = 'new';
+
+/**
+ * What the three areas of a book are called (§9k). *The story* is named too,
+ * because two labelled halves around an unlabelled middle reads as though the
+ * middle were left over rather than the point of the book.
+ */
+const AREA_NAMES: Record<'front' | 'body' | 'back', string> = {
+  front: 'Front matter',
+  body: 'The story',
+  back: 'Back matter',
+};
 
 /** A page that stands on nothing, before the book has been laid. */
 const EMPTY_PLACE: PagePlace = { elementId: null, partId: null, markerId: null };
@@ -266,6 +294,10 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const [partDialogId, setPartDialogId] = useState<string | null>(null);
   /** The page of the story opened in a dialog of its own (§9j). */
   const [pageDialogSheet, setPageDialogSheet] = useState<number | null>(null);
+  /** Why a drop on an area was refused, said once under the rail (§9k). */
+  const [areaRefusal, setAreaRefusal] = useState<string | null>(null);
+  /** The copyright page open in its own dialog (§9k). */
+  const [copyrightOpen, setCopyrightOpen] = useState(false);
   /**
    * The chapter-page dialog, **the room's own** (§9, §9d).
    *
@@ -338,6 +370,22 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const parts = useMemo(() => partsOf(file), [file]);
   /** The book as one list (§9a): the rail, and the room's one selection. */
   const rows = useMemo(() => bookRows(file), [file]);
+  /**
+   * A drop on an area heading (§9k). The domain decides whether it may
+   * happen and says why not, so the rail never quietly does nothing.
+   */
+  const dropOnArea = (half: 'front' | 'body' | 'back') => {
+    const moving = dragging;
+    setDragging(null);
+    setOver(null);
+    if (!moving || half === 'body') return;
+    onUpdate((current) => {
+      const done = partToHalf(current, moving.id, half);
+      setAreaRefusal(done.refusal);
+      return done.file;
+    });
+  };
+
   /** The units the rail lists in their own right, so a story does not list them twice (§9j). */
   const sectionRows = useMemo(
     () => new Set(rows.filter((row) => row.kind === 'section').map((row) => row.id)),
@@ -539,6 +587,16 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         const assetId = added.asset.id;
 
         if (target.kind === 'fill') return setFigurePicture(added.file, target.elementId, assetId as string);
+
+        // The barcode on the copyright page (§9k). It goes through the room's
+        // one picker like every other picture, so it joins the library and is
+        // there to be used again — a second cover, another edition.
+        if (target.kind === 'barcode') {
+          const part = partsOf(added.file).find((one) => one.id === target.partId);
+          if (!part) return added.file;
+          const page = setCopyright(part, added.file, { barcodeAssetId: assetId as string });
+          return updatePart(added.file, part.id, { copyright: page.copyright });
+        }
 
         if (target.kind === 'story') {
           const beat = added.file.beats.find((one) => one.manuscript.elements.some((element) => (element.id as string) === target.elementId));
@@ -880,6 +938,15 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           the same two components, so the gesture is uniform across every kind
           of page: a part opens its part, a chapter opening its chapter page,
           and an ordinary page this. */}
+      {/* The copyright page's own dialog (§9k, from Ken). It is opened from
+          the part and from the page, both of which are the same page. */}
+      <CopyrightDialog
+        file={file}
+        part={copyrightOpen ? (partsOf(file).find((one) => one.kind === 'copyright') ?? null) : null}
+        onUpdate={onUpdate}
+        onClose={() => setCopyrightOpen(false)}
+        onPickBarcode={(partId) => importArt({ kind: 'barcode', partId })}
+      />
       <PageDialog
         page={dialogPage}
         controls={
@@ -973,7 +1040,24 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           {/* The book as one list, in the order it is bound (§9a). No
               headings, no notes: a row is its name and its page. */}
           <ul className="layout-parts layout-tree" aria-label="The book">
-            {rows.map((row) => {
+            {rows.map((row, index) => {
+              /*
+               * The three areas of the book (§9k, from Ken: *I want to add the
+               * label back in front matter… a locked area, those items from the
+               * list that are front matter will automatically populate that
+               * area*).
+               *
+               * §9a took two headings out for being noise, and it was right
+               * about what it took: rows that existed only to carry buttons
+               * and a sentence. These say something no row can — **which part
+               * of the book you are in** — and they are a **reading** of the
+               * rows beside them rather than a structure of their own, so a
+               * part that changes half changes area with nothing run. The
+               * front matter stands even when it is empty, because it is the
+               * place a writer drops something into.
+               */
+              const opens = index === 0 || rows[index - 1]?.half !== row.half;
+              const area = opens ? AREA_NAMES[row.half] : null;
               // The page it lands on, read off the laid page rather than off
               // `where`: a picture cut into a paragraph rides inside it, so
               // `where` has no entry of its own for it.
@@ -999,6 +1083,27 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                   : [];
               return (
                 <Fragment key={row.id}>
+                {area ? (
+                  <li
+                    className={`layout-rail-area${over === `area-${row.half}` ? ' drop-before' : ''}`}
+                    // Dropping on an area is asking for that half (§9k). Only
+                    // an art page can really move; everything else is refused
+                    // in a sentence, because a copyright page is front matter
+                    // by being a copyright page.
+                    onDragOver={(event) => {
+                      if (!dragging || row.half === 'body') return;
+                      event.preventDefault();
+                      setOver(`area-${row.half}`);
+                    }}
+                    onDragLeave={() => setOver((current) => (current === `area-${row.half}` ? null : current))}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      dropOnArea(row.half);
+                    }}
+                  >
+                    <span>{area}</span>
+                  </li>
+                ) : null}
                 <RailRow
                   row={row}
                   {...(divides
@@ -1095,6 +1200,9 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               — what *+ Picture* does and where the book's settings are — were
               labels for buttons already on the screen. These two cannot be
               seen, so they are said, once, under the list they are about. */}
+          {/* A refusal says itself where the drop happened (§9k), and goes
+              the moment anything else is dragged. */}
+          {areaRefusal ? <p className="small layout-rail-refusal">{areaRefusal}</p> : null}
           <p className="muted small layout-rail-note">A page can be chosen on the spread too. A double-click opens it.</p>
         </aside>
         <div className="divider vertical" role="separator" aria-label="Rail width" aria-orientation="vertical" title="Drag to widen the rail" {...rail.dividerProps} />
@@ -1284,7 +1392,14 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           {selectedFigure ? figureControls(selectedFigure) : null}
           {selected ? (
             <>
-              <PartFields file={file} part={selected} onUpdate={onUpdate} onDone={() => setSelectedRowId(null)} onOpenBookSettings={() => setBookSettingsOpen(true)} />
+              <PartFields
+                file={file}
+                part={selected}
+                onUpdate={onUpdate}
+                onDone={() => setSelectedRowId(null)}
+                onOpenBookSettings={() => setBookSettingsOpen(true)}
+                onOpenCopyright={() => setCopyrightOpen(true)}
+              />
               <p className="muted small">
                 <button type="button" className="ghost small" onClick={() => setPartDialogId(selected.id)}>
                   Open the page…
@@ -1976,6 +2091,254 @@ function PageDialog({
           <div className="layout-page-dialog-body">{controls}</div>
         </>
       ) : null}
+    </dialog>
+  );
+}
+
+/**
+ * The copyright page (addendum 20 §9k, from Ken: *with the copyright page in
+ * particular, we need to have a special pop-up dialog box that is for the
+ * copyright information, that allows you to put all the information
+ * attached*).
+ *
+ * Every other page in the front matter is one thing said once. This one is a
+ * dozen separate facts in a settled order, and a writer typing them into a box
+ * has to know a convention the program already knows — which line comes first,
+ * how a notice is punctuated, what a number line means. So the fields are the
+ * page, and the lines they make are shown underneath, from `copyrightLines`:
+ * the same reading the printed book uses, so what is on the screen is what
+ * will be on the paper.
+ */
+function CopyrightDialog({
+  file,
+  part,
+  onUpdate,
+  onClose,
+  onPickBarcode,
+}: {
+  file: ProjectFile;
+  part: BookPart | null;
+  onUpdate: LayoutWindowProps['onUpdate'];
+  onClose(): void;
+  onPickBarcode(partId: string): void;
+}) {
+  const dialog = useModal(Boolean(part));
+  if (!part) return <dialog ref={dialog} className="layout-copyright-dialog" aria-label="Copyright page" onClose={onClose} />;
+
+  const page = copyrightOf(part) ?? beginCopyright(part, file);
+  const write = (patch: Partial<CopyrightPage>) =>
+    onUpdate((current) => {
+      const now = partsOf(current).find((one) => one.id === part.id);
+      if (!now) return current;
+      return updatePart(current, part.id, { copyright: setCopyright(now, current, patch).copyright });
+    });
+  const writePage = (next: CopyrightPage) => write(next);
+  const lines = copyrightLines(copyrightOf(part) ? part : { ...part, copyright: page } as BookPart, file);
+  const barcode = page.barcodeAssetId ? file.assets.find((one) => (one.id as string) === page.barcodeAssetId) : undefined;
+
+  return (
+    <dialog ref={dialog} className="layout-copyright-dialog" aria-label="Copyright page" onClose={onClose}>
+      <header className="layout-page-dialog-bar">
+        <h3>Copyright page</h3>
+        <span className="toolbar-spacer" />
+        <button type="button" className="ghost" aria-label="Close" onClick={onClose}>
+          ×
+        </button>
+      </header>
+      <div className="layout-copyright-body">
+        <div className="layout-copyright-fields">
+          <h4>The notice</h4>
+          <div className="layout-copyright-pair">
+            <label className="field">
+              <span>Year of first publication</span>
+              <input aria-label="Year of first publication" value={page.year} onChange={(event) => write({ year: event.target.value })} />
+            </label>
+            <label className="field">
+              <span>Copyright holder</span>
+              <input
+                aria-label="Copyright holder"
+                placeholder={bookNames(file).author || 'The author'}
+                value={page.holder}
+                onChange={(event) => write({ holder: event.target.value })}
+              />
+            </label>
+          </div>
+          <label className="field">
+            <span>Rights</span>
+            <input aria-label="Rights" value={page.rights} onChange={(event) => write({ rights: event.target.value })} />
+          </label>
+          {page.rights.trim() !== RIGHTS_RESERVED ? (
+            <button type="button" className="ghost small" onClick={() => write({ rights: RIGHTS_RESERVED })}>
+              Use the usual wording
+            </button>
+          ) : null}
+
+          <h4>The numbers</h4>
+          {/* A number per format (§9k): a paperback and an eBook are different
+              books to a retailer, and a page that can hold only one of them
+              makes a writer choose which to leave off. */}
+          {page.numbers.map((number, at) => (
+            <div className="layout-copyright-pair" key={at}>
+              <label className="field">
+                <span>Format</span>
+                <input
+                  aria-label={`Format ${at + 1}`}
+                  list="vcw-number-formats"
+                  value={number.format}
+                  onChange={(event) => writePage(setBookNumber(page, at, { format: event.target.value }))}
+                />
+              </label>
+              <label className="field">
+                <span>ISBN</span>
+                <input
+                  aria-label={`ISBN ${at + 1}`}
+                  value={number.number}
+                  onChange={(event) => writePage(setBookNumber(page, at, { number: event.target.value }))}
+                />
+              </label>
+              <button
+                type="button"
+                className="ghost small"
+                aria-label={`Remove number ${at + 1}`}
+                onClick={() => writePage(removeBookNumber(page, at))}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <datalist id="vcw-number-formats">
+            {NUMBER_FORMATS.map((one) => (
+              <option key={one} value={one} />
+            ))}
+          </datalist>
+          <button type="button" className="ghost small" onClick={() => writePage(addBookNumber(page, page.numbers.length === 0 ? 'Paperback' : ''))}>
+            + A number
+          </button>
+
+          <h4>The publisher</h4>
+          <label className="field">
+            <span>Name</span>
+            <input aria-label="Publisher" value={page.publisher} onChange={(event) => write({ publisher: event.target.value })} />
+          </label>
+          <div className="layout-copyright-pair">
+            <label className="field">
+              <span>City</span>
+              <input aria-label="Publisher city" value={page.publisherPlace} onChange={(event) => write({ publisherPlace: event.target.value })} />
+            </label>
+            <label className="field">
+              <span>Website</span>
+              <input aria-label="Publisher website" value={page.publisherUrl} onChange={(event) => write({ publisherUrl: event.target.value })} />
+            </label>
+          </div>
+
+          <h4>The printing</h4>
+          <label className="field">
+            <span>Edition</span>
+            <input aria-label="Edition" placeholder="First Edition" value={page.edition} onChange={(event) => write({ edition: event.target.value })} />
+          </label>
+          <label className="field">
+            <span>Printed in</span>
+            <input
+              aria-label="Printed in"
+              placeholder="Printed in the United States of America"
+              value={page.printedIn}
+              onChange={(event) => write({ printedIn: event.target.value })}
+            />
+          </label>
+          {/* The number line is **worked out** (§9k): a writer says which
+              printing this is and the line follows, because typing it by hand
+              is how a second printing ends up claiming to be the first. */}
+          <label className="field">
+            <span>Which printing</span>
+            <select
+              aria-label="Which printing"
+              value={page.printing === null ? '' : String(page.printing)}
+              onChange={(event) => write({ printing: event.target.value === '' ? null : Number(event.target.value) })}
+            >
+              <option value="">No number line</option>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((one) => (
+                <option key={one} value={one}>
+                  {one === 1 ? 'First printing' : `Printing ${one}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          {page.printing === null ? null : (
+            <p className="muted small">
+              It prints <span className="layout-number-line">{numberLine(page.printing)}</span>. There is nowhere to type it: the
+              lowest number is which printing this is.
+            </p>
+          )}
+
+          <h4>The notices</h4>
+          <label className="field">
+            <span>Disclaimer</span>
+            <textarea aria-label="Disclaimer" rows={3} value={page.disclaimer} onChange={(event) => write({ disclaimer: event.target.value })} />
+          </label>
+          {page.disclaimer.trim() !== FICTION_DISCLAIMER ? (
+            <button type="button" className="ghost small" onClick={() => write({ disclaimer: FICTION_DISCLAIMER })}>
+              Use the usual work-of-fiction wording
+            </button>
+          ) : null}
+          <label className="field">
+            <span>Credits</span>
+            <textarea
+              aria-label="Credits"
+              rows={2}
+              placeholder="Cover design by… Illustrations by…"
+              value={page.credits}
+              onChange={(event) => write({ credits: event.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Anything else</span>
+            <textarea aria-label="Anything else" rows={3} value={page.more} onChange={(event) => write({ more: event.target.value })} />
+          </label>
+
+          {/* The barcode (§9k, from Ken: *in case there is no jacket on the
+              actual book — for example, if the book is made of leather*). */}
+          <h4>Barcode</h4>
+          <p className="muted small">
+            Bottom right of the page, for a book with no jacket to carry one. The picture is yours — a barcode encodes the price as
+            well as the number, which the book does not know.
+          </p>
+          <div className="layout-plate-pick">
+            <button type="button" className="raised small" onClick={() => onPickBarcode(part.id)}>
+              {barcode ? 'Another picture…' : 'Choose a picture…'}
+            </button>
+            {barcode ? (
+              <button type="button" className="ghost small danger" onClick={() => write({ barcodeAssetId: null })}>
+                Take it off
+              </button>
+            ) : null}
+          </div>
+          {barcode ? (
+            <label className="field">
+              <span>Width, {page.barcodeInches.toFixed(2)} in</span>
+              <input
+                type="range"
+                aria-label="Barcode width"
+                min={Math.round(BARCODE_INCHES.min * 100)}
+                max={Math.round(BARCODE_INCHES.max * 100)}
+                step={5}
+                value={Math.round(page.barcodeInches * 100)}
+                onChange={(event) => write({ barcodeInches: Number(event.target.value) / 100 })}
+              />
+            </label>
+          ) : null}
+        </div>
+
+        {/* What the page will say, from the one reading the print uses. */}
+        <aside className="layout-copyright-preview">
+          <h4>The page prints</h4>
+          <ol>
+            {lines.map((line: { text: string }, at: number) => (
+              <li key={at}>{line.text}</li>
+            ))}
+          </ol>
+          <p className="muted small">{describeCopyright(copyrightOf(part) ? part : ({ ...part, copyright: page } as BookPart), file)}</p>
+        </aside>
+      </div>
     </dialog>
   );
 }
@@ -2962,6 +3325,7 @@ function PartFields({
   onUpdate,
   onDone,
   onOpenBookSettings,
+  onOpenCopyright,
 }: {
   file: ProjectFile;
   part: BookPart;
@@ -2969,6 +3333,8 @@ function PartFields({
   onDone(): void;
   /** The book's title and author are set there, not here (§9). */
   onOpenBookSettings?(): void;
+  /** The copyright page's own dialog (§9k); absent on every other kind. */
+  onOpenCopyright?(): void;
 }) {
   const info = PART_INFO[part.kind];
   const library = graphicsInOrder(file);
@@ -3041,7 +3407,19 @@ function PartFields({
           <p className="muted small">A logotype in place of the title is under <em>File ▸ Title page…</em>.</p>
         </>
       )}
-      {info.carries === 'text' ? (
+      {/* The copyright page is set in a dialog of its own (§9k): a dozen
+          facts in a settled order are not a box to type into. The free text
+          box stays where the fields have never been used, so a page written
+          before this is still editable where it was written. */}
+      {part.kind === 'copyright' && onOpenCopyright ? (
+        <>
+          <button type="button" className="raised small" onClick={onOpenCopyright}>
+            The copyright information…
+          </button>
+          <p className="muted small">{describeCopyright(part, file)}</p>
+        </>
+      ) : null}
+      {info.carries === 'text' && !(part.kind === 'copyright' && copyrightOf(part)) ? (
         <label className="field">
           <span>Text</span>
           <textarea

@@ -114,13 +114,26 @@ describe('the room', () => {
     throw new Error('No page of the story was found');
   };
 
-  it('is one list in the order the book is bound, with no headings and nothing else said', () => {
+  /**
+   * §9a took two headings out and §9k puts three back, which only looks like
+   * a reversal. What §9a removed were **rows that carried buttons and a
+   * sentence** and said nothing about where anything was; what §9k adds is a
+   * label per area, which is the one thing a row cannot say — and it is a
+   * reading of the rows beside it rather than a structure of its own.
+   */
+  it('is one list in the order the book is bound, labelled by area and nothing else said', () => {
     render(<Harness initial={novel()} />);
     expect(railRows()).toEqual(['Half title', 'Title page', 'Copyright', 'Contents', 'The Lamp', 'The Return', 'About the author']);
-    // The three headings and the sentence under them are gone (§9a, from Ken).
     const rail = document.querySelector('.layout-rail') as HTMLElement;
+    // The areas, in the order the book is bound.
+    expect(Array.from(rail.querySelectorAll('.layout-rail-area')).map((one) => one.textContent)).toEqual([
+      'Front matter',
+      'The story',
+      'Back matter',
+    ]);
+    // …and none of the extra wording §9a took out has come back with them.
     expect(rail.querySelectorAll('h3')).toHaveLength(0);
-    expect(rail.textContent).not.toMatch(/Front matter|Back matter|above the first paragraph|Picture facing/);
+    expect(rail.textContent).not.toMatch(/above the first paragraph|Picture facing/);
     // One list, and everything in it is one row.
     expect(rail.querySelectorAll('ul')).toHaveLength(1);
     expect(within(rail).getByRole('list', { name: 'The book' })).toBeDefined();

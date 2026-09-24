@@ -203,8 +203,34 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
       return `<div class="bk-display bk-title"${styled}>${drop}${art}${subtitle}<p class="bk-author">${escapeHtml(titlePage.author || names.author)}</p>${imprint}</div>`;
     }
     case 'copyright': {
-      const text = block.text.trim().length > 0 ? block.text : `Copyright © ${names.author}`.trim();
-      return `<div class="bk-display bk-copyright"${styled}><p class="bk-small">${escapeHtml(text).replace(/\n/g, '<br />')}</p></div>`;
+      // The fields where the writer has used them (§9k): a paragraph per
+      // thing said, so a long disclaimer sets as a paragraph and the notice
+      // above it stays a line. Everything here is `copyrightLines`' answer —
+      // the printer decides nothing about what the page says.
+      const lines = block.copyright ?? [];
+      const body =
+        lines.length > 0
+          ? lines
+              .map((line, at) =>
+                line.apart || at === 0
+                  ? `<p class="bk-small">${escapeHtml(line.text).replace(/\n/g, '<br />')}</p>`
+                  : `<p class="bk-small bk-copy-run">${escapeHtml(line.text)}</p>`,
+              )
+              .join('')
+          : `<p class="bk-small">${escapeHtml(
+              block.text.trim().length > 0 ? block.text : `Copyright © ${names.author}`.trim(),
+            ).replace(/\n/g, '<br />')}</p>`;
+      // The barcode (§9k, from Ken: *in case there is no jacket on the actual
+      // book — for example, if the book is made of leather*). Bottom right,
+      // at the width the writer set, and absent rather than boxed where there
+      // is no picture: an empty rectangle would print on the finished book.
+      const code = block.assetId ? context.pictures.get(block.assetId) : undefined;
+      const barcode = code
+        ? `<div class="bk-barcode" style="width:${(block.barcodeInches ?? 2).toFixed(2)}in"><img alt="${escapeHtml(
+            code.altText || 'Barcode',
+          )}" src="${escapeHtml(code.data)}" /></div>`
+        : '';
+      return `<div class="bk-display bk-copyright"${styled}>${body}${barcode}</div>`;
     }
     // A leaf left deliberately blank (§9i): it holds the page and prints
     // nothing at all — no words, no running head, no number.
@@ -589,6 +615,14 @@ export const BOOK_STYLES = `
   .bk-title-art { max-width: 80%; max-height: 40%; }
   .bk-small { font-size: 0.8em; line-height: 1.4; margin: 0; }
   .bk-display.bk-copyright .bk-small { font-size: var(--pt-title-size, 0.8em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, normal); letter-spacing: var(--pt-title-tracking, 0); border-bottom: var(--pt-rule, none); padding-bottom: 0.15em; }
+  /* A copyright page's lines (§9k): a paragraph each, with a little air
+     between them, and a run-on line tucked under the one it belongs to. */
+  .bk-display.bk-copyright .bk-small + .bk-small { margin-top: 0.5em; }
+  .bk-display.bk-copyright .bk-copy-run { margin-top: 0 !important; }
+  /* The barcode: bottom right, off the text block's corner, at the width the
+     writer set. It is the last thing on the page and nothing wraps round it. */
+  .bk-barcode { align-self: flex-end; margin-top: 0.6em; }
+  .bk-barcode img { display: block; width: 100%; height: auto; }
   .bk-words p { margin: 0; font-style: italic; }
   /* The contents and the index are designed pages that **flow** (§7a): the
      style sits on the wrapper, so the entries take the line style by
