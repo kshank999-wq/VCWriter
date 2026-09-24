@@ -238,7 +238,11 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
             code.altText || 'Barcode',
           )}" src="${escapeHtml(code.data)}" /></div>`
         : '';
-      return `<div class="bk-display bk-copyright"${styled}>${body}${barcode}</div>`;
+      // Where the block sits (§15). It hung at the foot and nowhere else,
+      // which was right about the default and wrong to be the only answer;
+      // the class is the position, so `foot` prints exactly as it did.
+      const sits = block.copyrightPosition ?? 'bottom';
+      return `<div class="bk-display bk-copyright bk-copy-${sits}"${styled}>${body}${barcode}</div>`;
     }
     // A leaf left deliberately blank (§9i): it holds the page and prints
     // nothing at all — no words, no running head, no number.
@@ -783,6 +787,8 @@ ${CHAPTER_STYLES}
   .bk-display.bk-words p.bk-words-under { font-size: var(--pt-line-size, 1em); text-transform: var(--pt-line-case, none); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, italic); letter-spacing: var(--pt-line-tracking, 0); }
   /* It hangs at the foot, which is what a copyright page is (§7a); everything
      else about it is the writer's, the same as the other designed pages. */
+  .bk-display.bk-copy-top { justify-content: flex-start; }
+  .bk-display.bk-copy-middle { justify-content: center; }
   .bk-display.bk-copyright { justify-content: flex-end; align-items: var(--pt-items, flex-start); text-align: var(--pt-align, left); font-family: var(--pt-face, var(--bk-face)); }
   .bk-display.bk-plate { justify-content: center; }
   .bk-book-title { margin: 0; font-size: 2.2em; line-height: 1.15; letter-spacing: 0.02em; }

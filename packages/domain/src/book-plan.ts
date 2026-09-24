@@ -372,6 +372,8 @@ export interface BookBlock {
   copyright?: CopyrightLine[];
   /** How wide the barcode prints on a copyright page, in inches (§9k). */
   barcodeInches?: number | null;
+  /** Where the copyright block sits on its page (§15): top, middle or bottom. */
+  copyrightPosition?: 'top' | 'middle' | 'bottom';
   /** How a designed page is set (addendum 20 §9), resolved from the part. */
   partStyle?: PartStyle;
   /**
@@ -465,7 +467,9 @@ const partBlocks = (
           copyright: lines,
           assetId: page?.barcodeAssetId ?? null,
           barcodeInches: page?.barcodeInches ?? null,
-          // A designed page like the other four (§7a); it hangs at the foot.
+          copyrightPosition: page?.position ?? 'bottom',
+          // A designed page like the other four (§7a); it hangs at the foot
+          // unless the writer has said otherwise (§15).
           partStyle: partStyleOf(part),
         }),
       ];

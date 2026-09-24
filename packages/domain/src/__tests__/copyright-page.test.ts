@@ -6,9 +6,18 @@ import {
   beginCopyright,
   bookBlocks,
   bookRows,
+  applyCopyrightPreset,
   copyrightLines,
   copyrightNotice,
   copyrightOf,
+  copyrightOrder,
+  copyrightPlaceholders,
+  isbnLooksRight,
+  moveCopyrightElement,
+  placeCopyrightElement,
+  presetOf,
+  showCopyrightElement,
+  COPYRIGHT_PRESETS,
   createProjectFile,
   describeCopyright,
   numberLine,
@@ -136,11 +145,13 @@ describe('the number line', () => {
     }
   });
 
-  it('stands last on the page, under everything else', () => {
-    const file = write(book(), { printing: 3, printedIn: 'Printed in the United States of America' });
+  it('rides with the edition, which is where a book prints it (§15)', () => {
+    // It used to stand last, under everything. A book sets it under the
+    // edition statement — which is what the handoff's element is called,
+    // *Edition & number line* — so it moves with it when the order changes.
+    const file = write(book(), { printing: 3, edition: 'First Edition', printedIn: 'Printed in the United States of America' });
     const lines = copyrightLines(copyrightPart(file), file).map((line) => line.text);
-    expect(lines.at(-1)).toBe('10 9 8 7 6 5 4 3');
-    expect(lines.at(-2)).toBe('Printed in the United States of America');
+    expect(lines.indexOf('10 9 8 7 6 5 4 3')).toBe(lines.indexOf('First Edition') + 1);
   });
 });
 
@@ -199,5 +210,118 @@ describe('the areas', () => {
     const refused = partToHalf(moved.file, copyrightPart(moved.file).id, 'back');
     expect(refused.refusal).toMatch(/belongs in the front matter/);
     expect(refused.file).toBe(moved.file);
+  });
+});
+
+/**
+ * §15, from Ken's *Copyright Page dialog* handoff: the order is the writer's,
+ * from four standard ones, with each element switched on or off.
+ */
+describe('the order is the writer’s', () => {
+  const full = (): ProjectFile =>
+    write(book(), {
+      disclaimer: FICTION_DISCLAIMER,
+      lccn: '2026901234',
+      permissions: 'Lines from “The Lamp” used by permission.',
+      printedIn: 'Printed in the United States of America',
+      edition: 'First Edition',
+    });
+
+  it('prints in the order a book made before this printed in, with nothing moved', () => {
+    const file = full();
+    const page = copyrightOf(copyrightPart(file))!;
+    // Nothing stored, so the trade order stands and the page is unchanged.
+    expect(page.order).toEqual([]);
+    expect(copyrightOrder(page)[0]).toBe('disclaimer');
+    const lines = copyrightLines(copyrightPart(file), file).map((one) => one.text);
+    expect(lines.indexOf(FICTION_DISCLAIMER)).toBeLessThan(lines.findIndex((one) => one.startsWith('Copyright')));
+  });
+
+  it('moves an element, and the page follows', () => {
+    let file = full();
+    const page = copyrightOf(copyrightPart(file))!;
+    file = write(file, moveCopyrightElement(page, 'notice', -1));
+    const lines = copyrightLines(copyrightPart(file), file).map((one) => one.text);
+    expect(lines.findIndex((one) => one.startsWith('Copyright'))).toBeLessThan(lines.indexOf(FICTION_DISCLAIMER));
+  });
+
+  it('keeps an element’s words when it is switched off', () => {
+    let file = full();
+    const page = copyrightOf(copyrightPart(file))!;
+    file = write(file, showCopyrightElement(page, 'lccn', false));
+    const off = copyrightOf(copyrightPart(file))!;
+    // Off the page…
+    expect(copyrightLines(copyrightPart(file), file).some((one) => one.text.includes('2026901234'))).toBe(false);
+    // …and the words still there, which is what makes it different from
+    // clearing the field.
+    expect(off.lccn).toBe('2026901234');
+    file = write(file, showCopyrightElement(off, 'lccn', true));
+    expect(copyrightLines(copyrightPart(file), file).some((one) => one.text.includes('2026901234'))).toBe(true);
+  });
+
+  it('refuses to hide the two a book may not print without', () => {
+    const page = copyrightOf(copyrightPart(full()))!;
+    for (const id of ['notice', 'rights']) {
+      expect(showCopyrightElement(page, id, false).hidden).not.toContain(id);
+      // They can still be reordered, which is the handoff's first criterion.
+      expect(copyrightOrder(moveCopyrightElement(page, id, 1)).indexOf(id)).toBe(copyrightOrder(page).indexOf(id) + 1);
+    }
+  });
+
+  it('reads back which standard order is in force, and says Custom for anything else', () => {
+    const page = copyrightOf(copyrightPart(full()))!;
+    expect(presetOf(page, 'left')?.id).toBe('trade');
+    // The same order centred is the other preset, which is the only thing
+    // that tells them apart.
+    expect(presetOf(page, 'center')?.id).toBe('centered');
+    const legal = applyCopyrightPreset(page, COPYRIGHT_PRESETS.find((one) => one.id === 'legal')!);
+    expect(presetOf(legal, 'left')?.id).toBe('legal');
+    // Move one element and it stops describing the page.
+    expect(presetOf(moveCopyrightElement(legal, 'lccn', -1), 'left')).toBeNull();
+  });
+
+  it('takes a preset’s order, what it hides and where the block sits', () => {
+    const page = copyrightOf(copyrightPart(full()))!;
+    const minimal = applyCopyrightPreset(page, COPYRIGHT_PRESETS.find((one) => one.id === 'minimal')!);
+    expect(minimal.position).toBe('middle');
+    expect(minimal.hidden).toContain('lccn');
+    // And it keeps the writer's words — switching preset is not a reset.
+    expect(minimal.lccn).toBe('2026901234');
+    expect(minimal.disclaimer).toBe(FICTION_DISCLAIMER);
+  });
+
+  it('drops an element before another, which is the drag', () => {
+    const page = copyrightOf(copyrightPart(full()))!;
+    const moved = placeCopyrightElement(page, 'printed', 'disclaimer');
+    expect(copyrightOrder(moved)[0]).toBe('printed');
+    expect(copyrightOrder(moved)).toHaveLength(copyrightOrder(page).length);
+  });
+});
+
+describe('what is still to fill in', () => {
+  it('counts the placeholders across what the page will print', () => {
+    let file = write(book(), { credits: 'Cover design by [NAME]\nInterior design by [NAME]' });
+    expect(copyrightPlaceholders(copyrightPart(file), file)).toBe(2);
+    // An element switched off is not going to print, so it is not owed.
+    const page = copyrightOf(copyrightPart(file))!;
+    file = write(file, showCopyrightElement(page, 'credits', false));
+    expect(copyrightPlaceholders(copyrightPart(file), file)).toBe(0);
+  });
+
+  it('counts a book number set to show with nothing in it', () => {
+    const file = write(book(), { numbers: [{ format: 'Paperback', number: '' }] });
+    expect(copyrightPlaceholders(copyrightPart(file), file)).toBe(1);
+  });
+});
+
+describe('a book number', () => {
+  it('checks the ISBN-13 sum, and says nothing about an empty box', () => {
+    // An empty box is a number the writer has not got yet, not a mistake.
+    expect(isbnLooksRight('')).toBeNull();
+    expect(isbnLooksRight('   ')).toBeNull();
+    expect(isbnLooksRight('978-0-306-40615-7')).toBe(true);
+    expect(isbnLooksRight('9780306406157')).toBe(true);
+    expect(isbnLooksRight('9780306406158')).toBe(false);
+    expect(isbnLooksRight('not a number')).toBe(false);
   });
 });

@@ -34,6 +34,36 @@ import type { ProjectFile } from './project-file.js';
  * opens the dialog and sets something, and until then the page prints the free
  * text it always printed. So no existing book moves, which is `partStyleOf`'s
  * rule (§7a) pointed at content rather than at type.
+ *
+ * ---
+ *
+ * **§15 is the order being the writer's** (from Ken's *Copyright Page dialog*
+ * handoff, the companion to the chapter opening one). The audit paid again:
+ * **ten of the handoff's twelve elements were already fields here**, and the
+ * two that were not (permissions, the Library of Congress number) had been
+ * going into `more`. What was missing is not the content but **the sequence**
+ * — `copyrightLines` walked a hard-coded run of `say(…)` calls, so a writer
+ * who wanted the notice above the disclaimer could not have it.
+ *
+ * Three more decisions.
+ *
+ * **An element turned off is not an element left empty.** The two look alike
+ * on the printed page and mean different things: *I have no Library of
+ * Congress number* and *I have one and this book does not print it*. So
+ * `hidden` is its own field and turning something off **keeps its words**,
+ * which is the graveyard's `archived`-is-not-`deletedAt` argument pointed at
+ * a page.
+ *
+ * **Which preset is in force is read back, never stored.** `presetOf` compares
+ * the order, the hidden set, the position and the alignment against the four,
+ * and answers `null` for anything else — so a writer who moves one element
+ * reads *Custom* rather than a preset that has stopped describing the page.
+ * `bookPresetOf`'s rule, and the handoff asks for exactly it.
+ *
+ * **Two of the handoff's controls are settings that already exist.** Its
+ * alignment and its type size are the part's own `LineStyle` (§7a), so they
+ * are edited through that rather than copied here — a second control for
+ * either would be a second answer about how the page is set.
  */
 
 /** One of the book's numbers: the format it identifies, and the number itself. */
@@ -79,10 +109,200 @@ export const copyrightPageSchema = z.object({
   barcodeAssetId: z.string().nullable().default(null),
   /** How wide the barcode prints, in inches. A trade EAN-13 with its add-on is about 2. */
   barcodeInches: z.number().min(0.75).max(4).default(2),
+  /** Credit lines for quoted or previously published material (§15). */
+  permissions: z.string().default(''),
+  /** The Library of Congress Control Number (§15). */
+  lccn: z.string().default(''),
   /** Anything the fields have no room for, printed under them. */
   more: z.string().default(''),
+  /**
+   * The elements in the order they print (§15). Empty means *the order this
+   * page has always printed in*, which is `TRADE_ORDER` — so a page made
+   * before there was an order reads exactly as it did and nothing is
+   * migrated, `layout`/`template`'s shape a second time.
+   */
+  order: z.array(z.string()).default([]),
+  /**
+   * The elements switched off. **Not the same as empty**: turning one off
+   * keeps its words, so switching it back on gives them back.
+   */
+  hidden: z.array(z.string()).default([]),
+  /**
+   * Where the block sits on the page (§15). It hung at the foot and nowhere
+   * else (§7a, on the reading that a notice a third of the way down is not a
+   * copyright page and that the block is long enough to be pushed off) — which
+   * was right about the **default** and wrong to make it the only answer. The
+   * handoff settles the worry it rested on: a block too tall for the page
+   * shrinks a step and says so, rather than running off the bottom.
+   */
+  position: z.enum(['top', 'middle', 'bottom']).default('bottom'),
 });
 export type CopyrightPage = z.infer<typeof copyrightPageSchema>;
+
+// ------------------------------------------------------------ the elements
+
+/** What kind of thing an element is, which is what the dialog opens for it. */
+export type CopyrightElementKind = 'text' | 'numbers' | 'barcode';
+
+export interface CopyrightElement {
+  id: string;
+  /** What the writer calls it. */
+  name: string;
+  kind: CopyrightElementKind;
+  /**
+   * The two a book may not print without. They can be **reordered** — what is
+   * refused is hiding them, which is the handoff's first acceptance criterion.
+   */
+  required: boolean;
+  /** Which field of the record it prints, for the text ones. */
+  field?: keyof CopyrightPage;
+}
+
+export const COPYRIGHT_ELEMENTS: readonly CopyrightElement[] = [
+  { id: 'disclaimer', name: 'Fiction disclaimer', kind: 'text', required: false, field: 'disclaimer' },
+  { id: 'notice', name: 'Copyright notice', kind: 'text', required: true },
+  { id: 'rights', name: 'All rights reserved', kind: 'text', required: true, field: 'rights' },
+  { id: 'permissions', name: 'Permissions', kind: 'text', required: false, field: 'permissions' },
+  { id: 'publisher', name: 'Publisher', kind: 'text', required: false },
+  { id: 'lccn', name: 'Library of Congress', kind: 'text', required: false, field: 'lccn' },
+  { id: 'isbn', name: 'ISBNs', kind: 'numbers', required: false },
+  { id: 'barcode', name: 'ISBN barcode', kind: 'barcode', required: false },
+  { id: 'credits', name: 'Credits', kind: 'text', required: false, field: 'credits' },
+  { id: 'website', name: 'Website', kind: 'text', required: false, field: 'publisherUrl' },
+  { id: 'edition', name: 'Edition & number line', kind: 'text', required: false, field: 'edition' },
+  { id: 'printed', name: 'Country of printing', kind: 'text', required: false, field: 'printedIn' },
+  { id: 'more', name: 'Anything else', kind: 'text', required: false, field: 'more' },
+];
+
+export const copyrightElement = (id: string): CopyrightElement | undefined =>
+  COPYRIGHT_ELEMENTS.find((one) => one.id === id);
+
+/**
+ * The order the page printed in before there was one, so a book made before
+ * §15 reads unchanged. `more` comes last, as it always did — it is the
+ * overflow rather than one of the handoff's twelve.
+ */
+export const TRADE_ORDER = [
+  'disclaimer',
+  'notice',
+  'rights',
+  'permissions',
+  'publisher',
+  'lccn',
+  'isbn',
+  'barcode',
+  'credits',
+  'website',
+  'edition',
+  'printed',
+  'more',
+] as const;
+
+export interface CopyrightPreset {
+  id: string;
+  name: string;
+  order: readonly string[];
+  hidden: readonly string[];
+  position: 'top' | 'middle' | 'bottom';
+  align: 'left' | 'center' | 'right';
+}
+
+/** The four standard orders of the handoff, as data. */
+export const COPYRIGHT_PRESETS: readonly CopyrightPreset[] = [
+  { id: 'trade', name: 'Trade standard', order: TRADE_ORDER, hidden: [], position: 'bottom', align: 'left' },
+  {
+    id: 'legal',
+    name: 'Legal first',
+    order: ['notice', 'rights', 'isbn', 'barcode', 'publisher', 'edition', 'printed', 'lccn', 'disclaimer', 'permissions', 'credits', 'website', 'more'],
+    hidden: [],
+    position: 'top',
+    align: 'left',
+  },
+  {
+    id: 'minimal',
+    name: 'Indie minimal',
+    order: ['notice', 'rights', 'disclaimer', 'isbn', 'barcode', 'credits', 'website', 'edition', 'permissions', 'publisher', 'lccn', 'printed', 'more'],
+    hidden: ['permissions', 'publisher', 'lccn', 'printed'],
+    position: 'middle',
+    align: 'center',
+  },
+  { id: 'centered', name: 'Centered classic', order: TRADE_ORDER, hidden: [], position: 'bottom', align: 'center' },
+];
+
+/**
+ * The order in force: the writer's where they have one, the trade order
+ * otherwise. Anything the record does not name is appended, so an element
+ * added to `COPYRIGHT_ELEMENTS` tomorrow appears on an existing page rather
+ * than vanishing from it.
+ */
+export const copyrightOrder = (page: CopyrightPage): string[] => {
+  const known = new Set(COPYRIGHT_ELEMENTS.map((one) => one.id));
+  const named = page.order.filter((id) => known.has(id));
+  const seen = new Set(named);
+  return [...named, ...COPYRIGHT_ELEMENTS.map((one) => one.id).filter((id) => !seen.has(id))];
+};
+
+/** Whether an element prints. The two required ones always do. */
+export const copyrightShows = (page: CopyrightPage, id: string): boolean =>
+  copyrightElement(id)?.required === true || !page.hidden.includes(id);
+
+/**
+ * Which preset the page is set to, or null for an order the writer has made
+ * themselves. **Read back rather than stored** (§15), so moving one element
+ * reads *Custom* rather than a preset that has stopped describing the page.
+ */
+export const presetOf = (page: CopyrightPage, align: 'left' | 'center' | 'right'): CopyrightPreset | null => {
+  const order = copyrightOrder(page).join(',');
+  const hidden = [...page.hidden].sort().join(',');
+  return (
+    COPYRIGHT_PRESETS.find(
+      (preset) =>
+        copyrightOrder({ ...page, order: [...preset.order] }).join(',') === order &&
+        [...preset.hidden].sort().join(',') === hidden &&
+        preset.position === page.position &&
+        preset.align === align,
+    ) ?? null
+  );
+};
+
+/** Take a preset: the order, what is hidden and where the block sits. */
+export const applyCopyrightPreset = (page: CopyrightPage, preset: CopyrightPreset): CopyrightPage =>
+  copyrightPageSchema.parse({
+    ...page,
+    order: [...preset.order],
+    hidden: [...preset.hidden],
+    position: preset.position,
+  });
+
+/** Move an element one place up or down. */
+export const moveCopyrightElement = (page: CopyrightPage, id: string, by: -1 | 1): CopyrightPage => {
+  const order = copyrightOrder(page);
+  const at = order.indexOf(id);
+  const to = at + by;
+  if (at < 0 || to < 0 || to >= order.length) return page;
+  const moved = [...order];
+  moved[at] = order[to]!;
+  moved[to] = id;
+  return copyrightPageSchema.parse({ ...page, order: moved });
+};
+
+/** Drop an element before another, which is the drag (§15). */
+export const placeCopyrightElement = (page: CopyrightPage, id: string, beforeId: string | null): CopyrightPage => {
+  const order = copyrightOrder(page).filter((one) => one !== id);
+  const at = beforeId === null ? order.length : order.indexOf(beforeId);
+  if (beforeId !== null && at < 0) return page;
+  return copyrightPageSchema.parse({ ...page, order: [...order.slice(0, at), id, ...order.slice(at)] });
+};
+
+/**
+ * Turn an element off, or on. **The words stay either way** — which is what
+ * makes this different from clearing the field, and is why both exist.
+ */
+export const showCopyrightElement = (page: CopyrightPage, id: string, show: boolean): CopyrightPage => {
+  if (copyrightElement(id)?.required === true) return page;
+  const hidden = page.hidden.filter((one) => one !== id);
+  return copyrightPageSchema.parse({ ...page, hidden: show ? hidden : [...hidden, id] });
+};
 
 export const RIGHTS_RESERVED = 'All rights reserved.';
 
@@ -172,30 +392,97 @@ export const copyrightLines = (part: BookPart, file: ProjectFile): CopyrightLine
     if (trimmed.length > 0) out.push({ text: trimmed, apart });
   };
 
+  // The book's own title heads the page whatever the order says: it is not
+  // one of the elements a writer arranges, it is what the page is about.
   say(bookNames(file).title);
-  say(copyrightNotice(page, file));
-  say(page.rights);
 
-  const publisher = [page.publisher, page.publisherPlace].map((one) => one.trim()).filter((one) => one.length > 0);
-  if (publisher.length > 0) say(publisher.join(', '));
-  // The address's own line, so a long URL never runs into the city.
-  if (publisher.length > 0) say(page.publisherUrl, false);
-  else say(page.publisherUrl);
-
-  for (const [at, number] of page.numbers.entries()) {
-    const format = number.format.trim();
-    const digits = number.number.trim();
-    if (digits.length === 0) continue;
-    say(format.length > 0 ? `ISBN ${digits} (${format})` : `ISBN ${digits}`, at === 0);
+  // The writer's order (§15), where the hard-coded run of `say(…)` used to
+  // be. Each element says its own piece and nothing knows where it falls.
+  for (const id of copyrightOrder(page)) {
+    if (!copyrightShows(page, id)) continue;
+    switch (id) {
+      case 'notice':
+        say(copyrightNotice(page, file));
+        break;
+      case 'publisher': {
+        const named = [page.publisher, page.publisherPlace].map((one) => one.trim()).filter((one) => one.length > 0);
+        if (named.length > 0) say(named.join(', '));
+        break;
+      }
+      case 'website':
+        // Its own line under the publisher where there is one, so a long URL
+        // never runs into the city.
+        say(page.publisherUrl, !copyrightShows(page, 'publisher') || page.publisher.trim().length === 0);
+        break;
+      case 'lccn':
+        if (page.lccn.trim().length > 0) say(`Library of Congress Control Number: ${page.lccn.trim()}`);
+        break;
+      case 'isbn':
+        for (const [at, number] of page.numbers.entries()) {
+          const format = number.format.trim();
+          const digits = number.number.trim();
+          if (digits.length === 0) continue;
+          say(format.length > 0 ? `ISBN ${digits} (${format})` : `ISBN ${digits}`, at === 0);
+        }
+        break;
+      case 'edition':
+        say(page.edition);
+        // The number line rides with the edition, which is where a book puts
+        // it — and it is still worked out, with nowhere to type one.
+        say(numberLine(page.printing), false);
+        break;
+      case 'barcode':
+        // A picture rather than a line; `copyrightLines` says words, and the
+        // print places the barcode itself.
+        break;
+      default: {
+        const field = copyrightElement(id)?.field;
+        if (field) say(String(page[field] ?? ''));
+      }
+    }
   }
-
-  say(page.edition);
-  say(page.disclaimer);
-  say(page.credits);
-  say(page.printedIn);
-  say(page.more);
-  say(numberLine(page.printing));
   return out;
+};
+
+// -------------------------------------------------------- what is not filled
+
+/** A placeholder a writer has still to fill in: `[YEAR]`, `[NAME]`. */
+const PLACEHOLDER = /\[[^\]]*\]/g;
+
+/**
+ * How many placeholders are left across what the page will **print** (§15).
+ *
+ * Only the visible elements count, and an empty book number counts too: a
+ * number set to show with nothing in it is a line the book cannot print. The
+ * footer says the figure, and it never blocks anything — a writer who has not
+ * got their ISBN yet still has a page.
+ */
+export const copyrightPlaceholders = (part: BookPart, file: ProjectFile): number => {
+  const page = copyrightOf(part);
+  if (!page) return (part.text.match(PLACEHOLDER) ?? []).length;
+  let count = 0;
+  for (const line of copyrightLines(part, file)) count += (line.text.match(PLACEHOLDER) ?? []).length;
+  if (copyrightShows(page, 'isbn')) {
+    count += page.numbers.filter((one) => one.number.trim().length === 0 && one.format.trim().length > 0).length;
+  }
+  return count;
+};
+
+/**
+ * Whether a string is a well-formed ISBN-13 (§15's *checksum validation*).
+ *
+ * It answers **null for nothing typed** rather than false, because an empty
+ * box is not a mistake — it is a book number the writer has not got yet, and
+ * a red mark on it would be the program telling them off for waiting on their
+ * publisher.
+ */
+export const isbnLooksRight = (value: string): boolean | null => {
+  const digits = value.replace(/[\s-]/g, '');
+  if (digits.length === 0) return null;
+  if (!/^\d{13}$/.test(digits)) return false;
+  let sum = 0;
+  for (let at = 0; at < 12; at += 1) sum += Number(digits[at]) * (at % 2 === 0 ? 1 : 3);
+  return (10 - (sum % 10)) % 10 === Number(digits[12]);
 };
 
 /** Set fields on the page, starting it from the book where there is none yet. */
