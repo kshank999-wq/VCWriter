@@ -9,6 +9,7 @@ import {
   createProjectFile,
   moveFigureBefore,
   pagePlace,
+  pagesUnder,
   partsOf,
   placeFigure,
   removeBookRow,
@@ -177,5 +178,69 @@ describe('a picture on the page it was added to', () => {
       { id: 'p2', kind: 'paragraph' },
     ] as never;
     expect(pagePlace(pages, blocks, 2)).toEqual({ elementId: 'p2', partId: null, markerId: 'm1' });
+  });
+});
+
+/**
+ * The fold lists every page of a division (§9m, from Ken twice). The old
+ * reading matched ids, and a unit with no title has no row to match — so its
+ * pages fell back to the story and the numeral above them folded open short.
+ */
+describe('what a division folds open on', () => {
+  /** Pages as `bookPageRows` reads them: a story, three numerals, one of them untitled. */
+  const rail = [
+    { id: 'story', kind: 'chapter', title: 'In For A Pound', label: '', depth: 0, half: 'body', draggable: true },
+    { id: 'u1', kind: 'section', title: 'I.', label: '', depth: 1, half: 'body', draggable: false },
+    { id: 'u3', kind: 'section', title: 'II.', label: '', depth: 1, half: 'body', draggable: false },
+  ] as never as Parameters<typeof pagesUnder>[0];
+  const page = (sheet: number, unitId: string | null, extra: Record<string, unknown> = {}) =>
+    ({
+      sheet,
+      folio: String(sheet),
+      counted: String(sheet),
+      says: 'Text',
+      markerId: 'story',
+      unitId,
+      partId: null,
+      figureId: null,
+      elementId: null,
+      blankFor: null,
+      blank: false,
+      ...extra,
+    }) as never;
+
+  const pages = [
+    { ...(page(1, null) as object), partId: 'front' } as never,
+    page(2, null, { says: 'Chapter opens' }),
+    page(3, 'u1', { says: 'Chapter opens' }),
+    // The pages a unit per paragraph puts in an untitled unit — no row of
+    // their own, and the whole of what the old reading lost.
+    page(4, 'u2'),
+    page(5, 'u2', { says: 'Illustration' }),
+    page(6, 'u2', { says: 'Blank', blank: true }),
+    page(7, 'u3', { says: 'Chapter opens' }),
+    page(8, 'u4'),
+  ];
+
+  it('gives a numeral every page between it and the next, titled unit or not', () => {
+    const under = pagesUnder(rail, pages);
+    expect(under.get('u1')?.map((one) => one.sheet)).toEqual([3, 4, 5, 6]);
+    expect(under.get('u3')?.map((one) => one.sheet)).toEqual([7, 8]);
+  });
+
+  it('leaves the story only the pages before its first numeral', () => {
+    expect(pagesUnder(rail, pages).get('story')?.map((one) => one.sheet)).toEqual([2]);
+  });
+
+  it('accounts for every page of the story exactly once', () => {
+    const under = pagesUnder(rail, pages);
+    const listed = [...under.values()].flat().map((one) => one.sheet);
+    expect([...listed].sort((a, b) => a - b)).toEqual([2, 3, 4, 5, 6, 7, 8]);
+    expect(new Set(listed).size).toBe(listed.length);
+  });
+
+  it('gives a part page to nobody, a part having a row of its own', () => {
+    const under = pagesUnder(rail, pages);
+    expect([...under.values()].flat().some((one) => one.sheet === 1)).toBe(false);
   });
 });

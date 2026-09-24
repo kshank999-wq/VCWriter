@@ -681,11 +681,14 @@ export function ChapterStyleFields({
   file,
   onUpdate,
   marker,
+  onPage = false,
 }: {
   file: ProjectFile;
   onUpdate: ChapterPageDialogProps['onUpdate'];
   /** The chapter being looked at, where there is one: it may override the template. */
   marker: StoryMarker | null;
+  /** Rendered on a page's own panel (§9m), where the page is already in hand. */
+  onPage?: boolean;
 }) {
   const style = chapterPageStyleOf(file);
   const book = isInstructional(file.project.format);
@@ -739,10 +742,15 @@ export function ChapterStyleFields({
         />
       ) : null}
 
-      <p className="muted small">
-        Where the picture sits on a {unit} page, how far down the heading falls and how much air stands over the
-        first paragraph belong to <em>that</em> page — double-click it in the book to set them.
-      </p>
+      {/* Where the page's own settings are (§9c) — said only where the writer
+          is not already standing on one (§9m). On the page's own panel it
+          would be a sentence telling somebody to go where they are. */}
+      {onPage ? null : (
+        <p className="muted small">
+          Where the picture sits on a {unit} page, how far down the heading falls and how much air stands over the
+          first paragraph belong to <em>that</em> page — double-click it in the book to set them.
+        </p>
+      )}
     </section>
   );
 }

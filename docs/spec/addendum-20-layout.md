@@ -1606,6 +1606,73 @@ second copy**: putting the chapter page's controls here as well would be two
 screens disagreeing about how a chapter opens, which is the fault §6a, §7a and
 §9c each found in turn. Absent where the page has nothing to set.
 
+## 9m. Every page under its chapter, and a panel that says less
+
+From Ken, after §9l: *chapter one is still wrong, where it only has page two…
+chapter three has only one page and it really has four pages… and so every page
+is accounted for*. He reported it twice, which is what makes it the first thing
+here.
+
+**The fold matched ids, and matching loses pages.** §9h reads a page's
+`unitId` and the rail draws a section row for every unit that has a **title**
+(§6) — and those are not the same set. A story imported as a unit per
+paragraph has one titled unit carrying the numeral and untitled ones after it:
+their pages matched no section row, so they fell back to the story and the
+numeral folded open on the one page its heading stood on. That is exactly what
+he saw, and it is why two chapters were right and two were not — it depends on
+how the writing happens to land in units, which is not a fact about the book.
+
+So a division's pages are **a range rather than a set**: `pagesUnder` in
+`book-rail.ts` walks the laid pages in order and gives each one to the nearest
+division row at or before it, which is `divisionSpan`'s rule pointed at pages.
+Every page of the story is then under exactly one row **by construction**,
+rather than by every unit happening to be listed. A part's page is nobody's, a
+part having a row of its own and no fold.
+
+**The instructional prose is a floating help box.** From Ken: *all this extra
+text that's instructional can be a pop-up box, like a floating help box*. It
+was true and in the way — a writer who has read *a picture put here goes in
+before the words on it* reads it again every time they open a page, and it
+pushed the buttons they came for down the panel. It is behind a **?** now, and
+it **floats**: nothing under it moves when it is asked for, which is what stops
+it reading as part of the controls. It is anchored to the **section** rather
+than to its mark, a panel being the width there is; the first draft hung a
+260px box off a mark at the panel's right edge and it ran off the left one, in
+the heading's own tracked capitals.
+
+**Done is gone.** From Ken: *when you hit done, nothing happens — you have to
+use the X on top, so you might as well remove that*. The figure's Done really
+did nothing the × did not, and two ways out of one dialog are two answers. The
+line describing the picture went the same way (*under picture, it's saying
+about the actual picture — I don't know if that's necessary*): the heading is
+the picture's own name now and what the line added is in the help.
+
+**How openings look is on the page, not behind a door.** From Ken: *set how
+openings look just gives you the book settings, and we need the graphic
+dialogue buttons included in this menu*. §9l made that a **route** on the
+argument that a second copy is a second answer — right about the copy and
+wrong about the door, because sending a writer to Book settings took away the
+picture controls they were standing beside. `ChapterStyleFields` is one
+component, so rendering it **here** is not a second copy; it is the same
+fields, on the panel that has the buttons. A chapter with a page of its own
+keeps the button, that page having a sheet to be set against and a dialog that
+draws it. The sentence pointing at the page's own settings is absent here, it
+being a sentence telling somebody to go where they are.
+
+**The box is editable, and a picture goes in from the box.** From Ken: *it
+should be an editable box that can be dragged out and can give you the
+specifications of its dimensions… draggable corners that maintain its
+squareness… and there's nothing that allows you to actually put a graphic in
+the box area, it just says picture goes here*. So the box being placed wears
+its size (`2.10 × 1.40 in · 62% of the measure`, read off the **laid page**
+rather than off the drag, so it is the size the book will print), four corner
+grips, and a **＋** beside the ✗ and the ✓. Only the **width** is dragged and
+the height follows from the picture's own proportions — which is what keeps the
+box square-cornered and the picture unsquashed, and is why there is no *fill
+the box* to press: the box is never a shape the picture fails to fill. The
+text runs round it as the corner moves, the handle being measured off the
+figure after each laying (§9d).
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

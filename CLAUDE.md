@@ -1906,6 +1906,46 @@ push live; the build takes a minute or two.
   deliberately and which has no page of its own: a **route rather than a
   second copy**, two screens disagreeing about how a chapter opens being the
   fault §6a, §7a and §9c each found in turn.
+  **§9m is every page under its chapter, and a panel that says less**, from
+  Ken after §9l and reported twice: *chapter one is still wrong, where it only
+  has page two… chapter three has only one page and it really has four pages…
+  and so every page is accounted for*. **The fold matched ids, and matching
+  loses pages** — the rail lists a section only where it has a title (§6),
+  so a story imported as a unit per paragraph has one titled unit carrying the
+  numeral and untitled ones after it, whose pages matched no section row and
+  fell back to the *story*; the numeral then folded open on the one page its
+  heading stood on. It is why two chapters were right and two were not, which
+  depends on how the writing happens to land in units and is not a fact about
+  the book. So a division's pages are **a range rather than a set**:
+  `pagesUnder` in `book-rail.ts` gives each laid page to the nearest division
+  row at or before it — `divisionSpan`'s rule pointed at pages — so every page
+  is under exactly one row **by construction** rather than by every unit
+  happening to be listed. Three things went with it. **The instructional prose
+  is a floating help box** (*all this extra text that's instructional can be a
+  pop-up box, like a floating help box*): true and in the way, so it is behind
+  a **?** that floats, nothing under it moving when it opens, anchored to the
+  **section** rather than to its mark because a panel is the width there is —
+  the first draft hung a 260px box off a mark at the panel's right edge, in the
+  heading's own tracked capitals, and it ran off the left one. **Done is gone**
+  (*when you hit done, nothing happens — you have to use the X on top*): it did
+  nothing the × did not, and the line describing the picture went with it, the
+  heading being the picture's own name now. And **how openings look is on the
+  page rather than behind a door** (*set how openings look just gives you the
+  book settings, and we need the graphic dialogue buttons included in this
+  menu*) — §9l's *route rather than a second copy* was right about the copy and
+  wrong about the door, since sending a writer to Book settings took away the
+  picture controls they were standing beside; `ChapterStyleFields` is one
+  component, so rendering it here is the same fields rather than a second
+  answer. **The box is editable and a picture goes in from the box** (*it
+  should be an editable box… draggable corners that maintain its squareness…
+  there's nothing that allows you to actually put a graphic in the box area, it
+  just says picture goes here*): the box being placed wears its size in inches
+  and as a share of the measure — read off the **laid page** rather than off
+  the drag — four corner grips and a **＋** beside the ✗ and the ✓. Only the
+  **width** is dragged and the height follows from the picture's proportions,
+  which is what keeps the box square-cornered and the picture unsquashed, and
+  is why there is no *fill the box*: the box is never a shape the picture fails
+  to fill.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves

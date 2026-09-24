@@ -425,8 +425,15 @@ describe('the room', () => {
     fireEvent.click(within(pages[0] as HTMLElement).getByRole('button'));
     const inspector = document.querySelector('.layout-inspector') as HTMLElement;
     expect(inspector).not.toBeNull();
-    expect(inspector.textContent).toMatch(/this page's alone/);
+    // What the panel used to say in prose is behind the ? (§9m, from Ken:
+    // *all this extra text that's instructional can be a floating help box*),
+    // and it floats rather than opening in the flow.
+    expect(inspector.textContent).not.toMatch(/this page’s alone/);
+    fireEvent.click(within(inspector).getByLabelText(/^About page /));
+    expect(inspector.textContent).toMatch(/this page’s alone/);
     expect(within(inspector).getByRole('button', { name: 'Put a picture on this page…' })).toBeDefined();
+    // And **Done** is gone (§9m): it did nothing the × did not.
+    expect(within(inspector).queryByRole('button', { name: 'Done' })).toBeNull();
     // How the page is set is a **way through** rather than a second copy
     // (§9l): the chapter page's own controls stay in the chapter page's
     // dialog, so two screens cannot disagree about how a chapter opens.
@@ -562,7 +569,14 @@ describe('the room', () => {
     expect(box).toBeDefined();
     expect(box!.attributes.assetId).toBeUndefined();
     expect(figurePlacement(box!).place).toBe('right');
-    expect(screen.getByRole('heading', { name: 'An empty box' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: /An empty box/ })).toBeDefined();
+    // **A picture goes in from the box itself** (§9m, from Ken: *there's
+    // nothing that allows you to actually put a graphic in the box area*),
+    // beside the ✗ and the ✓ rather than a panel away — and the box says
+    // what it measures, and carries corners to drag.
+    expect(screen.getByLabelText('Put a picture in this box')).toBeDefined();
+    expect(document.querySelector('.layout-placing-size')?.textContent).toMatch(/in/);
+    expect(document.querySelectorAll('.layout-placing-grip')).toHaveLength(4);
 
     // And the picture goes in afterwards, which is the order Ken asked for.
     fireEvent.click(screen.getByRole('button', { name: 'Choose a picture…' }));

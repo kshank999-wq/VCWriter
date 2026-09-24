@@ -119,6 +119,7 @@ import {
   markerNumbering,
   type MarkerNumbering,
   bookPageRows,
+  pagesUnder,
   plateIntoStory,
   type BookPageRow,
   placeBookFigure,
@@ -386,11 +387,6 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
     });
   };
 
-  /** The units the rail lists in their own right, so a story does not list them twice (§9j). */
-  const sectionRows = useMemo(
-    () => new Set(rows.filter((row) => row.kind === 'section').map((row) => row.id)),
-    [rows],
-  );
   const selectedRow = rows.find((row) => row.id === selectedRowId) ?? null;
   const selected = selectedRow?.part ?? null;
   const opened = parts.find((part) => part.id === partDialogId) ?? null;
@@ -399,6 +395,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const pages = laying?.laid.pages ?? [];
   /** Every page of the book with a word for what stands on it (§9h). */
   const pageRows = useMemo(() => (laying ? bookPageRows(laying.laid.pages, laying.blocks) : []), [laying]);
+  /** What each division folds open on: a range of pages, so none is lost (§9m). */
+  const folds = useMemo(() => pagesUnder(rows, pageRows), [rows, pageRows]);
   const spreadCount = Math.max(1, Math.ceil((pages.length + 1) / 2));
   /**
    * The size that fits, read every render from the trim and the space there
@@ -755,7 +753,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
    * do to this page*, and the dialog exists precisely so the answer is the
    * same wherever a writer asks it.
    */
-  const pageControls = (page: BookPageRow, onDone: () => void) => (
+  const pageControls = (page: BookPageRow) => (
     <StoryPageSection
       page={page}
       // Why a blank leaf is blank is a reading of the page before it, and the
@@ -770,23 +768,32 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         setDrawing(NEW_BOX);
       }}
       onBlank={(elementId, blank) => onUpdate((current) => setBlankBefore(current, elementId, blank))}
-      format={pageFormat(page).label}
+      format={pageFormat(page).markerId ? pageFormat(page).label : null}
       onFormat={() => {
         const to = pageFormat(page);
         setPageDialogSheet(null);
         if (to.markerId) openChapterPage(to.markerId);
-        else setBookSettingsOpen(true);
       }}
-      onDone={onDone}
+      // The book's own openings, rendered here where the page has no leaf to
+      // set (§9m). `ChapterStyleFields` is the one component Book settings
+      // renders too, so the two cannot disagree about how a chapter opens.
+      openings={
+        pageFormat(page).label && !pageFormat(page).markerId ? (
+          <Fold id="page-openings" title="How openings look">
+            <ChapterStyleFields file={file} onUpdate={onUpdate} marker={null} onPage />
+          </Fold>
+        ) : null
+      }
     />
   );
 
   /**
    * Where this page's own look is set (§9l). A chapter with a marker has a
    * page of its own; a chapter **inside a story** has none — §6 made it a
-   * section deliberately — so its opening is set once for the whole book,
-   * and the button says which of the two it is rather than pretending they
-   * are the same thing.
+   * section deliberately — so its opening is set once for the whole book.
+   * That second case is not a button: sending a writer to Book settings for
+   * it took away the picture controls they were standing beside (§9m), so it
+   * is the fields themselves, on this screen.
    */
   const pageFormat = (page: BookPageRow): { label: string | null; markerId: string | null } => {
     if (page.says !== 'Chapter opens') return { label: null, markerId: null };
@@ -797,7 +804,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           .find((block) => block?.kind === 'chapter_opening')
       : undefined;
     if (opens) return { label: 'Set this chapter’s page…', markerId: opens.id };
-    return { label: 'Set how openings look…', markerId: null };
+    return { label: 'How openings look', markerId: null };
   };
 
   const figureControls = (figure: BookFigure) => (
@@ -815,10 +822,6 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         setSelectedRowId(null);
         setPageDialogSheet(null);
         onUpdate((current) => removeBookFigure(current, figure.elementId));
-      }}
-      onDone={() => {
-        setDrawing(null);
-        setSelectedRowId(null);
       }}
     />
   );
@@ -978,7 +981,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         controls={
           dialogPage ? (
             <>
-              {pageControls(dialogPage, () => setPageDialogSheet(null))}
+              {pageControls(dialogPage)}
               {dialogFigure ? figureControls(dialogFigure) : null}
             </>
           ) : null
@@ -1090,23 +1093,13 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               const at = laying ? pageOf(laying, row.id) : undefined;
               // Every division folds, not only a top-level chapter (§9i, from
               // Ken: *if I select chapter three and it has eight pages, when I
-              // toggle the arrow I should see pages one to eight*). A
-              // collection's chapter is a **section**, so its pages are found
-              // by the unit; a chapter elsewhere is the marker's.
+              // toggle the arrow I should see pages one to eight*). What is
+              // under one is `pagesUnder`'s range rather than an id match
+              // (§9m): matching lost the pages of any unit the rail does not
+              // list, so a numeral folded open on the one page its heading
+              // stood on.
               const divides = row.kind === 'chapter' || row.kind === 'section';
-              const under =
-                divides && openChapters.includes(row.id)
-                  ? pageRows.filter((one) =>
-                      row.kind === 'section'
-                        ? one.unitId === row.id
-                        : // A division lists what no row **under** it lists
-                          // (§9j). A story's sections are rows of their own,
-                          // so without this every page of the story appeared
-                          // twice — once under the story and once under the
-                          // numeral it really belongs to.
-                          one.markerId === row.id && (one.unitId === null || !sectionRows.has(one.unitId)),
-                    )
-                  : [];
+              const under = divides && openChapters.includes(row.id) ? (folds.get(row.id) ?? []) : [];
               return (
                 <Fragment key={row.id}>
                 {area ? (
@@ -1271,6 +1264,20 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               onPickPage={setSelectedSheet}
               onOpenPage={openPage}
               placing={placing}
+              placingEmpty={placing !== null && bookFigures(file).find((one) => one.elementId === placing)?.assetId == null}
+              onSpan={(span) => {
+                const what = placing;
+                if (!what) return;
+                onUpdate((current) => {
+                  const held = bookFigures(current).find((one) => one.elementId === what);
+                  if (!held) return current;
+                  return placeBookFigure(current, what, { ...held.placement, span });
+                });
+              }}
+              onPick={() => {
+                const what = placing;
+                if (what) importArt({ kind: 'fill', elementId: what });
+              }}
               onSlide={(place, beforeElementId) => {
                 const what = placing;
                 if (!what) return;
@@ -1415,7 +1422,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               put graphics on that page, and the adjustments of that graphic*).
               It used to open the chapter's page or the title page's fields,
               which is how a picture asked for on page 9 landed on chapter 2. */}
-          {storyPage ? pageControls(storyPage, () => setSelectedSheet(null)) : null}
+          {storyPage ? pageControls(storyPage) : null}
           {selectedFigure ? figureControls(selectedFigure) : null}
           {selected ? (
             <>
@@ -1457,6 +1464,44 @@ const describeSpread = (pages: BookPage[], spread: number): string => {
  * the running heads read as three things rather than one long column.
  * Whether each is open is a preference of the machine, not of the book.
  */
+/**
+ * What a screen would otherwise say in the margin (§9m, from Ken: *all this
+ * extra text that's instructional can be a pop-up box, like a floating help
+ * box*).
+ *
+ * The prose was true and in the way. A writer who has read *a picture put here
+ * goes in before the words on it* once reads it again every time they open a
+ * page, and it pushed the buttons they came for down the panel. It is behind a
+ * **?** now, and it **floats** rather than opening in the flow: nothing else on
+ * the screen moves when it is asked for, which is what stops it being read as
+ * part of the controls.
+ */
+function Help({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="layout-help">
+      <button
+        type="button"
+        className="layout-help-ask"
+        aria-label={label}
+        aria-expanded={open}
+        title={label}
+        onClick={() => setOpen((current) => !current)}
+      >
+        ?
+      </button>
+      {open ? (
+        <span className="layout-help-box" role="note">
+          {children}
+          <button type="button" className="ghost small" onClick={() => setOpen(false)}>
+            Close
+          </button>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 function Fold({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   const [open, setOpen] = usePreference(`layout.fold.${id}`, true);
   return (
@@ -1613,7 +1658,10 @@ function Spreads({
   drawing,
   onDrawn,
   placing,
+  placingEmpty,
   onSlide,
+  onSpan,
+  onPick,
   onKeep,
   onDrop,
 }: {
@@ -1633,8 +1681,14 @@ function Spreads({
   onDrawn(placement: BookFigurePlacement, sheet: number): void;
   /** The box being placed (§9d), which wears a ✗ and a ✓ and can be slid. */
   placing: string | null;
+  /** Whether that box is still waiting for a picture (§9m). */
+  placingEmpty: boolean;
   /** Slid to a side, and before the element it was let go over. */
   onSlide(place: 'left' | 'right', beforeElementId: string | null): void;
+  /** A corner dragged: the new width as a share of the measure (§9m). */
+  onSpan(span: number): void;
+  /** A picture for the box being placed (§9m). */
+  onPick(): void;
   onKeep(): void;
   onDrop(): void;
 }) {
@@ -1676,6 +1730,35 @@ function Spreads({
     const span = Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, drawn.w / width));
     const place = drawn.x + drawn.w / 2 < inset + width / 2 ? 'left' : 'right';
     onDrawn({ place, span, side: 'either', standoff: INSET_STANDOFF.default }, from.page.sheet);
+  };
+
+  /** The text block's width on a sheet, in the sheet's own pixels. */
+  const measureOn = (sheetEl: HTMLElement | null): number => {
+    if (!sheetEl) return 0;
+    const text = sheetEl.querySelector('.bk-text') as HTMLElement | null;
+    const rect = (text ?? sheetEl).getBoundingClientRect();
+    return (rect.width || sheetEl.getBoundingClientRect().width) / zoom;
+  };
+
+  /** A dragged corner, as the share of the measure the picture takes (§9m). */
+  const spanFor = (sheetEl: HTMLElement | null, width: number): number => {
+    const measure = measureOn(sheetEl);
+    if (measure <= 0) return INSET_SPAN.default;
+    return Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, width / measure));
+  };
+
+  /**
+   * What the box measures, in the book's own inches (§9m, from Ken: *it should
+   * give you the specifications of its dimensions*). Read off the **laid page**
+   * rather than off the drag, so it is the size the book will print.
+   */
+  const sizeOf = (sheetEl: HTMLElement | null, at: { width: number; height: number } | null): string => {
+    if (!at) return '';
+    const perInch = pageWidthPx / laying.geometry.trim.width;
+    if (perInch <= 0) return '';
+    const measure = measureOn(sheetEl);
+    const share = measure > 0 ? Math.round((at.width / measure) * 100) : 0;
+    return `${(at.width / perInch).toFixed(2)} × ${(at.height / perInch).toFixed(2)} in${share > 0 ? ` · ${share}% of the measure` : ''}`;
   };
 
   /**
@@ -1782,6 +1865,8 @@ function Spreads({
         ) : null}
         <PlacingHandle
           at={handles[key] ?? null}
+          empty={placingEmpty}
+          size={sizeOf(sheets.current[key] ?? null, handles[key] ?? null)}
           onSlideTo={(clientX, clientY) => {
             const sheetEl = sheets.current[key];
             if (!sheetEl) return;
@@ -1789,6 +1874,8 @@ function Spreads({
             const rect = (text ?? sheetEl).getBoundingClientRect();
             onSlide(clientX < rect.left + rect.width / 2 ? 'left' : 'right', blockUnder(page, sheetEl, clientY));
           }}
+          onCorner={(width) => onSpan(spanFor(sheets.current[key] ?? null, width))}
+          onPick={onPick}
           onKeep={onKeep}
           onDrop={onDrop}
         />
@@ -2692,25 +2779,77 @@ const PLACE_WORDS: Record<BookFigurePlacement['place'], string> = {
  */
 function PlacingHandle({
   at,
+  empty,
+  size,
   onSlideTo,
+  onCorner,
+  onPick,
   onKeep,
   onDrop,
 }: {
   at: { left: number; top: number; width: number; height: number } | null;
+  /** Whether the box is still waiting for its picture (§9m). */
+  empty: boolean;
+  /** What it measures, said on the box itself: *3.1 × 2.0 in · 62% of the measure*. */
+  size: string;
   onSlideTo(clientX: number, clientY: number): void;
+  /** A corner dragged: the new width in the sheet's own pixels (§9m). */
+  onCorner(width: number): void;
+  /** Put a picture in this box, from here (§9m, from Ken). */
+  onPick(): void;
   onKeep(): void;
   onDrop(): void;
 }) {
   const [sliding, setSliding] = useState(false);
+  /** Which corner is being dragged, and where the box stood when it was taken. */
+  const corner = useRef<{ x: number; left: number; right: number; from: 'left' | 'right' } | null>(null);
   if (!at) return null;
+  /**
+   * A corner resizes it (§9m, from Ken: *it needs to have draggable corners
+   * that maintain its squareness*). Only the **width** is dragged, and the
+   * height follows from the picture's own proportions — which is what keeps
+   * the box square-cornered and the picture unsquashed, and is why there is
+   * no *fill the box* to press: the box is never a shape the picture fails to
+   * fill. A corner on the near side grows it towards the pointer, the far
+   * side being pinned, so the box grows where the hand is.
+   */
+  const takeCorner = (event: React.PointerEvent, from: 'left' | 'right') => {
+    event.preventDefault();
+    event.stopPropagation();
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    corner.current = { x: event.clientX, left: at.left, right: at.left + at.width, from };
+  };
+  const moveCorner = (event: React.PointerEvent) => {
+    const held = corner.current;
+    if (!held) return;
+    const by = event.clientX - held.x;
+    onCorner(Math.max(24, held.from === 'right' ? at.width + by : at.width - by));
+  };
+  const letGo = (event: React.PointerEvent) => {
+    corner.current = null;
+    setSliding(false);
+    event.stopPropagation();
+  };
+  const grip = (where: string, from: 'left' | 'right') => (
+    <span
+      key={where}
+      className={`layout-placing-grip ${where}`}
+      role="presentation"
+      onPointerDown={(event) => takeCorner(event, from)}
+      onPointerMove={moveCorner}
+      onPointerUp={letGo}
+      onPointerCancel={letGo}
+    />
+  );
   return (
     <div
       className={sliding ? 'layout-placing sliding' : 'layout-placing'}
       style={{ left: at.left, top: at.top, width: at.width, height: at.height }}
       onPointerDown={(event) => {
-        // The marks are pressed rather than dragged; everything else in the
-        // box is the handle.
-        if ((event.target as HTMLElement).closest('button')) return;
+        // The marks and the grips are their own; everything else in the box
+        // is the handle that slides it.
+        const on = event.target as HTMLElement;
+        if (on.closest('button') || on.classList.contains('layout-placing-grip')) return;
         event.preventDefault();
         (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
         setSliding(true);
@@ -2721,16 +2860,38 @@ function PlacingHandle({
       }}
       onPointerUp={() => setSliding(false)}
       onPointerCancel={() => setSliding(false)}
-      title="Drag to slide the box; the text runs round it as you go"
+      title="Drag to slide the box; the text runs round it as you go. Drag a corner to resize it."
     >
+      {/* What it measures, on the box (§9m, from Ken: *it should give you the
+          specifications of its dimensions, so you can match your picture to
+          it*). Read off the laid page every time, so it is the size the book
+          will print rather than the size of the drag. */}
+      <span className="layout-placing-size">{size}</span>
       <div className="layout-placing-marks">
         <button type="button" className="layout-placing-mark drop" aria-label="Take the box away" title="Take the box away" onClick={onDrop}>
           ✗
         </button>
-        <button type="button" className="layout-placing-mark keep" aria-label="Keep the box here" title="Keep the box here, and choose a picture" onClick={onKeep}>
+        {/* A picture, from the box itself (§9m, from Ken: *there's nothing
+            that allows you to actually put a graphic in the box area — it
+            just says picture goes here*). It was in the inspector and behind
+            the ✓, which is a press and a panel away from the thing on the
+            screen that says it wants one. */}
+        {empty ? (
+          <button
+            type="button"
+            className="layout-placing-mark pick"
+            aria-label="Put a picture in this box"
+            title="Choose a picture from a file. It joins the graphics library and goes in this box."
+            onClick={onPick}
+          >
+            ＋
+          </button>
+        ) : null}
+        <button type="button" className="layout-placing-mark keep" aria-label="Keep the box here" title="Keep the box here" onClick={onKeep}>
           ✓
         </button>
       </div>
+      {[grip('nw', 'left'), grip('ne', 'right'), grip('sw', 'left'), grip('se', 'right')]}
     </div>
   );
 }
@@ -2770,7 +2931,7 @@ function StoryPageSection({
   onBlank,
   onFormat,
   format,
-  onDone,
+  openings,
 }: {
   page: BookPageRow;
   /** A blank leaf standing behind a picture page, asked for rather than left (§9i). */
@@ -2790,27 +2951,43 @@ function StoryPageSection({
   onFormat(): void;
   /** What that button says, and null where the page has nothing to set. */
   format: string | null;
-  onDone(): void;
+  /**
+   * How openings look, set **here** rather than through a door (§9m, from Ken:
+   * *set how openings look just gives you the book settings, and we need the
+   * graphic dialogue buttons included in this menu*). A chapter inside a story
+   * has no page of its own, so its look is the book's — and sending the writer
+   * to Book settings for it took away the picture buttons they were standing
+   * next to.
+   */
+  openings: ReactNode;
 }) {
+  /** What stands on the page, in the rail's own words rather than a sentence. */
+  const what = page.figureId ? 'a picture' : page.blank ? 'blank' : page.says === 'Chapter opens' ? 'a chapter opens' : null;
   return (
     <section className="layout-section layout-page-section">
-      <h3>Page {page.counted}</h3>
-      <p className="muted small">
-        {page.figureId
-          ? 'A picture stands on it. How it sits is below.'
-          : page.blank
-            ? // Three blank pages, three reasons, and only one of them the
-              // writer's — a page that says the wrong one is a page nobody
-              // can work out how to be rid of.
-              page.blankFor
-              ? 'It is blank because you put it here. It counts as a page and prints no number.'
-              : behindPicture
-                ? 'It is blank — the back of the picture before it, kept empty so nothing shows through. It counts as a page and prints no number.'
-                : 'It is blank — the page before a chapter that opens on a right-hand page.'
-            : page.says === 'Chapter opens'
-              ? 'The chapter opens on it. A picture put here goes in before it, and the chapter moves down.'
-              : 'Story text. A picture put here goes in before the words on it, and they move down.'}
-      </p>
+      <h3>
+        Page {page.counted}
+        {what ? <span className="muted"> · {what}</span> : null}
+        <Help label={`About page ${page.counted}`}>
+          <span>
+            {page.figureId
+              ? 'A picture stands on it. How it sits is below.'
+              : page.blank
+                ? // Three blank pages, three reasons, and only one of them the
+                  // writer's — a page that says the wrong one is a page nobody
+                  // can work out how to be rid of.
+                  page.blankFor
+                  ? 'It is blank because you put it here. It counts as a page and prints no number.'
+                  : behindPicture
+                    ? 'It is blank — the back of the picture before it, kept empty so nothing shows through. It counts as a page and prints no number.'
+                    : 'It is blank — the page before a chapter that opens on a right-hand page.'
+                : page.says === 'Chapter opens'
+                  ? 'The chapter opens on it. A picture put here goes in before it, and the chapter moves down.'
+                  : 'Story text. A picture put here goes in before the words on it, and they move down.'}{' '}
+            The pictures here are this page’s alone.
+          </span>
+        </Help>
+      </h3>
       {page.figureId ? null : (
         <div className="layout-page-acts">
           {page.blank ? null : (
@@ -2839,11 +3016,12 @@ function StoryPageSection({
           ) : null}
         </div>
       )}
-      {/* Everything else that sets this page (§9l). It is a **way through
-          rather than a second copy**: the chapter page's controls live in the
-          chapter page's dialog and the openings in Book settings, and putting
-          either of them here as well would be two screens disagreeing about
-          how a chapter opens. Absent where the page has nothing to set. */}
+      {/* How the opening is set (§9l, §9m). A chapter with a page of its own
+          keeps the **button**, because that page has a sheet to be set
+          against and a dialog that draws it. A chapter inside a story has no
+          page, so its look is the book's — and that is rendered **here**
+          rather than behind a door, the fields being the same component Book
+          settings renders, never a second copy. */}
       {format ? (
         <div className="layout-page-acts">
           <button type="button" className="raised small" onClick={onFormat}>
@@ -2851,14 +3029,7 @@ function StoryPageSection({
           </button>
         </div>
       ) : null}
-      <p className="muted small">
-        {/* The whole of what this screen is for, said once: the picture acts
-            reach this page and nothing else. */}
-        The pictures here are this page's alone.
-      </p>
-      <button type="button" className="ghost small" onClick={onDone}>
-        Done
-      </button>
+      {openings}
     </section>
   );
 }
@@ -2871,7 +3042,6 @@ function FigureSection({
   onFill,
   onBackBlank,
   onRemove,
-  onDone,
 }: {
   figure: BookFigure;
   drawing: boolean;
@@ -2883,7 +3053,6 @@ function FigureSection({
   onBackBlank(blank: boolean): void;
   /** Take the picture out of the book (§9j). The library keeps the file. */
   onRemove(): void;
-  onDone(): void;
 }) {
   const { place, span, standoff } = figure.placement;
   const backBlank = figure.backBlank;
@@ -2891,21 +3060,20 @@ function FigureSection({
   const empty = figure.assetId === null;
   return (
     <section className="layout-section layout-figure">
-      <h3>{empty ? 'An empty box' : 'Picture'}</h3>
-      {/* The box before its picture (§9a, from Ken: *you should be able to
-          move that around until it’s correct and then add a graphic to
-          it*): it holds its place on the page and says what it still wants. */}
-      {empty ? (
-        <p className="muted small">
-          It holds its space on the page. Choose what goes in it, or draw the box again to move it or resize it.
-        </p>
-      ) : (
-        <p className="muted small">
-          {figure.caption.trim() || figure.assetName || 'A figure'}
-          {figure.chapterTitle ? ` · in ${figure.chapterTitle}` : ''}. The manuscript prints it across the measure; the
-          book puts it where you say.
-        </p>
-      )}
+      {/* The line under this heading described the picture the writer was
+          looking at (§9m, from Ken: *under picture it's saying about the
+          actual picture — I don't know if that's necessary*). What it said
+          that the screen does not is behind the **?**. */}
+      <h3>
+        {empty ? 'An empty box' : figure.caption.trim() || figure.assetName || 'Picture'}
+        <Help label="About this picture">
+          <span>
+            {empty
+              ? 'The box holds its space on the page. Choose what goes in it below, or draw it again to move it or resize it.'
+              : `The manuscript prints it across the measure; the book puts it where you say.${figure.chapterTitle ? ` It is in ${figure.chapterTitle}.` : ''}`}
+          </span>
+        </Help>
+      </h3>
       <label className="field">
         <span>Place</span>
         <select
@@ -3011,9 +3179,6 @@ function FigureSection({
           onClick={onRemove}
         >
           Delete
-        </button>
-        <button type="button" className="ghost small" onClick={onDone}>
-          Done
         </button>
       </div>
     </section>

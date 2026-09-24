@@ -3,7 +3,7 @@ import { beatsInScript } from './selectors.js';
 import { removeFigure } from './instructional.js';
 import { divisionSpan, divisionRemoval, removeDivision } from './outline-binding.js';
 import { isCollection } from './formats.js';
-import { bookFigures, halfOf, partTitle, partsOf, removePart, type BookFigure } from './book-plan.js';
+import { bookFigures, halfOf, partTitle, partsOf, removePart, type BookFigure, type BookPageRow } from './book-plan.js';
 import type { BookPart } from './entities/book.js';
 import type { StructuralUnit } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
@@ -191,6 +191,63 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
 
   for (const part of parts) if (halfOf(part) === 'back') rows.push(partRow(file, part, 0));
   return rows;
+};
+
+// ------------------------------------------------------------- what is under
+
+/**
+ * The pages a division row covers, for the fold (§9m, from Ken twice: *chapter
+ * one is still wrong, where it only has page two… chapter three has only one
+ * page and it really has four pages… and so every page is accounted for*).
+ *
+ * The fold used to match ids — a page fell under a row when its `unitId` was
+ * that row's — and **matching loses pages**, because not every unit has a row.
+ * `bookRows` lists a section only where it has a title (§6), so a story
+ * imported as a unit per paragraph has one titled unit carrying the numeral
+ * and untitled ones after it: their pages matched no section row and dropped
+ * back to the *story*, so the numeral folded open on the one page its heading
+ * stood on and the rest were listed a level up. That is exactly what Ken saw,
+ * and why two chapters were right and two were not — it depends on how the
+ * writing happened to land in units, which is not a fact about the book.
+ *
+ * So a division's pages are **a range rather than a set**: a page belongs to
+ * the nearest division row at or before it, which is `divisionSpan`'s rule
+ * pointed at the laid pages. Every page of the story is then under exactly
+ * one row by construction, rather than by every unit happening to be listed.
+ *
+ * A part's page is nobody's: a part has a row of its own and does not fold.
+ */
+export const pagesUnder = (
+  rows: readonly BookRow[],
+  pages: readonly BookPageRow[],
+): Map<string, BookPageRow[]> => {
+  const sections = new Set(rows.filter((row) => row.kind === 'section').map((row) => row.id));
+  const chapters = new Set(rows.filter((row) => row.kind === 'chapter').map((row) => row.id));
+  const under = new Map<string, BookPageRow[]>();
+  const put = (id: string, page: BookPageRow) => {
+    const held = under.get(id);
+    if (held) held.push(page);
+    else under.set(id, [page]);
+  };
+  let current: string | null = null;
+  let marker: string | null = null;
+  for (const page of pages) {
+    if (page.partId !== null) {
+      current = null;
+      marker = null;
+      continue;
+    }
+    // A new division starts its own run, so the last one cannot run on into
+    // it — the reason `bookPageRows` clears the unit at a chapter opening,
+    // said again here because a row is what folds.
+    if (page.markerId !== marker) {
+      marker = page.markerId;
+      current = marker !== null && chapters.has(marker) ? marker : null;
+    }
+    if (page.unitId !== null && sections.has(page.unitId)) current = page.unitId;
+    if (current !== null) put(current, page);
+  }
+  return under;
 };
 
 // ------------------------------------------------------------ taking one out

@@ -9249,6 +9249,70 @@ a.talk-mark:hover {
   color: var(--danger);
 }
 
+/* A picture, from the box itself (addendum 20 §9m, from Ken). */
+.layout-placing-mark.pick {
+  color: var(--ink);
+  font-size: 17px;
+}
+
+/*
+ * What the box measures, on the box (§9m). Above it where there is room and
+ * inside it otherwise, so a box at the head of a page does not put its own
+ * size off the paper.
+ */
+.layout-placing-size {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--gold);
+  color: #1d1c21;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/*
+ * The corners (§9m, from Ken: *draggable corners that maintain its
+ * squareness*). Only the width is dragged and the picture's own proportions
+ * give the height, which is what keeps it square-cornered and unsquashed.
+ */
+.layout-placing-grip {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--gold);
+  border: 1px solid #1d1c21;
+  border-radius: 2px;
+  touch-action: none;
+}
+
+.layout-placing-grip.nw {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.layout-placing-grip.ne {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.layout-placing-grip.sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.layout-placing-grip.se {
+  bottom: -6px;
+  right: -6px;
+  cursor: nwse-resize;
+}
+
 .layout-foot {
   flex: 0 0 auto;
   display: flex;
@@ -9288,6 +9352,10 @@ a.talk-mark:hover {
 }
 
 .layout-section {
+  /* The help box is anchored to the section rather than to its ? (§9m):
+     a panel is the width there is, and a box hung off a mark at the panel's
+     right edge runs off its left one. */
+  position: relative;
   padding-bottom: 12px;
   margin-bottom: 8px;
   border-bottom: 1px solid var(--border);
@@ -14564,6 +14632,70 @@ dialog.layout-page-dialog::backdrop {
   flex-wrap: wrap;
   gap: 6px;
   margin: 8px 0;
+}
+
+/* The floating help box (addendum 20 §9m, from Ken: *all this extra text
+   that's instructional can be a pop-up box, like a floating help box*). It is
+   `position: absolute` inside a `relative` mark so opening it moves nothing
+   under it — a box that pushed the buttons down would be the prose again with
+   an extra press in front of it. */
+.layout-help {
+  display: inline-block;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.layout-help-ask {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.layout-help-ask:hover {
+  color: var(--ink);
+  border-color: var(--gold-deep);
+}
+
+/*
+ * It opens **leftwards** and paints its own everything. A help box on a
+ * section heading inherits that heading's capitals and tracking, and a panel
+ * 300px wide has no room to the right of a `?` at its end — the first draft
+ * drew a 260px box of tracked capitals half off the window.
+ */
+.layout-help-box {
+  position: absolute;
+  z-index: 40;
+  top: 26px;
+  left: 0;
+  right: 0;
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 55%);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.45;
+  letter-spacing: normal;
+  text-transform: none;
+  text-align: left;
+  white-space: normal;
+}
+
+.layout-help-box button {
+  display: block;
+  margin-top: 8px;
 }
 
 /* What an item would do, said under it (addendum 02 §6b) — for the ones
