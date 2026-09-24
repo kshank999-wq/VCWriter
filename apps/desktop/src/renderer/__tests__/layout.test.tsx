@@ -13,6 +13,7 @@ import {
   createProjectFile,
   beginStory,
   contentsDivisions,
+  backBlank,
   figurePlacement,
   partsOf,
   setChapterPage,
@@ -240,15 +241,23 @@ describe('the room', () => {
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
     fireEvent.click(rail.getByRole('button', { name: /^The harbour/ }));
     expect((screen.getByLabelText('Figure place') as HTMLSelectElement).value).toBe('measure');
-    // A page of its own, on the left-hand side of the spread.
+    // A page of its own. **Which side is not asked** (§9j, from Ken: *you can
+    // take the which page out and just make it whatever the selected page*):
+    // the picture goes where it was put, and the one thing that side control
+    // was really for — holding a leaf for a facing illustration — is the
+    // blank-back box below, which is honest about what it does.
     fireEvent.change(screen.getByLabelText('Figure place'), { target: { value: 'page' } });
-    fireEvent.change(screen.getByLabelText('Which page'), { target: { value: 'verso' } });
-    let placed = figurePlacement((latest as ProjectFile).beats[0]!.manuscript.elements[1]!);
-    expect(placed).toMatchObject({ place: 'page', side: 'verso' });
-    expect(screen.getByText(/The picture fills the page, edge to edge/)).toBeDefined();
-    // Cut into the text instead: a width and a border, and no side question.
-    fireEvent.change(screen.getByLabelText('Figure place'), { target: { value: 'right' } });
     expect(screen.queryByLabelText('Which page')).toBeNull();
+    let placed = figurePlacement((latest as ProjectFile).beats[0]!.manuscript.elements[1]!);
+    expect(placed).toMatchObject({ place: 'page' });
+    expect(screen.getByText(/The picture fills the page, edge to edge/)).toBeDefined();
+    fireEvent.click(screen.getByLabelText('Leave the back of the page blank'));
+    expect(backBlank((latest as ProjectFile).beats[0]!.manuscript.elements[1]!)).toBe(true);
+    // Cut into the text instead: a width and a border, and the back leaf
+    // forgotten, a picture in the text having no back to leave.
+    fireEvent.change(screen.getByLabelText('Figure place'), { target: { value: 'right' } });
+    expect(screen.queryByLabelText('Leave the back of the page blank')).toBeNull();
+    expect(backBlank((latest as ProjectFile).beats[0]!.manuscript.elements[1]!)).toBe(false);
     fireEvent.change(screen.getByLabelText('Border round the picture'), { target: { value: '20' } });
     placed = figurePlacement((latest as ProjectFile).beats[0]!.manuscript.elements[1]!);
     expect(placed).toMatchObject({ place: 'right', standoff: 2 });

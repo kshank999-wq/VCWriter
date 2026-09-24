@@ -253,7 +253,14 @@ export const materialiseScenes = (script: ImportedScript, options: MaterialiseOp
       if (prose && options.headings === 'sections') {
         // One story: the first heading is its title, said on the marker the
         // caller places; every later one stays a heading in the words.
-        if (index > 0) {
+        //
+        // **Unless it is a bare label** (addendum 20 §9j, from Ken: *page two
+        // is actually Roman numeral one*). A story called *I.* is not a story
+        // anybody named — it is the first chapter of one named somewhere else,
+        // usually by the file on disk. Dropping it as the title lost the
+        // numeral, so the first chapter of every imported story had no
+        // opening while the rest did.
+        if (index > 0 || BARE_LABEL.test(scene.heading.trim())) {
           elements.push(
             manuscriptElementSchema.parse({ id: newId<ManuscriptElementId>(), type: 'heading', text: chapterName(scene.heading) || scene.heading.trim() }),
           );

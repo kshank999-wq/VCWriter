@@ -61,7 +61,6 @@ import {
   setTitlePage,
   updatePartInset,
   type BookFigurePlacement,
-  type FigureSide,
   type LineStyle,
   type PartInset,
   type PartStyle,
@@ -265,6 +264,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const [bookSettingsOpen, setBookSettingsOpen] = useState(false);
   /** The part opened in a dialog of its own, by a double-click (§9). */
   const [partDialogId, setPartDialogId] = useState<string | null>(null);
+  /** The page of the story opened in a dialog of its own (§9j). */
+  const [pageDialogSheet, setPageDialogSheet] = useState<number | null>(null);
   /**
    * The chapter-page dialog, **the room's own** (§9, §9d).
    *
@@ -337,6 +338,11 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const parts = useMemo(() => partsOf(file), [file]);
   /** The book as one list (§9a): the rail, and the room's one selection. */
   const rows = useMemo(() => bookRows(file), [file]);
+  /** The units the rail lists in their own right, so a story does not list them twice (§9j). */
+  const sectionRows = useMemo(
+    () => new Set(rows.filter((row) => row.kind === 'section').map((row) => row.id)),
+    [rows],
+  );
   const selectedRow = rows.find((row) => row.id === selectedRowId) ?? null;
   const selected = selectedRow?.part ?? null;
   const opened = parts.find((part) => part.id === partDialogId) ?? null;
@@ -389,6 +395,37 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
     return () => window.removeEventListener('keydown', keys);
   }, [open, spreadCount]);
 
+  /**
+   * Delete takes the picture in hand (§9j, from Ken: *I need to be able to
+   * select the pictures on the page… or delete them*).
+   *
+   * Only where a **picture** is chosen, and never while the pointer is in a
+   * field — a book has no other selection this key could mean, and a writer
+   * typing a caption is not asking for anything to go. The picture leaves the
+   * book and stays in the library, which is what makes the key safe to give:
+   * Ctrl+Z puts it back, and the file was never at risk.
+   *
+   * It sits **here**, above the room's own `open` guard, because a hook after
+   * a conditional return is a hook that is sometimes not run — which is not a
+   * style point: it took the whole room down the first time it was written
+   * further down the file, where the figure it acts on is declared.
+   */
+  useEffect(() => {
+    if (!open || !selectedRowId) return undefined;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+      const on = event.target as HTMLElement | null;
+      if (on?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (!bookFigures(file).some((one) => one.elementId === selectedRowId)) return;
+      event.preventDefault();
+      setSelectedRowId(null);
+      setPageDialogSheet(null);
+      onUpdate((current) => removeBookFigure(current, selectedRowId));
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, selectedRowId, file, onUpdate]);
+
   if (!open) return null;
 
   const settings = laying?.settings;
@@ -431,6 +468,11 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   /** What this format calls a division — Chapter, Story, Episode (§6a). */
   const { division: noun, divisionPlural: nounPlural } = nounsFor(file.project.format);
   const selectedFigure = figures.find((figure) => figure.elementId === selectedRowId) ?? null;
+
+  /** The page a double-click opened, and the picture standing on it (§9j). */
+  const dialogPage = pageRows.find((one) => one.sheet === pageDialogSheet && one.partId === null) ?? null;
+  const dialogFigure = dialogPage?.figureId ? (figures.find((one) => one.elementId === dialogPage.figureId) ?? null) : null;
+
 
   /**
    * What the page in hand stands on (§9a). Everything that adds a picture
@@ -623,13 +665,79 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       return;
     }
     const row = bookPageRows(laying.laid.pages, laying.blocks).find((one) => one.sheet === page.sheet);
-    if (row?.says === 'Chapter opens' && at.markerId) {
+    // The chapter's own page, but **only where this page carries the chapter
+    // opening itself** (§9j). Read off the page's blocks rather than off the
+    // chapter in force, and rather than off the row's word: a chapter inside
+    // a story opens with a heading and has no marker of its own (addendum 22
+    // §6), so asking the chapter in force sent a writer who double-clicked
+    // the numeral to the *story's* page — a different page, which is the
+    // *trying to enter any information just changes title pages* of §9h in
+    // one more place.
+    const index = new Map(laying.blocks.map((block) => [block.id, block]));
+    const opensHere = page.pieces.some((piece) => index.get(piece.blockId)?.kind === 'chapter_opening');
+    if (opensHere && at.markerId) {
       openChapterPage(at.markerId);
       return;
     }
+    // An ordinary page of the story opens **its own dialog** (§9j, from Ken:
+    // *if I double-click any page, the page setup dialog box should pop up
+    // with all the options for that page*). It used to put the page in hand
+    // and nothing more, so a double-click on the one kind of page that has no
+    // other owner appeared to do nothing at all.
     setSelectedRowId(row?.figureId ?? null);
     setSelectedSheet(page.sheet);
+    setPageDialogSheet(page.sheet);
   };
+
+  /**
+   * What a page of the story can be told to do, in one place (§9j).
+   *
+   * The inspector and the page dialog render **this**, rather than each
+   * building the same two sections: two copies are two answers to *what can I
+   * do to this page*, and the dialog exists precisely so the answer is the
+   * same wherever a writer asks it.
+   */
+  const pageControls = (page: BookPageRow, onDone: () => void) => (
+    <StoryPageSection
+      page={page}
+      // Why a blank leaf is blank is a reading of the page before it, and the
+      // two reasons are different acts: one the cutter's, one the writer's
+      // own (§9i).
+      behindPicture={pageRows.find((one) => one.sheet === page.sheet - 1)?.says === 'Picture'}
+      drawing={drawing === NEW_BOX}
+      onPut={() => importPicture('page')}
+      onDraw={() => {
+        // The box is drawn on the spread, so the dialog covering it goes.
+        setPageDialogSheet(null);
+        setDrawing(NEW_BOX);
+      }}
+      onBlank={(elementId, blank) => onUpdate((current) => setBlankBefore(current, elementId, blank))}
+      onDone={onDone}
+    />
+  );
+
+  const figureControls = (figure: BookFigure) => (
+    <FigureSection
+      figure={figure}
+      drawing={drawing === figure.elementId}
+      onPlace={(placement) => onUpdate((current) => placeBookFigure(current, figure.elementId, placement))}
+      onDraw={() => {
+        setPageDialogSheet(null);
+        setDrawing((current) => (current === figure.elementId ? null : figure.elementId));
+      }}
+      onFill={() => importArt({ kind: 'fill', elementId: figure.elementId })}
+      onBackBlank={(blank) => onUpdate((current) => setBackBlank(current, figure.elementId, blank))}
+      onRemove={() => {
+        setSelectedRowId(null);
+        setPageDialogSheet(null);
+        onUpdate((current) => removeBookFigure(current, figure.elementId));
+      }}
+      onDone={() => {
+        setDrawing(null);
+        setSelectedRowId(null);
+      }}
+    />
+  );
 
   /**
    * A drop on a **page** (§9i, from Ken: *when I insert a picture it goes to
@@ -767,6 +875,23 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           setBookSettingsOpen(true);
         }}
       />
+      {/* A page of the story, opened by a double-click on its row or on the
+          page itself (§9j). It holds exactly what the inspector holds, being
+          the same two components, so the gesture is uniform across every kind
+          of page: a part opens its part, a chapter opening its chapter page,
+          and an ordinary page this. */}
+      <PageDialog
+        page={dialogPage}
+        controls={
+          dialogPage ? (
+            <>
+              {pageControls(dialogPage, () => setPageDialogSheet(null))}
+              {dialogFigure ? figureControls(dialogFigure) : null}
+            </>
+          ) : null
+        }
+        onClose={() => setPageDialogSheet(null)}
+      />
 
       <header className="sculptor-bar">
         <h2>Layout</h2>
@@ -861,7 +986,16 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               const divides = row.kind === 'chapter' || row.kind === 'section';
               const under =
                 divides && openChapters.includes(row.id)
-                  ? pageRows.filter((one) => (row.kind === 'section' ? one.unitId === row.id : one.markerId === row.id))
+                  ? pageRows.filter((one) =>
+                      row.kind === 'section'
+                        ? one.unitId === row.id
+                        : // A division lists what no row **under** it lists
+                          // (§9j). A story's sections are rows of their own,
+                          // so without this every page of the story appeared
+                          // twice — once under the story and once under the
+                          // numeral it really belongs to.
+                          one.markerId === row.id && (one.unitId === null || !sectionRows.has(one.unitId)),
+                    )
                   : [];
               return (
                 <Fragment key={row.id}>
@@ -932,10 +1066,24 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                         setSelectedSheet(one.sheet);
                         setSpread(spreadOfSheet(one.sheet));
                       }}
+                      // The rail and the spread are one gesture (§9j): a
+                      // double-click opens the page wherever it is pressed.
+                      onDoubleClick={() => {
+                        setSpread(spreadOfSheet(one.sheet));
+                        const at = pages.find((sheet) => sheet.sheet === one.sheet);
+                        if (at) openPage(at);
+                      }}
                     >
+                      {/* The page number is what the row **is** (§9j, from
+                          Ken: *it needs to say two, three, and four*). It
+                          was here already, in muted small grey out at the
+                          right margin, where he could not see it — so the
+                          number leads and what stands on the page follows.
+                          A picture and a blank print none, so they say so
+                          in its place rather than showing a dash. */}
+                      <span className="layout-rail-folio">{one.folio || '·'}</span>
                       <span className="layout-rail-title">{one.says}</span>
                     </button>
-                    <span className="muted small layout-rail-page-no">{one.folio || '—'}</span>
                   </li>
                 ))}
                 </Fragment>
@@ -1132,34 +1280,8 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               put graphics on that page, and the adjustments of that graphic*).
               It used to open the chapter's page or the title page's fields,
               which is how a picture asked for on page 9 landed on chapter 2. */}
-          {storyPage ? (
-            <StoryPageSection
-              page={storyPage}
-              // Why a blank leaf is blank is a reading of the page before it,
-              // and the two reasons are different acts: one the cutter's, one
-              // the writer's own (§9i).
-              behindPicture={pageRows.find((one) => one.sheet === storyPage.sheet - 1)?.says === 'Picture'}
-              drawing={drawing === NEW_BOX}
-              onPut={() => importPicture('page')}
-              onDraw={() => setDrawing(NEW_BOX)}
-              onBlank={(elementId, blank) => onUpdate((current) => setBlankBefore(current, elementId, blank))}
-              onDone={() => setSelectedSheet(null)}
-            />
-          ) : null}
-          {selectedFigure ? (
-            <FigureSection
-              figure={selectedFigure}
-              drawing={drawing === selectedFigure.elementId}
-              onPlace={(placement) => onUpdate((current) => placeBookFigure(current, selectedFigure.elementId, placement))}
-              onDraw={() => setDrawing((current) => (current === selectedFigure.elementId ? null : selectedFigure.elementId))}
-              onFill={() => importArt({ kind: 'fill', elementId: selectedFigure.elementId })}
-              onBackBlank={(blank) => onUpdate((current) => setBackBlank(current, selectedFigure.elementId, blank))}
-              onDone={() => {
-                setDrawing(null);
-                setSelectedRowId(null);
-              }}
-            />
-          ) : null}
+          {storyPage ? pageControls(storyPage, () => setSelectedSheet(null)) : null}
+          {selectedFigure ? figureControls(selectedFigure) : null}
           {selected ? (
             <>
               <PartFields file={file} part={selected} onUpdate={onUpdate} onDone={() => setSelectedRowId(null)} onOpenBookSettings={() => setBookSettingsOpen(true)} />
@@ -1817,6 +1939,47 @@ function BookSettingsDialog({
  * book sets it — the same markup the spread draws and the PDF prints, so
  * what is seen here is what will be printed.
  */
+/**
+ * One page of the story, in a dialog (§9j, from Ken: *if I double-click any
+ * page, the page setup dialog box should pop up with all the options for that
+ * page*).
+ *
+ * It holds **nothing of its own**: the caller hands it the same sections the
+ * inspector shows, so opening a page in a dialog and choosing it in the rail
+ * cannot offer different things. What it adds is the gesture — every page in
+ * the book now answers a double-click, where an ordinary page of the story
+ * answered nothing because it was the one kind that belonged to no record.
+ */
+function PageDialog({
+  page,
+  controls,
+  onClose,
+}: {
+  page: BookPageRow | null;
+  controls: ReactNode;
+  onClose(): void;
+}) {
+  const dialog = useModal(Boolean(page));
+  return (
+    <dialog ref={dialog} className="layout-page-dialog" aria-label="Page" onClose={onClose}>
+      {page ? (
+        <>
+          {/* The bar carries the way out and nothing else: the section below
+              already names the page, and two headings saying *Page 5* is one
+              of them explaining nothing. */}
+          <header className="layout-page-dialog-bar">
+            <span className="toolbar-spacer" />
+            <button type="button" className="ghost" aria-label="Close" onClick={onClose}>
+              ×
+            </button>
+          </header>
+          <div className="layout-page-dialog-body">{controls}</div>
+        </>
+      ) : null}
+    </dialog>
+  );
+}
+
 function PartDialog({
   file,
   part,
@@ -2123,12 +2286,6 @@ const PLACE_WORDS: Record<BookFigurePlacement['place'], string> = {
   page: 'a page of its own',
 };
 
-const SIDE_WORDS: Record<FigureSide, string> = {
-  either: 'Whichever page it falls on',
-  verso: 'Always a left-hand page',
-  recto: 'Always a right-hand page',
-};
-
 /**
  * The box being placed (addendum 20 §9d, from Ken: *you can slide it around
  * and watch the text move around it so you can get it placed perfectly … and
@@ -2299,6 +2456,7 @@ function FigureSection({
   onDraw,
   onFill,
   onBackBlank,
+  onRemove,
   onDone,
 }: {
   figure: BookFigure;
@@ -2309,9 +2467,11 @@ function FigureSection({
   onFill(): void;
   /** Ask for the leaf behind a picture page, or stop asking (§9i). */
   onBackBlank(blank: boolean): void;
+  /** Take the picture out of the book (§9j). The library keeps the file. */
+  onRemove(): void;
   onDone(): void;
 }) {
-  const { place, span, side, standoff } = figure.placement;
+  const { place, span, standoff } = figure.placement;
   const backBlank = figure.backBlank;
   const cut = place === 'left' || place === 'right';
   const empty = figure.assetId === null;
@@ -2347,16 +2507,13 @@ function FigureSection({
       </label>
       {place === 'page' ? (
         <>
-          <label className="field">
-            <span>Which page</span>
-            <select aria-label="Which page" value={side} onChange={(event) => onPlace({ ...figure.placement, side: event.target.value as FigureSide })}>
-              {(['either', 'verso', 'recto'] as FigureSide[]).map((one) => (
-                <option key={one} value={one}>
-                  {SIDE_WORDS[one]}
-                </option>
-              ))}
-            </select>
-          </label>
+          {/* *Which page* is gone (§9j, from Ken: *you can take the which
+              page out and just make it whatever the selected page*). It asked
+              a question the gesture had already answered — the picture goes
+              where it was put — and its one real use, holding a page for a
+              facing illustration, is what the box below does properly. An
+              older book's answer is still honoured; there is just nowhere to
+              set a new one. */}
           {/* The leaf behind it (§9i, from Ken: *you need to have an option
               for the back page to be blank, so the illustration doesn't bleed
               through*). It counts in the numbering and prints nothing, the
@@ -2372,9 +2529,9 @@ function FigureSection({
           </label>
           <p className="muted small">
             The picture fills the page, edge to edge, where it stands in the writing — no running head over it and no page number
-            on it. Asking for a side may leave the page before it blank, which is what a facing illustration means.
+            on it.
             {backBlank
-              ? ' The leaf behind it is left empty so nothing shows through; it counts as a page and prints no number either.'
+              ? ' It takes a right-hand page, so the empty leaf after it really is its back; both count as pages and neither prints a number. The words start again on the page after that.'
               : ''}
           </p>
         </>
@@ -2429,6 +2586,18 @@ function FigureSection({
         </button>
       </div>
       <div className="layout-part-actions">
+        {/* Taking the picture out (§9j, from Ken: *I need to be able to
+            select the pictures on the page… or delete them*). Only the box
+            goes: the picture stays in the graphics library, which is the same
+            promise `removeBookFigure` has always kept. */}
+        <button
+          type="button"
+          className="ghost small danger"
+          title="Take this picture out of the book. The file stays in the graphics library."
+          onClick={onRemove}
+        >
+          Delete
+        </button>
         <button type="button" className="ghost small" onClick={onDone}>
           Done
         </button>

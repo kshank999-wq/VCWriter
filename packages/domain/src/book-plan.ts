@@ -879,7 +879,15 @@ export const bookPageRows = (
   return pages.map((page) => {
     const on = page.pieces.map((piece) => index.get(piece.blockId)).filter((block): block is BookBlock => block !== undefined);
     const opening = on.find((block) => block.kind === 'chapter_opening');
-    if (opening) marker = opening.id;
+    // A new division ends the last one's run (§9j). Without this the unit in
+    // force ran on past its own writing — the next story's opening page, and
+    // the blank leaf before the back matter, were both credited to the last
+    // section of the story before, so folding it open listed pages that were
+    // not in it. The unit that opens on this page sets it again below.
+    if (opening) {
+      marker = opening.id;
+      unit = null;
+    }
     // `unitId` is on the first block of each unit (§9b), which is how a row
     // finds the page it opens on; read in order it is also what says which
     // division a page in the middle of one belongs to.
@@ -894,11 +902,15 @@ export const bookPageRows = (
     // page with nothing on it. So the row says the same of both.
     const leaf = on.find((block) => block.kind === 'blank');
     const empty = page.blank || leaf !== undefined;
+    // A chapter inside a story opens with its heading rather than with a
+    // `chapter_opening` (addendum 22 §6), so without this every numeral's
+    // page read *Text* and nothing on the rail said where a chapter began.
+    const opensSection = on[0]?.kind === 'heading' && on[0]?.starts !== 'none';
     const says = empty
       ? 'Blank'
       : art
         ? 'Picture'
-        : opening
+        : opening || opensSection
           ? 'Chapter opens'
           : part
             ? 'Page'
@@ -979,6 +991,14 @@ const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensCha
       // the side the writer asked for, with no running head over it.
       const placed = figurePlacement(element);
       const page = placed.place === 'page';
+      // **The back of a leaf is the other side of that sheet** (§9j, from
+      // Ken: *when you insert a picture on the left-hand page, leaving a
+      // blank page just makes the next page blank — it's not the back of the
+      // page*). He is right, and it is why a picture asked to leave its back
+      // blank takes a **recto**: a recto's back is the verso after it, so the
+      // blank that follows really is behind the picture. On a verso the page
+      // after is the front of the *next* leaf, which shows through nothing.
+      const leafToItself = page && backBlank(element);
       return block({
         id,
         kind: 'figure',
@@ -987,7 +1007,15 @@ const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensCha
         unbreakable: true,
         display: page,
         folio: !page,
-        starts: page ? (placed.side === 'verso' ? 'verso' : placed.side === 'recto' ? 'recto' : 'page') : 'none',
+        starts: !page
+          ? 'none'
+          : leafToItself
+            ? 'recto'
+            : placed.side === 'verso'
+              ? 'verso'
+              : placed.side === 'recto'
+                ? 'recto'
+                : 'page',
         assetId: typeof element.attributes.assetId === 'string' ? element.attributes.assetId : null,
         caption: element.text,
         decorative: element.attributes.decorative === true,
@@ -1075,7 +1103,12 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
     // starts a new page, the way a chapter opening does. The running head
     // stays the story's, because a reader turning the page wants to know
     // which story they are in and not which numeral.
-    let atSectionHead = chapters && !placed;
+    // Every section of a story opens, **the first included** (§9j, from Ken).
+    // It used to be `chapters && !placed`, which read *the story's opening is
+    // this section's opening* — but they are two pages: the story's carries
+    // its title, the section's carries its numeral, and skipping the second
+    // left chapter one as the only chapter in the book that did not open.
+    let atSectionHead = chapters;
     // The first block of the unit carries it, whatever that block turns out
     // to be: a section with a heading and one without both need a page the
     // rail can find, and the heading is not guaranteed.

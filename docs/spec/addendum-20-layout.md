@@ -1365,6 +1365,107 @@ Three blank pages, three reasons, and the screen says which: *you put it
 here*, *the back of the picture before it*, or *the page before a chapter that
 opens on a right-hand page*. Only the first has a button under it.
 
+## 9j. The pages by their numbers, and the first chapter of a story
+
+From Ken, using §9h and §9i on his own collection.
+
+### The first chapter had no opening
+
+*The first chapter has a Roman numeral I with a period, but it still doesn't
+recognise it in the layout… I selected page two, which is actually Roman
+numeral one, and the page format is incorrect, where it should look like a
+chapter page.*
+
+Two faults, both one-liners standing on a reason that had stopped being true.
+
+**The importer ate the numeral.** `materialiseScenes` drops the first heading
+of a prose document because *the first heading is its title, said on the marker
+the caller places* — which is right for a document headed *In For A Pound*
+followed by chapters, and wrong for one headed `I.` A story called *I.* is not
+a story anybody named; it is the first chapter of a story named somewhere else,
+usually by the file on disk. `BARE_LABEL` already knows the difference, so it
+decides: a bare numeral is kept as a heading like every other, and only a real
+title is taken as one.
+
+**And the plan gave it no page.** `atSectionHead` was `chapters && !placed`,
+which reads *the story's opening is this section's opening*. They are two
+pages — the story's carries its title, the section's carries its numeral — and
+excluding the second left chapter one as the only chapter in the book that did
+not open. It is `chapters` now.
+
+### Every page, by its number, under the chapter it is in
+
+*In the chapter it needs to be like an outline form in the left-hand menu…
+chapter one has pages two, three and four, so it needs to say two, three and
+four.*
+
+Three things were wrong at once and only the first was visible.
+
+**The number was drawn in muted small grey** out at the right margin, where a
+writer reading a list of rows does not look. The page number is what the row
+**is**, so it leads the row now, in a fixed column so the numbers line up.
+A picture and a blank print none, and say so in its place.
+
+**A section's numeral read *Text*.** A chapter inside a story opens with a
+heading rather than with a `chapter_opening` (addendum 22 §6), so `says` never
+called it an opening and nothing on the rail marked where a chapter began.
+
+**And the unit in force ran past its own writing.** `bookPageRows` carried the
+last unit forward across a division boundary, so the next story's opening page
+and the blank leaf before the back matter were both credited to the section
+before them. A new division ends the last one's run. With that, a division
+lists the pages **no row under it lists** — a story's own pages, and each
+numeral's — where before every page of a story appeared twice.
+
+### Double-clicking a page
+
+*If I double-click any page, the page setup dialog box should pop up with all
+the options for that page… I should be able to click on any page in the
+left-hand window and double-click on a selected page that opens up the dialog
+box. Same function.*
+
+§9h gave every kind of page an owner but not every kind a dialog: a part opened
+its part and a chapter opening its chapter page, while an ordinary page of the
+story — the one kind that belongs to no record — only went in hand, which on
+the screen is indistinguishable from nothing happening. It has a dialog now,
+opened by a double-click on its row or on the page itself, and the dialog
+**holds nothing of its own**: it renders the same sections the inspector does,
+because two copies would be two answers to *what can I do to this page*.
+
+One thing had to be read more carefully for it. Which dialog opens is now
+decided by **what is on the page** rather than by the chapter in force: a
+chapter inside a story has no marker of its own, so asking the chapter in force
+sent a writer who double-clicked the numeral to the *story's* page — §9h's
+*trying to enter any information just changes title pages*, one layer further
+in.
+
+### The back of a leaf
+
+*When you insert a picture on the left-hand page, leaving a blank page just
+makes the next page blank — it's not the back of the page.*
+
+He is right, and the fix is a word. The back of a sheet is its **other side**:
+a recto's back is the verso after it, a verso's is the recto before. A picture
+asked to leave its back blank therefore takes a **recto**, and the blank that
+follows really is behind it — which is also his own earlier arithmetic (45 the
+illustration, 46 blank, 47 the text).
+
+*Which page* is gone with it (*you can take the which page out and just make it
+whatever the selected page*): it asked a question the gesture had already
+answered, and its one real use — holding a leaf for a facing illustration — is
+what the blank-back box does properly. An older book's answer is still
+honoured; there is just nowhere to set a new one.
+
+### Deleting a picture
+
+*I need to be able to select the pictures on the page… or delete them. So if I
+select it and hit delete, it should be able to delete.*
+
+**Delete** on the picture's own panel, and the `Delete` key while a picture is
+chosen and the pointer is not in a field. Only the box goes; the file stays in
+the graphics library, which is what makes the key safe to give — and Ctrl+Z
+puts it back.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

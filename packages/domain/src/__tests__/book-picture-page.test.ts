@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   addBeat,
   addMarker,
+  beatsInScript,
+  buildProjectFromImport,
   addPart,
   addUnit,
   backBlank,
@@ -17,6 +19,8 @@ import {
   plateIntoStory,
   setBackBlank,
   setBlankBefore,
+  textToProse,
+  unitsInStoryOrder,
   updateBeat,
   type ProjectFile,
 } from '../index.js';
@@ -238,5 +242,96 @@ describe('bringing an art page into the story', () => {
     const made = addPart(file, 'plate');
     expect(plateIntoStory(made.file, made.partId!, 'no-such-element').elementId).toBeNull();
     expect(plateIntoStory(made.file, made.partId!, 'no-such-element').file).toBe(made.file);
+  });
+});
+
+/**
+ * A collection's chapters (addendum 20 §9j, from Ken: *the first chapter has
+ * a Roman numeral I with a period, but it still doesn't recognise it in the
+ * layout… page two is actually Roman numeral one, and the page format is
+ * incorrect, where it should look like a chapter page*).
+ *
+ * Two faults met here, and both were one-liners standing on a wrong reason.
+ */
+describe('the first chapter of a story', () => {
+  const collection = (): ProjectFile => {
+    const words = (n: number) => `${`Word${n} `.repeat(40)}`.trim();
+    const text = ['I.', '', words(1), '', words(2), '', 'II.', '', words(3), '', 'III.', '', words(4)].join('\n');
+    let file = buildProjectFromImport(textToProse(text, { title: 'In For A Pound' }), {
+      format: 'short_story',
+      title: "Villain's Tales",
+    }).file;
+    const first = unitsInStoryOrder(file)[0]!;
+    return addMarker(file, { unitId: first.id, kind: 'chapter', title: 'In For A Pound' }).file;
+  };
+
+  /**
+   * The importer drops the first heading because it names the story. A bare
+   * numeral names nothing — the story was named by the file on disk — so
+   * dropping it lost the one chapter heading that could not be got back.
+   */
+  it('keeps a bare numeral the importer used to eat as the story’s title', () => {
+    const file = collection();
+    const units = unitsInStoryOrder(file);
+    expect(units.map((unit) => unit.title)).toEqual(['I.', 'II.', 'III.']);
+    for (const unit of units) {
+      const first = beatsInScript(file, unit.id).flatMap((beat) => beat.manuscript.elements)[0];
+      expect(first?.type).toBe('heading');
+      expect(first?.text).toBe(unit.title);
+    }
+  });
+
+  it('opens a page of its own, like every other chapter in the book', () => {
+    const blocks = bookBlocks(collection());
+    const heads = blocks.filter((block) => block.kind === 'heading');
+    expect(heads.map((block) => block.text)).toEqual(['I.', 'II.', 'III.']);
+    // Each one starts a page — the whole of what *looks like a chapter page*
+    // means here — and none is left running on under the story's own opening.
+    for (const head of heads) expect(head.starts).toBe('page');
+  });
+
+  /**
+   * A page belongs to the division running on it. The unit in force used to
+   * run past its own writing, so folding the last chapter of a story open
+   * listed the next story's opening page and the blank leaf before it.
+   */
+  it('does not lend its pages to the story after it', () => {
+    const file = collection();
+    const laid = lay(file);
+    const rows = bookPageRows(laid.pages, laid.blocks);
+    const units = new Set(unitsInStoryOrder(file).map((unit) => unit.id as string));
+    for (const row of rows) {
+      if (row.unitId === null) continue;
+      expect(units.has(row.unitId)).toBe(true);
+    }
+    // And the numeral's own page says a chapter opens on it.
+    const opens = rows.filter((row) => row.says === 'Chapter opens');
+    expect(opens.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+/**
+ * The back of a leaf is the other side of that sheet (§9j, from Ken: *when
+ * you insert a picture on the left-hand page, leaving a blank page just makes
+ * the next page blank — it's not the back of the page*).
+ */
+describe('which side a picture with a blank back takes', () => {
+  it('takes a right-hand page, so the leaf after it really is its back', () => {
+    const { file, figureId } = book();
+    const plain = bookBlocks(placeBookFigure(file, figureId, { place: 'page' })).find((block) => block.kind === 'figure')!;
+    expect(plain.starts).toBe('page');
+
+    const asked = setBackBlank(placeBookFigure(file, figureId, { place: 'page' }), figureId, true);
+    const figure = bookBlocks(asked).find((block) => block.kind === 'figure')!;
+    expect(figure.starts).toBe('recto');
+
+    const { pages, kindsOn } = lay(asked);
+    const at = pages.findIndex((page) => kindsOn(page).includes('figure'));
+    expect(pages[at]!.side).toBe('recto');
+    // The blank really is behind it: the same sheet's other side.
+    expect(pages[at + 1]!.side).toBe('verso');
+    expect(kindsOn(pages[at + 1]!)).toContain('blank');
+    // …and the words start again on the page after that.
+    expect(pages[at + 2]!.folio).not.toBe('');
   });
 });

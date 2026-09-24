@@ -1805,6 +1805,43 @@ push live; the build takes a minute or two.
   the screen says which — *you put it here*, *the back of the picture before
   it*, or *the page before a chapter that opens on a right-hand page* — with a
   button under the first alone.
+  **§9j is the pages by their numbers, and the first chapter of a story**,
+  from Ken using §9h and §9i on his own collection. **The first chapter had
+  no opening**, from two one-liners each standing on a reason that had
+  stopped being true. The **importer ate the numeral**: `materialiseScenes`
+  drops a prose document's first heading because *the first heading is its
+  title*, which is right for a document headed *In For A Pound* and wrong for
+  one headed `I.` — a story called *I.* is not a story anybody named, it is
+  the first chapter of one named by the file on disk, so `BARE_LABEL` decides
+  and a bare numeral is kept like every other heading. And **the plan gave it
+  no page**: `atSectionHead` was `chapters && !placed`, reading *the story's
+  opening is this section's opening*, where they are two pages — the story's
+  carries its title, the section's its numeral — so chapter one was the only
+  chapter in the book that did not open. **Every page by its number**: three
+  faults at once, and only the first visible. The number was **muted small
+  grey out at the right margin**, so it leads the row now in a fixed column,
+  a picture and a blank saying so in its place; a section's numeral **read
+  *Text*** because a chapter inside a story opens with a heading rather than
+  a `chapter_opening`; and **the unit in force ran past its own writing**, so
+  the next story's opening and the blank leaf before the back matter were
+  credited to the section before them — a new division ends the last one's
+  run, and a division now lists the pages **no row under it lists**, where
+  before every page of a story appeared twice. **A double-click opens any
+  page**: §9h gave every kind of page an owner but not every kind a dialog,
+  so an ordinary page of the story only went in hand, which on the screen is
+  indistinguishable from nothing happening — and the dialog **holds nothing
+  of its own**, rendering the same sections the inspector does, two copies
+  being two answers to *what can I do to this page*. Which dialog opens is
+  decided by **what is on the page** rather than by the chapter in force,
+  since a chapter inside a story has no marker of its own and asking the
+  chapter in force sent a writer who double-clicked the numeral to the
+  *story's* page. **The back of a leaf is its other side** (Ken: *leaving a
+  blank page just makes the next page blank, it's not the back of the page*),
+  so a picture asked to leave its back blank takes a **recto** and the blank
+  after it really is behind it — which is his own earlier arithmetic; *Which
+  page* went with it, having asked a question the gesture had already
+  answered. And **Delete** takes a picture out, from its panel or the key,
+  the file staying in the library.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves
