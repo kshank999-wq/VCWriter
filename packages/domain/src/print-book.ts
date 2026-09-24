@@ -8,6 +8,14 @@ import {
   type ChapterPageStyle,
   isFullPageArt,
 } from './chapter-style.js';
+import {
+  LAYOUT_OF_TEMPLATE,
+  LEAD_IN_WORDS,
+  chapterLayout,
+  type ChapterLayout,
+  type ChapterSlot,
+} from './chapter-layouts.js';
+import type { ChapterPageContent } from './markers.js';
 import { FACE_STACKS, faceStackOf, fontFaceCss, type BookGeometry } from './book-layout.js';
 import { partStyleAttr } from './part-style.js';
 import { headSideClass, runningHeadStyleOf, runningStyleVars } from './running-heads.js';
@@ -286,13 +294,132 @@ const chapterStyleFor = (context: BookRenderContext, block?: BookBlock): string 
     context.settings.fonts,
   );
 
+/**
+ * A chapter opening, drawn from its layout's **slot list** (§14).
+ *
+ * The three-way template branch this replaces could draw three arrangements
+ * and no fourth, so Ken's flush-left opening, bleeding header and numeral-only
+ * page had nowhere to be expressed. A layout is a list of pieces in the order
+ * they are met down the page, and this walks the list — which is the handoff's
+ * *adding a layout needs only a new entry*, kept by construction: there is no
+ * `if (layout === …)` here or anywhere else.
+ */
+const slotMarkup = (
+  slot: ChapterSlot,
+  layout: ChapterLayout,
+  chapter: ChapterPageContent | undefined,
+  headBlock: string,
+): string => {
+  switch (slot) {
+    case 'graphic': {
+      if (!chapter?.image) return '';
+      const alt = escapeHtml(chapter.image.name);
+      const src = escapeHtml(chapter.image.dataUrl);
+      if (layout.graphic === 'page') return `<img class="bk-chapter-art" alt="${alt}" src="${src}" />`;
+      if (layout.graphic === 'bleed') return `<div class="bk-chapter-bleed"><img alt="${alt}" src="${src}" /></div>`;
+      const wide = `width:${Math.round(chapter.image.width)}%`;
+      return `<img class="bk-chapter-device" alt="${alt}" style="${wide}" src="${src}" />`;
+    }
+    // The number, the rule and the title are **one piece**: they sit inside
+    // `.bk-chapter-head`, which is what carries the book's optional rule
+    // under the whole heading. The walk emits that block where it meets the
+    // first of the three and skips the rest, so the four older layouts emit
+    // byte for byte the markup they always did.
+    case 'number':
+      return headBlock;
+    case 'rule':
+    case 'title':
+      return '';
+    case 'epigraph':
+      if (!chapter || !chapter.epigraph.trim()) return '';
+      return `<p class="bk-chapter-epigraph${layout.epigraphApart ? ' bk-epigraph-apart' : ''}">${escapeHtml(chapter.epigraph)}</p>`;
+    case 'summary':
+      return chapter && chapter.summary.trim() ? `<p class="bk-chapter-summary">${escapeHtml(chapter.summary)}</p>` : '';
+    // The sink is the leaf's own padding and the body is the manuscript that
+    // follows this block; both are slots so a layout can say where they fall
+    // relative to a graphic, and neither draws anything here.
+    case 'sink':
+    case 'body':
+    default:
+      return '';
+  }
+};
+
+/**
+ * A chapter's first paragraph, set as the book asks (§14).
+ *
+ * **It cuts at a character rather than re-marking the text**: a drop cap takes
+ * the first letter and a lead-in the first few words, and everything after the
+ * cut goes through `renderSpans` unchanged — so a chapter that opens on an
+ * italic phrase keeps it. Where the opening is already marked up (a span
+ * starting at nought), the plain text is used for the part taken, which is
+ * what a drop cap is: one letter, set large, in the body's own ink.
+ */
+const firstLineMarkup = (block: BookBlock, first: 'drop_cap' | 'lead_in'): string => {
+  const text = block.text;
+  if (text.trim().length === 0) return renderSpans(block.spans, block.text);
+  const cut =
+    first === 'drop_cap'
+      ? // Past any opening quotation mark, so the quote does not become the cap.
+        /^["'“‘]/.test(text)
+        ? 2
+        : 1
+      : // The first few words, cut on the space after the LEAD_IN_WORDS'th, so
+        // a short opening sentence is not swallowed whole.
+        wordBreak(text, LEAD_IN_WORDS);
+  if (cut <= 0 || cut >= text.length) return renderSpans(block.spans, block.text);
+  const taken = escapeHtml(text.slice(0, cut));
+  const rest = renderSpans(spansAfter(block.spans, cut), text.slice(cut));
+  return first === 'drop_cap'
+    ? `<span class="bk-drop-cap">${taken}</span>${rest}`
+    : `<span class="bk-lead-in">${taken}</span>${rest}`;
+};
+
+/** Where the nth space falls, or 0 where the text has fewer words than that. */
+const wordBreak = (text: string, words: number): number => {
+  let seen = 0;
+  for (let at = 0; at < text.length; at += 1) {
+    if (text[at] !== ' ') continue;
+    seen += 1;
+    if (seen >= words) return at;
+  }
+  return 0;
+};
+
+/**
+ * The spans of a text that has had its first `at` characters taken off it.
+ *
+ * A span carries its own words rather than offsets, so this walks the list
+ * and trims the span the cut lands inside — which is what keeps an opening
+ * marked up in italic italic from the cut onwards.
+ */
+const spansAfter = (spans: InlineSpan[], at: number): InlineSpan[] => {
+  if (spans.length === 0) return spans;
+  const out: InlineSpan[] = [];
+  let seen = 0;
+  for (const span of spans) {
+    const ends = seen + span.text.length;
+    if (ends <= at) {
+      seen = ends;
+      continue;
+    }
+    out.push(seen >= at ? span : { ...span, text: span.text.slice(at - seen) });
+    seen = ends;
+  }
+  return out;
+};
+
 const openingMarkup = (block: BookBlock, context: BookRenderContext): string => {
   const chapter = block.chapter;
   const style = chapterStyleFor(context, block);
+  // The layout in force. Absent on a block read alone, where the template is
+  // still the answer — so nothing that has not been given a layout moves.
+  const layout = chapterLayout(chapter?.layout ?? (chapter ? LAYOUT_OF_TEMPLATE[chapter.template] : 'mid'));
   const head: string[] = [];
   if (chapter) {
     if (chapter.label.length > 0) head.push(`<p class="bk-chapter-label">${escapeHtml(chapter.label)}</p>`);
-    if (chapter.title.length > 0) head.push(`<p class="bk-chapter-title">${escapeHtml(chapter.title)}</p>`);
+    if (layout.rule && chapter.label.length > 0) head.push('<div class="bk-chapter-slot-rule"></div>');
+    if (!layout.hideTitle && chapter.title.length > 0) head.push(`<p class="bk-chapter-title">${escapeHtml(chapter.title)}</p>`);
   } else if (block.title) {
     head.push(`<p class="bk-chapter-title">${escapeHtml(block.title)}</p>`);
   }
@@ -303,19 +430,14 @@ const openingMarkup = (block: BookBlock, context: BookRenderContext): string => 
     return `<div class="bk-display bk-leaf bk-leaf-art"><img class="bk-chapter-art" alt="${escapeHtml(chapter.image.name)}" src="${escapeHtml(chapter.image.dataUrl)}" /></div>`;
   }
   if (block.leaf && chapter) {
-    // The leaf as the chapter-page dialog designed it: number, name, device, epigraph, summary.
-    const graphic = chapter.image
-      ? `<img class="bk-chapter-device" alt="${escapeHtml(chapter.image.name)}" style="width:${Math.round(chapter.image.width)}%" src="${escapeHtml(chapter.image.dataUrl)}" />`
-      : '';
-    const epigraph = chapter.epigraph.trim() ? `<p class="bk-chapter-epigraph">${escapeHtml(chapter.epigraph)}</p>` : '';
-    const summary = chapter.summary.trim() ? `<p class="bk-chapter-summary">${escapeHtml(chapter.summary)}</p>` : '';
-    const parts =
-      chapter.template === 'graphic_top'
-        ? [graphic, heading, epigraph, summary]
-        : chapter.template === 'graphic_bottom'
-          ? [heading, epigraph, summary, graphic]
-          : [heading, graphic, epigraph, summary];
-    return `<div class="bk-display bk-leaf" style="text-align:${chapter.align};${style}">${parts.filter(Boolean).join('')}</div>`;
+    // A page of art drawn by the layout rather than by the older template.
+    if (layout.graphic === 'page' && chapter.image) {
+      return `<div class="bk-display bk-leaf bk-leaf-art">${slotMarkup('graphic', layout, chapter, heading)}</div>`;
+    }
+    const parts = layout.slots.map((slot) => slotMarkup(slot, layout, chapter, heading));
+    const classes = ['bk-display', 'bk-leaf', `bk-layout-${layout.id}`].join(' ');
+    const align = layout.align === 'left' ? 'left' : chapter.align;
+    return `<div class="${classes}" style="text-align:${align};${style}">${parts.filter(Boolean).join('')}</div>`;
   }
   // The opening above the first paragraph: dropped a third of the way down.
   // A prose part's heading carries the page's own style over the book's
@@ -336,7 +458,15 @@ const openingMarkup = (block: BookBlock, context: BookRenderContext): string => 
         .map(([name, value]) => `${name}:${value}`)
         .join(';')
     : '';
-  return `<div class="bk-opening" style="text-align:${align};${style}${own ? `;${own}` : ''}">${heading}</div>`;
+  // The same slot walk above the first paragraph (§14), so a chapter that
+  // opens on the page rather than on a leaf of its own gets its layout too —
+  // a bleeding header, a large number at the left margin, a numeral alone.
+  // A part's heading has no chapter and so no layout, and draws as it did.
+  const parts = chapter
+    ? layout.slots.map((slot) => slotMarkup(slot, layout, chapter, heading)).filter(Boolean).join('')
+    : heading;
+  const wide = layout.graphic === 'bleed' ? ' bk-opening-bleed' : '';
+  return `<div class="bk-opening bk-layout-${layout.id}${wide}" style="text-align:${layout.align === 'left' ? 'left' : align};${style}${own ? `;${own}` : ''}">${parts}</div>`;
 };
 
 /**
@@ -388,8 +518,16 @@ export const renderBookBlock = (block: BookBlock, context: BookRenderContext): s
   const style = blockStyle(block, context);
   switch (block.kind) {
     case 'paragraph': {
-      const cls = ['bk-p', opens ? `bk-opens bk-${context.settings.opening}` : '', block.inset ? 'bk-has-inset' : ''].filter(Boolean).join(' ');
-      return `<p class="${cls}"${style}>${block.inset ? insetMarkup(block.inset, context) : ''}${renderSpans(block.spans, block.text)}</p>`;
+      // What happens to a chapter's **first** line (§14). `opensChapter` has
+      // been on the block since the book was first laid out — the fifteenth
+      // time the mechanism was already there — so a drop cap is a rendering
+      // of a paragraph the plan already marks, and nothing new is stored.
+      const first = block.opensChapter ? context.chapterStyle.firstLine : 'plain';
+      const cls = ['bk-p', opens ? `bk-opens bk-${context.settings.opening}` : '', block.inset ? 'bk-has-inset' : '', first === 'plain' ? '' : `bk-first-${first}`]
+        .filter(Boolean)
+        .join(' ');
+      const words = first === 'plain' ? renderSpans(block.spans, block.text) : firstLineMarkup(block, first);
+      return `<p class="${cls}"${style}>${block.inset ? insetMarkup(block.inset, context) : ''}${words}</p>`;
     }
     case 'heading':
       // A heading that opens a page is a chapter inside a story (addendum 22
@@ -590,6 +728,23 @@ export const BOOK_STYLES = `
   .bk-chapter-art { display: block; width: 100%; height: 100%; object-fit: cover; }
   .bk-chapter-epigraph { margin: 2em 0 0; white-space: pre-wrap; font-size: var(--chapter-epigraph-size); font-style: var(--chapter-epigraph-style); }
   .bk-chapter-summary { margin: 2em auto 0; max-width: 34em; white-space: pre-wrap; text-align: left; font-family: var(--bk-face); font-size: var(--chapter-summary-size); line-height: 1.5; }
+  /* The layouts (addendum 20 §14). Each is the slot list drawn; nothing here
+     knows what a layout means, only how the pieces sit. */
+  .bk-layout-left { align-items: flex-start; }
+  .bk-layout-left .bk-chapter-head { border-bottom: none; }
+  .bk-layout-left .bk-chapter-label { font-size: calc(var(--chapter-number-size) * 1.6); line-height: 1; }
+  .bk-layout-bignum .bk-chapter-label { font-size: calc(var(--chapter-number-size) * 2.7); line-height: 1; }
+  .bk-chapter-slot-rule { width: 4em; height: 1px; margin: 0.5em 0 0.45em; background: currentColor; }
+  .bk-chapter-bleed { margin: 0 calc(-1 * var(--bk-outside)) 1.6em; }
+  .bk-chapter-bleed img { display: block; width: 100%; height: 33vh; max-height: 3in; object-fit: cover; }
+  .bk-opening-bleed { padding-top: 0; }
+  .bk-epigraph-apart { max-width: 22em; margin: 2.2em auto 0; text-align: center; }
+  /* A chapter's first line (§14). The cap is floated, so the lines beside it
+     run round; the lead-in is font-variant-caps, which is a real setting
+     rather than a change to the letters (addendum 02 §12a's rule). */
+  .bk-drop-cap { float: left; font-size: calc(var(--bk-lead) * 3); line-height: calc(var(--bk-lead) * 2.55); padding: 0.02em 0.08em 0 0; font-family: var(--chapter-face, var(--bk-face)); }
+  .bk-lead-in { font-variant-caps: small-caps; letter-spacing: 0.04em; }
+  .bk-first-drop_cap::after, .bk-first-lead_in::after { content: ''; display: block; clear: none; }
   .bk-page.display .bk-text { height: 100%; }
   .bk-display { height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; }
   .bk-display.bk-half, .bk-display.bk-title, .bk-display.bk-words { align-items: var(--pt-items, center); text-align: var(--pt-align, center); font-family: var(--pt-face, var(--bk-face)); }

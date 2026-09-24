@@ -1,7 +1,7 @@
 import { unitsInStoryOrder } from './selectors.js';
 import type { ProjectFile } from './project-file.js';
 import type { ProjectFormat } from './entities/project.js';
-import type { ChapterTemplate, StoryMarker, StoryMarkerKind } from './entities/structure.js';
+import type { ChapterLayoutId, ChapterTemplate, StoryMarker, StoryMarkerKind } from './entities/structure.js';
 import { isCollection, isProseFormat } from './formats.js';
 
 /**
@@ -277,6 +277,13 @@ export interface ChapterPageContent {
    * existed, so nothing that has not been touched moves.
    */
   placement?: ChapterPlacement;
+  /**
+   * The layout the opening is drawn with (addendum 20 §14). Resolved by
+   * `chapterLeafContent`, which knows the book's and the older `template`
+   * spelling; **absent** when the content is read alone, and a caller with
+   * none falls back to the template exactly as it always did.
+   */
+  layout?: ChapterLayoutId;
 }
 
 /** The three things a page places for itself (addendum 20 §9c). */

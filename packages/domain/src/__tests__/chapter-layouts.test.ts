@@ -12,12 +12,16 @@ import {
   describeApplyToAll,
   firstLineOf,
   graphicSizeOf,
-  layoutOf,
+  chapterLayoutOf,
   setChapterLayout,
   setChapterPageStyle,
   setFirstLine,
   sinkInches,
   sinkOf,
+  bookSettingsOf,
+  geometryOf,
+  renderBookPage,
+  type ChapterLayoutId,
   type ProjectFile,
 } from '../index.js';
 
@@ -70,23 +74,23 @@ describe('the older spelling', () => {
     // Nothing has set a layout: the template is the answer, so the book
     // draws exactly as it did.
     expect(chapterPageStyleOf(file).layout).toBeNull();
-    expect(layoutOf(file, null)).toBe('mid');
-    expect(layoutOf(setChapterPageStyle(file, { template: 'graphic_bottom' }), null)).toBe('bottom');
-    expect(layoutOf(setChapterPageStyle(file, { template: 'full_page' }), null)).toBe('art');
+    expect(chapterLayoutOf(file, null)).toBe('mid');
+    expect(chapterLayoutOf(setChapterPageStyle(file, { template: 'graphic_bottom' }), null)).toBe('bottom');
+    expect(chapterLayoutOf(setChapterPageStyle(file, { template: 'full_page' }), null)).toBe('art');
   });
 
   it('lets a chapter’s own template beat the book’s, as it always did', () => {
     let file = setChapterPageStyle(novel(), { template: 'graphic_top' });
     const marker = file.markers[0]!;
     file = { ...file, markers: file.markers.map((one) => (one.id === marker.id ? { ...one, page: { ...(one.page ?? {}), template: 'graphic_bottom' } } : one)) };
-    expect(layoutOf(file, file.markers[0]!)).toBe('bottom');
-    expect(layoutOf(file, file.markers[1]!)).toBe('top');
+    expect(chapterLayoutOf(file, file.markers[0]!)).toBe('bottom');
+    expect(chapterLayoutOf(file, file.markers[1]!)).toBe('top');
   });
 
   it('clears the template when a layout is set, so the two cannot disagree', () => {
     const file = setChapterLayout(setChapterPageStyle(novel(), { template: 'graphic_bottom' }), null, 'left');
     expect(chapterPageStyleOf(file).layout).toBe('left');
-    expect(layoutOf(file, null)).toBe('left');
+    expect(chapterLayoutOf(file, null)).toBe('left');
     for (const marker of file.markers) expect((marker.page as { layout?: unknown } | undefined)?.layout ?? null).toBeNull();
   });
 });
@@ -95,10 +99,10 @@ describe('this chapter, or every chapter', () => {
   it('gives one chapter its own layout without touching the others', () => {
     const before = novel();
     const file = setChapterLayout(before, before.markers[0]!.id, 'epi');
-    expect(layoutOf(file, file.markers[0]!)).toBe('epi');
+    expect(chapterLayoutOf(file, file.markers[0]!)).toBe('epi');
     // The other chapter, and the book itself, are untouched.
-    expect(layoutOf(file, file.markers[1]!)).toBe('mid');
-    expect(layoutOf(file, null)).toBe('mid');
+    expect(chapterLayoutOf(file, file.markers[1]!)).toBe('mid');
+    expect(chapterLayoutOf(file, null)).toBe('mid');
   });
 
   it('says what applying to every opener would clear, before it is pressed', () => {
@@ -113,7 +117,7 @@ describe('this chapter, or every chapter', () => {
     // And applying to all really does clear it.
     const all = setChapterLayout(one, null, 'classic');
     expect(chaptersOverriding(all)).toHaveLength(0);
-    expect(layoutOf(all, all.markers[0]!)).toBe('classic');
+    expect(chapterLayoutOf(all, all.markers[0]!)).toBe('classic');
   });
 });
 
@@ -149,5 +153,125 @@ describe('the first line', () => {
     expect(firstLineOf(file)).toBe('drop_cap');
     // There is nowhere on a chapter's page to disagree with it.
     for (const marker of file.markers) expect(marker.page).not.toHaveProperty('firstLine');
+  });
+});
+
+/**
+ * What the print draws (§14). The slot walk is what makes *adding a layout
+ * needs only an entry* true, so these pin the pieces rather than the CSS.
+ */
+describe('the print walks the slots', () => {
+  const chapter = {
+    label: 'IV',
+    title: 'The Letter',
+    epigraph: 'A line that sets the tone.',
+    summary: '',
+    image: { dataUrl: 'data:image/png;base64,AA', name: 'Device', width: 45 },
+    align: 'center' as const,
+    template: 'graphic_middle' as const,
+  };
+  const book = createProjectFile({ title: 'X', format: 'novel' });
+  const settings = bookSettingsOf(book);
+  const context = {
+    settings,
+    geometry: geometryOf(settings, 'novel', 200),
+    chapterStyle: chapterPageStyleOf(book),
+    paragraphStyle: 'indented' as const,
+    pictures: new Map(),
+    names: { title: 'X', author: 'A', imprint: '' },
+    titlePage: { title: '', author: '', imprint: '', lines: [] },
+    contents: [],
+    index: null,
+  } as never;
+  const leaf = (layout: ChapterLayoutId) =>
+    renderBookPage(
+      { sheet: 1, blank: false, display: true, folio: '', counted: '1', running: '', pieces: [{ blockId: 'c1', from: 0, to: 1 }] } as never,
+      new Map([['c1', { id: 'c1', kind: 'chapter_opening', leaf: true, chapter: { ...chapter, layout }, spans: [], text: '' }]]) as never,
+      context,
+    );
+
+  it('puts the device over the heading, under it, or at the foot', () => {
+    const top = leaf('top');
+    const bottom = leaf('bottom');
+    expect(top.indexOf('bk-chapter-device')).toBeLessThan(top.indexOf('bk-chapter-head'));
+    expect(bottom.indexOf('bk-chapter-device')).toBeGreaterThan(bottom.indexOf('bk-chapter-head'));
+  });
+
+  it('keeps the number and the name in one heading block, as they always were', () => {
+    // The four older layouts must emit byte for byte what they did, which is
+    // why the walk puts the whole head where it meets the number slot.
+    expect(leaf('mid')).toContain('<div class="bk-chapter-head"><p class="bk-chapter-label">IV</p><p class="bk-chapter-title">The Letter</p></div>');
+  });
+
+  it('prints an epigraph the writer typed under every layout, not only the epigraph one', () => {
+    // A layout that dropped it would lose their words for a reason nobody
+    // asked for; what `epi` changes is how it is set, never whether.
+    for (const id of ['classic', 'top', 'mid', 'bottom', 'left'] as ChapterLayoutId[]) {
+      expect(leaf(id)).toContain('A line that sets the tone.');
+      expect(leaf(id)).not.toContain('bk-epigraph-apart');
+    }
+    expect(leaf('epi')).toContain('bk-epigraph-apart');
+  });
+
+  it('shows the number alone on a numeral-only page', () => {
+    expect(leaf('bignum')).toContain('IV');
+    expect(leaf('bignum')).not.toContain('The Letter');
+  });
+
+  it('sets a rule between the number and the name on a flush-left opening', () => {
+    const left = leaf('left');
+    expect(left.indexOf('bk-chapter-slot-rule')).toBeGreaterThan(left.indexOf('bk-chapter-label'));
+    expect(left.indexOf('bk-chapter-slot-rule')).toBeLessThan(left.indexOf('bk-chapter-title'));
+    expect(leaf('classic')).not.toContain('bk-chapter-slot-rule');
+  });
+});
+
+describe('the chapter’s first line', () => {
+  const book = createProjectFile({ title: 'X', format: 'novel' });
+  const settings = bookSettingsOf(book);
+  const para = (text: string) => ({ id: 'p1', kind: 'paragraph', text, spans: [], opensChapter: true });
+  const set = (firstLine: 'drop_cap' | 'lead_in' | 'plain', text: string, spans: unknown[] = []) =>
+    renderBookPage(
+      { sheet: 1, blank: false, folio: '1', counted: '1', running: '', pieces: [{ blockId: 'p1', from: 0, to: 9 }] } as never,
+      new Map([['p1', { ...para(text), spans }]]) as never,
+      {
+        settings,
+        geometry: geometryOf(settings, 'novel', 200),
+        chapterStyle: { ...chapterPageStyleOf(book), firstLine },
+        paragraphStyle: 'indented' as const,
+        pictures: new Map(),
+        names: { title: 'X', author: 'A', imprint: '' },
+        titlePage: { title: '', author: '', imprint: '', lines: [] },
+        contents: [],
+        index: null,
+      } as never,
+    );
+
+  it('floats the first letter, and the rest of the words are untouched', () => {
+    const out = set('drop_cap', 'The rain had not let up for three days.');
+    expect(out).toContain('<span class="bk-drop-cap">T</span>he rain had not let up');
+  });
+
+  it('takes the quotation mark with the letter, so the quote is not the cap', () => {
+    expect(set('drop_cap', '“The rain had stopped.”')).toContain('<span class="bk-drop-cap">“T</span>he rain');
+  });
+
+  it('sets the opening words in small capitals, five of them', () => {
+    const out = set('lead_in', 'The rain had not let up for three days.');
+    expect(out).toContain('<span class="bk-lead-in">The rain had not let</span> up for three days.');
+  });
+
+  it('keeps the marking on what is left after the cut', () => {
+    // A chapter opening on an italic phrase keeps it italic past the cap.
+    const spans = [{ text: 'The rain', italic: true }, { text: ' had stopped.' }];
+    const out = set('drop_cap', 'The rain had stopped.', spans);
+    expect(out).toContain('<span class="bk-drop-cap">T</span><i>he rain</i> had stopped.');
+  });
+
+  it('does nothing at all where the book asks for neither', () => {
+    const out = set('plain', 'The rain had not let up for three days.');
+    expect(out).not.toContain('bk-drop-cap');
+    expect(out).not.toContain('bk-lead-in');
+    expect(out).toContain('The rain had not let up for three days.');
   });
 });

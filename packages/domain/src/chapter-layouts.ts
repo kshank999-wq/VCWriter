@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { chapterPageStyleOf, setChapterPageStyle } from './chapter-style.js';
+import type { ChapterPageStyle } from './chapter-style.js';
 import {
   CHAPTER_LAYOUT_IDS,
   CHAPTER_TEMPLATES,
@@ -90,6 +91,16 @@ export interface ChapterLayout {
   ignoresGraphicSize: boolean;
   /** A rule between the number and the title. */
   rule: boolean;
+  /**
+   * The epigraph set apart, on its own measure with air round it.
+   *
+   * **Every layout carries the epigraph slot** and this is the one that gives
+   * it prominence — because an epigraph is something the writer *typed on this
+   * chapter*, and a layout that dropped it would lose their words for a reason
+   * they never asked for. Whether a page has one is whether there is one to
+   * print; this decides only how it is set.
+   */
+  epigraphApart: boolean;
 }
 
 const one = (
@@ -110,6 +121,7 @@ const one = (
   ignoresSink: false,
   ignoresGraphicSize: false,
   rule: false,
+  epigraphApart: false,
   ...extra,
 });
 
@@ -123,28 +135,41 @@ const one = (
  * them would take that away.
  */
 export const CHAPTER_LAYOUTS: readonly ChapterLayout[] = [
-  one('classic', 'Classic sink', 'The heading, a third of the way down', ['sink', 'number', 'title', 'summary', 'body']),
-  one('top', 'Graphic above', 'A device over the heading', ['sink', 'graphic', 'number', 'title', 'summary', 'body'], {
+  one('classic', 'Classic sink', 'The heading, a third of the way down', [
+    'sink',
+    'number',
+    'title',
+    'epigraph',
+    'summary',
+    'body',
+  ]),
+  one('top', 'Graphic above', 'A device over the heading', ['sink', 'graphic', 'number', 'title', 'epigraph', 'summary', 'body'], {
     graphic: 'top',
   }),
-  one('mid', 'Graphic between', 'A device under the heading', ['sink', 'number', 'title', 'graphic', 'summary', 'body'], {
+  one('mid', 'Graphic between', 'A device under the heading', ['sink', 'number', 'title', 'graphic', 'epigraph', 'summary', 'body'], {
     graphic: 'middle',
   }),
-  one('bottom', 'Graphic at foot', 'A device at the bottom margin', ['sink', 'number', 'title', 'summary', 'body', 'graphic'], {
-    graphic: 'foot',
-  }),
-  one('full', 'Bleeding header', 'A band of picture across the top', ['graphic', 'number', 'title', 'summary', 'body'], {
+  one(
+    'bottom',
+    'Graphic at foot',
+    'A device at the bottom margin',
+    ['sink', 'number', 'title', 'epigraph', 'summary', 'body', 'graphic'],
+    { graphic: 'foot' },
+  ),
+  one('full', 'Bleeding header', 'A band of picture across the top', ['graphic', 'number', 'title', 'epigraph', 'summary', 'body'], {
     graphic: 'bleed',
     ignoresSink: true,
     ignoresGraphicSize: true,
   }),
-  one('left', 'Flush left', 'A large number at the left margin', ['sink', 'number', 'rule', 'title', 'summary', 'body'], {
+  one('left', 'Flush left', 'A large number at the left margin', ['sink', 'number', 'rule', 'title', 'epigraph', 'summary', 'body'], {
     align: 'left',
     numberScale: 'large',
     rule: true,
   }),
-  one('epi', 'With epigraph', 'A quotation under the heading', ['sink', 'number', 'title', 'epigraph', 'summary', 'body']),
-  one('bignum', 'Numeral only', 'The number alone, very large', ['sink', 'number', 'summary', 'body'], {
+  one('epi', 'With epigraph', 'A quotation given its own measure', ['sink', 'number', 'title', 'epigraph', 'summary', 'body'], {
+    epigraphApart: true,
+  }),
+  one('bignum', 'Numeral only', 'The number alone, very large', ['sink', 'number', 'epigraph', 'summary', 'body'], {
     numberScale: 'display',
     hideTitle: true,
   }),
@@ -240,11 +265,13 @@ export const LEAD_IN_WORDS = 5;
  * The layout in force for a chapter: its own where it has one, the book's
  * otherwise, and the older `template` spelling where neither has been set.
  */
-export const layoutOf = (file: ProjectFile, marker: StoryMarker | null): ChapterLayoutId => {
+export const layoutOf = (
+  style: Pick<ChapterPageStyle, 'layout' | 'template'>,
+  marker: StoryMarker | null,
+): ChapterLayoutId => {
   const page = marker?.page as { layout?: unknown; template?: unknown } | undefined;
   const own = page?.layout;
   if (typeof own === 'string' && (CHAPTER_LAYOUT_IDS as readonly string[]).includes(own)) return own as ChapterLayoutId;
-  const style = chapterPageStyleOf(file);
   if (style.layout) return style.layout;
   // The older spelling: where the graphic sits, which is all a book used to
   // store. A page's own template beats the book's, as it always has.
@@ -255,6 +282,18 @@ export const layoutOf = (file: ProjectFile, marker: StoryMarker | null): Chapter
   }
   return 'mid';
 };
+
+/**
+ * The same, read off a project.
+ *
+ * `layoutOf` takes the **style** rather than the file on purpose: it is the
+ * one thing `chapter-style.ts` calls back into this module for, and giving it
+ * no runtime dependency of its own is what keeps the two modules from forming
+ * a cycle. The acts below do import `chapter-style.js`, and that edge only
+ * goes one way.
+ */
+export const chapterLayoutOf = (file: ProjectFile, marker: StoryMarker | null): ChapterLayoutId =>
+  layoutOf(chapterPageStyleOf(file), marker);
 
 /** How the first line of the chapter is set. The book's alone: it is a convention. */
 export const firstLineOf = (file: ProjectFile): FirstLine => chapterPageStyleOf(file).firstLine;

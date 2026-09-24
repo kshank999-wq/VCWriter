@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import { bookSettingsOf, estimatedPages, faceStackOf, fontOf, geometryOf } from './book-layout.js';
+// One function, and it takes the style rather than the file — which is what
+// keeps this module and `chapter-layouts.ts` from forming a cycle (§14).
+import { layoutOf } from './chapter-layouts.js';
 import { projectStats } from './selectors.js';
 import type { BookFont } from './entities/book.js';
 import type { ProjectFile } from './project-file.js';
@@ -416,6 +419,7 @@ export const chapterLeafContent = (file: ProjectFile, placed: PlacedMarker): Cha
     ...content,
     template: templateOf(file, placed.marker),
     placement: chapterPlacementOf(file, placed.marker),
+    layout: layoutOf(chapterPageStyleOf(file), placed.marker),
     image: asset ? { dataUrl: asset.data, name: asset.altText || asset.name, width: page.graphicWidth } : content.image,
   };
 };
