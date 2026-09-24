@@ -279,11 +279,11 @@ describe('the pages of a chapter', () => {
     const picture = rows.find((row) => row.figureId === 'art1');
 
     expect(picture).toBeDefined();
-    expect(picture!.says).toBe('Picture');
+    expect(picture!.says).toBe('Illustration');
     // It is in chapter one, which is what lets the rail sit it under that row.
     expect(picture!.markerId).toBe('ch1');
     // And nothing else on the book claims to be a picture.
-    expect(rows.filter((row) => row.says === 'Picture')).toHaveLength(1);
+    expect(rows.filter((row) => row.says === 'Illustration')).toHaveLength(1);
   });
 });
 

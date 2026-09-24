@@ -415,15 +415,22 @@ describe('the room', () => {
     fireEvent.click(rail.getAllByLabelText(/^Show the pages of /)[0]!);
     const pages = document.querySelectorAll('.layout-rail-page');
     expect(pages.length).toBeGreaterThan(0);
-    // Each says what stands on it, which is how art is told from text.
-    expect(pages[0]!.textContent).toMatch(/Chapter opens|Text|Picture|Blank/);
+    // **Each row is its page** (§9l, from Ken: *it should say page two, page
+    // three, page four, page five*), with what stands on it after the number
+    // where that is anything but plain text.
+    expect(pages[0]!.textContent).toMatch(/^Page \w+/);
+    for (const page of pages) expect(page.textContent).not.toMatch(/^Text/);
 
     // Choosing one puts that page in hand, and the column is the page's.
     fireEvent.click(within(pages[0] as HTMLElement).getByRole('button'));
     const inspector = document.querySelector('.layout-inspector') as HTMLElement;
     expect(inspector).not.toBeNull();
-    expect(inspector.textContent).toMatch(/only this page/);
+    expect(inspector.textContent).toMatch(/this page's alone/);
     expect(within(inspector).getByRole('button', { name: 'Put a picture on this page…' })).toBeDefined();
+    // How the page is set is a **way through** rather than a second copy
+    // (§9l): the chapter page's own controls stay in the chapter page's
+    // dialog, so two screens cannot disagree about how a chapter opens.
+    expect(within(inspector).getByRole('button', { name: 'Set this chapter’s page…' })).toBeDefined();
     // And nothing from the chapter's page or the book's settings is on it.
     expect(within(inspector).queryByLabelText('Trim size')).toBeNull();
     expect(within(inspector).queryByLabelText('The number size')).toBeNull();

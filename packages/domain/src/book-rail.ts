@@ -170,9 +170,23 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
     if (chapters) {
       for (const unit of divisionSpan(file, placed.marker.id)) {
         if (unit.title.trim().length > 0) rows.push(sectionRow(unit));
+        // **A picture sits under the chapter it is in** (§9l, from Ken). A
+        // figure carries its story's marker, so listing by the marker alone
+        // put every picture in the story after the last numeral — a picture
+        // on page four standing below chapter thirteen, which says nothing
+        // about where it is.
+        for (const figure of figures) if (figure.unitId === (unit.id as string)) rows.push(figureRow(figure, 2));
       }
+      // One that belongs to no section of this story — there should be none,
+      // but a picture is never dropped from the rail for tidiness.
+      for (const figure of figures) {
+        if (figure.markerId !== id) continue;
+        if (divisionSpan(file, placed.marker.id).some((unit) => figure.unitId === (unit.id as string))) continue;
+        rows.push(figureRow(figure, 1));
+      }
+    } else {
+      for (const figure of figures) if (figure.markerId === id) rows.push(figureRow(figure, 1));
     }
-    for (const figure of figures) if (figure.markerId === id) rows.push(figureRow(figure, 1));
   }
 
   for (const part of parts) if (halfOf(part) === 'back') rows.push(partRow(file, part, 0));

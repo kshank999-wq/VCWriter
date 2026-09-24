@@ -716,6 +716,12 @@ export interface BookFigure {
    * before the first chapter, where it belongs to none.
    */
   markerId: string | null;
+  /**
+   * The section it stands in (§9l). On a collection a story's sections are its
+   * chapters, so the marker alone puts every picture in the story at the end
+   * of it rather than under the numeral it actually falls in.
+   */
+  unitId: string | null;
   /** Marked decorative for the eBook (addendum 23 §11). */
   decorative: boolean;
   /** The leaf behind it left blank (§9i). Meaningless off a picture page. */
@@ -748,6 +754,7 @@ export const bookFigures = (file: ProjectFile): BookFigure[] => {
           placement: figurePlacement(element),
           chapterTitle,
           markerId,
+          unitId: unit.id as string,
           decorative: element.attributes.decorative === true,
           backBlank: backBlank(element),
         });
@@ -910,6 +917,8 @@ export interface BookPageRow {
    * on this page goes in, which is `pagePlace`'s answer for one sheet.
    */
   elementId: string | null;
+  /** Which page this is, printed or not (§9l): a picture page still counts. */
+  counted: string;
   /**
    * Where this page is a blank leaf the *writer* put in (§9i): the element it
    * stands before, which is what taking it away again needs. Null on a leaf
@@ -960,7 +969,7 @@ export const bookPageRows = (
     const says = empty
       ? 'Blank'
       : art
-        ? 'Picture'
+        ? 'Illustration'
         : opening || opensSection
           ? 'Chapter opens'
           : part
@@ -969,6 +978,7 @@ export const bookPageRows = (
     return {
       sheet: page.sheet,
       folio: page.folio,
+      counted: page.counted,
       says,
       markerId: part ? null : marker,
       unitId: part ? null : unit,
@@ -1160,6 +1170,12 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
     // its title, the section's carries its numeral, and skipping the second
     // left chapter one as the only chapter in the book that did not open.
     let atSectionHead = chapters;
+    /**
+     * What this section would print as its heading if the manuscript carries
+     * none (§9l). Empty on every other format, and on a section the writer
+     * left unnamed — there is nothing to print then, and nothing is invented.
+     */
+    const sectionHeading = chapters ? unit.title.trim() : '';
     // The first block of the unit carries it, whatever that block turns out
     // to be: a section with a heading and one without both need a page the
     // rail can find, and the heading is not guaranteed.
@@ -1206,6 +1222,35 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
             // numeral, which in a ten-page story is most of the paper.
             made.starts = 'page';
             made.keepWithNext = true;
+            opensChapter = true;
+          } else if (sectionHeading.length > 0) {
+            // **A chapter's heading is its own title where the manuscript has
+            // none** (§9l, from Ken: *how that page is formatted, it should be
+            // the same for the first chapter*).
+            //
+            // §9j taught the importer to keep a bare numeral, but a book
+            // imported before that fix has a first section with no heading
+            // element at all — and the rule above can only act on one. So the
+            // *unit's* title stands in, which is the same words the rail shows
+            // and the contents page lists: one chapter in the book opening
+            // differently from every other is a fault whichever way it was
+            // arrived at, and repairing the manuscript to fix a page is the
+            // one thing this room may never do.
+            out.push(
+              block({
+                id: `${unit.id as string}:head`,
+                kind: 'heading',
+                numbering: 'arabic',
+                starts: 'page',
+                keepWithNext: true,
+                unbreakable: true,
+                text: sectionHeading,
+                spans: parseInline(sectionHeading),
+                chapterTitle,
+                unitId: unit.id as string,
+              }),
+            );
+            atUnitHead = false;
             opensChapter = true;
           }
         }

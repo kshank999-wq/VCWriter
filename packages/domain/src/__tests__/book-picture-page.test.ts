@@ -335,3 +335,77 @@ describe('which side a picture with a blank back takes', () => {
     expect(pages[at + 2]!.folio).not.toBe('');
   });
 });
+
+/**
+ * A chapter inside a story that the manuscript never gave a heading
+ * (addendum 20 §9l, from Ken: *how that page is formatted, it should be the
+ * same for the first chapter*).
+ *
+ * §9j taught the importer to keep a bare numeral. A book imported before that
+ * has a first section with no heading element at all, and one chapter in the
+ * book opening differently from every other is a fault whichever way it was
+ * arrived at — so the unit's own title stands in.
+ */
+describe('a section whose heading the manuscript lost', () => {
+  const eaten = (): ProjectFile => {
+    const words = (n: number) => `${`Word${n} `.repeat(40)}`.trim();
+    const text = ['I.', '', words(1), '', 'II.', '', words(2), '', 'III.', '', words(3)].join('\n');
+    let file = buildProjectFromImport(textToProse(text, { title: 'In For A Pound' }), {
+      format: 'short_story',
+      title: "Villain's Tales",
+    }).file;
+    const first = unitsInStoryOrder(file)[0]!;
+    file = addMarker(file, { unitId: first.id, kind: 'chapter', title: 'In For A Pound' }).file;
+    // What an older import left behind: the numeral gone from the words.
+    const beat = beatsInScript(file, first.id)[0]!;
+    return updateBeat(file, beat.id, {
+      manuscript: { elements: beat.manuscript.elements.filter((one) => one.type !== 'heading') },
+    });
+  };
+
+  it('opens its page anyway, with the words the rail already shows', () => {
+    const file = eaten();
+    const heads = bookBlocks(file).filter((block) => block.kind === 'heading');
+    expect(heads.map((block) => block.text)).toEqual(['I.', 'II.', 'III.']);
+    for (const head of heads) expect(head.starts).toBe('page');
+    // The manuscript is untouched: the page is made, the writing is not.
+    const first = unitsInStoryOrder(file)[0]!;
+    expect(beatsInScript(file, first.id).flatMap((beat) => beat.manuscript.elements).some((one) => one.type === 'heading')).toBe(
+      false,
+    );
+  });
+
+  /** Nothing is invented: a section the writer left unnamed prints nothing. */
+  it('prints none where the section has no title either', () => {
+    let file = eaten();
+    const first = unitsInStoryOrder(file)[0]!;
+    file = { ...file, units: file.units.map((unit) => (unit.id === first.id ? { ...unit, title: '' } : unit)) };
+    expect(bookBlocks(file).filter((block) => block.kind === 'heading').map((block) => block.text)).toEqual(['II.', 'III.']);
+  });
+});
+
+describe('every page says which page it is', () => {
+  /**
+   * From Ken: *it should say page two, page three, page four, page five… and
+   * if there is an illustration on a page it will say page three and have
+   * something that says illustration, or if it's blank, it'll say blank.*
+   */
+  it('counts an illustration and a blank leaf like any other page, though neither prints a folio', () => {
+    const { file, figureId } = book();
+    const asked = setBackBlank(placeBookFigure(file, figureId, { place: 'page' }), figureId, true);
+    const laid = lay(asked);
+    const rows = bookPageRows(laid.pages, laid.blocks);
+    const art = rows.find((row) => row.says === 'Illustration')!;
+    const back = rows[rows.indexOf(art) + 1]!;
+
+    // Neither prints a number…
+    expect(art.folio).toBe('');
+    expect(back.folio).toBe('');
+    // …and both know which page they are.
+    expect(Number(art.counted)).toBeGreaterThan(0);
+    expect(Number(back.counted)).toBe(Number(art.counted) + 1);
+    expect(back.says).toBe('Blank');
+    // Every page in the book has one, printed or not.
+    for (const row of rows) expect(row.counted.length).toBeGreaterThan(0);
+  });
+});

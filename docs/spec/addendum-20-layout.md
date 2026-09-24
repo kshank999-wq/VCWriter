@@ -1544,6 +1544,68 @@ as well as the number, which the book does not know. It is **absent rather than
 boxed** where there is no picture — an empty rectangle would print on the
 finished book.
 
+## 9l. A row is a page, and the chapter that still would not open
+
+From Ken, looking at §9j on his own book: *under the chapter titles, in chapter
+one — the Roman numeral I — it says two Text. Well, the actual is four pages…
+each underneath should say page two, page three, page four, page five. And if
+there is an illustration on a page it will say page three and have something
+that says illustration, or if it's blank, it'll say blank. Also, if you look at
+the example I gave you with chapter three, how that page is formatted, it should
+be the same for the first chapter.*
+
+### The chapter that still would not open
+
+§9j fixed the **importer** so a bare numeral is kept as a heading. Ken's book was
+imported before that, so its first section has no heading element at all — and
+the rule that opens a chapter could only act on one, because it reads the
+manuscript. One chapter in the book opening differently from every other is a
+fault whichever way it was arrived at, so the section's **own title** stands in:
+the same words the rail shows and the contents page lists.
+
+Two things it deliberately does not do. It does not **repair the manuscript** —
+writing a heading back into the words to fix a page is the one thing this room
+may never do, and a room that edits the writing to make a page look right is
+worse than the page. And it invents nothing: a section the writer left unnamed
+opens its page and prints no heading, as it always did.
+
+### A row is a page
+
+Three faults, and the first hid the other two.
+
+**The number was the folio.** An illustration and a blank leaf are counted like
+every other page and merely print no folio (§9i), so a row that showed the folio
+left both of them with no number at all — the two kinds of page a writer most
+needs to point at. `counted` is the page's number printed or not, which is the
+reading the rail wanted and `folio` was never going to be.
+
+**And the row said what stands on it instead of which page it is.** *Text* is
+not the name of a page; it is what a page of a book contains. So the row reads
+**Page 4**, with what stands on it after the number only where that is anything
+but plain text — *Chapter opens*, *Illustration*, *Blank*. Ken's word for a
+picture page is **illustration** and it is the domain's now, in the one place
+that decides.
+
+**A picture was listed after the last chapter.** A figure carries its story's
+marker, and on a collection the story is the marker for every section in it, so
+every picture in the story was listed after the last numeral — a picture on page
+four standing below chapter thirteen, which says nothing about where it is. A
+figure carries its **section** too now, and sits under it.
+
+### What sets this page
+
+From Ken: *when you double click, the dialog box should have all the graphic
+buttons that let you format a page instantly and have all the options for that
+page.*
+
+The page dialog gains the way through to whatever sets it — the **chapter's own
+page** where the page carries a chapter marker, **Book settings ▸ openings**
+where it is a chapter inside a story, which §6 made a section deliberately and
+which therefore has no page of its own to set. It is a **route rather than a
+second copy**: putting the chapter page's controls here as well would be two
+screens disagreeing about how a chapter opens, which is the fault §6a, §7a and
+§9c each found in turn. Absent where the page has nothing to set.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

@@ -243,6 +243,7 @@ describe('a figure cut into the text (stage 6)', () => {
         placement: { place: 'left', span: 0.4, side: 'either', standoff: 1 },
         chapterTitle: 'The Road',
         markerId: file.markers[0]!.id,
+        unitId: file.units[0]!.id,
         decorative: false,
         backBlank: false,
       },

@@ -40,6 +40,8 @@ export interface BookPage {
   number: number;
   /** What prints as the page number, or nothing. */
   folio: string;
+  /** Which page this is, printed or not (§9l): a picture page still counts. */
+  counted: string;
   runningHead: string;
   /** The chapter in force, for the recto head and the inspector. */
   chapterTitle: string;
@@ -256,7 +258,13 @@ export const layPages = (
     // A book set to carry no page numbers still counts its pages — the
     // contents and the index are read off the count — it just prints none.
     const shows = !filled.blank && filled.folio && showsFolio(settings.folio);
-    const folio = shows ? (numbering === 'roman' ? toRoman(number).toLowerCase() : String(number)) : '';
+    // What this page's number **is**, printed or not (§9l, from Ken: *it
+    // should say page two, page three, page four, page five*). A picture page
+    // and a blank leaf are counted like every other and merely print nothing,
+    // so `folio` answers *what appears on the paper* and this answers *which
+    // page is this* — the rail needs the second and had only the first.
+    const counted = numbering === 'roman' ? toRoman(number).toLowerCase() : String(number);
+    const folio = shows ? counted : '';
     for (const piece of filled.pieces) {
       if (!where.has(piece.blockId)) where.set(piece.blockId, { numbering, number });
     }
@@ -272,6 +280,7 @@ export const layPages = (
       numbering: filled.blank ? 'none' : numbering,
       number,
       folio,
+      counted,
       runningHead: filled.blank || filled.display || opens ? '' : headTextFor(side, settings, names, filled.chapterTitle),
       chapterTitle: filled.chapterTitle,
       display: filled.display,

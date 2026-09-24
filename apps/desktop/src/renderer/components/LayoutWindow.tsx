@@ -761,7 +761,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       // Why a blank leaf is blank is a reading of the page before it, and the
       // two reasons are different acts: one the cutter's, one the writer's
       // own (§9i).
-      behindPicture={pageRows.find((one) => one.sheet === page.sheet - 1)?.says === 'Picture'}
+      behindPicture={pageRows.find((one) => one.sheet === page.sheet - 1)?.says === 'Illustration'}
       drawing={drawing === NEW_BOX}
       onPut={() => importPicture('page')}
       onDraw={() => {
@@ -770,9 +770,35 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         setDrawing(NEW_BOX);
       }}
       onBlank={(elementId, blank) => onUpdate((current) => setBlankBefore(current, elementId, blank))}
+      format={pageFormat(page).label}
+      onFormat={() => {
+        const to = pageFormat(page);
+        setPageDialogSheet(null);
+        if (to.markerId) openChapterPage(to.markerId);
+        else setBookSettingsOpen(true);
+      }}
       onDone={onDone}
     />
   );
+
+  /**
+   * Where this page's own look is set (§9l). A chapter with a marker has a
+   * page of its own; a chapter **inside a story** has none — §6 made it a
+   * section deliberately — so its opening is set once for the whole book,
+   * and the button says which of the two it is rather than pretending they
+   * are the same thing.
+   */
+  const pageFormat = (page: BookPageRow): { label: string | null; markerId: string | null } => {
+    if (page.says !== 'Chapter opens') return { label: null, markerId: null };
+    const opens = laying
+      ? laying.laid.pages
+          .find((one) => one.sheet === page.sheet)
+          ?.pieces.map((piece) => laying.blocks.find((block) => block.id === piece.blockId))
+          .find((block) => block?.kind === 'chapter_opening')
+      : undefined;
+    if (opens) return { label: 'Set this chapter’s page…', markerId: opens.id };
+    return { label: 'Set how openings look…', markerId: null };
+  };
 
   const figureControls = (figure: BookFigure) => (
     <FigureSection
@@ -1179,15 +1205,16 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
                         if (at) openPage(at);
                       }}
                     >
-                      {/* The page number is what the row **is** (§9j, from
-                          Ken: *it needs to say two, three, and four*). It
-                          was here already, in muted small grey out at the
-                          right margin, where he could not see it — so the
-                          number leads and what stands on the page follows.
-                          A picture and a blank print none, so they say so
-                          in its place rather than showing a dash. */}
-                      <span className="layout-rail-folio">{one.folio || '·'}</span>
-                      <span className="layout-rail-title">{one.says}</span>
+                      {/* **The row is the page** (§9l, from Ken: *it should
+                          say page two, page three, page four, page five*).
+                          The number is the page's own, printed or not — an
+                          illustration and a blank leaf are counted like any
+                          other page and merely print no folio, so a row that
+                          showed the folio left both of them nameless. What
+                          stands on the page follows, and a page of plain text
+                          needs no word: that is what a page of a book is. */}
+                      <span className="layout-rail-title">Page {one.counted}</span>
+                      {one.says === 'Text' ? null : <span className="muted small layout-rail-says">{one.says}</span>}
                     </button>
                   </li>
                 ))}
@@ -2741,6 +2768,8 @@ function StoryPageSection({
   onPut,
   onDraw,
   onBlank,
+  onFormat,
+  format,
   onDone,
 }: {
   page: BookPageRow;
@@ -2751,11 +2780,21 @@ function StoryPageSection({
   onDraw(): void;
   /** Put a blank leaf in before an element, or take one away (§9i). */
   onBlank(elementId: string, blank: boolean): void;
+  /**
+   * How the page is set (§9l, from Ken: *it should have all the graphic
+   * buttons that let you format a page instantly and have all the options for
+   * that page*). A chapter's own page where the page carries a chapter's
+   * marker; the book's openings where it is a chapter inside a story, which
+   * has no marker and so no page of its own to set.
+   */
+  onFormat(): void;
+  /** What that button says, and null where the page has nothing to set. */
+  format: string | null;
   onDone(): void;
 }) {
   return (
     <section className="layout-section layout-page-section">
-      <h3>{page.folio ? `Page ${page.folio}` : 'This page'}</h3>
+      <h3>Page {page.counted}</h3>
       <p className="muted small">
         {page.figureId
           ? 'A picture stands on it. How it sits is below.'
@@ -2800,10 +2839,22 @@ function StoryPageSection({
           ) : null}
         </div>
       )}
+      {/* Everything else that sets this page (§9l). It is a **way through
+          rather than a second copy**: the chapter page's controls live in the
+          chapter page's dialog and the openings in Book settings, and putting
+          either of them here as well would be two screens disagreeing about
+          how a chapter opens. Absent where the page has nothing to set. */}
+      {format ? (
+        <div className="layout-page-acts">
+          <button type="button" className="raised small" onClick={onFormat}>
+            {format}
+          </button>
+        </div>
+      ) : null}
       <p className="muted small">
-        {/* The whole of what this screen is for, said once: nothing here
-            reaches the chapter's page or the book's settings. */}
-        Nothing here changes the chapter or the book — only this page.
+        {/* The whole of what this screen is for, said once: the picture acts
+            reach this page and nothing else. */}
+        The pictures here are this page's alone.
       </p>
       <button type="button" className="ghost small" onClick={onDone}>
         Done

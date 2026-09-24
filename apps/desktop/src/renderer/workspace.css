@@ -14497,20 +14497,10 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
   flex: 0 0 auto;
 }
 
-/* The page's own number, leading its row (§9j). A fixed column so the
-   numbers line up down the list and the words start together. */
-.layout-rail-folio {
-  display: inline-block;
-  width: 26px;
+/* A page row reads *Page 4* (§9l), with what is on it after the number. */
+.layout-rail-page .layout-rail-title {
   flex: 0 0 auto;
-  text-align: right;
-  margin-right: 8px;
-  color: var(--gold-deep);
   font-variant-numeric: tabular-nums;
-}
-
-.layout-rail-page .layout-rail-name.on .layout-rail-folio {
-  color: var(--gold);
 }
 
 /* The book's three areas (§9k): a quiet heading over the rows that stand in
@@ -14695,4 +14685,11 @@ dialog.layout-copyright-dialog::backdrop {
   display: grid;
   gap: 6px;
   line-height: 1.4;
+}
+
+/* What stands on a page, after its number (§9l): an illustration, a blank
+   leaf, a chapter opening. A page of plain text says nothing extra. */
+.layout-rail-says {
+  flex: 0 0 auto;
+  margin-left: 8px;
 }

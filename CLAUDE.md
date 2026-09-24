@@ -1877,6 +1877,35 @@ push live; the build takes a minute or two.
   the program draws, because a retail barcode encodes the **price** as well
   as the number and the book does not know it; **absent rather than boxed**
   with no picture, an empty rectangle being something that would print.
+  **§9l is a row being a page, and the chapter that still would not open**,
+  from Ken looking at §9j on his own book. §9j fixed the **importer** so a
+  bare numeral is kept, and his book was imported before that — its first
+  section has no heading element at all, and the rule that opens a chapter
+  reads the manuscript, so it had nothing to act on. **One chapter opening
+  differently from every other is a fault whichever way it was arrived at**,
+  so the section's own title stands in: the same words the rail shows and the
+  contents page lists. Two refusals — it does not **repair the manuscript**
+  (writing a heading back into the words to fix a page is the one thing this
+  room may never do) and it **invents nothing**, a section left unnamed
+  opening its page and printing no heading as before. Then three faults in
+  the rail, the first hiding the other two. **The number was the folio**: an
+  illustration and a blank leaf are counted like every page and merely print
+  none (§9i), so the two kinds of page a writer most needs to point at had no
+  number at all — `counted` is the page's number printed or not, the reading
+  the rail wanted and `folio` was never going to be. **And the row said what
+  stands on it instead of which page it is** — *Text* is not the name of a
+  page, it is what a page of a book contains — so a row reads **Page 4**,
+  with what stands on it after the number only where that is anything but
+  plain text, and *illustration* is Ken's word and the domain's now. **A
+  picture was listed after the last chapter**, a figure carrying its story's
+  marker and the story being the marker for every section in it, so a picture
+  on page four stood below chapter thirteen; a figure carries its **section**
+  too now. And the page dialog gains **the way through to whatever sets it** —
+  the chapter's own page where the page carries a marker, *Book settings ▸
+  openings* where it is a chapter inside a story, which §6 made a section
+  deliberately and which has no page of its own: a **route rather than a
+  second copy**, two screens disagreeing about how a chapter opens being the
+  fault §6a, §7a and §9c each found in turn.
   `addendum-21-word-import.md` is **Word import**, from Ken's *import a Word
   document and maintain the formatting, along with the font type and size*.
   **Built.** §1 is the audit: the script importer already had both halves
