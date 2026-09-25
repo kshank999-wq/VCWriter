@@ -2027,6 +2027,34 @@ push live; the build takes a minute or two.
   glossary yet. This makes one, at the back* — **two sentences saying one
   thing**, which reads as two facts; the page it would make is part of what a
   press would do, so it is said in the same breath.
+  **§9o is what a fold hides**, from Ken (*when you collapse a story, it only
+  collapses the first chapter. It needs to collapse the entire story until the
+  next one… it still shows the opening page even when you collapse it*), and
+  **both halves are one fault**: the room's own rule going unread. §9a settled
+  that **containment is depth, never a heading**, and the fold never asked
+  about depth — it hid a row's **pages** and nothing else, so closing a story
+  hid the one page the story row owns and left every chapter under it, and all
+  of *their* pages, standing. Measured on three stories of three chapters: the
+  rail was nineteen rows and closing every story took it to nineteen. The
+  opening page is the same fault from the other end — `pagesUnder` gives a
+  page **one** owner (§9m), so where the first chapter has a row the opening
+  page is **that chapter's**, and a chapter row that never hides is an opening
+  page that never hides; whether the story or its first chapter owns it turns
+  on whether the chapter is titled, which is why it looked like it half worked
+  on the second story. `visibleRows` reads depth — **a closed division hides
+  every row after it that is deeper, until the next row at its own level or
+  above** — and the pages go because a hidden row draws nothing, so there is
+  no second rule about pages. Two things came with it: the arrow is **absent
+  rather than dead** where nothing is under a row (`rowHasUnder`), which the
+  row's own comment had claimed since §9h while every chapter and section got
+  one regardless; and it is labelled **what is under** rather than *the pages
+  of*, a story holding its chapters as well as its opening page. **A novel
+  changes too** and it is said rather than special-cased: a novel's chapters
+  have pictures under them (§9l), so closing one now hides its pictures, which
+  is the same rule and means an illustrated book opens on its chapters rather
+  than on every picture in them. Four existing tests asserted the old
+  behaviour and were **updated rather than worked around**, which is the
+  honest signal that the rule changed.
   **§17c is importing a back-matter page**, from Ken (*for the appendix and
   the glossary and the index, you need an option to import that as text or
   import that as a PDF and it'll just maintain the formatting*), and the

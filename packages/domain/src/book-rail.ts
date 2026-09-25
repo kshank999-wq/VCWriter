@@ -250,6 +250,69 @@ export const pagesUnder = (
   return under;
 };
 
+/** A division row: the two kinds that hold something and so can fold. */
+const divides = (row: BookRow): boolean => row.kind === 'chapter' || row.kind === 'section';
+
+/**
+ * **What a fold hides** (§9o, from Ken: *when you collapse a story, it only
+ * collapses the first chapter. It needs to collapse the entire story until the
+ * next one… it still shows the opening page even when you collapse it*).
+ *
+ * Both halves of that are **one fault**, and it is the rail's own rule going
+ * unread. §9a settled that **containment is depth, never a heading** — the
+ * front matter, the story and the back matter are not three lists, they are
+ * the order, and the only nesting is depth. The fold never asked about depth.
+ * It hid a row's **pages** and nothing else, so closing a story hid the one
+ * page the story row owns — its opening — and left every chapter under it, and
+ * every one of *their* pages, standing. A story of three chapters closed to
+ * twelve rows instead of one.
+ *
+ * And the opening page is the same fault seen from the other end: `pagesUnder`
+ * gives each page to **one** owner, so where the story's first chapter carries
+ * a row the opening page belongs to *that chapter* rather than to the story —
+ * and a chapter row that never hides is an opening page that never hides.
+ *
+ * So the fold reads depth: **a closed division hides every row after it that
+ * is deeper, until the next row at its own level or above**. The pages go with
+ * them because a hidden row draws nothing, which is why there is no second
+ * rule here about pages.
+ */
+export const visibleRows = (
+  rows: readonly BookRow[],
+  open: ReadonlySet<string> | readonly string[],
+): BookRow[] => {
+  const isOpen = (id: string): boolean => (open instanceof Set ? open.has(id) : (open as readonly string[]).includes(id));
+  const out: BookRow[] = [];
+  // The depth a closed row is hiding below; null while nothing is shut.
+  let shutAt: number | null = null;
+  for (const row of rows) {
+    if (shutAt !== null && row.depth > shutAt) continue;
+    shutAt = null;
+    out.push(row);
+    if (divides(row) && !isOpen(row.id)) shutAt = row.depth;
+  }
+  return out;
+};
+
+/**
+ * Whether a row has anything to show — a row under it, or a page of its own.
+ *
+ * The arrow is **absent rather than dead** where there is neither, which the
+ * row's own comment claimed and the code did not do: every chapter and section
+ * got an arrow whether or not anything was under it, so a story's untitled
+ * first section offered a fold that opened onto nothing.
+ */
+export const rowHasUnder = (
+  rows: readonly BookRow[],
+  folds: ReadonlyMap<string, readonly BookPageRow[]>,
+  row: BookRow,
+): boolean => {
+  if (!divides(row)) return false;
+  if ((folds.get(row.id) ?? []).length > 0) return true;
+  const at = rows.indexOf(row);
+  return at >= 0 && (rows[at + 1]?.depth ?? row.depth) > row.depth;
+};
+
 // ------------------------------------------------------------ taking one out
 
 /**

@@ -124,6 +124,8 @@ import {
   type MarkerNumbering,
   bookPageRows,
   pagesUnder,
+  rowHasUnder,
+  visibleRows,
   plateIntoStory,
   type BookPageRow,
   placeBookFigure,
@@ -467,6 +469,12 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
   const pageRows = useMemo(() => (laying ? bookPageRows(laying.laid.pages, laying.blocks) : []), [laying]);
   /** What each division folds open on: a range of pages, so none is lost (§9m). */
   const folds = useMemo(() => pagesUnder(rows, pageRows), [rows, pageRows]);
+  /**
+   * The rows a closed fold leaves standing (§9o). Containment is depth, so a
+   * closed story hides every row under it — its chapters and their pages —
+   * until the next row at its own level.
+   */
+  const shown = useMemo(() => visibleRows(rows, openChapters), [rows, openChapters]);
   const spreadCount = Math.max(1, Math.ceil((pages.length + 1) / 2));
   /**
    * The size that fits, read every render from the trim and the space there
@@ -1283,7 +1291,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           {/* The book as one list, in the order it is bound (§9a). No
               headings, no notes: a row is its name and its page. */}
           <ul className="layout-parts layout-tree" aria-label="The book">
-            {rows.map((row, index) => {
+            {shown.map((row, index) => {
               /*
                * The three areas of the book (§9k, from Ken: *I want to add the
                * label back in front matter… a locked area, those items from the
@@ -1299,7 +1307,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                * front matter stands even when it is empty, because it is the
                * place a writer drops something into.
                */
-              const opens = index === 0 || rows[index - 1]?.half !== row.half;
+              const opens = index === 0 || shown[index - 1]?.half !== row.half;
               const area = opens ? AREA_NAMES[row.half] : null;
               // The page it lands on, read off the laid page rather than off
               // `where`: a picture cut into a paragraph rides inside it, so
@@ -1312,7 +1320,12 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
               // (§9m): matching lost the pages of any unit the rail does not
               // list, so a numeral folded open on the one page its heading
               // stood on.
-              const divides = row.kind === 'chapter' || row.kind === 'section';
+              // **The arrow is the row's, and only where there is something
+              // under it** — `rowHasUnder` over the whole list, so a section
+              // with neither a page nor a picture offers no fold rather than
+              // one that opens onto nothing, which the row's own comment has
+              // claimed since §9h and the code did not do.
+              const divides = rowHasUnder(rows, folds, row);
               const under = divides && openChapters.includes(row.id) ? (folds.get(row.id) ?? []) : [];
               return (
                 <Fragment key={row.id}>
@@ -1805,15 +1818,22 @@ function RailRow({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      {/* The chapter's pages, folded (§9h). Absent rather than a dead arrow
-          on a row that has no pages under it. */}
+      {/* What is under the row, folded (§9h). Absent rather than a dead arrow
+          where there is nothing under it — which `rowHasUnder` now decides,
+          this comment having claimed it since §9h while every chapter and
+          section got one regardless.
+
+          **Not *the pages*** (§9o): a story holds its chapters as well as its
+          own opening page, and a label naming only one of the two describes
+          the fold a writer is complaining about rather than the one they
+          have. */}
       {onToggle ? (
         <button
           type="button"
           className="ghost small layout-rail-fold"
           aria-expanded={open === true}
-          aria-label={`${open ? 'Hide' : 'Show'} the pages of ${row.title}`}
-          title="Its pages, one row each"
+          aria-label={`${open ? 'Hide' : 'Show'} what is under ${row.title}`}
+          title={row.kind === 'chapter' ? 'What is under it, one row each' : 'Its pages, one row each'}
           onClick={onToggle}
         >
           <span aria-hidden="true">{open ? '▾' : '▸'}</span>

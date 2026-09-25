@@ -109,6 +109,16 @@ describe('the room', () => {
   const railRows = (): string[] =>
     Array.from(document.querySelectorAll('.layout-tree .layout-part .layout-part-name')).map((one) => one.textContent ?? '');
 
+  /**
+   * Open a division's fold (§9o). A closed one hides **everything** under it —
+   * its chapters, its pictures and its pages — so a picture in the writing is
+   * one press away rather than listed under a shut chapter.
+   */
+  const openFold = (title: string) => {
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.click(rail.getByLabelText(`Show what is under ${title}`));
+  };
+
   /** One row by its name — the button carries a grip before it, so the text is matched. */
   const railRow = (name: string): HTMLElement => {
     const found = Array.from(document.querySelectorAll('.layout-tree .layout-part .layout-part-name')).find(
@@ -170,6 +180,9 @@ describe('the room', () => {
       },
     });
     render(<Harness initial={start} />);
+    // Shut, the chapter hides what is in it (§9o) — the picture included.
+    expect(railRows()).toEqual(['Half title', 'Title page', 'Copyright', 'Contents', 'The Lamp', 'The Return', 'About the author']);
+    openFold('The Lamp');
     expect(railRows()).toEqual(['Half title', 'Title page', 'Copyright', 'Contents', 'The Lamp', 'The harbour', 'The Return', 'About the author']);
     const picture = document.querySelector('.layout-rail-picture') as HTMLElement;
     expect(picture.textContent).toContain('The harbour');
@@ -270,7 +283,9 @@ describe('the room', () => {
       },
     });
     render(<Harness initial={start} />);
-    // The figure is on the rail; choosing it opens the picture's own fields.
+    // The figure is under its chapter, so the chapter is opened first (§9o);
+    // choosing it opens the picture's own fields.
+    openFold('The Lamp');
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
     fireEvent.click(rail.getByRole('button', { name: /^The harbour/ }));
     expect((screen.getByLabelText('Figure place') as HTMLSelectElement).value).toBe('measure');
@@ -309,6 +324,7 @@ describe('the room', () => {
       },
     });
     render(<Harness initial={start} />);
+    openFold('The Lamp');
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
     fireEvent.click(rail.getByRole('button', { name: /^The harbour/ }));
     const draw = screen.getByRole('button', { name: 'Draw the box…' });
@@ -432,7 +448,7 @@ describe('the room', () => {
 
     // Folded to begin with: a chapter is one row until somebody asks.
     expect(document.querySelectorAll('.layout-rail-page')).toHaveLength(0);
-    fireEvent.click(rail.getAllByLabelText(/^Show the pages of /)[0]!);
+    fireEvent.click(rail.getAllByLabelText(/^Show what is under /)[0]!);
     const pages = document.querySelectorAll('.layout-rail-page');
     expect(pages.length).toBeGreaterThan(0);
     // **Each row is its page** (§9l, from Ken: *it should say page two, page

@@ -2575,6 +2575,49 @@ thing**, which reads as two facts. The page it would make is part of what a
 press would do, so it is said in the same breath: *Start a glossary at the
 back of the book, with “X” in it.*
 
+## 9o. What a fold hides
+
+From Ken: *when you collapse a story, it only collapses the first chapter. It
+needs to collapse the entire story until the next one. So I have three stories
+loaded. And it works with the second story, but it still shows the opening page
+even when you collapse it.*
+
+**Both halves of that are one fault**, and it is this room's own rule going
+unread. §9a settled that **containment is depth, never a heading** — the front
+matter, the story and the back matter are not three lists, they are the order,
+and the only nesting is depth. The fold never asked about depth. It hid a row's
+**pages** and nothing else, so closing a story hid the one page the story row
+owns and left every chapter under it, and every one of *their* pages, standing.
+Measured on a collection of three stories with three chapters each: the whole
+rail was nineteen rows and closing every story took it to nineteen rows.
+
+The opening page is the same fault from the other end. `pagesUnder` gives each
+page to **one** owner (§9m), so where the story's first chapter carries a row
+the opening page belongs to **that chapter** rather than to the story — and a
+chapter row that never hides is an opening page that never hides. Which is why
+it looked like it half worked on the second story: whether the story or its
+first chapter owns that page depends on whether the chapter has a title, which
+is not a fact about the book.
+
+So `visibleRows` reads depth: **a closed division hides every row after it that
+is deeper, until the next row at its own level or above.** The pages go with
+them because a hidden row draws nothing, which is why there is no second rule
+about pages. Three stories now close to three rows.
+
+Two things came with it. The arrow is **absent rather than dead** where there
+is nothing under a row (`rowHasUnder`) — which the row's own comment has
+claimed since §9h while every chapter and section got one regardless, so a
+story's untitled first section offered a fold that opened onto nothing. And it
+is labelled **what is under** rather than *the pages of*: a story holds its
+chapters as well as its own opening page, and a label naming one of the two
+describes the fold a writer is complaining about rather than the one they have.
+
+**What changes for a novel**, and it is worth saying because Ken asked about a
+collection: a novel's chapters have pictures under them (§9l) rather than
+chapters, so closing one now hides its pictures too. That is the same rule and
+is why it is not special-cased, but it does mean an illustrated book opens on
+its chapters rather than on its chapters and every picture in them.
+
 ## 17c. Importing a back-matter page
 
 From Ken: *for the appendix and the glossary and the index, you need an
