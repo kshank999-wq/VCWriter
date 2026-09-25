@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   addMarker,
+  isInteractive,
   countWords,
   findBeat,
   findTrack,
@@ -30,6 +31,7 @@ import {
   nounsFor,
 } from '@vcwriter/domain';
 import { RelatedPanel } from './RelatedPanel';
+import { GameInspector } from './GameInspector';
 import { CharacterWorkPanel } from './CharacterWorkPanel';
 import { LearningAidsPanel } from './LearningAidsPanel';
 import { BEAT_STATUSES } from './status';
@@ -46,7 +48,21 @@ interface InspectorProps {
  * writes through the same domain mutation the Script and the timeline use,
  * so an edit here is visible there on the next render.
  */
-export function Inspector({ file, selectedBeatId, onUpdate }: InspectorProps) {
+export function Inspector(props: InspectorProps) {
+  // On a game the far column carries the game's panels too (addendum 25
+  // §4.2); everywhere else it is exactly the Inspector it always was.
+  if (!isInteractive(props.file.project.format)) return <BeatInspector {...props} />;
+  return (
+    <GameInspector
+      file={props.file}
+      selectedBeatId={props.selectedBeatId}
+      onUpdate={props.onUpdate}
+      beatPanel={<BeatInspector {...props} />}
+    />
+  );
+}
+
+function BeatInspector({ file, selectedBeatId, onUpdate }: InspectorProps) {
   const beat = selectedBeatId ? findBeat(file, selectedBeatId) : undefined;
   const unit = beat ? findUnit(file, beat.unitId) : undefined;
   const track = unit ? findTrack(file, unit.trackId) : undefined;

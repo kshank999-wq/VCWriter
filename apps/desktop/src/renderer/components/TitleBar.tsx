@@ -127,10 +127,15 @@ export function TitleBar({
           <button
             type="button"
             className="raised"
-            title={`Research: everything the ${nouns.manuscript.toLowerCase()} is made from`}
+            title={
+              file.project.format === 'game'
+                ? 'Game Bible: the cast, the places, the items, the state and the quests the game is made from'
+                : `Research: everything the ${nouns.manuscript.toLowerCase()} is made from`
+            }
             onClick={onOpenResearch}
           >
-            Research
+            {/* On a game, Research is the Game Bible (addendum 25 §4.1). */}
+            {file.project.format === 'game' ? 'Bible' : 'Research'}
           </button>
         ) : null}
         {writing && onOpenLayout ? (

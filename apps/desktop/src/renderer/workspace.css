@@ -16270,3 +16270,249 @@ dialog.scene-dialog > header {
   gap: 6px;
   align-items: center;
 }
+
+/* ------------------------------------------------------ the Game Bible */
+/* Addendum 25 §4.1. On a game, Research is the Game Bible; its own sections
+   are cards down the middle and the chosen one on the right — Research's
+   shape, inside the room's contents column. */
+.bible-section {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.bible-cards-column {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bible-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.bible-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.bible-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 9px 11px;
+  border-radius: 2px;
+  text-align: left;
+}
+
+.bible-card.chosen {
+  border-color: var(--gold);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+
+.bible-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bible-card-reads {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Used or not: a reading, drawn as Research draws it for a note. */
+.bible-used {
+  margin-top: 2px;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bible-used.used {
+  color: var(--green);
+}
+
+/* Research hides its own detail column on a full-width section; the Bible's
+   is inside the section, so it is shown again here. */
+.research-body.creating .bible-section .research-detail {
+  display: block;
+  overflow-y: auto;
+}
+
+.bible-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bible-fields h4 {
+  margin: 8px 0 0;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: normal;
+}
+
+.bible-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.bible-remove {
+  align-self: flex-start;
+  margin-top: 10px;
+}
+
+.bible-loose h4 {
+  margin: 12px 0 4px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: normal;
+}
+
+/* ------------------------------------------- the far column on a game */
+/* Addendum 25 §4.2. The Inspector with a vertical menu down its edge; each
+   entry opens in place, and they are the Story Map's own panels. */
+.game-inspector {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px;
+}
+
+.game-inspector-panel {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The map's panels are asides with a fixed width and an edge; here they fill
+   the column they are in. */
+.game-inspector-panel > .narrmap-world,
+.game-inspector-panel > .narrmap-endings,
+.game-inspector-panel > aside {
+  width: auto;
+  border-right: none;
+}
+
+.game-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 4px;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.game-rail-button {
+  position: relative;
+  padding: 7px 2px;
+  border-radius: 2px;
+  font-family: var(--display);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.game-rail-button.on {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.game-rail-count {
+  position: absolute;
+  top: -4px;
+  right: -3px;
+  min-width: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--red);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0;
+  line-height: 15px;
+}
+
+.game-inspector-section {
+  padding: 10px 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.game-inspector-section h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.game-inspector-section h4 {
+  margin: 8px 0 0;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: normal;
+}
+
+.game-inspector-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.game-inspector-list.findings li {
+  padding-left: 8px;
+  border-left: 2px solid var(--red);
+}
+
+.game-built-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* The rule builder in the far column: the same builder as beside the map,
+   in a narrower place, so its bar and rows wrap rather than run off the
+   edge, at the column's own size. */
+.game-inspector-section {
+  font-size: 12px;
+}
+
+.game-inspector-section .rule-group-bar,
+.game-inspector-section .rule-row {
+  flex-wrap: wrap;
+}
+
+.game-inspector-section .rule-group-bar .toolbar-spacer {
+  display: none;
+}
+
+.game-inspector-section select,
+.game-inspector-section input {
+  max-width: 100%;
+  font-size: 12px;
+}

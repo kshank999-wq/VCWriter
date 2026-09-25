@@ -1226,6 +1226,19 @@ push live; the build takes a minute or two.
   a rule sits. The map keeps `playerRow` (under the spine) empty of nodes. A
   new objective is opened once it is **in the file** (a ref and an effect),
   not by catching its id inside `onUpdate`, which may run after the click.
+  **Stage 3: on a game, Research is the Game Bible** (§4.1, the audit answering
+  §11's second question) — its side menu already holds the cast, places,
+  plots, setups, themes, map and graveyard, so a game adds one group, **The
+  game** (`BIBLE_SECTIONS`: items & resources, state, quests & objectives),
+  rendered by `GameBiblePanel` inside `ResearchBody` as `{ kind: 'game' }`.
+  `paneTitle('research', 'game')` is *Game Bible*, and the title-bar button
+  says *Bible*. *Used* is `bibleEntries`, a reading. The detail reuses the
+  world panel's exported word lists and `Economy`. **The far column on a game
+  is `GameInspector`** — the Inspector plus a vertical rail (Beat, Rules,
+  World, Play, Checks, Endings, Built); `Inspector` delegates to it only when
+  `isInteractive`, so every other format is untouched. `.research-body.creating`
+  hides `.research-detail`; the Bible's own detail is re-shown inside
+  `.bible-section`.
   `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
   Ken after using instructional mode: chapters, sections and subsections
   worked out first, then put on the track. **All six stages of §9 are

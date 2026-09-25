@@ -32,16 +32,16 @@ import {
  * and cannot be repaired by guessing.
  */
 
-const STATE_KINDS: StateKind[] = ['flag', 'number', 'enum', 'text'];
+export const STATE_KINDS: StateKind[] = ['flag', 'number', 'enum', 'text'];
 
-const STATE_WORDS: Record<StateKind, string> = {
+export const STATE_WORDS: Record<StateKind, string> = {
   flag: 'Flag — true or false',
   number: 'Number — a score or a count',
   enum: 'One of a list',
   text: 'Text',
 };
 
-const RESOURCE_KINDS: ResourceKind[] = [
+export const RESOURCE_KINDS: ResourceKind[] = [
   'weapon',
   'ammunition',
   'consumable',
@@ -52,7 +52,7 @@ const RESOURCE_KINDS: ResourceKind[] = [
   'collectible',
 ];
 
-const RESOURCE_WORDS: Record<ResourceKind, string> = {
+export const RESOURCE_WORDS: Record<ResourceKind, string> = {
   weapon: 'Weapon',
   ammunition: 'Ammunition',
   consumable: 'Consumable',
@@ -310,7 +310,7 @@ export function NarrativeWorldPanel({
  * question a designer could not ask before — *I have written "needs a keycard"
  * in four places; is there anywhere that gives one?*
  */
-function Economy({
+export function Economy({
   file,
   resourceId,
   overlayOn,

@@ -52,8 +52,13 @@ import {
   type ResearchItem,
   type ResearchItemId,
   type ResearchView,
+  BIBLE_SECTIONS,
+  bibleCounts,
+  isInteractive,
+  type BibleSection,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
+import { GameBiblePanel } from './GameBiblePanel';
 import { InlineText } from './InlineText';
 import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
@@ -112,6 +117,11 @@ type Selection =
   | { kind: 'mobile' }
   /** What has been deleted and can still be put back (addendum 24). */
   | { kind: 'graveyard' }
+  /**
+   * The Game Bible's own sections, on a game (addendum 25 §4.1): what the
+   * player carries, the state the story keeps, and the quests.
+   */
+  | { kind: 'game'; section: BibleSection }
   /**
    * Somebody open in the Character Creator (addendum 08 §5).
    *
@@ -233,6 +243,13 @@ export function ResearchBody({
    * A professor is not offered a Character Creator to ignore.
    */
   const instructional = isInstructional(file.project.format);
+  /**
+   * On a game, Research **is** the Game Bible (addendum 25 §4.1): the cast,
+   * the places, the plots, themes and setups are already here, so what a game
+   * adds is one more group in the same menu rather than a second room.
+   */
+  const game = isInteractive(file.project.format);
+  const bible = game ? bibleCounts(file) : null;
   const prose = isProseFormat(file.project.format);
   const views = useMemo(() => viewsFor(file.project.format), [file.project.format]);
   const [query, setQuery] = useState('');
@@ -432,7 +449,9 @@ export function ResearchBody({
     );
 
   const title =
-    selection.kind === 'creator'
+    selection.kind === 'game'
+      ? (BIBLE_SECTIONS.find((one) => one.section === selection.section)?.label ?? 'The game')
+      : selection.kind === 'creator'
       ? (creator?.name ?? 'Character')
       : selection.kind === 'view'
       ? (views.find((entry) => entry.view === selection.view)?.label ?? 'Research')
@@ -463,7 +482,7 @@ export function ResearchBody({
   return (
     <>
       <header className="research-head">
-        <span className="research-name">Research</span>
+        <span className="research-name">{game ? 'Game Bible' : 'Research'}</span>
         <input
           className="research-search"
           type="search"
@@ -489,6 +508,8 @@ export function ResearchBody({
       <div
         className={
           creator ||
+          // A game section has its own detail column, as the Creator does.
+          selection.kind === 'game' ||
           // The wiring diagram wants the whole width: it is a timeline.
           selection.kind === 'links' ||
           selection.kind === 'graphics' ||
@@ -502,6 +523,31 @@ export function ResearchBody({
       >
         {/* The side menu: what is not a place, then the folders. */}
         <nav className="research-side" aria-label="Research folders">
+          {bible ? (
+            <>
+              <h4>The game</h4>
+              <ul className="research-views">
+                {BIBLE_SECTIONS.map(({ section, label }) => {
+                  const here = selection.kind === 'game' && selection.section === section;
+                  const count = bible[section];
+                  return (
+                    <li key={section}>
+                      <button
+                        type="button"
+                        className={here ? 'folder-row selected' : 'folder-row'}
+                        aria-current={here ? 'true' : undefined}
+                        title={count.unused > 0 ? `${count.unused} not yet used` : undefined}
+                        onClick={() => setSelection({ kind: 'game', section })}
+                      >
+                        <span className="folder-name">{label}</span>
+                        <span className="count muted">{count.total}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          ) : null}
           <h4>Everything</h4>
           <ul className="research-views">
             {views.map((entry) => (
@@ -777,7 +823,8 @@ export function ResearchBody({
             <>
           <header className="research-contents-head">
             <h3>{title}</h3>
-            {selection.kind === 'plots' ||
+            {selection.kind === 'game' ||
+            selection.kind === 'plots' ||
             selection.kind === 'setups' ||
             selection.kind === 'thematics' ||
             selection.kind === 'locations' ||
@@ -857,6 +904,10 @@ export function ResearchBody({
                 onUpdate={onUpdate}
                 {...(onGoToBeat ? { onGoToBeat } : {})}
               />
+            </div>
+          ) : selection.kind === 'game' ? (
+            <div className="research-embedded">
+              <GameBiblePanel key={selection.section} file={file} section={selection.section} onUpdate={onUpdate} />
             </div>
           ) : selection.kind === 'locations' ? (
             <div className="research-embedded">

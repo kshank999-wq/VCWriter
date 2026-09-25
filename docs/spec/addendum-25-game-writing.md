@@ -18,7 +18,7 @@ The two specs are kept beside this addendum as
 [`game-studio-spec-v1.md`](game-studio-spec-v1.md). The Game Studio spec
 calls the narrative module *VC Rider*; it is this one.
 
-**Status: stages 0, 1 and 2 built.** §9 is the build order; §12 says what each built stage does.
+**Status: stages 0–3 built.** §9 is the build order; §12 says what each built stage does.
 
 ---
 
@@ -408,9 +408,8 @@ the file.
    script's *Act*. Games say *level*, *chapter* or *mission*. Is that a noun
    per project (from the wizard's progression answer) or one word for every
    game?
-2. **Where the Game Bible sits beside Research.** §4.1 folds research into the
-   Bible's side menu for a game. The alternative is two rooms. One is simpler
-   for a game writer; two keeps Research identical across formats.
+2. ~~**Where the Game Bible sits beside Research.**~~ Settled by stage 3:
+   on a game, **Research is the Game Bible** (§12, stage 3).
 
 ---
 
@@ -522,3 +521,47 @@ The steps are now numbered beside themselves, in a two-column grid. And the
 panel's new objective opens itself once it has **arrived in the file**, not
 from inside the mutation, because the document is shared over the link and the
 mutation may run after the click has returned — a test caught that one.
+
+### Stage 3 — the Game Bible and the far column
+
+`game-bible.ts`, `GameBiblePanel.tsx`, `GameInspector.tsx`, and a group in
+Research's side menu.
+
+**The audit a ninth time, and it answered §11's second question.** §4.1 drew
+the Bible as a room *built from* Research's three parts. Opening Research on
+a game showed it already **is** most of one: the cast (one click into the
+Character Creator), the locations, the plots, setups and payoffs, themes and
+motifs, the character map, the review and the graveyard are all in its side
+menu. A second room would be a second place to look for the same people and
+places. So on a game, **Research is the Game Bible** — its head, its title-bar
+button, its window-menu item and its window's title say so, all through
+`paneTitle` — and what a game adds is one group at the top of the same menu,
+**The game**: *Items & resources*, *State* and *Quests & objectives*. Objects
+and puzzles join the group when stages 5 and 6 build them; until then they are
+absent, not greyed.
+
+Each of the three is cards and a detail, Research's shape. **Used / Not yet
+used is a reading** (`bibleEntries`): a resource or a state is used when some
+condition, effect or objective mentions it, a quest when it has a step. The
+detail edits through the same domain functions as the world panel beside the
+map, so the two screens are two windows onto one record and cannot disagree;
+the world panel's word lists and its economy block are exported and shared
+rather than copied.
+
+**The far column on a game** is the Inspector with a vertical menu down its
+edge (§4.2): *Beat* (the Inspector as it always was), *Rules* (the rule on
+the node bound to the selected beat, with *Put this beat on the Story Map*
+where there is none yet), *World*, *Play*, *Checks* (with the count on the
+button, and the selected beat's findings first), *Endings*, and *Built* — Game
+Studio's status, greyed in the sense §1 means: shown, and said to be done in
+Game Studio. On every other format the Inspector is exactly what it was. Being
+the Inspector, it goes to a second monitor with the Inspector's own ⧉, and a
+room there can do everything the panel here can.
+
+Driving the real renderer caught three layout faults, none of which the tests
+could see: the Bible's detail column was **hidden**, because Research hides
+its own detail on a full-width section and the Bible's reused the class; the
+rail's longest words (*Checks*, *Endings*) were **cut off** at 56px; and the
+rule builder's bar **ran off the edge** of the narrower column. All three are
+fixed in the stylesheet: the Bible's detail is shown inside its section, the
+rail is 64px with tighter tracking, and the builder wraps in the far column.

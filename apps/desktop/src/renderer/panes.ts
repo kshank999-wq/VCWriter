@@ -152,6 +152,8 @@ export const ROOM_NAMES: Record<RoomPane, string> = {
 
 /** What a window of this section calls itself, before the project is known. */
 export const paneTitle = (pane: string, format: ProjectFormat | null = null): string => {
+  // On a game, Research is the Game Bible (addendum 25 §4.1).
+  if (pane === 'research' && format === 'game') return 'Game Bible';
   if (isRoomPane(pane)) return ROOM_NAMES[pane];
   if (beatIdOf(pane)) return 'Beat';
   return paneNamesFor(format)[pane as PaneId] ?? 'VC Writer';
