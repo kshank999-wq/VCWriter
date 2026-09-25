@@ -1175,6 +1175,31 @@ push live; the build takes a minute or two.
   the ***else*** of the writing tab, so a third tab drew them underneath its own
   tables — with two tabs the two spellings are the same thing, with three they
   are not.
+  `addendum-25-game-writing.md` is **game writing, and the line to VC Game
+  Studio**, from Ken's two 22 September specs (kept beside it as
+  `game-writing-spec-v1.md` and `game-studio-spec-v1.md`) and his decisions of
+  25 September: *one tool, a limited form unless you upgrade*. **VC Writer
+  plans everything; VC Game Studio implements** (§1) — there is no planning
+  tier held back, and binding, code generation and asset import live only in
+  Game Studio. The audit found **most of the spec is addendum 18**; §0 lists
+  the eleven things that are new. Work is on `claude/game-writing`, not the
+  dev-spec branch, so the two can move without breaking each other; `main` is
+  merged in often and each stage goes to `main` by pull request when Ken says.
+  **Stage 0 is the file keeping what Game Studio writes** (§2), and it comes
+  first because a collection the schema does not name is **stripped on load**
+  and an unknown enum value **fails the whole file** — a Save in VC Writer
+  would otherwise erase a week of binding work. `implementationBindings`
+  (`entities/implementation.ts`) joins the file with `.default([])`, and every
+  engine-shaped field in it — `sourceType`, `engine`, `target` — is **free
+  text, never an enum**, so a newer Game Studio binding a kind this build has
+  never heard of is carried exactly and read as nothing. Status is **a
+  reading, never a column** (`implementation.ts`): unbound, partial,
+  implemented, *needs update* (the record's `fingerprintOf` no longer matches
+  the binding's `sourceHash`) and *conflict* (the record is gone). The
+  fingerprint is synchronous and pure so the status can be read like
+  reachability, leaves out `createdAt`/`updatedAt` so a touch is not a change,
+  and is change detection rather than security. `implementation.test.ts`
+  holds the round trip, the unknown kind and all five words down.
   `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
   Ken after using instructional mode: chapters, sections and subsections
   worked out first, then put on the track. **All six stages of §9 are

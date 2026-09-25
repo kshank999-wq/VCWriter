@@ -36,6 +36,8 @@ export * from './narrative-run.js';
 export * from './narrative-endings.js';
 export * from './narrative-reports.js';
 export * from './print-narrative.js';
+export * from './entities/implementation.js';
+export * from './implementation.js';
 export * from './project-home.js';
 export * from './formats.js';
 export * from './projects.js';

@@ -73,6 +73,12 @@ export type ChoiceId = Id<'Choice'>;
 export type StateDefinitionId = Id<'StateDefinition'>;
 export type ResourceDefinitionId = Id<'ResourceDefinition'>;
 export type SimulationRunId = Id<'SimulationRun'>;
+/**
+ * Game Studio's record that an authored thing has been built in an engine
+ * (addendum 25 §2). VC Writer carries these and reads their status; it never
+ * makes one.
+ */
+export type ImplementationBindingId = Id<'ImplementationBinding'>;
 export type OrderId = Id<'Order'>;
 export type LicenseId = Id<'License'>;
 export type ReleaseBuildId = Id<'ReleaseBuild'>;

@@ -7,6 +7,7 @@ import { defaultCharacterCategories } from './characters.js';
 import { storyLinkSchema } from './entities/links.js';
 import { storyThreadSchema } from './entities/threads.js';
 import { gameSetupSchema } from './entities/game.js';
+import { implementationBindingSchema } from './entities/implementation.js';
 import {
   choiceSchema,
   narrativeElementSchema,
@@ -165,6 +166,12 @@ export const projectFileSchema = z.object({
   simulationRuns: z.array(simulationRunSchema).default([]),
   /** What the designer said the game is (addendum 18 §2). */
   gameSetup: gameSetupSchema.nullable().default(null),
+  /**
+   * What VC Game Studio has built in an engine (addendum 25 §2). VC Writer
+   * never writes one; it is here so that a Save in VC Writer **keeps** them,
+   * because a collection the schema does not name is stripped on load.
+   */
+  implementationBindings: z.array(implementationBindingSchema).default([]),
   /**
    * End-of-section learning aids (addendum 16 §10). Empty in every project
    * that is not an instructional book, and in most that are.
