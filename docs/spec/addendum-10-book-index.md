@@ -135,7 +135,7 @@ and on the preview toolbar).
 
 ## 6. Marking a passage
 
-Right-click a line of the manuscript and choose **Index this…** — the same
+Right-click a line of the manuscript and choose **Add to the index…** — the same
 right-click the Character Creator uses (addendum 08 §7) and deliberately the
 same shape, because it is the same act, *this passage is about that*, pointed at
 the back of the book instead of at a person.

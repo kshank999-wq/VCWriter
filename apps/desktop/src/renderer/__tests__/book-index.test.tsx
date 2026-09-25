@@ -58,14 +58,14 @@ describe('indexing a passage from the writing', () => {
   it('offers it on a book and not on a screenplay', () => {
     render(<Writing format="novel" />);
     fireEvent.contextMenu(screen.getAllByRole('textbox')[0]!);
-    expect(screen.getByText('Index this…')).toBeTruthy();
+    expect(screen.getByText('Add to the index…')).toBeTruthy();
 
     cleanup();
     render(<Writing format="screenplay" />);
     fireEvent.contextMenu(screen.getAllByRole('textbox')[0]!);
     // Absent rather than greyed: the true thing is that this format has no
     // index at all, and a disabled line says *not yet*.
-    expect(screen.queryByText('Index this…')).toBeNull();
+    expect(screen.queryByText('Add to the index…')).toBeNull();
     expect(screen.getByText('Add to a character’s characterization…')).toBeTruthy();
   });
 
@@ -73,7 +73,7 @@ describe('indexing a passage from the writing', () => {
     let seen: ProjectFile | null = null;
     render(<Writing format="novel" onFile={(file) => (seen = file)} />);
     fireEvent.contextMenu(screen.getAllByRole('textbox')[0]!);
-    fireEvent.click(screen.getByText('Index this…'));
+    fireEvent.click(screen.getByText('Add to the index…'));
 
     fireEvent.change(screen.getByLabelText('Heading'), { target: { value: 'lamp, the' } });
     fireEvent.change(screen.getByLabelText('Sub-heading'), { target: { value: 'turning of' } });
@@ -90,7 +90,7 @@ describe('indexing a passage from the writing', () => {
   it('will not file one with no heading', () => {
     render(<Writing format="novel" />);
     fireEvent.contextMenu(screen.getAllByRole('textbox')[0]!);
-    fireEvent.click(screen.getByText('Index this…'));
+    fireEvent.click(screen.getByText('Add to the index…'));
 
     expect((screen.getByText('Index it') as HTMLButtonElement).disabled).toBe(true);
   });

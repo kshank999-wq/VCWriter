@@ -2522,6 +2522,59 @@ look is one press away, and the prose pages that are **not** among the seven
 (a foreword, a preface) are given `drop: 0` explicitly so none of them
 moves.
 
+## 17b. Collecting into the back matter while reading
+
+From Ken, the day after §17a: *for the appendix and the glossary and the
+index in the book view as you're reading it you can pick a word and when you
+use the right click menu you can say add to appendix add to index add to
+glossary.*
+
+**One of the three was already built.** *Index this…* has been on the
+manuscript's right-click since addendum 10 §6, and it is the better half of
+the three: a mark anchored to the passage, with the page number read off the
+pagination every time. So this is the other two, built to its shape — and the
+existing one renamed to match, since **three acts of one kind should read as
+three**, and *Index this…* beside *Add to the glossary…* reads as two
+different sorts of thing.
+
+Three decisions carry it.
+
+**The act makes the page.** A writer who picks a word and asks for it in the
+glossary is telling you the book has a glossary; refusing for want of one and
+sending them to Layout to make it first is §4b's mistake — an act must make
+the reading true rather than require it. `captureToGlossary` and
+`captureToAppendix` make the page where the book has none.
+
+**A word for the two that list words, the passage for the one that holds
+prose.** An index entry and a glossary term are things a reader looks up, so
+they take what was picked; an appendix holds supplementary *material*, so
+*add to the appendix* means the passage. Which is which is the thing a writer
+would otherwise get wrong once and distrust afterwards, so the menu says it
+under each label — `note` on the item, which §6b built for exactly this —
+rather than leaving it to be discovered by pressing.
+
+**A term already listed is said, never doubled.** A glossary with *Fresnel
+lens* in it twice is worse than one with it once, and the writer who asked did
+not know it was there. `glossaryCaptureOffer` refuses in a sentence, and
+`captureToGlossary` refuses the same thing again, `trackRemoval`'s shape.
+
+`packages/domain/src/back-matter-capture.ts` is the module;
+`CollectIntoBackMatter` in `BeatBody.tsx` is **one screen for the two**,
+because they are one act with two destinations and two screens would be two
+answers to *what does picking a word do here*. The index keeps its own, which
+asks for a heading, a sub-heading and whether the discussion is the principal
+one — none of which either of these has. An appendix picker is **absent where
+the book has none or one**, nothing to choose not being a control. All three
+are **absent rather than greyed** on a screenplay, which has no back matter at
+all.
+
+Driving it caught the fault of the day, and it is a wording one: the screen
+said *Start a glossary with “X” in it.* and then, under it, *The book has no
+glossary yet. This makes one, at the back.* — **two sentences saying one
+thing**, which reads as two facts. The page it would make is part of what a
+press would do, so it is said in the same breath: *Start a glossary at the
+back of the book, with “X” in it.*
+
 ### Deliberately not built
 
 The **file importers** of §2 — BibTeX, RIS, CSL-JSON, CSV/TSV/XLSX, a

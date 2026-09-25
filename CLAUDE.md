@@ -688,8 +688,9 @@ push live; the build takes a minute or two.
   why they are not one table with a flag. A run prints as `14–17`, and **a
   principal discussion never merges with a passing mention** because `14–17` set
   half bold is not something type can do. `indexPages` breaks it by counting
-  lines, and never leaves a letter alone at the foot of a page. **Index this…**
-  is on the manuscript right-click beside the Character Creator's (§6), and
+  lines, and never leaves a letter alone at the foot of a page. **Add to the
+  index…** is on the manuscript right-click beside the Character Creator's (§6;
+  named *Index this…* until addendum 20 §17b gave it two neighbours), and
   **Editor ▸ Index…** opens the fourth tab of the Editors page (§7) — which
   shows the three things the printed index cannot: the *marks* under a heading
   rather than only its numbers, **orphans** (a mark whose passage was cut, kept
@@ -1995,6 +1996,37 @@ push live; the build takes a minute or two.
   index** — which is a change to the *cutter*, the measurement and the lines
   per page both halving, so `columns` was built, found to be read by nothing
   and **taken out rather than left as a control that lies**.
+  **§17b is collecting into the back matter while reading**, from Ken (*for
+  the appendix and the glossary and the index in the book view as you're
+  reading it you can pick a word and when you use the right click menu you
+  can say add to appendix add to index add to glossary*), and **one of the
+  three was already built** — *Index this…* has been on the manuscript's
+  right-click since addendum 10 §6, and it is the better half of the three, a
+  mark anchored to the passage with the page number read off the pagination.
+  So this is the other two, `back-matter-capture.ts`, built to its shape, and
+  the existing one **renamed to match**: three acts of one kind should read
+  as three, and *Index this…* beside *Add to the glossary…* reads as two
+  sorts of thing. Three decisions. **The act makes the page** — a writer who
+  picks a word and asks for it in the glossary is telling you the book has
+  one, so refusing for want of a page and sending them to Layout is §4b's
+  mistake, an act having to make the reading true rather than require it.
+  **A word for the two that list words, the passage for the one that holds
+  prose** — an index entry and a glossary term are things a reader looks up
+  while an appendix holds *material*, which is the thing a writer would
+  otherwise get wrong once and distrust afterwards, so the menu says which is
+  which **under each label** (`note` on the item, which §6b built for exactly
+  this) rather than leaving it to be found by pressing. And **a term already
+  listed is said, never doubled**, `glossaryCaptureOffer` refusing in a
+  sentence and `captureToGlossary` refusing it again, `trackRemoval`'s shape.
+  `CollectIntoBackMatter` is **one screen for the two**, one act with two
+  destinations; the index keeps its own, which asks for a heading, a
+  sub-heading and whether the discussion is principal, none of which either of
+  these has. The appendix picker is **absent where the book has none or one**.
+  Driving it caught the fault of the day and it is a wording one: the screen
+  said *Start a glossary with “X” in it* and then, under it, *The book has no
+  glossary yet. This makes one, at the back* — **two sentences saying one
+  thing**, which reads as two facts; the page it would make is part of what a
+  press would do, so it is said in the same breath.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

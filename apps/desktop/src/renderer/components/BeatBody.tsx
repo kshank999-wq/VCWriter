@@ -32,6 +32,12 @@ import {
   addSetupPayoff,
   addSetupPoint,
   addTheme,
+  appendicesOf,
+  appendixCaptureOffer,
+  captureToAppendix,
+  captureToGlossary,
+  glossaryCaptureOffer,
+  partTitle,
   figuresInOrder,
   graphicsInOrder,
   groupManuscript,
@@ -197,6 +203,8 @@ export function BeatBody({
   const [filing, setFiling] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
   /** The same passage, on its way into the book's index (addendum 10 §6). */
   const [indexing, setIndexing] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
+  /** *Add to the glossary* / *to the appendix* (§17b), the index's two fellows. */
+  const [collecting, setCollecting] = useState<{ kind: 'glossary' | 'appendix'; text: string } | null>(null);
   /** And on its way into a setup or a payoff (the Setups & Payoffs spec §4). */
   const [planting, setPlanting] = useState<{ text: string } | null>(null);
   /** And under a theme or a motif (addendum 12 §4). */
@@ -821,7 +829,19 @@ export function BeatBody({
     // An index is a book's, so a screenplay is never offered one (addendum
     // 10 §2): a stack of scripts each numbering from its own page one has no
     // single page 34 for an entry to point at.
-    if (hasBookIndex(file.project.format)) entries.push({ label: 'Index this…', disabled: none, onPick: () => setIndexing({ elementId: at.elementId, text: at.text }) });
+    // **The three that collect while you read** (§17b, from Ken). The index's
+    // has been here since addendum 10 §6 and is the better half of the three,
+    // its page number being read off the pagination; the other two are built
+    // to its shape. All three are a book's, so a screenplay is offered none.
+    if (hasBookIndex(file.project.format)) {
+      entries.push(
+        { label: 'Add to the index…', disabled: none, onPick: () => setIndexing({ elementId: at.elementId, text: at.text }) },
+        { label: 'Add to the glossary…', disabled: none, note: 'the words you picked, as a term to define', onPick: () => setCollecting({ kind: 'glossary', text: at.text }) },
+        // The passage rather than the word: an appendix holds material, and
+        // the note says so before the press rather than after it.
+        { label: 'Add to the appendix…', disabled: none, note: 'this passage, copied — the writing stays', onPick: () => setCollecting({ kind: 'appendix', text: at.text }) },
+      );
+    }
     entries.push(
       { label: 'Make this a setup or a payoff…', disabled: none, onPick: () => setPlanting({ text: at.text }) },
       { label: 'Tag a theme or a motif…', disabled: none, onPick: () => setTagging({ elementId: at.elementId, text: at.text }) },
@@ -955,6 +975,16 @@ export function BeatBody({
           passage={indexing.text}
           onUpdate={onUpdate}
           onClose={() => setIndexing(null)}
+        />
+      ) : null}
+
+      {collecting ? (
+        <CollectIntoBackMatter
+          file={file}
+          kind={collecting.kind}
+          passage={collecting.text}
+          onUpdate={onUpdate}
+          onClose={() => setCollecting(null)}
         />
       ) : null}
 
@@ -1457,6 +1487,137 @@ function FileInIndex({
         </button>
         <button type="button" className="ghost small" disabled={term.trim().length === 0} onClick={save}>
           Index it
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * **Into the glossary or the appendix, from the page being read** (addendum 20
+ * §17b, from Ken: *for the appendix and the glossary and the index in the book
+ * view as you're reading it you can pick a word and when you use the right
+ * click menu you can say add to appendix add to index add to glossary*).
+ *
+ * One dialog for the two, because they are one act with two destinations and
+ * two dialogs would be two answers to *what does picking a word do here*. The
+ * index's is its own (`FileInIndex`) and stays its own: it asks for a heading,
+ * a sub-heading and whether the discussion is the principal one, none of which
+ * either of these has.
+ *
+ * What it says before it does anything is `glossaryCaptureOffer` /
+ * `appendixCaptureOffer` — including the fact a writer would not guess, that
+ * the book has no such page yet and pressing this makes one.
+ */
+function CollectIntoBackMatter({
+  file,
+  kind,
+  passage,
+  onUpdate,
+  onClose,
+}: {
+  file: ProjectFile;
+  kind: 'glossary' | 'appendix';
+  passage: string;
+  onUpdate: BeatBodyProps['onUpdate'];
+  onClose(): void;
+}) {
+  // The picked words are the term, and they are editable: a writer drags
+  // through *the Fresnel lens* and means *Fresnel lens*.
+  const [term, setTerm] = useState(passage.trim());
+  const [meaning, setMeaning] = useState('');
+  const appendices = useMemo(() => appendicesOf(file), [file]);
+  const [into, setInto] = useState<string>(() => (appendices[0]?.part.id as string) ?? '');
+
+  const offer =
+    kind === 'glossary'
+      ? glossaryCaptureOffer(file, term)
+      : appendixCaptureOffer(file, passage, into || undefined);
+
+  const save = () => {
+    if (!offer.can) return;
+    onUpdate((current) =>
+      kind === 'glossary'
+        ? captureToGlossary(current, term, meaning)
+        : captureToAppendix(current, passage, into || undefined),
+    );
+    onClose();
+  };
+
+  return (
+    <div
+      className="caught-dialog"
+      role="dialog"
+      aria-label={kind === 'glossary' ? 'Add to the glossary' : 'Add to the appendix'}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
+      {kind === 'glossary' ? (
+        <>
+          <label className="field">
+            <span>The term</span>
+            <input
+              autoFocus
+              aria-label="The term"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  save();
+                }
+              }}
+            />
+          </label>
+          {/* **The definition is never written for you** (§17a): it is the
+              work, and one nobody wrote would stand in the book under the
+              author's name. It may be written here, or left for the page. */}
+          <label className="field">
+            <span>What it means (optional — you can write it on the page)</span>
+            <textarea
+              aria-label="What it means"
+              rows={3}
+              value={meaning}
+              onChange={(event) => setMeaning(event.target.value)}
+            />
+          </label>
+        </>
+      ) : (
+        <>
+          <p className="index-quote">{passage}</p>
+          {/* Absent where the book has none or one: a picker over a single
+              appendix is a control with nothing to choose. */}
+          {appendices.length > 1 ? (
+            <label className="field">
+              <span>Into</span>
+              <select aria-label="Which appendix" value={into} onChange={(event) => setInto(event.target.value)}>
+                {appendices.map((one) => (
+                  <option key={one.part.id as string} value={one.part.id as string}>
+                    Appendix {one.label}
+                    {partTitle(one.part).trim().length > 0 ? ` — ${partTitle(one.part)}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </>
+      )}
+
+      {/* One sentence, the domain's: that the page does not exist yet and
+          this would make it is part of what a press would do, not a second
+          notice under it. */}
+      <p className="muted small">{offer.refusal ?? offer.says}</p>
+
+      <div className="caught-actions">
+        <button type="button" className="ghost small" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="ghost small" disabled={!offer.can} onClick={save}>
+          {kind === 'glossary' ? 'Add the term' : 'Add the passage'}
         </button>
       </div>
     </div>
