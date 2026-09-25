@@ -102,7 +102,35 @@ const KEEP = 2;
 interface Cursor {
   index: number;
   offset: number;
+  /**
+   * Plates set aside for the leaves after this page (§9q), in the order they
+   * fall. A page reached with room still on it does not end at a plate: the
+   * plate waits here while the text goes on filling, so the paragraph runs to
+   * the foot and **continues after the picture**, which is what an
+   * illustrated book does and what a reader expects.
+   */
+  held?: readonly number[];
 }
+
+/**
+ * **A plate may wait; nothing else may.** A chapter opening, a part's page
+ * and a blank the cutter itself left are all placed rather than flowed — a
+ * chapter that floated would open in the middle of the page before it. Only a
+ * picture given a page of its own inside the story can stand a leaf later
+ * than the block it was written beside.
+ */
+const floats = (block: BookBlock): boolean => block.display && block.kind === 'figure';
+
+/** The blank that is a plate's own back (§9i) goes with it, or it is stranded. */
+const backOf = (blocks: readonly BookBlock[], at: number): number[] => {
+  const run = [at];
+  let next = at + 1;
+  while (blocks[next]?.display && blocks[next]?.kind === 'blank') {
+    run.push(next);
+    next += 1;
+  }
+  return run;
+};
 
 interface Filled {
   pieces: PagePiece[];
@@ -136,7 +164,8 @@ const fillPage = (
   wraps: Wraps,
 ): Filled | null => {
   const first = blocks[start.index];
-  if (!first) return null;
+  const waiting = start.held ?? [];
+  if (!first && waiting.length === 0) return null;
   const empty: Filled = {
     pieces: [],
     depth: 0,
@@ -148,6 +177,30 @@ const fillPage = (
     numbering: null,
     continued: false,
   };
+
+  /**
+   * A plate that waited (§9q) takes this leaf before the text goes on. It
+   * keeps the side it asked for, so a picture that wants a recto still gets
+   * one and the verso before it is blank — the rule it had when it stood in
+   * the flow, said in the one place it is now placed from.
+   */
+  if (waiting.length > 0) {
+    const held = blocks[waiting[0] as number] as BookBlock;
+    if (held.starts === 'recto' && side === 'verso') return empty;
+    if (held.starts === 'verso' && side === 'recto') return empty;
+    return {
+      pieces: [{ blockId: held.id, from: 0, to: linesOf(measured, held) }],
+      depth: target,
+      cursor: { index: start.index, offset: start.offset, held: waiting.slice(1) },
+      display: true,
+      blank: false,
+      folio: held.folio,
+      chapterTitle: held.chapterTitle || chapterInForce,
+      numbering: held.numbering,
+      continued: false,
+    };
+  }
+  if (!first) return null;
 
   // A block that must open on the other side leaves this one blank.
   if (start.offset === 0 && first.starts === 'recto' && side === 'verso') return empty;
@@ -174,9 +227,33 @@ const fillPage = (
   let chapterTitle = chapterInForce;
   let numbering: 'roman' | 'arabic' | null = null;
 
+  const held: number[] = [];
   while (cursor.index < blocks.length) {
     const block = blocks[cursor.index] as BookBlock;
-    if (!isFlow(block)) break;
+    if (!isFlow(block)) {
+      /**
+       * **A plate does not cut the page short** (§9q, from Ken: *it cut the
+       * text in the first page… it should fill that entire page to a
+       * sentence, then move the rest to the appropriate page*).
+       *
+       * Where there is room left and something already stands here, the plate
+       * is set aside for the next leaf and the text goes on filling this one.
+       * The paragraph it interrupts runs to the foot and resumes after the
+       * picture, so the reader turns from a full page of prose to the plate
+       * and back into the same sentence — which is what an illustrated book
+       * does, and is the only arrangement that leaves no hole.
+       *
+       * Only with something already on the page: a plate reached on an empty
+       * one is simply this page, which is the branch above.
+       */
+      if (cursor.offset === 0 && floats(block) && pieces.length > 0) {
+        const run = backOf(blocks, cursor.index);
+        held.push(...run);
+        cursor = { index: (run[run.length - 1] as number) + 1, offset: 0 };
+        continue;
+      }
+      break;
+    }
     if (cursor.offset === 0 && block.starts !== 'none' && pieces.length > 0) break;
     const total = linesOf(measured, block);
     const remaining = total - cursor.offset;
@@ -251,7 +328,9 @@ const fillPage = (
   return {
     pieces,
     depth,
-    cursor,
+    // The plates this page set aside travel with the cursor (§9q), so the
+    // leaves after it draw them before the text goes on.
+    cursor: held.length > 0 ? { ...cursor, held } : cursor,
     display: false,
     blank: false,
     folio: true,
@@ -335,7 +414,7 @@ export const layPages = (
   cursor = opening.cursor;
 
   let sheet = 2;
-  while (cursor.index < blocks.length) {
+  while (cursor.index < blocks.length || (cursor.held?.length ?? 0) > 0) {
     const before = cursor;
     const titleBefore = chapterTitle;
     let verso = fillPage(blocks, measured, cursor, target, 'verso', chapterTitle, wraps);

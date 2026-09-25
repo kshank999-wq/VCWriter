@@ -2076,16 +2076,26 @@ push live; the build takes a minute or two.
   drew nothing left the writer unable to choose a page or a picture, with no
   way back if the box that would carry the ✗ was never made; it is the divide
   tools' idiom (addendum 21 §10), **the tool puts itself down when the act is
-  over**. **The fourth is a limit**: an illustration facing text cut the
-  facing page short, and moving the insertion point does not fix it — putting
-  the picture after the spanning paragraph leaves a bigger hole on the next
-  page. Both leave white because **a full-page plate cannot interrupt a
-  paragraph**: `fillPage` ends the page at a display block, and a figure is an
-  element between paragraphs rather than something a paragraph splits around.
-  What Ken describes is what illustrated books do, and getting it means
-  letting a display block fall at a page boundary with the flow resuming past
-  it — a cutter change that moves **every plate in every illustrated book**,
-  so it is its own piece of work and is deliberately not bolted on here.
+  over**. **§9q is the fourth**, and it is the cutter rather than
+  the placement: an illustration facing text cut the facing page short. It was
+  **measured before it was fixed, because the obvious fix is the wrong one** —
+  the chosen page opened with the *tail of a paragraph that began on the page
+  before*, and putting the picture after that paragraph instead leaves the
+  next page holding a two-line tail and a bigger hole; both leave white
+  because the cutter ended the page wherever it met a plate. So the rule is
+  one sentence: **a plate reached with room still on the page waits for the
+  next leaf while the text goes on filling this one**, and the paragraph it
+  interrupts **resumes after the picture** — a reader turns from a full page
+  of prose, past the plate, and back into the same sentence, which is what an
+  illustrated book does and the only arrangement that leaves no hole.
+  `Cursor` gains `held`, the plates a page set aside. Three rules keep it
+  honest: **only a plate may wait** (`floats` — a chapter opening that floated
+  would open in the middle of the page before it), **a plate's own back goes
+  with it** (`backOf`, or a picture asked to leave its reverse blank is parted
+  from that reverse), and **the side it asked for is kept**. It **moves plates
+  already placed**, which is why it was put to Ken before it was built rather
+  than after; and nothing in the suite covered a plate reached mid-page — the
+  change passed 2317 green tests without one moving — so it is pinned now.
   **§17c is importing a back-matter page**, from Ken (*for the appendix and
   the glossary and the index, you need an option to import that as text or
   import that as a PDF and it'll just maintain the formatting*), and the

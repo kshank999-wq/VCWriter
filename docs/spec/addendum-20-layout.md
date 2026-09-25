@@ -2657,29 +2657,46 @@ the box that would have carried the ✗ was never made. It is the divide tools'
 own idiom (addendum 21 §10): **the tool puts itself down when the act is
 over**, whether or not it came off.
 
-### The one that is a limit, not a slip
+## 9q. A plate does not cut the page short
 
-Ken's third screenshot: an illustration placed facing text in chapter one
-left the facing page's text **cut short**, with white below it — *it should
-fill that entire page to a sentence, then move the rest to the appropriate
-page*.
+From Ken, the fourth report in §9p's message: an illustration placed facing
+text left the facing page **cut short**, with white below it — *it should fill
+that entire page to a sentence, then move the rest to the appropriate page*.
 
-Reproduced and measured. The page he chose opened with the **tail of a
-paragraph that began on the page before**, so taking that paragraph to sit
-after the picture emptied the foot of the previous page. But moving the
-insertion point does not fix it: putting the picture after that paragraph
-instead leaves the *next* page holding a two-line tail and a far bigger hole.
-Both choices leave white, because **a full-page plate cannot interrupt a
-paragraph** — `fillPage` ends the page when it meets a display block, and a
-figure is an element between paragraphs rather than something a paragraph can
-be split around.
+Reproduced and measured first, because the obvious fix is the wrong one. The
+page he chose opened with the **tail of a paragraph that began on the page
+before**, so taking that paragraph to sit after the picture emptied the foot
+of the previous page. But moving the insertion point does not help: putting
+the picture *after* that paragraph instead leaves the next page holding a
+two-line tail and a far bigger hole. Both choices leave white, because the
+cutter ended the page wherever it met a plate.
 
-What Ken is describing is what illustrated books actually do: the paragraph
-runs to the foot of the page, the plate takes the next leaf, and the same
-paragraph continues after it. Getting that means letting a display block fall
-at a page boundary with the flow resuming past it — a change to the cutter
-that moves **every plate in every illustrated book**, not only new ones. It is
-its own piece of work and is not done here.
+So the cutter changes instead, and the rule is one sentence: **a plate reached
+with room still on the page waits for the next leaf while the text goes on
+filling this one.** The paragraph it interrupts runs to the foot and **resumes
+after the picture**, so a reader turns from a full page of prose, past the
+plate, and back into the same sentence — which is what an illustrated book
+does and is the only arrangement that leaves no hole.
+
+`Cursor` gains `held`: the plates a page set aside, travelling with the cursor
+so the leaves after it draw them before the text goes on. Three rules keep it
+honest. **Only a plate may wait** (`floats`) — a chapter opening that floated
+would open in the middle of the page before it, and a part's page and a blank
+the cutter itself left are placed rather than flowed. **A plate's own back
+goes with it** (`backOf`), or a picture asked to leave its reverse blank would
+be parted from the leaf that is its reverse. And **the side it asked for is
+kept**: a plate that wants a recto still gets one, with the verso before it
+blank, which is the rule it had when it stood in the flow said in the one
+place it is now placed from.
+
+Measured on a chapter whose paragraphs run over: before, the page held
+`opening + p1 + p2 + p3(cut)`; after placing a plate it holds exactly that,
+the plate takes the next leaf, and `p3(cut)` resumes on the one after.
+
+**This moves plates that are already placed**, which is why it was put to Ken
+before it was built rather than after. Nothing in the suite covered a plate
+reached mid-page — the change passed 2317 green tests without one of them
+moving — so the cases above are pinned now.
 
 ## 17c. Importing a back-matter page
 

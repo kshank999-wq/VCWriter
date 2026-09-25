@@ -56,9 +56,9 @@ const novel = (): ProjectFile => {
   return { ...file, assets: [...(file.assets ?? []), { id: 'a1', name: 'bridge.jpg', data: 'data:image/png;base64,AAA' }] } as ProjectFile;
 };
 
-const lay = (file: ProjectFile) => {
+const lay = (file: ProjectFile, lines = 9) => {
   const blocks = bookBlocks(file);
-  const measured = new Map(blocks.map((block) => [block.id, block.kind === 'paragraph' ? 9 : 4]));
+  const measured = new Map(blocks.map((block) => [block.id, block.kind === 'paragraph' ? lines : 4]));
   const settings = bookSettingsOf(file);
   const laid = layPages(blocks, measured, geometryOf(settings, 40), settings, bookNames(file));
   return { blocks, laid, rows: bookPageRows(laid.pages, blocks) };
@@ -72,8 +72,10 @@ const shape = (file: ProjectFile): string[] => {
 };
 
 /** Put a picture on a page, exactly as the room's *Put a picture on this page…* does. */
-const pictureOn = (file: ProjectFile, sheet: number): ProjectFile => {
-  const { blocks, laid } = lay(file);
+const pictureOn = (file: ProjectFile, sheet: number, lines = 9): ProjectFile => {
+  // The same measure the caller will read the result at, or the page found
+  // here is not the page asserted on.
+  const { blocks, laid } = lay(file, lines);
   const place = pagePlace(laid.pages, blocks, sheet);
   if (!place.elementId) throw new Error('nowhere to put it');
   const beat = file.beats.find((one) => one.manuscript.elements.some((element) => (element.id as string) === place.elementId))!;
@@ -151,5 +153,80 @@ describe('a book with no picture in it', () => {
     // head, so a book that has none must be untouched.
     const file = novel();
     expect(shape(file).filter((one) => one.includes('figure'))).toHaveLength(0);
+  });
+});
+
+/**
+ * **A plate does not cut the page short** (addendum 20 §9q, from Ken: *it cut
+ * the text in the first page… it should fill that entire page to a sentence,
+ * then move the rest to the appropriate page*).
+ *
+ * The page a plate was reached on used to end where the plate stood, however
+ * much room was left — so a paragraph that had been running to the foot was
+ * taken whole to after the picture and the foot went white. Now the plate
+ * waits, the text goes on filling, and the paragraph **resumes after the
+ * picture**, which is what an illustrated book does.
+ *
+ * Nothing in the suite covered this before, which is why the change passed
+ * 2317 green tests without one of them moving.
+ */
+const deep = (): ProjectFile => {
+  let file = createProjectFile({ title: 'Villain’s Tales', format: 'novel', author: 'M. Shank' });
+  const track = file.tracks[0]!.id;
+  const made = addUnit(file, { trackId: track, title: 'Chapter 1' });
+  file = made.file;
+  const beat = addBeat(file, { unitId: made.unit.id, title: 'c1' });
+  file = updateBeat(beat.file, beat.beat.id, {
+    manuscript: { elements: [1, 2, 3, 4, 5, 6].map((n) => para(`Paragraph ${n}. ${'word '.repeat(90)}`)) } as never,
+  });
+  file = addMarker(file, { kind: 'chapter', unitId: made.unit.id, title: 'Chapter 1' }).file;
+  return { ...file, assets: [{ id: 'a1', name: 'p.jpg', data: 'data:image/png;base64,AAA' }] } as ProjectFile;
+};
+
+/** Each page as `kind(cut)` pieces, so a split paragraph is visible. */
+const DEEP_LINES = 11;
+
+const pieces = (file: ProjectFile): string[] => {
+  const blocks = bookBlocks(file);
+  const measured = new Map(blocks.map((block) => [block.id, block.kind === 'paragraph' ? DEEP_LINES : 4]));
+  const settings = bookSettingsOf(file);
+  const laid = layPages(blocks, measured, geometryOf(settings, 40), settings, bookNames(file));
+  const byId = new Map(blocks.map((block) => [block.id, block]));
+  return laid.pages.map((page) =>
+    page.pieces.map((piece) => `${byId.get(piece.blockId)?.kind}${piece.cut ? '(cut)' : ''}`).join(' '),
+  );
+};
+
+describe('a plate reached with room still on the page', () => {
+  it('leaves the page it was reached on exactly as full as it was', () => {
+    const file = deep();
+    const before = pieces(file);
+    // The page whose text runs on past its foot.
+    const full = before.findIndex((one) => one.endsWith('paragraph(cut)'));
+    expect(full).toBeGreaterThanOrEqual(0);
+
+    const after = pieces(pictureOn(file, full + 2, DEEP_LINES));
+    // The whole point: that page is untouched, still running to its foot.
+    expect(after[full]).toBe(before[full]);
+  });
+
+  it('takes the next leaf, and the same paragraph resumes after it', () => {
+    const file = deep();
+    const before = pieces(file);
+    const full = before.findIndex((one) => one.endsWith('paragraph(cut)'));
+    const after = pieces(pictureOn(file, full + 2, DEEP_LINES));
+
+    expect(after[full + 1]).toBe('figure');
+    // A reader turns from a full page of prose, past the plate, and back
+    // into the same sentence.
+    expect(after[full + 2]!.startsWith('paragraph(cut)')).toBe(true);
+  });
+
+  it('never leaves the plate undrawn, however late it falls', () => {
+    const file = deep();
+    const before = pieces(file);
+    const full = before.findIndex((one) => one.endsWith('paragraph(cut)'));
+    const after = pieces(pictureOn(file, full + 2, DEEP_LINES));
+    expect(after.filter((one) => one === 'figure')).toHaveLength(1);
   });
 });
