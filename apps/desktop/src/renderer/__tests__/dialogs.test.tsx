@@ -95,7 +95,10 @@ describe('scene pop-up', () => {
     expect(latest.units[0]!.inScript).toBe(false);
     expect(manuscriptElements(latest)).toHaveLength(0);
     expect(latest.units).toHaveLength(1);
-    expect(screen.getByText('Off')).toBeDefined();
+    // The switch says what it *is* rather than *Off* (§4a) — a word that means
+    // nothing on its own is one a writer has to toggle to understand.
+    expect(screen.getByLabelText('In script').getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByText('Not in the script')).toBeDefined();
   });
 
   it('has no slugline for a novel', () => {

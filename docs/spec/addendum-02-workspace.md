@@ -384,6 +384,65 @@ Everything reorders by drag and by keyboard, as today:
   earlier/later in the story, or a track up/down; `Alt+Shift+↑/↓` moves a
   beat to the previous/next scene, or a scene to the previous/next track.
 
+## 4a. The scene's screen, restyled
+
+From Ken, with a handoff and a mockup: *this is going to apply to all the
+scenes throughout all the modules. If it has this function, just want to
+clean up the UI make it look a little more elegant.* A **visual restyle in
+place** — every binding, every act and the save-as-you-type are what they
+were — so what is worth writing down is the handful of places where a look
+turned out to be a statement about the work.
+
+**The breadcrumb is two lines.** *Chapter 1 · Main plot* on one line reads
+as one fact with a separator in it; split, the first line says **what this
+is** and the second, behind a dot in the track's own colour, says **which
+plot it is on**. Two questions, two lines, and the colour is the track's
+rather than a legend.
+
+**The name is set in the reading face, centred, and is not made
+uppercase.** It is the thing the writer typed, and a screen that shouts it
+back in capitals is a screen that has edited it.
+
+**The switch says what it is rather than *Off*.** *Off* means nothing on
+its own — off *what*? — so a writer has to toggle it to find out, which is
+the one thing a switch should never require. It reads **In manuscript** or
+**Not in the manuscript**, in the format's own noun, so it is *In script* on
+a screenplay and *In book* on a textbook. It is a `role="switch"` with
+`aria-checked`, which is the same statement made to a screen reader.
+
+**What it is comes before how it turns.** The fields are ordered **Status
+and Label**, then **the polarity pair**, then **Summary**, then **Notes**,
+because a writer opening a scene asks *what state is this in* before *how
+does it move*, and the drafting state is the field they change most often.
+The polarity pair is **one strip** rather than two loose selects with an
+arrow between them: *begins* and *ends* are one reading (addendum 13 §1),
+and two controls that must be read together should look like one control.
+
+**The status carries its colour inside the control.** `UNIT_STATUSES` in
+`entities/structure.ts` is the **one table** that says what the five states
+are called and what colour each is, read by the select's dot and by
+anything else that draws one — a second list would be a second answer to
+*what colour is Revised*.
+
+**The counts are on the headings and the figures are in a status bar.**
+Each side section carries a count beside its name, and the beat count, the
+page count and the reading time moved out of the middle of the form — where
+they sat looking like another field's help text — into a bar at the foot,
+beside **✓ Saved as you type**, which is where a program says how things
+stand rather than what to type.
+
+Two things the handoff asked for are **deliberately absent**: the dashed
+**+ Add character** and **+ Link a setup** buttons. Both lists are
+**readings** — the cast comes off the cues in the writing and the promises
+off the passages that were tagged — so neither has anything a button could
+add, and a button that can only refuse is one that lies. What is there
+instead is a sentence saying what makes a name appear: *No one speaks yet.
+A name appears here when they do.*
+
+Below 900px the two readings go **over** the form rather than three columns
+squeezing into nothing — at 860px the status select was showing *First
+dra*.
+
 ## 5. Timeline & Viewer
 
 Where an editing bay shows the picture, this shows the story — and it shows

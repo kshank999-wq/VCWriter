@@ -15625,3 +15625,391 @@ dialog.copyright-dialog::backdrop {
   color: var(--good, #8fc79a);
   font-size: 12px;
 }
+
+/* ------------------------------ the scene's own screen, restyled (§4a) */
+
+/*
+ * From Ken, with a mockup: *just want to clean up the UI, make it look a
+ * little more elegant*. A **restyle in place** — every binding, every act and
+ * the autosave are untouched, and because the panel has read `nounsFor` since
+ * §6c it lands on a scene, a chapter, a section, a story and an episode at
+ * once, which is what he asked for.
+ *
+ * It is the one dialog in the program with three columns and a footer, so the
+ * rules are its own rather than the workspace's general ones — but the tokens
+ * are the app's, so it follows the writer's colour scheme like everything
+ * else.
+ */
+dialog.scene-dialog {
+  width: min(980px, calc(100vw - 48px));
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 55%);
+}
+
+dialog.scene-dialog > header {
+  /* The breadcrumb, the name, the pill and the ×. The name takes the middle
+     and truncates rather than wrapping, so a long title never grows the bar. */
+  grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) auto auto;
+  gap: 16px;
+  min-height: 68px;
+  padding: 0 10px 0 20px;
+  background: var(--panel-2);
+}
+
+.scene-dialog-where {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.scene-dialog-kind {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scene-dialog-track {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scene-dialog-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+/* The name in the reading face, sentence case: it is the writer's words
+   rather than a field label, and shouting them in capitals made the one
+   editable thing on the bar look like furniture. */
+.scene-dialog-name {
+  height: 44px;
+  padding: 0 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--bright, var(--text));
+  font-family: Georgia, 'Times New Roman', 'Iowan Old Style', serif;
+  font-size: 24px;
+  font-weight: 500;
+  text-align: center;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.scene-dialog-name:hover,
+.scene-dialog-name:focus {
+  border-color: var(--border);
+}
+
+/* The pill says what it is rather than *Off*. */
+.scene-dialog-ms {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 14px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.scene-dialog-ms-track {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 20px;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.scene-dialog-ms.on .scene-dialog-ms-track {
+  background: var(--gold);
+  justify-content: flex-end;
+}
+
+.scene-dialog-ms-track > span {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--muted);
+}
+
+.scene-dialog-ms.on .scene-dialog-ms-track > span {
+  background: var(--panel);
+}
+
+.scene-dialog-x {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* A count beside a heading, so a section says how much it holds without a
+   sentence. */
+.scene-dialog-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.scene-dialog-side h4,
+.scene-dialog-beats h4 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* A rule between the two readings, rather than a heading floating in space. */
+.scene-dialog-side > section + section {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+/* The status, with its own colour inside the control (§4a). */
+.scene-status {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.scene-status-dot {
+  position: absolute;
+  left: 12px;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  pointer-events: none;
+}
+
+.scene-status select {
+  width: 100%;
+  padding-left: 32px;
+}
+
+/* The pair in a strip of its own, so the arrow has something to sit in and
+   the two selects read as one question. */
+.scene-dialog-main .field-head {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.scene-dialog-main .scene-polarity {
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+/* The writer's words in the reading face, so they read like prose rather
+   than like a form. */
+.scene-prose {
+  font-family: Georgia, 'Times New Roman', 'Iowan Old Style', serif;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+/* Notes take the rest of the height, so there is no dead space under them. */
+.scene-dialog-notes {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.scene-dialog-notes textarea {
+  flex: 1 1 auto;
+  min-height: 90px;
+  resize: none;
+}
+
+/* The number as a mark rather than a word, and the chosen one filled. */
+.beat-entry-no {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.beat-entry.selected .beat-entry-no {
+  background: var(--gold);
+  color: var(--panel);
+}
+
+.beat-entry {
+  min-height: 44px;
+}
+
+/* The figures, where a reader expects a count. */
+.scene-dialog-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 40px;
+  padding: 0 18px 0 20px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-2);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.scene-dialog-foot strong {
+  color: var(--bright, var(--text));
+  font-weight: 600;
+}
+
+.scene-dialog-rule {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+}
+
+.scene-dialog-spacer {
+  flex: 1 1 auto;
+}
+
+.scene-dialog-saved {
+  color: var(--good, #8fc79a);
+}
+
+.scene-dialog-off {
+  color: var(--gold);
+}
+
+/*
+ * Three faults driving the real dialog caught, none of them visible to a test.
+ *
+ * The passages column **overflowed**: its list is a grid, and a grid item is
+ * sized by its content unless it is told otherwise — so a long passage title
+ * pushed the column wider than the panel and took the split button off the
+ * edge with it. The ellipsis on the title was there and had nothing to bite
+ * on.
+ */
+.scene-dialog-beats li {
+  min-width: 0;
+}
+
+.scene-dialog-body {
+  grid-template-columns: 220px minmax(0, 1fr) 240px;
+}
+
+.scene-dialog-side,
+.scene-dialog-beats {
+  padding: 20px 16px;
+}
+
+.scene-dialog-main.scene-dialog-middle {
+  padding: 20px 24px;
+  gap: 16px;
+}
+
+/* The number needs an edge of its own: a fill a shade off the column behind
+   it reads as no mark at all. */
+.beat-entry-no {
+  border: 1px solid var(--border);
+}
+
+.beat-entry.selected .beat-entry-no {
+  border-color: var(--gold);
+}
+
+/* The cut, as an outlined act rather than a small grey slab — it is the one
+   thing this column *does*, and it was the quietest control on the screen. */
+.scene-dialog-beats .split {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: none;
+}
+
+.scene-dialog-beats .split:disabled {
+  border-color: var(--border);
+  color: var(--muted);
+  opacity: 1;
+}
+
+/*
+ * Below the app's narrowest window the two readings go **over** the form
+ * rather than three columns squeezing into nothing — at 860px the status
+ * select was showing *First dra*.
+ *
+ * Two faults worth naming, because each drew a screen indistinguishable from
+ * one where the rule had never been written. `flex-wrap` on a **grid** does
+ * nothing at all, and that is what the first draft set. The second draft set
+ * the columns correctly and was **overruled by a later rule of equal
+ * specificity** — a media query buys no weight, so where it stands in the
+ * file is the whole of whether it is obeyed. It stands last.
+ */
+@media (max-width: 900px) {
+  .scene-dialog-body {
+    grid-template-columns: minmax(0, 1fr) 210px;
+  }
+
+  .scene-dialog-side {
+    grid-column: 1 / -1;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .scene-dialog-side > section + section {
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+}

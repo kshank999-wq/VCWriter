@@ -76,6 +76,27 @@ export const structuralUnitStatusSchema = z.enum([
 export type StructuralUnitStatus = z.infer<typeof structuralUnitStatusSchema>;
 
 /**
+ * What each status is **called** and what colour stands for it (addendum 02
+ * §5a, from Ken's *Chapter Details* restyle).
+ *
+ * One table, because there were two: the scene's own screen turned
+ * `draft_complete` into *draft complete* with a regular expression, and the
+ * Outliner wrote the five out by hand — so a sixth status would have appeared
+ * on one screen and not the other, and neither could say what colour it was.
+ * The words are sentence case because they are read rather than shouted.
+ */
+export const UNIT_STATUSES: ReadonlyArray<{ value: StructuralUnitStatus; label: string; colour: string }> = [
+  { value: 'outline', label: 'Outline', colour: '#6fa8dc' },
+  { value: 'drafting', label: 'Drafting', colour: '#e0b25b' },
+  { value: 'draft_complete', label: 'First draft', colour: '#d98a5f' },
+  { value: 'revised', label: 'Revised', colour: '#b58fd0' },
+  { value: 'final', label: 'Final', colour: '#8fc79a' },
+];
+
+export const unitStatusWords = (status: StructuralUnitStatus): { label: string; colour: string } =>
+  UNIT_STATUSES.find((one) => one.value === status) ?? UNIT_STATUSES[0]!;
+
+/**
  * A scene read as a story in miniature (spec §8.2).
  *
  * The Story Grid's question, asked of every scene: what is at stake, which

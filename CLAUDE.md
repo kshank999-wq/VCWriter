@@ -149,6 +149,41 @@ push live; the build takes a minute or two.
   alike), and **a control is a control** — a press on the name, the draft
   picker or *In script* is that control's and never the start of a drag, or
   naming a beat would slide the screen out from under the pointer.
+  **§4a is the scene's screen restyled**, from Ken with a handoff and a
+  mockup (*this is going to apply to all the scenes throughout all the
+  modules… just want to clean up the UI make it look a little more
+  elegant*) — a **visual restyle in place**, every binding and the
+  save-as-you-type untouched, so what is worth keeping is the handful of
+  places where a look turned out to be a statement about the work. **The
+  switch says what it is rather than *Off***: *off* means nothing on its own
+  — off *what*? — so a writer had to toggle it to find out, which is the one
+  thing a switch may never require; it reads *In manuscript* / *Not in the
+  manuscript* in the format's own noun, and is a `role="switch"` with
+  `aria-checked`, the same statement made to a screen reader. **What it is
+  comes before how it turns** — Status and Label, then the polarity pair,
+  then Summary, then Notes, because a writer opening a scene asks what state
+  this is in before how it moves — and the pair is **one strip** rather than
+  two loose selects, *begins* and *ends* being one reading (addendum 13 §1)
+  and two controls that must be read together looking like one. **The
+  breadcrumb is two lines** (what this is, then which plot, behind a dot in
+  the track's colour, two questions being two lines), the **name is the
+  reading face and is not uppercased** (a screen that shouts it back has
+  edited it), and `UNIT_STATUSES` in `entities/structure.ts` is the **one
+  table** naming the five states and their colours, so the select's dot and
+  anything else that draws one cannot disagree. The figures moved out of the
+  middle of the form, where they looked like another field's help text, into
+  a **status bar** beside *✓ Saved as you type*. Two things the handoff
+  asked for are **deliberately absent**: the *+ Add character* and *+ Link a
+  setup* buttons, both lists being **readings** — the cast off the cues, the
+  promises off the tagged passages — so neither has anything a button could
+  add, and what stands there instead is a sentence saying what makes a name
+  appear. Driving it caught four faults no test could see, and the last is
+  the one worth writing down: the narrow-window rule was **correct and
+  overruled by a later rule of equal specificity**, a media query buying no
+  weight, so where it stands in the file is the whole of whether it is
+  obeyed. (Its first draft set `flex-wrap` on a **grid**, which does nothing
+  at all — two different ways to draw a screen indistinguishable from one
+  where the rule was never written.)
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
   1–7 (the board and its two nodes, the structure column, the layout rule
   with scenes, beats, the columns the writer defines, binding a node to a real

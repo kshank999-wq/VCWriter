@@ -12,7 +12,8 @@ import {
   setSceneHeading,
   SETTINGS,
   splitUnit,
-  structuralUnitStatusSchema,
+  UNIT_STATUSES,
+  unitStatusWords,
   timecode,
   TIMES,
   addLocation,
@@ -134,30 +135,44 @@ function SceneDialogBody({
 
   return (
     <>
+      {/* The breadcrumb is **two lines** (§4a): what this is, then which plot
+          it is on with the plot's own colour beside it. On one line the two
+          facts ran together and the dot had nothing to sit against. */}
       <header style={{ borderLeftColor: track?.color }} className={unit.inScript ? '' : 'off'}>
-        <span className="scene-dialog-label muted">
-          {unit.sequenceLabel || noun}
-          {track ? ` · ${track.name}` : ''}
+        <span className="scene-dialog-where">
+          <span className="scene-dialog-kind">{unit.sequenceLabel || noun}</span>
+          {track ? (
+            <span className="scene-dialog-track">
+              <span className="scene-dialog-dot" style={{ background: track.color }} aria-hidden="true" />
+              {track.name}
+            </span>
+          ) : null}
         </span>
         <input
-          className="bar-title scene-dialog-name"
+          className="scene-dialog-name"
           aria-label={`${noun} name`}
           placeholder={`Untitled ${noun.toLowerCase()}`}
           value={unit.title}
           onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { title: event.target.value }))}
         />
-        <label className="switch" title={`Off: the ${noun.toLowerCase()} stays here and leaves the ${nouns.manuscript.toLowerCase()}`}>
-          <input
-            type="checkbox"
-            role="switch"
-            aria-label={`In ${nouns.manuscript.toLowerCase()}`}
-            checked={unit.inScript}
-            onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { inScript: event.target.checked }))}
-          />
-          <span className="switch-track" aria-hidden="true" />
-          <span className="switch-label">{unit.inScript ? `In ${nouns.manuscript.toLowerCase()}` : 'Off'}</span>
-        </label>
-        <button type="button" className="ghost" aria-label="Close" onClick={onClose}>
+        {/* A pill that says what it *is* rather than *Off* (§4a): a switch
+            whose label changes to a word meaning nothing on its own is one a
+            writer has to toggle to understand. */}
+        <button
+          type="button"
+          className={unit.inScript ? 'scene-dialog-ms on' : 'scene-dialog-ms'}
+          role="switch"
+          aria-checked={unit.inScript}
+          aria-label={`In ${nouns.manuscript.toLowerCase()}`}
+          title={`Off: the ${noun.toLowerCase()} stays here and leaves the ${nouns.manuscript.toLowerCase()}`}
+          onClick={() => onUpdate((current) => updateUnit(current, unit.id, { inScript: !unit.inScript }))}
+        >
+          <span className="scene-dialog-ms-track" aria-hidden="true">
+            <span />
+          </span>
+          {unit.inScript ? `In ${nouns.manuscript.toLowerCase()}` : `Not in the ${nouns.manuscript.toLowerCase()}`}
+        </button>
+        <button type="button" className="ghost scene-dialog-x" aria-label="Close" onClick={onClose}>
           ×
         </button>
       </header>
@@ -165,65 +180,71 @@ function SceneDialogBody({
       {prose ? null : <HeadingFields file={file} unit={unit} onUpdate={onUpdate} />}
 
       <div className="scene-dialog-body">
+        {/* Both of these are **readings** — the cast off the cues, the
+            promises off the passages that were tagged — so neither gets the
+            *+ Add* button the restyle drew. A button here could only refuse;
+            what makes a name appear is said instead (§4a). */}
         <aside className="scene-dialog-side" aria-label={`In this ${noun.toLowerCase()}`}>
-          <h4>Characters</h4>
-          {cast.length > 0 ? (
-            <ul>
-              {cast.map((name) => (
-                <li key={name}>{name}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="muted">No one speaks yet.</p>
-          )}
-          <h4>Setups &amp; payoffs</h4>
-          {promises.length > 0 ? (
-            <ul>
-              {promises.map((promise, index) => (
-                <li key={`${promise.record.id}-${promise.role}-${index}`}>
-                  <span className={`promise-role ${promise.role}`}>{promise.role}</span> {promise.record.title}
-                  {promise.point?.description ? <span className="muted"> · {promise.point.description}</span> : null}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="muted">Nothing set up or paid off here.</p>
-          )}
+          <section>
+            <h4>
+              Characters <span className="scene-dialog-count">{cast.length}</span>
+            </h4>
+            {cast.length > 0 ? (
+              <ul>
+                {cast.map((name) => (
+                  <li key={name}>{name}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted small">No one speaks yet. A name appears here when they do.</p>
+            )}
+          </section>
+          <section>
+            <h4>
+              Setups &amp; payoffs <span className="scene-dialog-count">{promises.length}</span>
+            </h4>
+            {promises.length > 0 ? (
+              <ul>
+                {promises.map((promise, index) => (
+                  <li key={`${promise.record.id}-${promise.role}-${index}`}>
+                    <span className={`promise-role ${promise.role}`}>{promise.role}</span> {promise.record.title}
+                    {promise.point?.description ? <span className="muted"> · {promise.point.description}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted small">Nothing set up or paid off here. Tag a passage and it appears.</p>
+            )}
+          </section>
         </aside>
 
+        {/* **What it is** before **how it turns** (§4a): the status and the
+            label name the scene, and the polarity is a reading about it. The
+            pair used to come first, which put the most derived thing at the
+            top of the screen. */}
         <div className="scene-dialog-main scene-dialog-middle">
-          {/* Where the scene begins and where it ends (addendum 13 §2). Here
-              because this is the scene's own screen, and because a control a
-              writer has to go and find is a control they set once. Whether it
-              is flat follows from the pair; there is nothing to answer. */}
-          <div className="scene-polarity">
-            <PolarityPair
-              start={(unit.grid?.polarityStart ?? '') as PolarityValue}
-              end={(unit.grid?.polarityEnd ?? '') as PolarityValue}
-              onChange={(patch) => onUpdate((current) => setPolarity(current, unit.id, patch))}
-            />
-            {turn.said ? (
-              <span className={turn.flat ? 'polarity-flat-chip' : 'muted small'}>
-                {turn.flat ? 'Flat — it ends where it started' : `Turns ${turn.direction === 1 ? 'up' : 'down'}`}
-              </span>
-            ) : null}
-          </div>
-
           <div className="field-row">
             <label className="field">
               Status
-              <select
-                value={unit.status}
-                onChange={(event) =>
-                  onUpdate((current) => updateUnit(current, unit.id, { status: event.target.value as StructuralUnit['status'] }))
-                }
-              >
-                {structuralUnitStatusSchema.options.map((status) => (
-                  <option key={status} value={status}>
-                    {status.replace(/_/g, ' ')}
-                  </option>
-                ))}
-              </select>
+              <span className="scene-status">
+                <span
+                  className="scene-status-dot"
+                  style={{ background: unitStatusWords(unit.status).colour }}
+                  aria-hidden="true"
+                />
+                <select
+                  value={unit.status}
+                  onChange={(event) =>
+                    onUpdate((current) => updateUnit(current, unit.id, { status: event.target.value as StructuralUnit['status'] }))
+                  }
+                >
+                  {UNIT_STATUSES.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
+              </span>
             </label>
             <label className="field">
               Label
@@ -234,30 +255,48 @@ function SceneDialogBody({
               />
             </label>
           </div>
+
+          {/* Where the scene begins and where it ends (addendum 13 §2). Here
+              because this is the scene's own screen, and because a control a
+              writer has to go and find is a control they set once. Whether it
+              is flat follows from the pair; there is nothing to answer. */}
+          <div className="field">
+            <span className="field-head">Scene polarity</span>
+            <div className="scene-polarity">
+              <PolarityPair
+                start={(unit.grid?.polarityStart ?? '') as PolarityValue}
+                end={(unit.grid?.polarityEnd ?? '') as PolarityValue}
+                onChange={(patch) => onUpdate((current) => setPolarity(current, unit.id, patch))}
+              />
+              {turn.said ? (
+                <span className={turn.flat ? 'polarity-flat-chip' : 'muted small'}>
+                  {turn.flat ? 'Flat — it ends where it started' : `Turns ${turn.direction === 1 ? 'up' : 'down'}`}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
           <label className="field">
             Summary
             <textarea
+              className="scene-prose"
               rows={3}
-              placeholder={`What happens in this ${noun.toLowerCase()}`}
+              placeholder={`What happens in this ${noun.toLowerCase()}?`}
               value={unit.summary}
               onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { summary: event.target.value }))}
             />
           </label>
-          <label className="field">
+          {/* Notes take whatever height is left, so the panel has no dead
+              space under it at any size. */}
+          <label className="field scene-dialog-notes">
             Notes
             <textarea
-              rows={6}
+              className="scene-prose"
               placeholder="Anything to remember while writing it"
               value={unit.notes}
               onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { notes: event.target.value }))}
             />
           </label>
-          <p className="muted">
-            {beats.length} {beats.length === 1 ? 'beat' : 'beats'} · {pages < 0.05 ? '0' : pages.toFixed(1)} pages ·{' '}
-            {timecode(pages)}.
-            {unit.inScript ? '' : ` Switched off: this ${noun.toLowerCase()} is not in the ${nouns.manuscript.toLowerCase()}, the preview or the exports.`}{' '}
-            Changes are kept as you type.
-          </p>
         </div>
 
         <BeatList
@@ -274,6 +313,34 @@ function SceneDialogBody({
           onSplit={split}
         />
       </div>
+
+      {/* The figures were a grey sentence under the notes, where they read as
+          another field's help text (§4a). A status bar puts them where a
+          reader expects a count, with the numbers bold and the sentence about
+          saving on the other side. */}
+      <footer className="scene-dialog-foot">
+        <span>
+          <strong>{beats.length}</strong> {beats.length === 1 ? nouns.sub.toLowerCase() : nouns.subPlural.toLowerCase()}
+        </span>
+        <span className="scene-dialog-rule" aria-hidden="true" />
+        <span>
+          <strong>{pages < 0.05 ? '0' : pages.toFixed(1)}</strong> pages
+        </span>
+        <span className="scene-dialog-rule" aria-hidden="true" />
+        <span>
+          <strong>{timecode(pages)}</strong> read time
+        </span>
+        {unit.inScript ? null : (
+          <>
+            <span className="scene-dialog-rule" aria-hidden="true" />
+            <span className="scene-dialog-off">
+              Not in the {nouns.manuscript.toLowerCase()}, the preview or the exports
+            </span>
+          </>
+        )}
+        <span className="scene-dialog-spacer" />
+        <span className="scene-dialog-saved">✓ Saved as you type</span>
+      </footer>
     </>
   );
 }
@@ -307,7 +374,9 @@ function BeatList({
   const at = beats.findIndex((beat) => beat.id === selected);
   return (
     <aside className="scene-dialog-beats" aria-label={subPlural}>
-      <h4>{subPlural}</h4>
+      <h4>
+        {subPlural} <span className="scene-dialog-count">{beats.length}</span>
+      </h4>
       {beats.length > 0 ? (
         <ul>
           {beats.map((beat, position) => (
@@ -320,7 +389,9 @@ function BeatList({
                 onClick={() => onSelect(beat.id)}
                 onDoubleClick={() => onOpen?.(beat.id)}
               >
-                <span className="muted">{position + 1}</span>
+                {/* The number is a mark rather than a word beside the name,
+                    so a list of ten reads as a list rather than as prose. */}
+                <span className="beat-entry-no">{position + 1}</span>
                 <span className="beat-entry-title">{beat.title || `Untitled ${sub.toLowerCase()}`}</span>
                 {beat.color ? <span className="beat-entry-dot" style={{ background: beat.color }} aria-hidden="true" /> : null}
               </button>
@@ -328,7 +399,7 @@ function BeatList({
           ))}
         </ul>
       ) : (
-        <p className="muted">No {subPlural.toLowerCase()} yet.</p>
+        <p className="muted small">No {subPlural.toLowerCase()} yet.</p>
       )}
       <button
         type="button"
