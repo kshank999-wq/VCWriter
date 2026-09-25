@@ -249,3 +249,49 @@ describe('what a change to the graph does', () => {
     expect(screen.getByText('3 nodes · 3 connections · 1 converging.')).toBeDefined();
   });
 });
+
+/** Addendum 25 §3: objectives written on the scene, shown on the Player Lane. */
+describe('the Player Lane', () => {
+  const oneScene = (): ProjectFile => {
+    const start = createProjectFile({ title: 'The Sunken Vault', format: 'game' });
+    return start;
+  };
+
+  const dropFirstScene = () => {
+    fireEvent.click(screen.getByRole('button', { name: /New scene/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the story' }));
+  };
+
+  it('shows an objective under its scene as soon as it is written', () => {
+    const { container } = render(<Harness initial={oneScene()} />);
+    dropFirstScene();
+    expect(container.querySelector('.narrmap-player-band')).not.toBeNull();
+    expect(screen.getAllByText('Nothing asked of the player yet').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Objective' }));
+    fireEvent.change(screen.getByLabelText('The objective'), { target: { value: 'Find the vault key' } });
+    const lane = container.querySelector('.narrmap-player-scene')!;
+    expect(lane.textContent).toContain('Find the vault key');
+    expect(lane.textContent).toContain('Do');
+    // Done on arrival until it asks for something, and it says so.
+    expect(screen.getByText('Done as soon as the player is here.')).toBeDefined();
+  });
+
+  it('strings objectives into a quest and lists its steps', () => {
+    render(<Harness initial={oneScene()} />);
+    dropFirstScene();
+    fireEvent.click(screen.getByRole('button', { name: '+ Objective' }));
+    fireEvent.change(screen.getByLabelText('The objective'), { target: { value: 'Find the vault key' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Quests/ }));
+    fireEvent.click(screen.getByRole('button', { name: '+ Quest' }));
+    fireEvent.change(screen.getByLabelText("The quest's name"), { target: { value: 'The Lost Expedition' } });
+    expect(screen.getByText(/No objectives yet/)).toBeDefined();
+
+    fireEvent.change(screen.getByLabelText('The quest this objective is a step of'), {
+      target: { value: screen.getByRole('option', { name: 'The Lost Expedition' }).getAttribute('value') },
+    });
+    expect(screen.getByText('Find the vault key — done on arrival')).toBeDefined();
+    expect(screen.getByText(/scene 2 · New scene/)).toBeDefined();
+  });
+});

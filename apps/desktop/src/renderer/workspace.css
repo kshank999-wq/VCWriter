@@ -13609,6 +13609,124 @@ dialog.chapter-page-dialog {
   text-transform: uppercase;
 }
 
+/* The Player Lane, under the spine (addendum 25 §3): what the player does in
+   each scene, read off its objectives and its rules. Quieter than the spine's
+   band, because it is about the spine rather than beside it. */
+.narrmap-player-band {
+  fill: var(--panel);
+  opacity: 0.7;
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.narrmap-player-scene {
+  cursor: pointer;
+}
+
+.narrmap-player-hit {
+  fill: transparent;
+  stroke: transparent;
+  rx: 2px;
+}
+
+.narrmap-player-scene:hover .narrmap-player-hit,
+.narrmap-player-scene:focus-visible .narrmap-player-hit {
+  stroke: var(--border);
+}
+
+.narrmap-player-scene.is-selected .narrmap-player-hit {
+  stroke: var(--gold-deep);
+}
+
+.narrmap-player-scene:focus-visible {
+  outline: none;
+}
+
+.narrmap-player-line {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.narrmap-player-line.kind-objective {
+  fill: var(--text);
+}
+
+.narrmap-player-empty {
+  fill: var(--muted);
+  font-size: 10.5px;
+  font-style: italic;
+}
+
+.narrmap-lane-word {
+  fill: var(--gold);
+  color: var(--gold);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.narrmap-objectives {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.narrmap-lane-read {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.narrmap-quest-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.narrmap-quest-steps {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+
+/* The number is drawn beside the step rather than by the list, because a
+   button cannot flow as text: when a long step wraps, the number stays on
+   its first line. */
+ol.narrmap-quest-steps > li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 1.5em minmax(0, 1fr);
+}
+
+ol.narrmap-quest-steps > li::before {
+  content: counter(step) '.';
+  color: var(--muted);
+}
+
+ul.narrmap-quest-steps > li::before {
+  content: '·';
+  color: var(--muted);
+  margin-right: 6px;
+}
+
+.narrmap-quest-steps .link {
+  box-shadow: none;
+  white-space: normal;
+}
+
 /* The tray: two cards that write a scene or a beat into the story where they
    are dropped. Raised like every button, gold while one is being carried. */
 .narrmap-tray {

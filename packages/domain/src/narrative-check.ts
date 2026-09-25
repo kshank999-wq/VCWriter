@@ -1,3 +1,4 @@
+import { objectiveConditions } from './narrative-objectives.js';
 import {
   allConditions,
   allEffects,
@@ -384,7 +385,12 @@ const impossibleTogether = (file: ProjectFile, first: Condition, second: Conditi
  * is a definition somebody made and has not used yet, which is one fact.
  */
 export const orphanState = (file: ProjectFile): Finding[] => {
-  const read = new Set(allConditions(file).map((one) => one.condition.subjectId));
+  // An objective reading a state is a read (addendum 25 §3): *find the key*
+  // done when `has_key` is true makes `has_key` matter.
+  const read = new Set([
+    ...allConditions(file).map((one) => one.condition.subjectId),
+    ...objectiveConditions(file).map((one) => one.condition.subjectId),
+  ]);
   const written = new Set(allEffects(file).map((one) => one.effect.targetId));
 
   return statesOf(file).flatMap((state): Finding[] => {

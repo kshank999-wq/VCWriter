@@ -18,7 +18,7 @@ The two specs are kept beside this addendum as
 [`game-studio-spec-v1.md`](game-studio-spec-v1.md). The Game Studio spec
 calls the narrative module *VC Rider*; it is this one.
 
-**Status: stages 0 and 1 built.** §9 is the build order; §12 says what each built stage does.
+**Status: stages 0, 1 and 2 built.** §9 is the build order; §12 says what each built stage does.
 
 ---
 
@@ -470,3 +470,55 @@ marks sat on top of each other on every spine connection, and one floated in
 empty space over a loop. Escape puts the card back. An empty board now draws
 the lane, with a single *Start the story* mark, rather than a sentence and
 nothing to aim at.
+
+### Stage 2 — objectives, quests and the Player Lane
+
+`entities/narrative.ts` (`objectiveSchema`, `questSchema`),
+`narrative-objectives.ts`, `NarrativeQuestsPanel.tsx`, and the lane on the
+map.
+
+**An objective is the one stored record, and its completion is a
+condition.** `objectiveDone` is `meetsGroup` on the player's state, so the
+simulator, the rule builder and the checks all read it without being told
+what an objective is. There is no *done* flag anywhere. A **scene is complete**
+when every mandatory objective under it is done (`sceneCompletion`), which is
+the spec's *scene completion may require…* with no second rule behind it. A
+**quest** stores its name; its steps are the objectives that name it, and
+`questProgress` reads how far a player has got and what is next.
+
+**The lane is read, not kept.** `playerLane` walks the story order and, for
+each scene, lists its objectives and then what the nodes bound to its beats
+say: *decide* for a node with more than one choice, *needs* for a resource a
+rule asks for, *gets* and *uses* for `grant` and `consume`, *learns* for
+`reveal`, *overcomes* for an encounter or a mission. Each resource is said
+once per scene however many rules mention it. A branch off the spine is not on
+the lane: the lane is the way through, and a branch is drawn where it is.
+
+Four decisions the tests hold down:
+
+- **Deleting a state or a resource takes it out of objectives too**, as it
+  does out of every other rule: a condition about nothing cannot be evaluated.
+- **An objective reading a state counts as a read**, so the orphan check no
+  longer calls a state *set but never read* when an objective asks about it.
+  The other checks that walk `allConditions` are about where on the graph a
+  rule sits, and an objective sits on a scene, so they are unchanged.
+- **Cutting a scene loses no objective.** One under a scene that no longer
+  exists is read as *not under a scene* and waits in the Quests panel to be
+  put somewhere, rather than being deleted with the scene.
+- **Removing a quest keeps its objectives**, in no quest.
+
+The map keeps **one row directly under the spine** for the lane
+(`playerRow`); no node is placed in it, and branches below the spine start a
+row further down. Each scene's lines sit under its first card on the spine,
+objectives first, five at most and then *+ n more*. Pressing a scene's lines
+opens its node beside the map, where the **Player lane** section writes its
+objectives: the name, whether the scene needs it, its quest, and *done when* in
+the same rule builder every other condition uses. The side panel also lists
+what the lane read from the rules, so a designer can see why a line is there.
+
+Driving the real renderer caught one layout fault: a quest step long enough to
+wrap put its number on the second line, because a button cannot flow as text.
+The steps are now numbered beside themselves, in a two-column grid. And the
+panel's new objective opens itself once it has **arrived in the file**, not
+from inside the mutation, because the document is shared over the link and the
+mutation may run after the click has returned — a test caught that one.

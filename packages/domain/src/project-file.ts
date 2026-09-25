@@ -11,6 +11,8 @@ import { implementationBindingSchema } from './entities/implementation.js';
 import {
   choiceSchema,
   narrativeElementSchema,
+  objectiveSchema,
+  questSchema,
   resourceDefinitionSchema,
   simulationRunSchema,
   stateDefinitionSchema,
@@ -164,6 +166,9 @@ export const projectFileSchema = z.object({
   resourceDefinitions: z.array(resourceDefinitionSchema).default([]),
   /** Saved playthroughs (addendum 18 §13) — the module's one stored thing. */
   simulationRuns: z.array(simulationRunSchema).default([]),
+  /** What the player must do, and the quests that string it together (addendum 25 §3). */
+  objectives: z.array(objectiveSchema).default([]),
+  quests: z.array(questSchema).default([]),
   /** What the designer said the game is (addendum 18 §2). */
   gameSetup: gameSetupSchema.nullable().default(null),
   /**

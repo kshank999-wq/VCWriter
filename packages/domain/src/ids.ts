@@ -74,6 +74,12 @@ export type StateDefinitionId = Id<'StateDefinition'>;
 export type ResourceDefinitionId = Id<'ResourceDefinition'>;
 export type SimulationRunId = Id<'SimulationRun'>;
 /**
+ * The Player Lane's one stored record, and the quests that string objectives
+ * together (addendum 25 §3).
+ */
+export type ObjectiveId = Id<'Objective'>;
+export type QuestId = Id<'Quest'>;
+/**
  * Game Studio's record that an authored thing has been built in an engine
  * (addendum 25 §2). VC Writer carries these and reads their status; it never
  * makes one.

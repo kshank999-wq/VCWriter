@@ -4,6 +4,7 @@ import { ConditionGroupEditor, ContributorList, EffectList, RuleSentence } from 
 import { NarrativeWorldPanel } from './NarrativeWorldPanel';
 import { NarrativePlayPanel } from './NarrativePlayPanel';
 import { NarrativeEndingsPanel } from './NarrativeEndingsPanel';
+import { NarrativeQuestsPanel } from './NarrativeQuestsPanel';
 import {
   addChoice,
   addElement,
@@ -13,6 +14,14 @@ import {
   dropIntoLane,
   dropOnConnection,
   laneSlots,
+  addObjective,
+  objectivesIn,
+  playerLane,
+  questsOf,
+  removeObjective,
+  updateObjective,
+  LANE_WORDS,
+  type LaneScene,
   findElement,
   findingsAt,
   narrativeMap,
@@ -89,6 +98,10 @@ const clip = (text: string, most: number): string =>
 
 /** How far the lane's band reaches past a card above and below. */
 const LANE_PAD = 14;
+/** The Player Lane's band: one row, under the spine's. */
+const PLAYER_H = ROW - 12;
+/** The most lines a scene shows on the lane before saying how many more. */
+const PLAYER_LINES = 5;
 
 const CARD_WORDS: Record<LaneCard, string> = { scene: 'New scene', beat: 'New beat' };
 const CARD_TIPS: Record<LaneCard, string> = {
@@ -158,6 +171,9 @@ export function NarrativeMapWindow({
   const [overlay, setOverlay] = useState<string | null>(null);
   const [playOpen, setPlayOpen] = useState(false);
   const [endingsOpen, setEndingsOpen] = useState(false);
+  const [questsOpen, setQuestsOpen] = useState(false);
+  /** Which objective has its *done when* rule open. One at a time, as choices. */
+  const [openObjective, setOpenObjective] = useState<string | null>(null);
   /** The path being walked, so §9's *path preview* is drawn on the board. */
   const [walkingId, setWalkingId] = useState<SimulationRunId | null>(null);
   /** Which choice has its rule open. One at a time: three WHENs is a wall. */
@@ -219,6 +235,27 @@ export function NarrativeMapWindow({
   const along = new Set((walking?.steps ?? []).map((one) => one as string));
 
   const selected = selectedId ? findElement(file, selectedId) : null;
+  /** The scene the selected node's beat is in, for its Player Lane objectives. */
+  const selectedUnitId = selected?.boundBeatId
+    ? (file.beats.find((one) => one.id === selected.boundBeatId)?.unitId ?? null)
+    : null;
+  const lane = useMemo(() => playerLane(file), [file]);
+
+  /**
+   * Open a new objective's *done when* as soon as it exists. Read off the file
+   * once it has arrived rather than caught from inside the mutation, because the
+   * document is shared over the link and the mutation may run after this
+   * handler has returned.
+   */
+  const wantsNewObjective = useRef(false);
+  useEffect(() => {
+    if (!wantsNewObjective.current || !selectedUnitId) return;
+    const newest = objectivesIn(file, selectedUnitId).at(-1);
+    if (!newest) return;
+    wantsNewObjective.current = false;
+    setOpenObjective(newest.id as string);
+  }, [file, selectedUnitId]);
+  const selectedLane = selectedUnitId ? lane.find((one) => one.unitId === selectedUnitId) ?? null : null;
   const rows = selectedId ? choicesFor(file, selectedId) : [];
   const notes = selectedId ? findingsAt(file, selectedId) : [];
 
@@ -259,6 +296,7 @@ export function NarrativeMapWindow({
   const unitOfBeat = new Map(file.beats.map((one) => [one.id as string, one.unitId as string]));
   const spineCards = map.nodes.filter((one) => one.lane === 'spine').sort((a, b) => a.column - b.column);
   const laneY = MARGIN + map.laneRow * ROW + CARD_H / 2;
+  const playerTop = laneY + CARD_H / 2 + LANE_PAD + 6;
   const slots = laneSlots(file);
   const slotBefore = (unitId: string): StructuralUnitId | null => {
     const at = slots.findIndex((one) => one.afterUnitId === unitId);
@@ -335,6 +373,15 @@ export function NarrativeMapWindow({
           onClick={() => setPlayOpen(!playOpen)}
         >
           ▶ Play it
+        </button>
+        <button
+          type="button"
+          className={questsOpen ? 'tool on' : 'tool'}
+          aria-pressed={questsOpen}
+          title="Quests: objectives strung together in order"
+          onClick={() => setQuestsOpen(!questsOpen)}
+        >
+          ☰ Quests
         </button>
         <button
           type="button"
@@ -447,6 +494,18 @@ export function NarrativeMapWindow({
           />
         ) : null}
 
+        {questsOpen ? (
+          <NarrativeQuestsPanel
+            file={file}
+            onUpdate={onUpdate}
+            onClose={() => setQuestsOpen(false)}
+            onGoToScene={(unitId) => {
+              const scene = lane.find((one) => one.unitId === unitId);
+              if (scene?.nodes[0]) setSelectedId(scene.nodes[0].id);
+            }}
+          />
+        ) : null}
+
         {endingsOpen ? (
           <NarrativeEndingsPanel file={file} onClose={() => setEndingsOpen(false)} onGoTo={setSelectedId} />
         ) : null}
@@ -481,6 +540,37 @@ export function NarrativeMapWindow({
                 <text x={MARGIN} y={laneY - CARD_H / 2 - 4} className="narrmap-lane-label">
                   Spine
                 </text>
+              </g>
+
+              {/* The Player Lane, directly under the spine (addendum 25 §3):
+                  what the player does in each scene, read off its objectives
+                  and its nodes. Under the scene's first card on the spine. */}
+              <g className="narrmap-player-lane">
+                <rect
+                  x={0}
+                  y={playerTop}
+                  width={width}
+                  height={PLAYER_H}
+                  className="narrmap-player-band"
+                  aria-hidden="true"
+                />
+                <text x={MARGIN} y={playerTop + 12} className="narrmap-lane-label" aria-hidden="true">
+                  Player lane
+                </text>
+                {lane.map((scene) => {
+                  const card = scene.nodes.map((one) => placed.get(one.id as string)).find((one) => one?.lane === 'spine');
+                  if (!card) return null;
+                  return (
+                    <PlayerLaneColumn
+                      key={scene.unitId as string}
+                      scene={scene}
+                      x={xOf(card)}
+                      y={playerTop + 28}
+                      selected={scene.unitId === selectedUnitId}
+                      onPick={() => setSelectedId(card.element.id)}
+                    />
+                  );
+                })}
               </g>
 
               {map.links.map((link) => (
@@ -650,6 +740,126 @@ export function NarrativeMapWindow({
                     </label>
                   ) : null}
                 </>
+              ) : null}
+
+              {/* The Player Lane for this node's scene: its objectives, written
+                  here, and what the rest of the lane reads off the rules. Absent
+                  on a node that is not on the spine — the lane is the way
+                  through, and a branch has no scene of its own. */}
+              {selectedUnitId && selectedLane ? (
+                <section className="narrmap-objectives" aria-label="The Player Lane for this scene">
+                  <h3>Player lane · scene {selectedLane.position}</h3>
+                  {objectivesIn(file, selectedUnitId).length === 0 ? (
+                    <p className="muted small">What must the player do here? Add an objective.</p>
+                  ) : null}
+                  <ul className="narrmap-choices">
+                    {objectivesIn(file, selectedUnitId).map((objective) => {
+                      const id = objective.id as string;
+                      const open = openObjective === id;
+                      return (
+                        <li key={id}>
+                          <div className="rule-row">
+                            <input
+                              value={objective.name}
+                              placeholder="What the player must do"
+                              aria-label="The objective"
+                              onChange={(event) =>
+                                onUpdate((current) => updateObjective(current, objective.id, { name: event.target.value }))
+                              }
+                            />
+                            <button
+                              type="button"
+                              className="ghost small"
+                              aria-expanded={open}
+                              aria-label={`What makes ${objective.name || 'this objective'} done`}
+                              onClick={() => setOpenObjective(open ? null : id)}
+                            >
+                              {open ? '▴' : '▾'}
+                            </button>
+                            <button
+                              type="button"
+                              className="ghost small"
+                              aria-label={`Remove ${objective.name || 'the objective'}`}
+                              onClick={() => onUpdate((current) => removeObjective(current, objective.id))}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <RuleSentence file={file} group={objective.complete} empty="Done as soon as the player is here." />
+                          {open ? (
+                            <div className="rule-open">
+                              <h4>DONE WHEN</h4>
+                              <ConditionGroupEditor
+                                file={file}
+                                group={objective.complete}
+                                onChange={(next: ConditionGroup) =>
+                                  onUpdate((current) => updateObjective(current, objective.id, { complete: next }))
+                                }
+                              />
+                              <label>
+                                <input
+                                  type="checkbox"
+                                  checked={objective.mandatory}
+                                  onChange={(event) =>
+                                    onUpdate((current) =>
+                                      updateObjective(current, objective.id, { mandatory: event.target.checked }),
+                                    )
+                                  }
+                                />
+                                <span className="small">The scene is not complete without it</span>
+                              </label>
+                              <label className="sculpt-view">
+                                <span className="muted small">Quest</span>
+                                <select
+                                  value={(objective.questId as string) ?? ''}
+                                  aria-label="The quest this objective is a step of"
+                                  onChange={(event) =>
+                                    onUpdate((current) =>
+                                      updateObjective(current, objective.id, {
+                                        questId: (event.target.value || null) as never,
+                                      }),
+                                    )
+                                  }
+                                >
+                                  <option value="">No quest</option>
+                                  {questsOf(file).map((quest) => (
+                                    <option key={quest.id as string} value={quest.id as string}>
+                                      {quest.name || 'Untitled quest'}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            </div>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <button
+                    type="button"
+                    className="tool"
+                    onClick={() => {
+                      wantsNewObjective.current = true;
+                      onUpdate((current) => addObjective(current, { name: '', unitId: selectedUnitId }).file);
+                    }}
+                  >
+                    + Objective
+                  </button>
+                  {selectedLane.items.some((one) => one.kind !== 'objective') ? (
+                    <>
+                      <h4>Read from the rules</h4>
+                      <ul className="narrmap-lane-read">
+                        {selectedLane.items
+                          .filter((one) => one.kind !== 'objective')
+                          .map((one, index) => (
+                            <li key={`${one.kind}-${index}`}>
+                              <span className="narrmap-lane-word">{LANE_WORDS[one.kind]}</span> {one.text}
+                            </li>
+                          ))}
+                      </ul>
+                    </>
+                  ) : null}
+                </section>
               ) : null}
 
               <h3>Choices</h3>
@@ -930,6 +1140,69 @@ function DropMark({
       <circle r={lane ? 13 : 10} className="narrmap-drop-ring" />
       <path d="M -5 0 H 5 M 0 -5 V 5" className="narrmap-drop-plus" />
       <title>{label}</title>
+    </g>
+  );
+}
+
+/**
+ * One scene's lines on the Player Lane: objectives first, then what the rules
+ * say the player decides, needs, gets, uses, learns and overcomes. Each line
+ * is a reading; pressing the column opens the scene's node beside the map,
+ * where objectives are written.
+ */
+function PlayerLaneColumn({
+  scene,
+  x,
+  y,
+  selected,
+  onPick,
+}: {
+  scene: LaneScene;
+  x: number;
+  y: number;
+  selected: boolean;
+  onPick(): void;
+}) {
+  const shown = scene.items.slice(0, PLAYER_LINES);
+  const more = scene.items.length - shown.length;
+  const classes = ['narrmap-player-scene'];
+  if (selected) classes.push('is-selected');
+  const said = scene.items.map((one) => `${LANE_WORDS[one.kind]} ${one.text}`).join('; ');
+  return (
+    <g
+      className={classes.join(' ')}
+      transform={`translate(${x} ${y})`}
+      role="button"
+      tabIndex={0}
+      aria-label={`Player lane, scene ${scene.position}: ${said || 'nothing yet'}`}
+      onClick={onPick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onPick();
+        }
+      }}
+    >
+      <rect x={-6} y={-14} width={CARD_W + 12} height={PLAYER_H - 22} className="narrmap-player-hit" />
+      {shown.length === 0 ? (
+        <text className="narrmap-player-empty">Nothing asked of the player yet</text>
+      ) : (
+        shown.map((one, index) => (
+          <text key={`${one.kind}-${index}`} y={index * 16} className={`narrmap-player-line kind-${one.kind}`}>
+            <tspan className="narrmap-lane-word">{LANE_WORDS[one.kind]}</tspan>
+            <tspan dx={6}>
+              {clip(one.text, 26)}
+              {one.kind === 'objective' && one.mandatory === false ? ' (optional)' : ''}
+            </tspan>
+          </text>
+        ))
+      )}
+      {more > 0 ? (
+        <text y={shown.length * 16} className="narrmap-player-empty">
+          {`+ ${more} more`}
+        </text>
+      ) : null}
+      <title>{said || 'Nothing asked of the player yet'}</title>
     </g>
   );
 }

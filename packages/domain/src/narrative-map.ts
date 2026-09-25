@@ -95,6 +95,12 @@ export interface NarrativeMap {
   strandedCount: number;
   /** The row the spine runs along, with branches above and below it. */
   laneRow: number;
+  /**
+   * The row directly under the spine that the Player Lane is drawn in
+   * (addendum 25 §3). No node is ever placed in it: branches below the spine
+   * start one row further down.
+   */
+  playerRow: number;
 }
 
 export interface GraphFilter {
@@ -322,7 +328,8 @@ export const narrativeMap = (file: ProjectFile, filter: GraphFilter = {}): Narra
   // Rows counted from the top: the highest branch is row 0 and the lane sits
   // as far down as the tallest stack above it.
   const laneRow = nodes.length === 0 ? 0 : -Math.min(0, ...nodes.map((one) => one.offset));
-  for (const node of nodes) node.row = node.offset + laneRow;
+  const playerRow = laneRow + 1;
+  for (const node of nodes) node.row = node.offset + laneRow + (node.offset > 0 ? 1 : 0);
 
   const placed = new Map(nodes.map((one) => [one.element.id as string, one]));
   const links: GraphLink[] = [];
@@ -352,9 +359,10 @@ export const narrativeMap = (file: ProjectFile, filter: GraphFilter = {}): Narra
     nodes,
     links,
     columns: nodes.length === 0 ? 0 : Math.max(...nodes.map((one) => one.column)) + 1,
-    rows: nodes.length === 0 ? 0 : Math.max(...nodes.map((one) => one.row)) + 1,
+    rows: nodes.length === 0 ? 0 : Math.max(playerRow, ...nodes.map((one) => one.row)) + 1,
     strandedCount: nodes.filter((one) => one.stranded).length,
     laneRow,
+    playerRow,
   };
 };
 

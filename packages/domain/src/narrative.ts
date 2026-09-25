@@ -254,6 +254,11 @@ export const removeState = (file: ProjectFile, stateId: StateDefinitionId): Proj
       conditions: withoutSubject(one.conditions, stateId as string),
       effects: one.effects.filter((effect) => effect.targetId !== (stateId as string)),
     })),
+    // An objective's completion is a rule like any other (addendum 25 §3).
+    objectives: (file.objectives ?? []).map((one) => ({
+      ...one,
+      complete: withoutSubject(one.complete, stateId as string),
+    })),
   });
 
 /** A group with every mention of one subject taken out, at any depth. */
@@ -319,6 +324,11 @@ export const removeResource = (file: ProjectFile, resourceId: ResourceDefinition
       ...one,
       conditions: withoutSubject(one.conditions, resourceId as string),
       effects: one.effects.filter((effect) => effect.targetId !== (resourceId as string)),
+    })),
+    // An objective's completion is a rule like any other (addendum 25 §3).
+    objectives: (file.objectives ?? []).map((one) => ({
+      ...one,
+      complete: withoutSubject(one.complete, resourceId as string),
     })),
   });
 

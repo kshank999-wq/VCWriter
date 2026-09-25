@@ -4,8 +4,11 @@ import type {
   BeatId,
   ChoiceId,
   NarrativeElementId,
+  ObjectiveId,
   ProjectId,
+  QuestId,
   ResourceDefinitionId,
+  StructuralUnitId,
   SimulationRunId,
   StateDefinitionId,
 } from '../ids.js';
@@ -414,6 +417,60 @@ export const choiceSchema = z.object({
   ...timestamps,
 });
 export type Choice = z.infer<typeof choiceSchema>;
+
+// ------------------------------------------ objectives and quests (add. 25 §3)
+
+/**
+ * What the player has to do: *find the vault key* (addendum 25 §3).
+ *
+ * The Player Lane is mostly a **reading** — what the player decides, gets,
+ * spends and learns is already written down on the nodes and their choices.
+ * An objective is the one thing that is not: it is not a choice, a resource or
+ * a state, and addendum 18 §7 already said a setup-and-payoff is not close
+ * enough. So it is the lane's one stored record.
+ *
+ * **Its completion is a condition**, so the one `evaluate` decides it, the rule
+ * builder edits it and `sayCondition` reads it back. Nothing new evaluates
+ * anything, and there is no stored *done* flag: whether an objective is done is
+ * read off the player's state, like everything else in a run.
+ */
+export const objectiveSchema = z.object({
+  id: id<ObjectiveId>(),
+  projectId: id<ProjectId>(),
+  /** *Find the vault key.* What the Player Lane shows. */
+  name: z.string().default(''),
+  note: z.string().default(''),
+  /** The scene it sits under on the lane, or null for one not yet placed. */
+  unitId: id<StructuralUnitId>().nullable().default(null),
+  /** The quest it is a step of, if any. */
+  questId: id<QuestId>().nullable().default(null),
+  /**
+   * The scene is not complete without it — which is all *scene completion*
+   * means (spec §9): a scene's mandatory objectives, read, not a second rule.
+   */
+  mandatory: z.boolean().default(true),
+  /** What makes it done. Empty is done on arrival, like an ungated node. */
+  complete: conditionGroupSchema.default(emptyConditions()),
+  /** Its order within its scene, and within its quest. */
+  orderKey: orderKey(),
+  ...timestamps,
+});
+export type Objective = z.infer<typeof objectiveSchema>;
+
+/**
+ * Objectives in order: *a small state machine* (addendum 18 §7), whose state
+ * is which of its objectives are done — a reading too, so a quest stores only
+ * its name. Its steps are the objectives that name it.
+ */
+export const questSchema = z.object({
+  id: id<QuestId>(),
+  projectId: id<ProjectId>(),
+  name: z.string().default(''),
+  note: z.string().default(''),
+  orderKey: orderKey(),
+  ...timestamps,
+});
+export type Quest = z.infer<typeof questSchema>;
 
 // ------------------------------------------------------- a playthrough (§13)
 

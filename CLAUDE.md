@@ -1213,6 +1213,19 @@ push live; the build takes a minute or two.
   scenes that were not connected; the end of the lane and the start are the
   two places a link is added. Drop marks show only while a card is carried,
   and never on a spine link (the lane slot is the same drop) or a line back.
+  **Stage 2 is objectives, quests and the Player Lane** (§3,
+  `narrative-objectives.ts`). An **objective is the lane's one stored
+  record** and its `complete` is a `ConditionGroup`, so *done* is
+  `meetsGroup` on a play state and never a flag; a scene is complete when its
+  mandatory objectives are done; a quest stores only its name and its steps
+  are the objectives that name it. **`playerLane` reads the rest** off the
+  nodes bound to each scene's beats (decide, needs, gets, uses, learns,
+  overcomes). `removeState`/`removeResource` now strip objectives too, and
+  `orphanState` counts an objective's read — `allConditions` is deliberately
+  **not** widened, because its other callers reason about where on the graph
+  a rule sits. The map keeps `playerRow` (under the spine) empty of nodes. A
+  new objective is opened once it is **in the file** (a ref and an effect),
+  not by catching its id inside `onUpdate`, which may run after the click.
   `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
   Ken after using instructional mode: chapters, sections and subsections
   worked out first, then put on the track. **All six stages of §9 are
