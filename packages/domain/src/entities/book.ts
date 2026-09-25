@@ -201,6 +201,19 @@ export const bookPartSchema = z.object({
   /** The picture, for a plate: an id in the graphics library. */
   assetId: z.string().nullable().default(null),
   /**
+   * **Leave the back of this leaf blank** (addendum 20 §17d, from Ken: *on
+   * the title page, there needs to be an option to leave the back of the page
+   * blank, because it could be a printed page on different paper*).
+   *
+   * It is the same question §9i answered of a picture in the writing, asked
+   * of a part: the page takes a **recto** so the leaf after it really is its
+   * back, and a `blank` block follows — counted like every page and printing
+   * no folio. On the title page that means the copyright page comes off its
+   * reverse and onto the next leaf, which is what a title page printed on
+   * heavier or coloured stock needs.
+   */
+  backBlank: z.boolean().default(false),
+  /**
    * A **logotype** in place of the typed title, on a designed page (§9n): an
    * id in the graphics library, like every other picture the book uses.
    *

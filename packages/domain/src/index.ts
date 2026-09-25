@@ -87,6 +87,7 @@ export * from './beat-peek.js';
 export * from './back-matter.js';
 export * from './back-matter-pages.js';
 export * from './back-matter-capture.js';
+export * from './back-matter-import.js';
 export * from './back-matter-pull.js';
 export * from './sinks.js';
 export * from './running-heads.js';

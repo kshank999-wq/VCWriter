@@ -36,6 +36,7 @@ import {
   titlePageShown,
   titleTemplateOf,
   titleTemplatePatch,
+  partTakesBlankBack,
   updatePart,
   type BookPart,
   type PartMode,
@@ -970,15 +971,56 @@ function Body({
             </section>
           ) : null}
 
+          {/* **The back of the leaf** (§17d, from Ken: *there needs to be an
+              option to leave the back of the page blank, because it could be
+              a printed page on different paper*). It is §9i's mechanism asked
+              of a part, and it is a real choice rather than a convention —
+              which is why the sentence under it had to stop stating the old
+              answer as a fixed one. Absent on a page that flows, there being
+              no single back to leave. */}
+          {partTakesBlankBack(part.kind) ? (
+            <section className="dp-card">
+              <h3>
+                <span className="dp-num">{isTitle ? 4 : 3}</span> The back of this leaf
+              </h3>
+              <button
+                type="button"
+                className="dp-switch"
+                role="switch"
+                aria-checked={part.backBlank}
+                aria-label="Leave the back of this page blank"
+                onClick={() => onUpdate((current) => updatePart(current, part.id, { backBlank: !part.backBlank }))}
+              >
+                <span className={part.backBlank ? 'dp-switch-track on' : 'dp-switch-track'} aria-hidden="true">
+                  <span />
+                </span>
+                Leave the back blank
+              </button>
+              <p className="muted small">
+                {part.backBlank
+                  ? `This page takes a right-hand leaf and nothing prints on its reverse${
+                      // **The next left-hand page, not the next page.** A
+                      // copyright page is a verso by convention, so blanking
+                      // the title page's back sends it two leaves on and
+                      // leaves a second blank between — which a writer sees
+                      // in the rail and would otherwise read as a fault.
+                      isTitle ? ', so the copyright page moves to the next left-hand page' : ''
+                    }. The blanks are counted with the rest and carry no page numbers — which is what a page printed on different paper needs.`
+                  : `The page after this one prints on its reverse${
+                      isTitle ? ', which by convention is the copyright page' : ''
+                    }.`}
+              </p>
+            </section>
+          ) : null}
+
           {/* Said rather than hidden (§16): these are not settings, and a
               writer who cannot find a control for them should be told why
               rather than left hunting. The renderer enforces them — the
-              recto, the folio and the verso are the plan's, not this
-              screen's. */}
+              recto and the folio are the plan's, not this screen's. */}
           {isTitle ? (
             <p className="dp-locked muted small">
               Set by publishing convention: always a right-hand page, counted in the page total but printed with no page number or
-              running head. The copyright page goes on its back.
+              running head.
             </p>
           ) : null}
         </div>

@@ -2575,6 +2575,97 @@ thing**, which reads as two facts. The page it would make is part of what a
 press would do, so it is said in the same breath: *Start a glossary at the
 back of the book, with “X” in it.*
 
+## 17c. Importing a back-matter page
+
+From Ken: *for the appendix and the glossary and the index, you need an
+option to import that as text or import that as a PDF and it'll just maintain
+the formatting.*
+
+The decision the module rests on is that **those are two different promises,
+and they keep two different things**.
+
+**Text becomes records.** The words come in as the page's own — a glossary's
+terms, an appendix's paragraphs, an index's headings — and the book then sets
+them in the book's face, at the book's size, with the book's running head over
+them. What *maintain the formatting* means here is the **structure**: which
+line is a term and which its definition, where a paragraph breaks, which entry
+hangs under another. It cannot mean the source document's type, because that
+type belongs to another book.
+
+**A PDF becomes pages.** Read literally, and the only honest way to keep
+somebody else's typesetting is to keep their pages — so a PDF comes in as art
+pages, drawn once at print resolution exactly as §16a brings a barcode in. The
+cost is real and is **said rather than discovered**: it is then a picture of a
+glossary rather than a glossary — not re-set in this book's face, no running
+head, not searchable, and it will not reflow in the eBook.
+
+And the third thing, which is the one a writer would not think of:
+
+**An imported index's page numbers are another book's.** Addendum 10 §3 is
+that no page number is stored anywhere — this book's index is read off this
+book's pagination every time, which is what makes it right after the writing
+moves. So importing an index as **text keeps the headings and drops the
+numbers**, and what arrives is a **worklist**: every heading the old index had,
+with how many places in this manuscript mention it. It marks nothing, because
+`findForIndex`'s own rule is that a search helps somebody mark and marks
+nothing — filing every hit is a concordance, and which mentions matter is the
+judgement that makes an index worth reading. **Done is read off the marks**, so
+marking a passage strikes its row off with nothing run, and a heading this
+manuscript never mentions is **said rather than hidden**, being the most useful
+row on the list.
+
+`packages/domain/src/back-matter-import.ts` is the module and
+`readPdfPages` in `read-vector.ts` the reader — the same `drawPage` the
+barcode uses, at 300 dpi rather than 600, because a whole leaf of type at 600
+is megabytes per page and the file travels inside the project. Two functions
+that turn a PDF page into a picture would be two answers to how sharp a page
+is. Capped at `MAX_IMPORT_PAGES`.
+
+Both ways are **two steps** — the file is read, what it would do is said, and
+only then is there something to press — because what an import would do to a
+page that already has words on it is exactly what a writer wants to know
+first. It **adds and never overwrites** (§17a's rule), so a second press of the
+same file changes nothing and an edited definition cannot be lost. Every line
+read that became nothing is **accounted for on the screen**, which is §4's own
+rule: a file that half arrived without saying so is the one outcome an
+importer may not have.
+
+Driving it caught a collision the tests found first and the screen would have
+kept: the import's dismiss button said **Cancel**, and the dialog's own footer
+already owns that word for *put the whole page back as it was*. It says
+**Forget that file**, which is what it does.
+
+## 17d. Leaving the back of a page blank
+
+From Ken: *on the title page, there needs to be an option to leave the back of
+the page blank, because it could be a printed page on different paper.*
+
+**The mechanism was already there one level down** — §9i put `bookBackBlank`
+on a manuscript element so a picture could leave its back blank — so this is
+the same question asked of a **part**, and `backBlank` on the part is the whole
+of the data. No migration: parts live in `settings.book.parts`.
+
+Two rules carry it, both already written. **The back of a leaf is its other
+side** (§9j, Ken's own correction), so the page takes a **recto** and the
+`blank` block that follows really is behind it rather than being the next page
+along. And the blank is `display` so it takes a page, `folio: false` so it
+prints no number, and **counted**, because counting is what the cutter does to
+everything.
+
+It is **absent on a page that flows** — a contents page, an index — there
+being no single back to leave; `partTakesBlankBack` is `partPlacement`'s own
+predicate rather than a second list of kinds. The default is false, so the
+whole suite passed unedited, which is the proof that no existing book moves.
+
+One thing had to be **unsaid**: the title page's panel stated *The copyright
+page goes on its back* as a fixed convention, and it is now a choice. And
+driving it found the wording that replaced it was wrong too — a copyright page
+is a **verso**, so blanking the title page's back sends it to the next
+**left-hand** page, two leaves on, with a second blank falling out of the
+pagination. One block is inserted and the convention does the rest; the screen
+says *the next left-hand page* because of it, and a test pins the pair so the
+second blank is not later "fixed" as a fault.
+
 ### Deliberately not built
 
 The **file importers** of §2 — BibTeX, RIS, CSL-JSON, CSV/TSV/XLSX, a

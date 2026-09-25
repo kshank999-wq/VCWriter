@@ -9,9 +9,20 @@ import {
   EXTRA_WORDS,
   TERM_STYLES,
   TERM_STYLE_WORDS,
+  addGraphic,
   appendixLabel,
   appendixOf,
   bibliographyOf,
+  describeWorklist,
+  dropImportedEntry,
+  importPagesInto,
+  importTextInto,
+  indexWorklist,
+  pageImportOffer,
+  readBackMatterText,
+  textImportOffer,
+  type ReadBackMatter,
+  type ReadPage,
   extraHeading,
   extraWarning,
   glossaryOf,
@@ -51,6 +62,7 @@ import {
   type PartStyle,
   type ProjectFile,
 } from '@vcwriter/domain';
+import { readPdfPages } from '../read-vector';
 import { useModal } from '../use-modal';
 
 import type { Laying } from '../book-typeset';
@@ -614,6 +626,7 @@ function Card({
             onChange={(event) => onUpdate((current) => updatePart(current, partId, { text: event.target.value }))}
           />
         </label>
+        <Import file={file} part={part} onUpdate={onUpdate} />
       </section>
     );
   }
@@ -630,6 +643,7 @@ function Card({
           <span className="muted small dp-tally">{own.terms.length} on the page</span>
         </h3>
         <Pull file={file} part={part} onUpdate={onUpdate} />
+        <Import file={file} part={part} onUpdate={onUpdate} />
         <div className="dp-terms">
           {own.terms.map((one) => (
             <div className="dp-term" key={one.id}>
@@ -741,6 +755,7 @@ function Card({
     // the page already is, and saying so is the section.
     const marks = (file.indexMarks ?? []).length;
     const offer = pullOffer(file, part);
+    const work = indexWorklist(file, part);
     return (
       <section className="dp-card">
         <h3>
@@ -752,6 +767,44 @@ function Card({
           Mark a passage from the manuscript’s right-click, or open <strong>Editor ▸ Index…</strong> to see every mark under its heading,
           rename one everywhere at once, and find the ones whose passage was cut.
         </p>
+        <Import file={file} part={part} onUpdate={onUpdate} />
+        {work.length > 0 ? (
+          <>
+            <h3>
+              <span className="dp-num">2</span> From the index you brought in
+              <span className="muted small dp-tally">{describeWorklist(work)}</span>
+            </h3>
+            {/* **The numbers are gone and the headings are work.** A row is
+                struck through once its heading carries a mark, which is read
+                from the marks rather than ticked off — so marking a passage
+                in the manuscript strikes it here with nothing run. */}
+            <ul className="dp-worklist">
+              {work.map((one, at) => (
+                <li key={`${one.term}|${one.subTerm}`} className={one.done ? 'done' : ''}>
+                  <span className="dp-work-term">
+                    {one.term}
+                    {one.subTerm ? <span className="muted"> · {one.subTerm}</span> : null}
+                  </span>
+                  <span className="muted small">
+                    {one.done
+                      ? 'marked'
+                      : one.hits === 0
+                        ? 'not mentioned in this book'
+                        : `${one.hits} ${one.hits === 1 ? 'place says it' : 'places say it'}`}
+                  </span>
+                  <button
+                    type="button"
+                    className="ghost small"
+                    aria-label={`Take ${one.term} off the list`}
+                    onClick={() => onUpdate((current) => dropImportedEntry(current, partId, at))}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
       </section>
     );
   }
@@ -935,6 +988,159 @@ function Pull({ file, part, onUpdate }: { file: ProjectFile; part: BookPart; onU
     </div>
   );
 }
+
+/**
+ * **Importing a page** (addendum 20 §17c, from Ken: *for the appendix and the
+ * glossary and the index, you need an option to import that as text or import
+ * that as a PDF and it'll just maintain the formatting*).
+ *
+ * Two buttons because they are **two promises**: text becomes the page's own
+ * records and the book sets them in the book's type; a PDF keeps somebody
+ * else's typesetting by keeping their pages. Both are **two steps** — the file
+ * is read, what it would do is said, and only then is there something to
+ * press — because what an import would do to a page that already has words on
+ * it is exactly what a writer wants to know before it happens.
+ */
+function Import({
+  file,
+  part,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  part: BookPart;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+}) {
+  const textPicker = useRef<HTMLInputElement>(null);
+  const pdfPicker = useRef<HTMLInputElement>(null);
+  const [read, setRead] = useState<ReadBackMatter | null>(null);
+  const [pages, setPages] = useState<ReadPage[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  const clear = () => {
+    setRead(null);
+    setPages(null);
+    setFailed(null);
+  };
+
+  const takeText = async (picked: File | undefined) => {
+    if (!picked) return;
+    clear();
+    setBusy('Reading…');
+    try {
+      setRead(readBackMatterText(part.kind, await picked.text()));
+    } catch {
+      setFailed('That file could not be read.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const takePdf = async (picked: File | undefined) => {
+    if (!picked) return;
+    clear();
+    setBusy('Drawing page 1…');
+    try {
+      setPages(await readPdfPages(picked, (done, of) => setBusy(`Drawing page ${done} of ${of}…`)));
+    } catch {
+      setFailed('That PDF could not be read.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const offer = read
+    ? textImportOffer(file, part, read)
+    : pages
+      ? pageImportOffer(part.kind, pages)
+      : null;
+
+  return (
+    <div className="dp-import">
+      <input
+        ref={textPicker}
+        type="file"
+        accept=".txt,.text,.md,.markdown,text/plain,text/markdown"
+        aria-label="Text file to import"
+        hidden
+        onChange={(event) => {
+          void takeText(event.target.files?.[0]);
+          event.target.value = '';
+        }}
+      />
+      <input
+        ref={pdfPicker}
+        type="file"
+        accept="application/pdf,.pdf"
+        aria-label="PDF to import"
+        hidden
+        onChange={(event) => {
+          void takePdf(event.target.files?.[0]);
+          event.target.value = '';
+        }}
+      />
+
+      <div className="dp-import-ways">
+        <button type="button" className="raised" disabled={busy !== null} onClick={() => textPicker.current?.click()}>
+          Import as text…
+        </button>
+        <button type="button" className="raised" disabled={busy !== null} onClick={() => pdfPicker.current?.click()}>
+          Import a PDF…
+        </button>
+      </div>
+
+      {busy ? <p className="muted small">{busy}</p> : null}
+      {failed ? <p className="muted small dp-import-bad">{failed}</p> : null}
+
+      {offer ? (
+        <div className="dp-import-said">
+          <p className="muted small">{offer.refusal ?? offer.says}</p>
+          {/* **Every line read is accounted for** — §4's rule: a file that
+              half arrived without saying so is the one outcome an importer
+              may not have. */}
+          {read && read.skipped.length > 0 ? (
+            <p className="muted small">
+              {read.skipped.length === 1 ? '1 line was' : `${read.skipped.length} lines were`} read and left out:{' '}
+              {read.skipped
+                .slice(0, 3)
+                .map((one) => `“${one.line}” (${one.why})`)
+                .join('; ')}
+              {read.skipped.length > 3 ? `, and ${read.skipped.length - 3} more` : ''}.
+            </p>
+          ) : null}
+          <div className="dp-import-ways">
+            {/* **Not *Cancel***: the screen's footer already owns that word,
+                and there it means put the whole page back as it was. This
+                drops the file that was just read and nothing else, so it
+                says which of the two it is. */}
+            <button type="button" className="ghost small" onClick={clear}>
+              Forget that file
+            </button>
+            {offer.can ? (
+              <button
+                type="button"
+                className="raised"
+                onClick={() => {
+                  if (read) onUpdate((current) => importTextInto(current, part.id, read));
+                  else if (pages) onUpdate((current) => importPagesInto(current, pages, addGraphicPage));
+                  clear();
+                }}
+              >
+                {read ? 'Bring the words in' : `Put ${pages?.length === 1 ? 'the page' : 'the pages'} in`}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** The library's own add, in the shape `importPagesInto` asks for. */
+const addGraphicPage = (current: ProjectFile, input: ReadPage) => {
+  const added = addGraphic(current, { name: input.name, data: input.data, width: input.width, height: input.height });
+  return { file: added.file, assetId: added.asset.id as string };
+};
 
 /** A segmented row, written once: five panels were about to hold five copies. */
 function Seg<T extends string>({

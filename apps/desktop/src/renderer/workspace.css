@@ -16699,6 +16699,77 @@ dialog.designed-page-dialog[open] {
   margin: 0;
 }
 
+/* Importing a page (§17c). The same box as Pull, in a column: the two ways
+   in sit on one row, and what a press would do is said under them — which is
+   where a writer is already looking after choosing a file. */
+.dp-import {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--raised, transparent);
+}
+
+.dp-import-ways {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dp-import-said {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dp-import-said p {
+  margin: 0;
+}
+
+.dp-import-bad {
+  color: var(--bad, #c0392b);
+}
+
+/* The headings an imported index left to work through. A row is struck
+   through once its heading carries a mark — which is read from the marks,
+   so marking a passage strikes it here with nothing run. */
+.dp-worklist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.dp-worklist li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.dp-worklist li:nth-child(odd) {
+  background: var(--raised, transparent);
+}
+
+.dp-worklist li.done .dp-work-term {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.dp-work-term {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .dp-element input {
   width: 100%;
   box-sizing: border-box;

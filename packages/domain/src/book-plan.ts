@@ -6,7 +6,7 @@ import { contentsDivisions, type ChapterPageContent, type PlacedMarker } from '.
 import { bookNames, bookSettingsOf, setBookSettings } from './book-layout.js';
 import { beatsInScript, unitsInStoryOrder } from './selectors.js';
 import { newId } from './ids.js';
-import { partHasStyle, partLogo, partStyleOf, proseStyleBase, type PartStyle, type PartStylePatch } from './part-style.js';
+import { partHasStyle, partLogo, partPlacement, partStyleOf, proseStyleBase, type PartStyle, type PartStylePatch } from './part-style.js';
 import { isCollection } from './formats.js';
 import { placeFigure } from './instructional.js';
 import { copyrightLines, copyrightOf, type CopyrightLine } from './copyright-page.js';
@@ -473,7 +473,55 @@ export const opensOnLeaf = (leaf: ChapterPageContent): boolean =>
 const sameLine = (a: LineStyle, b: LineStyle): boolean =>
   a.size === b.size && a.case === b.case && a.bold === b.bold && a.italic === b.italic && a.tracking === b.tracking;
 
+/**
+ * **Whether this page may leave its back blank** (§17d).
+ *
+ * Every page that is a leaf of its own may; a part that **flows** — a
+ * contents page, an index — may not, because it runs to as many pages as it
+ * needs and there is no single back to leave. `partPlacement`'s own
+ * predicate, so there is no second list of kinds.
+ */
+export const partTakesBlankBack = (kind: PartKind): boolean => partPlacement(kind) !== 'flows';
+
+/**
+ * The part's own blocks, and then the leaf behind it where it asked for one.
+ *
+ * **The back of a leaf is its other side** (§9j, Ken's own correction): so a
+ * page asked to leave its back blank takes a **recto**, and the blank that
+ * follows really is behind it rather than being the next page along. The
+ * blank is `display` so it takes a page, `folio: false` so it prints no
+ * number, and **counted**, because counting is what the cutter does to
+ * everything.
+ */
 const partBlocks = (
+  part: BookPart,
+  numbering: 'roman' | 'arabic',
+  chapterTitle: string,
+  prose: PartStylePatch = {},
+  file?: ProjectFile,
+  plan: readonly BookPart[] = [],
+): BookBlock[] => {
+  const own = partOwnBlocks(part, numbering, chapterTitle, prose, file, plan);
+  if (!part.backBlank || !partTakesBlankBack(part.kind) || own.length === 0) return own;
+  const first = own[0] as BookBlock;
+  return [
+    { ...first, starts: 'recto' },
+    ...own.slice(1),
+    block({
+      id: `${part.id}:back`,
+      kind: 'blank',
+      numbering,
+      starts: 'page',
+      display: true,
+      folio: false,
+      unbreakable: true,
+      chapterTitle,
+      partId: part.id,
+    }),
+  ];
+};
+
+const partOwnBlocks = (
   part: BookPart,
   numbering: 'roman' | 'arabic',
   chapterTitle: string,

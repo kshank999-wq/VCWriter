@@ -2027,6 +2027,59 @@ push live; the build takes a minute or two.
   glossary yet. This makes one, at the back* — **two sentences saying one
   thing**, which reads as two facts; the page it would make is part of what a
   press would do, so it is said in the same breath.
+  **§17c is importing a back-matter page**, from Ken (*for the appendix and
+  the glossary and the index, you need an option to import that as text or
+  import that as a PDF and it'll just maintain the formatting*), and the
+  decision it rests on is that **those are two different promises keeping two
+  different things**. **Text becomes records** — a glossary's terms, an
+  appendix's paragraphs, an index's headings — and the book sets them in its
+  own face, so *maintain the formatting* means the **structure** (which line
+  is a term and which its definition, where a paragraph breaks, which entry
+  hangs under another) and cannot mean the source's type, which belongs to
+  another book. **A PDF becomes pages**, read literally, the only honest way
+  to keep somebody else's typesetting being to keep their pages: art pages
+  drawn once at print resolution as §16a brings a barcode in, with the cost
+  **said rather than discovered** — it is then a picture of a glossary rather
+  than a glossary, no running head, not searchable, and it will not reflow in
+  the eBook. And the third thing, which a writer would not think of: **an
+  imported index's page numbers are another book's**, addendum 10 §3 being
+  that none is stored anywhere, so a text index **keeps the headings and drops
+  the numbers** and arrives as a **worklist** — every old heading with how
+  many places in this manuscript say it. It marks nothing (`findForIndex`'s
+  rule: a search helps somebody mark and marks nothing, filing every hit being
+  a concordance), **done is read off the marks** so marking a passage strikes
+  the row with nothing run, and a heading this book never mentions is **said
+  rather than hidden**, being the most useful row on the list.
+  `back-matter-import.ts` is the module; `readPdfPages` is the **same
+  `drawPage` the barcode uses** at 300 dpi rather than 600, a whole leaf of
+  type at 600 being megabytes a page inside the project file, and two
+  functions that turn a PDF page into a picture being two answers to how sharp
+  a page is. Both ways are **two steps** — read, said, then a press — it
+  **adds and never overwrites** (§17a), and **every line that became nothing
+  is accounted for on the screen** (§4's rule). Driving it caught a collision:
+  the dismiss button said **Cancel**, which the dialog's own footer already
+  owns for *put the whole page back*; it says **Forget that file**.
+  **§17d is leaving the back of a page blank**, from Ken (*on the title page,
+  there needs to be an option to leave the back of the page blank, because it
+  could be a printed page on different paper*), and **the mechanism was
+  already there one level down** — §9i put `bookBackBlank` on a manuscript
+  element for a picture — so this is the same question asked of a **part**,
+  `backBlank` on it being the whole of the data and no migration, parts living
+  in `settings.book.parts`. Two rules, both already written: **the back of a
+  leaf is its other side** (§9j, Ken's own correction), so the page takes a
+  **recto** and the blank really is behind it; and the blank is `display`,
+  `folio: false` and **counted**, counting being what the cutter does to
+  everything. **Absent on a page that flows** (`partTakesBlankBack` is
+  `partPlacement`'s own predicate, not a second list of kinds), and the
+  default is false, so the whole suite passed unedited — the proof no existing
+  book moves. One thing had to be **unsaid**: the title page's panel stated
+  *The copyright page goes on its back* as a fixed convention, and it is a
+  choice now. Driving it found the replacement wrong too — a copyright page is
+  a **verso**, so blanking the title page's back sends it to the next
+  **left-hand** page, two leaves on, a second blank falling out of the
+  pagination; one block is inserted and the convention does the rest, the
+  screen says *the next left-hand page*, and a test pins the pair so the
+  second blank is not later "fixed" as a fault.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

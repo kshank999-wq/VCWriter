@@ -358,3 +358,44 @@ describe('the title page', () => {
     expect(screen.queryByLabelText('Author size in points')).toBeNull();
   });
 });
+
+/**
+ * **The back of the leaf** (addendum 20 §17d, from Ken: *on the title page,
+ * there needs to be an option to leave the back of the page blank, because it
+ * could be a printed page on different paper*).
+ *
+ * The laying is the domain's and tested there. What these cover is that the
+ * control is on the screen, that it says what it would do either way, and
+ * that the sentence which used to state the old answer as a fixed convention
+ * no longer does.
+ */
+describe('leaving the back of a page blank', () => {
+  it('offers it, and writes it on the part', () => {
+    let seen: ProjectFile | null = null;
+    render(<Harness kind="title_page" onFile={(file) => (seen = file)} />);
+    const control = screen.getByLabelText('Leave the back of this page blank');
+    expect(control.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(control);
+    expect(titlePage(seen as unknown as ProjectFile).backBlank).toBe(true);
+  });
+
+  it('says what happens to the copyright page, both ways round', () => {
+    render(<Harness kind="title_page" />);
+    expect(screen.getByText(/which by convention is the copyright page/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Leave the back of this page blank'));
+    expect(screen.getByText(/the copyright page moves to the next left-hand page/)).toBeTruthy();
+    expect(screen.getByText(/printed on different paper/)).toBeTruthy();
+  });
+
+  it('no longer states the copyright page’s side as a fixed convention', () => {
+    // It was one until this shipped; a screen going on saying so would be
+    // the settled-rule-in-a-sentence fault §5e keeps finding.
+    render(<Harness kind="title_page" />);
+    expect(screen.queryByText(/The copyright page goes on its back/)).toBeNull();
+  });
+
+  it('offers it on the half title too, that being a leaf of its own', () => {
+    render(<Harness kind="half_title" />);
+    expect(screen.getByLabelText('Leave the back of this page blank')).toBeTruthy();
+  });
+});
