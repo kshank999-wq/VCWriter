@@ -13,7 +13,9 @@ import {
   emptyConditions,
   presentationSchema,
   sceneLayersSchema,
+  triggerSchema,
   type Behaviour,
+  type Trigger,
   type Condition,
   type ConditionGroup,
   type NarrativeElement,
@@ -23,7 +25,8 @@ import {
 } from './entities/narrative.js';
 import type { Character } from './entities/character.js';
 import type { Location } from './entities/locations.js';
-import type { BehaviourId, CharacterId, SceneLayersId, StructuralUnitId } from './ids.js';
+import type { BehaviourId, CharacterId, SceneLayersId, StructuralUnitId, TriggerId } from './ids.js';
+import { objectsOf, puzzlesIn } from './narrative-world.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -52,10 +55,14 @@ const layersFor = (file: ProjectFile, unitId: StructuralUnitId): SceneLayers | n
   (file.sceneLayers ?? []).find((one) => one.unitId === unitId) ?? null;
 
 /** A scene's stored layers, or empty ones where nothing is written yet. */
-export const sceneLayersOf = (file: ProjectFile, unitId: StructuralUnitId): { behaviours: Behaviour[]; presentation: Presentation } => {
+export const sceneLayersOf = (
+  file: ProjectFile,
+  unitId: StructuralUnitId,
+): { behaviours: Behaviour[]; presentation: Presentation; triggers: Trigger[] } => {
   const found = layersFor(file, unitId);
   return {
     behaviours: found?.behaviours ?? [],
+    triggers: found?.triggers ?? [],
     presentation: found?.presentation ?? presentationSchema.parse({}),
   };
 };
@@ -119,6 +126,38 @@ export const updateBehaviour = (
 
 export const removeBehaviour = (file: ProjectFile, unitId: StructuralUnitId, behaviourId: BehaviourId): ProjectFile =>
   withLayers(file, unitId, (layers) => ({ ...layers, behaviours: layers.behaviours.filter((one) => one.id !== behaviourId) }));
+
+export const addTrigger = (file: ProjectFile, unitId: StructuralUnitId, input: { name?: string; kind?: string } = {}): { file: ProjectFile; trigger: Trigger } => {
+  const trigger = triggerSchema.parse({ id: newId<TriggerId>(), name: input.name ?? '', kind: input.kind ?? '' });
+  return { file: withLayers(file, unitId, (layers) => ({ ...layers, triggers: [...(layers.triggers ?? []), trigger] })), trigger };
+};
+
+export const updateTrigger = (
+  file: ProjectFile,
+  unitId: StructuralUnitId,
+  triggerId: TriggerId,
+  patch: Partial<Omit<Trigger, 'id'>>,
+): ProjectFile =>
+  withLayers(file, unitId, (layers) => ({
+    ...layers,
+    triggers: (layers.triggers ?? []).map((one) => (one.id === triggerId ? triggerSchema.parse({ ...one, ...patch }) : one)),
+  }));
+
+export const removeTrigger = (file: ProjectFile, unitId: StructuralUnitId, triggerId: TriggerId): ProjectFile =>
+  withLayers(file, unitId, (layers) => ({ ...layers, triggers: (layers.triggers ?? []).filter((one) => one.id !== triggerId) }));
+
+/** Trigger kinds offered, never enforced: what makes it fire is Game Studio's to build. */
+export const TRIGGER_SUGGESTIONS = [
+  'Proximity',
+  'Overlap',
+  'Line of sight',
+  'Interact',
+  'Timer',
+  'State change',
+  'Dialogue result',
+  'Inventory',
+  'Combat',
+] as const;
 
 /** Behaviour kinds offered, never enforced. */
 export const BEHAVIOUR_SUGGESTIONS = [
@@ -195,6 +234,12 @@ export const narrativeLayer = (file: ProjectFile, unitId: StructuralUnitId): Nar
 };
 
 export interface SystemicLayer {
+  /** Stored here: what fires in the scene, and what it does. */
+  triggers: { trigger: Trigger; says: string }[];
+  /** Read: the objects placed in the scene, and what can be done to them. */
+  objects: { name: string; verbs: string[] }[];
+  /** Read: the puzzles in the scene, and what solves them. */
+  puzzles: { name: string; says: string }[];
   /** What arriving changes, per node. */
   arrivals: string[];
   /** What is offered, and the rule on each, in the rule builder's sentence. */
@@ -209,7 +254,26 @@ export const systemicLayer = (file: ProjectFile, unitId: StructuralUnitId): Syst
   const nodes = nodesInScene(file, unitId);
   const objectives = objectivesIn(file, unitId);
   const mandatory = objectives.filter((one) => one.mandatory).map((one) => one.name.trim() || 'an unnamed objective');
+  const nodeIds = new Set(nodes.map((one) => one.id as string));
+  const placed = objectsOf(file).filter((one) => one.placedAt.some((id) => id === (unitId as string) || nodeIds.has(id)));
   return {
+    triggers: sceneLayersOf(file, unitId).triggers.map((trigger) => {
+      const when = sayGroup(file, trigger.conditions) || 'always';
+      const does = trigger.effects.length ? sayEffects(file, trigger.effects) : 'nothing yet';
+      return { trigger, says: `WHEN ${when} → DO ${does}${trigger.once ? ' (once)' : ''}` };
+    }),
+    objects: placed.map((object) => ({
+      name: object.name.trim() || 'An unnamed object',
+      verbs: object.verbs.map((verb) => {
+        const when = sayGroup(file, verb.conditions);
+        const does = verb.effects.length ? sayEffects(file, verb.effects) : 'nothing yet';
+        return `${verb.name.trim() || 'Use'}${when ? ` when ${when}` : ''} → ${does}`;
+      }),
+    })),
+    puzzles: puzzlesIn(file, unitId).map((puzzle) => ({
+      name: puzzle.name.trim() || 'An unnamed puzzle',
+      says: sayGroup(file, puzzle.solution) ? `solved when ${sayGroup(file, puzzle.solution)}` : 'no solution written yet',
+    })),
     arrivals: nodes.filter((one) => one.effects.length > 0).map((one) => sayEffects(file, one.effects)),
     choices: nodes.flatMap((node) =>
       choicesAt(file, node.id).map((choice) => ({
@@ -230,7 +294,7 @@ export const beatVisuals = (file: ProjectFile, unitId: StructuralUnitId): { beat
 
 // ---------------------------------------------------------- the board
 
-export type BoardCardKind = 'player' | 'character' | 'place' | 'resource' | 'objective' | 'exit';
+export type BoardCardKind = 'player' | 'character' | 'place' | 'resource' | 'object' | 'puzzle' | 'trigger' | 'objective' | 'exit';
 
 export interface BoardCard {
   kind: BoardCardKind;
@@ -303,6 +367,34 @@ export const sceneBoard = (file: ProjectFile, unitId: StructuralUnitId): BoardCa
       id,
       name: findResource(file, id as never)?.name.trim() || 'An unnamed resource',
       says: (['need', 'grant', 'consume'] as const).filter((one) => what.has(one)).map((one) => RESOURCE_ROLE_WORDS[one]).join(' · '),
+    });
+  }
+
+  const nodeIds = new Set(layer.nodes.map((one) => one.id as string));
+  for (const object of objectsOf(file)) {
+    if (!object.placedAt.some((id) => id === (unitId as string) || nodeIds.has(id))) continue;
+    const verbs = object.verbs.map((one) => one.name.trim()).filter((one) => one.length > 0);
+    cards.push({
+      kind: 'object',
+      id: object.id as string,
+      name: object.name.trim() || 'An unnamed object',
+      says: verbs.length ? verbs.join(' · ') : 'nothing to do to it yet',
+    });
+  }
+  for (const puzzle of puzzlesIn(file, unitId)) {
+    cards.push({
+      kind: 'puzzle',
+      id: puzzle.id as string,
+      name: puzzle.name.trim() || 'An unnamed puzzle',
+      says: puzzle.objective.trim() || 'to be solved here',
+    });
+  }
+  for (const trigger of sceneLayersOf(file, unitId).triggers) {
+    cards.push({
+      kind: 'trigger',
+      id: trigger.id as string,
+      name: trigger.name.trim() || 'An unnamed trigger',
+      says: trigger.kind.trim() ? `${trigger.kind.trim()}${trigger.once ? ', once' : ''}` : trigger.once ? 'fires once' : 'fires whenever it holds',
     });
   }
 

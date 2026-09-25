@@ -291,7 +291,9 @@ export const narrativeExport = (file: ProjectFile): Record<string, unknown> => {
   const rank = depths(file);
   return {
     format: 'vcwriter.narrative',
-    version: 1,
+    // 2: addendum 25's records join the export. Every key of version 1 is
+    // unchanged, so a reader of 1 reads 2.
+    version: 2,
     project: { id: file.project.id, title: file.project.title, logline: file.project.logline },
     setup: file.gameSetup ?? null,
     states: statesOf(file),
@@ -314,6 +316,20 @@ export const narrativeExport = (file: ProjectFile): Record<string, unknown> => {
       contributors: one.contributors,
     })),
     playthroughs: runsOf(file),
+    // Addendum 25: what game writing adds, as records with their own ids for
+    // the same reason as the rest — Game Studio has to be able to say *this is
+    // the same object the designer was looking at*.
+    objectives: file.objectives ?? [],
+    quests: file.quests ?? [],
+    scenes: (file.sceneLayers ?? []).map((one) => ({
+      unitId: one.unitId,
+      behaviours: one.behaviours,
+      presentation: one.presentation,
+      triggers: one.triggers ?? [],
+    })),
+    objects: file.interactiveObjects ?? [],
+    environments: file.environments ?? [],
+    puzzles: file.puzzles ?? [],
   };
 };
 

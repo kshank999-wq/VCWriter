@@ -15,6 +15,7 @@ import {
   startRun,
   stepBack,
   updateRun,
+  verbsAt,
   type NarrativeElementId,
   type ProjectFile,
   type SimulationRunId,
@@ -67,6 +68,7 @@ export function NarrativePlayPanel({
   const runs = runsOf(file);
   const run = runId ? findRun(file, runId) : null;
   const played = run ? replayRun(file, run) : null;
+  const verbs = played?.at ? verbsAt(file, played.state, played.at.id) : [];
   const other = against ? findRun(file, against as SimulationRunId) : null;
 
   /**
@@ -158,6 +160,19 @@ export function NarrativePlayPanel({
 
           {refused.length > 0 ? <p className="play-why">You cannot go that way: {refused.join('; ')}</p> : null}
 
+          {/* The other side's lines, where the node carries its own (addendum 25 §6). */}
+          {played.at && played.at.lines.length > 0 ? (
+            <ul className="play-lines">
+              {played.at.lines.map((line, index) => (
+                <li key={index}>
+                  <strong>{file.characters.find((one) => one.id === line.characterId)?.name ?? 'Somebody'}</strong>
+                  {line.direction.trim() ? <span className="muted small"> ({line.direction.trim()})</span> : null}{' '}
+                  {line.text}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
           <h4>Offered here</h4>
           {played.situation && played.situation.choices.length > 0 ? (
             <ul className="play-choices">
@@ -179,9 +194,36 @@ export function NarrativePlayPanel({
                 </li>
               ))}
             </ul>
+          ) : verbs.length > 0 ? (
+            <p className="muted small">No choices here, but there are things to do.</p>
           ) : (
             <p className="muted small">Nothing is offered here. The path ends.</p>
           )}
+
+          {/* What can be done to the objects here (addendum 25 §7): decided by
+              the same evaluator as a choice, recorded as a step like one. */}
+          {verbs.length > 0 ? (
+            <>
+              <h4>Things to do here</h4>
+              <ul className="play-choices">
+                {verbs.map((offer) => (
+                  <li key={offer.verb.id as string}>
+                    <button
+                      type="button"
+                      className={offer.available ? 'tool' : 'tool is-blocked'}
+                      disabled={!offer.available}
+                      onClick={() => take(offer.verb.id as never)}
+                    >
+                      {offer.verb.name || 'Use'} {offer.object.name || 'an object'}
+                    </button>
+                    {offer.available ? null : (
+                      <span className="play-why muted small">{offer.blockedBy.map((one) => one.says).join('; ')}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
 
           <h4>Carrying</h4>
           <ul className="play-holdings">
@@ -209,7 +251,13 @@ export function NarrativePlayPanel({
           <ol className="play-path">
             {played.steps.map((step, index) => (
               <li key={index} className={step.refused.length > 0 ? 'broke' : ''}>
-                <span>{step.choice?.name || 'a choice that has gone'}</span>
+                <span>
+                  {step.choice
+                    ? step.choice.name || step.choice.text || 'an unnamed choice'
+                    : step.used
+                      ? `${step.used.verb.name || 'Use'} ${step.used.object.name || 'an object'}`
+                      : 'a choice that has gone'}
+                </span>
                 {step.log.length > 0 ? (
                   <span className="muted small"> — {step.log.map((one) => one.says).join(', ')}</span>
                 ) : null}

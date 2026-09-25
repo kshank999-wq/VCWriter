@@ -217,9 +217,10 @@ export const objectiveConditions = (file: ProjectFile): { condition: Condition; 
  * - **need** — a resource a node or its choices ask for.
  * - **acquire** / **spend** — `grant` and `consume`, on arrival or on a choice.
  * - **learn** — `reveal`: something the player comes to know of.
- * - **overcome** — an encounter or a mission on the spine.
+ * - **interact** — a verb on an object placed here: *pull the lever*.
+ * - **overcome** — an encounter or a mission on the spine, or a puzzle here.
  */
-export type LaneItemKind = 'objective' | 'decide' | 'need' | 'acquire' | 'spend' | 'learn' | 'overcome';
+export type LaneItemKind = 'objective' | 'decide' | 'need' | 'acquire' | 'spend' | 'learn' | 'interact' | 'overcome';
 
 export interface LaneItem {
   kind: LaneItemKind;
@@ -249,6 +250,7 @@ export const LANE_WORDS: Record<LaneItemKind, string> = {
   acquire: 'Gets',
   spend: 'Uses',
   learn: 'Learns',
+  interact: 'Can',
   overcome: 'Overcomes',
 };
 
@@ -327,7 +329,21 @@ export const playerLane = (file: ProjectFile): LaneScene[] =>
       for (const choice of offered) fromEffects(choice.effects, node);
     }
 
-    const rank: Record<LaneItemKind, number> = { objective: 0, decide: 1, need: 2, acquire: 3, spend: 4, learn: 5, overcome: 6 };
+    // Objects placed in the scene or at one of its nodes, and puzzles in it.
+    const here = new Set([unit.id as string, ...nodes.map((one) => one.id as string)]);
+    for (const object of file.interactiveObjects ?? []) {
+      if (!object.placedAt.some((id) => here.has(id))) continue;
+      for (const verb of object.verbs) {
+        const what = `${verb.name.trim() || 'Use'} ${object.name.trim() || 'an object'}`;
+        once(`interact:${verb.id as string}`, { kind: 'interact', text: what });
+      }
+    }
+    for (const puzzle of file.puzzles ?? []) {
+      if (puzzle.unitId !== unit.id) continue;
+      once(`puzzle:${puzzle.id as string}`, { kind: 'overcome', text: puzzle.name.trim() || 'a puzzle' });
+    }
+
+    const rank: Record<LaneItemKind, number> = { objective: 0, decide: 1, need: 2, acquire: 3, spend: 4, learn: 5, interact: 6, overcome: 7 };
     items.sort((a, b) => rank[a.kind] - rank[b.kind]);
     return { unitId: unit.id, title: unit.title, position: index + 1, nodes, items };
   });

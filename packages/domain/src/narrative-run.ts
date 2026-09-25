@@ -1,11 +1,11 @@
 import { choicesAt, findChoice, findElement, entryPoints } from './narrative.js';
-import { choose, evaluate, initialState } from './narrative-eval.js';
+import { choose, evaluate, initialState, useVerb, verbsAt } from './narrative-eval.js';
 import { simulationRunSchema } from './entities/narrative.js';
 import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
-import type { Choice, NarrativeElement, SimulationRun } from './entities/narrative.js';
+import type { Choice, InteractiveObject, NarrativeElement, SimulationRun, Verb } from './entities/narrative.js';
 import type { Mutation, PlayState, Reason, Situation } from './narrative-eval.js';
-import type { ChoiceId, NarrativeElementId, SimulationRunId } from './ids.js';
+import type { ChoiceId, NarrativeElementId, SimulationRunId, VerbId } from './ids.js';
 import type { ProjectFile } from './project-file.js';
 
 /** Same as everywhere else in this module: a change stamps the project. */
@@ -108,7 +108,11 @@ export const recordStep = (
   if (!run) return { file, refused: [{ kind: 'missing', says: 'that path has gone' }] };
   const played = replayRun(file, run);
   if (!played.at) return { file, refused: [{ kind: 'missing', says: 'the node it started at has gone' }] };
-  const move = choose(file, played.state, played.at.id, choiceId);
+  // A step is a choice, or a verb on an object here (addendum 25 §7): both
+  // are ids, and the replay tells them apart the same way.
+  const move = findChoice(file, choiceId)
+    ? choose(file, played.state, played.at.id, choiceId)
+    : useVerb(file, played.state, played.at.id, choiceId as string as VerbId);
   if (move.refused.length > 0) return { file, refused: move.refused };
   return { file: updateRun(file, runId, { steps: [...run.steps, choiceId] }), refused: [] };
 };
@@ -129,8 +133,10 @@ export const stepBack = (file: ProjectFile, runId: SimulationRunId): ProjectFile
 // -------------------------------------------------------------- the replay
 
 export interface PlayedStep {
-  /** The choice taken, or null where it has been cut out of the game. */
+  /** The choice taken, or null where it has been cut out of the game or the step was a verb. */
   choice: Choice | null;
+  /** The object and verb used, where the step was one (addendum 25 §7). */
+  used?: { object: InteractiveObject; verb: Verb } | null;
   from: NarrativeElement;
   /** Where it led, or null where it stayed put or the path broke. */
   to: NarrativeElement | null;
@@ -185,6 +191,18 @@ export const replayRun = (file: ProjectFile, run: SimulationRun): Played => {
   for (const [index, choiceId] of run.steps.entries()) {
     const from = findElement(file, at)!;
     const choice = findChoice(file, choiceId);
+    const used = choice ? null : (verbsAt(file, state, at).find((one) => one.verb.id === (choiceId as string)) ?? null);
+    if (!choice && used) {
+      const move = useVerb(file, state, at, used.verb.id);
+      if (move.refused.length > 0) {
+        steps.push({ choice: null, used: { object: used.object, verb: used.verb }, from, to: null, log: [], refused: move.refused });
+        brokenAt = index;
+        break;
+      }
+      state = move.state;
+      steps.push({ choice: null, used: { object: used.object, verb: used.verb }, from, to: null, log: move.log, refused: [] });
+      continue;
+    }
     if (!choice) {
       // The designer cut the choice. That is the most ordinary break there is,
       // and it deserves a sentence rather than a silent stop.
@@ -193,7 +211,14 @@ export const replayRun = (file: ProjectFile, run: SimulationRun): Played => {
         from,
         to: null,
         log: [],
-        refused: [{ kind: 'missing', says: 'that choice has been cut from the game' }],
+        refused: [
+          {
+            kind: 'missing',
+            says: (file.interactiveObjects ?? []).some((one) => one.verbs.some((verb) => verb.id === (choiceId as string)))
+              ? 'the object it used is no longer here'
+              : 'that choice has been cut from the game',
+          },
+        ],
       });
       brokenAt = index;
       break;

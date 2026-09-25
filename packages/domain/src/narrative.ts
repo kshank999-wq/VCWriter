@@ -263,6 +263,25 @@ export const removeState = (file: ProjectFile, stateId: StateDefinitionId): Proj
     sceneLayers: (file.sceneLayers ?? []).map((layers) => ({
       ...layers,
       behaviours: layers.behaviours.map((one) => ({ ...one, conditions: withoutSubject(one.conditions, stateId as string) })),
+      triggers: (layers.triggers ?? []).map((one) => ({
+        ...one,
+        conditions: withoutSubject(one.conditions, stateId as string),
+        effects: one.effects.filter((effect) => effect.targetId !== (stateId as string)),
+      })),
+    })),
+    // Verbs and puzzles are rules too (addendum 25 §7–§8).
+    interactiveObjects: (file.interactiveObjects ?? []).map((object) => ({
+      ...object,
+      verbs: object.verbs.map((verb) => ({
+        ...verb,
+        conditions: withoutSubject(verb.conditions, stateId as string),
+        effects: verb.effects.filter((effect) => effect.targetId !== (stateId as string)),
+      })),
+    })),
+    puzzles: (file.puzzles ?? []).map((puzzle) => ({
+      ...puzzle,
+      solution: withoutSubject(puzzle.solution, stateId as string),
+      onSolve: puzzle.onSolve.filter((effect) => effect.targetId !== (stateId as string)),
     })),
   });
 
@@ -339,6 +358,25 @@ export const removeResource = (file: ProjectFile, resourceId: ResourceDefinition
     sceneLayers: (file.sceneLayers ?? []).map((layers) => ({
       ...layers,
       behaviours: layers.behaviours.map((one) => ({ ...one, conditions: withoutSubject(one.conditions, resourceId as string) })),
+      triggers: (layers.triggers ?? []).map((one) => ({
+        ...one,
+        conditions: withoutSubject(one.conditions, resourceId as string),
+        effects: one.effects.filter((effect) => effect.targetId !== (resourceId as string)),
+      })),
+    })),
+    // Verbs and puzzles are rules too (addendum 25 §7–§8).
+    interactiveObjects: (file.interactiveObjects ?? []).map((object) => ({
+      ...object,
+      verbs: object.verbs.map((verb) => ({
+        ...verb,
+        conditions: withoutSubject(verb.conditions, resourceId as string),
+        effects: verb.effects.filter((effect) => effect.targetId !== (resourceId as string)),
+      })),
+    })),
+    puzzles: (file.puzzles ?? []).map((puzzle) => ({
+      ...puzzle,
+      solution: withoutSubject(puzzle.solution, resourceId as string),
+      onSolve: puzzle.onSolve.filter((effect) => effect.targetId !== (resourceId as string)),
     })),
   });
 
@@ -369,10 +407,75 @@ export const conditionsIn = (group: ConditionGroup): ConditionGroup['conditions'
 /** Whether a group asks anything at all. An empty one is satisfied (§15.3). */
 export const isEmptyGroup = (group: ConditionGroup): boolean => conditionsIn(group).length === 0;
 
-/** Every effect anywhere in the graph, with what carried it. */
+/**
+ * The node a scene-level rule is read as sitting at (addendum 25 §7–§8): the
+ * first node bound to one of the scene's beats. A trigger, a puzzle and an
+ * object placed in a scene have no node of their own, and the checks that ask
+ * *where on the graph* a rule is need one. Null for a scene with no node —
+ * nothing reaches it, and a rule there changes nothing yet.
+ */
+const hostInScene = (file: ProjectFile, unitId: string): NarrativeElement | null => {
+  const beats = (file.beats ?? [])
+    .filter((one) => one.unitId === unitId)
+    .sort((a, b) => (a.orderKey < b.orderKey ? -1 : a.orderKey > b.orderKey ? 1 : 0))
+    .map((one) => one.id as string);
+  return (
+    elementsOf(file)
+      .filter((one) => one.boundBeatId !== null && beats.includes(one.boundBeatId as string))
+      .sort((a, b) => beats.indexOf(a.boundBeatId as string) - beats.indexOf(b.boundBeatId as string))[0] ?? null
+  );
+};
+
+/** Where an object's verbs are read as sitting: a node it is placed at, or its scene's first node. */
+const hostOfObject = (file: ProjectFile, placedAt: readonly string[]): NarrativeElement | null => {
+  for (const id of placedAt) {
+    const node = elementsOf(file).find((one) => (one.id as string) === id);
+    if (node) return node;
+    const inScene = hostInScene(file, id);
+    if (inScene) return inScene;
+  }
+  return null;
+};
+
+/**
+ * The rules that live off the graph but act on it (addendum 25 §7–§8) —
+ * verbs, triggers, puzzle solutions — each with the node it is read at.
+ */
+const offGraphRules = (
+  file: ProjectFile,
+): { host: NarrativeElement; conditions: ConditionGroup; effects: readonly Effect[] }[] => {
+  const out: { host: NarrativeElement; conditions: ConditionGroup; effects: readonly Effect[] }[] = [];
+  for (const object of file.interactiveObjects ?? []) {
+    const host = hostOfObject(file, object.placedAt);
+    if (!host) continue;
+    for (const verb of object.verbs) out.push({ host, conditions: verb.conditions, effects: verb.effects });
+  }
+  for (const layers of file.sceneLayers ?? []) {
+    const host = hostInScene(file, layers.unitId as string);
+    if (!host) continue;
+    for (const trigger of layers.triggers ?? []) out.push({ host, conditions: trigger.conditions, effects: trigger.effects });
+  }
+  for (const puzzle of file.puzzles ?? []) {
+    const host = puzzle.unitId ? hostInScene(file, puzzle.unitId as string) : null;
+    if (!host) continue;
+    out.push({
+      host,
+      conditions: puzzle.solution,
+      effects: [{ kind: 'set', targetId: puzzle.solvedStateId as string, value: 'true', timing: 'immediate', note: '' }, ...puzzle.onSolve],
+    });
+  }
+  return out;
+};
+
+/**
+ * Every effect anywhere in the game, with what carried it. Verbs, triggers and
+ * puzzles are carried by the node they are read at, so a key handed out by
+ * pulling a lever is a key the game gives (addendum 25 §7).
+ */
 export const allEffects = (file: ProjectFile): { effect: Effect; from: NarrativeElement | Choice }[] => [
   ...elementsOf(file).flatMap((element) => element.effects.map((effect) => ({ effect, from: element }))),
   ...choicesOf(file).flatMap((choice) => choice.effects.map((effect) => ({ effect, from: choice }))),
+  ...offGraphRules(file).flatMap((rule) => rule.effects.map((effect) => ({ effect, from: rule.host }))),
 ];
 
 /** Every condition anywhere, with what it gates. */
@@ -383,4 +486,5 @@ export const allConditions = (
     conditionsIn(element.conditions).map((condition) => ({ condition, on: element })),
   ),
   ...choicesOf(file).flatMap((choice) => conditionsIn(choice.conditions).map((condition) => ({ condition, on: choice }))),
+  ...offGraphRules(file).flatMap((rule) => conditionsIn(rule.conditions).map((condition) => ({ condition, on: rule.host }))),
 ];

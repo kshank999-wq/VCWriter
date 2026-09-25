@@ -15,6 +15,12 @@ import {
   dropOnConnection,
   laneSlots,
   addObjective,
+  makeChoicesExclusive,
+  living,
+  newId,
+  type DialogueLine,
+  type Shot,
+  type ShotId,
   objectivesIn,
   playerLane,
   questsOf,
@@ -711,6 +717,26 @@ export function NarrativeMapWindow({
                 }
               />
 
+              {/* The other side's lines, on a conversation or a cinematic that is
+                  not bound to a beat (addendum 25 §6): a bound one keeps its
+                  words in the script. Absent on every other kind. */}
+              {(selected.kind === 'conversation' || selected.kind === 'cinematic') && !selected.boundBeatId ? (
+                <LinesEditor
+                  file={file}
+                  lines={selected.lines}
+                  onChange={(next) => onUpdate((current) => updateElement(current, selected.id, { lines: next }))}
+                />
+              ) : null}
+              {selected.kind === 'cinematic' ? (
+                <ShotsEditor
+                  file={file}
+                  shots={selected.shots}
+                  skippable={selected.skippable}
+                  onSkippable={(next) => onUpdate((current) => updateElement(current, selected.id, { skippable: next }))}
+                  onChange={(next) => onUpdate((current) => updateElement(current, selected.id, { shots: next }))}
+                />
+              ) : null}
+
               {/* §11, and only where the node is an ending: a threshold and
                   what counts towards it. Absent rather than greyed elsewhere —
                   a scene has no ending to weigh. */}
@@ -921,6 +947,37 @@ export function NarrativeMapWindow({
                               onUpdate((current) => updateChoice(current, row.choice.id, { effects: next }))
                             }
                           />
+                          <div className="rule-row">
+                            <label className="small">
+                              <input
+                                type="checkbox"
+                                checked={row.choice.repeat === 'once'}
+                                onChange={(event) =>
+                                  onUpdate((current) =>
+                                    updateChoice(current, row.choice.id, { repeat: event.target.checked ? 'once' : 'repeatable' }),
+                                  )
+                                }
+                              />{' '}
+                              Only once
+                            </label>
+                            <label className="small" title="For Game Studio: how long the player has. Nothing here counts it down.">
+                              Timed{' '}
+                              <input
+                                type="number"
+                                min={0}
+                                value={row.choice.timedSeconds}
+                                aria-label="Seconds to choose, or 0 for no limit"
+                                onChange={(event) =>
+                                  onUpdate((current) =>
+                                    updateChoice(current, row.choice.id, {
+                                      timedSeconds: Math.max(0, Math.trunc(Number(event.target.value) || 0)),
+                                    }),
+                                  )
+                                }
+                              />{' '}
+                              s
+                            </label>
+                          </div>
                           <h4>GO TO</h4>
                           <select
                             value={(row.choice.toElementId as string) ?? ''}
@@ -954,6 +1011,16 @@ export function NarrativeMapWindow({
                 >
                   + Choice
                 </button>
+                {rows.length >= 2 ? (
+                  <button
+                    type="button"
+                    className="tool"
+                    title="Taking any one of these closes the others, wherever they are offered: one state, and one rule on each choice, which you can open and change"
+                    onClick={() => onUpdate((current) => makeChoicesExclusive(current, selected.id))}
+                  >
+                    Only one of these
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className={joining ? 'tool on' : 'tool'}
@@ -1204,5 +1271,113 @@ function PlayerLaneColumn({
       ) : null}
       <title>{said || 'Nothing asked of the player yet'}</title>
     </g>
+  );
+}
+
+/** Lines of dialogue, speaker and direction and words, in order. */
+function LinesEditor({
+  file,
+  lines,
+  onChange,
+  title = 'Lines',
+}: {
+  file: ProjectFile;
+  lines: readonly DialogueLine[];
+  onChange(next: DialogueLine[]): void;
+  title?: string;
+}) {
+  const cast = file.characters.filter((one) => living(one) && !one.archived);
+  const change = (index: number, patch: Partial<DialogueLine>) =>
+    onChange(lines.map((one, at) => (at === index ? { ...one, ...patch } : one)));
+  return (
+    <section className="narrmap-lines" aria-label={title}>
+      <h3>{title}</h3>
+      {lines.map((line, index) => (
+        <div key={index} className="narrmap-line">
+          <div className="rule-row">
+            <select
+              value={(line.characterId as string) ?? ''}
+              aria-label="Who says it"
+              onChange={(event) => change(index, { characterId: (event.target.value || null) as never })}
+            >
+              <option value="">Somebody</option>
+              {cast.map((person) => (
+                <option key={person.id as string} value={person.id as string}>
+                  {person.name}
+                </option>
+              ))}
+            </select>
+            <input
+              value={line.direction}
+              placeholder="barely a whisper"
+              aria-label="How it is said"
+              onChange={(event) => change(index, { direction: event.target.value })}
+            />
+            <button type="button" className="ghost small" aria-label="Remove this line" onClick={() => onChange(lines.filter((_, at) => at !== index))}>
+              ✕
+            </button>
+          </div>
+          <textarea value={line.text} placeholder="They were here. All this time." aria-label="The line" onChange={(event) => change(index, { text: event.target.value })} />
+        </div>
+      ))}
+      <button type="button" className="tool" onClick={() => onChange([...lines, { characterId: null, text: '', direction: '' }])}>
+        + Line
+      </button>
+    </section>
+  );
+}
+
+/** A cinematic's shots: camera, action, audio, lines and a running time for Game Studio. */
+function ShotsEditor({
+  file,
+  shots,
+  skippable,
+  onSkippable,
+  onChange,
+}: {
+  file: ProjectFile;
+  shots: readonly Shot[];
+  skippable: boolean;
+  onSkippable(next: boolean): void;
+  onChange(next: Shot[]): void;
+}) {
+  const change = (index: number, patch: Partial<Shot>) => onChange(shots.map((one, at) => (at === index ? { ...one, ...patch } : one)));
+  return (
+    <section className="narrmap-lines" aria-label="Shots">
+      <h3>Shots</h3>
+      <label className="small">
+        <input type="checkbox" checked={skippable} onChange={(event) => onSkippable(event.target.checked)} /> The player can skip it
+      </label>
+      {shots.map((shot, index) => (
+        <div key={shot.id as string} className="narrmap-line">
+          <div className="rule-row">
+            <span className="muted small">Shot {index + 1}</span>
+            <input
+              type="number"
+              min={0}
+              value={shot.seconds}
+              aria-label="Seconds"
+              title="Running time, for Game Studio"
+              onChange={(event) => change(index, { seconds: Math.max(0, Math.trunc(Number(event.target.value) || 0)) })}
+            />
+            <span className="muted small">s</span>
+            <button type="button" className="ghost small" aria-label={`Remove shot ${index + 1}`} onClick={() => onChange(shots.filter((_, at) => at !== index))}>
+              ✕
+            </button>
+          </div>
+          <input value={shot.camera} placeholder="Low wide on the door" aria-label="Camera" onChange={(event) => change(index, { camera: event.target.value })} />
+          <input value={shot.action} placeholder="The door swings inward" aria-label="What happens" onChange={(event) => change(index, { action: event.target.value })} />
+          <input value={shot.audio} placeholder="A deep stone rumble" aria-label="Sound" onChange={(event) => change(index, { audio: event.target.value })} />
+          <LinesEditor file={file} lines={shot.lines} title={`Lines in shot ${index + 1}`} onChange={(next) => change(index, { lines: next })} />
+        </div>
+      ))}
+      <button
+        type="button"
+        className="tool"
+        onClick={() => onChange([...shots, { id: newId<ShotId>(), camera: '', action: '', lines: [], audio: '', seconds: 0 }])}
+      >
+        + Shot
+      </button>
+    </section>
   );
 }

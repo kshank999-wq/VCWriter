@@ -15,6 +15,9 @@ import {
   questSchema,
   resourceDefinitionSchema,
   sceneLayersSchema,
+  interactiveObjectSchema,
+  environmentSchema,
+  puzzleSchema,
   simulationRunSchema,
   stateDefinitionSchema,
 } from './entities/narrative.js';
@@ -172,6 +175,10 @@ export const projectFileSchema = z.object({
   quests: z.array(questSchema).default([]),
   /** A game scene's behaviour and presentation layers (addendum 25 §5). */
   sceneLayers: z.array(sceneLayersSchema).default([]),
+  /** Interactive objects, location mechanics and puzzles (addendum 25 §7–§8). */
+  interactiveObjects: z.array(interactiveObjectSchema).default([]),
+  environments: z.array(environmentSchema).default([]),
+  puzzles: z.array(puzzleSchema).default([]),
   /** What the designer said the game is (addendum 18 §2). */
   gameSetup: gameSetupSchema.nullable().default(null),
   /**

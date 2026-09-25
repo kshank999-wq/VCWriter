@@ -1247,6 +1247,20 @@ push live; the build takes a minute or two.
   a real `ConditionGroup`, so `removeState`/`removeResource` strip it and
   `behaviourConditions` is counted by `orphanState` and `bibleEntries`.
   `sceneBoard` is cards read off the scene, storing nothing.
+  **Stages 5–7** (§12): **the evaluator grew `verbsAt`, `useVerb` and
+  `settle` inside `narrative-eval.ts`**, beside `choose`, on the same
+  `meetsGroup`/`shortOf`/`applyEffects` — a verb is a choice that stays put,
+  and `settle` fires the scene's triggers (once, or whenever they hold) and
+  solves its puzzles after every step, one pass, no cascade. `PlayState` has
+  optional `taken` (once-only choices) and `fired`. An object owns an enum
+  state and a puzzle a flag (`narrative-world.ts`), made, renamed and removed
+  with them; `ownerOfState` says whose. `allConditions`/`allEffects` include
+  verbs, triggers and puzzles at a host node (`offGraphRules`), so the checks
+  and the economy see them. `makeChoicesExclusive` writes a state and a rule
+  per choice rather than adding a field. Mechanics live in `environments`,
+  keyed by location; shots, `skippable` and `lines` are on the element;
+  `repeat`/`timedSeconds` on the choice. A saved run's step may be a verb id.
+  The export is version 2.
   `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
   Ken after using instructional mode: chapters, sections and subsections
   worked out first, then put on the track. **All six stages of §9 are

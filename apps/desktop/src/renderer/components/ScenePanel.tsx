@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import {
   addBehaviour,
+  addTrigger,
+  removeTrigger,
+  TRIGGER_SUGGESTIONS,
+  updateTrigger,
+  type Effect,
   beatVisuals,
   BEHAVIOUR_SUGGESTIONS,
   living,
@@ -19,7 +24,7 @@ import {
   type ProjectFile,
   type StructuralUnitId,
 } from '@vcwriter/domain';
-import { ConditionGroupEditor, RuleSentence } from './RuleBuilder';
+import { ConditionGroupEditor, EffectList, RuleSentence } from './RuleBuilder';
 
 /**
  * A game scene's four layers, and its board (addendum 25 §5), in the far
@@ -54,6 +59,9 @@ const CARD_WORDS: Record<BoardCardKind, string> = {
   character: 'Character',
   place: 'Place',
   resource: 'Item',
+  object: 'Object',
+  puzzle: 'Puzzle',
+  trigger: 'Trigger',
   objective: 'Objective',
   exit: 'Way out',
 };
@@ -232,7 +240,96 @@ export function ScenePanel({
           {heading('systemic')}
           {open.systemic ? (
             <div className="scene-layer">
-              <p className="muted small">Read from the rules. Write them in Rules or on the Story Map; objectives on the Player Lane.</p>
+              <p className="muted small">
+                Triggers are written here. The rest is read: rules from Rules or the Story Map, objectives from the Player Lane,
+                objects and puzzles from the Game Bible.
+              </p>
+              <datalist id="trigger-kinds">
+                {TRIGGER_SUGGESTIONS.map((one) => (
+                  <option key={one} value={one} />
+                ))}
+              </datalist>
+              <h4>Triggers</h4>
+              {systemic.triggers.length === 0 ? (
+                <p className="muted small">Something that happens when a condition becomes true. + Trigger adds one.</p>
+              ) : null}
+              <ul className="game-inspector-list">
+                {systemic.triggers.map(({ trigger, says }) => {
+                  const id = trigger.id as string;
+                  const ruleOpen = openRule === id;
+                  return (
+                    <li key={id} className="scene-behaviour">
+                      <div className="rule-row">
+                        <input
+                          value={trigger.name}
+                          placeholder="Lantern flickers"
+                          aria-label="The trigger"
+                          onChange={(event) =>
+                            onUpdate((current) => updateTrigger(current, scene, trigger.id, { name: event.target.value }))
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="ghost small"
+                          aria-label="Remove this trigger"
+                          onClick={() => onUpdate((current) => removeTrigger(current, scene, trigger.id))}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="rule-row">
+                        <input
+                          list="trigger-kinds"
+                          value={trigger.kind}
+                          placeholder="State change"
+                          aria-label="What makes it fire"
+                          onChange={(event) =>
+                            onUpdate((current) => updateTrigger(current, scene, trigger.id, { kind: event.target.value }))
+                          }
+                        />
+                        <label className="small">
+                          <input
+                            type="checkbox"
+                            checked={trigger.once}
+                            onChange={(event) =>
+                              onUpdate((current) => updateTrigger(current, scene, trigger.id, { once: event.target.checked }))
+                            }
+                          />{' '}
+                          Once
+                        </label>
+                      </div>
+                      <p className="rule-said">{says}</p>
+                      <button type="button" className="ghost small" aria-expanded={ruleOpen} onClick={() => setOpenRule(ruleOpen ? null : id)}>
+                        {ruleOpen ? '▴ When, and what it does' : '▾ When, and what it does'}
+                      </button>
+                      {ruleOpen ? (
+                        <>
+                          <span className="muted small">WHEN</span>
+                          <ConditionGroupEditor
+                            file={file}
+                            group={trigger.conditions}
+                            onChange={(next: ConditionGroup) =>
+                              onUpdate((current) => updateTrigger(current, scene, trigger.id, { conditions: next }))
+                            }
+                          />
+                          <span className="muted small">DO</span>
+                          <EffectList
+                            file={file}
+                            effects={trigger.effects}
+                            onChange={(next: Effect[]) =>
+                              onUpdate((current) => updateTrigger(current, scene, trigger.id, { effects: next }))
+                            }
+                          />
+                        </>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+              <button type="button" className="tool" onClick={() => onUpdate((current) => addTrigger(current, scene).file)}>
+                + Trigger
+              </button>
+              <h4>Rules</h4>
               {systemic.arrivals.length === 0 && systemic.choices.length === 0 && systemic.objectives.length === 0 ? (
                 <p className="muted small">No rules here yet.</p>
               ) : null}
@@ -253,6 +350,25 @@ export function ScenePanel({
                 </p>
               ))}
               {systemic.completion ? <p className="small">Complete when: {systemic.completion}</p> : null}
+              {systemic.objects.map((one, index) => (
+                <div key={`object-${index}`}>
+                  <strong>{one.name}</strong>
+                  {one.verbs.length === 0 ? (
+                    <p className="muted small">Nothing to do to it yet.</p>
+                  ) : (
+                    one.verbs.map((verb, at) => (
+                      <p key={at} className="rule-said">
+                        {verb}
+                      </p>
+                    ))
+                  )}
+                </div>
+              ))}
+              {systemic.puzzles.map((one, index) => (
+                <p key={`puzzle-${index}`} className="rule-said">
+                  Puzzle · {one.name}: {one.says}
+                </p>
+              ))}
             </div>
           ) : null}
 

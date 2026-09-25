@@ -16635,3 +16635,73 @@ dialog.scene-dialog > header {
 .scene-card.kind-exit .scene-card-kind {
   color: var(--muted);
 }
+
+/* ------------------------- objects, puzzles, lines and shots (add. 25) */
+.bible-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.bible-checks label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Research's detail makes every input the column's width; a tick box is not
+   a field to type in. */
+.research-detail .bible-checks input[type='checkbox'] {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.bible-verb,
+.narrmap-line {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bible-verb textarea,
+.narrmap-line textarea {
+  min-height: 40px;
+  resize: vertical;
+}
+
+.narrmap-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.narrmap-lines .narrmap-lines {
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+
+.narrmap-lines .narrmap-lines h3 {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.play-lines {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+}

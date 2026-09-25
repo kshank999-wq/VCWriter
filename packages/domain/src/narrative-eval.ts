@@ -1,12 +1,15 @@
 import { choicesAt, elementsOf, entryPoints, findElement, findResource, findState } from './narrative.js';
+import { beatsForUnit } from './selectors.js';
 import type {
   Choice,
   Condition,
   ConditionGroup,
   Effect,
+  InteractiveObject,
   NarrativeElement,
+  Verb,
 } from './entities/narrative.js';
-import type { NarrativeElementId, ChoiceId } from './ids.js';
+import type { NarrativeElementId, ChoiceId, StructuralUnitId, VerbId } from './ids.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -49,6 +52,14 @@ export interface PlayState {
   gates: Readonly<Record<string, boolean>>;
   /** Element id → revealed or hidden. Absent means revealed, for that reason. */
   shown: Readonly<Record<string, boolean>>;
+  /**
+   * Choice id → how many times it has been taken, for a once-only choice
+   * (addendum 25 §8). Absent is never. Optional so a state written before it
+   * existed is still a state.
+   */
+  taken?: Readonly<Record<string, number>>;
+  /** Trigger id → fired, for a `once` trigger (addendum 25 §7). */
+  fired?: Readonly<Record<string, boolean>>;
 }
 
 export const initialState = (file: ProjectFile): PlayState => ({
@@ -80,7 +91,7 @@ const numberOf = (value: string | number | undefined): number => {
  * designer asks most often.
  */
 export interface Reason {
-  kind: 'condition' | 'blocked' | 'missing';
+  kind: 'condition' | 'blocked' | 'missing' | 'taken';
   says: string;
 }
 
@@ -236,11 +247,17 @@ export const evaluate = (file: ProjectFile, state: PlayState, at: NarrativeEleme
     blockedBy,
     choices: choicesAt(file, at).map((choice) => {
       const met = meetsGroup(file, state, choice.conditions);
-      const short = shortOf(file, state, choice);
+      const short = shortOf(file, state, choice.effects);
+      // A once-only choice already taken is not offered, and says so
+      // (addendum 25 §8) — the same *not offered, and why* as any other.
+      const spent: Reason[] =
+        choice.repeat === 'once' && (state.taken?.[choice.id as string] ?? 0) > 0
+          ? [{ kind: 'taken', says: 'already chosen, and it can only be chosen once' }]
+          : [];
       return {
         choice,
-        available: met.ok && short.length === 0,
-        blockedBy: [...met.failing, ...short],
+        available: met.ok && short.length === 0 && spent.length === 0,
+        blockedBy: [...met.failing, ...short, ...spent],
       };
     }),
   };
@@ -254,8 +271,8 @@ export const evaluate = (file: ProjectFile, state: PlayState, at: NarrativeEleme
  * same question statically — *a required resource that can be exhausted before
  * a mandatory use* — and both readings sit on this one.
  */
-const shortOf = (file: ProjectFile, state: PlayState, choice: Choice): Reason[] =>
-  choice.effects
+const shortOf = (file: ProjectFile, state: PlayState, effects: readonly Effect[]): Reason[] =>
+  effects
     .filter((effect) => effect.kind === 'consume')
     .flatMap((effect) => {
       const have = state.resources[effect.targetId] ?? 0;
@@ -373,24 +390,27 @@ export const choose = (
   }
   if (!here.available) return { at, state, log: [], refused: here.blockedBy };
 
+  // Taking a choice is remembered, for a once-only one (addendum 25 §8).
+  const counted: PlayState = {
+    ...state,
+    taken: { ...(state.taken ?? {}), [choiceId as string]: (state.taken?.[choiceId as string] ?? 0) + 1 },
+  };
+
   const destination = here.choice.toElementId;
   if (destination) {
-    // Read the destination against the state *before* the effects, then again
-    // after: a choice that grants the key its own destination requires is a
-    // real and ordinary thing, so only the second answer decides.
-    const after = applyEffects(file, state, here.choice.effects);
+    const after = applyEffects(file, counted, here.choice.effects);
     const arriving = evaluate(file, after.state, destination);
     if (!arriving || !arriving.available) {
       return { at, state, log: [], refused: arriving?.blockedBy ?? [{ kind: 'missing', says: 'that node has gone' }] };
     }
-    // On arrival the node's own effects run, which is what makes a node a
-    // place where something happens rather than only a place with exits.
     const arrived = applyEffects(file, after.state, arriving.element.effects);
-    return { at: destination, state: arrived.state, log: [...after.log, ...arrived.log], refused: [] };
+    const settled = settle(file, arrived.state, destination);
+    return { at: destination, state: settled.state, log: [...after.log, ...arrived.log, ...settled.log], refused: [] };
   }
 
-  const after = applyEffects(file, state, here.choice.effects);
-  return { at, state: after.state, log: after.log, refused: [] };
+  const after = applyEffects(file, counted, here.choice.effects);
+  const settled = settle(file, after.state, at);
+  return { at, state: settled.state, log: [...after.log, ...settled.log], refused: [] };
 };
 
 /** Where a run starts: the first entry point, with its arrival effects run. */
@@ -398,7 +418,116 @@ export const beginRun = (file: ProjectFile): Move | null => {
   const start = entryPoints(file)[0];
   if (!start) return null;
   const arrived = applyEffects(file, initialState(file), start.effects);
-  return { at: start.id, state: arrived.state, log: arrived.log, refused: [] };
+  const settled = settle(file, arrived.state, start.id);
+  return { at: start.id, state: settled.state, log: [...arrived.log, ...settled.log], refused: [] };
+};
+
+// ------------------------------------ objects, triggers, puzzles (add. 25 §7–§8)
+
+/**
+ * The scene a node is in, read through the beat it is bound to. Null for a
+ * node bound to nothing: a branch has no scene of its own.
+ */
+export const sceneOf = (file: ProjectFile, elementId: NarrativeElementId): StructuralUnitId | null => {
+  const element = findElement(file, elementId);
+  if (!element?.boundBeatId) return null;
+  return (file.beats.find((one) => one.id === element.boundBeatId)?.unitId as StructuralUnitId | undefined) ?? null;
+};
+
+/** The objects the player can use at a node: placed at it, or in its scene. */
+export const objectsAt = (file: ProjectFile, elementId: NarrativeElementId): InteractiveObject[] => {
+  const scene = sceneOf(file, elementId);
+  return (file.interactiveObjects ?? []).filter(
+    (one) => one.placedAt.includes(elementId as string) || (scene !== null && one.placedAt.includes(scene as string)),
+  );
+};
+
+/** One verb as it currently stands: offered, or not and why — a choice's shape. */
+export interface VerbOffer {
+  object: InteractiveObject;
+  verb: Verb;
+  available: boolean;
+  blockedBy: Reason[];
+}
+
+/**
+ * What the player can do to the objects here (addendum 25 §7). **The same
+ * reading as a choice's**, through the same `meetsGroup` and the same *not
+ * enough to spend* rule, because a verb is a choice that stays where it is.
+ */
+export const verbsAt = (file: ProjectFile, state: PlayState, at: NarrativeElementId): VerbOffer[] =>
+  objectsAt(file, at).flatMap((object) =>
+    object.verbs.map((verb) => {
+      const met = meetsGroup(file, state, verb.conditions);
+      const short = shortOf(file, state, verb.effects);
+      return { object, verb, available: met.ok && short.length === 0, blockedBy: [...met.failing, ...short] };
+    }),
+  );
+
+/** Use a verb: its effects, then whatever that sets off, and the player stays put. */
+export const useVerb = (file: ProjectFile, state: PlayState, at: NarrativeElementId, verbId: VerbId): Move => {
+  const here = verbsAt(file, state, at).find((one) => one.verb.id === verbId);
+  if (!here) return { at, state, log: [], refused: [{ kind: 'missing', says: 'that is not something you can do here' }] };
+  if (!here.available) return { at, state, log: [], refused: here.blockedBy };
+  const after = applyEffects(file, state, here.verb.effects);
+  const settled = settle(file, after.state, at);
+  return { at, state: settled.state, log: [...after.log, ...settled.log], refused: [] };
+};
+
+/**
+ * What a step sets off in the scene the player is in (addendum 25 §7, §8):
+ * every trigger whose condition now holds — once for a `once` trigger — and
+ * every puzzle whose solution now holds, which is marked solved and runs its
+ * `onSolve`.
+ *
+ * **One pass, in the order written, with no cascade**: a trigger that makes
+ * another trigger's condition true fires that one on the next step, not this
+ * one. A chain that settled itself would be a loop waiting to happen, and a
+ * designer reading the log can see exactly what one step did.
+ */
+export const settle = (file: ProjectFile, state: PlayState, at: NarrativeElementId): { state: PlayState; log: Mutation[] } => {
+  const scene = sceneOf(file, at);
+  if (!scene) return { state, log: [] };
+  let current = state;
+  const log: Mutation[] = [];
+
+  const layers = (file.sceneLayers ?? []).find((one) => one.unitId === scene);
+  for (const trigger of layers?.triggers ?? []) {
+    if (trigger.once && current.fired?.[trigger.id as string]) continue;
+    if (!meetsGroup(file, current, trigger.conditions).ok) continue;
+    const done = applyEffects(file, current, trigger.effects);
+    current = { ...done.state, fired: { ...(done.state.fired ?? {}), [trigger.id as string]: true } };
+    // Each change is said with the trigger that made it, so the log shows
+    // what fired without inventing an entry for the firing itself.
+    const name = trigger.name.trim() || 'A trigger';
+    log.push(...done.log.map((one) => ({ effect: one.effect, says: `${name}: ${one.says}` })));
+  }
+
+  for (const puzzle of file.puzzles ?? []) {
+    if (puzzle.unitId !== scene) continue;
+    const flag = puzzle.solvedStateId as string;
+    if (current.states[flag] === 'true') continue;
+    if (!meetsGroup(file, current, puzzle.solution).ok) continue;
+    const solved = applyEffects(file, current, [
+      { kind: 'set', targetId: flag, value: 'true', timing: 'immediate', note: '' },
+      ...puzzle.onSolve,
+    ]);
+    current = solved.state;
+    // The first change is the puzzle's own flag, and it is said as what it means.
+    const [flagged, ...rest] = solved.log;
+    log.push({ effect: flagged!.effect, says: `${puzzle.name.trim() || 'A puzzle'} is solved` }, ...rest);
+  }
+  return { state: current, log };
+};
+
+/** A node's scene's first node, for the checks that ask where a rule sits. */
+export const firstNodeInScene = (file: ProjectFile, unitId: StructuralUnitId): NarrativeElement | null => {
+  const order = beatsForUnit(file, unitId).map((one) => one.id as string);
+  return (
+    elementsOf(file)
+      .filter((one) => one.boundBeatId !== null && order.includes(one.boundBeatId as string))
+      .sort((a, b) => order.indexOf(a.boundBeatId as string) - order.indexOf(b.boundBeatId as string))[0] ?? null
+  );
 };
 
 // ------------------------------------------------------- reachability

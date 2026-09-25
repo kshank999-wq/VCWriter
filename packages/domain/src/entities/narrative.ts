@@ -10,6 +10,15 @@ import type {
   BehaviourId,
   CharacterId,
   SceneLayersId,
+  InteractiveObjectId,
+  VerbId,
+  TriggerId,
+  EnvironmentId,
+  MechanicId,
+  PuzzleId,
+  PuzzleComponentId,
+  ShotId,
+  LocationId,
   ResourceDefinitionId,
   StructuralUnitId,
   SimulationRunId,
@@ -311,6 +320,38 @@ export const endingContributorSchema = z.object({
 });
 export type EndingContributor = z.infer<typeof endingContributorSchema>;
 
+// ------------------------------------------- dialogue and shots (add. 25 §6, §8)
+
+/**
+ * One line of dialogue on a node that is not bound to a beat (addendum 25 §6).
+ *
+ * A conversation or a cinematic bound to a beat keeps its words in the
+ * manuscript, as a scene does; this is for the unbound one, which addendum
+ * 18 §12 found had nowhere to put a line.
+ */
+export const dialogueLineSchema = z.object({
+  characterId: id<CharacterId>().nullable().default(null),
+  text: z.string().default(''),
+  /** *Barely a whisper.* The parenthetical, in a script's terms. */
+  direction: z.string().default(''),
+});
+export type DialogueLine = z.infer<typeof dialogueLineSchema>;
+
+/**
+ * One shot of a cinematic (spec §10). Presentation, so nothing evaluates it;
+ * the node's own effects are what the cinematic changes. `seconds` is a
+ * label, as a beat's timing is.
+ */
+export const shotSchema = z.object({
+  id: id<ShotId>(),
+  camera: z.string().default(''),
+  action: z.string().default(''),
+  lines: z.array(dialogueLineSchema).default([]),
+  audio: z.string().default(''),
+  seconds: z.number().int().min(0).default(0),
+});
+export type Shot = z.infer<typeof shotSchema>;
+
 // ---------------------------------------------------------------- elements
 
 /**
@@ -388,6 +429,12 @@ export const narrativeElementSchema = z.object({
    * switch to set wrongly and no way for the switch and the rules to disagree.
    */
   threshold: z.number().default(0),
+  /** The other side's lines, for a conversation or a cinematic not bound to a beat (addendum 25 §6). */
+  lines: z.array(dialogueLineSchema).default([]),
+  /** A cinematic's shots, in order (addendum 25 §8). Empty on every other kind. */
+  shots: z.array(shotSchema).default([]),
+  /** Whether the player may skip it. Meaningful on a cinematic. */
+  skippable: z.boolean().default(true),
   ...timestamps,
 });
 export type NarrativeElement = z.infer<typeof narrativeElementSchema>;
@@ -417,6 +464,14 @@ export const choiceSchema = z.object({
    */
   toElementId: id<NarrativeElementId>().nullable().default(null),
   note: z.string().default(''),
+  /**
+   * Whether it can be taken twice (addendum 25 §8). *Once* is read by the one
+   * `evaluate`: a once-only choice already taken is not offered, and says so.
+   * Repeatable is the default because it is what every choice did before.
+   */
+  repeat: z.enum(['repeatable', 'once']).default('repeatable'),
+  /** A timed choice's seconds, for Game Studio. A label: there is no clock here. */
+  timedSeconds: z.number().int().min(0).default(0),
   ...timestamps,
 });
 export type Choice = z.infer<typeof choiceSchema>;
@@ -499,6 +554,24 @@ export const behaviourSchema = z.object({
 });
 export type Behaviour = z.infer<typeof behaviourSchema>;
 
+/**
+ * Something that happens in a scene when a condition becomes true (spec §9):
+ * *the lantern flickers when the oil runs low*. Its kind is free text with
+ * suggestions — proximity, timer, state change — because only Game Studio
+ * cares what makes it physically fire. **What it does is ordinary effects**,
+ * applied by the one evaluator after every step while its condition holds;
+ * a `once` trigger fires the first time only.
+ */
+export const triggerSchema = z.object({
+  id: id<TriggerId>(),
+  name: z.string().default(''),
+  kind: z.string().default(''),
+  conditions: conditionGroupSchema.default(emptyConditions()),
+  effects: z.array(effectSchema).default([]),
+  once: z.boolean().default(true),
+});
+export type Trigger = z.infer<typeof triggerSchema>;
+
 /** Spec §6, layer 4: how the scene is presented. Text, for the people who build it. */
 export const presentationSchema = z.object({
   music: z.string().default(''),
@@ -523,9 +596,121 @@ export const sceneLayersSchema = z.object({
   unitId: id<StructuralUnitId>(),
   behaviours: z.array(behaviourSchema).default([]),
   presentation: presentationSchema.default({}),
+  triggers: z.array(triggerSchema).default([]),
   ...timestamps,
 });
 export type SceneLayers = z.infer<typeof sceneLayersSchema>;
+
+// ------------------------------------ objects, environment, puzzles (add. 25 §7, §8)
+
+/**
+ * Something the player can do to an interactive object: *pull* the lever.
+ * **A verb is a choice that stays where it is** — its conditions and effects
+ * are the types every rule uses, so the builder edits them and `evaluate`'s
+ * own helpers decide them.
+ */
+export const verbSchema = z.object({
+  id: id<VerbId>(),
+  name: z.string().default(''),
+  conditions: conditionGroupSchema.default(emptyConditions()),
+  effects: z.array(effectSchema).default([]),
+});
+export type Verb = z.infer<typeof verbSchema>;
+
+/**
+ * An interactive object, a *smart object* (spec §9): a lever, a door, a
+ * collapsing ledge.
+ *
+ * **Its state is a state definition it owns** — an enum whose values are the
+ * object's states — so *the lever is up* is an ordinary condition and
+ * *pulling it* is an ordinary `set`. There is no second mechanism for object
+ * state, and the checks, the rule builder and a rename all reach it.
+ */
+export const interactiveObjectSchema = z.object({
+  id: id<InteractiveObjectId>(),
+  projectId: id<ProjectId>(),
+  name: z.string().default(''),
+  note: z.string().default(''),
+  /** The owned state. Its `choices` are the object's states. */
+  stateId: id<StateDefinitionId>(),
+  /** Where it is: scene ids and node ids. The verbs are offered there. */
+  placedAt: z.array(z.string()).default([]),
+  verbs: z.array(verbSchema).default([]),
+  ...timestamps,
+});
+export type InteractiveObject = z.infer<typeof interactiveObjectSchema>;
+
+/**
+ * One environmental mechanic, as authored intent (spec §9): darkness, a
+ * crawl, rising water. **All text, and nothing evaluates it** — VC Writer
+ * says what should happen and Game Studio makes it physical. Where a
+ * mechanic has a rule (*the lantern drains in the dark*), the rule is a
+ * trigger, which does evaluate.
+ */
+export const mechanicSchema = z.object({
+  id: id<MechanicId>(),
+  /** *Darkness*, *traversal*, *hazard*… free text with suggestions. */
+  kind: z.string().default(''),
+  /** *Crawl*, *collapse*, *rising water*. */
+  variant: z.string().default(''),
+  note: z.string().default(''),
+  /** Numbers and settings for Game Studio, in the designer's words. */
+  params: z.string().default(''),
+});
+export type Mechanic = z.infer<typeof mechanicSchema>;
+
+/**
+ * A location's mechanics, on a game (addendum 25 §7). **A collection of its
+ * own keyed by the location**, not a field on it, for the scene layers'
+ * reason: locations are shared by every format and synchronised, and a
+ * screenplay's place has no mechanics to carry.
+ */
+export const environmentSchema = z.object({
+  id: id<EnvironmentId>(),
+  projectId: id<ProjectId>(),
+  locationId: id<LocationId>(),
+  mechanics: z.array(mechanicSchema).default([]),
+  ...timestamps,
+});
+export type Environment = z.infer<typeof environmentSchema>;
+
+export const puzzleComponentSchema = z.object({
+  id: id<PuzzleComponentId>(),
+  name: z.string().default(''),
+  note: z.string().default(''),
+});
+export type PuzzleComponent = z.infer<typeof puzzleComponentSchema>;
+
+/**
+ * A puzzle (spec §9): an objective, its parts, and **a solution that is a
+ * condition** — *the lever is up and the player holds the key*.
+ *
+ * Solved is **a flag the puzzle owns**, set by the one evaluator the moment
+ * the solution holds, and `onSolve` runs once then. Everything else reads the
+ * flag like any state, so a door gated on the puzzle is an ordinary gate.
+ * Failure and reset are words for Game Studio; there is no clock or attempt
+ * counter here to evaluate them against.
+ */
+export const puzzleSchema = z.object({
+  id: id<PuzzleId>(),
+  projectId: id<ProjectId>(),
+  name: z.string().default(''),
+  /** What the player is trying to do, in words. */
+  objective: z.string().default(''),
+  note: z.string().default(''),
+  /** The scene it is in, where its solution is checked. */
+  unitId: id<StructuralUnitId>().nullable().default(null),
+  components: z.array(puzzleComponentSchema).default([]),
+  solution: conditionGroupSchema.default(emptyConditions()),
+  hints: z.array(z.string()).default([]),
+  onSolve: z.array(effectSchema).default([]),
+  /** What failing looks like, and whether it resets. For Game Studio. */
+  failure: z.string().default(''),
+  /** The owned flag: true once solved. */
+  solvedStateId: id<StateDefinitionId>(),
+  ...timestamps,
+});
+export type Puzzle = z.infer<typeof puzzleSchema>;
 
 // ------------------------------------------------------- a playthrough (§13)
 

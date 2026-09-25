@@ -82,6 +82,15 @@ export type QuestId = Id<'Quest'>;
 /** A scene's behavioural and presentation layers, on a game (addendum 25 §5). */
 export type SceneLayersId = Id<'SceneLayers'>;
 export type BehaviourId = Id<'Behaviour'>;
+/** Addendum 25 §7–§8: objects, triggers, the environment, puzzles, shots. */
+export type InteractiveObjectId = Id<'InteractiveObject'>;
+export type VerbId = Id<'Verb'>;
+export type TriggerId = Id<'Trigger'>;
+export type EnvironmentId = Id<'Environment'>;
+export type MechanicId = Id<'Mechanic'>;
+export type PuzzleId = Id<'Puzzle'>;
+export type PuzzleComponentId = Id<'PuzzleComponent'>;
+export type ShotId = Id<'Shot'>;
 /**
  * Game Studio's record that an authored thing has been built in an engine
  * (addendum 25 §2). VC Writer carries these and reads their status; it never

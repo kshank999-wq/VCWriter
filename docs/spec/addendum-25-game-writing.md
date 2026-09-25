@@ -18,7 +18,7 @@ The two specs are kept beside this addendum as
 [`game-studio-spec-v1.md`](game-studio-spec-v1.md). The Game Studio spec
 calls the narrative module *VC Rider*; it is this one.
 
-**Status: stages 0–4 built.** §9 is the build order; §12 says what each built stage does.
+**Status: stages 0–7 built.** §9 is the build order; §12 says what each built stage does.
 
 ---
 
@@ -604,3 +604,72 @@ Read layers say where they are written, so nobody looks for a box to type in.
 Driving the real renderer caught one fault: the layer headings wore the
 Inspector's `twisty` class, which is sized for a lone arrow, so *1 ·
 Narrative* stacked into three lines. They are ordinary buttons now.
+
+### Stages 5–7 — objects, triggers, the environment, puzzles, shots, dialogue and choice behaviour
+
+`entities/narrative.ts`, `narrative-world.ts`, the evaluator, and every screen
+that already showed the game: the Bible, the scene's layers, the map's side
+panel, the simulator.
+
+**The one evaluator grew three functions and nothing beside it.** 18 §5's rule
+held all the way through: `verbsAt`, `useVerb` and `settle` live in
+`narrative-eval.ts` next to `choose`, decide availability through the same
+`meetsGroup` and the same *not enough to spend* reading, and apply changes
+through the same `applyEffects`.
+
+- **A verb is a choice that stays where it is.** An interactive object is
+  placed in scenes or at nodes; its verbs are offered there, and using one is a
+  move that leaves the player where they were. A saved path records a verb as
+  a step like a choice — both are ids, and the replay tells them apart — and a
+  path whose object has since been moved says *the object it used is no longer
+  here* rather than *cut*.
+- **An object owns a state and a puzzle owns a flag.** Made with them, renamed
+  with them (*Rusted Lever* is `rusted_lever_state`), removed with them and
+  every rule that asks about them. So *the lever is up* and *the vault door is
+  solved* are ordinary conditions, and there is no second mechanism for
+  object state or puzzle progress. The Bible shows an owned state as its
+  owner's and gives it no remove of its own.
+- **`settle` runs after every step**, in the scene the player is in: every
+  trigger whose condition holds (a `once` trigger the first time only), then
+  every puzzle whose solution holds, which sets its flag and runs `onSolve`
+  once. **One pass, in the order written, no cascade**: a trigger that makes
+  another true fires that one on the next step, so a chain cannot loop and the
+  log shows exactly what one step did. A trigger's changes are logged under
+  its name; nothing in the log is invented for the firing itself.
+- **A once-only choice** is read by `evaluate`: taken once, it is not offered,
+  and says *already chosen, and it can only be chosen once*. Choices are
+  repeatable by default, because that is what every choice did before.
+  `timedSeconds` is a label for Game Studio, as `timing` is.
+- **Mutual exclusion is a rule, not a field** (`makeChoicesExclusive`): one
+  enum state whose values are the choices, each choice setting it to its own
+  value and offered only while it is empty — written the way a designer would
+  write it by hand, so it evaluates with nothing new and can be opened and
+  changed in the rule builder. An ANY or NONE group is kept whole inside a new
+  ALL, so adding the exclusion never changes what the choice already asked.
+
+**Rules off the graph count as rules.** `allConditions` and `allEffects` now
+carry verbs, triggers and puzzle solutions, each read as sitting at the node
+it acts at — the node an object is placed at, or its scene's first node. So a
+key handed out by pulling a lever is a key the game gives, and every check,
+the economy and the Bible's *used* agree. Deleting a state or resource strips
+it from verbs, triggers and puzzles as from every other rule.
+
+**Written for Game Studio, evaluated by nothing:** a location's **mechanics**
+(darkness, traversal, hazards, water — a collection keyed by the location, for
+the scene layers' reason that locations are shared by every format and
+synchronised), a cinematic's **shots** (camera, action, audio, lines, seconds)
+and whether it can be skipped, and the **lines** of a conversation or
+cinematic not bound to a beat, which answers 18 §12's second question: a bound
+one keeps its words in the script.
+
+The Game Bible's group is now *Items & resources, State, Interactive objects,
+Puzzles, Environments, Quests & objectives*. The scene's systemic layer writes
+its triggers and reads its objects and puzzles; the board gains object,
+puzzle and trigger cards; the Player Lane says *Can pull the Rusted Lever* and
+*Overcomes the Vault Door*. The simulator offers *Things to do here* beside the
+choices, and shows a node's own lines. The export is version 2: every key of
+version 1 is unchanged, and the new records join it with their own ids.
+
+Driving the real renderer caught one fault: the Bible's *Where it is* tick
+boxes were each the width of the column, because Research's detail styles
+every input as a field; a tick box is not one.

@@ -1,4 +1,6 @@
-import { allConditions, allEffects, resourcesOf, statesOf } from './narrative.js';
+import { allConditions, allEffects, conditionsIn, resourcesOf, statesOf } from './narrative.js';
+import { mechanicsOf, objectsOf, puzzlesOf } from './narrative-world.js';
+import { locationsInOrder } from './locations.js';
 import { objectiveConditions, questSteps, questsOf } from './narrative-objectives.js';
 import { behaviourConditions } from './narrative-scene.js';
 import type { ProjectFile } from './project-file.js';
@@ -18,11 +20,14 @@ import type { ProjectFile } from './project-file.js';
  * changes it, a quest when it has a step. Nothing is stored.
  */
 
-export type BibleSection = 'resources' | 'states' | 'quests';
+export type BibleSection = 'resources' | 'states' | 'objects' | 'puzzles' | 'environments' | 'quests';
 
 export const BIBLE_SECTIONS: { section: BibleSection; label: string }[] = [
   { section: 'resources', label: 'Items & resources' },
   { section: 'states', label: 'State' },
+  { section: 'objects', label: 'Interactive objects' },
+  { section: 'puzzles', label: 'Puzzles' },
+  { section: 'environments', label: 'Environments' },
   { section: 'quests', label: 'Quests & objectives' },
 ];
 
@@ -67,6 +72,27 @@ const STATE_WORDS: Record<string, string> = {
 
 /** The cards in one section, in the designer's order. */
 export const bibleEntries = (file: ProjectFile, section: BibleSection): BibleEntry[] => {
+  if (section === 'objects') {
+    // Used once it is somewhere the player can use it.
+    return objectsOf(file).map((one) => {
+      const uses = one.verbs.length;
+      return { id: one.id as string, name: one.name, kind: 'Object', uses, used: one.placedAt.length > 0 && uses > 0 };
+    });
+  }
+  if (section === 'puzzles') {
+    // Used once it is in a scene with a solution written.
+    return puzzlesOf(file).map((one) => {
+      const uses = conditionsIn(one.solution).length;
+      return { id: one.id as string, name: one.name, kind: 'Puzzle', uses, used: one.unitId !== null && uses > 0 };
+    });
+  }
+  if (section === 'environments') {
+    // Every place, and how many mechanics the game gives it.
+    return locationsInOrder(file).map((one) => {
+      const uses = mechanicsOf(file, one.id).length;
+      return { id: one.id as string, name: one.name, kind: 'Place', uses, used: uses > 0 };
+    });
+  }
   if (section === 'quests') {
     return questsOf(file).map((quest) => {
       const steps = questSteps(file, quest.id).length;
@@ -100,6 +126,15 @@ export const bibleCounts = (file: ProjectFile): Record<BibleSection, { total: nu
 export const describeEntry = (section: BibleSection, entry: BibleEntry): string => {
   if (section === 'quests') {
     return entry.uses === 0 ? 'No steps yet' : `${entry.uses} step${entry.uses === 1 ? '' : 's'}`;
+  }
+  if (section === 'objects') {
+    return entry.uses === 0 ? 'Nothing to do to it yet' : `${entry.uses} thing${entry.uses === 1 ? '' : 's'} to do`;
+  }
+  if (section === 'puzzles') {
+    return entry.used ? `Solved by ${entry.uses} condition${entry.uses === 1 ? '' : 's'}` : 'Not in a scene with a solution yet';
+  }
+  if (section === 'environments') {
+    return entry.uses === 0 ? 'No mechanics yet' : `${entry.uses} mechanic${entry.uses === 1 ? '' : 's'}`;
   }
   if (!entry.used) return `${entry.kind} · not yet used`;
   return `${entry.kind} · ${entry.uses} rule${entry.uses === 1 ? '' : 's'}`;
