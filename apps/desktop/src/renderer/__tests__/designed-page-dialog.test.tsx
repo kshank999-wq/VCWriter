@@ -288,6 +288,67 @@ describe('the title page', () => {
     expect(screen.getByText(/Choose Title text or Logotype to set them/)).toBeTruthy();
   });
 
+  /**
+   * **The three faults Ken hit typing into this panel**, each in its own
+   * right and all of them invisible to a test that only pressed buttons.
+   */
+  it('keeps the caret in the box while a whole word is typed', () => {
+    // The control was a component declared inside the body, so every render
+    // made a new component *type*, React remounted the subtree, and the
+    // input a writer was typing into was thrown away at each keystroke.
+    // What pins it is the DOM node's identity across a change.
+    render(<Harness kind="title_page" start={withHouse} />);
+    const box = screen.getByLabelText('Subtitle');
+    fireEvent.change(box, { target: { value: 'S' } });
+    expect(screen.getByLabelText('Subtitle')).toBe(box);
+    fireEvent.change(box, { target: { value: 'St' } });
+    expect(screen.getByLabelText('Subtitle')).toBe(box);
+  });
+
+  it('takes a space, every box of it', () => {
+    // `titlePageOf` and `publisherOf` trim, being readings for the page, so
+    // a box bound to one lost the trailing space and the space bar did
+    // nothing — *the publisher location won't allow input*.
+    let seen: ProjectFile | null = null;
+    render(<Harness kind="title_page" onFile={(file) => (seen = file)} start={withHouse} />);
+    for (const [label, word] of [
+      ['Subtitle', 'Stories of '],
+      ['Author’s name', 'Marion '],
+      ['Book title', 'The Lamp '],
+      ['Publisher location', 'Portland, '],
+    ] as const) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value: word } });
+      expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe(word);
+    }
+    expect(seen).not.toBeNull();
+  });
+
+  it('shows the book’s own name as a placeholder rather than as the value', () => {
+    // A fallback arriving as a value reads as somebody's typing: it appends
+    // to what you type and comes straight back when you clear it.
+    render(<Harness kind="title_page" start={withHouse} />);
+    const author = screen.getByLabelText('Author’s name') as HTMLInputElement;
+    expect(author.value).toBe('');
+    expect(author.placeholder).toBe('M. Shank');
+    // The title *has* been typed on this fixture, so it is a value — which
+    // is the other half of the rule: what was typed shows as typed.
+    const title = screen.getByLabelText('Book title') as HTMLInputElement;
+    expect(title.value).toBe('Villain’s Tales');
+    expect(title.placeholder).toBe('Villain’s Tales');
+  });
+
+  it('says which type the size control sets', () => {
+    // From Ken: *there needs to be a font size for the title text*. It was
+    // there and read *Size*, beside an *Author size* that named itself.
+    render(<Harness kind="title_page" start={withHouse} />);
+    expect(screen.getByLabelText('Title size in points')).toBeTruthy();
+    expect(screen.getByText(/The subtitle is set from the title’s size/)).toBeTruthy();
+    cleanup();
+    // A half title has one line of type, so there is nothing to tell apart.
+    render(<Harness />);
+    expect(screen.getByLabelText('Size in points')).toBeTruthy();
+  });
+
   it('gives the author a size of its own, which the half title never had', () => {
     render(<Harness kind="title_page" start={withHouse} />);
     expect(screen.getByLabelText('Author size in points')).toBeTruthy();

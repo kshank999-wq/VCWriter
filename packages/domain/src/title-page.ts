@@ -3,7 +3,7 @@ import type { BookPart } from './entities/book.js';
 import type { ProjectFile } from './project-file.js';
 import { bookNames, bookSettingsOf } from './book-layout.js';
 import { copyrightOf } from './copyright-page.js';
-import { titlePageOf } from './entities/title-page.js';
+import { titlePageOf, titlePageSchema } from './entities/title-page.js';
 import type { PartStyle } from './part-style.js';
 
 /**
@@ -104,6 +104,43 @@ export const publisherOf = (
     name: (copyright?.publisher ?? '').trim() || bookSettingsOf(file).imprint.trim(),
     place: (copyright?.publisherPlace ?? '').trim(),
     edition: (copyright?.edition ?? '').trim(),
+  };
+};
+
+/**
+ * **What the writer has typed, exactly as typed** — the other half of
+ * `publisherOf` and of `titlePageOf`, and the half a *box* must be bound to.
+ *
+ * Both of those are readings **for the page**: they trim every field and put
+ * the book's own name in where nothing has been typed, which is right for
+ * ink and wrong for a control. Bound to an input it costs a writer two
+ * things, and Ken hit both — *the publisher location won't allow input* and
+ * *the author name does not allow input*. A **trailing space is trimmed off
+ * on the way back**, so the space bar does nothing and a two-word name
+ * cannot be typed; and a **fallback arrives as the value**, so the box shows
+ * the project's name as though somebody had typed it, typing appends to it,
+ * and clearing it hands it straight back.
+ *
+ * So the rule, which is `partStyleOf`'s and `bookPresetOf`'s pointed at a
+ * form: **a reading says what will print and a field says what was typed.**
+ * The fallback belongs in the *placeholder*, where it says *this is what the
+ * page will use* without pretending to be the writer's words.
+ */
+export const titlePageTyped = (file: ProjectFile): { title: string; subtitle: string; author: string } => {
+  const page = titlePageSchema.parse(file.settings.titlePage ?? {});
+  return { title: page.title, subtitle: page.episode, author: page.author };
+};
+
+/** The publisher's three, as typed on the copyright page. */
+export const publisherTyped = (
+  parts: readonly BookPart[],
+): { name: string; place: string; edition: string } => {
+  const page = parts.find((one) => one.kind === 'copyright');
+  const copyright = page ? copyrightOf(page) : null;
+  return {
+    name: copyright?.publisher ?? '',
+    place: copyright?.publisherPlace ?? '',
+    edition: copyright?.edition ?? '',
   };
 };
 

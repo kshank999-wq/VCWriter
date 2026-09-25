@@ -25,12 +25,14 @@ import {
   partsOf,
   proseStyleBase,
   publisherOf,
+  publisherTyped,
   setCopyright,
   renderBookPage,
   setTitlePage,
   titlePageContent,
   titlePageFieldsOf,
   titlePageOf,
+  titlePageTyped,
   titlePageShown,
   titleTemplateOf,
   titleTemplatePatch,
@@ -248,6 +250,15 @@ function Body({
   const fields = titlePageFieldsOf(part);
   const said = titlePageContent(file, part, plan);
   const house = publisherOf(file, plan);
+  /**
+   * **What a box is bound to.** `titlePageOf` and `publisherOf` are readings
+   * *for the page* — they trim and they fall back to the book's own name —
+   * so an input bound to one cannot take a trailing space (the space bar
+   * does nothing) and shows the fallback as though it were typed. The
+   * readings stay: they are what the sheet beside these controls draws.
+   */
+  const typed = titlePageTyped(file);
+  const typedHouse = publisherTyped(plan);
   const arrangement = titleTemplateOf(style);
 
   /** Switch one of the five optional elements, keeping its words (§15's rule). */
@@ -290,8 +301,17 @@ function Body({
    * The control on an element's row. Every one is a **real input**, writing
    * to wherever that value lives — the book's names, this page's own fields,
    * or the copyright page's record.
+   *
+   * **It is a function that returns markup, never a component** — and that is
+   * the whole of a bug Ken hit on the subtitle (*it just kicks me out of the
+   * box*). Declared inside `Body`, a component is a **new function identity
+   * on every render**, which React reads as a different *type*: it unmounts
+   * the old subtree and mounts a fresh one, so the `<input>` a writer is
+   * typing into is thrown away and rebuilt at each keystroke and the focus
+   * goes with it. Called rather than mounted, the markup is part of `Body`'s
+   * own tree, the element is reconciled in place, and the caret stays.
    */
-  const ElementInput = ({ id }: { id: (typeof TITLE_ELEMENTS)[number]['id'] }) => {
+  const elementInput = (id: (typeof TITLE_ELEMENTS)[number]['id']) => {
     if (id === 'title') {
       // A logotype stands in place of the words, so the row says so rather
       // than offering a box the page will not print (§16c).
@@ -317,7 +337,7 @@ function Body({
           className="dp-serif-input"
           aria-label="Book title"
           placeholder={file.project.title}
-          value={titlePage.title}
+          value={typed.title}
           onChange={(event) => onUpdate((current) => setTitlePage(current, { title: event.target.value }))}
         />
       );
@@ -327,7 +347,7 @@ function Body({
         <input
           aria-label="Subtitle"
           placeholder="A novel, Stories — or nothing"
-          value={titlePage.episode}
+          value={typed.subtitle}
           onChange={(event) => onUpdate((current) => setTitlePage(current, { episode: event.target.value }))}
         />
       );
@@ -337,7 +357,7 @@ function Body({
         <input
           aria-label="Author’s name"
           placeholder={file.project.author}
-          value={titlePage.author}
+          value={typed.author}
           onChange={(event) => onUpdate((current) => setTitlePage(current, { author: event.target.value }))}
         />
       );
@@ -372,7 +392,7 @@ function Body({
         <input
           aria-label="Edition"
           placeholder="Second Edition"
-          value={house.edition}
+          value={typedHouse.edition}
           onChange={(event) => writeHouse({ edition: event.target.value })}
         />
       );
@@ -401,8 +421,8 @@ function Body({
           ) : (
             <input
               aria-label="Publisher or imprint name"
-              placeholder="Imprint name"
-              value={house.name}
+              placeholder={bookSettingsOf(file).imprint || 'Imprint name'}
+              value={typedHouse.name}
               onChange={(event) => writeHouse({ publisher: event.target.value })}
             />
           )}
@@ -413,7 +433,7 @@ function Body({
       <input
         aria-label="Publisher location"
         placeholder="City, State"
-        value={house.place}
+        value={typedHouse.place}
         onChange={(event) => writeHouse({ publisherPlace: event.target.value })}
       />
     );
@@ -565,7 +585,7 @@ function Body({
                           <strong>{one.label}</strong>
                           <span className="muted small">{one.note}</span>
                         </div>
-                        {on ? <ElementInput id={one.id} /> : null}
+                        {on ? elementInput(one.id) : null}
                       </li>
                     );
                   })}
@@ -769,20 +789,28 @@ function Body({
                     ))}
                   </select>
                 </label>
+                {/* **It says what it sizes** (from Ken: *there needs to be a
+                    font size for the title text*). The control was here and
+                    read *Size*, on a panel listing seven elements, beside an
+                    *Author size* that named itself — so on a title page the
+                    one control a writer goes looking for was the one that
+                    would not say what it was for. The case control one row
+                    down had been reading `isTitle ? 'Title case' : 'Case'`
+                    all along; this is the same rule on the row above it. */}
                 <div className="field">
-                  <span>Size</span>
+                  <span>{isTitle ? 'Title size' : 'Size'}</span>
                   <div className="dp-step">
                     <button
                       type="button"
                       className="raised small"
-                      aria-label="Smaller"
+                      aria-label={isTitle ? 'Smaller title' : 'Smaller'}
                       onClick={() => write({ title: { ...style.title, size: Math.max(10, style.title.size - 1) } })}
                     >
                       −
                     </button>
                     <input
                       type="number"
-                      aria-label="Size in points"
+                      aria-label={isTitle ? 'Title size in points' : 'Size in points'}
                       min={10}
                       max={72}
                       value={style.title.size}
@@ -793,7 +821,7 @@ function Body({
                     <button
                       type="button"
                       className="raised small"
-                      aria-label="Larger"
+                      aria-label={isTitle ? 'Larger title' : 'Larger'}
                       onClick={() => write({ title: { ...style.title, size: Math.min(72, style.title.size + 1) } })}
                     >
                       +
@@ -801,6 +829,7 @@ function Body({
                   </div>
                 </div>
               </div>
+              {isTitle ? <p className="muted small">The subtitle is set from the title’s size, so it grows with it.</p> : null}
               {/* The **author's** own size (§16). It was `line`, shared with
                   the subtitle and the publisher, so setting the author set
                   all three — §7a's running heads on the page in front of

@@ -1843,6 +1843,33 @@ push live; the build takes a minute or two.
   and ranging a Classic page left reads as *Flush left*, which is what it now
   is. The lesson beside §16b's: **a rule about screens is not a rule about
   controls**, and applied one level down it turned a panel into a set of doors.
+  **§16e is three faults in one panel, all of them typing**, from Ken using
+  §16d's boxes (*when I try to enter something in the subtitle box, it just
+  kicks me out of the box*; *the publisher location won't allow input*; *the
+  author name does not allow input*) — three reports, **two causes**, and
+  both are rules rather than slips. **A component declared inside a component
+  is a new type on every render**: `ElementInput` lived in `Body`, so React
+  saw a different component each keystroke, unmounted the subtree and mounted
+  a fresh one, and the `<input>` a writer was typing into was thrown away with
+  the caret in it — called as a function rather than mounted, the markup joins
+  `Body`'s own tree and the element is reconciled in place. A sweep found no
+  second one. And **a reading says what will print; a field says what was
+  typed**: `titlePageOf` and `publisherOf` trim every value and put the book's
+  own name in where nothing is typed, which is right for ink and wrong for a
+  box — bound to one, a **trailing space is trimmed off on the way back** so
+  the space bar does nothing and *Portland, OR* cannot be typed, and a
+  **fallback arrives as the value** so the box shows the project's author as
+  though somebody had typed it, typing appends to it and clearing it hands it
+  straight back. `titlePageTyped` and `publisherTyped` are the other half of
+  the pair, the readings stay for the sheet, and the fallback is the
+  **placeholder**, where it says what the page will use without pretending to
+  be the writer's words. It is `partStyleOf`'s and `bookPresetOf`'s rule
+  pointed at a form. **And the title's size says what it sizes**, from Ken in
+  the same breath (*there needs to be a font size for the title text*): it was
+  there and read *Size*, on a panel listing seven elements, beside an *Author
+  size* that named itself — the case control one row down had been reading
+  `isTitle ? 'Title case' : 'Case'` all along, so this is the same rule on the
+  row above it, with a line saying the subtitle is set from it.
   **§17 is the back matter**, from Ken's handoff for seven pages after the
   story — acknowledgements, appendix, glossary, bibliography, index, about
   the author and reader extras — and the audit paid a **twentieth** time,
