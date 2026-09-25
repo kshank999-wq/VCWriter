@@ -996,6 +996,10 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           setPartDialogId(null);
           setBookSettingsOpen(true);
         }}
+        onOpenCopyright={() => {
+          setPartDialogId(null);
+          setCopyrightOpen(true);
+        }}
       />
       {/* A page of the story, opened by a double-click on its row or on the
           page itself (§9j). It holds exactly what the inspector holds, being
@@ -2280,6 +2284,7 @@ function PartDialog({
   onClose,
   onRemoved,
   onOpenBookSettings,
+  onOpenCopyright,
 }: {
   file: ProjectFile;
   part: BookPart | null;
@@ -2288,6 +2293,7 @@ function PartDialog({
   onClose(): void;
   onRemoved(): void;
   onOpenBookSettings?(): void;
+  onOpenCopyright?(): void;
 }) {
   const dialog = useModal(part !== null);
   /** The picture last touched, so the page beside the fields turns to where it fell. */
@@ -2308,7 +2314,20 @@ function PartDialog({
           </header>
           <div className="layout-part-dialog-body">
             <div className="layout-part-dialog-fields">
-              <PartFields file={file} part={part} onUpdate={onUpdate} onDone={onRemoved} onOpenBookSettings={onOpenBookSettings} />
+              {/* `onOpenCopyright` travels with the rest (§15a). Without it
+                  the copyright page's own button is **absent here** while
+                  standing in the inspector, so the one gesture the room
+                  documents for *open the thing that sets this page* — the
+                  double-click — landed on the free-text box the dialog
+                  replaces, and the dialog read as unbuilt. */}
+              <PartFields
+                file={file}
+                part={part}
+                onUpdate={onUpdate}
+                onDone={onRemoved}
+                onOpenBookSettings={onOpenBookSettings}
+                onOpenCopyright={onOpenCopyright}
+              />
               {partTakesInsets(part.kind) ? <PartPictures file={file} part={part} onUpdate={onUpdate} onTouched={setTouched} /> : null}
             </div>
             <PagePreview laying={laying} partId={part.id} focus={focus} />

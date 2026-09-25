@@ -184,6 +184,45 @@ push live; the build takes a minute or two.
   obeyed. (Its first draft set `flex-wrap` on a **grid**, which does nothing
   at all — two different ways to draw a screen indistinguishable from one
   where the rule was never written.)
+  **§4b is the two acts in the side column**, from Ken after §4a shipped
+  without them (*wire them to the cue and tag menu*), and the correction
+  worth keeping is that §4a was **right about the lists and wrong about the
+  buttons**: a reading is not a reason to have no act, it is a rule about
+  **what the act must do** — the act that makes the reading true rather
+  than a second list beside it. **+ Add character writes a cue**, because
+  `sceneCast` is read off the `character` elements and a cue is the only
+  way a name can appear in it; `bringIntoScene` in `scene-cast.ts` puts one
+  at the end of the scene's writing with an empty speech after it and the
+  beat opens in the writing screen, so cutting the speech takes the name
+  off the list with nothing run. It lives **beside the reading it feeds**,
+  `cueOffer` gives the refusal or the sentence before the act can be asked
+  for and `bringIntoScene` refuses the same things again (`trackRemoval`'s
+  shape), and it **never files a character record** — `notedCast` does that
+  from the cues, so doing it here would be a second answer about who the
+  project knows. **Absent rather than greyed on prose**, a novel having no
+  cue. **+ Link a setup opens the manuscript's own tag menu**, literally
+  `PlantSetupOrPayoff` exported and anchored to the beat the scene's
+  writing ends in, two screens that can make a promise being two answers to
+  what a promise is. Driving it caught the CSS fault of the day: the dashed
+  outline the handoff drew was written and **half obeyed**, `.ghost` setting
+  the border *colour* to transparent while the dashed *style* took, so the
+  control drew as a line of gold text.
+  **§20 §15a is one prop, and a feature that read as unbuilt**, from Ken
+  the day after the copyright dialog shipped (*the new copyright page is
+  not live*). It was, from one gesture out of two: `PartFields` is rendered
+  in the **inspector** and in the **part dialog**, only the first passed
+  `onOpenCopyright`, and the button is gated on it — so the double-click,
+  which is the gesture §9h and §9l document for *open the thing that sets
+  this page*, landed on the free-text box the dialog replaces. Two things
+  worth keeping. **A control gated on a callback is absent wherever the
+  callback is not handed down**, and absence is this room's own idiom for
+  *this does not apply here*, so a forgotten prop does not look like a bug,
+  it looks like a decision — the same shape as a screen holding its own
+  copy of a rule. And **a route needs a test per gesture, not per screen**:
+  §15's nine tests drive the dialog directly and passed throughout, because
+  not one of them asked how a writer gets there; the new one presses the
+  row and then double-clicks it and asserts the same dialog opens both
+  times.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
   1–7 (the board and its two nodes, the structure column, the layout rule
   with scenes, beats, the columns the writer defines, binding a node to a real

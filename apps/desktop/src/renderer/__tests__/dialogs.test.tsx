@@ -107,6 +107,71 @@ describe('scene pop-up', () => {
     expect(screen.getByLabelText('Chapter name')).toBeDefined();
     expect(screen.queryByLabelText('Location')).toBeNull();
   });
+
+  /**
+   * The side column's two acts (§4b, from Ken: *wire them to the cue and
+   * tag menu*). Both lists stay **readings**, so what these pin is that
+   * each button does the act that makes its reading true — and that
+   * neither keeps a list beside the script.
+   */
+  it('puts somebody in the scene by writing a cue, and opens the beat where the line goes', () => {
+    let latest = scene();
+    const unitId = latest.units[0]!.id;
+    const opened: BeatId[] = [];
+    render(
+      <Harness initial={latest}>
+        {(file, update) => {
+          latest = file;
+          return (
+            <SceneDialog
+              file={file}
+              unitId={unitId}
+              onClose={() => undefined}
+              onUpdate={update}
+              onOpenBeat={(beatId) => opened.push(beatId)}
+            />
+          );
+        }}
+      </Harness>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Add character' }));
+    fireEvent.change(screen.getByLabelText('Who speaks here'), { target: { value: 'celeste' } });
+    // The domain answers before the act can be asked for.
+    expect(screen.getByText(/CELESTE gets a cue/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Write the cue' }));
+
+    // The proof is the **manuscript**: nothing else was told she is here.
+    const cues = manuscriptElements(latest).filter((one) => one.type === 'character');
+    expect(cues.map((one) => one.text)).toEqual(['MIKE', 'CELESTE']);
+    expect(within(screen.getByLabelText('In this scene')).getByText('CELESTE')).toBeTruthy();
+    // And the beat is opened, because the line still has to be typed.
+    expect(opened).toHaveLength(1);
+  });
+
+  it('refuses a name already speaking, in a sentence rather than by doing nothing', () => {
+    const file = scene();
+    render(<SceneDialog file={file} unitId={file.units[0]!.id} onClose={() => undefined} onUpdate={() => undefined} />);
+    fireEvent.click(screen.getByRole('button', { name: '+ Add character' }));
+    fireEvent.change(screen.getByLabelText('Who speaks here'), { target: { value: 'MIKE' } });
+    expect(screen.getByText(/already speaks here/)).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Write the cue' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('offers no cue on a novel, there being no such thing, and still links a setup', () => {
+    const file = scene('novel');
+    render(<SceneDialog file={file} unitId={file.units[0]!.id} onClose={() => undefined} onUpdate={() => undefined} />);
+    // Absent rather than greyed.
+    expect(screen.queryByRole('button', { name: '+ Add character' })).toBeNull();
+    expect(screen.getByRole('button', { name: '+ Link a setup' })).toBeTruthy();
+  });
+
+  it('opens the manuscript’s own tag menu rather than a second way to make a promise', () => {
+    const file = scene();
+    render(<SceneDialog file={file} unitId={file.units[0]!.id} onClose={() => undefined} onUpdate={() => undefined} />);
+    fireEvent.click(screen.getByRole('button', { name: '+ Link a setup' }));
+    expect(screen.getByLabelText('Make this a setup or a payoff')).toBeTruthy();
+  });
 });
 
 describe('the writing screen', () => {

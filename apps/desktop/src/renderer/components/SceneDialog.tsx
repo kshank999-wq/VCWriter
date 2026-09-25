@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   beatsForUnit,
+  bringIntoScene,
+  cueOffer,
   findTrack,
   findUnit,
   isProseFormat,
@@ -27,6 +29,7 @@ import {
   useLocationInScene,
   turnOf,
   updateUnit,
+  workingCast,
   type Beat,
   type BeatId,
   type ProjectFile,
@@ -39,6 +42,7 @@ import {
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 import { PolarityPair } from './PolarityGraph';
+import { PlantSetupOrPayoff } from './BeatBody';
 
 interface SceneDialogProps {
   file: ProjectFile;
@@ -124,6 +128,11 @@ function SceneDialogBody({
   const beats = beatsForUnit(file, unit.id);
   const pages = pagesForUnit(file, unit.id);
   const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
+  /** The two acts the side column's *+ Add* buttons open (§4b). */
+  const [adding, setAdding] = useState(false);
+  const [linking, setLinking] = useState(false);
+  /** Where this scene's writing ends: a cue and a promise both anchor there. */
+  const lastBeat = beats[beats.length - 1] ?? null;
 
   /** Cut the scene at the selected beat; the rest becomes the next scene. */
   const split = () => {
@@ -180,10 +189,11 @@ function SceneDialogBody({
       {prose ? null : <HeadingFields file={file} unit={unit} onUpdate={onUpdate} />}
 
       <div className="scene-dialog-body">
-        {/* Both of these are **readings** — the cast off the cues, the
-            promises off the passages that were tagged — so neither gets the
-            *+ Add* button the restyle drew. A button here could only refuse;
-            what makes a name appear is said instead (§4a). */}
+        {/* Both of these stay **readings** — the cast off the cues, the
+            promises off the passages that were tagged — so neither *+ Add*
+            keeps a list of its own. Each does the act that makes the
+            reading true: one writes a cue, the other opens the tag menu
+            (§4b, from Ken). */}
         <aside className="scene-dialog-side" aria-label={`In this ${noun.toLowerCase()}`}>
           <section>
             <h4>
@@ -197,6 +207,23 @@ function SceneDialogBody({
               </ul>
             ) : (
               <p className="muted small">No one speaks yet. A name appears here when they do.</p>
+            )}
+            {/* Absent rather than greyed on prose, where there is no cue to
+                write — a novel's characters are in its sentences. */}
+            {prose ? null : adding ? (
+              <AddCharacter
+                file={file}
+                unitId={unit.id}
+                onUpdate={onUpdate}
+                onDone={(beatId) => {
+                  setAdding(false);
+                  if (beatId) onOpenBeat?.(beatId);
+                }}
+              />
+            ) : (
+              <button type="button" className="scene-dialog-add" onClick={() => setAdding(true)}>
+                + Add character
+              </button>
             )}
           </section>
           <section>
@@ -215,6 +242,15 @@ function SceneDialogBody({
             ) : (
               <p className="muted small">Nothing set up or paid off here. Tag a passage and it appears.</p>
             )}
+            {/* The same dialog the manuscript's right-click opens, anchored
+                to where this scene's writing ends. A scene with nothing
+                written has no beat to anchor to, so the button is absent
+                rather than refusing. */}
+            {lastBeat ? (
+              <button type="button" className="scene-dialog-add" onClick={() => setLinking(true)}>
+                + Link a setup
+              </button>
+            ) : null}
           </section>
         </aside>
 
@@ -341,7 +377,91 @@ function SceneDialogBody({
         <span className="scene-dialog-spacer" />
         <span className="scene-dialog-saved">✓ Saved as you type</span>
       </footer>
+
+      {/* The manuscript's own tag menu, opened from here against the beat
+          this scene's writing ends in. No passage is selected — a writer
+          standing in the scene's screen has not pointed at a line — so the
+          note they type is the description. */}
+      {linking && lastBeat ? (
+        <PlantSetupOrPayoff
+          file={file}
+          beatId={lastBeat.id}
+          passage=""
+          onUpdate={onUpdate}
+          onClose={() => setLinking(false)}
+        />
+      ) : null}
     </>
+  );
+}
+
+/**
+ * Putting somebody in the scene (§4b, from Ken: *wire them to the cue*).
+ * The cast the writer already has is offered, and a name they type is
+ * taken as well — `bringIntoScene` writes the cue either way, and the
+ * reading above picks them up because the cue is in the manuscript.
+ *
+ * It **never files a character record**: `notedCast` does that from the
+ * cues, so doing it here would be a second answer about who the project
+ * knows.
+ */
+function AddCharacter({
+  file,
+  unitId,
+  onUpdate,
+  onDone,
+}: {
+  file: ProjectFile;
+  unitId: StructuralUnitId;
+  onUpdate: SceneDialogProps['onUpdate'];
+  onDone(beatId: BeatId | null): void;
+}) {
+  const [name, setName] = useState('');
+  const cast = workingCast(file);
+  const offer = cueOffer(file, unitId, name);
+  return (
+    <div className="scene-dialog-adding">
+      <label className="field">
+        <span>Who</span>
+        <input
+          aria-label="Who speaks here"
+          list="scene-dialog-cast"
+          value={name}
+          autoFocus
+          placeholder="A name"
+          onChange={(event) => setName(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') onDone(null);
+          }}
+        />
+      </label>
+      <datalist id="scene-dialog-cast">
+        {cast.map((person) => (
+          <option key={person.id} value={person.name} />
+        ))}
+      </datalist>
+      {/* The domain answers before the act can be asked for: either a
+          refusal a writer can act on, or the sentence saying what a press
+          would do. */}
+      <p className="muted small">{offer.refusal ?? offer.sentence}</p>
+      <div className="scene-dialog-adding-acts">
+        <button
+          type="button"
+          className="raised small"
+          disabled={offer.refusal !== null}
+          onClick={() => {
+            const beatId = offer.beatId;
+            onUpdate((current) => bringIntoScene(current, unitId, name));
+            onDone(beatId);
+          }}
+        >
+          Write the cue
+        </button>
+        <button type="button" className="ghost small" onClick={() => onDone(null)}>
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }
 

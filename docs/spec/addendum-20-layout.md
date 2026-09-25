@@ -1859,6 +1859,36 @@ button: every change is kept as it is made, and the page is drawn beside it —
 §12a's rule, and the handoff's Cancel would have to undo work the preview has
 already shown as done.
 
+## 15a. One prop, and a feature that read as unbuilt
+
+From Ken, the day after §15 shipped: *the new copyright page is not live*.
+It was, and it was reachable from one gesture out of two.
+
+The dialog is offered by `PartFields`, which the room renders in **two**
+places: the inspector, when a row is chosen with a single click, and the
+**part dialog**, which is where a double-click lands. The inspector passed
+`onOpenCopyright` and the part dialog did not, so the button was `absent`
+there — and what stood in its place was the free-text box the dialog was
+built to replace. A writer who did what §9h and §9l document for *open the
+thing that sets this page* met the old screen and reasonably concluded
+nothing had shipped.
+
+Two things are worth keeping from a one-line fix.
+
+**A control gated on a callback is absent wherever the callback is not
+handed down**, and absence is the room's own idiom for *this does not
+apply here* — so a forgotten prop does not look like a bug, it looks like
+a decision. `PartFields` is rendered twice and was given different powers
+in each, which is the same shape as a screen holding its own copy of a
+rule: two answers to *what can be done to this part*.
+
+**A route needs a test per gesture, not per screen.** §15's own tests
+drive `CopyrightPageDialog` directly and all nine passed throughout; what
+none of them asked is how a writer gets there. The test added here presses
+the row and then double-clicks it, and asserts the same dialog opens both
+times — the route rather than the dialog, which is the half that was
+broken.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

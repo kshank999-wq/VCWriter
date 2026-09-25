@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
   addBeat,
@@ -35,6 +35,17 @@ import { ROOM_PANES, paneTitle } from '../panes';
  * the room, not the type: the parts are listed, the trim writes the settings,
  * the derived margins are said, and the story cannot be reordered from here.
  */
+
+/** jsdom has no `<dialog>` behaviour, and the room opens three of them. */
+beforeAll(() => {
+  const proto = window.HTMLDialogElement.prototype as unknown as Record<string, unknown>;
+  proto.showModal = function showModal(this: HTMLDialogElement) {
+    this.setAttribute('open', '');
+  };
+  proto.close = function close(this: HTMLDialogElement) {
+    this.removeAttribute('open');
+  };
+});
 
 afterEach(cleanup);
 
@@ -497,6 +508,33 @@ describe('the room', () => {
     // And it can come back from the menu.
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
     expect(screen.getAllByRole('menuitem').some((item) => (item.textContent ?? '').startsWith('Copyright'))).toBe(true);
+  });
+
+  /**
+   * The copyright page's own dialog is reached from **both** gestures
+   * (§15a, from Ken: *the new copyright page is not live*). It was
+   * reachable from the inspector alone, so the double-click — the one
+   * gesture the room documents for *open the thing that sets this page* —
+   * landed on the free-text box the dialog replaces, and the whole feature
+   * read as unbuilt. What this pins is the route rather than the dialog,
+   * which has tests of its own.
+   */
+  it('opens the copyright page from the row, and from the page’s own dialog', () => {
+    render(<Harness initial={novel()} />);
+    const rail = document.querySelector('.layout-rail') as HTMLElement;
+    const row = within(rail).getByRole('button', { name: /^Copyright/ });
+
+    // One click: the inspector offers it.
+    fireEvent.click(row);
+    fireEvent.click(screen.getByRole('button', { name: 'The copyright information…' }));
+    expect(screen.getByRole('button', { name: 'Trade standard' })).toBeTruthy();
+    fireEvent.click(within(screen.getByLabelText('Copyright page')).getByRole('button', { name: 'Close' }));
+
+    // And the double-click, through the part dialog, reaches the same one.
+    fireEvent.doubleClick(row);
+    const part = screen.getByLabelText('Part');
+    fireEvent.click(within(part).getByRole('button', { name: 'The copyright information…' }));
+    expect(screen.getByRole('button', { name: 'Trade standard' })).toBeTruthy();
   });
 
   it('drags a part within its half, and a chapter as a block', () => {

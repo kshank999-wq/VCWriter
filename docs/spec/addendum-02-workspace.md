@@ -443,6 +443,45 @@ Below 900px the two readings go **over** the form rather than three columns
 squeezing into nothing — at 860px the status select was showing *First
 dra*.
 
+## 4b. The two acts in the side column
+
+From Ken, after §4a shipped without them: *wire them to the cue and tag
+menu*. §4a left the dashed **+ Add character** and **+ Link a setup**
+buttons out because both lists are readings and a button there could only
+refuse. That was right about the lists and wrong about the buttons: a
+reading is not a reason to have no act, it is a rule about **what the act
+must do** — the act that makes the reading true, rather than a second list
+beside it.
+
+**+ Add character writes a cue.** `sceneCast` is everyone who speaks,
+read off the `character` elements, so the only way a name can appear in it
+is for a cue to exist. `bringIntoScene` in `packages/domain/src/scene-cast.ts`
+writes one at the end of the scene's writing, with an empty speech after
+it, and then the beat opens in the writing screen so the line can be
+typed. Nothing is recorded anywhere else, which is why cutting the speech
+takes the name off the list with nothing run — a stored list of who is in
+a scene would go on naming her.
+
+The act lives **beside the reading it feeds**, and `cueOffer` answers
+before it can be asked for: either a refusal a writer can act on (*MIKE
+already speaks here*, *There is nothing written here yet to put a cue in*)
+or the sentence saying what a press would do. `bringIntoScene` refuses the
+same things again, so a caller cannot get past the reading by not reading
+it — `trackRemoval`'s shape. The cast the writer already has is offered as
+suggestions, and a name typed is taken as well; it **never files a
+character record**, because `notedCast` does that from the cues and doing
+it here would be a second answer about who the project knows. On prose the
+control is **absent rather than greyed**: a novel has no cue, and its
+characters are in its sentences.
+
+**+ Link a setup opens the manuscript's own tag menu.** Literally the
+same `PlantSetupOrPayoff` the right-click opens, anchored to the beat the
+scene's writing ends in — two screens that can make a promise would be two
+answers to what a promise is. No passage is selected, because a writer
+standing in the scene's screen has not pointed at a line, so the note they
+type is the description. A scene with nothing written has no beat to
+anchor to, so the button is absent there too.
+
 ## 5. Timeline & Viewer
 
 Where an editing bay shows the picture, this shows the story — and it shows

@@ -16013,3 +16013,66 @@ dialog.scene-dialog > header {
     padding-top: 14px;
   }
 }
+
+/*
+ * The side column's two acts (§4b, from Ken: *wire them to the cue and tag
+ * menu*). Dashed in the accent colour, as the handoff drew them, because
+ * each **makes** something rather than changing what is there — and a
+ * dashed outline is the one button shape that reads as *and one more*.
+ *
+ * They sit under the list, not over it: what is already in the scene is
+ * what a writer came to read.
+ *
+ * They are **not** `.ghost`, which is the flat button and sets its border
+ * colour to transparent — so the dashed style took and the colour did not,
+ * and the control drew as a line of gold text. Driving it is the only way
+ * that shows: the rule is in the file, and half of it is obeyed.
+ */
+.scene-dialog-add {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px dashed var(--gold);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  text-align: center;
+  box-shadow: none;
+}
+
+.scene-dialog-add:hover {
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
+
+.scene-dialog-adding {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2, rgba(255, 255, 255, 0.03));
+}
+
+.scene-dialog-adding .field {
+  margin: 0 0 6px;
+}
+
+.scene-dialog-adding .field input {
+  width: 100%;
+  /* A name is typed in the cue's own case, so it reads as the cue it becomes. */
+  text-transform: uppercase;
+}
+
+.scene-dialog-adding p {
+  margin: 0 0 8px;
+}
+
+.scene-dialog-adding-acts {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}

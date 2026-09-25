@@ -1481,7 +1481,13 @@ function FileInIndex({
  * list includes every active record and a way to start a new one without
  * leaving the page.
  */
-function PlantSetupOrPayoff({
+/**
+ * The tag menu (addendum 02 §4b): exported because the scene's own screen
+ * opens the **same** dialog rather than growing a second way to link a
+ * setup — two screens that can make a promise are two answers to what a
+ * promise is.
+ */
+export function PlantSetupOrPayoff({
   file,
   beatId,
   passage,
