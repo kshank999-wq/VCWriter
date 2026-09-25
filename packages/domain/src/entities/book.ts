@@ -196,6 +196,18 @@ export const bookPartSchema = z.object({
   /** The picture, for a plate: an id in the graphics library. */
   assetId: z.string().nullable().default(null),
   /**
+   * A **logotype** in place of the typed title, on a designed page (§9n): an
+   * id in the graphics library, like every other picture the book uses.
+   *
+   * The title page has carried one since long before this, as
+   * `settings.titlePage.titleImage` — a data URI written by *File ▸ Title
+   * page…*. That is the **older spelling of the same intent** and is still
+   * honoured where a part carries none, which is `template`/`layout`'s shape
+   * (§14): nothing is migrated, no page moves, and there is one reading
+   * (`partLogo`) that says which is in force.
+   */
+  logoAssetId: z.string().nullable().default(null),
+  /**
    * A plate's description. Nothing prints on the page — the art is the page
    * (§8, from Ken) — but the eBook reads it to a reader who cannot see the
    * picture, and the library shows it.

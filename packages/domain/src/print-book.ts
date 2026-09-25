@@ -182,6 +182,24 @@ export const pictureLines = (
 const fullPageArt = (picture: BookPicture, alt: string): string =>
   `<div class="bk-display bk-plate bk-plate-art"><img class="bk-plate-image" alt="${escapeHtml(picture.altText || alt)}" src="${escapeHtml(picture.data)}" /></div>`;
 
+/**
+ * A logotype standing where the title would (§9n). Null where the page has
+ * none, so the caller sets the words instead — the picture is *in place of*
+ * the title and never as well as it, which has been the rule since the title
+ * page first took one.
+ *
+ * `partLogo` says which of the two homes it came from; a library id is
+ * looked up like every other picture, and the title page's older data URI is
+ * carried straight through.
+ */
+const logoMarkup = (block: BookBlock, context: BookRenderContext, alt: string): string | null => {
+  const found = block.logo ?? null;
+  if (!found) return null;
+  const src = found.data ?? context.pictures.get(found.assetId ?? '')?.data ?? '';
+  if (!src) return null;
+  return `<img class="bk-title-art" alt="${escapeHtml(alt)}" src="${escapeHtml(src)}" />`;
+};
+
 const displayInner = (block: BookBlock, context: BookRenderContext): string => {
   const { names, titlePage } = context;
   // A designed page (addendum 20 §9) carries its style as custom properties
@@ -196,14 +214,20 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
       // is in the art, so nothing is set over it.
       const whole = block.assetId ? context.pictures.get(block.assetId) : undefined;
       if (whole) return fullPageArt(whole, titlePage.title || names.title);
-      return `<div class="bk-display bk-half"${styled}>${drop}<p class="bk-book-title">${escapeHtml(titlePage.title || names.title)}</p></div>`;
+      // A logotype in place of the title (§9n). The half title takes one now
+      // as the title page always has: the same act on both pages, and
+      // `partLogo` is the one reading that says which picture is in force.
+      const mark = logoMarkup(block, context, titlePage.title || names.title);
+      return `<div class="bk-display bk-half"${styled}>${drop}${
+        mark ?? `<p class="bk-book-title">${escapeHtml(titlePage.title || names.title)}</p>`
+      }</div>`;
     }
     case 'title_page': {
       const whole = block.assetId ? context.pictures.get(block.assetId) : undefined;
       if (whole) return fullPageArt(whole, titlePage.title || names.title);
-      const art = titlePage.titleImage
-        ? `<img class="bk-title-art" alt="${escapeHtml(titlePage.title || names.title)}" src="${escapeHtml(titlePage.titleImage)}" />`
-        : `<p class="bk-book-title">${escapeHtml(titlePage.title || names.title)}</p>`;
+      const art =
+        logoMarkup(block, context, titlePage.title || names.title) ??
+        `<p class="bk-book-title">${escapeHtml(titlePage.title || names.title)}</p>`;
       // The line under the title (a subtitle, *A novel*): the title page's
       // own field, which a series fills with its episode.
       const subtitle = (titlePage.episode ?? '').trim().length > 0 ? `<p class="bk-subtitle">${escapeHtml(titlePage.episode)}</p>` : '';

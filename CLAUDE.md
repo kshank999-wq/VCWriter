@@ -1645,6 +1645,45 @@ push live; the build takes a minute or two.
   over it and says *45% of the page* where an inset says *of the measure*.
   `FigureInset` **omits** `x` and `y` rather than inheriting them, an inset's
   place being the paragraph's.
+  **§9n is the designed page on one screen**, from Ken's *Half title page
+  panel (redesign)* handoff, and the audit paid an **eighteenth** time:
+  nearly every control it asks for was already stored under a name that
+  means the same thing — the template table, the drop, the alignment, the
+  face, a `LineStyle`'s size/case/style/tracking, the rule, *Back to the
+  page's own look* — and `partTemplateOf` was already the **reading** the
+  handoff asks for by name. What was missing is the **shape**, and three
+  decisions carry it. **A template is a height**: the first five conflated
+  two questions (*High and left*, *Low and right* each carried an
+  alignment), so ranging a page left made it *Custom* though it sat exactly
+  where *Classic* put it, and choosing a template moved the block across the
+  page — now four heights, an alignment control beside them, and
+  `partTemplateOf` asks the **drop alone**. The default drop moves **30 →
+  33**, the one place a page nobody set changes, because at 30 a fresh book
+  reads *Custom · placed by hand*, which is a lie about the page and makes
+  the template row useless out of the box. **The mode is a reading**:
+  `partModeOf` says whether the page carries the words, a logotype or a page
+  of art, so the tiles cannot disagree with what prints, and a tile is
+  **the act** (it opens the picker, or takes the picture off) rather than a
+  flag beside the picture. The half title takes a logotype now as the title
+  page always has — `logoAssetId` on the part, with
+  `settings.titlePage.titleImage` the **older spelling of the same intent**,
+  still honoured where a part carries none (`template`/`layout`'s shape, no
+  migration, no page moved). And **Cancel means cancel**: the screen saves
+  as you type, because a look is tuned against the sheet beside it, so the
+  part as it stood when the screen opened is held and Cancel puts it back.
+  Three smaller ones: `partChanges` counts **leaf by leaf** (*1 change* over
+  a page that had been taken apart is a figure nobody can check), comparing
+  the resolved style against the same style with nothing stored so a field
+  set back to its default by hand is not a change; the navigator counts
+  **sheets** rather than printed numbers, the front matter counting in roman
+  and the story in arabic so *page i of 9* would put two numbering systems
+  in one sentence; and which pages get this screen is
+  `partPlacement(kind) === 'block'`, §7a's own predicate, so there is no
+  second list of kinds. Driving it caught the fault of the day: the room's
+  `h3` is a tracked-capitals section label, so *Typography* was shouted and
+  *Upper third* came back as UPPER THIRD — a template nobody named, from a
+  rule this screen never wrote and **inherited anyway**, which is the
+  quietest way a screen says something it did not write.
   **§9a is the rail as one linear tree**, from Ken after using the room —
   *this has become way too complicated to make this workable… this should
   be simple linear workflow… there shouldn't be all this extra wording* —

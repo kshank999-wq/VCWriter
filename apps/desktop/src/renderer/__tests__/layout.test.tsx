@@ -719,11 +719,14 @@ describe('the room', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Close book settings' }));
     let file = latest as ProjectFile;
     // The page's style: a template places it, a hand change reads as custom.
-    expect((screen.getByLabelText('Page template') as HTMLSelectElement).value).toBe('classic');
-    fireEvent.change(screen.getByLabelText('Page template'), { target: { value: 'high_left' } });
+    // A template is a **height** now (§9n) and the alignment is its own
+    // control, so the patch moves the block down the page and leaves it
+    // ranged where it was.
+    expect((screen.getByLabelText('Page template') as HTMLSelectElement).value).toBe('upper_third');
+    fireEvent.change(screen.getByLabelText('Page template'), { target: { value: 'low' } });
     file = latest as ProjectFile;
     const title = partsOf(file).find((part) => part.kind === 'title_page')!;
-    expect(title.style).toMatchObject({ align: 'left', drop: 10 });
+    expect(title.style).toMatchObject({ align: 'center', drop: 62 });
     fireEvent.change(screen.getByLabelText('How far down the page'), { target: { value: '20' } });
     expect((screen.getByLabelText('Page template') as HTMLSelectElement).value).toBe('custom');
     fireEvent.change(screen.getByLabelText('Title size'), { target: { value: '36' } });
@@ -872,20 +875,32 @@ describe('the room', () => {
     expect((latest as ProjectFile).units.length).toBe(units - 1);
   });
 
-  it('opens a part in a dialog of its own on a double-click, with its page beside the fields', async () => {
+  /**
+   * A **designed** page — one that is a block of words on a page of its own
+   * — opens on its own screen now (§9n), which is the half title, the title
+   * page, a dedication and an epigraph. A foreword still opens the older
+   * fields, because those three sections are about placing a block and a
+   * page that flows has none to place.
+   */
+  it('opens a designed page on its own screen, and a page that flows on the older fields', async () => {
     render(<Harness initial={novel()} />);
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
     fireEvent.doubleClick(rail.getByRole('button', { name: /^Half title/ }));
-    const dialog = screen.getByRole('dialog', { name: 'Part' });
+    const dialog = screen.getByRole('dialog', { name: 'Half title' });
     expect(dialog.hasAttribute('open')).toBe(true);
-    expect(dialog.querySelector('header strong')?.textContent).toBe('Half title');
+    expect(dialog.querySelector('.dp-title strong')?.textContent).toBe('Half title');
+    // The three sections, in order.
+    expect(within(dialog).getByText('What goes on the page')).toBeDefined();
+    expect(within(dialog).getByText('Placement')).toBeDefined();
+    expect(within(dialog).getByText('Typography')).toBeDefined();
     // The page as set: the same markup the spread draws.
-    await waitFor(() => expect(dialog.querySelector('.layout-page-preview .bk-page')).not.toBeNull());
-    expect(within(dialog).getByText(/a right-hand page/)).toBeDefined();
-    // A half title has no words to cut a picture into, so the pictures are absent rather than refused.
-    expect(within(dialog).queryByText('Pictures cut into the text')).toBeNull();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Close the part' }));
+    await waitFor(() => expect(dialog.querySelector('.dp-sheet-box .bk-page')).not.toBeNull());
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
     expect(dialog.hasAttribute('open')).toBe(false);
+
+    // The contents flow, so they keep the fields the older dialog draws.
+    fireEvent.doubleClick(rail.getByRole('button', { name: /^Contents/ }));
+    expect(screen.getByRole('dialog', { name: 'Part' }).hasAttribute('open')).toBe(true);
   });
 
   it('cuts a picture into a foreword’s text from the part’s dialog, beside the paragraph chosen', async () => {

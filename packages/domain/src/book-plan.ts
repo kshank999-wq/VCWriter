@@ -6,7 +6,7 @@ import { contentsDivisions, type ChapterPageContent, type PlacedMarker } from '.
 import { bookNames, bookSettingsOf, setBookSettings } from './book-layout.js';
 import { beatsInScript, unitsInStoryOrder } from './selectors.js';
 import { newId } from './ids.js';
-import { partHasStyle, partStyleOf, proseStyleBase, type PartStyle, type PartStylePatch } from './part-style.js';
+import { partHasStyle, partLogo, partStyleOf, proseStyleBase, type PartStyle, type PartStylePatch } from './part-style.js';
 import { isCollection } from './formats.js';
 import { placeFigure } from './instructional.js';
 import { copyrightLines, copyrightOf, type CopyrightLine } from './copyright-page.js';
@@ -382,6 +382,8 @@ export interface BookBlock {
    * in the book is read off its element and honoured here alone.
    */
   inset?: FigureInset;
+  /** A logotype in place of the title, on a designed page (§9n). */
+  logo?: { assetId: string | null; data: string | null };
   /**
    * Graphics set over the page this paragraph falls on (§8c). Several may
    * ride one paragraph, and none of them takes a line: the cutter never
@@ -448,10 +450,13 @@ const partBlocks = (
     // Either may be a piece of art brought in whole (§8, from Ken): the
     // asset on the part is the page, and the printer draws it edge to edge
     // in place of the typed title.
+    // A logotype stands where the title would, on either page (§9n), and
+    // `partLogo` is the one reading that says which picture is in force —
+    // the part's own, or the title page's older data URI.
     case 'half_title':
-      return [block({ id: part.id, kind: 'half_title', numbering, starts: 'recto', display: true, folio: false, partId: part.id, unbreakable: true, assetId: part.assetId, partStyle: partStyleOf(part) })];
+      return [block({ id: part.id, kind: 'half_title', numbering, starts: 'recto', display: true, folio: false, partId: part.id, unbreakable: true, assetId: part.assetId, logo: partLogo(part, file?.settings.titlePage?.titleImage ?? '') ?? undefined, partStyle: partStyleOf(part) })];
     case 'title_page':
-      return [block({ id: part.id, kind: 'title_page', numbering, starts: 'recto', display: true, folio: false, partId: part.id, unbreakable: true, assetId: part.assetId, partStyle: partStyleOf(part) })];
+      return [block({ id: part.id, kind: 'title_page', numbering, starts: 'recto', display: true, folio: false, partId: part.id, unbreakable: true, assetId: part.assetId, logo: partLogo(part, file?.settings.titlePage?.titleImage ?? '') ?? undefined, partStyle: partStyleOf(part) })];
     case 'copyright': {
       // The page's own fields where the writer has used them (§9k), and the
       // free text where they have not — one reading, so the print, the spread

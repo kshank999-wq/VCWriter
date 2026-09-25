@@ -139,6 +139,7 @@ import { PopOutButton } from './PopOutButton';
 import { ChapterPageDialog, ChapterStyleFields, Line } from './ChapterPageDialog';
 import { ChapterLayoutDialog } from './ChapterLayoutDialog';
 import { CopyrightPageDialog } from './CopyrightPageDialog';
+import { DesignedPageDialog } from './DesignedPageDialog';
 import { useModal } from '../use-modal';
 import { usePreference, useSplit } from '../use-split';
 import { readPicture } from '../read-picture';
@@ -183,6 +184,10 @@ type ArtTarget =
   | { kind: 'story'; elementId: string; as: 'measure' | 'page' | 'free' }
   /** Into a part: cut into its words where it has them, a page of its own where it has not. */
   | { kind: 'part'; partId: string; as: 'measure' | 'page' | 'free' }
+  /** A logotype in place of a designed page's title (§9n). */
+  | { kind: 'logo'; partId: string }
+  /** The page as a piece of art, edge to edge (§8). */
+  | { kind: 'part-art'; partId: string }
   /** Into a box already drawn and still empty (§9a). */
   | { kind: 'fill'; elementId: string }
   /** The barcode box on the copyright page (§9k). */
@@ -397,6 +402,14 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const selectedRow = rows.find((row) => row.id === selectedRowId) ?? null;
   const selected = selectedRow?.part ?? null;
   const opened = parts.find((part) => part.id === partDialogId) ?? null;
+  /**
+   * The four pages that are **a block of words on a page of their own** get
+   * the designed-page screen (§9n); every other kind keeps the old fields,
+   * because its three sections are about placing a block and a page that
+   * flows has none to place. `partPlacement` has drawn that line since §7a,
+   * so there is no second list of kinds here.
+   */
+  const designed = opened && partPlacement(opened.kind) === 'block' && opened.kind !== 'plate' ? opened : null;
   const divisions = useMemo(() => contentsDivisions(file), [file]);
 
   const pages = laying?.laid.pages ?? [];
@@ -628,6 +641,12 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           }
           return made.file;
         }
+
+        // A logotype and a page of art are **the part's own pictures**
+        // (§9n), so they go straight on the record: choosing one is the act,
+        // and the mode is read back from what is there.
+        if (target.kind === 'logo') return updatePart(added.file, target.partId, { logoAssetId: assetId as string });
+        if (target.kind === 'part-art') return updatePart(added.file, target.partId, { assetId: assetId as string });
 
         if (target.kind === 'part') {
           const part = partsOf(added.file).find((one) => one.id === target.partId);
@@ -1005,9 +1024,32 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         onClose={() => setLayoutDialogId(null)}
         onUpdate={onUpdate}
       />
+      {/* The designed pages have their own screen (§9n), so the older
+          dialog is handed only what it still serves. */}
+      <DesignedPageDialog
+        file={file}
+        part={designed}
+        laying={laying}
+        onUpdate={onUpdate}
+        onClose={() => setPartDialogId(null)}
+        onPickLogo={(id) => importArt({ kind: 'logo', partId: id })}
+        onPickArt={(id) => importArt({ kind: 'part-art', partId: id })}
+        onOpenBookSettings={() => {
+          setPartDialogId(null);
+          setBookSettingsOpen(true);
+        }}
+        onTurn={(sheet) => {
+          const row = pageRows.find((one) => one.sheet === sheet);
+          setSelectedSheet(sheet);
+          // A page of the story has no part, so the screen turns to whatever
+          // owns the page it lands on — which is what the navigator means.
+          setPartDialogId(row?.partId ?? null);
+          if (!row?.partId) setPageDialogSheet(sheet);
+        }}
+      />
       <PartDialog
         file={file}
-        part={opened}
+        part={designed ? null : opened}
         laying={laying}
         onUpdate={onUpdate}
         onClose={() => setPartDialogId(null)}

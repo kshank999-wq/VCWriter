@@ -23,17 +23,30 @@ import type { BookFont } from './entities/book.js';
  * about which template is in force.
  */
 
-export const PART_TEMPLATES = ['classic', 'centred', 'high_left', 'low_left', 'low_right'] as const;
+/**
+ * **A template is a height** (§9n, from Ken's handoff), and the alignment is
+ * its own control beside it.
+ *
+ * The first five conflated the two — *High and left*, *Low and right* — so
+ * ranging a page left made it *Custom* even though it sat exactly where
+ * *Classic* puts it, and choosing a template silently moved it across the
+ * page. Two questions, two controls: this table answers *how far down*, and
+ * nothing here touches the alignment.
+ *
+ * The four are the ones a compositor names. *Optical centre* is the one
+ * worth knowing: a block placed at the true middle reads as though it has
+ * sagged, so the eye's centre is a little above it.
+ */
+export const PART_TEMPLATES = ['upper_third', 'optical', 'centred', 'low'] as const;
 export type PartTemplate = (typeof PART_TEMPLATES)[number];
 
 export type PartAlign = 'left' | 'center' | 'right';
 
-export const PART_TEMPLATE_WORDS: Record<PartTemplate, { name: string; says: string; align: PartAlign; drop: number }> = {
-  classic: { name: 'Classic', says: 'Centred, a third of the way down: what most books do.', align: 'center', drop: 30 },
-  centred: { name: 'Centred', says: 'Centred, at the middle of the page.', align: 'center', drop: 42 },
-  high_left: { name: 'High and left', says: 'Ranged left, near the head of the page: a modern look.', align: 'left', drop: 10 },
-  low_left: { name: 'Low and left', says: 'Ranged left, low on the page, the space above it doing the work.', align: 'left', drop: 60 },
-  low_right: { name: 'Low and right', says: 'Ranged right, low on the page.', align: 'right', drop: 60 },
+export const PART_TEMPLATE_WORDS: Record<PartTemplate, { name: string; says: string; drop: number }> = {
+  upper_third: { name: 'Upper third', says: 'A third of the way down: what most books do.', drop: 33 },
+  optical: { name: 'Optical centre', says: 'A little above the middle, where the eye reads the centre to be.', drop: 42 },
+  centred: { name: 'Centred', says: 'At the true middle of the page.', drop: 50 },
+  low: { name: 'Low', says: 'Low on the page, the space above it doing the work.', drop: 62 },
 };
 
 /** The book's own face, or one of the book faces chosen for this page alone. */
@@ -42,8 +55,18 @@ export type PartFace = (typeof PART_FACES)[number];
 
 export const partStyleSchema = z.object({
   align: z.enum(['left', 'center', 'right']).default('center'),
-  /** How far down the page the block begins, as a share of the page's height. */
-  drop: z.number().min(0).max(80).default(30),
+  /**
+   * How far down the page the block begins, as a share of the page's height.
+   *
+   * **33 rather than 30** (§9n): the default is now *Upper third*, one of the
+   * four the room offers, so a page nobody has touched reads as a template
+   * rather than as *Custom · placed by hand* — which would be a lie about a
+   * page, and would make the template row useless on every book out of the
+   * box. It is the one place a page that was never set moves, by 3% of the
+   * height on the four designed block pages, and it is the handoff's own
+   * number. A page whose drop was ever chosen keeps it.
+   */
+  drop: z.number().min(0).max(80).default(33),
   face: z.enum(PART_FACES).default('book'),
   /** The title, or the words of a dedication. */
   title: lineStyleSchema.default({ size: 24, tracking: 2 }),
@@ -178,15 +201,86 @@ const KIND_DEFAULTS: Partial<Record<PartKind, PartStylePatch>> = {
 export const partStyleOf = (part: Pick<BookPart, 'kind' | 'style'>, base: PartStylePatch = {}): PartStyle =>
   partStyleSchema.parse({ ...base, ...(KIND_DEFAULTS[part.kind] ?? {}), ...part.style });
 
-/** Which template the style matches, or null where the alignment or the drop was changed by hand. */
-export const partTemplateOf = (style: Pick<PartStyle, 'align' | 'drop'>): PartTemplate | null =>
-  PART_TEMPLATES.find((template) => PART_TEMPLATE_WORDS[template].align === style.align && PART_TEMPLATE_WORDS[template].drop === style.drop) ?? null;
+/**
+ * Which template the page's height matches, or null where it was dragged to
+ * a height of its own — still a **reading** rather than a stored word, so a
+ * hand change makes the page *custom* by itself (§9n).
+ *
+ * It asks the **drop alone**. The alignment is a control beside it now, so a
+ * page ranged left at a third of the way down is still *Upper third*: where
+ * it sits down the page is what the word is about.
+ */
+export const partTemplateOf = (style: Pick<PartStyle, 'drop'>): PartTemplate | null =>
+  PART_TEMPLATES.find((template) => PART_TEMPLATE_WORDS[template].drop === style.drop) ?? null;
 
-/** The template's placement, as a patch: everything else about the page is kept. */
-export const partTemplatePatch = (template: PartTemplate): Pick<PartStyle, 'align' | 'drop'> => ({
-  align: PART_TEMPLATE_WORDS[template].align,
+/** The template's height, as a patch: everything else about the page is kept — the alignment among it. */
+export const partTemplatePatch = (template: PartTemplate): Pick<PartStyle, 'drop'> => ({
   drop: PART_TEMPLATE_WORDS[template].drop,
 });
+
+/**
+ * What the page carries in place of its title (§9n) — a **reading**, so
+ * nothing stores a mode that could disagree with what the page prints.
+ *
+ * - `art`: a picture fills the whole page, and the title is in the art.
+ * - `logo`: a picture stands where the title would, and the words are not set.
+ * - `text`: the book's own title, set in type.
+ *
+ * The order matters and is the print's: a page of art beats a logotype,
+ * because a picture edge to edge leaves nothing for a logotype to sit on.
+ */
+export type PartMode = 'text' | 'logo' | 'art';
+
+export const partModeOf = (part: Pick<BookPart, 'kind' | 'assetId' | 'logoAssetId'>, titleImage = ''): PartMode =>
+  part.assetId ? 'art' : partLogo(part, titleImage) ? 'logo' : 'text';
+
+/**
+ * The logotype in force: the part's own picture, or the title page's older
+ * `titleImage` where it has none. A library id and a data URI are told apart
+ * by the caller, which is why this says which of the two it found.
+ */
+export const partLogo = (
+  part: Pick<BookPart, 'kind' | 'logoAssetId'>,
+  titleImage = '',
+): { assetId: string; data: null } | { assetId: null; data: string } | null => {
+  if (part.logoAssetId) return { assetId: part.logoAssetId, data: null };
+  if (part.kind === 'title_page' && titleImage.trim().length > 0) return { assetId: null, data: titleImage };
+  return null;
+};
+
+/**
+ * How many of the page's settings differ from the style it would otherwise
+ * take (§9n, the handoff's *6 changes from the front-matter style*).
+ *
+ * It compares the **resolved** style against the same style with nothing
+ * stored, so it counts what a writer has actually chosen rather than how
+ * many keys happen to sit in the record — a field set back to its default by
+ * hand is not a change, and should not be counted as one.
+ */
+export const partChanges = (part: Pick<BookPart, 'kind' | 'style'>, base: PartStylePatch = {}): number => {
+  const mine = partStyleOf(part, base);
+  const theirs = partStyleOf({ kind: part.kind, style: {} }, base);
+  // **Leaf by leaf**, so a writer who set the size, the case and the slope
+  // is told they changed three things. Counting `title` as one would say
+  // *1 change* over a page that had been taken apart, which is a figure
+  // nobody can check against what they did.
+  const leaves = (one: PartStyle): unknown[] => [
+    one.align,
+    one.drop,
+    one.face,
+    one.rule,
+    ...([one.title, one.line, one.divider] as const).flatMap((line) => [
+      line.size,
+      line.case,
+      line.bold,
+      line.italic,
+      line.tracking,
+    ]),
+  ];
+  const a = leaves(mine);
+  const b = leaves(theirs);
+  return a.filter((value, at) => value !== b[at]).length;
+};
 
 /**
  * What a prose part looks like **before anybody sets it** — which is not a

@@ -1975,6 +1975,94 @@ the row and then double-clicks it, and asserts the same dialog opens both
 times — the route rather than the dialog, which is the half that was
 broken.
 
+## 9n. The designed page, on one screen
+
+From Ken's handoff, headed *Half title page panel (redesign)*: three
+numbered sections, four placement templates, a page navigator, guides, and
+a footer saying how far the page has been taken from the style.
+
+**The audit paid an eighteenth time.** Nearly every control the handoff
+asks for was already stored, under names that mean the same thing: the
+template table, the drop, the alignment, the face, the size/case/style/
+tracking of a `LineStyle`, the rule, and *Back to the page's own look*.
+`partTemplateOf` was already a **reading** — the handoff asks for exactly
+that by name. What was missing is not the settings but the **shape**: three
+decisions the old stack of fields could not express.
+
+### A template is a height
+
+The first five templates conflated two questions. *High and left* and *Low
+and right* each carried an alignment, so ranging a page left made it
+*Custom* though it sat exactly where *Classic* puts it, and choosing a
+template silently moved the block across the page. The handoff separates
+them — four heights, and an alignment control beside them — and that is the
+right reading: **where a block sits down the page** and **how it is ranged**
+are two questions, and a control that answers both can only be wrong about
+one of them.
+
+So `PART_TEMPLATE_WORDS` is *Upper third* (33), *Optical centre* (42),
+*Centred* (50) and *Low* (62), it carries no alignment, and
+`partTemplateOf` asks the **drop alone**. It is still read back rather than
+stored, so dragging the height makes the page *Custom · placed by hand* by
+itself.
+
+The default drop moves from **30 to 33**, which is the one place a page
+nobody ever set changes — by 3% of the height, on the four designed pages.
+It is the handoff's own number, and the alternative is worse: at 30 a fresh
+book reads *Custom · placed by hand*, which is a lie about the page and
+makes the template row useless out of the box.
+
+### The mode is a reading
+
+What the page carries in place of its title — the words, a logotype, a page
+of art — is `partModeOf`, read off the record, so the tiles cannot disagree
+with what the page prints. Choosing a tile is **the act**: it opens the
+picker, or takes the picture off. Nothing stores a mode beside the picture
+that could drift from it, which is the same absence as the chapter
+template's and the book preset's.
+
+The half title takes a logotype now, as the title page always has.
+`logoAssetId` on the part is the picture, from the graphics library like
+every other; `settings.titlePage.titleImage` is the **older spelling of the
+same intent** and is still honoured where a part carries none — nothing is
+migrated, no page moves, and `partLogo` is the one reading that says which
+is in force. *File ▸ Title page…* goes on writing the older field, which is
+what the handoff asks for by *keep it bound to the same setting*.
+
+### Cancel means cancel
+
+The room saves as you type and this screen goes on doing it, because a look
+is tuned against the sheet beside it (§12a). So the part **as it stood when
+the screen opened** is held, and Cancel puts it back; Done keeps what is
+there, having already kept it.
+
+### The rest
+
+`partChanges` counts **leaf by leaf** — a writer who set the size, the case
+and the slope is told three, where counting `title` as one field would say
+*1 change* over a page that had been taken apart. It compares the resolved
+style against the same style with nothing stored, so a field written back
+to its own default by hand is not a change.
+
+The navigator counts **sheets** rather than printed numbers: the front
+matter counts in roman and the story in arabic, so *page i of 9* would put
+two numbering systems in one sentence. What the page prints is on the chip
+beside it and in the line under the name.
+
+The guides are the room's own and nothing about them is stored: the text
+block from the geometry, and a line at the chosen height — the one thing a
+writer cannot otherwise watch themselves setting.
+
+Which pages get this screen is `partPlacement(kind) === 'block'`, the
+predicate §7a already drew: a page that **flows** or hangs at the foot has
+no block to place, so the contents, the index, the copyright page and the
+prose parts keep the older fields. There is no second list of kinds.
+
+Driving it caught three things the tests did not: the room's own `h3` is a
+tracked-capitals section label, so *Typography* was shouted and *Upper
+third* came back as UPPER THIRD — a template nobody named, from a rule this
+screen never wrote and inherited anyway.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

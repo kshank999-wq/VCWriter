@@ -16076,3 +16076,530 @@ dialog.scene-dialog > header {
   gap: 6px;
   align-items: center;
 }
+
+/* ---------------------------- the designed page's own screen (§9n) */
+
+/*
+ * The half title, the title page, a dedication, an epigraph: one screen,
+ * three numbered sections and the page beside them. It wears the chapter
+ * opening and copyright dialogs' chrome, because three screens with one
+ * look is one look rather than three.
+ *
+ * `[open]` as it has been since the chapter layout dialog: a bare
+ * `display: flex` on a `<dialog>` beats the browser's own `display: none`
+ * for a closed one, and the room behind it stops answering the mouse.
+ */
+dialog.designed-page-dialog[open] {
+  width: min(1200px, 96vw);
+  max-width: 96vw;
+  height: min(780px, 92vh);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.dp-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 12px 0 22px;
+  height: 64px;
+  background: var(--panel-2, rgba(255, 255, 255, 0.03));
+  border-bottom: 1px solid var(--border);
+}
+
+.dp-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dp-title strong {
+  font-family: var(--reading-face, Georgia, serif);
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.dp-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.dp-nav button {
+  width: 36px;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.dp-x {
+  width: 40px;
+  min-height: 40px;
+  font-size: 18px;
+}
+
+.dp-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 560px minmax(0, 1fr);
+}
+
+.dp-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 22px 24px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+}
+
+.dp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-2, rgba(255, 255, 255, 0.03));
+}
+
+.dp-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 15px;
+}
+
+/* The numbered badge: the section's place in the order, which is the one
+   thing a three-step screen has that a stack of fields does not. */
+.dp-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: var(--chip, rgba(255, 255, 255, 0.06));
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dp-says {
+  margin-left: auto;
+  font-weight: 400;
+}
+
+.dp-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dp-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--text);
+  text-align: left;
+  box-shadow: none;
+}
+
+.dp-tile.on {
+  border-color: var(--gold);
+  background: var(--chip, rgba(255, 255, 255, 0.06));
+}
+
+.dp-tile strong {
+  font-size: 13px;
+}
+
+.dp-slot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--field, rgba(0, 0, 0, 0.25));
+}
+
+.dp-slot > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dp-slot-empty {
+  border-style: dashed;
+}
+
+.dp-slot p {
+  margin: 2px 0 0;
+}
+
+/* The title as it will print, in the reading face: the writer is choosing
+   how a name looks, so the name is shown as a name and not as a field. */
+.dp-serif {
+  font-family: var(--reading-face, Georgia, serif);
+  font-size: 18px;
+}
+
+.dp-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.dp-templates {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* Each template is a little page with the block drawn where it would fall,
+   which is the whole of what the word means — a name alone would have to be
+   learnt. */
+.dp-template {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 4px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.dp-template.on {
+  border-color: var(--gold);
+  background: var(--chip, rgba(255, 255, 255, 0.06));
+  color: var(--text);
+}
+
+.dp-sheet {
+  position: relative;
+  width: 40px;
+  height: 60px;
+  border-radius: 2px;
+  background: #f4efe4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.dp-sheet > span {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  margin-top: -1.5px;
+  background: #3a3740;
+}
+
+.dp-slider {
+  gap: 6px;
+}
+
+.dp-slider > span {
+  display: flex;
+  justify-content: space-between;
+}
+
+.dp-marks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.dp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dp-row-label {
+  width: 92px;
+  flex: 0 0 auto;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* One track with the chosen chip raised in it: a row of separate buttons
+   reads as a row of acts rather than as one answer with three states. */
+.dp-seg {
+  display: flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--field, rgba(0, 0, 0, 0.25));
+}
+
+.dp-seg button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
+.dp-seg button.on {
+  background: var(--chip, rgba(255, 255, 255, 0.08));
+  color: var(--text);
+}
+
+.dp-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+}
+
+.dp-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dp-step button {
+  width: 38px;
+  min-height: 38px;
+}
+
+.dp-step input {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+}
+
+.dp-mark {
+  width: 38px;
+  min-height: 36px;
+  font-family: var(--reading-face, Georgia, serif);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.dp-italic {
+  font-style: italic;
+  font-weight: 400;
+}
+
+.dp-mark.on {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--panel);
+}
+
+.dp-switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  align-self: flex-start;
+  padding: 0;
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 13.5px;
+  box-shadow: none;
+}
+
+.dp-switch-track {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 34px;
+  height: 20px;
+  padding: 2px;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: var(--border);
+}
+
+.dp-switch-track.on {
+  justify-content: flex-end;
+  background: var(--gold);
+}
+
+.dp-switch-track > span {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--muted);
+}
+
+.dp-switch-track.on > span {
+  background: var(--panel);
+}
+
+.dp-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 24px;
+  min-width: 0;
+  background: var(--bg, #151418);
+}
+
+.dp-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dp-preview-head .dp-label {
+  flex: 1 1 auto;
+}
+
+.dp-chip {
+  padding: 4px 10px;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: none;
+}
+
+.dp-chip-on {
+  border-color: var(--gold);
+  background: var(--chip, rgba(255, 255, 255, 0.06));
+  color: var(--text);
+}
+
+.dp-sheet-box {
+  position: relative;
+  margin: auto;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* The guides are the room's and nothing about them is stored: the text
+   block, and the height the block is set to — the one thing a writer
+   cannot otherwise see themselves choosing. */
+.dp-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.dp-guide-block {
+  position: absolute;
+  border: 1px dashed rgba(70, 120, 190, 0.5);
+}
+
+.dp-guide-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed rgba(224, 178, 91, 0.7);
+}
+
+.dp-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 68px;
+  padding: 0 22px;
+  background: var(--panel-2, rgba(255, 255, 255, 0.03));
+  border-top: 1px solid var(--border);
+}
+
+.dp-spacer {
+  flex: 1 1 auto;
+}
+
+.dp-status {
+  font-size: 13px;
+}
+
+.dp-status-off {
+  color: var(--gold);
+}
+
+.dp-status-on {
+  color: #8fc79a;
+}
+
+.dp-done {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--panel);
+  font-weight: 600;
+}
+
+/* At the app's narrowest the page goes under the fields rather than the
+   two squeezing into nothing — the scene dialog's rule, and last in the
+   file for the same reason: a media query buys no weight. */
+@media (max-width: 1100px) {
+  .dp-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .dp-fields {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dp-preview {
+    max-height: 40vh;
+  }
+}
+
+/*
+ * The room's own `h3` is a tracked-capitals section label, and these are
+ * **headings of a card** — so *Typography* was shouted and *Upper third*
+ * came back as UPPER THIRD, which is a template nobody named. Found by
+ * driving: the rule is somebody else's and applies here by inheritance,
+ * which is the quietest way a screen ends up saying something it did not
+ * write.
+ */
+.dp-card h3,
+.dp-says {
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.dp-says {
+  font-weight: 400;
+}

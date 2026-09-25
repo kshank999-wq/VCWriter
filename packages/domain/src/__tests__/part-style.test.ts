@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  partChanges,
+  partLogo,
+  partModeOf,
   PART_TEMPLATES,
   addPart,
   bookBlocks,
@@ -77,14 +80,17 @@ describe('a designed page', () => {
 
   it('reads its template back from where the block sits, and never stores one', () => {
     for (const template of PART_TEMPLATES) expect(partTemplateOf(partTemplatePatch(template))).toBe(template);
-    expect(partTemplateOf({ align: 'center', drop: 31 })).toBeNull();
+    expect(partTemplateOf({ drop: 31 })).toBeNull();
+    // A template is a **height** now (§9n), so ranging the page left leaves
+    // it where it is: the alignment is a control beside it, not part of it.
+    expect(partTemplateOf({ drop: 33 })).toBe('upper_third');
     const file = novel();
     const half = partsOf(file).find((part) => part.kind === 'half_title')!;
-    expect(partTemplateOf(partStyleOf(half))).toBe('classic');
+    expect(partTemplateOf(partStyleOf(half))).toBe('upper_third');
     expect(Object.keys(half.style)).toEqual([]);
-    const moved = updatePart(file, half.id, { style: { ...partStyleOf(half), ...partTemplatePatch('low_left') } });
+    const moved = updatePart(file, half.id, { style: { ...partStyleOf(half), ...partTemplatePatch('low') } });
     const later = partsOf(moved).find((part) => part.kind === 'half_title')!;
-    expect(partTemplateOf(partStyleOf(later))).toBe('low_left');
+    expect(partTemplateOf(partStyleOf(later))).toBe('low');
     expect(later.style).not.toHaveProperty('template');
   });
 
@@ -111,7 +117,7 @@ describe('a designed page', () => {
   it('prints the half title and the title page in their style, with the typed title and the line under it, over the file’s name', () => {
     let file = setTitlePage(novel(), { title: 'The Lamp', episode: 'A novel' });
     const title = partsOf(file).find((part) => part.kind === 'title_page')!;
-    file = updatePart(file, title.id, { style: { ...partStyleOf(title), ...partTemplatePatch('high_left'), rule: true } });
+    file = updatePart(file, title.id, { style: { ...partStyleOf(title), ...partTemplatePatch('low'), align: 'left', rule: true } });
     const blocks = bookBlocks(file);
     const half = blocks.find((block) => block.kind === 'half_title')!;
     const page = blocks.find((block) => block.kind === 'title_page')!;
@@ -120,9 +126,9 @@ describe('a designed page', () => {
     expect(halfHtml).toContain('The Lamp');
     expect(halfHtml).not.toContain('the-lamp-final-v3');
     expect(halfHtml).toContain('<div class="bk-drop"></div>');
-    expect(halfHtml).toContain('--pt-drop:30%');
+    expect(halfHtml).toContain('--pt-drop:33%');
     const pageHtml = renderBookBlock(page, contextFor(file));
-    expect(pageHtml).toContain('--pt-drop:10%');
+    expect(pageHtml).toContain('--pt-drop:62%');
     expect(pageHtml).toContain('--pt-items:flex-start');
     expect(pageHtml).toContain('--pt-rule:1px solid currentColor');
     expect(pageHtml).toContain('<p class="bk-subtitle">A novel</p>');
@@ -412,5 +418,55 @@ describe('a prose part', () => {
     // so it is asserted over every paragraph rather than the ones nearby.
     const story = blocks.filter((one) => one.kind === 'paragraph' && one.partId !== partId);
     for (const block of story) expect(renderBookBlock(block, context)).not.toContain('font-size:');
+  });
+});
+
+/**
+ * What a designed page carries, and how far it has been taken from the
+ * style (§9n, from Ken's handoff).
+ */
+describe('a designed page’s mode and its changes', () => {
+  it('reads the mode off the page rather than storing one', () => {
+    const file = novel();
+    const half = partsOf(file).find((part) => part.kind === 'half_title')!;
+    expect(partModeOf(half)).toBe('text');
+    expect(partModeOf({ ...half, logoAssetId: 'logo' })).toBe('logo');
+    // A page of art beats a logotype: a picture edge to edge leaves nothing
+    // for a logotype to sit on, which is the order the print reads them in.
+    expect(partModeOf({ ...half, logoAssetId: 'logo', assetId: 'art' })).toBe('art');
+  });
+
+  it('takes the title page’s older logotype where the part carries none', () => {
+    const file = novel();
+    const title = partsOf(file).find((part) => part.kind === 'title_page')!;
+    const half = partsOf(file).find((part) => part.kind === 'half_title')!;
+    expect(partLogo(title, 'data:image/png;base64,AAA')).toEqual({ assetId: null, data: 'data:image/png;base64,AAA' });
+    // The part's own wins — it is the newer spelling of the same intent.
+    expect(partLogo({ ...title, logoAssetId: 'mine' }, 'data:image/png;base64,AAA')).toEqual({ assetId: 'mine', data: null });
+    // And the half title has never had `titleImage`, so it takes none.
+    expect(partLogo(half, 'data:image/png;base64,AAA')).toBeNull();
+  });
+
+  it('prints a logotype in place of the title on the half title too', () => {
+    let file = setTitlePage(novel(), { title: 'The Lamp' });
+    const half = partsOf(file).find((part) => part.kind === 'half_title')!;
+    file = updatePart(file, half.id, { logoAssetId: 'logo' });
+    file = { ...file, assets: [...(file.assets ?? []), { ...(file.assets?.[0] ?? {}), id: 'logo', kind: 'image', name: 'mark.svg', data: 'data:image/svg+xml;base64,QQ==', width: 100, height: 40, caption: '', altText: '', decorative: false, createdAt: new Date().toISOString() } as never] };
+    const block = bookBlocks(file).find((one) => one.kind === 'half_title')!;
+    const html = renderBookBlock(block, contextFor(file));
+    expect(html).toContain('bk-title-art');
+    // In place of, never as well as.
+    expect(html).not.toContain('bk-book-title');
+  });
+
+  it('counts what the writer chose rather than what happens to be stored', () => {
+    const file = novel();
+    const half = partsOf(file).find((part) => part.kind === 'half_title')!;
+    expect(partChanges(half)).toBe(0);
+    // A field written back to its own default is not a change.
+    const same = { ...half, style: { ...partStyleOf(half) } };
+    expect(partChanges(same)).toBe(0);
+    expect(partChanges({ ...half, style: { drop: 62 } })).toBe(1);
+    expect(partChanges({ ...half, style: { drop: 62, align: 'left', rule: true } })).toBe(3);
   });
 });
