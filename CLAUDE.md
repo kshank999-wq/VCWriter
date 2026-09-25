@@ -1800,6 +1800,23 @@ push live; the build takes a minute or two.
   menu command being the most durable route in the program and the least
   likely to be revisited. A sweep of the other nineteen commands found no
   second case.
+  **§16c is that a logotype replaces the title, not the page**, from Ken on
+  his own book (*the new title page box is not coming through*) — he was on
+  the new screen, with his title page set as **full-page art**, where it drew
+  three tiles and nothing else. **§9n hid the elements and the type wherever
+  the page carried a picture**, which is right on the half title (a logotype
+  there *is* the whole content) and wrong on the title page, where it stands
+  where the title would and **six of the seven go on printing** — so the
+  print drew things the screen would not let anybody reach. Only **art**
+  really has nothing to set, bleeding to the trim with the words in the
+  artwork; the title's row now says a logotype stands there and offers the
+  title back. And art mode is **absent with the reason said** — it explained
+  nothing, so a writer who had just specified seven elements found a panel
+  that looked unbuilt, which is what Ken reported about a screen working as
+  designed. The lesson is §16b's one layer in: **a mode is a route too** —
+  §15c and §16b found ways *in* that missed the new screen, this a state *of*
+  it that showed none of it, and all three read identically from the writer's
+  chair while the feature was there and working.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

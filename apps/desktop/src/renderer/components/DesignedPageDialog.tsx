@@ -301,7 +301,21 @@ function Body({
 
   const logo = partLogo(part, titlePage.titleImage);
   const showPlacement = mode !== 'art';
-  const showType = mode === 'text';
+  /**
+   * **A logotype replaces the title, not the page** (§16c, from Ken: *the new
+   * title page box is not coming through*).
+   *
+   * On the half title a logotype *is* the whole content, so there is nothing
+   * left to set and §9n hid the type with it. On the **title page** it stands
+   * where the title would and the subtitle, the author, the contributor and
+   * the whole publisher block go on printing — six of the seven — so hiding
+   * them made the print draw things the screen would not let anybody reach.
+   * Only a page of **art** really has nothing to set: it bleeds to the trim
+   * and the words are in the picture.
+   */
+  const showType = isTitle ? mode !== 'art' : mode === 'text';
+  /** The elements, for the same reason: they print under a logotype. */
+  const showElements = isTitle && mode !== 'art';
 
   return (
     <>
@@ -353,7 +367,7 @@ function Body({
                   arrangement, the template — and a tally is not that. Two
                   things under one name is a second answer waiting to be
                   read. */}
-              {isTitle && mode === 'text' ? <span className="muted small dp-tally">{titlePageShown(part)} of 7 shown</span> : null}
+              {showElements ? <span className="muted small dp-tally">{titlePageShown(part)} of 7 shown</span> : null}
             </h3>
             <div className="dp-tiles">
               {MODES.map((one) => (
@@ -369,7 +383,7 @@ function Body({
                 </button>
               ))}
             </div>
-            {mode === 'text' && isTitle ? (
+            {showElements ? (
               /* The seven elements (§16). Each row says where its words come
                  from, because six of the seven are read from somewhere that
                  already held them — a box here for any of those would be a
@@ -416,7 +430,24 @@ function Body({
                         <span className="muted small">{one.note}</span>
                       </div>
                       {on ? (
-                        one.id === 'contributor' ? (
+                        one.id === 'title' && mode === 'logo' ? (
+                          /* A logotype stands where the title would (§16c), so
+                             the row says what will print rather than showing
+                             words the page does not set. */
+                          <div className="dp-element-pair">
+                            <p className="dp-reads">A logotype stands here. The words are not set.</p>
+                            <button type="button" className="ghost small" onClick={() => onPickLogo(partId)}>
+                              Another logotype…
+                            </button>
+                            <button
+                              type="button"
+                              className="ghost small"
+                              onClick={() => onUpdate((current) => updatePart(current, partId, { logoAssetId: null }))}
+                            >
+                              Set the title instead
+                            </button>
+                          </div>
+                        ) : one.id === 'contributor' ? (
                           <div className="dp-element-pair">
                             <div className="dp-seg" role="group" aria-label="Which contributor">
                               {(['translator', 'editor'] as const).map((role) => (
@@ -494,12 +525,18 @@ function Body({
               </div>
             ) : (
               <div className="dp-slot dp-slot-empty">
+                {/* **Absent with the reason said** (§16c). A page of art is
+                    the one mode where none of the seven print, and a screen
+                    that simply drops them leaves a writer looking for a
+                    panel they were told they had. */}
                 <p className="muted small">
                   {mode === 'logo'
                     ? logo
                       ? 'A logotype stands in place of the title. The words are not set.'
                       : 'No logotype yet.'
-                    : 'The picture is the page, edge to edge. Nothing is set over it.'}
+                    : isTitle
+                      ? 'The picture is the page, edge to edge. None of the seven elements print — the title, the author and the publisher are all in the artwork — so there is nothing here to set. Choose Title text or Logotype to set them.'
+                      : 'The picture is the page, edge to edge. Nothing is set over it.'}
                 </p>
                 <button type="button" className="raised small" onClick={() => (mode === 'logo' ? onPickLogo(partId) : onPickArt(partId))}>
                   {mode === 'logo' ? (logo ? 'Another logotype…' : 'Choose a logotype…') : part.assetId ? 'Another picture…' : 'Choose a picture…'}

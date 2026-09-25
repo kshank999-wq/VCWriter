@@ -8,6 +8,7 @@ import {
   partTemplateOf,
   partsOf,
   setBookSettings,
+  updatePart,
   setTitlePage,
   titlePageFieldsOf,
   titleTemplateOf,
@@ -222,6 +223,43 @@ describe('the title page', () => {
     render(<Harness kind="title_page" />);
     expect(screen.getByText(/No publisher name or mark/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Done' }).hasAttribute('disabled')).toBe(false);
+  });
+
+  /**
+   * **A logotype replaces the title, not the page** (§16c, from Ken: *the new
+   * title page box is not coming through* — he was looking at a title page
+   * set as full-page art).
+   *
+   * §9n hid the type wherever the page carried a picture, which is right on
+   * the half title, where a logotype *is* the whole content. On the title
+   * page it stands where the title would and six of the seven go on
+   * printing, so hiding them made the print draw things the screen would not
+   * let anybody reach.
+   */
+  it('keeps the elements under a logotype, six of them still printing', () => {
+    const withLogo = (): ProjectFile => {
+      const file = withHouse();
+      return updatePart(file, titlePage(file).id, { logoAssetId: 'logo-1' });
+    };
+    render(<Harness kind="title_page" start={withLogo} />);
+    expect(document.querySelectorAll('.dp-element-head strong')).toHaveLength(7);
+    // The title's own row says what stands there instead of the words.
+    expect(screen.getByText('A logotype stands here. The words are not set.')).toBeTruthy();
+    // And the type is still the author's and the subtitle's to set.
+    expect(screen.getByLabelText('Author size in points')).toBeTruthy();
+  });
+
+  it('says why a page of art has none of them, and how to get them back', () => {
+    const withArt = (): ProjectFile => {
+      const file = withHouse();
+      return updatePart(file, titlePage(file).id, { assetId: 'art-1' });
+    };
+    render(<Harness kind="title_page" start={withArt} />);
+    // Nothing prints, so nothing is offered — but absent with the reason
+    // said, or a writer hunts for a panel they were told they had.
+    expect(document.querySelectorAll('.dp-element-head strong')).toHaveLength(0);
+    expect(screen.getByText(/None of the seven elements print/)).toBeTruthy();
+    expect(screen.getByText(/Choose Title text or Logotype to set them/)).toBeTruthy();
   });
 
   it('gives the author a size of its own, which the half title never had', () => {

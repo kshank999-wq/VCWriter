@@ -2285,6 +2285,36 @@ A sweep of the other nineteen commands found no second case: *Chapter page…*
 opens addendum 19's own book screen, and page setup and print are the
 manuscript's, which a book still has.
 
+## 16c. A logotype replaces the title, not the page
+
+From Ken, looking at his own title page: *the new title page box is not
+coming through.* He was on the new screen — his title page is set as
+**full-page art**, and in that mode it showed three tiles and nothing else.
+
+**§9n hid the elements and the type wherever the page carried a picture**,
+which is right on the half title: a logotype there *is* the whole content of
+the page, so there is nothing left to set. On the **title page** it stands
+where the title would and **six of the seven go on printing** — the subtitle,
+the author, the contributor and the whole publisher block — so the print drew
+things the screen would not let anybody reach. The predicate is the page's
+now, not the picture's: only **art** really has nothing to set, because it
+bleeds to the trim and the words are in the artwork.
+
+The title's own row then has to say what stands there, since the words are
+not set under a logotype; it offers another one, or the title back.
+
+And the art mode is **absent with the reason said**. It listed no elements
+and explained nothing, so a writer who had just specified seven of them
+found a panel that looked unbuilt — which is exactly what Ken reported, on a
+screen that was working as designed. It now says that none of the seven
+print, why (they are all in the artwork), and which tile brings them back.
+
+The lesson is the same one §16b drew, one layer in. **A mode is a route
+too.** §15c and §16b found ways *in* that missed the new screen; this found a
+state *of* the new screen that showed none of it. All three read identically
+from the writer's chair — the feature is not there — and in all three the
+feature was there and working.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.
