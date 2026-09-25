@@ -1843,6 +1843,58 @@ push live; the build takes a minute or two.
   and ranging a Classic page left reads as *Flush left*, which is what it now
   is. The lesson beside §16b's: **a rule about screens is not a rule about
   controls**, and applied one level down it turned a panel into a set of doors.
+  **§17 is the back matter**, from Ken's handoff for seven pages after the
+  story — acknowledgements, appendix, glossary, bibliography, index, about
+  the author and reader extras — and the audit paid a **twentieth** time,
+  this one mostly shell. **The screen exists** (§9n and §16 built the
+  handoff's own shape, which it says itself: *identical in structure to the
+  Half title and Title page panels*), **sections 2 and 3 exist** (a part's
+  `PartStyle` has carried the heading's line, the alignment and the rule
+  since §7a), and **five of the seven pages exist as part kinds** — the
+  index being addendum 10 whole, which is the handoff's *Build from the
+  manuscript* tile already built and already better than its promise, the
+  page numbers being a reading. So `BackMatterDialog.tsx` is **one shell
+  with a first section per page**, sections 2 and 3 written once because
+  *how deep is Standard* must not have seven answers. Four things the
+  cutter has always understood could now be asked for. **The page's own
+  side and its own number** — `layPages` has taken `starts` and `folio` on
+  every block since §4 and every prose part took a recto whether it wanted
+  one or not; both default to what they already did. **The sink, with a
+  fourth step nobody asked for**: the depth is `drop`, which a prose part
+  **stored and never read**, so making it a control was the day it could
+  move an existing foreword — §7a's rule (a style starts as exactly what
+  the page prints) puts **At the head** before Shallow, Standard and Deep
+  and makes it the default, the three named steps being `CHAPTER_SINKS`
+  read through `sinks.ts` rather than a second table, and a hand-set depth
+  lighting none. It is **absent on a page that flows**, `partPlacement`'s
+  own predicate. **The sign-off is a field rather than a last paragraph**
+  (the page ranges it right in italic, and a writer who typed it as a
+  paragraph could not say so), switching it off **keeps its words**, and it
+  prints as a paragraph with `role: 'sign_off'` — a field narrow enough to
+  name its one page being honester than a general one nobody can read,
+  `copyrightPosition`'s precedent. **About the author holds neither the
+  name nor the biography**: the name is the book's through `bookNames`
+  (§16d's one value, two doors) and the biography **is `part.text`**, a
+  `bio` beside it having been written and deleted because it would strand
+  what an author had already typed; the photograph is **the figure and the
+  inset a sixteenth time** (*above* a figure across the measure, *beside*
+  the very inset §8 cuts pictures in with), and where it goes and what
+  shape it is are **absent until there is a photograph**. **Columns were
+  built and taken out**: `PartStyle` had a `columns` and the stylesheet a
+  `.bk-cols-2` that nothing emitted — a two-column page is a change to the
+  **cutter** (the measurement and the lines per page both halve) rather
+  than a declaration, and a control storing a number the book never reads
+  is a control that lies. Driving the real room found the fault of the day
+  and it is this room's own: **the sink replaced the book's opening depth
+  instead of adding to it**, so *Shallow* moved the heading a quarter of
+  the way **up** from where *At the head* drew it; `.bk-opening` is
+  `calc(… + var(--pt-sink, 0in))` now, in **inches** because a percentage
+  padding resolves against the containing block's *width* even at the top
+  (§9g) — and it found the navigator keeping the column's scroll, so ›
+  landed halfway down the next page, which on the screen is
+  indistinguishable from the turn not working. The other five first
+  sections are stages of their own, **said rather than left blank**;
+  addendum 20 §17 carries the order.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

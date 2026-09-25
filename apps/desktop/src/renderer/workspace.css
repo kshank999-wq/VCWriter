@@ -16642,6 +16642,13 @@ dialog.designed-page-dialog[open] {
   min-width: 0;
 }
 
+/* The three links on About the author (§17). Their switches share a column so
+   the boxes start at one place: three switches at three widths read as three
+   different controls. */
+.dp-link-switch {
+  flex: 0 0 132px;
+}
+
 .dp-element input {
   width: 100%;
   box-sizing: border-box;

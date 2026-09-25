@@ -2360,6 +2360,98 @@ The lesson is narrower than §16b's and worth keeping beside it: **a rule
 about screens is not a rule about controls.** Applied one level down it
 turned a panel into a set of doors.
 
+## 17. The back matter
+
+From Ken's handoff, for seven pages that come after the story:
+acknowledgements, appendix, glossary, bibliography, index, about the author
+and reader extras — each with its own first section and one shared screen
+behind them all.
+
+**The audit paid a twentieth time, and this one is mostly shell.** The
+*screen* exists: §9n and §16 built exactly the handoff's shape — numbered
+section cards down the left, the page as the book sets it on the right, a
+navigator, Guides and a footer of *Reset to page style · Cancel · Done* —
+and the handoff says so itself, *identical in structure to the Half title
+and Title page panels*. *Sections 2 and 3* exist: a part's `PartStyle` has
+carried the heading's line, the alignment and the rule since §7a, and the
+body's size is its `line`. And *five of the seven pages* exist as part
+kinds, the index in particular being addendum 10 whole — marks placed in
+the manuscript, page numbers read off the pagination every time, letter
+dividers — which is the handoff's *Build from the manuscript* tile already
+built and already better than its own promise, since the numbers are a
+reading rather than a stored list.
+
+What is genuinely new: an appendix, a bibliography and the reader extras as
+part kinds, the two page-specific sections below, and four things the
+cutter has always understood and nothing could ask for.
+
+**The page's own side and its own number.** `layPages` has taken `starts`
+and `folio` on every block since §4, and every prose part took a recto and
+printed a number whether it wanted one or not, there being nowhere to say
+otherwise. `recto` and `folio` are on the style now; both default to what
+every prose part already did, so no existing page moves.
+
+**The sink, and the fourth step nobody asked for.** How far down the page
+the heading begins is `drop`, which every designed page has carried since
+§7a and which a prose part **stored and never read** — so the day it became
+a control was the day it could move an existing foreword. §7a's own rule
+decides it: a style starts as exactly what the page prints, so `BACK_SINKS`
+offers **At the head** before Shallow, Standard and Deep, and it is the
+default for all seven. The three named steps are `CHAPTER_SINKS` (§14) read
+through `sinks.ts` rather than a second table; a depth set by hand lights
+none of them, `bookPresetOf`'s rule for the sixth time. It is **absent on a
+page that flows** — the contents and the index run to as many pages as they
+need, so there is no single block on a page to place, which is
+`partPlacement`'s own predicate and the same reason the template and the
+drop are absent there.
+
+Driving the real room found the fault of the day, and it is the one this
+whole room keeps finding: **the sink replaced the book's opening depth
+rather than adding to it**, so pressing *Shallow* moved the heading a
+quarter of the way **up** from where *At the head* drew it — a control that
+goes the wrong way when a writer asks it to go down. `.bk-opening` now
+reads `calc(… + var(--pt-sink, 0in))`, and the depth is in **inches**,
+because a percentage padding resolves against the containing block's
+*width* even at the top (§9g). It also found the navigator keeping the
+fields column's scroll, so › off the foot of one page landed halfway down
+the next — indistinguishable, on the screen, from the turn not having
+worked.
+
+**The acknowledgements** are the page's words and a **sign-off**, which is a
+field of its own rather than a last paragraph: the page sets it apart —
+ranged right, in italic — and a writer who typed it as a paragraph would
+have no way to say so. Switching it off **keeps its words** (§15's rule),
+and it prints as a `paragraph` block with `role: 'sign_off'`, a field
+narrow enough to name the one page it serves being honester than a general
+one nobody can read — `copyrightPosition`'s precedent.
+
+**About the author** is the photograph and the links. Two things are
+deliberately *not* fields on it. The **name** is the book's, read from
+`bookNames`, so a pen name typed on the title page is the one on this page
+too — §16d's one value with two doors. And the **biography is the page's
+words**, `part.text`, which every prose part has carried since §5 and which
+the printer already sets; a `bio` beside it was written first and deleted,
+because it would have stranded whatever an author had already typed here
+and given the book two answers to what this page says. The photograph is a
+**figure and an inset a sixteenth time** rather than a picture of its own
+kind: *above* is a figure across the measure, *beside* is exactly the inset
+the book has cut pictures into paragraphs with since §8, *none* is no block
+at all — and where it goes and what shape it is are **absent until there is
+a photograph**, both being questions about a picture.
+
+**Columns were built and taken out.** `PartStyle` carried a `columns` and
+the stylesheet a `.bk-cols-2`, and nothing emitted the class: a two-column
+reference page is a change to the *cutter* — the measurement and the lines
+per page both halve — rather than a declaration, and a control that stores
+a number the book never reads is a control that lies. It is its own stage.
+
+The other five pages' first sections are stages of their own; until each
+has one the page is its words, **said rather than left blank**. The build
+order from here: Appendix (import, labels, tiles) → Glossary (import, sort,
+letter headings) → Bibliography (BibTeX/RIS/CSL, Chicago/MLA/APA, hanging
+indent) → Index (an import mode beside the marks that already exist) →
+Reader extras (four kinds, a QR code) → columns.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

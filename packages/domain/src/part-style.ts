@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { BOOK_FACES, type BookFace, type BookPart, type PartKind } from './entities/book.js';
 import { lineStyleSchema, lineStyleVars, type ChapterPageStyle, type LineStyle } from './chapter-style.js';
 import { faceStackOf } from './book-layout.js';
+import { sinkDrop } from './sinks.js';
 import type { BookFont } from './entities/book.js';
 
 /**
@@ -106,6 +107,21 @@ export const partStyleSchema = z.object({
   subtitleItalic: z.boolean().default(true),
   /** A rule under the title. */
   rule: z.boolean().default(false),
+  /**
+   * Whether the page prints its number, and whether it opens on a right-hand
+   * page. The cutter has understood both since §4 — `layPages` takes `folio`
+   * and `starts` on every block — and neither could be **asked for** until
+   * the back matter's screen wanted them per page.
+   */
+  folio: z.boolean().default(true),
+  /**
+   * **True by default**, because that is what every prose part has done: a
+   * foreword, a preface and an introduction each open on a right-hand page,
+   * and did so before this could be asked for. The back-matter kinds turn it
+   * off in their own defaults below, which is the handoff's table (§17) — so
+   * the control arrives without moving a page in a book made before it.
+   */
+  recto: z.boolean().default(true),
 });
 export type PartStyle = z.infer<typeof partStyleSchema>;
 
@@ -212,6 +228,21 @@ const KIND_DEFAULTS: Partial<Record<PartKind, PartStylePatch>> = {
     title: { size: 14, case: 'capitals', bold: false, italic: false, tracking: 12 },
     line: { size: 11, case: 'as_typed', bold: false, italic: false, tracking: 0 },
   },
+  // **The back matter starts at the head of its page** (§17). A prose part's
+  // `drop` has been stored and never read, so the day the sink became a
+  // control was the day it could move an existing foreword — and §7a's rule
+  // is that a style starts as exactly what the page already prints. Hence a
+  // fourth step, *At the head*, which the handoff does not name and which is
+  // the only honest default: Shallow, Standard and Deep are one press away
+  // and the screen says which the page is on. All seven take the same
+  // default, a page nobody has set being the same question whether or not
+  // any book has one yet.
+  acknowledgements: { drop: 0 },
+  appendix: { drop: 0 },
+  glossary: { drop: 0 },
+  bibliography: { drop: 0 },
+  about_the_author: { drop: 0 },
+  reader_extra: { drop: 0 },
 };
 
 /**
@@ -300,6 +331,8 @@ export const partChanges = (part: Pick<BookPart, 'kind' | 'style'>, base: PartSt
     one.face,
     one.rule,
     one.subtitleItalic,
+    one.folio,
+    one.recto,
     ...([one.title, one.line, one.divider] as const).flatMap((line) => [
       line.size,
       line.case,

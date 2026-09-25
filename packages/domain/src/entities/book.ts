@@ -144,6 +144,11 @@ export const PART_KINDS = [
   'epilogue',
   'afterword',
   'acknowledgements',
+  // The back matter's own (addendum 20 §17, from Ken's handoff). The other
+  // five it asks for were already kinds; these three were not.
+  'appendix',
+  'bibliography',
+  'reader_extra',
   'glossary',
   'about_the_author',
   'also_by',
@@ -220,6 +225,15 @@ export const bookPartSchema = z.object({
    * page's record.
    */
   titlePage: z.unknown().nullable().default(null),
+  /**
+   * A back-matter page's own fields (addendum 20 §17): the sign-off on an
+   * acknowledgements page, the photograph and links on *About the author*,
+   * the questions on a reader extra. Held loosely and parsed by the reading
+   * that wants it, the copyright page's and the title page's shape — so what
+   * each page carries stays in its own module rather than being spelled out
+   * a second time here.
+   */
+  about: z.unknown().nullable().default(null),
   /**
    * A plate's description. Nothing prints on the page — the art is the page
    * (§8, from Ken) — but the eBook reads it to a reader who cannot see the

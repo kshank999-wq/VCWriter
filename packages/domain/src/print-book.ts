@@ -18,6 +18,7 @@ import {
 import type { ChapterPageContent } from './markers.js';
 import { FACE_STACKS, faceStackOf, fontFaceCss, type BookGeometry } from './book-layout.js';
 import { partStyleAttr } from './part-style.js';
+import type { AuthorPhotoShape } from './back-matter.js';
 import { headSideClass, runningHeadStyleOf, runningStyleVars } from './running-heads.js';
 import type { BookBlock, FigureFree, FigureInset } from './book-plan.js';
 import type { BookContentsRow, BookPage } from './book-pages.js';
@@ -503,7 +504,19 @@ const openingMarkup = (block: BookBlock, context: BookRenderContext): string => 
     ? layout.slots.map((slot) => slotMarkup(slot, layout, chapter, heading)).filter(Boolean).join('')
     : heading;
   const wide = layout.graphic === 'bleed' ? ' bk-opening-bleed' : '';
-  return `<div class="bk-opening bk-layout-${layout.id}${wide}" style="text-align:${layout.align === 'left' ? 'left' : align};${style}${own ? `;${own}` : ''}">${parts}</div>`;
+  /**
+   * **The sink** on a back-matter page (§17): how far down the paper the
+   * heading begins, as a share of the page. In **inches** rather than a
+   * percentage, because a percentage padding resolves against the containing
+   * block's *width* even at the top — §9g's lesson, which drew a chapter
+   * page's drop at three quarters of where it meant to. It is drawn only
+   * where the page asks for one, so a heading at the head carries nothing.
+   */
+  const sink =
+    !chapter && block.partStyle && block.partStyle.drop > 0
+      ? `--pt-sink:${Math.round((block.partStyle.drop / 100) * context.geometry.trim.height * 100) / 100}in;`
+      : '';
+  return `<div class="bk-opening bk-layout-${layout.id}${wide}" style="${sink}text-align:${layout.align === 'left' ? 'left' : align};${style}${own ? `;${own}` : ''}">${parts}</div>`;
 };
 
 /**
@@ -616,11 +629,20 @@ const blockInner = (block: BookBlock, context: BookRenderContext): string => {
       // time the mechanism was already there — so a drop cap is a rendering
       // of a paragraph the plan already marks, and nothing new is stored.
       const first = block.opensChapter ? context.chapterStyle.firstLine : 'plain';
-      const cls = ['bk-p', opens ? `bk-opens bk-${context.settings.opening}` : '', block.inset ? 'bk-has-inset' : '', first === 'plain' ? '' : `bk-first-${first}`]
+      const cls = [
+        'bk-p',
+        opens ? `bk-opens bk-${context.settings.opening}` : '',
+        block.inset ? 'bk-has-inset' : '',
+        first === 'plain' ? '' : `bk-first-${first}`,
+        // What this paragraph is on a back-matter page (§17), and nothing at
+        // all anywhere else.
+        block.role === 'sign_off' ? 'bk-sign-off' : '',
+        block.role === 'author_link' ? 'bk-author-link' : '',
+      ]
         .filter(Boolean)
         .join(' ');
       const words = first === 'plain' ? renderSpans(block.spans, block.text) : firstLineMarkup(block, first);
-      return `<p class="${cls}"${style}>${block.inset ? insetMarkup(block.inset, context) : ''}${words}</p>`;
+      return `<p class="${cls}"${style}>${block.inset ? insetMarkup(block.inset, context, block.photoShape) : ''}${words}</p>`;
     }
     case 'heading':
       // A heading that opens a page is a chapter inside a story (addendum 22
@@ -655,7 +677,11 @@ const blockInner = (block: BookBlock, context: BookRenderContext): string => {
         ? `<img class="bk-figure-image" alt="${escapeHtml(picture.altText || block.caption || '')}" src="${escapeHtml(picture.data)}" />`
         : '<div class="bk-figure-missing">Picture goes here</div>';
       const caption = (block.caption ?? '').trim() ? `<p class="bk-caption">${escapeHtml(block.caption ?? '')}</p>` : '';
-      return `<div class="bk-figure" data-figure="${escapeHtml(block.id)}">${image}${caption}</div>`;
+      // The author's photograph above the biography (§17): the same figure
+      // every other picture across the measure is, shaped and held to a
+      // third of the measure by its class alone.
+      const shape = block.photoShape ? ` bk-author-photo bk-photo-${block.photoShape}` : '';
+      return `<div class="bk-figure${shape}" data-figure="${escapeHtml(block.id)}">${image}${caption}</div>`;
     }
     case 'chapter_opening':
     case 'part_opening':
@@ -710,7 +736,7 @@ const blockInner = (block: BookBlock, context: BookRenderContext): string => {
  * right height before the picture has decoded — the paragraph is measured
  * the moment it is set, and a float of no height would be measured as none.
  */
-const insetMarkup = (inset: FigureInset, context: BookRenderContext): string => {
+const insetMarkup = (inset: FigureInset, context: BookRenderContext, photoShape?: AuthorPhotoShape): string => {
   const picture = inset.assetId ? context.pictures.get(inset.assetId) : undefined;
   const ratio = picture && picture.width > 0 && picture.height > 0 ? `aspect-ratio:${picture.width} / ${picture.height};` : '';
   const image = picture
@@ -721,7 +747,11 @@ const insetMarkup = (inset: FigureInset, context: BookRenderContext): string => 
   // of a border*): the writer's, in ems of the body size, so it holds at any
   // trim and any type size.
   const gap = `--bk-standoff:${inset.standoff.toFixed(2)}em`;
-  return `<span class="bk-inset bk-inset-${inset.place}" data-figure="${escapeHtml(inset.figureId)}" style="width:${Math.round(inset.span * 100)}%;${gap}">${image}${caption}</span>`;
+  // The author's photograph is cut in like any other picture (§17) and is
+  // only shaped differently, so the shape is a class rather than a second
+  // way of putting a picture beside words.
+  const shape = photoShape ? ` bk-author-photo bk-photo-${photoShape}` : '';
+  return `<span class="bk-inset bk-inset-${inset.place}${shape}" data-figure="${escapeHtml(inset.figureId)}" style="width:${Math.round(inset.span * 100)}%;${gap}">${image}${caption}</span>`;
 };
 
 /** The text block's class, and the measuring box's: the paragraph style rides on it. */
@@ -788,7 +818,13 @@ export const renderBookPage = (
  * there is one copy and the printed page cannot drift from the screen.
  */
 export const CHAPTER_STYLES = `
-  .bk-opening { padding-top: calc(var(--bk-lead) * var(--chapter-opening-lines, 8)); padding-bottom: calc(var(--bk-lead) * 2); font-family: var(--chapter-face, var(--bk-face)); }
+  /* The opening's depth, plus a back-matter page's **sink** where it asks for
+     one (§17). Added rather than substituted: driving the room found a sink
+     that *replaced* the book's opening depth, so pressing *Shallow* moved the
+     heading a quarter of the way **up** the page from where *At the head*
+     drew it — a control that goes the wrong way when a writer asks it to go
+     down. At the head is the head, and every step is under it. */
+  .bk-opening { padding-top: calc(var(--bk-lead) * var(--chapter-opening-lines, 8) + var(--pt-sink, 0in)); padding-bottom: calc(var(--bk-lead) * 2); font-family: var(--chapter-face, var(--bk-face)); }
   .bk-chapter-head { display: inline-block; border-bottom: var(--chapter-rule, none); padding-bottom: 0.35em; }
   .bk-chapter-label { margin: 0; font-size: var(--chapter-number-size); font-weight: var(--chapter-number-weight); font-style: var(--chapter-number-style); text-transform: var(--chapter-number-case); font-variant-caps: var(--chapter-number-variant); letter-spacing: var(--chapter-number-tracking); line-height: 1.3; }
   .bk-chapter-title { margin: 0.6em 0 0; font-size: var(--chapter-title-size); font-weight: var(--chapter-title-weight); font-style: var(--chapter-title-style); text-transform: var(--chapter-title-case); font-variant-caps: var(--chapter-title-variant); letter-spacing: var(--chapter-title-tracking); line-height: 1.25; }
@@ -898,6 +934,19 @@ ${CHAPTER_STYLES}
      and the author either inside that group or at a height of its own. */
   .bk-display.bk-title { display: block; position: relative; }
   .bk-title-group, .bk-title-authors { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: var(--pt-items, center); text-align: var(--pt-align, center); }
+  /* **The back matter** (§17). The sink is drawn on the heading itself, in
+     inches, by the builder — a percentage padding resolves against the
+     containing block's *width* even at the top, which is §9g's lesson.
+     What is here is the three things the page sets apart. */
+  .bk-p.bk-sign-off { margin-top: calc(var(--bk-lead) * 1.5); text-align: right; font-style: italic; text-indent: 0; }
+  .bk-p.bk-author-link { margin-top: calc(var(--bk-lead) * 0.5); text-align: center; font-size: 0.9em; text-indent: 0; }
+  .bk-p.bk-author-link + .bk-p.bk-author-link { margin-top: 0; }
+  /* The photograph: a third of the measure, centred above the words or cut
+     in beside them, and shaped as the writer asked. */
+  .bk-figure.bk-author-photo { width: 34%; margin-left: auto; margin-right: auto; }
+  .bk-author-photo .bk-figure-image, .bk-author-photo .bk-inset-image { border-radius: var(--bk-photo-radius, 0); }
+  .bk-photo-rounded { --bk-photo-radius: 0.14in; }
+  .bk-photo-circle { --bk-photo-radius: 50%; }
   .bk-title-group { top: var(--pt-drop, 36%); }
   .bk-title-authors { top: var(--pt-author-drop, 52%); }
   /* The author's air above it is what separates it from the title **in the

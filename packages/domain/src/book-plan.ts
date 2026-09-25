@@ -11,6 +11,7 @@ import { isCollection } from './formats.js';
 import { placeFigure } from './instructional.js';
 import { copyrightLines, copyrightOf, type CopyrightLine } from './copyright-page.js';
 import { titlePageContent, titlePageFieldsOf, type TitlePageContent } from './title-page.js';
+import { aboutAuthorOf, acknowledgementsOf, authorLinksShown, type AuthorPhotoShape } from './back-matter.js';
 import type { BookPage } from './book-pages.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -63,7 +64,12 @@ export const PART_INFO: Record<PartKind, PartKindInfo> = {
   prologue: info('prologue', 'Prologue', 'text', 'front', false, 'story before the story'),
   epilogue: info('epilogue', 'Epilogue', 'text', 'back', false, 'story after the story'),
   afterword: info('afterword', 'Afterword', 'text', 'back', false, 'the author, afterwards'),
-  acknowledgements: info('acknowledgements', 'Acknowledgements', 'text', 'back', false, 'who helped'),
+  acknowledgements: info('acknowledgements', 'Acknowledgements', 'text', 'back', false, 'thanks to the people who helped make the book'),
+  // The three the back matter's handoff added (§17). An appendix and a
+  // reader extra may each appear several times; a bibliography is one list.
+  appendix: info('appendix', 'Appendix', 'text', 'back', false, 'supporting material that would interrupt the story'),
+  bibliography: info('bibliography', 'Bibliography', 'text', 'back', true, 'sources and references used for research'),
+  reader_extra: info('reader_extra', 'Reader extras', 'text', 'back', false, 'calls to action and teasers'),
   glossary: info('glossary', 'Glossary', 'text', 'back', false, 'the terms, explained'),
   about_the_author: info('about_the_author', 'About the author', 'text', 'back', true, 'a short biography'),
   also_by: info('also_by', 'Also by', 'text', 'back', true, 'the author’s other books'),
@@ -386,6 +392,22 @@ export interface BookBlock {
   /** A logotype in place of the title, on a designed page (§9n). */
   logo?: { assetId: string | null; data: string | null };
   /**
+   * What a paragraph is on a **back-matter page** (§17), and nothing at all
+   * on every other page — the copyright block's `copyrightPosition` is the
+   * precedent: a field narrow enough to name the one page it serves is
+   * honester than a general one nobody can read.
+   *
+   * A sign-off is set apart under the thanks; an author's link is one of the
+   * three lines under the biography.
+   */
+  role?: 'sign_off' | 'author_link';
+  /**
+   * The author photograph's shape (§17), on the block that carries it —
+   * whether that is the picture's own figure or the paragraph it is cut
+   * into, so one field serves both places it can stand.
+   */
+  photoShape?: AuthorPhotoShape;
+  /**
    * What the title page prints (§16): the seven elements, already resolved —
    * switched off ones empty, the contributor's line already worded. The
    * printer draws what it is handed and decides nothing about what the page
@@ -572,17 +594,36 @@ const partBlocks = (
       const style = partStyleOf(part, prose);
       const headingOwn = sameLine(style.title, base.title) && style.face === base.face && style.align === base.align && style.rule === base.rule ? undefined : style;
       const wordsOwn = sameLine(style.line, base.line) && style.face === base.face ? undefined : style;
+      // **Which page it opens on and whether it prints a number are the
+      // page's own** (§17). The cutter has understood `starts` and `folio`
+      // on every block since §4; until the back matter's screen there was
+      // nowhere to ask for them, so every prose part took a recto whether it
+      // wanted one or not.
       const opening = block({
         id: part.id,
         kind: 'part_opening',
         numbering,
-        starts: 'recto',
+        // `page` rather than `recto`: the page still begins a new leaf, it
+        // simply does not insist on a right-hand one.
+        starts: style.recto ? 'recto' : 'page',
+        folio: style.folio,
         keepWithNext: true,
         unbreakable: true,
         partId: part.id,
         title,
         chapterTitle: title,
-        partStyle: headingOwn,
+        // **The sink is always drawn** where the heading is, even on a page
+        // that carries no other style of its own: it is *where the heading
+        // is* rather than *what it looks like*, so `headingOwn`'s rule —
+        // draw only what differs — would silently put every back-matter
+        // heading back at the head of the page. A page nobody has touched
+        // takes its kind's default, which is what it always printed.
+        // The **sink** is where the heading is rather than what it looks
+        // like, so `headingOwn`'s rule — draw only what differs from the
+        // book — would put every sunk heading back at the head. A page at
+        // the head carries nothing, which is what every prose part drew
+        // before there was a control, byte for byte.
+        partStyle: headingOwn ?? (style.drop > 0 ? style : undefined),
       });
       const words = paragraphsOf(part.text);
       const paragraphs = words.map((text, index) =>
@@ -594,6 +635,7 @@ const partBlocks = (
           spans: parseInline(text),
           partId: part.id,
           chapterTitle: title,
+          folio: style.folio,
           opensChapter: index === 0,
           // The words take the page's own line style; the print sets each
           // paragraph from it rather than the body rule reading a variable,
@@ -601,6 +643,87 @@ const partBlocks = (
           partStyle: wordsOwn,
         }),
       );
+      // **The author's photograph** (§17), which is a figure and an inset a
+      // sixteenth time rather than a picture of its own kind: *above* is a
+      // figure across the measure before the words, *beside* is exactly the
+      // inset the book has cut pictures into paragraphs with since §8, and
+      // *none* is no block at all. The shape rides on whichever block holds
+      // it.
+      const before: BookBlock[] = [];
+      const after: BookBlock[] = [];
+      if (part.kind === 'about_the_author') {
+        const author = aboutAuthorOf(part);
+        if (author.photoAssetId && author.place === 'above') {
+          before.push(
+            block({
+              id: `${part.id}:photo`,
+              kind: 'figure',
+              numbering,
+              partId: part.id,
+              chapterTitle: title,
+              folio: style.folio,
+              assetId: author.photoAssetId,
+              caption: '',
+              photoShape: author.shape,
+            }),
+          );
+        }
+        if (author.photoAssetId && author.place === 'beside' && paragraphs[0]) {
+          paragraphs[0].inset = {
+            place: 'right',
+            span: 0.34,
+            side: 'either',
+            standoff: 1,
+            figureId: `${part.id}:photo`,
+            assetId: author.photoAssetId,
+            caption: '',
+            decorative: false,
+          };
+          paragraphs[0].unbreakable = true;
+          paragraphs[0].photoShape = author.shape;
+        }
+        // The three lines a reader is given, each printed only where it has
+        // words — an empty *Website:* line being something that would print.
+        authorLinksShown(part).forEach((text, index) =>
+          after.push(
+            block({
+              id: `${part.id}:link:${index}`,
+              kind: 'paragraph',
+              numbering,
+              text,
+              spans: parseInline(text),
+              partId: part.id,
+              chapterTitle: title,
+              folio: style.folio,
+              role: 'author_link',
+              partStyle: wordsOwn,
+            }),
+          ),
+        );
+      }
+      // **The sign-off**, a field of its own rather than a last paragraph
+      // (§17): the page sets it apart, and a writer who typed it as a
+      // paragraph would have no way to say so.
+      if (part.kind === 'acknowledgements') {
+        const own = acknowledgementsOf(part);
+        const said = own.signOffText.trim();
+        if (own.signOff && said.length > 0) {
+          after.push(
+            block({
+              id: `${part.id}:sign-off`,
+              kind: 'paragraph',
+              numbering,
+              text: said,
+              spans: parseInline(said),
+              partId: part.id,
+              chapterTitle: title,
+              folio: style.folio,
+              role: 'sign_off',
+              partStyle: wordsOwn,
+            }),
+          );
+        }
+      }
       // A picture cut into the text (§8) rides in the paragraph it names —
       // the last one where the text has grown shorter than the number, so a
       // cut paragraph never takes its picture with it. With no paragraph
@@ -620,7 +743,7 @@ const partBlocks = (
         };
         target.unbreakable = true;
       }
-      return [opening, ...paragraphs];
+      return [opening, ...before, ...paragraphs, ...after];
     }
   }
 };

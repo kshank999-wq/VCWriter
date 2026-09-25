@@ -17,6 +17,7 @@ import {
   OPENINGS,
   PART_INFO,
   TRIM_PRESETS,
+  aboutAuthorOf,
   addGraphic,
   addPart,
   addPartInset,
@@ -31,6 +32,7 @@ import {
   describeSpine,
   graphicsInOrder,
   halfOf,
+  isBackMatterPage,
   mayAdd,
   measureWarning,
   moveChapterBlock,
@@ -141,6 +143,7 @@ import { ChapterPageDialog, ChapterStyleFields, Line } from './ChapterPageDialog
 import { ChapterLayoutDialog } from './ChapterLayoutDialog';
 import { CopyrightPageDialog } from './CopyrightPageDialog';
 import { DesignedPageDialog } from './DesignedPageDialog';
+import { BackMatterDialog } from './BackMatterDialog';
 import { useModal } from '../use-modal';
 import { usePreference, useSplit } from '../use-split';
 import { PICTURE_ACCEPT, pictureRefusal, readPicture } from '../read-picture';
@@ -199,6 +202,8 @@ type ArtTarget =
   | { kind: 'part-art'; partId: string }
   /** The publisher's mark, at the foot of the title page (§16). */
   | { kind: 'imprint'; partId: string }
+  /** The author's photograph, on *About the author* (§17). */
+  | { kind: 'author-photo'; partId: string }
   /** Into a box already drawn and still empty (§9a). */
   | { kind: 'fill'; elementId: string }
   /** The barcode box on the copyright page (§9k). */
@@ -447,6 +452,14 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * the copyright page is one page, so it goes straight there.
    */
   const copyrightPart = opened && opened.kind === 'copyright' ? opened : (copyrightOpen ? (parts.find((one) => one.kind === 'copyright') ?? null) : null);
+  /**
+   * The seven pages after the story open **their own screen** (§17). It is
+   * the same route the copyright page and the designed pages take, and for
+   * the same reason: a double-click is one gesture and a page is one page, so
+   * it goes straight to the screen that sets it rather than through the
+   * older fields it replaces.
+   */
+  const backMatterPart = opened && isBackMatterPage(opened.kind) ? opened : null;
   const divisions = useMemo(() => contentsDivisions(file), [file]);
 
   const pages = laying?.laid.pages ?? [];
@@ -696,6 +709,15 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           if (!part) return added.file;
           return updatePart(added.file, part.id, {
             titlePage: { ...titlePageFieldsOf(part), imprintAssetId: assetId as string },
+          });
+        }
+        // The author's photograph (§17): the page's own field, on `about`
+        // beside the biography, for the imprint mark's reason.
+        if (target.kind === 'author-photo') {
+          const part = partsOf(added.file).find((one) => one.id === target.partId);
+          if (!part) return added.file;
+          return updatePart(added.file, part.id, {
+            about: { ...aboutAuthorOf(part), photoAssetId: assetId as string },
           });
         }
 
@@ -1106,9 +1128,19 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           if (!row?.partId) setPageDialogSheet(sheet);
         }}
       />
+      {/* The back matter's own screen (§17), one shell behind seven pages. */}
+      <BackMatterDialog
+        file={file}
+        part={backMatterPart}
+        laying={laying}
+        onUpdate={onUpdate}
+        onClose={() => setPartDialogId(null)}
+        onPickPhoto={(id) => importArt({ kind: 'author-photo', partId: id })}
+        onTurn={(id) => setPartDialogId(id)}
+      />
       <PartDialog
         file={file}
-        part={designed || copyrightPart ? null : opened}
+        part={designed || copyrightPart || backMatterPart ? null : opened}
         laying={laying}
         onUpdate={onUpdate}
         onClose={() => setPartDialogId(null)}
