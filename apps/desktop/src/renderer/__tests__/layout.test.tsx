@@ -518,8 +518,13 @@ describe('the room', () => {
    * landed on the free-text box the dialog replaces, and the whole feature
    * read as unbuilt. What this pins is the route rather than the dialog,
    * which has tests of its own.
+   *
+   * §15c finished it: the double-click goes **straight** to the screen
+   * rather than through the older dialog, because a route that lands a
+   * writer on the box the new screen replaces is a route they read as a
+   * failure — which is exactly what Ken read it as.
    */
-  it('opens the copyright page from the row, and from the page’s own dialog', () => {
+  it('opens the copyright page from the row, and from the double-click', () => {
     render(<Harness initial={novel()} />);
     const rail = document.querySelector('.layout-rail') as HTMLElement;
     const row = within(rail).getByRole('button', { name: /^Copyright/ });
@@ -530,11 +535,16 @@ describe('the room', () => {
     expect(screen.getByRole('button', { name: 'Trade standard' })).toBeTruthy();
     fireEvent.click(within(screen.getByLabelText('Copyright page')).getByRole('button', { name: 'Close' }));
 
-    // And the double-click, through the part dialog, reaches the same one.
+    // And the double-click opens that screen itself: one page, one gesture,
+    // and the older dialog never stands in front of it.
     fireEvent.doubleClick(row);
-    const part = screen.getByLabelText('Part');
-    fireEvent.click(within(part).getByRole('button', { name: 'The copyright information…' }));
     expect(screen.getByRole('button', { name: 'Trade standard' })).toBeTruthy();
+    expect(screen.getByLabelText('Part').hasAttribute('open')).toBe(false);
+    // The type the older dialog held is here, so nothing was left behind.
+    const dialog = within(screen.getByLabelText('Copyright page'));
+    expect(dialog.getByLabelText('Typeface')).toBeTruthy();
+    expect(dialog.getByRole('button', { name: 'Italic' })).toBeTruthy();
+    expect(dialog.getByLabelText('Letter spacing')).toBeTruthy();
   });
 
   it('drags a part within its half, and a chapter as a block', () => {

@@ -15295,12 +15295,19 @@ dialog.copyright-dialog::backdrop {
   overflow: hidden;
 }
 
+/* The column scrolls, and it says so (§15c). The small print's type came
+   here from the older dialog and runs past the foot of the well on a
+   laptop, so the scrollbar is drawn rather than left to appear under the
+   pointer: a control a writer cannot see is one they report as missing,
+   which is what brought the type here in the first place. */
 .cr-side {
-  flex: 0 0 250px;
+  flex: 0 0 272px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  overflow: auto;
+  gap: 14px;
+  overflow-y: scroll;
+  scrollbar-width: thin;
+  padding-right: 6px;
 }
 
 .cr-list-side {

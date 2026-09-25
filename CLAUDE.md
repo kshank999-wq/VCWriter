@@ -1702,6 +1702,29 @@ push live; the build takes a minute or two.
   makes the page *Custom* by itself) and it keeps the **arrangement and
   never the words** — an order is a house style and a copyright notice is
   one book's.
+  **§15c is that a route is not a detour**, from Ken looking at the part
+  dialog open on Copyright: *it still does not show in the update*. §15a was
+  right about the fault and half right about the fix — it gave the part
+  dialog the missing button, so the double-click **reaches** the new screen,
+  a route rather than a second copy. What it did not ask is **what the route
+  passes through**: the page the gesture lands on first is the one the new
+  screen replaces, and a writer standing on the old free-text box does not
+  read *there is a button that would take me somewhere better*; they read
+  that nothing changed. So §9n's line is drawn again — **a copyright page
+  opens its own screen**, from the rail, the spread and the inspector alike,
+  with the older dialog never in front of it. **A route is honest only where
+  what it passes through is not the thing it routes away from** (the
+  inspector is a panel about a selection; the part dialog was a rival, since
+  it held a control for the very thing the new screen sets). And **what the
+  older screen alone could do had to come with it**: PAGE STYLE was the only
+  way to set this page's face and the small print's case, weight, slope and
+  tracking, so *The small print* now holds all of it, writing to
+  `partStyleOf` exactly as before — routing past a screen without carrying
+  its controls is how a fix loses a feature. Driving it caught what the
+  tests could not: the section ran past the foot of the side column, so
+  everything below *Small caps* was reachable only by a scroll nothing
+  announced — which is the whole of why the type was moved in the first
+  place.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

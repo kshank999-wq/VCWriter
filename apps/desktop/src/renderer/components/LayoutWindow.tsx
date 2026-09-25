@@ -410,6 +410,15 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
    * so there is no second list of kinds here.
    */
   const designed = opened && partPlacement(opened.kind) === 'block' && opened.kind !== 'plate' ? opened : null;
+  /**
+   * The copyright page opens **its own screen** (§15c, from Ken: *it still
+   * does not show in the update*). §15a gave the older dialog a button
+   * through to it, which is a route rather than a second copy — but the
+   * route still landed a writer on the free-text box the dialog replaces,
+   * so the new screen read as unbuilt. A double-click is one gesture and
+   * the copyright page is one page, so it goes straight there.
+   */
+  const copyrightPart = opened && opened.kind === 'copyright' ? opened : (copyrightOpen ? (parts.find((one) => one.kind === 'copyright') ?? null) : null);
   const divisions = useMemo(() => contentsDivisions(file), [file]);
 
   const pages = laying?.laid.pages ?? [];
@@ -1049,7 +1058,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       />
       <PartDialog
         file={file}
-        part={designed ? null : opened}
+        part={designed || copyrightPart ? null : opened}
         laying={laying}
         onUpdate={onUpdate}
         onClose={() => setPartDialogId(null)}
@@ -1061,10 +1070,6 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           setPartDialogId(null);
           setBookSettingsOpen(true);
         }}
-        onOpenCopyright={() => {
-          setPartDialogId(null);
-          setCopyrightOpen(true);
-        }}
       />
       {/* A page of the story, opened by a double-click on its row or on the
           page itself (§9j). It holds exactly what the inspector holds, being
@@ -1075,9 +1080,12 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
           the part and from the page, both of which are the same page. */}
       <CopyrightPageDialog
         file={file}
-        part={copyrightOpen ? (partsOf(file).find((one) => one.kind === 'copyright') ?? null) : null}
+        part={copyrightPart}
         onUpdate={onUpdate}
-        onClose={() => setCopyrightOpen(false)}
+        onClose={() => {
+          setCopyrightOpen(false);
+          setPartDialogId(null);
+        }}
         /* A file dragged onto the barcode's box goes through the room's own
            reader (§15b), so it joins the graphics library like every other
            picture rather than growing a second way in. */
@@ -2389,7 +2397,6 @@ function PartDialog({
   onClose,
   onRemoved,
   onOpenBookSettings,
-  onOpenCopyright,
 }: {
   file: ProjectFile;
   part: BookPart | null;
@@ -2398,7 +2405,6 @@ function PartDialog({
   onClose(): void;
   onRemoved(): void;
   onOpenBookSettings?(): void;
-  onOpenCopyright?(): void;
 }) {
   const dialog = useModal(part !== null);
   /** The picture last touched, so the page beside the fields turns to where it fell. */
@@ -2419,20 +2425,9 @@ function PartDialog({
           </header>
           <div className="layout-part-dialog-body">
             <div className="layout-part-dialog-fields">
-              {/* `onOpenCopyright` travels with the rest (§15a). Without it
-                  the copyright page's own button is **absent here** while
-                  standing in the inspector, so the one gesture the room
-                  documents for *open the thing that sets this page* — the
-                  double-click — landed on the free-text box the dialog
-                  replaces, and the dialog read as unbuilt. */}
-              <PartFields
-                file={file}
-                part={part}
-                onUpdate={onUpdate}
-                onDone={onRemoved}
-                onOpenBookSettings={onOpenBookSettings}
-                onOpenCopyright={onOpenCopyright}
-              />
+              {/* The copyright page never arrives here: it opens its own
+                  screen (§15c), so there is no button through to one. */}
+              <PartFields file={file} part={part} onUpdate={onUpdate} onDone={onRemoved} onOpenBookSettings={onOpenBookSettings} />
               {partTakesInsets(part.kind) ? <PartPictures file={file} part={part} onUpdate={onUpdate} onTouched={setTouched} /> : null}
             </div>
             <PagePreview laying={laying} partId={part.id} focus={focus} />

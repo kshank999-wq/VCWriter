@@ -7,8 +7,11 @@ import {
   BARCODE_INCHES,
   COPYRIGHT_ELEMENTS,
   COPYRIGHT_PRESETS,
+  FACE_NAMES,
+  FACE_NOTES,
   FICTION_DISCLAIMER,
   NUMBER_FORMATS,
+  PART_FACES,
   RIGHTS_RESERVED,
   addBookNumber,
   applyCopyrightPreset,
@@ -34,8 +37,16 @@ import {
   type BookPart,
   type CopyrightPage,
   type CopyrightPreset,
+  type PartStyle,
   type ProjectFile,
 } from '@vcwriter/domain';
+
+/** The three cases a line of type is set in, as the designed page offers them. */
+const CASES: ReadonlyArray<{ id: PartStyle['title']['case']; label: string }> = [
+  { id: 'as_typed', label: 'As typed' },
+  { id: 'capitals', label: 'CAPITALS' },
+  { id: 'small_caps', label: 'Small caps' },
+];
 
 /**
  * **The copyright page** (addendum 20 §15, from Ken's own handoff, the
@@ -253,9 +264,24 @@ export function CopyrightPageDialog({ file, part, onUpdate, onClose, onPickBarco
             </div>
           </section>
 
+          {/* The type, whole (§15c). It was a row of three sizes and nothing
+              else, the face and the small print's case, weight, slope and
+              tracking living only in the older part dialog — which this
+              screen now opens in place of, so a control left behind there is
+              a control a writer cannot reach. */}
           <section className="chl-section">
-            <h3>Type size</h3>
-            <div className="chl-pills">
+            <h3>The small print</h3>
+            <label className="field">
+              <span>Typeface</span>
+              <select aria-label="Typeface" value={style.face} onChange={(event) => writeStyle({ face: event.target.value as typeof style.face })}>
+                {PART_FACES.map((one) => (
+                  <option key={one} value={one}>
+                    {one === 'book' ? 'The book’s own face' : `${FACE_NAMES[one]} — ${FACE_NOTES[one]}`}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="chl-pills" role="group" aria-label="Type size">
               {[8, 9, 10].map((size) => (
                 <button
                   key={size}
@@ -268,7 +294,61 @@ export function CopyrightPageDialog({ file, part, onUpdate, onClose, onPickBarco
                 </button>
               ))}
             </div>
-            <p className="muted small">This page’s own type, set here and in Book settings alike.</p>
+            <div className="chl-pills" role="group" aria-label="Case">
+              {CASES.map((one) => (
+                <button
+                  key={one.id}
+                  type="button"
+                  className={pill(style.title.case === one.id)}
+                  aria-pressed={style.title.case === one.id}
+                  onClick={() => writeStyle({ title: { ...style.title, case: one.id } })}
+                >
+                  {one.label}
+                </button>
+              ))}
+            </div>
+            <div className="chl-pills">
+              <button
+                type="button"
+                className={pill(style.title.bold)}
+                aria-label="Bold"
+                aria-pressed={style.title.bold}
+                onClick={() => writeStyle({ title: { ...style.title, bold: !style.title.bold } })}
+              >
+                <strong>B</strong>
+              </button>
+              <button
+                type="button"
+                className={pill(style.title.italic)}
+                aria-label="Italic"
+                aria-pressed={style.title.italic}
+                onClick={() => writeStyle({ title: { ...style.title, italic: !style.title.italic } })}
+              >
+                <em>I</em>
+              </button>
+              <button
+                type="button"
+                className={pill(style.rule)}
+                aria-label="A rule under the small print"
+                aria-pressed={style.rule}
+                onClick={() => writeStyle({ rule: !style.rule })}
+              >
+                Rule
+              </button>
+            </div>
+            <label className="field">
+              <span>Letter spacing · {(style.title.tracking / 100).toFixed(2)} em</span>
+              <input
+                type="range"
+                min={0}
+                max={40}
+                step={1}
+                aria-label="Letter spacing"
+                value={style.title.tracking}
+                onChange={(event) => writeStyle({ title: { ...style.title, tracking: Number(event.target.value) } })}
+              />
+            </label>
+            <p className="muted small">This page’s own type. The book’s is under <em>Book settings…</em>.</p>
           </section>
         </div>
 

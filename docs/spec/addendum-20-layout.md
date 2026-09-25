@@ -2096,6 +2096,49 @@ order is a house style and a copyright notice is one book's — and a
 writer's own can be forgotten where the four cannot, those being the
 standards rather than somebody's choice.
 
+## 15c. A route is not a detour
+
+From Ken, looking at the part dialog open on Copyright: *it still does not
+show in the update*. The screenshot showed the older screen — a HEADING
+field, a **The copyright information…** button, the free-text TEXT box, and
+PAGE STYLE with its face and its small print.
+
+§15a was right about the fault and only half right about the fix. It gave
+the part dialog the button it was missing, so the double-click *reaches*
+the new screen — a route rather than a second copy, which was the correct
+instinct. What it did not ask is what the route passes through: the page
+the gesture lands on first is the one the new screen was built to replace,
+and a writer standing on the old box does not read *there is a button that
+would take me somewhere better*. They read what Ken read, which is that
+nothing changed.
+
+So the line §9n drew for the designed pages is drawn again here: **a
+copyright page opens its own screen**, from the rail, from its page on the
+spread and from the inspector alike, and the older dialog never stands in
+front of it. One page, one screen, and no press in between.
+
+Two things follow.
+
+**A route is only honest where what it passes through is not the thing it
+is routing away from.** §15a's rule — a route rather than a second copy —
+is still right, and it is what the inspector's button does: the inspector
+is a panel about a selection, not a rival screen. The part dialog was a
+rival, because it holds a control for the very thing the new screen sets.
+
+**What the older screen alone could do had to come with it.** The part
+dialog's PAGE STYLE was the only way to set the copyright page's face and
+the small print's case, weight, slope and letter spacing — the new screen
+had the alignment and three sizes and nothing else. Routing past a screen
+without carrying its controls is how a fix loses a feature, so *The small
+print* now holds all of it, writing to `partStyleOf` exactly as before: the
+same field, one place to set it.
+
+Driving it caught what the tests could not — the section runs past the foot
+of the side column on a laptop, so every control below *Small caps* was
+reachable only by a scroll nothing announced. The column is wider and
+scrolls visibly now. A control a writer cannot see is one they report as
+missing, which is the whole of why the type is here at all.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.
