@@ -2055,6 +2055,37 @@ push live; the build takes a minute or two.
   than on every picture in them. Four existing tests asserted the old
   behaviour and were **updated rather than worked around**, which is the
   honest signal that the rule changed.
+  **§9p is a picture on a chapter's page**, from Ken — four reports in one
+  message, three fixed and the fourth a limit rather than a slip. **A picture
+  on the page a chapter opens on split the chapter in two**: the room's rule
+  is *before the element the page opens with* (§9a), and on an opening page
+  that element is the chapter's **first paragraph**, a `chapter_opening` being
+  emitted by the **unit** and not a manuscript element at all — so the figure
+  landed between the numeral and the words, three pages doing the work of two.
+  *Before the opening* cannot be said with a `beforeElementId`, so it is said
+  where the opening is made: **a page-figure at the head of a unit is emitted
+  before the chapter opens**, one branch, nothing stored, the figure keeping
+  the chapter it is in (§9l's rail). **A page that only opens a chapter
+  offered nothing** is the same cause from the other end — `pagePlace` answers
+  with a body block, an opening is not one, and the room greys its picture
+  buttons on exactly that answer, so chapter one's own page had every button
+  dead with nothing saying why; the chapter's **first element** is the answer
+  now. **The drawing tool would not go down**: `finish()` has five ways out
+  and only the successful one cleared `drawing`, and while it is armed every
+  press on the spread returns *before* selecting anything — so a press that
+  drew nothing left the writer unable to choose a page or a picture, with no
+  way back if the box that would carry the ✗ was never made; it is the divide
+  tools' idiom (addendum 21 §10), **the tool puts itself down when the act is
+  over**. **The fourth is a limit**: an illustration facing text cut the
+  facing page short, and moving the insertion point does not fix it — putting
+  the picture after the spanning paragraph leaves a bigger hole on the next
+  page. Both leave white because **a full-page plate cannot interrupt a
+  paragraph**: `fillPage` ends the page at a display block, and a figure is an
+  element between paragraphs rather than something a paragraph splits around.
+  What Ken describes is what illustrated books do, and getting it means
+  letting a display block fall at a page boundary with the flow resuming past
+  it — a cutter change that moves **every plate in every illustrated book**,
+  so it is its own piece of work and is deliberately not bolted on here.
   **§17c is importing a back-matter page**, from Ken (*for the appendix and
   the glossary and the index, you need an option to import that as text or
   import that as a PDF and it'll just maintain the formatting*), and the

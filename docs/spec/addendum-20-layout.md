@@ -2618,6 +2618,69 @@ chapters, so closing one now hides its pictures too. That is the same rule and
 is why it is not special-cased, but it does mean an illustrated book opens on
 its chapters rather than on its chapters and every picture in them.
 
+## 9p. A picture on a chapter's page, and a tool that would not go down
+
+From Ken, four reports in one message. Three are fixed here; the fourth is a
+limit rather than a slip and is named at the end.
+
+**A picture on the page a chapter opens on split the chapter in two.** The
+room's rule is that a picture goes in *before the element the page opens with*
+(§9a) — and on a chapter's opening page that element is the chapter's **first
+paragraph**, because a `chapter_opening` is emitted by the **unit** and is not
+a manuscript element at all. So the figure landed *between* the opening and
+the words: the numeral kept its page alone, the picture took the next, and the
+chapter's text began on the one after. Three pages doing the work of two, and
+none of them what was asked for.
+
+*Before the opening* cannot be said with a `beforeElementId`, so it is said
+where the opening is made instead: **a page-figure standing at the head of a
+unit is emitted before the chapter opens**. One branch, nothing stored, and
+the figure keeps the chapter it is in — which is where §9l's rail puts it and
+where a writer looks for it. Measured on a three-chapter novel: the picture
+takes the page the chapter used to open on, and the chapter opens whole on the
+next one.
+
+**A page that only opens a chapter offered nothing.** Same cause from the
+other end: `pagePlace` answers with a body block, a chapter opening is not
+one, and the room greys its picture buttons on exactly that answer — so on
+chapter one's own opening page every button was dead with nothing saying why
+(*it just did nothing*). The chapter's **first element** is the answer, on
+that page or the next, and putting a figure before it now puts it before the
+opening.
+
+**The drawing tool would not go down.** `finish()` has five ways out and only
+the successful one cleared `drawing` — so a press that drew nothing, or a box
+dragged a few pixels wide, left the room armed. And while it is armed every
+press on the spread returns *before* it selects anything, so the writer could
+not choose a page or a picture, could not delete one, and had no way back if
+the box that would have carried the ✗ was never made. It is the divide tools'
+own idiom (addendum 21 §10): **the tool puts itself down when the act is
+over**, whether or not it came off.
+
+### The one that is a limit, not a slip
+
+Ken's third screenshot: an illustration placed facing text in chapter one
+left the facing page's text **cut short**, with white below it — *it should
+fill that entire page to a sentence, then move the rest to the appropriate
+page*.
+
+Reproduced and measured. The page he chose opened with the **tail of a
+paragraph that began on the page before**, so taking that paragraph to sit
+after the picture emptied the foot of the previous page. But moving the
+insertion point does not fix it: putting the picture after that paragraph
+instead leaves the *next* page holding a two-line tail and a far bigger hole.
+Both choices leave white, because **a full-page plate cannot interrupt a
+paragraph** — `fillPage` ends the page when it meets a display block, and a
+figure is an element between paragraphs rather than something a paragraph can
+be split around.
+
+What Ken is describing is what illustrated books actually do: the paragraph
+runs to the foot of the page, the plate takes the next leaf, and the same
+paragraph continues after it. Getting that means letting a display block fall
+at a page boundary with the flow resuming past it — a change to the cutter
+that moves **every plate in every illustrated book**, not only new ones. It is
+its own piece of work and is not done here.
+
 ## 17c. Importing a back-matter page
 
 From Ken: *for the appendix and the glossary and the index, you need an

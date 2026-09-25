@@ -1541,6 +1541,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                 onUpdate((current) => removeBookFigure(current, what));
               }}
               drawing={drawing}
+              onGaveUp={() => setDrawing(null)}
               onDrawn={(placement, sheet) => {
                 const what = drawing;
                 if (!what || !laying) return;
@@ -1903,6 +1904,7 @@ function Spreads({
   onOpenPage,
   drawing,
   onDrawn,
+  onGaveUp,
   placing,
   placingEmpty,
   placingFree,
@@ -1926,6 +1928,8 @@ function Spreads({
   /** The figure whose box is being drawn (§8a), `'new'` for one not yet made (§9a), or null. */
   drawing: string | null;
   onDrawn(placement: BookFigurePlacement, sheet: number): void;
+  /** A press that drew nothing: the tool goes down rather than staying armed (§9p). */
+  onGaveUp(): void;
   /** The box being placed (§9d), which wears a ✗ and a ✓ and can be slid. */
   placing: string | null;
   /** Whether that box is still waiting for a picture (§9m). */
@@ -1970,7 +1974,23 @@ function Spreads({
     const from = start.current;
     start.current = null;
     setBox(null);
-    if (!drawing || !drawn || !from || drawn.w < 8) return;
+    /**
+     * **A press that draws no box puts the tool down** (§9p, from Ken: *after
+     * drawing a box and placing a picture, I tried to reselect it and I can't
+     * select it, delete it, or manipulate it in any way*).
+     *
+     * Every one of these four ways out used to leave the room **in drawing
+     * mode**, where a press on the spread returns before it selects anything
+     * — so a click that missed, or a box dragged a few pixels wide, left the
+     * writer unable to choose a page or a picture with nothing on the screen
+     * saying why, and no way back if the box that would carry the ✗ was never
+     * made. It is the divide tools' own idiom (addendum 21 §10): the tool
+     * puts itself down when the act is over, whether or not it came off.
+     */
+    if (!drawing || !drawn || !from || drawn.w < 8) {
+      onGaveUp();
+      return;
+    }
     const text = from.sheet.querySelector('.bk-text') as HTMLElement | null;
     const sheetRect = from.sheet.getBoundingClientRect();
     const textRect = (text ?? from.sheet).getBoundingClientRect();

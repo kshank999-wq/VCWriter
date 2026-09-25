@@ -1019,3 +1019,40 @@ describe('the room', () => {
     expect(screen.getByRole('button', { name: 'Export the book…' })).toBeDefined();
   });
 });
+
+/**
+ * **The drawing tool puts itself down** (addendum 20 §9p, from Ken: *after
+ * drawing a box and placing a picture, I tried to reselect it and I can't
+ * select it, delete it, or manipulate it in any way*).
+ *
+ * The room refuses every press on the spread while a box is being drawn, and
+ * four of the five ways out of the drag left the tool armed — so a press that
+ * drew nothing stranded the writer with a spread that answered nothing and
+ * said nothing about why.
+ */
+describe('drawing a box that never happens', () => {
+  it('puts the tool down when a press draws nothing, so the spread answers again', () => {
+    render(<Harness initial={novel()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    // Any page will do: nothing is ever drawn here, and the drawing state is
+    // the whole spread's.
+    const story = document.querySelector('.layout-sheet:not(.layout-no-sheet)') as HTMLElement;
+    fireEvent.click(story);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Draw a box for a picture…' }));
+    expect(story.classList.contains('layout-sheet-drawing')).toBe(true);
+
+    const rect = { left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    story.getBoundingClientRect = () => rect;
+    story.setPointerCapture = () => undefined;
+    // A press and a release in one place draws no box at all.
+    fireEvent.pointerDown(story, { clientX: 240, clientY: 100, pointerId: 1 });
+    fireEvent.pointerUp(story, { clientX: 240, clientY: 100, pointerId: 1 });
+
+    // The tool is down, rather than left armed with nothing saying so.
+    expect(story.classList.contains('layout-sheet-drawing')).toBe(false);
+    // And the spread takes a press again, which is what was lost: while the
+    // tool was armed every click on a page returned before selecting one.
+    fireEvent.click(story);
+    expect(document.querySelector('.layout-sheet-chosen')).toBeTruthy();
+  });
+});

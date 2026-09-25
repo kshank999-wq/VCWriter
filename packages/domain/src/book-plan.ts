@@ -1221,6 +1221,26 @@ export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock
     if (block.partId && !place.partId) place.partId = block.partId;
     if (BODY_KINDS.has(block.kind) && !place.elementId) place.elementId = block.id;
   }
+  /**
+   * **A page that only opens a chapter still has somewhere to put a picture**
+   * (§9p, from Ken: *I tried to put a picture in chapter one and it didn't
+   * even allow me to put a picture, it just did nothing*).
+   *
+   * A chapter opening is not a manuscript element, so a page carrying one and
+   * nothing else answered *nowhere* — and the room greys its picture buttons
+   * on exactly that answer, which is a control that does nothing for a reason
+   * the writer cannot see. The chapter's **first element** is the answer, on
+   * that page or on the next: putting a figure before it now puts it before
+   * the opening, so the picture takes this page and the chapter opens after.
+   */
+  if (!place.elementId && !place.partId) {
+    const at = page.pieces.findIndex((piece) => index.get(piece.blockId)?.kind === 'chapter_opening');
+    if (at !== -1) {
+      const from = blocks.findIndex((block) => block.id === page.pieces[at]!.blockId);
+      const next = blocks.slice(from + 1).find((block) => BODY_KINDS.has(block.kind));
+      if (next) place.elementId = next.id;
+    }
+  }
   return place;
 };
 
@@ -1473,6 +1493,37 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   for (const unit of unitsInStoryOrder(file)) {
     if (!unit.inScript) continue;
     const placed = divisions.get(unit.id as string);
+    /**
+     * **A picture that is a page of its own, standing at the head of a
+     * chapter, comes before the chapter opens** (§9p, from Ken: *I went to add
+     * a picture on a page that had chapter two on it, but it didn't shift the
+     * chapter page to the next page and then put the picture on the wrong page
+     * and started chapter two with the format all messed up*).
+     *
+     * The room's rule is that a picture goes in **before the element the page
+     * opens with** (§9a), and on a chapter's opening page that element is the
+     * chapter's first paragraph — so the figure landed *between* the opening
+     * and the words. The numeral was left alone on its page, the picture took
+     * the next one and the chapter's text began on the one after, which is
+     * three pages doing the work of two and none of them what was asked for.
+     *
+     * The opening is emitted by the **unit** rather than by an element, so
+     * *before it* cannot be said with a `beforeElementId` at all. Saying it
+     * here instead is one branch and needs nothing stored: a page-figure at
+     * the head of the unit is emitted first, and the chapter opens after it.
+     * The figure keeps the chapter it is in, which is where §9l's rail puts
+     * it and where a writer would look for it.
+     */
+    const leading: ManuscriptElement[] = [];
+    if (placed) {
+      walk: for (const beat of beatsInScript(file, unit.id)) {
+        for (const element of beat.manuscript.elements) {
+          if (element.type === 'figure' && element.attributes?.bookPlace === 'page') leading.push(element);
+          else break walk;
+        }
+      }
+    }
+    const beforeOpening = new Set(leading.map((element) => element.id as string));
     if (placed) {
       if (pending) {
         out.push(pending);
@@ -1480,6 +1531,13 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
       }
       for (const plate of platesBefore.get(placed.marker.id as string) ?? []) {
         out.push(...partBlocks(plate, 'arabic', chapterTitle));
+      }
+      // The running head is still the chapter before's, which is what these
+      // leaves stand after — and a picture that fills the page prints none
+      // anyway, so it is the honest answer rather than a consequential one.
+      for (const element of leading) {
+        const made = elementBlock(element, chapterTitle, false);
+        if (made) out.push(made);
       }
       const leaf = chapterLeafContent(file, placed);
       chapterTitle = leaf.title.trim() || leaf.label;
@@ -1527,6 +1585,8 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
     let atUnitHead = true;
     for (const beat of beatsInScript(file, unit.id)) {
       for (const element of beat.manuscript.elements) {
+        // Already drawn, before the chapter opened (§9p).
+        if (beforeOpening.has(element.id as string)) continue;
         if (element.text.trim().length === 0 && element.type !== 'scene_break' && element.type !== 'figure') continue;
         const made = elementBlock(element, chapterTitle, opensChapter && element.type === 'paragraph');
         if (!made) continue;
