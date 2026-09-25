@@ -149,6 +149,33 @@ push live; the build takes a minute or two.
   alike), and **a control is a control** — a press on the name, the draft
   picker or *In script* is that control's and never the start of a drag, or
   naming a beat would slide the screen out from under the pointer.
+  **§4c is the beat under the pointer**, from Ken (*when you hover over a
+  beat in a scene, I want to be able to see the entire description of the
+  beat, so you don't have to go into it to see if it's the one you need to be
+  working on. And these changes need to be universal*). **Universal is the
+  whole design**: a card built into the timeline would have to be built again
+  in the scene dialog, the Outliner, the Sculptor, the Script and the panels —
+  six more answers to *what is in this beat*, and a seventh surface built next
+  month with none. So `BeatPeekLayer` is **one listener over the window**, a
+  row says which beat it is with `data-beat`, and adding the hover to a new
+  screen is adding one attribute. It is mounted in the workspace **and in
+  every popped-out room**, §8's rule that a room on the other monitor must not
+  do less. `beatPeek` in the domain decides what it says, and three rules hold
+  it. **The description is never cut** — that is the ask: a writer who reads
+  half a sentence still has to open the beat, which is the trip this saves.
+  **Where nothing is described the writing stands in and says so**, a beat
+  with no summary not being an empty beat and its opening words being what it
+  is; the writing *is* clamped, being context rather than the answer. And
+  **one hover, one answer**: the native `title` on those rows said the status
+  and the keys, which beside the card would be a second tooltip over the same
+  row, so `data-keys` carries them into the card and the rows carry no title.
+  Two things driving it caught: the card had `overflow-y: auto` **and**
+  `pointer-events: none`, a scrollbar nobody can reach, so the writing is
+  clamped instead and the card never promises a scroll it cannot give; and it
+  goes on any press, key or scroll, being for reading and never for acting.
+  `beat-peek-surfaces.test.tsx` is `cast-surfaces`' shape: what can go wrong
+  is not the card but a screen that draws a beat and never says so, which
+  reads exactly like the feature not being there.
   **§4a is the scene's screen restyled**, from Ken with a handoff and a
   mockup (*this is going to apply to all the scenes throughout all the
   modules… just want to clean up the UI make it look a little more

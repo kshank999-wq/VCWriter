@@ -348,7 +348,8 @@ export function StoryView({
   const beatHeader = (beat: Beat) => (
     <header
       className="beat-name"
-      title={onOpenBeat ? `Double-click to open this ${nouns.sub.toLowerCase()}` : undefined}
+      data-beat={beat.id}
+      data-keys={onOpenBeat ? `Double-click to open this ${nouns.sub.toLowerCase()}` : undefined}
       onClick={() => onSelectBeat(beat.id)}
       onDoubleClick={() => onOpenBeat?.(beat.id)}
     >

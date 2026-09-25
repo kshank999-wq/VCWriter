@@ -1709,6 +1709,9 @@ function Node({
   const bound = isBound(node);
   return (
     <div
+      /* A card bound to a real beat reads its writing on hover (§4c); an
+         idea has none yet and carries nothing. */
+      data-beat={node.boundBeatId ?? undefined}
       className={[
         'sculpt-node',
         end ? 'end' : '',

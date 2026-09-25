@@ -1283,7 +1283,15 @@ function TrackRow({
                       }${beat.color ? ' coloured' : ''}${beat.inScript ? '' : ' off'}`}
                       style={beat.color ? ({ '--beat-colour': beat.color } as React.CSSProperties) : undefined}
                       aria-current={beat.id === selectedBeatId ? 'true' : undefined}
-                      title={`${beat.status} · double-click to open · Alt+↑/↓ to reorder · Alt+Shift+↑/↓ to move between ${noun}s`}
+                      /* What is in it is the hover's (§4c); the native title
+                         is left to say what the keys do, which a card about
+                         the writing has no business carrying. */
+                      /* **One hover, one answer.** The native `title` used to
+                         say the status and the keys; left beside the card it
+                         would be a second tooltip over the same row, so the
+                         keys moved into the card and this carries nothing. */
+                      data-beat={beat.id}
+                      data-keys={`Double-click to open · Alt+↑/↓ to reorder · Alt+Shift+↑/↓ to move between ${noun}s`}
                       onClick={(event) => {
                         // Shift takes the run from the one already chosen to
                         // this one; an ordinary click is one beat and clears

@@ -83,6 +83,7 @@ export * from './copyright-page.js';
 export * from './book-rail.js';
 export * from './part-style.js';
 export * from './title-page.js';
+export * from './beat-peek.js';
 export * from './back-matter.js';
 export * from './back-matter-pages.js';
 export * from './back-matter-pull.js';

@@ -1463,6 +1463,10 @@ function Row({
         .filter(Boolean)
         .join(' ')}
       style={{ paddingLeft: `${8 + depth * STEP}px` }}
+      /* A row bound to a real beat carries its id, so the hover reads the
+         writing rather than the row's own name (§4c). An idea that is not on
+         the track yet has no writing to show and carries nothing. */
+      data-beat={item.boundBeatId ?? undefined}
       role="treeitem"
       aria-level={depth + 1}
       aria-selected={selected}

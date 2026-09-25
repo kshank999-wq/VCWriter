@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { BeatPeekLayer } from './components/BeatPeekLayer';
 import {
   addTrack,
   addMarker,
@@ -81,6 +82,9 @@ export default function Satellite({ pane }: { pane: PaneKey }) {
           The workspace window closed, so this one can no longer save. Reopen the project and this window will follow.
         </p>
       ) : null}
+      {/* A room on the other monitor must not be able to do less than the
+          panel it came out of (§8), so the hover is here too. */}
+      <BeatPeekLayer file={file} />
       <Section pane={pane} file={file} onUpdate={project.update} />
     </div>
   );

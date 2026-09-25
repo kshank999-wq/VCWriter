@@ -80,6 +80,7 @@ import { NewEpisodeDialog } from './components/NewEpisodeDialog';
 import { useWritingClock } from './use-writing-clock';
 import { FindPanel } from './components/FindPanel';
 import { MenuBar } from './components/MenuBar';
+import { BeatPeekLayer } from './components/BeatPeekLayer';
 import { RoomBar } from './components/RoomBar';
 import { menusFor, type CommandId } from './menus';
 import { AccountPanel } from './components/AccountPanel';
@@ -934,6 +935,10 @@ export default function App() {
         .join(' ')}
       style={{ '--left-width': `${columns.size}px`, '--viewport-height': `${rows.size}px` } as React.CSSProperties}
     >
+      {/* The beat under the pointer, read without opening it (§4c). One
+          listener over the window, so every surface that carries a beat's id
+          gets the same card. */}
+      <BeatPeekLayer file={file} />
       <TitleBar
         menu={
           <MenuBar

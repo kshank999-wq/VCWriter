@@ -505,7 +505,8 @@ function BeatList({
                 type="button"
                 className={beat.id === selected ? 'beat-entry selected' : 'beat-entry'}
                 aria-current={beat.id === selected ? 'true' : undefined}
-                title={onOpen ? 'Click to select · double-click to write in it' : undefined}
+                data-beat={beat.id}
+                data-keys={onOpen ? 'Click to select · double-click to write in it' : undefined}
                 onClick={() => onSelect(beat.id)}
                 onDoubleClick={() => onOpen?.(beat.id)}
               >
