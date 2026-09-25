@@ -259,6 +259,11 @@ export const removeState = (file: ProjectFile, stateId: StateDefinitionId): Proj
       ...one,
       complete: withoutSubject(one.complete, stateId as string),
     })),
+    // …and so is a behaviour's *when* (addendum 25 §5).
+    sceneLayers: (file.sceneLayers ?? []).map((layers) => ({
+      ...layers,
+      behaviours: layers.behaviours.map((one) => ({ ...one, conditions: withoutSubject(one.conditions, stateId as string) })),
+    })),
   });
 
 /** A group with every mention of one subject taken out, at any depth. */
@@ -329,6 +334,11 @@ export const removeResource = (file: ProjectFile, resourceId: ResourceDefinition
     objectives: (file.objectives ?? []).map((one) => ({
       ...one,
       complete: withoutSubject(one.complete, resourceId as string),
+    })),
+    // …and so is a behaviour's *when* (addendum 25 §5).
+    sceneLayers: (file.sceneLayers ?? []).map((layers) => ({
+      ...layers,
+      behaviours: layers.behaviours.map((one) => ({ ...one, conditions: withoutSubject(one.conditions, resourceId as string) })),
     })),
   });
 

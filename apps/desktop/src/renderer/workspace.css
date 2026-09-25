@@ -16516,3 +16516,122 @@ dialog.scene-dialog > header {
   max-width: 100%;
   font-size: 12px;
 }
+
+/* ---------------------------------------------- a game scene's layers */
+/* Addendum 25 §5: four layers, two written here and two read, and the
+   scene as cards. In the far column, so everything wraps to its width. */
+.scene-view-switch {
+  display: flex;
+  gap: 4px;
+}
+
+.scene-layer-head {
+  align-self: stretch;
+  margin-top: 6px;
+  padding: 3px 0;
+  text-align: left;
+  white-space: nowrap;
+  font-family: var(--display);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.scene-layer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 0 8px 10px;
+  border-left: 1px solid var(--border);
+}
+
+.scene-layer p {
+  margin: 0;
+}
+
+.scene-layer textarea {
+  min-height: 48px;
+  resize: vertical;
+}
+
+.scene-layer .field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.scene-layer .field input {
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+}
+
+.scene-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 10px;
+  margin: 0;
+}
+
+.scene-facts dt {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.scene-facts dd {
+  margin: 0;
+}
+
+.scene-behaviour {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.scene-behaviour > .ghost {
+  align-self: flex-start;
+}
+
+/* The board: the scene as cards, each a reading. */
+.scene-board {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+}
+
+.scene-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--panel-2);
+}
+
+.scene-card-kind {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.scene-card.kind-player {
+  border-color: var(--gold-deep);
+}
+
+.scene-card.kind-exit .scene-card-kind {
+  color: var(--muted);
+}

@@ -1,5 +1,6 @@
 import { allConditions, allEffects, resourcesOf, statesOf } from './narrative.js';
 import { objectiveConditions, questSteps, questsOf } from './narrative-objectives.js';
+import { behaviourConditions } from './narrative-scene.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -41,6 +42,7 @@ const mentions = (file: ProjectFile): Map<string, number> => {
   const add = (id: string) => count.set(id, (count.get(id) ?? 0) + 1);
   for (const { condition } of allConditions(file)) add(condition.subjectId);
   for (const { condition } of objectiveConditions(file)) add(condition.subjectId);
+  for (const { condition } of behaviourConditions(file)) add(condition.subjectId);
   for (const { effect } of allEffects(file)) add(effect.targetId);
   return count;
 };

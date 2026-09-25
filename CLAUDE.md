@@ -1239,6 +1239,14 @@ push live; the build takes a minute or two.
   `isInteractive`, so every other format is untouched. `.research-body.creating`
   hides `.research-detail`; the Bible's own detail is re-shown inside
   `.bible-section`.
+  **Stage 4: the scene's four layers** (§5, `narrative-scene.ts`,
+  `ScenePanel.tsx` on the rail as *Scene*). Layers 1 and 3 are **read**
+  (`narrativeLayer`, `systemicLayer`); 2 and 4 are stored in `sceneLayers`, a
+  collection keyed by `unitId` — **not** fields on the unit, which every
+  format shares — made on first write (`withLayers`). A behaviour's `when` is
+  a real `ConditionGroup`, so `removeState`/`removeResource` strip it and
+  `behaviourConditions` is counted by `orphanState` and `bibleEntries`.
+  `sceneBoard` is cards read off the scene, storing nothing.
   `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
   Ken after using instructional mode: chapters, sections and subsections
   worked out first, then put on the track. **All six stages of §9 are

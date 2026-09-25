@@ -79,6 +79,9 @@ export type SimulationRunId = Id<'SimulationRun'>;
  */
 export type ObjectiveId = Id<'Objective'>;
 export type QuestId = Id<'Quest'>;
+/** A scene's behavioural and presentation layers, on a game (addendum 25 §5). */
+export type SceneLayersId = Id<'SceneLayers'>;
+export type BehaviourId = Id<'Behaviour'>;
 /**
  * Game Studio's record that an authored thing has been built in an engine
  * (addendum 25 §2). VC Writer carries these and reads their status; it never

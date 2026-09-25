@@ -7,6 +7,9 @@ import type {
   ObjectiveId,
   ProjectId,
   QuestId,
+  BehaviourId,
+  CharacterId,
+  SceneLayersId,
   ResourceDefinitionId,
   StructuralUnitId,
   SimulationRunId,
@@ -471,6 +474,58 @@ export const questSchema = z.object({
   ...timestamps,
 });
 export type Quest = z.infer<typeof questSchema>;
+
+// ------------------------------------- a scene's four layers (add. 25 §5)
+
+/**
+ * What one character does in a scene, and when (spec §6, layer 2).
+ *
+ * Written for the people who build the scene and exported for Game Studio;
+ * nothing evaluates the words. The condition is a real one, so *she moves
+ * ahead if trusted* is `trust_mara at least 1` and the rule builder, the
+ * checks and a rename all reach it.
+ */
+export const behaviourSchema = z.object({
+  id: id<BehaviourId>(),
+  characterId: id<CharacterId>().nullable().default(null),
+  /**
+   * *Follow*, *patrol*, *flee*… Free text with suggestions, for `GAME_TYPES`'
+   * reason: the list a designer needs is always one longer than ours.
+   */
+  kind: z.string().default(''),
+  note: z.string().default(''),
+  /** When it applies. Empty is always. */
+  conditions: conditionGroupSchema.default(emptyConditions()),
+});
+export type Behaviour = z.infer<typeof behaviourSchema>;
+
+/** Spec §6, layer 4: how the scene is presented. Text, for the people who build it. */
+export const presentationSchema = z.object({
+  music: z.string().default(''),
+  ambience: z.string().default(''),
+  sound: z.string().default(''),
+  camera: z.string().default(''),
+  cinematic: z.string().default(''),
+  atmosphere: z.string().default(''),
+});
+export type Presentation = z.infer<typeof presentationSchema>;
+
+/**
+ * The two layers of a game scene that nothing else holds (addendum 25 §5):
+ * behaviour and presentation. **A collection of its own, keyed by the scene,
+ * rather than fields on the unit**, because a unit is shared by every format
+ * and a screenplay's scene has no NPC behaviour to carry. Layers 1 and 3 are
+ * readings of the unit and its nodes and store nothing here.
+ */
+export const sceneLayersSchema = z.object({
+  id: id<SceneLayersId>(),
+  projectId: id<ProjectId>(),
+  unitId: id<StructuralUnitId>(),
+  behaviours: z.array(behaviourSchema).default([]),
+  presentation: presentationSchema.default({}),
+  ...timestamps,
+});
+export type SceneLayers = z.infer<typeof sceneLayersSchema>;
 
 // ------------------------------------------------------- a playthrough (§13)
 

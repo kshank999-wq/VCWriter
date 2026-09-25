@@ -93,7 +93,7 @@ describe('the far column on a game', () => {
     render(<Far initial={file} beatId={beatId} />);
     const rail = screen.getByRole('navigation', { name: 'Game panels' });
     expect(within(rail).getAllByRole('button').map((one) => one.textContent)).toEqual([
-      'Beat', 'Rules', 'World', 'Play', 'Checks', 'Endings', 'Built',
+      'Beat', 'Scene', 'Rules', 'World', 'Play', 'Checks', 'Endings', 'Built',
     ]);
     expect(within(rail).getByRole('button', { name: 'Beat' }).getAttribute('aria-pressed')).toBe('true');
   });
@@ -120,5 +120,29 @@ describe('the far column on a game', () => {
     render(<Far initial={file} beatId={beatId} />);
     expect(screen.queryByRole('navigation', { name: 'Game panels' })).toBeNull();
     expect(elementsOf(file)).toEqual([]);
+  });
+});
+
+/** Addendum 25 §5 on the screen: the scene's layers, beside the script. */
+describe('the scene’s layers', () => {
+  it('writes a behaviour and presentation, and shows the board', () => {
+    const start = game();
+    const scene = addUnit(start, { trackId: start.tracks[0]!.id, title: 'The Vault Door' });
+    const beat = addBeat(scene.file, { unitId: scene.unit.id, title: 'The Door' });
+    render(<Far initial={beat.file} beatId={beat.beat.id} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Scene' }));
+    expect(screen.getByText(/Scene 2 · The Vault Door/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Behaviour' }));
+    fireEvent.change(screen.getByLabelText('What they do'), { target: { value: 'Patrol' } });
+    expect(screen.getByLabelText('What they do')).toHaveProperty('value', 'Patrol');
+    expect(screen.getByText('Always.')).toBeDefined();
+
+    fireEvent.change(screen.getByPlaceholderText('Low strings as the door opens'), { target: { value: 'Low strings' } });
+    expect(screen.getByDisplayValue('Low strings')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Board' }));
+    const board = screen.getByRole('list', { name: 'The scene as cards' });
+    expect(within(board).getByText('The player')).toBeDefined();
   });
 });

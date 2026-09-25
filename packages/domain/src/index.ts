@@ -33,6 +33,7 @@ export * from './narrative-map.js';
 export * from './narrative-lane.js';
 export * from './narrative-objectives.js';
 export * from './game-bible.js';
+export * from './narrative-scene.js';
 export * from './narrative-rules.js';
 export * from './narrative-economy.js';
 export * from './narrative-run.js';

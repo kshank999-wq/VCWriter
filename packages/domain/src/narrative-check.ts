@@ -1,3 +1,4 @@
+import { behaviourConditions } from './narrative-scene.js';
 import { objectiveConditions } from './narrative-objectives.js';
 import {
   allConditions,
@@ -390,6 +391,7 @@ export const orphanState = (file: ProjectFile): Finding[] => {
   const read = new Set([
     ...allConditions(file).map((one) => one.condition.subjectId),
     ...objectiveConditions(file).map((one) => one.condition.subjectId),
+    ...behaviourConditions(file).map((one) => one.condition.subjectId),
   ]);
   const written = new Set(allEffects(file).map((one) => one.effect.targetId));
 

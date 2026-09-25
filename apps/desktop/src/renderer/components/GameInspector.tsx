@@ -21,6 +21,7 @@ import { ConditionGroupEditor, EffectList, RuleSentence } from './RuleBuilder';
 import { NarrativeWorldPanel } from './NarrativeWorldPanel';
 import { NarrativePlayPanel } from './NarrativePlayPanel';
 import { NarrativeEndingsPanel } from './NarrativeEndingsPanel';
+import { ScenePanel } from './ScenePanel';
 
 /**
  * The far column on a game (addendum 25 §4.2): the Inspector with a vertical
@@ -36,10 +37,11 @@ import { NarrativeEndingsPanel } from './NarrativeEndingsPanel';
  * Story Map uses.
  */
 
-type GamePanel = 'beat' | 'rules' | 'world' | 'play' | 'checks' | 'endings' | 'built';
+type GamePanel = 'beat' | 'scene' | 'rules' | 'world' | 'play' | 'checks' | 'endings' | 'built';
 
 const PANELS: { panel: GamePanel; label: string; title: string }[] = [
   { panel: 'beat', label: 'Beat', title: 'The beat, its scene and its track' },
+  { panel: 'scene', label: 'Scene', title: "The scene's four layers — narrative, behaviour, systemic, presentation — and its board" },
   { panel: 'rules', label: 'Rules', title: "The rule on this beat's node: what must be true here, what arriving changes, what is offered" },
   { panel: 'world', label: 'World', title: 'The states and resources every rule asks about' },
   { panel: 'play', label: 'Play', title: 'Walk the game as a player' },
@@ -69,6 +71,8 @@ export function GameInspector({
       <div className="game-inspector-panel">
         {panel === 'beat' ? (
           beatPanel
+        ) : panel === 'scene' ? (
+          <ScenePanel file={file} beatId={selectedBeatId} onUpdate={onUpdate} />
         ) : panel === 'rules' ? (
           <BeatRules file={file} beatId={selectedBeatId} onUpdate={onUpdate} />
         ) : panel === 'world' ? (

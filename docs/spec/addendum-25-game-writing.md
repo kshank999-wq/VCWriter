@@ -18,7 +18,7 @@ The two specs are kept beside this addendum as
 [`game-studio-spec-v1.md`](game-studio-spec-v1.md). The Game Studio spec
 calls the narrative module *VC Rider*; it is this one.
 
-**Status: stages 0–3 built.** §9 is the build order; §12 says what each built stage does.
+**Status: stages 0–4 built.** §9 is the build order; §12 says what each built stage does.
 
 ---
 
@@ -565,3 +565,42 @@ rail's longest words (*Checks*, *Endings*) were **cut off** at 56px; and the
 rule builder's bar **ran off the edge** of the narrower column. All three are
 fixed in the stylesheet: the Bible's detail is shown inside its section, the
 rail is 64px with tighter tracking, and the builder wraps in the far column.
+
+### Stage 4 — the scene's four layers, and its board
+
+`entities/narrative.ts` (`sceneLayersSchema`, `behaviourSchema`,
+`presentationSchema`), `narrative-scene.ts`, `ScenePanel.tsx`, and a *Scene*
+entry on the far column's rail.
+
+**Two layers stored, two read**, as §5 drew it. Layer 1 is read off the scene
+itself: its summary, its place from the scene heading (`locationOfScene`),
+who speaks from the cues (`castInScene`), and what its nodes require. Layer 3
+is read off its nodes' rules and its objectives, in the rule builder's own
+sentences. Layers 2 and 4 are the only new data, and they live in **a
+collection of their own, keyed by the scene** (`sceneLayers`), rather than as
+fields on the unit: a unit is shared by every format, and a screenplay's
+scene has no NPC behaviour to carry. A scene nobody has described stores
+nothing — the record is made the first time something is written.
+
+A **behaviour** is a character, a kind (free text with suggestions — follow,
+patrol, lead, flee…), the words, and a real condition for *when*. Because the
+condition is a real one, it is treated like every other rule: deleting a state
+or resource takes it out, and a behaviour that asks about a state counts as a
+read, both for the orphan check and for the Bible's *used*. **Presentation**
+is six fields of text (music, ambience, sound, camera, cinematic,
+atmosphere) beside what each beat's own `visual` already says, which is read
+rather than copied.
+
+**The board stores nothing** (`sceneBoard`): the player (the setup's player
+role), everyone who speaks or has a behaviour here, the place, every item a
+rule here gives, uses or needs, the objectives, and the ways out — a choice
+whose destination is not in the scene. Adding a card means defining the thing
+or writing the rule that uses it.
+
+The panel sits on the far column's rail, after *Beat*, and follows the beat
+selected in the script: select a beat and its scene's layers are beside it.
+Read layers say where they are written, so nobody looks for a box to type in.
+
+Driving the real renderer caught one fault: the layer headings wore the
+Inspector's `twisty` class, which is sized for a lone arrow, so *1 ·
+Narrative* stacked into three lines. They are ordinary buttons now.
