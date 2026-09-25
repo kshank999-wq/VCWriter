@@ -117,7 +117,10 @@ describe('the flow', () => {
     expect(first.depth).toBe(LINES);
     // …and carries the other 8 to the verso.
     const second = laid.pages[1]!;
-    expect(second.pieces[0]).toEqual({ blockId: 'ch1p1', from: 4, to: 12 });
+    // `cut` says this piece is part of a split block, which is the only
+    // thing the page clips — a whole block is drawn whole so a cut-in
+    // picture can reach past its paragraph (§8b).
+    expect(second.pieces[0]).toEqual({ blockId: 'ch1p1', from: 4, to: 12, cut: true });
   });
 
   it('refuses a widow by taking one line less', () => {
@@ -127,7 +130,7 @@ describe('the flow', () => {
     const first = laid.pages[0]!;
     const piece = first.pieces.find((one) => one.blockId === 'ch1p0')!;
     expect(piece.to).toBe(LINES - 6 - 1);
-    expect(laid.pages[1]?.pieces[0]).toEqual({ blockId: 'ch1p0', from: LINES - 7, to: LINES - 5 });
+    expect(laid.pages[1]?.pieces[0]).toEqual({ blockId: 'ch1p0', from: LINES - 7, to: LINES - 5, cut: true });
   });
 
   it('refuses an orphan by moving the paragraph whole', () => {
@@ -135,7 +138,8 @@ describe('the flow', () => {
     const blocks = chapter(1, [LINES - 7, 10]);
     const laid = layPages(blocks, measure({ ch1: 6, ch1p0: LINES - 7, ch1p1: 10 }), geometry(), settings(), names);
     expect(laid.pages[0]!.pieces.map((piece) => piece.blockId)).toEqual(['ch1', 'ch1p0']);
-    expect(laid.pages[1]!.pieces[0]).toEqual({ blockId: 'ch1p1', from: 0, to: 10 });
+    // Moved whole, so it is not cut and the page does not clip it.
+    expect(laid.pages[1]!.pieces[0]).toEqual({ blockId: 'ch1p1', from: 0, to: 10, cut: false });
   });
 
   it('keeps a heading with the lines after it', () => {
@@ -321,5 +325,69 @@ describe('a page that carries no number', () => {
     if (after) expect(after.number).toBe(picture.number + 1);
     // Nothing else is set over it either.
     expect(picture.runningHead).toBe('');
+  });
+});
+
+/**
+ * A picture cut into the text (§8b, from Ken: *the text below it is not
+ * wrapping around the picture, so it splits it and adds a big gap*).
+ *
+ * The picture reaches **past its own paragraph** — that is what cutting in
+ * means — so the cutter is told the reach and keeps it on one page. Without
+ * it the picture is clipped at the foot and the text on the next page runs
+ * full measure where it was measured narrowed.
+ */
+describe('a picture cut into the text', () => {
+  const inset = (id: string): BookBlock['inset'] => ({
+    place: 'right',
+    span: 0.38,
+    side: 'either',
+    standoff: 1,
+    figureId: id,
+    assetId: 'pic',
+    caption: '',
+    decorative: false,
+  });
+
+  /** A chapter whose second paragraph carries a picture 20 lines deep. */
+  const withPicture = (): BookBlock[] => {
+    const blocks = chapter(1, [4, 4, 4, 4]);
+    (blocks[2] as BookBlock).inset = inset('fig');
+    return blocks;
+  };
+
+  it('keeps the picture and the text running round it on one page', () => {
+    const blocks = withPicture();
+    // The opening plus a paragraph leaves ten lines: the picture needs twenty.
+    const lines = { ch1: LINES - 14, ch1p0: 4, ch1p1: 4, ch1p2: 4, ch1p3: 4 };
+    const laid = layPages(blocks, measure(lines), geometry(), settings(), names, new Map([['ch1p1', 20]]));
+    const first = laid.pages[0]!.pieces.map((piece) => piece.blockId);
+    // The picture's paragraph is pushed over rather than clipped at the foot.
+    expect(first).toEqual(['ch1', 'ch1p0']);
+    expect(laid.pages[1]!.pieces.map((piece) => piece.blockId)).toContain('ch1p1');
+  });
+
+  it('places it where the reach fits, and says nothing about a page with room', () => {
+    const blocks = withPicture();
+    const lines = { ch1: 6, ch1p0: 4, ch1p1: 4, ch1p2: 4, ch1p3: 4 };
+    const laid = layPages(blocks, measure(lines), geometry(), settings(), names, new Map([['ch1p1', 20]]));
+    expect(laid.pages[0]!.pieces.map((piece) => piece.blockId)).toContain('ch1p1');
+  });
+
+  it('runs a picture taller than the page rather than looping', () => {
+    const blocks = withPicture();
+    const lines = { ch1: 6, ch1p0: 4, ch1p1: 4, ch1p2: 4, ch1p3: 4 };
+    // A reach past a whole page cannot be helped by turning to an empty one.
+    const laid = layPages(blocks, measure(lines), geometry(), settings(), names, new Map([['ch1p1', LINES * 2]]));
+    expect(laid.pages.length).toBeGreaterThan(0);
+    expect(laid.pages.flatMap((page) => page.pieces).some((piece) => piece.blockId === 'ch1p1')).toBe(true);
+  });
+
+  it('lays a book with no reach told exactly as it always did', () => {
+    const blocks = chapter(1, [4, 4, 4, 4]);
+    const lines = { ch1: 6, ch1p0: 4, ch1p1: 4, ch1p2: 4, ch1p3: 4 };
+    const before = layPages(blocks, measure(lines), geometry(), settings(), names);
+    const after = layPages(blocks, measure(lines), geometry(), settings(), names, new Map());
+    expect(after.pages.map((page) => page.pieces)).toEqual(before.pages.map((page) => page.pieces));
   });
 });

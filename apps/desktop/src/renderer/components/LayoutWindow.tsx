@@ -97,6 +97,7 @@ import {
   BOOK_PRESET_NAMES,
   BOOK_PRESETS,
   INSET_SPAN,
+  FREE_SPAN,
   INSET_STANDOFF,
   PRESET_INFO,
   bookFigures,
@@ -179,9 +180,9 @@ type ArtTarget =
   | { kind: 'back' }
   | { kind: 'before'; markerId: string }
   /** Into the story, before this element: across the measure, or a page of its own. */
-  | { kind: 'story'; elementId: string; as: 'measure' | 'page' }
+  | { kind: 'story'; elementId: string; as: 'measure' | 'page' | 'free' }
   /** Into a part: cut into its words where it has them, a page of its own where it has not. */
-  | { kind: 'part'; partId: string; as: 'measure' | 'page' }
+  | { kind: 'part'; partId: string; as: 'measure' | 'page' | 'free' }
   /** Into a box already drawn and still empty (§9a). */
   | { kind: 'fill'; elementId: string }
   /** The barcode box on the copyright page (§9k). */
@@ -565,7 +566,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
    * choice the writer makes — it is what *here* means at each of those three
    * places.
    */
-  const importPicture = (as: 'measure' | 'page') => {
+  const importPicture = (as: 'measure' | 'page' | 'free') => {
     if (place.elementId) importArt({ kind: 'story', elementId: place.elementId, as });
     else if (place.partId) importArt({ kind: 'part', partId: place.partId, as });
     else importArt({ kind: 'back' });
@@ -609,7 +610,17 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
             beatId: beat.id,
             assetId,
             beforeElementId: target.elementId as never,
-            attributes: target.as === 'page' ? { bookPlace: 'page' } : {},
+            attributes:
+              target.as === 'page'
+                ? { bookPlace: 'page' }
+                : // A vector graphic goes on **free** (§8c): over the page,
+                  // taking no line, at a place the writer then drags. It
+                  // lands a tenth in from the top-left rather than at the
+                  // corner, so the whole of it is on the paper to take hold
+                  // of.
+                  target.as === 'free'
+                  ? { bookPlace: 'free', bookSpan: FREE_SPAN.default, bookX: 0.1, bookY: 0.1 }
+                  : {},
           });
           if (made.elementId) {
             setSelectedRowId(made.elementId as string);
@@ -773,6 +784,10 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         setPageDialogSheet(null);
         setDrawing(NEW_BOX);
       }}
+      onVector={() => {
+        setPageDialogSheet(null);
+        importPicture('free');
+      }}
       onBlank={(elementId, blank) => onUpdate((current) => setBlankBefore(current, elementId, blank))}
       format={pageFormat(page).markerId ? pageFormat(page).label : null}
       onFormat={() => {
@@ -834,10 +849,18 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const figureControls = (figure: BookFigure) => (
     <FigureSection
       figure={figure}
-      drawing={drawing === figure.elementId}
+      drawing={figure.placement.place === 'free' ? placing === figure.elementId : drawing === figure.elementId}
       onPlace={(placement) => onUpdate((current) => placeBookFigure(current, figure.elementId, placement))}
       onDraw={() => {
         setPageDialogSheet(null);
+        // A free graphic is **already on the page**, so there is nothing to
+        // draw: the handle goes straight over it and it is dragged and
+        // resized where it stands (§8c). A figure in the text has no place
+        // until a box is drawn, which is why the two gestures differ.
+        if (figure.placement.place === 'free') {
+          setPlacing((current) => (current === figure.elementId ? null : figure.elementId));
+          return;
+        }
         setDrawing((current) => (current === figure.elementId ? null : figure.elementId));
       }}
       onFill={() => importArt({ kind: 'fill', elementId: figure.elementId })}
@@ -1317,23 +1340,35 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
               onOpenPage={openPage}
               placing={placing}
               placingEmpty={placing !== null && bookFigures(file).find((one) => one.elementId === placing)?.assetId == null}
-              onSpan={(span) => {
+              placingFree={placing !== null && bookFigures(file).find((one) => one.elementId === placing)?.placement.place === 'free'}
+              onSpan={(span, ofPage) => {
                 const what = placing;
                 if (!what) return;
                 onUpdate((current) => {
                   const held = bookFigures(current).find((one) => one.elementId === what);
                   if (!held) return current;
-                  return placeBookFigure(current, what, { ...held.placement, span });
+                  // A free graphic's width is a share of the **page**, an
+                  // inset's of the measure: two measurements of two things.
+                  const wide = held.placement.place === 'free' ? ofPage : span;
+                  return placeBookFigure(current, what, { ...held.placement, span: wide });
                 });
               }}
               onPick={() => {
                 const what = placing;
                 if (what) importArt({ kind: 'fill', elementId: what });
               }}
-              onSlide={(place, beforeElementId) => {
+              onSlide={(place, beforeElementId, at) => {
                 const what = placing;
                 if (!what) return;
                 onUpdate((current) => {
+                  const held = bookFigures(current).find((one) => one.elementId === what);
+                  // A free graphic slides **on the page** and never changes
+                  // which paragraph carries it: where it rides is about which
+                  // page it lands on, and dragging it across the sheet is not
+                  // a request to move it through the writing.
+                  if (held?.placement.place === 'free') {
+                    return placeBookFigure(current, what, { ...held.placement, x: at.x, y: at.y });
+                  }
                   const moved = beforeElementId && beforeElementId !== what ? moveFigureBefore(current, what, beforeElementId) : current;
                   return placeBookFigure(moved, what, { place });
                 });
@@ -1711,6 +1746,7 @@ function Spreads({
   onDrawn,
   placing,
   placingEmpty,
+  placingFree,
   onSlide,
   onSpan,
   onPick,
@@ -1735,10 +1771,12 @@ function Spreads({
   placing: string | null;
   /** Whether that box is still waiting for a picture (§9m). */
   placingEmpty: boolean;
+  /** The figure in hand is set over the page, so its width is a share of it. */
+  placingFree: boolean;
   /** Slid to a side, and before the element it was let go over. */
-  onSlide(place: 'left' | 'right', beforeElementId: string | null): void;
+  onSlide(place: 'left' | 'right', beforeElementId: string | null, at: { x: number; y: number }): void;
   /** A corner dragged: the new width as a share of the measure (§9m). */
-  onSpan(span: number): void;
+  onSpan(span: number, ofPage: number): void;
   /** A picture for the box being placed (§9m). */
   onPick(): void;
   onKeep(): void;
@@ -1781,7 +1819,9 @@ function Spreads({
     const width = textRect.width || sheetRect.width;
     const span = Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, drawn.w / width));
     const place = drawn.x + drawn.w / 2 < inset + width / 2 ? 'left' : 'right';
-    onDrawn({ place, span, side: 'either', standoff: INSET_STANDOFF.default }, from.page.sheet);
+    // A drawn box is always cut into the text, so its free position is
+    // whatever `figurePlacement` falls back to and is never read.
+    onDrawn({ place, span, side: 'either', standoff: INSET_STANDOFF.default, x: 0, y: 0 }, from.page.sheet);
   };
 
   /** The text block's width on a sheet, in the sheet's own pixels. */
@@ -1793,6 +1833,10 @@ function Spreads({
   };
 
   /** A dragged corner, as the share of the measure the picture takes (§9m). */
+  /** A sheet's own width in the room's pixels, which a free graphic is a share of. */
+  const sheetWidthOf = (sheetEl: HTMLElement | null): number =>
+    sheetEl ? sheetEl.getBoundingClientRect().width / zoom : 0;
+
   const spanFor = (sheetEl: HTMLElement | null, width: number): number => {
     const measure = measureOn(sheetEl);
     if (measure <= 0) return INSET_SPAN.default;
@@ -1808,9 +1852,14 @@ function Spreads({
     if (!at) return '';
     const perInch = pageWidthPx / laying.geometry.trim.width;
     if (perInch <= 0) return '';
-    const measure = measureOn(sheetEl);
-    const share = measure > 0 ? Math.round((at.width / measure) * 100) : 0;
-    return `${(at.width / perInch).toFixed(2)} × ${(at.height / perInch).toFixed(2)} in${share > 0 ? ` · ${share}% of the measure` : ''}`;
+    // A free graphic is a share of the **page** and everything else of the
+    // measure (§8c). Saying *of the measure* over a graphic that is not in
+    // the text's way is a figure that cannot be checked against anything.
+    const free = placingFree;
+    const against = free ? sheetWidthOf(sheetEl) : measureOn(sheetEl);
+    const share = against > 0 ? Math.round((at.width / against) * 100) : 0;
+    const of = free ? 'of the page' : 'of the measure';
+    return `${(at.width / perInch).toFixed(2)} × ${(at.height / perInch).toFixed(2)} in${share > 0 ? ` · ${share}% ${of}` : ''}`;
   };
 
   /**
@@ -1924,9 +1973,16 @@ function Spreads({
             if (!sheetEl) return;
             const text = sheetEl.querySelector('.bk-text') as HTMLElement | null;
             const rect = (text ?? sheetEl).getBoundingClientRect();
-            onSlide(clientX < rect.left + rect.width / 2 ? 'left' : 'right', blockUnder(page, sheetEl, clientY));
+            // A free graphic is placed against the **page** (§8c), an inset
+            // against the text block — so both are read here and the room
+            // uses whichever the figure in hand is.
+            const sheetRect = sheetEl.getBoundingClientRect();
+            onSlide(clientX < rect.left + rect.width / 2 ? 'left' : 'right', blockUnder(page, sheetEl, clientY), {
+              x: (clientX - sheetRect.left) / (sheetRect.width || 1),
+              y: (clientY - sheetRect.top) / (sheetRect.height || 1),
+            });
           }}
-          onCorner={(width) => onSpan(spanFor(sheets.current[key] ?? null, width))}
+          onCorner={(width) => onSpan(spanFor(sheets.current[key] ?? null, width), width / (sheetWidthOf(sheets.current[key] ?? null) || 1))}
           onPick={onPick}
           onKeep={onKeep}
           onDrop={onDrop}
@@ -2595,6 +2651,7 @@ const PLACE_WORDS: Record<BookFigurePlacement['place'], string> = {
   left: 'cut in at the left',
   right: 'cut in at the right',
   page: 'a page of its own',
+  free: 'set over the page',
 };
 
 /**
@@ -2762,6 +2819,7 @@ function StoryPageSection({
   drawing,
   onPut,
   onDraw,
+  onVector,
   onBlank,
   onFormat,
   format,
@@ -2773,6 +2831,7 @@ function StoryPageSection({
   drawing: boolean;
   onPut(): void;
   onDraw(): void;
+  onVector(): void;
   /** Put a blank leaf in before an element, or take one away (§9i). */
   onBlank(elementId: string, blank: boolean): void;
   /**
@@ -2834,6 +2893,14 @@ function StoryPageSection({
               </button>
             </>
           )}
+          {/* A vector graphic (§8c, from Ken: *add a vector graphic … anywhere
+              on the page, and then they can resize that also. But it has a
+              transparent background*). Offered on **every** page, a blank
+              leaf included: a flourish takes no room in the text, so there is
+              no writing for it to need. */}
+          <button type="button" className="small" onClick={onVector}>
+            Add a vector graphic…
+          </button>
           {/* A blank page (§9i, from Ken: *insert a blank page… and it will
               slide what was on that page to the next page*). Offered where
               there is writing to stand before; on a leaf the writer put in,
@@ -2919,8 +2986,33 @@ function FigureSection({
           <option value="left">Cut into the text, at the left</option>
           <option value="right">Cut into the text, at the right</option>
           <option value="page">A page of its own, inside the story</option>
+          <option value="free">Set over the page, anywhere</option>
         </select>
       </label>
+      {/* A free graphic (§8c): a width that is a share of the **page** and
+          nothing about the text, because it is not in the text's way. It is
+          moved and resized on the spread, which is the gesture that shows
+          where it will actually be. */}
+      {place === 'free' ? (
+        <>
+          <label className="field">
+            <span>Width, {Math.round(span * 100)}% of the page</span>
+            <input
+              type="range"
+              aria-label="Graphic width"
+              min={Math.round(FREE_SPAN.min * 100)}
+              max={Math.round(FREE_SPAN.max * 100)}
+              step={1}
+              value={Math.round(span * 100)}
+              onChange={(event) => onPlace({ ...figure.placement, span: Number(event.target.value) / 100 })}
+            />
+          </label>
+          <p className="muted small">
+            It stands over the page and moves nothing: no line is given up for it, and whatever the file leaves clear stays
+            clear. Press <em>Move and resize it…</em> to drag it and take its corner.
+          </p>
+        </>
+      ) : null}
       {place === 'page' ? (
         <>
           {/* *Which page* is gone (§9j, from Ken: *you can take the which
@@ -2995,10 +3087,20 @@ function FigureSection({
           type="button"
           className={drawing ? 'raised small selected' : 'raised small'}
           aria-pressed={drawing}
-          title="Drag a box on the page where the picture goes; its width and the side it lands on are taken from the box. Drawn on another page, it moves the picture there."
+          title={
+            place === 'free'
+              ? 'Drag it where it goes and take a corner to resize it.'
+              : 'Drag a box on the page where the picture goes; its width and the side it lands on are taken from the box. Drawn on another page, it moves the picture there.'
+          }
           onClick={onDraw}
         >
-          {drawing ? 'Drawing — drag on the page' : 'Draw the box…'}
+          {place === 'free'
+            ? drawing
+              ? 'Moving it — drag on the page'
+              : 'Move and resize it…'
+            : drawing
+              ? 'Drawing — drag on the page'
+              : 'Draw the box…'}
         </button>
       </div>
       <div className="layout-part-actions">

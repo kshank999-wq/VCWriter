@@ -1604,6 +1604,47 @@ push live; the build takes a minute or two.
   picture keeps its proportions, which is what a float does. *Put a
   picture here…* on the manuscript right-click is every prose format's
   now rather than the textbook's alone.
+  **§8b is the text running round a cut-in picture**, from Ken (*the text
+  below it is not wrapping around the picture, so it splits it and adds a big
+  gap*): a four-line paragraph with a fifteen-line picture beside it and
+  eleven lines of white under the words. **Two boxes were containing the
+  float** and each was there for a reason that had stopped applying —
+  `.bk-p.bk-has-inset` was `display: flow-root`, and every block is drawn in a
+  `.bk-piece` of its measured height with `overflow: hidden`, both of which
+  are formatting contexts. So cutting in was cutting into *one paragraph*,
+  which is not what the words mean. **Only a split piece is clipped now**:
+  clipping is what a split is *for*, so `PagePiece` carries `cut` and the page
+  clips that piece alone; a whole block is drawn whole and the float reaches
+  the paragraphs after it, with a heading, a break, a figure and a page of its
+  own all **clearing**. **The reach is a measurement** (§4's rule pointed at a
+  float) — the domain has no font metrics, so `measureBlocks` reads the
+  picture's own box and hands `layPages` a `Wraps` map beside the line counts,
+  and the cutter keeps a picture and the text round it on one page or the next
+  page's text runs full measure where it was measured narrowed. **Measurement
+  needed no change at all**: the measure box has always set the blocks as
+  consecutive siblings, exactly as the page does, so the paragraphs after a
+  picture already measured narrowed by it — the float was simply never allowed
+  to reach them.
+  **§8c is a graphic set over the page**, from Ken (*add a vector graphic …
+  anywhere on the page, and then they can resize that also. But it has a
+  transparent background*), and the audit paid a **fifteenth** time: it is a
+  **figure**, and `free` is a fifth `FigurePlace` — the library, the
+  attributes, the rail, the inspector and `placeBookFigure` are all reused, so
+  what is new is one value and what it means. What it means is that it **takes
+  no room in the flow**: everything else is in the text's way and the cutter
+  knows about it, while this is set over the page with nothing moving to make
+  space, which is why several may ride one block and why it is offered on a
+  blank leaf too. **It rides a paragraph and is placed against the page**, and
+  the two are not in tension — a page is not a record, so anchoring to page
+  nine would be wrong the moment a word is added, while `x`, `y` and `span`
+  are fractions of the **page** because *anywhere on the page* includes the
+  margins. **Nothing draws a background and nothing prints a caption**, which
+  is the whole of *transparent*; an SVG needed no new reader. **Moving it is
+  not drawing a box** — a figure in the text has no place until a box is
+  drawn, a free graphic is already on the page — so the handle goes straight
+  over it and says *45% of the page* where an inset says *of the measure*.
+  `FigureInset` **omits** `x` and `y` rather than inheriting them, an inset's
+  place being the paragraph's.
   **§9a is the rail as one linear tree**, from Ken after using the room —
   *this has become way too complicated to make this workable… this should
   be simple linear workflow… there shouldn't be all this extra wording* —

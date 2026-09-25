@@ -25,6 +25,7 @@ import {
   type BookSettings,
   type LaidBook,
   type Measured,
+  type Wraps,
   type ProjectFile,
 } from '@vcwriter/domain';
 
@@ -84,7 +85,7 @@ export const measureBlocks = (
   box: HTMLElement,
   blocks: readonly BookBlock[],
   context: BookRenderContext,
-): Measured => {
+): { measured: Measured; wraps: Wraps } => {
   const { leadPx, measurePx } = bookMetrics(context.geometry);
   const linesPerPage = context.geometry.linesPerPage;
   const vars = bookVars(context);
@@ -94,6 +95,18 @@ export const measureBlocks = (
     .map((block) => `<div class="bk-item" data-block="${block.id}">${renderBookBlock(block, context)}</div>`)
     .join('');
   const measured = new Map<string, number>();
+  /**
+   * How far a cut-in picture reaches, in lines (§8b). Measured rather than
+   * worked out: only the browser knows how tall the picture sets at this
+   * measure, and the cutter needs it to keep the picture and the text
+   * running round it on one page.
+   *
+   * It is read from the picture's own box, which is why the items below are
+   * **not** formatting contexts — a float contained by its item would
+   * measure as its own paragraph's height and the paragraphs after it would
+   * measure full measure, which is the page the fix is about.
+   */
+  const wraps = new Map<string, number>();
   const items = box.querySelectorAll<HTMLElement>('.bk-item');
   blocks.forEach((block, index) => {
     if (block.display) {
@@ -118,9 +131,14 @@ export const measureBlocks = (
     // one line, so the laying still runs and says something rather than
     // nothing.
     measured.set(block.id, height > 0 ? Math.max(1, Math.ceil(height / leadPx - 0.1)) : 1);
+    if (block.inset && element) {
+      const picture = element.querySelector<HTMLElement>('.bk-inset');
+      const reach = picture ? picture.getBoundingClientRect().height : 0;
+      if (reach > 0) wraps.set(block.id, Math.max(1, Math.ceil(reach / leadPx - 0.1)));
+    }
   });
   box.innerHTML = '';
-  return measured;
+  return { measured, wraps };
 };
 
 /** The whole laying, from a file, measuring in `box`. Pure but for the box. */
@@ -142,8 +160,8 @@ export const layBook = (file: ProjectFile, box: HTMLElement): Laying => {
       contents: rows,
       index: bookIndexFor(file, { pages: [], where: new Map(), roman: 0, arabic: 0 }),
     };
-    const measured = measureBlocks(box, blocks, preliminary);
-    const laid = layPages(blocks, measured, geometry, settings, context.names);
+    const { measured, wraps } = measureBlocks(box, blocks, preliminary);
+    const laid = layPages(blocks, measured, geometry, settings, context.names, wraps);
     const final: BookRenderContext = {
       ...context,
       contents: bookContentsOf(blocks, laid),

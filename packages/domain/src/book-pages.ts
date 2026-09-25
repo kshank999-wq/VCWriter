@@ -24,11 +24,32 @@ import type { ProjectFile } from './project-file.js';
 /** How many lines each block made, by block id. A block not measured is taken as one line. */
 export type Measured = ReadonlyMap<string, number>;
 
+/**
+ * How far a cut-in picture reaches, in lines, by the block it is on (§8b).
+ *
+ * It is **not** the same as the block's measured lines: the paragraph the
+ * picture cuts into is usually shorter than the picture, and the rest of
+ * the picture stands beside the paragraphs after it. The cutter needs the
+ * reach to keep a picture and the text that runs round it on one page; the
+ * browser is what knows it, since only the browser knows how tall the
+ * picture sets at this measure.
+ */
+export type Wraps = ReadonlyMap<string, number>;
+
+const NO_WRAPS: Wraps = new Map();
+
 /** Lines `from` up to `to` of a block, on one page. */
 export interface PagePiece {
   blockId: string;
   from: number;
   to: number;
+  /**
+   * The block is **split** — this piece is part of it (§8b). Only a split
+   * piece is clipped, because clipping is what a split is for: a whole
+   * block drawn in a clipped box cannot let a cut-in picture reach the
+   * paragraphs after it, which is the gap the wrap fix is about.
+   */
+  cut?: boolean;
 }
 
 export interface BookPage {
@@ -112,6 +133,7 @@ const fillPage = (
   target: number,
   side: 'verso' | 'recto',
   chapterInForce: string,
+  wraps: Wraps,
 ): Filled | null => {
   const first = blocks[start.index];
   if (!first) return null;
@@ -167,6 +189,19 @@ const fillPage = (
     const next = blocks[cursor.index + 1];
     const keepsNext = block.keepWithNext && next !== undefined && isFlow(next) && next.starts === 'none';
 
+    /**
+     * A cut-in picture reaches **past its own paragraph** (§8b), so it needs
+     * that much room on this page or it is clipped at the foot and the text
+     * on the next page runs full measure where it was measured narrowed. The
+     * reach is a measurement — the browser knows how tall the picture sets —
+     * so it arrives with the line counts rather than being worked out here.
+     *
+     * Only where something already stands on the page: a picture taller than
+     * a whole page cannot be helped by turning to an empty one.
+     */
+    const reach = block.inset ? Math.max(remaining, wraps.get(block.id) ?? 0) : remaining;
+    if (block.inset && reach > available && pieces.length > 0) break;
+
     if (block.unbreakable) {
       if (remaining <= available) {
         // Whole, and with room under it where it keeps the next.
@@ -178,7 +213,7 @@ const fillPage = (
       }
       // Taller than a page: nothing else to do but run it over.
       if (pieces.length === 0 && remaining > target) {
-        pieces.push({ blockId: block.id, from: cursor.offset, to: cursor.offset + available });
+        pieces.push({ blockId: block.id, from: cursor.offset, to: cursor.offset + available, cut: true });
         depth += available;
         cursor = { index: cursor.index, offset: cursor.offset + available };
         continue;
@@ -188,7 +223,7 @@ const fillPage = (
 
     if (remaining <= available) {
       if (keepsNext && available - remaining < KEEP && pieces.length > 0) break;
-      pieces.push({ blockId: block.id, from: cursor.offset, to: total });
+      pieces.push({ blockId: block.id, from: cursor.offset, to: total, cut: cursor.offset > 0 });
       depth += remaining;
       cursor = { index: cursor.index + 1, offset: 0 };
       continue;
@@ -203,7 +238,7 @@ const fillPage = (
       else break;
     }
     if (take <= 0) break;
-    pieces.push({ blockId: block.id, from: cursor.offset, to: cursor.offset + take });
+    pieces.push({ blockId: block.id, from: cursor.offset, to: cursor.offset + take, cut: true });
     depth += take;
     cursor = { index: cursor.index, offset: cursor.offset + take };
     break;
@@ -239,6 +274,7 @@ export const layPages = (
   geometry: BookGeometry,
   settings: BookSettings,
   names: RunningNames,
+  wraps: Wraps = NO_WRAPS,
 ): LaidBook => {
   const target = Math.max(1, geometry.linesPerPage);
   const pages: BookPage[] = [];
@@ -293,7 +329,7 @@ export const layPages = (
   };
 
   // The first leaf, alone.
-  const opening = fillPage(blocks, measured, cursor, target, 'recto', chapterTitle);
+  const opening = fillPage(blocks, measured, cursor, target, 'recto', chapterTitle, wraps);
   if (!opening) return { pages, where, roman, arabic };
   pages.push(record(opening, 1, 'recto', target));
   cursor = opening.cursor;
@@ -302,9 +338,9 @@ export const layPages = (
   while (cursor.index < blocks.length) {
     const before = cursor;
     const titleBefore = chapterTitle;
-    let verso = fillPage(blocks, measured, cursor, target, 'verso', chapterTitle);
+    let verso = fillPage(blocks, measured, cursor, target, 'verso', chapterTitle, wraps);
     if (!verso) break;
-    let recto = fillPage(blocks, measured, verso.cursor, target, 'recto', verso.chapterTitle);
+    let recto = fillPage(blocks, measured, verso.cursor, target, 'recto', verso.chapterTitle, wraps);
     let cut = target;
     if (
       recto &&
@@ -315,8 +351,8 @@ export const layPages = (
       verso.depth !== recto.depth
     ) {
       cut = Math.min(verso.depth, recto.depth);
-      verso = fillPage(blocks, measured, before, cut, 'verso', titleBefore) ?? verso;
-      recto = fillPage(blocks, measured, verso.cursor, cut, 'recto', verso.chapterTitle);
+      verso = fillPage(blocks, measured, before, cut, 'verso', titleBefore, wraps) ?? verso;
+      recto = fillPage(blocks, measured, verso.cursor, cut, 'recto', verso.chapterTitle, wraps);
     }
     pages.push(record(verso, sheet, 'verso', cut));
     cursor = verso.cursor;

@@ -19,7 +19,7 @@ import type { ChapterPageContent } from './markers.js';
 import { FACE_STACKS, faceStackOf, fontFaceCss, type BookGeometry } from './book-layout.js';
 import { partStyleAttr } from './part-style.js';
 import { headSideClass, runningHeadStyleOf, runningStyleVars } from './running-heads.js';
-import type { BookBlock, FigureInset } from './book-plan.js';
+import type { BookBlock, FigureFree, FigureInset } from './book-plan.js';
 import type { BookContentsRow, BookPage } from './book-pages.js';
 import { runsText, type BookIndex } from './book-index.js';
 import type { TitlePage } from './entities/title-page.js';
@@ -524,7 +524,39 @@ export const blockStyle = (block: BookBlock, context: BookRenderContext): string
   return rules.length > 0 ? ` style="${rules.join(';')}"` : '';
 };
 
+/**
+ * A graphic set over the page (§8c, from Ken: *add a vector graphic …
+ * anywhere on the page … but it has a transparent background*).
+ *
+ * It is positioned against the **page**, which is the only positioned box
+ * between here and the sheet, so the fractions mean what they say — a
+ * tenth down is a tenth down the paper rather than a tenth down whatever
+ * paragraph happens to carry it. It takes no room in the flow, draws no
+ * background of its own and prints no caption: a flourish is not a figure,
+ * and whatever transparency the file carries is what shows.
+ */
+const freeMarkup = (free: FigureFree, context: BookRenderContext): string => {
+  const picture = free.assetId ? context.pictures.get(free.assetId) : undefined;
+  const at = `left:${(free.x * 100).toFixed(3)}%;top:${(free.y * 100).toFixed(3)}%;width:${(free.span * 100).toFixed(3)}%`;
+  const alt = free.decorative ? '' : escapeHtml(picture?.altText || free.caption || '');
+  const inner = picture
+    ? `<img class="bk-free-image" alt="${alt}" src="${escapeHtml(picture.data)}" />`
+    : '<span class="bk-free-missing">Graphic goes here</span>';
+  return `<span class="bk-free" data-figure="${escapeHtml(free.figureId)}" style="${at}">${inner}</span>`;
+};
+
+/**
+ * A block's markup, with whatever is set over the page it falls on before
+ * it. The free graphics are emitted **outside** the switch because they
+ * belong to no kind: a flourish sits over a paragraph, a heading or an
+ * opening alike, and asks nothing of what it rides.
+ */
 export const renderBookBlock = (block: BookBlock, context: BookRenderContext): string => {
+  const over = (block.free ?? []).map((one) => freeMarkup(one, context)).join('');
+  return over + blockInner(block, context);
+};
+
+const blockInner = (block: BookBlock, context: BookRenderContext): string => {
   const opens = block.opensChapter && context.settings.opening !== 'none';
   const style = blockStyle(block, context);
   switch (block.kind) {
@@ -677,7 +709,13 @@ export const renderBookPage = (
       if (block.display) return `<div class="bk-piece bk-whole">${inner}</div>`;
       const height = (piece.to - piece.from) * leadPx;
       const shift = piece.from * leadPx;
-      return `<div class="bk-piece" style="height:${height.toFixed(3)}px"><div class="bk-clip" style="margin-top:-${shift.toFixed(3)}px">${inner}</div></div>`;
+      // **Only a split piece is clipped** (§8b). Clipping is what a split is
+      // for, and `overflow: hidden` makes a box a formatting context of its
+      // own — so a whole block drawn in one could neither let a cut-in
+      // picture reach past its paragraph nor let the paragraphs after it
+      // run round the picture, which together are the gap.
+      const cls = piece.cut ? 'bk-piece bk-cut' : 'bk-piece';
+      return `<div class="${cls}" style="height:${height.toFixed(3)}px"><div class="bk-clip" style="margin-top:-${shift.toFixed(3)}px">${inner}</div></div>`;
     })
     .join('');
   const head = page.runningHead
@@ -746,8 +784,8 @@ export const BOOK_STYLES = `
   .bk-page.verso { padding: var(--bk-top) var(--bk-inside) var(--bk-bottom) var(--bk-outside); }
   .bk-text { width: var(--bk-measure); }
   .bk-measure { position: absolute; left: -100000px; top: 0; visibility: hidden; width: var(--bk-measure); font-family: var(--bk-face); font-size: var(--bk-size); line-height: var(--bk-lead); color: #111; }
-  .bk-piece { overflow: hidden; }
-  .bk-piece.bk-whole { height: 100%; }
+  .bk-piece.bk-cut { overflow: hidden; }
+  .bk-piece.bk-whole { height: 100%; overflow: hidden; }
   .bk-p { margin: 0; text-align: var(--bk-align); hyphens: var(--bk-hyphens); -webkit-hyphens: var(--bk-hyphens); text-indent: var(--bk-indent); }
   .bk-p.bk-opens, .bk-heading + .bk-p, .bk-break + .bk-p, .bk-figure + .bk-p { text-indent: 0; }
   .bk-blocked .bk-p { text-indent: 0; padding-bottom: var(--bk-lead); }
@@ -758,11 +796,23 @@ export const BOOK_STYLES = `
   .bk-quote { margin: 0; padding: 0 2em; text-align: var(--bk-align); }
   .bk-break { margin: 0; height: calc(var(--bk-lead) * 3); line-height: calc(var(--bk-lead) * 3); text-align: center; letter-spacing: 0.5em; }
   .bk-figure { margin: 0; padding-bottom: var(--bk-lead); text-align: center; }
-  .bk-p.bk-has-inset { display: flow-root; }
+  /* The paragraph a picture cuts into is **not** a formatting context of its
+     own (§8b). It was — display: flow-root — which contained the float, so
+     a short paragraph grew to the picture's height and the text after it
+     began below the picture: the gap. Now the picture reaches past its own
+     paragraph and the ones after run round it, which is what cutting in
+     means. A heading or a page of its own clears, having no business beside
+     a picture. */
   .bk-inset { float: left; margin: 0.15em var(--bk-standoff, 1em) var(--bk-standoff, 1em) 0; }
+  .bk-heading, .bk-break, .bk-figure, .bk-display, .bk-chapter-opening { clear: both; }
   .bk-inset.bk-inset-right { float: right; margin: 0.15em 0 var(--bk-standoff, 1em) var(--bk-standoff, 1em); }
   .bk-inset-image { display: block; width: 100%; height: auto; }
   .bk-inset-caption { display: block; font-size: 0.8em; line-height: 1.25; text-align: center; margin-top: 0.3em; }
+  /* A free graphic (§8c): against the page, over the text, no background of
+     its own — whatever the file carries is what shows. */
+  .bk-free { position: absolute; z-index: 2; display: block; }
+  .bk-free-image { display: block; width: 100%; height: auto; }
+  .bk-free-missing { display: flex; align-items: center; justify-content: center; height: calc(var(--bk-lead) * 4); border: 1px dashed #999; color: #777; font-size: 0.8em; }
   .bk-inset .bk-figure-missing { display: flex; height: calc(var(--bk-lead) * 5); }
   .bk-figure-image { display: block; width: 100%; height: auto; }
   .bk-plate-art { position: absolute; inset: 0; padding: 0; height: auto; overflow: hidden; }

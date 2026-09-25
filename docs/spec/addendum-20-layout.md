@@ -805,6 +805,92 @@ format rather than the textbook alone — a children's book is a novel with
 pictures — and absent on a book whose library is empty, since *put a
 picture here* with nothing to put is not an offer.
 
+## 8b. The text runs round a cut-in picture
+
+From Ken: *the text below it is not wrapping around the picture, so it
+splits it and adds a big gap*. He was looking at a four-line paragraph with
+a picture fifteen lines deep beside it, and eleven lines of white under the
+words.
+
+**Two boxes were containing the float, and both were there for a reason
+that had stopped applying to this case.** `.bk-p.bk-has-inset` was
+`display: flow-root`, which makes a paragraph a formatting context of its
+own and so as tall as anything floated inside it. And every block is drawn
+in a `.bk-piece` of its measured height with `overflow: hidden`, which is a
+formatting context too. A picture could not reach past its own paragraph,
+and the paragraphs after it could not run round it: cutting in was cutting
+*into one paragraph*, which is not what the words mean.
+
+**Only a split piece is clipped now.** Clipping is what a split is *for* —
+a paragraph broken across a page shows the lines that belong to this one —
+so `PagePiece` carries `cut` and the page clips that piece alone. A whole
+block is drawn whole, the paragraph is no longer a formatting context, and
+the float reaches into the paragraphs after it exactly as a book sets it.
+A heading, a scene break, a figure and a page of its own all **clear**,
+having no business standing beside a picture.
+
+**The reach is a measurement, not a calculation** (§4's rule pointed at a
+float). The domain has no font metrics and cannot know how tall a picture
+sets at this measure, so `measureBlocks` reads the picture's own box and
+hands `layPages` a `Wraps` map beside the line counts. The cutter keeps a
+picture and the text running round it on one page: without that, the
+picture is clipped at the foot and the next page's text runs full measure
+where it was measured narrowed. A picture taller than a whole page is run
+over rather than looped on, there being no empty page that would help.
+
+Measurement needed no change of its own. The measure box has always set
+the blocks as consecutive siblings, which is what the page does, so the
+paragraphs after a picture measure **narrowed** by it without anything
+being told to do so — the float was simply never allowed to reach them.
+
+A book with no picture cut into it lays exactly as it did, which a test
+pins by laying the same blocks with and without a reach and comparing every
+piece.
+
+## 8c. A graphic set over the page
+
+From Ken: *add a vector graphic … somewhere on the page that they can add a
+vector graphic that anywhere on the page, and then they can resize that
+also. But it has a transparent background.*
+
+**It is a figure, and `free` is a fifth place** — the fifteenth time the
+mechanism was already there. Everything that makes a figure work is
+reused: the graphics library, the element's own attributes, the rail, the
+inspector, `placeBookFigure`. What is new is one value of `FigurePlace` and
+what it means.
+
+What it means is that **it takes no room in the flow**. Every other place
+is in the text's way and the cutter knows about it; a free graphic is set
+over the page, nothing moves to make space, and the cutter never sees it.
+That is why several may ride one block while an inset is one per paragraph,
+and why it is offered on a blank leaf too — a flourish needs no writing to
+stand beside.
+
+**It rides a paragraph, and is placed against the page.** Those are not in
+tension: a page is not a record, so a graphic anchored to page nine would be
+on the wrong page the moment a word is added — riding the block puts it
+wherever that block falls. Its `x`, `y` and `span` are fractions of the
+**page** rather than of the text block, because *anywhere on the page*
+includes the margins and a flourish that cannot reach the edge is not free.
+
+**Nothing draws a background and nothing prints a caption.** Whatever the
+file leaves clear stays clear, which is the whole of what Ken asked for
+with *transparent*; and a flourish is not a figure, so it has no number and
+no words under it. An SVG needs no new reader — `readPicture` has always
+taken any image the browser decodes.
+
+**Moving it is not drawing a box.** A figure in the text has no place until
+a box is drawn, so *Draw the box…*; a free graphic is already on the page,
+so the handle goes straight over it and *Move and resize it…* drags it
+where it stands. The handle is the one from §9d, and it says *45% of the
+page* where an inset says *of the measure* — two measurements of two
+things, and a figure that cannot be checked against anything is worse than
+none.
+
+`FigureInset` **omits** `x` and `y` rather than inheriting them: an inset's
+place is decided by the paragraph it cuts into, so a free position on one
+could only disagree with where it actually sets.
+
 ## 9. The room
 
 Opened from **Layout** on the title bar, beside Research, and absent rather

@@ -383,6 +383,12 @@ export interface BookBlock {
    */
   inset?: FigureInset;
   /**
+   * Graphics set over the page this paragraph falls on (§8c). Several may
+   * ride one paragraph, and none of them takes a line: the cutter never
+   * sees them, which is the whole of what *free* means.
+   */
+  free?: FigureFree[];
+  /**
    * How the document this came from set it (addendum 21 §3): a face, a size
    * in points, an alignment. Read by the printer only under the *As imported*
    * face, except the alignment, which is a fact about the words.
@@ -598,7 +604,16 @@ const setting = (element: ManuscriptElement): Pick<BookBlock, 'face' | 'size' | 
  * story (§8a, from Ken), which is the same record standing where the
  * writer already put the figure rather than a second kind of thing.
  */
-export type FigurePlace = 'measure' | 'left' | 'right' | 'page';
+/**
+ * Where a figure stands in the book (§8, §8a, §8c).
+ *
+ * `free` is the one that takes **no room in the flow** (§8c, from Ken:
+ * *add a vector graphic … anywhere on the page, and then they can resize
+ * that also*): a flourish or a spot drawing set over the page at a place
+ * the writer picks, with nothing moving to make space for it. Everything
+ * else is in the text's way and the cutter knows about it.
+ */
+export type FigurePlace = 'measure' | 'left' | 'right' | 'page' | 'free';
 
 /** Which page an illustrated page falls on: the left, the right, or whichever comes. */
 export type FigureSide = 'either' | 'verso' | 'recto';
@@ -614,9 +629,24 @@ export interface BookFigurePlacement {
    * body size (§8a, from Ken: *gives a little bit of a border*).
    */
   standoff: number;
+  /**
+   * Where a **free** graphic stands, as a fraction of the page from its
+   * top-left corner (§8c). It is the *page* rather than the text block,
+   * because *anywhere on the page* includes the margins — a flourish that
+   * cannot reach the edge is not free.
+   *
+   * Nothing but a free graphic reads these.
+   */
+  x: number;
+  y: number;
 }
 
-export interface FigureInset extends BookFigurePlacement {
+/**
+ * `x` and `y` are **omitted** rather than inherited: an inset's place is
+ * decided by the paragraph it cuts into, so a free position on one would be
+ * two fields that can only disagree with where it actually sets.
+ */
+export interface FigureInset extends Omit<BookFigurePlacement, 'x' | 'y'> {
   place: 'left' | 'right';
   /** The figure element's id, for finding it on the page and in the rail. */
   figureId: string;
@@ -624,6 +654,28 @@ export interface FigureInset extends BookFigurePlacement {
   caption: string;
   decorative: boolean;
 }
+
+/**
+ * A graphic set over the page, taking no room in the flow (§8c).
+ *
+ * It rides on a paragraph for the same reason an inset does — **a page is
+ * not a record**, so a graphic anchored to page nine would be on the wrong
+ * page the moment a word is added. Riding the paragraph puts it wherever
+ * that paragraph falls, which is what makes it survive the writing moving.
+ */
+export interface FigureFree {
+  figureId: string;
+  assetId: string | null;
+  /** Fractions of the page: 0 is its top-left corner, 1 its bottom-right. */
+  x: number;
+  y: number;
+  /** The width as a fraction of the page. The height follows the picture. */
+  span: number;
+  decorative: boolean;
+  caption: string;
+}
+
+export const FREE_SPAN = { min: 0.05, max: 1, default: 0.25 } as const;
 
 export const INSET_SPAN = { min: 0.2, max: 0.6, default: 0.4 } as const;
 export const INSET_STANDOFF = { min: 0, max: 3, default: 1 } as const;
@@ -692,8 +744,15 @@ export const figurePlacement = (element: ManuscriptElement): BookFigurePlacement
   const span = element.attributes.bookSpan;
   const side = element.attributes.bookSide;
   const standoff = element.attributes.bookStandoff;
-  const chosen: FigurePlace = place === 'left' || place === 'right' || place === 'page' ? place : 'measure';
-  const fraction = typeof span === 'number' && Number.isFinite(span) ? Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, span)) : INSET_SPAN.default;
+  const chosen: FigurePlace =
+    place === 'left' || place === 'right' || place === 'page' || place === 'free' ? place : 'measure';
+  // A free graphic's width is a share of the **page** and may be anything
+  // from an ornament to the whole sheet, so it is not held to an inset's
+  // band — the two are different measurements of different things.
+  const band = chosen === 'free' ? FREE_SPAN : INSET_SPAN;
+  const fraction = typeof span === 'number' && Number.isFinite(span) ? Math.min(band.max, Math.max(band.min, span)) : band.default;
+  const place01 = (value: unknown, fallback: number): number =>
+    typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback;
   return {
     place: chosen,
     span: fraction,
@@ -702,6 +761,8 @@ export const figurePlacement = (element: ManuscriptElement): BookFigurePlacement
       typeof standoff === 'number' && Number.isFinite(standoff)
         ? Math.min(INSET_STANDOFF.max, Math.max(INSET_STANDOFF.min, standoff))
         : INSET_STANDOFF.default,
+    x: place01(element.attributes.bookX, 0.1),
+    y: place01(element.attributes.bookY, 0.1),
   };
 };
 
@@ -821,6 +882,8 @@ export const placeBookFigure = (file: ProjectFile, elementId: string, placement:
                 bookSide: _side,
                 bookStandoff: _off,
                 bookBackBlank: _back,
+                bookX: _x,
+                bookY: _y,
                 ...rest
               } = element.attributes;
               if (placement.place === 'measure') return { ...element, attributes: rest };
@@ -829,6 +892,14 @@ export const placeBookFigure = (file: ProjectFile, elementId: string, placement:
                 // A page needs no width and no standoff: it is the page.
                 if (placement.side && placement.side !== 'either') attributes.bookSide = placement.side;
                 if (element.attributes.bookBackBlank === true) attributes.bookBackBlank = true;
+              } else if (placement.place === 'free') {
+                // Where it stands and how wide, and nothing else: a free
+                // graphic is out of the text's way, so it has no side to
+                // take and no standoff to keep (§8c).
+                const held = figurePlacement(element);
+                attributes.bookSpan = Math.min(FREE_SPAN.max, Math.max(FREE_SPAN.min, placement.span ?? held.span));
+                attributes.bookX = Math.min(1, Math.max(0, placement.x ?? held.x));
+                attributes.bookY = Math.min(1, Math.max(0, placement.y ?? held.y));
               } else {
                 attributes.bookSpan = Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, placement.span ?? INSET_SPAN.default));
                 const standoff = Math.min(INSET_STANDOFF.max, Math.max(INSET_STANDOFF.min, placement.standoff ?? INSET_STANDOFF.default));
@@ -1126,6 +1197,8 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   /** On a collection a story's sections are its chapters (addendum 22 §6). */
   const chapters = isCollection(file.project.format);
   let pending: BookBlock | null = null;
+  /** Free graphics waiting for the next block to ride (§8c). */
+  const floating: FigureFree[] = [];
   const elementById = new Map<string, ManuscriptElement>(
     file.beats.flatMap((beat) => beat.manuscript.elements.map((element) => [element.id as string, element] as const)),
   );
@@ -1291,6 +1364,22 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
             pending = made;
             continue;
           }
+          // A free graphic (§8c) waits for a paragraph too, but rides it
+          // without taking a line — it is set over the page rather than in
+          // the text — so several may wait at once and none of them ever
+          // becomes a block of its own.
+          if (placement.place === 'free') {
+            floating.push({
+              figureId: element.id as string,
+              assetId: made.assetId ?? null,
+              x: placement.x,
+              y: placement.y,
+              span: placement.span,
+              decorative: made.decorative === true,
+              caption: made.caption ?? '',
+            });
+            continue;
+          }
         }
         if (pending) {
           if (made.kind === 'paragraph') {
@@ -1310,6 +1399,13 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
             out.push(pending);
           }
           pending = null;
+        }
+        // Whatever is waiting rides the next block that lands on a page,
+        // whether that is a paragraph or a heading — a free graphic asks
+        // nothing of what it sits over.
+        if (floating.length > 0) {
+          made.free = [...floating];
+          floating.length = 0;
         }
         if (made.kind === 'paragraph') opensChapter = false;
         out.push(made);
