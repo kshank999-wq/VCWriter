@@ -25,6 +25,7 @@ import {
   partsOf,
   proseStyleBase,
   publisherOf,
+  setCopyright,
   renderBookPage,
   setTitlePage,
   titlePageContent,
@@ -270,6 +271,155 @@ function Body({
     });
 
   /**
+   * What the copyright page holds, written from here (§16d).
+   *
+   * The publisher, its place and the edition live on **that** record, and
+   * this writes it. §16 offered a button through to it instead, on the
+   * ground that a value should be named once — but a box here writes the
+   * same field, so it *is* named once: one value, two doors, which is what
+   * the handoff's *two-way synced* means and what a route cannot give.
+   */
+  const writeHouse = (patch: { publisher?: string; publisherPlace?: string; edition?: string }) =>
+    onUpdate((current) => {
+      const page = partsOf(current).find((two) => two.kind === 'copyright');
+      if (!page) return current;
+      return updatePart(current, page.id, { copyright: setCopyright(page, current, patch as never).copyright });
+    });
+
+  /**
+   * The control on an element's row. Every one is a **real input**, writing
+   * to wherever that value lives — the book's names, this page's own fields,
+   * or the copyright page's record.
+   */
+  const ElementInput = ({ id }: { id: (typeof TITLE_ELEMENTS)[number]['id'] }) => {
+    if (id === 'title') {
+      // A logotype stands in place of the words, so the row says so rather
+      // than offering a box the page will not print (§16c).
+      if (mode === 'logo') {
+        return (
+          <div className="dp-element-pair">
+            <p className="dp-reads">A logotype stands here. The words are not set.</p>
+            <button type="button" className="ghost small" onClick={() => onPickLogo(partId)}>
+              Another logotype…
+            </button>
+            <button
+              type="button"
+              className="ghost small"
+              onClick={() => onUpdate((current) => updatePart(current, partId, { logoAssetId: null }))}
+            >
+              Set the title instead
+            </button>
+          </div>
+        );
+      }
+      return (
+        <input
+          className="dp-serif-input"
+          aria-label="Book title"
+          placeholder={file.project.title}
+          value={titlePage.title}
+          onChange={(event) => onUpdate((current) => setTitlePage(current, { title: event.target.value }))}
+        />
+      );
+    }
+    if (id === 'subtitle') {
+      return (
+        <input
+          aria-label="Subtitle"
+          placeholder="A novel, Stories — or nothing"
+          value={titlePage.episode}
+          onChange={(event) => onUpdate((current) => setTitlePage(current, { episode: event.target.value }))}
+        />
+      );
+    }
+    if (id === 'author') {
+      return (
+        <input
+          aria-label="Author’s name"
+          placeholder={file.project.author}
+          value={titlePage.author}
+          onChange={(event) => onUpdate((current) => setTitlePage(current, { author: event.target.value }))}
+        />
+      );
+    }
+    if (id === 'contributor') {
+      return (
+        <div className="dp-element-pair">
+          <div className="dp-seg" role="group" aria-label="Which contributor">
+            {(['translator', 'editor'] as const).map((role) => (
+              <button
+                key={role}
+                type="button"
+                className={fields.contributorRole === role ? 'on' : ''}
+                aria-pressed={fields.contributorRole === role}
+                onClick={() => writeFields({ contributorRole: role })}
+              >
+                {role === 'translator' ? 'Translator' : 'Editor'}
+              </button>
+            ))}
+          </div>
+          <input
+            aria-label="Translator or editor"
+            placeholder="Name"
+            value={fields.contributor}
+            onChange={(event) => writeFields({ contributor: event.target.value })}
+          />
+        </div>
+      );
+    }
+    if (id === 'edition') {
+      return (
+        <input
+          aria-label="Edition"
+          placeholder="Second Edition"
+          value={house.edition}
+          onChange={(event) => writeHouse({ edition: event.target.value })}
+        />
+      );
+    }
+    if (id === 'publisher') {
+      const asMark = fields.imprintAssetId !== null;
+      return (
+        <div className="dp-element-pair">
+          <div className="dp-seg" role="group" aria-label="The publisher as a name or a mark">
+            <button
+              type="button"
+              className={asMark ? '' : 'on'}
+              aria-pressed={!asMark}
+              onClick={() => writeFields({ imprintAssetId: null })}
+            >
+              Name
+            </button>
+            <button type="button" className={asMark ? 'on' : ''} aria-pressed={asMark} onClick={() => onPickImprint(partId)}>
+              Logo
+            </button>
+          </div>
+          {asMark ? (
+            <button type="button" className="ghost small dp-grow" onClick={() => onPickImprint(partId)}>
+              Another mark… <span className="muted">SVG, PNG or PDF</span>
+            </button>
+          ) : (
+            <input
+              aria-label="Publisher or imprint name"
+              placeholder="Imprint name"
+              value={house.name}
+              onChange={(event) => writeHouse({ publisher: event.target.value })}
+            />
+          )}
+        </div>
+      );
+    }
+    return (
+      <input
+        aria-label="Publisher location"
+        placeholder="City, State"
+        value={house.place}
+        onChange={(event) => writeHouse({ publisherPlace: event.target.value })}
+      />
+    );
+  };
+
+  /**
    * Where this page falls in the book, for the navigator — a **reading** of
    * the laid pages rather than a number kept anywhere, so adding a page in
    * front of it moves it with nothing run.
@@ -384,131 +534,43 @@ function Body({
               ))}
             </div>
             {showElements ? (
-              /* The seven elements (§16). Each row says where its words come
-                 from, because six of the seven are read from somewhere that
-                 already held them — a box here for any of those would be a
-                 second answer to what the book is called, who published it or
-                 which edition this is. */
-              <ul className="dp-elements">
-                {TITLE_ELEMENTS.map((one) => {
-                  const required = one.id === 'title' || one.id === 'author';
-                  const on = required || fields.shows[one.id as TitlePageElement];
-                  const words =
-                    one.id === 'title'
-                      ? said.title
-                      : one.id === 'author'
-                        ? said.author
-                        : one.id === 'subtitle'
-                          ? titlePage.episode
-                          : one.id === 'contributor'
-                            ? fields.contributor
-                            : one.id === 'edition'
-                              ? house.edition
-                              : one.id === 'publisher'
-                                ? house.name
-                                : house.place;
-                  return (
-                    <li key={one.id} className={on ? 'dp-element' : 'dp-element off'}>
-                      <div className="dp-element-head">
-                        {required ? (
-                          <span className="dp-required">REQUIRED</span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="dp-switch"
-                            role="switch"
-                            aria-checked={on}
-                            aria-label={`Show the ${one.label.toLowerCase()}`}
-                            onClick={() => show(one.id as TitlePageElement, !on)}
-                          >
-                            <span className={on ? 'dp-switch-track on' : 'dp-switch-track'} aria-hidden="true">
-                              <span />
-                            </span>
-                          </button>
-                        )}
-                        <strong>{one.label}</strong>
-                        <span className="muted small">{one.note}</span>
-                      </div>
-                      {on ? (
-                        one.id === 'title' && mode === 'logo' ? (
-                          /* A logotype stands where the title would (§16c), so
-                             the row says what will print rather than showing
-                             words the page does not set. */
-                          <div className="dp-element-pair">
-                            <p className="dp-reads">A logotype stands here. The words are not set.</p>
-                            <button type="button" className="ghost small" onClick={() => onPickLogo(partId)}>
-                              Another logotype…
-                            </button>
+              <>
+                {/* The handoff's own line. It is the argument for the two
+                    boxes below being real: the title and the author are one
+                    value with two doors, not two answers. */}
+                <p className="muted small dp-sync">Title and author stay in sync with Book settings.</p>
+                <ul className="dp-elements">
+                  {TITLE_ELEMENTS.map((one) => {
+                    const required = one.id === 'title' || one.id === 'author';
+                    const on = required || fields.shows[one.id as TitlePageElement];
+                    return (
+                      <li key={one.id} className={on ? 'dp-element' : 'dp-element off'}>
+                        <div className="dp-element-head">
+                          {required ? (
+                            <span className="dp-required">REQUIRED</span>
+                          ) : (
                             <button
                               type="button"
-                              className="ghost small"
-                              onClick={() => onUpdate((current) => updatePart(current, partId, { logoAssetId: null }))}
+                              className="dp-switch"
+                              role="switch"
+                              aria-checked={on}
+                              aria-label={`Show the ${one.label.toLowerCase()}`}
+                              onClick={() => show(one.id as TitlePageElement, !on)}
                             >
-                              Set the title instead
+                              <span className={on ? 'dp-switch-track on' : 'dp-switch-track'} aria-hidden="true">
+                                <span />
+                              </span>
                             </button>
-                          </div>
-                        ) : one.id === 'contributor' ? (
-                          <div className="dp-element-pair">
-                            <div className="dp-seg" role="group" aria-label="Which contributor">
-                              {(['translator', 'editor'] as const).map((role) => (
-                                <button
-                                  key={role}
-                                  type="button"
-                                  className={fields.contributorRole === role ? 'on' : ''}
-                                  aria-pressed={fields.contributorRole === role}
-                                  onClick={() => writeFields({ contributorRole: role })}
-                                >
-                                  {role === 'translator' ? 'Translator' : 'Editor'}
-                                </button>
-                              ))}
-                            </div>
-                            <input
-                              aria-label="Translator or editor"
-                              placeholder="Name"
-                              value={fields.contributor}
-                              onChange={(event) => writeFields({ contributor: event.target.value })}
-                            />
-                          </div>
-                        ) : one.id === 'subtitle' ? (
-                          <input
-                            aria-label="Subtitle"
-                            placeholder="A subtitle — A novel, Stories — or nothing"
-                            value={titlePage.episode}
-                            onChange={(event) => onUpdate((current) => setTitlePage(current, { episode: event.target.value }))}
-                          />
-                        ) : one.id === 'publisher' ? (
-                          <div className="dp-element-pair">
-                            <p className="dp-reads">{fields.imprintAssetId ? 'A mark stands in place of the name.' : words || 'Not named yet'}</p>
-                            <button type="button" className="ghost small" onClick={() => onPickImprint(partId)}>
-                              {fields.imprintAssetId ? 'Another mark…' : 'Use a mark…'}
-                            </button>
-                            {fields.imprintAssetId ? (
-                              <button type="button" className="ghost small" onClick={() => writeFields({ imprintAssetId: null })}>
-                                Set the name instead
-                              </button>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <div className="dp-element-pair">
-                            <p className="dp-reads">{words || 'Not given yet'}</p>
-                            {/* A route rather than a second box (§15c): the
-                                publisher and the edition are typed on the
-                                copyright page, and a book naming two
-                                publishers is a mistake, not a design. */}
-                            <button
-                              type="button"
-                              className="ghost small"
-                              onClick={() => (one.from === 'copyright' ? onOpenCopyright() : onOpenBookSettings())}
-                            >
-                              {one.from === 'copyright' ? 'Edit on the copyright page' : 'Edit in Book settings'}
-                            </button>
-                          </div>
-                        )
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
+                          )}
+                          <strong>{one.label}</strong>
+                          <span className="muted small">{one.note}</span>
+                        </div>
+                        {on ? <ElementInput id={one.id} /> : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
             ) : mode === 'text' ? (
               <div className="dp-slot">
                 <div>
@@ -922,10 +984,17 @@ function Body({
             No publisher name or mark — fine for self-publishing, but most title pages carry one
           </span>
         ) : (
-          <span className={changes > 0 ? 'dp-status dp-status-off' : 'dp-status dp-status-on'}>
+          <span className="dp-status dp-status-on">
+            {/* The handoff's own wording on the title page: what the page
+                *has* first, and how far it has been taken as a clause after
+                it — a page that is complete should say so, not lead with an
+                arithmetic nobody asked about. */}
+            {isTitle ? 'All required elements present' : changes > 0 ? '' : `Matches the ${half === 'front matter' ? 'front-matter' : 'back-matter'} style`}
             {changes > 0
-              ? `${changes} change${changes === 1 ? '' : 's'} from the ${half === 'front matter' ? 'front-matter' : 'back-matter'} style`
-              : `Matches the ${half === 'front matter' ? 'front-matter' : 'back-matter'} style`}
+              ? `${isTitle ? ' · ' : ''}${changes} change${changes === 1 ? '' : 's'} from the ${
+                  half === 'front matter' ? 'front-matter' : 'back-matter'
+                } style`
+              : ''}
           </span>
         )}
         <span className="dp-spacer" />

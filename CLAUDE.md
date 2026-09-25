@@ -1817,6 +1817,32 @@ push live; the build takes a minute or two.
   §15c and §16b found ways *in* that missed the new screen, this a state *of*
   it that showed none of it, and all three read identically from the writer's
   chair while the feature was there and working.
+  **§16d is that a route is not a field**, from Ken re-sending the handoff
+  unchanged (*here is what it is supposed to be*), and the divergence was one
+  decision of mine: **§16 made six of the seven rows read-only** with a button
+  through to wherever the value is typed, on the ground that a value should be
+  named once, where the handoff's §8.1 asks in plain words for *editing the
+  title or author here updates Book settings, and the reverse*. **Two-way sync
+  is not a second answer** — a box on the row writes the **same field**, so
+  there is one value with two doors — and what I built was a misapplication
+  rather than a stricter reading: §15c's *route rather than a second copy* is
+  about **screens** (do not build a second panel that sets the same thing) and
+  says nothing against a second control onto one field. A route in a row's
+  place cannot show the value as an editable thing, throws the writer out of
+  the page they are setting, and makes a seven-row panel a list of links. Every
+  row is a real input now, writing where the value lives — title, subtitle and
+  author through `setTitlePage` (the call Book settings makes), the contributor
+  onto this page's record, the publisher, place and edition onto the copyright
+  page's — with the handoff's **Name / Logo** pair and its *Title and author
+  stay in sync with Book settings* line, which is the argument for the boxes
+  said on the screen. **And *Flush left* is built after all**: §16 dropped it
+  as §9n's conflation returning, and the way to keep both is to make the
+  **reading** ask all three numbers rather than to drop the arrangement —
+  Classic is 30/52 centred and Flush left is 30/52 left, so each names one
+  whole arrangement, nothing is stored, the alignment keeps its own control,
+  and ranging a Classic page left reads as *Flush left*, which is what it now
+  is. The lesson beside §16b's: **a rule about screens is not a rule about
+  controls**, and applied one level down it turned a panel into a set of doors.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

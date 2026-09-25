@@ -124,17 +124,20 @@ describe('where the title and the author sit', () => {
     // Classic and Stacked disagree only about the author, so a reading that
     // asked the title's height alone would call them the same thing.
     expect(TITLE_TEMPLATE_WORDS.classic.drop).not.toBe(TITLE_TEMPLATE_WORDS.stacked.drop);
-    expect(titleTemplateOf({ drop: 30, authorDrop: null })).toBeNull();
-    expect(titleTemplateOf({ drop: 30, authorDrop: 52 })).toBe('classic');
+    expect(titleTemplateOf({ drop: 30, authorDrop: null, align: 'center' })).toBeNull();
+    expect(titleTemplateOf({ drop: 30, authorDrop: 52, align: 'center' })).toBe('classic');
   });
 
-  it('offers no template that ranges the page, the alignment being its own control', () => {
-    // The handoff's fourth — *Flush left* — is Classic's heights ranged left,
-    // which is the conflation §9n took out. Keeping it would mean choosing a
-    // template moved the page across as well as down.
-    expect(TITLE_TEMPLATES).toEqual(['classic', 'stacked', 'high']);
+  it('names Flush left as its own arrangement rather than storing a word', () => {
+    // §9n's rule is kept by having the **reading** ask all three numbers:
+    // Classic is 30/52 centred and Flush left is 30/52 left, so each names
+    // one whole arrangement and choosing one cannot leave a stored word
+    // disagreeing with where the page sits.
+    expect(TITLE_TEMPLATES).toEqual(['classic', 'stacked', 'high', 'flush_left']);
     const ranged = { ...partStyleOf(titlePart(book())), ...titleTemplatePatch('classic'), align: 'left' as const };
-    expect(titleTemplateOf(ranged)).toBe('classic');
+    expect(titleTemplateOf(ranged)).toBe('flush_left');
+    // Anything the four do not name is custom, said rather than guessed at.
+    expect(titleTemplateOf({ drop: 30, authorDrop: 52, align: 'right' })).toBeNull();
   });
 });
 

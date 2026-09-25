@@ -2315,6 +2315,51 @@ state *of* the new screen that showed none of it. All three read identically
 from the writer's chair — the feature is not there — and in all three the
 feature was there and working.
 
+## 16d. A route is not a field
+
+From Ken, re-sending the handoff unchanged: *here is what it is supposed to
+be.* Comparing it against what shipped, the divergence is one decision of
+mine and it was wrong.
+
+**§16 made six of the seven rows read-only**, each with a button through to
+wherever the value is typed — *Edit in Book settings*, *Edit on the
+copyright page* — on the ground that a value should be named once. The
+handoff's §8.1 asks for the opposite in plain words: *editing the title or
+author here updates Book settings, and the reverse.*
+
+**And two-way sync is not a second answer.** A box on this row writes the
+**same field** Book settings writes; there is still one value, with two
+doors. What I built was not a stricter reading of *named once* but a
+misapplication of it: §15c's *route rather than a second copy* is about
+**screens** — do not build a second panel that sets the same thing — and
+says nothing against a second control onto one field. A route in a row's
+place is worse on every count: it cannot show the value as an editable
+thing, it throws the writer out of the page they are setting, and it makes a
+seven-row panel into a list of links.
+
+So every row is a real input now, each writing where that value lives: the
+title, the subtitle and the author through `setTitlePage` (the call Book
+settings makes), the contributor onto this page's own record, and the
+publisher, its place and the edition onto the copyright page's — which is
+still the one place each is stored, and is now reachable from both.
+
+The publisher takes the handoff's **Name / Logo** pair rather than a button
+beside the name, and the header carries its line: *Title and author stay in
+sync with Book settings*, which is the argument for the boxes said on the
+screen.
+
+**And *Flush left* is built after all.** §16 dropped it as §9n's conflation
+returning — a template that ranges the page as well as placing it. The way
+to keep both is to make the **reading** ask all three numbers rather than to
+drop the arrangement: Classic is 30/52 centred and Flush left is 30/52 left,
+so each names one whole arrangement, nothing is stored, the alignment keeps
+its own control, and ranging a Classic page left reads as *Flush left* —
+which is what it now is. Anything the four do not name is *Custom*.
+
+The lesson is narrower than §16b's and worth keeping beside it: **a rule
+about screens is not a rule about controls.** Applied one level down it
+turned a panel into a set of doors.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

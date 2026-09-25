@@ -16264,7 +16264,10 @@ dialog.designed-page-dialog[open] {
 
 /* The title as it will print, in the reading face: the writer is choosing
    how a name looks, so the name is shown as a name and not as a field. */
-.dp-serif {
+/* The book's own name, in the face it is read in — on the line that shows it
+   and in the box that types it, one rule so the two cannot drift. */
+.dp-serif,
+.dp-serif-input {
   font-family: var(--reading-face, Georgia, serif);
   font-size: 18px;
 }
@@ -16644,9 +16647,20 @@ dialog.designed-page-dialog[open] {
   box-sizing: border-box;
 }
 
-/* What the page will say, read from wherever it is typed. Not a box: six of
-   the seven are the book's or the copyright page's, and a box here would be
-   a second answer to what the book is called. */
+/* A control that fills the rest of its row beside a segmented pair. */
+.dp-grow {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+/* The handoff's line under the section heading (§16d). */
+.dp-sync {
+  margin: 0;
+}
+
+/* What the page will say where there is no box for it — a logotype standing
+   in place of the title. */
 .dp-reads {
   flex: 1 1 auto;
   min-width: 0;

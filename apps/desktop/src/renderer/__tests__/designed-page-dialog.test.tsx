@@ -6,7 +6,9 @@ import {
   createProjectFile,
   partStyleOf,
   partTemplateOf,
+  bookNames,
   partsOf,
+  publisherOf,
   setBookSettings,
   updatePart,
   setTitlePage,
@@ -185,12 +187,32 @@ describe('the title page', () => {
     expect(document.querySelectorAll('.dp-required')).toHaveLength(2);
   });
 
-  it('sends a writer to the copyright page for the publisher rather than offering a box', () => {
-    const picked: string[] = [];
-    render(<Harness kind="title_page" picked={picked} start={withHouse} />);
-    // A route rather than a second copy: one place names the publisher.
-    fireEvent.click(screen.getAllByRole('button', { name: 'Edit on the copyright page' })[0]!);
-    expect(picked).toEqual(['copyright']);
+  /**
+   * **Every row is a real box** (§16d, the handoff's §8.1: *editing the title
+   * or author here updates Book settings, and the reverse*).
+   *
+   * §16 offered buttons through to Book settings and the copyright page
+   * instead, on the ground that a value should be named once. But a box here
+   * writes the **same field**, so it is still named once: one value with two
+   * doors, which is what two-way sync means and what a route cannot give.
+   */
+  it('types the title here and the book is renamed, which is the sync', () => {
+    let seen: ProjectFile | null = null;
+    render(<Harness kind="title_page" onFile={(file) => (seen = file)} start={withHouse} />);
+    fireEvent.change(screen.getByLabelText('Book title'), { target: { value: 'The Lamp' } });
+    // The same field Book settings writes, so the two cannot disagree.
+    expect((seen as unknown as ProjectFile).settings.titlePage.title).toBe('The Lamp');
+    expect(bookNames(seen as unknown as ProjectFile).title).toBe('The Lamp');
+  });
+
+  it('types the publisher here and the copyright page has it', () => {
+    let seen: ProjectFile | null = null;
+    render(<Harness kind="title_page" onFile={(file) => (seen = file)} start={withHouse} />);
+    fireEvent.change(screen.getByLabelText('Publisher or imprint name'), { target: { value: 'Lamplight' } });
+    fireEvent.change(screen.getByLabelText('Publisher location'), { target: { value: 'Hull' } });
+    const house = publisherOf(seen as unknown as ProjectFile, partsOf(seen as unknown as ProjectFile));
+    expect(house.name).toBe('Lamplight');
+    expect(house.place).toBe('Hull');
   });
 
   it('keeps an element’s words when it is switched off', () => {
@@ -214,9 +236,13 @@ describe('the title page', () => {
     fireEvent.click(screen.getByRole('button', { name: /Classic/ }));
     expect(screen.getByLabelText('Author height')).toBeTruthy();
     expect(titleTemplateOf(partStyleOf(titlePage(seen as unknown as ProjectFile)))).toBe('classic');
-    // The alignment is its own control, so ranging it left is still Classic.
+    // The alignment keeps its own control, and the reading asks all three
+    // numbers: Classic ranged left **is** Flush left, which is the handoff's
+    // fourth arrangement rather than a page nobody can name.
     fireEvent.click(screen.getByRole('button', { name: 'Left' }));
-    expect(titleTemplateOf(partStyleOf(titlePage(seen as unknown as ProjectFile)))).toBe('classic');
+    expect(titleTemplateOf(partStyleOf(titlePage(seen as unknown as ProjectFile)))).toBe('flush_left');
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    expect(titleTemplateOf(partStyleOf(titlePage(seen as unknown as ProjectFile)))).toBeNull();
   });
 
   it('says a missing publisher rather than refusing it', () => {

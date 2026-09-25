@@ -155,45 +155,79 @@ export const titlePageShown = (part: Pick<BookPart, 'titlePage'>): number =>
   2 + TITLE_PAGE_OPTIONAL.filter((one) => titlePageFieldsOf(part).shows[one]).length;
 
 /**
- * **Where the title and the author sit**, as the three arrangements a
- * compositor names.
+ * **Where the title and the author sit**, as the four arrangements the
+ * handoff names.
  *
- * The handoff lists four, the fourth being *Flush left* — Classic's heights,
- * ranged left. That is the very conflation §9n took out: a template is
- * **where the block sits down the page**, the alignment is its own control
- * beside it, and a page ranged left at Classic's heights is still Classic.
- * Offering it as a fourth template would mean choosing a template moved the
- * page across as well as down, and ranging a page left would make it
- * *Custom* though nothing about its heights had changed.
+ * Three place the block down the page and the fourth, *Flush left*, is
+ * Classic's heights ranged left. §9n's rule — a template is a height, the
+ * alignment is its own control — is kept by having the **reading** ask all
+ * three numbers rather than by dropping the arrangement: Classic is 30/52
+ * centred and Flush left is 30/52 left, so each names one whole arrangement
+ * and nothing is stored. Ranging a Classic page left reads as *Flush left*,
+ * which is what it now is; the alignment control stays beside them and any
+ * other combination reads as *Custom*.
  */
-export const TITLE_TEMPLATES = ['classic', 'stacked', 'high'] as const;
+export const TITLE_TEMPLATES = ['classic', 'stacked', 'high', 'flush_left'] as const;
 export type TitleTemplate = (typeof TITLE_TEMPLATES)[number];
 
 export const TITLE_TEMPLATE_WORDS: Record<
   TitleTemplate,
-  { name: string; says: string; drop: number; authorDrop: number | null }
+  { name: string; says: string; drop: number; authorDrop: number | null; align: 'left' | 'center' | 'right' }
 > = {
-  classic: { name: 'Classic', says: 'The title a third down, the author well below it.', drop: 30, authorDrop: 52 },
-  stacked: { name: 'Stacked', says: 'The author directly under the title, as one block.', drop: 36, authorDrop: null },
-  high: { name: 'Set high', says: 'Both placed high, the space beneath doing the work.', drop: 20, authorDrop: 36 },
+  classic: {
+    name: 'Classic',
+    says: 'The title a third down, the author well below it.',
+    drop: 30,
+    authorDrop: 52,
+    align: 'center',
+  },
+  stacked: {
+    name: 'Stacked',
+    says: 'The author directly under the title, as one block.',
+    drop: 36,
+    authorDrop: null,
+    align: 'center',
+  },
+  high: {
+    name: 'Set high',
+    says: 'Both placed high, the space beneath doing the work.',
+    drop: 20,
+    authorDrop: 36,
+    align: 'center',
+  },
+  flush_left: {
+    name: 'Flush left',
+    says: 'Classic’s heights, ranged to the left margin.',
+    drop: 30,
+    authorDrop: 52,
+    align: 'left',
+  },
 };
 
 /**
  * Which arrangement the page is in, or null where it was placed by hand —
- * a **reading** of the two heights, never a stored word, so dragging either
- * slider makes the page *Custom* by itself (§9n, `bookPresetOf`'s rule).
+ * a **reading** of the two heights and the alignment, never a stored word,
+ * so moving either slider makes the page *Custom* by itself (§9n,
+ * `bookPresetOf`'s rule).
  *
- * It asks the **pair**, because on this page one height does not describe the
+ * It asks all three, because on this page no one of them describes the
  * arrangement: a title at 30% tells you nothing about whether the author is
- * under it or half a page below.
+ * under it or half a page below, and Classic and Flush left differ only in
+ * where they are ranged.
  */
-export const titleTemplateOf = (style: Pick<PartStyle, 'drop' | 'authorDrop'>): TitleTemplate | null =>
+export const titleTemplateOf = (style: Pick<PartStyle, 'drop' | 'authorDrop' | 'align'>): TitleTemplate | null =>
   TITLE_TEMPLATES.find(
-    (one) => TITLE_TEMPLATE_WORDS[one].drop === style.drop && TITLE_TEMPLATE_WORDS[one].authorDrop === (style.authorDrop ?? null),
+    (one) =>
+      TITLE_TEMPLATE_WORDS[one].drop === style.drop &&
+      TITLE_TEMPLATE_WORDS[one].authorDrop === (style.authorDrop ?? null) &&
+      TITLE_TEMPLATE_WORDS[one].align === style.align,
   ) ?? null;
 
-/** The arrangement's two heights, as a patch: the alignment and the type are kept. */
-export const titleTemplatePatch = (template: TitleTemplate): Pick<PartStyle, 'drop' | 'authorDrop'> => ({
+/** The arrangement whole: its two heights and where it is ranged. */
+export const titleTemplatePatch = (
+  template: TitleTemplate,
+): Pick<PartStyle, 'drop' | 'authorDrop' | 'align'> => ({
   drop: TITLE_TEMPLATE_WORDS[template].drop,
   authorDrop: TITLE_TEMPLATE_WORDS[template].authorDrop,
+  align: TITLE_TEMPLATE_WORDS[template].align,
 });
