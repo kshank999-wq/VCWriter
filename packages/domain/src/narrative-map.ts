@@ -39,8 +39,15 @@ export interface GraphNode {
   name: string;
   /** Column: how many choices from a start, at the shortest. */
   column: number;
-  /** Row within the column, from the top. */
+  /** Row within the column, from the top. The spine's lane is `laneRow`. */
   row: number;
+  /**
+   * Where the node sits against the central lane (addendum 25 §4.3): 0 is the
+   * lane, negative is above it and positive below, counted outwards.
+   */
+  offset: number;
+  /** Which side of the lane: the spine runs through the middle. */
+  lane: 'spine' | 'above' | 'below';
   /** On the spine — bound to a beat that is in the script (§3). */
   onSpine: boolean;
   /** Where it falls in the script, one-based, or null where it is not on the spine. */
@@ -86,6 +93,8 @@ export interface NarrativeMap {
   rows: number;
   /** Nodes nothing reaches, which are laid out after everything else. */
   strandedCount: number;
+  /** The row the spine runs along, with branches above and below it. */
+  laneRow: number;
 }
 
 export interface GraphFilter {
@@ -182,10 +191,12 @@ const near = (
  *
  * Columns are `depths` — how many choices from a start — because that is the
  * one ordering a branching graph actually has. Within a column, the **spine
- * comes first and in the script's own order**, which is §1's *primary path*
- * drawn rather than declared: a designer reading left to right along the top
- * row is reading their story. Everything else follows, ordered by where it is
- * reached from, so a branch sits near what it branches off.
+ * takes the central lane, in the script's own order**, which is §1's *primary
+ * path* drawn rather than declared: a designer reading left to right along the
+ * lane is reading their story (addendum 25 §4.3 moved it from the top row to
+ * the middle, at Ken's asking). Everything else is stacked above and below,
+ * ordered by where it is reached from, so a branch sits near what it branches
+ * off and on the side it left by.
  *
  * A node nothing reaches has no depth, so it is placed in a column of its own
  * at the end and drawn stranded. **Placed rather than dropped**: §4's finding
@@ -216,12 +227,16 @@ export const narrativeMap = (file: ProjectFile, filter: GraphFilter = {}): Narra
   // sits under what it branches off rather than wherever it happened to be
   // created.
   const firstParent = new Map<string, number>();
+  const parentOf = new Map<string, string>();
   for (const choice of choicesOf(file)) {
     if (!choice.toElementId) continue;
     const to = choice.toElementId as string;
     const from = rank.get(choice.elementId as string);
     if (from === undefined) continue;
-    firstParent.set(to, Math.min(firstParent.get(to) ?? Number.POSITIVE_INFINITY, from));
+    if (from < (firstParent.get(to) ?? Number.POSITIVE_INFINITY)) {
+      firstParent.set(to, from);
+      parentOf.set(to, choice.elementId as string);
+    }
   }
 
   const strandedColumn = Math.max(0, ...[...rank.values()].map((one) => one + 1), 0);
@@ -237,6 +252,15 @@ export const narrativeMap = (file: ProjectFile, filter: GraphFilter = {}): Narra
   const nodes: GraphNode[] = [];
   /** Node id → its beat's place, for the one question `scenePosition` cannot answer. */
   const onSpine = new Map<string, number>();
+  /**
+   * The spine runs through the middle and branches leave it above and below
+   * (addendum 25 §4.3). A branch keeps to the side its parent is on, so a line
+   * that leaves the lane upwards carries on upwards until it comes back, and a
+   * branch straight off the spine takes the next side in turn — above first,
+   * because the Player Lane sits directly under the spine.
+   */
+  const sideOf = new Map<string, number>();
+  let nextSide = -1;
   for (const [column, members] of [...byColumn.entries()].sort((a, b) => a[0] - b[0])) {
     const ordered = [...members].sort((a, b) => {
       const spineA = script.get(a.boundBeatId as string) ?? null;
@@ -252,16 +276,36 @@ export const narrativeMap = (file: ProjectFile, filter: GraphFilter = {}): Narra
       return a.createdAt.localeCompare(b.createdAt);
     });
 
-    for (const [row, element] of ordered.entries()) {
+    const taken = new Set<number>();
+    for (const element of ordered) {
       const offered = choicesAt(file, element.id);
       const place = element.boundBeatId ? (script.get(element.boundBeatId as string) ?? null) : null;
       if (place) onSpine.set(element.id as string, place.beat);
+      let offset: number;
+      if (place && !taken.has(0)) {
+        offset = 0;
+      } else {
+        const parent = parentOf.get(element.id as string);
+        const inherited = parent !== undefined ? (sideOf.get(parent) ?? 0) : 0;
+        let side = inherited;
+        if (side === 0) {
+          side = nextSide;
+          nextSide = -nextSide;
+        }
+        let step = 1;
+        while (taken.has(side * step)) step += 1;
+        offset = side * step;
+      }
+      taken.add(offset);
+      sideOf.set(element.id as string, Math.sign(offset));
       nodes.push({
         element,
         kind: element.kind,
         name: element.name,
         column,
-        row,
+        row: offset,
+        offset,
+        lane: offset === 0 ? 'spine' : offset < 0 ? 'above' : 'below',
         onSpine: place !== null,
         scenePosition: place?.scene ?? null,
         stranded: !found.has(element.id as string),
@@ -274,6 +318,11 @@ export const narrativeMap = (file: ProjectFile, filter: GraphFilter = {}): Narra
       });
     }
   }
+
+  // Rows counted from the top: the highest branch is row 0 and the lane sits
+  // as far down as the tallest stack above it.
+  const laneRow = nodes.length === 0 ? 0 : -Math.min(0, ...nodes.map((one) => one.offset));
+  for (const node of nodes) node.row = node.offset + laneRow;
 
   const placed = new Map(nodes.map((one) => [one.element.id as string, one]));
   const links: GraphLink[] = [];
@@ -305,6 +354,7 @@ export const narrativeMap = (file: ProjectFile, filter: GraphFilter = {}): Narra
     columns: nodes.length === 0 ? 0 : Math.max(...nodes.map((one) => one.column)) + 1,
     rows: nodes.length === 0 ? 0 : Math.max(...nodes.map((one) => one.row)) + 1,
     strandedCount: nodes.filter((one) => one.stranded).length,
+    laneRow,
   };
 };
 
@@ -314,7 +364,7 @@ export const narrativeMap = (file: ProjectFile, filter: GraphFilter = {}): Narra
 export const describeGraph = (file: ProjectFile, map: NarrativeMap): string => {
   if (map.nodes.length === 0) {
     return elementsOf(file).length === 0
-      ? 'Nothing on the board yet. Add a node to start the graph.'
+      ? 'Nothing on the board yet. Drop a scene into the lane to start the story.'
       : 'Nothing matches that.';
   }
   const parts = [

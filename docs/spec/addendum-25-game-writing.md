@@ -18,7 +18,7 @@ The two specs are kept beside this addendum as
 [`game-studio-spec-v1.md`](game-studio-spec-v1.md). The Game Studio spec
 calls the narrative module *VC Rider*; it is this one.
 
-**Status: stage 0 built.** §9 is the build order.
+**Status: stages 0 and 1 built.** §9 is the build order; §12 says what each built stage does.
 
 ---
 
@@ -411,3 +411,62 @@ the file.
 2. **Where the Game Bible sits beside Research.** §4.1 folds research into the
    Bible's side menu for a game. The alternative is two rooms. One is simpler
    for a game writer; two keeps Research identical across formats.
+
+---
+
+## 12. What the built stages do
+
+### Stage 0 — the file keeps what Game Studio writes
+
+`entities/implementation.ts` and `implementation.ts`, as §2 describes.
+`implementationBindings` is a collection the file names, so a Save carries it;
+`sourceType`, `engine` and `target` are free text, so a newer Game Studio
+cannot make a file fail to open here. Status is read every time from the
+binding and the record it points at. `fingerprintOf` is synchronous and pure
+so that reading can happen anywhere, and leaves out `createdAt` and
+`updatedAt` so a touch is not a change.
+
+### Stage 1 — the central lane
+
+`narrative-map.ts`, `narrative-lane.ts`, and the map room.
+
+**The layout rule is unchanged, only where rows go.** Columns are still
+`depths`. What moved is the spine: from the top row to a lane through the
+middle, with `offset` 0 for the lane and branches counted outwards, negative
+above and positive below. `row` is still what the screen draws from, now
+measured from the highest branch, and `laneRow` says which row the lane is.
+A branch **keeps to the side its parent is on**, so a line that leaves the
+lane upwards carries on upwards until it comes back; a branch straight off
+the spine takes the next side in turn, above first, because the Player Lane
+will sit directly under the spine.
+
+**A drop writes the words' home first and the node second.**
+`dropIntoLane` makes the scene (and its one beat) in the story order at the
+slot, or for a beat card, a beat at the end of the scene to the left, then a
+node bound to it. `dropOnConnection` does the same after the scene the
+connection leaves from. Neither stores a position; both are edits to the
+story, and the map places the result.
+
+**Splicing keeps the designer's work.** Dropped onto a connection, the
+**same choice** now leads to the new node, with its text, conditions and
+effects untouched, and the new node carries on to where it went. Dropped
+into the lane between two connected scenes, every choice between them does
+the same. Where two scenes were **not** connected, nothing is guessed. Two
+edges of the story get one more rule each, because dropping scene after
+scene onto the end of the lane is the most ordinary thing a writer will do:
+at the end, a scene with no way on and not meant to stop gets one, to the new
+scene; at the start, the new scene takes over *starts here* and leads to what
+had it.
+
+On the screen, the tray is two raised buttons in the bar, *New scene* and
+*New beat*. A card is dragged, or tapped and then placed, which is the same
+drop for a touch screen and for anybody who would rather not drag. While a
+card is carried the gold marks appear: a slot before the first scene and
+after each one in the lane, and one on every connection off the spine. **Not
+on the spine's own line**, where the lane's slot is the same drop in the same
+place, and not on a line back, which dips under the board and has no middle
+worth aiming at. That one came from driving the real renderer: with both, two
+marks sat on top of each other on every spine connection, and one floated in
+empty space over a loop. Escape puts the card back. An empty board now draws
+the lane, with a single *Start the story* mark, rather than a sentence and
+nothing to aim at.

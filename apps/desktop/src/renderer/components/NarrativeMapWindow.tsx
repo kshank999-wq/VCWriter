@@ -10,6 +10,9 @@ import {
   choicesFor,
   describeGraph,
   describeNode,
+  dropIntoLane,
+  dropOnConnection,
+  laneSlots,
   findElement,
   findingsAt,
   narrativeMap,
@@ -26,6 +29,9 @@ import {
   type Effect,
   type GraphLink,
   type GraphNode,
+  type LaneCard,
+  type ChoiceId,
+  type StructuralUnitId,
   type NarrativeElementId,
   type NarrativeKind,
   type ProjectFile,
@@ -42,8 +48,14 @@ import {
  * says so rather than leaving somebody hunting for the handle.
  *
  * Every mark on it is a reading: the columns are how many choices from a start,
- * the top row is the spine in the script's order, the badge is stage 3's
- * findings, and the ring is a node nothing reaches. Nothing here is stored.
+ * the central lane is the spine in the script's order with branches above and
+ * below it (addendum 25 §4.3), the badge is stage 3's findings, and the ring is
+ * a node nothing reaches. Nothing here is stored.
+ *
+ * The one thing that moves is a **card from the tray**, and it is not a
+ * position: dropping *New scene* into the lane writes a scene into the story
+ * order there, and dropping one on a connection splices a node into it. The
+ * layout is then read from the new graph like any other.
  */
 
 const COLUMN = 240;
@@ -74,6 +86,17 @@ const KINDS = Object.keys(KIND_WORDS) as NarrativeKind[];
  */
 const clip = (text: string, most: number): string =>
   text.length > most ? `${text.slice(0, most - 1).trimEnd()}…` : text;
+
+/** How far the lane's band reaches past a card above and below. */
+const LANE_PAD = 14;
+
+const CARD_WORDS: Record<LaneCard, string> = { scene: 'New scene', beat: 'New beat' };
+const CARD_TIPS: Record<LaneCard, string> = {
+  scene: 'Drag into the lane to write a new scene into the story there, or onto a connection to put one in between',
+  beat: 'Drag into the lane to add a beat to the scene on its left, or onto a connection to put one in between',
+};
+/** The drag's own type, so a file or text dragged in from outside is not a card. */
+const DRAG_TYPE = 'application/x-vcwriter-lane-card';
 
 const xOf = (node: GraphNode): number => MARGIN + node.column * COLUMN;
 const yOf = (node: GraphNode): number => MARGIN + node.row * ROW;
@@ -139,6 +162,12 @@ export function NarrativeMapWindow({
   const [walkingId, setWalkingId] = useState<SimulationRunId | null>(null);
   /** Which choice has its rule open. One at a time: three WHENs is a wall. */
   const [openRule, setOpenRule] = useState<string | null>(null);
+  /**
+   * A tray card on its way into the lane: being dragged, or tapped and waiting
+   * for a place — the same drop by touch, or for anybody who would rather not
+   * drag.
+   */
+  const [carrying, setCarrying] = useState<LaneCard | null>(null);
 
   const map = useMemo(
     () =>
@@ -172,6 +201,15 @@ export function NarrativeMapWindow({
     }
   }, [selectedId, map]);
 
+  useEffect(() => {
+    if (!carrying) return;
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setCarrying(null);
+    };
+    window.addEventListener('keydown', cancel);
+    return () => window.removeEventListener('keydown', cancel);
+  }, [carrying]);
+
   // Where the player is standing and which connections they came along. A
   // reading of the run like every other reading here, so stepping back on the
   // panel un-draws the last line with nothing told to do it.
@@ -186,7 +224,7 @@ export function NarrativeMapWindow({
 
   if (!open) return null;
 
-  const width = MARGIN * 2 + Math.max(1, map.columns) * COLUMN;
+  const width = MARGIN * 2 + Math.max(1, map.columns) * COLUMN + MARGIN;
   const height = MARGIN * 2 + Math.max(1, map.rows) * ROW;
   const placed = new Map(map.nodes.map((one) => [one.element.id as string, one]));
 
@@ -203,6 +241,45 @@ export function NarrativeMapWindow({
     if (made) setSelectedId(made);
   };
 
+  const drop = (target: { afterUnitId: StructuralUnitId | null } | { choiceId: ChoiceId }, card: LaneCard): void => {
+    let made: NarrativeElementId | null = null;
+    onUpdate((current) => {
+      const next =
+        'choiceId' in target
+          ? dropOnConnection(current, { card, choiceId: target.choiceId })
+          : dropIntoLane(current, { card, afterUnitId: target.afterUnitId });
+      made = next.element.id;
+      return next.file;
+    });
+    setCarrying(null);
+    if (made) setSelectedId(made);
+  };
+
+  /** Where on the lane each slot sits: between spine cards, and at both ends. */
+  const unitOfBeat = new Map(file.beats.map((one) => [one.id as string, one.unitId as string]));
+  const spineCards = map.nodes.filter((one) => one.lane === 'spine').sort((a, b) => a.column - b.column);
+  const laneY = MARGIN + map.laneRow * ROW + CARD_H / 2;
+  const slots = laneSlots(file);
+  const slotBefore = (unitId: string): StructuralUnitId | null => {
+    const at = slots.findIndex((one) => one.afterUnitId === unitId);
+    return at > 0 ? (slots[at - 1]!.afterUnitId as StructuralUnitId | null) : null;
+  };
+  const laneTargets: { key: string; x: number; afterUnitId: StructuralUnitId | null; label: string }[] = [];
+  if (spineCards.length === 0) {
+    laneTargets.push({ key: 'start', x: MARGIN + CARD_W / 2, afterUnitId: slots.at(-1)?.afterUnitId ?? null, label: slots.length > 1 ? 'Add to the story' : 'Start the story' });
+  } else {
+    const unitOf = (node: GraphNode) => unitOfBeat.get(node.element.boundBeatId as string) ?? '';
+    const first = spineCards[0]!;
+    laneTargets.push({ key: 'start', x: xOf(first) - MARGIN / 2, afterUnitId: slotBefore(unitOf(first)), label: 'Before this scene' });
+    spineCards.forEach((node, index) => {
+      const next = spineCards[index + 1];
+      const x = next ? (xOf(node) + CARD_W + xOf(next)) / 2 : xOf(node) + CARD_W + MARGIN / 2 + 6;
+      const unit = unitOf(node);
+      const label = slots.find((one) => one.afterUnitId === unit)?.label ?? 'Here';
+      laneTargets.push({ key: `after-${node.element.id as string}`, x, afterUnitId: (unit || null) as StructuralUnitId | null, label });
+    });
+  }
+
   const join = (to: NarrativeElementId): void => {
     if (!joining) return;
     onUpdate((current) => addChoice(current, { elementId: joining, name: '', toElementId: to }).file);
@@ -217,7 +294,28 @@ export function NarrativeMapWindow({
 
         <span className="toolbar-spacer" />
 
-        <button type="button" className="tool" onClick={add} title="Add a node to the graph">
+        <div className="narrmap-tray" role="group" aria-label="Cards to drop into the lane">
+          {(['scene', 'beat'] as const).map((card) => (
+            <button
+              key={card}
+              type="button"
+              draggable
+              className={carrying === card ? 'tool narrmap-tray-card on' : 'tool narrmap-tray-card'}
+              aria-pressed={carrying === card}
+              title={CARD_TIPS[card]}
+              onDragStart={(event) => {
+                event.dataTransfer.setData(DRAG_TYPE, card);
+                event.dataTransfer.effectAllowed = 'copy';
+                setCarrying(card);
+              }}
+              onDragEnd={() => setCarrying(null)}
+              onClick={() => setCarrying(carrying === card ? null : card)}
+            >
+              ＋ {CARD_WORDS[card]}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="tool" onClick={add} title="Add a node to the graph that is not on the spine">
           + Node
         </button>
         <button
@@ -319,7 +417,9 @@ export function NarrativeMapWindow({
 
         {/* Said out loud, because somebody will look for the handle. */}
         <span className="muted small narrmap-note">
-          The layout is read from the graph — draw a connection and a node moves by itself.
+          {carrying
+            ? `Drop the ${CARD_WORDS[carrying].toLowerCase()} on a gold mark: in the lane, or on a connection. Esc to put it back.`
+            : 'The layout is read from the graph — drop a scene into the lane, or draw a connection, and it takes its place.'}
         </span>
       </div>
 
@@ -352,7 +452,7 @@ export function NarrativeMapWindow({
         ) : null}
 
         <div className="narrmap-stage" ref={stage}>
-          {map.nodes.length === 0 ? (
+          {map.nodes.length === 0 && !showLaneWhenEmpty(file, search, kind) ? (
             <p className="muted empty-state">{describeGraph(file, map)}</p>
           ) : (
             <svg
@@ -369,6 +469,20 @@ export function NarrativeMapWindow({
                 </marker>
               </defs>
 
+              {/* The spine's lane, through the middle (addendum 25 §4.3). */}
+              <g className="narrmap-lane" aria-hidden="true">
+                <rect
+                  x={0}
+                  y={laneY - CARD_H / 2 - LANE_PAD}
+                  width={width}
+                  height={CARD_H + LANE_PAD * 2}
+                  className="narrmap-lane-band"
+                />
+                <text x={MARGIN} y={laneY - CARD_H / 2 - 4} className="narrmap-lane-label">
+                  Spine
+                </text>
+              </g>
+
               {map.links.map((link) => (
                 <LinkLine
                   key={link.choice.id as string}
@@ -377,6 +491,27 @@ export function NarrativeMapWindow({
                   walked={along.has(link.choice.id as string)}
                 />
               ))}
+
+              {/* A mark on each connection a card can be spliced into. Not on
+                  the spine's own line, where the lane's slot is the same drop
+                  in the same place, and not on a line back, which dips under
+                  the board and has no middle worth aiming at. */}
+              {carrying
+                ? map.links.filter((link) => !link.spine && !link.back).map((link) => {
+                    const from = placed.get(link.from as string);
+                    const to = placed.get(link.to as string);
+                    if (!from || !to) return null;
+                    return (
+                      <DropMark
+                        key={`on-${link.choice.id as string}`}
+                        x={(xOf(from) + CARD_W + xOf(to)) / 2}
+                        y={(yOf(from) + yOf(to)) / 2 + CARD_H / 2}
+                        label={`Between ${from.name || 'Untitled'} and ${to.name || 'Untitled'}`}
+                        onDrop={(card) => drop({ choiceId: link.choice.id }, card ?? carrying)}
+                      />
+                    );
+                  })
+                : null}
 
               {map.nodes.map((node) => (
                 <NodeCard
@@ -388,6 +523,19 @@ export function NarrativeMapWindow({
                   onPick={() => (joining ? join(node.element.id) : setSelectedId(node.element.id))}
                 />
               ))}
+
+              {carrying
+                ? laneTargets.map((one) => (
+                    <DropMark
+                      key={one.key}
+                      x={one.x}
+                      y={laneY}
+                      label={one.label}
+                      lane
+                      onDrop={(card) => drop({ afterUnitId: one.afterUnitId }, card ?? carrying)}
+                    />
+                  ))
+                : null}
             </svg>
           )}
         </div>
@@ -717,6 +865,71 @@ function NodeCard({
         </>
       ) : null}
       <title>{`${node.name || 'Untitled'} — ${describeNode(node)}`}</title>
+    </g>
+  );
+}
+
+/**
+ * Whether to draw the lane on a board with nothing on it yet: yes, so the
+ * first scene has somewhere to be dropped — unless a search or a kind filter
+ * is what emptied it, when *nothing matches* is the true thing to say.
+ */
+function showLaneWhenEmpty(file: ProjectFile, search: string, kind: NarrativeKind | ''): boolean {
+  return search.trim() === '' && kind === '' && file.narrativeElements.length === 0;
+}
+
+/**
+ * A place a tray card can land: a slot in the lane, or the middle of a
+ * connection. Dragging onto it and tapping it do the same thing.
+ */
+function DropMark({
+  x,
+  y,
+  label,
+  lane = false,
+  onDrop,
+}: {
+  x: number;
+  y: number;
+  label: string;
+  lane?: boolean;
+  onDrop(card: LaneCard | null): void;
+}) {
+  const [over, setOver] = useState(false);
+  const classes = ['narrmap-drop'];
+  if (lane) classes.push('in-lane');
+  if (over) classes.push('over');
+  return (
+    <g
+      className={classes.join(' ')}
+      transform={`translate(${x} ${y})`}
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      onClick={() => onDrop(null)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onDrop(null);
+        }
+      }}
+      onDragOver={(event) => {
+        if (!event.dataTransfer.types.includes(DRAG_TYPE)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(event) => {
+        event.preventDefault();
+        setOver(false);
+        const card = event.dataTransfer.getData(DRAG_TYPE);
+        onDrop(card === 'scene' || card === 'beat' ? card : null);
+      }}
+    >
+      <circle r={lane ? 13 : 10} className="narrmap-drop-ring" />
+      <path d="M -5 0 H 5 M 0 -5 V 5" className="narrmap-drop-plus" />
+      <title>{label}</title>
     </g>
   );
 }

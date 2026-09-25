@@ -30,6 +30,7 @@ export * from './narrative.js';
 export * from './narrative-eval.js';
 export * from './narrative-check.js';
 export * from './narrative-map.js';
+export * from './narrative-lane.js';
 export * from './narrative-rules.js';
 export * from './narrative-economy.js';
 export * from './narrative-run.js';

@@ -13591,6 +13591,82 @@ dialog.chapter-page-dialog {
   fill: var(--border);
 }
 
+/* The spine's lane through the middle (addendum 25 §4.3). Branches are drawn
+   above and below it; the band is where the story itself runs. The double
+   rule is the brand's: gold, a gap, gold-deep. */
+.narrmap-lane-band {
+  fill: var(--panel-2);
+  opacity: 0.55;
+  stroke: var(--gold-deep);
+  stroke-width: 1;
+}
+
+.narrmap-lane-label {
+  fill: var(--gold);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* The tray: two cards that write a scene or a beat into the story where they
+   are dropped. Raised like every button, gold while one is being carried. */
+.narrmap-tray {
+  display: inline-flex;
+  gap: 4px;
+  padding-right: 6px;
+  margin-right: 2px;
+  border-right: 1px solid var(--border);
+}
+
+.narrmap-tray-card {
+  cursor: grab;
+}
+
+.narrmap-tray-card:active {
+  cursor: grabbing;
+}
+
+/* Where a card can land. Drawn only while one is being carried, so the board
+   is not littered with targets the rest of the time. */
+.narrmap-drop {
+  cursor: copy;
+}
+
+.narrmap-drop-ring {
+  fill: var(--ink);
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+}
+
+.narrmap-drop.in-lane .narrmap-drop-ring {
+  stroke-width: 2;
+}
+
+.narrmap-drop-plus {
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.narrmap-drop.over .narrmap-drop-ring,
+.narrmap-drop:hover .narrmap-drop-ring,
+.narrmap-drop:focus-visible .narrmap-drop-ring {
+  fill: var(--gold);
+  stroke-dasharray: none;
+}
+
+.narrmap-drop.over .narrmap-drop-plus,
+.narrmap-drop:hover .narrmap-drop-plus,
+.narrmap-drop:focus-visible .narrmap-drop-plus {
+  stroke: var(--ink);
+}
+
+.narrmap-drop:focus-visible {
+  outline: none;
+}
+
 .narrmap-card {
   cursor: pointer;
 }

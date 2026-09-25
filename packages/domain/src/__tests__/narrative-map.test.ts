@@ -272,7 +272,7 @@ describe('the sentence above it', () => {
 
   it('says the board is empty rather than showing nothing', () => {
     const file = game();
-    expect(describeGraph(file, narrativeMap(file))).toBe('Nothing on the board yet. Add a node to start the graph.');
+    expect(describeGraph(file, narrativeMap(file))).toBe('Nothing on the board yet. Drop a scene into the lane to start the story.');
   });
 
   it('says a filter matched nothing, which is a different thing', () => {

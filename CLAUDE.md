@@ -1200,6 +1200,19 @@ push live; the build takes a minute or two.
   reachability, leaves out `createdAt`/`updatedAt` so a touch is not a change,
   and is change detection rather than security. `implementation.test.ts`
   holds the round trip, the unknown kind and all five words down.
+  **Stage 1 is the Story Map's central lane** (§4.3): the spine runs through
+  the middle and branches stack above and below it, a branch **keeping to its
+  parent's side**. Columns are still `depths`; only rows moved — `offset` (0
+  the lane, negative above, positive below) and `laneRow` are new on the map,
+  and `row` is now measured from the highest branch. The tray's *New scene* /
+  *New beat* are **edits, not positions** (`narrative-lane.ts`):
+  `dropIntoLane` writes the scene or beat into the story order and binds a
+  node to it, `dropOnConnection` splices one in, and the layout is then read
+  as ever — so 18's *nothing here is dragged* still holds. Splicing keeps the
+  **same choice** pointing at the new node, and nothing is guessed between
+  scenes that were not connected; the end of the lane and the start are the
+  two places a link is added. Drop marks show only while a card is carried,
+  and never on a spine link (the lane slot is the same drop) or a line back.
   `addendum-19-book-outliner.md` is the Outliner as a book's front door, from
   Ken after using instructional mode: chapters, sections and subsections
   worked out first, then put on the track. **All six stages of §9 are

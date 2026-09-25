@@ -65,7 +65,7 @@ describe('the canvas', () => {
   it('tells the designer there is nothing to drag', () => {
     render(<Harness initial={diamond()} />);
     expect(
-      screen.getByText(/The layout is read from the graph — draw a connection and a node moves by itself\./),
+      screen.getByText(/The layout is read from the graph — drop a scene into the lane, or draw a connection, and it takes its place\./),
     ).toBeDefined();
   });
 
@@ -74,9 +74,57 @@ describe('the canvas', () => {
     expect(screen.getByText('3 nodes · 2 connections.')).toBeDefined();
   });
 
-  it('says the board is empty rather than showing an empty box', () => {
-    render(<Harness initial={game()} />);
-    expect(screen.getAllByText('Nothing on the board yet. Add a node to start the graph.').length).toBe(2);
+  it('says the board is empty, and draws the lane the first scene goes into', () => {
+    const { container } = render(<Harness initial={game()} />);
+    expect(screen.getByText('Nothing on the board yet. Drop a scene into the lane to start the story.')).toBeDefined();
+    expect(container.querySelector('.narrmap-lane-band')).not.toBeNull();
+  });
+});
+
+/**
+ * The central lane (addendum 25 §4.3). A card from the tray is not a position:
+ * dropping it writes a scene into the story there, and the map places it.
+ * Tapped here rather than dragged, because the tap is the same drop and jsdom
+ * has no drag.
+ */
+describe('the lane', () => {
+  it('writes a scene into the story where a tray card is dropped, and puts it on the spine', () => {
+    const { container } = render(<Harness initial={game()} />);
+    // No targets until a card is being carried.
+    expect(container.querySelectorAll('.narrmap-drop')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: /New scene/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the story' }));
+    expect(container.querySelectorAll('.narrmap-card.on-spine')).toHaveLength(1);
+    // The new node is selected, so its name is the next thing typed.
+    expect(screen.getByLabelText("The node's name")).toHaveProperty('value', 'New scene');
+    expect(container.querySelectorAll('.narrmap-drop')).toHaveLength(0);
+  });
+
+  it('carries the story on when a second scene is dropped after the first', () => {
+    const { container } = render(<Harness initial={game()} />);
+    fireEvent.click(screen.getByRole('button', { name: /New scene/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the story' }));
+    fireEvent.click(screen.getByRole('button', { name: /New scene/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'After New scene' }));
+    expect(container.querySelectorAll('.narrmap-card.on-spine')).toHaveLength(2);
+    expect(container.querySelectorAll('.narrmap-link.on-spine')).toHaveLength(1);
+    expect(container.querySelectorAll('.narrmap-card.stranded')).toHaveLength(0);
+  });
+
+  it('splices a card dropped on a connection between its two ends', () => {
+    const { container } = render(<Harness initial={diamond()} />);
+    fireEvent.click(screen.getByRole('button', { name: /New scene/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Between Cold open and The vent' }));
+    expect(screen.getByText('4 nodes · 3 connections · 1 on the spine.')).toBeDefined();
+    expect(container.querySelectorAll('.narrmap-card.stranded')).toHaveLength(0);
+  });
+
+  it('puts the card back with Escape', () => {
+    const { container } = render(<Harness initial={game()} />);
+    fireEvent.click(screen.getByRole('button', { name: /New scene/ }));
+    expect(container.querySelectorAll('.narrmap-drop').length).toBeGreaterThan(0);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(container.querySelectorAll('.narrmap-drop')).toHaveLength(0);
   });
 });
 
@@ -92,7 +140,7 @@ describe('the node beside it', () => {
 
   it('adds a node and selects it, so the next thing typed lands on it', () => {
     render(<Harness initial={game()} />);
-    fireEvent.click(screen.getByTitle('Add a node to the graph'));
+    fireEvent.click(screen.getByTitle('Add a node to the graph that is not on the spine'));
     const name = screen.getByLabelText("The node's name");
     fireEvent.change(name, { target: { value: 'Cold open' } });
     expect(screen.getByText('Cold open')).toBeDefined();
