@@ -392,13 +392,26 @@ describe('a prose part', () => {
   });
 
   it('draws nothing of its own until somebody sets something, so an existing book is byte for byte what it was', () => {
+    // A **foreword** rather than a back-matter page: §17 gives the seven a
+    // design of their own from the handoff's table, so their openings really
+    // do carry a sink now. What this rule always protected is the pages that
+    // were given no design — and, on any prose part, the **words**.
     const { file } = withBio(BIO);
-    const blocks = bookBlocks(file);
-    const mine = blocks.filter((one) => one.partId?.includes('about_the_author'));
+    const made = addPart(file, 'foreword', { title: 'Foreword', text: 'A word before.\n\nAnd another.' } as never);
+    const mine = bookBlocks(made.file).filter((one) => one.partId === made.partId);
     expect(mine.length).toBeGreaterThan(1);
     for (const block of mine) expect(block.partStyle).toBeUndefined();
-    const html = mine.map((block) => renderBookBlock(block, contextFor(file))).join('');
+    const html = mine.map((block) => renderBookBlock(block, contextFor(made.file))).join('');
     expect(html).not.toContain('font-size:');
+  });
+
+  it('leaves a back-matter page’s own words undeclared, whatever its heading does', () => {
+    // The sink rides on the **opening**; the paragraphs are the book's body
+    // and stay it, which is the half of the rule that never moved.
+    const { file } = withBio(BIO);
+    const mine = bookBlocks(file).filter((one) => one.partId?.includes('about_the_author') && one.kind === 'paragraph');
+    expect(mine.length).toBeGreaterThan(0);
+    for (const block of mine) expect(block.partStyle).toBeUndefined();
   });
 
   it('sets its heading and its words apart, and reaches no paragraph of the story', () => {

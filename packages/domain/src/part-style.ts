@@ -186,6 +186,9 @@ export const partHasDividers = (kind: PartKind): boolean => kind === 'index';
  * printed page drew before there was a style, so a book that never chooses
  * looks as it did. A dedication's words are set at reading size, in italic.
  */
+/** The size the reference pages set, from the handoff's §3 table. */
+const PROSE_SMALL = { size: 10, case: 'as_typed', bold: false, italic: false, tracking: 0 } as const;
+
 const KIND_DEFAULTS: Partial<Record<PartKind, PartStylePatch>> = {
   half_title: { title: { size: 24, case: 'as_typed', bold: false, italic: false, tracking: 2 } },
   // **Stacked**, which is what the page has always drawn (§16): the author
@@ -224,25 +227,47 @@ const KIND_DEFAULTS: Partial<Record<PartKind, PartStylePatch>> = {
     title: { size: 14, case: 'capitals', bold: false, italic: false, tracking: 12 },
     line: { size: 11, case: 'as_typed', bold: false, italic: false, tracking: 0 },
   },
+  // The index is both: a designed page with its own heading (§7a) and one of
+  // the back matter's seven (§17), so its entry carries the handoff's sink,
+  // size, folio and side alongside the type it has had since §7a.
   index: {
     title: { size: 14, case: 'capitals', bold: false, italic: false, tracking: 12 },
-    line: { size: 11, case: 'as_typed', bold: false, italic: false, tracking: 0 },
+    line: { size: 9.5, case: 'as_typed', bold: false, italic: false, tracking: 0 },
+    drop: sinkDrop('shallow'),
+    folio: true,
+    recto: false,
   },
-  // **The back matter starts at the head of its page** (§17). A prose part's
-  // `drop` has been stored and never read, so the day the sink became a
-  // control was the day it could move an existing foreword — and §7a's rule
-  // is that a style starts as exactly what the page already prints. Hence a
-  // fourth step, *At the head*, which the handoff does not name and which is
-  // the only honest default: Shallow, Standard and Deep are one press away
-  // and the screen says which the page is on. All seven take the same
-  // default, a page nobody has set being the same question whether or not
-  // any book has one yet.
-  acknowledgements: { drop: 0 },
-  appendix: { drop: 0 },
-  glossary: { drop: 0 },
-  bibliography: { drop: 0 },
-  about_the_author: { drop: 0 },
-  reader_extra: { drop: 0 },
+  // **The back matter's seven** (§17), from the handoff's own §3 table: the
+  // sink, the text size, whether a number prints and which side it opens on,
+  // per page. `sinkDrop` rather than a literal, so the three named steps have
+  // one table and the back matter cannot drift from the chapter openings.
+  //
+  // It corrects a first version that gave all seven *At the head* on §7a's
+  // rule — a style starts as exactly what the page prints — and the
+  // correction is the interesting half: that rule is about **not moving work
+  // somebody did**, and it is not a reason to withhold a design from a page
+  // that has never had one, which is what a handoff is for. *At the head*
+  // stays as the fourth step, so the older look is one press away.
+  // **The prose pages that are not one of the seven keep the look they had.**
+  // `drop` defaults to 33 for the pages that place a block on a leaf, and a
+  // prose part stored it and never read it — so the day §17 made the sink
+  // real was the day a foreword would have moved. §7a's rule, and the reason
+  // the seven below are the exception rather than the change being general.
+  foreword: { drop: 0 },
+  preface: { drop: 0 },
+  introduction: { drop: 0 },
+  prologue: { drop: 0 },
+  epilogue: { drop: 0 },
+  afterword: { drop: 0 },
+  also_by: { drop: 0 },
+  acknowledgements: { drop: sinkDrop('standard'), folio: true, recto: false },
+  appendix: { drop: sinkDrop('standard'), line: PROSE_SMALL, folio: true, recto: false },
+  glossary: { drop: sinkDrop('standard'), line: PROSE_SMALL, folio: true, recto: false },
+  bibliography: { drop: sinkDrop('standard'), line: PROSE_SMALL, folio: true, recto: false },
+  about_the_author: { drop: sinkDrop('standard'), folio: false, recto: false },
+  // A last page a reader is meant to act on: dropped deep, ruled, on a
+  // right-hand page and carrying no number.
+  reader_extra: { drop: sinkDrop('deep'), rule: true, folio: false, recto: true },
 };
 
 /**

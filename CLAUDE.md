@@ -1922,6 +1922,52 @@ push live; the build takes a minute or two.
   indistinguishable from the turn not working. The other five first
   sections are stages of their own, **said rather than left blank**;
   addendum 20 §17 carries the order.
+  **§17a is the other five, and pulling from the text**, from Ken in the
+  middle of building them (*any functions in the back matter that can be
+  pulled from the text? Let's have a function and a button that says pull
+  from text*). **Two of the seven can, one already does, and four cannot**,
+  and saying which is most of the feature: the button is **absent rather
+  than greyed** on the five, with the reason in its place, a press that can
+  only refuse being one a writer never trusts again. A **glossary** takes
+  the terms the book itself marks — a heading marked for the **index**, or a
+  short run set **bold**, which is how non-fiction names a term on first use
+  (over four words is emphasis, and a glossary of sentences is worse than
+  none). A **bibliography** takes the research notes carrying a `source`,
+  addendum 16 §2's one field a nonfiction author cannot work without. The
+  **index** already is the reading and has been since addendum 10, so a
+  button there would be a second and worse copy. Three rules keep it honest:
+  **it never writes a definition** (the definition is the work and the term
+  is the tedium; a generated one is a sentence the author did not write
+  standing under their name), **it adds and never overwrites** so a second
+  press changes nothing and an edited definition cannot be lost, and it
+  **reads marks rather than guessing**. The five panels: an **appendix**
+  whose label is a **reading** from where it falls (the chapter number's rule
+  a seventh time, with nowhere to type *Appendix C*); a **glossary** whose
+  letter headings are **absent while the list is unsorted**, letters over an
+  unsorted list heading groups of one; a **bibliography** set live in
+  Chicago, MLA or APA where **a free-text entry is kept exactly as written**
+  and shown as one box rather than five, a style being a rule about *fields*
+  and an entry with none being unrestylable without inventing them; an
+  **index** whose section is a statement rather than a control; and **reader
+  extras** as four kinds, *Also by* taking the book's author as a reading.
+  **What a list page prints is its records** — `partBlocks` reads a
+  glossary's, a bibliography's and an extra's paragraphs off them, so the
+  panel and the page cannot disagree, and a term's `lead` is its own field
+  rather than an inline mark because **small capitals is not something an
+  inline mark spells** and the definition after it keeps the writer's own
+  italics. And the **§3 defaults table corrects §17 an hour after it
+  shipped**: all seven had been given *At the head* on §7a's rule, and the
+  correction is the half worth keeping — **that rule is about not moving
+  work somebody did, and is not a reason to withhold a design from a page
+  that never had one**, which is what a handoff is for; *At the head* stays
+  as the fourth step and the prose pages that are **not** among the seven get
+  `drop: 0` explicitly so none of them moves. Deliberately absent and said:
+  §2's **file importers** (BibTeX, RIS, CSL-JSON, CSV, a .docx table, a
+  static-page-number index and *Match them to tags*), the **QR code** at
+  export, a **preview chapter** from another project, and the **two-column
+  index** — which is a change to the *cutter*, the measurement and the lines
+  per page both halving, so `columns` was built, found to be read by nothing
+  and **taken out rather than left as a control that lies**.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

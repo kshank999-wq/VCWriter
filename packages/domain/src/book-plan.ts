@@ -12,6 +12,7 @@ import { placeFigure } from './instructional.js';
 import { copyrightLines, copyrightOf, type CopyrightLine } from './copyright-page.js';
 import { titlePageContent, titlePageFieldsOf, type TitlePageContent } from './title-page.js';
 import { aboutAuthorOf, acknowledgementsOf, authorLinksShown, type AuthorPhotoShape } from './back-matter.js';
+import { bibliographyEntries, glossaryEntries, glossaryLetter, glossaryOf, readerExtraOf } from './back-matter-pages.js';
 import type { BookPage } from './book-pages.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -400,7 +401,15 @@ export interface BookBlock {
    * A sign-off is set apart under the thanks; an author's link is one of the
    * three lines under the biography.
    */
-  role?: 'sign_off' | 'author_link';
+  role?: 'sign_off' | 'author_link' | 'glossary' | 'source' | 'letter' | 'question' | 'also' | 'extra';
+  /**
+   * A run set apart at the head of its own paragraph (§17): a glossary term
+   * before its definition, a question's number. It is its own field rather
+   * than inline marks because a term may be set in **small capitals**, which
+   * no inline mark spells — and because the definition after it is the
+   * writer's prose and must keep its own italics.
+   */
+  lead?: { text: string; style: 'bold' | 'small_caps' | 'italic' | 'plain' };
   /**
    * The author photograph's shape (§17), on the block that carries it —
    * whether that is the picture's own figure or the paragraph it is cut
@@ -625,18 +634,69 @@ const partBlocks = (
         // before there was a control, byte for byte.
         partStyle: headingOwn ?? (style.drop > 0 ? style : undefined),
       });
-      const words = paragraphsOf(part.text);
-      const paragraphs = words.map((text, index) =>
+      /**
+       * **What a list page is made of** (§17). A glossary, a bibliography and
+       * a reader extra hold **records** rather than prose, so their
+       * paragraphs are read off those records — the page and the panel
+       * cannot then disagree about what it says, which is this room's rule
+       * everywhere else. A page with no records of its own is its words, as
+       * every prose part has always been.
+       */
+      const listed: Array<{ text: string; role?: BookBlock['role']; lead?: BookBlock['lead'] }> = [];
+      if (part.kind === 'glossary') {
+        const own = glossaryOf(part);
+        let letter = '';
+        for (const entry of glossaryEntries(part)) {
+          const at = glossaryLetter(entry.term);
+          if (own.letterHeadings && own.sorted && at !== letter) {
+            letter = at;
+            listed.push({ text: at, role: 'letter' });
+          }
+          listed.push({
+            text: own.layout === 'run_in' ? `— ${entry.definition}` : entry.definition,
+            role: 'glossary',
+            lead: { text: entry.term, style: own.termStyle },
+          });
+        }
+      } else if (part.kind === 'bibliography') {
+        for (const one of bibliographyEntries(part)) listed.push({ text: one.text, role: 'source' });
+      } else if (part.kind === 'reader_extra') {
+        const own = readerExtraOf(part);
+        if (own.kind === 'newsletter') {
+          if (own.message.trim()) for (const line of paragraphsOf(own.message)) listed.push({ text: line, role: 'extra' });
+          if (own.link.trim()) listed.push({ text: own.link.trim(), role: 'extra' });
+        } else if (own.kind === 'questions') {
+          own.questions
+            .filter((one) => one.text.trim().length > 0)
+            .forEach((one, at) =>
+              listed.push({
+                text: one.text,
+                role: 'question',
+                lead: { text: own.numbering === 'numbers' ? `${at + 1}.` : '•', style: 'plain' },
+              }),
+            );
+        } else if (own.kind === 'also_by') {
+          for (const one of own.titles.filter((two) => two.title.trim().length > 0)) {
+            listed.push({ text: one.series.trim() ? `${one.title} — ${one.series}` : one.title, role: 'also' });
+          }
+        } else if (own.leadIn.trim()) {
+          listed.push({ text: own.leadIn.trim(), role: 'extra' });
+        }
+      }
+      const words = listed.length > 0 ? listed : paragraphsOf(part.text).map((text) => ({ text }) as (typeof listed)[number]);
+      const paragraphs = words.map((one, index) =>
         block({
           id: `${part.id}:${index}`,
           kind: 'paragraph',
           numbering,
-          text,
-          spans: parseInline(text),
+          text: one.text,
+          spans: parseInline(one.text),
+          role: one.role,
+          lead: one.lead,
           partId: part.id,
           chapterTitle: title,
           folio: style.folio,
-          opensChapter: index === 0,
+          opensChapter: index === 0 && listed.length === 0,
           // The words take the page's own line style; the print sets each
           // paragraph from it rather than the body rule reading a variable,
           // so nothing about the story's paragraphs changes.

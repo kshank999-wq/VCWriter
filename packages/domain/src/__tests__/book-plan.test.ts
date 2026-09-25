@@ -207,7 +207,9 @@ describe('the blocks', () => {
     const edited = updatePart(file, about.id, { text: 'Lives in Hull.\n\nWrites at night.' });
     const blocks = bookBlocks(edited).filter((block) => block.partId === about.id);
     expect(blocks.map((block) => block.kind)).toEqual(['part_opening', 'paragraph', 'paragraph']);
-    expect(blocks[0]?.starts).toBe('recto');
+    // `page` rather than `recto`: the handoff's §3 table opens the back
+    // matter on either side, which the cutter has always understood (§17).
+    expect(blocks[0]?.starts).toBe('page');
     expect(blocks[0]?.title).toBe('About the author');
     expect(blocks[1]?.text).toBe('Lives in Hull.');
   });

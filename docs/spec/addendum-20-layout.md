@@ -2445,12 +2445,93 @@ reference page is a change to the *cutter* — the measurement and the lines
 per page both halve — rather than a declaration, and a control that stores
 a number the book never reads is a control that lies. It is its own stage.
 
-The other five pages' first sections are stages of their own; until each
-has one the page is its words, **said rather than left blank**. The build
-order from here: Appendix (import, labels, tiles) → Glossary (import, sort,
-letter headings) → Bibliography (BibTeX/RIS/CSL, Chicago/MLA/APA, hanging
-indent) → Index (an import mode beside the marks that already exist) →
-Reader extras (four kinds, a QR code) → columns.
+## 17a. The other five, and pulling from the text
+
+The remaining five first sections, and Ken's ask in the middle of building
+them: *any functions in the back matter that can be pulled from the text?
+Let's have a function and a button that says pull from text.*
+
+**The answer is that two of the seven can, one already does, and four
+cannot** — and saying which is most of the feature, because a button on a
+page with nothing to read is one a writer presses once and never trusts
+again. It is **absent rather than greyed** on the five, with the reason in
+its place.
+
+- **Glossary** ← the terms the book itself marks: a heading marked for the
+  **index**, or a short run set **bold** in the writing, which is how a work
+  of non-fiction names a term on first use. Both are the writer's own marks
+  on their own text. A bold run longer than four words is emphasis rather
+  than a term, and a glossary of sentences is worse than no glossary.
+- **Bibliography** ← the research notes that carry a `source`, which is the
+  field addendum 16 §2 calls the one a nonfiction author cannot work
+  without. Each arrives **as written**.
+- **Index** ← it already does, continuously, and has since addendum 10. A
+  button here would be a second and worse copy, so the section says so.
+- The other four have nothing a book could give them, and say that instead.
+
+Three rules keep it honest. **It never writes a definition** — a term
+arrives with its definition empty, because the definition is the work and
+the term is the tedium, and a generated one would be a sentence the author
+did not write standing in their book under their name. **It adds and never
+overwrites**, matching on the words, so a second press changes nothing and
+an edited definition cannot be lost — which is what makes it safe to put on
+the page with no ask. And **it reads marks rather than guessing**: nothing
+here decides what a term is.
+
+### The five panels
+
+**Appendix.** The label is a **reading**: `appendixLabel` works it out from
+where the appendix falls among its fellows, so moving one relabels the rest
+with nothing run and there is nowhere to type *Appendix C* — the chapter
+number's rule for the seventh time. Letters, numbers or roman, plus the
+title and whether each starts a new page.
+
+**Glossary.** Terms and definitions as rows, sorted or in the writer's
+order, with letter headings **absent rather than greyed** while the list is
+unsorted (letters over an unsorted list head groups of one). A term style
+and a run-in or stacked layout.
+
+**Bibliography.** Sources as fields, set live in Chicago, MLA or APA — and
+**a free-text entry is kept exactly as written**, shown as one box rather
+than five, because a style is a rule about *fields* and an entry with none
+cannot be restyled without inventing the parts.
+
+**Index.** Its section is a statement rather than a control: the page is
+addendum 10 whole, so it says how many marks the book carries and where to
+manage them.
+
+**Reader extras.** Four kinds as tiles, each with its own controls and its
+own heading — and *Also by* takes the book's author, so it is a reading
+rather than a string in a table.
+
+**What a list page prints is its records.** A glossary, a bibliography and
+a reader extra hold records rather than prose, so `partBlocks` reads its
+paragraphs off them; the panel and the page cannot then disagree about what
+the page says. A term's `lead` is its own field rather than an inline mark,
+because a term may be set in **small capitals**, which no inline mark
+spells, and because the definition after it is the writer's prose and keeps
+its own italics.
+
+**The §3 defaults table, and a correction.** Each page now starts at the
+handoff's sink, size, folio and side. That corrects §17, which gave all
+seven *At the head* on §7a's rule — and the correction is the interesting
+half: **that rule is about not moving work somebody did, and it is not a
+reason to withhold a design from a page that has never had one**, which is
+what a handoff is for. *At the head* stays as the fourth step, so the older
+look is one press away, and the prose pages that are **not** among the seven
+(a foreword, a preface) are given `drop: 0` explicitly so none of them
+moves.
+
+### Deliberately not built
+
+The **file importers** of §2 — BibTeX, RIS, CSL-JSON, CSV/TSV/XLSX, a
+two-column .docx table, an index with static page numbers and its *Match
+them to tags* — are their own stage, and a large one. So is the **QR code**
+at export, the **preview chapter** taken from another project, and the
+**two-column index**, which is a change to the *cutter* (the measurement and
+the lines per page both halve) rather than a declaration: `columns` was
+built as a field, found to be read by nothing, and taken out rather than
+left as a control that lies.
 
 ## 10. What it must never do
 

@@ -82,15 +82,28 @@ describe('which pages the screen serves', () => {
 });
 
 describe('the sink', () => {
-  it('offers a fourth step the handoff does not name, and it is the default', () => {
-    // A prose part has stored `drop` and never read it, so the day the sink
-    // became a control was the day it could move an existing foreword. *At
-    // the head* is where every one of them already sits.
+  it('offers a fourth step the handoff does not name, and each page takes the table’s', () => {
+    // *At the head* is not in the handoff and is where every prose part used
+    // to sit, so it stays as the fourth step — the older look, one press
+    // away. What a page **starts** as is the handoff's §3 table.
     expect(BACK_SINKS.map((one) => one.id)).toEqual(['head', 'shallow', 'standard', 'deep']);
     expect(sinkDrop('head')).toBe(0);
-    const { file, part } = withPage('acknowledgements');
+    for (const [kind, want] of [
+      ['acknowledgements', 'standard'],
+      ['glossary', 'standard'],
+      ['index', 'shallow'],
+      ['reader_extra', 'deep'],
+    ] as const) {
+      const { file, part } = withPage(kind);
+      expect(backSinkOf(styleOf(file, part))).toBe(want);
+    }
+  });
+
+  it('leaves the prose pages that are not one of the seven where they were', () => {
+    // A foreword's `drop` was stored and never read; making the sink real
+    // would have moved it, which §7a forbids.
+    const { file, part } = withPage('foreword');
     expect(styleOf(file, part).drop).toBe(0);
-    expect(backSinkOf(styleOf(file, part))).toBe('head');
   });
 
   it('is read back rather than stored, so a depth set by hand lights nothing', () => {
@@ -99,10 +112,11 @@ describe('the sink', () => {
   });
 
   it('leaves a page at the head carrying no style at all', () => {
-    // §7a's rule: only what differs from the book is drawn, so the markup of
-    // a page nobody has set is byte for byte what it always was.
+    // §7a's rule: only what differs from the book is drawn, so a page put
+    // back to the head carries nothing and prints what it always printed.
     const { file, part } = withPage('acknowledgements', { title: 'Acknowledgements', text: 'Thank you.' } as never);
-    const opening = bookBlocks(file).find((block) => block.partId === part.id && block.kind === 'part_opening')!;
+    const head = updatePart(file, part.id, { style: sinkPatch('head') });
+    const opening = bookBlocks(head).find((block) => block.partId === part.id && block.kind === 'part_opening')!;
     expect(opening.partStyle).toBeUndefined();
   });
 
@@ -115,11 +129,19 @@ describe('the sink', () => {
 });
 
 describe('the page that prints its number, and the side it opens on', () => {
-  it('takes a right-hand page until it is told otherwise', () => {
+  it('opens on either side and prints its number, which is the table’s', () => {
     const { file, part } = withPage('glossary', { title: 'Glossary', text: 'A word.' } as never);
     const opening = bookBlocks(file).find((block) => block.partId === part.id && block.kind === 'part_opening')!;
-    expect(opening.starts).toBe('recto');
+    expect(opening.starts).toBe('page');
     expect(opening.folio).toBe(true);
+    // The two the table turns the number off on, for opposite reasons: one
+    // is a page nobody counts, the other a page a reader is meant to act on.
+    const author = withPage('about_the_author', { text: 'She writes.' } as never);
+    expect(bookBlocks(author.file).find((b) => b.partId === author.part.id)?.folio).toBe(false);
+    const extra = withPage('reader_extra', { text: 'Want more?' } as never);
+    const opens = bookBlocks(extra.file).find((b) => b.partId === extra.part.id)!;
+    expect(opens.folio).toBe(false);
+    expect(opens.starts).toBe('recto');
   });
 
   it('opens on either side, and prints no number, where the page says so', () => {

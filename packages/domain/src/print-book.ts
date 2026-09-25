@@ -636,13 +636,18 @@ const blockInner = (block: BookBlock, context: BookRenderContext): string => {
         first === 'plain' ? '' : `bk-first-${first}`,
         // What this paragraph is on a back-matter page (§17), and nothing at
         // all anywhere else.
-        block.role === 'sign_off' ? 'bk-sign-off' : '',
-        block.role === 'author_link' ? 'bk-author-link' : '',
+        block.role ? `bk-bm bk-bm-${block.role.replace('_', '-')}` : '',
       ]
         .filter(Boolean)
         .join(' ');
       const words = first === 'plain' ? renderSpans(block.spans, block.text) : firstLineMarkup(block, first);
-      return `<p class="${cls}"${style}>${block.inset ? insetMarkup(block.inset, context, block.photoShape) : ''}${words}</p>`;
+      // A run set apart at the head of the paragraph (§17): a glossary term,
+      // a question's number. The words after it are the writer's prose and
+      // keep their own marks, which is why this is not an inline span.
+      const lead = block.lead
+        ? `<span class="bk-lead bk-lead-${block.lead.style.replace('_', '-')}">${escapeHtml(block.lead.text)}</span> `
+        : '';
+      return `<p class="${cls}"${style}>${block.inset ? insetMarkup(block.inset, context, block.photoShape) : ''}${lead}${words}</p>`;
     }
     case 'heading':
       // A heading that opens a page is a chapter inside a story (addendum 22
@@ -938,9 +943,22 @@ ${CHAPTER_STYLES}
      inches, by the builder — a percentage padding resolves against the
      containing block's *width* even at the top, which is §9g's lesson.
      What is here is the three things the page sets apart. */
-  .bk-p.bk-sign-off { margin-top: calc(var(--bk-lead) * 1.5); text-align: right; font-style: italic; text-indent: 0; }
-  .bk-p.bk-author-link { margin-top: calc(var(--bk-lead) * 0.5); text-align: center; font-size: 0.9em; text-indent: 0; }
-  .bk-p.bk-author-link + .bk-p.bk-author-link { margin-top: 0; }
+  /* Every back-matter paragraph that is a record rather than prose: none of
+     them is indented, because a list is not a run of paragraphs. */
+  .bk-p.bk-bm { text-indent: 0; }
+  .bk-p.bk-bm-sign-off { margin-top: calc(var(--bk-lead) * 1.5); text-align: right; font-style: italic; }
+  .bk-p.bk-bm-author-link { margin-top: calc(var(--bk-lead) * 0.5); text-align: center; font-size: 0.9em; }
+  .bk-p.bk-bm-author-link + .bk-p.bk-bm-author-link { margin-top: 0; }
+  /* A glossary and a bibliography hang: the first line stands out to the
+     left of the rest, which is what makes a long list findable. */
+  .bk-p.bk-bm-glossary, .bk-p.bk-bm-source { padding-left: 1.4em; text-indent: -1.4em; margin-top: calc(var(--bk-lead) * 0.4); break-inside: avoid; }
+  .bk-p.bk-bm-letter { margin-top: calc(var(--bk-lead) * 1); font-weight: 700; break-after: avoid; }
+  .bk-p.bk-bm-question { padding-left: 1.6em; text-indent: -1.6em; margin-top: calc(var(--bk-lead) * 0.6); break-inside: avoid; }
+  .bk-p.bk-bm-also { text-align: center; margin-top: calc(var(--bk-lead) * 0.5); }
+  .bk-p.bk-bm-extra { text-align: center; margin-top: calc(var(--bk-lead) * 0.6); }
+  .bk-lead-bold { font-weight: 700; }
+  .bk-lead-italic { font-style: italic; }
+  .bk-lead-small-caps { font-variant-caps: small-caps; letter-spacing: 0.04em; }
   /* The photograph: a third of the measure, centred above the words or cut
      in beside them, and shaped as the writer asked. */
   .bk-figure.bk-author-photo { width: 34%; margin-left: auto; margin-right: auto; }

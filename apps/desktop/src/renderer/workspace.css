@@ -16649,6 +16649,56 @@ dialog.designed-page-dialog[open] {
   flex: 0 0 132px;
 }
 
+/* The back matter's list pages (§17): a glossary's terms, a bibliography's
+   sources, a reader extra's questions and titles. One shape for all of them,
+   because they are one thing — a row of fields with a × at its end. */
+.dp-terms {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dp-term,
+.dp-source {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dp-term > input,
+.dp-source > input {
+  flex: 1 1 130px;
+  min-width: 0;
+}
+
+/* The definition and the title are the longer half of their row. */
+.dp-term > input.dp-serif-input {
+  flex: 2 1 200px;
+}
+
+.dp-term .item-x,
+.dp-source .item-x {
+  flex: 0 0 auto;
+}
+
+/* Pull from the text: what a press would do, and the press. */
+.dp-pull {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--raised, transparent);
+}
+
+.dp-pull p {
+  flex: 1 1 200px;
+  margin: 0;
+}
+
 .dp-element input {
   width: 100%;
   box-sizing: border-box;

@@ -1,6 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  APPENDIX_LABELS,
+  APPENDIX_LABEL_WORDS,
   AUTHOR_LINKS,
+  CITATION_STYLES,
+  CITATION_STYLE_WORDS,
+  EXTRA_KINDS,
+  EXTRA_WORDS,
+  TERM_STYLES,
+  TERM_STYLE_WORDS,
+  appendixLabel,
+  appendixOf,
+  bibliographyOf,
+  extraHeading,
+  extraWarning,
+  glossaryOf,
+  pullFromText,
+  pullOffer,
+  readerExtraOf,
+  styleReaches,
+  type Source,
   AUTHOR_LINK_WORDS,
   AUTHOR_PHOTO_PLACES,
   AUTHOR_PHOTO_SHAPES,
@@ -550,14 +569,333 @@ function Card({
     );
   }
 
-  // The other five are stages of their own (§17's build order). Until each
-  // has its section, the page is its words — said, rather than left blank.
+  if (part.kind === 'appendix') {
+    const own = appendixOf(part);
+    // **The label is a reading**: it is worked out from where this appendix
+    // falls among its fellows, so moving one relabels the rest with nothing
+    // run and there is nowhere to type *Appendix C* by hand — the chapter
+    // number's rule for the seventh time.
+    const mine = partsOf(file).filter((one) => one.kind === 'appendix');
+    const at = mine.findIndex((one) => one.id === partId);
+    return (
+      <section className="dp-card">
+        <h3>
+          <span className="dp-num">1</span> This appendix
+          <span className="muted small dp-tally">Appendix {appendixLabel(Math.max(0, at), own.labels)}</span>
+        </h3>
+        <label className="field">
+          <span>Title</span>
+          <input
+            aria-label="Appendix title"
+            placeholder="What this appendix is"
+            value={part.title}
+            onChange={(event) => onUpdate((current) => updatePart(current, partId, { title: event.target.value }))}
+          />
+        </label>
+        <Seg
+          label="Labels"
+          options={APPENDIX_LABELS.map((one) => ({ id: one, label: APPENDIX_LABEL_WORDS[one] }))}
+          value={own.labels}
+          onPick={(labels) => onWriteAbout({ labels })}
+        />
+        <p className="muted small">
+          {mine.length === 1
+            ? 'The only appendix, so it is A. Adding another makes this one A and that one B.'
+            : `${mine.length} appendices. The letters follow the order they stand in, so moving one relabels the rest.`}
+        </p>
+        <Switch on={own.ownPage} label="Each appendix starts a new page" onToggle={() => onWriteAbout({ ownPage: !own.ownPage })} />
+        <label className="field">
+          <span>Words</span>
+          <textarea
+            className="dp-serif-input"
+            aria-label="Appendix text"
+            rows={7}
+            value={part.text}
+            onChange={(event) => onUpdate((current) => updatePart(current, partId, { text: event.target.value }))}
+          />
+        </label>
+      </section>
+    );
+  }
+
+  if (part.kind === 'glossary') {
+    const own = glossaryOf(part);
+    const write = (patch: Partial<typeof own>) => onWriteAbout({ ...own, ...patch });
+    const setTerm = (id: string, patch: { term?: string; definition?: string }) =>
+      write({ terms: own.terms.map((one) => (one.id === id ? { ...one, ...patch } : one)) });
+    return (
+      <section className="dp-card">
+        <h3>
+          <span className="dp-num">1</span> Terms
+          <span className="muted small dp-tally">{own.terms.length} on the page</span>
+        </h3>
+        <Pull file={file} part={part} onUpdate={onUpdate} />
+        <div className="dp-terms">
+          {own.terms.map((one) => (
+            <div className="dp-term" key={one.id}>
+              <input aria-label="Term" placeholder="Term" value={one.term} onChange={(event) => setTerm(one.id, { term: event.target.value })} />
+              <input
+                className="dp-serif-input"
+                aria-label={`What ${one.term || 'it'} means`}
+                placeholder="What it means"
+                value={one.definition}
+                onChange={(event) => setTerm(one.id, { definition: event.target.value })}
+              />
+              <button type="button" className="ghost item-x" aria-label={`Remove ${one.term || 'this term'}`} onClick={() => write({ terms: own.terms.filter((two) => two.id !== one.id) })}>
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+        <button type="button" className="raised small" onClick={() => write({ terms: [...own.terms, { id: `t${Date.now()}`, term: '', definition: '' }] })}>
+          + Add a term
+        </button>
+        <Switch on={own.sorted} label="Sort A–Z" onToggle={() => write({ sorted: !own.sorted, letterHeadings: own.sorted ? false : own.letterHeadings })} />
+        {/* Letters over an unsorted list would head groups of one, so the
+            switch is absent rather than greyed until the list is sorted. */}
+        {own.sorted ? (
+          <Switch on={own.letterHeadings} label="A letter over each group" onToggle={() => write({ letterHeadings: !own.letterHeadings })} />
+        ) : null}
+        <Seg
+          label="Term style"
+          options={TERM_STYLES.map((one) => ({ id: one, label: TERM_STYLE_WORDS[one] }))}
+          value={own.termStyle}
+          onPick={(termStyle) => write({ termStyle })}
+        />
+        <Seg
+          label="Layout"
+          options={[
+            { id: 'run_in' as const, label: 'Term — definition' },
+            { id: 'stacked' as const, label: 'Definition under it' },
+          ]}
+          value={own.layout}
+          onPick={(layout) => write({ layout })}
+        />
+      </section>
+    );
+  }
+
+  if (part.kind === 'bibliography') {
+    const own = bibliographyOf(part);
+    const write = (patch: Partial<typeof own>) => onWriteAbout({ ...own, ...patch });
+    const setSource = (id: string, patch: Partial<Source>) =>
+      write({ sources: own.sources.map((one) => (one.id === id ? { ...one, ...patch } : one)) });
+    return (
+      <section className="dp-card">
+        <h3>
+          <span className="dp-num">1</span> Sources
+          <span className="muted small dp-tally">{own.sources.length} on the page</span>
+        </h3>
+        <Pull file={file} part={part} onUpdate={onUpdate} />
+        <div className="dp-terms">
+          {own.sources.map((one) => (
+            <div className="dp-source" key={one.id}>
+              {styleReaches(one) ? (
+                <>
+                  <input aria-label="Author" placeholder="Last, First" value={one.author} onChange={(event) => setSource(one.id, { author: event.target.value })} />
+                  <input aria-label="Title" placeholder="Title" value={one.title} onChange={(event) => setSource(one.id, { title: event.target.value })} />
+                  <input aria-label="City" placeholder="City" value={one.city} onChange={(event) => setSource(one.id, { city: event.target.value })} />
+                  <input aria-label="Publisher" placeholder="Publisher" value={one.publisher} onChange={(event) => setSource(one.id, { publisher: event.target.value })} />
+                  <input aria-label="Year" placeholder="Year" value={one.year} onChange={(event) => setSource(one.id, { year: event.target.value })} />
+                </>
+              ) : (
+                /* An entry with no fields: a style is a rule about fields, so
+                   it is kept exactly as written and the row says so. */
+                <input
+                  className="dp-serif-input dp-grow"
+                  aria-label="The entry as written"
+                  value={one.raw}
+                  onChange={(event) => setSource(one.id, { raw: event.target.value })}
+                />
+              )}
+              <button type="button" className="ghost item-x" aria-label="Remove this source" onClick={() => write({ sources: own.sources.filter((two) => two.id !== one.id) })}>
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+        <p className="muted small">{own.sources.some((one) => !styleReaches(one)) ? 'An entry written out in full is kept as written — a style sets fields, and those have none.' : ''}</p>
+        <button
+          type="button"
+          className="raised small"
+          onClick={() => write({ sources: [...own.sources, { id: `s${Date.now()}`, author: '', title: '', city: '', publisher: '', year: '', raw: '' }] })}
+        >
+          + Add a source
+        </button>
+        <Seg
+          label="Citation style"
+          options={CITATION_STYLES.map((one) => ({ id: one, label: CITATION_STYLE_WORDS[one] }))}
+          value={own.style}
+          onPick={(style) => write({ style })}
+        />
+        <Switch on={own.sortByAuthor} label="Sort by author" onToggle={() => write({ sortByAuthor: !own.sortByAuthor })} />
+        <Switch on={own.hangingIndent} label="Hanging indent" onToggle={() => write({ hangingIndent: !own.hangingIndent })} />
+      </section>
+    );
+  }
+
+  if (part.kind === 'index') {
+    // **This page is addendum 10, whole** — marks placed in the manuscript,
+    // page numbers read off the pagination every time. So the handoff's
+    // *Build from the manuscript* tile is not a thing to build, it is what
+    // the page already is, and saying so is the section.
+    const marks = (file.indexMarks ?? []).length;
+    const offer = pullOffer(file, part);
+    return (
+      <section className="dp-card">
+        <h3>
+          <span className="dp-num">1</span> Entries
+          <span className="muted small dp-tally">{marks} marked in the book</span>
+        </h3>
+        <p className="muted small">{offer.refusal}</p>
+        <p className="muted small">
+          Mark a passage from the manuscript’s right-click, or open <strong>Editor ▸ Index…</strong> to see every mark under its heading,
+          rename one everywhere at once, and find the ones whose passage was cut.
+        </p>
+      </section>
+    );
+  }
+
+  if (part.kind === 'reader_extra') {
+    const own = readerExtraOf(part);
+    const write = (patch: Partial<typeof own>) => onWriteAbout({ ...own, ...patch });
+    const warning = extraWarning(part);
+    return (
+      <section className="dp-card">
+        <h3>
+          <span className="dp-num">1</span> What this page does
+        </h3>
+        <div className="dp-modes" role="group" aria-label="What this page does">
+          {EXTRA_KINDS.map((one) => (
+            <button
+              key={one}
+              type="button"
+              className={own.kind === one ? 'dp-tile on' : 'dp-tile'}
+              aria-pressed={own.kind === one}
+              onClick={() => write({ kind: one })}
+            >
+              <strong>{EXTRA_WORDS[one].label}</strong>
+              <span className="muted small">{EXTRA_WORDS[one].note}</span>
+            </button>
+          ))}
+        </div>
+        {/* Choosing a kind names the page, so the heading follows unless the
+            writer has given it words of their own. */}
+        <p className="muted small">It will be headed “{extraHeading(file, own.kind)}” unless you type something else below.</p>
+
+        {own.kind === 'newsletter' ? (
+          <>
+            <label className="field">
+              <span>Message</span>
+              <textarea className="dp-serif-input" aria-label="Message" rows={4} value={own.message} onChange={(event) => write({ message: event.target.value })} />
+            </label>
+            <label className="field">
+              <span>Sign-up link</span>
+              <input aria-label="Sign-up link" placeholder="example.com/letters" value={own.link} onChange={(event) => write({ link: event.target.value })} />
+            </label>
+            {warning ? <p className="dp-status dp-status-warn">{warning}</p> : null}
+            <Switch on={own.qr} label="Print a code to scan" onToggle={() => write({ qr: !own.qr })} />
+            <Switch on={own.liveLink} label="A live link in the eBook" onToggle={() => write({ liveLink: !own.liveLink })} />
+          </>
+        ) : null}
+
+        {own.kind === 'questions' ? (
+          <>
+            <div className="dp-terms">
+              {own.questions.map((one, at) => (
+                <div className="dp-term" key={one.id}>
+                  <span className="dp-row-label">{own.numbering === 'numbers' ? `${at + 1}.` : '•'}</span>
+                  <input
+                    className="dp-serif-input"
+                    aria-label={`Question ${at + 1}`}
+                    value={one.text}
+                    onChange={(event) => write({ questions: own.questions.map((two) => (two.id === one.id ? { ...two, text: event.target.value } : two)) })}
+                  />
+                  <button type="button" className="ghost item-x" aria-label={`Remove question ${at + 1}`} onClick={() => write({ questions: own.questions.filter((two) => two.id !== one.id) })}>
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button type="button" className="raised small" onClick={() => write({ questions: [...own.questions, { id: `q${Date.now()}`, text: '' }] })}>
+              + Add a question
+            </button>
+            <Seg
+              label="Numbering"
+              options={[
+                { id: 'numbers' as const, label: '1, 2, 3' },
+                { id: 'bullets' as const, label: 'Bullets' },
+              ]}
+              value={own.numbering}
+              onPick={(numbering) => write({ numbering })}
+            />
+          </>
+        ) : null}
+
+        {own.kind === 'also_by' ? (
+          <>
+            <div className="dp-terms">
+              {own.titles.map((one) => (
+                <div className="dp-term" key={one.id}>
+                  <input
+                    aria-label="Title"
+                    placeholder="Title"
+                    value={one.title}
+                    onChange={(event) => write({ titles: own.titles.map((two) => (two.id === one.id ? { ...two, title: event.target.value } : two)) })}
+                  />
+                  <input
+                    aria-label="Series note"
+                    placeholder="Book Two of the Lamp"
+                    value={one.series}
+                    onChange={(event) => write({ titles: own.titles.map((two) => (two.id === one.id ? { ...two, series: event.target.value } : two)) })}
+                  />
+                  <button type="button" className="ghost item-x" aria-label="Remove this title" onClick={() => write({ titles: own.titles.filter((two) => two.id !== one.id) })}>
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button type="button" className="raised small" onClick={() => write({ titles: [...own.titles, { id: `b${Date.now()}`, title: '', series: '' }] })}>
+              + Add a title
+            </button>
+          </>
+        ) : null}
+
+        {own.kind === 'preview' ? (
+          <>
+            <label className="field">
+              <span>Lead-in line</span>
+              <input
+                className="dp-serif-input"
+                aria-label="Lead-in line"
+                placeholder="Turn the page for the opening of…"
+                value={own.leadIn}
+                onChange={(event) => write({ leadIn: event.target.value })}
+              />
+            </label>
+            <p className="muted small">
+              The extract itself is set here for now — bringing a chapter in from another project is its own stage.
+            </p>
+            <textarea
+              className="dp-serif-input"
+              aria-label="The extract"
+              rows={6}
+              value={part.text}
+              onChange={(event) => onUpdate((current) => updatePart(current, partId, { text: event.target.value }))}
+            />
+          </>
+        ) : null}
+      </section>
+    );
+  }
+
+  // Every other prose page after the story — an afterword, an also-by — is
+  // its words, which is what it has always been.
   return (
     <section className="dp-card">
       <h3>
         <span className="dp-num">1</span> {PART_INFO[part.kind].name}
       </h3>
-      <p className="muted small">This page’s own controls are still being built. Its words are set here, and the heading and page style below are the page’s.</p>
       <textarea
         className="dp-serif-input"
         aria-label="The page’s words"
@@ -568,6 +906,73 @@ function Card({
     </section>
   );
 }
+
+/**
+ * **Pull from the text** (§17a, from Ken). Absent where the page has nothing
+ * a book could give it, with the reason said in its place — a button that
+ * can only refuse is one that lies.
+ */
+function Pull({ file, part, onUpdate }: { file: ProjectFile; part: BookPart; onUpdate(mutate: (current: ProjectFile) => ProjectFile): void }) {
+  const offer = pullOffer(file, part);
+  if (!offer.can) return <p className="muted small">{offer.refusal}</p>;
+  return (
+    <div className="dp-pull">
+      <p className="muted small">{offer.says}</p>
+      <button
+        type="button"
+        className="raised"
+        onClick={() =>
+          onUpdate((current) => {
+            const now = partsOf(current).find((one) => one.id === part.id);
+            if (!now) return current;
+            const patch = pullFromText(current, now);
+            return patch ? updatePart(current, now.id, patch) : current;
+          })
+        }
+      >
+        Pull from the text
+      </button>
+    </div>
+  );
+}
+
+/** A segmented row, written once: five panels were about to hold five copies. */
+function Seg<T extends string>({
+  label,
+  options,
+  value,
+  onPick,
+}: {
+  label: string;
+  options: ReadonlyArray<{ id: T; label: string }>;
+  value: T;
+  onPick(id: T): void;
+}) {
+  return (
+    <div className="dp-row">
+      <span className="dp-row-label">{label}</span>
+      <div className="dp-seg" role="group" aria-label={label}>
+        {options.map((one) => (
+          <button key={one.id} type="button" className={value === one.id ? 'on' : ''} aria-pressed={value === one.id} onClick={() => onPick(one.id)}>
+            {one.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Switch({ on, label, onToggle }: { on: boolean; label: string; onToggle(): void }) {
+  return (
+    <button type="button" className="dp-switch" role="switch" aria-checked={on} aria-label={label} onClick={onToggle}>
+      <span className={on ? 'dp-switch-track on' : 'dp-switch-track'} aria-hidden="true">
+        <span />
+      </span>
+      {label}
+    </button>
+  );
+}
+
 
 /**
  * The page itself, drawn by the **same renderer the book prints with** — the
