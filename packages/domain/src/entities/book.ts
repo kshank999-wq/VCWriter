@@ -208,6 +208,19 @@ export const bookPartSchema = z.object({
    */
   logoAssetId: z.string().nullable().default(null),
   /**
+   * The title page's own fields (addendum 20 §16): a translator or an editor,
+   * the publisher's mark, and which of the optional elements the page shows.
+   *
+   * Held loosely and parsed by `titlePageFieldsOf`, the copyright page's
+   * shape — so the schema of what a title page carries stays in its own
+   * module rather than being spelled out a second time here. Everything else
+   * the page prints is read from somewhere that already held it: the title
+   * and the author from the book's names, the subtitle from
+   * `settings.titlePage`, the publisher and the edition from the copyright
+   * page's record.
+   */
+  titlePage: z.unknown().nullable().default(null),
+  /**
    * A plate's description. Nothing prints on the page — the art is the page
    * (§8, from Ken) — but the eBook reads it to a reader who cannot see the
    * picture, and the library shows it.

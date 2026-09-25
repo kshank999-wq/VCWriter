@@ -727,18 +727,15 @@ describe('the room', () => {
     fireEvent.click(within(document.querySelector('.layout-inspector') as HTMLElement).getByRole('button', { name: 'Book settings…' }));
     expect(screen.getByRole('dialog', { name: 'Book settings' }).hasAttribute('open')).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Close book settings' }));
-    let file = latest as ProjectFile;
-    // The page's style: a template places it, a hand change reads as custom.
-    // A template is a **height** now (§9n) and the alignment is its own
-    // control, so the patch moves the block down the page and leaves it
-    // ranged where it was.
-    expect((screen.getByLabelText('Page template') as HTMLSelectElement).value).toBe('upper_third');
-    fireEvent.change(screen.getByLabelText('Page template'), { target: { value: 'low' } });
-    file = latest as ProjectFile;
-    const title = partsOf(file).find((part) => part.kind === 'title_page')!;
-    expect(title.style).toMatchObject({ align: 'center', drop: 62 });
-    fireEvent.change(screen.getByLabelText('How far down the page'), { target: { value: '20' } });
-    expect((screen.getByLabelText('Page template') as HTMLSelectElement).value).toBe('custom');
+    // The page's style. The **template select is absent here** (§16): the
+    // title page's placement is a pair of heights — where the title sits and
+    // where the author does — so a control offering the one-height templates
+    // could only disagree with the three arrangements on the page's own
+    // screen. Absent rather than greyed, and the drop is still the title's.
+    expect(screen.queryByLabelText('Page template')).toBeNull();
+    expect(screen.queryByLabelText('How far down the page')).toBeNull();
+    expect(document.querySelector('.layout-inspector')?.textContent).toMatch(/set on the page’s own screen/);
+    // The type is still the panel's: it is the same field either screen sets.
     fireEvent.change(screen.getByLabelText('Title size'), { target: { value: '36' } });
     expect((partsOf(latest as ProjectFile).find((part) => part.kind === 'title_page')!.style as { title: { size: number } }).title.size).toBe(36);
     fireEvent.click(screen.getByRole('button', { name: 'Back to the page’s own look' }));
@@ -749,8 +746,8 @@ describe('the room', () => {
     Object.defineProperty(picker, 'files', { value: [art], configurable: true });
     fireEvent.change(picker);
     await waitFor(() => expect((latest as ProjectFile).assets).toHaveLength(1));
-    file = latest as ProjectFile;
-    expect(partsOf(file).find((part) => part.kind === 'title_page')!.assetId).toBe(file.assets![0]!.id);
+    const after = latest as ProjectFile;
+    expect(partsOf(after).find((part) => part.kind === 'title_page')!.assetId).toBe(after.assets![0]!.id);
     expect(screen.getByRole('button', { name: 'Import other full page art…' })).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Set the words instead' }));
     expect(partsOf(latest as ProjectFile).find((part) => part.kind === 'title_page')!.assetId).toBeNull();

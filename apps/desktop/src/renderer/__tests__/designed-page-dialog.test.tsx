@@ -7,7 +7,10 @@ import {
   partStyleOf,
   partTemplateOf,
   partsOf,
+  setBookSettings,
   setTitlePage,
+  titlePageFieldsOf,
+  titleTemplateOf,
   type ProjectFile,
 } from '@vcwriter/domain';
 
@@ -39,13 +42,24 @@ const book = (): ProjectFile =>
   });
 
 const halfTitle = (file: ProjectFile) => partsOf(file).find((part) => part.kind === 'half_title')!;
+const titlePage = (file: ProjectFile) => partsOf(file).find((part) => part.kind === 'title_page')!;
 
-function Harness({ onFile, picked }: { onFile?: (file: ProjectFile) => void; picked?: string[] }) {
-  const [file, setFile] = useState(book);
+function Harness({
+  onFile,
+  picked,
+  kind = 'half_title',
+  start,
+}: {
+  onFile?: (file: ProjectFile) => void;
+  picked?: string[];
+  kind?: 'half_title' | 'title_page';
+  start?: () => ProjectFile;
+}) {
+  const [file, setFile] = useState(start ?? book);
   return (
     <DesignedPageDialog
       file={file}
-      part={halfTitle(file)}
+      part={kind === 'title_page' ? titlePage(file) : halfTitle(file)}
       laying={null}
       onUpdate={(change) =>
         setFile((current) => {
@@ -57,6 +71,8 @@ function Harness({ onFile, picked }: { onFile?: (file: ProjectFile) => void; pic
       onClose={() => undefined}
       onPickLogo={() => picked?.push('logo')}
       onPickArt={() => picked?.push('art')}
+      onPickImprint={() => picked?.push('imprint')}
+      onOpenCopyright={() => picked?.push('copyright')}
       onOpenBookSettings={() => picked?.push('settings')}
       onTurn={() => undefined}
     />
@@ -138,5 +154,82 @@ describe('the designed page’s screen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset to page style' }));
     expect(halfTitle(seen as unknown as ProjectFile).style).toEqual({});
     expect(screen.getByText('Matches the front-matter style')).toBeTruthy();
+  });
+});
+
+/**
+ * **The title page's own half** (addendum 20 §16, from Ken's handoff). It is
+ * the same screen grown rather than a second one, so what these pin is the
+ * three things that make it the title page's: the elements say where their
+ * words come from, an element switched off keeps them, and the arrangement is
+ * a pair of heights read back.
+ */
+describe('the title page', () => {
+  const withHouse = (): ProjectFile => setBookSettings(book(), { imprint: 'Lamplight Books' });
+
+  it('lists the seven, saying which are required and how many show', () => {
+    render(<Harness kind="title_page" start={withHouse} />);
+    const names = Array.from(document.querySelectorAll('.dp-element-head strong')).map((one) => one.textContent);
+    expect(names).toEqual([
+      'Book title',
+      'Subtitle',
+      'Author’s name',
+      'Translator or editor',
+      'Edition',
+      'Publisher name or mark',
+      'Publisher location',
+    ]);
+    // Two required and three of the five on: the page's own count.
+    expect(screen.getByText('5 of 7 shown')).toBeTruthy();
+    expect(document.querySelectorAll('.dp-required')).toHaveLength(2);
+  });
+
+  it('sends a writer to the copyright page for the publisher rather than offering a box', () => {
+    const picked: string[] = [];
+    render(<Harness kind="title_page" picked={picked} start={withHouse} />);
+    // A route rather than a second copy: one place names the publisher.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit on the copyright page' })[0]!);
+    expect(picked).toEqual(['copyright']);
+  });
+
+  it('keeps an element’s words when it is switched off', () => {
+    let seen: ProjectFile | null = null;
+    render(<Harness kind="title_page" onFile={(file) => (seen = file)} start={withHouse} />);
+    fireEvent.click(screen.getByRole('switch', { name: 'Show the translator or editor' }));
+    fireEvent.change(screen.getByLabelText('Translator or editor'), { target: { value: 'Jane Doe' } });
+    fireEvent.click(screen.getByRole('switch', { name: 'Show the translator or editor' }));
+    const fields = titlePageFieldsOf(titlePage(seen as unknown as ProjectFile));
+    expect(fields.shows.contributor).toBe(false);
+    // Switched off is not emptied: the two are different intentions.
+    expect(fields.contributor).toBe('Jane Doe');
+  });
+
+  it('reads the arrangement off the pair, and offers the author a height only when it has one', () => {
+    let seen: ProjectFile | null = null;
+    render(<Harness kind="title_page" onFile={(file) => (seen = file)} start={withHouse} />);
+    expect(document.querySelector('.dp-says')?.textContent).toBe('Stacked');
+    // Absent rather than greyed: under the title, there is nothing to move.
+    expect(screen.queryByLabelText('Author height')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Classic/ }));
+    expect(screen.getByLabelText('Author height')).toBeTruthy();
+    expect(titleTemplateOf(partStyleOf(titlePage(seen as unknown as ProjectFile)))).toBe('classic');
+    // The alignment is its own control, so ranging it left is still Classic.
+    fireEvent.click(screen.getByRole('button', { name: 'Left' }));
+    expect(titleTemplateOf(partStyleOf(titlePage(seen as unknown as ProjectFile)))).toBe('classic');
+  });
+
+  it('says a missing publisher rather than refusing it', () => {
+    render(<Harness kind="title_page" />);
+    expect(screen.getByText(/No publisher name or mark/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Done' }).hasAttribute('disabled')).toBe(false);
+  });
+
+  it('gives the author a size of its own, which the half title never had', () => {
+    render(<Harness kind="title_page" start={withHouse} />);
+    expect(screen.getByLabelText('Author size in points')).toBeTruthy();
+    expect(screen.getByRole('switch', { name: 'Italic subtitle' })).toBeTruthy();
+    cleanup();
+    render(<Harness />);
+    expect(screen.queryByLabelText('Author size in points')).toBeNull();
   });
 });

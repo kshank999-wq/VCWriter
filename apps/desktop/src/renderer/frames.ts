@@ -1,3 +1,5 @@
+import { pictureRefusal } from './read-picture';
+
 /**
  * Getting a storyboard frame into the document (addendum 05 §3c, §4b).
  *
@@ -42,7 +44,7 @@ export interface Frame {
 }
 
 /** Whether a dropped or chosen file is something a plate can hold. */
-export const isPicture = (file: File): boolean => file.type.startsWith('image/');
+export const isPicture = (file: File): boolean => pictureRefusal(file) === null;
 
 /** Whether it is the moving kind. */
 export const isMoving = (file: File): boolean => file.type.startsWith('video/');

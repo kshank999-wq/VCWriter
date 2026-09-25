@@ -16566,6 +16566,125 @@ dialog.designed-page-dialog[open] {
   color: #8fc79a;
 }
 
+/* Said rather than refused (addendum 20 §16): a book published by nobody in
+   particular is an ordinary book, so a missing publisher is a note in the
+   footer and never something holding Done. */
+.dp-status-warn {
+  color: var(--gold);
+}
+
+/* How many of the seven the page shows. Not `dp-says`, which names what is
+   in force: a tally and a state are two things. */
+.dp-tally {
+  margin-left: auto;
+  font-weight: 400;
+}
+
+/* ------------------------------------------------- the title page's elements */
+
+/* One row per element (§16), each saying where its words come from. A row
+   that is switched off collapses to a dashed outline: what it holds is kept,
+   so the outline is *this page does not say it* rather than *this is
+   empty* — two intentions that look alike on the page and must not on the
+   screen. */
+.dp-elements {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dp-element {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.dp-element.off {
+  border-style: dashed;
+  background: transparent;
+}
+
+.dp-element.off strong {
+  color: var(--muted);
+}
+
+.dp-element-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.dp-element-head strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dp-element-pair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dp-element-pair input {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.dp-element input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* What the page will say, read from wherever it is typed. Not a box: six of
+   the seven are the book's or the copyright page's, and a box here would be
+   a second answer to what the book is called. */
+.dp-reads {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.dp-required {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+/* The author's bar on an arrangement thumbnail: thinner than the title's, so
+   the pair of heights the tile is about can be read at 40px wide. */
+.dp-sheet > span.dp-sheet-author {
+  left: 12px;
+  right: 12px;
+  height: 2px;
+}
+
+/* The conventions the page cannot depart from (§16), said rather than left
+   as controls a writer hunts for and never finds. */
+.dp-locked {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+  line-height: 1.5;
+}
+
 .dp-done {
   background: var(--gold);
   border-color: var(--gold);

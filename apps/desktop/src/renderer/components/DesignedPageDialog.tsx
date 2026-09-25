@@ -6,6 +6,9 @@ import {
   PART_INFO,
   PART_TEMPLATES,
   PART_TEMPLATE_WORDS,
+  TITLE_PAGE_OPTIONAL,
+  TITLE_TEMPLATES,
+  TITLE_TEMPLATE_WORDS,
   bookMetrics,
   bookNames,
   bookPageRows,
@@ -21,14 +24,22 @@ import {
   partTemplatePatch,
   partsOf,
   proseStyleBase,
+  publisherOf,
   renderBookPage,
+  setTitlePage,
+  titlePageContent,
+  titlePageFieldsOf,
   titlePageOf,
+  titlePageShown,
+  titleTemplateOf,
+  titleTemplatePatch,
   updatePart,
   type BookPart,
   type PartMode,
   type PartStyle,
   type PartTemplate,
   type ProjectFile,
+  type TitlePageElement,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 
@@ -84,6 +95,28 @@ const CASES: ReadonlyArray<{ id: PartStyle['title']['case']; label: string }> = 
   { id: 'small_caps', label: 'Small caps' },
 ];
 
+/**
+ * The title page's seven (§16), each saying **where its words come from** —
+ * which is the section's whole argument: four are read from somewhere that
+ * already held them, two more from the copyright page, and only the
+ * contributor is typed here.
+ */
+const TITLE_ELEMENTS: ReadonlyArray<{
+  id: TitlePageElement | 'title' | 'author';
+  label: string;
+  note: string;
+  /** Where a writer changes it, when it is not here. */
+  from?: 'book' | 'copyright';
+}> = [
+  { id: 'title', label: 'Book title', note: 'from Book settings', from: 'book' },
+  { id: 'subtitle', label: 'Subtitle', note: 'directly below the title' },
+  { id: 'author', label: 'Author’s name', note: 'from Book settings', from: 'book' },
+  { id: 'contributor', label: 'Translator or editor', note: 'another contributor' },
+  { id: 'edition', label: 'Edition', note: 'only if not the first', from: 'copyright' },
+  { id: 'publisher', label: 'Publisher name or mark', note: 'at the foot of the page', from: 'copyright' },
+  { id: 'location', label: 'Publisher location', note: 'city, state or country', from: 'copyright' },
+];
+
 export function DesignedPageDialog({
   file,
   part,
@@ -92,7 +125,9 @@ export function DesignedPageDialog({
   onClose,
   onPickLogo,
   onPickArt,
+  onPickImprint,
   onOpenBookSettings,
+  onOpenCopyright,
   onTurn,
 }: {
   file: ProjectFile;
@@ -104,7 +139,16 @@ export function DesignedPageDialog({
   onPickLogo(partId: string): void;
   /** Choose the page's art; the same picker, a different home on the part. */
   onPickArt(partId: string): void;
+  /** The publisher's mark, on the title page: the same picker, a third home. */
+  onPickImprint(partId: string): void;
   onOpenBookSettings(): void;
+  /**
+   * Open the copyright page's own screen. The publisher, its place and the
+   * edition are typed there (§16), so this is a **route rather than a second
+   * copy** — §15c's rule, which is what stops two pages naming two
+   * publishers.
+   */
+  onOpenCopyright(): void;
   /** Turn to another page of the book, by its sheet. */
   onTurn(sheet: number): void;
 }) {
@@ -136,7 +180,9 @@ export function DesignedPageDialog({
           onUpdate={onUpdate}
           onPickLogo={onPickLogo}
           onPickArt={onPickArt}
+          onPickImprint={onPickImprint}
           onOpenBookSettings={onOpenBookSettings}
+          onOpenCopyright={onOpenCopyright}
           onTurn={onTurn}
           onCancel={() => {
             const was = held.current;
@@ -159,7 +205,9 @@ function Body({
   onUpdate,
   onPickLogo,
   onPickArt,
+  onPickImprint,
   onOpenBookSettings,
+  onOpenCopyright,
   onTurn,
   onCancel,
   onClose,
@@ -172,7 +220,9 @@ function Body({
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   onPickLogo(partId: string): void;
   onPickArt(partId: string): void;
+  onPickImprint(partId: string): void;
   onOpenBookSettings(): void;
+  onOpenCopyright(): void;
   onTurn(sheet: number): void;
   onCancel(): void;
   onClose(): void;
@@ -186,6 +236,32 @@ function Body({
   const changes = partChanges(part, base);
   const names = bookNames(file);
   const partId = part.id;
+  /**
+   * The title page's own half (§16). Every other designed page ignores it,
+   * which is why it is a branch rather than a second dialog: the chrome, the
+   * navigator, the guides, the footer and Cancel are the same screen's, and a
+   * copy of them would be a second answer to all five.
+   */
+  const isTitle = part.kind === 'title_page';
+  const plan = useMemo(() => partsOf(file), [file]);
+  const fields = titlePageFieldsOf(part);
+  const said = titlePageContent(file, part, plan);
+  const house = publisherOf(file, plan);
+  const arrangement = titleTemplateOf(style);
+
+  /** Switch one of the five optional elements, keeping its words (§15's rule). */
+  const show = (element: TitlePageElement, on: boolean) =>
+    onUpdate((current) => {
+      const now = partsOf(current).find((one) => one.id === partId) ?? part;
+      const was = titlePageFieldsOf(now);
+      return updatePart(current, partId, { titlePage: { ...was, shows: { ...was.shows, [element]: on } } });
+    });
+
+  const writeFields = (patch: Partial<ReturnType<typeof titlePageFieldsOf>>) =>
+    onUpdate((current) => {
+      const now = partsOf(current).find((one) => one.id === partId) ?? part;
+      return updatePart(current, partId, { titlePage: { ...titlePageFieldsOf(now), ...patch } });
+    });
 
   const write = (patch: Partial<PartStyle>) =>
     onUpdate((current) => {
@@ -272,7 +348,12 @@ function Body({
         <div className="dp-fields">
           <section className="dp-card">
             <h3>
-              <span className="dp-num">1</span> What goes on the page
+              <span className="dp-num">1</span> {isTitle ? 'What’s on the page' : 'What goes on the page'}
+              {/* Its own class: `dp-says` names **what is in force** — the
+                  arrangement, the template — and a tally is not that. Two
+                  things under one name is a second answer waiting to be
+                  read. */}
+              {isTitle && mode === 'text' ? <span className="muted small dp-tally">{titlePageShown(part)} of 7 shown</span> : null}
             </h3>
             <div className="dp-tiles">
               {MODES.map((one) => (
@@ -288,7 +369,116 @@ function Body({
                 </button>
               ))}
             </div>
-            {mode === 'text' ? (
+            {mode === 'text' && isTitle ? (
+              /* The seven elements (§16). Each row says where its words come
+                 from, because six of the seven are read from somewhere that
+                 already held them — a box here for any of those would be a
+                 second answer to what the book is called, who published it or
+                 which edition this is. */
+              <ul className="dp-elements">
+                {TITLE_ELEMENTS.map((one) => {
+                  const required = one.id === 'title' || one.id === 'author';
+                  const on = required || fields.shows[one.id as TitlePageElement];
+                  const words =
+                    one.id === 'title'
+                      ? said.title
+                      : one.id === 'author'
+                        ? said.author
+                        : one.id === 'subtitle'
+                          ? titlePage.episode
+                          : one.id === 'contributor'
+                            ? fields.contributor
+                            : one.id === 'edition'
+                              ? house.edition
+                              : one.id === 'publisher'
+                                ? house.name
+                                : house.place;
+                  return (
+                    <li key={one.id} className={on ? 'dp-element' : 'dp-element off'}>
+                      <div className="dp-element-head">
+                        {required ? (
+                          <span className="dp-required">REQUIRED</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="dp-switch"
+                            role="switch"
+                            aria-checked={on}
+                            aria-label={`Show the ${one.label.toLowerCase()}`}
+                            onClick={() => show(one.id as TitlePageElement, !on)}
+                          >
+                            <span className={on ? 'dp-switch-track on' : 'dp-switch-track'} aria-hidden="true">
+                              <span />
+                            </span>
+                          </button>
+                        )}
+                        <strong>{one.label}</strong>
+                        <span className="muted small">{one.note}</span>
+                      </div>
+                      {on ? (
+                        one.id === 'contributor' ? (
+                          <div className="dp-element-pair">
+                            <div className="dp-seg" role="group" aria-label="Which contributor">
+                              {(['translator', 'editor'] as const).map((role) => (
+                                <button
+                                  key={role}
+                                  type="button"
+                                  className={fields.contributorRole === role ? 'on' : ''}
+                                  aria-pressed={fields.contributorRole === role}
+                                  onClick={() => writeFields({ contributorRole: role })}
+                                >
+                                  {role === 'translator' ? 'Translator' : 'Editor'}
+                                </button>
+                              ))}
+                            </div>
+                            <input
+                              aria-label="Translator or editor"
+                              placeholder="Name"
+                              value={fields.contributor}
+                              onChange={(event) => writeFields({ contributor: event.target.value })}
+                            />
+                          </div>
+                        ) : one.id === 'subtitle' ? (
+                          <input
+                            aria-label="Subtitle"
+                            placeholder="A subtitle — A novel, Stories — or nothing"
+                            value={titlePage.episode}
+                            onChange={(event) => onUpdate((current) => setTitlePage(current, { episode: event.target.value }))}
+                          />
+                        ) : one.id === 'publisher' ? (
+                          <div className="dp-element-pair">
+                            <p className="dp-reads">{fields.imprintAssetId ? 'A mark stands in place of the name.' : words || 'Not named yet'}</p>
+                            <button type="button" className="ghost small" onClick={() => onPickImprint(partId)}>
+                              {fields.imprintAssetId ? 'Another mark…' : 'Use a mark…'}
+                            </button>
+                            {fields.imprintAssetId ? (
+                              <button type="button" className="ghost small" onClick={() => writeFields({ imprintAssetId: null })}>
+                                Set the name instead
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="dp-element-pair">
+                            <p className="dp-reads">{words || 'Not given yet'}</p>
+                            {/* A route rather than a second box (§15c): the
+                                publisher and the edition are typed on the
+                                copyright page, and a book naming two
+                                publishers is a mistake, not a design. */}
+                            <button
+                              type="button"
+                              className="ghost small"
+                              onClick={() => (one.from === 'copyright' ? onOpenCopyright() : onOpenBookSettings())}
+                            >
+                              {one.from === 'copyright' ? 'Edit on the copyright page' : 'Edit in Book settings'}
+                            </button>
+                          </div>
+                        )
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : mode === 'text' ? (
               <div className="dp-slot">
                 <div>
                   <span className="dp-label">Title from the book</span>
@@ -324,8 +514,43 @@ function Body({
             <section className="dp-card">
               <h3>
                 <span className="dp-num">2</span> Placement
-                <span className="muted small dp-says">{template ? PART_TEMPLATE_WORDS[template].name : 'Custom · placed by hand'}</span>
+                <span className="muted small dp-says">
+                  {isTitle
+                    ? arrangement
+                      ? TITLE_TEMPLATE_WORDS[arrangement].name
+                      : 'Custom · placed by hand'
+                    : template
+                      ? PART_TEMPLATE_WORDS[template].name
+                      : 'Custom · placed by hand'}
+                </span>
               </h3>
+              {/* The title page's arrangements are a **pair** of heights
+                  (§16): a title at a third of the way down says nothing about
+                  whether the author is under it or half a page below, so one
+                  height cannot name the arrangement. */}
+              {isTitle ? (
+                <div className="dp-templates">
+                  {TITLE_TEMPLATES.map((one) => (
+                    <button
+                      key={one}
+                      type="button"
+                      className={arrangement === one ? 'dp-template on' : 'dp-template'}
+                      aria-pressed={arrangement === one}
+                      title={TITLE_TEMPLATE_WORDS[one].says}
+                      onClick={() => write(titleTemplatePatch(one))}
+                    >
+                      <span className="dp-sheet" aria-hidden="true">
+                        <span style={{ top: `${TITLE_TEMPLATE_WORDS[one].drop}%` }} />
+                        <span
+                          className="dp-sheet-author"
+                          style={{ top: `${TITLE_TEMPLATE_WORDS[one].authorDrop ?? TITLE_TEMPLATE_WORDS[one].drop + 12}%` }}
+                        />
+                      </span>
+                      {TITLE_TEMPLATE_WORDS[one].name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
               <div className="dp-templates">
                 {PART_TEMPLATES.map((one) => (
                   <button
@@ -343,9 +568,10 @@ function Body({
                   </button>
                 ))}
               </div>
+              )}
               <label className="field dp-slider">
                 <span>
-                  Height on the page <strong>{style.drop}% down</strong>
+                  {isTitle ? 'Title height' : 'Height on the page'} <strong>{style.drop}% down</strong>
                 </span>
                 <input
                   type="range"
@@ -362,6 +588,53 @@ function Body({
                 <span>Middle</span>
                 <span>Bottom</span>
               </div>
+              {/* **One field, both answers** (§16): a height means the author
+                  stands there, and nothing means directly under the title, so
+                  there is no mode flag beside the number that could disagree
+                  with it. */}
+              {isTitle ? (
+                <>
+                  <div className="dp-row">
+                    <span className="dp-row-label">Author</span>
+                    <div className="dp-seg" role="group" aria-label="Where the author stands">
+                      <button
+                        type="button"
+                        className={style.authorDrop !== null ? 'on' : ''}
+                        aria-pressed={style.authorDrop !== null}
+                        onClick={() => write({ authorDrop: style.authorDrop ?? 52 })}
+                      >
+                        Placed separately
+                      </button>
+                      <button
+                        type="button"
+                        className={style.authorDrop === null ? 'on' : ''}
+                        aria-pressed={style.authorDrop === null}
+                        onClick={() => write({ authorDrop: null })}
+                      >
+                        Right under the title
+                      </button>
+                    </div>
+                  </div>
+                  {/* Absent rather than greyed where the author has no height
+                      of its own: there is nothing for the slider to move. */}
+                  {style.authorDrop !== null ? (
+                    <label className="field dp-slider">
+                      <span>
+                        Author height <strong>{style.authorDrop}% down</strong>
+                      </span>
+                      <input
+                        type="range"
+                        min={10}
+                        max={85}
+                        step={1}
+                        aria-label="Author height"
+                        value={style.authorDrop}
+                        onChange={(event) => write({ authorDrop: Number(event.target.value) })}
+                      />
+                    </label>
+                  ) : null}
+                </>
+              ) : null}
               <div className="dp-row">
                 <span className="dp-row-label">Alignment</span>
                 <div className="dp-seg" role="group" aria-label="Alignment">
@@ -429,9 +702,49 @@ function Body({
                   </div>
                 </div>
               </div>
+              {/* The **author's** own size (§16). It was `line`, shared with
+                  the subtitle and the publisher, so setting the author set
+                  all three — §7a's running heads on the page in front of
+                  them. The subtitle's size is the title's and there is
+                  nowhere to type one. */}
+              {isTitle ? (
+                <div className="dp-pair">
+                  <div className="field">
+                    <span>Author size</span>
+                    <div className="dp-step">
+                      <button
+                        type="button"
+                        className="raised small"
+                        aria-label="Smaller author"
+                        onClick={() => write({ line: { ...style.line, size: Math.max(8, style.line.size - 1) } })}
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        aria-label="Author size in points"
+                        min={8}
+                        max={36}
+                        value={style.line.size}
+                        onChange={(event) =>
+                          write({ line: { ...style.line, size: Math.min(36, Math.max(8, Number(event.target.value) || style.line.size)) } })
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="raised small"
+                        aria-label="Larger author"
+                        onClick={() => write({ line: { ...style.line, size: Math.min(36, style.line.size + 1) } })}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               <div className="dp-row">
-                <span className="dp-row-label">Case</span>
-                <div className="dp-seg" role="group" aria-label="Case">
+                <span className="dp-row-label">{isTitle ? 'Title case' : 'Case'}</span>
+                <div className="dp-seg" role="group" aria-label={isTitle ? 'Title case' : 'Case'}>
                   {CASES.map((one) => (
                     <button
                       key={one.id}
@@ -445,6 +758,24 @@ function Body({
                   ))}
                 </div>
               </div>
+              {isTitle ? (
+                <div className="dp-row">
+                  <span className="dp-row-label">Author case</span>
+                  <div className="dp-seg" role="group" aria-label="Author case">
+                    {CASES.map((one) => (
+                      <button
+                        key={one.id}
+                        type="button"
+                        className={style.line.case === one.id ? 'on' : ''}
+                        aria-pressed={style.line.case === one.id}
+                        onClick={() => write({ line: { ...style.line, case: one.id } })}
+                      >
+                        {one.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <div className="dp-row">
                 <span className="dp-row-label">Style</span>
                 <button
@@ -480,6 +811,21 @@ function Body({
                   onChange={(event) => write({ title: { ...style.title, tracking: Number(event.target.value) } })}
                 />
               </label>
+              {isTitle ? (
+                <button
+                  type="button"
+                  className="dp-switch"
+                  role="switch"
+                  aria-checked={style.subtitleItalic}
+                  aria-label="Italic subtitle"
+                  onClick={() => write({ subtitleItalic: !style.subtitleItalic })}
+                >
+                  <span className={style.subtitleItalic ? 'dp-switch-track on' : 'dp-switch-track'} aria-hidden="true">
+                    <span />
+                  </span>
+                  Italic subtitle
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="dp-switch"
@@ -494,6 +840,18 @@ function Body({
                 Rule under the title
               </button>
             </section>
+          ) : null}
+
+          {/* Said rather than hidden (§16): these are not settings, and a
+              writer who cannot find a control for them should be told why
+              rather than left hunting. The renderer enforces them — the
+              recto, the folio and the verso are the plan's, not this
+              screen's. */}
+          {isTitle ? (
+            <p className="dp-locked muted small">
+              Set by publishing convention: always a right-hand page, counted in the page total but printed with no page number or
+              running head. The copyright page goes on its back.
+            </p>
           ) : null}
         </div>
 
@@ -519,11 +877,20 @@ function Body({
         {/* What the page owes the style it would otherwise take. It counts
             the **resolved** settings rather than the keys in the record, so a
             field set back to its default by hand is not a change. */}
-        <span className={changes > 0 ? 'dp-status dp-status-off' : 'dp-status dp-status-on'}>
-          {changes > 0
-            ? `${changes} change${changes === 1 ? '' : 's'} from the ${half === 'front matter' ? 'front-matter' : 'back-matter'} style`
-            : `Matches the ${half === 'front matter' ? 'front-matter' : 'back-matter'} style`}
-        </span>
+        {/* A missing publisher is **said, never refused** (§16): plenty of
+            books are published by nobody in particular, so it is a note about
+            what most title pages carry rather than something to fix. */}
+        {isTitle && said.publisher.trim().length === 0 && fields.imprintAssetId === null ? (
+          <span className="dp-status dp-status-warn">
+            No publisher name or mark — fine for self-publishing, but most title pages carry one
+          </span>
+        ) : (
+          <span className={changes > 0 ? 'dp-status dp-status-off' : 'dp-status dp-status-on'}>
+            {changes > 0
+              ? `${changes} change${changes === 1 ? '' : 's'} from the ${half === 'front matter' ? 'front-matter' : 'back-matter'} style`
+              : `Matches the ${half === 'front matter' ? 'front-matter' : 'back-matter'} style`}
+          </span>
+        )}
         <span className="dp-spacer" />
         <button type="button" className="ghost" onClick={() => onUpdate((current) => updatePart(current, partId, { style: {} }))}>
           Reset to page style

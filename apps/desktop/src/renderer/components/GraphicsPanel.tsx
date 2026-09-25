@@ -12,7 +12,7 @@ import {
   type BeatId,
   type ProjectFile,
 } from '@vcwriter/domain';
-import { readPicture } from '../read-picture';
+import { PICTURE_ACCEPT, pictureRefusal, readPicture } from '../read-picture';
 
 /**
  * The graphics library (addendum 16 §9).
@@ -51,7 +51,8 @@ export function GraphicsPanel({ file, onUpdate, onGoToBeat }: GraphicsPanelProps
     if (!files || files.length === 0) return;
     setBusy(true);
     for (const one of Array.from(files)) {
-      if (!one.type.startsWith('image/')) continue;
+      // One reading (§16a), so the library takes a vendor's PDF too.
+      if (pictureRefusal(one)) continue;
       try {
         const read = await readPicture(one);
         onUpdate((current) => addGraphic(current, { name: one.name, ...read }).file);
@@ -90,7 +91,7 @@ export function GraphicsPanel({ file, onUpdate, onGoToBeat }: GraphicsPanelProps
           <input
             ref={picker}
             type="file"
-            accept="image/*"
+            accept={PICTURE_ACCEPT}
             multiple
             aria-label="Add graphics"
             style={{ display: 'none' }}

@@ -225,14 +225,40 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
     case 'title_page': {
       const whole = block.assetId ? context.pictures.get(block.assetId) : undefined;
       if (whole) return fullPageArt(whole, titlePage.title || names.title);
-      const art =
-        logoMarkup(block, context, titlePage.title || names.title) ??
-        `<p class="bk-book-title">${escapeHtml(titlePage.title || names.title)}</p>`;
-      // The line under the title (a subtitle, *A novel*): the title page's
-      // own field, which a series fills with its episode.
-      const subtitle = (titlePage.episode ?? '').trim().length > 0 ? `<p class="bk-subtitle">${escapeHtml(titlePage.episode)}</p>` : '';
-      const imprint = names.imprint.trim().length > 0 ? `<p class="bk-imprint">${escapeHtml(names.imprint)}</p>` : '';
-      return `<div class="bk-display bk-title"${styled}>${drop}${art}${subtitle}<p class="bk-author">${escapeHtml(titlePage.author || names.author)}</p>${imprint}</div>`;
+      // The seven elements as the domain resolved them (§16): switched-off
+      // ones arrive empty and the contributor's line arrives worded, so the
+      // printer decides nothing about what the page says — the copyright
+      // page's rule, on the page in front of it.
+      const on = block.titlePage ?? {
+        title: titlePage.title || names.title,
+        subtitle: (titlePage.episode ?? '').trim(),
+        author: titlePage.author || names.author,
+        contributor: '',
+        edition: '',
+        publisher: names.imprint.trim(),
+        location: '',
+        imprintAssetId: null,
+      };
+      const said = (text: string, css: string): string =>
+        text.trim().length > 0 ? `<p class="${css}">${escapeHtml(text)}</p>` : '';
+      const art = logoMarkup(block, context, on.title) ?? `<p class="bk-book-title">${escapeHtml(on.title)}</p>`;
+      const who = `${said(on.author, 'bk-author')}${said(on.contributor, 'bk-contributor')}`;
+      // **Two groups or one** (§16). `--pt-author-drop` is declared only where
+      // the author stands at a height of its own, so its absence is what
+      // *directly under the title* means — one field, both arrangements, and
+      // no mode flag beside it that could say otherwise.
+      const separate = (block.partStyle?.authorDrop ?? null) !== null;
+      const mark = on.imprintAssetId ? context.pictures.get(on.imprintAssetId) : undefined;
+      const house = mark
+        ? `<img class="bk-imprint-mark" alt="${escapeHtml(mark.altText || on.publisher || 'Publisher')}" src="${escapeHtml(mark.data)}" />`
+        : said(on.publisher, 'bk-imprint');
+      const foot = `<div class="bk-title-foot">${said(on.edition, 'bk-edition')}${
+        on.publisher.trim().length > 0 || mark ? house : ''
+      }${said(on.location, 'bk-place')}</div>`;
+      return `<div class="bk-display bk-title"${styled}><div class="bk-title-group">${art}${said(
+        on.subtitle,
+        'bk-subtitle',
+      )}${separate ? '' : who}</div>${separate ? `<div class="bk-title-authors">${who}</div>` : ''}${foot}</div>`;
     }
     case 'copyright': {
       // The fields where the writer has used them (§9k): a paragraph per
@@ -849,8 +875,36 @@ ${CHAPTER_STYLES}
   .bk-display.bk-half, .bk-display.bk-title, .bk-display.bk-words { align-items: var(--pt-items, center); text-align: var(--pt-align, center); font-family: var(--pt-face, var(--bk-face)); }
   .bk-drop { flex: 0 0 var(--pt-drop, 30%); }
   .bk-display .bk-book-title { font-size: var(--pt-title-size, 2.2em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, normal); letter-spacing: var(--pt-title-tracking, 0.02em); border-bottom: var(--pt-rule, none); padding-bottom: 0.15em; }
-  .bk-display .bk-author, .bk-display .bk-subtitle, .bk-display .bk-imprint { font-size: var(--pt-line-size, 1.1em); text-transform: var(--pt-line-case, uppercase); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, normal); letter-spacing: var(--pt-line-tracking, 0.12em); }
-  .bk-subtitle { margin: 0.8em 0 0; }
+  /* The **author's** line, and only the author's (§16). The subtitle and the
+     publisher shared this rule, so setting the author to sixteen point set
+     the imprint to sixteen point too and a subtitle could not be italic while
+     the author was in small caps — §7a's running heads on the page in front
+     of them. Each is its own line of type now. */
+  .bk-display .bk-author { font-size: var(--pt-line-size, 1.1em); text-transform: var(--pt-line-case, uppercase); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, normal); letter-spacing: var(--pt-line-tracking, 0.12em); }
+  /* Its size is the **title's**, a little over half, so it grows when the
+     title does and there is nowhere to type one (§16). The slope is the one
+     thing there is to set. */
+  .bk-subtitle { margin: 0.8em 0 0; font-size: calc(var(--pt-title-size, 2.2em) * 0.52); font-style: var(--pt-subtitle-style, italic); line-height: 1.3; letter-spacing: 0.01em; }
+  /* Who translated or edited it, under the author's name. */
+  .bk-contributor { margin: 0.35em 0 0; font-size: 0.8em; font-style: italic; letter-spacing: 0.01em; }
+  /* The publisher's block, anchored to the foot of the text block. Its type
+     is the page's own and there is nothing to set: a book's imprint line is
+     a convention rather than a design decision. */
+  .bk-title-foot { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: var(--pt-items, center); text-align: var(--pt-align, center); }
+  .bk-edition { margin: 0 0 0.9em; font-size: 0.75em; letter-spacing: 0.14em; text-transform: uppercase; }
+  .bk-place { margin: 0.35em 0 0; font-size: 0.7em; letter-spacing: 0.06em; }
+  .bk-imprint-mark { max-width: 40%; max-height: 8%; }
+  /* Two groups on one page (§16): the title where the title height puts it,
+     and the author either inside that group or at a height of its own. */
+  .bk-display.bk-title { display: block; position: relative; }
+  .bk-title-group, .bk-title-authors { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: var(--pt-items, center); text-align: var(--pt-align, center); }
+  .bk-title-group { top: var(--pt-drop, 36%); }
+  .bk-title-authors { top: var(--pt-author-drop, 52%); }
+  /* The author's air above it is what separates it from the title **in the
+     stacked arrangement**, where they are one block. In a group of its own
+     the height is the whole of where it stands, so the margin would put it
+     four per cent below the number the writer set. */
+  .bk-title-authors .bk-author { margin-top: 0; }
   /* One selector, not two: bk-display and bk-words are on the same element,
      so the descendant form that stood here matched nothing and the page's own
      type was never honoured at all (§7a). The defaults are what the dead rule
@@ -867,7 +921,9 @@ ${CHAPTER_STYLES}
   .bk-display.bk-plate { justify-content: center; }
   .bk-book-title { margin: 0; font-size: 2.2em; line-height: 1.15; letter-spacing: 0.02em; }
   .bk-author { margin: 2em 0 0; font-size: 1.1em; letter-spacing: 0.12em; text-transform: uppercase; }
-  .bk-imprint { margin-top: auto; padding-bottom: 1em; font-size: 0.85em; letter-spacing: 0.15em; text-transform: uppercase; }
+  /* No margin-top of auto: the foot block places it now (§16), so the
+     publisher's line no longer has to be the last flex child to sit low. */
+  .bk-imprint { margin: 0; font-size: 0.85em; letter-spacing: 0.15em; text-transform: uppercase; }
   .bk-title-art { max-width: 80%; max-height: 40%; }
   .bk-small { font-size: 0.8em; line-height: 1.4; margin: 0; }
   .bk-display.bk-copyright .bk-small { font-size: var(--pt-title-size, 0.8em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, normal); letter-spacing: var(--pt-title-tracking, 0); border-bottom: var(--pt-rule, none); padding-bottom: 0.15em; }

@@ -67,6 +67,19 @@ export const partStyleSchema = z.object({
    * number. A page whose drop was ever chosen keeps it.
    */
   drop: z.number().min(0).max(80).default(33),
+  /**
+   * How far down the page the **author** stands, on the title page (§16).
+   *
+   * **Null means directly under the title**, which is one field answering
+   * both of the handoff's controls rather than a number and a mode beside it
+   * that could disagree — `minimumSetups`' shape, and the reason is the same:
+   * two fields for one question drift the moment one is written without the
+   * other. It is also what the page has always done, so a title page nobody
+   * has arranged is unchanged.
+   *
+   * Every other kind ignores it, as they ignore the dividers.
+   */
+  authorDrop: z.number().min(10).max(85).nullable().default(null),
   face: z.enum(PART_FACES).default('book'),
   /** The title, or the words of a dedication. */
   title: lineStyleSchema.default({ size: 24, tracking: 2 }),
@@ -80,6 +93,17 @@ export const partStyleSchema = z.object({
    * the foot-hung and flowing pages ignore the drop.
    */
   divider: lineStyleSchema.default({ size: 11, bold: true }),
+  /**
+   * Whether the title page's subtitle is set in italic (§16).
+   *
+   * Its **size is derived** — a little over half the title's — because a
+   * subtitle is a line of the title group rather than a line of its own, so
+   * it should grow when the title does; there is nowhere to type one, which
+   * is this project's rule about a derived fact arriving on a page for the
+   * tenth time. The slope is the one thing books really disagree about, so
+   * it is the one thing there is to set.
+   */
+  subtitleItalic: z.boolean().default(true),
   /** A rule under the title. */
   rule: z.boolean().default(false),
 });
@@ -148,7 +172,12 @@ export const partHasDividers = (kind: PartKind): boolean => kind === 'index';
  */
 const KIND_DEFAULTS: Partial<Record<PartKind, PartStylePatch>> = {
   half_title: { title: { size: 24, case: 'as_typed', bold: false, italic: false, tracking: 2 } },
-  title_page: {},
+  // **Stacked**, which is what the page has always drawn (§16): the author
+  // directly under the title, as one block. 36 rather than the schema's 33 so
+  // a title page nobody has arranged reads as one of the three arrangements
+  // rather than as *Custom · placed by hand* — §9n's argument, which moved
+  // the half title by 3% for the same reason and on the handoff's own number.
+  title_page: { drop: 36, authorDrop: null },
   // The lines under the words start as the words (§7a): an epigraph's
   // attribution and a dedication's second line are set the same until somebody
   // says otherwise, so a page made before there were two styles is unchanged.
@@ -267,8 +296,10 @@ export const partChanges = (part: Pick<BookPart, 'kind' | 'style'>, base: PartSt
   const leaves = (one: PartStyle): unknown[] => [
     one.align,
     one.drop,
+    one.authorDrop,
     one.face,
     one.rule,
+    one.subtitleItalic,
     ...([one.title, one.line, one.divider] as const).flatMap((line) => [
       line.size,
       line.case,
@@ -316,6 +347,11 @@ export const partStyleVars = (
   // and the front matter in whatever the table happened to hold.
   '--pt-face': faceStackOf(style.face === 'book' ? bookFace : style.face, fonts),
   '--pt-drop': `${style.drop}%`,
+  // Null means *directly under the title* (§16), which on the page is the
+  // author standing inside the title's own group — so there is no second
+  // height to declare and the property is simply not set.
+  ...(style.authorDrop === null ? {} : { '--pt-author-drop': `${style.authorDrop}%` }),
+  '--pt-subtitle-style': style.subtitleItalic ? 'italic' : 'normal',
   '--pt-align': style.align,
   '--pt-items': style.align === 'left' ? 'flex-start' : style.align === 'right' ? 'flex-end' : 'center',
   '--pt-rule': style.rule ? '1px solid currentColor' : 'none',

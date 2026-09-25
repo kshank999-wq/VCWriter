@@ -19,6 +19,7 @@ import {
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 import { ChapterLeaf } from './Paper';
+import { PICTURE_ACCEPT } from '../read-picture';
 
 interface MarkerDialogProps {
   file: ProjectFile;
@@ -236,7 +237,7 @@ function Body({
                   <input
                     ref={picker}
                     type="file"
-                    accept="image/*"
+                    accept={PICTURE_ACCEPT}
                     aria-label="Graphic"
                     hidden
                     onChange={(event) => chooseImage(event.target.files)}
@@ -248,7 +249,7 @@ function Body({
                   <input
                     ref={artPicker}
                     type="file"
-                    accept="image/*"
+                    accept={PICTURE_ACCEPT}
                     aria-label="Full page art file"
                     hidden
                     onChange={(event) => {

@@ -2139,6 +2139,114 @@ reachable only by a scroll nothing announced. The column is wider and
 scrolls visibly now. A control a writer cannot see is one they report as
 missing, which is the whole of why the type is here at all.
 
+## 16. The title page
+
+From Ken's own *Title Page panel* handoff, the companion to §9n's and §15's:
+seven elements each with a switch, three arrangements, its own typography,
+and the page beside them.
+
+**The audit paid a nineteenth time, in two directions at once.** Four of the
+seven were already printing — the title and the author are `bookNames`', the
+subtitle is `settings.titlePage.episode` (the older spelling, drawn under the
+title since the room was built), the publisher is `settings.book.imprint`.
+Two more were already *typed*, on the **copyright page**: `publisher`,
+`publisherPlace` and `edition` have been fields on that record since §9k. So
+what is new is not the content but the **switches, the arrangement and the
+type**; the one field a title page had nowhere to keep is the contributor.
+
+Four decisions carry it.
+
+**The publisher is the book's, and is named once.** A title page and a
+copyright page naming different publishers is a mistake rather than a design,
+so `publisherOf` reads that record and the rows offer **Edit on the copyright
+page** — §15c's route rather than a second copy, which is what the row would
+be if it held a box.
+
+**An element switched off is not an element left empty** (§15's rule pointed
+at the page in front of it). *This book has no second edition* and *this book
+has one and the title page does not print it* look alike on the page, so each
+optional element has a switch of its own and switching it off keeps its
+words. The defaults are exactly what the page printed before there were
+switches; the location is on because an element that is on and empty prints
+nothing, which is the whole of why the switch and the field are two things.
+
+**A template is a pair of heights, and one of the handoff's four is not a
+template at all.** On this page the title's height says nothing about whether
+the author is under it or half a page below, so `titleTemplateOf` asks
+both — Classic, Stacked, Set high. The handoff's fourth, *Flush left*, is
+Classic's heights ranged left, which is the conflation §9n removed: keeping
+it would mean choosing a template moved the page across as well as down, and
+ranging a page left would read as *Custom* though its heights had not moved.
+The alignment stays its own control. **Null means *under the title***, so
+`authorDrop` is one field answering both of the handoff's controls rather
+than a number and a mode that could disagree — `minimumSetups`' shape, and
+what the page has always done, so a title page nobody has arranged is
+unchanged. It reads as **Stacked**, which is §9n's argument again: the
+default drop moves 33 → 36 so a fresh page names an arrangement rather than
+lying about being custom.
+
+**The author, the subtitle and the publisher were one line of type and are
+three.** `.bk-author`, `.bk-subtitle` and `.bk-imprint` all read
+`--pt-line-*`, so setting the author to sixteen point set the imprint to
+sixteen point and a subtitle could not be italic while the author was in
+small caps — §7a's running heads, on the page in front of them. The
+subtitle's **size is derived** from the title's and there is nowhere to type
+one; its slope is the one thing books disagree about, so it is the one thing
+there is to set.
+
+Two smaller ones. The conventions — always a recto, counted but unnumbered,
+the copyright page on its back — are **said rather than hidden**, because a
+writer who cannot find a control should be told why instead of hunting. And a
+missing publisher is **said, never refused**: plenty of books are published
+by nobody in particular, so it is a note in the footer and never something
+holding *Done*.
+
+Driving the real room caught two faults tests could not. The author's `2em`
+of air, which is what separates it from the title in the stacked
+arrangement, carried into its own group and put Classic's author at 56%
+rather than the 52% the writer set. And the inspector's older `PageStyle`
+panel still offered this page the **one-height** templates, which on a page
+whose placement is a pair could only disagree with it — absent there now,
+with the way through said.
+
+## 16a. A barcode as the vendor sends it
+
+From Ken while §16 was being built: *the ISBN barcode needs to be able to
+import a PDF, because that's how it's exported from the actual vendor. Or an
+EPS file.*
+
+**The PDF is drawn once, on the way in.** A data URI of a PDF in an `<img>`
+draws nothing — not in the room's preview, not in the exported PDF, not in
+the eBook — so `readPdfPicture` renders page one at **600 dpi against the
+page's own size in points** and what the library keeps is an ordinary
+picture. Nothing downstream learns that PDFs exist, and `barcodeResolution`
+reads the dots it is given and answers honestly: a 2 in vendor file comes in
+at 1200 × 600 and reads *600 dpi at this width*, falling to 400 when the
+writer widens it to 3 in.
+
+**EPS is refused, with the one-step fix named.** Nothing in the app can
+rasterise PostScript — pdf.js reads PDF and Chromium reads neither — and
+there is no honest way to accept one: a stored EPS would be an empty box in
+the preview, the printed book and the eBook alike. So it says *open it and
+save it as a PDF*, which is a refusal a writer can act on; `.ai` and `.ps`
+say the same. Everything else still reads *that is not a picture file*.
+
+**One reading, where there were nine.** `pictureRefusal` is what decides, and
+it had been written out by hand as `startsWith('image/')` in nine places plus
+`accept="image/*"` in nine more — so a gate beside the reader would have gone
+on refusing what the reader had learned to draw. `PICTURE_ACCEPT` is the one
+constant the pickers offer, because a picker that refuses what the reader
+takes is a control that lies.
+
+**And it found a fault in code it did not write.** pdf.js 6 calls
+`Map.prototype.getOrInsertComputed`, a proposal method that landed in V8
+*after* the Chromium this app ships on — so `getDocument(…).getPage(1)`
+throws on a writer's machine, and **the PDF script importer had been broken
+the same way** with every test green, nothing in the suite loading pdf.js.
+`pdf-runtime.ts` is one place that loads the library, owns the worker and
+supplies the missing method where it is missing; both readers ask it, which
+also took out a second copy of the worker setup.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

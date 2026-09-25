@@ -10,6 +10,7 @@ import { partHasStyle, partLogo, partStyleOf, proseStyleBase, type PartStyle, ty
 import { isCollection } from './formats.js';
 import { placeFigure } from './instructional.js';
 import { copyrightLines, copyrightOf, type CopyrightLine } from './copyright-page.js';
+import { titlePageContent, titlePageFieldsOf, type TitlePageContent } from './title-page.js';
 import type { BookPage } from './book-pages.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -385,6 +386,13 @@ export interface BookBlock {
   /** A logotype in place of the title, on a designed page (§9n). */
   logo?: { assetId: string | null; data: string | null };
   /**
+   * What the title page prints (§16): the seven elements, already resolved —
+   * switched off ones empty, the contributor's line already worded. The
+   * printer draws what it is handed and decides nothing about what the page
+   * says, which is the copyright page's rule on the page before it.
+   */
+  titlePage?: TitlePageContent & { imprintAssetId: string | null };
+  /**
    * Graphics set over the page this paragraph falls on (§8c). Several may
    * ride one paragraph, and none of them takes a line: the cutter never
    * sees them, which is the whole of what *free* means.
@@ -444,6 +452,10 @@ const partBlocks = (
   // The copyright page reads the book to fill its own blanks (§9k); every
   // other part is built from itself alone.
   file?: ProjectFile,
+  // The whole plan, for the title page: its publisher and its edition are the
+  // **copyright page's** fields (§16), a book naming two publishers on two
+  // pages being a mistake rather than a design.
+  plan: readonly BookPart[] = [],
 ): BookBlock[] => {
   const title = partTitle(part);
   switch (part.kind) {
@@ -456,7 +468,27 @@ const partBlocks = (
     case 'half_title':
       return [block({ id: part.id, kind: 'half_title', numbering, starts: 'recto', display: true, folio: false, partId: part.id, unbreakable: true, assetId: part.assetId, logo: partLogo(part, file?.settings.titlePage?.titleImage ?? '') ?? undefined, partStyle: partStyleOf(part) })];
     case 'title_page':
-      return [block({ id: part.id, kind: 'title_page', numbering, starts: 'recto', display: true, folio: false, partId: part.id, unbreakable: true, assetId: part.assetId, logo: partLogo(part, file?.settings.titlePage?.titleImage ?? '') ?? undefined, partStyle: partStyleOf(part) })];
+      return [
+        block({
+          id: part.id,
+          kind: 'title_page',
+          numbering,
+          starts: 'recto',
+          display: true,
+          folio: false,
+          partId: part.id,
+          unbreakable: true,
+          assetId: part.assetId,
+          logo: partLogo(part, file?.settings.titlePage?.titleImage ?? '') ?? undefined,
+          // The seven elements, resolved once (§16) — what each says and
+          // whether it says it. Without a file there is nothing to read them
+          // from, and the printer falls back to what it drew before.
+          titlePage: file
+            ? { ...titlePageContent(file, part, plan), imprintAssetId: titlePageFieldsOf(part).imprintAssetId }
+            : undefined,
+          partStyle: partStyleOf(part),
+        }),
+      ];
     case 'copyright': {
       // The page's own fields where the writer has used them (§9k), and the
       // free text where they have not — one reading, so the print, the spread
@@ -1184,7 +1216,7 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   const prose = proseStyleBase(chapterPageStyleSchema.parse(file.settings.chapterPageStyle ?? {}), settings.size);
   const out: BookBlock[] = [];
 
-  for (const part of frontParts(parts)) out.push(...partBlocks(part, 'roman', bookTitle, prose, file));
+  for (const part of frontParts(parts)) out.push(...partBlocks(part, 'roman', bookTitle, prose, file, parts));
 
   const platesBefore = new Map<string, BookPart[]>();
   for (const part of parts) {
@@ -1419,7 +1451,7 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   }
   if (pending) out.push(pending);
 
-  for (const part of backParts(parts)) out.push(...partBlocks(part, 'arabic', bookTitle, prose, file));
+  for (const part of backParts(parts)) out.push(...partBlocks(part, 'arabic', bookTitle, prose, file, parts));
   return out;
 };
 

@@ -13,6 +13,7 @@ import {
   type ProjectFile,
   type ProjectStatus,
 } from '@vcwriter/domain';
+import { PICTURE_ACCEPT, pictureRefusal } from '../read-picture';
 
 /**
  * The project home (master spec §4, addendum 17).
@@ -82,7 +83,7 @@ export function ProjectHomePanel({
 
   const takePoster = async (chosen: FileList | null) => {
     const one = chosen?.[0];
-    if (!one || !one.type.startsWith('image/')) return;
+    if (!one || pictureRefusal(one)) return;
     try {
       const read = await readPicture(one);
       onUpdate((current) => setPoster(current, { name: one.name, ...read }).file);
@@ -233,7 +234,7 @@ export function ProjectHomePanel({
             <input
               ref={picker}
               type="file"
-              accept="image/*"
+              accept={PICTURE_ACCEPT}
               aria-label="Choose key art"
               style={{ display: 'none' }}
               onChange={(event) => {

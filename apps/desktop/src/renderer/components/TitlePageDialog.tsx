@@ -12,6 +12,7 @@ import {
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 import { TitleSheet } from './TitleSheet';
+import { PICTURE_ACCEPT } from '../read-picture';
 
 interface TitlePageDialogProps {
   file: ProjectFile;
@@ -165,7 +166,7 @@ export function TitlePageDialog({ file, open, episode, onClose, onUpdate }: Titl
                   <input
                     ref={picker}
                     type="file"
-                    accept="image/*"
+                    accept={PICTURE_ACCEPT}
                     className="visually-hidden"
                     aria-label="Choose a title graphic"
                     onChange={(event) => {

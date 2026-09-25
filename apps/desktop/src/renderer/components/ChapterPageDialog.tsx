@@ -40,6 +40,7 @@ import {
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 import { ChapterLeaf } from './Paper';
+import { PICTURE_ACCEPT } from '../read-picture';
 
 interface ChapterPageDialogProps {
   file: ProjectFile;
@@ -567,14 +568,14 @@ function Body({
                 <input
                   ref={picker}
                   type="file"
-                  accept="image/*"
+                  accept={PICTURE_ACCEPT}
                   hidden
                   onChange={(event) => takeImage(event.target.files?.[0])}
                 />
                 <input
                   ref={artPicker}
                   type="file"
-                  accept="image/*"
+                  accept={PICTURE_ACCEPT}
                   aria-label="Full page art file"
                   hidden
                   onChange={(event) => {

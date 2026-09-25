@@ -741,16 +741,18 @@ function ElementFields({
           </>
         ) : (
           <>
-            <p className="cr-drop-here small">Drag a barcode picture here</p>
+            <p className="cr-drop-here small">Drag a barcode here</p>
             <button type="button" className="raised small" onClick={onPickBarcode}>
               Browse…
             </button>
             {/* What a barcode encodes — the retail price as well as the
                 number — is not something the book knows, so this is a box for
-                one rather than one the program draws (§9k). */}
+                one rather than one the program draws (§9k). A vendor sends
+                one as a **PDF** (§16a), which is drawn here at print
+                resolution and kept as a picture like any other. */}
             <p className="muted small">
-              A picture from your printer or retailer. The book does not draw one, because a retail barcode carries the
-              price as well as the number.
+              A PDF or a picture from your printer or retailer. The book does not draw one, because a retail barcode carries
+              the price as well as the number.
             </p>
           </>
         )}

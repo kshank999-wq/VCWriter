@@ -74,6 +74,7 @@ import {
   removePartInset,
   setChapterPage,
   setTitlePage,
+  titlePageFieldsOf,
   updatePartInset,
   type BookFigurePlacement,
   type LineStyle,
@@ -142,7 +143,7 @@ import { CopyrightPageDialog } from './CopyrightPageDialog';
 import { DesignedPageDialog } from './DesignedPageDialog';
 import { useModal } from '../use-modal';
 import { usePreference, useSplit } from '../use-split';
-import { readPicture } from '../read-picture';
+import { PICTURE_ACCEPT, pictureRefusal, readPicture } from '../read-picture';
 import { useBookLaying, type Laying } from '../book-typeset';
 
 /**
@@ -188,6 +189,8 @@ type ArtTarget =
   | { kind: 'logo'; partId: string }
   /** The page as a piece of art, edge to edge (§8). */
   | { kind: 'part-art'; partId: string }
+  /** The publisher's mark, at the foot of the title page (§16). */
+  | { kind: 'imprint'; partId: string }
   /** Into a box already drawn and still empty (§9a). */
   | { kind: 'fill'; elementId: string }
   /** The barcode box on the copyright page (§9k). */
@@ -602,8 +605,12 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
    */
   const takeArt = async (picked: File | undefined) => {
     if (!picked) return;
-    if (!picked.type.startsWith('image/')) {
-      setMessage('That is not a picture file.');
+    // One reading (§16a): a vendor's barcode arrives as a PDF, and a gate
+    // written here would go on refusing it after the reader learned to draw
+    // one — which is what nine hand-written copies of this had been doing.
+    const no = pictureRefusal(picked);
+    if (no) {
+      setMessage(no);
       return;
     }
     const target = artTarget.current;
@@ -656,6 +663,16 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         // and the mode is read back from what is there.
         if (target.kind === 'logo') return updatePart(added.file, target.partId, { logoAssetId: assetId as string });
         if (target.kind === 'part-art') return updatePart(added.file, target.partId, { assetId: assetId as string });
+        // The publisher's mark (§16): the title page's own field, so it goes
+        // on the part beside the logotype rather than into the imprint's
+        // name, which is the book's and is words.
+        if (target.kind === 'imprint') {
+          const part = partsOf(added.file).find((one) => one.id === target.partId);
+          if (!part) return added.file;
+          return updatePart(added.file, part.id, {
+            titlePage: { ...titlePageFieldsOf(part), imprintAssetId: assetId as string },
+          });
+        }
 
         if (target.kind === 'part') {
           const part = partsOf(added.file).find((one) => one.id === target.partId);
@@ -971,7 +988,7 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
       <input
         ref={artPicker}
         type="file"
-        accept="image/*"
+        accept={PICTURE_ACCEPT}
         aria-label="Art page file"
         hidden
         onChange={(event) => {
@@ -1043,6 +1060,14 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         onClose={() => setPartDialogId(null)}
         onPickLogo={(id) => importArt({ kind: 'logo', partId: id })}
         onPickArt={(id) => importArt({ kind: 'part-art', partId: id })}
+        onPickImprint={(id) => importArt({ kind: 'imprint', partId: id })}
+        /* A route rather than a second copy (§15c, §16): the publisher and
+           the edition are the copyright page's fields, so the title page
+           sends a writer there instead of offering its own boxes. */
+        onOpenCopyright={() => {
+          setPartDialogId(null);
+          setCopyrightOpen(true);
+        }}
         onOpenBookSettings={() => {
           setPartDialogId(null);
           setBookSettingsOpen(true);
@@ -2470,8 +2495,9 @@ function PartPictures({
   const takeFile = async (picked: File | undefined) => {
     setError(null);
     if (!picked) return;
-    if (!picked.type.startsWith('image/')) {
-      setError('That is not a picture file.');
+    const no = pictureRefusal(picked);
+    if (no) {
+      setError(no);
       return;
     }
     try {
@@ -2496,7 +2522,7 @@ function PartPictures({
       <input
         ref={picker}
         type="file"
-        accept="image/*"
+        accept={PICTURE_ACCEPT}
         aria-label="Part picture file"
         hidden
         onChange={(event) => {
@@ -3549,8 +3575,9 @@ function PartFields({
   const takePicture = async (picked: File | undefined) => {
     setPictureError(null);
     if (!picked) return;
-    if (!picked.type.startsWith('image/')) {
-      setPictureError('That is not a picture file.');
+    const no = pictureRefusal(picked);
+    if (no) {
+      setPictureError(no);
       return;
     }
     try {
@@ -3637,7 +3664,7 @@ function PartFields({
           <input
             ref={picturePicker}
             type="file"
-            accept="image/*"
+            accept={PICTURE_ACCEPT}
             aria-label="Title art file"
             hidden
             onChange={(event) => {
@@ -3672,7 +3699,7 @@ function PartFields({
           <input
             ref={picturePicker}
             type="file"
-            accept="image/*"
+            accept={PICTURE_ACCEPT}
             aria-label="Plate picture file"
             hidden
             onChange={(event) => {
@@ -3830,7 +3857,18 @@ function PageStyle({ part, file, onUpdate }: { part: BookPart; file: ProjectFile
           nowhere to place a block. This page starts as the book’s own; anything set here is this page’s alone.
         </p>
       ) : null}
-      {atFoot || flows || prose ? null : (
+      {/* The **title page's** placement is a pair of heights (§16) — where
+          the title sits and where the author does — and this select offers
+          the one-height templates the other block pages use, so on this page
+          it could only disagree with the three arrangements. Absent rather
+          than greyed, with the way through said. */}
+      {part.kind === 'title_page' ? (
+        <p className="muted small">
+          Where the title and the author sit is set on the page’s own screen: the two heights are one arrangement, and half of
+          one here could only disagree with it.
+        </p>
+      ) : null}
+      {atFoot || flows || prose || part.kind === 'title_page' ? null : (
       <>
       <label className="field">
         <span>Template</span>

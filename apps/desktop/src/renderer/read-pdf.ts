@@ -1,4 +1,5 @@
 import type { LaidOutLine } from '@vcwriter/domain';
+import { openPdfDocument } from './pdf-runtime';
 
 /**
  * Getting the lines off a PDF page (addendum 02 §18).
@@ -60,25 +61,11 @@ export interface PdfReadResult {
  * pictures of words, and saying so is better than importing nothing.
  */
 export const readPdfLines = async (bytes: ArrayBuffer): Promise<PdfReadResult> => {
-  // Loaded on demand: this is the only screen that needs it.
-  const pdfjs = await import('pdfjs-dist');
-
-  // pdf.js does its reading in a worker, and insists on one. The worker is
-  // handed over as a port rather than a URL: written this way the bundler
-  // emits it beside the app and resolves the path itself, which is what
-  // makes it work under the `file://` origin the desktop app runs at.
-  const worker = new Worker(new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url), { type: 'module' });
-  (pdfjs.GlobalWorkerOptions as { workerPort: Worker | null }).workerPort = worker;
-
-  // The loading task owns the worker and the transport; the document is what
-  // is read. Both are let go at the end.
-  const task = pdfjs.getDocument({
-    data: new Uint8Array(bytes),
-    // A script is text. Nothing here should reach the network or load a font.
-    disableFontFace: true,
-    useWorkerFetch: false,
-  });
-  const document = await task.promise;
+  // One runtime (§16a), which is also where the polyfill pdf.js 6 needs on
+  // this app's Chromium lives — without it `getPage` throws, and this reader
+  // had been failing that way with every test green.
+  // A script is text: nothing here should reach the network or load a font.
+  const { document, done } = await openPdfDocument(bytes, { disableFontFace: true });
 
   const lines: LaidOutLine[] = [];
   for (let number = 1; number <= document.numPages; number += 1) {
@@ -118,8 +105,6 @@ export const readPdfLines = async (bytes: ArrayBuffer): Promise<PdfReadResult> =
   }
 
   const pages = document.numPages;
-  await task.destroy();
-  worker.terminate();
-  (pdfjs.GlobalWorkerOptions as { workerPort: Worker | null }).workerPort = null;
+  await done();
   return { lines, pages, title };
 };

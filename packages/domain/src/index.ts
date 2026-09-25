@@ -82,6 +82,7 @@ export * from './book-plan.js';
 export * from './copyright-page.js';
 export * from './book-rail.js';
 export * from './part-style.js';
+export * from './title-page.js';
 export * from './running-heads.js';
 export * from './book-pages.js';
 export * from './print-book.js';

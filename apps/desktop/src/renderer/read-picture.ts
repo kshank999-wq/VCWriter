@@ -6,7 +6,29 @@
  * panel, the Layout room's plate and anywhere else a picture comes in, so
  * they cannot disagree about what a file becomes.
  */
-export const readPicture = (file: File): Promise<{ data: string; width: number; height: number }> =>
+import { isVectorPicture, readPdfPicture, vectorRefusal } from './read-vector';
+
+/**
+ * A file this reader cannot make a picture of, with the fix named (§16a).
+ * Null means it can — either the browser decodes it or pdf.js draws it.
+ */
+export const pictureRefusal = (file: File): string | null => {
+  if (isVectorPicture(file)) return null;
+  const said = vectorRefusal(file);
+  if (said) return said;
+  return file.type.startsWith('image/') ? null : 'That is not a picture file.';
+};
+
+export const readPicture = (file: File): Promise<{ data: string; width: number; height: number }> => {
+  // A PDF is **drawn once, here** (§16a), so what the library keeps is an
+  // ordinary picture and nothing downstream learns that PDFs exist. It is in
+  // this reader rather than beside it because this file's own promise is to
+  // be the one place a file becomes a picture.
+  if (isVectorPicture(file)) return readPdfPicture(file);
+  return readRaster(file);
+};
+
+const readRaster = (file: File): Promise<{ data: string; width: number; height: number }> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Could not read the file.'));
@@ -34,3 +56,10 @@ export const readPicture = (file: File): Promise<{ data: string; width: number; 
     };
     reader.readAsDataURL(file);
   });
+
+/**
+ * What a file picker offers (§16a). One constant rather than `image/*` typed
+ * into a dozen `accept` attributes — nine of them were already there, and a
+ * picker that refuses what the reader accepts is a control that lies.
+ */
+export const PICTURE_ACCEPT = 'image/*,application/pdf';

@@ -1725,6 +1725,60 @@ push live; the build takes a minute or two.
   everything below *Small caps* was reachable only by a scroll nothing
   announced — which is the whole of why the type was moved in the first
   place.
+  **§16 is the title page**, from Ken's own handoff, and the audit paid a
+  **nineteenth** time in two directions at once: four of its seven elements
+  were already printing (the title and the author are `bookNames`', the
+  subtitle is `settings.titlePage.episode` — the older spelling — and the
+  publisher is `settings.book.imprint`) and **two more were already typed, on
+  the copyright page**, `publisher`/`publisherPlace`/`edition` having been
+  fields on that record since §9k. Only the **contributor** had nowhere to
+  live. Four decisions. **The publisher is the book's and is named once** — a
+  title page and a copyright page naming different publishers is a mistake
+  rather than a design, so `publisherOf` reads that record and the row offers
+  *Edit on the copyright page*, §15c's route rather than a second copy.
+  **An element switched off is not an element left empty** (§15's rule on the
+  page in front of it), so each optional one has a switch and switching it
+  off keeps its words; the defaults are exactly what the page printed before
+  there were switches. **A template is a pair of heights** — on this page the
+  title's height says nothing about whether the author is under it or half a
+  page below — so `titleTemplateOf` asks both, and the handoff's fourth
+  (*Flush left*, Classic ranged left) is **not built**, being the very
+  conflation §9n removed; `authorDrop` is **null-means-under-the-title**, one
+  field answering both of the handoff's controls (`minimumSetups`' shape a
+  fifth time), and the default drop moves 33 → 36 so a fresh page reads
+  *Stacked* rather than lying about being custom. And **the author, the
+  subtitle and the publisher were one line of type and are three**: all read
+  `--pt-line-*`, so setting the author set the imprint and a subtitle could
+  not be italic while the author was small caps — §7a's running heads a
+  **fourth** time; the subtitle's size is **derived** from the title's with
+  nowhere to type one. The conventions (a recto, counted but unnumbered, the
+  copyright page on its back) are **said rather than hidden**, and a missing
+  publisher is **said, never refused**. Driving it caught the author's `2em`
+  of stacked air carrying into its own group (Classic's author at 56% rather
+  than the 52% set) and the inspector's older panel still offering this page
+  the **one-height** templates, which on a page whose placement is a pair
+  could only disagree — absent there now.
+  **§16a is a barcode as the vendor sends it**, from Ken (*the ISBN barcode
+  needs to be able to import a PDF … or an EPS file*). **The PDF is drawn
+  once, on the way in**: a data URI of a PDF in an `<img>` draws nothing
+  anywhere, so `readPdfPicture` renders page one at **600 dpi against the
+  page's own size in points** and the library keeps an ordinary picture —
+  nothing downstream learns PDFs exist, and `barcodeResolution` reads the
+  dots it is given (a 2in vendor file lands at 1200 × 600 and reads *600
+  dpi*, falling to 400 at 3in). **EPS is refused with the one-step fix
+  named**, nothing here being able to rasterise PostScript and a stored EPS
+  being an empty box in the preview, the book and the eBook alike. **One
+  reading where there were nine**: `pictureRefusal` replaces nine
+  hand-written `startsWith('image/')` gates and `PICTURE_ACCEPT` nine
+  `accept="image/*"` attributes, a gate beside the reader otherwise going on
+  refusing what the reader has learned to draw. **And it found a fault in
+  code it did not write**: pdf.js 6 calls
+  `Map.prototype.getOrInsertComputed`, which landed in V8 *after* this app's
+  Chromium, so `getPage` throws on a writer's machine and **the PDF script
+  importer had been broken the same way** with every test green — nothing in
+  the suite loads pdf.js. `pdf-runtime.ts` is one place that loads the
+  library, owns the worker and supplies the missing method; both readers ask
+  it, which also removed a second copy of the worker setup.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that
