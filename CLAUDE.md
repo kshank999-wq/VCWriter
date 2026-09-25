@@ -1779,6 +1779,27 @@ push live; the build takes a minute or two.
   the suite loads pdf.js. `pdf-runtime.ts` is one place that loads the
   library, owns the worker and supplies the missing method; both readers ask
   it, which also removed a second copy of the worker setup.
+  **§16b is the route that predates the screen**, from Ken the day §16
+  shipped (*the title page dialogue box not showing — probably same problem
+  as copyright had*), and he named it before looking. **`File ▸ Title page…`
+  opened the screenplay's front page** — Written by, Contact, Draft date — on
+  a book, that command having existed since long before books did and nothing
+  ever having asked it what it was opening; the panel §16 had just built was
+  one double-click away in the Layout room and read as unbuilt from the only
+  route the menu documents. On a book it now opens **the book's** title page,
+  which is the room's own screen (its preview is the page as the book sets it
+  and its navigator turns to the next, so it needs the laid pages — §9d's
+  rule from the other end); `openOnKind` asks the room, keyed on **arriving**
+  rather than on the kind, so closing the dialog and staying does not reopen
+  it. Three of these in three days is worth naming: **when a new screen
+  replaces an old one, the old screen's routes are the feature** — §15c found
+  a route that passed *through* the page it replaced and this one that had
+  never heard of it, both times with the screen working, every test passing
+  and the writer correctly concluding nothing had shipped. So §15a's rule
+  grows a clause: **a route needs a test per gesture, and per menu item**, a
+  menu command being the most durable route in the program and the least
+  likely to be revisited. A sweep of the other nineteen commands found no
+  second case.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

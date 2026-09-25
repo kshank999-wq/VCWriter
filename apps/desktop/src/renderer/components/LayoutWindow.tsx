@@ -159,6 +159,14 @@ import { useBookLaying, type Laying } from '../book-typeset';
 interface LayoutWindowProps {
   file: ProjectFile;
   open: boolean;
+  /**
+   * A part to open the moment the room does (§16b). *File ▸ Title page…* on
+   * a book comes through here, because the book's title page is set on the
+   * room's own screen and that screen needs the laid pages — its preview is
+   * the page as the book sets it and its navigator turns to the next one.
+   * Null on every other way in.
+   */
+  openOnKind?: PartKind | null;
   onClose(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   /** Take the room to a window of its own (addendum 02 §8). Absent in one. */
@@ -246,7 +254,7 @@ const pageOf = (laying: Laying, id: string): BookPage | undefined => {
   );
 };
 
-export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenChapterPage }: LayoutWindowProps) {
+export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate, onPopOut, onOpenChapterPage }: LayoutWindowProps) {
   const { laying, box } = useBookLaying(file, open);
   /**
    * What is chosen (§9a): one selection for the whole room, because the rail
@@ -312,6 +320,23 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
   const [areaRefusal, setAreaRefusal] = useState<string | null>(null);
   /** The copyright page open in its own dialog (§9k). */
   const [copyrightOpen, setCopyrightOpen] = useState(false);
+  /**
+   * A part asked for on the way in (§16b), opened once the room is up.
+   *
+   * Keyed on `open` rather than on the kind, so closing the dialog and
+   * leaving the room open does not reopen it a moment later — the ask is
+   * about arriving, not about the room standing there.
+   */
+  useEffect(() => {
+    if (!open || !openOnKind) return;
+    const wanted = partsOf(file).find((one) => one.kind === openOnKind);
+    if (!wanted) return;
+    setSelectedRowId(wanted.id);
+    if (openOnKind === 'copyright') setCopyrightOpen(true);
+    else setPartDialogId(wanted.id);
+    // Only on arriving. `file` is read for the parts and must not re-run it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, openOnKind]);
   /**
    * The chapter-page dialog, **the room's own** (§9, §9d).
    *
@@ -3627,7 +3652,10 @@ function PartFields({
               />
             </label>
           ) : null}
-          <p className="muted small">A logotype in place of the title is under <em>File ▸ Title page…</em>.</p>
+          {/* It is on the page's own screen (§16b), which is where the
+              three tiles are. It used to point at *File ▸ Title page…*,
+              which on a book opened the screenplay's front page. */}
+          <p className="muted small">A logotype in place of the title is on the page’s own screen, under <em>Open the page…</em>.</p>
         </>
       )}
       {/* The copyright page is set in a dialog of its own (§9k): a dozen

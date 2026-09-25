@@ -177,6 +177,8 @@ export default function App() {
   const [startingNew, setStartingNew] = useState(false);
   /** The title page's own screen: a page of the document, off the File menu. */
   const [titlePageOpen, setTitlePageOpen] = useState(false);
+  /** A part the Layout room should open on when it is opened (§16b). */
+  const [layoutOpenOn, setLayoutOpenOn] = useState<'title_page' | 'copyright' | null>(null);
   const [chapterPageOpen, setChapterPageOpen] = useState(false);
   /** The chapter the page dialog opens on, when a caller has one in hand; null is the first. */
   const [chapterPageMarkerId, setChapterPageMarkerId] = useState<string | null>(null);
@@ -545,6 +547,19 @@ export default function App() {
           // browser preview hands back a file to keep.
           return void project.saveNow();
         case 'file.titlePage':
+          // **On a book the title page is the book's** (§16b, from Ken: *the
+          // title page dialogue box not showing — probably same problem as
+          // copyright had*). It was: the one route the menu documents landed
+          // on the screenplay's front page — Written by, Contact, Draft date
+          // — which is a different page of a different kind of document, so
+          // the panel he had just specified read as unbuilt. The book's is
+          // the Layout room's own screen, because its preview is the page as
+          // the book sets it, so this opens the room on it.
+          if (file && isProseFormat(file.project.format)) {
+            setLayoutOpenOn('title_page');
+            setLayoutOpen(true);
+            return;
+          }
           setTitlePageEpisode(null);
           return setTitlePageOpen(true);
         case 'file.chapterPage':
@@ -1144,7 +1159,11 @@ export default function App() {
             <LayoutWindow
               file={file}
               open={layoutOpen && !away.has('layout')}
-              onClose={() => setLayoutOpen(false)}
+              openOnKind={layoutOpenOn}
+              onClose={() => {
+                setLayoutOpen(false);
+                setLayoutOpenOn(null);
+              }}
               onUpdate={project.update}
               onOpenChapterPage={openChapterPage}
               onPopOut={() => {

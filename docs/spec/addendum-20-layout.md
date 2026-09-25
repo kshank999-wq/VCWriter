@@ -2247,6 +2247,44 @@ the same way** with every test green, nothing in the suite loading pdf.js.
 supplies the missing method where it is missing; both readers ask it, which
 also took out a second copy of the worker setup.
 
+## 16b. The route that predates the screen
+
+From Ken, the day §16 shipped: *the title page dialogue box not showing —
+probably same problem as copyright had.* It was, and he named it before
+looking.
+
+**`File ▸ Title page…` opened the screenplay's front page.** Written by,
+Contact, Draft date, Revision — a different page of a different kind of
+document, offered on a book because that command has existed since long
+before books did and nothing had ever asked it what it was opening. The
+panel §16 had just built was one double-click away in the Layout room and
+read as unbuilt from the only route the menu documents.
+
+On a book the item now opens **the book's title page**, which is the room's
+own screen: its preview is the page as the book sets it and its navigator
+turns to the next one, so it needs the laid pages and cannot be hosted over
+the workspace — §9d's rule about the chapter page, arrived at from the other
+end. `openOnKind` is how the room is asked, keyed on **arriving** rather than
+on the kind, so closing the dialog and staying in the room does not reopen it
+a moment later.
+
+Three of these in three days is a pattern worth naming.
+
+**When a new screen replaces an old one, the old screen's routes are the
+feature.** §15c found a route that passed *through* the page it replaced;
+this found one that had never heard of it. Both times the screen itself
+worked, both times every test passed, and both times the writer correctly
+concluded nothing had shipped. Building the screen is not shipping it.
+
+So §15a's rule grows a clause: **a route needs a test per gesture, and per
+menu item.** A menu command is the most durable route in the program and the
+least likely to be revisited — it is written once, years before the screen it
+will one day be wrong about.
+
+A sweep of the other nineteen commands found no second case: *Chapter page…*
+opens addendum 19's own book screen, and page setup and print are the
+manuscript's, which a book still has.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

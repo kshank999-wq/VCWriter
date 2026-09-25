@@ -51,13 +51,22 @@ afterEach(cleanup);
 
 let latest: ProjectFile | null = null;
 
-function Harness({ initial, onOpenChapterPage }: { initial: ProjectFile; onOpenChapterPage?: (markerId: string) => void }) {
+function Harness({
+  initial,
+  onOpenChapterPage,
+  openOnKind,
+}: {
+  initial: ProjectFile;
+  onOpenChapterPage?: (markerId: string) => void;
+  openOnKind?: 'title_page' | 'copyright';
+}) {
   const [file, setFile] = useState(initial);
   latest = file;
   return (
     <LayoutWindow
       file={file}
       open
+      openOnKind={openOnKind ?? null}
       onClose={() => undefined}
       onUpdate={(mutate) => setFile((current) => mutate(current))}
       onOpenChapterPage={onOpenChapterPage}
@@ -545,6 +554,21 @@ describe('the room', () => {
     expect(dialog.getByLabelText('Typeface')).toBeTruthy();
     expect(dialog.getByRole('button', { name: 'Italic' })).toBeTruthy();
     expect(dialog.getByLabelText('Letter spacing')).toBeTruthy();
+  });
+
+  /**
+   * The room opens on a part when it is asked for (§16b, from Ken: *the title
+   * page dialogue box not showing — probably same problem as copyright had*).
+   * It was: *File ▸ Title page…* is the one route the menu documents, and on
+   * a book it opened the **screenplay's** front page — Written by, Contact,
+   * Draft date — so the panel he had just specified read as unbuilt.
+   */
+  it('opens on the part it was asked for, and the title page is the book’s', () => {
+    render(<Harness initial={novel()} openOnKind="title_page" />);
+    // The book's own screen, not the screenplay's front page.
+    expect(screen.getByLabelText('Title page').hasAttribute('open')).toBe(true);
+    expect(screen.getByText('5 of 7 shown')).toBeTruthy();
+    expect(screen.queryByLabelText('Draft date')).toBeNull();
   });
 
   it('drags a part within its half, and a chapter as a block', () => {
