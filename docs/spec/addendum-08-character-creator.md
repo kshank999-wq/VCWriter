@@ -927,3 +927,43 @@ convenience.
 **It runs the same `pinUsage` as everywhere else**, so the colour follows from
 the manuscript exactly as §2 requires, and dropping something twice in the same
 beat changes nothing.
+
+
+## 8b. Getting a deleted cast back, and organising it
+
+From Ken: *In the research screen under characters, I accidentally deleted
+all the characters and I don't know how to get those back. But we need to
+have something that defines and organizes in that character screen, major
+characters.*
+
+**The cause is exact, and driving it found it.** The Character Creator's
+section was drawn only where the cast had somebody in it, so deleting the
+last person took the whole module off the menu — no way to make another,
+and nothing saying where the old ones had gone. The Graveyard held all
+three the whole time, at the foot of the menu, under a heading that says
+nothing about characters.
+
+**A feature that vanishes when its list is empty is one a writer cannot get
+back into.** The section stands now whatever the cast, with *+ New
+character* and, where people are buried, a line saying how many are in the
+Graveyard — said **there**, because somebody who has just lost a cast is
+looking at where it used to be rather than at the foot of the menu.
+
+**The organizing half needed no new data.** `castByCategory` has grouped
+the cast under the writer's own headings since the categories were built
+(*main before recurring before minor*, and they are data rather than an
+enum, so *The family* and *The precinct* are headings too). The menu threw
+the groups away with a `flatMap`, so a project that had said who its leads
+were showed one undifferentiated list. It draws the headings now, in their
+order, which is the order names are offered in while a cue is typed.
+
+**An empty heading is dropped in the menu and kept in the cast panel.**
+That is not a contradiction: the panel is where a writer *files* somebody,
+so an empty heading there is where the next one goes, while the menu is a
+list of people to click into and a heading over nobody points at nothing. A
+new project seeds three, so without this a cast of two under one of them
+would be drawn beneath two empty labels.
+
+Filing somebody is the Creator's own Overview, which has had a **Heading**
+picker since the categories existed — so once a character is open, saying
+they are a lead is one control, and the menu follows.

@@ -1684,6 +1684,44 @@ push live; the build takes a minute or two.
   *Upper third* came back as UPPER THIRD — a template nobody named, from a
   rule this screen never wrote and **inherited anyway**, which is the
   quietest way a screen says something it did not write.
+  **§15b is the two the copyright page still owed**, from Ken re-sending the
+  handoff (*I'm not sure if I gave you this spec because the copyright page
+  hasn't changed*) — which was **§15a's fault rather than a missing
+  feature**, the dialog having been reachable from one gesture out of two.
+  With that fixed, §15.5's two leftovers are built. **The barcode's
+  sharpness is a reading**: the same picture is fine at 1.5in and too coarse
+  at 3in, so `barcodeResolution` counts the dots at the width it is *placed*
+  and narrowing the barcode clears the warning by itself; the sentence names
+  the number, the width and the way out, a warning that does not say what
+  would fix it being one a writer can only ignore, and a **vector is not
+  warned about** rather than warned about with a made-up number. The box
+  takes a dragged file and Browse… does the same, both through the room's
+  one reader. **A saved order is the same shape as a built-in**, so
+  `presetOf` takes the four and the writer's own as one list and nothing
+  below is told saved ones exist; it is still a reading (moving one element
+  makes the page *Custom* by itself) and it keeps the **arrangement and
+  never the words** — an order is a house style and a copyright notice is
+  one book's.
+  **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
+  accidentally deleted all the characters and I don't know how to get those
+  back… we need to have something that defines and organizes in that
+  character screen, major characters*), and driving it found the cause
+  exactly: the Character Creator section was drawn **only where the cast had
+  somebody in it**, so deleting the last person took the whole module off
+  the menu — no way to make another and nothing saying where the old ones
+  had gone, while the Graveyard quietly held all three. **A feature that
+  vanishes when its list is empty is one a writer cannot get back into.** It
+  stands now whatever the cast, with *+ New character* and, where people are
+  buried, a line saying how many are in the Graveyard — said **there**,
+  because somebody who has just lost a cast is looking at where it used to
+  be. The organizing half needed no new data: `castByCategory` has grouped
+  the cast under the writer's own headings since the categories were built,
+  and the menu threw the groups away with a `flatMap`, so a project that had
+  said who its leads were showed one undifferentiated list. **An empty
+  heading is dropped in the menu and kept in the cast panel**, which is not
+  a contradiction: the panel is where a writer *files* somebody, so an empty
+  heading there is where the next one goes, while the menu is a list of
+  people to click into and a heading over nobody points at nothing.
   **§9a is the rail as one linear tree**, from Ken after using the room —
   *this has become way too complicated to make this workable… this should
   be simple linear workflow… there shouldn't be all this extra wording* —

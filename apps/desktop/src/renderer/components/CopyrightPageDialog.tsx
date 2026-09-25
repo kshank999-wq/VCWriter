@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  barcodeResolution,
+  bookSettingsOf,
+  savedCopyrightPreset,
+  setBookSettings,
   BARCODE_INCHES,
   COPYRIGHT_ELEMENTS,
   COPYRIGHT_PRESETS,
@@ -61,13 +65,17 @@ export interface CopyrightPageDialogProps {
   onClose(): void;
   /** Choose the barcode picture, which the room's own file dialog does. */
   onPickBarcode(partId: string): void;
+  /** A barcode dragged in from the desktop, which is how one arrives (§15b). */
+  onDropBarcode(partId: string, picked: File): void;
 }
 
-export function CopyrightPageDialog({ file, part, onUpdate, onClose, onPickBarcode }: CopyrightPageDialogProps) {
+export function CopyrightPageDialog({ file, part, onUpdate, onClose, onPickBarcode, onDropBarcode }: CopyrightPageDialogProps) {
   const ref = useRef<HTMLDialogElement | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
+  /** A file is over the barcode's box, so it says it will take one. */
+  const [dropping, setDropping] = useState(false);
   const [said, setSaid] = useState('');
 
   useEffect(() => {
@@ -99,7 +107,11 @@ export function CopyrightPageDialog({ file, part, onUpdate, onClose, onPickBarco
     });
 
   const order = copyrightOrder(page);
-  const preset = presetOf(page, style.align);
+  /* The four the program ships and whatever the writer has kept (§15b),
+     read as one list: a saved order is the same shape as a built-in, so
+     nothing below is told they are different. */
+  const saved = (bookSettingsOf(file).copyrightPresets ?? []) as CopyrightPreset[];
+  const preset = presetOf(page, style.align, saved);
   // The page as it will print, from the one reading the book itself asks.
   const lines = copyrightLines({ ...part, copyright: page } as BookPart, file);
   const owed = copyrightPlaceholders({ ...part, copyright: page } as BookPart, file);
@@ -164,7 +176,7 @@ export function CopyrightPageDialog({ file, part, onUpdate, onClose, onPickBarco
           <section className="chl-section">
             <h3>Standard orders</h3>
             <div className="cr-presets">
-              {COPYRIGHT_PRESETS.map((one) => (
+              {[...COPYRIGHT_PRESETS, ...saved].map((one) => (
                 <button
                   key={one.id}
                   type="button"
@@ -177,6 +189,24 @@ export function CopyrightPageDialog({ file, part, onUpdate, onClose, onPickBarco
                 >
                   <PresetThumb preset={one} />
                   <span>{one.name}</span>
+                  {/* A writer's own can be forgotten; the four cannot, being
+                      the standards rather than somebody's choice. */}
+                  {one.id.startsWith('own:') ? (
+                    <span
+                      className="cr-preset-x"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Forget ${one.name}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onUpdate((current) => setBookSettings(current, {
+                          copyrightPresets: (bookSettingsOf(current).copyrightPresets ?? []).filter((kept) => kept.id !== one.id),
+                        }));
+                      }}
+                    >
+                      ×
+                    </span>
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -332,6 +362,21 @@ export function CopyrightPageDialog({ file, part, onUpdate, onClose, onPickBarco
                         page={page}
                         file={file}
                         barcodeName={barcode?.name ?? null}
+                        barcodePicture={
+                          barcode
+                            ? {
+                                data: barcode.data,
+                                width: barcode.width,
+                                height: barcode.height,
+                                // A vector has no pixels to count, and the
+                                // data URI is what says which it is.
+                                vector: /^data:image\/svg\+xml/i.test(barcode.data),
+                              }
+                            : null
+                        }
+                        dropping={dropping}
+                        onDropping={setDropping}
+                        onDropBarcode={(picked) => onDropBarcode(part.id, picked)}
                         onPatch={patch}
                         onPickBarcode={() => onPickBarcode(part.id)}
                       />
@@ -375,6 +420,30 @@ export function CopyrightPageDialog({ file, part, onUpdate, onClose, onPickBarco
             : 'Nothing left to fill in'}
         </span>
         <span className="chl-spacer" />
+        {/* Keeping this order to use again (§15b, the handoff's *Save as
+            preset…*). It saves the **arrangement** and never the words: an
+            order is a house style and a copyright notice is one book's. */}
+        <button
+          type="button"
+          className="raised small"
+          onClick={() => {
+            const named = window.prompt('Call this order what?');
+            const name = (named ?? '').trim();
+            if (name.length === 0) return;
+            const made = savedCopyrightPreset(page, style.align, name);
+            onUpdate((current) => {
+              const kept = (bookSettingsOf(current).copyrightPresets ?? []).filter((one) => one.id !== made.id);
+              // The stored shape is the readable one made mutable: a preset
+              // is handed round read-only and written down as plain arrays.
+              return setBookSettings(current, {
+                copyrightPresets: [...kept, { ...made, order: [...made.order], hidden: [...made.hidden] }],
+              });
+            });
+            setSaid(`${name} saved as an order you can use again`);
+          }}
+        >
+          Save as preset…
+        </button>
         <span className="muted small">Every change is kept as you make it.</span>
       </div>
       <p aria-live="polite" className="visually-hidden">
@@ -390,6 +459,10 @@ function ElementFields({
   page,
   file,
   barcodeName,
+  barcodePicture,
+  dropping,
+  onDropping,
+  onDropBarcode,
   onPatch,
   onPickBarcode,
 }: {
@@ -397,6 +470,11 @@ function ElementFields({
   page: CopyrightPage;
   file: ProjectFile;
   barcodeName: string | null;
+  /** The picture itself, for the thumbnail and for counting its dots (§15b). */
+  barcodePicture: { data: string; width: number; height: number; vector: boolean } | null;
+  dropping: boolean;
+  onDropping(on: boolean): void;
+  onDropBarcode(file: File): void;
   onPatch(fields: Partial<CopyrightPage>): void;
   onPickBarcode(): void;
 }) {
@@ -517,10 +595,41 @@ function ElementFields({
     );
   }
   if (id === 'barcode') {
+    /**
+     * How finely it will print at the width it is placed (§15b). A reading,
+     * so narrowing the barcode clears the warning by itself — the same
+     * picture is fine at 1.5in and too coarse at 3in, and a warning stored
+     * when the file arrived would be about a size that has since changed.
+     */
+    const sharpness = barcodeResolution(
+      barcodePicture ? { width: barcodePicture.width, height: barcodePicture.height, vector: barcodePicture.vector } : null,
+      page.barcodeInches,
+    );
     return (
-      <div className="cr-barcode-box">
+      <div
+        className={dropping ? 'cr-barcode-box cr-dropping' : 'cr-barcode-box'}
+        /* A file dragged in from the desktop, which is how a printer's
+           barcode actually arrives (§15b). Browse… does the same thing for
+           anybody not dragging. */
+        onDragOver={(event) => {
+          if (Array.from(event.dataTransfer.types).includes('Files')) {
+            event.preventDefault();
+            onDropping(true);
+          }
+        }}
+        onDragLeave={() => onDropping(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          onDropping(false);
+          const picked = event.dataTransfer.files[0];
+          if (picked) onDropBarcode(picked);
+        }}
+      >
         {barcodeName ? (
           <>
+            {/* The picture itself, not its file name: the writer is checking
+                that the right barcode is on the page. */}
+            {barcodePicture ? <img className="cr-barcode-thumb" src={barcodePicture.data} alt={barcodeName} /> : null}
             <p className="muted small">{barcodeName}</p>
             <div className="chl-pills">
               <button type="button" className="small" onClick={onPickBarcode}>
@@ -542,11 +651,19 @@ function ElementFields({
                 onChange={(event) => onPatch({ barcodeInches: Number(event.target.value) })}
               />
             </label>
+            {sharpness.warning ? (
+              <p className="cr-coarse small">{sharpness.warning}</p>
+            ) : sharpness.dpi !== null ? (
+              <p className="muted small">{sharpness.dpi} dpi at this width — fine for a printer.</p>
+            ) : (
+              <p className="muted small">A vector picture, so it is sharp at any width.</p>
+            )}
           </>
         ) : (
           <>
+            <p className="cr-drop-here small">Drag a barcode picture here</p>
             <button type="button" className="raised small" onClick={onPickBarcode}>
-              Choose the barcode…
+              Browse…
             </button>
             {/* What a barcode encodes — the retail price as well as the
                 number — is not something the book knows, so this is a box for

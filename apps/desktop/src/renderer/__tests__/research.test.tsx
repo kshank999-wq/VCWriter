@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import {
   addCharacter,
+  addCharacterCategory,
   addResearchCategory,
   addResearchItem,
   addLocation,
@@ -13,7 +14,10 @@ import {
   castByCategory,
   createProjectFile,
   graveyard,
+  removeCharacter,
   removeLocation,
+  restoreFromGraveyard,
+  updateCharacter,
   removeThread,
   tracksInOrder,
   type ProjectFile,
@@ -409,5 +413,60 @@ describe('what the menu counts', () => {
 
     render(<Harness initial={removeThread(file, made.thread.id)} />);
     expect(counted()).toBe('1');
+  });
+});
+
+/**
+ * The cast in the menu (§8b, from Ken: *I accidentally deleted all the
+ * characters and I don't know how to get those back… we need to have
+ * something that defines and organizes in that character screen, major
+ * characters*).
+ */
+describe('the Character Creator in the menu', () => {
+  const cast = () => {
+    let file = createProjectFile({ title: 'The Drowned Bell', format: 'screenplay' });
+    for (const name of ['MARA', 'CELESTE', 'JOHN']) file = addCharacter(file, { name });
+    const main = addCharacterCategory(file, { name: 'Leads' });
+    file = main.file;
+    const minor = addCharacterCategory(file, { name: 'The precinct' });
+    file = minor.file;
+    file = updateCharacter(file, file.characters[0]!.id, { categoryId: main.category.id });
+    file = updateCharacter(file, file.characters[1]!.id, { categoryId: main.category.id });
+    file = updateCharacter(file, file.characters[2]!.id, { categoryId: minor.category.id });
+    return file;
+  };
+
+  it('files the cast under the writer’s own headings, in their order', () => {
+    render(<Harness initial={cast()} />);
+    const heads = Array.from(document.querySelectorAll('.research-cast-head')).map((one) => one.textContent);
+    expect(heads).toEqual(['Leads', 'The precinct']);
+    // A seeded heading with nobody under it points at nobody, so it is not
+    // drawn here — the cast panel keeps it, being where filing happens.
+    expect(heads).not.toContain('Main characters');
+  });
+
+  /**
+   * The one that mattered: the section used to be drawn only where the cast
+   * had somebody in it, so deleting the last person took the whole module
+   * off the menu — no way to make another, and nothing saying where the old
+   * ones had gone.
+   */
+  it('stands with nobody in it, and says where the deleted ones are', () => {
+    let file = cast();
+    for (const person of [...file.characters]) file = removeCharacter(file, person.id);
+    render(<Harness initial={file} />);
+    expect(screen.getByText('Character Creator')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '+ New character' })).toBeTruthy();
+    expect(screen.getByText('3 deleted records are in the Graveyard')).toBeTruthy();
+  });
+
+  it('puts somebody back from the graveyard, with everything that pointed at them', () => {
+    let file = cast();
+    const mara = file.characters[0]!;
+    file = removeCharacter(file, mara.id);
+    expect(castByCategory(file).flatMap((group) => group.characters)).toHaveLength(2);
+    // Restoring is clearing the field, which is why it can be a promise.
+    const back = restoreFromGraveyard(file, { kind: 'character', id: mara.id as string });
+    expect(castByCategory(back).flatMap((group) => group.characters).map((one) => one.name)).toContain(mara.name);
   });
 });

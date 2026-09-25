@@ -276,6 +276,24 @@ export type EbookSettings = z.infer<typeof ebookSettingsSchema>;
 export const bookSettingsSchema = z.object({
   /** The eBook's own fields (addendum 23). */
   ebook: ebookSettingsSchema.default({}),
+  /**
+   * Copyright-page orders the writer has kept (§15b). The same shape as the
+   * four the program ships, so everything that reads a preset takes one
+   * without being told they exist — a publisher's own order being the case
+   * this is for.
+   */
+  copyrightPresets: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        order: z.array(z.string()),
+        hidden: z.array(z.string()),
+        position: z.enum(['top', 'middle', 'bottom']),
+        align: z.enum(['left', 'center', 'right']),
+      }),
+    )
+    .default([]),
   trim: trimSchema.default({}),
   /** Typed over the derived margins, in inches; null is derived (§3). */
   margins: z

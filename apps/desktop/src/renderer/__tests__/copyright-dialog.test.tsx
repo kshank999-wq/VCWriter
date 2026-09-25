@@ -49,6 +49,7 @@ function Harness({ onFile }: { onFile?: (file: ProjectFile) => void }) {
       }
       onClose={() => undefined}
       onPickBarcode={() => undefined}
+      onDropBarcode={() => undefined}
     />
   );
 }

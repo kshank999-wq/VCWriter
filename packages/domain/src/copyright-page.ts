@@ -251,11 +251,39 @@ export const copyrightShows = (page: CopyrightPage, id: string): boolean =>
  * themselves. **Read back rather than stored** (§15), so moving one element
  * reads *Custom* rather than a preset that has stopped describing the page.
  */
-export const presetOf = (page: CopyrightPage, align: 'left' | 'center' | 'right'): CopyrightPreset | null => {
+/**
+ * The orders a writer has kept, beside the four the program ships (§15b,
+ * from Ken's handoff: *Save as preset…*).
+ *
+ * A saved one is **the same shape as a built-in**, so everything that reads
+ * a preset — the tiles, `presetOf`, `applyCopyrightPreset` — takes it
+ * without being told they exist. A publisher's own order is the case this
+ * is for, and it is the writer's rather than the book's, so it lives beside
+ * the book's settings and travels with the project.
+ */
+export const savedCopyrightPreset = (page: CopyrightPage, align: 'left' | 'center' | 'right', name: string): CopyrightPreset => ({
+  id: `own:${name.trim().toLowerCase()}`,
+  name: name.trim(),
+  order: copyrightOrder(page),
+  hidden: [...page.hidden].sort(),
+  position: page.position,
+  align,
+});
+
+/**
+ * Which order is in force, over the four and the writer's own. Still a
+ * **reading** — nothing stores which preset a page came from — so moving one
+ * element makes the page *Custom* by itself.
+ */
+export const presetOf = (
+  page: CopyrightPage,
+  align: 'left' | 'center' | 'right',
+  saved: readonly CopyrightPreset[] = [],
+): CopyrightPreset | null => {
   const order = copyrightOrder(page).join(',');
   const hidden = [...page.hidden].sort().join(',');
   return (
-    COPYRIGHT_PRESETS.find(
+    [...COPYRIGHT_PRESETS, ...saved].find(
       (preset) =>
         copyrightOrder({ ...page, order: [...preset.order] }).join(',') === order &&
         [...preset.hidden].sort().join(',') === hidden &&
@@ -310,6 +338,51 @@ export const FICTION_DISCLAIMER =
   'This is a work of fiction. Names, characters, places and incidents are the product of the author’s imagination or are used fictitiously. Any resemblance to actual persons, living or dead, events or locales is entirely coincidental.';
 
 export const BARCODE_INCHES = { min: 0.75, max: 4, default: 2 } as const;
+
+/** What a printer wants of a raster barcode, and what the bars need to scan. */
+export const BARCODE_DPI = 300;
+
+/**
+ * How finely the barcode will print, at the width it is placed (§15b, from
+ * Ken's handoff: *warn if a raster image comes in under 300 dpi at its
+ * placed size*).
+ *
+ * It is a **reading**, and that is the whole of why it is worth having: the
+ * same picture is fine at 1.5in and too coarse at 3in, so a warning stored
+ * when the file arrived would be about a size the writer has since changed.
+ * Narrowing the barcode makes the warning go away by itself, which is the
+ * honest fix as well as the fastest one.
+ *
+ * A vector file has no pixels to count and is right at any size, so it is
+ * **not warned about** rather than warned about with a made-up number — the
+ * caller says which it is, because what a file is, is the host's business.
+ */
+export interface BarcodeResolution {
+  /** Dots per inch as it will print. Null where there is nothing to count. */
+  dpi: number | null;
+  /** Whether it is too coarse for a printer at this width. */
+  coarse: boolean;
+  /** What to say, or null where there is nothing to say. */
+  warning: string | null;
+}
+
+export const barcodeResolution = (
+  picture: { width: number; height: number; vector?: boolean } | null,
+  inches: number,
+): BarcodeResolution => {
+  if (!picture || picture.vector === true || picture.width <= 0 || inches <= 0) {
+    return { dpi: null, coarse: false, warning: null };
+  }
+  const dpi = Math.round(picture.width / inches);
+  if (dpi >= BARCODE_DPI) return { dpi, coarse: false, warning: null };
+  return {
+    dpi,
+    coarse: true,
+    // The number, the size it is about, and the way out — a warning that
+    // does not say what would fix it is one a writer can only ignore.
+    warning: `${dpi} dpi at ${inches.toFixed(2)} in. A printer wants ${BARCODE_DPI}. Use a wider picture, or set it narrower than ${(picture.width / BARCODE_DPI).toFixed(2)} in.`,
+  };
+};
 
 /** What a book's numbers are usually called, offered rather than enforced. */
 export const NUMBER_FORMATS = ['Paperback', 'Hardcover', 'eBook', 'Audiobook', 'Large print'] as const;

@@ -2063,6 +2063,39 @@ tracked-capitals section label, so *Typography* was shouted and *Upper
 third* came back as UPPER THIRD — a template nobody named, from a rule this
 screen never wrote and inherited anyway.
 
+## 15b. The two the copyright page still owed
+
+§15.5 listed *Save as preset* and the barcode's drop zone as not built. Ken
+re-sent the handoff — *I'm not sure if I gave you this spec because the
+copyright page hasn't changed* — which was §15a's fault rather than a
+missing feature: the dialog was reachable from one gesture out of two, so
+the double-click landed on the free-text box it replaces. With that fixed,
+these two are what the handoff still asked for.
+
+**The barcode's sharpness is a reading**, and that is why it is worth
+having: the same picture is fine at 1.5in and too coarse at 3in, so a
+warning worked out when the file arrived would be about a size the writer
+has since changed. `barcodeResolution` counts the dots at the width it is
+*placed*, so narrowing the barcode clears the warning by itself — the
+honest fix as well as the fastest. The sentence names the number, the width
+it is about and the way out, because a warning that does not say what would
+fix it is one a writer can only ignore. A **vector is not warned about**
+rather than warned about with a made-up number, having no pixels to count;
+what a file is, is the host's business, so the caller says which it is. The
+box takes a file dragged onto it and Browse… does the same for anybody not
+dragging — both through the room's one reader, so a barcode joins the
+graphics library like every other picture.
+
+**A saved order is the same shape as a built-in.** `savedCopyrightPreset`
+makes one from the page as it stands, and `presetOf` takes the four and the
+writer's own as one list — so the tiles, the reading and `applyCopyrightPreset`
+take it without being told saved ones exist. It is still a **reading**:
+nothing stores which preset a page came from, so moving one element makes
+it *Custom* by itself. It keeps the **arrangement and never the words** — an
+order is a house style and a copyright notice is one book's — and a
+writer's own can be forgotten where the four cannot, those being the
+standards rather than somebody's choice.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

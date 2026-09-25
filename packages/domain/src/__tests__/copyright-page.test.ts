@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  barcodeResolution,
+  copyrightPageSchema,
+  savedCopyrightPreset,
   addBookNumber,
   addMarker,
   addPart,
@@ -334,5 +337,47 @@ describe('a notice with nobody in it', () => {
     expect(copyrightPlaceholders(copyrightPart(file), file)).toBe(1);
     const named = write(file, { holder: 'M. Shank' });
     expect(copyrightPlaceholders(copyrightPart(named), named)).toBe(0);
+  });
+});
+
+/**
+ * The two leftovers of §15, built in §15b from Ken's handoff: the barcode's
+ * sharpness and an order the writer keeps.
+ */
+describe('the barcode’s sharpness and a saved order', () => {
+  it('counts the dots at the width it is placed, and clears by itself when narrowed', () => {
+    // 600 pixels across: fine at 2in, too coarse at 3.
+    expect(barcodeResolution({ width: 600, height: 300 }, 2).dpi).toBe(300);
+    expect(barcodeResolution({ width: 600, height: 300 }, 2).coarse).toBe(false);
+    const wide = barcodeResolution({ width: 600, height: 300 }, 3);
+    expect(wide.coarse).toBe(true);
+    expect(wide.dpi).toBe(200);
+    // The warning says the way out, not just the number.
+    expect(wide.warning).toContain('2.00 in');
+  });
+
+  it('says nothing about a vector, which is right at any size', () => {
+    expect(barcodeResolution({ width: 600, height: 300, vector: true }, 4)).toEqual({ dpi: null, coarse: false, warning: null });
+    expect(barcodeResolution(null, 2).warning).toBeNull();
+  });
+
+  it('keeps an order beside the four, and reads it back as the one in force', () => {
+    const page = copyrightPageSchema.parse({});
+    const moved = moveCopyrightElement(page, 'permissions', -1);
+    // It is Custom while nothing has been kept by this shape.
+    expect(presetOf(moved, 'left')).toBeNull();
+    const mine = savedCopyrightPreset(moved, 'left', 'House order');
+    // A saved one is the same shape as a built-in, so the reading takes it.
+    expect(presetOf(moved, 'left', [mine])?.name).toBe('House order');
+    // And it says nothing about a page that has moved on again.
+    expect(presetOf(moveCopyrightElement(moved, 'credits', -1), 'left', [mine])).toBeNull();
+  });
+
+  it('keeps the arrangement and never the words', () => {
+    const page = copyrightPageSchema.parse({ credits: 'Cover by Ada' });
+    const mine = savedCopyrightPreset(page, 'center', 'House order');
+    expect(JSON.stringify(mine)).not.toContain('Ada');
+    expect(mine.align).toBe('center');
+    expect(mine.position).toBe(page.position);
   });
 });

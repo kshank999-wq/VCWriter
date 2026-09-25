@@ -11,6 +11,7 @@ import {
   motifsInOrder,
   themesInOrder,
   threadsInOrder,
+  addCharacter,
   addResearchCategory,
   addResearchItem,
   approveCapture,
@@ -282,11 +283,26 @@ export function ResearchBody({
   const tree = useMemo(() => researchTree(file), [file]);
   const folders = useMemo(() => flatten(tree), [tree]);
 
-  /** The cast in the order it is offered while typing: main characters first. */
-  const cast = useMemo(
-    () => castByCategory(file).flatMap((group) => group.characters),
-    [file],
-  );
+  /**
+   * The cast **under its headings** (§8b, from Ken: *we need to have
+   * something that defines and organizes in that character screen, major
+   * characters*).
+   *
+   * `castByCategory` has grouped them since the categories were built, and
+   * the menu threw the groups away with a `flatMap` — so a project that had
+   * said who its leads were showed one undifferentiated list. The headings
+   * are the writer's own words and their order is main-before-minor, which
+   * is the order names are offered in while a cue is typed.
+   *
+   * **An empty heading is dropped here** and kept in the cast panel, which
+   * is not a contradiction: the panel is where a writer *files* somebody, so
+   * an empty heading there is where the next one goes, while this is a list
+   * of people to click into and a heading over nobody points at nothing. A
+   * new project seeds three, so without this a cast of two under one of them
+   * would be drawn beneath two empty labels.
+   */
+  const groups = useMemo(() => castByCategory(file).filter((group) => group.characters.length > 0), [file]);
+  const cast = useMemo(() => groups.flatMap((group) => group.characters), [groups]);
 
   /**
    * How much is waiting on each of them, read off the usage links like
@@ -525,31 +541,84 @@ export function ResearchBody({
               is how somebody finds it after reading about it. The order is the
               order names are offered while a cue is being typed: main
               characters first. */}
-          {cast.length > 0 && !instructional ? (
+          {/* **The section stands whether or not anybody is in it** (§8b,
+              from Ken: *I accidentally deleted all the characters and I
+              don't know how to get those back*). It used to be drawn only
+              where the cast had somebody in it, so deleting the last person
+              took the whole module off the menu — with no way to make
+              another and nothing saying where the old ones had gone. A
+              feature that vanishes when its list is empty is one a writer
+              cannot get back into. */}
+          {!instructional ? (
             <>
               <h4>Character Creator</h4>
-              <ul className="research-views research-cast">
-                {cast.map((person) => (
-                  <CastMenuRow
-                    key={person.id}
-                    file={file}
-                    person={person}
-                    chosen={selection.kind === 'creator' && selection.id === person.id}
-                    waiting={onDeck[person.id as string] ?? 0}
-                    onOpen={() => openCreator(person.id)}
-                    onDragOver={(event) => {
-                      if (dragging?.kind === 'capture') event.preventDefault();
+              {groups.map((group) => (
+                <ul key={group.category?.id ?? 'unfiled'} className="research-views research-cast">
+                  {/* The heading is the writer's own word for who these
+                      people are to the story. It is drawn only where there
+                      is more than one, because a single heading over the
+                      whole cast is a label rather than an arrangement. */}
+                  {groups.length > 1 ? (
+                    <li className="research-cast-head" aria-hidden="true">
+                      {group.name}
+                    </li>
+                  ) : null}
+                  {group.characters.map((person) => (
+                    <CastMenuRow
+                      key={person.id}
+                      file={file}
+                      person={person}
+                      chosen={selection.kind === 'creator' && selection.id === person.id}
+                      waiting={onDeck[person.id as string] ?? 0}
+                      onOpen={() => openCreator(person.id)}
+                      onDragOver={(event) => {
+                        if (dragging?.kind === 'capture') event.preventDefault();
+                      }}
+                      onDrop={() => {
+                        const capture = draggedCapture();
+                        setDragging(null);
+                        if (capture) {
+                          void placeCapture(capture, { kind: 'about_character', characterId: person.id });
+                        }
+                      }}
+                      onUpdate={onUpdate}
+                    />
+                  ))}
+                </ul>
+              ))}
+              <ul className="research-views">
+                <li>
+                  <button
+                    type="button"
+                    className="folder-row"
+                    title="Make a character and open them in the Creator"
+                    onClick={() => {
+                      const named = window.prompt('Who?');
+                      const name = (named ?? '').trim();
+                      if (name.length === 0) return;
+                      onUpdate((current) => {
+                        const made = addCharacter(current, { name });
+                        const person = made.characters[made.characters.length - 1];
+                        if (person) setSelection({ kind: 'creator', id: person.id });
+                        return made;
+                      });
                     }}
-                    onDrop={() => {
-                      const capture = draggedCapture();
-                      setDragging(null);
-                      if (capture) {
-                        void placeCapture(capture, { kind: 'about_character', characterId: person.id });
-                      }
-                    }}
-                    onUpdate={onUpdate}
-                  />
-                ))}
+                  >
+                    <span className="folder-name">+ New character</span>
+                  </button>
+                </li>
+                {/* Where the deleted ones went, said **here** rather than
+                    only at the foot of the menu: somebody who has just lost
+                    a cast is looking at where it used to be. */}
+                {cast.length === 0 && buried > 0 ? (
+                  <li>
+                    <button type="button" className="folder-row" onClick={() => setSelection({ kind: 'graveyard' })}>
+                      <span className="folder-name">
+                        {buried === 1 ? '1 deleted record is in the Graveyard' : `${buried} deleted records are in the Graveyard`}
+                      </span>
+                    </button>
+                  </li>
+                ) : null}
               </ul>
             </>
           ) : null}

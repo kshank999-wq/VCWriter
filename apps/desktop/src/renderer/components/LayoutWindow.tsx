@@ -1078,6 +1078,13 @@ export function LayoutWindow({ file, open, onClose, onUpdate, onPopOut, onOpenCh
         part={copyrightOpen ? (partsOf(file).find((one) => one.kind === 'copyright') ?? null) : null}
         onUpdate={onUpdate}
         onClose={() => setCopyrightOpen(false)}
+        /* A file dragged onto the barcode's box goes through the room's own
+           reader (§15b), so it joins the graphics library like every other
+           picture rather than growing a second way in. */
+        onDropBarcode={(partId, picked) => {
+          artTarget.current = { kind: 'barcode', partId };
+          void takeArt(picked);
+        }}
         onPickBarcode={(partId) => importArt({ kind: 'barcode', partId })}
       />
       <PageDialog
