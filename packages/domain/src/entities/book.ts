@@ -214,6 +214,17 @@ export const bookPartSchema = z.object({
    */
   backBlank: z.boolean().default(false),
   /**
+   * **A blank leaf before this page** (addendum 20 §9r, from Ken: *you should
+   * be able to enter a blank page wherever you want*).
+   *
+   * *Wherever* was the whole of the ask and the whole of the gap: the act
+   * hung on a manuscript element, so it was offered on a page of the story
+   * and **absent on every page of the front and back matter** — a writer
+   * could not put a leaf between the title page and the copyright page, or
+   * before an appendix, which is where a book most often wants one.
+   */
+  blankBefore: z.boolean().default(false),
+  /**
    * A **logotype** in place of the typed title, on a designed page (§9n): an
    * id in the graphics library, like every other picture the book uses.
    *

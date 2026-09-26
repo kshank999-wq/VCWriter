@@ -177,7 +177,20 @@ describe('a picture on the page it was added to', () => {
       { id: 'm1', kind: 'chapter_opening' },
       { id: 'p2', kind: 'paragraph' },
     ] as never;
-    expect(pagePlace(pages, blocks, 2)).toEqual({ elementId: 'p2', partId: null, markerId: 'm1' });
+    // Page 2 is inside chapter m1 but does not open it: `markerId` is the
+    // chapter in force, `opensMarkerId` the chapter whose opening stands on
+    // **this** page, which §9r needs so a blank asked for on a chapter's own
+    // page goes before the opening rather than splitting the chapter.
+    expect(pagePlace(pages, blocks, 2)).toEqual({
+      elementId: 'p2',
+      partId: null,
+      markerId: 'm1',
+      opensMarkerId: null,
+      opensAlone: false,
+    });
+    // And page 1, which does open it.
+    expect(pagePlace(pages, blocks, 1).opensMarkerId).toBe('m1');
+    expect(pagePlace(pages, blocks, 1).opensAlone).toBe(true);
   });
 });
 

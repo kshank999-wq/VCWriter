@@ -2149,6 +2149,68 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault.
+  **§9r is a blank page wherever you want**, from Ken (*the chapter page we
+  have a blank on the back, and you should be able to enter a blank page
+  wherever you want*), then, a minute later, *tried to put a blank page on the
+  chapter one page and it wouldn't allow me*. **Wherever was the whole ask and
+  the whole gap**: §9i built the writer's own blank on a **manuscript
+  element**, which is right — a page is not a record, so a blank moves when the
+  words move — and it made the act's reach exactly the manuscript's, the panel
+  gating the button on `place.elementId`, so a leaf could go before a paragraph
+  of the story and **nowhere else**: not between the title page and the
+  copyright page, not before an appendix, and not on the page a chapter opens
+  on. That last is **§9p's fault a second time** — a chapter opening is emitted
+  by the **unit** and not by an element, so *before the opening* cannot be said
+  with a `beforeElementId` at all, and hung on the chapter's first element the
+  leaf lands **between the numeral and the words**; §9p found it for pictures,
+  and for blanks it showed as the control being **absent**, which reads as the
+  feature not being there. So the act keeps its shape and grows two more places
+  to live, each on the record that owns the page: `blankBefore` on a **part**
+  (beside §17d's `backBlank`), and `blankBefore` + `backBlank` on the **chapter
+  page record**, the same `chapterPageSchema` that has carried the summary, the
+  template and the picture, emitted **around the opening**. **`blankSpot` is
+  the one reading that decides what a press means** and the order in it is the
+  fix — `page.blankFor ?? place.opensMarkerId ?? place.elementId ??
+  place.partId` — the marker **before** the element so a chapter's page answers
+  for the chapter rather than for its first paragraph, and `blankFor` before
+  everything so a leaf says which page asked for it and can be taken away
+  again; `setBlankPage` looks the id up across the three collections, which is
+  what lets one button serve a part, a chapter and a paragraph without the
+  screen knowing which it has (*one act read where it lands*). `PagePlace`
+  gained `opensMarkerId` and `opensAlone`, both read **off the laid page**
+  rather than from the block's `display` flag, and that distinction cost an
+  hour: my first gate asked `opensOnLeaf`, true only where the page was given a
+  device, a summary or an epigraph — while a chapter page carrying nothing but
+  its title still **stands alone**, which is exactly the shape of Ken's
+  stories, so the control appeared on **none** of his chapters;
+  `page.pieces.length === 1` is the fact the screen needs and it is a fact
+  about the page. The back-blank is offered **only where the opening stands
+  alone**, a page carrying the chapter's first words having no back to leave.
+  Two pages stay **absent**, §9i's rule kept: the blanks the **cutter** left
+  are nobody's to remove there and the page's screen already says which of the
+  three reasons a page is blank. Driving the room found the last of it and it
+  is a **route** fault of §15c's and §16b's kind — the control was right and
+  unreachable in the front matter, because selecting a part row shows the
+  **part's** panel and not the page's — so it is in three places now, all
+  writing the same field, which is *a second control onto one field* (§16d)
+  rather than a second answer. And it caught the half of §9r worth keeping:
+  **a blank block takes the next page**, and a chapter opening on a right-hand
+  page has already left the verso in front of it empty, so a leaf asked for
+  there **fills the cutter's gap and the book does not grow** — a press that
+  changes no page a writer can see, which reads exactly like *it wouldn't
+  allow me*. The obvious repair is wrong: before a recto page a second blank
+  costs **two**, so asking for one leaf would give three, and **the absorption
+  is correct typography**. So the act is unchanged and the screen **says what
+  is already true before the press** — `blankOffer` in `trackRemoval`'s shape
+  (the spot, the button's words, or the refusal), the control **absent with
+  the reason in its place** where a leaf already stands in front, never
+  refused where that leaf is the writer's own since its page is the only place
+  it can be found again; `partBlankOffer` asks it of a **part**, because the
+  other two surfaces set the field from the part and a screen toggling it
+  blind would go on absorbing silently. On Ken's collection it is offered on
+  the half title, the copyright page, the contents and the back matter, and
+  refused on the **title page**, whose predecessor is the half title's own
+  blank back.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

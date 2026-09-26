@@ -12,6 +12,7 @@ import {
   bookMetrics,
   bookNames,
   bookPageRows,
+  partBlankOffer,
   bookSettingsOf,
   bookVars,
   chapterPageStyleSchema,
@@ -447,6 +448,8 @@ function Body({
    */
   const rows = useMemo(() => (laying ? bookPageRows(laying.laid.pages, laying.blocks) : []), [laying]);
   const at = rows.findIndex((row) => row.partId === partId);
+  /** Whether a leaf may be asked for in front of this page, and what it says (§9r). */
+  const blankLeaf = partBlankOffer(rows, part);
   const here = at >= 0 ? rows[at] : undefined;
   const half = halfOf(part) === 'front' ? 'front matter' : 'back matter';
 
@@ -971,47 +974,77 @@ function Body({
             </section>
           ) : null}
 
-          {/* **The back of the leaf** (§17d, from Ken: *there needs to be an
-              option to leave the back of the page blank, because it could be
-              a printed page on different paper*). It is §9i's mechanism asked
-              of a part, and it is a real choice rather than a convention —
-              which is why the sentence under it had to stop stating the old
-              answer as a fixed one. Absent on a page that flows, there being
-              no single back to leave. */}
-          {partTakesBlankBack(part.kind) ? (
-            <section className="dp-card">
-              <h3>
-                <span className="dp-num">{isTitle ? 4 : 3}</span> The back of this leaf
-              </h3>
+          {/* **The leaves around this page** — one section rather than two,
+              because *what is in front of it* and *what is behind it* are one
+              question about one page, and two cards asking it would read as
+              two answers.
+
+              In front (§9r, from Ken: *you should be able to enter a blank
+              page wherever you want*) is offered on every page here, a page
+              that flows included: putting a leaf in front of one is always a
+              thing a book may want. Behind (§17d, *there needs to be an option
+              to leave the back of the page blank, because it could be a
+              printed page on different paper*) is §9i's mechanism asked of a
+              part, and is a real choice rather than a convention — which is
+              why the sentence under it had to stop stating the old answer as a
+              fixed one. It is absent on a page that flows, there being no
+              single back to leave. */}
+          <section className="dp-card">
+            <h3>
+              <span className="dp-num">{isTitle ? 4 : 3}</span> The leaves around this page
+            </h3>
+            {/* It reads the **offer** rather than toggling the field: a leaf
+                asked for where the cutter has already left one is absorbed by
+                the gap, so a switch that turned on and moved nothing would be
+                doing the invisible thing §9r was written to stop. */}
+            {blankLeaf.act ? (
               <button
                 type="button"
                 className="dp-switch"
                 role="switch"
-                aria-checked={part.backBlank}
-                aria-label="Leave the back of this page blank"
-                onClick={() => onUpdate((current) => updatePart(current, part.id, { backBlank: !part.backBlank }))}
+                aria-checked={part.blankBefore}
+                aria-label="Put a blank page before this one"
+                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: !part.blankBefore }))}
               >
-                <span className={part.backBlank ? 'dp-switch-track on' : 'dp-switch-track'} aria-hidden="true">
+                <span className={part.blankBefore ? 'dp-switch-track on' : 'dp-switch-track'} aria-hidden="true">
                   <span />
                 </span>
-                Leave the back blank
+                A blank page before this one
               </button>
-              <p className="muted small">
-                {part.backBlank
-                  ? `This page takes a right-hand leaf and nothing prints on its reverse${
-                      // **The next left-hand page, not the next page.** A
-                      // copyright page is a verso by convention, so blanking
-                      // the title page's back sends it two leaves on and
-                      // leaves a second blank between — which a writer sees
-                      // in the rail and would otherwise read as a fault.
-                      isTitle ? ', so the copyright page moves to the next left-hand page' : ''
-                    }. The blanks are counted with the rest and carry no page numbers — which is what a page printed on different paper needs.`
-                  : `The page after this one prints on its reverse${
-                      isTitle ? ', which by convention is the copyright page' : ''
-                    }.`}
-              </p>
-            </section>
-          ) : null}
+            ) : null}
+            {blankLeaf.refusal ? <p className="muted small">{blankLeaf.refusal}</p> : null}
+            {partTakesBlankBack(part.kind) ? (
+              <>
+                <button
+                  type="button"
+                  className="dp-switch"
+                  role="switch"
+                  aria-checked={part.backBlank}
+                  aria-label="Leave the back of this page blank"
+                  onClick={() => onUpdate((current) => updatePart(current, part.id, { backBlank: !part.backBlank }))}
+                >
+                  <span className={part.backBlank ? 'dp-switch-track on' : 'dp-switch-track'} aria-hidden="true">
+                    <span />
+                  </span>
+                  Leave the back blank
+                </button>
+                <p className="muted small">
+                  {part.backBlank
+                    ? `This page takes a right-hand leaf and nothing prints on its reverse${
+                        // **The next left-hand page, not the next page.** A
+                        // copyright page is a verso by convention, so blanking
+                        // the title page's back sends it two leaves on and
+                        // leaves a second blank between — which a writer sees
+                        // in the rail and would otherwise read as a fault.
+                        isTitle ? ', so the copyright page moves to the next left-hand page' : ''
+                      }. The blanks are counted with the rest and carry no page numbers — which is what a page printed on different paper needs.`
+                    : `The page after this one prints on its reverse${
+                        isTitle ? ', which by convention is the copyright page' : ''
+                      }.`}
+                </p>
+              </>
+            ) : null}
+          </section>
 
           {/* Said rather than hidden (§16): these are not settings, and a
               writer who cannot find a control for them should be told why

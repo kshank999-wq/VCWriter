@@ -126,6 +126,11 @@ import {
   pagesUnder,
   rowHasUnder,
   visibleRows,
+  blankOffer,
+  partBlankOffer,
+  chapterPageSchema,
+  setBlankPage,
+  setChapterBlank,
   plateIntoStory,
   type BookPageRow,
   placeBookFigure,
@@ -870,13 +875,29 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * do to this page*, and the dialog exists precisely so the answer is the
    * same wherever a writer asks it.
    */
-  const pageControls = (page: BookPageRow) => (
+  /** Where anything asked for on a sheet would go (§9r), read from the laying. */
+  const pagePlaceFor = (sheet: number): PagePlace =>
+    laying ? pagePlace(laying.laid.pages, laying.blocks, sheet) : EMPTY_PLACE;
+
+  /** Whether that chapter's own page already leaves its back blank (§9r). */
+  const chapterBackOf = (markerId: string | null): boolean => {
+    if (!markerId) return false;
+    const marker = file.markers.find((one) => (one.id as string) === markerId);
+    return chapterPageSchema.parse(marker?.page ?? {}).backBlank === true;
+  };
+
+  const pageControls = (page: BookPageRow) => {
+    const place = pagePlaceFor(page.sheet);
+    return (
     <StoryPageSection
       page={page}
+      place={place}
+      chapterBack={chapterBackOf(place.opensMarkerId ?? null)}
       // Why a blank leaf is blank is a reading of the page before it, and the
       // two reasons are different acts: one the cutter's, one the writer's
       // own (§9i).
       behindPicture={pageRows.find((one) => one.sheet === page.sheet - 1)?.says === 'Illustration'}
+      leafBefore={pageRows.find((one) => one.sheet === page.sheet - 1) ?? null}
       drawing={drawing === NEW_BOX}
       onPut={() => importPicture('page')}
       onDraw={() => {
@@ -888,7 +909,8 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         setPageDialogSheet(null);
         importPicture('free');
       }}
-      onBlank={(elementId, blank) => onUpdate((current) => setBlankBefore(current, elementId, blank))}
+      onBlank={(id, blank) => onUpdate((current) => setBlankPage(current, id, blank))}
+      onChapterBack={(markerId, blank) => onUpdate((current) => setChapterBlank(current, markerId, 'back', blank))}
       format={pageFormat(page).markerId ? pageFormat(page).label : null}
       onFormat={() => {
         const to = pageFormat(page);
@@ -921,7 +943,8 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         ) : null
       }
     />
-  );
+    );
+  };
 
   /**
    * Where this page's own look is set (§9l). A chapter with a marker has a
@@ -1673,6 +1696,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                 onDone={() => setSelectedRowId(null)}
                 onOpenBookSettings={() => setBookSettingsOpen(true)}
                 onOpenCopyright={() => setCopyrightOpen(true)}
+                rows={pageRows}
               />
               <p className="muted small">
                 <button type="button" className="ghost small" onClick={() => setPartDialogId(selected.id)}>
@@ -2549,7 +2573,14 @@ function PartDialog({
             <div className="layout-part-dialog-fields">
               {/* The copyright page never arrives here: it opens its own
                   screen (§15c), so there is no button through to one. */}
-              <PartFields file={file} part={part} onUpdate={onUpdate} onDone={onRemoved} onOpenBookSettings={onOpenBookSettings} />
+              <PartFields
+                file={file}
+                part={part}
+                onUpdate={onUpdate}
+                onDone={onRemoved}
+                onOpenBookSettings={onOpenBookSettings}
+                rows={laying ? bookPageRows(laying.laid.pages, laying.blocks) : []}
+              />
               {partTakesInsets(part.kind) ? <PartPictures file={file} part={part} onUpdate={onUpdate} onTouched={setTouched} /> : null}
             </div>
             <PagePreview laying={laying} partId={part.id} focus={focus} />
@@ -2988,19 +3019,31 @@ function StoryPageSection({
   onDraw,
   onVector,
   onBlank,
+  onChapterBack,
+  place,
+  chapterBack,
+  leafBefore,
   onFormat,
   format,
   openings,
 }: {
   page: BookPageRow;
+  /** Where a picture or a leaf asked for on this page would go (§9r). */
+  place: PagePlace;
+  /** Whether this chapter's page already leaves its back blank. */
+  chapterBack: boolean;
+  /** The page in front of this one, so the offer can see a leaf already there (§9r). */
+  leafBefore: BookPageRow | null;
   /** A blank leaf standing behind a picture page, asked for rather than left (§9i). */
   behindPicture: boolean;
   drawing: boolean;
   onPut(): void;
   onDraw(): void;
   onVector(): void;
-  /** Put a blank leaf in before an element, or take one away (§9i). */
-  onBlank(elementId: string, blank: boolean): void;
+  /** A blank leaf before this page, wherever it lands (§9r): an element, a part or a chapter. */
+  onBlank(id: string, blank: boolean): void;
+  /** A blank on the back of a chapter's own leaf (§9r). */
+  onChapterBack(markerId: string, blank: boolean): void;
   /**
    * How the page is set (§9l, from Ken: *it should have all the graphic
    * buttons that let you format a page instantly and have all the options for
@@ -3021,6 +3064,13 @@ function StoryPageSection({
    */
   openings: ReactNode;
 }) {
+  /**
+   * Whether a blank leaf may be asked for here, where it would go, and what a
+   * press would do (§9r) — one reading over the three places it can land and
+   * over the one case where a leaf already stands in front, so no screen holds
+   * a second answer about either.
+   */
+  const offer = blankOffer(place, page, leafBefore);
   /** What stands on the page, in the rail's own words rather than a sentence. */
   const what = page.figureId ? 'a picture' : page.blank ? 'blank' : page.says === 'Chapter opens' ? 'a chapter opens' : null;
   return (
@@ -3073,13 +3123,28 @@ function StoryPageSection({
               there is writing to stand before; on a leaf the writer put in,
               the same button takes it away, which is the only place it can
               be found again. */}
-          {page.blankFor ? (
-            <button type="button" className="small" onClick={() => onBlank(page.blankFor as string, false)}>
-              Take this blank page away
+          {offer.spot && offer.act ? (
+            <button
+              type="button"
+              className="small"
+              onClick={() => onBlank(offer.spot as string, !page.blankFor)}
+            >
+              {offer.act}
             </button>
-          ) : page.elementId ? (
-            <button type="button" className="small" onClick={() => onBlank(page.elementId as string, true)}>
-              Put a blank page here…
+          ) : null}
+          {offer.refusal ? <p className="muted small">{offer.refusal}</p> : null}
+          {/* **A blank on the chapter page's back** (§9r, Ken's own words).
+              Absent where the chapter opens with its own first paragraph:
+              there is no back to leave, the next page being the middle of the
+              chapter, and a control that did something there would be doing
+              what nobody could predict. */}
+          {place.opensMarkerId && place.opensAlone ? (
+            <button
+              type="button"
+              className="small"
+              onClick={() => onChapterBack(place.opensMarkerId as string, !chapterBack)}
+            >
+              {chapterBack ? 'Print on the back of this page' : 'Leave the back of this page blank'}
             </button>
           ) : null}
         </div>
@@ -3645,6 +3710,7 @@ function PartFields({
   onDone,
   onOpenBookSettings,
   onOpenCopyright,
+  rows = [],
 }: {
   file: ProjectFile;
   part: BookPart;
@@ -3654,8 +3720,11 @@ function PartFields({
   onOpenBookSettings?(): void;
   /** The copyright page's own dialog (§9k); absent on every other kind. */
   onOpenCopyright?(): void;
+  /** The laid pages, so the blank leaf's offer can see what is in front (§9r). */
+  rows?: readonly BookPageRow[];
 }) {
   const info = PART_INFO[part.kind];
+  const blank = partBlankOffer(rows, part);
   const library = graphicsInOrder(file);
   const chapters = contentsDivisions(file);
   const [asking, setAsking] = useState(false);
@@ -3692,6 +3761,25 @@ function PartFields({
     <section className="layout-section layout-part-fields">
       <h3>{info.name}</h3>
       <p className="muted small">{info.note}.</p>
+      {/* **A blank leaf before this page** (§9r, from Ken: *you should be
+          able to enter a blank page wherever you want*). Here as well as on
+          the page's own screen, because this is the panel a part shows when
+          it is chosen in the rail — which is where a writer reaches for it,
+          and where §9r found the act had no answer at all. It reads the
+          **offer** rather than toggling the field: a leaf asked for where the
+          cutter has already left one is absorbed, and a control that did that
+          silently is the fault this was written to stop. */}
+      {blank.act ? (
+        <button
+          type="button"
+          className="ghost small layout-part-blank"
+          aria-pressed={part.blankBefore}
+          onClick={() => patch({ blankBefore: !part.blankBefore })}
+        >
+          {blank.act}
+        </button>
+      ) : null}
+      {blank.refusal ? <p className="muted small">{blank.refusal}</p> : null}
       {part.kind !== 'half_title' && part.kind !== 'title_page' ? (
         <label className="field">
           <span>Heading</span>

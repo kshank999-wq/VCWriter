@@ -462,6 +462,24 @@ export const chapterPageSchema = z.object({
   dropInches: z.number().min(0).max(6).nullable().default(null),
   openingLines: z.number().min(0).max(16).nullable().default(null),
   /**
+   * **A blank leaf before this chapter opens, and a blank on its back**
+   * (addendum 20 §9r, from Ken: *the chapter page we have a blank on the
+   * back, and you should be able to enter a blank page wherever you want*).
+   *
+   * They are the chapter's rather than the manuscript's for the reason §9p
+   * found for a picture: a chapter opening is emitted by the **unit**, so a
+   * blank hung on the chapter's first *element* lands between the numeral and
+   * the words and splits the chapter in two. Said here, it is drawn where the
+   * opening is drawn — before it, or on the leaf behind it.
+   *
+   * `backBlank` means anything only where the chapter opens on a leaf of its
+   * own: where it opens with its own first paragraph there is no back to
+   * leave, the next page being the middle of the chapter, so the control is
+   * absent rather than doing something nobody could predict.
+   */
+  blankBefore: z.boolean().default(false),
+  backBlank: z.boolean().default(false),
+  /**
    * A picture from the book's graphics library (addendum 19 §7), by id, so
    * replacing a diagram in the library replaces it here too and there is one
    * answer to *where are my graphics*. Null means the page uses `image`, the

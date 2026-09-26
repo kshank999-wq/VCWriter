@@ -2,6 +2,7 @@ import { PART_KINDS, bookPartSchema, partInsetSchema, type BookPart, type PartIn
 import type { ManuscriptElement } from './entities/manuscript.js';
 import { parseInline, type InlineSpan } from './entities/inline.js';
 import { chapterLeafContent, chapterPageStyleSchema, type LineStyle } from './chapter-style.js';
+import { chapterPageSchema } from './entities/structure.js';
 import { contentsDivisions, type ChapterPageContent, type PlacedMarker } from './markers.js';
 import { bookNames, bookSettingsOf, setBookSettings } from './book-layout.js';
 import { beatsInScript, unitsInStoryOrder } from './selectors.js';
@@ -502,13 +503,10 @@ const partBlocks = (
   plan: readonly BookPart[] = [],
 ): BookBlock[] => {
   const own = partOwnBlocks(part, numbering, chapterTitle, prose, file, plan);
-  if (!part.backBlank || !partTakesBlankBack(part.kind) || own.length === 0) return own;
-  const first = own[0] as BookBlock;
-  return [
-    { ...first, starts: 'recto' },
-    ...own.slice(1),
+  if (own.length === 0) return own;
+  const leaf = (suffix: string): BookBlock =>
     block({
-      id: `${part.id}:back`,
+      id: `${part.id}:${suffix}`,
       kind: 'blank',
       numbering,
       starts: 'page',
@@ -517,8 +515,16 @@ const partBlocks = (
       unbreakable: true,
       chapterTitle,
       partId: part.id,
-    }),
-  ];
+      // Which page put it here, so the room can offer to take it away again
+      // — the one place a leaf the writer asked for can be found (§9i).
+      blankFor: suffix === 'before' ? part.id : undefined,
+    });
+  // **A leaf in front of this page** (§9r): *wherever you want* includes the
+  // front and back matter, which is where a book most often wants one.
+  const front = part.blankBefore ? [leaf('before')] : [];
+  if (!part.backBlank || !partTakesBlankBack(part.kind)) return [...front, ...own];
+  const first = own[0] as BookBlock;
+  return [...front, { ...first, starts: 'recto' }, ...own.slice(1), leaf('back')];
 };
 
 const partOwnBlocks = (
@@ -989,6 +995,156 @@ export const setBlankBefore = (file: ProjectFile, elementId: string, blank: bool
   })),
 });
 
+/**
+ * **Where a blank page asked for on this page goes** (§9r, from Ken: *you
+ * should be able to enter a blank page wherever you want*, and *tried to put
+ * a blank page on the chapter one page and it wouldn't allow me*).
+ *
+ * *Wherever* was the whole of the ask and the whole of the gap. The act hung
+ * on a manuscript element, so it was offered on a page of the story and
+ * **absent on every page of the front and back matter** — a writer could not
+ * put a leaf between the title page and the copyright page, or before an
+ * appendix, which is where a book most often wants one.
+ *
+ * So it is one act read where it lands, the way putting a picture in is
+ * (§9a). Three places, in this order, and **the order is the point**: a page
+ * a chapter opens on answers with the **chapter** rather than with the
+ * element under it, because a blank hung on the chapter's first element lands
+ * between the numeral and the words and splits the chapter in two — §9p's
+ * fault exactly, which is how it was found again here.
+ */
+export const blankSpot = (place: PagePlace, page: Pick<BookPageRow, 'blankFor'>): string | null =>
+  page.blankFor ?? place.opensMarkerId ?? place.elementId ?? place.partId ?? null;
+
+/** What a press would do, or why it may not be asked for (§9r). */
+export interface BlankOffer {
+  /** Where the leaf would go. Null where the act may not be asked for here. */
+  spot: string | null;
+  /** The button's words, where there is a button. */
+  act: string | null;
+  /** Why there is none, in a sentence a writer can act on. */
+  refusal: string | null;
+}
+
+/**
+ * **Whether a blank leaf may be asked for on this page** (§9r), and what a
+ * press would do — the domain answering before the act can be asked for,
+ * which is `trackRemoval`'s shape.
+ *
+ * It exists because of the one thing measuring the act caught. A blank block
+ * takes the **next page**, and a chapter that opens on a right-hand page has
+ * already left the verso in front of it empty — so asking for a leaf there
+ * fills the gap the cutter left and **the book does not grow by a page**.
+ * Nothing is wrong with that; what is wrong is a press that looks exactly
+ * like the fault Ken reported, which is a screen doing something invisible
+ * rather than saying what is already true.
+ *
+ * So where a leaf already stands in front of this page, the act is refused in
+ * a sentence rather than offered and absorbed. It holds for every kind of
+ * page, because the absorption is a fact about the cutter rather than about
+ * chapters — chapters are merely where it happens on every one.
+ */
+export const blankOffer = (
+  place: PagePlace,
+  page: Pick<BookPageRow, 'blankFor'>,
+  /** The row of the page in front of this one, where there is one. */
+  before: Pick<BookPageRow, 'blank' | 'blankFor'> | null,
+): BlankOffer => {
+  const spot = blankSpot(place, page);
+  if (spot === null) return { spot: null, act: null, refusal: null };
+  // Taking away the leaf a writer put in is never refused: it is the only
+  // place that leaf can be found again (§9i).
+  if (page.blankFor) return { spot, act: 'Take this blank page away', refusal: null };
+  if (before?.blank) {
+    return {
+      spot: null,
+      act: null,
+      refusal: before.blankFor
+        ? 'There is already a blank page in front of this one. Its own page takes it away again.'
+        : 'The page in front of this one is already blank. Its own page says why.',
+    };
+  }
+  return { spot, act: 'Put a blank page here…', refusal: null };
+};
+
+/**
+ * **The same question asked of a part** (§9r), for the two screens that reach
+ * the field from the part rather than from the page — the inspector's own
+ * panel and the designed page's dialog.
+ *
+ * They exist because a part row shows the *part's* panel, so a writer in the
+ * front matter reaches the act from there; and they read this rather than
+ * toggling the field, because a screen that toggles it blind absorbs the
+ * cutter's leaf silently, which is the very thing `blankOffer` was written to
+ * stop. Three surfaces, one answer.
+ */
+export const partBlankOffer = (
+  rows: readonly BookPageRow[],
+  part: Pick<BookPart, 'id' | 'blankBefore'>,
+): BlankOffer => {
+  const opens = rows.find((row) => row.partId === part.id);
+  if (part.blankBefore) {
+    return { spot: part.id, act: 'Take the blank page before this one away', refusal: null };
+  }
+  if (opens && rows.find((row) => row.sheet === opens.sheet - 1)?.blank === true) {
+    return {
+      spot: null,
+      act: null,
+      refusal: 'The page in front of this one is already blank. Its own page says why.',
+    };
+  }
+  return { spot: part.id, act: 'Put a blank page before this one', refusal: null };
+};
+
+/**
+ * Put a blank leaf in, or take it away. **One act for all three**, because
+ * which of them an id names is a fact the caller should not have to carry:
+ * the ids are distinct, so the act reads which it is and nothing on a screen
+ * holds a second answer.
+ */
+export const setBlankPage = (file: ProjectFile, id: string, blank: boolean): ProjectFile => {
+  if (file.beats.some((beat) => beat.manuscript.elements.some((element) => (element.id as string) === id))) {
+    return setBlankBefore(file, id, blank);
+  }
+  if (partsOf(file).some((part) => part.id === id)) return setPartBlank(file, id, 'before', blank);
+  if (file.markers.some((marker) => (marker.id as string) === id)) return setChapterBlank(file, id, 'before', blank);
+  return file;
+};
+
+/**
+ * **A blank leaf before a part's page, or behind it** (§9r): the same act as
+ * the manuscript's, said of the front and back matter, where *wherever you
+ * want* had no answer at all.
+ */
+export const setPartBlank = (
+  file: ProjectFile,
+  partId: string,
+  where: 'before' | 'back',
+  blank: boolean,
+): ProjectFile =>
+  updatePart(file, partId, where === 'before' ? { blankBefore: blank } : { backBlank: blank });
+
+/**
+ * **A blank leaf before a chapter opens, or on the back of its page** (§9r).
+ *
+ * On the chapter rather than on its first element, because a chapter opening
+ * is emitted by the unit: hung on the element it lands between the numeral
+ * and the words, which is §9p's fault exactly.
+ */
+export const setChapterBlank = (
+  file: ProjectFile,
+  markerId: string,
+  where: 'before' | 'back',
+  blank: boolean,
+): ProjectFile => ({
+  ...file,
+  markers: file.markers.map((marker) => {
+    if ((marker.id as string) !== markerId) return marker;
+    const page = chapterPageSchema.parse(marker.page ?? {});
+    return { ...marker, page: { ...page, [where === 'before' ? 'blankBefore' : 'backBlank']: blank } };
+  }),
+});
+
 /** Ask for that leaf, or stop asking. Only what differs from the default is stored. */
 export const setBackBlank = (file: ProjectFile, elementId: string, blank: boolean): ProjectFile => ({
   ...file,
@@ -1201,12 +1357,22 @@ export interface PagePlace {
   partId: string | null;
   /** The chapter in force on it. */
   markerId: string | null;
+  /** The chapter whose opening stands **on** this page, where one does (§9r). */
+  opensMarkerId?: string | null;
+  /**
+   * Whether that opening **stands alone on its page**, so there is a back to
+   * leave blank (§9r). Read from the laid page rather than from the block's
+   * own `display` flag: a chapter page carrying nothing but its title stands
+   * alone whether or not it was given a device, and Ken's stories are exactly
+   * that shape — gating on the flag offered the control on none of them.
+   */
+  opensAlone?: boolean;
 }
 
 export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock[], sheet: number): PagePlace => {
   const page = pages.find((one) => one.sheet === sheet);
   const index = new Map(blocks.map((block) => [block.id, block]));
-  const place: PagePlace = { elementId: null, partId: null, markerId: null };
+  const place: PagePlace = { elementId: null, partId: null, markerId: null, opensMarkerId: null, opensAlone: false };
   if (!page) return place;
   // The chapter in force is read from the last opening at or before the page,
   // so a page in the middle of a chapter still knows which chapter it is in.
@@ -1241,6 +1407,17 @@ export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock
       if (next) place.elementId = next.id;
     }
   }
+  /**
+   * **Which chapter opens *on* this page** (§9r), as against the chapter in
+   * force, which every page inside one has. A blank leaf and a blank back are
+   * the chapter page's own, so the room has to tell the page a chapter opens
+   * on from the pages that merely follow it.
+   */
+  const opening = page.pieces
+    .map((piece) => index.get(piece.blockId))
+    .find((block) => block?.kind === 'chapter_opening');
+  place.opensMarkerId = opening ? opening.id : null;
+  place.opensAlone = opening !== undefined && page.pieces.length === 1;
   return place;
 };
 
@@ -1539,6 +1716,28 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
         const made = elementBlock(element, chapterTitle, false);
         if (made) out.push(made);
       }
+      /**
+       * **A blank leaf before the chapter opens** (§9r). It is the chapter's
+       * rather than the manuscript's for §9p's reason: hung on the chapter's
+       * first *element* it lands between the numeral and the words and splits
+       * the chapter in two, which is the very fault §9p fixed for pictures.
+       */
+      const own = chapterPageSchema.parse(placed.marker.page ?? {});
+      if (own.blankBefore) {
+        out.push(
+          block({
+            id: `${placed.marker.id as string}:before`,
+            kind: 'blank',
+            numbering: 'arabic',
+            starts: 'page',
+            display: true,
+            folio: false,
+            unbreakable: true,
+            chapterTitle,
+            blankFor: placed.marker.id as string,
+          }),
+        );
+      }
       const leaf = chapterLeafContent(file, placed);
       chapterTitle = leaf.title.trim() || leaf.label;
       const onLeaf = opensOnLeaf(leaf);
@@ -1557,6 +1756,30 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
           chapterTitle,
         }),
       );
+      /**
+       * **A blank on the chapter page's back** (§9r, Ken's own words): the
+       * leaf right behind the page the chapter opens on.
+       *
+       * It is emitted whenever it is asked for, because it is an explicit
+       * ask; **where it is offered** is the room's question, and the room
+       * offers it where the opening stands alone on its page (`opensAlone`)
+       * — on a page that carries the chapter's first words as well there is
+       * no back to leave, the next page being the middle of the chapter.
+       */
+      if (own.backBlank) {
+        out.push(
+          block({
+            id: `${placed.marker.id as string}:back`,
+            kind: 'blank',
+            numbering: 'arabic',
+            starts: 'page',
+            display: true,
+            folio: false,
+            unbreakable: true,
+            chapterTitle,
+          }),
+        );
+      }
       opensChapter = true;
     }
     // A chapter inside a story (addendum 22 §6, from Ken: *divide short
