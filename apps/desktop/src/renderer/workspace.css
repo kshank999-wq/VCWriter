@@ -10252,9 +10252,86 @@ dialog.projects-dialog {
 
 .creator-traits {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  /* The traits, what shows them, and somewhere to put it (addendum 25 §3). */
+  grid-template-columns: 200px minmax(0, 1fr) 232px;
   min-height: 0;
   flex: 1;
+}
+
+/* Where a moment goes: the scenes in story order, bright where this person
+   is in them. A press pins to the beat in hand; the drag is how a writer
+   reaches a scene that is not the one they are in. */
+.creator-story {
+  border-left: 1px solid var(--border);
+  padding: 12px 12px 18px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.creator-story h4 {
+  margin: 0 0 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+.creator-story-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.creator-story-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 6px;
+  border: 1px dashed transparent;
+  border-radius: 5px;
+  font-size: 11.5px;
+}
+
+/* Bright where they are in it, dimmed where they are not — and the dim one
+   says why rather than leaving it to the eye. */
+.creator-story-row.not-in-scene .creator-story-name {
+  color: var(--muted);
+}
+
+.creator-story-row.over {
+  border-color: var(--gold);
+  background: var(--panel-2);
+}
+
+.creator-story-div {
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.creator-story-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.creator-story-pins {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.creator-story-note {
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.creator-story-drop {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  color: var(--gold);
 }
 
 .creator-rail {

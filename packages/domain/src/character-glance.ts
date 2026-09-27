@@ -1,13 +1,17 @@
 import { castColours } from './story-threads.js';
+import { nounsFor } from './formats.js';
+import { placedMarkerForUnit } from './markers.js';
 import {
   arcBoard,
   characterBoard,
+  peopleSpeakingIn,
   relationshipsOf,
   unfiledItems,
   type CharacterizationRow,
   type UsageColour,
 } from './character-creator.js';
 import type { ProjectFile } from './project-file.js';
+import type { BeatId, StructuralUnitId } from './ids.js';
 
 /**
  * The two readings on the Overview (addendum 25 §3, the handoff's *At a
@@ -207,3 +211,106 @@ export const glancePills = (glance: Glance): { used: string; onDeck: string; arc
 });
 
 export type { CharacterizationRow };
+
+// ------------------------------------------------------------- the story panel
+
+/**
+ * One scene, as a place to put something (addendum 25 §3, the handoff's
+ * *Story* panel).
+ */
+export interface StoryRow {
+  unitId: StructuralUnitId;
+  /** What the panel calls it — the division it opens, then the scene's name. */
+  label: string;
+  /** The division it falls under, where there is one: *Ch 1*, *Episode 2*. */
+  division: string;
+  /**
+   * They are **in** it: somebody speaks their cue there. Bright on the panel;
+   * everything else is dimmed and says *not in scene*.
+   *
+   * Read from the manuscript every time (addendum 08 §2), so writing a cue
+   * lights the row with nothing run — and it is `castCalled`'s rule, so
+   * MARABEL's lines are not MARA's.
+   */
+  appears: boolean;
+  /**
+   * Where a drop lands: the scene's **first beat**, because a scene is what a
+   * writer points at and a beat is where the link lives. Null where the scene
+   * has no beats at all, and such a row takes no drop — a link with nowhere to
+   * anchor is a link that would be broken the moment it was made.
+   */
+  beatId: BeatId | null;
+  /** How much of this person's work is already pinned in it. */
+  pinned: number;
+}
+
+/**
+ * The scenes, in story order, as somewhere to put a moment (§3).
+ *
+ * **Nothing about it is stored.** Which scenes somebody is in is read off the
+ * cues, so the panel re-lights itself as the writing changes; what is pinned
+ * where is read off the usage links, for the same reason the colours are.
+ */
+export const storyPanel = (input: { characterId: string; file: ProjectFile }): StoryRow[] => {
+  const { characterId, file } = input;
+  const nouns = nounsFor(file.project.format);
+  const beatsOf = new Map<string, ProjectFile['beats']>();
+  for (const beat of file.beats) {
+    const held = beatsOf.get(beat.unitId as string) ?? [];
+    held.push(beat);
+    beatsOf.set(beat.unitId as string, held);
+  }
+
+  /**
+   * **The division a scene falls under, not only the one that carries its
+   * marker** (addendum 25 §3). A marker sits on the scene a chapter opens on,
+   * so reading it per unit labelled the first scene *Ch 1* and left every
+   * other scene in that chapter blank — which is exactly the question the
+   * column is there to answer. It is `divisionSpan`'s rule pointed at a list:
+   * the nearest marker at or before this scene.
+   */
+  let division = '';
+  return [...file.units]
+    .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))
+    .map((unit) => {
+      const beats = (beatsOf.get(unit.id as string) ?? []).sort((a, b) =>
+        a.orderKey < b.orderKey ? -1 : 1,
+      );
+      const appears = beats.some((beat) =>
+        peopleSpeakingIn(file, beat).some((one) => (one as unknown as string) === characterId),
+      );
+      const ids = new Set(beats.map((beat) => beat.id as string));
+      const pinned = file.usageLinks.filter((link) => {
+        if (!ids.has(link.beatId as string)) return false;
+        if (link.ownerKind === 'characterization') {
+          return file.characterizationItems.some(
+            (item) =>
+              (item.id as string) === link.ownerId && (item.characterId as string) === characterId,
+          );
+        }
+        if (link.ownerKind === 'arc_point') {
+          return file.arcPoints.some(
+            (point) =>
+              (point.id as string) === link.ownerId && (point.characterId as string) === characterId,
+          );
+        }
+        return false;
+      }).length;
+
+      const placed = placedMarkerForUnit(file, unit.id as string);
+      if (placed) division = placed.label;
+      return {
+        unitId: unit.id,
+        label: unit.title.trim() || `Untitled ${nouns.unit.toLowerCase()}`,
+        division: division || unit.sequenceLabel.trim(),
+        appears,
+        beatId: beats[0]?.id ?? null,
+        pinned,
+      };
+    });
+};
+
+/** What the panel says under its heading, in the format's own nouns. */
+export const describeStoryPanel = (file: ProjectFile, name: string): string =>
+  `Drag something on deck onto a ${nounsFor(file.project.format).unit.toLowerCase()} to use it. ` +
+  `${name.trim() || 'They'} is in the bright ones.`;

@@ -10,8 +10,10 @@ import {
   filterBoard,
   setConflict,
   characterGlance,
+  describeStoryPanel,
   describeUpNext,
   glancePills,
+  storyPanel,
   upNext,
   ARC_LINK_VERB_NAMES,
   ARC_POINT_KINDS,
@@ -92,6 +94,7 @@ import {
   type TraitTone,
   type UsageColour,
 } from '@vcwriter/domain';
+import { carryWork, carryingWork, workCarried } from '../carry-work';
 import { usePreference } from '../use-split';
 import { InlineText } from './InlineText';
 
@@ -366,6 +369,7 @@ export function CharacterCreator({
                 onRevealed={() => setReveal(null)}
                 onUpdate={onUpdate}
               />
+              <StoryPanel file={file} characterId={characterId} name={person.name} onUpdate={onUpdate} />
             </div>
             </>
           )}
@@ -879,6 +883,104 @@ function UpNext({ steps, onGo }: { steps: readonly NextStep[]; onGo(where: NextW
   );
 }
 
+/**
+ * Somewhere to put a moment (addendum 25 §3, the handoff's *Story* panel).
+ *
+ * The scenes in story order, **bright where this person is in them**, as drop
+ * targets for anything still on deck. It is the press's sibling rather than
+ * its replacement (addendum 08 §13): a press pins to the beat in hand, and
+ * the drag is how a writer reaches a scene that is not the one they are in.
+ *
+ * A scene with no beats takes no drop and says so by not lighting: a link
+ * with nowhere to anchor is one that would be broken the moment it was made.
+ */
+function StoryPanel({
+  file,
+  characterId,
+  name,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  characterId: CharacterId;
+  name: string;
+  onUpdate: CharacterCreatorProps['onUpdate'];
+}) {
+  const rows = useMemo(() => storyPanel({ characterId: characterId as string, file }), [characterId, file]);
+  /** Which row the pointer is over, so the target lights while a drag is on. */
+  const [over, setOver] = useState<string | null>(null);
+
+  if (rows.length === 0) {
+    return (
+      <aside className="creator-story" aria-label="Story">
+        <h4>Story</h4>
+        <p className="muted small">Nothing written yet to put anything in.</p>
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="creator-story" aria-label="Story">
+      <h4>Story</h4>
+      <p className="muted small">{describeStoryPanel(file, name)}</p>
+      <ul className="creator-story-list">
+        {rows.map((row) => {
+          const takes = row.beatId !== null;
+          return (
+            <li
+              key={row.unitId}
+              className={[
+                'creator-story-row',
+                row.appears ? 'in-scene' : 'not-in-scene',
+                over === (row.unitId as string) ? 'over' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onDragOver={(event) => {
+                // Only ours, and only where there is somewhere to anchor.
+                if (!takes || !carryingWork(event.dataTransfer)) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'copy';
+                setOver(row.unitId as string);
+              }}
+              onDragLeave={() => setOver((current) => (current === (row.unitId as string) ? null : current))}
+              onDrop={(event) => {
+                setOver(null);
+                const work = workCarried(event.dataTransfer);
+                if (!work || !row.beatId) return;
+                event.preventDefault();
+                onUpdate((current) =>
+                  pinUsage(current, {
+                    ownerKind: work.ownerKind,
+                    ownerId: work.ownerId,
+                    beatId: row.beatId as BeatId,
+                  }).file,
+                );
+              }}
+            >
+              {row.division ? <span className="creator-story-div">{row.division}</span> : null}
+              <span className="creator-story-name">{row.label}</span>
+              {/* What is already here, and — where they are not in it at all —
+                  the reason the row is dim, said rather than left to the eye. */}
+              {row.pinned > 0 ? (
+                <span className="creator-story-pins">
+                  {Array.from({ length: Math.min(row.pinned, 4) }, (_, at) => (
+                    <i key={at} className="creator-dot is-in" />
+                  ))}
+                </span>
+              ) : row.appears ? null : (
+                <span className="muted creator-story-note">not in scene</span>
+              )}
+              {over === (row.unitId as string) ? (
+                <span className="creator-story-drop">Drop to use it here</span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </aside>
+  );
+}
+
 // -------------------------------------------------------------------- traits
 
 function Traits({
@@ -1211,7 +1313,22 @@ function Shown({
       ) : (
         <ul className="creator-items">
           {rows.map((row) => (
-            <li key={row.item.id} className={`creator-item ${DOT_CLASS[row.colour]}`}>
+            <li
+              key={row.item.id}
+              className={`creator-item ${DOT_CLASS[row.colour]}`}
+              // **Only what is waiting is carried** (addendum 25 §3): a moment
+              // already in the writing has somewhere to be, and dragging it
+              // would offer to pin it twice for no reason a writer asked for.
+              draggable={row.colour === 'red'}
+              onDragStart={(event) => {
+                if (row.colour !== 'red' || !event.dataTransfer) return;
+                carryWork(event.dataTransfer, {
+                  ownerKind: 'characterization',
+                  ownerId: row.item.id as string,
+                  label: row.item.text,
+                });
+              }}
+            >
               <div className="creator-item-row">
               <i className={`creator-dot ${DOT_CLASS[row.colour]}`} title={USAGE_WORDS[row.colour]} />
               {/* The badge rides **inside the words' cell** rather than

@@ -176,6 +176,31 @@ the mockup is *for* — the red counts always in front of you — is delivered o
 every row of the list. The one-column stack is a layout preference and is
 stage 8's to weigh.
 
+**Stage 4 — the Story panel.** The scenes down the right of the Traits tab,
+as somewhere to put a moment. **Nothing about it is stored**: which scenes
+somebody is in is read off the cues every time — `castCalled`'s rule, so
+MARABEL's lines are not MARA's — and what is pinned where off the usage
+links, so writing a cue lights a row with nothing run and cutting one puts it
+out again. A row is **dimmed and never dropped**: a scene they are not in is
+exactly where a writer may be about to put them, and it says *not in scene*
+rather than leaving the dimness to be read.
+
+Three decisions. **The division is carried forward** — a marker sits on the
+scene a chapter opens on, so reading it per unit labelled the first scene
+*Chapter 1* and left every other scene in that chapter blank, which is the
+question the column exists to answer; it is `divisionSpan`'s rule pointed at
+a list, the nearest marker at or before. **A drop lands on the scene's first
+beat**, because a scene is what a writer points at and a beat is where the
+link lives — and a scene with no beats at all **takes no drop**, a link with
+nowhere to anchor being one that would be broken the moment it was made.
+And **only what is waiting is carried**: a moment already in the writing is
+not draggable, there being nothing to place.
+
+It is `carry-work.ts` unchanged — addendum 08 §13's MIME type of its own, so
+dragging a line of dialogue inside the manuscript is left entirely alone —
+and the drop runs the same `pinUsage` as the Where panel and the Inspector's
+on-deck queue. **A third way in, not a third answer.**
+
 ## 5. Deliberately not built
 
 §21's AI-assisted suggestions. The handoff does not ask for them and the

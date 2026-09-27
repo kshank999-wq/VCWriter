@@ -3448,6 +3448,58 @@ push live; the build takes a minute or two.
   row, every reading over the writer's records asks its module's one function,
   every reading over the manuscript asks the whole collection, and both halves
   are pinned by a surfaces test per module.
+  `addendum-25-character-creator-revision.md` is **the Character Creator
+  revised**, from Ken's handoff package (a spec, five mockups and a second dev
+  spec). It is a revision of a **built** module — addendum 08 and all fourteen
+  of its stages — and §1 is the audit, which paid a **twenty-first** time and
+  harder than usual: **the handoff's own headline decision had already been
+  made here independently**, its seven tabs having been four since addendum 08
+  stage 2 for the same reasons. Seventeen more of its asks are standing under
+  another name. **Stages 1 to 4 of §4's eight are built**; §4a says what each
+  does. Four decisions carry it. **The arc's shape is said *and* read** —
+  addendum 08 §5 made it a reading and the handoff asks for a toggle, and both
+  are right about different moments (an arc with no points has no shape to
+  read, a finished arc's shape is a fact about its points), so the toggle
+  stores an **intention**, `arcShape` goes on reading, and **where they
+  disagree the screen says so**, which is addendum 13's `movementOf` pointed
+  at an arc. **`origin` is taken, so a moment is `found`** — `origin` has
+  meant *who made it, in a room* since addendum 07 stage 4 and addendum 16 §2
+  had to separate `source` from it for the same reason; `found` is a fact
+  about provenance and **never a status**, a planned moment and a found one
+  being used or on deck by the same rule. **A colour is read, never stored**,
+  so the handoff's `avatarColor` is not built and `castColours` came out of
+  `story-threads.ts` as the one place the avatars, the timeline and the
+  threads all ask. And **nothing here stores a status**, which is addendum 08
+  §2 arriving on a summary: a bar written down would go on saying *7 used*
+  after the scene was cut. Stage 1 is the record (`role` as six chips plus
+  free text, `background` behind a fold, the writer's own fields as a **list
+  rather than a map** because the id is what makes a rename an edit; migration
+  0053). Stage 2 is `character-glance.ts` — *At a glance* and *Up next*, both
+  readings, the latter **naming the trait rather than counting across all of
+  them** and **offering rather than warning**, its two buttons **routes to the
+  Character review's own modes** rather than reports of their own. Stage 3 is
+  the filter bar, whose **figures are the whole character's whichever tab is
+  pressed** (a bar whose own figures changed as it was pressed would be
+  unreadable) and under which a trait with nothing left **drops out**; plus
+  red counts on every trait row, `found`, and **`conflictsWith` said once and
+  read both ways** — storing the pair on both traits would be two records of
+  one fact, free to disagree the moment one is edited (migration 0054). Stage
+  4 is the **Story panel**, the scenes down the right of the Traits tab as
+  somewhere to put a moment, and it stores nothing: who is in a scene is read
+  off the cues (`castCalled`'s rule, so MARABEL's lines are not MARA's) and
+  what is pinned where off the usage links, so a cue lights a row with nothing
+  run. A scene they are not in is **dimmed and never dropped** and says *not
+  in scene*; **the division is carried forward** from the nearest marker at or
+  before, `divisionSpan`'s rule pointed at a list, because a marker sits on
+  the scene a chapter opens on and reading it per unit left every other scene
+  in the chapter blank — the very question the column answers. A drop lands on
+  the scene's **first beat** and a scene with no beats **takes no drop**, a
+  link with nowhere to anchor being one that would be broken the moment it was
+  made; only what is waiting is draggable; and it is `carry-work.ts` and
+  `pinUsage` unchanged, **a third way in and not a third answer**. §2 records
+  where this diverges from the handoff and why; §5 is the one thing
+  deliberately not built (§21's AI suggestions, which the handoff does not ask
+  for).
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
