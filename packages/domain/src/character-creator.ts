@@ -229,6 +229,23 @@ export const ARC_POINT_NAMES: Record<ArcPointKind, string> = {
   doubling_down: 'Doubles down',
 };
 
+/**
+ * The three shapes a writer may **say** they are aiming at (addendum 25 §2).
+ *
+ * They are a subset of `ArcShape`'s words on purpose: the intention and the
+ * reading must be comparable, and two vocabularies for one idea would make
+ * *do these agree?* a translation exercise. `flat` and `unstarted` are not
+ * here because neither is something anybody sets out to write.
+ */
+export const ARC_INTENTS = ['positive', 'negative', 'refused'] as const;
+export type ArcIntent = (typeof ARC_INTENTS)[number];
+
+export const ARC_INTENT_WORDS: Record<ArcIntent, string> = {
+  positive: 'Grows',
+  negative: 'Falls',
+  refused: 'Refuses to change',
+};
+
 export const characterArcSchema = z.object({
   id: id<CharacterArcId>(),
   projectId: id<ProjectId>(),
@@ -239,6 +256,21 @@ export const characterArcSchema = z.object({
   need: z.string().default(''),
   /** Who they have become — or refused to become. */
   ending: z.string().default(''),
+  /**
+   * What the writer is **aiming at**, where they have said (addendum 25 §2).
+   *
+   * **An intention, never the answer.** `arcShape` goes on reading the points
+   * and nothing here overrides it — a control that let somebody label a
+   * refusal *Grows* would be a control that lies. What this is for is the
+   * moment before there is anything to read: an arc with no points has no
+   * shape, and saying *refuses to change* is what makes the refusal furniture
+   * worth putting on the screen. Where the two disagree the screen says so
+   * rather than picking, which is addendum 13's `movementOf` pointed at an
+   * arc.
+   *
+   * Null is *not said*, which is different from either answer.
+   */
+  intent: z.enum(ARC_INTENTS).nullable().default(null),
   ...timestamps,
 });
 export type CharacterArc = z.infer<typeof characterArcSchema>;
@@ -1305,6 +1337,13 @@ export interface ArcPointRow {
   colour: UsageColour;
   /** The scene it is in, when it is in one. */
   unitTitle: string | null;
+  /**
+   * That scene, by id. Carried as well as the title because a caller that
+   * wants the division, the position or the scene itself would otherwise have
+   * to find the unit back from its name — which is a second and lossier
+   * answer to a question this already knows.
+   */
+  unitId: StructuralUnitId | null;
 }
 
 /**
@@ -1342,6 +1381,7 @@ export const arcBoard = (input: { characterId: string; file: ProjectFile }): Arc
       used,
       colour: usageColour({ retired: entry.point.retired, used }),
       unitTitle: unit ? `${unit.sequenceLabel} ${unit.title}`.trim() || 'Untitled scene' : null,
+      unitId: unit?.id ?? null,
       where: entry.where,
     };
   });
@@ -1389,7 +1429,7 @@ export const beginArc = (
 export const updateArc = (
   file: ProjectFile,
   arcId: CharacterArcId,
-  patch: Partial<Pick<CharacterArc, 'beginning' | 'need' | 'ending'>>,
+  patch: Partial<Pick<CharacterArc, 'beginning' | 'need' | 'ending' | 'intent'>>,
 ): ProjectFile => ({
   ...file,
   characterArcs: file.characterArcs.map((arc) =>

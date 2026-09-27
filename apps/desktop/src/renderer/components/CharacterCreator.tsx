@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  ARC_INTENTS,
+  ARC_INTENT_WORDS,
+  ARC_KEY,
   ARC_LINK_VERBS,
   CHARACTER_ROLES,
+  arcGraph,
+  describeArcDisagreement,
+  type ArcMark,
   MOMENT_FILTERS,
   MOMENT_FILTER_WORDS,
   UP_NEXT_LIMIT,
@@ -146,6 +152,13 @@ interface CharacterCreatorProps {
    * opened somewhere the review cannot be reached.
    */
   onReview?(mode: 'story' | 'deck'): void;
+  /**
+   * Point the Creator at somebody else (addendum 25 §5), which is what the
+   * Arc tab's *Open their arc* does for an arc joined to this one. **Absent
+   * rather than greyed** where the Creator is opened somewhere that has no
+   * cast to move through, so the button simply is not there.
+   */
+  onOpenCharacter?(id: CharacterId): void;
   /** Back to wherever this was opened from. */
   onBack(): void;
 }
@@ -168,6 +181,7 @@ export function CharacterCreator({
   currentBeatId,
   backLabel = 'Cast',
   onReview,
+  onOpenCharacter,
   tab: tabFromOwner,
   onTab,
   onUpdate,
@@ -319,6 +333,7 @@ export function CharacterCreator({
               reveal={reveal?.kind === 'arc_point' ? (reveal.id as ArcPointId) : null}
               onRevealed={() => setReveal(null)}
               onUpdate={onUpdate}
+              {...(onOpenCharacter ? { onOpenCharacter } : {})}
             />
           ) : (
             <>
@@ -1602,6 +1617,192 @@ function Where({
 
 // --------------------------------------------------------------------- arc
 
+/** How wide the graph is drawn, in its own coordinates. */
+const GRAPH = { w: 1000, left: 56, right: 56, top: 26, floor: 214, ruler: 248, joined: 300 };
+
+/** SVG text neither wraps nor clips, which the narrative map learned the hard way. */
+const clip = (text: string, at: number): string =>
+  text.length <= at ? text : `${text.slice(0, at - 1).trimEnd()}…`;
+
+const markX = (at: number): number => GRAPH.left + at * (GRAPH.w - GRAPH.left - GRAPH.right);
+const markY = (height: number): number => GRAPH.floor - height * (GRAPH.floor - GRAPH.top);
+
+/**
+ * One mark on the line. **The decisive kinds get a shape of their own**
+ * (addendum 08 §8's `isDecisive`) — a chance to change, a refusal and a
+ * doubling-down are what a reader is looking for, and a row of identical dots
+ * makes them findable only by reading every label.
+ */
+function Mark({ mark, x, y }: { mark: ArcMark; x: number; y: number }) {
+  const cls = `arc-mark ${DOT_CLASS[mark.colour]}`;
+  if (mark.kind === 'opportunity') {
+    return <path className={cls} d={`M ${x} ${y - 7} L ${x + 7} ${y} L ${x} ${y + 7} L ${x - 7} ${y} Z`} />;
+  }
+  if (mark.kind === 'doubling_down') {
+    return <path className={cls} d={`M ${x - 7} ${y - 6} L ${x + 7} ${y - 6} L ${x} ${y + 7} Z`} />;
+  }
+  if (mark.kind === 'refusal') {
+    return (
+      <g className={cls}>
+        <circle cx={x} cy={y} r={7} />
+        <path className="arc-mark-cross" d={`M ${x - 3} ${y - 3} L ${x + 3} ${y + 3} M ${x + 3} ${y - 3} L ${x - 3} ${y + 3}`} />
+      </g>
+    );
+  }
+  if (mark.kind === 'turning_point') {
+    return <rect className={cls} x={x - 6} y={y - 6} width={12} height={12} rx={2} transform={`rotate(45 ${x} ${y})`} />;
+  }
+  return <circle className={cls} cx={x} cy={y} r={5.5} />;
+}
+
+/**
+ * The arc drawn against the chapters (addendum 25 §5, the handoff's *Arc*
+ * screen).
+ *
+ * **Everything on it is a reading.** Where a mark stands is the scene it is
+ * pinned to, how high it stands is what has happened to them by then, the
+ * shape under the toggle is `arcShape` over the points, and the arcs joined to
+ * this one come off the links — so moving a scene moves a mark and cutting the
+ * last link takes a row away, with nothing run.
+ *
+ * **The line is drawn from the points and is not a score.** Addendum 13 §1's
+ * rule, one module over: a setback goes down because *setback* means down, the
+ * word is the record and the height exists so there is something to draw. No
+ * number is shown, asked for or typeable.
+ */
+function ArcGraph({
+  file,
+  characterId,
+  onPick,
+  onOpenArc,
+}: {
+  file: ProjectFile;
+  characterId: CharacterId;
+  onPick(id: ArcPointId): void;
+  /** **Absent rather than greyed** where there is nowhere to go (§5). */
+  onOpenArc?(id: CharacterId): void;
+}) {
+  const graph = useMemo(
+    () => arcGraph({ characterId: characterId as string, file }),
+    [characterId, file],
+  );
+  const placed = graph.marks.filter((mark) => mark.at !== null);
+  const line = placed
+    .map((mark, at) => `${at === 0 ? 'M' : 'L'} ${markX(mark.at!)} ${markY(mark.height)}`)
+    .join(' ');
+  const height = graph.connected.length > 0 ? GRAPH.joined + 44 * graph.connected.length : GRAPH.ruler + 24;
+
+  return (
+    <div className="arc-graph">
+      <svg viewBox={`0 0 ${GRAPH.w} ${height}`} role="img" aria-label="The arc against the chapters">
+        {/* The ruler: the divisions of the work, where each one falls. */}
+        <line className="arc-rule" x1={GRAPH.left} y1={GRAPH.ruler} x2={GRAPH.w - GRAPH.right} y2={GRAPH.ruler} />
+        {graph.ruler.ticks.map((tick) => (
+          <g key={`${tick.label}-${tick.at}`}>
+            <line
+              className="arc-tick"
+              x1={markX(tick.at)}
+              y1={GRAPH.ruler - 5}
+              x2={markX(tick.at)}
+              y2={GRAPH.ruler + 5}
+            />
+            <text className="arc-tick-label" x={markX(tick.at)} y={GRAPH.ruler + 20} textAnchor="middle">
+              {clip(tick.label, 12)}
+            </text>
+          </g>
+        ))}
+
+        {line.length > 0 ? <path className="arc-line" d={line} /> : null}
+        {placed.map((mark) => {
+          const x = markX(mark.at!);
+          const y = markY(mark.height);
+          return (
+            <g
+              key={mark.pointId as string}
+              className="arc-node"
+              onClick={() => onPick(mark.pointId)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') onPick(mark.pointId);
+              }}
+            >
+              <title>{`${mark.division ? `${mark.division} · ` : ''}${mark.kindName}: ${mark.text}`}</title>
+              <Mark mark={mark} x={x} y={y} />
+              <text className="arc-node-where" x={x} y={y - 16} textAnchor="middle">
+                {clip([mark.division, mark.kindName].filter(Boolean).join(' · '), 22)}
+              </text>
+              <text className="arc-node-text" x={x} y={y + 22} textAnchor="middle">
+                {clip(mark.text, 26)}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Somebody else's arc, because the two are joined (§13). Drawn as a
+            level line rather than a second curve: this row is about *when* the
+            other person's moments fall against these, and two curves crossing
+            would invite a reader to compare heights that are each normalised
+            against their own arc. */}
+        {graph.connected.map((other, row) => {
+          const y = GRAPH.joined + 44 * row;
+          return (
+            <g key={other.characterId as string} className="arc-joined">
+              <line className="arc-joined-line" x1={GRAPH.left} y1={y} x2={GRAPH.w - GRAPH.right} y2={y} />
+              <text className="arc-joined-name" x={0} y={y - 10}>
+                {other.name} · {other.shapeWords.toLowerCase()} · {other.joins} joined
+              </text>
+              {other.marks
+                .filter((mark) => mark.at !== null)
+                .map((mark) => (
+                  <g key={mark.pointId as string}>
+                    <title>{`${mark.division ? `${mark.division} · ` : ''}${mark.kindName}: ${mark.text}`}</title>
+                    <Mark mark={mark} x={markX(mark.at!)} y={y} />
+                  </g>
+                ))}
+            </g>
+          );
+        })}
+      </svg>
+
+      {onOpenArc
+        ? graph.connected.map((other) => (
+            <button
+              key={other.characterId as string}
+              type="button"
+              className="small arc-open-other"
+              onClick={() => onOpenArc(other.characterId)}
+            >
+              Open {other.name}’s arc
+            </button>
+          ))
+        : null}
+
+      {/* The key, read off the same tables the marks are — a list written out
+          beside the drawing is a second answer to what a shape means. */}
+      <ul className="arc-key">
+        {ARC_KEY.map((row) => (
+          <li key={row.mark}>
+            <svg viewBox="0 0 18 18" aria-hidden="true">
+              <Mark
+                mark={
+                  {
+                    kind: row.mark === 'in' || row.mark === 'deck' ? 'movement' : row.mark,
+                    colour: row.mark === 'deck' ? 'red' : 'green',
+                  } as ArcMark
+                }
+                x={9}
+                y={9}
+              />
+            </svg>
+            {row.words}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /**
  * The Arc Builder (addendum 08 §8, §9 — stage 5).
  *
@@ -1628,6 +1829,7 @@ function Arc({
   reveal,
   onRevealed,
   onUpdate,
+  onOpenCharacter,
 }: {
   file: ProjectFile;
   characterId: CharacterId;
@@ -1636,8 +1838,12 @@ function Arc({
   reveal: ArcPointId | null;
   onRevealed(): void;
   onUpdate: CharacterCreatorProps['onUpdate'];
+  /** Point the Creator at somebody whose arc this one is joined to (§5). */
+  onOpenCharacter?(id: CharacterId): void;
 }) {
   const board = useMemo(() => arcBoard({ characterId: characterId as string, file }), [characterId, file]);
+  // Said only where the writer's intention and the points disagree (§5).
+  const disagreement = describeArcDisagreement(board.arc?.intent ?? null, board.shape);
   const person = file.characters.find((one) => one.id === characterId);
   const [adding, setAdding] = useState('');
   const [addingKind, setAddingKind] = useState<ArcPointKind>('movement');
@@ -1830,7 +2036,33 @@ function Arc({
     <div className="creator-arc">
       {journey}
       <header className="arc-head">
-        <span className="arc-shape">{ARC_SHAPE_WORDS[board.shape]}</span>
+        {/* **The intention, beside the reading** (addendum 25 §2). What a
+            writer is aiming at is theirs to say and is the only thing here
+            that is stored; the shape after the dot is `arcShape` over the
+            points and nothing on this row can change it. Pressing the chosen
+            one again unsays it, *not said* being a third state rather than a
+            default. */}
+        <span className="arc-intent-label">Aiming at</span>
+        <div className="arc-intent" role="group" aria-label="What this arc is aiming at">
+          {ARC_INTENTS.map((intent) => (
+            <button
+              key={intent}
+              type="button"
+              className={arc.intent === intent ? 'chip on' : 'chip'}
+              aria-pressed={arc.intent === intent}
+              onClick={() =>
+                onUpdate((current) =>
+                  updateArc(current, arc.id, { intent: arc.intent === intent ? null : intent }),
+                )
+              }
+            >
+              {ARC_INTENT_WORDS[intent]}
+            </button>
+          ))}
+        </div>
+        <span className="arc-shape" title="Read from the points, every time">
+          {ARC_SHAPE_WORDS[board.shape]}
+        </span>
         {/* §9: whether they were ever really given the chance is the question
             that separates a tragedy from somebody who was simply never asked.
             Said only when the shape has not already said it. */}
@@ -1849,6 +2081,18 @@ function Arc({
           ×
         </button>
       </header>
+
+      {/* **Said only where the two disagree**, and it states both and picks
+          neither: either could be the one that is wrong, and software does not
+          know which. */}
+      {disagreement ? <p className="arc-disagree">{disagreement}</p> : null}
+
+      <ArcGraph
+        file={file}
+        characterId={characterId}
+        onPick={setOpen}
+        {...(onOpenCharacter ? { onOpenArc: onOpenCharacter } : {})}
+      />
 
       <label className="field">
         <span>Who they are at the start</span>

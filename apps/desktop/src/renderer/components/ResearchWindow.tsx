@@ -856,6 +856,19 @@ export function ResearchBody({
                 setCameFrom({ kind: 'creator', id: creator.id });
                 setSelection({ kind: 'review' });
               }}
+              // Into somebody else's arc (addendum 25 §5). The Creator is a
+              // **selection** rather than a layer (addendum 08 §11), so this
+              // is the same act as clicking them in the menu — which is why
+              // coming back is clicking the first person again.
+              // A button reading *Open their arc* that lands on their Overview
+              // is a route that does not do what it says, so the tab goes with
+              // the act — which is a change to where that person is *left*,
+              // the same fact §11 remembers per person.
+              onOpenCharacter={(id) => {
+                setCameFrom({ kind: 'creator', id: creator.id });
+                setTabFor((current) => ({ ...current, [id as string]: 'arc' }));
+                setSelection({ kind: 'creator', id });
+              }}
               onBack={() => setSelection(cameFrom ?? { kind: 'view', view: 'all' })}
             />
           ) : (

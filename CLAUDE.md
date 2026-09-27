@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0052.
+  reads like it does. Applied through 0055.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
   the windowing, and the thing to know is that **every room goes to a second
@@ -3455,7 +3455,7 @@ push live; the build takes a minute or two.
   harder than usual: **the handoff's own headline decision had already been
   made here independently**, its seven tabs having been four since addendum 08
   stage 2 for the same reasons. Seventeen more of its asks are standing under
-  another name. **Stages 1 to 4 of §4's eight are built**; §4a says what each
+  another name. **Stages 1 to 5 of §4's eight are built**; §4a says what each
   does. Four decisions carry it. **The arc's shape is said *and* read** —
   addendum 08 §5 made it a reading and the handoff asks for a toggle, and both
   are right about different moments (an arc with no points has no shape to
@@ -3496,7 +3496,28 @@ push live; the build takes a minute or two.
   the scene's **first beat** and a scene with no beats **takes no drop**, a
   link with nowhere to anchor being one that would be broken the moment it was
   made; only what is waiting is draggable; and it is `carry-work.ts` and
-  `pinUsage` unchanged, **a third way in and not a third answer**. §2 records
+  `pinUsage` unchanged, **a third way in and not a third answer**. Stage 5 is
+  `character-arc-graph.ts` — the shape toggle, the chapter ruler, the connected
+  arc and the key — where §2's decision arrives: the toggle stores an
+  **intention** (migration 0055, nullable because *not said* is a third state),
+  `arcShape` goes on reading, nothing consults the intention to decide the
+  shape, and `describeArcDisagreement` is **said only where they part** and
+  **states both and picks neither**, either being possibly the one that is
+  wrong. The graph is readings all the way down: the ruler is the **divisions
+  where there are any and the scenes where there are none** (a script with no
+  acts still has a spine), a mark stands where its scene stands, its division
+  is **carried forward** from the nearest marker at or before (`divisionSpan`
+  a second time in this addendum — asking per unit blanked every point after
+  the chapter's first scene), and how high it stands is **addendum 13 §1 one
+  module over**: a setback goes down because *setback* means down, the word is
+  the record and the height exists so there is something to draw, with no
+  number shown, asked for or typeable, **one mark making no claim** and *on
+  deck* **not a position of zero**. The joined arcs are read from the links and
+  drawn as **level lines rather than second curves**, two curves inviting a
+  comparison of heights each normalised against its own arc; *Open their arc*
+  is **absent rather than greyed** and opens them **on the Arc tab**, a button
+  that landed on their Overview being a route that does not do what it says.
+  §2 records
   where this diverges from the handoff and why; §5 is the one thing
   deliberately not built (§21's AI suggestions, which the handoff does not ask
   for).

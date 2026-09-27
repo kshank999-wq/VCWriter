@@ -10835,19 +10835,168 @@ dialog.projects-dialog {
 
 .arc-head {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
 
+.arc-intent-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.arc-intent {
+  display: flex;
+  gap: 4px;
+}
+
+/* The reading, after the intention. It is deliberately **not** a chip: a
+   fourth button beside the three would say it could be pressed, and this is
+   the one thing on the row nobody sets. */
 .arc-shape {
   font-size: 13px;
   color: var(--gold);
+  border-left: 1px solid var(--border);
+  padding-left: 12px;
 }
 
 .arc-drop {
   margin-left: auto;
+}
+
+.arc-disagree {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  border-left: 2px solid var(--gold);
+  padding-left: 10px;
+}
+
+/* ------------------------------------------------------ the arc as a picture */
+
+.arc-graph {
+  margin: 10px 0 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.arc-graph > svg {
+  width: 100%;
+  overflow: visible;
+}
+
+.arc-line {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.arc-rule,
+.arc-tick,
+.arc-joined-line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.arc-tick-label {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.arc-node {
+  cursor: pointer;
+}
+
+.arc-node:hover .arc-node-text,
+.arc-node:focus-visible .arc-node-text {
+  fill: var(--text);
+}
+
+.arc-node-where {
+  fill: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.arc-node-text {
+  fill: var(--muted);
+  font-size: 12px;
+}
+
+/* A label on a rising line sits on the line. `paint-order` draws the stroke
+   first, so the background is laid *under* the glyphs rather than over them —
+   which is the only way to cut a hole in a path for type without knowing where
+   the path goes. */
+.arc-node-where,
+.arc-node-text,
+.arc-tick-label,
+.arc-joined-name {
+  paint-order: stroke;
+  stroke: var(--panel);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+/* The marks take the usage colours the rows do, so green and red mean the
+   same thing on the line as they do on every list in the module. */
+.arc-mark.is-in {
+  fill: var(--green);
+  stroke: none;
+}
+
+.arc-mark.is-deck {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 2;
+}
+
+.arc-mark.is-aside {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+}
+
+.arc-mark-cross {
+  stroke: var(--paper, #1a1814);
+  stroke-width: 1.6;
+  fill: none;
+}
+
+.arc-joined-name {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.arc-key {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.arc-key li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.arc-key svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
 }
 
 /* The points hang off a line, so the middle of the arc reads as a journey

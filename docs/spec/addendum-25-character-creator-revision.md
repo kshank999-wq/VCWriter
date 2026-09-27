@@ -201,6 +201,48 @@ dragging a line of dialogue inside the manuscript is left entirely alone —
 and the drop runs the same `pinUsage` as the Where panel and the Inspector's
 on-deck queue. **A third way in, not a third answer.**
 
+**Stage 5 — the arc.** `character-arc-graph.ts`, the shape toggle, the
+chapter ruler, the connected arc and the key. §2's decision arrives: the
+toggle stores an **intention** (`intent` on the arc, migration 0055, nullable
+because *not said* is a third state), `arcShape` goes on reading the points,
+and **nothing consults the intention to decide the shape** — so the head
+carries three chips, then the reading after a rule, and the reading is
+deliberately not a fourth chip, a button beside the three saying it could be
+pressed. `describeArcDisagreement` is **said only where they part**: a note
+appearing the moment somebody chose an intention would be scolding them for
+having a plan, an arc with no points has no shape to compare, and where they
+do disagree it **states both and picks neither**, because either could be the
+one that is wrong and software does not know which.
+
+The graph is readings all the way down. **The ruler is the divisions where
+there are any and the scenes where there are none** — a script with no acts
+still has a spine, and a ruler labelled with nothing is one nobody can read a
+position off. **Where a mark stands is the scene it is pinned to**, so moving
+a scene moves the mark; **which division it falls in is carried forward** from
+the nearest marker at or before, `divisionSpan`'s rule a second time in this
+addendum, which building it caught — asking per unit named the chapter for its
+first scene and left every other point in it blank. And **how high it stands
+is addendum 13 §1 one module over**: a setback goes down because *setback*
+means down, the word is the record and the height exists so there is something
+to draw. No number is shown, asked for or typeable, **one mark makes no claim**
+(it sits in the middle rather than being drawn at the top for the arithmetic's
+sake), and *on deck* is **not a position of zero** — unplaced and at-the-start
+are different things.
+
+The arcs joined to this one are **read from the links**, so cutting the last
+one takes the row away; each is drawn as a **level line rather than a second
+curve**, that row being about *when* the other person's moments fall against
+these and two curves inviting a reader to compare heights each normalised
+against its own arc. And the key reads the same tables the marks do, a list
+written out beside the drawing being a second answer to what a shape means.
+*Open their arc* is `onOpenCharacter`, **absent rather than greyed** where the
+Creator is opened somewhere with no cast to move through — and it opens them
+**on the Arc tab**, which driving it caught: a button reading *Open their arc*
+that lands on their Overview is a route that does not do what it says. Driving
+also caught labels sitting on the rising line, fixed with `paint-order:
+stroke`, the only way to cut a hole in a path for type without knowing where
+the path goes.
+
 ## 5. Deliberately not built
 
 §21's AI-assisted suggestions. The handoff does not ask for them and the

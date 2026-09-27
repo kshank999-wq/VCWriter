@@ -810,6 +810,9 @@ const characterCreatorRows = (
     beginning: one.beginning,
     need: one.need,
     ending: one.ending,
+    // What the writer says they are aiming at (addendum 25 §5). Null is *not
+    // said*, which is neither of the answers.
+    intent: one.intent,
     created_at: one.createdAt,
     updated_at: one.updatedAt,
   })),
@@ -1226,6 +1229,7 @@ const characterCreatorFromRows = (
       beginning: text(row['beginning']),
       need: text(row['need']),
       ending: text(row['ending']),
+      intent: row['intent'] ?? null,
       createdAt: row['created_at'],
       updatedAt: row['updated_at'],
     }),
