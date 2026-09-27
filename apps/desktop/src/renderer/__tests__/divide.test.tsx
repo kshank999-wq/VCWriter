@@ -99,7 +99,7 @@ describe('dividing from the bar', () => {
     expect(first.title).toMatch(/already opens the chapter/);
     expect((screen.getByRole('menuitem', { name: 'Split the passage here' }) as HTMLButtonElement).disabled).toBe(true);
     // The writing's own items are still there.
-    expect(screen.getByRole('menuitem', { name: 'Add to a character’s characterization…' })).toBeDefined();
+    expect(screen.getByRole('menuitem', { name: 'Make this a character moment…' })).toBeDefined();
     fireEvent.keyDown(first, { key: 'Escape' });
 
     fireEvent.contextMenu(box('c'), { clientX: 20, clientY: 20 });

@@ -118,6 +118,8 @@ Each stage ships on its own.
 
 ## 4a. What each built stage does
 
+**All eight are built.**
+
 **Stage 1 — the record.** `role` (six chips offered, free text underneath),
 `background` behind a fold marked optional, and the writer's own fields as a
 **list rather than a map**, because the id is what makes a rename an edit.
@@ -173,8 +175,8 @@ has — the list of traits beside the chosen one's moments — because that pane
 holds more per trait than the card does (*When*, *How much of them*, *Read
 as*, and the *Where* panel that says which scenes a moment landed in). What
 the mockup is *for* — the red counts always in front of you — is delivered on
-every row of the list. The one-column stack is a layout preference and is
-stage 8's to weigh.
+every row of the list. The one-column stack was stage 8's to weigh, and stage
+8 kept the shelf; the reasoning is there.
 
 **Stage 4 — the Story panel.** The scenes down the right of the Traits tab,
 as somewhere to put a moment. **Nothing about it is stored**: which scenes
@@ -314,6 +316,47 @@ statement about the line on the opposite side from the control that changes
 it — and measuring killed it, the manuscript's side column ending at 425px
 with the mark landing at 421, under the divider. The left gutter is the one
 this room reserves.
+
+**Stage 8 — the module says *moment*, and the header the handoff draws.**
+
+The handoff's own decision — *a moment in the interface, a
+`CharacterizationItem` in the data* — because the word a writer uses and the
+word the schema uses answer different questions. So the tab is **Traits &
+Moments**, the box is *The moment*, the button is **+ Moment**, the
+manuscript's right-click says *Make this a character moment…* (with a note
+under it saying what a press would do, which is §6b's own item shape), and
+the readings say *3 moments for "Miserly" are still on deck*. Nothing in the
+data moved.
+
+What makes it worth a **test** rather than a rename is addendum 16 §6c's
+lesson: seventeen components still said *Scene* after the noun table existed,
+each having written the word itself. `creator-vocabulary.test.tsx` walks the
+whole rendered screen on every tab, **attributes included**, and asserts the
+older words are nowhere on it — `class` excluded, a class being a name for a
+box rather than a word about the work.
+
+Writing that test found the restyle's one real fault: **the tabs were a `nav`
+of buttons carrying `aria-current="page"`**, which announces *the current
+page* about something that is not a page, so a reader was told four links and
+which one they were on rather than a set of tabs and which is showing. It is
+a `role="tablist"` of `role="tab"` with `aria-selected` now — §4a's switch
+argument, the same statement the ink makes made to a screen reader. And the
+header gained **the avatar the handoff draws**, whose colour is `castColours`
+(§2: read, never stored, so a new character arrives with one) and whose
+initials are a reading with nowhere to type them; it is a **ring rather than
+a disc**, a filled circle in somebody's colour competing with the name beside
+it.
+
+**The one-column card stack is weighed and not built**, which §4a said this
+stage would decide. Screen 02 draws the traits as one column of expanded
+cards; the built screen keeps the shelf — the list of traits beside the
+chosen one's moments — because that panel holds more per trait than the card
+does (*When*, *How much of them*, *Read as*, *Pulls against*, and the
+*Where* panel that says which scenes a moment landed in), and what the
+mockup is *for*, the red counts always in front of you, is delivered on every
+row of the list and on the rail. Rebuilding it as cards would trade four
+controls per trait for a layout, which is not a trade the handoff asks for
+anywhere in its own words.
 
 ## 5. Deliberately not built
 

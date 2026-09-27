@@ -255,7 +255,7 @@ describe('what is still on deck', () => {
       file,
     });
     expect(onDeck.characterization.map((one) => one.id)).toEqual([waiting]);
-    expect(onDeckNote(onDeck)).toBe('1 way to show them still on deck.');
+    expect(onDeckNote(onDeck)).toBe('1 moment still on deck.');
   });
 
   it('says so plainly when there is nothing left', () => {

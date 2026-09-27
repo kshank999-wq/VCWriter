@@ -168,11 +168,11 @@ describe('up next', () => {
     // four traits tells a writer nothing about where to go.
     expect(steps[0]!.kind).toBe('on_deck');
     expect(steps[0]!.text).toContain('Secretly sentimental');
-    expect(steps[0]!.text).toContain('2 ways');
+    expect(steps[0]!.text).toContain('2 moments');
     expect(steps[0]!.act).toBe('Place one');
     expect(steps[0]!.where).toEqual({ tab: 'traits', traitId: second.trait!.id });
     // And the singular reads as a sentence rather than as *1 ways*.
-    expect(steps[1]!.text).toMatch(/^One way to show/);
+    expect(steps[1]!.text).toMatch(/^One moment for/);
   });
 
   it('offers rather than warns, and goes when the work is done', () => {

@@ -8,6 +8,7 @@ import {
   CHARACTER_ROLES,
   addRelationshipStage,
   arcGraph,
+  castColours,
   describeArcDisagreement,
   describeRelationshipChange,
   nounsFor,
@@ -203,6 +204,28 @@ export function CharacterCreator({
     setOwnTab(next);
     onTab?.(next);
   };
+  /**
+   * Their colour and their initials, both readings (§8). `castColours` is the
+   * one place a person's colour is decided; the fallback is the muted ink, so
+   * somebody who has never spoken and is not yet in the cast order still
+   * draws as a person rather than as nothing.
+   */
+  const colour = useMemo(
+    () => castColours(file).get((person?.name ?? '').trim().toUpperCase()) ?? 'var(--muted)',
+    [file, person?.name],
+  );
+  const initials = useMemo(
+    () =>
+      (person?.name ?? '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((word) => word[0]!.toUpperCase())
+        .join('') || '?',
+    [person?.name],
+  );
+
   const [shelf, setShelf] = useState<Shelf | null>(null);
   /**
    * The filter bar (addendum 25 §3). Held here rather than per trait, because
@@ -266,6 +289,16 @@ export function CharacterCreator({
         <button type="button" className="ghost small" onClick={onBack}>
           ‹ {backLabel}
         </button>
+        {/* The avatar the handoff draws, in the person's own colour
+            (addendum 25 §8). **The colour is read, never stored** (§2): it
+            comes off the cast's order through `castColours`, the same reading
+            the timeline, the threads and the Room's badges ask, so a new
+            character arrives with a colour rather than waiting for somebody to
+            pick one and nothing here can disagree with anything there. The
+            initials are a reading too — there is nowhere to type them. */}
+        <span className="creator-avatar" style={{ '--who': colour } as React.CSSProperties} aria-hidden="true">
+          {initials}
+        </span>
         <InlineText
           value={person.name}
           ariaLabel="Character name"
@@ -294,11 +327,20 @@ export function CharacterCreator({
         </span>
       </header>
 
-      <nav className="creator-tabs" aria-label="Character">
+      {/* **A tab strip, said as one.** It was a `nav` of buttons carrying
+          `aria-current="page"` — which announces *the current page* about
+          something that is not a page — so a reader was told four links and
+          which one they were on rather than a set of tabs and which is
+          showing. `role="tablist"` with `aria-selected` is the §4a switch's
+          argument: the same statement the ink makes, made to a screen
+          reader. */}
+      <div className="creator-tabs" role="tablist" aria-label="Character">
         {(
           [
             ['overview', 'Overview'],
-            ['traits', 'Traits'],
+            // The handoff's own name for the tab, and the sweep's point: a
+            // trait is the folder and a **moment** is the work (§8).
+            ['traits', 'Traits & Moments'],
             ['arc', 'Arc'],
             ['relationships', 'Relationships'],
           ] as ReadonlyArray<[Tab, string]>
@@ -306,14 +348,15 @@ export function CharacterCreator({
           <button
             key={key}
             type="button"
+            role="tab"
+            aria-selected={tab === key}
             className={tab === key ? 'creator-tab selected' : 'creator-tab'}
-            aria-current={tab === key ? 'page' : undefined}
             onClick={() => setTab(key)}
           >
             {label}
           </button>
         ))}
-      </nav>
+      </div>
 
       <div className="creator-body">
         <div className="creator-main">
@@ -1366,7 +1409,7 @@ function Shown({
               <span className="creator-item-said">
                 <InlineText
                   value={row.item.text}
-                  ariaLabel="How it shows"
+                  ariaLabel="The moment"
                   className="creator-item-text"
                   onCommit={(text) =>
                     onUpdate((current) => updateCharacterization(current, row.item.id, { text }))
@@ -1463,13 +1506,13 @@ function Shown({
         }}
       >
         <input
-          aria-label="How it shows"
-          placeholder="Another way it shows — an action, a habit, a choice, a prop"
+          aria-label="The moment"
+          placeholder="Another moment — an action, a habit, a choice, a prop"
           value={adding}
           onChange={(event) => setAdding(event.target.value)}
         />
         <button type="submit" className="ghost small">
-          + How it shows
+          + Moment
         </button>
       </form>
     </section>

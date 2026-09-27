@@ -3455,7 +3455,7 @@ push live; the build takes a minute or two.
   harder than usual: **the handoff's own headline decision had already been
   made here independently**, its seven tabs having been four since addendum 08
   stage 2 for the same reasons. Seventeen more of its asks are standing under
-  another name. **Stages 1 to 7 of §4's eight are built**; §4a says what each
+  another name. **All eight stages of §4 are built**; §4a says what each
   does. Four decisions carry it. **The arc's shape is said *and* read** —
   addendum 08 §5 made it a reading and the handoff asks for a toggle, and both
   are right about different moments (an arc with no points has no shape to
@@ -3558,6 +3558,25 @@ push live; the build takes a minute or two.
   twelve. Driving it caught the placement: the right gutter was tried first and
   **measuring killed it**, the side column ending at 425px with the mark
   landing at 421, under the divider.
+  Stage 8 is the **vocabulary** and the header. The handoff's own decision —
+  *a moment in the interface, a `CharacterizationItem` in the data*, the word
+  a writer uses and the word the schema uses answering different questions —
+  so the tab is *Traits & Moments*, the button *+ Moment*, the manuscript's
+  right-click *Make this a character moment…* and the readings *3 moments for
+  “Miserly” are still on deck*, with nothing in the data moved. What makes it
+  worth a **test** rather than a rename is addendum 16 §6c's lesson, so
+  `creator-vocabulary.test.tsx` walks the whole rendered screen on every tab,
+  **attributes included**, and asserts the older words are nowhere on it.
+  Writing it found the restyle's one real fault: **the tabs were a `nav` of
+  buttons carrying `aria-current="page"`**, which announces *the current page*
+  about something that is not one — a `role="tablist"` now, §4a's switch
+  argument. The header gained **the avatar the handoff draws**, its colour
+  `castColours` (read, never stored) and its initials a reading, a **ring
+  rather than a disc** because a filled circle in somebody's colour competes
+  with the name beside it. And the **one-column card stack is weighed and not
+  built**: the shelf holds four controls per trait the card cannot, and what
+  the mockup is *for* — the red counts always in front of you — is on every
+  row already.
   §2 records
   where this diverges from the handoff and why; §5 is the one thing
   deliberately not built (§21's AI suggestions, which the handoff does not ask

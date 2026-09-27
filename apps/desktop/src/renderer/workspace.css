@@ -17805,3 +17805,23 @@ dialog.designed-page-dialog[open] {
   margin-left: auto;
   white-space: nowrap;
 }
+
+/* ---------------- the Creator's avatar (addendum 25 §8) */
+
+/* A ring rather than a disc: a filled circle in somebody's colour is a badge
+   about them, and a ring is the same statement without competing with the
+   name it stands beside. The colour is a reading (`castColours`) handed in as
+   a variable, so nothing here holds a second answer about who is what colour. */
+.creator-avatar {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--who, var(--muted));
+  color: var(--who, var(--muted));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}

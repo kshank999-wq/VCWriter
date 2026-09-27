@@ -66,7 +66,7 @@ describe('indexing a passage from the writing', () => {
     // Absent rather than greyed: the true thing is that this format has no
     // index at all, and a disabled line says *not yet*.
     expect(screen.queryByText('Add to the index…')).toBeNull();
-    expect(screen.getByText('Add to a character’s characterization…')).toBeTruthy();
+    expect(screen.getByText('Make this a character moment…')).toBeTruthy();
   });
 
   it('files it under the heading the writer types, keeping the passage as the quote', () => {

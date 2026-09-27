@@ -852,7 +852,14 @@ export function BeatBody({
         onPick: () => onUpdate((current) => splitBeatBefore(current, at.elementId as string).file),
       },
       'rule',
-      { label: 'Add to a character’s characterization…', disabled: none, onPick: () => setFiling({ elementId: at.elementId, text: at.text }) },
+      {
+        label: 'Make this a character moment…',
+        // What the act does, said under the label rather than in a hover
+        // nobody sees (addendum 02 §6b's note).
+        note: 'Files the passage under somebody, and marks it used here.',
+        disabled: none,
+        onPick: () => setFiling({ elementId: at.elementId, text: at.text }),
+      },
     ];
     // An index is a book's, so a screenplay is never offered one (addendum
     // 10 §2): a stack of scripts each numbering from its own page one has no
@@ -1284,7 +1291,7 @@ function FileAsCharacterization({
 
   if (cast.length === 0) {
     return (
-      <div className="caught-dialog" role="dialog" aria-label="Add to characterization">
+      <div className="caught-dialog" role="dialog" aria-label="Make this a character moment">
         <p className="muted small">Nobody is in the cast yet — add a character and this has somewhere to go.</p>
         <div className="caught-actions">
           <button type="button" className="ghost small" onClick={onClose}>
@@ -1299,7 +1306,7 @@ function FileAsCharacterization({
     <div
       className="caught-dialog"
       role="dialog"
-      aria-label="Add to characterization"
+      aria-label="Make this a character moment"
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
           event.preventDefault();

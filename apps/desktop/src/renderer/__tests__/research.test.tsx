@@ -281,7 +281,7 @@ describe('the cast in the side menu', () => {
     const side = within(screen.getByLabelText('Research folders'));
 
     fireEvent.click(side.getByRole('button', { name: /^MARA/ }));
-    expect(screen.getByRole('navigation', { name: 'Character' })).toBeDefined();
+    expect(screen.getByRole('tablist', { name: 'Character' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Character name: MARA' })).toBeDefined();
   });
 
@@ -290,16 +290,16 @@ describe('the cast in the side menu', () => {
     const side = within(screen.getByLabelText('Research folders'));
 
     fireEvent.click(side.getByRole('button', { name: /^MARA/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Arc' }));
-    expect(screen.getByRole('button', { name: 'Arc' }).getAttribute('aria-current')).toBe('page');
+    fireEvent.click(screen.getByRole('tab', { name: 'Arc' }));
+    expect(screen.getByRole('tab', { name: 'Arc' }).getAttribute('aria-selected')).toBe('true');
 
     // Off to look at something else, which is the move that used to lose her.
     fireEvent.click(side.getByRole('button', { name: /^Plots/ }));
-    expect(screen.queryByRole('navigation', { name: 'Character' })).toBeNull();
+    expect(screen.queryByRole('tablist', { name: 'Character' })).toBeNull();
 
     fireEvent.click(side.getByRole('button', { name: /^MARA/ }));
     expect(screen.getByRole('button', { name: 'Character name: MARA' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Arc' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('tab', { name: 'Arc' }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('gives each of them their own place, rather than one Creator that follows the last click', () => {
@@ -307,15 +307,15 @@ describe('the cast in the side menu', () => {
     const side = within(screen.getByLabelText('Research folders'));
 
     fireEvent.click(side.getByRole('button', { name: /^MARA/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Relationships' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Relationships' }));
     fireEvent.click(side.getByRole('button', { name: /^DEAKINS/ }));
 
     // Deakins opens where he was left, which is the beginning — not on her tab.
     expect(screen.getByRole('button', { name: 'Character name: DEAKINS' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Overview' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('tab', { name: 'Overview' }).getAttribute('aria-selected')).toBe('true');
 
     fireEvent.click(side.getByRole('button', { name: /^MARA/ }));
-    expect(screen.getByRole('button', { name: 'Relationships' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('tab', { name: 'Relationships' }).getAttribute('aria-selected')).toBe('true');
   });
 
   /**
@@ -362,7 +362,7 @@ describe('the cast in the side menu', () => {
 
     const row = screen.getByLabelText('Heading for MARA').closest('li')!;
     fireEvent.contextMenu(row);
-    expect(screen.getByRole('navigation', { name: 'Character' })).toBeDefined();
+    expect(screen.getByRole('tablist', { name: 'Character' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Character name: MARA' })).toBeDefined();
   });
 });

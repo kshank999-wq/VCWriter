@@ -104,12 +104,12 @@ export const UP_NEXT_LIMIT = 3;
  * What there is to do next, in plain words (§3).
  *
  * **It offers and never warns** (addendum 08 §7). Every line is a fact plus a
- * way to act on it — *3 ways to show "Miserly" are still on deck · Place one*
+ * way to act on it — *3 moments for "Miserly" are still on deck · Place one*
  * — because a character with things on deck is in the middle of the work
  * rather than behind on it, and a module that said so in red would be telling
  * a writer off for planning ahead.
  *
- * The order is the work's: the ways to show them, then the arc, then the
+ * The order is the work's: the moments, then the arc, then the
  * people. Retired items are not here at all (§17).
  */
 export const upNext = (input: { characterId: string; file: ProjectFile }): NextStep[] => {
@@ -128,8 +128,8 @@ export const upNext = (input: { characterId: string; file: ProjectFile }): NextS
       kind: 'on_deck',
       text:
         waiting.length === 1
-          ? `One way to show “${entry.trait.name}” is still on deck.`
-          : `${waiting.length} ways to show “${entry.trait.name}” are still on deck.`,
+          ? `One moment for “${entry.trait.name}” is still on deck.`
+          : `${waiting.length} moments for “${entry.trait.name}” are still on deck.`,
       act: 'Place one',
       where: { tab: 'traits', traitId: entry.trait.id as string },
       waiting: true,

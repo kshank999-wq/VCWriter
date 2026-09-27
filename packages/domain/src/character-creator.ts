@@ -565,7 +565,7 @@ export const stillOnDeck = (input: {
 export const onDeckNote = (onDeck: { characterization: unknown[]; arc: unknown[] }): string => {
   const parts = [
     onDeck.characterization.length > 0
-      ? `${onDeck.characterization.length} way${onDeck.characterization.length === 1 ? '' : 's'} to show them`
+      ? `${onDeck.characterization.length} moment${onDeck.characterization.length === 1 ? '' : 's'}`
       : '',
     onDeck.arc.length > 0
       ? `${onDeck.arc.length} arc point${onDeck.arc.length === 1 ? '' : 's'}`
