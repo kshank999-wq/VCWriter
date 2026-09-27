@@ -311,6 +311,8 @@ export function ResearchBody({
    */
   const groups = useMemo(() => castByCategory(file).filter((group) => group.characters.length > 0), [file]);
   const cast = useMemo(() => groups.flatMap((group) => group.characters), [groups]);
+  /** Has anybody a type at all? Until somebody has, the list is just a list. */
+  const typed = useMemo(() => groups.some((group) => group.category !== null), [groups]);
 
   /**
    * How much is waiting on each of them, read off the usage links like
@@ -574,15 +576,22 @@ export function ResearchBody({
               <h4>Character Creator</h4>
               {groups.map((group) => (
                 <ul key={group.category?.id ?? 'unfiled'} className="research-views research-cast">
-                  {/* The heading is the writer's own word for who these
-                      people are to the story. It is drawn only where there
-                      is more than one, because a single heading over the
-                      whole cast is a label rather than an arrangement. */}
-                  {groups.length > 1 ? (
-                    <li className="research-cast-head" aria-hidden="true">
-                      {group.name}
-                    </li>
-                  ) : null}
+                  {/* The heading is the character **type** — the writer's own
+                      word for who these people are to the story (§4c).
+
+                      **It is drawn as soon as anybody has a type**, which is
+                      the correction: it used to appear only where there was
+                      more than one group, so a cast filed entirely as main
+                      characters said nothing about being one — which is what
+                      Ken asked the left-hand list to say.
+
+                      And it is **all of the headings or none**. The first
+                      draft drew one over every real type and none over *Not
+                      filed*, since that names nothing; driving it showed what
+                      that costs — a group with no heading takes the one above
+                      it, so Victor Marsh, whom nobody had typed, sat under
+                      BACKGROUND CHARACTERS reading as one. */}
+                  {typed ? <li className="research-cast-head">{group.name}</li> : null}
                   {group.characters.map((person) => (
                     <CastMenuRow
                       key={person.id}

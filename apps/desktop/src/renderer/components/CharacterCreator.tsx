@@ -482,6 +482,14 @@ export function CharacterCreator({
  * usage links every time, so cutting the scene turns a row red by itself. What
  * a click does instead is open the work with **Where** already showing, which
  * is the same gesture and one press — and leaves the colour meaning something.
+ *
+ * **It is headed *Characterizations*** (§4c, Ken's word for this panel). §8
+ * swept the interface to *moment* and this is the one place the older word
+ * comes back, which is not a reversal: the tab is about a **trait** and the
+ * moments filed under it, while this panel is everything that characterizes
+ * somebody — the traits' moments, the arc, the notes — and no one of those is
+ * a moment. `creator-vocabulary.test.tsx` allows the word here and nowhere
+ * else, so the sweep still holds everywhere it was about.
  */
 function Rail({
   blocks,
@@ -493,7 +501,7 @@ function Rail({
   return (
     <aside className="creator-rail" aria-label="Everything for this character">
       <header className="creator-rail-head">
-        <h4>Made for them</h4>
+        <h4>Characterizations</h4>
         <span className="muted small">{railStanding(blocks)}</span>
       </header>
 
@@ -685,12 +693,19 @@ function Overview({
         </div>
       </div>
 
-      {/* Not the role: how much of the story they are in, which is what the
-          cast is grouped by in the research menu (addendum 08 §8b). */}
+      {/* **Character type** (§4c, Ken's word): not the role, but how much of
+          the story they are in — a main character, a minor one, an extra —
+          which is exactly what the cast is grouped by in the research menu
+          (addendum 08 §8b). It read *How much of the story*, which describes
+          the question and does not name the answer, so a writer could not
+          tell that picking one files them under a heading on the left. The
+          options are the project's own headings, because they are the
+          writer's words: a new project starts with Ken's three and any of
+          them can be renamed in the cast panel. */}
       <label className="field">
-        <span>How much of the story</span>
+        <span>Character type</span>
         <select
-          aria-label="Heading"
+          aria-label="Character type"
           value={(person.categoryId as string) ?? ''}
           onChange={(event) =>
             patch({ categoryId: event.target.value === '' ? null : (event.target.value as CharacterCategoryId) })
@@ -727,7 +742,7 @@ function Overview({
           aria-expanded={look}
           onClick={() => setLook(!look)}
         >
-          <span>Background &amp; look</span>
+          <span>Character description</span>
           <span className="muted small">optional</span>
           <span className="creator-fold-arrow" aria-hidden="true">
             {look ? '▾' : '▸'}
@@ -738,8 +753,8 @@ function Overview({
             {(
               [
                 ['age', 'Age', '64'],
-                ['look', 'Look', 'Frayed black coat, ink-stained cuffs'],
-                ['history', 'History', 'What happened before the story starts.'],
+                ['look', 'Character description', 'Frayed black coat, ink-stained cuffs'],
+                ['history', 'Backstory', 'What happened before the story starts.'],
               ] as ReadonlyArray<['age' | 'look' | 'history', string, string]>
             ).map(([key, label, hint]) => (
               <label key={key} className="field">
@@ -756,10 +771,12 @@ function Overview({
         ) : null}
       </section>
 
-      {/* Tags are the book's own topics — money, grief, the Christmas thread.
-          Who somebody is to the story is the role above. */}
+      {/* **Links** (§4c, Ken's word; `tags` in the data, which nothing moved).
+          They are the book's own topics — money, grief, the Christmas thread.
+          Who somebody is to the story is the role above, and what *type* they
+          are is the select above that. */}
       <div className="field">
-        <span>Tags</span>
+        <span>Links</span>
         <div className="creator-tags">
           {person.tags.map((word) => (
             <span key={word} className="creator-tag">
@@ -767,7 +784,7 @@ function Overview({
               <button
                 type="button"
                 className="ghost small"
-                aria-label={`Remove the tag ${word}`}
+                aria-label={`Remove the link ${word}`}
                 onClick={() => patch({ tags: person.tags.filter((one) => one !== word) })}
               >
                 ×
@@ -781,7 +798,7 @@ function Overview({
             }}
           >
             <input
-              aria-label="Add a tag"
+              aria-label="Add a link"
               placeholder="money, grief, the Christmas thread"
               value={tag}
               onChange={(event) => setTag(event.target.value)}

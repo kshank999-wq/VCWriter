@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import {
+  CHARACTER_TYPES,
   addCharacter,
   addEpisode,
   castOf,
@@ -67,7 +68,7 @@ describe('the episode rail', () => {
   });
 
   it('lists every episode with its number, its name and what is in it', () => {
-    let file = cast(series(), 'MAEVE', 'Main characters');
+    let file = cast(series(), 'MAEVE', CHARACTER_TYPES.main);
     file = addEpisode(file, { title: 'Pilot' }).file;
     file = addEpisode(file, { title: 'The Wreck' }).file;
 
@@ -118,21 +119,21 @@ describe('the episode rail', () => {
 
 describe('starting an episode', () => {
   it('asks for a name and what comes over, and says what will and will not', () => {
-    let file = cast(series(), 'MAEVE', 'Main characters');
-    file = cast(file, 'THE FERRYMAN', 'Minor characters');
+    let file = cast(series(), 'MAEVE', CHARACTER_TYPES.main);
+    file = cast(file, 'THE FERRYMAN', CHARACTER_TYPES.minor);
 
     render(
       <NewEpisodeDialog file={file} open onClose={() => {}} onCreate={() => {}} onGo={() => {}} />,
     );
     expect(screen.getByLabelText('Episode name')).toBeTruthy();
-    expect(screen.getByLabelText('Main characters')).toBeTruthy();
-    expect(screen.getByLabelText('Recurring characters')).toBeTruthy();
-    expect(screen.getByLabelText('Minor characters')).toBeTruthy();
+    expect(screen.getByLabelText(CHARACTER_TYPES.main)).toBeTruthy();
+    expect(screen.getByLabelText(CHARACTER_TYPES.recurring)).toBeTruthy();
+    expect(screen.getByLabelText(CHARACTER_TYPES.minor)).toBeTruthy();
     expect(screen.getByText(/None of the writing does/)).toBeTruthy();
   });
 
   it('creates the episode with the cast that was ticked, and leaves the rest', () => {
-    const start = cast(cast(series(), 'MAEVE', 'Main characters'), 'THE FERRYMAN', 'Minor characters');
+    const start = cast(cast(series(), 'MAEVE', CHARACTER_TYPES.main), 'THE FERRYMAN', CHARACTER_TYPES.minor);
     let seen: ProjectFile = start;
 
     render(
@@ -151,9 +152,9 @@ describe('starting an episode', () => {
       const box = screen.getByLabelText(label) as HTMLInputElement;
       if (box.checked !== on) fireEvent.click(box);
     };
-    tick('Main characters', true);
-    tick('Recurring characters', false);
-    tick('Minor characters', false);
+    tick(CHARACTER_TYPES.main, true);
+    tick(CHARACTER_TYPES.recurring, false);
+    tick(CHARACTER_TYPES.minor, false);
     tick('Whoever spoke last episode', false);
 
     fireEvent.click(screen.getByRole('button', { name: /start episode/i }));
@@ -190,22 +191,22 @@ describe('starting an episode', () => {
 
 describe('the cast under its headings', () => {
   it('shows a series’ four headings, and the unfiled last', () => {
-    let file = cast(series(), 'MAEVE', 'Main characters');
+    let file = cast(series(), 'MAEVE', CHARACTER_TYPES.main);
     file = addCharacter(file, { name: 'PORTER' });
 
     render(<CastPanel file={file} onUpdate={() => {}} />);
     const headings = [...document.querySelectorAll('.cast-group-name')].map((node) => node.textContent);
     expect(headings).toEqual([
-      'Main characters',
-      'Recurring characters',
-      'Minor characters',
-      'Background characters',
+      CHARACTER_TYPES.main,
+      CHARACTER_TYPES.recurring,
+      CHARACTER_TYPES.minor,
+      CHARACTER_TYPES.extra,
       'Not filed',
     ]);
   });
 
   it('files someone under another heading, and keeps them when a heading goes', () => {
-    const start = cast(series(), 'MAEVE', 'Main characters');
+    const start = cast(series(), 'MAEVE', CHARACTER_TYPES.main);
     let seen: ProjectFile = start;
 
     render(
@@ -222,13 +223,13 @@ describe('the cast under its headings', () => {
       </Holding>,
     );
 
-    const recurring = characterCategoriesInOrder(start).find((entry) => entry.name === 'Recurring characters')!;
+    const recurring = characterCategoriesInOrder(start).find((entry) => entry.name === CHARACTER_TYPES.recurring)!;
     fireEvent.change(screen.getByLabelText('Heading for MAEVE'), { target: { value: recurring.id } });
     expect(seen.characters[0]?.categoryId).toBe(recurring.id);
 
-    fireEvent.click(screen.getByLabelText('Remove the heading Recurring characters'));
+    fireEvent.click(screen.getByLabelText(`Remove the heading ${CHARACTER_TYPES.recurring}`));
     // The heading is gone; MAEVE is not.
-    expect(seen.characterCategories.map((entry) => entry.name)).not.toContain('Recurring characters');
+    expect(seen.characterCategories.map((entry) => entry.name)).not.toContain(CHARACTER_TYPES.recurring);
     expect(seen.characters.map((person) => person.name)).toEqual(['MAEVE']);
     expect(seen.characters[0]?.categoryId).toBeNull();
   });

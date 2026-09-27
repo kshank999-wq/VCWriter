@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CHARACTER_TYPES,
   ImportError,
   buildProjectFromImport,
   castByCategory,
@@ -333,8 +334,8 @@ describe('building the project', () => {
   it('files the cast by how much of the script they carry', () => {
     const built = buildProjectFromImport(read(), { title: 'The Lighthouse' });
     const groups = castByCategory(built.file);
-    expect(groups.find((group) => group.name === 'Main characters')?.characters.map((p) => p.name)).toEqual(['MAEVE']);
-    expect(groups.find((group) => group.name === 'Minor characters')?.characters.map((p) => p.name)).toEqual([
+    expect(groups.find((group) => group.name === CHARACTER_TYPES.main)?.characters.map((p) => p.name)).toEqual(['MAEVE']);
+    expect(groups.find((group) => group.name === CHARACTER_TYPES.minor)?.characters.map((p) => p.name)).toEqual([
       'THE FERRYMAN',
     ]);
   });
@@ -608,7 +609,7 @@ describe('the people a script names in its action', () => {
     // evidence the script offers — and precisely the person a writer does not
     // need to flesh out.
     const background = castByCategory(built.file).find(
-      (group) => group.name === 'Background characters',
+      (group) => group.name === CHARACTER_TYPES.extra,
     );
     expect(background?.characters.map((person) => person.name)).toEqual(['HOLLIS']);
   });

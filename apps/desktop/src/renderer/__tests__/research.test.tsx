@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import {
+  characterCategoriesInOrder,
+  CHARACTER_TYPES,
   addCharacter,
   addCharacterCategory,
   addResearchCategory,
@@ -436,13 +438,37 @@ describe('the Character Creator in the menu', () => {
     return file;
   };
 
+  const heads = () =>
+    Array.from(document.querySelectorAll('.research-cast-head')).map((one) => one.textContent);
+
   it('files the cast under the writer’s own headings, in their order', () => {
     render(<Harness initial={cast()} />);
-    const heads = Array.from(document.querySelectorAll('.research-cast-head')).map((one) => one.textContent);
-    expect(heads).toEqual(['Leads', 'The precinct']);
+    expect(heads()).toEqual(['Leads', 'The precinct']);
     // A seeded heading with nobody under it points at nobody, so it is not
     // drawn here — the cast panel keeps it, being where filing happens.
-    expect(heads).not.toContain('Main characters');
+    expect(heads()).not.toContain(CHARACTER_TYPES.main);
+  });
+
+  /**
+   * The left-hand list Ken asked for (§4c): *a list of the characters under
+   * their category*.
+   */
+  it('heads one type where that is all there is, and says which people have none', () => {
+    let file = createProjectFile({ title: 'The Drowned Bell', format: 'screenplay' });
+    for (const name of ['MARA', 'CELESTE']) file = addCharacter(file, { name });
+    const main = characterCategoriesInOrder(file).find((one) => one.name === CHARACTER_TYPES.main)!;
+    // Nobody typed at all: the list is just a list, and a heading over the
+    // whole cast is a label rather than an arrangement.
+    render(<Harness initial={file} />);
+    expect(heads()).toEqual([]);
+    cleanup();
+
+    // One person typed, one not. **All the headings or none**: a group with
+    // no heading takes the one above it, so the untyped person would read as
+    // a main character.
+    file = updateCharacter(file, file.characters[0]!.id, { categoryId: main.id });
+    render(<Harness initial={file} />);
+    expect(heads()).toEqual([CHARACTER_TYPES.main, 'Not filed']);
   });
 
   /**

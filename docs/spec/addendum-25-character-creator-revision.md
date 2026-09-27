@@ -116,10 +116,11 @@ Each stage ships on its own.
 7. **The margin mark**, and search across the cast.
 8. **The restyle**, and a sweep of the module's vocabulary to *moment*.
 9. **The one-column card stack** (§4b), from Ken overruling stage 8.
+10. **What the record is called, and the left-hand list** (§4c), from Ken.
 
 ## 4a. What each built stage does
 
-**All nine are built.**
+**All ten are built.**
 
 **Stage 1 — the record.** `role` (six chips offered, free text underneath),
 `background` behind a fold marked optional, and the writer's own fields as a
@@ -422,3 +423,75 @@ the thing a test has to hold.
 
 §21's AI-assisted suggestions. The handoff does not ask for them and the
 spec puts them in a future version.
+
+## 4c. What the record is called, and the left-hand list
+
+**Stage 10**, from Ken in one message: five things renamed, and the cast
+listed under its types on the left.
+
+The renames are his words and there is nothing to argue with in them, but two
+of the five turned out to be about more than a label.
+
+**Character type** was *How much of the story*, which **describes the question
+and never names the answer**. The control has always written `categoryId` —
+the heading the cast is grouped by in the research menu, which `castByCategory`
+has read since the categories were built — so a writer who picked one was
+filing somebody under a heading on the left, and nothing on the screen said
+so. It is the audit paying a **twenty-second** time, in the form this project
+keeps meeting: the mechanism was built, general and correct, and narrow in
+vocabulary. Ken's *main character, minor character, extra character* are what
+a new project now seeds, singular, because **one of them is what a person
+*is*, not a shelf they are on** — *Main character* is a sentence about
+somebody where *Main characters* is a label on a drawer — and *Extra* is the
+trade's word for what was called *Background*.
+
+**An existing project keeps its own headings**, which is not an oversight but
+the rule `defaultCharacterCategories` has carried in its own comment since it
+was written: they are the writer's, and a heading appearing in a finished
+script because the software changed its mind would be the software
+rearranging somebody's cast. They are renamed by hand in the cast panel.
+
+Renaming them found the fault worth keeping: **the four names were written
+down twice.** The importer's `headingFor` files an imported cast by *naming*
+the heading it wants — deliberately, so that arithmetic on how many headings
+there are cannot silently refile a tier — and it held its own copy of the
+strings. So renaming the defaults left the importer asking for headings that
+no longer existed and quietly filing everybody under the last one. Four tests
+caught it, which is the only reason it is not still true, and `CHARACTER_TYPES`
+is the one list now. A test helper made it worse and has been fixed too: `cast`
+filed under `null` when it could not find the heading it was given, so three
+episode tests failed as *mysteriously empty casts* rather than as a fixture
+saying what was wrong with it. **A fixture that cannot find what it was asked
+for throws.**
+
+The other four are labels and stay labels: **Character description** for the
+fold that was *Background & look* and for the `look` field inside it,
+**Backstory** for `history`, **Links** for `tags` (`tags` in the data, which
+nothing moved). Two neighbours are worth naming rather than quietly leaving:
+*Links* is also what the research menu calls story threads, and *Character
+description* now sits under the *Who they are* box, which is the prose one.
+Both are Ken's words and both are one edit to change if the neighbour turns
+out to matter.
+
+**The left-hand list is the one that was already there.** The research menu
+lists the cast and has grouped it under its headings since §8b; what it could
+not do was say so, because the heading was drawn only where there was more
+than one group — so a cast filed entirely as main characters said nothing
+about being one. A **second** list of characters inside the Creator was
+considered and not built: it would stand an inch from the first, which is the
+fault addendum 20 §9u had just finished removing from the Layout room.
+
+Driving it caught this stage's own fault, and it is the shape of the rule
+rather than a slip. The first draft drew a heading over every real type and
+none over *Not filed*, since that names nothing — and **a group with no
+heading takes the one above it**, so Victor Marsh, whom nobody had typed, sat
+under BACKGROUND CHARACTERS reading as one. It is all of the headings or none.
+
+**The rail is headed *Characterizations***, which is Ken's word and is the one
+place §8's sweep to *moment* is deliberately not applied. It is not a
+reversal: the tab is about a **trait** and the moments filed under it, where
+*moment* is exactly right, while the rail is everything that characterizes
+somebody — those moments, the arc, the notes — and no one of them is a
+moment. `creator-vocabulary.test.tsx` strips the rail and asserts the older
+word is nowhere else, so the sweep still holds over every screen it was
+written about.

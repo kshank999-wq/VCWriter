@@ -43,9 +43,21 @@ const world = (): ProjectFile => {
   }).file;
 };
 
-/** Everything a writer can read on the screen, attributes and all. */
+/**
+ * Everything a writer can read on the screen, attributes and all — **except
+ * the rail**, which is headed *Characterizations* on Ken's instruction
+ * (addendum 25 §4c).
+ *
+ * That is not the sweep being abandoned. The tab is about a **trait** and the
+ * moments filed under it, where *moment* is exactly right; the rail is
+ * everything that characterizes somebody — those moments, the arc, the notes
+ * — and no one of them is a moment. So the exception is one panel, named
+ * here, and the sweep still holds over every screen it was written about: if
+ * the word reappears anywhere else this still fails.
+ */
 const wordsOn = (): string => {
   const root = document.body;
+  for (const rail of Array.from(root.querySelectorAll('.creator-rail'))) rail.remove();
   const seen: string[] = [root.textContent ?? ''];
   for (const node of Array.from(root.querySelectorAll('*'))) {
     for (const attribute of Array.from(node.attributes)) {

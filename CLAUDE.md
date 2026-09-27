@@ -3455,7 +3455,7 @@ push live; the build takes a minute or two.
   harder than usual: **the handoff's own headline decision had already been
   made here independently**, its seven tabs having been four since addendum 08
   stage 2 for the same reasons. Seventeen more of its asks are standing under
-  another name. **All nine stages of §4 are built**; §4a says what each
+  another name. **All ten stages of §4 are built**; §4a says what each
   does. Four decisions carry it. **The arc's shape is said *and* read** —
   addendum 08 §5 made it a reading and the handoff asks for a toggle, and both
   are right about different moments (an arc with no points has no shape to
@@ -3611,6 +3611,51 @@ push live; the build takes a minute or two.
   yet. `creator-stack.test.tsx` pins the shape and not the styling, ending on
   the thing the overrule was about: **all four of the shelf's controls are
   still reachable behind the ⋯**.
+  **Stage 10 (§4c) is what the record is called, and the left-hand list**,
+  from Ken in one message. Two of the five renames were about more than a
+  label. **Character type** was *How much of the story*, which **describes the
+  question and never names the answer** — the control has always written
+  `categoryId`, the heading `castByCategory` groups the research menu by, so
+  picking one filed somebody under a heading on the left and nothing said so:
+  the audit paying a **twenty-second** time, the mechanism built and general
+  and merely narrow in vocabulary. Ken's three are what a new project seeds,
+  **singular**, because one of them is what a person *is* rather than a shelf
+  they are on (*Main character* is a sentence about somebody; *Main
+  characters* is a label on a drawer), with *Extra* the trade's word for what
+  was *Background*. **An existing project keeps its own headings**, which is
+  `defaultCharacterCategories`' own rule rather than an oversight — they are
+  the writer's, and a heading appearing in a finished script because the
+  software changed its mind would be the software rearranging somebody's cast
+  — so they are renamed by hand in the cast panel. Renaming them found the
+  fault: **the four names were written down twice**, the importer's
+  `headingFor` holding its own copy (deliberately naming what it wants, so
+  arithmetic on how many headings there are cannot refile a tier), so the
+  rename left it asking for headings that no longer existed and quietly
+  filing everybody under the last one; `CHARACTER_TYPES` is the one list now.
+  A test helper made it worse and is fixed too — `cast` filed under `null`
+  when it could not find its heading, so three episode tests failed as
+  **mysteriously empty casts** rather than as a fixture saying what was wrong
+  with it: **a fixture that cannot find what it was asked for throws**. The
+  other four are labels — **Character description** (the fold that was
+  *Background & look*, and the `look` field in it), **Backstory** (`history`),
+  **Links** (`tags`, which nothing moved in the data) — with two neighbours
+  named rather than quietly left: *Links* is also the research menu's word for
+  story threads, and *Character description* now sits under the *Who they are*
+  prose box. **The left-hand list is the one already there**: the research
+  menu has grouped the cast since §8b and could not say so, the heading being
+  drawn only where there was more than one group, so a cast filed entirely as
+  main characters said nothing about being one; a **second** list inside the
+  Creator was weighed and not built, standing an inch from the first being the
+  fault addendum 20 §9u had just removed from Layout. Driving it caught this
+  stage's own: the first draft headed every real type and not *Not filed*,
+  and **a group with no heading takes the one above it**, so an untyped Victor
+  Marsh sat under BACKGROUND CHARACTERS reading as one — it is all of the
+  headings or none. And the rail is headed **Characterizations**, Ken's word
+  and the one place §8's sweep to *moment* is deliberately not applied: the
+  tab is about a **trait** and the moments under it, while the rail is
+  everything that characterizes somebody — those moments, the arc, the notes —
+  and no one of them is a moment; the vocabulary test strips the rail and
+  holds everywhere else.
   §2 records
   where this diverges from the handoff and why; §5 is the one thing
   deliberately not built (§21's AI suggestions, which the handoff does not ask

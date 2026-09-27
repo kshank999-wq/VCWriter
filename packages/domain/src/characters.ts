@@ -24,23 +24,49 @@ import type { CharacterCategoryId } from './ids.js';
  */
 
 /**
- * The headings a new project starts with. A series makes one more distinction.
+ * The **character types** a new project starts with (addendum 25 §4c, Ken's
+ * own three). A series makes one more distinction.
  *
- * **Background last, and that is what it is for.** These headings order the
- * names offered while a cue is being typed, so the waitress who says one line
- * belongs at the bottom of that list rather than competing with the lead. It is
- * also the tier a writer will want to leave alone — somebody with one line
- * needs no trait, no arc and no attention from the Character Creator.
+ * They are **singular**, because one of them is what a person *is* rather than
+ * a shelf they are on: the control that sets it reads *Character type* and the
+ * answer is read back as *Main character*, which is a sentence about somebody.
+ * *Extra* is the trade's word and replaces *Background*, which named the tier
+ * rather than the person.
  *
- * Only new projects get these. An existing one keeps the headings it has, which
- * is right: they are the writer's, and a heading appearing in a finished script
- * because the software changed its mind would be the software rearranging
- * somebody's cast.
+ * **Extra last, and that is what it is for.** These headings order the names
+ * offered while a cue is being typed, so the waitress who says one line belongs
+ * at the bottom of that list rather than competing with the lead. It is also
+ * the tier a writer will want to leave alone — somebody with one line needs no
+ * trait, no arc and no attention from the Character Creator.
+ *
+ * Only new projects get these, and **an existing one keeps the headings it
+ * has**, which is right and is the reason renaming them here changes nothing
+ * about a project already open: they are the writer's, a heading appearing in
+ * a finished script because the software changed its mind would be the
+ * software rearranging somebody's cast, and they can be renamed by hand in the
+ * cast panel.
  */
+/**
+ * **The one list of what a character type is called.**
+ *
+ * It is a constant rather than four literals because the names were written
+ * down twice — here and in the importer's `headingFor`, which files an
+ * imported cast by naming the heading it wants — so renaming them in one place
+ * left the importer asking for headings that no longer existed and filing
+ * everybody under the last one. Four tests caught it, which is the only reason
+ * it is not still true. Anything that wants a type by name asks this.
+ */
+export const CHARACTER_TYPES = {
+  main: 'Main character',
+  recurring: 'Recurring character',
+  minor: 'Minor character',
+  extra: 'Extra',
+} as const;
+
 export const defaultCharacterCategories = (format: ProjectFormat): string[] =>
   format === 'series'
-    ? ['Main characters', 'Recurring characters', 'Minor characters', 'Background characters']
-    : ['Main characters', 'Minor characters', 'Background characters'];
+    ? [CHARACTER_TYPES.main, CHARACTER_TYPES.recurring, CHARACTER_TYPES.minor, CHARACTER_TYPES.extra]
+    : [CHARACTER_TYPES.main, CHARACTER_TYPES.minor, CHARACTER_TYPES.extra];
 
 export const characterCategoriesInOrder = (file: ProjectFile): CharacterCategory[] =>
   sortByOrderKey(file.characterCategories ?? []);

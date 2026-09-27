@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CHARACTER_TYPES,
   addCharacter,
   addCharacterCategory,
   addEpisode,
@@ -40,9 +41,14 @@ const series = (): ProjectFile => createProjectFile({ title: 'The Lighthouse', f
 /** File a new character under a heading, by the heading's name. */
 const cast = (file: ProjectFile, name: string, heading: string): ProjectFile => {
   const category = characterCategoriesInOrder(file).find((entry) => entry.name === heading);
+  // **Loudly, not quietly.** This used to file under `null` when the heading
+  // was not found, so renaming the types (addendum 25 §4c) turned three
+  // episode tests into mysteriously empty casts rather than into a fixture
+  // that said what was wrong with it.
+  if (!category) throw new Error(`No character type called ${heading}`);
   const withPerson = addCharacter(file, { name });
   const person = withPerson.characters[withPerson.characters.length - 1]!;
-  return updateCharacter(withPerson, person.id, { categoryId: category?.id ?? null });
+  return updateCharacter(withPerson, person.id, { categoryId: category.id });
 };
 
 /** Put a speech in a beat, so who spoke in an episode can be read back. */
@@ -59,20 +65,20 @@ const speaks = (file: ProjectFile, beatId: string, who: string): ProjectFile =>
 describe('the headings the cast is filed under', () => {
   it('gives a series a recurring heading that the other formats do not have', () => {
     expect(defaultCharacterCategories('series')).toEqual([
-      'Main characters',
-      'Recurring characters',
-      'Minor characters',
-      'Background characters',
+      'Main character',
+      'Recurring character',
+      'Minor character',
+      'Extra',
     ]);
     expect(defaultCharacterCategories('screenplay')).toEqual([
-      'Main characters',
-      'Minor characters',
-      'Background characters',
+      'Main character',
+      'Minor character',
+      'Extra',
     ]);
-    // Background is last on purpose: the headings order the names offered
-    // while a cue is being typed, and somebody with one line should not be
-    // competing with the lead.
-    expect(defaultCharacterCategories('screenplay').at(-1)).toBe('Background characters');
+    // Extra is last on purpose: the headings order the names offered while a
+    // cue is being typed, and somebody with one line should not be competing
+    // with the lead.
+    expect(defaultCharacterCategories('screenplay').at(-1)).toBe(CHARACTER_TYPES.extra);
     expect(characterCategoriesInOrder(series()).map((entry) => entry.name)).toEqual(
       defaultCharacterCategories('series'),
     );
@@ -88,16 +94,16 @@ describe('the headings the cast is filed under', () => {
   });
 
   it('groups the cast under its headings, with the unfiled shown last', () => {
-    let file = cast(series(), 'MAEVE', 'Main characters');
-    file = cast(file, 'DR HALE', 'Recurring characters');
+    let file = cast(series(), 'MAEVE', CHARACTER_TYPES.main);
+    file = cast(file, 'DR HALE', CHARACTER_TYPES.recurring);
     file = addCharacter(file, { name: 'PORTER' });
 
     const groups = castByCategory(file);
     expect(groups.map((group) => group.name)).toEqual([
-      'Main characters',
-      'Recurring characters',
-      'Minor characters',
-      'Background characters',
+      CHARACTER_TYPES.main,
+      CHARACTER_TYPES.recurring,
+      CHARACTER_TYPES.minor,
+      CHARACTER_TYPES.extra,
       'Not filed',
     ]);
     expect(groups[0]?.characters.map((person) => person.name)).toEqual(['MAEVE']);
@@ -105,7 +111,7 @@ describe('the headings the cast is filed under', () => {
   });
 
   it('unfiles the people under a heading it removes rather than losing them', () => {
-    let file = cast(series(), 'MAEVE', 'Main characters');
+    let file = cast(series(), 'MAEVE', CHARACTER_TYPES.main);
     const main = characterCategoriesInOrder(file)[0]!;
     file = removeCharacterCategory(file, main.id);
 
@@ -141,7 +147,7 @@ describe('an episode', () => {
   });
 
   it('starts as a clear slate: its own scene, one empty beat, no text carried', () => {
-    let file = cast(series(), 'MAEVE', 'Main characters');
+    let file = cast(series(), 'MAEVE', CHARACTER_TYPES.main);
     file = speaks(file, file.beats[0]!.id, 'MAEVE');
     const before = file.beats.length;
 
@@ -153,9 +159,9 @@ describe('an episode', () => {
   });
 
   it('carries the cast the writer asked for, and leaves the guests behind', () => {
-    let file = cast(series(), 'MAEVE', 'Main characters');
-    file = cast(file, 'DR HALE', 'Recurring characters');
-    file = cast(file, 'THE FERRYMAN', 'Minor characters');
+    let file = cast(series(), 'MAEVE', CHARACTER_TYPES.main);
+    file = cast(file, 'DR HALE', CHARACTER_TYPES.recurring);
+    file = cast(file, 'THE FERRYMAN', CHARACTER_TYPES.minor);
 
     const headings = characterCategoriesInOrder(file);
     const carry = {
@@ -169,7 +175,7 @@ describe('an episode', () => {
   });
 
   it('can also carry whoever actually spoke in the episode before', () => {
-    let file = cast(series(), 'THE FERRYMAN', 'Minor characters');
+    let file = cast(series(), 'THE FERRYMAN', CHARACTER_TYPES.minor);
     file = addEpisode(file, { title: 'Pilot', carry: { castFrom: [], castWhoSpoke: false, tracks: 'series', openSetups: false } }).file;
     const pilot = episodes(file)[0]!;
     file = speaks(file, pilot.beats[0]!.id, 'THE FERRYMAN');
@@ -184,7 +190,7 @@ describe('an episode', () => {
   it('carries the person who spoke and not somebody whose name merely starts the same', () => {
     // The rule used to be *does the cue start with this name*, which carried
     // MAEVE into the next episode because MAEVENA spoke in this one.
-    let file = cast(series(), 'MAEVENA', 'Minor characters');
+    let file = cast(series(), 'MAEVENA', CHARACTER_TYPES.minor);
     file = addEpisode(file, {
       title: 'Pilot',
       carry: { castFrom: [], castWhoSpoke: false, tracks: 'series', openSetups: false },
@@ -197,7 +203,7 @@ describe('an episode', () => {
   });
 
   it('still carries somebody whose cue wears an extension', () => {
-    let file = cast(series(), 'THE FERRYMAN', 'Minor characters');
+    let file = cast(series(), 'THE FERRYMAN', CHARACTER_TYPES.minor);
     file = addEpisode(file, {
       title: 'Pilot',
       carry: { castFrom: [], castWhoSpoke: false, tracks: 'series', openSetups: false },
@@ -238,9 +244,9 @@ describe('an episode', () => {
   });
 
   it('offers this episode’s cast first while a cue is being typed', () => {
-    let file = cast(series(), 'MAEVE', 'Main characters');
-    file = cast(file, 'DR HALE', 'Recurring characters');
-    file = cast(file, 'THE FERRYMAN', 'Minor characters');
+    let file = cast(series(), 'MAEVE', CHARACTER_TYPES.main);
+    file = cast(file, 'DR HALE', CHARACTER_TYPES.recurring);
+    file = cast(file, 'THE FERRYMAN', CHARACTER_TYPES.minor);
 
     const headings = characterCategoriesInOrder(file);
     const carry = {

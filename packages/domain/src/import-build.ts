@@ -8,7 +8,7 @@ import { manuscriptElementSchema } from './entities/manuscript.js';
 import { assetSchema } from './entities/asset.js';
 import { storyMarkerSchema } from './entities/structure.js';
 import { createProjectFile } from './project-file.js';
-import { characterCategoriesInOrder } from './characters.js';
+import { CHARACTER_TYPES, characterCategoriesInOrder } from './characters.js';
 import { CHAPTER_HEAD, bareCue, type ImportedScript } from './importing.js';
 import { BARE_LABEL } from './import-docx.js';
 import type { ProjectFile } from './project-file.js';
@@ -89,26 +89,26 @@ const wordsIn = (text: string): number => text.trim().split(/\s+/).filter(Boolea
  * do not. Everything is a proposal — the writer refiles anyone in a click.
  */
 const headingFor = (speeches: number, busiest: number, mainAtLeast: number): string[] => {
-  // Named in the action and never given a line: background, by the only
+  // Named in the action and never given a line: an extra, by the only
   // evidence the script offers. Somebody who never speaks is precisely who a
   // writer does not need to flesh out.
-  if (speeches === 0) return ['Background characters', 'Minor characters'];
-  if (speeches >= mainAtLeast || speeches >= busiest * 0.4) return ['Main characters'];
+  if (speeches === 0) return [CHARACTER_TYPES.extra, CHARACTER_TYPES.minor];
+  if (speeches >= mainAtLeast || speeches >= busiest * 0.4) return [CHARACTER_TYPES.main];
   // The band between the leads and the small parts is *recurring* in a series,
   // which is the distinction a series actually makes — and simply minor
   // anywhere else, which is why the fallback is named rather than positional.
-  if (speeches >= busiest * 0.12) return ['Recurring characters', 'Minor characters'];
-  return ['Minor characters'];
+  if (speeches >= busiest * 0.12) return [CHARACTER_TYPES.recurring, CHARACTER_TYPES.minor];
+  return [CHARACTER_TYPES.minor];
 };
 
 /**
  * The first of those headings the project actually has.
  *
  * **Asked for by name rather than by position.** The headings are a list that
- * grows — background arrived that way — and arithmetic on *how many* there are
+ * grows — the last tier arrived that way — and arithmetic on *how many* there are
  * silently refiles a whole tier the day one more appears. Each band names its
  * second choice too, because a screenplay has no *recurring* heading and the
- * band below the leads is plainly minor there, not background.
+ * band below the leads is plainly minor there, not an extra.
  */
 const namedHeading = (
   headings: readonly CharacterCategory[],

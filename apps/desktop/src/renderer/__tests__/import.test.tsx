@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { castByCategory, episodes, type ProjectFile } from '@vcwriter/domain';
+import { CHARACTER_TYPES, castByCategory, episodes, type ProjectFile } from '@vcwriter/domain';
 import { ImportDialog } from '../components/ImportDialog';
 import { MENUS } from '../menus';
 import { buildDocx, wordParagraph } from './zip-fixture';
@@ -122,8 +122,8 @@ describe('importing a script', () => {
     expect(file.beats).toHaveLength(2);
 
     const groups = castByCategory(file);
-    expect(groups.find((group) => group.name === 'Main characters')?.characters.map((p) => p.name)).toEqual(['MAEVE']);
-    expect(groups.find((group) => group.name === 'Minor characters')?.characters.map((p) => p.name)).toEqual([
+    expect(groups.find((group) => group.name === CHARACTER_TYPES.main)?.characters.map((p) => p.name)).toEqual(['MAEVE']);
+    expect(groups.find((group) => group.name === CHARACTER_TYPES.minor)?.characters.map((p) => p.name)).toEqual([
       'THE KEEPER',
     ]);
     expect(file.researchItems.map((item) => item.title)).toContain('LIGHTHOUSE - STAIRS');
