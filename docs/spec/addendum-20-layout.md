@@ -2906,6 +2906,72 @@ chapter; the spot being the marker's id and not the element's; the back-blank
 falling behind the opening; and a book nobody has asked anything of laid
 exactly as it was.
 
+## 9s. The page that could not be edited, and the chapter page's own screen
+
+From Ken, two reports in one sitting: *there still needs to be on the chapter
+page the option to make the back of that page blank*, and then *when I select
+page two and I try to make it blank, that doesn't work. There's something
+about that opening formatted page that doesn't allow you to edit it. It also
+doesn't allow me to put a picture… I should be able to double click that page
+and put a blank page or a picture there or a vector graphic. And then that
+page two goes to page three. So if I want to open with a picture, I can.*
+
+### A block that is not a manuscript element
+
+The second is the one worth writing down, and it is **one cause under all of
+it**. §9l stands a section's own title in where the manuscript carries no
+heading — a book imported before §9j taught the importer to keep a bare
+numeral, which is Ken's book exactly. The block it makes is **not a manuscript
+element**: its id names the *unit*.
+
+`pagePlace` answers a press with the element a page opens with, and headings
+are body blocks, so on those pages it answered with the **stand-in**. Every
+act built on that answer looks the id up in the manuscript — `setBlankPage`
+walks the three collections, `placeFigure` finds the beat that holds the
+element — and all of them found nothing and **returned the document
+unchanged**. Not an error, not a refusal: the page simply did not respond,
+which is why Ken read it as *something about that opening formatted page that
+doesn't allow you to edit it*.
+
+So `BookBlock` carries **`standsIn`**, and `pagePlace` answers with the first
+**real** element instead. Two rules follow.
+
+**What is anchored to that element is emitted in front of the stand-in.** The
+blank already was — `blankBefore` is pushed before the head — so the leaf lands
+in front of the numeral and the whole opening moves on together, which is
+Ken's *that page two goes to page three*. The **picture** was not: a page-figure
+at a section's head was drawn after the numeral, so the stand-in now **waits**
+for the page-figures in front of it and is flushed before the first block that
+is not one (and at the end of the unit, so a section of nothing but pictures
+still prints its numeral). That is §9p's rule for a chapter with a marker, said
+for a chapter without one.
+
+**§9p's own fallback had the same hole one page over.** A page carrying only a
+chapter opening answers with the chapter's first element, found by walking
+forward for the next body block — which on this book is the *following*
+section's stand-in. It skips them now.
+
+Nothing about what a book **prints** changes: this is a fix to what a page
+*answers*, and a test asserts the stand-in is still drawn, still three of them,
+still in the same place.
+
+### The chapter page's own screen
+
+The first report is §15c and §16b's lesson a fourth time. §9r put both leaves
+on the Layout room's **page panel** and not on the screen that *is* the chapter
+page — the one *File ▸ Chapter page…* documents and the one *Set this
+chapter's page…* opens. A writer who goes there to set a chapter page finds
+everything about it except this.
+
+Both controls are in `PagePlacementFields` now, writing through that dialog's
+own `patch` — the same field, so there is one answer. The gate is the same one
+too: **`standsAlone` is a fact about the laid page**, so the dialog takes the
+room's laid pages and asks `pagePlace` rather than keeping a second, coarser
+reading that could disagree with the panel an inch away. Where the dialog is
+opened over the workspace there are no laid pages, and the control is **shown
+rather than hidden** — §16c's rule, that a writer who cannot see a control
+reads the feature as missing.
+
 ### Deliberately not built
 
 The **file importers** of §2 — BibTeX, RIS, CSL-JSON, CSV/TSV/XLSX, a

@@ -361,3 +361,38 @@ describe('a book with no chapters yet', () => {
     expect(screen.getByText(/no chapters yet/i)).toBeTruthy();
   });
 });
+
+/**
+ * **The leaves around the page** (addendum 20 §9s, from Ken: *there still
+ * needs to be on the chapter page the option to make the back of that page
+ * blank*).
+ *
+ * §9r put both controls on the Layout room's page panel and not on the screen
+ * that **is** the chapter page — which is the one *File ▸ Chapter page…*
+ * documents, and the one a writer setting a chapter page opens. A route needs
+ * a test per gesture (§15a), so this drives the dialog rather than the panel.
+ */
+describe('the leaves around a chapter page', () => {
+  it('offers both, and the back of the leaf writes to the chapter', () => {
+    let latest: ProjectFile | null = null;
+    render(<Harness start={book(['One', 'Two'])} onFile={(file) => (latest = file)} />);
+    const back = screen.getByLabelText<HTMLInputElement>('Leave the back of this page blank', { exact: false });
+    const before = screen.getByLabelText<HTMLInputElement>('A blank page before this one', { exact: false });
+    expect(back.checked).toBe(false);
+    expect(before.checked).toBe(false);
+    fireEvent.click(back);
+    const marker = (latest as unknown as ProjectFile).markers[0]!;
+    expect(marker.page?.backBlank).toBe(true);
+    // And it is the chapter's own record, not the book's.
+    expect(chapterPageStyleOf(latest as unknown as ProjectFile)).not.toHaveProperty('backBlank');
+  });
+
+  it('keeps the two apart: the leaf in front is its own answer', () => {
+    let latest: ProjectFile | null = null;
+    render(<Harness start={book(['One'])} onFile={(file) => (latest = file)} />);
+    fireEvent.click(screen.getByLabelText('A blank page before this one', { exact: false }));
+    const marker = (latest as unknown as ProjectFile).markers[0]!;
+    expect(marker.page?.blankBefore).toBe(true);
+    expect(marker.page?.backBlank).not.toBe(true);
+  });
+});

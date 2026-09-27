@@ -10,6 +10,9 @@ import {
   chapterChoices,
   chapterLeafContent,
   chapterPageStyleOf,
+  pagePlace,
+  type BookBlock,
+  type BookPage,
   chapterSheetVars,
   bookFaceOf,
   chapterPlacementOf,
@@ -55,6 +58,14 @@ interface ChapterPageDialogProps {
    * page…*, and the button with it.
    */
   onDrawBox?: () => void;
+  /**
+   * The laid pages, where the caller has them (§9s). The back of a chapter's
+   * page is real only where the opening **stands alone on it**, and that is a
+   * fact about the laid page rather than about the chapter — so the dialog
+   * asks the same reading the Layout room's own panel does, rather than
+   * keeping a second, coarser answer that could disagree with it.
+   */
+  laying?: { pages: readonly BookPage[]; blocks: readonly BookBlock[] } | null;
 }
 
 /**
@@ -91,12 +102,19 @@ interface ChapterPageDialogProps {
  * leaf is a look being tuned against the sheet beside it, and a page that only
  * updated on a button would make that impossible to judge.
  */
-export function ChapterPageDialog({ file, open, initialMarkerId = null, onClose, onUpdate, onDrawBox }: ChapterPageDialogProps) {
+export function ChapterPageDialog({ file, open, initialMarkerId = null, onClose, onUpdate, onDrawBox, laying = null }: ChapterPageDialogProps) {
   const dialog = useModal(open);
   return (
     <dialog ref={dialog} className="track-dialog chapter-page-dialog" aria-label="Chapter page" onClose={onClose}>
       {open ? (
-        <Body file={file} initialMarkerId={initialMarkerId} onClose={onClose} onUpdate={onUpdate} {...(onDrawBox ? { onDrawBox } : {})} />
+        <Body
+          file={file}
+          initialMarkerId={initialMarkerId}
+          onClose={onClose}
+          onUpdate={onUpdate}
+          laying={laying}
+          {...(onDrawBox ? { onDrawBox } : {})}
+        />
       ) : null}
     </dialog>
   );
@@ -136,12 +154,14 @@ function Body({
   onClose,
   onUpdate,
   onDrawBox,
+  laying = null,
 }: {
   file: ProjectFile;
   initialMarkerId: string | null;
   onClose(): void;
   onUpdate: ChapterPageDialogProps['onUpdate'];
   onDrawBox?: () => void;
+  laying?: ChapterPageDialogProps['laying'];
 }) {
   const chapters = useMemo(() => chapterChoices(file), [file]);
   // The body mounts afresh each time the dialog opens, so the chapter asked
@@ -173,6 +193,18 @@ function Body({
   const leafSheet = useMemo(() => chapterSheetVars(file, style) as React.CSSProperties, [file, style]);
   const leafFace = useMemo(() => bookFaceOf(file), [file]);
   const marker = placed?.marker;
+  /**
+   * Whether this chapter's opening stands alone on its page (§9s) — the same
+   * reading the Layout room's own page panel asks, off the same laid pages,
+   * so the two screens cannot offer different answers about the one field.
+   * Undefined where the caller has no laid pages (*File ▸ Chapter page…* over
+   * the workspace), which shows the control rather than hiding it.
+   */
+  const standsAlone = useMemo(() => {
+    if (!laying || !marker) return undefined;
+    const at = laying.pages.find((page) => page.pieces.some((piece) => piece.blockId === (marker.id as string)));
+    return at ? pagePlace(laying.pages, laying.blocks, at.sheet).opensAlone === true : undefined;
+  }, [laying, marker]);
   /**
    * A book's page has a summary and takes its picture from the library
    * (addendum 19 §7). A novel keeps the illustration it has always had.
@@ -641,7 +673,15 @@ function Body({
               changed. The same fields stand in Layout's Book settings, from
               one component, because *how every chapter page is set* applies
               to the whole book and a second copy would be a second answer. */}
-          {marker ? <PagePlacementFields file={file} marker={marker} onUpdate={onUpdate} onDrawBox={onDrawBox} /> : null}
+          {marker ? (
+            <PagePlacementFields
+              file={file}
+              marker={marker}
+              onUpdate={onUpdate}
+              onDrawBox={onDrawBox}
+              {...(standsAlone === undefined ? {} : { standsAlone })}
+            />
+          ) : null}
           <ChapterStyleFields file={file} onUpdate={onUpdate} marker={marker ?? null} />
         </div>
 
@@ -776,6 +816,7 @@ export function PagePlacementFields({
   marker,
   onUpdate,
   onDrawBox,
+  standsAlone,
 }: {
   file: ProjectFile;
   marker: StoryMarker;
@@ -788,6 +829,13 @@ export function PagePlacementFields({
    * draw on, and a button that cannot be pressed is worse than no button.
    */
   onDrawBox?: () => void;
+  /**
+   * Whether the chapter's opening **stands alone on its page** (§9s), so
+   * there is a back to leave blank. The Layout room reads it off the laid
+   * page; over the workspace there are none, and `undefined` shows the
+   * control rather than hiding a feature the writer came for.
+   */
+  standsAlone?: boolean;
 }) {
   const book = chapterPageStyleOf(file);
   const placement = chapterPlacementOf(file, marker);
@@ -863,6 +911,46 @@ export function PagePlacementFields({
         opens above its first paragraph, in lines of the body — what it has to look right against is the text
         under it.
       </p>
+
+      {/* **The leaves around this page** (§9s, from Ken: *there still needs
+          to be on the chapter page the option to make the back of that page
+          blank*).
+
+          §9r put both on the page's own panel in the Layout room and not on
+          the screen that *is* the chapter page — which is where a writer
+          looking to set a chapter page goes, and is the route *File ▸ Chapter
+          page…* documents. Same field, written through this dialog's own
+          `patch`, so there is one answer and not two.
+
+          `standsAlone` is the room's reading of the laid page; where the
+          dialog is opened over the workspace there are no laid pages to ask,
+          and the control is shown rather than hidden, because a writer who
+          cannot see it reads the feature as missing (§16c). */}
+      {standsAlone === false ? (
+        <p className="muted small">
+          This {unit} opens above its own first paragraph, so there is no back to leave blank — what follows it is
+          the rest of the {unit}.
+        </p>
+      ) : (
+        <>
+          <label className="check">
+            <input type="checkbox" checked={own?.backBlank === true} onChange={(event) => patch({ backBlank: event.target.checked })} />
+            <span>Leave the back of this page blank</span>
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={own?.blankBefore === true}
+              onChange={(event) => patch({ blankBefore: event.target.checked })}
+            />
+            <span>A blank page before this one</span>
+          </label>
+          <p className="muted small">
+            Both leaves are counted with the rest of the book and print no page number. A {unit} that opens on a
+            right-hand page may already have a blank in front of it, and asking for another changes nothing.
+          </p>
+        </>
+      )}
 
       {onDrawBox ? (
         <div className="layout-plate-pick">

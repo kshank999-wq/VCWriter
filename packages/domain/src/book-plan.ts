@@ -374,6 +374,19 @@ export interface BookBlock {
    */
   blankFor?: string;
   /**
+   * **This block is not a manuscript element** (§9s): it stands in for a
+   * section's missing heading (§9l), so its id names the *unit* rather than
+   * anything a writer can point at.
+   *
+   * It matters because `pagePlace` answers a press with the element a page
+   * opens with, and every act built on that answer — a blank leaf, a picture,
+   * a vector graphic — looks the id up in the manuscript. A stand-in's id is
+   * in no collection, so the act found nothing and **returned the document
+   * unchanged**: the page read as one that could not be edited at all, which
+   * is what Ken reported. Saying so here is how the reading skips it.
+   */
+  standsIn?: boolean;
+  /**
    * The copyright page's lines, built from its fields (§9k). The printer
    * draws these where they are given and falls back to `text` where they are
    * not, which is what keeps a page nobody has set exactly as it was.
@@ -1385,7 +1398,12 @@ export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock
     const block = index.get(piece.blockId);
     if (!block) continue;
     if (block.partId && !place.partId) place.partId = block.partId;
-    if (BODY_KINDS.has(block.kind) && !place.elementId) place.elementId = block.id;
+    // **Never a block that stands in for a missing heading** (§9s): its id
+    // names the unit, so every act built on this answer would look it up in
+    // the manuscript, find nothing and change nothing. The first *real*
+    // element is the answer, and what is anchored to it is emitted in front
+    // of the stand-in, so the whole opening moves on together.
+    if (BODY_KINDS.has(block.kind) && !block.standsIn && !place.elementId) place.elementId = block.id;
   }
   /**
    * **A page that only opens a chapter still has somewhere to put a picture**
@@ -1403,7 +1421,10 @@ export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock
     const at = page.pieces.findIndex((piece) => index.get(piece.blockId)?.kind === 'chapter_opening');
     if (at !== -1) {
       const from = blocks.findIndex((block) => block.id === page.pieces[at]!.blockId);
-      const next = blocks.slice(from + 1).find((block) => BODY_KINDS.has(block.kind));
+      // The first **real** element, for §9s's reason: a stand-in head names
+      // the unit, so answering with one sends every act looking for an
+      // element that is not there.
+      const next = blocks.slice(from + 1).find((block) => BODY_KINDS.has(block.kind) && !block.standsIn);
       if (next) place.elementId = next.id;
     }
   }
@@ -1806,6 +1827,12 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
     // to be: a section with a heading and one without both need a page the
     // rail can find, and the heading is not guaranteed.
     let atUnitHead = true;
+    /**
+     * A stand-in head held back while pictures that are pages of their own
+     * go in front of it (§9s). Flushed before the first block that is not
+     * one, and at the end of the unit, so it can never be lost.
+     */
+    let waiting: BookBlock | null = null;
     for (const beat of beatsInScript(file, unit.id)) {
       for (const element of beat.manuscript.elements) {
         // Already drawn, before the chapter opened (§9p).
@@ -1813,6 +1840,10 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
         if (element.text.trim().length === 0 && element.type !== 'scene_break' && element.type !== 'figure') continue;
         const made = elementBlock(element, chapterTitle, opensChapter && element.type === 'paragraph');
         if (!made) continue;
+        if (waiting && !(made.kind === 'figure' && figurePlacement(element).place === 'page')) {
+          out.push(waiting);
+          waiting = null;
+        }
         // A blank page the writer put in (§9i, from Ken: *insert a blank page
         // … and it will slide what was on that page to the next page*). It is
         // an attribute on the element the page opens with, so it moves with
@@ -1864,20 +1895,35 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
             // differently from every other is a fault whichever way it was
             // arrived at, and repairing the manuscript to fix a page is the
             // one thing this room may never do.
-            out.push(
-              block({
-                id: `${unit.id as string}:head`,
-                kind: 'heading',
-                numbering: 'arabic',
-                starts: 'page',
-                keepWithNext: true,
-                unbreakable: true,
-                text: sectionHeading,
-                spans: parseInline(sectionHeading),
-                chapterTitle,
-                unitId: unit.id as string,
-              }),
-            );
+            const stand = block({
+              id: `${unit.id as string}:head`,
+              kind: 'heading',
+              numbering: 'arabic',
+              starts: 'page',
+              keepWithNext: true,
+              unbreakable: true,
+              text: sectionHeading,
+              spans: parseInline(sectionHeading),
+              chapterTitle,
+              unitId: unit.id as string,
+              standsIn: true,
+            });
+            /**
+             * **A picture that is a page of its own opens the chapter**
+             * (§9s, from Ken: *I should be able to … put a blank page or a
+             * picture there … and then that page two goes to page three, so
+             * if I want to open with a picture, I can*).
+             *
+             * §9p settled this for a chapter with a marker; a chapter inside
+             * a story has none, so the stand-in was pushed first and the
+             * picture landed *after* the numeral. The head waits instead,
+             * which puts the leaf the reader meets first where they meet it.
+             */
+            if (made.kind === 'figure' && figurePlacement(element).place === 'page') {
+              waiting = stand;
+            } else {
+              out.push(stand);
+            }
             atUnitHead = false;
             opensChapter = true;
           }
@@ -1961,6 +2007,11 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
         if (made.kind === 'paragraph') opensChapter = false;
         out.push(made);
       }
+    }
+    // A section of nothing but pictures still prints its numeral (§9s).
+    if (waiting) {
+      out.push(waiting);
+      waiting = null;
     }
   }
   if (pending) out.push(pending);

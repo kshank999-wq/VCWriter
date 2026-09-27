@@ -2211,6 +2211,44 @@ push live; the build takes a minute or two.
   the half title, the copyright page, the contents and the back matter, and
   refused on the **title page**, whose predecessor is the half title's own
   blank back.
+  **§9s is the page that could not be edited**, from Ken in two reports with
+  **one cause**: *there still needs to be on the chapter page the option to
+  make the back of that page blank*, and *when I select page two and I try to
+  make it blank, that doesn't work… there's something about that opening
+  formatted page that doesn't allow you to edit it. It also doesn't allow me to
+  put a picture… I should be able to double click that page and put a blank
+  page or a picture there or a vector graphic. And then that page two goes to
+  page three. So if I want to open with a picture, I can.* §9l stands a
+  section's own title in where the manuscript carries no heading — a book
+  imported before §9j, which is his — and **the block it makes is not a
+  manuscript element**: its id names the *unit*. Headings are body blocks, so
+  `pagePlace` answered a press with the **stand-in**, and every act built on
+  that answer looks the id up in the manuscript (`setBlankPage` walks the three
+  collections, `placeFigure` finds the beat that holds the element) — so all of
+  them found nothing and **returned the document unchanged**. Not an error and
+  not a refusal: the page simply did not respond, which is why it read as one
+  nothing could be done to. `BookBlock` carries **`standsIn`** now and
+  `pagePlace` answers with the first **real** element, and two rules follow.
+  **What is anchored to it is emitted in front of the stand-in** — the blank
+  already was, so the leaf lands before the numeral and the whole opening moves
+  on together (*that page two goes to page three*), while a **page-figure** was
+  drawn after it, so the stand-in **waits** for the pictures in front of it and
+  is flushed before the first block that is not one (and at the end of the
+  unit, so a section of nothing but pictures still prints its numeral) — §9p's
+  rule for a chapter with a marker, said for a chapter without one. And
+  **§9p's own fallback had the same hole one page over**: a page carrying only
+  a chapter opening walks forward for the next body block, which on this book
+  is the *following* section's stand-in. Nothing a book **prints** changes;
+  this is a fix to what a page *answers*, pinned by a test that the stand-in is
+  still drawn, still three of them, still in the same place. The other half is
+  §15c and §16b's lesson a **fourth** time: §9r put both leaves on the Layout
+  room's **page panel** and not on the screen that *is* the chapter page — the
+  one *File ▸ Chapter page…* documents — so they are in `PagePlacementFields`
+  now, writing through that dialog's own `patch`, and the gate is the same one,
+  **`standsAlone` being a fact about the laid page**, so the dialog takes the
+  room's laid pages rather than keeping a second, coarser reading that could
+  disagree with the panel an inch away; opened over the workspace there are no
+  laid pages and the control is **shown rather than hidden** (§16c).
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

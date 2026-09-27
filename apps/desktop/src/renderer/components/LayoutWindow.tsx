@@ -1108,6 +1108,9 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           initialMarkerId={ownChapterPage}
           onClose={() => setOwnChapterPage(null)}
           onUpdate={onUpdate}
+          // The laid pages, so the dialog's back-of-the-leaf control asks the
+          // same reading this room's own page panel does (§9s).
+          laying={laying ? { pages: laying.laid.pages, blocks: laying.blocks } : null}
           // *Add custom graphic…* (§9d, from Ken: *the menu disappears and
           // allows you to draw a box where you want the graphic*). The dialog
           // goes, because a box is drawn on the page it is covering.
