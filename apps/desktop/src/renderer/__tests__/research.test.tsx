@@ -13,6 +13,8 @@ import {
   addTrack,
   addThread,
   addUnit,
+  updateBeat,
+  addBeat,
   castByCategory,
   createProjectFile,
   graveyard,
@@ -469,6 +471,59 @@ describe('the Character Creator in the menu', () => {
     file = updateCharacter(file, file.characters[0]!.id, { categoryId: main.id });
     render(<Harness initial={file} />);
     expect(heads()).toEqual([CHARACTER_TYPES.main, 'Not filed']);
+  });
+
+  /**
+   * **No `window.prompt` anywhere** (§4d, from Ken: *I added two new
+   * characters and neither of them show up*).
+   *
+   * Electron does not implement one — it writes *prompt() is and will not be
+   * supported.* to a console no writer sees and returns nothing — so on the
+   * desktop build the button did nothing at all. The test throws if anything
+   * reaches for it, which is the only way this cannot come back: a prompt
+   * works in the browser preview, which is exactly why it survived.
+   */
+  it('makes a character from a field, and never asks through the browser', () => {
+    const original = window.prompt;
+    window.prompt = () => {
+      throw new Error('window.prompt is not implemented in Electron');
+    };
+    try {
+      render(<Harness initial={cast()} />);
+      fireEvent.click(screen.getByRole('button', { name: '+ New character' }));
+      const field = screen.getByLabelText('Who?');
+      fireEvent.change(field, { target: { value: 'ADA' } });
+      fireEvent.submit(field);
+      // In the menu, and in the Creator the act opens them in.
+      expect(screen.getAllByText('ADA').length).toBeGreaterThan(0);
+    } finally {
+      window.prompt = original;
+    }
+  });
+
+  /**
+   * Getting the cast out of a script that arrived without one (§4d). Whatever
+   * happened at import, the script still says who speaks.
+   */
+  it('offers the names the script speaks and no record knows, then stops offering', () => {
+    let file = createProjectFile({ title: 'The Drowned Bell', format: 'screenplay' });
+    const unit = addUnit(file, { trackId: file.tracks[0]!.id, title: 'The pier' });
+    const beat = addBeat(unit.file, { unitId: unit.unit.id, title: 'The bell' });
+    file = updateBeat(beat.file, beat.beat.id, {
+      manuscript: {
+        elements: [
+          { id: 'e1' as never, type: 'character', text: 'MARA', attributes: {} },
+          { id: 'e2' as never, type: 'dialogue', text: 'It is rung.', attributes: {} },
+        ],
+      } as never,
+    });
+
+    render(<Harness initial={file} />);
+    const offer = screen.getByRole('button', { name: '+ Add 1 name from the script' });
+    fireEvent.click(offer);
+    expect(screen.getByText('MARA')).toBeTruthy();
+    // A reading: there is nobody left to add, so the offer goes.
+    expect(screen.queryByRole('button', { name: /from the script/ })).toBeNull();
   });
 
   /**

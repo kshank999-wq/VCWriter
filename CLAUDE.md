@@ -3455,7 +3455,7 @@ push live; the build takes a minute or two.
   harder than usual: **the handoff's own headline decision had already been
   made here independently**, its seven tabs having been four since addendum 08
   stage 2 for the same reasons. Seventeen more of its asks are standing under
-  another name. **All ten stages of §4 are built**; §4a says what each
+  another name. **All eleven stages of §4 are built**; §4a says what each
   does. Four decisions carry it. **The arc's shape is said *and* read** —
   addendum 08 §5 made it a reading and the handoff asks for a toggle, and both
   are right about different moments (an arc with no points has no shape to
@@ -3656,6 +3656,35 @@ push live; the build takes a minute or two.
   everything that characterizes somebody — those moments, the arc, the notes —
   and no one of them is a moment; the vocabulary test strips the rail and
   holds everywhere else.
+  **Stage 11 (§4d) is the cast that would not appear**, from Ken's bug report
+  (*the characters that are in the script are not recognized… and I added two
+  new characters and neither of them show up*). **The second half reproduced
+  and is one line**: *+ New character* asked with `window.prompt`, and
+  **Electron does not implement one** — it writes *prompt() is and will not be
+  supported.* to a console no writer sees and returns nothing — so on the
+  desktop build the button did nothing at all, silently, every time. It
+  survived because it works perfectly in the browser preview, which is where
+  it was driven. The rule it breaks is the room's own: **an act asks for what
+  it needs where it stands**, the way a folder, a trait, a story and an order
+  are named; the row *is* the act until pressed, Escape and an empty blur put
+  it away, Enter makes them and opens them. The copyright page's *Save as
+  preset…* had the same fault and went in the same change — **there is no
+  `window.prompt` left in the program**, and the test throws if anything
+  reaches for one, which is the only way it cannot come back. **The first half
+  did not reproduce**: driven through the real readers a Final Draft script
+  and a PDF at ordinary screenplay geometry both give up their cast and file
+  it, and the probe that said otherwise was **a fixture written in inches
+  where the reader wants points** — worth recording, since it nearly became a
+  bug report about working code. So the answer is the one that holds whatever
+  went wrong: **the script still says who speaks**. `cuesWithoutCharacter` has
+  answered *which names speak and have no record* since addendum 08 stage 13
+  and `notedCast` has filed them for longer; what was missing was anywhere to
+  press, so *+ Add 3 names from the script* stands under the cast, **absent
+  the moment there is nobody left to add**. One thing in the report is named
+  rather than fixed: the cast is under **Character Creator** while **Folders ▸
+  Characters** is a research shelf that will always read 0 for a cast, and two
+  things called Characters in one menu is a fair complaint that renaming
+  either would reach further than this fix should.
   §2 records
   where this diverges from the handoff and why; §5 is the one thing
   deliberately not built (§21's AI suggestions, which the handoff does not ask

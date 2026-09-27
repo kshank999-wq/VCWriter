@@ -17970,3 +17970,27 @@ dialog.designed-page-dialog[open] {
   font-size: 11px;
   letter-spacing: 0.04em;
 }
+
+/* Naming a character from the menu, and an order from the copyright page's
+   foot: a field where the press was. Both were `window.prompt`, which Electron
+   does not implement, so both buttons did nothing at all on the desktop build
+   (addendum 25 §4d). */
+.research-new-cast input {
+  width: 100%;
+  font-size: 12px;
+  padding: 4px 7px;
+  background: var(--ink);
+}
+
+.cr-name-order {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.cr-name-order input {
+  font-size: 12px;
+  padding: 4px 7px;
+  background: var(--ink);
+  min-width: 200px;
+}

@@ -117,10 +117,11 @@ Each stage ships on its own.
 8. **The restyle**, and a sweep of the module's vocabulary to *moment*.
 9. **The one-column card stack** (§4b), from Ken overruling stage 8.
 10. **What the record is called, and the left-hand list** (§4c), from Ken.
+11. **The cast that would not appear** (§4d), from Ken's bug report.
 
 ## 4a. What each built stage does
 
-**All ten are built.**
+**All eleven are built.**
 
 **Stage 1 — the record.** `role` (six chips offered, free text underneath),
 `background` behind a fold marked optional, and the writer's own fields as a
@@ -495,3 +496,47 @@ somebody — those moments, the arc, the notes — and no one of them is a
 moment. `creator-vocabulary.test.tsx` strips the rail and asserts the older
 word is nowhere else, so the sweep still holds over every screen it was
 written about.
+
+## 4d. The cast that would not appear
+
+**Stage 11**, from Ken: *the characters that are in the script are not
+recognized… and I added two new characters and neither of them show up.*
+
+**The second half reproduced exactly, and the cause is one line.**
+*+ New character* asked for the name with `window.prompt`, and **Electron does
+not implement one** — it writes *prompt() is and will not be supported.* to a
+console no writer ever sees and returns nothing. So on the desktop build the
+button did nothing at all, silently, every time. It survived because it works
+perfectly in the browser preview, which is where it was driven.
+
+The rule it breaks is the one the rest of the room already follows: **an act
+asks for what it needs where it stands** — a folder, a trait, a story and an
+order are all named in a field on the row that makes them. `NewCharacter` is
+that field: the row *is* the act until it is pressed, so the menu carries no
+box nobody is using, Escape and an empty blur put it away, and Enter makes
+them and opens them in the Creator. The copyright page's *Save as preset…* had
+the same fault and is fixed in the same change. **There is no `window.prompt`
+left in the program**, and the test throws if anything reaches for one, which
+is the only way this cannot come back: a prompt works in every environment a
+test runs in.
+
+**The first half did not reproduce.** Driven through the real readers, a Final
+Draft script and a PDF laid out at ordinary screenplay geometry both give up
+their cast and file it — the first probe that said otherwise was a fixture
+written in inches where the reader wants points, which is worth recording
+because it nearly became a bug report about working code. So rather than guess
+at which reader failed on a file nobody here has, the answer is the one that
+works whatever went wrong: **the script still says who speaks**.
+`cuesWithoutCharacter` has answered *which names speak and have no record*
+since addendum 08 stage 13, and `notedCast` has filed them since long before
+that; what was missing was anywhere to press. *+ Add 3 names from the script*
+now stands under the cast in the research menu, **absent the moment there is
+nobody left to add** — a reading, so it cannot offer what it would not do, and
+it says how many rather than promising something vague.
+
+There is a third thing in the report worth naming rather than fixing: *they
+don't show up under the character folders*. The cast is under **Character
+Creator** in the menu, while **Folders ▸ Characters** is a research shelf for
+notes and will always read 0 for a cast. Two things called Characters in one
+menu is a fair complaint, and it is left standing for now because renaming
+either one reaches further than this fix should.

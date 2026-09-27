@@ -88,6 +88,9 @@ export function CopyrightPageDialog({ file, part, onUpdate, onClose, onPickBarco
   /** A file is over the barcode's box, so it says it will take one. */
   const [dropping, setDropping] = useState(false);
   const [said, setSaid] = useState('');
+  /** Naming an order to keep — a field in the foot, never a browser prompt. */
+  const [naming, setNaming] = useState(false);
+  const [orderName, setOrderName] = useState('');
 
   useEffect(() => {
     const node = ref.current;
@@ -503,27 +506,53 @@ export function CopyrightPageDialog({ file, part, onUpdate, onClose, onPickBarco
         {/* Keeping this order to use again (§15b, the handoff's *Save as
             preset…*). It saves the **arrangement** and never the words: an
             order is a house style and a copyright notice is one book's. */}
-        <button
-          type="button"
-          className="raised small"
-          onClick={() => {
-            const named = window.prompt('Call this order what?');
-            const name = (named ?? '').trim();
-            if (name.length === 0) return;
-            const made = savedCopyrightPreset(page, style.align, name);
-            onUpdate((current) => {
-              const kept = (bookSettingsOf(current).copyrightPresets ?? []).filter((one) => one.id !== made.id);
-              // The stored shape is the readable one made mutable: a preset
-              // is handed round read-only and written down as plain arrays.
-              return setBookSettings(current, {
-                copyrightPresets: [...kept, { ...made, order: [...made.order], hidden: [...made.hidden] }],
+        {/* **A form, not `window.prompt`** — the same fault the research
+            menu's *+ New character* had (§4d): Electron implements no prompt,
+            so on the desktop build this button did nothing at all and said so
+            only in a console. Asking in the foot, where the press was, is what
+            the rest of the program does. */}
+        {naming ? (
+          <form
+            className="cr-name-order"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const name = orderName.trim();
+              setOrderName('');
+              setNaming(false);
+              if (name.length === 0) return;
+              const made = savedCopyrightPreset(page, style.align, name);
+              onUpdate((current) => {
+                const kept = (bookSettingsOf(current).copyrightPresets ?? []).filter((one) => one.id !== made.id);
+                // The stored shape is the readable one made mutable: a preset
+                // is handed round read-only and written down as plain arrays.
+                return setBookSettings(current, {
+                  copyrightPresets: [...kept, { ...made, order: [...made.order], hidden: [...made.hidden] }],
+                });
               });
-            });
-            setSaid(`${name} saved as an order you can use again`);
-          }}
-        >
-          Save as preset…
-        </button>
+              setSaid(`${name} saved as an order you can use again`);
+            }}
+          >
+            <input
+              aria-label="Call this order what?"
+              placeholder="Call this order what?"
+              autoFocus
+              value={orderName}
+              onChange={(event) => setOrderName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== 'Escape') return;
+                setOrderName('');
+                setNaming(false);
+              }}
+            />
+            <button type="submit" className="raised small">
+              Save
+            </button>
+          </form>
+        ) : (
+          <button type="button" className="raised small" onClick={() => setNaming(true)}>
+            Save as preset…
+          </button>
+        )}
         <span className="muted small">Every change is kept as you make it.</span>
       </div>
       <p aria-live="polite" className="visually-hidden">

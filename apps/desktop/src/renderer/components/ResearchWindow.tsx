@@ -16,6 +16,8 @@ import {
   addResearchItem,
   approveCapture,
   castByCategory,
+  cuesWithoutCharacter,
+  notedCast,
   characterBoard,
   inboxGroups,
   rejectCapture,
@@ -313,6 +315,12 @@ export function ResearchBody({
   const cast = useMemo(() => groups.flatMap((group) => group.characters), [groups]);
   /** Has anybody a type at all? Until somebody has, the list is just a list. */
   const typed = useMemo(() => groups.some((group) => group.category !== null), [groups]);
+  /**
+   * Names that speak in the manuscript and have no character record (§4d).
+   * `cuesWithoutCharacter` has answered this since addendum 08 stage 13; what
+   * was missing was anywhere to act on it.
+   */
+  const unknownCues = useMemo(() => cuesWithoutCharacter(file), [file]);
 
   /**
    * How much is waiting on each of them, read off the usage links like
@@ -617,25 +625,51 @@ export function ResearchBody({
               ))}
               <ul className="research-views">
                 <li>
-                  <button
-                    type="button"
-                    className="folder-row"
-                    title="Make a character and open them in the Creator"
-                    onClick={() => {
-                      const named = window.prompt('Who?');
-                      const name = (named ?? '').trim();
-                      if (name.length === 0) return;
+                  {/* **A form, not `window.prompt`.**
+
+                      It was a prompt, and **Electron does not implement one**
+                      — it writes *prompt() is and will not be supported.* to a
+                      console no writer sees and returns nothing — so on the
+                      desktop build this button did nothing at all, silently.
+                      That is Ken's report: *I added two new characters and
+                      neither of them show up.* In the browser preview it
+                      worked, which is why it survived.
+
+                      The rule it breaks is the one the whole room follows
+                      anyway: **an act asks for what it needs where it stands**,
+                      the way a folder, a trait and a story are named. */}
+                  <NewCharacter
+                    onMake={(name) =>
                       onUpdate((current) => {
                         const made = addCharacter(current, { name });
                         const person = made.characters[made.characters.length - 1];
                         if (person) setSelection({ kind: 'creator', id: person.id });
                         return made;
-                      });
-                    }}
-                  >
-                    <span className="folder-name">+ New character</span>
-                  </button>
+                      })
+                    }
+                  />
                 </li>
+                {/* **The cast the script already names** (§4d). Whatever
+                    happened at import — a document read as prose, a PDF with
+                    no geometry to read, a cue style the reader did not know —
+                    the script itself still says who speaks, and this files
+                    them. It is a **reading**, so it is absent the moment there
+                    is nobody left to add, and it says how many rather than
+                    promising something it may not do. */}
+                {unknownCues.length > 0 ? (
+                  <li>
+                    <button
+                      type="button"
+                      className="folder-row"
+                      title="Every name that speaks in the script and has no record yet"
+                      onClick={() => onUpdate((current) => notedCast(current))}
+                    >
+                      <span className="folder-name">
+                        + {unknownCues.length === 1 ? 'Add 1 name from the script' : `Add ${unknownCues.length} names from the script`}
+                      </span>
+                    </button>
+                  </li>
+                ) : null}
                 {/* Where the deleted ones went, said **here** rather than
                     only at the foot of the menu: somebody who has just lost
                     a cast is looking at where it used to be. */}
@@ -1118,6 +1152,68 @@ const flatten = (folders: ResearchFolder[]): ResearchFolder[] =>
  * opens them, the × waits until the row is pointed at, and it asks in the
  * graveyard's words rather than this menu's.
  */
+/**
+ * Making a character, from the menu (§4d).
+ *
+ * A form of its own rather than a `window.prompt`, which Electron does not
+ * implement — see the call site. It is **its own component** because a
+ * component declared inside another is a new type on every render, and the
+ * `<input>` a writer is typing into is thrown away with the caret in it
+ * (addendum 20 §16e).
+ *
+ * The row **is** the act until it is pressed, so the menu does not carry a box
+ * nobody is using: pressing *+ New character* opens the field, Escape and an
+ * empty blur put it away, and Enter makes them and opens them in the Creator.
+ */
+function NewCharacter({ onMake }: { onMake(name: string): void }) {
+  const [naming, setNaming] = useState(false);
+  const [name, setName] = useState('');
+
+  const done = () => {
+    const wanted = name.trim();
+    setName('');
+    setNaming(false);
+    if (wanted.length > 0) onMake(wanted);
+  };
+
+  if (!naming) {
+    return (
+      <button
+        type="button"
+        className="folder-row"
+        title="Make a character and open them in the Creator"
+        onClick={() => setNaming(true)}
+      >
+        <span className="folder-name">+ New character</span>
+      </button>
+    );
+  }
+
+  return (
+    <form
+      className="research-new-cast"
+      onSubmit={(event) => {
+        event.preventDefault();
+        done();
+      }}
+    >
+      <input
+        aria-label="Who?"
+        placeholder="Who?"
+        autoFocus
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        onBlur={done}
+        onKeyDown={(event) => {
+          if (event.key !== 'Escape') return;
+          setName('');
+          setNaming(false);
+        }}
+      />
+    </form>
+  );
+}
+
 function CastMenuRow({
   file,
   person,
