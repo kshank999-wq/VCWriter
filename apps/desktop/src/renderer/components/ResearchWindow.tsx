@@ -68,7 +68,7 @@ import { CastPanel } from './CastPanel';
 import { CharacterCreator, type CreatorTab } from './CharacterCreator';
 import { CharacterMap } from './CharacterMap';
 import { MobileInbox } from './MobileInbox';
-import { CharacterReview } from './CharacterReview';
+import { CharacterReview, type ReviewMode } from './CharacterReview';
 import { useModal } from '../use-modal';
 
 interface ResearchWindowProps {
@@ -219,6 +219,12 @@ export function ResearchBody({
    * somewhere plausible. Opening from the map should return to the map.
    */
   const [cameFrom, setCameFrom] = useState<Selection | null>(null);
+  /**
+   * The mode and the person the review was asked to open on (addendum 25 §3).
+   * Held here rather than in the review, because the ask comes from another
+   * screen and the review is unmounted between the two.
+   */
+  const [reviewOn, setReviewOn] = useState<{ mode: ReviewMode; characterId: CharacterId } | null>(null);
   /**
    * The tab each person was last left on.
    *
@@ -758,7 +764,12 @@ export function ResearchBody({
                   <button
                     type="button"
                     className={selection.kind === 'review' ? 'folder-row selected' : 'folder-row'}
-                    onClick={() => setSelection({ kind: 'review' })}
+                    onClick={() => {
+                      // Off the menu it is the review's own opening reading,
+                      // rather than whatever somebody last asked it for.
+                      setReviewOn(null);
+                      setSelection({ kind: 'review' });
+                    }}
                   >
                     <span className="folder-name">Character review</span>
                     <span className="count muted">
@@ -840,6 +851,11 @@ export function ResearchBody({
               tab={tabFor[creator.id as string] ?? 'overview'}
               onTab={(next) => setTabFor((current) => ({ ...current, [creator.id as string]: next }))}
               onUpdate={onUpdate}
+              onReview={(mode) => {
+                setReviewOn({ mode, characterId: creator.id });
+                setCameFrom({ kind: 'creator', id: creator.id });
+                setSelection({ kind: 'review' });
+              }}
               onBack={() => setSelection(cameFrom ?? { kind: 'view', view: 'all' })}
             />
           ) : (
@@ -892,7 +908,7 @@ export function ResearchBody({
               onRefresh={() => void loadCaptures()}
             />
           ) : selection.kind === 'review' ? (
-            <CharacterReview file={file} onOpenCreator={openCreator} />
+            <CharacterReview file={file} onOpenCreator={openCreator} openOn={reviewOn} />
           ) : selection.kind === 'charmap' ? (
             <CharacterMap
               file={file}

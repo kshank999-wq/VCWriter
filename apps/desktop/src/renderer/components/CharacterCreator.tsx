@@ -2,6 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ARC_LINK_VERBS,
   CHARACTER_ROLES,
+  MOMENT_FILTERS,
+  MOMENT_FILTER_WORDS,
+  UP_NEXT_LIMIT,
+  conflictsFor,
+  describeConflicts,
+  filterBoard,
+  setConflict,
+  characterGlance,
+  describeUpNext,
+  glancePills,
+  upNext,
   ARC_LINK_VERB_NAMES,
   ARC_POINT_KINDS,
   ARC_POINT_NAMES,
@@ -67,6 +78,10 @@ import {
   type CharacterTraitId,
   type CharacterizationItemId,
   type CharacterizationRow,
+  type Glance,
+  type MomentFilter,
+  type NextStep,
+  type NextWhere,
   type ManuscriptElementId,
   type ProjectFile,
   type RailBlock,
@@ -121,6 +136,13 @@ interface CharacterCreatorProps {
    */
   tab?: CreatorTab;
   onTab?(tab: CreatorTab): void;
+  /**
+   * Into the Character review, on a mode, filtered to this person (addendum
+   * 25 §3). The handoff's two buttons are **routes to readings that already
+   * exist** rather than reports of their own. Absent where the Creator is
+   * opened somewhere the review cannot be reached.
+   */
+  onReview?(mode: 'story' | 'deck'): void;
   /** Back to wherever this was opened from. */
   onBack(): void;
 }
@@ -142,6 +164,7 @@ export function CharacterCreator({
   characterId,
   currentBeatId,
   backLabel = 'Cast',
+  onReview,
   tab: tabFromOwner,
   onTab,
   onUpdate,
@@ -156,6 +179,12 @@ export function CharacterCreator({
     onTab?.(next);
   };
   const [shelf, setShelf] = useState<Shelf | null>(null);
+  /**
+   * The filter bar (addendum 25 §3). Held here rather than per trait, because
+   * it is a question about the whole screen — *what is still on deck* — and a
+   * writer asks it once and reads down.
+   */
+  const [filter, setFilter] = useState<MomentFilter>('all');
 
   /**
    * What the rail asked to open, and the whole of why clicking a red row is
@@ -175,6 +204,13 @@ export function CharacterCreator({
     () => characterRail({ characterId: characterId as string, file }),
     [characterId, file],
   );
+  /** The Overview's two cards, and the header's pills (addendum 25 §3). */
+  const glance = useMemo(
+    () => characterGlance({ characterId: characterId as string, file }),
+    [characterId, file],
+  );
+  const pills = glancePills(glance);
+  const steps = useMemo(() => upNext({ characterId: characterId as string, file }), [characterId, file]);
 
   if (!person) {
     return (
@@ -189,8 +225,15 @@ export function CharacterCreator({
   const chosen: Shelf =
     shelf ??
     (board.traits[0] ? { kind: 'trait', id: board.traits[0].trait.id } : { kind: 'unfiled' });
-  const openTrait = chosen.kind === 'trait' ? board.traits.find((entry) => entry.trait.id === chosen.id) : null;
-  const rows: CharacterizationRow[] = openTrait ? openTrait.items : chosen.kind === 'unfiled' ? board.unfiled : [];
+  /** The board as the filter bar leaves it (addendum 25 §3). */
+  const shownBoard = useMemo(() => filterBoard(board, filter), [board, filter]);
+  const openTrait =
+    chosen.kind === 'trait' ? shownBoard.traits.find((entry) => entry.trait.id === chosen.id) : null;
+  const rows: CharacterizationRow[] = openTrait
+    ? openTrait.items
+    : chosen.kind === 'unfiled'
+      ? shownBoard.unfiled
+      : [];
 
   return (
     <div className="creator">
@@ -209,7 +252,21 @@ export function CharacterCreator({
             they work on the traits, the arc or the map. Absent where none is
             set — a chip reading nothing says nothing. */}
         {person.role.trim() ? <span className="creator-role-chip">{person.role.trim()}</span> : null}
-        <span className="muted small creator-standing">{characterStanding(board)}</span>
+        {/* The pills (addendum 25 §3): the two counts and the arc, on every
+            tab, read off the usage links every time. `characterStanding` says
+            the same thing in a sentence and stays as the title, so a reader
+            who cannot tell a green dot from a red one still has the words. */}
+        <span className="creator-pills" title={characterStanding(board)}>
+          <span className="creator-pill is-in">
+            <i className="creator-dot is-in" />
+            {pills.used}
+          </span>
+          <span className="creator-pill is-deck">
+            <i className="creator-dot is-deck" />
+            {pills.onDeck}
+          </span>
+          {pills.arc ? <span className="creator-pill">{pills.arc}</span> : null}
+        </span>
       </header>
 
       <nav className="creator-tabs" aria-label="Character">
@@ -236,7 +293,19 @@ export function CharacterCreator({
       <div className="creator-body">
         <div className="creator-main">
           {tab === 'overview' ? (
-            <Overview file={file} characterId={characterId} onUpdate={onUpdate} />
+            <Overview
+              file={file}
+              characterId={characterId}
+              glance={glance}
+              steps={steps}
+              onUpdate={onUpdate}
+              onGo={(where) => {
+                if (where.tab === 'traits' && where.traitId) setShelf({ kind: 'trait', id: where.traitId as CharacterTraitId });
+                if (where.tab === 'traits' && !where.traitId) setShelf({ kind: 'unfiled' });
+                setTab(where.tab);
+              }}
+              {...(onReview ? { onReview } : {})}
+            />
           ) : tab === 'relationships' ? (
             <Relationships file={file} characterId={characterId} onUpdate={onUpdate} />
           ) : tab === 'arc' ? (
@@ -249,11 +318,37 @@ export function CharacterCreator({
               onUpdate={onUpdate}
             />
           ) : (
+            <>
+            {/* All / Used / On deck / Retired (addendum 25 §3). The counts are
+                the **whole** character's whichever is chosen: those numbers are
+                what the writer is choosing between, and a bar whose own figures
+                changed as it was pressed would be unreadable. */}
+            <nav className="creator-filter" aria-label="Which moments">
+              {MOMENT_FILTERS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={filter === key ? 'creator-filter-tab on' : 'creator-filter-tab'}
+                  aria-pressed={filter === key}
+                  onClick={() => setFilter(key)}
+                >
+                  {key === 'all' ? null : (
+                    <i className={`creator-dot ${DOT_CLASS[key === 'used' ? 'green' : key === 'on_deck' ? 'red' : 'grey']}`} />
+                  )}
+                  {MOMENT_FILTER_WORDS[key]}
+                  {key === 'all' ? null : (
+                    <span className="muted">
+                      {key === 'used' ? board.counts.shown : key === 'on_deck' ? board.counts.onDeck : board.counts.setAside}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </nav>
             <div className="creator-traits">
               <Traits
                 file={file}
                 characterId={characterId}
-                board={board}
+                board={shownBoard}
                 chosen={chosen}
                 onChoose={setShelf}
                 onUpdate={onUpdate}
@@ -272,6 +367,7 @@ export function CharacterCreator({
                 onUpdate={onUpdate}
               />
             </div>
+            </>
           )}
         </div>
 
@@ -414,10 +510,18 @@ function Rail({
 function Overview({
   file,
   characterId,
+  glance,
+  steps,
+  onGo,
+  onReview,
   onUpdate,
 }: {
   file: ProjectFile;
   characterId: CharacterId;
+  glance: Glance;
+  steps: readonly NextStep[];
+  onGo(where: NextWhere): void;
+  onReview?(mode: 'story' | 'deck'): void;
   onUpdate: CharacterCreatorProps['onUpdate'];
 }) {
   const person = file.characters.find((one) => one.id === characterId)!;
@@ -444,6 +548,7 @@ function Overview({
 
   return (
     <div className="creator-overview">
+      <div className="creator-record">
       <div className="creator-pair">
         {/* The same field the header edits (§16d: one value, two doors). A
             writer reading the record expects the name in it. */}
@@ -653,7 +758,124 @@ function Overview({
           + Add field
         </button>
       </div>
+      </div>
+
+      <aside className="creator-cards" aria-label="At a glance">
+        <AtAGlance glance={glance} />
+        <UpNext steps={steps} onGo={onGo} />
+        {/* **Routes to readings that already exist** (addendum 25 §3): both
+            are modes of the Character review, filtered to this person, rather
+            than reports of their own. Absent where the review cannot be
+            reached from here. */}
+        {onReview ? (
+          <div className="creator-card-acts">
+            <button type="button" className="small" onClick={() => onReview('story')}>
+              Review in story order
+            </button>
+            <button type="button" className="small" onClick={() => onReview('deck')}>
+              Unused material report
+            </button>
+          </div>
+        ) : null}
+      </aside>
     </div>
+  );
+}
+
+/**
+ * The bar, the line and the faces (addendum 25 §3, the handoff's *At a
+ * glance*). Every figure on it is `characterGlance`, read every time.
+ */
+function AtAGlance({ glance }: { glance: Glance }) {
+  const total = glance.moments.used + glance.moments.onDeck;
+  const share = total === 0 ? 0 : Math.round((glance.moments.used / total) * 100);
+  return (
+    <section className="creator-card">
+      <h3>At a glance</h3>
+      <div className="creator-card-row">
+        <span className="creator-card-label">Moments</span>
+        <span className="muted small">
+          {total === 0 ? 'None yet' : `${glance.moments.used} used · ${glance.moments.onDeck} on deck`}
+        </span>
+      </div>
+      {/* A bar with nothing in it is a bar that lies about being measured. */}
+      {total === 0 ? null : (
+        <div className="creator-bar" role="img" aria-label={`${share}% of their moments are in the writing`}>
+          <span className="creator-bar-in" style={{ width: `${share}%` }} />
+        </div>
+      )}
+      <div className="creator-card-row">
+        <span className="creator-card-label">Arc points in the story</span>
+        <span className="muted small">
+          {glance.arc.total === 0 ? 'No arc yet' : `${glance.arc.placed} of ${glance.arc.total}`}
+        </span>
+      </div>
+      {glance.arc.total === 0 ? null : (
+        <div className="creator-sparks" aria-hidden="true">
+          {glance.arc.dots.map((colour, at) => (
+            <i key={at} className={`creator-dot ${DOT_CLASS[colour]}`} />
+          ))}
+        </div>
+      )}
+      <div className="creator-card-row">
+        <span className="creator-card-label">Relationships</span>
+        {glance.people.length === 0 ? (
+          <span className="muted small">Nobody yet</span>
+        ) : (
+          <span className="creator-faces">
+            {glance.people.map((one) => (
+              <i key={one.id} className="creator-face" style={{ background: one.colour }} title={one.name}>
+                {initials(one.name)}
+              </i>
+            ))}
+          </span>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** Two letters for a face, which is what the handoff draws. */
+const initials = (name: string): string =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? '')
+    .join('');
+
+/**
+ * What there is to do next (addendum 25 §3, the handoff's *Up next*).
+ *
+ * **It offers and never warns**: every line is a fact plus a way to act on
+ * it, because a character with things on deck is in the middle of the work
+ * rather than behind on it.
+ */
+function UpNext({ steps, onGo }: { steps: readonly NextStep[]; onGo(where: NextWhere): void }) {
+  const shown = steps.slice(0, UP_NEXT_LIMIT);
+  const more = describeUpNext(steps);
+  return (
+    <section className="creator-card">
+      <h3>Up next</h3>
+      {shown.length === 0 ? (
+        <p className="muted small">{more}</p>
+      ) : (
+        <ul className="creator-next">
+          {shown.map((step, at) => (
+            <li key={`${step.kind}-${at}`}>
+              <i className={step.waiting ? 'creator-ring is-deck' : 'creator-ring'} aria-hidden="true" />
+              <span>
+                {step.text}{' '}
+                <button type="button" className="link-button" onClick={() => onGo(step.where)}>
+                  {step.act}
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {shown.length > 0 && more ? <p className="muted small">{more}</p> : null}
+    </section>
   );
 }
 
@@ -699,6 +921,8 @@ function Traits({
         <ul className="creator-trait-list">
           {board.traits.map((entry) => {
             const selected = chosen.kind === 'trait' && chosen.id === entry.trait.id;
+            const used = entry.items.filter((row) => row.colour === 'green').length;
+            const waiting = entry.items.filter((row) => row.colour === 'red').length;
             return (
               <li key={entry.trait.id}>
                 <button
@@ -708,9 +932,29 @@ function Traits({
                   onClick={() => onChoose({ kind: 'trait', id: entry.trait.id })}
                 >
                   <span className="folder-name">{entry.trait.name}</span>
-                  {/* An empty trait is an unfinished thought, not an error, so
-                      it says so quietly rather than wearing a zero. */}
-                  <span className="count muted">{entry.unshown ? '—' : entry.items.length}</span>
+                  {/* **The red count, on every row** (addendum 25 §1: *red
+                      counts appear everywhere, so unused material is always
+                      visible as a to-do list*). An empty trait is an
+                      unfinished thought, not an error, so it says so quietly
+                      rather than wearing a pair of zeros. */}
+                  {entry.unshown ? (
+                    <span className="count muted">—</span>
+                  ) : (
+                    <span className="creator-row-counts">
+                      {used > 0 ? (
+                        <span className="creator-count is-in">
+                          <i className="creator-dot is-in" />
+                          {used}
+                        </span>
+                      ) : null}
+                      {waiting > 0 ? (
+                        <span className="creator-count is-deck">
+                          <i className="creator-dot is-deck" />
+                          {waiting}
+                        </span>
+                      ) : null}
+                    </span>
+                  )}
                 </button>
               </li>
             );
@@ -805,6 +1049,9 @@ function Shown({
   const traits = file.characterTraits.filter(
     (one) => (one.characterId as string) === (characterId as string) && !one.archived,
   );
+  /** Who this one pulls against, read both ways (addendum 25 §3). */
+  const against = trait ? conflictsFor(traits, trait.id as string) : [];
+  const others = trait ? traits.filter((one) => one.id !== trait.id) : [];
 
   const add = () => {
     const text = adding.trim();
@@ -880,6 +1127,36 @@ function Shown({
               ))}
             </select>
           </label>
+          {/* **Pulls against** (addendum 25 §3, the handoff's chip). The spec
+              asks for contradictory traits to be allowed, and allowing them is
+              not the same as being able to say so — a writer who has written
+              *Miserly* and *Secretly sentimental* knows the pair is the
+              character. Said once, read both ways, so it appears on both
+              cards and taking it off either takes it off both. Absent where
+              there is nobody to pull against. */}
+          {others.length > 0 ? (
+            <label className="creator-inline-field">
+              <span className="muted small">Pulls against</span>
+              <select
+                aria-label="Pulls against"
+                value=""
+                onChange={(event) => {
+                  const other = event.target.value as CharacterTraitId;
+                  if (!other) return;
+                  onUpdate((current) => setConflict(current, trait.id, other, true));
+                }}
+              >
+                <option value="">Add one…</option>
+                {others
+                  .filter((one) => !against.some((pair) => pair.id === one.id))
+                  .map((one) => (
+                    <option key={one.id} value={one.id}>
+                      {one.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          ) : null}
           <button
             type="button"
             className="ghost small"
@@ -898,6 +1175,24 @@ function Shown({
           </span>
         </header>
       )}
+
+      {trait && against.length > 0 ? (
+        <p className="creator-pulls">
+          {against.map((one) => (
+            <span key={one.id} className="creator-pull">
+              {describeConflicts([one])}
+              <button
+                type="button"
+                className="ghost small"
+                aria-label={`Stop saying it pulls against ${one.name}`}
+                onClick={() => onUpdate((current) => setConflict(current, trait.id, one.id, false))}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </p>
+      ) : null}
 
       {trait ? (
         <input
@@ -919,14 +1214,28 @@ function Shown({
             <li key={row.item.id} className={`creator-item ${DOT_CLASS[row.colour]}`}>
               <div className="creator-item-row">
               <i className={`creator-dot ${DOT_CLASS[row.colour]}`} title={USAGE_WORDS[row.colour]} />
-              <InlineText
-                value={row.item.text}
-                ariaLabel="How it shows"
-                className="creator-item-text"
-                onCommit={(text) =>
-                  onUpdate((current) => updateCharacterization(current, row.item.id, { text }))
-                }
-              />
+              {/* The badge rides **inside the words' cell** rather than
+                  taking a column of its own: the row is a grid, and an item
+                  some rows have and others do not would put every following
+                  control in a different column from one line to the next. */}
+              <span className="creator-item-said">
+                <InlineText
+                  value={row.item.text}
+                  ariaLabel="How it shows"
+                  className="creator-item-text"
+                  onCommit={(text) =>
+                    onUpdate((current) => updateCharacterization(current, row.item.id, { text }))
+                  }
+                />
+                {/* Noticed rather than invented (addendum 25 §3). A badge and
+                    never a status: it is used or on deck by the same rule as
+                    everything else here. */}
+                {row.item.found ? (
+                  <span className="creator-found" title="It came out of the manuscript">
+                    found while writing
+                  </span>
+                ) : null}
+              </span>
               {/* The state is the way in to where it landed: the question a
                   colour raises is *where*, so the colour answers it. */}
               <button

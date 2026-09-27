@@ -48,9 +48,17 @@ import {
 interface CharacterReviewProps {
   file: ProjectFile;
   onOpenCreator(characterId: CharacterId): void;
+  /**
+   * Opened from somebody's Overview (addendum 25 §3): *Review in story order*
+   * and *Unused material report* are **routes to modes that already exist**
+   * rather than screens of their own, filtered to the person they were
+   * pressed from. Absent on every other way in.
+   */
+  openOn?: { mode: ReviewMode; characterId: CharacterId } | null;
 }
 
-type Mode = 'script' | 'story' | 'deck' | 'continuity';
+export type ReviewMode = 'script' | 'story' | 'deck' | 'continuity';
+type Mode = ReviewMode;
 
 const DOT_CLASS: Record<UsageColour, string> = {
   green: 'is-in',
@@ -60,12 +68,13 @@ const DOT_CLASS: Record<UsageColour, string> = {
 
 const STANDINGS: ReadonlyArray<WorkStanding> = ['in_the_writing', 'on_deck', 'set_aside'];
 
-export function CharacterReview({ file, onOpenCreator }: CharacterReviewProps) {
+export function CharacterReview({ file, onOpenCreator, openOn = null }: CharacterReviewProps) {
   // Opens on the script, which is the reading that has something in it before
   // anybody has written a trait down — and on most projects that is all of them.
-  const [mode, setMode] = useState<Mode>('script');
+  // Unless somebody asked for a mode on the way in.
+  const [mode, setMode] = useState<Mode>(openOn?.mode ?? 'script');
   const [query, setQuery] = useState('');
-  const [characterId, setCharacterId] = useState<CharacterId | ''>('');
+  const [characterId, setCharacterId] = useState<CharacterId | ''>(openOn?.characterId ?? '');
   const [traitId, setTraitId] = useState<CharacterTraitId | ''>('');
   const [standing, setStanding] = useState<WorkStanding | ''>('');
   const [arcKind, setArcKind] = useState<ArcPointKind | ''>('');

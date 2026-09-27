@@ -47,6 +47,31 @@ export const CHARACTER_COLOURS = [
 export const characterColour = (position: number): string =>
   CHARACTER_COLOURS[position % CHARACTER_COLOURS.length] as string;
 
+/**
+ * Everybody's colour, keyed by their name in capitals (addendum 25 §2).
+ *
+ * **Read rather than stored**, which is why the handoff's `avatarColor` on
+ * the record is not built: a new character would arrive with no colour until
+ * somebody picked one, and the timeline, the threads and the Creator's own
+ * avatars would each be free to answer differently. This is the one place
+ * that decides, and the order is the one the threads have always used —
+ * whoever speaks first, then the rest of the working cast, so a character's
+ * first line does not reshuffle everybody else.
+ */
+export const castColours = (file: ProjectFile, layout?: StoryLayout): Map<string, string> => {
+  const order: string[] = [];
+  for (const span of (layout ?? storyLayout(file)).spans) {
+    for (const beat of beatsForUnit(file, span.unit.id)) {
+      for (const name of speakersIn(beat)) if (!order.includes(name)) order.push(name);
+    }
+  }
+  for (const character of workingCast(file)) {
+    const name = character.name.trim().toUpperCase();
+    if (name.length > 0 && !order.includes(name)) order.push(name);
+  }
+  return new Map(order.map((name, position) => [name, characterColour(position)]));
+};
+
 export interface CharacterAppearance {
   /** Story index of the scene. */
   index: number;
@@ -117,13 +142,11 @@ export const threadLayout = (
 
   // Characters the writer has created but who have not spoken yet still get
   // a colour, after those who have, so their first line does not reshuffle
-  // everyone else.
-  for (const character of workingCast(file)) {
-    const name = character.name.trim().toUpperCase();
-    if (name.length > 0 && !order.includes(name)) order.push(name);
-  }
+  // everyone else. `castColours` is the one reading that decides (§2), and
+  // this asks it rather than keeping a second copy of the order.
+  const colours = castColours(file, layout);
+  for (const name of colours.keys()) if (!order.includes(name)) order.push(name);
 
-  const colours = new Map(order.map((name, position) => [name, characterColour(position)]));
   const characters: CharacterThread[] = order
     .filter((name) => (appearances.get(name) ?? []).length > 0)
     .map((name) => ({ name, color: colours.get(name) as string, appearances: appearances.get(name) ?? [] }));

@@ -83,6 +83,21 @@ export const characterTraitSchema = z.object({
   tone: traitToneSchema.default('unsaid'),
   /** Why it matters — the thing that makes the trait worth dramatising. */
   notes: z.string().default(''),
+  /**
+   * Traits of this person's that this one **pulls against** (addendum 25 §3,
+   * the handoff's *pulls against Miserly*).
+   *
+   * The spec asks for contradictory traits to be allowed, and allowing them
+   * is not the same as being able to say so: a writer who has written
+   * *Miserly* and *Secretly sentimental* knows the pair is the character, and
+   * the screen should know it too.
+   *
+   * **It is said once and read both ways.** Storing it on both traits would
+   * be two records of one fact, free to disagree the moment one is edited —
+   * so `conflictsFor` reads a trait's own list and everybody else's, and the
+   * chip appears on both cards from the one thing that was said.
+   */
+  conflictsWith: z.array(z.string()).default([]),
   orderKey: orderKey(),
   archived: z.boolean().default(false),
   ...timestamps,
@@ -114,6 +129,21 @@ export const characterizationItemSchema = z.object({
    * nagging about a decision already made.
    */
   retired: z.boolean().default(false),
+  /**
+   * It came out of the manuscript rather than being planned (addendum 25 §3,
+   * the handoff's *found while writing* badge).
+   *
+   * **Not called `origin`**, which the handoff's data model does: `origin` on
+   * a record has meant *who made it, in a room* since addendum 07 stage 4,
+   * and addendum 16 §2 had to separate `source` from it for the same reason.
+   *
+   * And it is **a fact about where it came from, never a status**: a planned
+   * moment and a found one are the same kind of thing, and both are used or
+   * on deck by the same rule (§2). What the badge says is *this one was
+   * noticed rather than invented*, which is worth knowing and changes
+   * nothing.
+   */
+  found: z.boolean().default(false),
   orderKey: orderKey(),
   ...timestamps,
 });
@@ -607,6 +637,116 @@ export const characterBoard = (input: {
   };
 };
 
+// ------------------------------------------------ the filter, and the pairs
+
+/** The four the handoff's bar offers (addendum 25 §3). */
+export const MOMENT_FILTERS = ['all', 'used', 'on_deck', 'retired'] as const;
+export type MomentFilter = (typeof MOMENT_FILTERS)[number];
+
+export const MOMENT_FILTER_WORDS: Record<MomentFilter, string> = {
+  all: 'All',
+  used: 'Used',
+  on_deck: 'On deck',
+  retired: 'Retired',
+};
+
+/** Which colour each filter keeps. `all` keeps everything. */
+const FILTER_COLOUR: Record<MomentFilter, UsageColour | null> = {
+  all: null,
+  used: 'green',
+  on_deck: 'red',
+  retired: 'grey',
+};
+
+/**
+ * The board narrowed to one filter (addendum 25 §3).
+ *
+ * **The counts stay the counts of the whole.** The bar says *Used 7 · On deck
+ * 5* whichever is chosen, because those numbers are what the writer is
+ * choosing between — a bar whose own figures changed as it was pressed would
+ * be unreadable.
+ *
+ * A trait with nothing left under a narrowing filter **drops out**: a card
+ * saying *Miserly* over nothing, on a screen that was asked for what is on
+ * deck, is a card about a question nobody asked. Under `all` every trait
+ * stands, including the one with nothing under it yet, which is addendum 08
+ * §1's unfinished thought rather than an error.
+ */
+export const filterBoard = (board: CharacterBoard, filter: MomentFilter): CharacterBoard => {
+  const keep = FILTER_COLOUR[filter];
+  if (keep === null) return board;
+  const narrowed = board.traits
+    .map((entry) => ({ ...entry, items: entry.items.filter((row) => row.colour === keep) }))
+    .filter((entry) => entry.items.length > 0);
+  return {
+    traits: narrowed,
+    unfiled: board.unfiled.filter((row) => row.colour === keep),
+    counts: board.counts,
+  };
+};
+
+/**
+ * The traits this one pulls against (addendum 25 §3).
+ *
+ * **Said once and read both ways**: a trait's own list, plus everybody whose
+ * list names it. Storing the pair on both would be two records of one fact,
+ * free to disagree the moment one is edited — and a writer who says *Secretly
+ * sentimental pulls against Miserly* has said it about the pair.
+ */
+export const conflictsFor = (
+  traits: readonly CharacterTrait[],
+  traitId: string,
+): CharacterTrait[] => {
+  const own = traits.find((trait) => (trait.id as string) === traitId);
+  if (!own) return [];
+  const named = new Set(own.conflictsWith);
+  return traits.filter(
+    (trait) =>
+      (trait.id as string) !== traitId &&
+      (named.has(trait.id as string) || trait.conflictsWith.includes(traitId)),
+  );
+};
+
+/** What the chip says, in the writer's own words. */
+export const describeConflicts = (against: readonly CharacterTrait[]): string =>
+  against.length === 0
+    ? ''
+    : `pulls against ${against.map((trait) => trait.name).join(', ')}`;
+
+/**
+ * Say that two traits pull against each other, or stop saying it.
+ *
+ * It is written on the trait it is said **from**, and `conflictsFor` reads it
+ * both ways — so pressing it off from either card takes it off both, which is
+ * what a writer who is looking at one card expects.
+ */
+export const setConflict = (
+  file: ProjectFile,
+  traitId: CharacterTraitId,
+  otherId: CharacterTraitId,
+  pulls: boolean,
+): ProjectFile => {
+  if ((traitId as string) === (otherId as string)) return file;
+  const both = new Set([traitId as string, otherId as string]);
+  let touched = false;
+  const traits = file.characterTraits.map((trait) => {
+    if (!both.has(trait.id as string)) return trait;
+    const other = (trait.id as string) === (traitId as string) ? (otherId as string) : (traitId as string);
+    const has = trait.conflictsWith.includes(other);
+    // Saying it writes it on the one it was said from; unsaying it takes it
+    // off both, because either card may be the one being looked at.
+    if (pulls) {
+      if ((trait.id as string) !== (traitId as string) || has) return trait;
+      touched = true;
+      return stamp({ ...trait, conflictsWith: [...trait.conflictsWith, other] });
+    }
+    if (!has) return trait;
+    touched = true;
+    return stamp({ ...trait, conflictsWith: trait.conflictsWith.filter((one) => one !== other) });
+  });
+  return touched ? { ...file, characterTraits: traits } : file;
+};
+
 /**
  * What the Overview says about how far along somebody is.
  *
@@ -747,6 +887,8 @@ export const addCharacterization = (
     traitId?: CharacterTraitId | null;
     text: string;
     notes?: string;
+    /** It came out of the manuscript (addendum 25 §3). `captureFromScript` sets it. */
+    found?: boolean;
   },
 ): { file: ProjectFile; item: CharacterizationItem | null } => {
   const text = input.text.trim();
@@ -774,6 +916,7 @@ export const addCharacterization = (
     traitId,
     text,
     notes: input.notes ?? '',
+    found: input.found ?? false,
     orderKey: lastKey(
       file.characterizationItems.filter(
         (one) => (one.traitId as string | null) === (traitId as string | null),
@@ -1115,6 +1258,10 @@ export const captureFromScript = (
     characterId: input.characterId,
     traitId,
     text,
+    // Noticed rather than invented (addendum 25 §3). It is a fact about where
+    // the moment came from and changes nothing else: it is used or on deck by
+    // the same rule as everything here.
+    found: true,
   });
   if (!added.item) return { file, item: null };
 

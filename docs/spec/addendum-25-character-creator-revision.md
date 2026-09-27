@@ -116,6 +116,66 @@ Each stage ships on its own.
 7. **The margin mark**, and search across the cast.
 8. **The restyle**, and a sweep of the module's vocabulary to *moment*.
 
+## 4a. What each built stage does
+
+**Stage 1 — the record.** `role` (six chips offered, free text underneath),
+`background` behind a fold marked optional, and the writer's own fields as a
+**list rather than a map**, because the id is what makes a rename an edit.
+Migration 0053. *Notes on their journey* moved to the Arc tab, where it stands
+whether or not there is an arc — the case addendum 08 §4 keeps it for is the
+character who has not got one.
+
+**Stage 2 — at a glance, and up next.** `character-glance.ts`, and **neither
+stores a thing**: a bar written down would go on saying *7 used* after the
+scene was cut, and a to-do list written down would go on asking for something
+already done. `characterGlance` is the counts, the arc as a line of marks
+(placed first, in the story's order, then what is waiting) and everybody this
+person is joined to, once each. `upNext` is the same readings said as work:
+*3 ways to show "Secretly sentimental" are still on deck · Place one*.
+
+Three decisions. **It names the trait rather than counting across all of
+them** — *5 on deck* over four traits tells a writer nothing about where to
+go. **It offers and never warns** (addendum 08 §7): a character with things
+on deck is in the middle of the work rather than behind on it, and a line in
+red would be telling them off for planning ahead. And the empty card **says
+so out loud**, because a blank box looks broken.
+
+The two buttons are **routes to readings that already exist**: *Review in
+story order* and *Unused material report* are the Character review's own
+modes, filtered to the person they were pressed from, rather than reports of
+their own. And `castColours` came out of `story-threads.ts` so the avatars,
+the timeline and the threads cannot disagree about anybody's colour — which
+is why the handoff's stored `avatarColor` is not built.
+
+**Stage 3 — traits and moments.** The filter bar, whose **figures are the
+whole character's whichever tab is pressed**: those numbers are what the
+writer is choosing between, and a bar whose own figures changed as it was
+pressed would be unreadable. Under a narrowing filter a trait with nothing
+left **drops out** — a card over nothing, on a screen that was asked what is
+on deck, is a card about a question nobody asked — while under *All* every
+trait stands, the empty one included.
+
+**Red counts on every trait row**, which is §1's *unused material is always
+visible as a to-do list*. **`found`** marks a moment that came out of the
+manuscript: not called `origin`, which means *who made it, in a room*, and a
+fact about provenance **never a status** — a planned moment and a found one
+are used or on deck by the same rule. And **`conflictsWith`**, the handoff's
+*pulls against Miserly*: the spec asks for contradictory traits to be
+allowed, and allowing them is not the same as being able to say so. It is
+**said once and read both ways** — written on the trait it was said from,
+read by `conflictsFor` from either — because storing the pair on both would
+be two records of one fact, free to disagree the moment one is edited.
+Migration 0054.
+
+**One place this diverges from the mockup, on purpose.** Screen 02 draws the
+traits as one column of expanded cards. The built screen keeps the shelf it
+has — the list of traits beside the chosen one's moments — because that panel
+holds more per trait than the card does (*When*, *How much of them*, *Read
+as*, and the *Where* panel that says which scenes a moment landed in). What
+the mockup is *for* — the red counts always in front of you — is delivered on
+every row of the list. The one-column stack is a layout preference and is
+stage 8's to weigh.
+
 ## 5. Deliberately not built
 
 §21's AI-assisted suggestions. The handoff does not ask for them and the
