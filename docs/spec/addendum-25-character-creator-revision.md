@@ -118,10 +118,11 @@ Each stage ships on its own.
 9. **The one-column card stack** (§4b), from Ken overruling stage 8.
 10. **What the record is called, and the left-hand list** (§4c), from Ken.
 11. **The cast that would not appear** (§4d), from Ken's bug report.
+12. **The arc as a line you fill in** (§4e), from Ken.
 
 ## 4a. What each built stage does
 
-**All eleven are built.**
+**All twelve are built.**
 
 **Stage 1 — the record.** `role` (six chips offered, free text underneath),
 `background` behind a fold marked optional, and the writer's own fields as a
@@ -540,3 +541,58 @@ Creator** in the menu, while **Folders ▸ Characters** is a research shelf for
 notes and will always read 0 for a cast. Two things called Characters in one
 menu is a fair complaint, and it is left standing for now because renaming
 either one reaches further than this fix should.
+
+## 4e. The arc as a line you fill in
+
+**Stage 12**, from Ken: *under the arc, that is going to be like a timeline
+view — where the character begins as a box you could fill out, and by default
+the end of the character arc, what the character becomes. Then you can double
+click on the line and it will create another point… and you can also click
+into that box and add a link, so you can link it to the script or to a theme
+or a motif.*
+
+**The audit paid a twenty-third time, this one inside the record itself.**
+`beginning` and `ending` have been fields on `characterArcSchema` since the Arc
+Builder was built — which is exactly *where they begin* and *what they
+become* — and the moments between them are `arcPoints` in their order. None of
+what Ken describes is new data. What was wrong is that the tab drew it as **two
+loose textareas with the whole spine stacked between them**: the same
+information, arranged so that nobody could see it was a journey.
+
+**The line between two boxes is the act.** `addArcPoint` appends, which is
+right for a form at the foot of a list and useless for a gesture that means
+*here*, so `insertArcPoint` takes an index and the key is worked out between
+the neighbours the way every other ordered thing in the program is placed. A
+gap is a real button as well as a double-click target, which is also the only
+way the keyboard reaches a gesture described with a mouse.
+
+**Driving it settled the one real design question, and the first answer was
+wrong.** Ordered `arcBoard`'s way — everything in the writing first, then what
+is still on deck — double-clicking between the first two boxes put the new
+moment **at the far end**, because a moment nobody has written yet sorts after
+every one that is. A gesture that means *here* and lands somewhere else is a
+gesture that does not work. So this is the one place the module keeps two
+orders on one screen, deliberately: **the line is the writer's arrangement and
+the lists below are the manuscript's**, because *what is the shape of this
+journey* and *how far along is it* are two questions. Each stop still carries
+the board's answer — its colour, and the scene it is pinned in — so the
+manuscript's reading travels with a stop rather than deciding where it stands,
+and there is still nothing to drag on the line.
+
+**A link hangs on a moment and never on a state.** *Who they are at the start*
+is a condition rather than an event, and a link from it would be a link from
+the whole character — so the two ends carry no link control and **say why**,
+rather than leaving a writer to press at them and conclude it is broken. What a
+moment can be joined to is the script, a theme or a motif, which needed
+**`theme` and `motif` to join `storyEntityTypeSchema`** — the fifth time that
+list has been the whole answer, after `arc_point` and `thread_node`: two
+references and a verb is what a story link has been since spec §7.4, so there
+is no table, no migration and no second kind of link. They stay **two entries
+and never one**, which is Themes & Motifs' own rule (addendum 12 §2). A link
+to something since cut keeps its row struck through rather than vanishing,
+because the writer put it there.
+
+The graph stage 5 built is **kept and moved below the line**, and the order is
+the argument for having both: a writer arranges the journey on the line, and
+the graph reads the result back — its heights and its chapter ruler are a
+reading of the same points, never a second place to put one.

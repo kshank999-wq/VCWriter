@@ -318,6 +318,18 @@ export const resolveRef = (file: ProjectFile, target: StoryEntityRef): ResolvedE
       const person = file.characters.find((candidate) => candidate.id === point.characterId);
       return found(point.text, person ? `${person.name}'s arc` : 'arc point');
     }
+    // What the book is about (addendum 25 §4e). Resolved here for the same
+    // reason as the two above: an arc point linked to a theme then reads in
+    // the Related Elements box without that box being told arcs or themes
+    // exist. **Two cases and never one** — a motif is not a theme.
+    case 'theme': {
+      const theme = (file.themes ?? []).find((candidate) => candidate.id === target.id);
+      return theme ? found(theme.name, 'theme') : missing();
+    }
+    case 'motif': {
+      const motif = (file.motifs ?? []).find((candidate) => candidate.id === target.id);
+      return motif ? found(motif.name, 'motif') : missing();
+    }
     // A moment of a narrative thread (addendum 15 §3). Resolved here for the
     // same reason: a dependency between two moments then reads in the Related
     // Elements box without that box being told threads exist.

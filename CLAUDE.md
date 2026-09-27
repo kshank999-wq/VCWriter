@@ -3455,7 +3455,7 @@ push live; the build takes a minute or two.
   harder than usual: **the handoff's own headline decision had already been
   made here independently**, its seven tabs having been four since addendum 08
   stage 2 for the same reasons. Seventeen more of its asks are standing under
-  another name. **All eleven stages of §4 are built**; §4a says what each
+  another name. **All twelve stages of §4 are built**; §4a says what each
   does. Four decisions carry it. **The arc's shape is said *and* read** —
   addendum 08 §5 made it a reading and the handoff asks for a toggle, and both
   are right about different moments (an arc with no points has no shape to
@@ -3685,6 +3685,42 @@ push live; the build takes a minute or two.
   Characters** is a research shelf that will always read 0 for a cast, and two
   things called Characters in one menu is a fair complaint that renaming
   either would reach further than this fix should.
+  **Stage 12 (§4e) is the arc as a line you fill in**, from Ken (*that is
+  going to be like a timeline view… where the character begins as a box you
+  could fill out, and by default the end of the character arc… then you can
+  double click on the line and it will create another point… and you can also
+  click into that box and add a link*). **The audit paid a twenty-third time,
+  inside the record itself**: `beginning` and `ending` have been fields on
+  `characterArcSchema` since the Arc Builder was built and the moments between
+  are `arcPoints` in their order, so none of it is new data — what was wrong is
+  that the tab drew it as **two loose textareas with the whole spine stacked
+  between them**, the same information arranged so nobody could see it was a
+  journey. **The line between two boxes is the act**: `addArcPoint` appends,
+  which is right for a form at the foot of a list and useless for a gesture
+  meaning *here*, so `insertArcPoint` takes an index and the key is worked out
+  between the neighbours; a gap is a real button as well as a double-click
+  target, the only way the keyboard reaches a gesture described with a mouse.
+  **Driving it settled the design question and the first answer was wrong** —
+  ordered `arcBoard`'s way (everything written first, then what is on deck),
+  double-clicking between the first two boxes put the moment **at the far
+  end**, because a moment nobody has written sorts after every one that is,
+  and *a gesture that means here and lands somewhere else is a gesture that
+  does not work*. So this is the one place the module keeps two orders on one
+  screen, deliberately: **the line is the writer's arrangement and the lists
+  below are the manuscript's**, *what is the shape of this journey* and *how
+  far along is it* being two questions; each stop still carries the board's
+  colour and the scene it is pinned in, so the manuscript's answer travels
+  with a stop rather than deciding where it stands. **A link hangs on a moment
+  and never on a state** — *who they are at the start* is a condition rather
+  than an event, so the two ends carry no link control and **say why** — and
+  what a moment joins to is the script, a theme or a motif, which needed
+  **`theme` and `motif` to join `storyEntityTypeSchema`**, the fifth time that
+  list has been the whole answer after `arc_point` and `thread_node`: no table,
+  no migration, no second kind of link, and **two entries never one** (addendum
+  12 §2). A link to something cut keeps its row struck through. Stage 5's graph
+  is **kept and moved below the line**, the order being the argument for both:
+  the writer arranges the journey on the line and the graph reads the result
+  back.
   §2 records
   where this diverges from the handoff and why; §5 is the one thing
   deliberately not built (§21's AI suggestions, which the handoff does not ask

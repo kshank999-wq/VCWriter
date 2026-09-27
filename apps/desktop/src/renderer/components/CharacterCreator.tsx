@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { CharacterMap } from './CharacterMap.js';
 import {
   ARC_INTENTS,
@@ -8,6 +8,16 @@ import {
   CHARACTER_ROLES,
   addRelationshipStage,
   arcGraph,
+  arcTimeline,
+  describeArcTimeline,
+  insertArcPoint,
+  themesInOrder,
+  motifsInOrder,
+  ARC_LINK_KINDS,
+  ARC_LINK_KIND_WORDS,
+  type ArcLinkKind,
+  type ArcStop,
+  type CharacterArcId,
   castColours,
   describeArcDisagreement,
   describeRelationshipChange,
@@ -2095,6 +2105,306 @@ function ArcGraph({
 }
 
 /**
+ * The arc as a line you fill in (addendum 25 §4e, Ken's *timeline view*).
+ *
+ * **Begins at one end, Becomes at the other, and the moments between.** The
+ * two ends are there the moment the arc is, because an arc with no points
+ * still begins somewhere; a stop is a box a writer types into, and **the line
+ * between two boxes is the gesture** — double-click it and a moment goes in
+ * *there*, which is what `insertArcPoint` is for and what a form at the foot
+ * of a list cannot say.
+ *
+ * Two decisions worth keeping. **A box's place is the story's** — a pinned
+ * moment stands where the manuscript puts it, so there is nothing to drag and
+ * no arrow on a placed stop, which is addendum 08 §5's rule drawn rather than
+ * listed. And **a link hangs on a moment, never on a state**: *who they are at
+ * the start* is a condition rather than an event, so the two ends carry no
+ * link control and the line under the strip says why rather than leaving a
+ * writer to press at them.
+ */
+function ArcLine({
+  file,
+  characterId,
+  arcId,
+  chosen,
+  onChoose,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  characterId: CharacterId;
+  arcId: CharacterArcId;
+  /** Which stop's details are open below, by `ArcStop.key`. */
+  chosen: string | null;
+  onChoose(key: string | null): void;
+  onUpdate: CharacterCreatorProps['onUpdate'];
+}) {
+  const stops = useMemo(
+    () => arcTimeline({ characterId: characterId as string, file }),
+    [characterId, file],
+  );
+  /** Which gap has its field open: the index a new moment would go in at. */
+  const [opening, setOpening] = useState<number | null>(null);
+  const [saying, setSaying] = useState('');
+
+  /**
+   * Where a gap sits among the arc's **stored** points, which is what
+   * `insertArcPoint` counts — the strip draws placed moments first, so the
+   * gap after the third box is not always the third order key.
+   */
+  const order = useMemo(
+    () =>
+      file.arcPoints
+        .filter((one) => (one.arcId as string) === (arcId as string))
+        .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))
+        .map((one) => one.id as string),
+    [file.arcPoints, arcId],
+  );
+  const indexBefore = (stop: ArcStop | undefined): number => {
+    if (!stop || stop.kind !== 'point') return stop?.kind === 'ending' ? order.length : 0;
+    const at = order.indexOf(stop.key);
+    return at < 0 ? order.length : at;
+  };
+
+  const put = (index: number) => {
+    const text = saying.trim();
+    setSaying('');
+    setOpening(null);
+    if (text.length === 0) return;
+    onUpdate((current) => insertArcPoint(current, { arcId, index, text }).file);
+  };
+
+  return (
+    <section className="arc-line" aria-label="The arc, from beginning to end">
+      <div className="arc-line-track">
+        {stops.map((stop, at) => (
+          <Fragment key={stop.key}>
+            {at > 0 ? (
+              /* **The line is the act.** A gap between two boxes is where a
+                 moment goes, so it is a button — which is also the only way
+                 the keyboard reaches a gesture Ken described with a mouse. */
+              <div className="arc-gap">
+                {opening === at ? (
+                  <form
+                    className="arc-gap-form"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      put(indexBefore(stop));
+                    }}
+                  >
+                    <input
+                      aria-label="What happens here"
+                      placeholder="What happens here"
+                      autoFocus
+                      value={saying}
+                      onChange={(event) => setSaying(event.target.value)}
+                      onBlur={() => put(indexBefore(stop))}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Escape') return;
+                        setSaying('');
+                        setOpening(null);
+                      }}
+                    />
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    className="arc-gap-line"
+                    aria-label={`Put a moment before ${stop.title}`}
+                    title="Double-click to put a moment in here"
+                    onDoubleClick={() => setOpening(at)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') setOpening(at);
+                    }}
+                  >
+                    <span className="arc-gap-plus" aria-hidden="true">
+                      +
+                    </span>
+                  </button>
+                )}
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className={`arc-stop ${stop.kind}${chosen === stop.key ? ' chosen' : ''}${
+                stop.colour ? ` ${DOT_CLASS[stop.colour]}` : ''
+              }`}
+              aria-pressed={chosen === stop.key}
+              onClick={() => onChoose(chosen === stop.key ? null : stop.key)}
+            >
+              <span className="arc-stop-head">
+                {stop.colour ? <i className={`creator-dot ${DOT_CLASS[stop.colour]}`} /> : null}
+                {stop.title}
+              </span>
+              <span className={stop.text.trim() ? 'arc-stop-text' : 'arc-stop-text muted'}>
+                {stop.text.trim() || stop.placeholder}
+              </span>
+              {stop.where ? <span className="arc-stop-where muted">{stop.where}</span> : null}
+              {stop.links.length > 0 ? (
+                <span className="arc-stop-links muted">
+                  {stop.links.length === 1 ? '1 link' : `${stop.links.length} links`}
+                </span>
+              ) : null}
+            </button>
+          </Fragment>
+        ))}
+      </div>
+      <p className="muted small arc-line-says">{describeArcTimeline(stops)}</p>
+
+      {chosen ? (
+        <ArcStopPanel
+          file={file}
+          stop={stops.find((one) => one.key === chosen) ?? null}
+          arcId={arcId}
+          onClose={() => onChoose(null)}
+          onUpdate={onUpdate}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+/**
+ * One stop, opened (§4e).
+ *
+ * The two ends write the arc's own `beginning` and `ending`, which are where
+ * those words have lived since the Arc Builder was built — **the older
+ * spelling**, so nothing is migrated and a project made before this reads
+ * exactly as it did. A moment writes its point, and carries the links.
+ */
+function ArcStopPanel({
+  file,
+  stop,
+  arcId,
+  onClose,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  stop: ArcStop | null;
+  arcId: CharacterArcId;
+  onClose(): void;
+  onUpdate: CharacterCreatorProps['onUpdate'];
+}) {
+  const [kind, setKind] = useState<ArcLinkKind>('beat');
+  const [target, setTarget] = useState('');
+  if (!stop) return null;
+
+  /** What can be joined to, by kind — the script, and what the book is about. */
+  const choices: { id: string; label: string }[] =
+    kind === 'beat'
+      ? file.beats
+          .slice()
+          .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))
+          .map((beat) => ({ id: beat.id as string, label: beat.title || 'Untitled' }))
+      : kind === 'theme'
+        ? themesInOrder(file).map((one) => ({ id: one.id as string, label: one.name }))
+        : motifsInOrder(file).map((one) => ({ id: one.id as string, label: one.name }));
+
+  return (
+    <div className="arc-stop-panel">
+      <header>
+        <h5>{stop.title}</h5>
+        <button type="button" className="ghost small" aria-label="Close this stop" onClick={onClose}>
+          ×
+        </button>
+      </header>
+
+      <textarea
+        aria-label={stop.kind === 'point' ? 'What happens' : stop.title}
+        rows={2}
+        placeholder={stop.placeholder}
+        value={stop.text}
+        onChange={(event) => {
+          const text = event.target.value;
+          onUpdate((current) =>
+            stop.pointId
+              ? updateArcPoint(current, stop.pointId, { text })
+              : updateArc(current, arcId, stop.kind === 'beginning' ? { beginning: text } : { ending: text }),
+          );
+        }}
+      />
+
+      {/* **A link hangs on a moment, never on a state** — said rather than
+          left to be pressed at, because an absent control with no reason is
+          the thing this room keeps being reported for. */}
+      {!stop.linkable ? (
+        <p className="muted small">
+          Where they begin and what they become are the arc itself rather than moments in it, so
+          nothing links from here. A moment on the line can be joined to a scene, a theme or a motif.
+        </p>
+      ) : (
+        <>
+          {stop.links.length > 0 ? (
+            <ul className="arc-links">
+              {stop.links.map((link) => (
+                <li key={link.linkId} className={link.exists ? '' : 'is-gone'}>
+                  <span className="arc-link-label">{link.label}</span>
+                  <span className="muted small">{link.detail}</span>
+                  <button
+                    type="button"
+                    className="ghost small"
+                    aria-label={`Unlink ${link.label}`}
+                    onClick={() => onUpdate((current) => unlink(current, link.linkId))}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <form
+            className="arc-link-add"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!target || !stop.pointId) return;
+              const from = { type: 'arc_point' as const, id: stop.pointId as string };
+              const to = { type: kind, id: target };
+              setTarget('');
+              onUpdate((current) => linkEntities(current, { from, to, type: 'relates_to' }));
+            }}
+          >
+            <select
+              aria-label="Link it to"
+              value={kind}
+              onChange={(event) => {
+                setKind(event.target.value as ArcLinkKind);
+                setTarget('');
+              }}
+            >
+              {ARC_LINK_KINDS.map((one) => (
+                <option key={one} value={one}>
+                  {ARC_LINK_KIND_WORDS[one]}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Which one"
+              value={target}
+              onChange={(event) => setTarget(event.target.value)}
+            >
+              <option value="">Choose…</option>
+              {choices.map((one) => (
+                <option key={one.id} value={one.id}>
+                  {one.label}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="ghost small" disabled={!target}>
+              + Link
+            </button>
+          </form>
+          {/* Absent rather than greyed would hide the act; a writer with no
+              themes yet needs to know the control is theirs once there are. */}
+          {choices.length === 0 ? (
+            <p className="muted small">Nothing of that kind in the project yet.</p>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
  * The Arc Builder (addendum 08 §8, §9 — stage 5).
  *
  * **A spine, read top to bottom**: who they are, what they need, what happens,
@@ -2139,6 +2449,8 @@ function Arc({
   const [adding, setAdding] = useState('');
   const [addingKind, setAddingKind] = useState<ArcPointKind>('movement');
   const [open, setOpen] = useState<ArcPointId | null>(null);
+  /** Which stop on the line is open, by `ArcStop.key` (§4e). */
+  const [stop, setStop] = useState<string | null>(null);
 
   useEffect(() => {
     if (!reveal) return;
@@ -2378,23 +2690,32 @@ function Arc({
           know which. */}
       {disagreement ? <p className="arc-disagree">{disagreement}</p> : null}
 
+      {/* **The line, and the two ends on it** (§4e). *Who they are at the
+          start* and *what they become* were two loose textareas with the
+          whole spine stacked between them — the same information arranged so
+          that nobody could see it was a journey. They are the ends of the
+          line now, and they write the same two fields. */}
+      <ArcLine
+        file={file}
+        characterId={characterId}
+        arcId={arc.id}
+        chosen={stop}
+        onChoose={setStop}
+        onUpdate={onUpdate}
+      />
+
+      {/* **The line is what you fill in; the graph is what it came out
+          like.** They are two pictures of one arc and the order is the
+          argument for having both: a writer arranges the journey on the line,
+          and the graph reads the result back — its heights and its chapter
+          ruler are a reading of the same points (§5), never a second place to
+          put one. */}
       <ArcGraph
         file={file}
         characterId={characterId}
         onPick={setOpen}
         {...(onOpenCharacter ? { onOpenArc: (id: CharacterId) => onOpenCharacter(id, 'arc') } : {})}
       />
-
-      <label className="field">
-        <span>Who they are at the start</span>
-        <textarea
-          aria-label="Beginning"
-          rows={2}
-          placeholder="Keeps score. Money is the only measure she trusts."
-          value={arc.beginning}
-          onChange={(event) => onUpdate((current) => updateArc(current, arc.id, { beginning: event.target.value }))}
-        />
-      </label>
 
       <label className="field">
         <span>What they need to learn, confront, accept, reject or become</span>
@@ -2407,6 +2728,10 @@ function Arc({
         />
       </label>
 
+      {/* The same moments the line draws, as rows — where the kind, the
+          order, the Where panel and the cross-arc links live. The line is
+          the picture and this is the desk: two views of one list, never two
+          lists. */}
       <section className="arc-spine">
         <h4>In the writing</h4>
         {board.placed.length === 0 ? (
@@ -2453,16 +2778,6 @@ function Arc({
         </form>
       </section>
 
-      <label className="field">
-        <span>Who they have become — or refused to become</span>
-        <textarea
-          aria-label="Ending"
-          rows={2}
-          placeholder="Counts faster."
-          value={arc.ending}
-          onChange={(event) => onUpdate((current) => updateArc(current, arc.id, { ending: event.target.value }))}
-        />
-      </label>
     </div>
   );
 }

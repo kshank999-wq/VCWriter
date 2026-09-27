@@ -17994,3 +17994,196 @@ dialog.designed-page-dialog[open] {
   background: var(--ink);
   min-width: 200px;
 }
+
+/* ---------------------------- the arc as a line (addendum 25 §4e) */
+/* Begins at one end, Becomes at the other, the moments between, and the line
+   itself is the gesture: double-click a gap and a moment goes in there. */
+
+.arc-line {
+  display: grid;
+  gap: 6px;
+}
+
+.arc-line-track {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  gap: 0;
+}
+
+.arc-stop {
+  flex: 0 0 auto;
+  width: 176px;
+  min-height: 92px;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel);
+  cursor: pointer;
+}
+
+/* The two ends are the arc rather than things on it, so they are drawn as the
+   posts the line runs between. */
+.arc-stop.beginning,
+.arc-stop.ending {
+  border-color: var(--gold-deep, var(--border));
+}
+
+.arc-stop.chosen {
+  border-color: var(--gold);
+}
+
+.arc-stop-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+
+.arc-stop-text {
+  font-size: 12px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.arc-stop-where,
+.arc-stop-links {
+  font-size: 10px;
+}
+
+/* The gap between two boxes: the line, and the act. */
+.arc-gap {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  min-width: 46px;
+}
+
+.arc-gap-line {
+  flex: 1;
+  height: 26px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: copy;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arc-gap-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+}
+
+.arc-gap-plus {
+  position: relative;
+  color: transparent;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 4px;
+  background: var(--ink);
+}
+
+.arc-gap-line:hover .arc-gap-plus,
+.arc-gap-line:focus-visible .arc-gap-plus {
+  color: var(--gold);
+}
+
+.arc-gap-form input {
+  width: 150px;
+  font-size: 11.5px;
+  padding: 3px 6px;
+  background: var(--ink);
+}
+
+.arc-line-says {
+  margin: 0;
+}
+
+.arc-stop-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border-left: 2px solid var(--gold-deep);
+  border-radius: 0 6px 6px 0;
+}
+
+.arc-stop-panel header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.arc-stop-panel h5 {
+  margin: 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  flex: 1;
+}
+
+.arc-stop-panel textarea {
+  width: 100%;
+  font-size: 12.5px;
+  padding: 5px 8px;
+  background: var(--ink);
+}
+
+.arc-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.arc-links li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+
+/* A link to something cut keeps its row and says so, rather than vanishing. */
+.arc-links li.is-gone .arc-link-label {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.arc-link-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.arc-link-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.arc-link-add select {
+  font-size: 11.5px;
+  padding: 3px 6px;
+  background: var(--ink);
+  max-width: 200px;
+}

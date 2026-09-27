@@ -38,6 +38,22 @@ export const storyEntityTypeSchema = z.enum([
    * migration, and the same reading code draws it.
    */
   'thread_node',
+  /**
+   * A theme and a motif (addendum 25 §4e).
+   *
+   * **The fifth time this list has been the answer.** An arc point that *is
+   * about* a theme, or that a motif recurs at, is two references and a verb,
+   * which is what a story link has been since spec §7.4 — so linking an arc to
+   * what the book is about needed no table, no migration and no second kind of
+   * link, only these two words. `from_type` is text in Postgres, as it was for
+   * `arc_point` and `thread_node`.
+   *
+   * They stay **two entries and never one** — Themes & Motifs' rule all the
+   * way down (addendum 12 §2): a reader *meets* a motif and *understands* a
+   * theme, and nothing anywhere takes *a thematic thing* and works out which.
+   */
+  'theme',
+  'motif',
 ]);
 export type StoryEntityType = z.infer<typeof storyEntityTypeSchema>;
 
