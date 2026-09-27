@@ -23,6 +23,22 @@ export const characterCategorySchema = z.object({
 export type CharacterCategory = z.infer<typeof characterCategorySchema>;
 
 /**
+ * The roles the Overview offers (addendum 25 §3, the handoff's chips).
+ *
+ * **Offered, never imposed**: the field is free text and the last chip is the
+ * writer's own, because *the one who knows* and *the voice on the phone* are
+ * roles a story has and no list would hold.
+ */
+export const CHARACTER_ROLES = [
+  'Protagonist',
+  'Antagonist',
+  'Supporting',
+  'Mentor',
+  'Ally',
+  'Rival',
+] as const;
+
+/**
  * Characters are first-class project entities (spec §13) and carry a persistent
  * TTS voice assignment so screenplay read-back sounds like several people
  * talking (§10). A character may also be surfaced in the Characters research
@@ -51,6 +67,51 @@ export const characterSchema = z.object({
    * person, and it stays free text because the vocabulary is the writer's.
    */
   tags: z.array(z.string()).default([]),
+  /**
+   * What this person is **to the story** (addendum 25 §3): protagonist,
+   * antagonist, supporting, mentor, ally, rival — or whatever the writer
+   * calls it, which is why it is free text with `CHARACTER_ROLES` offered
+   * beside it rather than an enum.
+   *
+   * It is not the heading they are filed under (how much of the story they
+   * are in) and it is **no longer** what `tags` is for: tags did this job and
+   * the writer's own topics at once — *antagonist* beside *money*, *grief*,
+   * *Christmas thread* — which is one field answering two questions. Tags are
+   * the topics now.
+   */
+  role: z.string().default(''),
+  /**
+   * The optional half (spec §3, *without making biography the center of the
+   * tool*): what a reader would notice, and what happened before the story.
+   * Empty strings rather than nulls, because the screen shows three lines
+   * whether or not they are filled and an absent field is not a different
+   * thing from an empty one here.
+   */
+  background: z
+    .object({
+      age: z.string().default(''),
+      look: z.string().default(''),
+      history: z.string().default(''),
+    })
+    .default({}),
+  /**
+   * The writer's own fields — *Voice: clipped, answers questions with
+   * prices*.
+   *
+   * **A list rather than a map**, which the handoff's `customFields{}`
+   * suggests: a map loses the order they were made in and cannot be renamed
+   * without losing what is in it, because the name is the key. Each carries
+   * an id, so renaming one is an edit rather than a delete and an add.
+   */
+  customFields: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string().default(''),
+        value: z.string().default(''),
+      }),
+    )
+    .default([]),
   /** Optional backing research card, when the writer keeps one. */
   researchItemId: id<ResearchItemId>().nullable().default(null),
   /** Which heading they are filed under; null until the writer files them. */

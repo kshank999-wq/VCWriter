@@ -3,6 +3,7 @@ import { id, nowIso, orderKey, timestamps } from './entities/common.js';
 import { storyEntityRefSchema } from './entities/links.js';
 import { castCalled, workingCast } from './characters.js';
 import { orderKeyBetween } from './ordering.js';
+import { updateCharacter } from './mutations.js';
 import { newId } from './ids.js';
 import type {
   ArcPointId,
@@ -632,6 +633,46 @@ const stamp = <T extends { updatedAt: string }>(record: T): T => ({ ...record, u
 const lastKey = (existing: readonly { orderKey: string }[]): string => {
   const sorted = [...existing].sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1));
   return orderKeyBetween(sorted[sorted.length - 1]?.orderKey ?? null, null);
+};
+
+// ------------------------------------------------- the writer's own fields
+
+/**
+ * A field of the writer's own (addendum 25 §3): *Voice — clipped, answers
+ * questions with prices.*
+ *
+ * Three small acts rather than one that takes the whole list, because the
+ * **id** is what makes renaming an edit: hand a component the list and it
+ * has to mint ids itself, and a rename becomes a delete and an add that
+ * loses what was in the field.
+ */
+export const addCustomField = (file: ProjectFile, characterId: CharacterId, name = ''): ProjectFile => {
+  const person = file.characters.find((one) => one.id === characterId);
+  if (!person) return file;
+  return updateCharacter(file, characterId, {
+    customFields: [...person.customFields, { id: newId(), name, value: '' }],
+  });
+};
+
+export const updateCustomField = (
+  file: ProjectFile,
+  characterId: CharacterId,
+  fieldId: string,
+  patch: { name?: string; value?: string },
+): ProjectFile => {
+  const person = file.characters.find((one) => one.id === characterId);
+  if (!person) return file;
+  return updateCharacter(file, characterId, {
+    customFields: person.customFields.map((field) => (field.id === fieldId ? { ...field, ...patch } : field)),
+  });
+};
+
+export const removeCustomField = (file: ProjectFile, characterId: CharacterId, fieldId: string): ProjectFile => {
+  const person = file.characters.find((one) => one.id === characterId);
+  if (!person) return file;
+  return updateCharacter(file, characterId, {
+    customFields: person.customFields.filter((field) => field.id !== fieldId),
+  });
 };
 
 export const addTrait = (

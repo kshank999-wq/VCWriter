@@ -756,7 +756,20 @@ export const updateCharacter = (
   file: ProjectFile,
   characterId: CharacterId,
   patch: Partial<
-    Pick<Character, 'name' | 'description' | 'arcNotes' | 'aliases' | 'tags' | 'categoryId' | 'archived'>
+    Pick<
+      Character,
+      | 'name'
+      | 'description'
+      | 'arcNotes'
+      | 'aliases'
+      | 'tags'
+      // The record the Overview asks for (addendum 25 §3).
+      | 'role'
+      | 'background'
+      | 'customFields'
+      | 'categoryId'
+      | 'archived'
+    >
   >,
 ): ProjectFile => {
   if (!file.characters.some((character) => character.id === characterId)) {

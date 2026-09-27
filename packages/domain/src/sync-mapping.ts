@@ -314,6 +314,9 @@ const characterToRow = (character: Character): Row => ({
   description: character.description,
   arc_notes: character.arcNotes,
   tags: character.tags,
+  role: character.role,
+  background: character.background,
+  custom_fields: character.customFields,
   research_item_id: character.researchItemId,
   category_id: character.categoryId,
   voice: character.voice,
@@ -1003,6 +1006,11 @@ const characterFromRow = (row: Row): Character =>
     description: text(row['description']),
     arcNotes: text(row['arc_notes']),
     tags: list(row['tags']),
+    role: text(row['role']),
+    // A row written before 0053 carries neither, and the schema's own
+    // defaults fill them in — which is why `?? undefined` rather than `?? {}`.
+    background: row['background'] ?? undefined,
+    customFields: row['custom_fields'] ?? undefined,
     researchItemId: nullableText(row['research_item_id']),
     categoryId: nullableText(row['category_id']),
     voice: row['voice'] ?? null,

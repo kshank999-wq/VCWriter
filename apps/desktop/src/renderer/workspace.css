@@ -9850,6 +9850,122 @@ dialog.projects-dialog {
   background: var(--ink);
 }
 
+/* The record (addendum 25 §3). The name and what they are also called read
+   as one line, which is how the handoff draws them. */
+.creator-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Who they are: the reading face, because it is prose about a person rather
+   than a field of the form. */
+.creator-overview textarea.creator-prose {
+  font-family: var(--reading-face, inherit);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* The roles: offered, never imposed — the last one is the writer's own. */
+.creator-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.creator-chip {
+  padding: 3px 12px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.creator-chip.on {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.creator-chip.ghost-chip {
+  border-style: dashed;
+  color: var(--muted);
+  background: none;
+  box-shadow: none;
+}
+
+.creator-chip-own {
+  width: auto;
+  min-width: 120px;
+  border-radius: 12px;
+}
+
+/* Optional, and said to be (spec §3). */
+.creator-fold-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+
+.creator-fold-head .muted {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.creator-fold-arrow {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.creator-fold-body {
+  display: grid;
+  gap: 8px;
+  padding: 8px 2px 2px;
+}
+
+/* The writer's own fields: a name and a value, and a × that takes the pair. */
+.creator-own-fields {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.creator-own-fields li {
+  display: grid;
+  grid-template-columns: minmax(80px, 150px) 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.creator-own-name {
+  color: var(--muted);
+}
+
+/* The role beside the name, on every tab. */
+.creator-role-chip {
+  padding: 2px 10px;
+  border: 1px solid var(--gold-dim, var(--border));
+  border-radius: 10px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+/* Where somebody writes about a character before there is an arc. */
+.creator-journey {
+  margin-bottom: 4px;
+}
+
 .creator-tags {
   display: flex;
   flex-wrap: wrap;

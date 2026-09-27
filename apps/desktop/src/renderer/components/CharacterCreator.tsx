@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ARC_LINK_VERBS,
+  CHARACTER_ROLES,
   ARC_LINK_VERB_NAMES,
   ARC_POINT_KINDS,
   ARC_POINT_NAMES,
@@ -14,6 +15,7 @@ import {
   USAGE_WORDS,
   addArcPoint,
   addCharacterization,
+  addCustomField,
   addTrait,
   arcEffectsOf,
   answerRelationship,
@@ -39,10 +41,12 @@ import {
   removeArc,
   removeArcPoint,
   removeCharacterization,
+  removeCustomField,
   removeRelationship,
   removeTrait,
   unlink,
   unpinUsage,
+  updateCustomField,
   updateArc,
   updateArcPoint,
   updateCharacter,
@@ -73,6 +77,7 @@ import {
   type TraitTone,
   type UsageColour,
 } from '@vcwriter/domain';
+import { usePreference } from '../use-split';
 import { InlineText } from './InlineText';
 
 /**
@@ -199,6 +204,11 @@ export function CharacterCreator({
           className="creator-name"
           onCommit={(name) => onUpdate((current) => updateCharacter(current, person.id, { name }))}
         />
+        {/* The role beside the name, on every tab (addendum 25 §3): it is the
+            one fact about the record a writer wants in front of them while
+            they work on the traits, the arc or the map. Absent where none is
+            set — a chip reading nothing says nothing. */}
+        {person.role.trim() ? <span className="creator-role-chip">{person.role.trim()}</span> : null}
         <span className="muted small creator-standing">{characterStanding(board)}</span>
       </header>
 
@@ -388,6 +398,19 @@ function Rail({
 
 // ------------------------------------------------------------------ overview
 
+/**
+ * The record (addendum 25 §1, the handoff's Overview).
+ *
+ * It is the spec's *flexible general-information area without making
+ * biography the center of the tool*, which is why the middle of the screen is
+ * **who they are** and the biography is behind a fold marked optional.
+ *
+ * `role` is new and it is a correction: `tags` was given the writer's own
+ * shorthand for who somebody is *and* the book's own topics — *antagonist*
+ * beside *money*, *grief*, *the Christmas thread* — which is one field
+ * answering two questions. The chips are offered and the field is free text,
+ * because *the one who knows* is a role no list would hold.
+ */
 function Overview({
   file,
   characterId,
@@ -400,6 +423,11 @@ function Overview({
   const person = file.characters.find((one) => one.id === characterId)!;
   const headings = characterCategoriesInOrder(file);
   const [tag, setTag] = useState('');
+  const [ownRole, setOwnRole] = useState(false);
+  const [look, setLook] = usePreference('creator.background', false);
+
+  const patch = (fields: Parameters<typeof updateCharacter>[2]) =>
+    onUpdate((current) => updateCharacter(current, person.id, fields));
 
   const addTag = () => {
     const word = tag.trim();
@@ -407,42 +435,88 @@ function Overview({
       setTag('');
       return;
     }
-    onUpdate((current) => updateCharacter(current, person.id, { tags: [...person.tags, word] }));
+    patch({ tags: [...person.tags, word] });
     setTag('');
   };
 
+  /** The role is the writer's own where it is not one of the six. */
+  const named = person.role.trim().length > 0 && !CHARACTER_ROLES.some((one) => one === person.role);
+
   return (
     <div className="creator-overview">
-      <label className="field">
-        <span>Also called</span>
-        <input
-          aria-label="Aliases"
-          placeholder="Separated by commas — MAE, Detective Rourke"
-          value={person.aliases.join(', ')}
-          onChange={(event) =>
-            onUpdate((current) =>
-              updateCharacter(current, person.id, {
+      <div className="creator-pair">
+        {/* The same field the header edits (§16d: one value, two doors). A
+            writer reading the record expects the name in it. */}
+        <label className="field">
+          <span>Name</span>
+          <input
+            aria-label="Name"
+            value={person.name}
+            onChange={(event) => patch({ name: event.target.value })}
+          />
+        </label>
+        <label className="field">
+          <span>Also called</span>
+          <input
+            aria-label="Aliases"
+            placeholder="Separated by commas — MAE, Detective Rourke"
+            value={person.aliases.join(', ')}
+            onChange={(event) =>
+              patch({
                 aliases: event.target.value
                   .split(',')
                   .map((alias) => alias.trim())
                   .filter((alias) => alias.length > 0),
-              }),
-            )
-          }
-        />
-      </label>
+              })
+            }
+          />
+        </label>
+      </div>
 
+      <div className="field">
+        <span>Role in the story</span>
+        <div className="creator-chips">
+          {CHARACTER_ROLES.map((role) => (
+            <button
+              key={role}
+              type="button"
+              className={person.role === role ? 'creator-chip on' : 'creator-chip'}
+              aria-pressed={person.role === role}
+              onClick={() => {
+                setOwnRole(false);
+                patch({ role: person.role === role ? '' : role });
+              }}
+            >
+              {role}
+            </button>
+          ))}
+          {named || ownRole ? (
+            <input
+              className="creator-chip-own"
+              aria-label="Your own role"
+              placeholder="Your own"
+              autoFocus={ownRole && !named}
+              value={named ? person.role : ''}
+              onChange={(event) => patch({ role: event.target.value })}
+              onBlur={() => setOwnRole(false)}
+            />
+          ) : (
+            <button type="button" className="creator-chip ghost-chip" onClick={() => setOwnRole(true)}>
+              + Your own
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Not the role: how much of the story they are in, which is what the
+          cast is grouped by in the research menu (addendum 08 §8b). */}
       <label className="field">
         <span>How much of the story</span>
         <select
           aria-label="Heading"
           value={(person.categoryId as string) ?? ''}
           onChange={(event) =>
-            onUpdate((current) =>
-              updateCharacter(current, person.id, {
-                categoryId: event.target.value === '' ? null : (event.target.value as CharacterCategoryId),
-              }),
-            )
+            patch({ categoryId: event.target.value === '' ? null : (event.target.value as CharacterCategoryId) })
           }
         >
           <option value="">Not filed</option>
@@ -454,11 +528,61 @@ function Overview({
         </select>
       </label>
 
-      {/* Tags are what the writer calls somebody, which is a different question
-          from the heading above (how much of the story they are in) and from a
-          trait below (what they are like). */}
+      <label className="field">
+        <span>Who they are</span>
+        <textarea
+          aria-label="Who they are"
+          rows={5}
+          className="creator-prose"
+          placeholder="What a reader would say about them after the first scene."
+          value={person.description}
+          onChange={(event) => patch({ description: event.target.value })}
+        />
+      </label>
+
+      {/* Optional, and said to be (spec §3). Whether it is open is a
+          preference of the machine: a writer who works from a biography wants
+          it open every time, and one who does not never wants to see it. */}
+      <section className="creator-fold">
+        <button
+          type="button"
+          className="raised creator-fold-head"
+          aria-expanded={look}
+          onClick={() => setLook(!look)}
+        >
+          <span>Background &amp; look</span>
+          <span className="muted small">optional</span>
+          <span className="creator-fold-arrow" aria-hidden="true">
+            {look ? '▾' : '▸'}
+          </span>
+        </button>
+        {look ? (
+          <div className="creator-fold-body">
+            {(
+              [
+                ['age', 'Age', '64'],
+                ['look', 'Look', 'Frayed black coat, ink-stained cuffs'],
+                ['history', 'History', 'What happened before the story starts.'],
+              ] as ReadonlyArray<['age' | 'look' | 'history', string, string]>
+            ).map(([key, label, hint]) => (
+              <label key={key} className="field">
+                <span>{label}</span>
+                <input
+                  aria-label={label}
+                  placeholder={hint}
+                  value={person.background[key]}
+                  onChange={(event) => patch({ background: { ...person.background, [key]: event.target.value } })}
+                />
+              </label>
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      {/* Tags are the book's own topics — money, grief, the Christmas thread.
+          Who somebody is to the story is the role above. */}
       <div className="field">
-        <span>Who they are to the story</span>
+        <span>Tags</span>
         <div className="creator-tags">
           {person.tags.map((word) => (
             <span key={word} className="creator-tag">
@@ -467,13 +591,7 @@ function Overview({
                 type="button"
                 className="ghost small"
                 aria-label={`Remove the tag ${word}`}
-                onClick={() =>
-                  onUpdate((current) =>
-                    updateCharacter(current, person.id, {
-                      tags: person.tags.filter((one) => one !== word),
-                    }),
-                  )
-                }
+                onClick={() => patch({ tags: person.tags.filter((one) => one !== word) })}
               >
                 ×
               </button>
@@ -487,7 +605,7 @@ function Overview({
           >
             <input
               aria-label="Add a tag"
-              placeholder="antagonist, the one who knows"
+              placeholder="money, grief, the Christmas thread"
               value={tag}
               onChange={(event) => setTag(event.target.value)}
               onBlur={addTag}
@@ -496,32 +614,45 @@ function Overview({
         </div>
       </div>
 
-      <label className="field">
-        <span>Who they are, in a line</span>
-        <input
-          aria-label="Description"
-          value={person.description}
-          onChange={(event) =>
-            onUpdate((current) => updateCharacter(current, person.id, { description: event.target.value }))
-          }
-        />
-      </label>
-
-      {/* §4: `arcNotes` stays and is not replaced by the structured arc. It is
-          where somebody writes about a character before deciding to build one,
-          and taking it away would remove the thing people actually start with. */}
-      <label className="field">
-        <span>Notes on their journey</span>
-        <textarea
-          aria-label="Notes on their journey"
-          rows={6}
-          placeholder="Anything about where they start and where this goes."
-          value={person.arcNotes}
-          onChange={(event) =>
-            onUpdate((current) => updateCharacter(current, person.id, { arcNotes: event.target.value }))
-          }
-        />
-      </label>
+      {/* The writer's own fields (§3). A list rather than a map, so renaming
+          one is an edit rather than losing what is in it. */}
+      <div className="field">
+        <span>Your own fields</span>
+        <ul className="creator-own-fields">
+          {person.customFields.map((one) => (
+            <li key={one.id}>
+              <input
+                className="creator-own-name"
+                aria-label="Field name"
+                placeholder="Voice"
+                value={one.name}
+                onChange={(event) =>
+                  onUpdate((current) => updateCustomField(current, person.id, one.id, { name: event.target.value }))
+                }
+              />
+              <input
+                aria-label={one.name.trim() || 'Field value'}
+                placeholder="Clipped. Answers questions with prices."
+                value={one.value}
+                onChange={(event) =>
+                  onUpdate((current) => updateCustomField(current, person.id, one.id, { value: event.target.value }))
+                }
+              />
+              <button
+                type="button"
+                className="ghost small"
+                aria-label={`Remove the field ${one.name.trim() || 'with no name'}`}
+                onClick={() => onUpdate((current) => removeCustomField(current, person.id, one.id))}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button type="button" className="ghost small" onClick={() => onUpdate((current) => addCustomField(current, person.id))}>
+          + Add field
+        </button>
+      </div>
     </div>
   );
 }
@@ -1081,6 +1212,7 @@ function Arc({
   onUpdate: CharacterCreatorProps['onUpdate'];
 }) {
   const board = useMemo(() => arcBoard({ characterId: characterId as string, file }), [characterId, file]);
+  const person = file.characters.find((one) => one.id === characterId);
   const [adding, setAdding] = useState('');
   const [addingKind, setAddingKind] = useState<ArcPointKind>('movement');
   const [open, setOpen] = useState<ArcPointId | null>(null);
@@ -1108,9 +1240,33 @@ function Arc({
   }, [file.links]);
   const movesCount = (id: ArcPointId): number => moves.get(id as string) ?? 0;
 
+  /**
+   * **Where somebody writes about a character before deciding to build an
+   * arc** (addendum 08 §4). It was on the Overview, which the handoff's
+   * record does not have room for and which is not where a reader would look
+   * for it: it is about the journey, so it is on the Arc tab — above the
+   * arc, and there **whether or not there is one**, since the case it exists
+   * for is the character who has not got one yet.
+   */
+  const journey = (
+    <label className="field creator-journey">
+      <span>Notes on their journey</span>
+      <textarea
+        aria-label="Notes on their journey"
+        rows={4}
+        placeholder="Anything about where they start and where this goes."
+        value={person?.arcNotes ?? ''}
+        onChange={(event) =>
+          onUpdate((current) => updateCharacter(current, characterId, { arcNotes: event.target.value }))
+        }
+      />
+    </label>
+  );
+
   if (!board.arc) {
     return (
       <div className="creator-arc empty">
+        {journey}
         {/* §9: never require an arc. Most characters in most scripts do not
             have one, and saying so is kinder than an empty form. */}
         <p className="muted">
@@ -1246,6 +1402,7 @@ function Arc({
 
   return (
     <div className="creator-arc">
+      {journey}
       <header className="arc-head">
         <span className="arc-shape">{ARC_SHAPE_WORDS[board.shape]}</span>
         {/* §9: whether they were ever really given the chance is the question
