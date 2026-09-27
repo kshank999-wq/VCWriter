@@ -3721,6 +3721,33 @@ push live; the build takes a minute or two.
   is **kept and moved below the line**, the order being the argument for both:
   the writer arranges the journey on the line and the graph reads the result
   back.
+  **Stage 13 (§4f) is the arc line before there is an arc**, from Ken sending
+  §4e's ask again **word for word** — which in this project has meant one thing
+  four times (§15c, §16b, §16c, §4d) and meant it again. Driving the room named
+  it: for a character with **no arc record** the tab drew a sentence and a
+  *Start an arc* button and `.arc-stop` returned `[]`, so there was no line at
+  all — and since **every character starts without an arc**, that was not an
+  edge case but the only state most writers ever meet the tab in, which from
+  Ken's chair is indistinguishable from the feature never having been built.
+  **No arc yet is not no line**: `arcTimeline` returns the two ends whether or
+  not there is a record, because a character with no arc still begins somewhere
+  and still becomes something. **Nothing is created to draw it** — `beginArc`
+  has been idempotent since the Arc Builder, so it doubles as *ensure* and runs
+  at the first **act** (typing into *Begins*, or putting a moment in) rather
+  than at the first look, and a cast of forty extras still carries no arc rows;
+  that is how addendum 08 §9's *never require an arc* is kept, and the whole
+  stage is the distinction that the rule is about **not making a record** and
+  had been read as *not showing what one is*. The **Start an arc button is gone
+  rather than kept beside it**, the line being the way in and two ways to start
+  being two answers. Driving it again found two more of one rule: **a
+  placeholder names the question rather than answering it** — §4e's example
+  sentences sat close enough to the reading colour that the tab opened on *two
+  filled boxes*, and they named a pronoun, so a character with no arc opened on
+  somebody else's sentence about *her*; they are Ken's own two questions now
+  (*Who they are when we meet them*, *Who they are by the end*) and the `+
+  Point` field one control down had the same fault — and the **notes box moved
+  under the line**, a tab opening on a four-row free-text box saying an arc is a
+  paragraph, which is the arrangement §4e was built to replace.
   §2 records
   where this diverges from the handoff and why; §5 is the one thing
   deliberately not built (§21's AI suggestions, which the handoff does not ask

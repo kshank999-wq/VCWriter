@@ -24,10 +24,20 @@ import type { StoryEntityRef } from './entities/links.js';
  *
  * Three rules hold the reading.
  *
- * **The two ends are always there.** They are the arc rather than things on
- * it: an arc with no points still begins somewhere and still becomes
- * something, so the line has two stops the moment it exists and a writer is
- * never looking at an empty screen wondering what to press.
+ * **The two ends are always there — including before there is an arc.** They
+ * are the arc rather than things on it: a character with no arc still begins
+ * somewhere and still becomes something, so the line has two stops from the
+ * first moment anybody looks at it.
+ *
+ * That last clause is a correction. The first build returned nothing without
+ * an arc record, so the Arc tab drew a sentence and a *Start an arc* button —
+ * and since **every character starts without one**, the timeline was absent
+ * from the only state a writer ever meets it in. Ken asked for it twice in
+ * the same words, which is this project's own signal that a feature is built
+ * and unreachable. Nothing is created to draw the line: `beginArc` runs when
+ * the writer first types into it, so a cast of forty extras still carries no
+ * arc records, and addendum 08 §9's *never require an arc* is kept by not
+ * making one rather than by hiding what one is.
  *
  * **The line is the writer's arrangement and the lists below are the
  * manuscript's.** This is the one place the module keeps two orders on one
@@ -131,7 +141,8 @@ export const arcPointLinks = (file: ProjectFile, pointId: ArcPointId): ArcStopLi
 export const arcTimeline = (input: { characterId: string; file: ProjectFile }): ArcStop[] => {
   const { file } = input;
   const board = arcBoard({ characterId: input.characterId, file });
-  if (!board.arc) return [];
+  // **No arc yet is not no line.** The two ends read empty and the middle is
+  // empty, which is exactly what an arc nobody has started looks like.
   const arc = board.arc;
 
   const begins: ArcStop = {
@@ -139,8 +150,12 @@ export const arcTimeline = (input: { characterId: string; file: ProjectFile }): 
     kind: 'beginning',
     pointId: null,
     title: 'Begins',
-    text: arc.beginning,
-    placeholder: 'Keeps score. Money is the only measure she trusts.',
+    text: arc?.beginning ?? '',
+    // **A placeholder names the question rather than answering it.** The first
+    // draft put an example sentence here, which on a dark screen read as
+    // content — a writer meeting the tab saw two filled boxes — and it named a
+    // pronoun, so it was somebody else's character standing in theirs.
+    placeholder: 'Who they are when we meet them',
     colour: null,
     where: '',
     linkable: false,
@@ -152,8 +167,8 @@ export const arcTimeline = (input: { characterId: string; file: ProjectFile }): 
     kind: 'ending',
     pointId: null,
     title: 'Becomes',
-    text: arc.ending,
-    placeholder: 'Counts faster.',
+    text: arc?.ending ?? '',
+    placeholder: 'Who they are by the end',
     colour: null,
     where: '',
     linkable: false,
@@ -180,8 +195,8 @@ export const arcTimeline = (input: { characterId: string; file: ProjectFile }): 
   const read = new Map(
     [...board.placed, ...board.onDeck].map((row) => [row.point.id as string, row] as const),
   );
-  const points = file.arcPoints
-    .filter((one) => (one.arcId as string) === (arc.id as string))
+  const points = (arc ? file.arcPoints : [])
+    .filter((one) => (one.arcId as string) === (arc!.id as string))
     .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))
     .map((point) => read.get(point.id as string))
     .filter((row): row is (typeof board.placed)[number] => row !== undefined);

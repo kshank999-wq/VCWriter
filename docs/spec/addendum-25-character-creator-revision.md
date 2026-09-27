@@ -119,10 +119,11 @@ Each stage ships on its own.
 10. **What the record is called, and the left-hand list** (§4c), from Ken.
 11. **The cast that would not appear** (§4d), from Ken's bug report.
 12. **The arc as a line you fill in** (§4e), from Ken.
+13. **The arc line before there is an arc** (§4f), from Ken asking twice.
 
 ## 4a. What each built stage does
 
-**All twelve are built.**
+**All thirteen are built.**
 
 **Stage 1 — the record.** `role` (six chips offered, free text underneath),
 `background` behind a fold marked optional, and the writer's own fields as a
@@ -596,3 +597,62 @@ The graph stage 5 built is **kept and moved below the line**, and the order is
 the argument for having both: a writer arranges the journey on the line, and
 the graph reads the result back — its heights and its chapter ruler are a
 reading of the same points, never a second place to put one.
+
+## 4f. The arc line before there is an arc
+
+**Stage 13**, from Ken sending §4e's request again **word for word**, with
+nothing changed and nothing added. In this project that has meant one thing
+four times now — §15c, §16b, §16c and §4d — and it meant it again: the
+feature was built, and something stood between the writer and it.
+
+Driving the room found the something exactly. Every character in the fixture
+was opened in turn, and for **Tomas Hale**, who has no arc record, the Arc tab
+drew a sentence and a **Start an arc** button, and `.arc-stop` returned `[]`.
+There was no line on the screen at all. And since **every character starts
+without an arc**, that was not an edge case: it was the only state most
+writers ever meet the tab in. §4e's timeline was absent from the one screen it
+had to be on, which from Ken's chair is indistinguishable from it never having
+been built — so he described it a second time in the same words.
+
+**No arc yet is not no line.** `arcTimeline` returns the two ends whether or
+not there is a record: a character with no arc still begins somewhere and
+still becomes something, so the two boxes are the arc rather than things on
+it, and they read empty. The gap between them is the same gap, and
+double-clicking it does the same thing.
+
+**Nothing is created to draw it.** `beginArc` has been idempotent since the Arc
+Builder was built — it returns the existing arc where there is one — so it
+doubles as *ensure*, and it is run at the first act rather than at the first
+look: typing into *Begins*, or putting a moment in the line, makes the record;
+opening the tab makes nothing. A cast of forty extras still carries no arc
+rows. That is how addendum 08 §9's **never require an arc** is kept, and the
+distinction is the whole of the stage: that rule is about **not making a
+record**, and it had been read as *not showing what one is*.
+
+**The Start an arc button is gone rather than kept beside it.** The line is the
+way in, and two ways to start are two answers — the module's own rule about
+two controls for one act, which §5d had just applied to a delete. The sentence
+it stood next to stays, as a quiet line under the strip: *most characters do
+not need an arc — it is for somebody the story changes, or offers a change and
+watches refuse it. Nothing is kept until you write in it.* That last clause is
+the promise the mechanism keeps.
+
+Driving it again, with the line drawing, found two more faults that no test
+could see, and both are one rule.
+
+**A placeholder names the question rather than answering it.** §4e had put an
+example sentence in each end — *Keeps score. Money is the only measure she
+trusts.* and *Counts faster.* — which on a dark screen sat close enough to the
+reading colour that a writer opening the tab saw **two filled boxes**, and
+which named a pronoun, so a character with no arc opened on somebody else's
+sentence about *her*. They say *Who they are when we meet them* and *Who they
+are by the end*, which is Ken's own two questions. The `+ Point` field one
+control down had the same fault (*She is offered the money back*) and says
+*What happens*.
+
+**The notes box moved under the line.** *Notes on their journey* was the first
+thing on the Arc tab, which was harmless while the line only drew for a
+character who already had an arc and is not now that it draws for everybody: a
+tab opening on a four-row free-text box says an arc is a paragraph, which is
+the arrangement §4e was built to replace. The line first, then what it says in
+words, then the notes.

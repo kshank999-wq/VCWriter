@@ -148,10 +148,30 @@ describe('the arc as a line', () => {
     expect(point.links[0]!.exists).toBe(false);
   });
 
-  it('is empty where there is no arc at all', () => {
+  /**
+   * **The correction** (§4f). This used to return nothing without an arc
+   * record — and since every character starts without one, the Arc tab drew a
+   * *Start an arc* button and the timeline was absent from the only state a
+   * writer ever meets it in.
+   */
+  it('still draws the two ends where there is no arc at all', () => {
     let file: ProjectFile = createProjectFile({ title: 'The Ledger', format: 'screenplay' });
     file = addCharacter(file, { name: 'NELL' });
     const nell = file.characters[file.characters.length - 1]!.id;
-    expect(arcTimeline({ characterId: nell as string, file })).toEqual([]);
+
+    const stops = arcTimeline({ characterId: nell as string, file });
+    expect(stops.map((stop) => stop.kind)).toEqual(['beginning', 'ending']);
+    expect(stops.every((stop) => stop.text === '')).toBe(true);
+    // And nothing has been written down to draw them.
+    expect(file.characterArcs).toHaveLength(0);
+
+    // **The placeholder names the question rather than answering it.** The
+    // first draft put an example sentence in each box, which on the real
+    // screen read as content — and named a pronoun, so a character with no
+    // arc opened on somebody else's sentence about *her*.
+    expect(stops.map((stop) => stop.placeholder)).toEqual([
+      'Who they are when we meet them',
+      'Who they are by the end',
+    ]);
   });
 });

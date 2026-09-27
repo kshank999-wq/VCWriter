@@ -91,3 +91,40 @@ describe('the arc as a line', () => {
     expect(kinds).toEqual(['In the script', 'A theme', 'A motif']);
   });
 });
+
+/**
+ * The line before there is an arc (addendum 25 §4f).
+ *
+ * The one that mattered: every character starts without an arc, so this was
+ * the only state most writers ever saw — and it drew a sentence and a *Start
+ * an arc* button rather than the timeline.
+ */
+describe('a character with no arc', () => {
+  const nobody = (): ProjectFile => {
+    let file = createProjectFile({ title: 'The Ledger', format: 'screenplay' });
+    file = addCharacter(file, { name: 'NELL' });
+    return file;
+  };
+
+  it('draws the line anyway, and never a button to start one', () => {
+    const file = nobody();
+    const { container } = render(<Harness initial={file} />);
+
+    const stops = Array.from(container.querySelectorAll('.arc-stop')).map((one) =>
+      (one.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    );
+    expect(stops).toHaveLength(2);
+    expect(stops[0]).toContain('Begins');
+    expect(stops[1]).toContain('Becomes');
+    expect(container.querySelector('.arc-gap-line')).toBeTruthy();
+    // Two ways to start an arc would be two answers; the line is the way in.
+    expect(screen.queryByRole('button', { name: 'Start an arc' })).toBeNull();
+    // And nothing has been written down to draw it.
+    expect(file.characterArcs).toHaveLength(0);
+  });
+
+  it('says an arc is optional without hiding what one is', () => {
+    render(<Harness initial={nobody()} />);
+    expect(screen.getByText(/Most characters do not need an arc/)).toBeTruthy();
+  });
+});

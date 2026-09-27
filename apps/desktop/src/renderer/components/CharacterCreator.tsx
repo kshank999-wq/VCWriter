@@ -2132,7 +2132,14 @@ function ArcLine({
 }: {
   file: ProjectFile;
   characterId: CharacterId;
-  arcId: CharacterArcId;
+  /**
+   * The arc, **where there is one**. Null is the ordinary state — every
+   * character starts without one — and the line is drawn just the same: it is
+   * `beginArc` on the first thing anybody types that makes the record, so
+   * nothing is created to draw a screen and nobody has to press a button to
+   * find out what an arc is.
+   */
+  arcId: CharacterArcId | null;
   /** Which stop's details are open below, by `ArcStop.key`. */
   chosen: string | null;
   onChoose(key: string | null): void;
@@ -2153,7 +2160,7 @@ function ArcLine({
    */
   const order = useMemo(
     () =>
-      file.arcPoints
+      (arcId ? file.arcPoints : [])
         .filter((one) => (one.arcId as string) === (arcId as string))
         .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))
         .map((one) => one.id as string),
@@ -2170,7 +2177,14 @@ function ArcLine({
     setSaying('');
     setOpening(null);
     if (text.length === 0) return;
-    onUpdate((current) => insertArcPoint(current, { arcId, index, text }).file);
+    onUpdate((current) => {
+      // `beginArc` is idempotent, so this is *ensure* rather than a second
+      // way to start one: the first moment somebody puts in is what makes the
+      // record, and pressing the line twice makes one arc.
+      const made = beginArc(current, characterId);
+      if (!made.arc) return current;
+      return insertArcPoint(made.file, { arcId: made.arc.id, index, text }).file;
+    });
   };
 
   return (
@@ -2254,7 +2268,7 @@ function ArcLine({
         <ArcStopPanel
           file={file}
           stop={stops.find((one) => one.key === chosen) ?? null}
-          arcId={arcId}
+          characterId={characterId}
           onClose={() => onChoose(null)}
           onUpdate={onUpdate}
         />
@@ -2274,13 +2288,14 @@ function ArcLine({
 function ArcStopPanel({
   file,
   stop,
-  arcId,
+  characterId,
   onClose,
   onUpdate,
 }: {
   file: ProjectFile;
   stop: ArcStop | null;
-  arcId: CharacterArcId;
+  /** The arc is made on the first keystroke, so this takes the person. */
+  characterId: CharacterId;
   onClose(): void;
   onUpdate: CharacterCreatorProps['onUpdate'];
 }) {
@@ -2315,11 +2330,13 @@ function ArcStopPanel({
         value={stop.text}
         onChange={(event) => {
           const text = event.target.value;
-          onUpdate((current) =>
-            stop.pointId
-              ? updateArcPoint(current, stop.pointId, { text })
-              : updateArc(current, arcId, stop.kind === 'beginning' ? { beginning: text } : { ending: text }),
-          );
+          onUpdate((current) => {
+            if (stop.pointId) return updateArcPoint(current, stop.pointId, { text });
+            // Typing into *Begins* or *Becomes* is what starts an arc.
+            const made = beginArc(current, characterId);
+            if (!made.arc) return current;
+            return updateArc(made.file, made.arc.id, stop.kind === 'beginning' ? { beginning: text } : { ending: text });
+          });
         }}
       />
 
@@ -2479,9 +2496,15 @@ function Arc({
    * **Where somebody writes about a character before deciding to build an
    * arc** (addendum 08 §4). It was on the Overview, which the handoff's
    * record does not have room for and which is not where a reader would look
-   * for it: it is about the journey, so it is on the Arc tab — above the
-   * arc, and there **whether or not there is one**, since the case it exists
-   * for is the character who has not got one yet.
+   * for it: it is about the journey, so it is on the Arc tab, and there
+   * **whether or not there is one**, since the case it exists for is the
+   * character who has not got one yet.
+   *
+   * It stands **under the line** (§4f). It was above it, which was harmless
+   * while the line only drew for a character who already had an arc and is
+   * not now that it draws for everybody: a tab opening on a four-row
+   * free-text box says the arc is a paragraph, which is the arrangement §4e
+   * was built to replace.
    */
   const journey = (
     <label className="field creator-journey">
@@ -2498,23 +2521,38 @@ function Arc({
     </label>
   );
 
+  /**
+   * **No arc yet draws the line, not a wall in front of it** (§4f).
+   *
+   * There was a sentence and a *Start an arc* button here, and since every
+   * character begins without an arc that was the only state most writers ever
+   * saw — so the timeline §4e built was absent from the one screen it had to
+   * be on. Ken asked for it twice in the same words, which in this project
+   * has meant *the feature is built and something makes it unreachable* four
+   * times now (§15c, §16b, §16c, §4d).
+   *
+   * §9's rule is kept where it actually lives: **never require an arc** means
+   * not creating a record, not hiding what one is. Nothing is written until
+   * the writer types, the sentence stays as a quiet line, and the button is
+   * gone because the line is the way in and two ways to start are two
+   * answers.
+   */
   if (!board.arc) {
     return (
-      <div className="creator-arc empty">
-        {journey}
-        {/* §9: never require an arc. Most characters in most scripts do not
-            have one, and saying so is kinder than an empty form. */}
-        <p className="muted">
-          No arc for them yet. Most characters do not need one — an arc is for somebody the story
-          changes, or offers a change and watches refuse it.
+      <div className="creator-arc">
+        <ArcLine
+          file={file}
+          characterId={characterId}
+          arcId={null}
+          chosen={stop}
+          onChoose={setStop}
+          onUpdate={onUpdate}
+        />
+        <p className="muted small">
+          Most characters do not need an arc — it is for somebody the story changes, or offers a
+          change and watches refuse it. Nothing is kept until you write in it.
         </p>
-        <button
-          type="button"
-          className="ghost small"
-          onClick={() => onUpdate((current) => beginArc(current, characterId).file)}
-        >
-          Start an arc
-        </button>
+        {journey}
       </div>
     );
   }
@@ -2637,7 +2675,6 @@ function Arc({
 
   return (
     <div className="creator-arc">
-      {journey}
       <header className="arc-head">
         {/* **The intention, beside the reading** (addendum 25 §2). What a
             writer is aiming at is theirs to say and is the only thing here
@@ -2768,7 +2805,7 @@ function Arc({
           </select>
           <input
             aria-label="What happens"
-            placeholder="She is offered the money back"
+            placeholder="What happens"
             value={adding}
             onChange={(event) => setAdding(event.target.value)}
           />
@@ -2778,6 +2815,7 @@ function Arc({
         </form>
       </section>
 
+      {journey}
     </div>
   );
 }
