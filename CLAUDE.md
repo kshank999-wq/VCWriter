@@ -2272,6 +2272,40 @@ push live; the build takes a minute or two.
   not open the section**: it stands in front of what does, the head stays
   pending, and the numeral (real or stood in) is emitted after the picture. One
   condition rather than a held-back block, answering both asks.
+  **§9u is the column, removed**, from Ken (*since we can double click any of
+  the pages and it opens up the dialog box, let's remove the right-hand menu.
+  There's no need for it. It's just redundant*). He is right and §9f had got
+  half way: the inspector was the selection's, and what it held was **the
+  screen a double-click opens** — a second copy of one screen, costing a third
+  of a laptop window, which since §9e is a third less book. The deletion is one
+  line and **the repairs are the work**, because a column that answers a single
+  press hides every gap in the double-click. **Two rows opened nothing at all**:
+  a **section** (a chapter inside a story, addendum 22 §6) and a **picture**
+  are not records with screens of their own, so both open the page they stand
+  on — the section through `openPage`, which already routes a page to whatever
+  owns it, and the picture **not** through it, a picture not being a page and
+  the page it stands on very often being a chapter's opening, whose leaf says
+  nothing about a picture cut into the text under it. **A page's dialog could
+  not name most pictures**: a page row's `figureId` names only a picture that
+  *is* a page, so the dialog is about the picture **in hand** where it stands
+  on this page and falls back to the page's own — and `pageOf` had the same
+  hole one layer down, a **free** graphic riding a block without being one, so
+  its row carried no page number and had nothing to open. **A chapter's opening
+  page lost its own acts**: §9j sent it straight to the chapter's leaf, right
+  while the column still answered a press with the page's acts and stranding
+  them without it, so the special case is gone and §9j's own words are kept
+  (*if I double-click any page, the page setup dialog box should pop up with
+  all the options for that page*) while §9l's **route** stays — *Set this
+  chapter's page…* one press on, a door rather than a second copy, the
+  chapter's own row still opening its leaf directly. And **a page made answered
+  with a rail row**, so adding a part now opens it. Two dead panels came out
+  with it: `PartFields` held a **second set of fields for the half title and
+  the title page** (`partPlacement` calls both a block, so both have opened the
+  designed-page screen since §9n) and a button through to the copyright page's
+  screen (§15c sends the double-click straight there) — both reachable from the
+  column and nowhere else. **A route that only one surface can reach is a
+  feature nobody finds; when that surface goes, what it alone could do is
+  either carried or deleted, never left.**
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

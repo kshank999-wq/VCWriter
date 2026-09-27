@@ -3003,6 +3003,68 @@ of its own does not open the section**. It stands in front of what does, the
 head stays pending, and the numeral — real or stood in — is emitted after the
 picture. One condition rather than a deferral, and it answers both asks.
 
+## 9u. The column, removed
+
+From Ken: *since we can double click any of the pages and it opens up the
+dialog box, let's remove the right-hand menu. There's no need for it. It's just
+redundant.*
+
+He is right, and §9f had already got half way there: the inspector was the
+selection's, so it stood only when something was chosen. What it then held was
+**the screen a double-click opens** — the page's acts, a picture's fields, a
+part's. A second copy of one screen is the fault this room keeps finding and
+removing; this time the copy was the column itself, and it was costing a third
+of a laptop window, which since §9e is a third less book.
+
+Removing it is one deletion and four repairs, and the repairs are the work: a
+column that answers a single press hides every gap in the double-click, and all
+four had been there since the gesture was built.
+
+**Two rows opened nothing at all.** A **section** — a chapter inside a story,
+whose heading opens a page (addendum 22 §6) — and a **picture** are not records
+with screens of their own, so `openRow` had no branch for either. Both open the
+page they stand on now. A section goes through `openPage`, which already routes
+a page to whatever owns it; a picture does **not**, because a picture is not a
+page: the page it stands on is very often a chapter's opening, and a chapter's
+leaf says nothing about a picture cut into the text under it. It opens the
+page's own dialog directly.
+
+**A page's own dialog could not name most pictures.** A page row's `figureId`
+names only a picture that *is* a page, so an inset and a graphic set over the
+page were findable from the column and nowhere else. The dialog is about the
+picture **in hand** where that picture stands on this page, and falls back to
+the page's own. Pressing a picture on the spread picks it and puts its page in
+hand, so the two agree by construction. The same gap ran one layer down:
+`pageOf` matched a block's id, its part and its unit and an inset's figure, and
+a **free** graphic rides a block without being one — so its row carried no page
+number and had nothing to open.
+
+**A chapter's opening page lost its own acts.** §9j sent a page carrying a
+chapter opening straight to the chapter's leaf, which was right while the
+column still answered a single press with the page's acts, and strands them
+without it: a picture, a box, a vector graphic and a blank leaf are the
+*page's*. The special case is gone and §9j's own words are kept — *if I
+double-click any page, the page setup dialog box should pop up with all the
+options for that page* — while the **route** §9l built stays: *Set this
+chapter's page…* stands on that screen, one press on, a door rather than a
+second copy. The chapter's own row still opens its leaf directly, for a writer
+who wants the leaf and not the page.
+
+**A page made answered with a rail row.** Adding a part used to put its fields
+in the column the moment it was made; now it opens on its own screen, because a
+writer who has just made a dedication is looking for somewhere to type it.
+
+And two panels that had been dead for months came out with it. `PartFields`
+held a **second set of fields for the half title and the title page** — a
+heading that is not a heading, a sentence pointing at Book settings, a subtitle
+box beside the one §16d built — although `partPlacement` calls both a *block*
+and both have opened the designed-page screen since §9n: the column was the
+only thing that could still reach them. It held a button through to the
+copyright page's screen for the same reason, §15c having sent the double-click
+straight there. **A route that only one surface can reach is a feature nobody
+finds; when that surface goes, what it alone could do is either carried or
+deleted, never left.**
+
 ### Deliberately not built
 
 The **file importers** of §2 — BibTeX, RIS, CSL-JSON, CSV/TSV/XLSX, a

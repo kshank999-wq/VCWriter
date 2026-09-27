@@ -59,7 +59,6 @@ import {
   beginCopyright,
   copyrightLines,
   copyrightOf,
-  describeCopyright,
   numberLine,
   removeBookNumber,
   setBookNumber,
@@ -260,7 +259,14 @@ const pageOf = (laying: Laying, id: string): BookPage | undefined => {
       const block = blocks.get(piece.blockId);
       return (
         block !== undefined &&
-        (block.id === id || block.partId === id || block.unitId === id || block.inset?.figureId === id)
+        (block.id === id ||
+          block.partId === id ||
+          block.unitId === id ||
+          block.inset?.figureId === id ||
+          // A graphic set over the page rides a block without being one
+          // (§8c), so without this a free graphic's row turned to no page —
+          // which since §9u is the way to its own controls.
+          block.free?.some((one) => one.figureId === id) === true)
       );
     }),
   );
@@ -397,14 +403,6 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
   // cut off. Only a machine that has never dragged the divider takes this:
   // `useSplit` remembers, so nobody's own width is overwritten.
   const rail = useSplit({ key: 'layout.rail', initial: 360, min: 220, reserve: 720, axis: 'x' });
-  /**
-   * The inspector's width (§9f). It was a fixed 320px column, which on a
-   * 1280-wide window is a quarter of the screen the writer cannot argue with —
-   * and since §9e that quarter is a quarter less book. It drags like the rail,
-   * from the other end: `from: 'end'` so the same gesture sizes the pane after
-   * the divider rather than the one before it.
-   */
-  const inspector = useSplit({ key: 'layout.inspector', initial: 320, min: 240, reserve: 560, axis: 'x', from: 'end' });
   const [message, setMessage] = useState<string | null>(null);
   /** The Add menu, open at the button (§9a). */
   const [addMenu, setAddMenu] = useState<{ x: number; y: number } | null>(null);
@@ -439,8 +437,6 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     });
   };
 
-  const selectedRow = rows.find((row) => row.id === selectedRowId) ?? null;
-  const selected = selectedRow?.part ?? null;
   const opened = parts.find((part) => part.id === partDialogId) ?? null;
   /**
    * The four pages that are **a block of words on a page of their own** get
@@ -600,7 +596,22 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
 
   /** The page a double-click opened, and the picture standing on it (§9j). */
   const dialogPage = pageRows.find((one) => one.sheet === pageDialogSheet && one.partId === null) ?? null;
-  const dialogFigure = dialogPage?.figureId ? (figures.find((one) => one.elementId === dialogPage.figureId) ?? null) : null;
+  /**
+   * The picture the dialog is about (§9u).
+   *
+   * A page row's `figureId` names only a picture that **is** the page, so a
+   * picture cut into the text and a graphic set over it could not be found
+   * from here at all — the inspector was the one place either could be
+   * reached, which is why removing it had to answer this first. The picture
+   * **in hand** wins where it stands on this page: pressing one on the spread
+   * picks it and puts its page in hand, so the two agree by construction.
+   */
+  const dialogFigure =
+    selectedFigure && dialogPage !== null && dialogPage.sheet === selectedSheet
+      ? selectedFigure
+      : dialogPage?.figureId
+        ? (figures.find((one) => one.elementId === dialogPage.figureId) ?? null)
+        : null;
 
 
   /**
@@ -609,14 +620,6 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * wherever it is pressed.
    */
   const place = laying && selectedSheet !== null ? pagePlace(laying.laid.pages, laying.blocks, selectedSheet) : EMPTY_PLACE;
-  /**
-   * The page in hand, where it is **inside the story** (§9h). A page in the
-   * front or back matter belongs to a part and the part's own fields are its
-   * screen; a page of the story belongs to nobody, which is why it had none.
-   */
-  const storyPage = pageRows.find((one) => one.sheet === selectedSheet && one.partId === null) ?? null;
-  /** The column stands for a part, a picture, or a page of the story (§9f, §9h). */
-  const showInspector = Boolean(selected || selectedFigure || storyPage);
   /** What the page in hand is called in the book, for the buttons that act on it. */
   const chosen = pages.find((one) => one.sheet === selectedSheet);
   const chosenPage =
@@ -796,7 +799,15 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       onPick: () =>
         onUpdate((current) => {
           const made = addPart(current, kind);
-          if (made.partId) setSelectedRowId(made.partId);
+          if (made.partId) {
+            setSelectedRowId(made.partId);
+            // **A page made opens** (§9u). While there was a column the new
+            // part's fields appeared in it the moment it was added; with the
+            // column gone, adding a page would answer with a rail row and
+            // nothing else, and a writer who has just made a dedication is
+            // looking for somewhere to type it.
+            setPartDialogId(made.partId);
+          }
           return made.file;
         }),
     })),
@@ -819,8 +830,37 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    */
   const openRow = (row: BookRow) => {
     selectRow(row);
-    if (row.kind === 'part') setPartDialogId(row.id);
-    else if (row.kind === 'chapter') openChapterPage(row.id);
+    if (row.kind === 'part') {
+      setPartDialogId(row.id);
+      return;
+    }
+    if (row.kind === 'chapter') {
+      openChapterPage(row.id);
+      return;
+    }
+    /**
+     * **A section and a picture open the page they stand on** (§9u).
+     *
+     * Neither is a record with a screen of its own — a chapter inside a story
+     * is a section whose heading opens a page (addendum 22 §6), and a picture
+     * stands where it stands in the writing — so both used to open nothing at
+     * all, which was survivable only while the inspector answered for them.
+     */
+    const page = laying ? pageOf(laying, row.id) : undefined;
+    if (!page) return;
+    if (row.kind === 'picture') {
+      // A picture is **not** a page, so this is not `openPage`'s question.
+      // The page it stands on is very often a chapter's opening, which
+      // `openPage` rightly sends to the chapter's leaf — and a chapter's
+      // leaf says nothing at all about a picture cut into the text under
+      // it. The page's own dialog is where the picture in hand is set.
+      setSelectedSheet(page.sheet);
+      setPageDialogSheet(page.sheet);
+      return;
+    }
+    // A section **is** a page, so `openPage` answers it — one call rather
+    // than a second ladder that could disagree with it.
+    openPage(page);
   };
 
   /**
@@ -843,25 +883,21 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       return;
     }
     const row = bookPageRows(laying.laid.pages, laying.blocks).find((one) => one.sheet === page.sheet);
-    // The chapter's own page, but **only where this page carries the chapter
-    // opening itself** (§9j). Read off the page's blocks rather than off the
-    // chapter in force, and rather than off the row's word: a chapter inside
-    // a story opens with a heading and has no marker of its own (addendum 22
-    // §6), so asking the chapter in force sent a writer who double-clicked
-    // the numeral to the *story's* page — a different page, which is the
-    // *trying to enter any information just changes title pages* of §9h in
-    // one more place.
-    const index = new Map(laying.blocks.map((block) => [block.id, block]));
-    const opensHere = page.pieces.some((piece) => index.get(piece.blockId)?.kind === 'chapter_opening');
-    if (opensHere && at.markerId) {
-      openChapterPage(at.markerId);
-      return;
-    }
-    // An ordinary page of the story opens **its own dialog** (§9j, from Ken:
-    // *if I double-click any page, the page setup dialog box should pop up
-    // with all the options for that page*). It used to put the page in hand
-    // and nothing more, so a double-click on the one kind of page that has no
-    // other owner appeared to do nothing at all.
+    /**
+     * **Every page of the story opens the page's own screen** (§9u, and
+     * §9j's own words from Ken: *if I double-click any page, the page setup
+     * dialog box should pop up with all the options for that page*).
+     *
+     * §9j sent a page carrying a chapter opening straight to the chapter's
+     * leaf instead, which was right while the column still answered a single
+     * press with the page's own acts — and strands them now the column is
+     * gone: a picture, a box, a vector graphic and a blank leaf are the
+     * page's, and a chapter's leaf says nothing about any of them. So the
+     * special case goes and the **route** §9l built stays: *Set this
+     * chapter's page…* stands on this screen, one press on, which is a door
+     * rather than a second copy. The chapter's own row still opens its leaf
+     * directly, for a writer who wants the leaf and not the page.
+     */
     setSelectedRowId(row?.figureId ?? null);
     setSelectedSheet(page.sheet);
     setPageDialogSheet(page.sheet);
@@ -1182,16 +1218,11 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           setPartDialogId(null);
           setSelectedRowId(null);
         }}
-        onOpenBookSettings={() => {
-          setPartDialogId(null);
-          setBookSettingsOpen(true);
-        }}
       />
       {/* A page of the story, opened by a double-click on its row or on the
-          page itself (§9j). It holds exactly what the inspector holds, being
-          the same two components, so the gesture is uniform across every kind
-          of page: a part opens its part, a chapter opening its chapter page,
-          and an ordinary page this. */}
+          page itself (§9j) — and since §9u the only screen it has, the column
+          that held a second copy of it being gone. A part opens its part, a
+          chapter opening its chapter page, and an ordinary page this. */}
       {/* The copyright page's own dialog (§9k, from Ken). It is opened from
           the part and from the page, both of which are the same page. */}
       <CopyrightPageDialog
@@ -1468,15 +1499,16 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
               );
             })}
           </ul>
-          {/* What is left of the old column's paragraph (§9f): the two
-              gestures, and nothing else. It said three things, and two of them
-              — what *+ Picture* does and where the book's settings are — were
-              labels for buttons already on the screen. These two cannot be
-              seen, so they are said, once, under the list they are about. */}
           {/* A refusal says itself where the drop happened (§9k), and goes
               the moment anything else is dragged. */}
           {areaRefusal ? <p className="small layout-rail-refusal">{areaRefusal}</p> : null}
-          <p className="muted small layout-rail-note">A page can be chosen on the spread too. A double-click opens it.</p>
+          {/* The two gestures, said once under the list they are about (§9f).
+              With the column gone (§9u) the double-click is the **only** way
+              to what sets a page, so it is the one thing on this screen that
+              has to be told rather than seen. */}
+          <p className="muted small layout-rail-note">
+            A double-click opens what sets a page — here, or on the spread.
+          </p>
         </aside>
         <div className="divider vertical" role="separator" aria-label="Rail width" aria-orientation="vertical" title="Drag to widen the rail" {...rail.dividerProps} />
 
@@ -1667,50 +1699,14 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           </div>
         </div>
 
-        {/* The inspector is the selection's, so with nothing chosen there is
-            no column (§9f): it stood holding one paragraph, and on a small
-            window that paragraph cost a quarter of the screen — which since
-            §9e is a quarter less book. Absent rather than empty. */}
-        {showInspector ? (
-          <div
-            className="divider vertical"
-            role="separator"
-            aria-label="Inspector width"
-            aria-orientation="vertical"
-            title="Drag to widen the inspector"
-            {...inspector.dividerProps}
-          />
-        ) : null}
-        {showInspector ? (
-        <aside className="layout-inspector" style={{ flex: `0 0 ${inspector.size}px` }}>
-          {/* A page inside the story does pictures and nothing else (§9h, from
-              Ken: *the only thing that should be in there is the ability to
-              put graphics on that page, and the adjustments of that graphic*).
-              It used to open the chapter's page or the title page's fields,
-              which is how a picture asked for on page 9 landed on chapter 2. */}
-          {storyPage ? pageControls(storyPage) : null}
-          {selectedFigure ? figureControls(selectedFigure) : null}
-          {selected ? (
-            <>
-              <PartFields
-                file={file}
-                part={selected}
-                onUpdate={onUpdate}
-                onDone={() => setSelectedRowId(null)}
-                onOpenBookSettings={() => setBookSettingsOpen(true)}
-                onOpenCopyright={() => setCopyrightOpen(true)}
-                rows={pageRows}
-              />
-              <p className="muted small">
-                <button type="button" className="ghost small" onClick={() => setPartDialogId(selected.id)}>
-                  Open the page…
-                </button>{' '}
-                to see it set{partTakesInsets(selected.kind) ? ' and cut pictures into its text' : ''}.
-              </p>
-            </>
-          ) : null}
-        </aside>
-        ) : null}
+        {/* **The column is gone** (§9u, from Ken: *since we can double click
+            any of the pages and it opens up the dialog box, let's remove the
+            right-hand menu. There's no need for it. It's just redundant*).
+            It was: every screen it held is the screen a double-click opens,
+            and the room was paying a third of a laptop window for a second
+            copy of one. What it took to make that true is in §9u — the two
+            rows whose double-click did nothing, and the pictures a page's
+            own dialog could not name. */}
       </div>
     </div>
   );
@@ -2545,7 +2541,6 @@ function PartDialog({
   onUpdate,
   onClose,
   onRemoved,
-  onOpenBookSettings,
 }: {
   file: ProjectFile;
   part: BookPart | null;
@@ -2553,7 +2548,6 @@ function PartDialog({
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   onClose(): void;
   onRemoved(): void;
-  onOpenBookSettings?(): void;
 }) {
   const dialog = useModal(part !== null);
   /** The picture last touched, so the page beside the fields turns to where it fell. */
@@ -2581,7 +2575,6 @@ function PartDialog({
                 part={part}
                 onUpdate={onUpdate}
                 onDone={onRemoved}
-                onOpenBookSettings={onOpenBookSettings}
                 rows={laying ? bookPageRows(laying.laid.pages, laying.blocks) : []}
               />
               {partTakesInsets(part.kind) ? <PartPictures file={file} part={part} onUpdate={onUpdate} onTouched={setTouched} /> : null}
@@ -3711,18 +3704,12 @@ function PartFields({
   part,
   onUpdate,
   onDone,
-  onOpenBookSettings,
-  onOpenCopyright,
   rows = [],
 }: {
   file: ProjectFile;
   part: BookPart;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   onDone(): void;
-  /** The book's title and author are set there, not here (§9). */
-  onOpenBookSettings?(): void;
-  /** The copyright page's own dialog (§9k); absent on every other kind. */
-  onOpenCopyright?(): void;
   /** The laid pages, so the blank leaf's offer can see what is in front (§9r). */
   rows?: readonly BookPageRow[];
 }) {
@@ -3783,56 +3770,20 @@ function PartFields({
         </button>
       ) : null}
       {blank.refusal ? <p className="muted small">{blank.refusal}</p> : null}
-      {part.kind !== 'half_title' && part.kind !== 'title_page' ? (
-        <label className="field">
-          <span>Heading</span>
-          <input aria-label="The part's heading" placeholder={info.name} value={part.title} onChange={(event) => patch({ title: event.target.value })} />
-        </label>
-      ) : (
-        <>
-          {/* The book's title and author run all the way through, so they
-              are in Book settings and not here (§9, from Ken); this page
-              says what it will print and where that is set, rather than
-              offering a second box for the same field. */}
-          <p className="muted small">
-            This page prints <em>{bookNames(file).title}</em>
-            {part.kind === 'title_page' ? ` by ${bookNames(file).author || 'nobody yet'}` : ''}. The title and the author are the
-            whole book’s, under <em>Book settings…</em> in the bar.
-          </p>
-          {onOpenBookSettings ? (
-            <button type="button" className="ghost small" onClick={onOpenBookSettings}>
-              Book settings…
-            </button>
-          ) : null}
-          {part.kind === 'title_page' ? (
-            <label className="field">
-              <span>Under the title</span>
-              <input
-                aria-label="Under the title"
-                placeholder="A subtitle — A novel, Stories — or nothing"
-                value={file.settings.titlePage.episode}
-                onChange={(event) => onUpdate((current) => setTitlePage(current, { episode: event.target.value }))}
-              />
-            </label>
-          ) : null}
-          {/* It is on the page's own screen (§16b), which is where the
-              three tiles are. It used to point at *File ▸ Title page…*,
-              which on a book opened the screenplay's front page. */}
-          <p className="muted small">A logotype in place of the title is on the page’s own screen, under <em>Open the page…</em>.</p>
-        </>
-      )}
-      {/* The copyright page is set in a dialog of its own (§9k): a dozen
-          facts in a settled order are not a box to type into. The free text
-          box stays where the fields have never been used, so a page written
-          before this is still editable where it was written. */}
-      {part.kind === 'copyright' && onOpenCopyright ? (
-        <>
-          <button type="button" className="raised small" onClick={onOpenCopyright}>
-            The copyright information…
-          </button>
-          <p className="muted small">{describeCopyright(part, file)}</p>
-        </>
-      ) : null}
+      {/* **The half title and the title page never arrive here either**
+          (§9u). `partPlacement` calls both a block, so both have gone to the
+          designed-page screen since §9n — and this panel went on holding a
+          second set of fields for them, reachable from the column, which is
+          the two-answers fault that screen was built to end. It was the
+          column that kept them alive; the column is gone. */}
+      <label className="field">
+        <span>Heading</span>
+        <input aria-label="The part's heading" placeholder={info.name} value={part.title} onChange={(event) => patch({ title: event.target.value })} />
+      </label>
+      {/* A copyright page never arrives here (§15c): it opens its own screen,
+          and with the inspector gone (§9u) this panel is `PartDialog`'s alone,
+          which the copyright page does not reach. The button through to that
+          screen went with the column that held the only route to it. */}
       {info.carries === 'text' && !(part.kind === 'copyright' && copyrightOf(part)) ? (
         <label className="field">
           <span>Text</span>

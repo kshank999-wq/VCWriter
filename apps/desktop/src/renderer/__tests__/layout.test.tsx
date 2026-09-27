@@ -128,6 +128,19 @@ describe('the room', () => {
     return found.closest('button') as HTMLElement;
   };
 
+  /** Turn the spread until a page of the story is up, without pressing it. */
+  const turnToStoryPage = (): HTMLElement => {
+    const next = screen.getByRole('button', { name: 'Next spread' });
+    for (let turn = 0; turn < 14; turn += 1) {
+      const story = (Array.from(document.querySelectorAll('.layout-sheet:not(.layout-no-sheet)')) as HTMLElement[]).find((one) =>
+        one.querySelector('.bk-p'),
+      );
+      if (story) return story;
+      fireEvent.click(next);
+    }
+    throw new Error('No page of the story was found');
+  };
+
   /** Turn the spread until a page of the story is up, and choose it. */
   const chooseStoryPage = (): HTMLElement => {
     const next = screen.getByRole('button', { name: 'Next spread' });
@@ -283,11 +296,13 @@ describe('the room', () => {
       },
     });
     render(<Harness initial={start} />);
-    // The figure is under its chapter, so the chapter is opened first (§9o);
-    // choosing it opens the picture's own fields.
+    // The figure is under its chapter, so the chapter is opened first (§9o).
+    // **A double-click opens it** (§9u): with the column gone, the picture's
+    // fields are on the page it stands on, and the picture in hand is the one
+    // that page's dialog is about.
     openFold('The Lamp');
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    fireEvent.click(rail.getByRole('button', { name: /^The harbour/ }));
+    fireEvent.doubleClick(rail.getByRole('button', { name: /^The harbour/ }));
     expect((screen.getByLabelText('Figure place') as HTMLSelectElement).value).toBe('measure');
     // A page of its own. **Which side is not asked** (§9j, from Ken: *you can
     // take the which page out and just make it whatever the selected page*):
@@ -326,16 +341,16 @@ describe('the room', () => {
     render(<Harness initial={start} />);
     openFold('The Lamp');
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    fireEvent.click(rail.getByRole('button', { name: /^The harbour/ }));
+    fireEvent.doubleClick(rail.getByRole('button', { name: /^The harbour/ }));
     const draw = screen.getByRole('button', { name: 'Draw the box…' });
     expect(draw.getAttribute('aria-pressed')).toBe('false');
-    // The box is drawn on a page of the story, which is where a figure can go.
-    const story = chooseStoryPage();
+    // **Taking the tool up closes the page's dialog** (§9d, §9u): the box is
+    // drawn on the spread the dialog was covering, so it gets out of the way.
     fireEvent.click(draw);
-    // The spread says it is waiting for a box.
-    const sheet = story;
+    expect((document.querySelector('.layout-page-dialog') as HTMLElement).hasAttribute('open')).toBe(false);
+    // The box is drawn on a page of the story, which is where a figure can go.
+    const sheet = turnToStoryPage();
     expect(sheet.classList.contains('layout-sheet-drawing')).toBe(true);
-    expect(screen.getByRole('button', { name: 'Drawing — drag on the page' })).toBeDefined();
     // jsdom measures nothing, so the sheet is given a rectangle to be read against.
     const rect = { left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
     sheet.getBoundingClientRect = () => rect;
@@ -350,7 +365,10 @@ describe('the room', () => {
     expect(placed.span).toBeGreaterThan(0.2);
     // The drawing is over, and the box is gone.
     expect(document.querySelector('.layout-draw-box')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Draw the box…' })).toBeDefined();
+    // The tool is down, and the picture's own screen is a double-click away
+    // again — which is the one way to it now (§9u).
+    fireEvent.doubleClick(rail.getByRole('button', { name: /^The harbour/ }));
+    expect(screen.getByRole('button', { name: 'Draw the box…' }).getAttribute('aria-pressed')).toBe('false');
   });
 
   /**
@@ -394,25 +412,36 @@ describe('the room', () => {
   });
 
   /**
-   * The inspector is the selection's (§9f). It used to stand whatever was
-   * chosen, holding one paragraph, which on a small window cost a quarter of
-   * the screen — and since §9e a quarter of the screen is a quarter less book.
+   * **There is no column at all** (§9u, from Ken: *since we can double click
+   * any of the pages and it opens up the dialog box, let's remove the
+   * right-hand menu. There's no need for it. It's just redundant*).
+   *
+   * §9f had already made it the selection's, so it stood only when something
+   * was chosen — and what it then held was the screen the double-click opens.
+   * A second copy of one screen is what this room keeps finding and removing;
+   * this time the copy was the column itself.
    */
-  it('has no inspector column until something is chosen, and drags when there is one', () => {
+  it('has no column beside the spread, whatever is chosen', () => {
     render(<Harness initial={novel()} />);
-    expect(document.querySelector('.layout-inspector')).toBeNull();
-    expect(screen.queryByLabelText('Inspector width')).toBeNull();
-    // What the column used to say is one line under the list it is about, and
-    // the two halves that were labels for buttons already on screen are gone.
+    const gone = () => {
+      expect(document.querySelector('.layout-inspector')).toBeNull();
+      expect(screen.queryByLabelText('Inspector width')).toBeNull();
+    };
+    gone();
+    // The double-click is the only way to what sets a page, so it is the one
+    // thing on this screen that has to be told rather than seen.
     const note = document.querySelector('.layout-rail-note') as HTMLElement;
-    expect(note.textContent).toMatch(/chosen on the spread/);
+    expect(note.textContent).toMatch(/double-click opens what sets a page/);
     expect(note.textContent).not.toMatch(/Picture|Book settings/);
 
-    // Choosing a part brings the column and its divider.
+    // Choosing a part turns to its page and brings no column with it.
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
     fireEvent.click(rail.getByRole('button', { name: /^Half title/ }));
-    expect(document.querySelector('.layout-inspector')).not.toBeNull();
-    expect(screen.getByLabelText('Inspector width')).toBeDefined();
+    gone();
+    expect(screen.queryByLabelText('Half title')).toBeNull();
+    // The double-click opens the page's own screen (§9n).
+    fireEvent.doubleClick(rail.getByRole('button', { name: /^Half title/ }));
+    expect(screen.getByLabelText('Half title').hasAttribute('open')).toBe(true);
   });
 
   /**
@@ -457,27 +486,31 @@ describe('the room', () => {
     expect(pages[0]!.textContent).toMatch(/^Page \w+/);
     for (const page of pages) expect(page.textContent).not.toMatch(/^Text/);
 
-    // Choosing one puts that page in hand, and the column is the page's.
+    // Choosing one puts that page in hand and nothing else: the page's screen
+    // is what a **double-click** opens (§9u), the column that used to answer a
+    // single press being gone.
     fireEvent.click(within(pages[0] as HTMLElement).getByRole('button'));
-    const inspector = document.querySelector('.layout-inspector') as HTMLElement;
-    expect(inspector).not.toBeNull();
+    expect(document.querySelector('.layout-inspector')).toBeNull();
+    fireEvent.doubleClick(within(pages[0] as HTMLElement).getByRole('button'));
+    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    expect(panel.hasAttribute('open')).toBe(true);
     // What the panel used to say in prose is behind the ? (§9m, from Ken:
     // *all this extra text that's instructional can be a floating help box*),
     // and it floats rather than opening in the flow.
-    expect(inspector.textContent).not.toMatch(/this page’s alone/);
-    fireEvent.click(within(inspector).getByLabelText(/^About page /));
-    expect(inspector.textContent).toMatch(/this page’s alone/);
-    expect(within(inspector).getByRole('button', { name: 'Put a picture on this page…' })).toBeDefined();
+    expect(panel.textContent).not.toMatch(/this page’s alone/);
+    fireEvent.click(within(panel).getByLabelText(/^About page /));
+    expect(panel.textContent).toMatch(/this page’s alone/);
+    expect(within(panel).getByRole('button', { name: 'Put a picture on this page…' })).toBeDefined();
     // And **Done** is gone (§9m): it did nothing the × did not.
-    expect(within(inspector).queryByRole('button', { name: 'Done' })).toBeNull();
+    expect(within(panel).queryByRole('button', { name: 'Done' })).toBeNull();
     // How the page is set is a **way through** rather than a second copy
     // (§9l): the chapter page's own controls stay in the chapter page's
     // dialog, so two screens cannot disagree about how a chapter opens.
-    expect(within(inspector).getByRole('button', { name: 'Set this chapter’s page…' })).toBeDefined();
+    expect(within(panel).getByRole('button', { name: 'Set this chapter’s page…' })).toBeDefined();
     // And nothing from the chapter's page or the book's settings is on it.
-    expect(within(inspector).queryByLabelText('Trim size')).toBeNull();
-    expect(within(inspector).queryByLabelText('The number size')).toBeNull();
-    expect(inspector.textContent).not.toMatch(/epigraph|Book title/i);
+    expect(within(panel).queryByLabelText('Trim size')).toBeNull();
+    expect(within(panel).queryByLabelText('The number size')).toBeNull();
+    expect(panel.textContent).not.toMatch(/epigraph|Book title/i);
   });
 
   it('writes the trim and says what was worked out from it', () => {
@@ -500,16 +533,38 @@ describe('the room', () => {
     expect(bookSettingsOf(latest as ProjectFile).margins.outside).toBeNull();
   });
 
-  it('adds a part, edits its words, and removes it after asking', () => {
+  /**
+   * **A page made opens** (§9u). While there was a column the new part's
+   * fields appeared in it the moment it was added; with the column gone,
+   * adding a page would otherwise answer with a rail row and nothing else,
+   * and a writer who has just made a preface is looking for somewhere to
+   * type it.
+   */
+  it('adds a part, opens it, edits its words, and removes it after asking', () => {
+    render(<Harness initial={novel()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /^Preface/ }));
+    expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'preface')).toBe(true);
+    expect(screen.getByLabelText('Part').hasAttribute('open')).toBe(true);
+    fireEvent.change(screen.getByLabelText("The part's text"), { target: { value: 'A word first.' } });
+    expect(partsOf(latest as ProjectFile).find((part) => part.kind === 'preface')?.text).toBe('A word first.');
+    fireEvent.click(screen.getByRole('button', { name: 'Remove…' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'preface')).toBe(false);
+  });
+
+  /**
+   * A dedication is a **designed** page, so it has gone to its own screen
+   * since §9n — and the older fields went on offering a second set for it
+   * from the column. With the column gone there is one screen (§9u).
+   */
+  it('opens a designed page on its own screen rather than on the older fields', () => {
     render(<Harness initial={novel()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
     fireEvent.click(screen.getByRole('menuitem', { name: /^Dedication/ }));
-    expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'dedication')).toBe(true);
-    fireEvent.change(screen.getByLabelText("The part's text"), { target: { value: 'For M.' } });
-    expect(partsOf(latest as ProjectFile).find((part) => part.kind === 'dedication')?.text).toBe('For M.');
-    fireEvent.click(screen.getByRole('button', { name: 'Remove…' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
-    expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'dedication')).toBe(false);
+    expect(screen.getByLabelText('Dedication').hasAttribute('open')).toBe(true);
+    expect(screen.getByLabelText('Part').hasAttribute('open')).toBe(false);
+    expect(screen.queryByLabelText("The part's text")).toBeNull();
   });
 
   it('offers a once-only part only once', () => {
@@ -554,13 +609,14 @@ describe('the room', () => {
     const rail = document.querySelector('.layout-rail') as HTMLElement;
     const row = within(rail).getByRole('button', { name: /^Copyright/ });
 
-    // One click: the inspector offers it.
+    // One click chooses the row and opens nothing (§9u): the column that used
+    // to carry a button through to this screen is gone, and with it the last
+    // place the older fields could be reached from.
     fireEvent.click(row);
-    fireEvent.click(screen.getByRole('button', { name: 'The copyright information…' }));
-    expect(screen.getByRole('button', { name: 'Trade standard' })).toBeTruthy();
-    fireEvent.click(within(screen.getByLabelText('Copyright page')).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('button', { name: 'The copyright information…' })).toBeNull();
+    expect(screen.getByLabelText('Copyright page').hasAttribute('open')).toBe(false);
 
-    // And the double-click opens that screen itself: one page, one gesture,
+    // The double-click opens that screen itself: one page, one gesture,
     // and the older dialog never stands in front of it.
     fireEvent.doubleClick(row);
     expect(screen.getByRole('button', { name: 'Trade standard' })).toBeTruthy();
@@ -657,17 +713,18 @@ describe('the room', () => {
     expect(box).toBeDefined();
     expect(box!.attributes.assetId).toBeUndefined();
     expect(figurePlacement(box!).place).toBe('right');
-    expect(screen.getByRole('heading', { name: /An empty box/ })).toBeDefined();
     // **A picture goes in from the box itself** (§9m, from Ken: *there's
     // nothing that allows you to actually put a graphic in the box area*),
     // beside the ✗ and the ✓ rather than a panel away — and the box says
-    // what it measures, and carries corners to drag.
-    expect(screen.getByLabelText('Put a picture in this box')).toBeDefined();
+    // what it measures, and carries corners to drag. Since §9u this is the
+    // whole answer on the spread: nothing opens a panel behind the box a
+    // writer is still placing.
     expect(document.querySelector('.layout-placing-size')?.textContent).toMatch(/in/);
     expect(document.querySelectorAll('.layout-placing-grip')).toHaveLength(4);
+    expect(document.querySelector('.layout-inspector')).toBeNull();
 
     // And the picture goes in afterwards, which is the order Ken asked for.
-    fireEvent.click(screen.getByRole('button', { name: 'Choose a picture…' }));
+    fireEvent.click(screen.getByLabelText('Put a picture in this box'));
     chooseArt('harbour.png');
     await waitFor(() => {
       const filled = (latest as ProjectFile).beats.flatMap((beat) => beat.manuscript.elements).find((one) => one.id === box!.id);
@@ -719,6 +776,54 @@ describe('the room', () => {
     expect(rail.textContent).not.toMatch(/Story page|Picture facing/);
   });
 
+  /**
+   * **The two rows that opened nothing** (§9u).
+   *
+   * A section and a picture are not records with screens of their own — a
+   * chapter inside a story is a section whose heading opens a page (addendum
+   * 22 §6), and a picture stands where it stands in the writing — so neither
+   * had a double-click at all, which was survivable only while the column
+   * answered a single press for them. Both open the page they stand on now.
+   */
+  it('opens a section and a graphic set over the page from their rows', () => {
+    let file = createProjectFile({ title: 'Tales', format: 'short_story' });
+    file = beginStory(file, { title: 'The Road' }).file;
+    const track = file.tracks[0]!.id;
+    const made = addUnit(file, { trackId: track, title: 'II.' });
+    file = made.file;
+    const beat = addBeat(file, { unitId: made.unit.id, title: 'II.' });
+    file = updateBeat(beat.file, beat.beat.id, {
+      manuscript: {
+        elements: [
+          // A graphic set over the page (§8c): it rides the block after it
+          // without being one, so the row could not find the page it stands
+          // on — no number beside it in the rail, and nothing to open.
+          { id: 'g-1' as never, type: 'figure', text: 'A flourish', characterId: null, attributes: { assetId: 'a1', bookPlace: 'free' } },
+          { id: 'p-1' as never, type: 'paragraph', text: 'The road again.', characterId: null, attributes: {} },
+        ],
+      },
+    } as never);
+    render(<Harness initial={file} onOpenChapterPage={() => undefined} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    const dialog = () => document.querySelector('.layout-page-dialog') as HTMLElement;
+
+    openFold('The Road');
+    // eslint-disable-next-line no-console
+    fireEvent.doubleClick(railRow('II.'));
+
+    expect(dialog().hasAttribute('open')).toBe(true);
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Close' }));
+
+    // And the free graphic, whose own fields are on the page it stands on.
+    openFold('II.');
+    // The row carries its page number, which is the visible half of the same
+    // fix: without it `pageOf` found no page and there was nothing to open.
+    expect(railRow('A flourish').textContent).toMatch(/2$/);
+    fireEvent.doubleClick(rail.getByRole('button', { name: /^A flourish/ }));
+    expect(dialog().hasAttribute('open')).toBe(true);
+    expect((within(dialog()).getByLabelText('Figure place') as HTMLSelectElement).value).toBe('free');
+  });
+
   it('folds a group of settings behind its heading, and remembers', () => {
     render(<Harness initial={novel()} />);
     openBookSettings();
@@ -753,48 +858,36 @@ describe('the room', () => {
     expect(within(dialog).getByText(/Empty means the project’s own name/)).toBeDefined();
   });
 
-  it('says on the title page what it will print and sends the writer to Book settings, and takes full-page art', async () => {
+  /**
+   * **The half title and the title page have one screen** (§9u).
+   *
+   * Both are *block* pages, so both have opened the designed-page screen
+   * since §9n — and the older fields went on offering a second set for
+   * them, reachable from the column: a heading that was not a heading, a
+   * sentence pointing at Book settings, a subtitle box beside the one §16d
+   * built. That is the two-answers fault this room keeps finding, and the
+   * column was what kept it alive. What each screen holds is pinned by
+   * `designed-page-dialog.test.tsx`; what this pins is that there is one.
+   */
+  it('gives the title page and the half title one screen, and the older fields none', () => {
     render(<Harness initial={novel()} />);
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
-    fireEvent.click(rail.getByRole('button', { name: /^Title page/ }));
-    // Nothing says "nothing to type on it" any more, and the names are not offered twice.
-    expect(screen.queryByText(/nothing to type on it/)).toBeNull();
-    expect(screen.queryByLabelText('Book title')).toBeNull();
-    expect(document.querySelector('.layout-inspector')?.textContent).toMatch(/This page prints/);
-    fireEvent.change(screen.getByLabelText('Under the title'), { target: { value: 'A novel' } });
-    expect((latest as ProjectFile).settings.titlePage.episode).toBe('A novel');
-    // The button opens the one place the names are set.
-    fireEvent.click(within(document.querySelector('.layout-inspector') as HTMLElement).getByRole('button', { name: 'Book settings…' }));
-    expect(screen.getByRole('dialog', { name: 'Book settings' }).hasAttribute('open')).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Close book settings' }));
-    // The page's style. The **template select is absent here** (§16): the
-    // title page's placement is a pair of heights — where the title sits and
-    // where the author does — so a control offering the one-height templates
-    // could only disagree with the three arrangements on the page's own
-    // screen. Absent rather than greyed, and the drop is still the title's.
-    expect(screen.queryByLabelText('Page template')).toBeNull();
-    expect(screen.queryByLabelText('How far down the page')).toBeNull();
-    expect(document.querySelector('.layout-inspector')?.textContent).toMatch(/set on the page’s own screen/);
-    // The type is still the panel's: it is the same field either screen sets.
-    fireEvent.change(screen.getByLabelText('Title size'), { target: { value: '36' } });
-    expect((partsOf(latest as ProjectFile).find((part) => part.kind === 'title_page')!.style as { title: { size: number } }).title.size).toBe(36);
-    fireEvent.click(screen.getByRole('button', { name: 'Back to the page’s own look' }));
-    expect(partsOf(latest as ProjectFile).find((part) => part.kind === 'title_page')!.style).toEqual({});
-    // Full-page art: the picture joins the library and becomes the page.
-    const picker = screen.getByLabelText('Title art file') as HTMLInputElement;
-    const art = new File(['PNG bytes'], 'title-art.png', { type: 'image/png' });
-    Object.defineProperty(picker, 'files', { value: [art], configurable: true });
-    fireEvent.change(picker);
-    await waitFor(() => expect((latest as ProjectFile).assets).toHaveLength(1));
-    const after = latest as ProjectFile;
-    expect(partsOf(after).find((part) => part.kind === 'title_page')!.assetId).toBe(after.assets![0]!.id);
-    expect(screen.getByRole('button', { name: 'Import other full page art…' })).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Set the words instead' }));
-    expect(partsOf(latest as ProjectFile).find((part) => part.kind === 'title_page')!.assetId).toBeNull();
-    // The half title says what it prints too, and offers no subtitle.
-    fireEvent.click(rail.getByRole('button', { name: /^Half title/ }));
-    expect(document.querySelector('.layout-inspector')?.textContent).toMatch(/This page prints/);
-    expect(screen.queryByLabelText('Under the title')).toBeNull();
+    for (const name of [/^Title page/, /^Half title/]) {
+      const row = rail.getByRole('button', { name });
+      // A press chooses the row and offers nothing to type.
+      fireEvent.click(row);
+      expect(screen.queryByText(/This page prints/)).toBeNull();
+      expect(screen.queryByLabelText("The part's heading")).toBeNull();
+      expect(screen.queryByLabelText('Title art file')).toBeNull();
+      expect(screen.getByLabelText('Part').hasAttribute('open')).toBe(false);
+      // The double-click opens the page's own screen, and it is the book's
+      // fields that are on it (§16d: one value, two doors).
+      fireEvent.doubleClick(row);
+      const panel = document.querySelector('.designed-page-dialog') as HTMLElement;
+      expect(panel.hasAttribute('open')).toBe(true);
+      expect(panel.getAttribute('aria-label')).toBe(name.source.replace('^', ''));
+      fireEvent.click(within(panel).getByRole('button', { name: 'Close' }));
+    }
   });
 
   it('takes a chapter out and keeps every word, after saying what goes', () => {

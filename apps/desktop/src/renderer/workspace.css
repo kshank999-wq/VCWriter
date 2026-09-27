@@ -9057,8 +9057,7 @@ a.talk-mark:hover {
   overflow: auto;
 }
 
-.layout-rail h3,
-.layout-inspector h3 {
+.layout-rail h3 {
   margin: 12px 0 6px;
   font-size: 10px;
   text-transform: uppercase;
@@ -9340,15 +9339,6 @@ a.talk-mark:hover {
 
 .layout-message {
   color: var(--gold);
-}
-
-.layout-inspector {
-  /* Width from `useSplit` inline (§9f); the column is absent with nothing chosen. */
-  flex: 0 0 320px;
-  border-left: 1px solid var(--border);
-  background: var(--panel);
-  padding: 12px 14px;
-  overflow: auto;
 }
 
 .layout-section {
