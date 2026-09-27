@@ -53,6 +53,8 @@ import {
   type ResearchItem,
   type ResearchItemId,
   type ResearchView,
+  WORK_STANDING_WORDS,
+  reviewRows,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
 import { InlineText } from './InlineText';
@@ -322,6 +324,18 @@ export function ResearchBody({
     }
     return counts;
   }, [cast, file]);
+
+  /**
+   * How many found rows the search shows before it says there are more.
+   * A search that returned two hundred is one nobody reads.
+   */
+  const FOUND_LIMIT = 12;
+
+  /** Character work matching the search, across the whole cast (§7). */
+  const found = useMemo(
+    () => (query.trim().length === 0 ? [] : reviewRows(file, { query }).slice(0, FOUND_LIMIT)),
+    [file, query],
+  );
 
   const items = useMemo(() => {
     if (selection.kind === 'folder') return researchItemsIn(file, { categoryId: selection.id }, { query });
@@ -898,6 +912,53 @@ export function ResearchBody({
               </span>
             )}
           </header>
+
+          {/* **The search finds character work too** (addendum 25 §7). The box
+              said *Search titles, notes and tags* and meant it: a writer who
+              typed *coal tongs* found nothing, though it is a moment under
+              Silas's Miserly trait. The audit pays again — `reviewRows` with
+              no `characterId` has searched across the whole cast since
+              addendum 08 stage 10, matching the work, its trait's name and the
+              person's — so this is a **second reader of one reading** rather
+              than a second search, shown where the search already puts things
+              and **absent rather than empty** where nothing matches. */}
+          {found.length > 0 ? (
+            <section className="research-found" aria-label="Character work found">
+              <h4>
+                Character work · {found.length}
+                {found.length === FOUND_LIMIT ? '+' : ''}
+              </h4>
+              <ul>
+                {found.map((row) => {
+                  const who = file.characters.find((one) => one.id === row.work.characterId);
+                  return (
+                    <li key={`${row.work.kind}-${row.work.id}`}>
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() => {
+                          setCameFrom(null);
+                          setSelection({ kind: 'creator', id: row.work.characterId });
+                          setTabFor((current) => ({
+                            ...current,
+                            [row.work.characterId as string]:
+                              row.work.kind === 'arc_point' ? 'arc' : 'traits',
+                          }));
+                        }}
+                      >
+                        {row.work.text}
+                      </button>
+                      <span className="muted small">
+                        {who?.name ?? 'Somebody'}
+                        {row.unitTitle ? ` · ${row.unitTitle}` : ''} ·{' '}
+                        {WORK_STANDING_WORDS[row.standing]}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ) : null}
 
           {/* The Characters folder opens with the cast itself — the people,
               under the headings they are filed under (addendum 02 §16) —

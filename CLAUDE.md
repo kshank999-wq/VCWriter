@@ -3455,7 +3455,7 @@ push live; the build takes a minute or two.
   harder than usual: **the handoff's own headline decision had already been
   made here independently**, its seven tabs having been four since addendum 08
   stage 2 for the same reasons. Seventeen more of its asks are standing under
-  another name. **Stages 1 to 6 of §4's eight are built**; §4a says what each
+  another name. **Stages 1 to 7 of §4's eight are built**; §4a says what each
   does. Four decisions carry it. **The arc's shape is said *and* read** —
   addendum 08 §5 made it a reading and the handoff asks for a toggle, and both
   are right about different moments (an arc with no points has no shape to
@@ -3537,6 +3537,27 @@ push live; the build takes a minute or two.
   rather than the route). Driving it caught the placement fault: `.charmap` is
   `flex: 1` with its canvas `min-height: 0`, right in a room of its own and a
   thousand pixels tall in ordinary flow.
+  Stage 7 is the **margin mark** and **search across the cast**.
+  `passage-marks.ts` is the mark, and the decision is that **the ask is the
+  Character Creator's and the reading deliberately is not**: a mark that showed
+  characterization alone would stand beside a paragraph carrying a theme, an
+  index heading and a promise saying nothing about any of them — a mark that
+  lies about what it means. `usage_links` has been the polymorphic anchor since
+  this module was built and four modules since have widened it, so **one
+  reading answers for all of them** and a module built next month is marked the
+  day it anchors to an element; the book index is one more reader rather than a
+  second answer. **Nothing is stored** (cutting the passage takes the mark), **a
+  beat-wide pin is not marked** (no `elementId` means *somewhere in this
+  scene*, and marking the first paragraph would invent a position), and **every
+  mark is named rather than counted**, the point of a margin being to tell
+  without going anywhere. The search half is **the audit paying again**:
+  `reviewRows` with no `characterId` has searched the whole cast since addendum
+  08 stage 10, while the research box — *Search titles, notes and tags* — meant
+  it, so *coal tongs* found nothing though it is a moment under a trait; this
+  is a **second reader of one reading**, absent rather than empty and capped at
+  twelve. Driving it caught the placement: the right gutter was tried first and
+  **measuring killed it**, the side column ending at 425px with the mark
+  landing at 421, under the divider.
   §2 records
   where this diverges from the handoff and why; §5 is the one thing
   deliberately not built (§21's AI suggestions, which the handoff does not ask

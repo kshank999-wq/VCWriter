@@ -276,6 +276,45 @@ its canvas `min-height: 0`, which is right in a room of its own and draws a
 thousand pixels tall in ordinary flow, so the section gives it the height it
 expects.
 
+**Stage 7 — the margin mark, and search across the cast.**
+
+`passage-marks.ts` is the mark, and the decision is that **the ask is the
+Character Creator's and the reading deliberately is not**. A mark that showed
+characterization and nothing else would stand beside a paragraph carrying a
+theme, an index heading and a promise while saying nothing about any of them —
+a mark that lies about what it means. `usage_links` has been the polymorphic
+anchor since the Character Creator was built and four modules since have
+widened it rather than adding one of their own, so **one reading answers for
+all of them** and a module built next month is marked the day it anchors to an
+element; the book index is one more reader here rather than a second answer,
+being its own table because a mark carries a heading the writer typed.
+
+Three rules. **Nothing is stored**, so cutting the passage or taking the pin
+off takes the mark with nothing run. **A beat-wide pin is not marked** — a pin
+with no `elementId` means *somewhere in this scene*, which is a real answer,
+and putting its mark on the first paragraph would invent a position the writer
+did not give. And **every mark is named rather than counted**: *Character:
+Silas Crane · Miserly*, because the whole point of a margin is being able to
+tell without going anywhere. A buried character's work is unmarked, the margin
+being a list (addendum 24 §5i).
+
+**The search across the cast is the audit paying again.** `reviewRows` with no
+`characterId` has searched the whole cast since addendum 08 stage 10, matching
+the work, its trait's name and the person's — and the research search, whose
+box says *Search titles, notes and tags*, meant it: a writer who typed *coal
+tongs* found nothing, though it is a moment under Silas's Miserly trait. So
+this is a **second reader of one reading** rather than a second search, shown
+where the search already puts things, **absent rather than empty** where
+nothing matches, and capped at twelve because a search returning two hundred
+is one nobody reads. Pressing a row opens that person on the tab the work
+lives on.
+
+Driving it caught the placement: the right gutter was tried first — a
+statement about the line on the opposite side from the control that changes
+it — and measuring killed it, the manuscript's side column ending at 425px
+with the mark landing at 421, under the divider. The left gutter is the one
+this room reserves.
+
 ## 5. Deliberately not built
 
 §21's AI-assisted suggestions. The handoff does not ask for them and the

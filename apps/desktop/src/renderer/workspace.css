@@ -2393,6 +2393,55 @@ input[type='color'].swatch {
   opacity: 1;
 }
 
+/* What is already anchored to this line (addendum 25 §7).
+
+   It is **always drawn**, where the element type appears on hover: the mark is
+   there to be caught out of the corner of an eye while writing, and one that
+   appeared only on hover could be found only by somebody already looking for
+   it, which is the trip it exists to save.
+
+   It sits in the **left** gutter, tight against the text. The right gutter was
+   tried first — a statement about the line on the opposite side from the
+   control that changes it — and measuring killed it: the manuscript's side
+   column ends at 425px and the mark landed at 421, under the divider. The
+   left gutter is the one this room reserves. */
+.element-marks {
+  position: absolute;
+  left: -14px;
+  top: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  pointer-events: auto;
+}
+
+.element-mark {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+/* Each kind in the colour that module already uses, so a writer who knows
+   what green means on the Character Creator's rows knows what it means here. */
+.element-mark.mark-characterization,
+.element-mark.mark-arc_point {
+  background: var(--green);
+}
+
+.element-mark.mark-theme,
+.element-mark.mark-motif {
+  background: var(--gold);
+}
+
+.element-mark.mark-thread {
+  background: var(--blue, #6f8fbd);
+}
+
+.element-mark.mark-index {
+  background: var(--muted);
+}
+
 /* The capitals belong to the line, so both of its layers wear them — and the
    type in the gutter does not. */
 .element-scene_heading .field,
@@ -17712,4 +17761,47 @@ dialog.designed-page-dialog[open] {
 .beat-peek-keys {
   color: var(--muted);
   font-size: 0.85em;
+}
+
+/* ---------------- character work found by the search (addendum 25 §7) */
+
+/* It stands above the notes because it is the rarer answer: a writer who
+   typed a phrase and got notes has what they expected, and one who got a
+   moment under a trait has found something the box never used to look for. */
+.research-found {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--gold);
+  background: var(--panel-2);
+  display: grid;
+  gap: 6px;
+}
+
+.research-found h4 {
+  margin: 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.research-found ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.research-found li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.research-found li > span {
+  margin-left: auto;
+  white-space: nowrap;
 }

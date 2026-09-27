@@ -92,6 +92,8 @@ import {
   type SetupPayoffId,
   type ThematicKind,
   type Typing,
+  describePassageMarks,
+  passageMarks,
   workingCast,
 } from '@vcwriter/domain';
 
@@ -184,6 +186,17 @@ export function BeatBody({
   const layout = layoutForFile(file);
   const elementTypes = elementTypesFor(format);
   const shortcuts = useMemo(() => styleShortcuts(format), [format]);
+
+  /**
+   * What is already anchored to each line (addendum 25 §7).
+   *
+   * **A reading, so a mark cannot outlive its pin**: cutting the passage or
+   * taking the pin off takes the mark with nothing run. It is every anchored
+   * kind rather than the Character Creator's alone — a mark that showed
+   * characterization and stayed silent beside a themed paragraph would be one
+   * that lies about what it means.
+   */
+  const marks = useMemo(() => passageMarks(file, beat), [file, beat]);
 
   const [focusId, setFocusId] = useState<ManuscriptElementId | null>(null);
   const [selection, setSelection] = useState<{ id: ManuscriptElementId; start: number; end: number } | null>(null);
@@ -691,6 +704,21 @@ export function BeatBody({
             } as React.CSSProperties
           }
         >
+          {/* **In the margin, never in the way**: it is outside the measure,
+              carries no tab stop of its own and does nothing on a press —
+              reading is the whole of it, and what it says is in the title so
+              there is no second panel to open. */}
+          {(marks.get(element.id) ?? []).length > 0 ? (
+            <span
+              className="element-marks"
+              title={describePassageMarks(marks.get(element.id) ?? [])}
+              aria-label={describePassageMarks(marks.get(element.id) ?? [])}
+            >
+              {(marks.get(element.id) ?? []).map((mark, at) => (
+                <i key={at} className={`element-mark mark-${mark.kind}`} />
+              ))}
+            </span>
+          ) : null}
           <select
             className="element-type"
             value={element.type}
