@@ -14356,7 +14356,47 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
 .layout-part-dialog-body { display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 20px; padding: 12px 18px 14px; max-height: calc(100vh - 140px); overflow: auto; }
 .layout-part-dialog-fields { min-width: 0; }
 .layout-part-dialog-fields .layout-section:last-child { border-bottom: 0; }
-.layout-page-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
+
+/* What the contents page lists (§9v): the contents itself, at its own depth,
+   with the page each entry would carry. It scrolls rather than growing the
+   dialog, a book of forty chapters otherwise pushing the page beside it off
+   the screen. */
+.layout-contents-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.layout-contents-list li { margin: 0; }
+
+.layout-contents-list label {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 3px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.layout-contents-list label:hover { background: var(--panel-2); }
+
+/* A chapter inside a story sits under it, the way the page sets it. */
+.layout-contents-under label { padding-left: 22px; }
+.layout-contents-under .layout-contents-name { font-size: 0.92em; }
+
+.layout-contents-name { min-width: 0; overflow-wrap: anywhere; }
+.layout-contents-page { font-variant-numeric: tabular-nums; }
+
+/* Left off: still readable, and plainly not on the page. */
+.layout-contents-list input:not(:checked) ~ .layout-contents-name { opacity: 0.45; }
+/* The page stays in view while the fields scroll (§9v). Both columns are in
+   one scrolling box, so a long panel — the contents' list of entries being
+   the first that really is — used to carry the page it is checked against off
+   the top of the dialog. */
+.layout-page-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; position: sticky; top: 0; align-self: start; }
 .layout-page-preview-box { position: relative; overflow: hidden; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.45); }
 .layout-page-preview-box .layout-spread { position: absolute; left: 0; top: 0; transform-origin: top left; }
 .layout-page-preview-foot { display: flex; align-items: center; gap: 8px; }

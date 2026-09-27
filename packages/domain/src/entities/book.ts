@@ -393,5 +393,17 @@ export const bookSettingsSchema = z.object({
   parts: z.array(bookPartSchema).nullable().default(null),
   /** The fonts the writer imported (§6b). Empty until one is. */
   fonts: z.array(bookFontSchema).default([]),
+  /**
+   * What the contents page does **not** list (§9v, from Ken: *you need to be
+   * able to select in the menu what is going to be in the table of contents*).
+   *
+   * The ids that are **out**, rather than the ids that are in, because a
+   * contents page lists the book: a chapter written tomorrow belongs on it
+   * without anybody being asked, and a list of what is in would silently drop
+   * it. Each is a division's marker, a section's unit or a part — whichever
+   * record the entry stands for — and one that no longer exists is simply
+   * ignored, so deleting a chapter needs nothing run here.
+   */
+  contentsOut: z.array(z.string()).default([]),
 });
 export type BookSettings = z.infer<typeof bookSettingsSchema>;

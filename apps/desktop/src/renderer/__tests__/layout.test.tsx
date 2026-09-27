@@ -5,7 +5,9 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import {
   addBeat,
   addMarker,
+  addPart,
   addUnit,
+  outOfContents,
   bookNames,
   bookSettingsOf,
   bookFontsOf,
@@ -661,6 +663,74 @@ describe('the room', () => {
     drag(row(/^Chapter 2/), row(/^Chapter 1/));
     expect(contentsDivisions(latest as ProjectFile).map((placed) => placed.marker.title)).toEqual(['The Return', 'The Lamp']);
     expect(unitsInStoryOrder(latest as ProjectFile).map((unit) => unit.title)).toEqual(['The Return', 'Chapter One']);
+  });
+
+  /**
+   * **The contents follows a reorder at once** (§9v, from Ken: *when you
+   * reorder anything, in that left menu… right now it updates but you have to
+   * erase and reload the page*).
+   *
+   * The rail reads the file and redrew immediately; the contents, the running
+   * heads and every page number come off the **laying**, and what the laying
+   * watched did not include where a unit falls — so a chapter dragged rekeyed
+   * the units it moved without touching a word, and the room went on drawing
+   * the book in the order it used to be in.
+   */
+  it('re-lays the book when a chapter is dragged, so the contents is the new order', () => {
+    render(<Harness initial={addPart(novel(), 'contents').file} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    const row = (name: RegExp) => rail.getByRole('button', { name }).closest('li') as HTMLElement;
+    const listed = () =>
+      Array.from(document.querySelectorAll('.layout-sheet .bk-contents-title')).map((one) => one.textContent ?? '');
+    // Turn the spread to the contents page, which is where the list is drawn.
+    fireEvent.click(rail.getByRole('button', { name: /^Contents/ }));
+    // The two chapters and the back matter after them.
+    expect(listed()).toEqual(['The Lamp', 'The Return', 'About the author']);
+
+    fireEvent.dragStart(row(/^Chapter 2/), { dataTransfer: { setData: () => undefined } });
+    fireEvent.dragOver(row(/^Chapter 1/));
+    fireEvent.drop(row(/^Chapter 1/));
+    fireEvent.dragEnd(row(/^Chapter 2/));
+
+    // The story order moved, and so did the page that lists it — with nothing
+    // closed, nothing reopened and nothing reloaded.
+    expect(unitsInStoryOrder(latest as ProjectFile).map((unit) => unit.title)).toEqual(['The Return', 'Chapter One']);
+    expect(listed()).toEqual(['The Return', 'The Lamp', 'About the author']);
+  });
+
+  /**
+   * **What the contents lists** (§9v, from Ken: *you need to be able to select
+   * in the menu what is going to be in the table of contents… that can be done
+   * in the contents dialog box*). Everything until somebody says otherwise.
+   */
+  it('ticks what the contents page lists, on the contents page’s own screen', () => {
+    render(<Harness initial={addPart(novel(), 'contents').file} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.doubleClick(rail.getByRole('button', { name: /^Contents/ }));
+    const picker = document.querySelector('.layout-contents-picker') as HTMLElement;
+    expect(picker).not.toBeNull();
+    expect(picker.textContent).toMatch(/Everything in the book/);
+    const boxes = within(picker).getAllByRole('checkbox');
+    expect(boxes.every((box) => (box as HTMLInputElement).checked)).toBe(true);
+
+    // The list is the contents itself, in the book's order.
+    const names = Array.from(picker.querySelectorAll('.layout-contents-name')).map((one) => one.textContent ?? '');
+    expect(names.some((name) => name.includes('The Lamp'))).toBe(true);
+    expect(names.some((name) => name.includes('The Return'))).toBe(true);
+
+    // Untick one: the page stops printing it, and the row stays to be
+    // ticked again — what is stored is only what was taken off.
+    const at = names.findIndex((name) => name.includes('The Return'));
+    fireEvent.click(boxes[at]!);
+    expect([...outOfContents(latest as ProjectFile)]).toHaveLength(1);
+    expect(picker.textContent).toMatch(/1 left off/);
+    // The page beside the list, which is what the ticks are checked against.
+    expect(
+      Array.from(document.querySelectorAll('.layout-page-preview .bk-contents-title')).map((one) => one.textContent ?? ''),
+    ).toEqual(['The Lamp', 'About the author']);
+    // And back on again, which is the whole of why the row stays.
+    fireEvent.click(within(picker).getAllByRole('checkbox')[at]!);
+    expect(outOfContents(latest as ProjectFile).size).toBe(0);
   });
 
   it('sets how a division’s heading looks in Book settings, under the format’s own word', () => {

@@ -86,6 +86,7 @@ import {
   renderBookHtml,
   renderBookPage,
   setBookSettings,
+  setInContents,
   trimPresetOf,
   updatePart,
   type BookPage,
@@ -2578,6 +2579,12 @@ function PartDialog({
                 rows={laying ? bookPageRows(laying.laid.pages, laying.blocks) : []}
               />
               {partTakesInsets(part.kind) ? <PartPictures file={file} part={part} onUpdate={onUpdate} onTouched={setTouched} /> : null}
+              {/* What the contents page lists (§9v). On the contents page's
+                  own screen rather than in the rail: the rail lists the book
+                  and the contents lists **entries**, and the two are not the
+                  same list — a story's chapters are a fold away there and all
+                  of them are here, which is the list being ticked. */}
+              {part.kind === 'contents' ? <ContentsPicker file={file} laying={laying} onUpdate={onUpdate} /> : null}
             </div>
             <PagePreview laying={laying} partId={part.id} focus={focus} />
           </div>
@@ -2594,6 +2601,66 @@ function PartDialog({
  * how much of the measure it takes; the picture comes from a file, or from
  * the library where it is already in the book.
  */
+/**
+ * What the contents page lists (§9v, from Ken: *you need to be able to select
+ * in the menu what is going to be in the table of contents… that can be done
+ * in the contents dialog box*).
+ *
+ * **The list is the contents itself**, in the book's order and at its depth,
+ * with the page each entry would carry. Ken offered the rail as the other
+ * place, and the rail cannot be it: it lists the *book*, where a story's
+ * chapters are a fold away and a writer would have to open every one to see
+ * what they are ticking. Here they are all in front of them, beside the page
+ * the ticks make.
+ *
+ * Everything is listed until somebody says otherwise, so a chapter written
+ * tomorrow is on the page the day it is written — the ticks are read off
+ * `contentsOut`, which holds only what was taken off.
+ */
+function ContentsPicker({
+  file,
+  laying,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  laying: Laying | null;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+}) {
+  const rows = laying?.context.contents ?? [];
+  const off = rows.filter((row) => !row.listed).length;
+  return (
+    <section className="layout-section layout-contents-picker">
+      <h3>What it lists</h3>
+      {rows.length === 0 ? (
+        <p className="muted small">Nothing to list yet.</p>
+      ) : (
+        <>
+          <p className="muted small">
+            {off === 0
+              ? 'Everything in the book. Anything added later is listed too.'
+              : `${off} left off. ${rows.length - off} of ${rows.length} on the page.`}
+          </p>
+          <ul className="layout-contents-list">
+            {rows.map((row) => (
+              <li key={row.id} className={row.depth ? 'layout-contents-under' : undefined}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={row.listed}
+                    onChange={(event) => onUpdate((current) => setInContents(current, row.id, event.target.checked))}
+                  />
+                  <span className="layout-contents-name">{row.label ? `${row.label} ${row.title}`.trim() : row.title}</span>
+                  <span className="muted layout-contents-page">{row.page > 0 ? row.page : ''}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
 function PartPictures({
   file,
   part,

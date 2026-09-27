@@ -450,11 +450,23 @@ export const sheetCount = (laid: LaidBook): number => laid.pages.length;
 
 /** The contents page's rows, read off the laid book: every chapter opening and its page. */
 export interface BookContentsRow {
+  /**
+   * The record the entry stands for (§9v): a division's marker, a section's
+   * unit, or a part. What a tick is kept against, and what the screen names
+   * a row by — never the page, a page not being a record.
+   */
+  id: string;
   label: string;
   title: string;
   page: number;
   /** How far in it sits: a chapter inside a story is under it (addendum 22 §6). */
   depth: number;
+  /**
+   * Whether the page prints it (§9v). Every row comes back either way, so the
+   * screen can draw what is left off and the writer can put it back; the
+   * print skips the ones that are not listed.
+   */
+  listed: boolean;
 }
 
 /**
@@ -467,7 +479,12 @@ export interface BookContentsRow {
  * where it opens a chapter inside a story — so a novel's running headings
  * stay out of the contents without this having to know what a novel is.
  */
-export const bookContentsOf = (blocks: readonly BookBlock[], laid: LaidBook): BookContentsRow[] =>
+export const bookContentsOf = (
+  blocks: readonly BookBlock[],
+  laid: LaidBook,
+  /** The ids the writer has taken off the page (§9v). Everything is on by default. */
+  out: ReadonlySet<string> = new Set(),
+): BookContentsRow[] =>
   blocks
     .filter((block) => {
       if (block.kind === 'chapter_opening') return true;
@@ -477,16 +494,25 @@ export const bookContentsOf = (blocks: readonly BookBlock[], laid: LaidBook): Bo
     .map((block) => {
       const at = laid.where.get(block.id);
       const page = at && at.numbering === 'arabic' ? at.number : 0;
+      // **The record, never the block** (§9v). A tick has to survive the book
+      // being re-laid, and a block is made afresh every time — so a division
+      // is named by its marker, a section by its unit and a part by the part.
       // A chapter inside a story has no number — a collection numbers
       // nothing — so its heading goes where a title goes and the row is
       // indented under its story. Put in the label's column it would hang
       // outside the text block, which is where the first draft drew it.
-      if (block.kind === 'heading') return { label: '', title: block.text.trim(), page, depth: 1 };
+      if (block.kind === 'heading') {
+        const id = block.unitId ?? block.id;
+        return { id, label: '', title: block.text.trim(), page, depth: 1, listed: !out.has(id) };
+      }
+      const id = block.kind === 'part_opening' ? (block.partId ?? block.id) : block.id;
       return {
+        id,
         label: block.chapter?.label ?? '',
         title: block.chapter ? block.chapter.title : block.title ?? '',
         page,
         depth: 0,
+        listed: !out.has(id),
       };
     });
 

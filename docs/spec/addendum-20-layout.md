@@ -3065,6 +3065,60 @@ straight there. **A route that only one surface can reach is a feature nobody
 finds; when that surface goes, what it alone could do is either carried or
 deleted, never left.**
 
+## 9v. What the contents lists, and a reorder it follows
+
+From Ken, two asks in one message: *for the table of contents, you need to be
+able to select in the menu what is going to be in the table of contents… Or
+that can be done in the contents dialog box*, and *when you reorder anything,
+in that left menu it dynamically updates — right now it updates but you have
+to erase and reload the page.*
+
+**The reorder is one line, and the line is what the laying watches.** The rail
+reads the file, so it redrew the moment a story was dragged; the contents, the
+running heads and every page number come off the **laying**, which is re-made
+only when what it depends on changes — and that key listed a unit's id, its
+title and whether it is in the script, and **not where it falls**. A chapter
+dragged rekeys the units it moved without touching a word, so nothing in the
+key moved and the room went on drawing the book in the order it used to be in.
+Measured on a collection of three stories: the rail put FALLING above SIMPLE
+PLEASURES and the contents page still read *SIMPLE PLEASURES 9, FALLING 13*.
+With `orderKey`, `trackId` and `kind` in the key it follows at once, pages and
+all. The lesson is the one the room keeps learning from the other end: **two
+readings of one document, and only one of them told when the document moves**.
+
+**The ticks are in the contents page's own screen.** Ken offered the rail as
+the other place and the rail cannot be it: it lists the *book*, where a story's
+chapters are a fold away, so ticking down it would mean opening every fold to
+see what is being ticked. Here they are all in front of the writer, in the
+book's order and at their own depth, with the page each entry would carry —
+**the list is the contents itself** — and the page it makes stands beside it.
+
+Three decisions. **Only what is off is written down**: `contentsOut` holds the
+ids that are *not* listed rather than the ids that are, because a contents page
+lists the book — a chapter written tomorrow belongs on it without anybody being
+asked, and a list of what is in would silently drop it. **A row is named by its
+record, never by its block**: a division by its marker, a section by its unit, a
+part by the part, so a tick survives the book being re-laid, and an id that
+names nothing is simply ignored, which is what lets a chapter be deleted with
+nothing run here. And **every row comes back either way**: `bookContentsOf`
+returns what is left off as well as what is on, carrying `listed`, so the screen
+can draw a row that is off and offer it back while the print skips it. A list of
+what is on could not do that — a row taken off would have nowhere to be found.
+
+It also answers something the screen showed and nobody had reported: a
+collection whose first section is titled as the story is lists that story
+**twice**, once as the division and once as the section under it. That is the
+manuscript saying the title twice, which is the importer's business rather than
+the contents page's, so nothing here guesses at it — the writer unticks the
+repeat, which is what *select what is going to be in the table of contents* is
+for.
+
+One thing came out of driving it: both columns of the part dialog are in one
+scrolling box, and the list of entries is the first panel long enough to carry
+the page it is checked against off the top. The preview is sticky now, so it
+stays in view while the fields scroll — which every long panel wanted and only
+this one made plain.
+
 ### Deliberately not built
 
 The **file importers** of §2 — BibTeX, RIS, CSL-JSON, CSV/TSV/XLSX, a

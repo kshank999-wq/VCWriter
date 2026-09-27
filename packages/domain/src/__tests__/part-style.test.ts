@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  outOfContents,
+  setInContents,
   partChanges,
   partLogo,
   partModeOf,
@@ -264,8 +266,10 @@ describe('the contents page and the index', () => {
   const laid = (file: ProjectFile): BookRenderContext => ({
     ...contextFor(file),
     contents: [
-      { label: '1', title: 'The Lamp', page: 3, depth: 0 },
-      { label: '', title: 'A room above the shop', page: 4, depth: 1 },
+      // `listed` is §9v's: the page prints the ticked rows. The cast below
+      // means a missing field is not a type error, so it is written out.
+      { id: 'ch1', label: '1', title: 'The Lamp', page: 3, depth: 0, listed: true },
+      { id: 'u1', label: '', title: 'A room above the shop', page: 4, depth: 1, listed: true },
     ],
     index: { letters: [{ letter: 'L', headings: [{ term: 'lamps', runs: [{ from: 3, to: 4, principal: false }], subEntries: [] }] }] },
   }) as unknown as BookRenderContext;
@@ -306,6 +310,44 @@ describe('the contents page and the index', () => {
     // The rows themselves are untouched; only how they are set changed.
     expect(html).toContain('The Lamp');
     expect(html).toContain('A room above the shop');
+  });
+
+  /**
+   * **What the page prints is what is ticked** (§9v). The rows all reach the
+   * builder, which is what lets the screen offer a row back; it prints the
+   * ones that are listed and nothing else.
+   */
+  it('prints the rows that are listed and leaves the rest off', () => {
+    const file = addPart(novel(), 'contents').file;
+    const block = bookBlocks(file).find((one) => one.kind === 'contents')!;
+    const context = laid(file);
+    expect(renderBookBlock(block, context)).toContain('A room above the shop');
+    const off = {
+      ...context,
+      contents: context.contents.map((row) => (row.depth ? { ...row, listed: false } : row)),
+    };
+    const html = renderBookBlock(block, off);
+    expect(html).not.toContain('A room above the shop');
+    // The division above it is untouched, and so is its page number.
+    expect(html).toContain('The Lamp');
+    expect(html).toContain('>3<');
+  });
+
+  /**
+   * Only what is **off** is written down (§9v), so a chapter added tomorrow
+   * is listed the day it is written and the list stays as short as the
+   * writer's decisions rather than as long as the book.
+   */
+  it('keeps the ids that are out, and hands a tick back', () => {
+    const file = addPart(novel(), 'contents').file;
+    expect(outOfContents(file).size).toBe(0);
+    const off = setInContents(file, 'ch1', false);
+    expect([...outOfContents(off)]).toEqual(['ch1']);
+    // Saying it again changes nothing at all.
+    expect(setInContents(off, 'ch1', false)).toBe(off);
+    const back = setInContents(off, 'ch1', true);
+    expect(outOfContents(back).size).toBe(0);
+    expect(setInContents(back, 'ch1', true)).toBe(back);
   });
 
   it('gives the index the same style, which nothing could reach before', () => {

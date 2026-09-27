@@ -2306,6 +2306,43 @@ push live; the build takes a minute or two.
   column and nowhere else. **A route that only one surface can reach is a
   feature nobody finds; when that surface goes, what it alone could do is
   either carried or deleted, never left.**
+  **§9v is what the contents lists, and a reorder it follows**, from Ken in
+  one message (*you need to be able to select in the menu what is going to be
+  in the table of contents… Or that can be done in the contents dialog box*;
+  *when you reorder anything, in that left menu it dynamically updates — right
+  now it updates but you have to erase and reload the page*). **The reorder is
+  one line and the line is what the laying watches**: the rail reads the file
+  and redrew at once, while the contents, the running heads and every page
+  number come off the **laying**, whose key listed a unit's id, title and
+  `inScript` and **not where it falls** — so a chapter dragged rekeys the units
+  it moved without touching a word, nothing in the key moved, and the room went
+  on drawing the book in the order it used to be in (measured: the rail put
+  FALLING above SIMPLE PLEASURES and the page still read *SIMPLE PLEASURES 9,
+  FALLING 13*). `orderKey`, `trackId` and `kind` join it. The lesson is the
+  room's own from the other end — **two readings of one document, and only one
+  of them told when the document moves**. **The ticks are on the contents
+  page's own screen** rather than in the rail, which Ken offered first and
+  which cannot be it: the rail lists the *book*, where a story's chapters are a
+  fold away, so ticking down it means opening every fold to see what is being
+  ticked, while here **the list is the contents itself** — every entry in the
+  book's order at its own depth with the page it would carry, beside the page
+  the ticks make. Three decisions. **Only what is off is written down**
+  (`contentsOut` holds the ids *not* listed, because a contents page lists the
+  book and a chapter written tomorrow belongs on it without being asked, where
+  a list of what is in would silently drop it). **A row is named by its record
+  and never by its block** — a division by its marker, a section by its unit, a
+  part by the part — so a tick survives the book being re-laid and an id naming
+  nothing is ignored, which is what lets a chapter be deleted with nothing run.
+  And **every row comes back either way**, carrying `listed`, so the screen can
+  draw what is off and offer it back while the print skips it; a list of what is
+  on could not, a row taken off having nowhere to be found. It also answers
+  something nobody had reported: a collection whose first section is titled as
+  the story lists that story **twice**, which is the manuscript saying the title
+  twice and so the importer's business rather than the contents page's — the
+  writer unticks the repeat, which is what the feature is for. Driving it caught
+  the part dialog's two columns being one scrolling box, so the list of entries
+  carried the page it is checked against off the top; the preview is **sticky**
+  now, which every long panel wanted and only this one made plain.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

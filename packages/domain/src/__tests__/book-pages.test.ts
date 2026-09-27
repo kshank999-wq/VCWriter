@@ -218,6 +218,44 @@ describe('the furniture', () => {
     // Chapter 2 opens on a recto: an odd page.
     expect(laid.where.get('ch2')!.number % 2).toBe(1);
   });
+
+  /**
+   * **What the contents page lists** (§9v, from Ken: *you need to be able to
+   * select in the menu what is going to be in the table of contents*).
+   *
+   * Every row comes back either way, so the screen can draw what is left off
+   * and offer it again; `listed` says which the page prints.
+   */
+  it('names every row by its record and lists everything until somebody says otherwise', () => {
+    const blocks = [...front(), ...chapter(1, [LINES * 2]), ...chapter(2, [3])];
+    const laid = layPages(
+      blocks,
+      measure({ half: 1, title: 4, copy: 6, contents: 3, ch1: 6, ch1p0: LINES * 2, ch2: 6, ch2p0: 3 }),
+      geometry(),
+      settings(),
+      names,
+    );
+    const rows = bookContentsOf(blocks, laid);
+    // The record, never the block: a division is named by its marker.
+    expect(rows.map((row) => row.id)).toEqual(['ch1', 'ch2']);
+    expect(rows.every((row) => row.listed)).toBe(true);
+
+    // One taken off: it is still a row, and it is not listed.
+    const after = bookContentsOf(blocks, laid, new Set(['ch2']));
+    expect(after.map((row) => [row.id, row.listed])).toEqual([
+      ['ch1', true],
+      ['ch2', false],
+    ]);
+    // Nothing else about it moved: the page it opens on is the page it opens on.
+    expect(after[1]!.page).toBe(rows[1]!.page);
+  });
+
+  it('ignores an id that names nothing, so deleting a chapter needs nothing run', () => {
+    const blocks = [...front(), ...chapter(1, [3])];
+    const laid = layPages(blocks, measure({ half: 1, title: 4, copy: 6, contents: 3, ch1: 6, ch1p0: 3 }), geometry(), settings(), names);
+    const rows = bookContentsOf(blocks, laid, new Set(['a chapter that is gone']));
+    expect(rows.map((row) => [row.id, row.listed])).toEqual([['ch1', true]]);
+  });
 });
 
 describe('balancing', () => {

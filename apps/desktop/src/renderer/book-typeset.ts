@@ -13,6 +13,7 @@ import {
   geometryOf,
   insideFor,
   layPages,
+  outOfContents,
   pictureLines,
   projectStats,
   renderBookBlock,
@@ -145,6 +146,11 @@ export const measureBlocks = (
 export const layBook = (file: ProjectFile, box: HTMLElement): Laying => {
   const settings = bookSettingsOf(file);
   const blocks = bookBlocks(file);
+  // What the contents page leaves off (§9v). It is read once and handed to
+  // both passes, because the entries decide how many pages the list takes
+  // and a measurement made against a different list is a measurement of a
+  // book that is not being printed.
+  const out = outOfContents(file);
   const format = file.project.format;
   const stats = projectStats(file);
   let pages = estimatedPages(stats.wordCount, contentsDivisions(file).length);
@@ -154,7 +160,7 @@ export const layBook = (file: ProjectFile, box: HTMLElement): Laying => {
     const context = contextFor(file, settings, geometry);
     // The contents and the index are measured for their rows: the numbers
     // are not known until the book is laid, and do not change the count.
-    const rows = bookContentsOf(blocks, { pages: [], where: new Map(), roman: 0, arabic: 0 });
+    const rows = bookContentsOf(blocks, { pages: [], where: new Map(), roman: 0, arabic: 0 }, out);
     const preliminary: BookRenderContext = {
       ...context,
       contents: rows,
@@ -164,7 +170,7 @@ export const layBook = (file: ProjectFile, box: HTMLElement): Laying => {
     const laid = layPages(blocks, measured, geometry, settings, context.names, wraps);
     const final: BookRenderContext = {
       ...context,
-      contents: bookContentsOf(blocks, laid),
+      contents: bookContentsOf(blocks, laid, out),
       index: bookIndexFor(file, laid),
     };
     return { blocks, settings, geometry, context: final, laid, measured };
@@ -224,7 +230,13 @@ export const useBookLaying = (file: ProjectFile, open: boolean): { laying: Layin
         file.settings.markerNumbering,
         file.project.title,
         file.project.author,
-        file.units.map((unit) => [unit.id, unit.inScript, unit.title]),
+        // **Where a unit falls, as well as what it says** (§9v, from Ken:
+        // *when you reorder anything… you have to erase and reload the
+        // page*). The rail reads the file and re-drew at once; the contents,
+        // the running heads and every page number come off the laying, and a
+        // chapter dragged rekeys the units it moved without touching a word —
+        // so the room went on drawing the book in the order it used to be in.
+        file.units.map((unit) => [unit.id, unit.inScript, unit.title, unit.orderKey, unit.trackId, unit.kind]),
         file.beats.map((beat) => [beat.id, beat.unitId, beat.inScript, beat.orderKey, beat.manuscript]),
         file.markers,
         (file.assets ?? []).map((asset) => [asset.id, asset.width, asset.height, asset.caption]),

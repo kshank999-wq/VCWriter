@@ -699,6 +699,9 @@ const blockInner = (block: BookBlock, context: BookRenderContext): string => {
       // place — the list runs to as many pages as it needs.
       const styled = block.partStyle ? ` style="${partStyleAttr(block.partStyle, context.settings.face, context.settings.fonts)}"` : '';
       const rows = context.contents
+        // What the writer left off (§9v). The rows all come back either way,
+        // so the screen can offer them again; the page prints the ticked.
+        .filter((row) => row.listed)
         .map(
           (row) =>
             `<div class="bk-contents-row${row.depth ? ' bk-contents-under' : ''}"><span class="bk-contents-label">${escapeHtml(row.label)}</span>` +

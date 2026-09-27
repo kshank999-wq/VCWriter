@@ -105,6 +105,35 @@ export const setBookSettings = (file: ProjectFile, patch: Partial<BookSettings>)
   project: { ...file.project, updatedAt: nowIso() },
 });
 
+// --------------------------------------------------------- what is listed
+
+/**
+ * What the contents page leaves off (§9v, from Ken: *you need to be able to
+ * select in the menu what is going to be in the table of contents*).
+ *
+ * A set of ids, read every time. Nothing here decides what a contents page
+ * *has* — that is `bookContentsOf`, off the laid book — so a chapter added
+ * tomorrow is listed the day it is written and one deleted drops out with
+ * nothing run.
+ */
+export const outOfContents = (file: ProjectFile): ReadonlySet<string> =>
+  new Set(bookSettingsOf(file).contentsOut);
+
+/**
+ * List an entry, or stop listing it. The id is the record the entry stands
+ * for — a division's marker, a section's unit, or a part.
+ *
+ * Only what is **off** is written down, so the list stays as short as the
+ * writer's decisions rather than as long as the book.
+ */
+export const setInContents = (file: ProjectFile, id: string, listed: boolean): ProjectFile => {
+  const out = bookSettingsOf(file).contentsOut;
+  if (listed === !out.includes(id)) return file;
+  return setBookSettings(file, {
+    contentsOut: listed ? out.filter((one) => one !== id) : [...out, id],
+  });
+};
+
 // ------------------------------------------------------------------- faces
 
 /**
