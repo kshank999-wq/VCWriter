@@ -71,6 +71,16 @@ interface CharacterMapProps {
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   /** Open somebody in the Character Creator (§12). */
   onOpenCreator(characterId: CharacterId): void;
+  /**
+   * Who the map opens focused on (addendum 25 §6).
+   *
+   * The map is the same component wherever it is drawn — rendering it beside
+   * the Relationships list is the map, not a second one — and the only thing
+   * that differs is where it starts. It is an **opening state rather than a
+   * fixed one**: the writer may focus on somebody else from the bar, which is
+   * what makes the map on that tab the map.
+   */
+  initialFocus?: CharacterId;
 }
 
 /** The drawing is laid out in a unit box; this is how big it is drawn. */
@@ -78,8 +88,8 @@ const SIZE = 1000;
 const PAD = 60;
 const at = (value: number) => PAD + value * (SIZE - PAD * 2);
 
-export function CharacterMap({ file, onUpdate, onOpenCreator }: CharacterMapProps) {
-  const [focusId, setFocusId] = useState<CharacterId | ''>('');
+export function CharacterMap({ file, onUpdate, onOpenCreator, initialFocus }: CharacterMapProps) {
+  const [focusId, setFocusId] = useState<CharacterId | ''>(initialFocus ?? '');
   const [depth, setDepth] = useState(1);
   const [kind, setKind] = useState<RelationshipKind | ''>('');
   const [trackId, setTrackId] = useState<TrackId | ''>('');

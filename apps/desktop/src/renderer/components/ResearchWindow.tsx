@@ -864,9 +864,14 @@ export function ResearchBody({
               // is a route that does not do what it says, so the tab goes with
               // the act — which is a change to where that person is *left*,
               // the same fact §11 remembers per person.
-              onOpenCharacter={(id) => {
+              onOpenCharacter={(id, tab) => {
                 setCameFrom({ kind: 'creator', id: creator.id });
-                setTabFor((current) => ({ ...current, [id as string]: 'arc' }));
+                // The tab goes with the act where the act names one: a button
+                // reading *Open their arc* that lands on their Overview is a
+                // route that does not do what it says. Where it names none —
+                // a person pressed on the map — they open on whatever tab
+                // they were last left on (addendum 08 §11).
+                if (tab) setTabFor((current) => ({ ...current, [id as string]: tab }));
                 setSelection({ kind: 'creator', id });
               }}
               onBack={() => setSelection(cameFrom ?? { kind: 'view', view: 'all' })}

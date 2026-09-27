@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
+import { CharacterMap } from './CharacterMap.js';
 import {
   ARC_INTENTS,
   ARC_INTENT_WORDS,
   ARC_KEY,
   ARC_LINK_VERBS,
   CHARACTER_ROLES,
+  addRelationshipStage,
   arcGraph,
   describeArcDisagreement,
+  describeRelationshipChange,
+  nounsFor,
+  relationshipStages,
+  removeRelationshipStage,
+  updateRelationshipStage,
   type ArcMark,
+  type CharacterRelationship,
   MOMENT_FILTERS,
   MOMENT_FILTER_WORDS,
   UP_NEXT_LIMIT,
@@ -158,7 +166,7 @@ interface CharacterCreatorProps {
    * rather than greyed** where the Creator is opened somewhere that has no
    * cast to move through, so the button simply is not there.
    */
-  onOpenCharacter?(id: CharacterId): void;
+  onOpenCharacter?(id: CharacterId, tab?: CreatorTab): void;
   /** Back to wherever this was opened from. */
   onBack(): void;
 }
@@ -324,7 +332,12 @@ export function CharacterCreator({
               {...(onReview ? { onReview } : {})}
             />
           ) : tab === 'relationships' ? (
-            <Relationships file={file} characterId={characterId} onUpdate={onUpdate} />
+            <Relationships
+              file={file}
+              characterId={characterId}
+              onUpdate={onUpdate}
+              {...(onOpenCharacter ? { onOpenCharacter } : {})}
+            />
           ) : tab === 'arc' ? (
             <Arc
               file={file}
@@ -1839,7 +1852,7 @@ function Arc({
   onRevealed(): void;
   onUpdate: CharacterCreatorProps['onUpdate'];
   /** Point the Creator at somebody whose arc this one is joined to (§5). */
-  onOpenCharacter?(id: CharacterId): void;
+  onOpenCharacter?(id: CharacterId, tab?: CreatorTab): void;
 }) {
   const board = useMemo(() => arcBoard({ characterId: characterId as string, file }), [characterId, file]);
   // Said only where the writer's intention and the points disagree (§5).
@@ -2091,7 +2104,7 @@ function Arc({
         file={file}
         characterId={characterId}
         onPick={setOpen}
-        {...(onOpenCharacter ? { onOpenArc: onOpenCharacter } : {})}
+        {...(onOpenCharacter ? { onOpenArc: (id: CharacterId) => onOpenCharacter(id, 'arc') } : {})}
       />
 
       <label className="field">
@@ -2179,6 +2192,117 @@ function Arc({
 // ----------------------------------------------------------- relationships
 
 /**
+ * How a relationship changes, as steps along the story (addendum 25 §6).
+ *
+ * **Where it stands, at a scene.** The chapter each step falls in is a
+ * reading, so there is nowhere to type *Ch 7* and moving the scene moves the
+ * step; the placed ones stand in the story's order and what is planned but
+ * not placed sits after them, which is `arcBoard`'s split. **The paragraph
+ * is the older spelling**: it stands where there are no steps, so nobody's
+ * words go and only one answer is on the screen at a time.
+ */
+function HowItChanges({
+  file,
+  rel,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  rel: CharacterRelationship;
+  onUpdate: CharacterCreatorProps['onUpdate'];
+}) {
+  const rows = relationshipStages(file, rel);
+  const nouns = nounsFor(file.project.format);
+  const units = useMemo(
+    () => [...file.units].sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1)),
+    [file.units],
+  );
+
+  return (
+    <div className="rel-change">
+      <div className="rel-change-head">
+        <span>How it changes</span>
+        <button
+          type="button"
+          className="ghost small"
+          onClick={() => onUpdate((current) => addRelationshipStage(current, rel.id).file)}
+        >
+          + Step
+        </button>
+      </div>
+
+      {rows.length === 0 ? (
+        <>
+          <p className="muted small">{describeRelationshipChange(rel)}</p>
+          {/* Still editable, because it is somebody's writing. It goes from
+              view the moment there is a step, which is what makes it the
+              older spelling rather than a second field. */}
+          <label className="field">
+            <span className="visually-hidden">How it changes, in a paragraph</span>
+            <textarea
+              aria-label="How it changes"
+              rows={2}
+              placeholder="Or say it in a sentence."
+              value={rel.evolution}
+              onChange={(event) =>
+                onUpdate((current) => updateRelationship(current, rel.id, { evolution: event.target.value }))
+              }
+            />
+          </label>
+        </>
+      ) : (
+        <ol className="rel-steps">
+          {rows.map((row) => (
+            <li key={row.stage.id} className={row.at === null ? 'rel-step planned' : 'rel-step'}>
+              <select
+                aria-label="Where it turns"
+                className="rel-step-where"
+                value={row.stage.unitId ?? ''}
+                onChange={(event) =>
+                  onUpdate((current) =>
+                    updateRelationshipStage(current, rel.id, row.stage.id, {
+                      unitId: event.target.value === '' ? null : event.target.value,
+                    }),
+                  )
+                }
+              >
+                <option value="">Not placed yet</option>
+                {units.map((unit) => (
+                  <option key={unit.id} value={unit.id as string}>
+                    {unit.title.trim() || `Untitled ${nouns.unit.toLowerCase()}`}
+                  </option>
+                ))}
+              </select>
+              {/* The division is read from where the scene falls — there is
+                  nowhere to type it, which is the point. */}
+              {row.division ? <span className="rel-step-div">{row.division}</span> : null}
+              <InlineText
+                value={row.stage.state}
+                ariaLabel="What it becomes"
+                placeholder="What it becomes"
+                className="rel-step-state"
+                onCommit={(state) =>
+                  onUpdate((current) => updateRelationshipStage(current, rel.id, row.stage.id, { state }))
+                }
+              />
+              <button
+                type="button"
+                className="ghost small"
+                aria-label="Remove this step"
+                onClick={() =>
+                  onUpdate((current) => removeRelationshipStage(current, rel.id, row.stage.id))
+                }
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+/**
  * How somebody stands towards other people (addendum 08 §11, stage 7).
  *
  * **Two lists, because the two directions are allowed to disagree.** *She trusts
@@ -2198,10 +2322,13 @@ function Relationships({
   file,
   characterId,
   onUpdate,
+  onOpenCharacter,
 }: {
   file: ProjectFile;
   characterId: CharacterId;
   onUpdate: CharacterCreatorProps['onUpdate'];
+  /** Into somebody else, from a line on the map (§6). */
+  onOpenCharacter?(id: CharacterId, tab?: CreatorTab): void;
 }) {
   const rows = useMemo(
     () => relationshipsOf({ characterId: characterId as string, file }),
@@ -2321,18 +2448,12 @@ function Relationships({
               />
             </label>
             {/* §11 calls the evolution optional, and it stays optional: most
-                relationships in most scripts do not move. */}
-            <label className="field">
-              <span>How it changes across the story — if it does</span>
-              <textarea
-                aria-label="How it changes"
-                rows={2}
-                value={rel.evolution}
-                onChange={(event) =>
-                  onUpdate((current) => updateRelationship(current, rel.id, { evolution: event.target.value }))
-                }
-              />
-            </label>
+                relationships in most scripts do not move. Addendum 25 §6 gives
+                it a shape — steps, each at a scene — and **the paragraph is
+                the older spelling**: where there are steps they are what shows,
+                where there are none the box stands, so nobody's words are
+                lost and there is one answer on the screen at a time. */}
+            <HowItChanges file={file} rel={rel} onUpdate={onUpdate} />
           </div>
         ) : null}
       </li>
@@ -2396,6 +2517,24 @@ function Relationships({
           <ul className="rel-list">{rows.inward.map((entry) => row(entry, false))}</ul>
         )}
       </section>
+
+      {/* **The map, beside the list** (addendum 25 §6, the handoff's own
+          screen). It is `CharacterMap` itself rather than a second drawing —
+          the same component the Research menu opens, started focused on this
+          person, so the two can never disagree about who is joined to whom.
+          **Absent rather than greyed** where there is nobody to go to. */}
+      {onOpenCharacter ? (
+        <section className="creator-rel-map" aria-label="Map">
+          <CharacterMap
+            file={file}
+            onUpdate={onUpdate}
+            // Plainly, on whatever tab they were last left on — clicking a
+            // person on the map is not a request to see their arc.
+            onOpenCreator={(id) => onOpenCharacter(id)}
+            initialFocus={characterId}
+          />
+        </section>
+      ) : null}
     </div>
   );
 }

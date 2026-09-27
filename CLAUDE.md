@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0055.
+  reads like it does. Applied through 0056.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
   the windowing, and the thing to know is that **every room goes to a second
@@ -3455,7 +3455,7 @@ push live; the build takes a minute or two.
   harder than usual: **the handoff's own headline decision had already been
   made here independently**, its seven tabs having been four since addendum 08
   stage 2 for the same reasons. Seventeen more of its asks are standing under
-  another name. **Stages 1 to 5 of §4's eight are built**; §4a says what each
+  another name. **Stages 1 to 6 of §4's eight are built**; §4a says what each
   does. Four decisions carry it. **The arc's shape is said *and* read** —
   addendum 08 §5 made it a reading and the handoff asks for a toggle, and both
   are right about different moments (an arc with no points has no shape to
@@ -3517,6 +3517,26 @@ push live; the build takes a minute or two.
   comparison of heights each normalised against its own arc; *Open their arc*
   is **absent rather than greyed** and opens them **on the Arc tab**, a button
   that landed on their Overview being a route that does not do what it says.
+  Stage 6 is **relationships**: there was one free-text `evolution` and the
+  handoff asks for what that paragraph is trying to say, a sequence of states
+  each anchored to a scene. **The paragraph stays as the older spelling** —
+  where there are steps they show, where there are none it stands, and taking
+  the last step away brings it back, which is `template`/`layout`'s rule
+  pointed at content rather than type. **A step is anchored to the scene and
+  never to a chapter number** (migration 0056, JSON in the row by a location's
+  prepared descriptions' precedent), so the chapter is read from where the
+  scene falls — `divisionSpan` a **third** time in this addendum — and there
+  is nowhere to type *Ch 7*; **a step with no scene is planned rather than
+  placed** and is listed after what is, `arcBoard`'s split for its own reason.
+  And **the map is the map**: `CharacterMap` itself rendered beside the list
+  with an `initialFocus`, rather than a second drawing, so the two cannot
+  disagree about who is joined to whom — an **opening state rather than a
+  fixed one**, and pressing a person there opens them **plainly** on whatever
+  tab they were last left on, where stage 5's *Open their arc* names a tab
+  because its label does (`onOpenCharacter` takes the tab, so the act decides
+  rather than the route). Driving it caught the placement fault: `.charmap` is
+  `flex: 1` with its canvas `min-height: 0`, right in a room of its own and a
+  thousand pixels tall in ordinary flow.
   §2 records
   where this diverges from the handoff and why; §5 is the one thing
   deliberately not built (§21's AI suggestions, which the handoff does not ask

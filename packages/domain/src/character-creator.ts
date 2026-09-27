@@ -5,6 +5,7 @@ import { castCalled, workingCast } from './characters.js';
 import { orderKeyBetween } from './ordering.js';
 import { updateCharacter } from './mutations.js';
 import { newId } from './ids.js';
+import { placedMarkerForUnit } from './markers.js';
 import type {
   ArcPointId,
   BeatId,
@@ -320,6 +321,22 @@ export type RelationshipKind = (typeof RELATIONSHIP_KINDS)[number];
  * of those and should not grow three fields every other link would leave empty
  * (addendum 08 §3.1).
  */
+/**
+ * One step in how a relationship changes (addendum 25 §6).
+ *
+ * It is a **state at a scene**, and the scene is the anchor: what a reader
+ * sees is *Ch 7 · Pays his doctor*, and the chapter is worked out from where
+ * that scene falls rather than typed, so moving the scene moves the step.
+ */
+export const relationshipStageSchema = z.object({
+  id: z.string(),
+  /** Where in the story it turns. Null where it is planned and not placed. */
+  unitId: z.string().nullable().default(null),
+  /** What it becomes there, in the writer's words. */
+  state: z.string().default(''),
+});
+export type RelationshipStage = z.infer<typeof relationshipStageSchema>;
+
 export const characterRelationshipSchema = z.object({
   id: id<CharacterRelationshipId>(),
   projectId: id<ProjectId>(),
@@ -331,8 +348,28 @@ export const characterRelationshipSchema = z.object({
   description: z.string().default(''),
   /** Where it stands now. */
   state: z.string().default(''),
-  /** How it changes across the story, where the writer tracks that. */
+  /**
+   * How it changes across the story, in a paragraph — **the older spelling**
+   * of `stages` (addendum 25 §6).
+   *
+   * Kept rather than replaced: it is what a writer typed, and taking it away
+   * to make room for a better shape would lose their words for a reason
+   * nobody asked for. Where there are stages, they are what the screen shows;
+   * where there are none, this paragraph stands. One answer at a time, which
+   * is `template`/`layout`'s rule (addendum 20 §14).
+   */
   evolution: z.string().default(''),
+  /**
+   * The same thing said as a sequence: where it stands, at a scene
+   * (addendum 25 §6).
+   *
+   * **Anchored to the scene and never to a chapter number**, so moving a
+   * scene moves the stage and there is nowhere to type *Ch 7* — the chapter
+   * is read from where the scene falls, the seventh time this project has
+   * made that a reading. A stage with no scene is one the writer has planned
+   * and not placed, which is the arc's own split.
+   */
+  stages: z.array(relationshipStageSchema).default([]),
   ...timestamps,
 });
 export type CharacterRelationship = z.infer<typeof characterRelationshipSchema>;
@@ -1841,6 +1878,131 @@ export const removeRelationship = (
   ...file,
   characterRelationships: file.characterRelationships.filter(
     (one) => (one.id as string) !== (relationshipId as string),
+  ),
+});
+
+// ---------------------------------------- how it changes (addendum 25 §6)
+
+/** One step of a relationship, with where it falls in the story worked out. */
+export interface RelationshipStageRow {
+  stage: RelationshipStage;
+  /** The division it falls under: *Ch 7*. Empty where the book has none. */
+  division: string;
+  /** The scene it turns in, named. Null where it is not placed yet. */
+  unitTitle: string | null;
+  /** Its place in the story order, for ordering. Null where unplaced. */
+  at: number | null;
+}
+
+/**
+ * How a relationship changes, read in the story's order.
+ *
+ * **Placed first, in the story's order, then what is planned**, which is
+ * `arcBoard`'s own split (addendum 08 §5) and for the same reason: once a step
+ * is anchored to a scene the manuscript decides where it falls, and a control
+ * that let somebody drag it above an earlier one would be a control that lies.
+ * The division is worked out from where the scene falls — **the nearest marker
+ * at or before**, `divisionSpan`'s rule — so there is nowhere to type *Ch 7*
+ * and moving the scene moves the step.
+ */
+export const relationshipStages = (
+  file: ProjectFile,
+  relationship: CharacterRelationship,
+): RelationshipStageRow[] => {
+  const order = new Map<string, number>();
+  const division = new Map<string, string>();
+  let held = '';
+  [...file.units]
+    .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))
+    .forEach((unit, at) => {
+      order.set(unit.id as string, at);
+      const placed = placedMarkerForUnit(file, unit.id as string);
+      if (placed && placed.label.trim().length > 0) held = placed.label;
+      division.set(unit.id as string, held);
+    });
+
+  const rows = relationship.stages.map((stage): RelationshipStageRow => {
+    const unit = stage.unitId
+      ? file.units.find((one) => (one.id as string) === stage.unitId)
+      : undefined;
+    return {
+      stage,
+      division: unit ? (division.get(unit.id as string) ?? '') : '',
+      unitTitle: unit ? unit.title.trim() || 'Untitled scene' : null,
+      at: unit ? (order.get(unit.id as string) ?? null) : null,
+    };
+  });
+
+  const placed = rows.filter((row) => row.at !== null).sort((a, b) => a.at! - b.at!);
+  return [...placed, ...rows.filter((row) => row.at === null)];
+};
+
+/**
+ * What the row says about how it changes, where there are no steps.
+ *
+ * **The paragraph is the older spelling** (§6): where somebody has written one
+ * it stands, and where they have written neither the screen says what steps
+ * are for rather than showing an empty strip.
+ */
+export const describeRelationshipChange = (relationship: CharacterRelationship): string =>
+  relationship.stages.length > 0
+    ? ''
+    : relationship.evolution.trim().length > 0
+      ? relationship.evolution
+      : 'Nothing said about how it changes. A step is where it stands, at a scene.';
+
+export const addRelationshipStage = (
+  file: ProjectFile,
+  relationshipId: CharacterRelationshipId,
+  input: { unitId?: string | null; state?: string } = {},
+): { file: ProjectFile; stage: RelationshipStage | null } => {
+  const one = file.characterRelationships.find(
+    (candidate) => (candidate.id as string) === (relationshipId as string),
+  );
+  if (!one) return { file, stage: null };
+  const stage = relationshipStageSchema.parse({
+    id: newId(),
+    unitId: input.unitId ?? null,
+    state: input.state ?? '',
+  });
+  return {
+    file: {
+      ...file,
+      characterRelationships: file.characterRelationships.map((candidate) =>
+        candidate.id === one.id ? stamp({ ...candidate, stages: [...candidate.stages, stage] }) : candidate,
+      ),
+    },
+    stage,
+  };
+};
+
+export const updateRelationshipStage = (
+  file: ProjectFile,
+  relationshipId: CharacterRelationshipId,
+  stageId: string,
+  patch: Partial<Pick<RelationshipStage, 'unitId' | 'state'>>,
+): ProjectFile => ({
+  ...file,
+  characterRelationships: file.characterRelationships.map((one) =>
+    (one.id as string) === (relationshipId as string)
+      ? stamp({
+          ...one,
+          stages: one.stages.map((stage) => (stage.id === stageId ? { ...stage, ...patch } : stage)),
+        })
+      : one,
+  ),
+});
+
+export const removeRelationshipStage = (
+  file: ProjectFile,
+  relationshipId: CharacterRelationshipId,
+  stageId: string,
+): ProjectFile => ({
+  ...file,
+  characterRelationships: file.characterRelationships.map((one) =>
+    (one.id as string) === (relationshipId as string)
+      ? stamp({ ...one, stages: one.stages.filter((stage) => stage.id !== stageId) })
+      : one,
   ),
 });
 

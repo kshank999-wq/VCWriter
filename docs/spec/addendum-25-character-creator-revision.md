@@ -243,6 +243,39 @@ also caught labels sitting on the rising line, fixed with `paint-order:
 stroke`, the only way to cut a hole in a path for type without knowing where
 the path goes.
 
+**Stage 6 — relationships.** The steps and the map. There was one free-text
+`evolution` — a paragraph about how a relationship develops — and the handoff
+asks for the thing that paragraph is trying to say: a sequence of states, each
+anchored to a scene, drawn as a strip.
+
+**The paragraph stays, as the older spelling.** It is what a writer typed, and
+replacing it to make room for a better shape would lose their words for a
+reason nobody asked for; where there are steps they are what the screen shows,
+where there are none it stands, and taking the last step away brings it back.
+One answer at a time — `template`/`layout`'s rule (addendum 20 §14) pointed at
+content. **A step is anchored to the scene and never to a chapter number**
+(migration 0056, JSON in the row by a location's prepared descriptions'
+precedent): the chapter it falls in is read from where that scene falls —
+**the nearest marker at or before**, `divisionSpan` a third time in this
+addendum — so there is nowhere to type *Ch 7* and moving the scene moves the
+step. And **a step with no scene is planned rather than placed**, listed after
+what is placed, which is `arcBoard`'s split for its own reason: once a step is
+anchored the manuscript decides where it falls, and a control that let
+somebody drag it above an earlier one would be a control that lies.
+
+**The map is the map.** `CharacterMap` itself is rendered beside the list —
+the same component the Research menu opens, given an `initialFocus` — rather
+than a second drawing, so the two can never disagree about who is joined to
+whom; and it is an **opening state rather than a fixed one**, the writer being
+free to focus on somebody else from its own bar. Pressing a person there opens
+them **plainly**, on whatever tab they were last left on (addendum 08 §11),
+where stage 5's *Open their arc* names a tab because its label does —
+`onOpenCharacter` takes the tab as an argument so the act decides rather than
+the route. Driving it caught the placement fault: `.charmap` is `flex: 1` with
+its canvas `min-height: 0`, which is right in a room of its own and draws a
+thousand pixels tall in ordinary flow, so the section gives it the height it
+expects.
+
 ## 5. Deliberately not built
 
 §21's AI-assisted suggestions. The handoff does not ask for them and the

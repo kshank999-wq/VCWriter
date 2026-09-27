@@ -852,6 +852,10 @@ const characterCreatorRows = (
     description: one.description,
     state: one.state,
     evolution: one.evolution,
+    // How it changes, as steps (addendum 25 §6). JSON inside the row, being
+    // parts of a relationship rather than records of their own — a location's
+    // prepared descriptions' precedent (addendum 14).
+    stages: one.stages,
     created_at: one.createdAt,
     updated_at: one.updatedAt,
   })),
@@ -1275,6 +1279,7 @@ const characterCreatorFromRows = (
       description: text(row['description']),
       state: text(row['state']),
       evolution: text(row['evolution']),
+      stages: row['stages'] ?? [],
       createdAt: row['created_at'],
       updatedAt: row['updated_at'],
     }),

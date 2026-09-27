@@ -11220,6 +11220,94 @@ dialog.projects-dialog {
   background: var(--ink);
 }
 
+/* ------------------------------- how it changes (addendum 25 §6) */
+
+.rel-change {
+  display: grid;
+  gap: 6px;
+}
+
+.rel-change-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.rel-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  /* The steps hang off a line, so a sequence reads as one. */
+  border-left: 2px solid var(--border);
+  padding-left: 12px;
+}
+
+.rel-step {
+  display: grid;
+  grid-template-columns: 150px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Planned and not placed: the arc's own split, said by dimming rather than
+   by a word, since the select beside it already reads *Not placed yet*. */
+.rel-step.planned {
+  opacity: 0.66;
+}
+
+.rel-step-div {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.rel-step-state {
+  font-size: 12.5px;
+}
+
+.rel-step-where {
+  font-size: 11px;
+  max-width: 150px;
+}
+
+/* The map, beside the list rather than instead of it.
+   `.charmap` is `flex: 1` and its canvas `min-height: 0`, which is right in a
+   room of its own — a fixed-height flex column above it. Here it stands in
+   ordinary flow with nothing bounding it, so the SVG takes its own 1:1 box and
+   draws a thousand pixels tall. A height makes it a panel again; the same
+   component either way, given the room it expects. */
+.creator-rel-map {
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+/* The drawing is laid out in a **unit box** — `at()` maps 0 to 1 across both
+   axes — so the SVG is square and `preserveAspectRatio` fits it to whichever
+   side is shorter. Here that is the height, so the height *is* how big the map
+   is drawn; it is a panel rather than a page, and 560 is as much as can stand
+   under a list without pushing the list off the screen. (`width: auto` was
+   tried and is worse: an SVG with no intrinsic width falls back to the CSS
+   replaced-element default of 300px.) */
+.creator-rel-map .charmap {
+  height: 560px;
+}
+
+
+.creator-rel-map .charmap-bar,
+.creator-rel-map .charmap-showing {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 /* ------------------------------- the character map (addendum 08 §12) */
 /* Computed every time rather than arranged by hand, so there are no saved
    positions and nothing to drift out of step with the cast. */
