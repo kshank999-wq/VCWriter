@@ -1714,12 +1714,38 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
      */
     const leading: ManuscriptElement[] = [];
     if (placed) {
+      const run: ManuscriptElement[] = [];
+      let next: ManuscriptElement | null = null;
       walk: for (const beat of beatsInScript(file, unit.id)) {
         for (const element of beat.manuscript.elements) {
-          if (element.type === 'figure' && element.attributes?.bookPlace === 'page') leading.push(element);
-          else break walk;
+          if (element.type === 'figure' && element.attributes?.bookPlace === 'page') run.push(element);
+          else {
+            next = element;
+            break walk;
+          }
         }
       }
+      /**
+       * **Only where nothing else would stand between the picture and the
+       * opening** (§9t, from Ken: *I go to add a picture on that page, which
+       * should shift that Roman numeral to the following page. But instead it
+       * adds the picture on the opposite of the chapter page*).
+       *
+       * The hoist above is right for a chapter whose opening and whose first
+       * words share a page: there is nowhere else for a picture to be, so it
+       * goes in front. It is wrong where the unit carries **a division heading
+       * of its own** — a story's first section opens twice, once with the
+       * story's page and again with its numeral (addendum 22 §6) — because
+       * then the picture asked for on the numeral's page has a real place
+       * between the two, which is exactly where the writing already puts it.
+       * Hoisting took the only expression of *before the opening* and used it
+       * for both, so a picture asked for on page four landed facing page two.
+       *
+       * The unit's own heading is a heading element, or the title §9l stands
+       * in where the manuscript carries none — his book being the second.
+       */
+      const opensTwice = chapters && (next?.type === 'heading' || unit.title.trim().length > 0);
+      if (!opensTwice) leading.push(...run);
     }
     const beforeOpening = new Set(leading.map((element) => element.id as string));
     if (placed) {
@@ -1827,12 +1853,6 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
     // to be: a section with a heading and one without both need a page the
     // rail can find, and the heading is not guaranteed.
     let atUnitHead = true;
-    /**
-     * A stand-in head held back while pictures that are pages of their own
-     * go in front of it (§9s). Flushed before the first block that is not
-     * one, and at the end of the unit, so it can never be lost.
-     */
-    let waiting: BookBlock | null = null;
     for (const beat of beatsInScript(file, unit.id)) {
       for (const element of beat.manuscript.elements) {
         // Already drawn, before the chapter opened (§9p).
@@ -1840,10 +1860,6 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
         if (element.text.trim().length === 0 && element.type !== 'scene_break' && element.type !== 'figure') continue;
         const made = elementBlock(element, chapterTitle, opensChapter && element.type === 'paragraph');
         if (!made) continue;
-        if (waiting && !(made.kind === 'figure' && figurePlacement(element).place === 'page')) {
-          out.push(waiting);
-          waiting = null;
-        }
         // A blank page the writer put in (§9i, from Ken: *insert a blank page
         // … and it will slide what was on that page to the next page*). It is
         // an attribute on the element the page opens with, so it moves with
@@ -1872,7 +1888,12 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
           atUnitHead = false;
           made.unitId = unit.id as string;
         }
-        if (atSectionHead) {
+        // **A picture that is a page of its own does not open the section**
+        // (§9s): it stands in front of what does, so the head stays pending
+        // and the numeral — real heading or §9l's stand-in — is emitted after
+        // the picture. That is *open the chapter with a picture*, and it also
+        // stops a unit that has a real heading being given a stand-in as well.
+        if (atSectionHead && !(made.kind === 'figure' && figurePlacement(element).place === 'page')) {
           atSectionHead = false;
           if (made.kind === 'heading') {
             // A new page, never a forced recto: the **story** opens on a
@@ -1908,22 +1929,7 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
               unitId: unit.id as string,
               standsIn: true,
             });
-            /**
-             * **A picture that is a page of its own opens the chapter**
-             * (§9s, from Ken: *I should be able to … put a blank page or a
-             * picture there … and then that page two goes to page three, so
-             * if I want to open with a picture, I can*).
-             *
-             * §9p settled this for a chapter with a marker; a chapter inside
-             * a story has none, so the stand-in was pushed first and the
-             * picture landed *after* the numeral. The head waits instead,
-             * which puts the leaf the reader meets first where they meet it.
-             */
-            if (made.kind === 'figure' && figurePlacement(element).place === 'page') {
-              waiting = stand;
-            } else {
-              out.push(stand);
-            }
+            out.push(stand);
             atUnitHead = false;
             opensChapter = true;
           }
@@ -2007,11 +2013,6 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
         if (made.kind === 'paragraph') opensChapter = false;
         out.push(made);
       }
-    }
-    // A section of nothing but pictures still prints its numeral (§9s).
-    if (waiting) {
-      out.push(waiting);
-      waiting = null;
     }
   }
   if (pending) out.push(pending);

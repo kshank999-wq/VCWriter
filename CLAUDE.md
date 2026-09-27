@@ -2249,6 +2249,29 @@ push live; the build takes a minute or two.
   room's laid pages rather than keeping a second, coarser reading that could
   disagree with the panel an inch away; opened over the workspace there are no
   laid pages and the control is **shown rather than hidden** (§16c).
+  **§9t is a picture on the numeral's page**, from Ken on his own collection
+  (*where the Roman numeral one, that page, I go to add a picture of that page,
+  which should shift that Roman numeral to the following page. But instead it
+  adds the picture on the opposite of the chapter page with the In For A Pound
+  graphic*). It is **§9p's hoist reaching one page too far**, from a shape §9p
+  never met: a collection's first section **opens twice** — the story's own art
+  page and then its numeral, two pages of one unit (addendum 22 §6) — while
+  §9p's *a page-figure at the head of a unit is emitted before the chapter
+  opens* was written for a chapter whose opening and first words share a page,
+  where there is nowhere else for a picture to be. Here there is, **between the
+  two**, which is where the writing already puts it. So the hoist asks whether
+  anything else would stand between the picture and the opening and refuses
+  where the unit carries **a division heading of its own** — a heading element,
+  or the title §9l stands in where the manuscript has none, which is his book;
+  a novel is unchanged and §9p's own suite passed untouched, which is the
+  proof. Building it found the second half **in code §9s had just written**:
+  §9s made the stand-in wait for page-figures, but a page-figure also
+  *consumed* the section head, so a unit with a **real** heading got a stand-in
+  as well and the page drew two numerals. The deferral is gone and the rule is
+  simpler than what it replaced — **a picture that is a page of its own does
+  not open the section**: it stands in front of what does, the head stays
+  pending, and the numeral (real or stood in) is emitted after the picture. One
+  condition rather than a held-back block, answering both asks.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

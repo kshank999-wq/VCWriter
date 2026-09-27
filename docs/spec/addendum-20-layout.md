@@ -2972,6 +2972,37 @@ opened over the workspace there are no laid pages, and the control is **shown
 rather than hidden** — §16c's rule, that a writer who cannot see a control
 reads the feature as missing.
 
+## 9t. A picture on the numeral's page, not facing the story's
+
+From Ken, on his own collection: *where the Roman numeral one, that page, I go
+to add a picture of that page, which should shift that Roman numeral to the
+following page. But instead it adds the picture on the opposite of the chapter
+page with the In For A Pound graphic. Adds it to the left.*
+
+It is **§9p's hoist reaching one page too far**, and the reason is a shape §9p
+never met. A collection's first section **opens twice**: once with the story's
+own page (the *In For A Pound* art) and again with its numeral, two pages of
+one unit (addendum 22 §6). §9p's rule — *a page-figure at the head of a unit is
+emitted before the chapter opens* — was written for a chapter whose opening and
+whose first words share a page, where there is nowhere else for a picture to
+be. Here there is: **between the two**, which is exactly where the writing
+already puts it.
+
+So the hoist now asks whether anything else would stand between the picture and
+the opening, and refuses where the unit carries **a division heading of its
+own** — a heading element, or the title §9l stands in where the manuscript has
+none, which is Ken's book. A novel's chapter is unchanged and §9p's own suite
+passed untouched, which is the proof.
+
+Building it found the **second half, in code §9s had just written**. §9s made
+the stand-in wait for page-figures so a chapter could open with one; but a
+page-figure also *consumed* the section head, so a unit with a **real** heading
+got the stand-in as well and the page drew two numerals. The held-back head is
+gone and the rule is simpler than what it replaced: **a picture that is a page
+of its own does not open the section**. It stands in front of what does, the
+head stays pending, and the numeral — real or stood in — is emitted after the
+picture. One condition rather than a deferral, and it answers both asks.
+
 ### Deliberately not built
 
 The **file importers** of §2 — BibTeX, RIS, CSL-JSON, CSV/TSV/XLSX, a

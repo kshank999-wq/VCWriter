@@ -157,10 +157,19 @@ describe('a page whose heading stands in', () => {
     expect(drawn[at + 1]).toMatch(/^heading/);
   });
 
-  it('leaves §9p alone where the section carries the story’s own marker', () => {
-    // A picture at the head of the section the marker sits on belongs in
-    // front of the story's opening, which §9p settled; the held-back head
-    // must not have quietly taken that case over.
+  it('stands between the story’s page and its numeral, never in front of both', () => {
+    /**
+     * §9t, and a correction to what this test first asserted. The section
+     * carrying the story's marker **opens twice** — once with the story's own
+     * page and again with its numeral — and §9p's hoist, written for a
+     * chapter whose opening and first words share a page, carried a picture
+     * asked for on the numeral's page all the way past the story's.
+     *
+     * Ken: *I go to add a picture on that page, which should shift that Roman
+     * numeral to the following page. But instead it adds the picture on the
+     * opposite of the chapter page.* So the hoist is now refused wherever
+     * something else would stand between the picture and the opening.
+     */
     const file = imported();
     const { blocks, laid, rows } = lay(file);
     const first = rows.find((row) => row.says === 'Chapter opens')!;
@@ -168,7 +177,9 @@ describe('a page whose heading stands in', () => {
     const drawn = shape(pictureBefore(file, before).file);
     const at = drawn.findIndex((one) => one === 'figure');
     expect(at).toBeGreaterThan(-1);
-    expect(drawn[at + 1]).toBe('chapter_opening');
+    // The story's page is still in front of it, and the numeral follows.
+    expect(drawn[at - 1]).toBe('chapter_opening');
+    expect(drawn[at + 1]).toMatch(/^heading/);
   });
 
   it('still prints the numeral where a section is nothing but pictures', () => {
