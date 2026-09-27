@@ -3455,7 +3455,7 @@ push live; the build takes a minute or two.
   harder than usual: **the handoff's own headline decision had already been
   made here independently**, its seven tabs having been four since addendum 08
   stage 2 for the same reasons. Seventeen more of its asks are standing under
-  another name. **All eight stages of §4 are built**; §4a says what each
+  another name. **All nine stages of §4 are built**; §4a says what each
   does. Four decisions carry it. **The arc's shape is said *and* read** —
   addendum 08 §5 made it a reading and the handoff asks for a toggle, and both
   are right about different moments (an arc with no points has no shape to
@@ -3573,10 +3573,44 @@ push live; the build takes a minute or two.
   argument. The header gained **the avatar the handoff draws**, its colour
   `castColours` (read, never stored) and its initials a reading, a **ring
   rather than a disc** because a filled circle in somebody's colour competes
-  with the name beside it. And the **one-column card stack is weighed and not
-  built**: the shelf holds four controls per trait the card cannot, and what
+  with the name beside it. And the **one-column card stack was weighed and
+  refused**: the shelf holds four controls per trait the card cannot, and what
   the mockup is *for* — the red counts always in front of you — is on every
   row already.
+  **Stage 9 (§4b) is that refusal overruled by Ken the same day, and the
+  correction is the part worth keeping**: it was **an argument about where the
+  controls go, dressed up as an argument about the layout**. *What layout does
+  the screen have* and *where does a trait's settings live* are two questions,
+  and the handoff had already answered the second — it draws a **⋯** on every
+  card head, for exactly those four — so the controls were never the price of
+  the layout. Every trait is a card now, one under the next, with its moments
+  inside it, which is the thing the shelf could not do at all: **every trait's
+  red count and every trait's moments on the screen at once**, where before
+  they were a column of numbers you pressed one at a time to read behind.
+  Three rules: **a card is open by default and folding is about this minute**
+  (nothing stored, addendum 20 §9h's rail), **a head's counts are the whole
+  trait's** whatever the filter bar shows (`filterBoard`'s rule about the bar
+  pointed one level down — a card reading *1 on deck* because the bar says *On
+  deck* tells you what you just asked for), and **the unfiled pile is absent
+  where there is nothing unfiled**, its only route being the Overview's *File
+  them*, which appears only when there is something in it. `Shelf` survives
+  with a changed meaning and the rename is the point: it was *which trait is
+  showing*, and in a stack every trait is, so it is a **destination** — the
+  route opens that card and brings it into view, then lets go, or a card
+  routed to could not be folded again. Driving it caught three things 727
+  green tests could not: the `found while writing` badge is `nowrap` and the
+  words were `min-width: 0`, so at 1280 a row read as **a badge about a moment
+  standing where the moment should be** (it wraps under the words now); *why
+  it matters* was a full-width box, one on the shelf and nine down a stack, so
+  it is a line of italic prose that draws its box when typed in; and
+  **`.empty-state` is 48px of padding and a centred sentence** — right filling
+  a column, absurd nine deep, nine untouched traits drawing a page and a half
+  of *Nothing shows this yet.* The sentence is **gone rather than shrunk**,
+  the head's `—` already saying it and the placeholder doing the rest, which
+  now reads *what shows it* rather than *another*, there being no other one
+  yet. `creator-stack.test.tsx` pins the shape and not the styling, ending on
+  the thing the overrule was about: **all four of the shelf's controls are
+  still reachable behind the ⋯**.
   §2 records
   where this diverges from the handoff and why; §5 is the one thing
   deliberately not built (§21's AI suggestions, which the handoff does not ask

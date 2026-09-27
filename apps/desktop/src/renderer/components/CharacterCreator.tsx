@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CharacterMap } from './CharacterMap.js';
 import {
   ARC_INTENTS,
@@ -107,6 +107,7 @@ import {
   type RelationshipRow,
   type StoryLinkId,
   type TraitTone,
+  type TraitWithItems,
   type UsageColour,
 } from '@vcwriter/domain';
 import { carryWork, carryingWork, workCarried } from '../carry-work';
@@ -116,9 +117,10 @@ import { InlineText } from './InlineText';
 /**
  * The Character Creator (addendum 08 §5, stage 2).
  *
- * **A trait is a folder and the characterization is the work**, so the screen
- * is arranged to say it: traits down the side, and the middle of the screen is
- * the ways one of them gets shown. A layout that put the traits in the middle
+ * **A trait is a folder and the moment is the work**, so the screen is arranged
+ * to say it: every trait is a card and what is inside a card is the moments,
+ * which is the handoff's screen 02 and what addendum 25 §4b builds. A layout
+ * that drew the traits and made you press one to find out what was under it
  * would be a screen about adjectives.
  *
  * **Red is the ordinary state.** Every piece of characterization starts on deck
@@ -175,7 +177,17 @@ interface CharacterCreatorProps {
 export type CreatorTab = 'overview' | 'traits' | 'arc' | 'relationships';
 type Tab = CreatorTab;
 
-/** Which trait's characterization is being looked at. */
+/**
+ * Which card somebody has been sent to.
+ *
+ * It **was** which trait was on the shelf, back when one trait's moments were
+ * the middle column and the rest were a list. In the stack every trait is on
+ * the screen at once, so this is no longer *what is shown* — it is a
+ * destination: the Overview's *Place one* and the rail's rows both name a
+ * trait, and what naming one now does is open that card and bring it into
+ * view. It is cleared the moment it is honoured, so closing a card by hand
+ * does not fight a prop that keeps re-opening it.
+ */
 type Shelf = { kind: 'trait'; id: CharacterTraitId } | { kind: 'unfiled' };
 
 const DOT_CLASS: Record<UsageColour, string> = {
@@ -268,20 +280,8 @@ export function CharacterCreator({
     );
   }
 
-  // What is on the shelf now: the chosen trait, the unfiled pile, or — first
-  // time in — whatever there is to look at.
-  const chosen: Shelf =
-    shelf ??
-    (board.traits[0] ? { kind: 'trait', id: board.traits[0].trait.id } : { kind: 'unfiled' });
   /** The board as the filter bar leaves it (addendum 25 §3). */
   const shownBoard = useMemo(() => filterBoard(board, filter), [board, filter]);
-  const openTrait =
-    chosen.kind === 'trait' ? shownBoard.traits.find((entry) => entry.trait.id === chosen.id) : null;
-  const rows: CharacterizationRow[] = openTrait
-    ? openTrait.items
-    : chosen.kind === 'unfiled'
-      ? shownBoard.unfiled
-      : [];
 
   return (
     <div className="creator">
@@ -393,10 +393,12 @@ export function CharacterCreator({
             />
           ) : (
             <>
-            {/* All / Used / On deck / Retired (addendum 25 §3). The counts are
+            {/* All / Used / On deck / Retired (addendum 25 §3), and the one act
+                that is about the screen rather than about a card. The counts are
                 the **whole** character's whichever is chosen: those numbers are
                 what the writer is choosing between, and a bar whose own figures
                 changed as it was pressed would be unreadable. */}
+            <div className="creator-filter-bar">
             <nav className="creator-filter" aria-label="Which moments">
               {MOMENT_FILTERS.map((key) => (
                 <button
@@ -418,22 +420,17 @@ export function CharacterCreator({
                 </button>
               ))}
             </nav>
+            <AddTrait characterId={characterId} onUpdate={onUpdate} onMade={setShelf} />
+            </div>
             <div className="creator-traits">
-              <Traits
+              <TraitStack
                 file={file}
                 characterId={characterId}
                 board={shownBoard}
-                chosen={chosen}
-                onChoose={setShelf}
-                onUpdate={onUpdate}
-              />
-              <Shown
-                file={file}
-                characterId={characterId}
-                trait={openTrait?.trait ?? null}
-                unfiled={chosen.kind === 'unfiled'}
-                rows={rows}
+                whole={board}
                 currentBeatId={currentBeatId}
+                shelf={shelf}
+                onShelved={() => setShelf(null)}
                 reveal={
                   reveal?.kind === 'characterization' ? (reveal.id as CharacterizationItemId) : null
                 }
@@ -1052,121 +1049,242 @@ function StoryPanel({
   );
 }
 
-// -------------------------------------------------------------------- traits
+// --------------------------------------------------------- the one-column stack
 
-function Traits({
+/**
+ * Starting a trait (addendum 25 §4b).
+ *
+ * It sits on the filter bar rather than on a card, because it is the one act
+ * on this tab that is about the **screen** rather than about a trait — the
+ * handoff draws it there for the same reason. It is its own component because
+ * a component declared inside another is a new type on every render, and the
+ * `<input>` a writer is typing into is thrown away with the caret in it
+ * (addendum 20 §16e, found the hard way).
+ */
+function AddTrait({
+  characterId,
+  onUpdate,
+  onMade,
+}: {
+  characterId: CharacterId;
+  onUpdate: CharacterCreatorProps['onUpdate'];
+  /** Open the card that was just made, and bring it into view. */
+  onMade(shelf: Shelf): void;
+}) {
+  const [adding, setAdding] = useState('');
+  return (
+    <form
+      className="creator-add creator-add-trait"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const name = adding.trim();
+        if (name.length === 0) return;
+        onUpdate((current) => {
+          const next = addTrait(current, { characterId, name });
+          if (next.trait) onMade({ kind: 'trait', id: next.trait.id });
+          return next.file;
+        });
+        setAdding('');
+      }}
+    >
+      <input
+        aria-label="New trait"
+        placeholder="Another trait"
+        value={adding}
+        onChange={(event) => setAdding(event.target.value)}
+      />
+      <button type="submit" className="small">
+        + Add trait
+      </button>
+    </form>
+  );
+}
+
+/**
+ * Every trait as a card, one under the next (addendum 25 §4b, the handoff's
+ * screen 02).
+ *
+ * §4a weighed this against the shelf it replaces — a list of traits beside one
+ * trait's moments — and kept the shelf, on the ground that the shelf's middle
+ * column held four controls a card could not. Ken overruled it, and the
+ * correction is the part worth keeping: **that was an argument about where the
+ * controls go, dressed up as an argument about the layout**. The four are on
+ * the card, behind the ⋯ that the handoff draws for exactly them, and what the
+ * stack buys is the thing the mockup is *for* — the red counts of every trait
+ * in front of you at once, which on the shelf were a column of numbers you had
+ * to press to read behind.
+ *
+ * Two rules hold it. **A card is open by default and folding is about this
+ * minute** — nothing is stored, the way the Layout rail's chapters fold — so a
+ * writer with nine traits closes the seven they are not working on and comes
+ * back tomorrow to all nine. And **the head's counts are the whole trait's**,
+ * whatever the filter bar is showing, which is `filterBoard`'s own rule about
+ * the bar pointed one level down: a card that said *1 on deck* because the bar
+ * was set to *On deck* would be telling you what you had just asked for.
+ */
+function TraitStack({
   file,
   characterId,
   board,
-  chosen,
-  onChoose,
+  whole,
+  currentBeatId,
+  shelf,
+  onShelved,
+  reveal,
+  onRevealed,
   onUpdate,
 }: {
   file: ProjectFile;
   characterId: CharacterId;
+  /** The board as the filter bar leaves it: what each card draws. */
   board: ReturnType<typeof characterBoard>;
-  chosen: Shelf;
-  onChoose(shelf: Shelf): void;
+  /** The board entire: what each card **counts**. */
+  whole: ReturnType<typeof characterBoard>;
+  currentBeatId: BeatId | null;
+  /** A card somebody was sent to, from the Overview or the rail. */
+  shelf: Shelf | null;
+  onShelved(): void;
+  /** Opened from the rail: show this moment's *where* on arrival. */
+  reveal: CharacterizationItemId | null;
+  onRevealed(): void;
   onUpdate: CharacterCreatorProps['onUpdate'];
 }) {
-  const [adding, setAdding] = useState('');
+  /**
+   * Which cards are folded. Shut rather than open, so a new trait and a trait
+   * nobody has touched are both on the screen — and held here rather than on
+   * the record or on the machine, because it is about this minute (the Layout
+   * rail's rule, addendum 20 §9h).
+   */
+  const [shut, setShut] = useState<ReadonlySet<string>>(() => new Set<string>());
+  /** Which card has its four controls showing. One at a time: it is a detour. */
+  const [settings, setSettings] = useState<string | null>(null);
+  /** Which moment has its *where* open, across the whole stack. */
+  const [open, setOpen] = useState<CharacterizationItemId | null>(null);
+  const cards = useRef(new Map<string, HTMLElement>());
 
-  const add = () => {
-    const name = adding.trim();
-    if (name.length === 0) return;
-    onUpdate((current) => {
-      const next = addTrait(current, { characterId, name });
-      if (next.trait) onChoose({ kind: 'trait', id: next.trait.id });
-      return next.file;
+  const traits = file.characterTraits.filter(
+    (one) => (one.characterId as string) === (characterId as string) && !one.archived,
+  );
+
+  // Somebody was sent here. Open that card, bring it into view, and let go of
+  // the request — the stack is not a selection, so holding it would mean a
+  // card that could not be folded again.
+  useEffect(() => {
+    if (!shelf) return;
+    const key = shelf.kind === 'trait' ? (shelf.id as string) : 'unfiled';
+    setShut((held) => {
+      if (!held.has(key)) return held;
+      const next = new Set(held);
+      next.delete(key);
+      return next;
     });
-    setAdding('');
-  };
+    cards.current.get(key)?.scrollIntoView({ block: 'nearest' });
+    onShelved();
+  }, [shelf, onShelved]);
+
+  useEffect(() => {
+    if (!reveal) return;
+    setOpen(reveal);
+    onRevealed();
+  }, [reveal, onRevealed]);
+
+  const toggle = (key: string) =>
+    setShut((held) => {
+      const next = new Set(held);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  const nothingAtAll = whole.traits.length === 0 && whole.unfiled.length === 0;
+  const nothingShown = board.traits.length === 0 && board.unfiled.length === 0;
 
   return (
-    <nav className="creator-side" aria-label="Traits">
-      <h4>Traits</h4>
-      {board.traits.length === 0 ? (
-        <p className="muted small">
-          A trait is a folder — <em>greedy</em>, <em>never asks for help</em>. What goes in it is how you show
-          it.
+    <div className="creator-stack" aria-label="Traits and moments">
+      {nothingAtAll ? (
+        <p className="muted empty-state">
+          A trait is a folder — <em>greedy</em>, <em>never asks for help</em>. What goes in it is the
+          moments that show it.
         </p>
-      ) : (
-        <ul className="creator-trait-list">
-          {board.traits.map((entry) => {
-            const selected = chosen.kind === 'trait' && chosen.id === entry.trait.id;
-            const used = entry.items.filter((row) => row.colour === 'green').length;
-            const waiting = entry.items.filter((row) => row.colour === 'red').length;
-            return (
-              <li key={entry.trait.id}>
-                <button
-                  type="button"
-                  className={selected ? 'folder-row selected' : 'folder-row'}
-                  aria-current={selected ? 'true' : undefined}
-                  onClick={() => onChoose({ kind: 'trait', id: entry.trait.id })}
-                >
-                  <span className="folder-name">{entry.trait.name}</span>
-                  {/* **The red count, on every row** (addendum 25 §1: *red
-                      counts appear everywhere, so unused material is always
-                      visible as a to-do list*). An empty trait is an
-                      unfinished thought, not an error, so it says so quietly
-                      rather than wearing a pair of zeros. */}
-                  {entry.unshown ? (
-                    <span className="count muted">—</span>
-                  ) : (
-                    <span className="creator-row-counts">
-                      {used > 0 ? (
-                        <span className="creator-count is-in">
-                          <i className="creator-dot is-in" />
-                          {used}
-                        </span>
-                      ) : null}
-                      {waiting > 0 ? (
-                        <span className="creator-count is-deck">
-                          <i className="creator-dot is-deck" />
-                          {waiting}
-                        </span>
-                      ) : null}
-                    </span>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      ) : nothingShown ? (
+        <p className="muted empty-state">Nothing under that filter.</p>
+      ) : null}
 
-      <form
-        className="creator-add"
-        onSubmit={(event) => {
-          event.preventDefault();
-          add();
-        }}
-      >
-        <input
-          aria-label="New trait"
-          placeholder="Another trait"
-          value={adding}
-          onChange={(event) => setAdding(event.target.value)}
+      {board.traits.map((entry) => (
+        <TraitCard
+          key={entry.trait.id}
+          file={file}
+          entry={entry}
+          /* The whole trait, for the counts on its head. */
+          whole={whole.traits.find((one) => one.trait.id === entry.trait.id) ?? entry}
+          traits={traits}
+          open={!shut.has(entry.trait.id as string)}
+          onToggle={() => toggle(entry.trait.id as string)}
+          settings={settings === (entry.trait.id as string)}
+          onSettings={() =>
+            setSettings(settings === (entry.trait.id as string) ? null : (entry.trait.id as string))
+          }
+          where={open}
+          onWhere={setOpen}
+          currentBeatId={currentBeatId}
+          onUpdate={onUpdate}
+          hold={(node) => {
+            if (node) cards.current.set(entry.trait.id as string, node);
+            else cards.current.delete(entry.trait.id as string);
+          }}
         />
-        <button type="submit" className="ghost small">
-          + Trait
-        </button>
-      </form>
+      ))}
 
-      <h4>Not filed</h4>
-      <ul className="creator-trait-list">
-        <li>
-          <button
-            type="button"
-            className={chosen.kind === 'unfiled' ? 'folder-row selected' : 'folder-row'}
-            aria-current={chosen.kind === 'unfiled' ? 'true' : undefined}
-            onClick={() => onChoose({ kind: 'unfiled' })}
-          >
-            <span className="folder-name">Noticed, not filed</span>
-            <span className="count muted">{board.unfiled.length}</span>
-          </button>
-        </li>
-      </ul>
+      {/* **Absent where there is nothing unfiled** (§4b). It is a pile of
+          things caught while writing rather than a folder anybody files into,
+          so an empty one is a card about nothing; the only route to it — the
+          Overview's *File them* — appears only when there is something in it,
+          so nothing is sent somewhere that is not there. */}
+      {board.unfiled.length > 0 ? (
+        <section
+          className="creator-card"
+          aria-label="Noticed, not filed"
+          ref={(node) => {
+            if (node) cards.current.set('unfiled', node);
+            else cards.current.delete('unfiled');
+          }}
+        >
+          <header className="creator-card-head">
+            <button
+              type="button"
+              className="creator-card-fold"
+              aria-expanded={!shut.has('unfiled')}
+              aria-label={`${shut.has('unfiled') ? 'Open' : 'Fold'} Noticed, not filed`}
+              onClick={() => toggle('unfiled')}
+            >
+              {shut.has('unfiled') ? '›' : '⌄'}
+            </button>
+            <span className="creator-trait-name">Noticed, not filed</span>
+            <Counts rows={whole.unfiled} />
+          </header>
+          {shut.has('unfiled') ? null : (
+            <>
+              <p className="muted small creator-card-why">
+                Caught while writing, before anybody decided what it was an example of.
+              </p>
+              <ul className="creator-items">
+                {board.unfiled.map((row) => (
+                  <MomentRow
+                    key={row.item.id}
+                    file={file}
+                    row={row}
+                    traits={traits}
+                    where={open}
+                    onWhere={setOpen}
+                    currentBeatId={currentBeatId}
+                    onUpdate={onUpdate}
+                  />
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      ) : null}
 
       <div className="creator-legend">
         {(['green', 'red', 'grey'] as const).map((colour) => (
@@ -1180,79 +1298,157 @@ function Traits({
           reproach.
         </p>
       </div>
-    </nav>
+    </div>
   );
 }
 
-// ------------------------------------------------------- what shows the trait
+/** The two figures on a card's head, in the colours the legend explains. */
+function Counts({ rows }: { rows: readonly CharacterizationRow[] }) {
+  const used = rows.filter((row) => row.colour === 'green').length;
+  const waiting = rows.filter((row) => row.colour === 'red').length;
+  /* An empty trait is an unfinished thought, not an error, so it says so
+     quietly rather than wearing a pair of zeros. */
+  if (rows.length === 0) return <span className="creator-card-counts count muted">—</span>;
+  return (
+    <span
+      className="creator-card-counts creator-row-counts"
+      title={`${used} in the writing, ${waiting} on deck`}
+    >
+      {used > 0 ? (
+        <span className="creator-count is-in">
+          <i className="creator-dot is-in" />
+          {used}
+        </span>
+      ) : null}
+      {waiting > 0 ? (
+        <span className="creator-count is-deck">
+          <i className="creator-dot is-deck" />
+          {waiting}
+        </span>
+      ) : null}
+    </span>
+  );
+}
 
-function Shown({
+/**
+ * One trait, and the moments that show it (addendum 25 §4b).
+ *
+ * The head is what a writer reads down the stack without stopping: the name,
+ * how it reads, how much of them it is, what it pulls against, and the counts.
+ * **The four controls are behind the ⋯** — which is the handoff's own answer
+ * and the right one: *When*, *How much of them*, *Read as* and *Pulls against*
+ * are set once and read for months, so five form fields per card times nine
+ * traits is a page of boxes over the work itself. Everything the shelf's middle
+ * column could do is here; none of it is in the way.
+ */
+function TraitCard({
   file,
-  characterId,
-  trait,
-  unfiled,
-  rows,
+  entry,
+  whole,
+  traits,
+  open,
+  onToggle,
+  settings,
+  onSettings,
+  where,
+  onWhere,
   currentBeatId,
-  reveal,
-  onRevealed,
   onUpdate,
+  hold,
 }: {
   file: ProjectFile;
-  characterId: CharacterId;
-  trait: CharacterTrait | null;
-  unfiled: boolean;
-  rows: CharacterizationRow[];
+  entry: TraitWithItems;
+  whole: TraitWithItems;
+  traits: readonly CharacterTrait[];
+  open: boolean;
+  onToggle(): void;
+  settings: boolean;
+  onSettings(): void;
+  where: CharacterizationItemId | null;
+  onWhere(id: CharacterizationItemId | null): void;
   currentBeatId: BeatId | null;
-  /** Opened from the rail: show this one's *where* on arrival. */
-  reveal: CharacterizationItemId | null;
-  onRevealed(): void;
   onUpdate: CharacterCreatorProps['onUpdate'];
+  hold(node: HTMLElement | null): void;
 }) {
+  const { trait } = entry;
   const [adding, setAdding] = useState('');
-  /** Which row has its *where* open. One at a time: this is a detour, not a column. */
-  const [open, setOpen] = useState<CharacterizationItemId | null>(null);
-
-  // The rail asked for one. Cleared as soon as it is honoured, so closing the
-  // panel by hand does not fight a prop that keeps re-opening it.
-  useEffect(() => {
-    if (!reveal) return;
-    setOpen(reveal);
-    onRevealed();
-  }, [reveal, onRevealed]);
-  const traits = file.characterTraits.filter(
-    (one) => (one.characterId as string) === (characterId as string) && !one.archived,
-  );
   /** Who this one pulls against, read both ways (addendum 25 §3). */
-  const against = trait ? conflictsFor(traits, trait.id as string) : [];
-  const others = trait ? traits.filter((one) => one.id !== trait.id) : [];
-
-  const add = () => {
-    const text = adding.trim();
-    if (text.length === 0) return;
-    onUpdate((current) =>
-      addCharacterization(current, { characterId, traitId: trait?.id ?? null, text }).file,
-    );
-    setAdding('');
-  };
-
-  if (!trait && !unfiled) {
-    return (
-      <section className="creator-shown">
-        <p className="muted empty-state">Add a trait, and this is where you say how it shows.</p>
-      </section>
-    );
-  }
+  const against = conflictsFor(traits, trait.id as string);
+  const others = traits.filter((one) => one.id !== trait.id);
 
   return (
-    <section className="creator-shown" aria-label={trait ? trait.name : 'Noticed, not filed'}>
-      {trait ? (
-        <header className="creator-trait-head">
-          <InlineText
-            value={trait.name}
-            ariaLabel="Trait"
-            className="creator-trait-name"
-            onCommit={(name) => onUpdate((current) => updateTrait(current, trait.id, { name }))}
-          />
+    <section className="creator-card" aria-label={trait.name} ref={hold}>
+      <header className="creator-card-head">
+        <button
+          type="button"
+          className="creator-card-fold"
+          aria-expanded={open}
+          aria-label={`${open ? 'Fold' : 'Open'} ${trait.name}`}
+          onClick={onToggle}
+        >
+          {open ? '⌄' : '›'}
+        </button>
+        <InlineText
+          value={trait.name}
+          ariaLabel="Trait"
+          className="creator-trait-name"
+          onCommit={(name) => onUpdate((current) => updateTrait(current, trait.id, { name }))}
+        />
+        {/* **Absent where nothing is said** — `unsaid` is the default and the
+            module's oldest promise is that the software never has an opinion
+            about a character, so a chip reading *Not saying* would be the
+            opinion arriving as furniture. */}
+        {trait.tone !== 'unsaid' ? (
+          <span className="creator-tone-chip">{TRAIT_TONE_WORDS[trait.tone]}</span>
+        ) : null}
+        {/* How much of them, drawn. The number is set behind the ⋯; this is the
+            reading of it, which is why it is `aria-hidden` and carries the
+            word in a title rather than inventing a second control. */}
+        <span
+          className="creator-prominence"
+          title={`${PROMINENCE_WORDS[trait.prominence] ?? ''} — how much of them this is`}
+        >
+          {[1, 2, 3, 4, 5].map((level) => (
+            <i key={level} className={level <= trait.prominence ? 'on' : ''} aria-hidden="true" />
+          ))}
+        </span>
+        {against.map((one) => (
+          <span key={one.id} className="creator-pull">
+            {describeConflicts([one])}
+            <button
+              type="button"
+              className="ghost small"
+              aria-label={`Stop saying it pulls against ${one.name}`}
+              onClick={() => onUpdate((current) => setConflict(current, trait.id, one.id, false))}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <Counts rows={whole.items} />
+        <button
+          type="button"
+          className="creator-card-more"
+          aria-expanded={settings}
+          aria-label={`Settings for ${trait.name}`}
+          title="When it shows, how much of them it is, how it reads, what it pulls against"
+          onClick={onSettings}
+        >
+          ⋯
+        </button>
+        <button
+          type="button"
+          className="item-x"
+          aria-label={`Remove the trait ${trait.name}`}
+          title="Removes the trait. What you wrote under it is unfiled, not deleted."
+          onClick={() => onUpdate((current) => removeTrait(current, trait.id))}
+        >
+          ×
+        </button>
+      </header>
+
+      {settings ? (
+        <div className="creator-card-settings">
           <label className="creator-inline-field">
             <span className="muted small">When</span>
             <input
@@ -1330,192 +1526,214 @@ function Shown({
               </select>
             </label>
           ) : null}
-          <button
-            type="button"
-            className="ghost small"
-            aria-label={`Remove the trait ${trait.name}`}
-            title="Removes the trait. What you wrote under it is unfiled, not deleted."
-            onClick={() => onUpdate((current) => removeTrait(current, trait.id))}
-          >
-            ×
-          </button>
-        </header>
-      ) : (
-        <header className="creator-trait-head">
-          <span className="creator-trait-name">Noticed, not filed</span>
-          <span className="muted small">
-            Caught while writing, before anybody decided what it was an example of.
-          </span>
-        </header>
-      )}
-
-      {trait && against.length > 0 ? (
-        <p className="creator-pulls">
-          {against.map((one) => (
-            <span key={one.id} className="creator-pull">
-              {describeConflicts([one])}
-              <button
-                type="button"
-                className="ghost small"
-                aria-label={`Stop saying it pulls against ${one.name}`}
-                onClick={() => onUpdate((current) => setConflict(current, trait.id, one.id, false))}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </p>
+        </div>
       ) : null}
 
-      {trait ? (
-        <input
-          className="creator-why"
-          aria-label="Why it matters"
-          placeholder="Why it matters — the thing that makes it worth dramatising"
-          value={trait.notes}
-          onChange={(event) => onUpdate((current) => updateTrait(current, trait.id, { notes: event.target.value }))}
-        />
-      ) : null}
+      {open ? (
+        <>
+          <input
+            className="creator-why"
+            aria-label="Why it matters"
+            placeholder="Why it matters — the thing that makes it worth dramatising"
+            value={trait.notes}
+            onChange={(event) =>
+              onUpdate((current) => updateTrait(current, trait.id, { notes: event.target.value }))
+            }
+          />
 
-      {rows.length === 0 ? (
-        <p className="muted empty-state">
-          {trait ? 'Nothing shows this yet.' : 'Nothing unfiled.'}
-        </p>
-      ) : (
-        <ul className="creator-items">
-          {rows.map((row) => (
-            <li
-              key={row.item.id}
-              className={`creator-item ${DOT_CLASS[row.colour]}`}
-              // **Only what is waiting is carried** (addendum 25 §3): a moment
-              // already in the writing has somewhere to be, and dragging it
-              // would offer to pin it twice for no reason a writer asked for.
-              draggable={row.colour === 'red'}
-              onDragStart={(event) => {
-                if (row.colour !== 'red' || !event.dataTransfer) return;
-                carryWork(event.dataTransfer, {
-                  ownerKind: 'characterization',
-                  ownerId: row.item.id as string,
-                  label: row.item.text,
-                });
-              }}
-            >
-              <div className="creator-item-row">
-              <i className={`creator-dot ${DOT_CLASS[row.colour]}`} title={USAGE_WORDS[row.colour]} />
-              {/* The badge rides **inside the words' cell** rather than
-                  taking a column of its own: the row is a grid, and an item
-                  some rows have and others do not would put every following
-                  control in a different column from one line to the next. */}
-              <span className="creator-item-said">
-                <InlineText
-                  value={row.item.text}
-                  ariaLabel="The moment"
-                  className="creator-item-text"
-                  onCommit={(text) =>
-                    onUpdate((current) => updateCharacterization(current, row.item.id, { text }))
-                  }
-                />
-                {/* Noticed rather than invented (addendum 25 §3). A badge and
-                    never a status: it is used or on deck by the same rule as
-                    everything else here. */}
-                {row.item.found ? (
-                  <span className="creator-found" title="It came out of the manuscript">
-                    found while writing
-                  </span>
-                ) : null}
-              </span>
-              {/* The state is the way in to where it landed: the question a
-                  colour raises is *where*, so the colour answers it. */}
-              <button
-                type="button"
-                className={open === row.item.id ? 'creator-item-state open' : 'creator-item-state'}
-                aria-expanded={open === row.item.id}
-                title="Where it turns up in the script"
-                onClick={() => setOpen(open === row.item.id ? null : row.item.id)}
-              >
-                {USAGE_WORDS[row.colour]}
-              </button>
-              <select
-                aria-label={`File ${row.item.text}`}
-                value={(row.item.traitId as string) ?? ''}
-                onChange={(event) =>
-                  onUpdate((current) =>
-                    fileCharacterization(
-                      current,
-                      row.item.id,
-                      event.target.value === '' ? null : (event.target.value as CharacterTraitId),
-                    ),
-                  )
-                }
-              >
-                <option value="">Not filed</option>
-                {traits.map((one) => (
-                  <option key={one.id} value={one.id}>
-                    {one.name}
-                  </option>
-                ))}
-              </select>
-              {/* Setting aside is a decision and keeps the idea; × is for
-                  something typed by mistake (§17). */}
-              <button
-                type="button"
-                className="ghost small"
-                aria-label={row.item.retired ? 'Put it back on deck' : 'Set it aside'}
-                title={
-                  row.item.retired
-                    ? 'Back on deck — still to place.'
-                    : 'Set aside: kept, but no longer counted as work outstanding.'
-                }
-                onClick={() =>
-                  onUpdate((current) =>
-                    updateCharacterization(current, row.item.id, { retired: !row.item.retired }),
-                  )
-                }
-              >
-                {row.item.retired ? '↩' : '⌄'}
-              </button>
-              <button
-                type="button"
-                className="ghost small"
-                aria-label={`Delete ${row.item.text}`}
-                title="Delete it outright."
-                onClick={() => onUpdate((current) => removeCharacterization(current, row.item.id))}
-              >
-                ×
-              </button>
-              </div>
-
-              {open === row.item.id ? (
-                <Where
+          {/* **No *Nothing shows this yet.* here.** The head's `—` already says
+              the trait is empty, and a sentence saying it again under nine
+              cards is the same fact nine more times; what an empty card needs
+              is the way to fill it, which is the form under this. The
+              placeholder is the statement, and it says *what shows it* rather
+              than *another* — there is no other one yet. */}
+          {entry.items.length === 0 ? null : (
+            <ul className="creator-items">
+              {entry.items.map((row) => (
+                <MomentRow
+                  key={row.item.id}
                   file={file}
-                  owner={{ kind: 'characterization', id: row.item.id as string }}
+                  row={row}
+                  traits={traits}
+                  where={where}
+                  onWhere={onWhere}
                   currentBeatId={currentBeatId}
                   onUpdate={onUpdate}
                 />
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
+              ))}
+            </ul>
+          )}
 
-      <form
-        className="creator-add wide"
-        onSubmit={(event) => {
-          event.preventDefault();
-          add();
-        }}
-      >
-        <input
-          aria-label="The moment"
-          placeholder="Another moment — an action, a habit, a choice, a prop"
-          value={adding}
-          onChange={(event) => setAdding(event.target.value)}
-        />
-        <button type="submit" className="ghost small">
-          + Moment
-        </button>
-      </form>
+          <form
+            className="creator-add wide"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const text = adding.trim();
+              if (text.length === 0) return;
+              onUpdate((current) =>
+                addCharacterization(current, {
+                  characterId: trait.characterId,
+                  traitId: trait.id,
+                  text,
+                }).file,
+              );
+              setAdding('');
+            }}
+          >
+            <input
+              aria-label="The moment"
+              placeholder={
+                whole.items.length === 0
+                  ? 'What shows it — an action, a habit, a choice, a prop'
+                  : 'Another moment — an action, a habit, a choice, a prop'
+              }
+              value={adding}
+              onChange={(event) => setAdding(event.target.value)}
+            />
+            <button type="submit" className="ghost small">
+              + Moment
+            </button>
+          </form>
+        </>
+      ) : null}
     </section>
+  );
+}
+
+/**
+ * One moment, wherever it is filed.
+ *
+ * The same row under a trait's card and in the unfiled pile, because it is the
+ * same thing in both places — which is what makes filing it a select on the
+ * row rather than a move between two kinds of list.
+ */
+function MomentRow({
+  file,
+  row,
+  traits,
+  where,
+  onWhere,
+  currentBeatId,
+  onUpdate,
+}: {
+  file: ProjectFile;
+  row: CharacterizationRow;
+  traits: readonly CharacterTrait[];
+  where: CharacterizationItemId | null;
+  onWhere(id: CharacterizationItemId | null): void;
+  currentBeatId: BeatId | null;
+  onUpdate: CharacterCreatorProps['onUpdate'];
+}) {
+  return (
+    <li
+      className={`creator-item ${DOT_CLASS[row.colour]}`}
+      // **Only what is waiting is carried** (addendum 25 §3): a moment
+      // already in the writing has somewhere to be, and dragging it
+      // would offer to pin it twice for no reason a writer asked for.
+      draggable={row.colour === 'red'}
+      onDragStart={(event) => {
+        if (row.colour !== 'red' || !event.dataTransfer) return;
+        carryWork(event.dataTransfer, {
+          ownerKind: 'characterization',
+          ownerId: row.item.id as string,
+          label: row.item.text,
+        });
+      }}
+    >
+      <div className="creator-item-row">
+        <i className={`creator-dot ${DOT_CLASS[row.colour]}`} title={USAGE_WORDS[row.colour]} />
+        {/* The badge rides **inside the words' cell** rather than
+            taking a column of its own: the row is a grid, and an item
+            some rows have and others do not would put every following
+            control in a different column from one line to the next. */}
+        <span className="creator-item-said">
+          <InlineText
+            value={row.item.text}
+            ariaLabel="The moment"
+            className="creator-item-text"
+            onCommit={(text) =>
+              onUpdate((current) => updateCharacterization(current, row.item.id, { text }))
+            }
+          />
+          {/* Noticed rather than invented (addendum 25 §3). A badge and
+              never a status: it is used or on deck by the same rule as
+              everything else here. */}
+          {row.item.found ? (
+            <span className="creator-found" title="It came out of the manuscript">
+              found while writing
+            </span>
+          ) : null}
+        </span>
+        {/* The state is the way in to where it landed: the question a
+            colour raises is *where*, so the colour answers it. */}
+        <button
+          type="button"
+          className={where === row.item.id ? 'creator-item-state open' : 'creator-item-state'}
+          aria-expanded={where === row.item.id}
+          title="Where it turns up in the script"
+          onClick={() => onWhere(where === row.item.id ? null : row.item.id)}
+        >
+          {USAGE_WORDS[row.colour]}
+        </button>
+        <select
+          aria-label={`File ${row.item.text}`}
+          value={(row.item.traitId as string) ?? ''}
+          onChange={(event) =>
+            onUpdate((current) =>
+              fileCharacterization(
+                current,
+                row.item.id,
+                event.target.value === '' ? null : (event.target.value as CharacterTraitId),
+              ),
+            )
+          }
+        >
+          <option value="">Not filed</option>
+          {traits.map((one) => (
+            <option key={one.id} value={one.id}>
+              {one.name}
+            </option>
+          ))}
+        </select>
+        {/* Setting aside is a decision and keeps the idea; × is for
+            something typed by mistake (§17). */}
+        <button
+          type="button"
+          className="ghost small"
+          aria-label={row.item.retired ? 'Put it back on deck' : 'Set it aside'}
+          title={
+            row.item.retired
+              ? 'Back on deck — still to place.'
+              : 'Set aside: kept, but no longer counted as work outstanding.'
+          }
+          onClick={() =>
+            onUpdate((current) =>
+              updateCharacterization(current, row.item.id, { retired: !row.item.retired }),
+            )
+          }
+        >
+          {row.item.retired ? '↩' : '⌄'}
+        </button>
+        <button
+          type="button"
+          className="ghost small"
+          aria-label={`Delete ${row.item.text}`}
+          title="Delete it outright."
+          onClick={() => onUpdate((current) => removeCharacterization(current, row.item.id))}
+        >
+          ×
+        </button>
+      </div>
+
+      {where === row.item.id ? (
+        <Where
+          file={file}
+          owner={{ kind: 'characterization', id: row.item.id as string }}
+          currentBeatId={currentBeatId}
+          onUpdate={onUpdate}
+        />
+      ) : null}
+    </li>
   );
 }
 

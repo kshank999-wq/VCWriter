@@ -115,10 +115,11 @@ Each stage ships on its own.
 6. **Relationships**: the stages timeline, and the map's chrome.
 7. **The margin mark**, and search across the cast.
 8. **The restyle**, and a sweep of the module's vocabulary to *moment*.
+9. **The one-column card stack** (§4b), from Ken overruling stage 8.
 
 ## 4a. What each built stage does
 
-**All eight are built.**
+**All nine are built.**
 
 **Stage 1 — the record.** `role` (six chips offered, free text underneath),
 `background` behind a fold marked optional, and the writer's own fields as a
@@ -169,14 +170,13 @@ read by `conflictsFor` from either — because storing the pair on both would
 be two records of one fact, free to disagree the moment one is edited.
 Migration 0054.
 
-**One place this diverges from the mockup, on purpose.** Screen 02 draws the
-traits as one column of expanded cards. The built screen keeps the shelf it
-has — the list of traits beside the chosen one's moments — because that panel
-holds more per trait than the card does (*When*, *How much of them*, *Read
-as*, and the *Where* panel that says which scenes a moment landed in). What
-the mockup is *for* — the red counts always in front of you — is delivered on
-every row of the list. The one-column stack was stage 8's to weigh, and stage
-8 kept the shelf; the reasoning is there.
+**The shelf this stage kept is gone.** Screen 02 draws the traits as one
+column of expanded cards; stage 8 weighed that against the shelf — the list
+of traits beside the chosen one's moments — and kept the shelf, because the
+shelf held four controls per trait that a card did not. Ken overruled it, and
+§4b is the stack built to the mockup. The correction is recorded there,
+because it is the part worth keeping: **that was an argument about where the
+controls go, dressed up as an argument about the layout**.
 
 **Stage 4 — the Story panel.** The scenes down the right of the Traits tab,
 as somewhere to put a moment. **Nothing about it is stored**: which scenes
@@ -347,16 +347,76 @@ initials are a reading with nowhere to type them; it is a **ring rather than
 a disc**, a filled circle in somebody's colour competing with the name beside
 it.
 
-**The one-column card stack is weighed and not built**, which §4a said this
-stage would decide. Screen 02 draws the traits as one column of expanded
-cards; the built screen keeps the shelf — the list of traits beside the
-chosen one's moments — because that panel holds more per trait than the card
-does (*When*, *How much of them*, *Read as*, *Pulls against*, and the
-*Where* panel that says which scenes a moment landed in), and what the
-mockup is *for*, the red counts always in front of you, is delivered on every
-row of the list and on the rail. Rebuilding it as cards would trade four
-controls per trait for a layout, which is not a trade the handoff asks for
-anywhere in its own words.
+**The one-column card stack was weighed here and refused**, which §4a said
+this stage would decide — on the ground that the shelf held four controls per
+trait a card did not, so rebuilding it as cards would trade those controls
+for a layout. Ken overruled it the same day, and he was right: §4b is the
+stack, and the refusal above is left standing because the correction is more
+useful than a tidy record.
+
+## 4b. The one-column card stack
+
+**Stage 9.**
+
+Every trait is a card, one under the next, with its moments inside it: the
+handoff's screen 02, and what stage 8 declined to build. The overrule is the
+part worth writing down, because the argument that lost was not wrong about
+its facts. The shelf really did hold *When*, *How much of them*, *Read as*
+and *Pulls against*, and a card head really cannot carry five form fields
+nine times over. What the argument got wrong is that **those are two
+questions**: *what layout does the screen have* and *where do a trait's
+settings live*. The handoff had already answered the second — it draws a ⋯ on
+every card head, for exactly them — so the controls were never the price of
+the layout. **An argument about where the controls go, dressed up as an
+argument about the layout.**
+
+What the stack buys is the thing the mockup exists for, and the thing the
+shelf could not do at all: **every trait's red count, and every trait's
+moments, on the screen at once**. On the shelf the counts were a column of
+numbers you pressed one at a time to read behind; here a writer reads down
+and sees what the whole character still owes.
+
+Three decisions hold it. **A card is open by default and folding is about
+this minute** — nothing is stored, the Layout rail's rule (addendum 20 §9h),
+so a writer with nine traits closes the seven they are not working on and
+comes back tomorrow to all nine. **A head's counts are the whole trait's**
+whatever the filter bar is showing, which is `filterBoard`'s own rule about
+the bar pointed one level down: a card reading *1 on deck* because the bar
+was set to *On deck* would be telling you what you had just asked for. And
+**the unfiled pile is absent where there is nothing unfiled** — it is a pile
+of things caught while writing rather than a folder anybody files into, and
+the only route to it, the Overview's *File them*, appears only when there is
+something in it, so nothing is ever sent somewhere that is not there.
+
+The old `Shelf` state survives with a changed meaning, and the rename is the
+point: it was *which trait is showing*, and in a stack every trait is
+showing, so it is now a **destination** — the Overview's *Place one* and the
+rail's rows name a trait, and naming one opens that card and brings it into
+view. It is cleared the moment it is honoured, or a card that had been
+routed to could not be folded again.
+
+Driving the real room caught three things 727 green tests could not, and the
+third is the one worth keeping. In a narrow column the `found while writing`
+badge is `nowrap` and the words were `min-width: 0`, so at 1280 a row read as
+a single letter beside the badge — **a badge about a moment standing where
+the moment should be**; the badge wraps under the words now. The *why it
+matters* field was a full-width box, which was one box on the shelf and nine
+down the stack, so it is a line of italic prose that draws its box when it is
+typed in. And **`.empty-state` is 48px of padding and a centred sentence** —
+right where it fills a column, absurd where nine of them stack: nine traits
+nobody had written under yet drew a page and a half of *Nothing shows this
+yet.* So the sentence is **gone rather than shrunk**: the head's `—` already
+says the trait is empty, and what an empty card needs is the way to fill it.
+Its placeholder does the saying, and says *what shows it* rather than
+*another* — there is no other one yet.
+
+`creator-stack.test.tsx` pins the shape rather than the styling: nine traits
+draw nine cards, a card's moments are on the screen without anything being
+pressed, folding takes the moments and keeps the head, a head's counts
+survive the bar narrowing the rows, a card with nothing left under a
+narrowing filter drops out, and **all four of the shelf's controls are still
+reachable behind the ⋯** — which is the thing the overrule was about, and so
+the thing a test has to hold.
 
 ## 5. Deliberately not built
 

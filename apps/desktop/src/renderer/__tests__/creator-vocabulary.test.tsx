@@ -115,7 +115,8 @@ describe('the module says moment', () => {
         onBack={nothing}
       />,
     );
-    // The shelf opens on the first trait, so the row's own box is on screen.
+    // Every trait is a card and every open card carries the form, so the box
+    // is on the screen without anything being pressed (addendum 25 §4b).
     expect(screen.getAllByLabelText('The moment').length).toBeGreaterThan(0);
   });
 });

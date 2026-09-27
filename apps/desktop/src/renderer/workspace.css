@@ -10301,10 +10301,192 @@ dialog.projects-dialog {
 
 .creator-traits {
   display: grid;
-  /* The traits, what shows them, and somewhere to put it (addendum 25 §3). */
-  grid-template-columns: 200px minmax(0, 1fr) 232px;
+  /* The stack of trait cards, and somewhere to put a moment (addendum 25 §4b).
+     It was three columns — a list of traits, one trait's moments, the scenes —
+     and the list is gone, every trait being a card in the stack now. */
+  grid-template-columns: minmax(0, 1fr) 232px;
   min-height: 0;
   flex: 1;
+}
+
+/* ------------------------------------- the one-column stack (addendum 25 §4b) */
+
+.creator-stack {
+  padding: 10px 18px 32px;
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  /* A moment is a sentence, so the column is set to a sentence's width rather
+     than stretched across a wide monitor. */
+  max-width: 980px;
+}
+
+.creator-card {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel);
+  padding: 9px 12px 10px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.creator-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+
+/* The fold. A card is open by default and folding is about this minute — the
+   Layout rail's rule, so nothing about it is stored. */
+.creator-card-fold {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 3px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.creator-card-fold:hover {
+  color: var(--gold);
+}
+
+/* How it reads, where the writer has said. Absent where they have not. */
+.creator-tone-chip {
+  padding: 1px 8px;
+  border: 1px solid var(--gold-deep, var(--border));
+  border-radius: 9px;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+/* How much of them, drawn: the reading of a number set behind the ⋯. */
+.creator-prominence {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.creator-prominence i {
+  width: 9px;
+  height: 3px;
+  border-radius: 1px;
+  background: var(--border);
+}
+
+.creator-prominence i.on {
+  background: var(--gold-deep, var(--gold));
+}
+
+/* The counts are the whole trait's, whatever the filter bar is showing, and
+   they sit at the end of the head so a reader goes down a column of them. */
+.creator-card-counts {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.creator-card-more {
+  border: 1px solid transparent;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  padding: 1px 6px 4px;
+  border-radius: 5px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.creator-card-more:hover,
+.creator-card-more[aria-expanded='true'] {
+  border-color: var(--border);
+  color: var(--gold);
+}
+
+/* The four that are set once and read for months. */
+.creator-card-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--ink);
+  border-radius: 5px;
+}
+
+.creator-card-why {
+  margin: 0;
+}
+
+/* Why it matters, as a line of prose rather than a box. On the shelf there was
+   one of these on the screen; in the stack there is one per card, and nine
+   empty boxes down a column are furniture over the work. It is still a field —
+   it draws its box when it is being typed in. */
+.creator-card .creator-why {
+  background: none;
+  border-color: transparent;
+  font-style: italic;
+  padding: 2px 0;
+}
+
+.creator-card .creator-why:hover {
+  border-color: var(--border);
+}
+
+.creator-card .creator-why:focus {
+  background: var(--ink);
+  border-color: var(--gold-deep, var(--border));
+  padding: 2px 6px;
+}
+
+.creator-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px 0;
+}
+
+.creator-filter-bar .creator-filter {
+  padding: 0;
+}
+
+.creator-add-trait {
+  margin-left: auto;
+}
+
+.creator-add-trait input {
+  width: 140px;
+  flex: 0 0 auto;
+}
+
+/* The × on a card's head: hidden until the card is pointed at or focused, so
+   the most destructive thing on the row is not the easiest to hit — and hidden
+   rather than absent, so the keyboard reaches it. */
+.creator-card .item-x {
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 1px 4px;
+  visibility: hidden;
+  flex: 0 0 auto;
+}
+
+.creator-card:hover .item-x,
+.creator-card .item-x:focus-visible {
+  visibility: visible;
+}
+
+.creator-card .item-x:hover {
+  color: var(--red);
 }
 
 /* Where a moment goes: the scenes in story order, bright where this person
@@ -10499,31 +10681,6 @@ dialog.projects-dialog {
   min-width: 0;
 }
 
-.creator-side {
-  border-right: 1px solid var(--border);
-  padding: 12px 10px 24px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.creator-side h4 {
-  margin: 6px 0 0;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--muted);
-}
-
-.creator-trait-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 1px;
-}
-
 .creator-add {
   display: flex;
   gap: 6px;
@@ -10543,8 +10700,7 @@ dialog.projects-dialog {
 }
 
 .creator-legend {
-  margin-top: auto;
-  padding-top: 12px;
+  padding-top: 6px;
   display: grid;
   gap: 3px;
   font-size: 11px;
@@ -10587,24 +10743,6 @@ dialog.projects-dialog {
 .creator-dot.is-aside {
   background: none;
   border: 1.5px dashed var(--muted);
-}
-
-.creator-shown {
-  padding: 12px 18px 32px;
-  overflow-y: auto;
-  display: grid;
-  gap: 10px;
-  align-content: start;
-  /* A line of characterization is a sentence, so it is set to a sentence's
-     width rather than stretched across a wide monitor. */
-  max-width: 980px;
-}
-
-.creator-trait-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 12px;
 }
 
 .creator-trait-name {
@@ -10659,13 +10797,20 @@ dialog.projects-dialog {
 .creator-item-said {
   display: flex;
   align-items: center;
+  /* The badge wraps under the words rather than squeezing them. Measured in
+     the stack at 1280: the badge is `nowrap` and the words were `min-width: 0`,
+     so in a narrow column the words gave way entirely and a row read as a
+     single letter beside `found while writing` — a badge about a moment,
+     standing where the moment should be. */
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
 }
 
 .creator-item-text {
   font-size: 12.5px;
-  min-width: 0;
+  flex: 1 1 12em;
+  min-width: 6em;
 }
 
 /* Set aside stays legible — it is a decision, not a deletion — but stops
