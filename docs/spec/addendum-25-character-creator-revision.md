@@ -120,10 +120,11 @@ Each stage ships on its own.
 11. **The cast that would not appear** (§4d), from Ken's bug report.
 12. **The arc as a line you fill in** (§4e), from Ken.
 13. **The arc line before there is an arc** (§4f), from Ken asking twice.
+14. **The line that fits the pane** (§4g), from Ken asking a third time.
 
 ## 4a. What each built stage does
 
-**All thirteen are built.**
+**All fourteen are built.**
 
 **Stage 1 — the record.** `role` (six chips offered, free text underneath),
 `background` behind a fold marked optional, and the writer's own fields as a
@@ -656,3 +657,73 @@ character who already had an arc and is not now that it draws for everybody: a
 tab opening on a four-row free-text box says an arc is a paragraph, which is
 the arrangement §4e was built to replace. The line first, then what it says in
 words, then the notes.
+
+## 4g. The line that fits the pane
+
+**Stage 14**, from Ken sending §4e's request a **third** time, word for word
+again. §4f read the second sending as this project's usual signal — a feature
+built and something standing in front of it — and fixed a real one. It was not
+the whole of it, because **both earlier readings were about the plumbing and
+the ask is about the picture**: *that is going to be like a timeline view*.
+
+Driving it found no route fault this time. From an empty cast: *+ Add 1 name
+from the script*, press the name, press **Arc** — tabs, stops, gaps, all there.
+So the screen was measured instead, and the measurement is the report.
+
+On a character with five moments, in a 1700-wide window:
+
+    .arc-line-track   x=278  width=944
+    stop 0            x=280   … stop 6  x=1612 width=176
+    .creator-body     ends at x=1700
+
+`.arc-stop` was a **fixed 176px** in a `flex` strip with `overflow-x: auto`, so
+seven stops ran 1508px through a 944px track. The last two moments **and
+*Becomes* itself** were off the right-hand edge of the screen, behind an
+overlay scrollbar that draws nothing until the pointer is already inside the
+strip. The one thing Ken names twice — *by default, the end of the character
+arc* — was not on the screen. And with only the two ends, the same fixed widths
+huddled them into the left third of the pane with a **46px** dash between them:
+two cards and a hyphen, which is not a line and not a timeline.
+
+**A timeline fits the space it is given.** This is addendum 15 §15's *whole
+story means the whole story fits* and addendum 20 §9e's *the size that fits is
+a reading*, arriving in a third room — and it is the same fault each time, a
+fixed number where a share of the measure belongs. A stop is `flex: 1 1 0` with
+a floor of 110px and a ceiling of 220px, so it never grows into a slab and
+never shrinks past legible; a gap is `flex: 1 1 auto` and **takes what the
+stops do not**. Measured again, the seven stops end at 1220 in a track ending
+at 1222, and with two stops *Begins* stands at one edge, *Becomes* at the
+other, and the line runs the width of the pane between them.
+
+That second half is not decoration: **the line is the gesture**. Double-click
+*on the line* is a real act when the line is half the pane and a joke when it
+is 46px, so making the line long is the same change as making the act
+reachable. The `+` on it is faint rather than invisible for the same reason —
+over 46px a hover-only mark was survivable, over half a pane it is the only
+thing saying the line can be pressed.
+
+**Where it must scroll, it says so.** Past about six moments on a laptop even a
+legible floor will not fit, and there is nothing here to zoom; that is stated
+rather than hidden, with a thin scrollbar instead of an overlay one, and the
+chosen stop is brought into view — addendum 18 stage 4's own fix (*a card the
+designer had just made was off the screen*) on another board whose arrangement
+is likewise not the writer's to drag.
+
+Two things came out of building it.
+
+**A host is asked rather than assumed.** The new `scrollIntoView` threw in
+jsdom, and an effect that throws takes the whole tab down — a worse failure
+than a stop that stays put. The room already had the answer in two places
+(`NarrativeMapWindow` and `StoryView` both test `typeof … === 'function'`) and
+**two newer copies had not asked it**: this one, and §4b's own card scroll from
+the week before, which survived only because its key is usually null. Both are
+guarded now. It is the *second answer* argument pointed at a browser API.
+
+And the lesson over the three sendings, which is the part worth keeping:
+**when the same words come back a third time, stop reading them as a report of
+a broken mechanism and read them as a description of a picture.** §4f's rule
+was *a route is not a field*; this one is that **a repeat is not always a
+regression** — twice it named something unreachable, and the third time it
+named something reachable that did not look like what was asked for. The
+measurement is what separated them, and nothing else would have: every test was
+green through all three.

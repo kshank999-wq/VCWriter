@@ -1205,7 +1205,10 @@ function TraitStack({
       next.delete(key);
       return next;
     });
-    cards.current.get(key)?.scrollIntoView({ block: 'nearest' });
+    // Guarded for the reason the arc line's is (§4g): not every host has it,
+    // and an effect that throws takes the tab down with it.
+    const card = cards.current.get(key);
+    if (card && typeof card.scrollIntoView === 'function') card.scrollIntoView({ block: 'nearest' });
     onShelved();
   }, [shelf, onShelved]);
 
@@ -2154,6 +2157,28 @@ function ArcLine({
   const [saying, setSaying] = useState('');
 
   /**
+   * **A stop that is chosen is brought into view** (§4g).
+   *
+   * The line fits the pane until there are more moments than fit at a legible
+   * width, and past that it scrolls — so a moment put in at the far end, or
+   * one opened from below, can be off the edge. This is addendum 18 stage 4's
+   * fault and its fix: *a card the designer had just made was off the screen*,
+   * on a board whose arrangement is likewise not the writer's to drag.
+   */
+  const track = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!chosen) return;
+    const box = track.current?.querySelector<HTMLElement>(`[data-stop="${CSS.escape(chosen)}"]`);
+    // **Asked for rather than assumed.** `scrollIntoView` is not on every host
+    // this renderer runs in, and an effect that throws takes the whole tab
+    // down — which is a worse failure than a stop that stays where it is. The
+    // narrative map and the Script both ask the same question.
+    if (box && typeof box.scrollIntoView === 'function') {
+      box.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [chosen]);
+
+  /**
    * Where a gap sits among the arc's **stored** points, which is what
    * `insertArcPoint` counts — the strip draws placed moments first, so the
    * gap after the third box is not always the third order key.
@@ -2189,7 +2214,7 @@ function ArcLine({
 
   return (
     <section className="arc-line" aria-label="The arc, from beginning to end">
-      <div className="arc-line-track">
+      <div className="arc-line-track" ref={track}>
         {stops.map((stop, at) => (
           <Fragment key={stop.key}>
             {at > 0 ? (
@@ -2243,6 +2268,7 @@ function ArcLine({
                 stop.colour ? ` ${DOT_CLASS[stop.colour]}` : ''
               }`}
               aria-pressed={chosen === stop.key}
+              data-stop={stop.key}
               onClick={() => onChoose(chosen === stop.key ? null : stop.key)}
             >
               <span className="arc-stop-head">

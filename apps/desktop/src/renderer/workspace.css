@@ -18004,17 +18004,32 @@ dialog.designed-page-dialog[open] {
   gap: 6px;
 }
 
+/* The line fits the pane until there are more moments than fit at a legible
+   width — about six on a laptop — and past that it scrolls. **The scrollbar is
+   thin rather than absent**: an overlay scrollbar shows nothing until the
+   pointer is already over the strip, so the writer's own last moment could sit
+   off the edge with the screen saying so in no way at all, which is how this
+   read as *the end of the arc is missing*. */
 .arc-line-track {
   display: flex;
   align-items: stretch;
   overflow-x: auto;
+  scrollbar-width: thin;
   padding: 4px 2px 8px;
   gap: 0;
 }
 
+/* **The line fits the space it is given** (§4g).
+   These were a fixed 176px each, so two stops huddled in the left third of the
+   pane and seven ran 1508px through a 944px track — which scrolls, silently,
+   with *Becomes* off the right edge of the screen. So a stop takes a share of
+   the width instead: it never grows into a slab, never shrinks past legible,
+   and what is left over goes to the line between them, which is what makes
+   double-clicking *on the line* a gesture with somewhere to land. */
 .arc-stop {
-  flex: 0 0 auto;
-  width: 176px;
+  flex: 1 1 0;
+  min-width: 110px;
+  max-width: 220px;
   min-height: 92px;
   display: grid;
   align-content: start;
@@ -18062,12 +18077,14 @@ dialog.designed-page-dialog[open] {
   font-size: 10px;
 }
 
-/* The gap between two boxes: the line, and the act. */
+/* The gap between two boxes: the line, and the act. **It takes what the stops
+   do not** (§4g), so on a character with two ends and nothing between, the line
+   really does run from one side of the pane to the other. */
 .arc-gap {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
-  min-width: 46px;
+  min-width: 28px;
 }
 
 .arc-gap-line {
@@ -18092,9 +18109,13 @@ dialog.designed-page-dialog[open] {
   background: var(--border);
 }
 
+/* **Faint rather than invisible** (§4g): over 46px of line a hidden `+` was
+   survivable, over half the pane it is the only thing saying the line can be
+   pressed. It comes up to full gold under the pointer. */
 .arc-gap-plus {
   position: relative;
-  color: transparent;
+  color: var(--gold);
+  opacity: 0.32;
   font-size: 13px;
   line-height: 1;
   padding: 0 4px;
@@ -18103,7 +18124,7 @@ dialog.designed-page-dialog[open] {
 
 .arc-gap-line:hover .arc-gap-plus,
 .arc-gap-line:focus-visible .arc-gap-plus {
-  color: var(--gold);
+  opacity: 1;
 }
 
 .arc-gap-form input {

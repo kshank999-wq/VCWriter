@@ -3748,6 +3748,36 @@ push live; the build takes a minute or two.
   Point` field one control down had the same fault — and the **notes box moved
   under the line**, a tab opening on a four-row free-text box saying an arc is a
   paragraph, which is the arrangement §4e was built to replace.
+  **Stage 14 (§4g) is the line that fits the pane**, from Ken sending §4e's ask
+  a **third** time in the same words — and the lesson is that **both earlier
+  readings were about the plumbing while the ask is about the picture**
+  (*like a timeline view*). Driving it found no route fault: from an empty cast
+  the whole journey works. So it was **measured**, and the measurement is the
+  report — `.arc-stop` was a **fixed 176px** in a `flex` strip, so seven stops
+  ran 1508px through a 944px track and the last two moments **and *Becomes*
+  itself** sat off the right edge of the screen behind an overlay scrollbar that
+  draws nothing until the pointer is already in the strip, while two ends alone
+  huddled into the left third with a **46px** dash between them: two cards and a
+  hyphen, not a line. **A timeline fits the space it is given** — addendum 15
+  §15's *whole story means the whole story fits* and addendum 20 §9e's *the size
+  that fits is a reading* in a third room, the same fixed number where a share
+  of the measure belongs — so a stop is `flex: 1 1 0` floored at 110px and
+  capped at 220px and a gap **takes what the stops do not**, which puts seven
+  stops inside the track and stands *Begins* at one edge and *Becomes* at the
+  other. That half is not decoration: **the line is the gesture**, so making it
+  long is the same change as making *double-click on the line* reachable, and
+  the `+` is faint rather than invisible for the same reason. Past about six
+  moments on a laptop it **scrolls and says so** (a thin scrollbar, and the
+  chosen stop brought into view — addendum 18 stage 4's own fix). Building it
+  caught **a host asked rather than assumed**: the new `scrollIntoView` threw in
+  jsdom and an effect that throws takes the tab down, and the room already had
+  the guard in two places while **two newer copies had not asked it** — this one
+  and §4b's card scroll — the *second answer* argument pointed at a browser API.
+  The keeper: **when the same words come back a third time, stop reading them as
+  a broken mechanism and read them as a description of a picture** — twice they
+  named something unreachable, the third time something reachable that did not
+  look like what was asked for, and only measuring told them apart, every test
+  being green through all three.
   §2 records
   where this diverges from the handoff and why; §5 is the one thing
   deliberately not built (§21's AI suggestions, which the handoff does not ask
