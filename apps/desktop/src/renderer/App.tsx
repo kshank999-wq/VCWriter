@@ -193,7 +193,19 @@ export default function App() {
   const [researchView, setResearchView] = useState<ResearchView | undefined>(undefined);
   // Where the four sections sit, and which of them are in windows of their
   // own right now (addendum 02 §8).
-  const [storedArrangement, setArrangement] = usePreference<Arrangement>('panes', DEFAULT_ARRANGEMENT);
+  /**
+   * **A new key, because the old one holds the old default** (addendum 02
+   * §8a). The arrangement is remembered per machine, so every machine that
+   * has ever opened the workspace has `panes` written with the viewer on top
+   * — and for nearly all of them that was not somebody choosing an
+   * arrangement, it was the one they were handed. Changing
+   * `DEFAULT_ARRANGEMENT` alone would have reached nobody who had already
+   * opened the program, which is the shape of fault this project has spent
+   * the week finding. `layout.pageZoom` replaced `layout.zoom` for the same
+   * reason (addendum 20 §9e). Anybody who really had dragged the two apart
+   * puts them back with the one drag that is already there.
+   */
+  const [storedArrangement, setArrangement] = usePreference<Arrangement>('panes2', DEFAULT_ARRANGEMENT);
   const chosenArrangement = useMemo(() => normaliseArrangement(storedArrangement), [storedArrangement]);
   const [detached, setDetached] = useState<string[]>([]);
   const [dragging, setDragging] = useState<PaneId | null>(null);
@@ -214,15 +226,29 @@ export default function App() {
    * because a board's proportions are not a script's.
    */
   const shortForm = project.file?.project.format === 'short_form';
+  /**
+   * The stage's divider sizes whatever is **on top**, which since §8a is the
+   * plot tracks — so this is Ken's *I want to be able to adjust the height of
+   * it too*, and it needed no new gesture, only the right numbers under it.
+   *
+   * Its **key is new** for the arrangement's own reason: `viewportHeight`
+   * holds a height somebody chose for the *viewer*, and handing that to the
+   * tracks would open the screen at a size nobody picked for what is now
+   * there. The minimum and the reserve swap sides with the panes — the floor
+   * is the tracks' (a ruler, the acts row and a track or two) and what is
+   * kept back is the viewer's — so the tracks can be dragged tall enough to
+   * work in, which is the point of the whole change.
+   */
   const rows = useSplit({
-    key: shortForm ? 'sheetHeight' : 'viewportHeight',
+    key: shortForm ? 'sheetHeight' : 'tracksHeight',
     // Enough for the board and the segments under it without a scrollbar,
-    // and every pixel above that to the sheet.
-    initial: shortForm ? 0.68 : 0.48,
-    min: shortForm ? 240 : 160,
+    // and every pixel above that to the sheet. On a script the tracks open
+    // with rather more than half, being the surface rather than the summary.
+    initial: shortForm ? 0.68 : 0.58,
+    min: shortForm ? 240 : 200,
     // The strip under the sheet has two tracks to show — the board and the
     // segments — so it is never squeezed below the height of both.
-    reserve: shortForm ? 270 : 200,
+    reserve: shortForm ? 270 : 160,
     axis: 'y',
   });
 
@@ -1074,7 +1100,12 @@ export default function App() {
                         className="divider"
                         role="separator"
                         aria-orientation="horizontal"
-                        aria-label="Resize the viewport"
+                        /* **Named for what it sizes**, which is whatever is in
+                           the top slot — the plot tracks by default since §8a,
+                           and anything at all once the sections have been
+                           swapped. It said *Resize the viewport*, which was
+                           true of one arrangement out of twenty-four. */
+                        aria-label={`Resize the ${paneNames[arrangement.top].toLowerCase()}`}
                         {...rows.dividerProps}
                       />
                     ) : null}

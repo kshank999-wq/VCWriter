@@ -149,6 +149,40 @@ push live; the build takes a minute or two.
   alike), and **a control is a control** — a press on the name, the draft
   picker or *In script* is that control's and never the start of a drag, or
   naming a beat would slide the screen out from under the pointer.
+  **§8a is the working surface taking the stage**, from Ken (*switch the
+  timeline viewer and the plot tracks… the plot tracks are the ones we're going
+  to be working with, and the timeline viewer is basically an overview… I also
+  want the plot tracks to be expandable height-wise*). **Both halves were
+  mechanisms already there, pointed the wrong way**: §8 has let any section swap
+  with any other since it was built and the stage has had a drag divider all
+  along, so what was wrong was the **default** — `DEFAULT_ARRANGEMENT` put the
+  viewer on the stage and the tracks in the strip, which is a claim about which
+  of them a writer's hands are on. **A screen is arranged around what is acted
+  on, and the overview goes under it.** Two things fall out of the swap rather
+  than being arranged beside it, which is why it is made in the record: the
+  **Inspector comes with it** (it stands in the top row beside whatever is
+  there, describing the scene or beat you select *on the tracks*), and the
+  divider **now sizes the tracks**, having always sized whatever is on top —
+  Ken's *adjust the height of it too*, with no new gesture. The half that
+  decides whether any of it is seen: **a new preference key, because the old one
+  holds the old default** — the arrangement is per machine, so every machine
+  that ever opened the workspace has `panes` written with the viewer on top, and
+  for nearly all of them that was not a choice but what they were handed;
+  changing the default alone would have reached **nobody who had already opened
+  the program**, which is the week's own fault a fourth time, and `panes2` is
+  `layout.pageZoom` replacing `layout.zoom` (addendum 20 §9e) again.
+  `tracksHeight` replaces `viewportHeight` on the same argument (a height chosen
+  for the *viewer* is not one anybody chose for the tracks), opening at 0.58
+  rather than 0.48 — the surface rather than the summary — with the floor and
+  the reserve swapping sides. The divider is **named for what it sizes**
+  (`Resize the plot tracks`, read off the top slot), its old *Resize the
+  viewport* having been true of one arrangement in twenty-four. Measured with
+  the old arrangement still in storage: tracks on the stage at 580px, viewer at
+  337, and a 180px drag puts the tracks at 764 with the viewer at its floor.
+  Three `windows.test.tsx` assertions spelled the old default out while testing
+  the swap and were **updated rather than worked around**. Short form is
+  untouched, its arrangement being hard-coded and its split keeping
+  `sheetHeight`.
   **§4c is the beat under the pointer**, from Ken (*when you hover over a
   beat in a scene, I want to be able to see the entire description of the
   beat, so you don't have to go into it to see if it's the one you need to be

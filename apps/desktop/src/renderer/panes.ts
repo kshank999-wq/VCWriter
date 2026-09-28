@@ -25,10 +25,28 @@ export type Arrangement = Record<SlotId, PaneId>;
 export const PANE_IDS: PaneId[] = ['script', 'viewer', 'tracks', 'inspector'];
 export const SLOT_IDS: SlotId[] = ['left', 'top', 'bottom', 'right'];
 
+/**
+ * **The working surface takes the stage; the overview sits under it.**
+ *
+ * This was the other way round — the viewer on top and the tracks beneath —
+ * and Ken named why that is backwards: *the plot tracks are the ones we're
+ * going to be working with, and the timeline viewer is basically an
+ * overview*. A screen is arranged around what a writer's hands are on, and
+ * the thing you act on should not be the strip at the foot.
+ *
+ * Two things follow from the swap rather than being arranged separately, and
+ * that is the argument for doing it here rather than in the markup. The
+ * **Inspector comes with it**: it stands in the top row beside whatever is
+ * there, and it describes the scene or beat you have selected — which you
+ * select on the tracks, so it was a column beside the overview and is now a
+ * column beside the work. And the stage's **divider now sizes the tracks**,
+ * since it has always sized whatever is on top, which is the whole of Ken's
+ * *I want to be able to adjust the height of it too*.
+ */
 export const DEFAULT_ARRANGEMENT: Arrangement = {
   left: 'script',
-  top: 'viewer',
-  bottom: 'tracks',
+  top: 'tracks',
+  bottom: 'viewer',
   right: 'inspector',
 };
 

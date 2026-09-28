@@ -32,10 +32,11 @@ describe('where the sections sit', () => {
   it('swaps two sections when one is put in the other one’s place', () => {
     const moved = movePane(DEFAULT_ARRANGEMENT, 'script', 'bottom');
     expect(moved.bottom).toBe('script');
-    // The tracks were there; they take the place the Script came from.
-    expect(moved.left).toBe('tracks');
-    // Nothing else stirred, and every section still has exactly one place.
-    expect(moved.top).toBe('viewer');
+    // The viewer was there; it takes the place the Script came from.
+    expect(moved.left).toBe('viewer');
+    // Nothing else stirred, and every section still has exactly one place —
+    // the tracks keep the stage, which since §8a is where they start.
+    expect(moved.top).toBe('tracks');
     expect(new Set(Object.values(moved)).size).toBe(4);
   });
 
@@ -102,9 +103,10 @@ function Frames({ onDetach = () => undefined }: { onDetach?(pane: PaneId): void 
 describe('the strip on a section', () => {
   it('moves a section to another place from its menu', () => {
     render(<Frames />);
-    expect(screen.getByTestId('where').textContent).toBe('script/viewer/tracks/inspector');
+    // The tracks take the stage and the viewer sits under them (§8a).
+    expect(screen.getByTestId('where').textContent).toBe('script/tracks/viewer/inspector');
     fireEvent.change(screen.getByLabelText('Move Script'), { target: { value: 'bottom' } });
-    expect(screen.getByTestId('where').textContent).toBe('tracks/viewer/script/inspector');
+    expect(screen.getByTestId('where').textContent).toBe('viewer/tracks/script/inspector');
   });
 
   it('swaps two sections when one is dragged onto the other', () => {
@@ -112,7 +114,7 @@ describe('the strip on a section', () => {
     const grips = container.querySelectorAll('.pane-grip');
     fireEvent.dragStart(grips[0] as HTMLElement);
     fireEvent.drop(screen.getByLabelText('Plot tracks'));
-    expect(screen.getByTestId('where').textContent).toBe('tracks/viewer/script/inspector');
+    expect(screen.getByTestId('where').textContent).toBe('tracks/script/viewer/inspector');
   });
 
   it('takes a section out to its own window', () => {

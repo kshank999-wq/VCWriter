@@ -1188,6 +1188,66 @@ process relays between windows and never reads what it relays; in the
 browser preview the windows are tabs of the same origin and talk over a
 `BroadcastChannel`. Both are the same three lines.
 
+## 8a. The working surface takes the stage
+
+From Ken: *I want to switch the timeline viewer and the plot tracks… I want
+the timeline viewer at the bottom of the page, because the plot tracks are the
+ones we're going to be working with, and the timeline viewer is basically an
+overview. And I also want the plot tracks to be expandable height-wise — so you
+can zoom, but I also want to be able to adjust the height of it too.*
+
+**Both halves were mechanisms that already existed, pointed the wrong way.**
+§8 has let any section swap with any other since it was built, and the stage
+has had a drag divider between its two halves for as long. What was wrong was
+the **default**: `DEFAULT_ARRANGEMENT` put the viewer on the stage and the
+tracks in the strip beneath, which is a claim about which of them a writer's
+hands are on, and it was the wrong way round. So the change is two words in
+one record, and the reasoning is the part worth keeping — **a screen is
+arranged around what is acted on, and the overview goes under it**.
+
+Two things follow from the swap rather than being arranged separately, which
+is the argument for making it there rather than in the markup. The
+**Inspector comes with it**: it stands in the top row beside whatever is
+there, and it describes the scene or beat that is selected — which is
+selected on the tracks — so a column that sat beside the overview is now a
+column beside the work. And the stage's **divider now sizes the tracks**,
+because it has always sized whatever is on top; that is Ken's *adjust the
+height of it too*, and it needed no new gesture at all.
+
+**A new preference key, because the old one holds the old default.** The
+arrangement is remembered per machine, so every machine that has ever opened
+the workspace has `panes` written with the viewer on top — and for nearly all
+of them that was not somebody choosing an arrangement, it was the one they
+were handed. Changing the default alone would have reached **nobody who had
+already opened the program**, which is exactly the shape of fault this project
+spent the week finding three times over; `layout.pageZoom` replaced
+`layout.zoom` for the same reason (addendum 20 §9e). `panes2` is the key, and
+anybody who really had dragged the two apart puts them back with the one drag
+that is already there. `tracksHeight` replaces `viewportHeight` on the same
+argument: a height somebody chose for the *viewer* is not a height anybody
+chose for the tracks. It opens at **0.58** rather than 0.48 — the surface
+rather than the summary — and the floor and the reserve swap sides with the
+panes, so the tracks can be dragged tall enough to work in and the viewer
+clamps at its own minimum rather than vanishing.
+
+**The divider is named for what it sizes.** Its label read *Resize the
+viewport*, which was true of one arrangement out of twenty-four; it reads the
+pane in the top slot now, so it says *Resize the plot tracks* by default and
+says something else the moment the sections are swapped — the room's own rule
+about a screen keeping a private copy of a fact, pointed at a label.
+
+Measured on the real screen, with the **old** arrangement already written to
+storage: the tracks take the stage at 580px with the Inspector beside them,
+the viewer sits under at 337, and dragging the divider down 180px puts the
+tracks at 764 and the viewer at its floor. Three tests in
+`windows.test.tsx` spelled the old default out while testing the swap
+mechanism, and were **updated rather than worked around** — the honest signal
+that the default changed and the mechanism did not.
+
+Short form is untouched: its arrangement is hard-coded (the sheet is the
+document and the timeline is the strip under it, addendum 05 §3e) and its
+split keeps its own `sheetHeight`.
+
 ## 9. Inspector
 
 The properties of the current selection, as a column of collapsible
