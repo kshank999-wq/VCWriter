@@ -1,6 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import {
+  describePhoneShelf,
+  describeShelf,
+  emptyShelf,
+  phoneShelfOffer,
+  readShelf,
+  setOnPhone,
+  shelfRows,
+  shownOnPhone,
+  type PhoneShelf,
+} from '@vcwriter/domain';
 
 /**
  * The Project Page (addendum 09 §3.1, stage 5).
@@ -17,7 +28,18 @@ import { useCallback, useEffect, useState } from 'react';
  * same `createProjectFile` the desktop does, so what comes back has its opening
  * scene, its research folders and its cast headings — not a title with nothing
  * behind it.
+ *
+ * **And which of them are on this phone is the writer's** (§13, from Ken): the
+ * list is everything the account has, which on a desk with eleven scripts on it
+ * is ten too many to scroll past in a pocket. `capture-shelf.ts` holds the
+ * rules — chiefly that only what is *off* is written down, so a project started
+ * tomorrow is here without being asked — and the tick reaches this device and
+ * nothing else, there being no copy of a project on a phone for anything to
+ * reach.
  */
+
+/** Where this device remembers what it has been told not to show. */
+export const NOTES_SHELF = 'vcwriter-notes-shelf';
 
 export interface ProjectSummary {
   id: string;
@@ -61,6 +83,27 @@ export function ProjectPage({
   const [title, setTitle] = useState('');
   const [format, setFormat] = useState('screenplay');
   const [making, setMaking] = useState(false);
+  /** Which projects this phone shows, and whether the writer is choosing. */
+  const [shelf, setShelf] = useState<PhoneShelf>(emptyShelf());
+  const [choosing, setChoosing] = useState(false);
+
+  useEffect(() => {
+    try {
+      setShelf(readShelf(localStorage.getItem(NOTES_SHELF)));
+    } catch {
+      // A locked-down browser shows everything, which is the right failure.
+    }
+  }, []);
+
+  const tick = (projectId: string, on: boolean) => {
+    const after = setOnPhone(shelf, projectId, on);
+    setShelf(after);
+    try {
+      localStorage.setItem(NOTES_SHELF, JSON.stringify(after));
+    } catch {
+      // It holds for this sitting either way; nothing is lost but the memory.
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,13 +155,51 @@ export function ProjectPage({
 
       {loading ? (
         <p className="muted">Looking…</p>
+      ) : choosing ? (
+        <>
+          {/* The heading says which screen this is: the page's own is
+              *Projects*, and arriving at a second list under the same word is
+              how somebody presses Done without knowing what they just did. */}
+          <h2 className="notes-shelf-head">On this phone</h2>
+          <ul className="notes-shelf-list">
+            {shelfRows(shelf, projects).map((row) => {
+              const offer = phoneShelfOffer(shelf, row);
+              return (
+                <li key={row.id}>
+                  <label className="notes-shelf-row">
+                    <input
+                      type="checkbox"
+                      checked={row.on}
+                      onChange={(event) => tick(row.id, event.target.checked)}
+                      aria-label={offer.act}
+                    />
+                    <span>
+                      <span className="notes-project-title">{row.title || 'Untitled'}</span>
+                      <span className="muted small">{FORMAT_WORDS[row.format] ?? row.format}</span>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          {/* **The promise is the domain's**, said once: two screens writing
+              *nothing is deleted* for themselves is two answers to the one
+              question a writer cannot check from a phone. It goes **under** the
+              ticks — what somebody came to do stands first, and on a desk with
+              eleven scripts on it a paragraph at the top is the list pushed off
+              the screen. */}
+          <p className="muted small">{describePhoneShelf()}</p>
+          <button type="button" className="button" onClick={() => setChoosing(false)}>
+            Done
+          </button>
+        </>
       ) : (
         <>
           {projects.length === 0 ? (
             <p className="muted">No projects yet. Start one and it will be on your desktop too.</p>
           ) : (
             <ul className="notes-project-list">
-              {projects.map((project) => (
+              {shownOnPhone(shelf, projects).map((project) => (
                 <li key={project.id}>
                   <button
                     type="button"
@@ -178,10 +259,27 @@ export function ProjectPage({
               </div>
             </form>
           ) : (
-            <button type="button" className="button secondary" onClick={() => setNaming(true)}>
-              New project
-            </button>
+            <div className="notes-item-actions">
+              <button type="button" className="button secondary" onClick={() => setNaming(true)}>
+                New project
+              </button>
+              {/* **Always here, never only when something is off**: a writer who
+                  unticks the last project would otherwise be looking at an empty
+                  list with no way back to the ticks that emptied it. */}
+              {projects.length > 0 ? (
+                <button type="button" className="button secondary" onClick={() => setChoosing(true)}>
+                  Which projects
+                </button>
+              ) : null}
+            </div>
           )}
+
+          {/* What is not being shown, said where it went missing. Absent where
+              nothing is off, a line reading *0 are off* being a fact about
+              nothing. */}
+          {describeShelf(shelf, projects) ? (
+            <p className="muted small">{describeShelf(shelf, projects)}</p>
+          ) : null}
         </>
       )}
     </section>

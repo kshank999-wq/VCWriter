@@ -20,11 +20,12 @@ import {
   type DictationSession,
 } from '@/lib/dictation';
 import { NotesReview } from './notes-review';
-import { ProjectPage, type ProjectSummary } from './project-page';
+import { NOTES_SHELF, ProjectPage, type ProjectSummary } from './project-page';
 import {
-  CAPTURE_CATEGORIES,
-  CAPTURE_CATEGORY_NAMES,
   applyCorrection,
+  emptyShelf,
+  readShelf,
+  shownOnPhone,
   captureKeyName,
   captureVocabulary,
   emptySitting,
@@ -39,7 +40,7 @@ import {
   speakBack,
   spokenFormatNames,
   WAKE,
-  type CaptureCategory,
+  type CaptureKey,
   type ProjectFormat,
   type Sitting,
 } from '@vcwriter/domain';
@@ -80,7 +81,7 @@ export default function CaptureApp() {
   const [project, setProject] = useState<ProjectSummary | null>(null);
   const [lastProjectId, setLastProjectId] = useState<string | null>(null);
   const [screen, setScreen] = useState<Screen>('projects');
-  const [category, setCategory] = useState<CaptureCategory>('idea');
+  const [category, setCategory] = useState<CaptureKey>('idea');
   const [subjectName, setSubjectName] = useState('');
 
   const [text, setText] = useState('');
@@ -120,14 +121,28 @@ export default function CaptureApp() {
     chosen.current = project;
   }, [project]);
 
-  /** The projects, for a spoken *dictate project Jinn*. */
+  /**
+   * The projects, for a spoken *dictate project Jinn*.
+   *
+   * **Narrowed by the shelf** (§13), through the same `shownOnPhone` the list
+   * reads: a project taken off this phone is off it, and a component deciding
+   * for itself which projects exist is addendum 24 §5i's fault — the lookup
+   * would go on finding a project the list has stopped showing, and switching
+   * to it silently.
+   */
   useEffect(() => {
     void (async () => {
       try {
         const response = await fetch('/api/notes/projects', { cache: 'no-store' });
         if (!response.ok) return;
         const body = (await response.json()) as { projects?: ProjectSummary[] };
-        setProjects(body.projects ?? []);
+        let shelf = emptyShelf();
+        try {
+          shelf = readShelf(localStorage.getItem(NOTES_SHELF));
+        } catch {
+          // A locked-down browser shows everything, which is the right failure.
+        }
+        setProjects(shownOnPhone(shelf, body.projects ?? []));
       } catch {
         // Offline is the ordinary case here; the picker still works.
       }
@@ -225,16 +240,15 @@ export default function CaptureApp() {
    * confirmation*).
    */
   const heardIt = (chunk: string) => {
-    const command = readSpoken(chunk);
+    // The **ref**, not the state: this runs from the recogniser, outside a
+    // render, where the ref is the one that is current.
+    const command = readSpoken(chunk, format());
 
     if (command.kind === 'category') {
       setCategory(command.category);
       if (command.subjectName) setSubjectName(command.subjectName);
-      setHeard(
-        command.subjectName
-          ? `${CAPTURE_CATEGORY_NAMES[command.category]} — ${command.subjectName}`
-          : CAPTURE_CATEGORY_NAMES[command.category],
-      );
+      const said = captureKeyName(command.category, format());
+      setHeard(command.subjectName ? `${said} — ${command.subjectName}` : said);
       if (command.text.length > 0) append(command.text);
       return;
     }
@@ -261,7 +275,7 @@ export default function CaptureApp() {
 
   /** Say the note back, so it can be checked without looking (his §5.7). */
   const sayItBack = () => {
-    readAloud(sayBack({ category, subjectName: subjectName.trim() || null, text }), {
+    readAloud(sayBack({ category, subjectName: subjectName.trim() || null, text }, formatNow), {
       onError: setStatus,
     });
   };
@@ -304,7 +318,37 @@ export default function CaptureApp() {
   const format = (): ProjectFormat => (chosen.current?.format as ProjectFormat) ?? 'screenplay';
   const formatNow: ProjectFormat = (project?.format as ProjectFormat) ?? 'screenplay';
 
-  /** One note out of the sitting, onto the device. */
+  /**
+   * What may be said and picked at this project, and which of it is chosen.
+   *
+   * **The chosen one is read back against the list rather than stored against
+   * it**: a writer who picks *Scene* in a novel and then opens a screenplay,
+   * where the word belongs to the unit, would otherwise be looking at a picker
+   * showing nothing at all. Idea is the fallback because it is said of every
+   * format — it is what `ANYWHERE` is for.
+   */
+  const vocabulary = captureVocabulary(formatNow);
+  const chosenCategory = vocabulary.find((one) => one.key === category);
+  const chosenKey: CaptureKey = chosenCategory?.key ?? 'idea';
+  const takesName = chosenCategory?.takesName ?? false;
+
+  /**
+   * One note out of the sitting, onto the device **and then sent**.
+   *
+   * The send is the half this was missing, and it is the whole of Ken's *it
+   * didn't save it*: the typed screen has always done `enqueue` and then
+   * `flushQueue`, while this did only the first — so every note of a
+   * hands-free walk sat in IndexedDB on the phone, correctly and invisibly,
+   * and **Review reads the server**, which had none of them. Nothing was ever
+   * lost; it was simply never sent, which from the writer's chair is the same
+   * thing and worse, because the screen said *Saved*.
+   *
+   * Sent **per note rather than at the end**, which is what the caller's own
+   * comment already claimed: a walk that pushed everything when it stopped
+   * would lose the lot to a dropped connection. `flushQueue` reads the whole
+   * queue each time and is idempotent on `client_capture_id`, so this is also
+   * what carries the notes taken in a tunnel the moment there is signal.
+   */
   const fileOne = async (note: {
     key: string | null;
     subjectName: string | null;
@@ -322,7 +366,7 @@ export default function CaptureApp() {
       requestedRouting: null,
       // The project's own vocabulary now (§10), which the column carries as
       // text since 0060.
-      category: note.key as CaptureCategory | null,
+      category: note.key as CaptureKey | null,
       subjectName: note.subjectName,
       // The writer's own word, said once and carried by every note after it
       // (§12). Nothing is created by it here: the desktop makes the folder.
@@ -331,6 +375,14 @@ export default function CaptureApp() {
       lastError: null,
       attempts: 0,
     });
+    /**
+     * **Sent as well as written down.** Offline it stays queued and the
+     * `online` listener above sends it, which is the one case where a note
+     * waits — and it waits having been written down, which is the promise the
+     * queue exists to keep. *Sync now* stays for that case; it is not
+     * something a walk should ever require anybody to press.
+     */
+    if (navigator.onLine) await flushQueue();
   };
 
   /**
@@ -502,7 +554,10 @@ export default function CaptureApp() {
       source: dictating ? 'mobile_voice' : 'mobile_text',
       capturedAt: new Date().toISOString(),
       requestedRouting: null,
-      category,
+      // What the picker is **showing**, which is the one the writer can see:
+      // a key that fell back because this project's format has no word for it
+      // would file the note under something nobody chose.
+      category: chosenKey,
       subjectName: subjectName.trim().length > 0 ? subjectName.trim() : null,
       // The typed screen has no group: §12's is said out loud, and a second
       // control for it here would be the folder picker §2 refuses.
@@ -603,7 +658,7 @@ export default function CaptureApp() {
         </nav>
       )}
 
-      {screen === 'review' ? <NotesReview projectId={project?.id ?? null} /> : null}
+      {screen === 'review' ? <NotesReview projectId={project?.id ?? null} format={project ? formatNow : null} /> : null}
 
       {screen === 'capture' && handsFree ? (
         /**
@@ -702,7 +757,7 @@ export default function CaptureApp() {
               category and the name — are the two a recogniser most often gets
               wrong (his §5.7). */}
           <p className="notes-spoken">
-            {CAPTURE_CATEGORY_NAMES[category]}
+            {captureKeyName(chosenKey, formatNow)}
             {subjectName.trim().length > 0 ? (
               <span className="notes-spoken-who"> · {subjectName.trim()}</span>
             ) : null}
@@ -712,23 +767,29 @@ export default function CaptureApp() {
           <div className="notes-pickers">
             <label className="field">
               <span>This is a</span>
-              <select value={category} onChange={(event) => setCategory(event.target.value as CaptureCategory)}>
-                {CAPTURE_CATEGORIES.map((one) => (
-                  <option key={one} value={one}>
-                    {CAPTURE_CATEGORY_NAMES[one]}
+              {/* **The project's own vocabulary** (§10), which this picker was
+                  the last screen not to read: it held the five stage 4 shipped,
+                  so a writer typing a note had no Scene, no Dialogue and none of
+                  their format's structural pair, while the walk an inch away
+                  heard all of them. */}
+              <select value={chosenKey} onChange={(event) => setCategory(event.target.value as CaptureKey)}>
+                {vocabulary.map((one) => (
+                  <option key={one.key} value={one.key}>
+                    {one.name}
                   </option>
                 ))}
               </select>
             </label>
 
-            {/* Optional for all five: a character's name for a Character or an
-                Arc note, a short label for the rest. */}
+            {/* Optional everywhere, and **the table says which asks for a
+                person**: a name for a Character, an Arc or a line of Dialogue,
+                a short label for the rest. */}
             <label className="field">
-              <span>{category === 'character' || category === 'arc' ? 'Who' : 'About'}</span>
+              <span>{takesName ? 'Who' : 'About'}</span>
               <input
                 value={subjectName}
                 onChange={(event) => setSubjectName(event.target.value)}
-                placeholder={category === 'character' || category === 'arc' ? 'MARA' : 'Optional'}
+                placeholder={takesName ? 'MARA' : 'Optional'}
                 autoComplete="off"
               />
             </label>

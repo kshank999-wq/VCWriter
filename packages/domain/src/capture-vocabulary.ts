@@ -50,6 +50,8 @@ export type CaptureKey =
   | 'arc'
   | 'setting'
   | 'research'
+  | 'dialogue'
+  | 'scene'
   | 'unit'
   | 'sub';
 
@@ -70,10 +72,23 @@ const ANYWHERE: ReadonlyArray<Omit<SpokenCategory, 'name'> & { name: string }> =
   { key: 'research', name: 'Research', spoken: ['research', 'note to look up'], takesName: false },
 ];
 
-/** Said of anything with people and places in it, which is every story. */
+/**
+ * Said of anything with people and places in it, which is every story.
+ *
+ * **Dialogue is a kind of thought and never a destination** (§2), which is
+ * what makes it belong here rather than being a reason to build something:
+ * a line overheard on a walk is a note about how somebody talks, and the
+ * desktop still places it. It takes a name for the same reason *character*
+ * does — *dialogue, Mara* is the commonest thing anybody says about a line —
+ * and its spoken words are deliberately **short of a bare *line***: only the
+ * opening of an utterance is a command, so *line up the shot*, said with
+ * nothing open, would file *up the shot* under Dialogue. A word common enough
+ * to start an ordinary sentence is a word this table must not take.
+ */
 const STORY: ReadonlyArray<SpokenCategory> = [
   { key: 'character', name: 'Character', spoken: ['character'], takesName: true },
   { key: 'setting', name: 'Setting', spoken: ['setting', 'location', 'place'], takesName: true },
+  { key: 'dialogue', name: 'Dialogue', spoken: ['dialogue', 'dialog', 'line of dialogue'], takesName: true },
   { key: 'plot_point', name: 'Plot Point', spoken: ['plot point', 'plotpoint', 'plot'], takesName: false },
   { key: 'arc', name: 'Arc', spoken: ['arc'], takesName: true },
 ];
@@ -106,9 +121,30 @@ export const captureVocabulary = (format: ProjectFormat): SpokenCategory[] => {
     { key: 'sub', name: nouns.sub, spoken: [sub], takesName: false },
   ];
 
+  /**
+   * **Scene, where the format has not already taken the word**, from Ken
+   * (*there also needs to be additional categories like a scene*).
+   *
+   * The two halves of that are one rule read twice. On a screenplay the
+   * structural unit **is** a Scene, so *scene* already files as the unit and a
+   * second key spelled the same way would be `section`-at-a-textbook over
+   * again — two levels behind one spoken word, the one ambiguity a tool you
+   * cannot look at must not have. On a novel the unit is a Chapter, and a
+   * novelist saying *scene* means the dramatic unit inside one, which this
+   * table had no word for at all: the note went into the writing.
+   *
+   * So it is **absent rather than renamed** where the word is taken, which is
+   * the same answer the cast and the plot get at a textbook, and it is a story
+   * word, so a textbook is offered none of it either.
+   */
+  const scene: SpokenCategory[] =
+    unit === 'scene' || sub === 'scene'
+      ? []
+      : [{ key: 'scene', name: 'Scene', spoken: ['scene'], takesName: false }];
+
   return isInstructional(format)
     ? [...structural, ...ANYWHERE]
-    : [...STORY, ...structural, ...ANYWHERE];
+    : [...STORY, ...scene, ...structural, ...ANYWHERE];
 };
 
 /**
@@ -131,6 +167,10 @@ export const captureKeyName = (key: string, format: ProjectFormat | null): strin
     arc: 'Arc',
     setting: 'Setting',
     research: 'Research',
+    dialogue: 'Dialogue',
+    // A note said at a novel, read at a screenplay, where the word is the
+    // unit's: still a note, still headed by what the writer said.
+    scene: 'Scene',
     unit: 'Scene or chapter',
     sub: 'Beat or passage',
   };

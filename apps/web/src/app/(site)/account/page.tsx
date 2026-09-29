@@ -4,6 +4,7 @@ import { adminClient, currentUser } from '@/lib/supabase';
 import { DownloadButton } from './download-button';
 import { ResendLicense } from './resend-license';
 import { Devices } from './devices';
+import { SetPassword } from './set-password';
 
 export const metadata: Metadata = { title: 'My account' };
 export const dynamic = 'force-dynamic';
@@ -143,6 +144,13 @@ export default async function AccountPage() {
           </ul>
         </section>
       ) : null}
+
+      {/* **Whether they have one is not asked**, because nothing on the user
+          honestly answers it: an `email` identity exists for a link-only
+          account too, and there is no *has a password* flag. So the section
+          reads the same either way rather than guessing and labelling it
+          wrongly half the time. */}
+      <SetPassword />
 
       {profile?.is_admin ? (
         <section>

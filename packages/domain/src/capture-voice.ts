@@ -1,8 +1,5 @@
-import {
-  CAPTURE_CATEGORIES,
-  CAPTURE_CATEGORY_NAMES,
-  type CaptureCategory,
-} from './entities/capture.js';
+import { captureKeyName, captureVocabulary, type CaptureKey } from './capture-vocabulary.js';
+import type { ProjectFormat } from './entities/project.js';
 
 /**
  * What the writer said, read as a command (addendum 09 §6, stage 4 — his §5
@@ -20,20 +17,23 @@ import {
 
 export type SpokenCommand =
   /** A category was named. `text` is what was left after it. */
-  | { kind: 'category'; category: CaptureCategory; subjectName: string | null; text: string }
+  | { kind: 'category'; category: CaptureKey; subjectName: string | null; text: string }
   /** The writer said *correction*. `text` is the replacement wording. */
   | { kind: 'correction'; text: string }
   /** Ordinary dictation. */
   | { kind: 'none'; text: string };
 
-/** The word the writer says for each of the five. */
-const SPOKEN_AS: Record<CaptureCategory, string[]> = {
-  character: ['character'],
-  plot_point: ['plot point', 'plotpoint'],
-  idea: ['idea'],
-  theme: ['theme'],
-  arc: ['arc'],
-};
+/**
+ * **The vocabulary is the project's here too**, which §10 widened for the walk
+ * and left this reader behind.
+ *
+ * It held its own table of five — the ones stage 4 shipped — so the screen a
+ * writer types on heard *idea* and *character* and not *scene*, *dialogue* or
+ * the format's own structural pair, while the hands-free walk an inch away
+ * heard all of them. That is addendum 09 §12's finding a fourth time: **a
+ * widening reaches only the callers that ask the one table**, and a second
+ * table goes on giving the old answer with every test green.
+ */
 
 /** What the correction command sounds like. Only the word itself. */
 const CORRECTION = ['correction'];
@@ -133,7 +133,7 @@ export const nameAfterTheCategory = (
  * says *the idea is that she never drives* is dictating, not filing, and a
  * parser that hunted for keywords anywhere would file half their notes for them.
  */
-export const readSpoken = (transcript: string): SpokenCommand => {
+export const readSpoken = (transcript: string, format: ProjectFormat): SpokenCommand => {
   const said = transcript.trim();
   if (said.length === 0) return { kind: 'none', text: '' };
 
@@ -142,23 +142,26 @@ export const readSpoken = (transcript: string): SpokenCommand => {
     if (rest !== null) return { kind: 'correction', text: tidy(rest) };
   }
 
-  for (const category of CAPTURE_CATEGORIES) {
-    for (const phrase of SPOKEN_AS[category]) {
-      const rest = opensWith(said, phrase);
-      if (rest === null) continue;
+  // Longest first, so *plot point* is not read as *plot* with *point* left
+  // standing at the head of the note.
+  const words = captureVocabulary(format)
+    .flatMap((one) => one.spoken.map((phrase) => ({ one, phrase })))
+    .sort((a, b) => b.phrase.length - a.phrase.length);
 
-      // Only the two that are about a person take a name (§4): *Idea, the audit
-      // lands the same week* has a pause in it and nobody in it.
-      const named =
-        category === 'character' || category === 'arc' ? nameAfterTheCategory(rest) : null;
+  for (const { one, phrase } of words) {
+    const rest = opensWith(said, phrase);
+    if (rest === null) continue;
 
-      return {
-        kind: 'category',
-        category,
-        subjectName: named?.name ?? null,
-        text: named?.rest ?? tidy(rest),
-      };
-    }
+    // Only what is about a person takes a name (§4), and the table says which:
+    // *Idea, the audit lands the same week* has a pause in it and nobody in it.
+    const named = one.takesName ? nameAfterTheCategory(rest) : null;
+
+    return {
+      kind: 'category',
+      category: one.key,
+      subjectName: named?.name ?? null,
+      text: named?.rest ?? tidy(rest),
+    };
   }
 
   return { kind: 'none', text: said };
@@ -173,12 +176,15 @@ export const readSpoken = (transcript: string): SpokenCommand => {
  * read-back that tidied the words would be confirming something other than what
  * would be saved.
  */
-export const sayBack = (note: {
-  category: CaptureCategory | null;
-  subjectName: string | null;
-  text: string;
-}): string => {
-  const head = note.category ? CAPTURE_CATEGORY_NAMES[note.category] : 'Note';
+export const sayBack = (
+  note: {
+    category: string | null;
+    subjectName: string | null;
+    text: string;
+  },
+  format: ProjectFormat | null = null,
+): string => {
+  const head = note.category ? captureKeyName(note.category, format) : 'Note';
   const who = note.subjectName?.trim();
   const opening = who && who.length > 0 ? `${head}, ${who}.` : `${head}.`;
   return note.text.trim().length > 0 ? `${opening} ${note.text.trim()}` : opening;

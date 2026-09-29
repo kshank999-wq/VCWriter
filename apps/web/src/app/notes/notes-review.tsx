@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  CAPTURE_CATEGORIES,
-  CAPTURE_CATEGORY_NAMES,
   captureKeyName,
+  captureVocabulary,
   mayStillEdit,
-  type CaptureCategory,
   type CaptureItem,
+  type ProjectFormat,
 } from '@vcwriter/domain';
 
 /**
@@ -24,13 +23,27 @@ import {
  * reviewable copy after syncing rather than appearing to lose it — so it is
  * here, marked, with its controls gone. `mayStillEdit` decides, the route
  * refuses, and migration 0042 refuses underneath that.
+ *
+ * **The chips are what is actually here**, not a list in a file: §10 widened
+ * the vocabulary to the project's own words and this screen went on offering
+ * the five stage 4 shipped, so a note said as *scene* or *dialogue* could be
+ * read and never filtered for. Reading them off the notes is `inboxGroups`'
+ * own rule — group by what is there now — and it keeps that rule's promise
+ * too, that a word a newer phone sent is never hidden by an older desk.
  */
 
-export function NotesReview({ projectId }: { projectId: string | null }) {
+export function NotesReview({
+  projectId,
+  format,
+}: {
+  projectId: string | null;
+  /** What this project is, for the words its categories go by. */
+  format: ProjectFormat | null;
+}) {
   const [notes, setNotes] = useState<CaptureItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [only, setOnly] = useState<CaptureCategory | 'all'>('all');
+  const [only, setOnly] = useState<string>('all');
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -84,6 +97,15 @@ export function NotesReview({ projectId }: { projectId: string | null }) {
 
   const shown = only === 'all' ? notes : notes.filter((note) => note.category === only);
 
+  /**
+   * One chip per category standing in these notes, in the order this project
+   * says them and anything it does not know after — so a chip is never offered
+   * over nothing, and a note is never without one.
+   */
+  const known = format ? captureVocabulary(format).map((one) => one.key as string) : [];
+  const here = [...new Set(notes.map((note) => note.category).filter((one): one is string => !!one))];
+  const chips = [...known.filter((one) => here.includes(one)), ...here.filter((one) => !known.includes(one))];
+
   return (
     <section className="notes-review">
       <div className="notes-filters" role="group" aria-label="Show">
@@ -94,14 +116,14 @@ export function NotesReview({ projectId }: { projectId: string | null }) {
         >
           All
         </button>
-        {CAPTURE_CATEGORIES.map((one) => (
+        {chips.map((one) => (
           <button
             key={one}
             type="button"
             className={only === one ? 'notes-chip selected' : 'notes-chip'}
             onClick={() => setOnly(one)}
           >
-            {CAPTURE_CATEGORY_NAMES[one]}
+            {captureKeyName(one, format)}
           </button>
         ))}
       </div>
@@ -125,7 +147,7 @@ export function NotesReview({ projectId }: { projectId: string | null }) {
                   {/* The project's own word where it is known, and the key
                       itself where it is not — a note captured under a word
                       this build has not heard of is still a note (§10). */}
-                  <strong>{note.subjectName ?? captureKeyName(note.category ?? 'idea', null)}</strong>
+                  <strong>{note.subjectName ?? captureKeyName(note.category ?? 'idea', format)}</strong>
                   <span className="muted small">{new Date(note.capturedAt).toLocaleDateString()}</span>
                 </div>
 

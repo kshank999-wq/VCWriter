@@ -954,3 +954,211 @@ note and a chip on each filed row. Then the same captures through the desk:
 *casting (1)*, the presses read *Make Marketing under Ideas and file 2 notes
 into it*, and one of them takes the project from six research folders to seven
 with **Marketing under Ideas**.
+
+---
+
+## 13. The note that was saved and never sent, and three things round it
+
+From Ken, using the app on his phone for the first time. Three reports in two
+messages, and the first is a real bug in shipped code.
+
+### 13.1 *It didn't save it*
+
+> *I was able to create a project and I was able to dictate and the dictate
+> commands work and it works pretty good. And it didn't save it though. So when
+> I go to review, there's nothing saved after I said dictate done.*
+
+And then, a minute later, from his own end:
+
+> *Actually, on the front screen, there was two notes. And because I didn't sync
+> it, it didn't save the notes to the review category.*
+
+He is exactly right, and the cause is one missing line. **The typed screen has
+always done `enqueue` and then `flushQueue`; the hands-free path called
+`fileOne`, which only enqueued.** So every note of a walk sat in IndexedDB on
+the phone — correctly, visibly, on the front screen where Ken saw them — and
+Review, which reads the **server**, had none of them.
+
+Nothing was ever lost. It was simply never sent, which from the writer's chair
+is the same thing and worse, because the screen said *Saved*. **A queue is a
+promise that something will go; a queue nothing flushes is a drawer.**
+
+The fix is the send, **per note rather than at the end of the walk** — which is
+what `fileOne`'s own caller comment already claimed it did. A walk that pushed
+everything when it stopped would lose the lot to a dropped connection or a flat
+battery, which is the failure the queue exists to prevent. Offline it stays
+queued and the `online` listener sends it, which is the one case where a note
+waits, and it waits having been written down. *Sync now* stays for that case; it
+is not something a walk should ever require anybody to press.
+
+Driven with the REST call watched: *idea*, a sentence, *dictate done*, and one
+row arrives at `capture_items` carrying the words, the category, the project and
+the group.
+
+### 13.2 Two more categories, and the screen that had never heard of the first ten
+
+> *There also needs to be additional categories like a scene. Dialogue.*
+
+**Dialogue** is new everywhere a story is written, and is absent on a textbook
+for the cast's own reason. It takes a name — *dialogue, Mara* is the commonest
+thing anybody says about a line — and its spoken words stop short of a bare
+*line*: only the **opening** of an utterance is a command, so *line up the shot*
+said with nothing open would file *up the shot* under Dialogue. **A word common
+enough to start an ordinary sentence is a word this table must not take.**
+
+**Scene** is offered **only where the format has not already taken the word**,
+which is §10.2's rule read twice. On a screenplay the structural unit *is* a
+Scene, so *scene* already files as the unit and a second key spelled the same
+way would be `section`-at-a-textbook over again — two levels behind one spoken
+word, the one ambiguity a tool you cannot look at must not have. On a novel the
+unit is a Chapter, and a novelist saying *scene* means the dramatic unit inside
+one, which this table had no word for at all: the note went into the writing.
+
+Neither gets a research folder that files into the manuscript. **Scene has none
+for the structural pair's reason** — a note said against a scene is about the
+manuscript, and the one thing this module may never do is file into it. Dialogue
+reads as **Notes**, an observation being what a remembered line is, and
+deliberately **not Characters even where a name was said**: a note filed under
+somebody is a claim about them, and a line half-heard on a walk is not one yet.
+
+Then the finding, which is bigger than the ask. **The typed screen was still
+offering the five stage 4 shipped.** §10 widened the vocabulary to the project's
+own words, and it reached the walk and not the screen an inch away: the picker
+held `CAPTURE_CATEGORIES`, and `readSpoken` held a private table of five, so a
+writer typing a note had no Scene, no Dialogue and none of their format's own
+structural pair while the hands-free path heard all of them. The Review screen's
+filter chips were the same five a third time.
+
+This is §12.5's finding a **fourth** time and the pattern is now plain: **a
+widening reaches only the callers that ask the one table**, and a second table
+goes on giving the old answer with every test green. So `readSpoken` takes the
+format and reads `captureVocabulary`, the picker reads it, and the Review chips
+read **what is actually in these notes** — `inboxGroups`' own rule, group by
+what is there now rather than by a list in a file, which also keeps that rule's
+promise that a word a newer phone sent is never hidden by an older desk.
+
+One smaller decision: the picked category is **read back against the format's
+list rather than stored against it**, so a writer who picks *Scene* in a novel
+and then opens a screenplay, where the word belongs to the unit, is not looking
+at a picker showing nothing at all. Idea is the fallback, being what `ANYWHERE`
+is for.
+
+### 13.3 Which projects are on this phone
+
+> *when you have a project that is going in your regular VC writer app, you need
+> the ability to sync those projects by selecting it… it shows you the projects
+> that are available and you can go ahead and check mark those… You can also
+> uncheck it which will hide it but does not delete it… but it does not delete
+> it from your hard drive or anything from your main*
+
+`packages/domain/src/capture-shelf.ts`, and the audit it opens with answers the
+first word of the ask: **there is nothing to sync.** The phone holds no copy of
+a project — the list is read from the account every time it opens, and what a
+note carries is an id. A project made on the desktop is already on the phone the
+moment it is pushed, and one named into the phone by voice (§11) is on the
+desktop the same way. What was missing is not a sync but a **choice**: a desk
+with eleven scripts on it is ten too many to scroll past in a pocket.
+
+That same fact is what makes Ken's promise true **by construction rather than by
+a warning**. There is nothing on this side that a delete could reach, so
+unticking every project would leave every word of all of them exactly where it
+is. `describePhoneShelf` says so in one sentence, and it is the **domain's** for
+addendum 24 §5c's reason: a screen writing that promise for itself is a screen
+that goes on making it after the module has changed its mind.
+
+Three decisions.
+
+**Only what is off is written down.** This is addendum 19 §9v's rule arriving at
+a project list: a writer whose phone lists their work expects work started
+tomorrow to be on it, and a stored list of what is *on* would silently leave out
+every project made after the day they chose. A project named into a pocket by
+voice is the sharpest case — it must be there the moment it exists, and it is.
+
+**It is per device**, like the last-used project beside it and like every other
+arrangement in the program. A phone and a tablet are two places somebody stands.
+A browser with nothing stored, a browser that refused, and a browser holding
+something this build cannot read are **one answer** — everything on — so there is
+no state in which a writer opens the app and finds their work missing because a
+preference did not parse.
+
+**The tick is the act and it says what it would do.** `phoneShelfOffer` is
+`trackRemoval`'s shape, and the sentence is the whole feature: a writer unticking
+a project wants to know what they are about to lose, and the answer is nothing.
+
+The voice lookup reads the shelf too, through the same `shownOnPhone` the list
+reads — a component deciding for itself which projects exist is addendum 24
+§5i's fault, and here it would have gone on finding a project the list had
+stopped showing and switching to it silently.
+
+**Deliberately not built, and named rather than invented:** the settings screen
+that *deletes those from the app*. Having established that the phone holds no
+copy, there is nothing further a delete could take that unticking does not
+already do — and two states that look alike is the thing this project refuses
+everywhere else. If it should mean something more (forgetting a project's
+**unsent** notes is the only real candidate), that is a decision to make out
+loud rather than a screen to guess at.
+
+### 13.4 Driven
+
+At 390×780 with the recogniser and the routes stubbed. *Which projects* opens on
+three ticked rows under **ON THIS PHONE** with the promise beneath them and
+*Done* ending at y 600, everything above the fold; unticking *In For A Pound*
+takes it off the list, the line under reads *In For A Pound is off this phone.*,
+a reload keeps it (`{"off":["p3"]}`) and a second tick puts it back. The picker
+on a screenplay reads *Character, Setting, Dialogue, Plot Point, Arc, Scene,
+Beat, Idea, Theme, Research* — one Scene, and it is the unit — and on a novel
+*…Arc, Scene, Chapter, Passage…*, which is the new key beside the structural
+pair. *dialogue, Mara, she never says his name out loud* comes back as Dialogue,
+Who: Mara, with the rest as the note. And the walk's note reaches
+`capture_items` the moment *dictate done* closes it.
+
+---
+
+## 14. Signing in on a phone
+
+This came before §13 — it is how Ken got into the app at all — and is recorded
+after it because it is about the way in rather than about the notebook.
+
+> *It just keeps looping me back to the sign-in screen. There needs to be a
+> login screen for when you already have an account. And you need to be able to
+> create a password instead of having to always be linked in from the email.*
+
+**A magic link is bound to the browser that asked for it.** The PKCE verifier
+lives in that browser's storage, and a phone opens mail in the mail app's own
+in-app browser, which has none — so `exchangeCodeForSession` fails and the form
+comes back. From the writer's chair that is exactly a **loop**: ask for a link,
+open it, arrive at the same screen, ask again. Nothing was broken; the one
+mechanism the site had could not work on the one device this module is for.
+
+So a password is not a convenience here, it is the **fix**: it has no handoff
+between browsers at all, so it works wherever it is typed. The link stays,
+because it is the only way in for somebody who has never set one, and because
+it is what a person who has forgotten theirs needs. Two ways in, **one at a
+time** — a form showing an email, a password and a *send me a link instead*
+button is three things to decide between where there are two.
+
+Setting one lives on the **account page** rather than on the sign-in screen, for
+the plain reason that only somebody already signed in may set one: `updateUser`
+writes to the session's own account, so there is nothing to prove and nobody
+else's password to reach. Set it once at the desk and the phone uses it.
+
+Two decisions inside that.
+
+**One heading for both.** The first draft read *Set a password* or *Change your
+password* depending on a `has_password` flag — which I invented; Supabase has
+none, and an `email` identity exists for a link-only account too. There is
+nothing on an account that says whether a password has ever been set, so a
+screen that chose between those two words would be wrong for somebody half the
+time. It says **Password**, which is true for everybody.
+
+**The failure notice goes under the form.** Measured at 390×780: with the notice
+above, the tabs sat at y 786 and the email box at y 896, so the writer the
+notice is *written for* — somebody who has just been bounced back here — saw the
+explanation and none of the form that would fix it. **What they came to do goes
+first; why the last try failed goes after.** Re-measured with it moved and the
+hero tightened: 394, 504, 607 in both states.
+
+One sentence is Supabase's fault and worth naming: it answers *Invalid login
+credentials* both for a wrong password and for an account that has never set
+one, which are different problems with different answers — so the refusal names
+both and points at the link.

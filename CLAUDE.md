@@ -884,6 +884,81 @@ push live; the build takes a minute or two.
   survived**), `QueuedCapture` the same union the hands-free path had been
   casting past, and the desktop inbox never passed the format, so a scene note
   was headed *Scene or chapter* on a screenplay.
+  **§13 is the note that was saved and never sent, and three things round it**,
+  from Ken using the phone for the first time. The first is a real bug in
+  shipped code and he diagnosed it himself (*there was two notes… because I
+  didn't sync it, it didn't save the notes to the review category*): **the typed
+  screen has always done `enqueue` and then `flushQueue` and the hands-free path
+  did only the first**, so every note of a walk sat in IndexedDB on the phone —
+  correctly, visibly, on the front screen where he saw them — while Review,
+  which reads the **server**, had none. Nothing was ever lost; it was simply
+  never sent, which from the writer's chair is the same thing and worse, because
+  the screen said *Saved*. **A queue is a promise that something will go; a queue
+  nothing flushes is a drawer.** Sent **per note rather than at the end**, which
+  is what the caller's own comment already claimed — a walk that pushed
+  everything when it stopped would lose the lot to a dropped connection —
+  offline being the one case where a note waits, and it waits written down.
+  Then **two categories**: **Dialogue** everywhere a story is written (absent on
+  a textbook for the cast's reason, taking a name because *dialogue, Mara* is
+  what anybody says about a line, and stopping short of a bare *line* since only
+  the **opening** of an utterance is a command, so *line up the shot* would file
+  *up the shot*), and **Scene only where the format has not taken the word** —
+  §10.2 read twice, a screenplay's unit *being* a Scene so a second key spelled
+  the same way is `section`-at-a-textbook again, while a novel's unit is a
+  Chapter and a novelist saying *scene* means the dramatic unit inside one,
+  which the table had no word for at all. Neither files into the manuscript:
+  Scene gets no folder for the structural pair's reason, Dialogue reads as
+  **Notes** and deliberately not Characters even where a name was said, a note
+  filed under somebody being a claim about them. The finding is bigger than the
+  ask — **the typed screen was still offering the five stage 4 shipped**, its
+  picker holding `CAPTURE_CATEGORIES` and `readSpoken` a private table of five,
+  with Review's chips a third copy, so §10's widening reached the walk and not
+  the screen an inch away. **A widening reaches only the callers that ask the
+  one table**, §12.5's finding a fourth time; `readSpoken` takes the format now
+  and the Review chips read **what is in these notes** (`inboxGroups`' own rule).
+  §13.3 is **which projects are on this phone**, from Ken (*it shows you the
+  projects that are available and you can go ahead and check mark those… you can
+  also uncheck it which will hide it but does not delete it… it does not delete
+  it from your hard drive*) — and the audit answers the first word of the ask:
+  **there is nothing to sync**, the phone holding no copy of a project, the list
+  being read from the account every time and a note carrying an id. What was
+  missing is not a sync but a **choice**, a desk with eleven scripts on it being
+  ten too many to scroll past in a pocket; and that same fact makes his promise
+  true **by construction rather than by a warning**, there being nothing on this
+  side a delete could reach. `capture-shelf.ts` holds it: **only what is off is
+  written down** (addendum 19 §9v at a project list — work started tomorrow must
+  be on it, and a project named into a pocket by voice is the sharpest case),
+  **per device** with a browser that has nothing, refused or stored nonsense all
+  reading as *everything on*, and `phoneShelfOffer` saying what a tick would do
+  in `trackRemoval`'s shape. `describePhoneShelf` is the **one** copy of the
+  promise, addendum 24 §5c's reason. The voice lookup reads the shelf through
+  the same `shownOnPhone` the list reads, or a component would go on finding a
+  project the list had stopped showing. **Deliberately not built and named
+  rather than invented**: the settings screen that *deletes those from the app*,
+  since with no copy on this side there is nothing a delete could take that
+  unticking does not, and two states that look alike is what this project
+  refuses everywhere else.
+  **§14 is signing in on a phone**, which came before §13 and is how Ken got
+  into the app at all (*it just keeps looping me back to the sign-in screen…
+  you need to be able to create a password instead of having to always be
+  linked in from the email*). **A magic link is bound to the browser that asked
+  for it** — the PKCE verifier is in that browser's storage — and a phone opens
+  mail in the mail app's own in-app browser, which has none, so the exchange
+  fails and the form comes back, which from the writer's chair is a **loop**.
+  Nothing was broken: the one mechanism the site had could not work on the one
+  device this module is for. So a password is the **fix** rather than a
+  convenience, having no handoff between browsers; the link stays, being the
+  only way in for somebody who has never set one. **Two ways in, one at a
+  time.** Setting one is on the **account page**, only somebody signed in being
+  able to (`updateUser` writes to the session's own account), and it is **one
+  heading for both** — the first draft chose *Set* or *Change* off a
+  `has_password` flag I had invented, and nothing on an account says whether a
+  password was ever set, so it says *Password*, true for everybody. The failure
+  notice goes **under the form**: measured at 390×780 it put the tabs at 786 and
+  the email box at 896, so the writer it is written for saw the explanation and
+  none of the form that would fix it — **what they came to do goes first**.
+  Supabase answers *Invalid login credentials* both for a wrong password and for
+  an account that has never set one, so the refusal names both.
   `addendum-10-book-index.md` is the back-of-book index, from Ken's ask for
   chapter pages that carry a graphic *"but it goes into an Index"* with the page
   numbers updating themselves. **Built.** Two of the three things he asked for

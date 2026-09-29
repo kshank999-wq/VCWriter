@@ -77,7 +77,9 @@ export const captureTitle = (capture: CaptureItem): string => {
  * `if (!folder) return null` below already meant — no suggestion, and the
  * writer places it. **The structural two deliberately have none**: a note said
  * against a scene or a chapter is about the manuscript, and the one thing this
- * module may never do is file into it.
+ * module may never do is file into it. **`scene` is the same answer** — it is
+ * offered where the format has not taken the word, and it means the same kind
+ * of thing the unit does.
  */
 const FOLDER_FOR: Record<string, string | undefined> = {
   character: 'characters',
@@ -89,6 +91,13 @@ const FOLDER_FOR: Record<string, string | undefined> = {
   // `arc` has no folder of its own and is not getting one: an arc note with
   // nobody named is a general thought, and Ideas is where those go.
   arc: 'ideas',
+  /**
+   * A remembered line is an observation, and Notes is where an observation
+   * goes. **Deliberately not Characters even where a name was said**: a note
+   * filed under somebody is a claim about them, and a line half-heard on a
+   * walk is not one yet — the desktop places it, which is the whole rule.
+   */
+  dialogue: 'notes',
 };
 
 // ------------------------------------------------- the groups they spoke (§12)

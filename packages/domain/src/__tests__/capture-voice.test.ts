@@ -11,7 +11,7 @@ import { applyCorrection, readSpoken, sayBack } from '../capture-voice.js';
 
 describe('a spoken category', () => {
   it('takes the one that was named and leaves the rest as the note', () => {
-    const heard = readSpoken('Plot point, the audit lands the same week as the funeral.');
+    const heard = readSpoken('Plot point, the audit lands the same week as the funeral.', 'screenplay');
     expect(heard).toMatchObject({
       kind: 'category',
       category: 'plot_point',
@@ -22,7 +22,7 @@ describe('a spoken category', () => {
 
   it('reads all five', () => {
     const said = ['Character x', 'Plot point x', 'Idea x', 'Theme x', 'Arc x'];
-    expect(said.map((one) => (readSpoken(one) as { category: string }).category)).toEqual([
+    expect(said.map((one) => (readSpoken(one, 'screenplay') as { category: string }).category)).toEqual([
       'character',
       'plot_point',
       'idea',
@@ -33,18 +33,18 @@ describe('a spoken category', () => {
 
   it('does not hear a command in the middle of a sentence', () => {
     // A writer saying what their idea is, is dictating rather than filing.
-    const heard = readSpoken('The idea is that she never lets anyone else drive.');
+    const heard = readSpoken('The idea is that she never lets anyone else drive.', 'screenplay');
     expect(heard.kind).toBe('none');
     expect(heard.text).toContain('never lets anyone');
   });
 
   it('matches a whole word, so arc is not architecture', () => {
-    expect(readSpoken('Architecture of the building matters here.').kind).toBe('none');
-    expect(readSpoken('Ideas about the ending').kind).toBe('none');
+    expect(readSpoken('Architecture of the building matters here.', 'screenplay').kind).toBe('none');
+    expect(readSpoken('Ideas about the ending', 'screenplay').kind).toBe('none');
   });
 
   it('survives the punctuation a recogniser leaves behind', () => {
-    expect(readSpoken('Theme. Everybody is paying somebody off.')).toMatchObject({
+    expect(readSpoken('Theme. Everybody is paying somebody off.', 'screenplay')).toMatchObject({
       category: 'theme',
       text: 'Everybody is paying somebody off.',
     });
@@ -53,7 +53,7 @@ describe('a spoken category', () => {
 
 describe('a name, and only when there was a pause', () => {
   it('takes the name the writer paused after', () => {
-    expect(readSpoken('Character Marisol, she never trusts him.')).toMatchObject({
+    expect(readSpoken('Character Marisol, she never trusts him.', 'screenplay')).toMatchObject({
       category: 'character',
       subjectName: 'Marisol',
       text: 'she never trusts him.',
@@ -61,7 +61,7 @@ describe('a name, and only when there was a pause', () => {
   });
 
   it('takes a name of several words', () => {
-    expect(readSpoken('Character the ferryman, only speaks when he is owed.')).toMatchObject({
+    expect(readSpoken('Character the ferryman, only speaks when he is owed.', 'screenplay')).toMatchObject({
       subjectName: 'the ferryman',
     });
   });
@@ -69,14 +69,14 @@ describe('a name, and only when there was a pause', () => {
   it('takes none at all when nobody paused', () => {
     // There is no way to tell a name from the start of a sentence without the
     // silence, so nothing is taken and the writer can see the whole thing.
-    expect(readSpoken('Character she never lets anyone else drive.')).toMatchObject({
+    expect(readSpoken('Character she never lets anyone else drive.', 'screenplay')).toMatchObject({
       subjectName: null,
       text: 'she never lets anyone else drive.',
     });
   });
 
   it('refuses a clause long enough to be a sentence', () => {
-    expect(readSpoken('Arc she has to be offered the way out first, then she refuses.')).toMatchObject({
+    expect(readSpoken('Arc she has to be offered the way out first, then she refuses.', 'screenplay')).toMatchObject({
       subjectName: null,
     });
   });
@@ -89,13 +89,13 @@ describe('a name, and only when there was a pause', () => {
       'Theme the debt, and who pays it.',
       'Plot point the wreck, found at dawn.',
     ]) {
-      expect(readSpoken(said).kind).toBe('category');
-      expect((readSpoken(said) as { subjectName: string | null }).subjectName).toBeNull();
+      expect(readSpoken(said, 'screenplay').kind).toBe('category');
+      expect((readSpoken(said, 'screenplay') as { subjectName: string | null }).subjectName).toBeNull();
     }
   });
 
   it('takes a name for an arc note, which is about somebody too', () => {
-    expect(readSpoken('Arc Marisol, she has to be offered the way out.')).toMatchObject({
+    expect(readSpoken('Arc Marisol, she has to be offered the way out.', 'screenplay')).toMatchObject({
       category: 'arc',
       subjectName: 'Marisol',
     });
@@ -104,7 +104,7 @@ describe('a name, and only when there was a pause', () => {
 
 describe('correction', () => {
   it('is heard at the front of what was said', () => {
-    expect(readSpoken('Correction, she never lets anyone else drive.')).toEqual({
+    expect(readSpoken('Correction, she never lets anyone else drive.', 'screenplay')).toEqual({
       kind: 'correction',
       text: 'she never lets anyone else drive.',
     });
@@ -119,7 +119,7 @@ describe('correction', () => {
   });
 
   it('outranks a category, so correcting a Character note does not refile it', () => {
-    expect(readSpoken('Correction character actors are not the point.').kind).toBe('correction');
+    expect(readSpoken('Correction character actors are not the point.', 'screenplay').kind).toBe('correction');
   });
 });
 

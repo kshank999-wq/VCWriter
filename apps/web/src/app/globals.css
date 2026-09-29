@@ -1729,6 +1729,46 @@ p.room-stamp {
   border: 1px solid var(--border);
 }
 
+/* Which projects are on this phone (addendum 09 §13). The tick is the act, so
+   the whole row is the label and a thumb lands on it anywhere. */
+.notes-shelf-head {
+  margin: 0 0 12px;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.notes-shelf-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.notes-shelf-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.notes-shelf-row input {
+  /* A tick a thumb can find. The browser's own is 13px on a phone. */
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--gold);
+}
+
+.notes-shelf-row > span {
+  display: grid;
+  gap: 2px;
+}
+
 /* Which script this is, and the way back — carried on every screen past the
    list, because project-first is a promise rather than a first step. */
 .notes-chosen {
@@ -1912,4 +1952,25 @@ p.room-stamp {
   border: 1px solid var(--line, #332b17);
   font-size: 0.75rem;
   color: var(--gold, #c8a253);
+}
+
+/* The two ways in, one at a time (addendum 27). Side by side rather than a
+   link under the form: they are two answers to one question, and a writer
+   whose link keeps failing needs to see the other one without reading. */
+.signin-ways {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 20px;
+  flex-wrap: wrap;
+}
+
+/* A utility page's hero (addendum 27). The marketing hero is 88px of air, a
+   rule and a headline, which on a phone put the sign-in form below the fold —
+   fine over a landing page, wrong over the one form somebody came to fill in. */
+.hero.hero-compact {
+  padding: 28px 0 20px;
+}
+
+.hero.hero-compact::before {
+  margin-bottom: 16px;
 }

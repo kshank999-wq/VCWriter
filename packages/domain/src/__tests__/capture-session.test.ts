@@ -179,7 +179,41 @@ describe('the words a format lends the phone', () => {
     const novel = captureVocabulary('novel').map((one) => one.name);
     expect(novel).toContain('Chapter');
     expect(novel).toContain('Passage');
-    expect(novel).not.toContain('Scene');
+  });
+
+  it('offers Scene only where the format has not already taken the word', () => {
+    // Ken asked for it, and the rule that shapes it is §10.2's: a screenplay's
+    // unit **is** a Scene, so the word is the unit's and a second key spelled
+    // the same way would put two levels behind one utterance. A novel's unit
+    // is a Chapter, so *scene* is free and means the dramatic unit inside one.
+    const screenplay = captureVocabulary('screenplay');
+    expect(screenplay.filter((one) => one.spoken.includes('scene')).map((one) => one.key)).toEqual([
+      'unit',
+    ]);
+
+    const novel = captureVocabulary('novel');
+    expect(novel.filter((one) => one.spoken.includes('scene')).map((one) => one.key)).toEqual([
+      'scene',
+    ]);
+
+    // A story word, so a textbook is offered none of it — the same answer the
+    // cast and the plot get there.
+    expect(captureVocabulary('instructional').map((one) => one.key)).not.toContain('scene');
+  });
+
+  it('hears Dialogue everywhere a story is written, and takes a name after it', () => {
+    for (const format of ['screenplay', 'novel', 'short_story', 'game'] as const) {
+      const said = captureVocabulary(format).find((one) => one.key === 'dialogue');
+      expect(said?.name).toBe('Dialogue');
+      // *dialogue, Mara* is the commonest thing anybody says about a line.
+      expect(said?.takesName).toBe(true);
+    }
+    expect(captureVocabulary('instructional').map((one) => one.key)).not.toContain('dialogue');
+
+    // Deliberately **not** a bare *line*: only the opening of an utterance is a
+    // command, so *line up the shot* would file *up the shot* under Dialogue.
+    const words = captureVocabulary('screenplay').flatMap((one) => one.spoken);
+    expect(words).not.toContain('line');
   });
 
   it('is absent rather than renamed where a format has none of it', () => {

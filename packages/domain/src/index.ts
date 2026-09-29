@@ -130,6 +130,7 @@ export * from './capture-upload.js';
 export * from './capture-voice.js';
 export * from './capture-vocabulary.js';
 export * from './capture-session.js';
+export * from './capture-shelf.js';
 export * from './spoken-script.js';
 export * from './release.js';
 export * from './room.js';
