@@ -36,6 +36,7 @@ import {
   researchCategorySchema,
   researchItemSchema,
 } from './entities/research.js';
+import { noteSessionSchema, noteSourceSchema } from './entities/note-sorter.js';
 import { assetSchema } from './entities/asset.js';
 import { boardSchema } from './entities/sculptor.js';
 import { outlineSchema } from './entities/outline.js';
@@ -102,6 +103,13 @@ export const projectFileSchema = z.object({
   outlines: z.array(outlineSchema).default([]),
   researchCategories: z.array(researchCategorySchema).default([]),
   researchItems: z.array(researchItemSchema).default([]),
+  /**
+   * The Note Sorter (addendum 26). Empty until somebody opens one, and only
+   * ever two collections: its categories are research categories carrying a
+   * `sessionId` and its cards are research items, which is §1's audit.
+   */
+  noteSessions: z.array(noteSessionSchema).default([]),
+  noteSources: z.array(noteSourceSchema).default([]),
   characters: z.array(characterSchema).default([]),
   /** The headings the cast is filed under (addendum 02 §16). */
   characterCategories: z.array(characterCategorySchema).default([]),

@@ -57,6 +57,9 @@ const SHAPES: Record<string, { width: number; height: number }> = {
   // Two facing pages between a rail and an inspector: wide, and tall enough
   // for a page at a readable zoom (addendum 20 §9).
   layout: { width: 1500, height: 960 },
+  // A page of notes beside a row of card stacks: wide, and tall enough to read
+  // a page of prose without scrolling every few seconds (addendum 26 §4).
+  sorter: { width: 1440, height: 940 },
 };
 
 const shapeFor = (pane: PaneKey) => SHAPES[pane.split(':')[0] ?? ''] ?? { width: 1000, height: 800 };

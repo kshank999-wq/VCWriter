@@ -62,6 +62,7 @@ export type CommandId =
   | 'window.sculptor'
   | 'window.narrative'
   | 'window.layout'
+  | 'window.sorter'
   | 'window.editors'
   | 'window.episodes'
   | 'window.beat'
@@ -231,6 +232,9 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       ...(format !== null && isProseFormat(format)
         ? [{ command: 'window.layout' as CommandId, label: 'Layout in its own window', checkable: true }]
         : []),
+      // The seventh room, and every format's: a page of notes wants sorting
+      // whatever is being written from it (addendum 26 §4).
+      { command: 'window.sorter' as CommandId, label: 'Note Sorter in its own window', checkable: true },
       // The rail down the right: a series' episodes, a collection's stories
       // (addendum 22 §3); absent on a format with neither.
       ...(format === 'series'

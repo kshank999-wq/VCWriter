@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0056.
+  reads like it does. Applied through 0058.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
   the windowing, and the thing to know is that **every room goes to a second
@@ -3816,6 +3816,78 @@ push live; the build takes a minute or two.
   where this diverges from the handoff and why; §5 is the one thing
   deliberately not built (§21's AI suggestions, which the handoff does not ask
   for).
+  `addendum-26-note-sorter.md` is the **Note Sorter**, from Ken's own dev spec
+  and its UI handoff (*a new ability to sort notes. Quickly. And easily from
+  whatever source*). **Built**; §13 says what each stage does. The audit paid a
+  **twenty-fourth** time and paid most of the module: §19's data model names
+  four records and **two already exist** — a sorting category *is* a
+  `research_category` and a card *is* a `research_item` — so the data work is
+  two tables and four columns (migration 0057), while §16's *cards become
+  attached notes, and outline items link back to their cards* is
+  **`addResearchRow`** whole (addendum 06 §5), which is why *after sending, the
+  cards stay in the sorter* needed nothing at all; §17's *attach to a theme* is
+  `story_links`, the dictation is `startDictation`, and a Word document arrives
+  through **`docxToMarkdown`**, written for the note importer and already
+  exactly what a page somebody is about to read and highlight should look like.
+  That convenience is also the module's one real risk and it is the graveyard's
+  exactly: if a card is a research item then every research reading that never
+  heard of the sorter will list it, so the predicate is applied **before the
+  first surface rather than after the fifth** (addendum 24 §5j) and it lives in
+  **research's own readings** — `researchCategoriesInOrder` filters
+  `sessionId === null` and `shelvedItems` joins `workingNotes` in
+  `selectors.ts` — with deliberately **no `shelfCategories` of this module's
+  own**, a second name for one reading being the first step to a second answer;
+  `sorter-surfaces.test.ts` is `cast-surfaces`' third sibling and walks every
+  research reading rather than the ones this module touches. Four rules carry
+  it. **The source is immutable and sorting never touches it**, so *Show
+  original source* is a read rather than a reconstruction — which is why §19's
+  stored `extractedText` is **not built**, a snapshot beside an immutable source
+  being able only to agree with `text.slice(from, to)` or be wrong about it.
+  **Processed is a reading**: `coverageOf` counts it back from the cards' ranges
+  every time, so deleting a card un-greys its passage with nothing run and two
+  cards over one stretch make one run, the sixth time a fact about the work is a
+  reading rather than a column. **The press is the act and the drag is the
+  browser's** — the first draft made the page `draggable` and measuring the real
+  browser showed what that costs, a `draggable` element not being able to have
+  text selected inside it at all, so the first of *read, highlight, drag, drop*
+  did not work; the attribute is gone, Chromium drags a selection of its own
+  accord, and what the room supplies is a **button per category** carrying
+  `extractOffer`'s sentence, which is also the only path a keyboard can reach.
+  And **there is no writing mode**, the handoff asking for one on the sitting to
+  set the Send mapping while the project has had a `format` since the first
+  migration: `sendLadder` reads it off the format (a chapter where the format
+  has one, otherwise the unit, and the next noun down under it), so a textbook
+  sends Chapters and Sections and a screenplay Scenes and Beats with nothing
+  naming a level; `send_mode` was written into 0057, found to be read by nothing
+  and **taken out in 0058** rather than left as a field that lies (`columns` on
+  a part's style, addendum 20 §17). The room is the **seventh**
+  (`NoteSorterWindow.tsx`, `ROOM_PANES`), on **every** format unlike Layout, a
+  **Notes** button on the title bar and *Window ▸ Note Sorter in its own
+  window*, with four tabs — Gather, Sort, Refine, Send to Outliner — and **no
+  dialog while sorting**, a dropped passage becoming a card at once named from
+  its first seven words. Driving the real room caught the fault of the day
+  **twice in one shape**: *Hide sorted* and *Unsorted only* drew the same 358
+  characters, and once that was fixed *Everything* and *Grey sorted* drew the
+  same 762, because the stylesheet greyed unconditionally — **four controls have
+  to mean four things or one of them lies**, so Everything is now the source
+  undifferentiated, Hide leaves a mark **in place** and Unsorted only runs what
+  is left together. It also found the chosen card drawn dark on dark, `button:
+  hover` being one specificity point above a bare class and the base button
+  raised since addendum 20 §9 — §4a's lesson pointed at specificity rather than
+  source order — and three of six stacks past the right edge of a 1500px window,
+  which is why **a category with nothing filed in it is a chip** (a reading, and
+  it becomes a stack the moment something lands in it) and the stacks **wrap**
+  rather than scrolling as the mockup does: you cannot drag a passage onto
+  something that is not on the screen. The **unsorted pile** is a real category
+  marked `note_unsorted` and seeded by `beginSession`, because a card must have
+  a home and the thing that needs it is a *delete*; it has no × and no rename,
+  absent with the reason said, and **Merge into… is Delete with a different
+  target**, `removeSortCategory` taking *where the cards go*. **Nothing is
+  created by looking** (addendum 25 §4f): a project with no sitting opens on
+  Gather and the first thing put in begins it. §15 names what is deliberately
+  absent — the AI suggestions of §15 of the handoff, undo in a popped-out room
+  (which is every room's and belongs to addendum 02 §8), and dragging a card
+  across to another category.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

@@ -29,6 +29,7 @@ import { usePrinting } from './printing';
 import { ResearchBody } from './components/ResearchWindow';
 import { SculptorWindow } from './components/SculptorWindow';
 import { LayoutWindow } from './components/LayoutWindow';
+import { NoteSorterWindow } from './components/NoteSorterWindow';
 import { NarrativeMapWindow } from './components/NarrativeMapWindow';
 import { OutlinerWindow } from './components/OutlinerWindow';
 import { EditorPanel } from './components/EditorPanel';
@@ -288,6 +289,13 @@ function Section({
   // over here, so the chapter page is reached from the workspace.
   if (pane === 'layout') {
     return <LayoutWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} />;
+  }
+
+  // The notes, sorted (addendum 26): the same shape again, and the room a
+  // second monitor is most obviously for — the notes on one screen and the
+  // writing on the other.
+  if (pane === 'sorter') {
+    return <NoteSorterWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} standalone />;
   }
 
   // The narrative canvas is the same shape: a room that already covers

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { roleCan, seatName, type RoomRole, type Seat } from './room.js';
-import { researchItemsIn } from './selectors.js';
+import { researchCategoriesInOrder, researchItemsIn } from './selectors.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -330,7 +330,8 @@ export const assignableThings = (file: ProjectFile): AssignableThing[] => {
     label: beat.title || 'Untitled beat',
   }));
 
-  const research: AssignableThing[] = file.researchCategories.flatMap((category) =>
+  // The shelf, not a sitting's working categories (addendum 26 §2).
+  const research: AssignableThing[] = researchCategoriesInOrder(file).flatMap((category) =>
     researchItemsIn(file, { categoryId: category.id }).map((item) => ({
       kind: 'research' as const,
       id: item.id as string,

@@ -44,6 +44,15 @@ export type StoryLinkId = Id<'StoryLink'>;
  * *dependencies* are story links, so this is the module's only new id.
  */
 export type StoryThreadId = Id<'StoryThread'>;
+/**
+ * The Note Sorter (addendum 26). **Two ids and no more**, because the audit
+ * found the rest already built: a sorting *category* is a research category
+ * (nested, coloured and ordered since addendum 02 §7) and a *card* is a
+ * research item, so what is new is the session those categories belong to and
+ * the immutable source a card was pulled out of.
+ */
+export type NoteSessionId = Id<'NoteSession'>;
+export type NoteSourceId = Id<'NoteSource'>;
 /** An end-of-section learning aid (addendum 16 §10). */
 export type LearningAidId = Id<'LearningAid'>;
 /** One run of the research importer (addendum 16 §4). */

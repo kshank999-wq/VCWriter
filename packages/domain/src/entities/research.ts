@@ -1,7 +1,14 @@
 import { z } from 'zod';
 import { id, isoDateTime, orderKey, timestamps } from './common.js';
 import { originSchema } from './structure.js';
-import type { BeatId, ProjectId, ResearchCategoryId, ResearchItemId } from '../ids.js';
+import type {
+  BeatId,
+  NoteSessionId,
+  NoteSourceId,
+  ProjectId,
+  ResearchCategoryId,
+  ResearchItemId,
+} from '../ids.js';
 
 /**
  * Research and story intelligence (spec §7).
@@ -36,6 +43,18 @@ export const systemCategoryKeySchema = z.enum([
    */
   'notes',
   'inbox',
+  /**
+   * A Note Sorter sitting's **unsorted pile** — where a deleted sorting
+   * category's cards land (addendum 26 §8).
+   *
+   * It is the one key that is not a shelf folder: it carries a `sessionId`, so
+   * `researchCategoriesInOrder` keeps it out of the research room entirely. It
+   * is marked here rather than found by its name for the reason every other key
+   * exists — a pile located by matching the word *Unsorted* would be lost the
+   * moment anybody renamed it, and would be found by accident in a folder
+   * somebody else called that.
+   */
+  'note_unsorted',
 ]);
 export type SystemCategoryKey = z.infer<typeof systemCategoryKeySchema>;
 
@@ -54,6 +73,20 @@ export const researchCategorySchema = z.object({
   parentId: id<ResearchCategoryId>().nullable().default(null),
   /** A colour for the folder and everything filed in it; null inherits. */
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().default(null),
+  /**
+   * The sorting session this category belongs to, or null for an ordinary
+   * research folder (addendum 26 §2).
+   *
+   * **A sorting category is a research category**, because everything §8 asks
+   * of one — nesting, colour, reordering, renaming — is already here. What
+   * this field decides is *which room lists it*: the research shelf shows the
+   * folders a writer filed things in, and a sorting session's categories are
+   * the working surface of a sitting rather than shelves. `shelfCategories`
+   * is the one reading that applies it, so a new surface asks rather than
+   * writing `sessionId === null` for itself — which is the graveyard's lesson
+   * (addendum 24 §5j) applied before the fault rather than after it.
+   */
+  sessionId: id<NoteSessionId>().nullable().default(null),
   orderKey: orderKey(),
   archived: z.boolean().default(false),
   ...timestamps,
@@ -97,6 +130,27 @@ export const researchItemSchema = z.object({
    * form. Formatting a bibliography is a later problem and a different one.
    */
   source: z.string().default(''),
+  /**
+   * Where this card was pulled out of, and the exact stretch it took
+   * (addendum 26 §3). Null on every research item that was not extracted,
+   * which is all of them until somebody opens the Note Sorter.
+   *
+   * **The range is the lineage and the words are not.** `title` is the
+   * working title and `body` the working text — the writer's, editable, and
+   * never written back — while what the page actually said is
+   * `source.text.slice(from, to)`, read every time. A source is immutable
+   * (addendum 26 §2), so a stored copy of the passage could only ever agree
+   * with that or be wrong about it.
+   */
+  sourceId: id<NoteSourceId>().nullable().default(null),
+  sourceFrom: z.number().int().min(0).nullable().default(null),
+  sourceTo: z.number().int().min(0).nullable().default(null),
+  /**
+   * Categories this card also shows in (§10's *Reference*). The card is not
+   * copied: `categoryId` is its home and these are extra places it appears,
+   * so editing it anywhere is editing the one record.
+   */
+  alsoIn: z.array(id<ResearchCategoryId>()).default([]),
   usage: researchUsageSchema.default('unused'),
   usedAt: isoDateTime().nullable().default(null),
   /** Where the material was incorporated, when known. */

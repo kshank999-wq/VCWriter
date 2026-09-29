@@ -18208,3 +18208,863 @@ dialog.designed-page-dialog[open] {
   background: var(--ink);
   max-width: 200px;
 }
+
+/* ------------------------------------------------ The Note Sorter (addendum 26)
+ *
+ * The seventh room. Two things carry the feel the handoff asks for — *moving
+ * index cards, not editing a database* — and both are here rather than in the
+ * component: a card is **cream paper with dark ink**, a red rule under its title
+ * and faint blue ruled lines behind its text; and it **lifts and tilts** while
+ * it is in the air. Everything else is the app's own tokens, because a screen
+ * painted in literal colours is the one screen that does not follow the writer's
+ * colour scheme (addendum 20 §14).
+ */
+
+.ns-room {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* Index-card paper, the one place this room sets colours of its own. */
+.ns-room {
+  --ns-paper: #ece3ca;
+  --ns-paper-ink: #2a2418;
+  --ns-paper-rule: #c0584a;
+  --ns-paper-lines: #b8c6d4;
+  --ns-tint: var(--gold);
+}
+
+.ns-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex: 0 0 auto;
+}
+
+.ns-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  padding: 7px 14px;
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.ns-tab.on {
+  background: var(--panel-2);
+  border-color: var(--border);
+  color: var(--gold-bright);
+}
+
+.ns-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ns-progress-rail,
+.ns-src-bar {
+  display: inline-block;
+  width: 120px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.ns-src-bar {
+  width: 64px;
+  height: 5px;
+}
+
+.ns-progress-run,
+.ns-src-run {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+}
+
+.ns-search {
+  min-width: 220px;
+}
+
+.ns-hits {
+  flex: 0 0 auto;
+  max-height: 168px;
+  overflow-y: auto;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.ns-hits ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ns-hits button {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+}
+
+.ns-hit-kind {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.ns-hit-kind.raw {
+  color: var(--muted);
+}
+
+.ns-hit-kind.card {
+  color: var(--ns-paper-ink);
+  background: var(--ns-paper);
+  border-color: transparent;
+}
+
+.ns-said {
+  margin: 0;
+  padding: 7px 14px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+  color: var(--gold-bright);
+  font-size: 12.5px;
+  flex: 0 0 auto;
+}
+
+.ns-gather,
+.ns-sort,
+.ns-refine,
+.ns-send {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.ns-gather > .ns-panel,
+.ns-send > .ns-panel {
+  flex: 1;
+}
+
+.ns-panel {
+  background: var(--panel);
+  padding: 12px 14px;
+  overflow-y: auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ns-panel h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ns-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: var(--panel);
+}
+
+/* ----------------------------------------------------------------- 1 Gather */
+
+.ns-sources {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ns-sources > li {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+}
+
+.ns-source-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ns-source-head strong {
+  flex: 1;
+  min-width: 0;
+}
+
+.ns-source-acts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.ns-original {
+  margin: 8px 0 0;
+  padding: 8px;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  background: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.ns-add {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-2);
+}
+
+.ns-add > span:first-child {
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.ns-add textarea {
+  resize: vertical;
+  font-family: var(--reading, Georgia, serif);
+}
+
+.ns-dictate {
+  flex: 0 0 320px;
+}
+
+.ns-just-talk {
+  margin: 0;
+  font-family: var(--reading, Georgia, serif);
+  font-size: 15px;
+  color: var(--gold-bright);
+}
+
+.ns-dictate-bar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ns-clock {
+  font-size: 18px;
+  color: var(--muted);
+  min-width: 52px;
+}
+
+.ns-clock.on {
+  color: var(--gold-bright);
+}
+
+.ns-transcript {
+  flex: 1;
+  min-height: 160px;
+  resize: vertical;
+  font-family: var(--reading, Georgia, serif);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* ------------------------------------------------------------------- 2 Sort */
+
+.ns-raw {
+  flex: 0 0 auto;
+  min-width: 320px;
+}
+
+.ns-stacks {
+  flex: 1;
+  min-width: 300px;
+}
+
+.ns-src-tabs,
+.ns-modes {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+
+.ns-src-tab,
+.ns-mode {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 9px;
+  font-size: 11.5px;
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.ns-src-tab.on,
+.ns-mode.on {
+  color: var(--gold-bright);
+  border-color: var(--gold-deep);
+  background: var(--ink);
+}
+
+.ns-src-tab.add {
+  color: var(--gold);
+}
+
+/* The page of raw notes. Reading type, because it is prose being read. */
+.ns-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+  background: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  font-family: var(--reading, Georgia, serif);
+  font-size: 15px;
+  line-height: 1.68;
+  color: var(--text);
+  cursor: text;
+  user-select: text;
+}
+
+.ns-page ::selection,
+.ns-page::selection {
+  background: var(--gold-deep);
+  color: var(--text);
+}
+
+/* What is dealt with, greyed — **in *Grey sorted* and nowhere else**. Driving
+   the room caught this twice in the same shape: *Hide sorted* and *Unsorted
+   only* drew the same page, and then *Everything* and *Grey sorted* did, because
+   this rule greyed unconditionally. Four controls have to mean four things, and
+   *Everything* means the source as it stands, undifferentiated — which is what
+   a writer switches to in order to read it rather than to audit it. */
+.ns-page-grey .ns-done {
+  color: #5d5540;
+}
+
+/* *Hide sorted*: a mark standing where a sorted stretch was, so the page keeps
+   its shape. It is not selectable, there being nothing there to highlight. */
+.ns-elided {
+  color: var(--gold-deep);
+  user-select: none;
+  cursor: default;
+  padding: 0 2px;
+}
+
+.ns-stacks-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+}
+
+/* The stacks **wrap** rather than scrolling off to the right, which is the one
+   place this diverges from the handoff's mockup: you cannot drag a passage onto
+   a target that is not on the screen, and half the stacks were past the edge at
+   1500px. With the chips above taking the unused categories, everything a
+   passage can go to is in front of the writer. */
+.ns-stack-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+  align-content: flex-start;
+  overflow-y: auto;
+  padding-bottom: 6px;
+  flex: 1;
+  min-height: 0;
+}
+
+.ns-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* A category nothing is filed in yet. It takes a press and a drop like a stack. */
+.ns-chip {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  font-size: 11.5px;
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.ns-room .ns-chip.over,
+.ns-room .ns-chip.over:hover {
+  border-color: var(--gold-bright);
+  color: var(--gold-bright);
+  background: var(--ink);
+}
+
+/* A stack of index cards, and the drop target. It is a button, because the
+   press is the act and the drag is the convenience. */
+.ns-stack {
+  flex: 0 0 196px;
+  max-height: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  text-align: left;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--ns-tint);
+  border-radius: 6px;
+  background: var(--panel-2);
+  box-shadow: none;
+  overflow-y: auto;
+}
+
+/* The stack being dragged onto, scoped for the card's reason. */
+.ns-room .ns-stack.over,
+.ns-room .ns-stack.over:hover {
+  border-color: var(--gold-bright);
+  background: var(--ink);
+}
+
+.ns-stack-head {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.ns-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ns-tint);
+  flex: 0 0 auto;
+}
+
+.ns-stack-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* The index card itself.
+ *
+ * **Scoped to the room so it beats the base button.** Driving it found the
+ * chosen card unreadable — dark ink on a dark panel — because `button:hover`
+ * sets `background` and is one specificity point above a bare class, and since
+ * addendum 20 §9 the base button is raised. A card is paper whatever the
+ * pointer is doing, so it says so at a weight the base cannot reach. It is §4a's
+ * lesson pointed at specificity rather than at source order: where a rule is
+ * obeyed is the whole of whether it is a rule. */
+.ns-room .ns-card,
+.ns-room .ns-card:hover {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  padding: 6px 8px 7px;
+  border-radius: 3px;
+  border: none;
+  background: var(--ns-paper);
+  color: var(--ns-paper-ink);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 45%);
+  /* The faint blue ruled lines behind the text. */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 17px,
+    var(--ns-paper-lines) 17px,
+    var(--ns-paper-lines) 18px
+  );
+  background-size: 100% 18px;
+}
+
+.ns-card-title {
+  font-weight: 600;
+  font-size: 12.5px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--ns-paper-rule);
+}
+
+.ns-card-body {
+  font-family: var(--reading, Georgia, serif);
+  font-size: 12px;
+  line-height: 18px;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ns-card .muted {
+  color: #6a6250;
+}
+
+.ns-card.mini .ns-card-title {
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Two lines of the writing on a card in a stack: enough that it reads as an
+   index card rather than as a chip, and not so much that four of them fill the
+   column. */
+.ns-card.mini .ns-card-body {
+  -webkit-line-clamp: 2;
+  font-size: 11px;
+}
+
+.ns-room .ns-card.slot,
+.ns-room .ns-card.slot:hover {
+  background: transparent;
+  background-image: none;
+  border: 1px dashed var(--gold-bright);
+  color: var(--gold-bright);
+  box-shadow: none;
+  text-align: center;
+  font-size: 11.5px;
+  padding: 10px 8px;
+}
+
+/* A card in the air lifts and tilts. */
+.ns-room .ns-card:active {
+  transform: rotate(-1.6deg) scale(1.02);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 60%);
+}
+
+/* ----------------------------------------------------------------- 3 Refine */
+
+.ns-tree {
+  flex: 0 0 240px;
+}
+
+.ns-sequence {
+  flex: 1;
+  min-width: 280px;
+}
+
+.ns-detail {
+  flex: 0 0 372px;
+}
+
+.ns-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ns-tree-name {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.ns-pile .item-row {
+  opacity: 0.86;
+}
+
+.row-note {
+  margin: 0 0 6px 18px;
+}
+
+.ns-ask-acts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ns-colours {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.ns-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  padding: 0;
+  box-shadow: none;
+}
+
+.ns-swatch.on {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 1px;
+}
+
+/* Where a dragged card would land: the gold insertion line the handoff draws. */
+.ns-cards > li.ns-landing {
+  box-shadow: 0 -2px 0 var(--gold-bright);
+  border-radius: 2px;
+}
+
+.ns-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ns-cards .ns-card {
+  width: 100%;
+}
+
+.ns-room .ns-cards .ns-card.on {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+.ns-room .ns-cards .ns-card.marked {
+  outline: 2px dashed var(--gold);
+  outline-offset: 2px;
+}
+
+.ns-card-n {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  color: #7a7260;
+}
+
+.ns-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ns-field > span:first-child {
+  font-family: var(--display);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ns-field textarea {
+  resize: vertical;
+  font-family: var(--reading, Georgia, serif);
+}
+
+.ns-quote blockquote {
+  margin: 4px 0 0;
+  padding: 7px 10px;
+  border-left: 2px solid var(--gold-deep);
+  background: var(--ink);
+  font-family: var(--reading, Georgia, serif);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.ns-card-acts,
+.ns-send-acts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ns-split {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ns-split-text {
+  margin: 0;
+  font-family: var(--reading, Georgia, serif);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* The dashed *split here* line, drawn where the cut would fall. */
+.ns-split-line {
+  display: inline-block;
+  width: 100%;
+  border-top: 1px dashed var(--gold-bright);
+  margin: 4px 0;
+}
+
+.ns-appears ul {
+  list-style: none;
+  margin: 3px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12.5px;
+}
+
+.ns-appears li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ns-shelf {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+/* ------------------------------------------------------------------- 4 Send */
+
+.ns-plan,
+.ns-preview-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ns-plan-row {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 3px 4px;
+  border-radius: 4px;
+  font-size: 12.5px;
+}
+
+.ns-plan-row:hover {
+  background: var(--panel-2);
+}
+
+.ns-plan-row.off {
+  opacity: 0.55;
+}
+
+.ns-plan-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ns-plan-row select {
+  font-size: 11.5px;
+  padding: 2px 5px;
+  background: var(--ink);
+}
+
+.ns-tally {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--gold-bright);
+}
+
+.ns-preview-rows li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12.5px;
+  padding: 2px 0;
+}
+
+.ns-preview-kind {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  flex: 0 0 auto;
+  min-width: 64px;
+}
+
+.ns-foot {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+/* A laptop: the raw notes and the stacks, with the detail column narrower. */
+@media (max-width: 1280px) {
+  .ns-tree {
+    flex-basis: 200px;
+  }
+
+  .ns-detail {
+    flex-basis: 320px;
+  }
+
+  .ns-dictate {
+    flex-basis: 260px;
+  }
+}

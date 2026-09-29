@@ -40,6 +40,7 @@ interface TitleBarProps {
    * is not set as a book, and the button is absent rather than greyed.
    */
   onOpenLayout?(): void;
+  onOpenSorter?(): void;
   /** Sections in windows of their own, and the way to bring one back (§8). */
   away: readonly string[];
   onBringBack(pane: string): void;
@@ -73,6 +74,7 @@ export function TitleBar({
   onOpenNarrative,
   onOpenOutliner,
   onOpenLayout,
+  onOpenSorter,
   away,
   onBringBack,
   account,
@@ -141,6 +143,18 @@ export function TitleBar({
             onClick={onOpenLayout}
           >
             Layout
+          </button>
+        ) : null}
+        {/* Every format's, unlike Layout: a page of notes wants sorting
+            whatever is being written from it (addendum 26 §4). */}
+        {writing && onOpenSorter ? (
+          <button
+            type="button"
+            className="raised"
+            title="Note Sorter: read a page of notes, highlight, and drop the pieces into categories"
+            onClick={onOpenSorter}
+          >
+            Notes
           </button>
         ) : null}
         {writing ? (

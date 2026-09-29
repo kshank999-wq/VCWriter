@@ -1,0 +1,16 @@
+-- The Note Sorter's writing mode, taken out (addendum 26 §11).
+--
+-- 0057 gave a sitting a `send_mode`, because the handoff asks for a writing
+-- mode on the session that sets the Send to Outliner mapping. Building the send
+-- showed it had no honest reading: the project has had a `format` since the
+-- first migration and `nounsFor` has named its levels since addendum 16 §1, so
+-- `sendLadder` reads the mapping off the format and a second field saying what
+-- kind of work this is would be two claims about one work, free to disagree the
+-- moment either is edited.
+--
+-- It is **taken out rather than left unread**, which is this schema's own move:
+-- `columns` on a part's style was built, found to be read by nothing and
+-- deleted (addendum 20 §17), for the reason that a stored field nothing obeys
+-- is a field that lies. What the handoff actually wants from that control is
+-- the per-row override, which is built and stores nothing.
+alter table public.note_sessions drop column if exists send_mode;

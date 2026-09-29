@@ -21,6 +21,7 @@ import {
 } from './entities/themes.js';
 import { locationSchema } from './entities/locations.js';
 import { storyThreadSchema } from './entities/threads.js';
+import { noteSessionSchema, noteSourceSchema } from './entities/note-sorter.js';
 import { learningAidSchema } from './entities/learning.js';
 import { projectSchema, projectSettingsSchema } from './entities/project.js';
 import { beatSchema, trackSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
@@ -105,6 +106,14 @@ export const SYNC_TABLES = {
    * of how regeneration is stopped from eating an edit.
    */
   learningAids: 'learning_aids',
+  /**
+   * The Note Sorter (addendum 26). **Two collections and no more**: its
+   * categories are `research_categories` carrying a `session_id` and its cards
+   * are `research_items` carrying a source and a range, both of which already
+   * sync. Order matters here as it does above — a source needs its session.
+   */
+  noteSessions: 'note_sessions',
+  noteSources: 'note_sources',
 } as const;
 
 export type SyncCollection = keyof typeof SYNC_TABLES;
@@ -277,6 +286,9 @@ const researchCategoryToRow = (category: ResearchCategory): Row => ({
   description: category.description,
   parent_id: category.parentId,
   color: category.color,
+  // The sorting session this category belongs to, or null for a research
+  // folder proper (addendum 26 §2).
+  session_id: category.sessionId,
   order_key: category.orderKey,
   archived: category.archived,
   created_at: category.createdAt,
@@ -292,6 +304,12 @@ const researchItemToRow = (item: ResearchItem): Row => ({
   tags: item.tags,
   // Where the fact came from (addendum 16 §3). Empty on everything creative.
   source: item.source,
+  // Where this card was pulled out of, and the stretch it took (addendum 26
+  // §3). Null on every research item nobody extracted, which is most of them.
+  source_id: item.sourceId,
+  source_from: item.sourceFrom,
+  source_to: item.sourceTo,
+  also_in: item.alsoIn,
   usage: item.usage,
   used_at: item.usedAt,
   used_in_beat_ids: item.usedInBeatIds,
@@ -573,6 +591,29 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
   ...characterCreatorRows(file),
   ...bookIndexRows(file),
   ...thematicRows(file),
+  noteSessions: (file.noteSessions ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    name: one.name,
+    archived: one.archived,
+    order_key: one.orderKey,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+  noteSources: (file.noteSources ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    session_id: one.sessionId,
+    name: one.name,
+    kind: one.kind,
+    // Immutable (addendum 26 §2): written once, and nothing updates it.
+    text: one.text,
+    file_name: one.fileName,
+    imported_at: one.importedAt,
+    order_key: one.orderKey,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
   learningAids: (file.learningAids ?? []).map((one) => ({
     id: one.id,
     project_id: one.projectId,
@@ -979,6 +1020,7 @@ const researchCategoryFromRow = (row: Row): ResearchCategory =>
     description: text(row['description']),
     parentId: nullableText(row['parent_id']),
     color: nullableText(row['color']),
+    sessionId: nullableText(row['session_id']),
     orderKey: row['order_key'],
     archived: flag(row['archived']),
     createdAt: row['created_at'],
@@ -994,6 +1036,10 @@ const researchItemFromRow = (row: Row): ResearchItem =>
     body: text(row['body']),
     tags: list(row['tags']),
     source: text(row['source']),
+    sourceId: nullableText(row['source_id']),
+    sourceFrom: row['source_from'] === null || row['source_from'] === undefined ? null : Number(row['source_from']),
+    sourceTo: row['source_to'] === null || row['source_to'] === undefined ? null : Number(row['source_to']),
+    alsoIn: list(row['also_in']),
     usage: row['usage'],
     usedAt: nullableText(row['used_at']),
     usedInBeatIds: list(row['used_in_beat_ids']),
@@ -1341,6 +1387,32 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     ...characterCreatorFromRows(rows),
     ...bookIndexFromRows(rows),
     ...thematicFromRows(rows),
+    noteSessions: (rows.noteSessions ?? []).map((row) =>
+      noteSessionSchema.parse({
+        id: row['id'],
+        projectId: row['project_id'],
+        name: text(row['name'], 'Note sorting'),
+        archived: flag(row['archived']),
+        orderKey: row['order_key'],
+        createdAt: row['created_at'],
+        updatedAt: row['updated_at'],
+      }),
+    ),
+    noteSources: (rows.noteSources ?? []).map((row) =>
+      noteSourceSchema.parse({
+        id: row['id'],
+        projectId: row['project_id'],
+        sessionId: row['session_id'],
+        name: text(row['name'], 'Source'),
+        kind: row['kind'],
+        text: text(row['text']),
+        fileName: text(row['file_name']),
+        importedAt: nullableText(row['imported_at']),
+        orderKey: row['order_key'],
+        createdAt: row['created_at'],
+        updatedAt: row['updated_at'],
+      }),
+    ),
     learningAids: (rows.learningAids ?? []).map((row) =>
       learningAidSchema.parse({
         id: row['id'],

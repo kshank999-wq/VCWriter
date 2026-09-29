@@ -58,9 +58,25 @@ export const findUnit = (file: ProjectFile, unitId: StructuralUnitId): Structura
 export const findTrack = (file: ProjectFile, trackId: TrackId): Track | undefined =>
   file.tracks.find((track) => track.id === trackId);
 
-/** Categories the writer sees, in their chosen order; archived ones are hidden (§7.1). */
+/**
+ * Categories the writer sees, in their chosen order; archived ones are hidden
+ * (§7.1).
+ *
+ * **A sitting's working category is not a shelf folder** (addendum 26 §2). The
+ * Note Sorter's categories are `research_category` rows — that is the audit it
+ * rests on — so the predicate is here, in research's one reading of what
+ * folders it has, rather than in the sorter. It has to be: the fault would
+ * otherwise be the graveyard's (addendum 24 §5d), a sorting category standing
+ * on the research shelf in every surface that never heard of the sorter, and it
+ * would be found one surface at a time. Nothing changes for a project made
+ * before the sorter existed, every category carrying null.
+ */
 export const researchCategoriesInOrder = (file: ProjectFile, includeArchived = false): ResearchCategory[] =>
-  sortByOrderKey(file.researchCategories.filter((category) => includeArchived || !category.archived));
+  sortByOrderKey(
+    file.researchCategories.filter(
+      (category) => category.sessionId === null && (includeArchived || !category.archived),
+    ),
+  );
 
 /**
  * Research as the tree it is drawn as (addendum 02 §7): folders in order,
@@ -166,7 +182,27 @@ const matches = (item: ResearchItem, query: string): boolean => {
  * answer, and every shape of note reading is built on it.
  */
 export const workingNotes = (file: ProjectFile): ResearchItem[] =>
-  onlyLiving(file.researchItems).filter((item) => !item.archived);
+  shelvedItems(file).filter((item) => !item.archived);
+
+/**
+ * Every living item **filed on the shelf rather than in a sitting** (addendum
+ * 26 §2), archived ones included.
+ *
+ * A Note Sorter card is a `research_item` — the audit that module rests on — so
+ * without this a brainstorm halfway through being sorted would fill the
+ * research room's *Everything* view, the Related Elements picker and the room's
+ * idea boxes with passages nobody has filed yet. It reads the **category**
+ * rather than anything stored on the item, because filing a card on the shelf
+ * moves its home and that is the whole of what `fileOnShelf` does: one fact,
+ * read, so a card arrives on the shelf the moment it is filed there and cannot
+ * be on it twice.
+ */
+export const shelvedItems = (file: ProjectFile): ResearchItem[] => {
+  const shelf = new Set(
+    file.researchCategories.filter((one) => one.sessionId === null).map((one) => one.id as string),
+  );
+  return onlyLiving(file.researchItems).filter((item) => shelf.has(item.categoryId as string));
+};
 
 /**
  * What the contents pane shows: a folder and everything under it, or one of
@@ -181,7 +217,9 @@ export const researchItemsIn = (
   // The graveyard is not a view (addendum 24): a buried note is out of every
   // one of these, including *archived*, because being put away and being
   // deleted are two different things a writer did.
-  const live = onlyLiving(file.researchItems);
+  // And a sitting's cards are not on the shelf, so they are in none of the
+  // smart folders either (addendum 26 §2).
+  const live = shelvedItems(file);
   if ('view' in where) {
     const items = live.filter((item) => {
       if (where.view === 'archived') return item.archived;

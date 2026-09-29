@@ -2,7 +2,7 @@ import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
 import { orderKeyBetween } from './ordering.js';
 import { researchItemSchema } from './entities/research.js';
-import { researchItemsIn, workingNotes } from './selectors.js';
+import { researchCategoriesInOrder, researchItemsIn, workingNotes } from './selectors.js';
 import { seatName, type Seat } from './room.js';
 import { originNow } from './attribution.js';
 import type { ProjectFile } from './project-file.js';
@@ -158,9 +158,9 @@ export const fileIdeas = (
 
 /** The headings a submission can be filed under, in the project's own order. */
 export const filingChoices = (file: ProjectFile): ResearchCategory[] =>
-  [...file.researchCategories]
-    .filter((category) => !category.archived)
-    .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1));
+  // The shelf's own reading, so a Note Sorter sitting's working categories are
+  // not offered as somewhere to file a room's idea (addendum 26 §2).
+  researchCategoriesInOrder(file);
 
 /**
  * What the room is told about a box it has taken up.

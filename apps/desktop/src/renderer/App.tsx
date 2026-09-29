@@ -59,6 +59,7 @@ import { ResearchWindow } from './components/ResearchWindow';
 import { ProjectHomePanel } from './components/ProjectHomePanel';
 import { SculptorWindow } from './components/SculptorWindow';
 import { LayoutWindow } from './components/LayoutWindow';
+import { NoteSorterWindow } from './components/NoteSorterWindow';
 import { NarrativeMapWindow } from './components/NarrativeMapWindow';
 import { OutlinerWindow } from './components/OutlinerWindow';
 import { BeatDialog } from './components/BeatDialog';
@@ -170,6 +171,7 @@ export default function App() {
   const [outlinerOpen, setOutlinerOpen] = useState(false);
   /** The Layout room, over the workspace (addendum 20). */
   const [layoutOpen, setLayoutOpen] = useState(false);
+  const [sorterOpen, setSorterOpen] = useState(false);
   /**
    * File → New project shows the project screen even with one already open:
    * the format is chosen there, beside the title and a word on what each one
@@ -665,6 +667,7 @@ export default function App() {
         case 'window.sculptor':
         case 'window.narrative':
         case 'window.layout':
+        case 'window.sorter':
         case 'window.editors': {
           // Ticked means it is out; choosing it again brings it back.
           const pane = command.slice('window.'.length);
@@ -680,6 +683,7 @@ export default function App() {
             if (pane === 'sculptor') setSculptorOpen(false);
             if (pane === 'narrative') setNarrativeOpen(false);
             if (pane === 'layout') setLayoutOpen(false);
+            if (pane === 'sorter') setSorterOpen(false);
             if (pane === 'research') setResearchOpen(false);
             // The editors are a page rather than an overlay, so what is left
             // behind is the page bar sitting on a page that has gone.
@@ -825,6 +829,7 @@ export default function App() {
     (sculptorOpen && !away.has('sculptor')) ||
     (outlinerOpen && !away.has('outliner')) ||
     (layoutOpen && !away.has('layout')) ||
+    (sorterOpen && !away.has('sorter')) ||
     (narrativeOpen && !away.has('narrative'));
   const withRail = (file.project.format === 'series' || isCollection(file.project.format)) && !roomOpen;
   // A section in a window of its own leaves no gap here: its place is not
@@ -1000,6 +1005,7 @@ export default function App() {
             ? () => (away.has('layout') ? openPane('layout') : setLayoutOpen(true))
             : undefined
         }
+        onOpenSorter={() => (away.has('sorter') ? openPane('sorter') : setSorterOpen(true))}
         away={detached}
         onBringBack={closePane}
         account={account}
@@ -1016,7 +1022,9 @@ export default function App() {
       <RoomBar
         file={file}
         looking={
-          researchOpen || sculptorOpen || outlinerOpen || narrativeOpen || view === 'outline' ? 'research' : 'script'
+          researchOpen || sculptorOpen || outlinerOpen || narrativeOpen || sorterOpen || view === 'outline'
+            ? 'research'
+            : 'script'
         }
       />
 
@@ -1208,6 +1216,18 @@ export default function App() {
               }}
             />
           ) : null}
+          {/* The notes, sorted (addendum 26): every format's, because a page of
+              notes wants sorting whatever is being written from it. */}
+          <NoteSorterWindow
+            file={file}
+            open={sorterOpen && !away.has('sorter')}
+            onClose={() => setSorterOpen(false)}
+            onUpdate={project.update}
+            onPopOut={() => {
+              setSorterOpen(false);
+              openPane('sorter');
+            }}
+          />
           {/* The outline over the workspace too: the rigid sibling of the
               board, and worked on whole for the same reason (addendum 06). */}
           <OutlinerWindow
