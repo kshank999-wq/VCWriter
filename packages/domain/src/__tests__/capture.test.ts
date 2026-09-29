@@ -11,8 +11,10 @@ import {
   approveCapture,
   captureTitle,
   deferCapture,
+  groupOffer,
   inboxGroups,
   needsReview,
+  openGroupFolder,
   rejectCapture,
   suggestRouting,
 } from '../capture-approval.js';
@@ -436,5 +438,156 @@ describe('the inbox', () => {
       capture({ category: 'idea', rawText: 'newer', capturedAt: '2026-06-01T00:00:00.000Z' }),
     ]);
     expect(groups[0]!.captures.map((one) => one.rawText)).toEqual(['newer', 'older']);
+  });
+});
+
+/**
+ * Where a spoken group shows on the desktop (addendum 09 §12).
+ *
+ * The rule the whole thing rests on is that **nothing was created by saying the
+ * word** — so the desk's job is to divide what arrived and, in one deliberate
+ * press, make the folder somebody meant.
+ */
+describe('a spoken group at the desk', () => {
+  /** Distinct times, because the inbox is newest first and order is asserted. */
+  let tick = 0;
+  const said = (group: string | null, category = 'idea', text = 'a poster with nobody on it') =>
+    capture({
+      category,
+      subcategory: group,
+      rawText: text,
+      projectId: null,
+      capturedAt: new Date(Date.UTC(2026, 0, 1, 0, 0, (tick += 1))).toISOString(),
+    });
+
+  it('divides one category by what the writer said, ungrouped last', () => {
+    // Said in this order; the inbox draws them newest first, so the group of
+    // the newest note heads the category — the one they came to the desk about.
+    const groups = inboxGroups(
+      [said('Marketing'), said(null), said('Marketing', 'idea', 'a trailer'), said('Casting')],
+      'screenplay',
+    );
+    const ideas = groups.find((one) => one.category === 'idea');
+    expect(ideas?.captures).toHaveLength(4);
+    expect(ideas?.under.map((one) => one.name)).toEqual(['Casting', 'Marketing', 'No group']);
+    expect(ideas?.under[1]?.captures).toHaveLength(2);
+    // Last, because a note nobody grouped has no place among the ones somebody
+    // did.
+    expect(ideas?.under[2]?.group).toBeNull();
+  });
+
+  it('divides by nothing where nobody said a group', () => {
+    // A single heading reading *No group* over everything divides nothing, so
+    // there are no headings at all — the glossary letters' rule.
+    const groups = inboxGroups([said(null), said(null)], 'screenplay');
+    expect(groups[0]?.captures).toHaveLength(2);
+    expect(groups[0]?.under).toEqual([]);
+  });
+
+  it('reads two spellings of one word as one group', () => {
+    const groups = inboxGroups([said('Marketing'), said(' marketing ')], 'screenplay');
+    expect(groups[0]?.under).toHaveLength(1);
+    expect(groups[0]?.under[0]?.captures).toHaveLength(2);
+  });
+
+  it('routes to the group folder only once it exists, and says so either way', () => {
+    const file = project();
+    const before = suggestRouting(file, said('Marketing'));
+    // Not lost, and not silently placed somewhere it was not asked for: the
+    // category's own folder, with the word in the reason.
+    expect(before.reason).toContain('Marketing');
+    expect(before.reason).toContain('no Marketing folder yet');
+
+    const opened = openGroupFolder(file, 'idea', 'Marketing');
+    const after = suggestRouting(opened.file, said('Marketing'));
+    expect(after.decision).toEqual({ kind: 'research', categoryId: opened.categoryId });
+    expect(after.reason).toContain('already under');
+  });
+
+  it('makes the folder under the category it belongs to, and only once', () => {
+    const file = project();
+    const first = openGroupFolder(file, 'idea', 'Marketing');
+    const made = first.file.researchCategories.find((one) => one.id === first.categoryId);
+    const ideas = first.file.researchCategories.find((one) => one.systemKey === 'ideas');
+    expect(made?.name).toBe('Marketing');
+    expect(made?.parentId).toBe(ideas?.id);
+
+    // Idempotent: a second press finds the one that is there rather than
+    // standing a rival beside it (addendum 24 §5n's rule, in the act).
+    const again = openGroupFolder(first.file, 'idea', 'marketing');
+    expect(again.categoryId).toBe(first.categoryId);
+    expect(again.file.researchCategories).toHaveLength(first.file.researchCategories.length);
+  });
+
+  it('says what a press would do before it can be asked for', () => {
+    const file = project();
+    const waiting = [said('Marketing'), said('Marketing', 'idea', 'a trailer'), said(null)];
+
+    const fresh = groupOffer(file, waiting, 'idea', 'Marketing');
+    expect(fresh.count).toBe(2);
+    expect(fresh.why).toBe('Make Marketing under Ideas and file 2 notes into it');
+
+    const opened = openGroupFolder(file, 'idea', 'Marketing');
+    const settled = groupOffer(opened.file, waiting, 'idea', 'Marketing');
+    expect(settled.existingId).toBe(opened.categoryId);
+    expect(settled.why).toBe('File 2 notes into Marketing, under Ideas');
+  });
+
+  it('refuses the structural two rather than filing into the manuscript', () => {
+    // A note said against a scene is about the manuscript, and the one thing
+    // this module may never do is file into it.
+    const file = project();
+    const offer = groupOffer(file, [said('Marketing', 'unit')], 'unit', 'Marketing');
+    expect(offer.parentId).toBeNull();
+    expect(offer.why).toContain('no folder');
+  });
+
+  it('counts only what is still waiting', () => {
+    const file = project();
+    const done = capture({ category: 'idea', subcategory: 'Marketing', status: 'approved' });
+    const offer = groupOffer(file, [said('Marketing'), done], 'idea', 'Marketing');
+    expect(offer.count).toBe(1);
+  });
+
+  it('carries the group through the row and back', () => {
+    const row = captureFromRow({
+      id: newId<CaptureItemId>(),
+      user_id: newId<UserId>(),
+      project_id: null,
+      source: 'mobile_voice',
+      captured_at: new Date().toISOString(),
+      raw_text: 'a poster with nobody on it',
+      category: 'idea',
+      subject_name: null,
+      subcategory: 'Marketing',
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    expect(row.subcategory).toBe('Marketing');
+  });
+});
+
+describe('a group beside a name', () => {
+  it('lets the person win and says the group rather than dropping it', () => {
+    // A group narrows a folder; it cannot narrow a person. Driving the walk
+    // found this, and the rule is that the writer hears their own word back.
+    const file = project();
+    const note = capture({
+      category: 'character',
+      subjectName: 'Tom',
+      subcategory: 'casting',
+      rawText: 'he should be older than the part reads',
+    });
+    const suggestion = suggestRouting(file, note);
+    expect(suggestion.decision).toEqual({ kind: 'character', name: 'Tom' });
+    expect(suggestion.reason).toContain('casting');
+    expect(suggestion.reason).toContain('does not narrow a person');
+  });
+
+  it('says nothing extra when no group was said', () => {
+    const file = project();
+    const suggestion = suggestRouting(file, capture({ category: 'character', subjectName: 'Tom' }));
+    expect(suggestion.reason).toBe('You said Character — Tom, who is not in the cast yet');
   });
 });

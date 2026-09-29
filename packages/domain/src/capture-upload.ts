@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { captureCategorySchema, captureSourceSchema } from './entities/capture.js';
+import { captureKeySchema, captureSourceSchema } from './entities/capture.js';
 
 /**
  * What the phone is allowed to send, and what it becomes (addendum 09 §6,
@@ -35,10 +35,24 @@ export const captureUploadSchema = z.object({
   source: captureSourceSchema.default('mobile_voice'),
   capturedAt: z.string().datetime(),
   rawText: z.string().min(1).max(20_000),
-  /** What kind of thought the writer said it was, if they said (§4). */
-  category: captureCategorySchema.nullable().default(null),
+  /**
+   * What kind of thought the writer said it was, if they said (§4).
+   *
+   * **`captureKeySchema` rather than the five-value enum**, which is a fault
+   * this stage found rather than made: §10 widened the vocabulary to the
+   * project's own words and migration 0060 widened the column to match, and
+   * this schema was not told — so the documented route refused a `setting` or a
+   * `sub` note with a 400 while the web page, which writes to the database
+   * directly, took them happily. A gate beside a reader that has learned to
+   * take more is the barcode's own lesson (addendum 20 §16a) pointed at a
+   * payload, and the shape being the permission is no defence when the shape
+   * is out of date.
+   */
+  category: captureKeySchema.nullable().default(null),
   /** The name they spoke. Testimony, never a guess (§3.1). */
   subjectName: z.string().max(200).nullable().default(null),
+  /** The writer's own word this note was said under (§12). */
+  subcategory: z.string().max(200).nullable().default(null),
   /** How sure the transcription was, when the device can say. */
   transcriptConfidence: z.number().min(0).max(1).nullable().default(null),
 });
@@ -69,6 +83,7 @@ export const uploadToRow = (
   raw_text: upload.rawText,
   category: upload.category,
   subject_name: upload.subjectName,
+  subcategory: upload.subcategory,
   transcript_confidence: upload.transcriptConfidence,
   client_capture_id: upload.clientCaptureId,
   synced_at: now,

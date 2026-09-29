@@ -52,6 +52,15 @@ export type SpokenTurn =
   | { kind: 'finish' }
   /** *dictate project Jinn* — address what follows to that project. */
   | { kind: 'project'; name: string }
+  /**
+   * *dictate group Marketing* — put what follows under that word (§12).
+   *
+   * An empty name asks rather than guesses: it is a writer who has not finished
+   * the sentence, and clearing is its own command.
+   */
+  | { kind: 'group'; name: string }
+  /** *dictate no group* — come back out of it. */
+  | { kind: 'ungroup' }
   /** *dictate new project The Lamp* — begin making one. Nothing is made yet. */
   | { kind: 'making'; name: string }
   /** *dictate yes* — the one word that makes it (§11). */
@@ -84,6 +93,16 @@ const NEW_PROJECT = ['new project', 'a new project', 'start a project', 'start a
 /** The one word that makes it. Deliberately not *ok*, which is said in passing. */
 const YES = ['yes', 'make it', 'do it', 'that is right', "that's right", 'confirm'];
 const CORRECTION = ['correction', 'correct that'];
+/**
+ * Putting what follows under a word of the writer's own (§12).
+ *
+ * **Generous in, one key out** — *group* is what somebody says while walking,
+ * *subcategory* is Ken's own word and what the record is called, and the rest
+ * are what the same thought sounds like out loud. Checked **after** `UNGROUP`,
+ * which would otherwise be read as a group called *group*.
+ */
+const GROUP = ['group', 'subgroup', 'subcategory', 'sub category', 'folder', 'topic', 'under'];
+const UNGROUP = ['no group', 'no folder', 'no topic', 'no subcategory', 'ungroup', 'out of that group'];
 /** Fillers a writer says before a category and means nothing by. */
 const FILLER = ['new', 'a new', 'another', 'a'];
 
@@ -177,6 +196,17 @@ export const readTurn = (
 
     // *dictate new setting* and *dictate setting* are the same thing.
     const withoutFiller = opensWithAny(after, FILLER) ?? after;
+
+    // Read against both spellings for the filler's own reason: *dictate new
+    // group Marketing* and *dictate group Marketing* are one act, and the
+    // stripper is what tells them apart. `UNGROUP` first — *no group* opens
+    // with neither word the other list holds, but *group* opens with one.
+    if (opensWithAny(after, UNGROUP) !== null || opensWithAny(withoutFiller, UNGROUP) !== null) {
+      return { kind: 'ungroup' };
+    }
+    const grouped = opensWithAny(after, GROUP) ?? opensWithAny(withoutFiller, GROUP);
+    if (grouped !== null) return { kind: 'group', name: grouped };
+
     const category = categoryAt(withoutFiller, vocabulary) ?? categoryAt(after, vocabulary);
     if (category) return category;
 
@@ -199,6 +229,16 @@ export interface OpenNote {
   key: CaptureKey | null;
   subjectName: string | null;
   text: string;
+  /**
+   * The writer's own word this note was said under, or null (§12).
+   *
+   * **A word on the note and never a folder in the project.** Nothing is
+   * created by saying it — §1's line is that the phone captures and the desktop
+   * places, and a taxonomy growing out of somebody's pocket is exactly the
+   * folder tree §2 refuses. What it buys is that a walk arrives at the desk
+   * already sorted, and that filing the whole of one group is one press there.
+   */
+  group: string | null;
 }
 
 /**
@@ -218,6 +258,15 @@ export interface ProjectPlan {
 export interface Sitting {
   /** The note being spoken, or null between notes. */
   open: OpenNote | null;
+  /**
+   * The group every note is being said under, or null (§12).
+   *
+   * **It sticks, which is the whole reason it is worth saying**: a writer
+   * walking with six thoughts about one thing says the word once. Like the
+   * project, and unlike a category, it is a setting on the sitting rather than
+   * a fact about one note.
+   */
+  group: string | null;
   /** A project being described, or null. While set, words answer the question. */
   making: ProjectPlan | null;
   /**
@@ -242,6 +291,7 @@ export interface Sitting {
 
 export const emptySitting = (): Sitting => ({
   open: null,
+  group: null,
   making: null,
   makes: null,
   filed: [],
@@ -255,6 +305,41 @@ const join = (current: string, words: string): string =>
   words.length === 0
     ? current
     : `${current}${current.length > 0 && !current.endsWith(' ') ? ' ' : ''}${words}`;
+
+/** Two spoken names for one group. Speech is loose, so matching is (§12). */
+const plainly = (name: string): string =>
+  name.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ');
+
+export const sameGroup = (a: string, b: string): boolean => plainly(a) === plainly(b);
+
+/**
+ * Every group this sitting has said, in the order they were first said.
+ *
+ * A **reading** rather than a list kept beside the notes, for the reason every
+ * other one in this program is: a note whose group was corrected changes the
+ * answer with nothing run. It is what makes *marketing* the second time mean
+ * the **Marketing** of the first — one spelling on every note of a group, or
+ * the desk gets two folders out of one word said twice.
+ */
+export const groupsSaid = (sitting: Sitting): string[] => {
+  const out: string[] = [];
+  const carry = (name: string | null) => {
+    if (!name) return;
+    if (!out.some((one) => sameGroup(one, name))) out.push(name);
+  };
+  for (const one of sitting.filed) carry(one.group);
+  carry(sitting.open?.group ?? null);
+  carry(sitting.group);
+  return out;
+};
+
+/** The spelling this sitting already uses for a word, or the word as said. */
+const settledSpelling = (sitting: Sitting, spoken: string): string =>
+  groupsSaid(sitting).find((one) => sameGroup(one, spoken)) ?? spoken.trim();
+
+/** A group name is a label rather than a sentence, so it is capped like one. */
+const MAX_GROUP_WORDS = 6;
+const MAX_GROUP_LENGTH = 60;
 
 const nameOf = (key: CaptureKey | null, format: ProjectFormat): string =>
   key === null
@@ -371,6 +456,9 @@ export const hear = (sitting: Sitting, said: string, format: ProjectFormat): Sit
         key: turn.key,
         subjectName: turn.subjectName,
         text: turn.text,
+        // The sitting's group, because it sticks: that is what saying it once
+        // over six notes is for (§12).
+        group: sitting.group,
       };
       return {
         ...base,
@@ -386,6 +474,46 @@ export const hear = (sitting: Sitting, said: string, format: ProjectFormat): Sit
 
     case 'project':
       return { ...base, wants: turn.name, said: `Project: ${turn.name}.` };
+
+    case 'group': {
+      // No name is somebody who has not finished the sentence, so it says where
+      // they are and changes nothing — clearing has a command of its own, and
+      // guessing at it here would throw a group away on a half-said word.
+      if (turn.name.trim().length === 0) {
+        return {
+          ...base,
+          said: sitting.group
+            ? `Group: ${sitting.group}. Say “${WAKE} no group” to come out.`
+            : 'No group. Say a name after it.',
+        };
+      }
+      const said = turn.name.trim().replace(/[.!?,]+$/, '').trim();
+      if (said.length > MAX_GROUP_LENGTH || said.split(/\s+/).length > MAX_GROUP_WORDS) {
+        return { ...base, said: 'That is long for a group. Try a word or two.' };
+      }
+      // The spelling this sitting already uses, so *marketing* said twice is one
+      // group at the desk rather than two folders out of one word.
+      const name = settledSpelling(sitting, said);
+      return {
+        ...base,
+        group: name,
+        // The note in hand takes it too: somebody who says it halfway through a
+        // note means this one, which is the only reading that is ever wrong in
+        // the recoverable direction.
+        open: sitting.open ? { ...sitting.open, group: name } : sitting.open,
+        said: `Group: ${name}.`,
+      };
+    }
+
+    case 'ungroup': {
+      if (!sitting.group && !sitting.open?.group) return { ...base, said: 'No group to come out of.' };
+      return {
+        ...base,
+        group: null,
+        open: sitting.open ? { ...sitting.open, group: null } : sitting.open,
+        said: 'Out of that group.',
+      };
+    }
 
     case 'making': {
       // Whatever was open is filed first: making a project is not a reason to
@@ -443,7 +571,8 @@ export const hear = (sitting: Sitting, said: string, format: ProjectFormat): Sit
       if (turn.text.length === 0) return base;
       // Words spoken with nothing open start a note with no category, because
       // a writer who just starts talking is still writing a note.
-      const into: OpenNote = sitting.open ?? { key: null, subjectName: null, text: '' };
+      const into: OpenNote =
+        sitting.open ?? { key: null, subjectName: null, text: '', group: sitting.group };
       return {
         ...base,
         open: { ...into, text: join(into.text, turn.text) },
@@ -521,6 +650,14 @@ export const speakBack = (before: Sitting, after: Sitting): string | null => {
   if (after.opened) return after.said;
   if (after.open === null && before.open !== null) return after.said;
   if (after.wants) return after.said;
+  /**
+   * The group, whenever it moves — set, cleared, or asked about. It is a
+   * setting that silently changes where six later notes land, and §11's rule
+   * about the project's own questions holds here for the same reason: from a
+   * pocket, a change nobody hears is one nobody can catch.
+   */
+  if (after.group !== before.group || after.said.startsWith('Group:')) return after.said;
+  if (after.said.startsWith('Out of that group')) return after.said;
   /**
    * **Every word of making a project is spoken**, which is the one place this
    * rule is absolute: the sentence is a *question*, and a question nobody hears

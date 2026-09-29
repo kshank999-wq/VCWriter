@@ -710,12 +710,13 @@ one. One function, read by both the single-utterance reader and the sitting.
 ### 10.5 What this stage deliberately does not do
 
 Ken asked for two more things and they were stages of their own rather than
-half-built here. **The first is now §11**; the second is still ahead:
+half-built here. **Both are now built** — §11 and §12 — and neither turned out
+to need the machinery it looked like it needed:
 
 - ~~**Making a project by voice**~~ — built, as §11.
-- **Subcategories within a project.** These are `research_categories`, which
-  already nest; what is missing is what a spoken one means and where it shows on
-  the desktop.
+- ~~**Subcategories within a project**~~ — built, as §12, and *not* as research
+  categories made from a pocket. What a spoken one means is a word on the note;
+  where it shows is the inbox, divided.
 
 Neither is started, so neither is on the screen. What is built is the walk
 itself, and it works end to end: driven in a real browser, Ken's own sequence —
@@ -840,3 +841,116 @@ making a project is not a reason to lose the thought that led to it), *a novel*,
 header changed to **Blackout**, five sentences were spoken in order, and the
 next *chapter* opened a **Chapter** — the new project's own word, which is what
 the live-project ref is for.
+
+## 12. Subcategories, said out loud
+
+From Ken: *you can create subcategories for that project if you need to* — the
+second of the two §10.5 staged, and the one whose own note said what was
+missing: *these are `research_categories`, which already nest; what is missing
+is what a spoken one means and where it shows on the desktop.*
+
+The audit paid before a line was written. Research folders have nested since
+addendum 02 §7; `requestedRouting` has existed since 0003 and already outranks
+every guess in `suggestRouting`; `inboxGroups` already groups. So this is one
+nullable column and one decision.
+
+### 12.1 A word on the note, and never a folder in the project
+
+The decision is §2's trap asked a second time, and the tempting build is the
+wrong one. Letting the phone name a research folder — even letting it *make*
+one — is the phone **placing**, and §1's line is that it captures while the
+desktop places. §2 says why in one sentence: an app that never decides where a
+thought goes needs no folder tree, no cast list and no taxonomy. A taxonomy
+growing out of somebody's pocket, while they are walking and cannot see a
+screen, is exactly the thing that sentence refuses.
+
+So **saying a group creates nothing**. `subcategory` is free text on the
+capture row (migration 0061), the project document is untouched by a walk, and
+there is no network call, no folder, no id and nothing to reconcile. It works
+offline like the rest of the app because there is nothing for it to ask.
+
+What that buys is real and it is the whole feature: **a walk arrives at the desk
+already divided**, and filing a whole group is one press there.
+
+### 12.2 It sticks, because that is why it is worth saying
+
+Like the project and unlike a category, a group is a setting on the sitting:
+
+    dictate group Marketing   → “Group: Marketing.”
+    idea · a poster with nobody on it · dictate done
+    idea · the tagline is the last line of the film · dictate done
+    dictate no group          → “Out of that group.”
+
+Six thoughts about one thing cost one word. It applies to **the note in hand**
+too — somebody who says it halfway through a note means this one, which is the
+only reading whose mistakes are in the recoverable direction — and it is spoken
+back on every turn, because a setting that silently changes where six later
+notes land is the one a pocket most needs to hear.
+
+*group*, *subcategory*, *folder*, *topic*, *under* and *subgroup* all mean it
+(**generous in, one key out**); *dictate group* with no name **says where you
+are and changes nothing**, clearing having a command of its own, since guessing
+would throw a group away on half a sentence. `groupsSaid` keeps **one spelling
+per group** — a reading over the sitting, not a list beside it — so *marketing*
+said twice is one folder at the desk rather than two.
+
+### 12.3 The act makes the folder, at the desk
+
+The inbox divides each category by what was said, in the order the notes
+already come in (newest first — writing *first said first* there would have been
+a second ordering inside a list that has one, and the test caught it), and
+**divides by nothing where nobody said a group**: a single heading reading *No
+group* over everything divides nothing, which is the glossary letters' rule
+(addendum 20 §17a).
+
+`groupOffer` says what a press would do before it can be asked for —
+`trackRemoval`'s shape — and `openGroupFolder` is the act: the folder is made
+**under the category's own** (Marketing under Ideas), or found if it is already
+there, and then each note goes through the same `approveCapture` a single press
+uses. **This is the one place the taxonomy grows**, and it grows by somebody
+pressing a button while looking at what is about to go in it. It is idempotent
+by name, addendum 24 §5n's rule put in the act rather than on the screen.
+
+`suggestRouting` routes to the group's folder **only once it exists**, and where
+it does not the note goes to the category's own folder with the word in the
+reason — *no Marketing folder yet* — because a spoken word that vanishes is
+worse than one that lands somewhere plain.
+
+### 12.4 A group narrows a folder; it cannot narrow a person
+
+Driving the walk found the one place the two things a writer said pull apart:
+*dictate group casting*, then *character, Tom*. The name is the more specific
+of the two and is what the character branches exist for, so the person wins —
+and **the group is said in the reason** rather than dropped where nobody can see
+it (*you also said casting, which does not narrow a person*). A writer who hears
+their own word back knows it was heard, and the drag is still there for filing
+it the other way.
+
+### 12.5 Three places that had not followed §10
+
+Building it found the same drift three times, all from §10 widening the spoken
+vocabulary and migration 0060 widening the column:
+
+- **`captureUploadSchema.category` was still the five-value enum**, so the
+  documented `POST /api/notes` refused a `setting` or a `sub` note with a 400
+  while the web page, which writes to the database directly, took them happily.
+  A gate beside a reader that has learned to take more is addendum 20 §16a's
+  lesson pointed at a payload — and **the test that pinned the narrowness is why
+  it survived**, asserting *refuses a category that is not one of the five* long
+  after there were more than five.
+- **`QueuedCapture.category`** was the same union, which the hands-free path had
+  been casting past, so a `setting` note went into IndexedDB under a type saying
+  it could not exist.
+- **The desktop inbox never passed the format**, so a scene note was headed
+  *Scene or chapter* on a screenplay that has scenes.
+
+### 12.6 Driven
+
+The phone at 420px with the recogniser and the routes stubbed: *dictate group
+Marketing* sets it and speaks it, two notes file carrying it, *dictate no group*
+comes out, and the next opens ungrouped — with the group on the screen above the
+note and a chip on each filed row. Then the same captures through the desk:
+`Idea` divides into *Marketing (2)* and *No group (1)*, `Character` into
+*casting (1)*, the presses read *Make Marketing under Ideas and file 2 notes
+into it*, and one of them takes the project from six research folders to seven
+with **Marketing under Ideas**.

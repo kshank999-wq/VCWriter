@@ -1152,6 +1152,7 @@ export const captureFromRow = (row: Row): CaptureItem =>
     requestedRouting: row['requested_routing'] ?? null,
     category: nullableText(row['category']),
     subjectName: nullableText(row['subject_name']),
+    subcategory: nullableText(row['subcategory']),
     status: row['status'],
     reviewedAt: nullableText(row['reviewed_at']),
     resultRef:

@@ -28,6 +28,7 @@ const capture = (overrides: Partial<QueuedCapture> = {}): QueuedCapture => ({
   requestedRouting: null,
   category: 'idea',
   subjectName: null,
+  subcategory: null,
   syncedAt: null,
   lastError: null,
   attempts: 0,

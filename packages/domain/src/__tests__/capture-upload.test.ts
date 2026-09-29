@@ -40,8 +40,31 @@ describe('what the phone may send', () => {
     expect(() => captureUploadSchema.parse({ ...good, rawText: '' })).toThrow();
   });
 
-  it('refuses a category that is not one of the five', () => {
-    expect(() => captureUploadSchema.parse({ ...good, category: 'location' })).toThrow();
+  /**
+   * **This assertion is why the drift survived.** It was right when the five
+   * were the whole vocabulary, and §10 made the words the project's own —
+   * migration 0060 widened the column, and the schema and this test were not
+   * told, so the documented route refused a `setting` or a `sub` note with a
+   * 400 while the web page, writing to the database directly, took them. A
+   * test that pins a narrowness is a test that has to be revisited when the
+   * narrowness goes.
+   *
+   * What the contract actually is now: any word the project uses, capped, and
+   * **a value this build has never heard of is still a note** — an upload that
+   * could be refused at the door cannot keep `inboxGroups`' promise that the
+   * last group is never hidden.
+   */
+  it('takes any word the project uses, and refuses one too long to be one', () => {
+    for (const word of ['character', 'setting', 'research', 'unit', 'sub', 'something_newer']) {
+      expect(captureUploadSchema.parse({ ...good, category: word }).category).toBe(word);
+    }
+    expect(() => captureUploadSchema.parse({ ...good, category: 'x'.repeat(41) })).toThrow();
+  });
+
+  it('carries the group the writer said, and refuses a paragraph as one', () => {
+    expect(captureUploadSchema.parse({ ...good, subcategory: 'Marketing' }).subcategory).toBe('Marketing');
+    expect(captureUploadSchema.parse(good).subcategory).toBeNull();
+    expect(() => captureUploadSchema.parse({ ...good, subcategory: 'x'.repeat(201) })).toThrow();
   });
 
   it('has no field for status, so a client cannot claim a note was approved', () => {

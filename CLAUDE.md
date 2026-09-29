@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0060.
+  reads like it does. Applied through 0061.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
   the windowing, and the thing to know is that **every room goes to a second
@@ -846,6 +846,44 @@ push live; the build takes a minute or two.
   routes stubbed: Tom's note filed first, `{ title, format }` at the route, the
   header changed, five sentences spoken in order, and the next *chapter*
   opening a **Chapter**.
+  **§12 is subcategories said out loud**, from Ken, and the audit paid before a
+  line was written — research folders have nested since addendum 02 §7,
+  `requestedRouting` has outranked every guess in `suggestRouting` since 0003,
+  and `inboxGroups` already grouped. So it is one nullable column (0061) and one
+  decision, which is §2's trap asked a second time: **a spoken group is a word
+  on the note and never a folder in the project**. Letting the phone name — or
+  make — a research folder is the phone *placing*, and §1's line is that it
+  captures while the desktop places; §2's own sentence is that an app which
+  never decides where a thought goes needs no folder tree, so a taxonomy grown
+  from a pocket is exactly what it refuses. Saying a group therefore **creates
+  nothing** — no folder, no id, no network, so it works offline like the rest —
+  and what it buys is that **a walk arrives at the desk already divided**.
+  It **sticks**, like the project and unlike a category, which is why one word
+  covers six thoughts; it takes **the note in hand** with it (somebody who says
+  it halfway through means this one, the only reading whose mistakes are
+  recoverable); *group*, *subcategory*, *folder*, *topic*, *under* all mean it;
+  **an empty *dictate group* says where you are and changes nothing**, clearing
+  having its own command and a guess throwing a group away on half a sentence;
+  and `groupsSaid` keeps **one spelling per group** — a reading over the sitting
+  — so *marketing* twice is one folder rather than two. **The act makes the
+  folder, at the desk**: `groupOffer` says what a press would do
+  (`trackRemoval`'s shape) and `openGroupFolder` makes it **under the category's
+  own**, idempotent by name (addendum 24 §5n's rule in the act rather than on the
+  screen), after which each note goes through the same `approveCapture` a single
+  press uses — **the one place the taxonomy grows**, by somebody looking at what
+  is about to go in it. The inbox divides **in the order the notes already come
+  in** (newest first; *first said first* would have been a second ordering inside
+  a list that has one, and the test caught it) and **divides by nothing where
+  nobody said a group**, the glossary letters' rule. Driving it found the one
+  place two spoken things pull apart — *group casting* then *character, Tom* —
+  and **a group narrows a folder and cannot narrow a person**, so the person
+  wins and the group is **said in the reason** rather than dropped. It also
+  found §10's widening had never reached three places: the upload schema still
+  held the five-value enum (so the documented route 400'd a `setting` note while
+  the web page took it, and **the test pinning the narrowness is why it
+  survived**), `QueuedCapture` the same union the hands-free path had been
+  casting past, and the desktop inbox never passed the format, so a scene note
+  was headed *Scene or chapter* on a screenplay.
   `addendum-10-book-index.md` is the back-of-book index, from Ken's ask for
   chapter pages that carry a graphic *"but it goes into an Index"* with the page
   numbers updating themselves. **Built.** Two of the three things he asked for

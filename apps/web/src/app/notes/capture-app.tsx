@@ -159,6 +159,7 @@ export default function CaptureApp() {
           requested_routing: capture.requestedRouting,
           category: capture.category,
           subject_name: capture.subjectName,
+          subcategory: capture.subcategory ?? null,
           client_capture_id: capture.clientCaptureId,
           synced_at: new Date().toISOString(),
           status: 'pending',
@@ -304,7 +305,12 @@ export default function CaptureApp() {
   const formatNow: ProjectFormat = (project?.format as ProjectFormat) ?? 'screenplay';
 
   /** One note out of the sitting, onto the device. */
-  const fileOne = async (note: { key: string | null; subjectName: string | null; text: string }) => {
+  const fileOne = async (note: {
+    key: string | null;
+    subjectName: string | null;
+    text: string;
+    group?: string | null;
+  }) => {
     const content = note.text.trim();
     if (content.length === 0 && !note.subjectName) return;
     await enqueue({
@@ -318,6 +324,9 @@ export default function CaptureApp() {
       // text since 0060.
       category: note.key as CaptureCategory | null,
       subjectName: note.subjectName,
+      // The writer's own word, said once and carried by every note after it
+      // (§12). Nothing is created by it here: the desktop makes the folder.
+      subcategory: note.group ?? null,
       syncedAt: null,
       lastError: null,
       attempts: 0,
@@ -495,6 +504,9 @@ export default function CaptureApp() {
       requestedRouting: null,
       category,
       subjectName: subjectName.trim().length > 0 ? subjectName.trim() : null,
+      // The typed screen has no group: §12's is said out loud, and a second
+      // control for it here would be the folder picker §2 refuses.
+      subcategory: null,
       syncedAt: null,
       lastError: null,
       attempts: 0,
@@ -614,6 +626,15 @@ export default function CaptureApp() {
                   }`
                 : 'Listening'}
           </p>
+          {/* The group, whenever there is one (§12). It changes where every
+              note after it lands, so it stands above the note rather than in
+              the line of what was last heard, which scrolls past. */}
+          {sitting.group ? (
+            <p className="notes-group">
+              <span className="muted small">Group</span> {sitting.group}
+            </p>
+          ) : null}
+
           <p className="notes-heard muted small">{sitting.said || 'Say a category, or just start talking.'}</p>
 
           {/* While a project is being described the phone is **not taking
@@ -651,7 +672,9 @@ export default function CaptureApp() {
             <p className="muted small">
               Say <strong>{WAKE} done</strong> to save it, <strong>{WAKE} new {(captureVocabulary(formatNow)[0]?.name ?? 'idea').toLowerCase()}</strong> to
               start the next, <strong>{WAKE} project</strong> and its name to move,{' '}
-              <strong>{WAKE} new project</strong> and a title to start one. Every command begins with
+              <strong>{WAKE} new project</strong> and a title to start one.{' '}
+              <strong>{WAKE} group</strong> and a word puts what follows under it, and{' '}
+              <strong>{WAKE} no group</strong> comes back out. Every command begins with
               “{WAKE}”, so those words are still yours inside a note.
             </p>
           )}
@@ -662,6 +685,7 @@ export default function CaptureApp() {
                 <li key={index}>
                   <strong>{captureKeyName(one.key ?? 'idea', formatNow)}</strong>
                   {one.subjectName ? ` · ${one.subjectName}` : ''}
+                  {one.group ? <span className="notes-filed-group">{one.group}</span> : null}
                   <span className="muted"> — {one.text.slice(0, 60)}</span>
                 </li>
               ))}

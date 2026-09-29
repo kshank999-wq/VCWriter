@@ -5,11 +5,13 @@ import {
   emptySitting,
   everything,
   formatNamed,
+  groupsSaid,
   hear,
   projectFailed,
   projectMade,
   projectNamed,
   readTurn,
+  sameGroup,
   speakBack,
   spokenFormatNames,
   WAKE,
@@ -67,15 +69,19 @@ describe('what a writer may say', () => {
 
     expect(sitting.open).toBeNull();
     expect(sitting.filed).toHaveLength(2);
+    // `group` is null throughout: nobody said one, and §12's word is the only
+    // thing that puts one on a note.
     expect(sitting.filed[0]).toEqual({
       key: 'character',
       subjectName: 'Tom',
       text: 'he never looks anybody in the eye',
+      group: null,
     });
     expect(sitting.filed[1]).toEqual({
       key: 'setting',
       subjectName: null,
       text: 'the kitchen is too small for the table in it',
+      group: null,
     });
   });
 
@@ -448,5 +454,121 @@ describe('making a project by voice', () => {
     const making = walk([`${WAKE} new project Jinn`]);
     expect(making.wants).toBeNull();
     expect(making.making).toMatchObject({ name: 'Jinn' });
+  });
+});
+
+/**
+ * Subcategories, said out loud (addendum 09 §12, from Ken: *you can create
+ * subcategories for that project if you need to*).
+ *
+ * The rule under all of it: **a spoken group is a word on the note and never a
+ * folder in the project.** §1's line is that the phone captures and the desktop
+ * places, and a taxonomy grown from a pocket is the folder tree §2 refuses. So
+ * nothing here creates anything — what it buys is a walk that arrives divided.
+ */
+describe('a group said out loud', () => {
+  const walk = (said: string[]): Sitting =>
+    said.reduce((sitting, one) => hear(sitting, one, 'screenplay'), emptySitting());
+
+  it('sticks, which is why it is worth saying once', () => {
+    const after = walk([
+      `${WAKE} group Marketing`,
+      'idea',
+      'a poster with nobody on it',
+      `${WAKE} done`,
+      'idea',
+      'the tagline is the last line of the film',
+    ]);
+    expect(after.group).toBe('Marketing');
+    expect(everything(after).map((one) => one.group)).toEqual(['Marketing', 'Marketing']);
+  });
+
+  it('takes the note in hand with it', () => {
+    // Somebody who says it halfway through a note means this one.
+    const after = walk(['idea', 'a poster with nobody on it', `${WAKE} group Marketing`]);
+    expect(after.open?.group).toBe('Marketing');
+  });
+
+  it('comes back out, and what was filed keeps its group', () => {
+    const after = walk([
+      `${WAKE} group Marketing`,
+      'idea',
+      'a poster',
+      `${WAKE} done`,
+      `${WAKE} no group`,
+      'idea',
+      'something else entirely',
+    ]);
+    expect(after.group).toBeNull();
+    expect(everything(after).map((one) => one.group)).toEqual(['Marketing', null]);
+  });
+
+  it('keeps one spelling per group, so the desk gets one folder', () => {
+    const after = walk([
+      `${WAKE} group Marketing`,
+      'idea',
+      'a poster',
+      `${WAKE} done`,
+      `${WAKE} group marketing`,
+      'idea',
+      'a trailer',
+    ]);
+    expect(groupsSaid(after)).toEqual(['Marketing']);
+    expect(everything(after).every((one) => one.group === 'Marketing')).toBe(true);
+    expect(sameGroup('Marketing', ' marketing ')).toBe(true);
+    expect(sameGroup('Marketing', 'Markets')).toBe(false);
+  });
+
+  it('is said generously and stored once', () => {
+    for (const phrase of ['group', 'subcategory', 'folder', 'topic', 'under', 'new group']) {
+      const after = walk([`${WAKE} ${phrase} Marketing`]);
+      expect(after.group).toBe('Marketing');
+    }
+  });
+
+  it('asks rather than clearing when nobody said a name', () => {
+    // *dictate group* on its own is an unfinished sentence, and clearing has a
+    // command of its own — guessing would throw a group away on half a word.
+    const inside = walk([`${WAKE} group Marketing`, `${WAKE} group`]);
+    expect(inside.group).toBe('Marketing');
+    expect(inside.said).toContain('Marketing');
+
+    const outside = walk([`${WAKE} group`]);
+    expect(outside.group).toBeNull();
+    expect(outside.said).toContain('Say a name');
+  });
+
+  it('refuses a sentence as a group name', () => {
+    const after = walk([`${WAKE} group the poster should have nobody on it at all`]);
+    expect(after.group).toBeNull();
+    expect(after.said).toContain('long for a group');
+  });
+
+  it('never opens a note, and never makes anything', () => {
+    const after = walk([`${WAKE} group Marketing`]);
+    expect(after.open).toBeNull();
+    expect(after.opened).toBe(false);
+    expect(after.filed).toEqual([]);
+    // Nothing on the sitting names a folder, an id or a project row — the whole
+    // of what a spoken group is, is the word.
+    expect(Object.keys(after)).not.toContain('folders');
+  });
+
+  it('says every turn of it out loud', () => {
+    // A setting that silently changes where six later notes land is the one a
+    // pocket most needs to hear.
+    const before = emptySitting();
+    const set = hear(before, `${WAKE} group Marketing`, 'screenplay');
+    expect(speakBack(before, set)).toBe('Group: Marketing.');
+
+    const out = hear(set, `${WAKE} no group`, 'screenplay');
+    expect(speakBack(set, out)).toBe('Out of that group.');
+  });
+
+  it('does not read a group out of an ordinary note', () => {
+    // Every command is prefixed, so the words are still the writer's inside one.
+    const after = walk(['idea', 'the group under the bridge is the whole third act']);
+    expect(after.group).toBeNull();
+    expect(after.open?.text).toContain('the group under the bridge');
   });
 });

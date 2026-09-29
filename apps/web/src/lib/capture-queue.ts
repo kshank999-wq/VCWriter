@@ -30,10 +30,20 @@ export interface QueuedCapture {
    * where it goes** (addendum 09 §2).
    */
   requestedRouting: { kind: 'research' | 'beat' | 'character'; categoryKey: string | null } | null;
-  /** One of the five (addendum 09 §4), or null if nobody said. */
-  category: 'character' | 'plot_point' | 'idea' | 'theme' | 'arc' | null;
+  /**
+   * What kind of thought the writer said it was, or null if nobody said.
+   *
+   * A **string** since §10 made the vocabulary the project's own — it was the
+   * five-value union, which the hands-free path has been casting past ever
+   * since, so a `setting` note went into this store under a type saying it
+   * could not exist. Migration 0060 widened the column and this is the last of
+   * the three places that had not followed.
+   */
+  category: string | null;
   /** The name the writer spoke, when they spoke one. */
   subjectName: string | null;
+  /** The writer's own word this note was said under (§12), or null. */
+  subcategory: string | null;
   /** Set once the server has the row; kept briefly so the UI can show it landed. */
   syncedAt: string | null;
   lastError: string | null;

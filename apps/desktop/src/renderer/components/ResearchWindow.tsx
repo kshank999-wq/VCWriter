@@ -15,6 +15,8 @@ import {
   addResearchCategory,
   addResearchItem,
   approveCapture,
+  groupOffer,
+  openGroupFolder,
   castByCategory,
   cuesWithoutCharacter,
   notedCast,
@@ -403,6 +405,62 @@ export function ResearchBody({
       setCaptures((current) => current.filter((one) => one.id !== capture.id));
     } catch (cause) {
       setCapturesError(cause instanceof Error ? cause.message : 'That note could not be filed');
+    }
+  };
+
+  /**
+   * A whole spoken group, filed at once (addendum 09 §12).
+   *
+   * **The folder is made here and nowhere else.** The phone said a word and
+   * created nothing; this is the deliberate press, by somebody looking at what
+   * is about to go in it.
+   *
+   * The file is threaded by hand rather than by calling `placeCapture` in a
+   * loop: that one reads `file` from the closure, so every note after the first
+   * would be approved against the document as it stood before any of them —
+   * which is addendum 18 stage 7's lesson, a value caught before the host has
+   * run the update.
+   */
+  const placeGroup = async (category: string | null, group: string) => {
+    setCapturesError(null);
+    const offer = groupOffer(file, captures, category, group);
+    if (!offer.parentId || offer.count === 0) {
+      setCapturesError(offer.why);
+      return;
+    }
+
+    try {
+      const opened = openGroupFolder(file, category, group);
+      let next = opened.file;
+      const done: CaptureItem[] = [];
+      const waiting = captures.filter(
+        (one) =>
+          (one.status === 'pending' || one.status === 'needs_review') &&
+          one.category === category &&
+          (one.subcategory ?? '').trim().toLowerCase() === group.trim().toLowerCase(),
+      );
+
+      for (const capture of waiting) {
+        const result = approveCapture(next, capture, { kind: 'research', categoryId: opened.categoryId });
+        next = result.file;
+        const written = await window.vcwriter.resolveCapture(result.capture);
+        if (!written.ok) {
+          // What has been filed is filed; say what stopped rather than
+          // pretending the whole press failed or that all of it worked.
+          onUpdate(() => next);
+          setCaptures((current) => current.filter((one) => !done.some((was) => was.id === one.id)));
+          setCapturesError(
+            written.error ?? 'Some of that group was filed; the phone’s copy could not be marked done',
+          );
+          return;
+        }
+        done.push(capture);
+      }
+
+      onUpdate(() => next);
+      setCaptures((current) => current.filter((one) => !done.some((was) => was.id === one.id)));
+    } catch (cause) {
+      setCapturesError(cause instanceof Error ? cause.message : 'That group could not be filed');
     }
   };
 
@@ -1028,6 +1086,7 @@ export function ResearchBody({
               }}
               onReject={(capture) => void discardCapture(capture)}
               onRefresh={() => void loadCaptures()}
+              onFileGroup={(category, group) => void placeGroup(category, group)}
             />
           ) : selection.kind === 'review' ? (
             <CharacterReview file={file} onOpenCreator={openCreator} openOn={reviewOn} />

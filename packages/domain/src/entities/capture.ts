@@ -123,6 +123,22 @@ export const captureItemSchema = z.object({
    * thing to be weighed against a confidence score.
    */
   subjectName: z.string().nullable().default(null),
+  /**
+   * The writer's own word this note was said under (addendum 09 §12, from Ken:
+   * *you can create subcategories for that project if you need to*).
+   *
+   * **A word on the note and never a folder in the project.** Saying it creates
+   * nothing: §1's line is that the phone captures and the desktop places, and a
+   * taxonomy grown from a pocket is the folder tree §2 refuses. What it is for
+   * is that a walk arrives at the desk already divided, and that filing a whole
+   * group is one press there — which is where the folder is finally made, by
+   * somebody looking at it.
+   *
+   * Free text rather than a key, for `category`'s reason one level down: it is
+   * the writer's word, and nothing here is entitled to a list of what they are
+   * allowed to have thought about.
+   */
+  subcategory: z.string().nullable().default(null),
   status: captureStatusSchema.default('pending'),
   reviewedAt: isoDateTime().nullable().default(null),
   /** What the approved capture became, once the writer confirmed it. */

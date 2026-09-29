@@ -19902,3 +19902,29 @@ dialog.designed-page-dialog[open] {
 .ns-plan-row {
   padding: 5px 4px;
 }
+
+/* A spoken group inside one category of the mobile inbox (addendum 09 §12).
+   Indented under its category's heading because that is what it is — a
+   division of those notes, not a category beside them. */
+.mobile-subgroup {
+  margin: 0 0 10px 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
+
+.mobile-subgroup-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 6px 0 4px;
+  /* The sentence beside it can be long ("Make Marketing under Ideas and file
+     3 notes into it"), and a panel is the width there is. */
+  flex-wrap: wrap;
+}
+
+.mobile-subgroup-head h5 {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

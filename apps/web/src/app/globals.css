@@ -1882,3 +1882,34 @@ p.room-stamp {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The group a walk is saying its notes under (addendum 09 §12).
+   Above the note rather than in the line of what was last heard, because it
+   decides where every note after it lands and that line scrolls past. */
+.notes-group {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gold, #c8a253);
+}
+
+.notes-group .muted {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+/* On a filed row it is a chip rather than another dot-separated word: a
+   group is not a third name for the note, it is the shelf it is going on. */
+.notes-filed-group {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line, #332b17);
+  font-size: 0.75rem;
+  color: var(--gold, #c8a253);
+}

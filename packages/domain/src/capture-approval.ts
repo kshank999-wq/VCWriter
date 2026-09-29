@@ -1,7 +1,14 @@
 import { nowIso } from './entities/common.js';
 import { captureKeyName, captureVocabulary } from './capture-vocabulary.js';
 import { ref, type StoryEntityRef } from './entities/links.js';
-import { addBeat, addCharacter, addResearchItem, linkEntities, DomainError } from './mutations.js';
+import {
+  addBeat,
+  addCharacter,
+  addResearchCategory,
+  addResearchItem,
+  linkEntities,
+  DomainError,
+} from './mutations.js';
 import { researchCategoriesInOrder } from './selectors.js';
 import { knowsCharacter } from './characters.js';
 import {
@@ -84,6 +91,107 @@ const FOLDER_FOR: Record<string, string | undefined> = {
   arc: 'ideas',
 };
 
+// ------------------------------------------------- the groups they spoke (§12)
+
+/** Two spellings of one folder name. Speech is loose, so matching is. */
+const plainly = (name: string): string =>
+  name.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ');
+
+/**
+ * The folder of that name already sitting under `parentId`, or undefined.
+ *
+ * The **living** categories only, so a folder in the graveyard does not make a
+ * spoken group look placed — addendum 24 §5l's edge, where a reading over the
+ * writer's own records asks the module's one function.
+ */
+const childNamed = (file: ProjectFile, parentId: ResearchCategoryId, name: string) =>
+  researchCategoriesInOrder(file).find(
+    (one) => (one.parentId ?? null) === parentId && plainly(one.name) === plainly(name),
+  );
+
+/** The folder a spoken category reads as, which is where a group nests. */
+const folderForCategory = (file: ProjectFile, category: string | null) => {
+  const key = category ? FOLDER_FOR[category] : undefined;
+  return key ? researchCategoriesInOrder(file).find((one) => one.systemKey === key) : undefined;
+};
+
+/**
+ * What filing a whole spoken group would do, before it can be asked for
+ * (§12) — `trackRemoval`'s shape: a refusal a writer can act on, or the
+ * sentence that says what a press is about to change.
+ *
+ * **This is the one place the taxonomy grows**, and it grows at the desk by a
+ * deliberate press. The phone said a word; nothing was made by saying it.
+ */
+export interface GroupOffer {
+  /** Null where the press cannot be made; `why` says so. */
+  parentId: ResearchCategoryId | null;
+  /** The folder that already holds this group, where there is one. */
+  existingId: ResearchCategoryId | null;
+  count: number;
+  /** What the button should say, or the reason there is no button. */
+  why: string;
+}
+
+export const groupOffer = (
+  file: ProjectFile,
+  captures: readonly CaptureItem[],
+  category: string | null,
+  group: string,
+): GroupOffer => {
+  const waiting = captures.filter(
+    (one) =>
+      (one.status === 'pending' || one.status === 'needs_review') &&
+      one.category === category &&
+      plainly(one.subcategory ?? '') === plainly(group),
+  );
+  const folder = folderForCategory(file, category);
+  if (!folder) {
+    // The structural two have no folder on purpose: a note said against a scene
+    // is about the manuscript, and this module may never file into it.
+    return {
+      parentId: null,
+      existingId: null,
+      count: waiting.length,
+      why: `${captureKeyName(category ?? '', null)} notes have no folder — place these by hand`,
+    };
+  }
+  if (waiting.length === 0) {
+    return { parentId: folder.id, existingId: null, count: 0, why: 'Nothing waiting in that group' };
+  }
+  const existing = childNamed(file, folder.id, group);
+  const notes = waiting.length === 1 ? '1 note' : `${waiting.length} notes`;
+  return {
+    parentId: folder.id,
+    existingId: existing?.id ?? null,
+    count: waiting.length,
+    why: existing
+      ? `File ${notes} into ${existing.name}, under ${folder.name}`
+      : `Make ${group} under ${folder.name} and file ${notes} into it`,
+  };
+};
+
+/**
+ * Make the folder a spoken group names, if it is not there already.
+ *
+ * Returns the file and the folder to file into, so the caller can then put each
+ * note through `approveCapture` exactly as a single press does — **one act with
+ * a destination and not a second kind of approval**, which is what keeps a
+ * whole group and one note indistinguishable once they are filed.
+ */
+export const openGroupFolder = (
+  file: ProjectFile,
+  category: string | null,
+  group: string,
+): { file: ProjectFile; categoryId: ResearchCategoryId } => {
+  const folder = folderForCategory(file, category);
+  if (!folder) throw new DomainError('There is nowhere to file that group');
+  const existing = childNamed(file, folder.id, group);
+  if (existing) return { file, categoryId: existing.id };
+  const made = addResearchCategory(file, { name: group.trim(), parentId: folder.id });
+  return { file: made.file, categoryId: made.category.id };
+};
+
 /**
  * What the category the writer spoke reads as, if they spoke one.
  *
@@ -97,21 +205,35 @@ const spokenSuggestion = (file: ProjectFile, capture: CaptureItem): RoutingSugge
   const category = capture.category;
   if (!category) return null;
   const name = capture.subjectName?.trim() ?? '';
+  const said = capture.subcategory?.trim();
 
   if (name.length > 0 && (category === 'character' || category === 'arc')) {
+    /**
+     * **A group narrows a folder; it cannot narrow a person** (§12).
+     *
+     * Driving the walk found the one case where the two things a writer said
+     * pull apart: *dictate group casting* and then *character, Tom*. The name
+     * is the more specific of the two and it is what these branches are for —
+     * a note about somebody goes to them, and a person nobody has recorded is
+     * offered as one. So the person wins, and **the group is said in the
+     * reason** rather than dropped where nobody can see it: a writer who hears
+     * their own word back knows it was heard, and the drag is still there for
+     * filing it the other way.
+     */
+    const aside = said ? ` · you also said ${said}, which does not narrow a person` : '';
     const known = knowsCharacter(file, name);
     if (known) {
       return {
         decision: { kind: 'about_character', characterId: known.id },
         confidence: 1,
-        reason: `You said ${captureKeyName(category, null)} — ${known.name}, who is already in the cast`,
+        reason: `You said ${captureKeyName(category, null)} — ${known.name}, who is already in the cast${aside}`,
       };
     }
     if (category === 'character') {
       return {
         decision: { kind: 'character', name },
         confidence: 1,
-        reason: `You said Character — ${name}, who is not in the cast yet`,
+        reason: `You said Character — ${name}, who is not in the cast yet${aside}`,
       };
     }
   }
@@ -121,6 +243,30 @@ const spokenSuggestion = (file: ProjectFile, capture: CaptureItem): RoutingSugge
     ? researchCategoriesInOrder(file).find((candidate) => candidate.systemKey === key)
     : undefined;
   if (!folder) return null;
+
+  /**
+   * A group the writer said on the phone (§12), which narrows the folder
+   * without replacing it. **It routes there only if the folder is already
+   * there**: making one is an act somebody presses, not something a suggestion
+   * does behind them — so where it is absent the note goes to the category's
+   * own folder and the reason says the word, which is how a writer knows it was
+   * not lost.
+   */
+  const group = said;
+  if (group) {
+    const under = childNamed(file, folder.id, group);
+    return under
+      ? {
+          decision: { kind: 'research', categoryId: under.id },
+          confidence: 1,
+          reason: `You said ${captureKeyName(category, null)}, ${group} — which is already under ${folder.name}`,
+        }
+      : {
+          decision: { kind: 'research', categoryId: folder.id },
+          confidence: 1,
+          reason: `You said ${captureKeyName(category, null)}, ${group} — no ${group} folder yet`,
+        };
+  }
 
   return {
     decision: { kind: 'research', categoryId: folder.id },
@@ -313,6 +459,24 @@ export interface InboxGroup {
   category: string | null;
   name: string;
   captures: CaptureItem[];
+  /**
+   * The same notes divided by the group they were said under (§12).
+   *
+   * **Empty where there is nothing to divide by**, which is the glossary
+   * letters' rule (addendum 20 §17a): a single heading reading *No group* over
+   * everything in a category is a division that divides nothing. `captures`
+   * above stays the whole category either way, so a surface that has never
+   * heard of groups reads exactly as it did.
+   */
+  under: InboxSubgroup[];
+}
+
+/** One spoken group within a category's notes. */
+export interface InboxSubgroup {
+  /** Null for the notes said under no group, which sort last. */
+  group: string | null;
+  name: string;
+  captures: CaptureItem[];
 }
 
 /**
@@ -350,16 +514,58 @@ export const inboxGroups = (
   const rest = seen.filter((key) => !order.includes(key as never)).sort();
 
   const groups: InboxGroup[] = [...known, ...rest]
-    .map((key) => ({
-      category: key,
-      name: captureKeyName(key, format),
-      captures: waiting.filter((one) => one.category === key),
-    }))
+    .map((key) => {
+      const captures = waiting.filter((one) => one.category === key);
+      return { category: key, name: captureKeyName(key, format), captures, under: divide(captures) };
+    })
     .filter((group) => group.captures.length > 0);
 
   const uncategorised = waiting.filter((one) => one.category === null);
   if (uncategorised.length > 0) {
-    groups.push({ category: null, name: 'No category', captures: uncategorised });
+    groups.push({
+      category: null,
+      name: 'No category',
+      captures: uncategorised,
+      under: divide(uncategorised),
+    });
   }
   return groups;
+};
+
+/**
+ * One category's notes by the group they were said under.
+ *
+ * **In the order the notes themselves are in**, which this list has kept newest
+ * first since it was built — so the group somebody was last talking about heads
+ * the category, which is also the one they came to the desk about. Writing
+ * *first said first* here would have been a second ordering inside a list that
+ * already has one, and the test caught it.
+ *
+ * **Nothing at all where no note names one** — see `InboxGroup.under`. One
+ * spelling wins per group for `groupsSaid`' reason on the phone: the desk
+ * should not draw two headings out of *marketing* and *Marketing*.
+ */
+const divide = (captures: readonly CaptureItem[]): InboxSubgroup[] => {
+  const named: { name: string; captures: CaptureItem[] }[] = [];
+  const loose: CaptureItem[] = [];
+  for (const one of captures) {
+    const group = one.subcategory?.trim();
+    if (!group) {
+      loose.push(one);
+      continue;
+    }
+    const found = named.find((candidate) => plainly(candidate.name) === plainly(group));
+    if (found) found.captures.push(one);
+    else named.push({ name: group, captures: [one] });
+  }
+  if (named.length === 0) return [];
+  const out: InboxSubgroup[] = named.map((one) => ({
+    group: one.name,
+    name: one.name,
+    captures: one.captures,
+  }));
+  // Last, because a note nobody grouped has no place among the ones somebody
+  // did — `arcBoard`'s split, and the graveyard's orphans.
+  if (loose.length > 0) out.push({ group: null, name: 'No group', captures: loose });
+  return out;
 };
