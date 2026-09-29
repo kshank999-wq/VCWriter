@@ -72,6 +72,8 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
   const [naming, setNaming] = useState(false);
   /** Which draft is being read beside the one being written; null for none. */
   const [comparing, setComparing] = useState<string | null>(null);
+  /** Where the writing screen's own tools go — see the slot below. */
+  const [tools, setTools] = useState<HTMLDivElement | null>(null);
   const [fromCopy, setFromCopy] = useState(false);
   const [name, setName] = useState('');
   const [zoom, setZoom] = usePreference('writerZoom', 1);
@@ -271,6 +273,17 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
         </form>
       ) : null}
 
+      {/* The writing screen's own tools, off the paper (§8c, from Ken: *move
+          the dictate button to just below where it says in script… but off of
+          the page. I don't want distractions when people are writing*).
+
+          It is a **slot** rather than a second dictation control: `BeatBody`
+          still owns every part of hearing and laying words in, and renders its
+          button through here, so there is one implementation standing in the
+          chrome instead of on the manuscript. Where nothing is put in it the
+          strip collapses to nothing. */}
+      <div className="writer-tools" ref={setTools} />
+
       <div className={comparing !== null ? 'writer-body comparing' : 'writer-body'}>
         {/* The page itself, at the size it prints, scaled by the zoom. */}
         <div className="writer-sheet" style={{ '--page-zoom': zoom } as React.CSSProperties}>
@@ -283,6 +296,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             onActivate={() => onSelect?.(beat.id)}
             // One beat, being written: the place dictation belongs (spec §9).
             dictation
+            dictationSlot={tools}
           />
         </div>
 

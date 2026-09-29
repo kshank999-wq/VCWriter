@@ -540,6 +540,45 @@ The lesson is small and general: **a function that normalises has to be safe to
 run twice**, because the thing that runs it twice is not the code that was being
 looked at when it was written.
 
+### 8c. Off the page altogether
+
+From Ken, after using §8a: *move the dictate button to just below where it says
+in script. And you can make the box white, with black text instead, but off of
+the page. I don't want distractions when people are writing.*
+
+§8a moved the instructions into a tooltip and was still wrong about the button.
+It found a corner of the **paper**, and the paper is the one surface in this
+program that should hold nothing but somebody's words. Four arrangements were
+driven in all — sticky at the foot, a page's worth of column height pushing it
+down, the sheet's top margin, and this — and the first three differ only in
+*where on the manuscript* the control sat. **The question was never which
+corner; it was whether it belonged on the page at all.** It does not: it is a
+tool of the writing screen, like the draft picker and *In script*, and it
+belongs in the chrome with them.
+
+So `writer-tools` is a strip between the bar and the sheet, right-aligned under
+*In script*, empty and of no height until something is put in it.
+
+**It is a slot, never a second control** (`dictationSlot` on `BeatBody`). Every
+part of hearing, reading what was meant and laying the words in stays exactly
+where it was; what moves is where the button is *drawn*, through a portal into
+the node the surface supplies. A screen that built its own Dictate in the bar
+would be a second answer to *is it listening*, free to disagree with the first
+the moment either changed. Given no slot it draws in place, which is what any
+other surface gets.
+
+White with black text, which is Ken's: the same paper as the page it works on,
+so it reads as belonging to the writing without being in it. **Listening says
+so inside the box** — a red microphone and a red word — rather than by
+repainting it, a control that changes colour being the sort of movement this
+was taken off the page to avoid.
+
+The slot earned its own test for the reason it is worth having: it is the one
+part of this that can fail silently. A button that never arrives because the
+node was not passed down looks precisely like dictation not being there at all,
+which is §15a's lesson — a gated control's absence reads as a decision rather
+than as a fault.
+
 ## 9. What this addendum deliberately does not do
 
 - It does not restate §12's nine exclusions. They are Ken's, they are clear, and

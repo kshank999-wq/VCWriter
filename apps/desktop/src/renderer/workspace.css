@@ -2473,39 +2473,47 @@ input[type='color'].swatch {
    It is **sticky at the foot of the writing column** rather than a paragraph
    at the end of it: in the corner wherever the writer has scrolled to, taking
    one line of height instead of four, and out of the way of the words. */
-/* **In the top corner of the paper**, out of the flow entirely.
+/* The writing screen's tools, between the bar and the paper (§8c, from Ken:
+   *move the dictate button to just below where it says in script… but off of
+   the page. I don't want distractions when people are writing*).
 
-   Two arrangements were driven before this one. Sticky at the foot put it an
-   inch under the first line on a short beat rather than in any corner; giving
-   the column a page's height to push it down stretched the empty-state button
-   into a block half the sheet tall, the column being a grid whose one row then
-   filled the track. The sheet's top inch is margin — blank paper above the
-   first line — so the button stands there: always in the same place, always
-   visible, and never moving as the writing grows. */
+   **Off the manuscript entirely** — three arrangements were driven before this
+   one, and every one of them was still on the page. Sticky at the foot put it
+   an inch under the first line on a short beat; giving the column a page's
+   height to push it down stretched the empty-state button into a block half
+   the sheet tall; standing it in the sheet's top margin was in the corner and
+   still on the paper. What a writer is looking at while writing should be
+   their words, so the tool belongs in the chrome with the draft picker and
+   *In script*, and the strip is empty — and takes no height — where nothing is
+   put in it. */
+.writer-tools {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  background: var(--ink);
+}
+
+.writer-tools:not(:empty) {
+  padding-top: 8px;
+}
+
 .dictation {
-  position: absolute;
-  top: calc(0.28in * var(--page-zoom, 1));
-  right: calc(0.5in * var(--page-zoom, 1));
-  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  pointer-events: none;
-  /* It sits inside the page column, which is set at the manuscript's own type
-     size — without this it is as large as the screenplay. */
+  /* Off the manuscript, so it takes the interface's type rather than the
+     screenplay's. */
   font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 12px;
   line-height: 1.5;
 }
 
-/* Only the controls take the pointer, so the corner it floats over is still
-   the manuscript: a writer clicking beside the button lands in their words. */
-.dictation > * {
-  pointer-events: auto;
-}
-
+/* White with black text, which is Ken's: it is the same paper as the page it
+   works on, so it reads as belonging to the writing without being *in* it. */
 .dictate-toggle {
   display: inline-flex;
   align-items: center;
@@ -2514,28 +2522,26 @@ input[type='color'].swatch {
   padding: 0 11px;
   font-size: 12px;
   border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--panel-2);
-  color: var(--muted);
+  border: 1px solid #c9c4b8;
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow: none;
 }
 
-.dictate-toggle:hover:not(:disabled) {
-  color: var(--text);
-  border-color: var(--gold-deep, var(--gold));
-  background: var(--panel-2);
+.dictate-toggle:hover {
+  background: #ffffff;
+  color: #1a1a1a;
+  border-color: var(--gold);
 }
 
-/* Listening is the one state that must read from across the room. */
+/* Listening is the one state that must read from across the room — and it
+   says so **in the box** rather than by repainting it, a control that changes
+   colour being the sort of movement this was moved off the page to avoid. */
 .dictate-toggle.on,
 .dictate-toggle.on:hover {
-  color: var(--bg);
-  border-color: var(--gold);
-  background: var(--gold);
-}
-
-.dictate-toggle:disabled {
-  opacity: 0.7;
-  cursor: help;
+  background: #ffffff;
+  color: #b3261e;
+  border-color: #b3261e;
 }
 
 .dictation .muted {
@@ -3020,7 +3026,6 @@ dialog.writer-dialog::backdrop {
    paper. The zoom scales the whole page rather than the text alone, so what
    is on screen stays a page and never becomes a wider one. */
 .writer-sheet {
-  position: relative;
   --page-zoom: 1;
   width: calc(8.5in * var(--page-zoom));
   max-width: 100%;

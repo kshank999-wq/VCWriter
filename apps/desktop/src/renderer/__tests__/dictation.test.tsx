@@ -168,6 +168,45 @@ describe('dictating a scene', () => {
     expect(screen.getByRole('button', { name: 'Dictate' })).toBeTruthy();
   });
 
+  it('draws into the slot the surface gives it, and nowhere on the page', () => {
+    // §8c, from Ken: *move the dictate button to just below where it says in
+    // script… but off of the page. I don't want distractions when people are
+    // writing.* The writing screen hands `BeatBody` somewhere better than the
+    // manuscript to put it, and the control goes there whole — one
+    // implementation moved, never a second one built in the chrome.
+    //
+    // Worth its own test because the slot is the one part of this that can
+    // fail silently: a button that never arrives looks exactly like dictation
+    // not being there at all.
+    function Slotted({ initial }: { initial: ProjectFile }) {
+      const [file, setFile] = useState(initial);
+      const [slot, setSlot] = useState<HTMLDivElement | null>(null);
+      return (
+        <>
+          <div data-testid="tools" ref={setSlot} />
+          <div data-testid="paper">
+            <BeatBody
+              file={file}
+              beat={file.beats[0]!}
+              onUpdate={(mutate) => setFile((current) => mutate(current))}
+              dictation
+              dictationSlot={slot}
+            />
+          </div>
+        </>
+      );
+    }
+
+    render(<Slotted initial={started()} />);
+    const button = screen.getByRole('button', { name: 'Dictate' });
+    expect(screen.getByTestId('tools').contains(button)).toBe(true);
+    expect(screen.getByTestId('paper').contains(button)).toBe(false);
+    // And it is the same working control, not a decoration in the bar.
+    fireEvent.click(button);
+    say('Scene heading. Interior kitchen, night.');
+    expect(written()).toEqual([['scene_heading', 'Interior kitchen, night.']]);
+  });
+
   it('is a toggle with the instructions in its tooltip, not on the page', () => {
     // From Ken: *a button in the corner that you can turn on and off, with a
     // little microphone that says dictate… when you hold your cursor over it,

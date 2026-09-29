@@ -736,6 +736,31 @@ push live; the build takes a minute or two.
   anybody meant. The general lesson: **a function that normalises has to be safe
   to run twice**, because the thing that runs it twice is never the code being
   looked at when it was written.
+  **§8c is off the page altogether**, from Ken after using §8a (*move the
+  dictate button to just below where it says in script… but off of the page. I
+  don't want distractions when people are writing*). §8a moved the instructions
+  into a tooltip and was still wrong about the button: it found a corner of the
+  **paper**, and the paper is the one surface in this program that should hold
+  nothing but somebody's words. Four arrangements were driven in all and the
+  first three differ only in *where on the manuscript* it sat — **the question
+  was never which corner, it was whether it belonged on the page at all**. It
+  does not: it is a tool of the writing screen like the draft picker and *In
+  script*, so `writer-tools` is a strip between the bar and the sheet,
+  right-aligned under *In script*, empty and of no height until something is
+  put in it. **It is a slot, never a second control** (`dictationSlot` on
+  `BeatBody`): hearing, reading what was meant and laying the words in all stay
+  where they were, and only where the button is *drawn* moves, through a portal
+  into the node the surface supplies — a bar that built its own Dictate would be
+  a second answer to *is it listening*, free to disagree the moment either
+  changed; given no slot it draws in place, which is what every other surface
+  gets. White with black text (Ken's): the same paper as the page it works on,
+  so it belongs to the writing without being in it, and **listening says so
+  inside the box** — a red microphone and a red word — rather than by repainting
+  it, a control that changes colour being the movement this was taken off the
+  page to avoid. The slot has its own test because it is the one part that can
+  **fail silently**: a button that never arrives because the node was not passed
+  down looks precisely like dictation not being there at all, which is addendum
+  20 §15a's lesson.
   `addendum-10-book-index.md` is the back-of-book index, from Ken's ask for
   chapter pages that carry a graphic *"but it goes into an Index"* with the page
   numbers updating themselves. **Built.** Two of the three things he asked for

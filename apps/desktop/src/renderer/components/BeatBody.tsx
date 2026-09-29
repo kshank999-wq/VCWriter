@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ContextMenu, type MenuEntry } from './ContextMenu';
 import {
   dictationKind,
@@ -142,6 +143,17 @@ interface BeatBodyProps {
    * in its own footer instead.
    */
   dictation?: boolean;
+  /**
+   * Where to draw the Dictate button, when the surface has somewhere better
+   * for it than the manuscript (§8c, from Ken).
+   *
+   * **A slot, never a second control.** Everything about hearing and laying
+   * words in stays here; only where the button is *drawn* moves, so the writing
+   * screen can stand it in its own chrome — off the paper — without this
+   * component learning what a beat dialog is. Absent, it draws in place, which
+   * is what any other surface gets.
+   */
+  dictationSlot?: HTMLElement | null;
 }
 
 const MARK_KEYS: Record<string, InlineMark> = { b: 'bold', i: 'italic', u: 'underline' };
@@ -233,6 +245,7 @@ export function BeatBody({
   only = null,
   readOnly = false,
   dictation = false,
+  dictationSlot = null,
 }: BeatBodyProps) {
   const format = file.project.format;
   const layout = layoutForFile(file);
@@ -999,8 +1012,10 @@ export function BeatBody({
           how to use a tool they may never press. What a writer needs on the
           page is a way in and a light that says whether it is listening;
           everything else is something you go and look for, once. */}
-      {dictation && !readOnly ? (
-        <div className="dictation">
+      {dictation && !readOnly
+        ? (() => {
+            const control = (
+              <div className="dictation">
           {/* **Absent rather than greyed** where the app cannot hear for
               itself: a disabled Dictate is a control that can only refuse. One
               short line stands in its place, in the same corner, with the rest
@@ -1024,10 +1039,14 @@ export function BeatBody({
 
           {/* What was heard, and anything that went wrong, still say so — a
               recogniser running silently is the one state that needs words. */}
-          {heard.length > 0 ? <span className="dictation-heard">{heard}</span> : null}
-          {voiceNote ? <span className="error small">{voiceNote}</span> : null}
-        </div>
-      ) : null}
+                {heard.length > 0 ? <span className="dictation-heard">{heard}</span> : null}
+                {voiceNote ? <span className="error small">{voiceNote}</span> : null}
+              </div>
+            );
+            // The slot when the surface gave one, in place when it did not.
+            return dictationSlot ? createPortal(control, dictationSlot) : control;
+          })()
+        : null}
 
       {caught ? (
         <ContextMenu
