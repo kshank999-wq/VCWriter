@@ -109,3 +109,18 @@ export const correctNote = async (
 
 export const forgetNote = async (noteId: string): Promise<Answer<{ deleted: boolean }>> =>
   ask(`/api/notes/${noteId}`, { method: 'DELETE' });
+
+/**
+ * Delete the account this phone is signed into (addendum 27 §12).
+ *
+ * **In the app rather than at a link to the website**, which is what the App
+ * Store asks for and is also the only honest arrangement: an app that can
+ * write your notes to a server and cannot take them off it is asking you to
+ * go and find another device to be believed on.
+ *
+ * It is the same route the account page presses, which is the whole reason §2
+ * made `currentUser()` read a bearer token — one answer to *what does deleting
+ * mean* rather than a shorter one for the phone.
+ */
+export const deleteAccount = async (confirm: string): Promise<Answer<{ deleted: boolean }>> =>
+  ask('/api/account/delete', { method: 'POST', body: JSON.stringify({ confirm }) });

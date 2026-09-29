@@ -58,7 +58,11 @@ export async function SiteChrome({ children }: { children: React.ReactNode }) {
       <footer className="site-footer">
         <div className="shell">
           <p>
-            © {new Date().getFullYear()} {SITE_NAME}. Windows 10, Windows 11 and macOS.
+            © {new Date().getFullYear()} {SITE_NAME}. Windows 10, Windows 11 and macOS.{' '}
+            {/* In the footer rather than the nav: both app stores require a
+                privacy policy at a public URL, and a footer is where anybody
+                looking for one looks. */}
+            <Link href="/privacy">Privacy</Link>
           </p>
         </div>
       </footer>

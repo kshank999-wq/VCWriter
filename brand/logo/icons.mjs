@@ -15,6 +15,20 @@
  * cut any shape out of it, guaranteeing only a circle of 80% diameter. Square
  * art has to fit inside that circle, so it is drawn at 290px on a black 512.
  *
+ * The phone application's adaptive icon is that argument again with Android's
+ * own number: a launcher may cut any shape it likes out of the 108dp canvas
+ * and guarantees only the central 72dp circle, so a square that survives every
+ * mask has a side of 72/sqrt(2) — 0.4714 of the canvas. It is smaller than a
+ * logo usually sits on a launcher, and that is the trade this artwork asks
+ * for: the gold frame *is* the mark, so a corner clipped off it is worse than
+ * a mark drawn small. The foreground is transparent outside the art and the
+ * black comes from `android.adaptiveIcon.backgroundColor`, which is what the
+ * launcher animates against.
+ *
+ * The iOS icon is written with an alpha channel and the App Store does not
+ * take one; Expo's prebuild generates the `AppIcon.appiconset` from this with
+ * transparency removed, and that generated set is what is submitted.
+ *
  * Outputs are committed; re-run after replacing the source. The preview strip
  * is written to PREVIEW_DIR when set, so the result can be judged at the
  * sizes it will actually be seen at — which is the only honest test.
@@ -53,7 +67,15 @@ const draw = (size, mode) =>
       stage.width = image.width;
       stage.height = image.height;
       stage.getContext('2d').drawImage(image, 0, 0);
-      const target = mode === 'tile' ? Math.round(size * 0.6836) : mode === 'safeCircle' ? Math.round(size * 0.566) : size;
+      const share =
+        mode === 'tile'
+          ? 0.6836
+          : mode === 'safeCircle'
+            ? 0.566
+            : mode === 'adaptive'
+              ? 0.4714
+              : 1;
+      const target = Math.round(size * share);
       while (stage.width / 2 > target) {
         const next = document.createElement('canvas');
         next.width = Math.round(stage.width / 2);
@@ -70,7 +92,13 @@ const draw = (size, mode) =>
       const context = canvas.getContext('2d');
       context.imageSmoothingQuality = 'high';
 
-      if (mode === 'tile') {
+      if (mode === 'adaptive') {
+        // Transparent outside the art: the launcher fills the shape it cuts
+        // with `adaptiveIcon.backgroundColor`, and a black square drawn here
+        // would be a second answer to what that colour is.
+        const inset = (size - target) / 2;
+        context.drawImage(stage, inset, inset, target, target);
+      } else if (mode === 'tile') {
         // Apple's grid: the tile is 824/1024 of the canvas, corner radius ~185/1024.
         const tile = size * (824 / 1024);
         const radius = size * (185 / 1024);
@@ -115,6 +143,16 @@ const OUTPUTS = [
   // VC Writer Notes, the phone app, via its web manifest.
   { out: 'apps/web/public/notes-icon-512.png', size: 512, mode: 'square' },
   { out: 'apps/web/public/notes-icon-maskable-512.png', size: 512, mode: 'safeCircle' },
+  // VC Writer Notes on the App Store and Google Play. Expo generates every
+  // size either platform asks for from these three, so these are the only
+  // ones committed: a folder of twenty cut sizes is twenty things to keep in
+  // step with the art.
+  { out: 'apps/mobile/assets/icon.png', size: 1024, mode: 'square' },
+  { out: 'apps/mobile/assets/adaptive-icon.png', size: 1024, mode: 'adaptive' },
+  // The splash. Full-bleed art on the near-black ground the app is drawn in,
+  // so what a writer sees while it starts is the gold frame standing on the
+  // same ink the first screen is painted on.
+  { out: 'apps/mobile/assets/splash-icon.png', size: 1024, mode: 'square' },
 ];
 
 for (const entry of OUTPUTS) await save(entry.out, await draw(entry.size, entry.mode));

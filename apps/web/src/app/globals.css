@@ -1974,3 +1974,39 @@ p.room-stamp {
 .hero.hero-compact::before {
   margin-bottom: 16px;
 }
+
+/* A page of prose the law asks for: the privacy policy (addendum 27 §11).
+   Nothing else on this site is a long document, so it gets a measure of its
+   own rather than the marketing pages' full-width sections — 34em is about
+   70 characters, which is where a paragraph stops being work to read. */
+.prose {
+  max-width: 34em;
+  /* Ranged left, sharing the hero's edge. Centring it in the shell was the
+     first draft and the screen said no: the title stood at the left margin
+     with every paragraph starting 220px further in, which reads as two pages
+     rather than as one document. */
+  margin: 0 0 64px;
+}
+
+.prose h2 {
+  margin: 40px 0 12px;
+}
+
+/* The hero above has already left the space. */
+.prose > h2:first-child {
+  margin-top: 0;
+}
+
+.prose p,
+.prose li {
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.prose ul {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding-left: 20px;
+}

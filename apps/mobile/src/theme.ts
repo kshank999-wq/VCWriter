@@ -22,6 +22,8 @@ export const colour = {
   muted: '#a3946f',
   /** Listening, and only listening: red is what the eye finds without reading. */
   live: '#c4432f',
+  /** The website's own `--red`, for the one control that cannot be undone. */
+  red: '#8b1c1c',
 } as const;
 
 export const styles = StyleSheet.create({
@@ -73,6 +75,9 @@ export const styles = StyleSheet.create({
     borderColor: colour.border,
   },
   secondaryText: { color: colour.gold },
+
+  danger: { backgroundColor: colour.red, borderWidth: 1, borderColor: colour.red },
+  dangerText: { color: colour.goldBright },
 
   row: {
     borderWidth: 1,

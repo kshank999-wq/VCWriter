@@ -20,7 +20,14 @@ import { adminClient } from './supabase';
 
 export interface OrderRow {
   id: string;
-  user_id: string;
+  /**
+   * Null once the buyer has deleted their account (migration 0062): the row
+   * stays as the financial record and stops being about a person. Every
+   * customer-shaped reading narrows by `in('user_id', ids)`, so a detached
+   * order is absent from those by construction; the orders list shows it with
+   * no email, which is what it now is.
+   */
+  user_id: string | null;
   status: 'pending' | 'paid' | 'refunded' | 'failed' | 'disputed';
   amount_cents: number;
   currency: string;
@@ -189,7 +196,10 @@ export const customerSummaries = (
   activations: readonly ActivationRow[],
 ): CustomerSummary[] => {
   const ordersByUser = new Map<string, number>();
-  for (const order of orders) ordersByUser.set(order.user_id, (ordersByUser.get(order.user_id) ?? 0) + 1);
+  for (const order of orders) {
+    if (!order.user_id) continue;
+    ordersByUser.set(order.user_id, (ordersByUser.get(order.user_id) ?? 0) + 1);
+  }
 
   const licenseOwner = new Map<string, string>();
   const licensesByUser = new Map<string, LicenseRow[]>();
@@ -305,7 +315,10 @@ export const loadDashboard = async (now = new Date()): Promise<DashboardData> =>
 
   return {
     metrics,
-    recentOrders: recentOrderRows.map((order) => ({ ...order, email: emailMap.get(order.user_id) ?? null })),
+    recentOrders: recentOrderRows.map((order) => ({
+      ...order,
+      email: order.user_id ? (emailMap.get(order.user_id) ?? null) : null,
+    })),
     recentFailedEmails: recentFailedRows.map((event) => ({
       ...event,
       email: event.user_id ? (emailMap.get(event.user_id) ?? null) : null,
@@ -355,7 +368,7 @@ export const loadOrders = async (options: { status?: OrderRow['status']; limit?:
   const { data } = await query;
   const rows = (data ?? []) as OrderRow[];
   const emailMap = await emailsFor(rows.map((row) => row.user_id));
-  return rows.map((row) => ({ ...row, email: emailMap.get(row.user_id) ?? null }));
+  return rows.map((row) => ({ ...row, email: row.user_id ? (emailMap.get(row.user_id) ?? null) : null }));
 };
 
 export type EmailEventWithEmail = EmailEventRow & { email: string | null };

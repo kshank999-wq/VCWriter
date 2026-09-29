@@ -5,6 +5,7 @@ import { DownloadButton } from './download-button';
 import { ResendLicense } from './resend-license';
 import { Devices } from './devices';
 import { SetPassword } from './set-password';
+import { DeleteAccount } from './delete-account';
 
 export const metadata: Metadata = { title: 'My account' };
 export const dynamic = 'force-dynamic';
@@ -162,6 +163,10 @@ export default async function AccountPage() {
           </p>
         </section>
       ) : null}
+
+      {/* Last on the page on purpose: the one act here that cannot be undone,
+          below everything somebody came to do. */}
+      <DeleteAccount email={user.email ?? ''} />
     </>
   );
 }

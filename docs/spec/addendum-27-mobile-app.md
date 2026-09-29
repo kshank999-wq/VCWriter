@@ -185,5 +185,152 @@ is committed.
 
 Deliberately absent for now, and named rather than half-built: a wake phrase
 (*Hey VC Writer*), which needs always-on audio and is a different permission
-conversation with both stores; notifications; and the app's own icon and
-splash, which are a designer's job rather than a placeholder's.
+conversation with both stores; and notifications.
+
+---
+
+## 10. The bundler, in a workspace
+
+`metro.config.js` exists because **a build that cannot resolve the domain is
+not store-ready however finished the screens are**, and Metro's defaults
+assume one `node_modules` under one project. Three lines answer it: the
+repository root joins `watchFolders`, two directories become the only two
+that may resolve a package, and `disableHierarchicalLookup` is turned on —
+the one that is easy to leave out and the reason this is a file rather than a
+field. pnpm's store keeps a package's own dependencies under
+`.pnpm/<name>@<version>/…`, so walking up from a file to find `node_modules`
+finds the **wrong copy of React**, which fails at runtime rather than at
+build and reads as the new architecture being broken.
+
+`@vcwriter/domain` is consumed as its built `dist`, so `eas-build-post-install`
+builds it before the bundler starts. The alternative — pointing `paths` at the
+source — was tried when this app was first written and dragged the eBook
+writer's platform globals into a phone's typecheck, which is the same fault
+one layer up: **a package is consumed the way it is published, or it is not
+one package.**
+
+---
+
+## 11. The icon, and the shape a launcher cuts
+
+`brand/logo/icons.mjs` has cut every application icon from one piece of
+artwork since the desktop shipped, and this adds three entries to its table
+rather than a second cutter — the argument this project makes about screens,
+made about images: two scripts would be two answers to *what does this
+product look like*, free to disagree the first time the art is replaced.
+
+The one decision worth keeping is **the size of the Android adaptive
+foreground**. A launcher may cut any shape it likes out of the 108dp canvas
+and guarantees only the central 72dp circle, so a square that survives every
+mask has a side of 72/√2 — **0.4714 of the canvas**, which is smaller than a
+logo usually sits on a home screen. That is the trade this artwork asks for:
+the gold double frame **is** the mark, so a corner clipped off it is worse
+than a mark drawn small. It is the maskable PWA icon's rule (0.566, from
+Android's 80% promise for that surface) with Android's other number, and the
+two are deliberately different because the two promises are.
+
+The foreground is transparent outside the art and the black comes from
+`adaptiveIcon.backgroundColor`, a black square drawn into the image being a
+second answer to what that colour is. Rendered under a circle, a squircle and
+a square at launcher sizes, the frame survives all three.
+
+The iOS icon is written with an alpha channel, which the App Store does not
+take — and needs no handling here, because Expo's prebuild generates the
+`AppIcon.appiconset` with transparency removed and **that generated set is
+what is submitted**. The splash is the same full-bleed art on `#070604`, the
+ink the first screen is painted in, so what a writer sees while the app
+starts is the frame standing on the ground the app stands on.
+
+---
+
+## 12. The policy, and the deletion that made it true
+
+Both stores refuse a submission without a privacy policy at a public URL, and
+**there was none** — so `/privacy` is new. The stores are why it was written
+this week; they are not why it reads as it does. **A writer's manuscript is
+the most private thing this program will ever hold**, and the question
+somebody asks before dictating a novel into a phone is *who else can read it*
+— so that is answered in the second section, in a sentence, rather than in a
+clause with exceptions after it.
+
+What makes it worth publishing is that **every claim is checkable against the
+code**: the processors are the keys in `lib/env.ts`, the crash report's fields
+are the schema in `api/telemetry` (opt-in, off by default, redacted twice),
+*we do not read your work* is row level security plus the fact that no reading
+in this application takes a manuscript anywhere, and the AI section describes
+the three routes that exist rather than a general permission. A policy that
+claims more than the code does has to be rewritten the first time anybody
+checks.
+
+Then it said somebody could delete their account, **and they could not** —
+which is the half of this section worth writing down, because nothing was
+missing from the application. The database refused. `profiles.id` cascades
+from `auth.users`, so removing the sign-in removes the profile, and both
+`orders.user_id` and `licenses.user_id` referenced that profile **on delete
+restrict**: every customer who had ever bought anything was undeletable, which
+is exactly the set of people most likely to ask. Migration 0062 separates the
+two, and separating them is the whole of it.
+
+**An order outlives the account, because it is a financial record.** It does
+not need a person attached to be one — it carries the amount, the currency,
+the Stripe session, payment intent and customer, and when it was paid, which
+is a complete receipt, and Stripe holds the identity half under its own
+retention. So the column is nullable and the reference is `set null`.
+**A licence goes with the account, because it is an entitlement**: somebody
+who deletes their account has given up the software, and a serial with no
+owner is a row nobody can retrieve and nobody may use. Its activations already
+cascaded from it.
+
+Everything else needed nothing, and one part of that is worth naming:
+addendum 07 §1's rule that **one writer's work is never destroyed by
+another's** had already decided what happens to work contributed to somebody
+else's room — a version's author and a seat's holder set null rather than
+cascading — so a question nobody had asked was answered years before it was.
+It cuts this way too, and is therefore said on the screen before the press
+rather than discovered after it, alongside the receipt.
+
+`POST /api/account/delete` is **one route for both doors**, which is what §2's
+bearer token was for: the account page and the Notes app press the same button
+and there is one answer to *what does deleting mean*. It is one call —
+`auth.admin.deleteUser`, and the cascades do the rest — because writing the
+deletions out would be a second, longer answer to a question the schema
+already answers, and the first table added next month would be the one it
+forgot. The confirmation is the account's **own email address, typed**: a
+boolean is a click, and this is the one act in the product that the graveyard
+cannot take back.
+
+On the phone it is **in the app rather than behind a link to the website**,
+which Apple asks for and which is right for the project's own reason: an
+application that will write your notes to a server and cannot take them off it
+is asking to be trusted on somebody else's screen. Building it found that the
+app had no way to sign out either, and no way to see which account it was
+signed into — three things a store requires and the app could do none of them,
+all of them now behind **Projects ▸ Account**.
+
+---
+
+## 13. The listings, and what cannot be made here
+
+`docs/store-listing.md` is every field both consoles ask for, filled in rather
+than described: the name, subtitle, description, keywords, the App Store
+privacy labels row by row, the Play Data safety answers, the content rating,
+the export-compliance answer, and the review notes. It is written as the
+**answer** and not as a draft to be reworded in the console, for the reason a
+second copy is always wrong: the one in the console is the one people read.
+
+Two things in it are honest absences rather than omissions. **The screenshots
+cannot be produced here and must not be faked** — both stores require shots of
+the app as it actually runs, a mock-up is a rejection, and more to the point
+it is a lie about what a writer will see; the document names the five to
+capture, in the order somebody meets them, and the sizes each store wants.
+And **the feature graphic** wants designing, which is `brand/artboards.html`'s
+job.
+
+`eas.json` is three build profiles and a **deliberately empty `submit` block**:
+`eas submit` asks for an Apple ID and a Play service account at the prompt and
+stores nothing, which is the only arrangement in which *no credential belongs
+in any repository* is enforced by the file rather than remembered. The two
+Supabase values are EAS environment variables, named in `apps/mobile/README.md`
+with the commands — the anon key is publishable by design, and is still read
+from the environment so that rotating it is a dashboard change rather than a
+release.

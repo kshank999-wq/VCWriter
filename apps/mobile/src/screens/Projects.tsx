@@ -48,9 +48,11 @@ const FORMATS: ProjectFormat[] = [
 export function Projects({
   chosenId,
   onChoose,
+  onAccount,
 }: {
   chosenId: string | null;
   onChoose(project: ProjectSummary): void;
+  onAccount(): void;
 }) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [shelf, setShelf] = useState<PhoneShelf>(emptyShelf());
@@ -236,6 +238,13 @@ export function Projects({
       )}
 
       {off ? <Text style={styles.muted}>{off}</Text> : null}
+
+      {/* The way to the account, from the one screen the app always opens on
+          (addendum 27 §12). Signing out and deleting the account both live
+          behind it; neither was reachable from the app at all before. */}
+      <Pressable style={[styles.button, styles.secondary]} onPress={onAccount}>
+        <Text style={[styles.buttonText, styles.secondaryText]}>Account</Text>
+      </Pressable>
     </ScrollView>
   );
 }

@@ -32,12 +32,16 @@ push live; the build takes a minute or two.
   create notes as an app for the apple app store and android*. It has **never
   been run on a device** — this container is Linux, an iOS build wants macOS or
   a cloud builder — so it typechecks, its tests pass and its dependencies
-  resolve, and nothing more than that is claimed.
+  resolve, and nothing more than that is claimed. `README.md` there is the
+  build, and `docs/store-listing.md` is every field both consoles ask for plus
+  what only Ken can do. **No credential, key, certificate or keystore belongs
+  in this repository**, which is why `eas.json`'s `submit` block is empty and
+  the two Supabase values are EAS environment variables.
 - `packages/supabase/migrations` — apply new ones to the live project as
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0061.
+  reads like it does. Applied through 0062.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
   the windowing, and the thing to know is that **every room goes to a second
@@ -1046,8 +1050,61 @@ push live; the build takes a minute or two.
   ending at an empty list. §9 is what is honestly not done: **it has never been
   run on a device**, the store accounts are Ken's to make (Apple $99/yr, Play
   $25 plus twelve testers for fourteen days on a new personal account), **no
-  signing key belongs in the repository**, and a wake phrase, notifications and
-  the icon are named rather than half-built.
+  signing key belongs in the repository**, and a wake phrase and notifications
+  are named rather than half-built.
+  **§10–§13 are store-ready**, and the half worth keeping is that two of the
+  four found something missing rather than something to configure. **§10** is
+  `metro.config.js`: a build that cannot resolve the domain is not store-ready
+  however finished the screens are, and the line easy to leave out is
+  `disableHierarchicalLookup` — pnpm keeps a package's own dependencies under
+  `.pnpm/…`, so walking up to find `node_modules` finds the **wrong copy of
+  React**, which fails at runtime and reads as the new architecture being
+  broken; `eas-build-post-install` builds the domain, because **a package is
+  consumed the way it is published or it is not one package**. **§11** is three
+  entries added to `brand/logo/icons.mjs` rather than a second cutter, and one
+  number: an Android launcher may cut any shape out of the 108dp canvas and
+  guarantees only the central 72dp circle, so a square that survives every mask
+  has a side of **0.4714** of it — smaller than a logo usually sits, and the
+  trade this artwork asks for, the gold frame *being* the mark, so a clipped
+  corner is worse than a mark drawn small (the maskable PWA icon's 0.566 is the
+  same rule against a different promise, which is why the two differ). The
+  foreground is transparent and the black is `adaptiveIcon.backgroundColor`, a
+  black square in the image being a second answer to what that colour is; the
+  iOS alpha channel needs no handling because Expo's prebuild strips it and
+  **the generated set is what is submitted**. **§12** is the privacy policy,
+  which did not exist — written the way it is not because the stores ask but
+  because **a writer's manuscript is the most private thing this program will
+  ever hold**, so *who else can read it* is answered in the second section in a
+  sentence; what makes it worth publishing is that **every claim is checkable
+  against the code**. Then it said an account could be deleted **and it could
+  not**, with nothing missing from the application: `profiles` cascades from
+  `auth.users` while `orders.user_id` and `licenses.user_id` referenced it **on
+  delete restrict**, so **every customer who had ever bought anything was
+  undeletable** — which is exactly the set most likely to ask. Migration 0062
+  separates them on the distinction that decides it: **an order outlives the
+  account because it is a financial record** (and needs no person attached to
+  be one — the amount, the Stripe ids and the date are a complete receipt), so
+  `set null`; **a licence goes with the account because it is an entitlement**,
+  so cascade. Everything else needed nothing, and addendum 07 §1's *one
+  writer's work is never destroyed by another's* turns out to have answered
+  what happens to work in somebody else's room years before the question — so
+  that, and the receipt, are **said before the press** rather than found after
+  it. `POST /api/account/delete` is **one route for both doors** (§2's bearer
+  token's whole point) and **one call**, the cascades doing the rest because
+  writing the deletions out would be a second answer the first new table would
+  forget; the confirmation is the **email typed**, this being the one act the
+  graveyard cannot take back. On the phone it is **in the app rather than a
+  link**, and building it found the app had no sign-out and nothing saying
+  which account it was in — three things a store requires and it could do none,
+  now behind **Projects ▸ Account**. **§13** is `docs/store-listing.md`, every
+  field filled in rather than described (the copy is the **answer**, a listing
+  typed twice being two listings), plus two honest absences: the
+  **screenshots cannot be made here and must not be faked**, a mock-up being a
+  rejection and a lie about what a writer will see, and the feature graphic
+  wants designing. `eas.json` has a **deliberately empty `submit` block** —
+  `eas submit` asks at the prompt and stores nothing, which is the only
+  arrangement where *no credential belongs in any repository* is enforced by
+  the file rather than remembered.
   `addendum-10-book-index.md` is the back-of-book index, from Ken's ask for
   chapter pages that carry a graphic *"but it goes into an Index"* with the page
   numbers updating themselves. **Built.** Two of the three things he asked for
