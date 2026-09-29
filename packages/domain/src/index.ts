@@ -112,6 +112,7 @@ export * from './sculptor-map.js';
 export * from './book-index.js';
 export * from './note-sorter.js';
 export * from './note-sorter-send.js';
+export * from './note-sorter-suggest.js';
 export * from './entities/note-sorter.js';
 export * from './outline.js';
 export * from './outline-binding.js';

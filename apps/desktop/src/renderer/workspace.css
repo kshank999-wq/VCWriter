@@ -19068,3 +19068,141 @@ dialog.designed-page-dialog[open] {
     flex-basis: 260px;
   }
 }
+
+/* ------------------------------------- Auto-sort suggestions (addendum 26 §14)
+ *
+ * Under the stacks, so approving a row greys the passage on the left an inch
+ * away — which is the whole of why the panel is trustworthy rather than merely
+ * clever.
+ */
+
+/* **The list scrolls and the panel does not**, so the head and the Approve
+   button are always on the screen. Driving it found Approve below the panel's
+   own scroll — the primary control of the section reachable only by a scroll
+   nothing announced, which is addendum 20 §15c's fault in a smaller box. */
+.ns-suggest {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  border-top: 1px solid var(--border);
+  padding-top: 9px;
+  max-height: 46%;
+  overflow: hidden;
+}
+
+.ns-suggest-rows {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.ns-suggest-head,
+.ns-suggest-acts,
+.ns-bring-back {
+  flex: 0 0 auto;
+}
+
+.ns-bring-back {
+  align-self: flex-start;
+  color: var(--gold);
+}
+
+.ns-suggest-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ns-suggest-head h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ns-switch {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.ns-suggest-rows,
+.ns-ideas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ns-suggest-rows > li {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 5px 6px;
+  background: var(--panel-2);
+}
+
+.ns-suggest-row {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+
+.ns-suggest-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Two lines of the passage: enough to recognise, never enough to read instead
+   of the page on the left. */
+.ns-suggest-passage {
+  font-family: var(--reading, Georgia, serif);
+  font-size: 12.5px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ns-suggest-into {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  color: var(--gold);
+  white-space: nowrap;
+  align-self: center;
+}
+
+.ns-suggest-acts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ns-ideas > li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Suggest Destination, beside the live selection in the footer. */
+.ns-looks {
+  color: var(--gold-bright);
+  padding: 1px 6px;
+}

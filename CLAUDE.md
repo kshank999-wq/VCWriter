@@ -3884,10 +3884,69 @@ push live; the build takes a minute or two.
   absent with the reason said, and **Merge into… is Delete with a different
   target**, `removeSortCategory` taking *where the cards go*. **Nothing is
   created by looking** (addendum 25 §4f): a project with no sitting opens on
-  Gather and the first thing put in begins it. §15 names what is deliberately
-  absent — the AI suggestions of §15 of the handoff, undo in a popped-out room
-  (which is every room's and belongs to addendum 02 §8), and dragging a card
-  across to another category.
+  Gather and the first thing put in begins it. **§14 is the auto-sort
+  suggestions**, from Ken straight after: spec §15's three functions — Suggest
+  Categories, Suggest Destination, Auto-Sort Suggestions — as **one scorer**,
+  and the divergence worth keeping is that the scorer is a **reading rather
+  than a model call**. The argument is not thrift: for *this* question the
+  writer has already given the answer, since asking a model *which of these six
+  categories does this paragraph belong in* gets general knowledge about the
+  words while asking the sitting gets **what this writer did with these
+  categories half an hour ago** — they made *Dialogue* and filed three passages
+  in it, so the fourth that talks the same way belongs there **because of those
+  three**, which a model cannot see and is the only thing worth seeing. Four
+  things follow: it **says why** in something checkable (*1 card uses
+  “villain”, “morning” in Character*, a fact about their own filing, where a
+  category named with no reason is what gets a panel switched off after the
+  second wrong guess); **nothing moves until you approve is true by
+  construction**, there being no suggestion record to write or clean up, so
+  extracting the passage stops it being suggested with nothing run
+  (`coverageOf`'s rule one layer up); it is **testable rather than merely
+  demonstrable** where the AI routes this program has have still never been run
+  live; and it **costs nothing and needs no account**, so there is no cap to hit
+  and no network to be without. A model would be the better tool for exactly
+  one of the three — naming a grouping from unclustered prose — and that is the
+  seam to widen, `suggestCategories` returning names and where they come from
+  being its business alone. A category is taught by its **cards and by its own
+  name, kept apart** (without the name the panel is silent until somebody has
+  done by hand the work it exists to save; without the separation it says *1
+  card uses “dialogue”* about a category nothing is filed in). Whether a row is
+  shown is **a rule rather than a number**, and the first draft had a number: a
+  floor on `strength` is a floor on a **density**, so the same evidence fell
+  below it in a longer paragraph and an obviously-Dialogue paragraph went
+  unoffered at 0.125 while a shorter one cleared at 0.167 — a threshold on a
+  density is a threshold on paragraph length wearing a disguise. `worthSaying`
+  asks about the **evidence**: two words, or one that is the category's own name
+  or that two of its cards share, and in the single-word cases a word no other
+  category knows — both clauses earned on the screen, the first draft having
+  accepted any unique word and duly proposed a paragraph about *revision* for
+  **Character** because one card there happened to contain *write*, which is an
+  accident rather than evidence. Four rules hold the placements: **only what is
+  unsorted** (`piecesOf`, the same reading the greying uses), **a paragraph at a
+  time** (what a writer highlights; half a sentence would make approving worse
+  than doing it by hand), **one category per passage** (two being a question
+  rather than a suggestion), and approving is `extractToCategory` and nothing
+  else, so an approved suggestion is indistinguishable afterwards from a
+  passage dragged across. **Suggest Categories proposes a name and never makes
+  one** — pressing it makes the category **empty**, after which the passages
+  suggest themselves into it, making it *and* filling it being the *silently
+  reorganize* the spec forbids. The panel sits **under the stacks in Sort**
+  rather than in Refine where the handoff draws it, because by the time a
+  writer is refining every card is filed and it would have nothing to say,
+  while here approving a row greys the passage an inch to the left. The
+  **switch is per machine and dismissing is about this minute**. Driving it
+  caught three of one kind: the **dismissal sentence lied** (*nothing here looks
+  enough like any of your categories*, said to somebody who had just dismissed
+  four things that did — `describeSuggestions` is told how many were put aside
+  and there is a way back), **Approve was below the panel's own scroll**
+  (addendum 20 §15c's fault in a smaller box; the list scrolls and the head and
+  acts do not), and the **switch's accessible name was *On*** — addendum 02
+  §4a's switch exactly, *off* meaning nothing on its own and neither does *on*,
+  so it is named for what it switches. A fourth the tests caught and it is the
+  switch being real: turning it off in one test reached every test after it,
+  a preference being per machine and jsdom's storage persisting. §15 names what
+  is still absent — undo in a popped-out room (every room's, and addendum 02
+  §8's) and dragging a card across to another category.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

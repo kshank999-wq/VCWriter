@@ -11,9 +11,11 @@ import {
   extractToCategory,
   outlinesOf,
   researchCategoriesInOrder,
+  sessionCards,
   sortCategories,
   sortingSessions,
   sourcesOf,
+  suggestPlacements,
   unsortedOf,
   type ProjectFile,
 } from '@vcwriter/domain';
@@ -34,7 +36,16 @@ import { ROOM_PANES, paneTitle } from '../panes';
  * (addendum 20 §15c, §16b, §16c).
  */
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  // The suggestions switch is remembered per machine (which is the point), so
+  // a test that turns it off reaches every test after it through storage.
+  try {
+    window.localStorage.clear();
+  } catch {
+    // A private window has none. Nothing here depends on it.
+  }
+});
 
 let latest: ProjectFile | null = null;
 
@@ -142,7 +153,9 @@ describe('the Note Sorter room', () => {
     render(<Harness initial={sorting()} />);
     fireEvent.click(screen.getByRole('tab', { name: '2 Sort' }));
 
-    const stack = screen.getByRole('button', { name: /Dialogue/ });
+    const stack = [...document.querySelectorAll('.ns-stack, .ns-chip')].find((one) =>
+      one.textContent?.includes('Dialogue'),
+    ) as HTMLElement;
     expect(stack.getAttribute('title')).toContain('Highlight a passage');
 
     fireEvent.click(stack);
@@ -231,6 +244,75 @@ describe('the Note Sorter room', () => {
     }
     expect(screen.getByText(/Nothing is ticked/)).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Send to Outliner' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('suggests where the unsorted passages belong, and moves nothing until approved', () => {
+    render(<Harness initial={sorting()} />);
+    fireEvent.click(screen.getByRole('tab', { name: '2 Sort' }));
+
+    // The categories are named Character and Dialogue, and the page has a
+    // paragraph about each — so the panel has something to say from the names
+    // alone, before anything at all has been filed.
+    const before = suggestPlacements(latest!, sortingSessions(latest!)[0]!.id);
+    expect(before.length).toBeGreaterThan(0);
+    expect(screen.getByText(/Nothing moves until you approve/)).toBeTruthy();
+
+    // Every row says why, in a fact about the writer's own categories.
+    const rows = document.querySelectorAll('.ns-suggest-rows > li');
+    expect(rows.length).toBe(before.length);
+    for (const row of rows) expect(row.textContent).toMatch(/is named for|cards? uses?/);
+
+    // Reading it changed nothing.
+    expect(sessionCards(latest!, sortingSessions(latest!)[0]!.id)).toHaveLength(0);
+
+    // Ticking one and approving is the ordinary extraction. The row's own tick,
+    // named for what it would do — the panel's switch is a checkbox too.
+    fireEvent.click(screen.getByRole('checkbox', { name: /^Put “/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Approve 1' }));
+
+    const session = sortingSessions(latest!)[0]!;
+    expect(sessionCards(latest!, session.id)).toHaveLength(1);
+    // And it stops being suggested, nothing having been stored to say so.
+    expect(suggestPlacements(latest!, session.id)).toHaveLength(before.length - 1);
+  });
+
+  it('the panel switches off, and says what it would do rather than going blank', () => {
+    render(<Harness initial={sorting()} />);
+    fireEvent.click(screen.getByRole('tab', { name: '2 Sort' }));
+
+    // Named for what it switches rather than for which way it is turned.
+    const settings = screen.getByRole('checkbox', {
+      name: 'Suggest where unsorted passages belong',
+    }) as HTMLInputElement;
+    expect(settings.checked).toBe(true);
+    fireEvent.click(settings);
+
+    expect(document.querySelectorAll('.ns-suggest-rows > li')).toHaveLength(0);
+    expect(screen.getByText(/Turn it on and the unsorted passages/)).toBeTruthy();
+  });
+
+  it('putting one aside says so rather than claiming nothing matched', () => {
+    render(<Harness initial={sorting()} />);
+    fireEvent.click(screen.getByRole('tab', { name: '2 Sort' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss all' }));
+    expect(document.querySelectorAll('.ns-suggest-rows > li')).toHaveLength(0);
+    // The sentence a writer who has just dismissed things must not be given.
+    expect(screen.queryByText(/looks enough like any of your categories/)).toBeNull();
+    expect(screen.getByText(/put aside for now/)).toBeTruthy();
+    // And there is a way back, dismissing being about this minute.
+    fireEvent.click(screen.getByRole('button', { name: 'Bring them back' }));
+    expect(document.querySelectorAll('.ns-suggest-rows > li').length).toBeGreaterThan(0);
+  });
+
+  it('proposes a new category, makes it empty, and stops proposing it', () => {
+    render(<Harness initial={sorting()} />);
+    fireEvent.click(screen.getByRole('tab', { name: '2 Sort' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Suggest new categories' }));
+
+    // This page has nothing repeated often enough, and the panel says so
+    // rather than offering a guess to fill the space.
+    expect(screen.getByText(/Nothing repeats often enough/)).toBeTruthy();
   });
 
   it('searches the raw notes and the cards together, and goes to each', () => {

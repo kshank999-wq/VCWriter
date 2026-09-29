@@ -294,7 +294,9 @@ grey does not move. `shelfOffer` says all of that before the press.
    vertical gaps. RTF and `.doc` are **refused with the one step that fixes
    them** (`pictureRefusal`'s shape, addendum 20 §16a), a crudely stripped RTF
    being a page of control words with the writer's sentences buried in it.
-7. **Dictation.** `startDictation` reused whole; what is new is that the
+7. **Suggestions.** `note-sorter-suggest.ts` and the panel under the stacks:
+   spec §15's three functions over one scorer, and §14 is the whole argument.
+8. **Dictation.** `startDictation` reused whole; what is new is that the
    transcript becomes a **source** rather than typed screenplay elements, and
    where there is no speech service the system's is named in that module's own
    words. The line the handoff asks for by name — *Just talk. You'll sort it
@@ -302,7 +304,7 @@ grey does not move. `shelfOffer` says all of that before the press.
 
 ---
 
-## §14 Nothing is created by looking
+## §13a Nothing is created by looking
 
 A project with no sitting opens on Gather with somewhere to put material, and
 **the first thing put in begins the sitting**. `beginArc`'s rule (addendum 25
@@ -311,14 +313,126 @@ one behind every time somebody looked at it.
 
 ---
 
-## §15 Deliberately absent, and said
+## §14 Auto-sort suggestions
 
-- **§15's auto-sort suggestions.** The handoff draws them with a switch, an
-  approve-N and the line *nothing moves until you approve*. Not built: the
-  approval machinery is the easy half and what a suggestion would have to be is
-  the hard one, and this module is worth having without a model in it. It is the
-  obvious next stage and needs no new records — a suggestion is a category id
-  against a card id, and `moveCard` already exists.
+Spec §15, *Optional AI Assistance*, is three things — **Suggest Categories**,
+**Suggest Destination** and **Auto-Sort Suggestions** — with its own caveat:
+*the writer remains in control; AI should not silently reorganize source
+material.* `note-sorter-suggest.ts` is all three, and they are **one scorer**.
+
+### §14.1 It is a reading, not a model call
+
+This is the stage's one real divergence from the spec, and the argument for it
+is not thrift. For *this* question the writer has already given the answer.
+
+Ask a model *which of these six categories does this paragraph belong in* and
+you get general knowledge about the words. Ask the sitting and you get **what
+this writer did with these categories half an hour ago**: they made *Dialogue*
+and filed three passages in it, so the fourth passage that talks the same way
+belongs there **because of those three**. A model cannot see that, and it is the
+only thing worth seeing here.
+
+Four things follow, each one this project has paid for before.
+
+- **It says why, in something checkable.** *1 card uses “villain”, “morning” in
+  Character* is a fact about their own filing that a writer can go and look at;
+  a category named with no reason is what gets a suggestion panel switched off
+  after the second wrong guess (the narrative validator's *not crying wolf*,
+  addendum 18 stage 3).
+- **Nothing moves until you approve is true by construction.** There is no
+  suggestion record to write, approve or clean up — extracting the passage takes
+  it out of the unsorted stretches and it stops being suggested with nothing
+  run, which is `coverageOf`'s own rule (§4) one layer up.
+- **It is testable rather than merely demonstrable** (addendum 09 §4). Every
+  rule below is pinned by a test that says what was suggested and why; the AI
+  routes this program already has (addendum 16 §6b) have still never been run
+  live, and a panel a writer leans on all afternoon is the wrong place for that.
+- **It costs nothing and needs no account**, so there is no cap to hit, no meter
+  to read and no network to be without.
+
+A model would be the better tool for one of the three — naming a grouping from
+unclustered prose — and that is the seam to widen if it is ever wanted. Nothing
+about the panel would change shape: `suggestCategories` returns names, and where
+they come from is its business alone.
+
+### §14.2 The scorer, and the rule that keeps it quiet
+
+A term is worth more where it is **common inside one category and rare across
+the rest**, which stops a word the writer uses everywhere (*scene*, in a book
+about writing scenes) putting every passage wherever the most cards are. A
+category is taught by its **cards and by its own name**, kept apart — without
+the name the panel is silent until somebody has done by hand the work it exists
+to save, and without the separation it says *1 card uses “dialogue”* about a
+category nothing is filed in, which is ungrammatical and false.
+
+Whether a row is shown at all is **a rule rather than a number**, and the first
+draft had a number. A floor on `strength` is a floor on a *density*, so the same
+evidence fell below it in a longer paragraph: an obviously-Dialogue paragraph
+went unoffered at 0.125 while a shorter one cleared at 0.167. A threshold on a
+density is a threshold on paragraph length wearing a disguise.
+
+`worthSaying` asks about the **evidence** instead: **two words, or one word that
+is the category's own name or that two of its cards share** — and in the
+single-word cases, a word no other category knows. Both of those clauses were
+earned on the screen: the first draft accepted any unique word and duly proposed
+a paragraph about *revision* for **Character**, because one card there happened
+to contain *write*. A passage that says the category's **name** is different in
+kind, and so is a word the writer has filed on **twice**. One card's incidental
+vocabulary is an accident.
+
+`strength` survives, for ordering only.
+
+### §14.3 The three functions
+
+**Suggest Destination** is `scoreCategories` pointed at the live selection, and
+it stands in the Sort footer beside the highlight: *Looks like Publishing →*,
+with the reason in its title and the press doing the ordinary extraction.
+
+**Auto-Sort Suggestions** is `suggestPlacements`, and four rules hold it:
+**only what is unsorted** (`piecesOf`, the same reading the greying uses, so the
+two cannot disagree); **a paragraph at a time**, because that is what a writer
+highlights and proposing half a sentence would make approving worse than doing
+it by hand; **one category per passage**, two being a question rather than a
+suggestion; and nothing that is not `worthSaying`. Approving is
+`extractToCategory` and nothing else, so an approved suggestion is
+indistinguishable afterwards from a passage dragged across by hand.
+
+**Suggest Categories** is `suggestCategories`: words that run through three or
+more unsorted paragraphs and that **no category knows, by name or by card**. It
+**proposes a name and never makes one**, and pressing it makes the category
+**empty** — after which the passages suggest themselves into it, which is the
+writer's press. Making it *and* filling it would be the *silently reorganize*
+the spec forbids.
+
+### §14.4 The panel
+
+**Under the stacks in Sort**, not in Refine where the handoff draws it: the
+suggestions are about material still in the raw notes, and by the time a writer
+is refining every card is filed and the panel would have nothing to say. Here
+approving a row greys the passage an inch to the left, which is the whole of why
+it is trustworthy rather than merely clever.
+
+**The switch is per machine and dismissing is about this minute** — whether you
+want the panel is a fact about how you work, while *not that one* is about this
+reading of these notes, and the reading changes every time anything is filed.
+
+Driving the real room caught three things, all of them the same kind.
+
+- **The dismissal sentence lied.** With everything put aside the panel said
+  *nothing here looks enough like any of your categories* — false, and false
+  about the one thing it is asking to be trusted on. `describeSuggestions` is
+  told how many were put aside, says so, and there is a way back.
+- **Approve was below the panel's own scroll**, which is addendum 20 §15c's
+  fault in a smaller box: the list scrolls now and the head and the acts do not.
+- **The switch's accessible name was *On***, which is addendum 02 §4a's switch
+  exactly — *off* means nothing on its own, and neither does *on*. It is named
+  for what it switches.
+
+A fourth thing the tests caught rather than the screen, and it is the switch
+being real: turning it off in one test reached every test after it, because a
+preference is per machine and jsdom's storage persists. The suite clears it.
+
+## §15 Deliberately absent, and said
 - **Undo in a popped-out room.** Undo is §6c's and reaches the sorter the day it
   was written, every act being a pure function through `update` — *in the
   workspace*. A room in a window of its own has never had it, `useLinkedProject`

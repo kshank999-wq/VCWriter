@@ -18,6 +18,11 @@ import {
   removeSortCategory,
   researchCategoriesInOrder,
   searchSession,
+  approvePlacements,
+  describeSuggestions,
+  placementKey,
+  sayWhy,
+  scoreCategories,
   sendCount,
   sendLadder,
   sendRows,
@@ -28,6 +33,9 @@ import {
   sortCategories,
   sortingSessions,
   sourcesOf,
+  suggestCategories,
+  suggestPlacements,
+  worthSaying,
   splitCard,
   unreferenceCard,
   unsortedOf,
@@ -44,6 +52,7 @@ import {
   type ResearchCategoryId,
   type ResearchItem,
   type ResearchItemId,
+  type Placement,
   type SendRow,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
@@ -842,6 +851,17 @@ function SortTab({
     window.getSelection?.()?.removeAllRanges();
   };
 
+  /** What the highlighted passage looks like, where anything does (§15). */
+  const looksLike = (() => {
+    if (!range || !session) return null;
+    const passage = source.text.slice(range.from, range.to).trim();
+    if (passage.length < 12) return null;
+    const best = scoreCategories(file, session.id, passage)[0];
+    return best && worthSaying(best)
+      ? { categoryId: best.categoryId, name: best.name, why: sayWhy(best) }
+      : null;
+  })();
+
   const offerFor = (into: ResearchCategory): string =>
     range
       ? extractOffer(file, { sourceId: source.id, ...range, categoryId: into.id }).says
@@ -930,9 +950,29 @@ function SortTab({
         </div>
 
         <p className="ns-foot muted small">
-          {range
-            ? `${range.to - range.from} characters highlighted — drop them on a category, or press one.`
-            : 'Highlight a passage, then drag it across or press a category. Nothing is ever cut from this page.'}
+          {range ? (
+            <>
+              {range.to - range.from} characters highlighted — drop them on a category, or press one.
+              {/* §15's **Suggest Destination**, which is `scoreCategories`
+                  pointed at the live selection: the same engine as the panel
+                  below, said where the writer's hands already are. */}
+              {looksLike ? (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    className="ghost small ns-looks"
+                    title={looksLike.why}
+                    onClick={() => file_(looksLike.categoryId, range)}
+                  >
+                    Looks like {looksLike.name} →
+                  </button>
+                </>
+              ) : null}
+            </>
+          ) : (
+            'Highlight a passage, then drag it across or press a category. Nothing is ever cut from this page.'
+          )}
         </p>
       </section>
 
@@ -1066,10 +1106,225 @@ function SortTab({
             </div>
           </>
         )}
+
+        {/* Auto-sort suggestions (§14). **Under the stacks rather than in
+            Refine**, where the handoff draws them: they are about the material
+            still in the raw notes, and by the time a writer is refining, every
+            card is already filed and the panel would have nothing to say. Here
+            approving one greys the passage on the left an inch away, which is
+            the whole of why it is trustworthy. */}
+        {session ? (
+          <Suggestions
+            file={file}
+            session={session}
+            sourceId={source.id}
+            onUpdate={onUpdate}
+            onSay={onSay}
+          />
+        ) : null}
       </section>
     </div>
   );
 }
+
+/**
+ * The suggestion panel (§14), and every rule it keeps is one sentence.
+ *
+ * **Nothing moves until you approve**, said on the panel and true by
+ * construction: a suggestion is a reading, so there is nothing to undo if it is
+ * ignored and nothing to clean up if it is dismissed.
+ *
+ * **Every row says why**, in a fact about the writer's own filing rather than a
+ * verdict — which is what a writer checks the second time and trusts the tenth.
+ *
+ * **The switch is per machine and dismissing is about this minute**: whether
+ * you want the panel at all is a fact about how you work, while *not that one*
+ * is about this reading of these notes, and the reading changes every time
+ * anything is filed.
+ */
+function Suggestions({
+  file,
+  session,
+  sourceId,
+  onUpdate,
+  onSay,
+}: {
+  file: ProjectFile;
+  session: NoteSession;
+  sourceId: NoteSourceId;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  onSay(text: string): void;
+}) {
+  const [on, setOn] = usePreference<boolean>('sorterSuggest', true);
+  const [dismissed, setDismissed] = useState<readonly string[]>([]);
+  const [ticked, setTicked] = useState<readonly string[]>([]);
+  const [ideasOpen, setIdeasOpen] = useState(false);
+
+  const all = useMemo(
+    () => (on ? suggestPlacements(file, session.id, { sourceId, limit: 24 }) : []),
+    [on, file, session.id, sourceId],
+  );
+  const rows = all.filter((one) => !dismissed.includes(placementKey(one)));
+  const putAside = all.length - rows.length;
+  const chosen = rows.filter((one) => ticked.includes(placementKey(one)));
+  const ideas = ideasOpen ? suggestCategories(file, session.id) : [];
+
+  return (
+    <div className="ns-suggest">
+      <div className="ns-suggest-head">
+        <h3>Suggestions</h3>
+        <label className="ns-switch">
+          {/* Named for **what it switches**, not for which way it is turned:
+              *On* is not the name of a control (addendum 02 §4a's switch, whose
+              whole point is that *off* means nothing on its own). */}
+          <input
+            type="checkbox"
+            checked={on}
+            aria-label="Suggest where unsorted passages belong"
+            onChange={(event) => setOn(event.target.checked)}
+          />
+          <span className="muted small">{on ? 'On' : 'Off'}</span>
+        </label>
+      </div>
+
+      {!on ? (
+        <p className="muted small">
+          Off. Turn it on and the unsorted passages that look like one of your categories are listed here.
+        </p>
+      ) : (
+        <>
+          <p className="muted small">{describeSuggestions(file, session.id, rows, putAside)}</p>
+
+          {putAside > 0 && rows.length > 0 ? (
+            <button type="button" className="ghost small ns-bring-back" onClick={() => setDismissed([])}>
+              Bring back {putAside === 1 ? 'the one I put aside' : `the ${putAside} I put aside`}
+            </button>
+          ) : null}
+          {putAside > 0 && rows.length === 0 ? (
+            <button type="button" className="tool" onClick={() => setDismissed([])}>
+              Bring them back
+            </button>
+          ) : null}
+
+          {rows.length > 0 ? (
+            <ul className="ns-suggest-rows">
+              {rows.map((one) => {
+                const key = placementKey(one);
+                return (
+                  <li key={key}>
+                    <label className="ns-suggest-row">
+                      <input
+                        type="checkbox"
+                        checked={ticked.includes(key)}
+                        aria-label={`Put “${one.title}” in ${nameOfCategory(file, one)}`}
+                        onChange={(event) =>
+                          setTicked(
+                            event.target.checked
+                              ? [...ticked, key]
+                              : ticked.filter((other) => other !== key),
+                          )
+                        }
+                      />
+                      <span className="ns-suggest-words">
+                        <span className="ns-suggest-passage">{one.passage}</span>
+                        <span className="muted small">{one.because}</span>
+                      </span>
+                      <span className="ns-suggest-into">→ {nameOfCategory(file, one)}</span>
+                    </label>
+                    <button
+                      type="button"
+                      className="ghost item-x"
+                      aria-label={`Not that one: “${one.title}”`}
+                      onClick={() => setDismissed([...dismissed, key])}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+
+          <div className="ns-suggest-acts">
+            <button
+              type="button"
+              className="tool"
+              disabled={chosen.length === 0}
+              onClick={() => {
+                let made = 0;
+                onUpdate((current) => {
+                  const done = approvePlacements(current, chosen);
+                  made = done.made;
+                  return done.file;
+                });
+                onSay(made === 1 ? '1 card made, and the passage is grey.' : `${made} cards made.`);
+                setTicked([]);
+              }}
+            >
+              {chosen.length === 0 ? 'Approve' : `Approve ${chosen.length}`}
+            </button>
+            {rows.length > 0 ? (
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  setDismissed(all.map(placementKey));
+                  setTicked([]);
+                }}
+              >
+                Dismiss all
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={ideasOpen ? 'ghost on' : 'ghost'}
+              aria-pressed={ideasOpen}
+              onClick={() => setIdeasOpen(!ideasOpen)}
+            >
+              Suggest new categories
+            </button>
+          </div>
+
+          {ideasOpen ? (
+            ideas.length === 0 ? (
+              <p className="muted small">
+                Nothing repeats often enough in what is left to be worth a category of its own.
+              </p>
+            ) : (
+              <ul className="ns-ideas">
+                {ideas.map((idea) => (
+                  <li key={idea.name}>
+                    <button
+                      type="button"
+                      className="tool"
+                      title={idea.because}
+                      onClick={() => {
+                        onUpdate((current) =>
+                          addSortCategory(current, { sessionId: session.id, name: idea.name }).file,
+                        );
+                        // Made empty, never filled: the passages then suggest
+                        // themselves into it, which is the writer's press.
+                        onSay(`${idea.name} is a category now. Nothing has been filed in it.`);
+                      }}
+                    >
+                      + {idea.name}
+                    </button>
+                    <span className="muted small">{idea.because}</span>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** What a placement's category is called. */
+const nameOfCategory = (file: ProjectFile, one: Placement): string =>
+  file.researchCategories.find((row) => (row.id as string) === (one.categoryId as string))?.name ??
+  'a category that has gone';
 
 // ------------------------------------------------------------------ 3 Refine
 
