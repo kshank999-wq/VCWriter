@@ -183,9 +183,20 @@ describe('approving a capture', () => {
  * really belonged.
  */
 describe('what the phone says a note is', () => {
-  it('carries the five categories and nothing else', () => {
+  it('keeps the five exactly, and no longer refuses a sixth', () => {
+    // Addendum 09 §10 revises §4's *five, and no more*. The reason for the
+    // five was a phone that did not know which project it was in; the app has
+    // opened on a project list since stage 5, so the words a writer may say
+    // are the project's own and `captureVocabulary` reads them off the format.
+    //
+    // What must still hold is both halves of that: the five keep their exact
+    // spellings, so every note ever captured reads back as what it was…
     expect(CAPTURE_CATEGORIES).toEqual(['character', 'plot_point', 'idea', 'theme', 'arc']);
-    expect(() => capture({ category: 'location' as never })).toThrow();
+    // …and a key this build has never heard of is **kept rather than refused**,
+    // because the inbox's promise is that the last group is never hidden. A
+    // schema that threw here would turn a note from a newer phone into nothing.
+    expect(capture({ category: 'setting' as never }).category).toBe('setting');
+    expect(capture({ category: 'something_newer' as never }).category).toBe('something_newer');
   });
 
   it('keeps the spoken name apart from anything a classifier guessed', () => {

@@ -55,6 +55,27 @@ export type RequestedRouting = z.infer<typeof requestedRoutingSchema>;
 export const captureCategorySchema = z.enum(['character', 'plot_point', 'idea', 'theme', 'arc']);
 export type CaptureCategory = z.infer<typeof captureCategorySchema>;
 
+/**
+ * What a note was actually captured under (addendum 09 §10, from Ken).
+ *
+ * **A string rather than the enum above**, and the widening is deliberate. §4's
+ * five were fixed for a phone that did not know which project it was in; the
+ * app has opened on a project list since stage 5, so the words a writer may
+ * say are now the project's own — a screenplay's Scene and Beat, a textbook's
+ * Section and Subsection — and `captureVocabulary` reads them off the format
+ * rather than storing a sixth, seventh and eighth enum value nobody can add to
+ * without a migration.
+ *
+ * The five keep their exact spellings, so every note ever captured reads back
+ * as what it was, and the enum above stays as the older, narrower vocabulary
+ * that `inboxGroups` and the review screen still understand.
+ *
+ * Unvalidated on purpose: a key this build has never heard of is still a note,
+ * and the inbox's promise is that **the last group is never hidden**. A schema
+ * that refused it would turn a note captured by a newer phone into nothing.
+ */
+export const captureKeySchema = z.string().max(40);
+
 /** What each category is called where a writer reads it. */
 export const CAPTURE_CATEGORY_NAMES: Record<CaptureCategory, string> = {
   character: 'Character',
@@ -92,7 +113,7 @@ export const captureItemSchema = z.object({
    * captured before the companion app existed, and for a capture that never
    * named one.
    */
-  category: captureCategorySchema.nullable().default(null),
+  category: captureKeySchema.nullable().default(null),
   /**
    * The name the writer spoke — §9's *character notes should retain the spoken
    * character name*, and §10's optional short label for the other four.

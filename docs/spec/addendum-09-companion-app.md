@@ -1,8 +1,9 @@
 # Addendum 09 — The Companion App
 
-Status: **all six stages built**, and §8 besides — dictation at the desk, which
+Status: **all six stages built**, plus §8 — dictation at the desk, which
 is spec §9's first bullet rather than this app's, built here because it shares
-the reading. September 2026. From Ken's *VC Writer
+the reading — and §10, hands-free capture, whose §10.5 names the two things
+Ken asked for that are staged rather than half-built. September 2026. From Ken's *VC Writer
 Companion App — Simplified Development Specification v1.0*, written as a
 coding/quoting handoff. Extends spec §9 and §11 (capture and sync), and the
 Mobile App area it asks for is a new part of the desktop.
@@ -587,3 +588,143 @@ than as a fault.
   platform constraints, and §5's *tap the microphone* does not need one.
 - It does not give the phone the Research tree, the Sculptor, the Outliner or
   the Room. §12 says so; §1 is why it stays true.
+
+## 10. Hands free: a walk, not a screen
+
+From Ken: *I want that same functionality in the mobile app… you can say
+Project Jinn, character, Tom. And then it'll beep and you'll start that note.
+And then you can say something that will turn it off without making that word
+unavailable when you're using the notes. Maybe you can say dictate done. And
+then it saves the note. Then you could say dictate new setting… Or you can just
+say idea, and it can go into your ideas folder.*
+
+### 10.1 The design is in the problem he stated
+
+A voice notebook you use while walking cannot ask you to press anything between
+notes, so the words that **end** a note have to be said out loud — and any word
+that ends a note is a word you can no longer put *in* one. Ken's answer is the
+right one and it is the only one that scales: **every command is prefixed
+`dictate`**. The command vocabulary and the writing vocabulary then never
+overlap, and a note may contain *done*, *idea*, *character*, *project* and
+*correction* as freely as any other words. A test says exactly that, with all
+five said inside one note.
+
+Two states and one rule each.
+
+**While a note is open, nothing but `dictate …` is a command.** Everything said
+is the note. This is what makes the phone safe to talk into.
+
+**While nothing is open, a bare category word may also start one** — his *or you
+can just say idea*. It is safe there for the reason it is unsafe inside a note:
+there is no note for the word to have belonged to.
+
+`dictate` followed by something the app does not know is **said rather than
+swallowed**. A writer who gave a command believes they gave one, and quietly
+writing *dictate nwe setitng* into the middle of their sentence is the worst of
+the three things that could happen to it, because it is the one they will not
+notice until they are back at the desk.
+
+### 10.2 The words are the project's, which revises §2
+
+§2 fixed five kinds of thought — Character, Plot Point, Idea, Theme, Arc — and
+said *five, and no more*. That was right for a phone that **did not know which
+project it was in**, where the only honest thing to offer is kinds of thought.
+The app has opened on a project list since stage 5, so a note is addressed to a
+project before a word is spoken, and once the project is known the words that
+project uses are the right words: a textbook writer saying *beat* means nothing;
+saying *section* means something exact.
+
+**What makes this a voice notebook is not the length of the list.** It is that
+nothing here is filed into the manuscript — saying *character, Tom* makes a note
+about Tom, never a character record, and the desktop still places it. §2's line,
+the phone captures and the desktop places, is untouched, and it is the line that
+matters.
+
+`captureVocabulary` reads the words off the format, so the structural pair is
+**the noun table's** (addendum 16 §6c): Scene and Beat on a screenplay, Chapter
+and Passage in a novel, Section and Subsection in a textbook. Character, Setting,
+Plot Point and Arc are **absent rather than renamed** on a textbook (addendum 16
+§6a), which has no cast, no locations and no plot.
+
+Writing the tests caught what generosity costs here. Ken said *just chapter and
+section in that educational book*, and the program calls those Section and
+Subsection; offering his words as synonyms as well put **`section` on both rungs
+at once** — the unit to somebody who knows the program, the sub to somebody
+using his words. Two levels behind one spoken word is the one ambiguity a tool
+you cannot look at must not have, so **the program's own words win and there are
+no synonyms for the structural pair**; a word that fits neither is kept as
+writing rather than guessed at.
+
+The stored category becomes text (migration 0060). An enum cannot carry a
+vocabulary read off the format without a migration per word, and worse: a value
+it does not hold is refused at the door, which would turn a note sent by a newer
+phone into an error. The five keep their exact spellings, so every note ever
+captured reads back as what it was, and `inboxGroups` now **groups by what is
+there** rather than by a list written in that file — which is also the only way
+it can keep the promise its own comment makes, that the last group is never
+hidden.
+
+### 10.3 What it does without being looked at
+
+**It beeps**, which is Ken's, and it is the whole of the feedback when the phone
+is in a pocket: a tone says *heard, and listening now* in a tenth of the time a
+spoken confirmation takes, which matters because the writer is about to talk and
+anything still speaking is something they will talk over. Two sounds, told apart
+**by direction rather than pitch** — opening rises, closing falls — because a
+listener who cannot say which note is higher can always say which way a pair
+moved, and a walk is not a quiet room. Synthesised rather than a file, and it
+**never throws**: a browser that will not give a page audio, a device on silent,
+a build with no `AudioContext` — none of those is a reason a note should fail to
+open.
+
+**It answers commands and never the writing.** Reading dictation back as it
+arrives would talk over somebody mid-sentence, which is exactly what a
+hands-free notebook must not do; what is worth hearing is that a note opened,
+closed or went away.
+
+**It never loses a note.** Every path that closes one files it — including the
+one where a new note is started while another is open, because a writer who says
+*dictate setting* mid-thought has finished the thought before it. The note still
+open when the walk ends is kept too: a notebook that kept only what you
+remembered to close is one you stop trusting after the first walk. The one act
+that throws anything away is the one that says so out loud, *dictate scratch
+that*. And each note goes to the device **as it closes** rather than at the end,
+because the queue exists precisely so a flat battery costs nothing.
+
+### 10.4 A bug in shipped code, found by writing his sentence down
+
+Ken's example is *character, Tom*. Through the shipped stage 4 reader that came
+back with **no name at all** — the remainder was tidied before the name rule
+ran, which strips the leading comma, **the very pause that marks the name**, so
+a name could only be found when there happened to be a *second* pause after it.
+*Character, Marisol, she never trusts him* worked; *character, Tom*, which is
+what somebody actually says, did not.
+
+The first fix broke the other direction, and the existing tests caught it within
+the minute: **there are two shapes and both are real.** The pause falls after
+the name (*Character Marisol, she never trusts him*) or straight after the
+category (*Character, Tom*), and the rule now says so in those terms. With no
+pause anywhere nothing is taken, which is stage 4's rule and still the right
+one. One function, read by both the single-utterance reader and the sitting.
+
+### 10.5 What this stage deliberately does not do
+
+Ken asked for two more things and they are stages of their own rather than
+half-built here:
+
+- **Making a project by voice**, with its format chosen out loud. The phone has
+  made projects since stage 5 (`createProjectFile` + `toRows`, the desktop's own
+  pair), so this is a grammar and a confirmation rather than new machinery — but
+  a mis-heard *novel* would make a project of the wrong shape, and something
+  created by accident is the one thing this app has never done.
+- **Subcategories within a project.** These are `research_categories`, which
+  already nest; what is missing is what a spoken one means and where it shows on
+  the desktop.
+
+Neither is started, so neither is on the screen. What is built is the walk
+itself, and it works end to end: driven in a real browser, Ken's own sequence —
+*dictate project Jinn*, *character, Tom*, a sentence with *idea* and *project*
+in it, *dictate done*, *dictate new setting*, a sentence, *dictate done*,
+*idea*, a sentence — files three notes with their categories and Tom's name,
+beeps on exactly the turns that open and close, and leaves both command words
+sitting in the middle of the first note where they were spoken.

@@ -1,4 +1,5 @@
 import { nowIso } from './entities/common.js';
+import { captureKeyName, captureVocabulary } from './capture-vocabulary.js';
 import { ref, type StoryEntityRef } from './entities/links.js';
 import { addBeat, addCharacter, addResearchItem, linkEntities, DomainError } from './mutations.js';
 import { researchCategoriesInOrder } from './selectors.js';
@@ -10,6 +11,7 @@ import {
   type CaptureItem,
 } from './entities/capture.js';
 import type { ProjectFile } from './project-file.js';
+import type { ProjectFormat } from './entities/project.js';
 import type { CharacterId, ResearchCategoryId, StructuralUnitId } from './ids.js';
 
 /**
@@ -60,12 +62,23 @@ export const captureTitle = (capture: CaptureItem): string => {
   return line.length > 0 ? line : 'Untitled capture';
 };
 
-/** The research folder a spoken category ordinarily reads as. */
-const FOLDER_FOR: Partial<Record<CaptureCategory, string>> = {
+/**
+ * The research folder a spoken category ordinarily reads as.
+ *
+ * Keyed by string since the vocabulary became the project's (addendum 09 §10):
+ * a word this build has not heard of simply has no folder, which is what the
+ * `if (!folder) return null` below already meant — no suggestion, and the
+ * writer places it. **The structural two deliberately have none**: a note said
+ * against a scene or a chapter is about the manuscript, and the one thing this
+ * module may never do is file into it.
+ */
+const FOLDER_FOR: Record<string, string | undefined> = {
   character: 'characters',
   plot_point: 'plot_points',
   idea: 'ideas',
   theme: 'themes',
+  setting: 'locations',
+  research: 'notes',
   // `arc` has no folder of its own and is not getting one: an arc note with
   // nobody named is a general thought, and Ideas is where those go.
   arc: 'ideas',
@@ -91,7 +104,7 @@ const spokenSuggestion = (file: ProjectFile, capture: CaptureItem): RoutingSugge
       return {
         decision: { kind: 'about_character', characterId: known.id },
         confidence: 1,
-        reason: `You said ${CAPTURE_CATEGORY_NAMES[category]} — ${known.name}, who is already in the cast`,
+        reason: `You said ${captureKeyName(category, null)} — ${known.name}, who is already in the cast`,
       };
     }
     if (category === 'character') {
@@ -115,7 +128,7 @@ const spokenSuggestion = (file: ProjectFile, capture: CaptureItem): RoutingSugge
     reason:
       category === 'arc'
         ? 'An arc note with nobody named — Ideas until you say otherwise'
-        : `You said ${CAPTURE_CATEGORY_NAMES[category]}`,
+        : `You said ${captureKeyName(category, null)}`,
   };
 };
 
@@ -297,7 +310,7 @@ export const deferCapture = (capture: CaptureItem): CaptureItem => ({
  * file would be an inbox nobody can trust.
  */
 export interface InboxGroup {
-  category: CaptureCategory | null;
+  category: string | null;
   name: string;
   captures: CaptureItem[];
 }
@@ -310,16 +323,39 @@ export interface InboxGroup {
  * still waiting to be placed, and a decision already made is not waiting. The
  * rows themselves are never deleted, so nothing here is destructive.
  */
-export const inboxGroups = (captures: readonly CaptureItem[]): InboxGroup[] => {
+export const inboxGroups = (
+  captures: readonly CaptureItem[],
+  /**
+   * The project's format, where the caller knows it, so the structural groups
+   * are named in its own words — *Scene* on a screenplay, *Chapter* in a novel.
+   * Without one they are named loosely rather than not at all.
+   */
+  format: ProjectFormat | null = null,
+): InboxGroup[] => {
   const waiting = [...captures]
     .filter((one) => one.status === 'pending' || one.status === 'needs_review')
     .sort((a, b) => (a.capturedAt < b.capturedAt ? 1 : -1));
 
-  const groups: InboxGroup[] = CAPTURE_CATEGORIES.map((category) => ({
-    category,
-    name: CAPTURE_CATEGORY_NAMES[category],
-    captures: waiting.filter((one) => one.category === category),
-  })).filter((group) => group.captures.length > 0);
+  /**
+   * **Grouped by what is there rather than by a list written here** (addendum
+   * 09 §10). The five were an enum and this reading walked them; the
+   * vocabulary is the project's now, so a list in this file would be a second
+   * one — and a note captured under a word it did not have would have fallen
+   * through both the walk and the `=== null` at the end, which is the one
+   * thing the comment above says cannot happen.
+   */
+  const order = format ? captureVocabulary(format).map((one) => one.key) : [...CAPTURE_CATEGORIES];
+  const seen = [...new Set(waiting.map((one) => one.category).filter((one): one is string => one !== null))];
+  const known = order.filter((key) => seen.includes(key));
+  const rest = seen.filter((key) => !order.includes(key as never)).sort();
+
+  const groups: InboxGroup[] = [...known, ...rest]
+    .map((key) => ({
+      category: key,
+      name: captureKeyName(key, format),
+      captures: waiting.filter((one) => one.category === key),
+    }))
+    .filter((group) => group.captures.length > 0);
 
   const uncategorised = waiting.filter((one) => one.category === null);
   if (uncategorised.length > 0) {

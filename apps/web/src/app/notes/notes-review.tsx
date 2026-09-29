@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   CAPTURE_CATEGORIES,
   CAPTURE_CATEGORY_NAMES,
+  captureKeyName,
   mayStillEdit,
   type CaptureCategory,
   type CaptureItem,
@@ -121,7 +122,10 @@ export function NotesReview({ projectId }: { projectId: string | null }) {
             return (
               <li key={note.id} className={changeable ? 'notes-item' : 'notes-item filed'}>
                 <div className="notes-item-head">
-                  <strong>{note.subjectName ?? CAPTURE_CATEGORY_NAMES[note.category ?? 'idea']}</strong>
+                  {/* The project's own word where it is known, and the key
+                      itself where it is not — a note captured under a word
+                      this build has not heard of is still a note (§10). */}
+                  <strong>{note.subjectName ?? captureKeyName(note.category ?? 'idea', null)}</strong>
                   <span className="muted small">{new Date(note.capturedAt).toLocaleDateString()}</span>
                 </div>
 

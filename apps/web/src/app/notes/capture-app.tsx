@@ -25,10 +25,21 @@ import {
   CAPTURE_CATEGORIES,
   CAPTURE_CATEGORY_NAMES,
   applyCorrection,
+  captureKeyName,
+  captureVocabulary,
+  emptySitting,
+  everything,
+  hear,
+  projectNamed,
   readSpoken,
   sayBack,
+  speakBack,
+  WAKE,
   type CaptureCategory,
+  type ProjectFormat,
+  type Sitting,
 } from '@vcwriter/domain';
+import { beep } from '@/lib/beep';
 
 /**
  * VC Writer Notes — capture away from the desk (spec §11, addendum 09).
@@ -82,9 +93,42 @@ export default function CaptureApp() {
   /** Whether the last utterance was heard as a command, for the line under it. */
   const [heard, setHeard] = useState<string | null>(null);
 
+  /**
+   * Hands-free (addendum 09 §10, from Ken).
+   *
+   * The sitting is the domain's, held in a **ref as well as state**: a
+   * recogniser fires outside React, so each utterance has to fold into what
+   * the one before it left rather than into whatever the last render captured.
+   * The state copy is only so the screen can draw it.
+   */
+  const [handsFree, setHandsFree] = useState(false);
+  const [sitting, setSitting] = useState<Sitting>(() => emptySitting());
+  const walk = useRef<Sitting>(emptySitting());
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  /** Held in a ref for the recogniser's reason: it reads the live project. */
+  const chosen = useRef<ProjectSummary | null>(null);
+
   const [queue, setQueue] = useState<QueuedCapture[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
+
+  useEffect(() => {
+    chosen.current = project;
+  }, [project]);
+
+  /** The projects, for a spoken *dictate project Jinn*. */
+  useEffect(() => {
+    void (async () => {
+      try {
+        const response = await fetch('/api/notes/projects', { cache: 'no-store' });
+        if (!response.ok) return;
+        const body = (await response.json()) as { projects?: ProjectSummary[] };
+        setProjects(body.projects ?? []);
+      } catch {
+        // Offline is the ordinary case here; the picker still works.
+      }
+    })();
+  }, []);
 
   const refreshQueue = useCallback(async () => {
     setQueue(await pendingCaptures());
@@ -242,6 +286,124 @@ export default function CaptureApp() {
     setDictating(true);
   };
 
+  // ------------------------------------------------------- hands free (§10)
+
+  /**
+   * What the chosen project calls things; a screenplay's words by default.
+   *
+   * Two readings of one fact, and the difference matters: the recogniser fires
+   * outside React and must read the **ref**, which is current; the screen is
+   * drawing and must read the **state**, because a ref set in an effect is one
+   * render behind on the pass that follows a project change.
+   */
+  const format = (): ProjectFormat => (chosen.current?.format as ProjectFormat) ?? 'screenplay';
+  const formatNow: ProjectFormat = (project?.format as ProjectFormat) ?? 'screenplay';
+
+  /** One note out of the sitting, onto the device. */
+  const fileOne = async (note: { key: string | null; subjectName: string | null; text: string }) => {
+    const content = note.text.trim();
+    if (content.length === 0 && !note.subjectName) return;
+    await enqueue({
+      clientCaptureId: newClientCaptureId(),
+      projectId: chosen.current?.id ?? null,
+      rawText: content,
+      source: 'mobile_voice',
+      capturedAt: new Date().toISOString(),
+      requestedRouting: null,
+      // The project's own vocabulary now (§10), which the column carries as
+      // text since 0060.
+      category: note.key as CaptureCategory | null,
+      subjectName: note.subjectName,
+      syncedAt: null,
+      lastError: null,
+      attempts: 0,
+    });
+  };
+
+  /**
+   * One utterance, folded into the walk.
+   *
+   * **Nothing here decides what was meant**: `hear` does, in the domain, where
+   * it is tested rather than demonstrated — which matters more on this screen
+   * than anywhere, because the writer cannot see it.
+   */
+  const heardHandsFree = (chunk: string) => {
+    const before = walk.current;
+    const after = hear(before, chunk, format());
+    walk.current = after;
+    setSitting(after);
+
+    // A note that just closed goes to the device at once: a walk that filed
+    // everything at the end would lose the lot to a dropped connection or a
+    // flat battery, and the queue exists precisely so it does not have to.
+    if (after.filed.length > before.filed.length) {
+      const done = after.filed[after.filed.length - 1];
+      if (done) void fileOne(done).then(refreshQueue);
+    }
+
+    if (after.opened) beep('open');
+    else if (after.open === null && before.open !== null) beep('close');
+
+    // A project asked for by name, resolved against the list (§10).
+    if (after.wants) {
+      const found = projectNamed(after.wants, projects.map((one) => ({ ...one, name: one.title })));
+      if (found) {
+        const picked = projects.find((one) => one.id === found.id) ?? null;
+        chosen.current = picked;
+        setProject(picked);
+        readAloud(`${picked?.title ?? after.wants}.`, { onError: setStatus });
+      } else {
+        readAloud(`No project called ${after.wants}.`, { onError: setStatus });
+      }
+      return;
+    }
+
+    const spoken = speakBack(before, after);
+    if (spoken) readAloud(spoken, { onError: setStatus });
+  };
+
+  const toggleHandsFree = () => {
+    if (handsFree) {
+      session.current?.stop();
+      session.current = null;
+      setHandsFree(false);
+      setDictating(false);
+      // Whatever was still open is kept: a notebook that only kept what you
+      // remembered to close is one you stop trusting after the first walk.
+      const left = everything(walk.current);
+      const openOne = walk.current.open;
+      if (openOne && left.includes(openOne)) void fileOne(openOne).then(refreshQueue);
+      walk.current = emptySitting();
+      setSitting(emptySitting());
+      setStatus(left.length === 1 ? '1 note from that walk' : `${left.length} notes from that walk`);
+      return;
+    }
+
+    const started = startDictation({
+      onFinal: (chunk) => heardHandsFree(chunk),
+      onInterim: setInterim,
+      onError: (message) => {
+        setStatus(message);
+        setHandsFree(false);
+        setDictating(false);
+      },
+      onEnd: () => {
+        setHandsFree(false);
+        setDictating(false);
+      },
+    });
+    if (!started) {
+      setStatus('No speech service in this browser — type the note instead.');
+      return;
+    }
+    session.current = started;
+    walk.current = emptySitting();
+    setSitting(emptySitting());
+    setHandsFree(true);
+    setDictating(true);
+    beep('open');
+  };
+
   const save = async () => {
     const content = text.trim();
     if (content.length === 0) return;
@@ -354,7 +516,58 @@ export default function CaptureApp() {
 
       {screen === 'review' ? <NotesReview projectId={project?.id ?? null} /> : null}
 
-      {screen === 'capture' ? (
+      {screen === 'capture' && handsFree ? (
+        /**
+         * Hands free (§10, from Ken), and it takes the whole screen because it
+         * is the whole of what the app is doing: one note at a time, out loud,
+         * without a press between them.
+         *
+         * **Everything here is a reading of the sitting**, which is the
+         * domain's — what is open, what has been filed, what was last heard.
+         * The screen holds no idea of its own about what was said, so what it
+         * draws and what is saved cannot disagree.
+         */
+        <section className="notes-handsfree">
+          <p className="notes-spoken">
+            {sitting.open
+              ? `${captureKeyName(sitting.open.key ?? 'idea', formatNow)}${
+                  sitting.open.subjectName ? ` · ${sitting.open.subjectName}` : ''
+                }`
+              : 'Listening'}
+          </p>
+          <p className="notes-heard muted small">{sitting.said || 'Say a category, or just start talking.'}</p>
+
+          <p className="notes-open-text">
+            {sitting.open?.text || interim || <span className="muted">…</span>}
+          </p>
+
+          <div className="notes-actions">
+            <button type="button" className="button recording" onClick={toggleHandsFree}>
+              ● Stop
+            </button>
+          </div>
+
+          <p className="muted small">
+            Say <strong>{WAKE} done</strong> to save it, <strong>{WAKE} new {(captureVocabulary(formatNow)[0]?.name ?? 'idea').toLowerCase()}</strong> to
+            start the next, <strong>{WAKE} project</strong> and its name to move. Every command begins with
+            “{WAKE}”, so those words are still yours inside a note.
+          </p>
+
+          {sitting.filed.length > 0 ? (
+            <ul className="notes-filed">
+              {sitting.filed.map((one, index) => (
+                <li key={index}>
+                  <strong>{captureKeyName(one.key ?? 'idea', formatNow)}</strong>
+                  {one.subjectName ? ` · ${one.subjectName}` : ''}
+                  <span className="muted"> — {one.text.slice(0, 60)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
+
+      {screen === 'capture' && !handsFree ? (
         <>
           {/* What the app currently thinks it is filing, in the largest type on
               the screen. A writer dictating hands-free glances rather than
@@ -413,6 +626,14 @@ export default function CaptureApp() {
             >
               {dictating ? '● Listening — tap to stop' : 'Dictate'}
             </button>
+            {/* The one press a whole walk needs (§10). Absent rather than
+                greyed where the browser cannot hear: a button that can only
+                refuse is one nobody presses twice. */}
+            {isDictationSupported() ? (
+              <button type="button" className="button secondary" onClick={toggleHandsFree}>
+                Hands free
+              </button>
+            ) : null}
             <button type="button" className="button" onClick={() => void save()} disabled={text.trim().length === 0}>
               Save note
             </button>

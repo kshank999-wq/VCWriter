@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0059.
+  reads like it does. Applied through 0060.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
   the windowing, and the thing to know is that **every room goes to a second
@@ -736,6 +736,53 @@ push live; the build takes a minute or two.
   anybody meant. The general lesson: **a function that normalises has to be safe
   to run twice**, because the thing that runs it twice is never the code being
   looked at when it was written.
+  **§10 is hands free**, from Ken (*you can say Project Jinn, character, Tom.
+  And then it'll beep and you'll start that note… then you can say something
+  that will turn it off without making that word unavailable when you're using
+  the notes. Maybe you can say dictate done*). **The design is in the problem
+  he stated**: a notebook used while walking cannot ask for a press between
+  notes, so the word that *ends* a note must be spoken — and any word that ends
+  one is a word you can no longer put *in* one. His answer is the only one that
+  scales: **every command is prefixed `dictate`**, so the command vocabulary
+  and the writing vocabulary never overlap and a note may contain *done*,
+  *idea*, *character*, *project* and *correction* freely, which a test says by
+  putting all five inside one note. Two states: **while a note is open nothing
+  but `dictate …` is a command**, and **while nothing is open a bare category
+  word may also start one** (his *or you can just say idea*), safe there for
+  the reason it is unsafe inside a note. `dictate` plus something unknown is
+  **said rather than swallowed** — a writer who gave a command believes they
+  gave one, and writing *dictate nwe setitng* into their sentence is the one
+  failure they will not notice until they are back at the desk. **§10.2 revises
+  §2's *five, and no more*** and says why the reason has not gone away: the
+  five were for a phone that did not know which project it was in, and the app
+  has opened on a project list since stage 5 — so `captureVocabulary` reads the
+  words off the format, the structural pair being **the noun table's** (Scene
+  and Beat, Chapter and Passage, Section and Subsection) and the cast, places
+  and plot **absent rather than renamed** on a textbook. What keeps it a voice
+  notebook is not the length of the list but that **nothing is filed into the
+  manuscript**, which is untouched. Writing the tests caught what generosity
+  costs: offering Ken's *chapter and section* as synonyms at a textbook put
+  **`section` on both rungs at once**, so the program's own words win and a
+  word that fits neither is kept as writing. Migration 0060 makes the stored
+  category **text**, an enum being unable to carry a vocabulary read off the
+  format and — worse — refusing at the door a note a newer phone sent, which is
+  the one thing `inboxGroups`' *the last group is never hidden* forbids; it
+  groups by what is there now rather than by a list in its own file. **It
+  beeps** (two tones told apart **by direction rather than pitch**, a walk not
+  being a quiet room), **answers commands and never the writing** (reading
+  dictation back would talk over somebody mid-sentence), and **never loses a
+  note** — every path that closes one files it, the one still open when the
+  walk ends is kept, each goes to the device as it closes rather than at the
+  end, and the only act that throws anything away says so out loud. **§10.4 is
+  a bug in shipped code found by writing Ken's sentence down**: *character,
+  Tom* came back with no name, the remainder having been tidied before the name
+  rule ran — which strips the leading comma, **the very pause that marks the
+  name** — so a name was only found where a *second* pause happened to follow.
+  The first fix broke the other direction and the existing tests caught it
+  inside a minute: **there are two shapes and both are real**, the pause after
+  the name or straight after the category, and one function now says so and is
+  read by both the single-utterance reader and the sitting. §10.5 names what is
+  staged rather than half-built — making a project by voice, and subcategories.
   **§8c is off the page altogether**, from Ken after using §8a (*move the
   dictate button to just below where it says in script… but off of the page. I
   don't want distractions when people are writing*). §8a moved the instructions

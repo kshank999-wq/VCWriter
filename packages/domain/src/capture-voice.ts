@@ -52,7 +52,7 @@ const opensWith = (transcript: string, phrase: string): string | null => {
   if (!lower.startsWith(phrase)) return null;
   const after = transcript.slice(phrase.length);
   if (after.length > 0 && /[a-z0-9']/i.test(after[0] as string)) return null;
-  return tidy(after);
+  return after;
 };
 
 /**
@@ -70,17 +70,60 @@ const opensWith = (transcript: string, phrase: string): string | null => {
 const MAX_NAME_WORDS = 4;
 const MAX_NAME_LENGTH = 40;
 
-const nameBeforeThePause = (text: string): { name: string; rest: string } | null => {
-  const stop = text.search(/[,—–]|\s-\s/);
-  if (stop <= 0) return null;
+/**
+ * The name a writer spoke after a category, read from the **untidied**
+ * remainder — the one place that may see the pause.
+ *
+ * It took Ken's own sentence to find what was wrong with the first version:
+ * *character, Tom* came back with no name at all. The remainder was tidied
+ * before this ran, which strips the leading comma — **the very pause that
+ * marks the name** — so a name could only be found when there happened to be a
+ * *second* pause after it. *Character, Marisol, she never trusts him* worked;
+ * *character, Tom*, which is what somebody actually says, did not.
+ *
+ * **There are two shapes and both are real**, which is what the first fix got
+ * wrong in the other direction — it handled Ken's and broke the one already
+ * shipped:
+ *
+ * - *Character Marisol, she never trusts him* — the pause falls **after** the
+ *   name, and the name is what stands before it.
+ * - *Character, Tom* — the pause falls **straight after the category**, and
+ *   the name is what stands between that pause and the next one, or the end.
+ *
+ * With no pause anywhere nothing is taken, which is stage 4's rule and still
+ * the right one: there is no way to tell *Marisol never trusts him* from a
+ * name followed by a note, and a wrong guess has to be noticed before it can
+ * be fixed.
+ *
+ * Capped at four words and forty characters, and refused outright if it has
+ * sentence punctuation in it: a pause also falls in the middle of a sentence,
+ * and *the audit lands the same week* is not somebody's name.
+ */
+const PAUSE = /[,—–]|\s-\s/;
 
-  const candidate = text.slice(0, stop).trim();
+export const nameAfterTheCategory = (
+  /** What followed the category word, **before** any tidying. */
+  raw: string,
+): { name: string; rest: string } | null => {
+  const first = raw.search(PAUSE);
+  if (first < 0) return null;
+
+  // Did the writer pause straight after the category, or after the name?
+  const paused = raw.slice(0, first).trim().length === 0;
+  const body = paused ? raw.slice(first + 1) : raw;
+  const next = body.search(PAUSE);
+
+  // Without a leading pause there has to be one after the name, or this was a
+  // sentence; with one, the name may simply run to the end.
+  if (!paused && next < 0) return null;
+  const candidate = (next < 0 ? body : body.slice(0, next)).trim();
+
   if (candidate.length === 0 || candidate.length > MAX_NAME_LENGTH) return null;
   if (candidate.split(/\s+/).length > MAX_NAME_WORDS) return null;
   // A name has no sentence in it.
   if (/[.!?]/.test(candidate)) return null;
 
-  return { name: candidate, rest: tidy(text.slice(stop + 1)) };
+  return { name: candidate, rest: next < 0 ? '' : tidy(body.slice(next + 1)) };
 };
 
 /**
@@ -96,7 +139,7 @@ export const readSpoken = (transcript: string): SpokenCommand => {
 
   for (const phrase of CORRECTION) {
     const rest = opensWith(said, phrase);
-    if (rest !== null) return { kind: 'correction', text: rest };
+    if (rest !== null) return { kind: 'correction', text: tidy(rest) };
   }
 
   for (const category of CAPTURE_CATEGORIES) {
@@ -107,13 +150,13 @@ export const readSpoken = (transcript: string): SpokenCommand => {
       // Only the two that are about a person take a name (§4): *Idea, the audit
       // lands the same week* has a pause in it and nobody in it.
       const named =
-        category === 'character' || category === 'arc' ? nameBeforeThePause(rest) : null;
+        category === 'character' || category === 'arc' ? nameAfterTheCategory(rest) : null;
 
       return {
         kind: 'category',
         category,
         subjectName: named?.name ?? null,
-        text: named?.rest ?? rest,
+        text: named?.rest ?? tidy(rest),
       };
     }
   }
