@@ -167,6 +167,26 @@ describe('dictating a scene', () => {
 
     expect(screen.getByRole('button', { name: 'Dictate' })).toBeTruthy();
   });
+
+  it('is a toggle with the instructions in its tooltip, not on the page', () => {
+    // From Ken: *a button in the corner that you can turn on and off, with a
+    // little microphone that says dictate… when you hold your cursor over it,
+    // a tooltip comes up with the instructions that are now shown on the
+    // screen. It would be too distracting for a writer.*
+    render(<Harness initial={started()} />);
+    const button = screen.getByRole('button', { name: 'Dictate' });
+
+    // The five spoken styles are in the tooltip and nowhere on the page. This
+    // is the whole of the ask, so it is asserted from both ends.
+    expect(button.getAttribute('title')).toContain('Scene heading');
+    expect(button.getAttribute('title')).toContain('Parenthetical');
+    expect(screen.queryByText(/Say .*Scene heading/)).toBeNull();
+
+    // A real on/off, said to a screen reader as well as drawn.
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(button);
+    expect(screen.getByRole('button', { name: /Listening/ }).getAttribute('aria-pressed')).toBe('true');
+  });
 });
 
 describe('the system’s own dictation', () => {

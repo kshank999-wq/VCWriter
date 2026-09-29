@@ -700,6 +700,42 @@ push live; the build takes a minute or two.
   line* works and naming a style aloud cannot, and the interface says so. The
   control is opt-in per surface (`dictation` on `BeatBody`), the Script drawing
   every beat with one having put nine of them down a short script.
+  **§8a is a button in the corner and the help in its tooltip**, from Ken (*the
+  dictate should be a button in the corner that you can turn on and off, with a
+  little microphone that says dictate… a tooltip comes up with the instructions
+  that are now shown on the screen. It would be too distracting for a writer*).
+  He is right and the reason is worth keeping: §8's line naming the five spoken
+  styles was **standing prose under somebody's manuscript**, a permanent
+  reminder of how to use a tool they may never press, where all a writer needs
+  on the page is a way in and a light saying whether it is listening. So it is a
+  small pill with a microphone that **fills while the recogniser runs**,
+  `aria-pressed` either way so the state is said as well as drawn, and the
+  instructions in its `title`. **It stands in the top corner of the paper, out
+  of the flow entirely** — two other arrangements were driven first and both
+  were wrong in ways only the screen showed: sticky at the foot put it an inch
+  under the first line on a short beat rather than in any corner, and giving the
+  column a page's height to push it down **stretched the empty-state button into
+  a block half the sheet tall**, the column being a grid whose one row then
+  filled the track; the sheet's top inch is blank margin, so it stands there and
+  never moves as the writing grows. **Absent rather than greyed** where the app
+  cannot hear for itself, a disabled *Dictate* being a control that can only
+  refuse — a test asserted that before the change and caught the first draft,
+  which had left a greyed button there. **§8b is the parenthetical that grew a
+  bracket**, from Ken with a screenshot: he said *parenthetical*, then *lifted
+  the gun*, and got `() lifted the gun)`. **The brackets are the program's
+  furniture and the words are the writer's**, and `insideParentheses` — the one
+  function that separates them — stripped from the outside in a loop that could
+  not clear a bracket which had become the **first** character: an empty
+  parenthetical is `()`, words joined onto it make `() lifted the gun`, taking
+  the leading `(` off leaves `) lifted the gun`, which neither half of the
+  condition matches, so it came back with the stray one in it and was wrapped
+  again. Every bracket comes off now, which is **idempotent by construction** —
+  what `retype` needs when asked to turn a parenthetical into a parenthetical,
+  and what a phrase dictated in two utterances requires; nothing is lost, a
+  bracket inside a wryly being this program's own rather than punctuation
+  anybody meant. The general lesson: **a function that normalises has to be safe
+  to run twice**, because the thing that runs it twice is never the code being
+  looked at when it was written.
   `addendum-10-book-index.md` is the back-of-book index, from Ken's ask for
   chapter pages that carry a graphic *"but it goes into an Index"* with the page
   numbers updating themselves. **Built.** Two of the three things he asked for

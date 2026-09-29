@@ -170,6 +170,58 @@ const MARK_KEYS: Record<string, InlineMark> = { b: 'bold', i: 'italic', u: 'unde
  * on screen is what will print without the editor having to become a rich
  * text engine.
  */
+
+/**
+ * What to say about dictating, in the button's tooltip rather than on the page
+ * (spec §9, from Ken).
+ *
+ * **Which recogniser there is decides which of these is true**, which is the
+ * same split `dictation.ts` settles by trying rather than by guessing the
+ * platform: where the app hears for itself, naming a style aloud works and is
+ * worth listing; where the *system* types into the field, it cannot — the app
+ * has no way to tell those words from the same words typed by hand, so it must
+ * not act on them, and implying otherwise would be worse than saying nothing.
+ */
+const dictationHelp = (kind: ReturnType<typeof dictationKind>): string =>
+  kind === 'offer'
+    ? [
+        'Dictate into the line the cursor is in.',
+        '',
+        'Say “Scene heading”, “Action”, “Character”, “Dialogue” or “Parenthetical”',
+        'as a sentence of its own to start that kind of line.',
+      ].join('\n')
+    : [
+        `This build has no speech service. Put the cursor in a line and ${systemDictationKey()}.`,
+        '',
+        'Say “new line” to start the next element; Tab changes what kind it is.',
+        'Naming a style aloud cannot work on this path.',
+      ].join('\n');
+
+/** The microphone on the button. It fills while the recogniser is running. */
+function MicrophoneGlyph({ listening }: { listening: boolean }) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <rect
+        x="6"
+        y="1.5"
+        width="4"
+        height="8"
+        rx="2"
+        fill={listening ? 'currentColor' : 'none'}
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M3.5 8a4.5 4.5 0 009 0M8 12.5V15"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function BeatBody({
   file,
   beat,
@@ -940,42 +992,38 @@ export function BeatBody({
           there is no speech service behind it, after which the system's own
           dictation is named instead — see `dictation.ts` for why this is
           settled by trying rather than by guessing the platform. */}
+      {/* **A button in the corner, and the instructions in its tooltip**, from
+          Ken: *it would be too distracting for a writer*. He is right, and the
+          reason is worth keeping — the line naming the five spoken styles was
+          standing prose under somebody's manuscript, a permanent reminder of
+          how to use a tool they may never press. What a writer needs on the
+          page is a way in and a light that says whether it is listening;
+          everything else is something you go and look for, once. */}
       {dictation && !readOnly ? (
         <div className="dictation">
+          {/* **Absent rather than greyed** where the app cannot hear for
+              itself: a disabled Dictate is a control that can only refuse. One
+              short line stands in its place, in the same corner, with the rest
+              of what to do in its own tooltip. */}
           {kind === 'offer' ? (
             <button
               type="button"
-              className={dictating ? 'ghost small listening' : 'ghost small'}
+              className={dictating ? 'dictate-toggle on' : 'dictate-toggle'}
               aria-pressed={dictating}
+              title={dictationHelp(kind)}
               onClick={toggleDictation}
             >
-              {dictating ? '● Listening — click to stop' : 'Dictate'}
+              <MicrophoneGlyph listening={dictating} />
+              <span>{dictating ? 'Listening' : 'Dictate'}</span>
             </button>
           ) : (
-            <span className="muted small">
+            <span className="muted small dictate-instead" title={dictationHelp(kind)}>
               To dictate, put the cursor in a line and {systemDictationKey()}.
             </span>
           )}
 
-          {kind === 'offer' ? (
-            <span className="muted small">
-              Say <strong>Scene heading</strong>, <strong>Action</strong>, <strong>Character</strong>,{' '}
-              <strong>Dialogue</strong> or <strong>Parenthetical</strong> — as a sentence of its own — to
-              start that kind of line.
-            </span>
-          ) : (
-            /* Naming a style aloud cannot work on this path, and implying it
-               could would be worse than saying nothing: the system types into
-               the field, and the app has no way to tell those words from the
-               same words typed by hand — so it must not act on them. Saying
-               "new line" does reach it, a line break in a field never having
-               been a keypress, and that is what is offered. */
-            <span className="muted small">
-              Say <strong>new line</strong> to start the next element; <strong>Tab</strong> changes what kind
-              it is.
-            </span>
-          )}
-
+          {/* What was heard, and anything that went wrong, still say so — a
+              recogniser running silently is the one state that needs words. */}
           {heard.length > 0 ? <span className="dictation-heard">{heard}</span> : null}
           {voiceNote ? <span className="error small">{voiceNote}</span> : null}
         </div>

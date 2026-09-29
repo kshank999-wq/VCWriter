@@ -179,14 +179,27 @@ export interface Retyped {
   caret: number;
 }
 
-/** The words inside a parenthetical, with any brackets and spacing taken off. */
-const insideParentheses = (text: string): string => {
-  let inner = text.trim();
-  while (inner.startsWith('(') || inner.endsWith(')')) {
-    inner = inner.replace(/^\(+/, '').replace(/\)+$/, '').trim();
-  }
-  return inner;
-};
+/**
+ * The words inside a parenthetical, with the brackets and spacing taken off.
+ *
+ * **The brackets are the program's furniture and the words are the writer's**,
+ * so every bracket comes off rather than only the ones at the ends — which is
+ * the fix for a real fault, from Ken, who dictated *parenthetical* and then
+ * *lifted the gun* and got `() lifted the gun)` on the page.
+ *
+ * The old rule stripped from the outside in a loop, and could not clear a
+ * bracket that had become the **first** character: an empty parenthetical is
+ * `()`, words joined onto it make `() lifted the gun`, taking the leading `(`
+ * off leaves `) lifted the gun`, which neither half of the condition matches —
+ * so it came back with the stray bracket in it and got wrapped again. Taking
+ * them all off is idempotent by construction, which is what `retype` needs
+ * when it is asked to turn a parenthetical into a parenthetical.
+ *
+ * Nothing is lost by it: a parenthetical is a wryly — *(beat)*, *(to Mara)*,
+ * *(quietly)* — and a bracket inside one is this program's own, never
+ * punctuation somebody meant.
+ */
+const insideParentheses = (text: string): string => text.replace(/[()]/g, '').trim();
 
 export const retype = (
   text: string,

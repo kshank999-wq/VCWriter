@@ -2465,27 +2465,81 @@ input[type='color'].swatch {
 
 /* Dictation (spec §9), under the beat rather than over it: the writing is the
    page and this is a tool beside it. */
+/* Dictation, from Ken: *a button in the corner that you can turn on and off,
+   with a little microphone that says dictate*, and the instructions in its
+   tooltip because a line of them under the manuscript *would be too
+   distracting for a writer*.
+
+   It is **sticky at the foot of the writing column** rather than a paragraph
+   at the end of it: in the corner wherever the writer has scrolled to, taking
+   one line of height instead of four, and out of the way of the words. */
+/* **In the top corner of the paper**, out of the flow entirely.
+
+   Two arrangements were driven before this one. Sticky at the foot put it an
+   inch under the first line on a short beat rather than in any corner; giving
+   the column a page's height to push it down stretched the empty-state button
+   into a block half the sheet tall, the column being a grid whose one row then
+   filled the track. The sheet's top inch is margin — blank paper above the
+   first line — so the button stands there: always in the same place, always
+   visible, and never moving as the writing grows. */
 .dictation {
+  position: absolute;
+  top: calc(0.28in * var(--page-zoom, 1));
+  right: calc(0.5in * var(--page-zoom, 1));
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 10px;
-  margin-top: 14px;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
   /* It sits inside the page column, which is set at the manuscript's own type
-     size — without this the help line is as large as the screenplay. */
+     size — without this it is as large as the screenplay. */
   font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 12px;
   line-height: 1.5;
-  max-width: 62ch;
+}
+
+/* Only the controls take the pointer, so the corner it floats over is still
+   the manuscript: a writer clicking beside the button lands in their words. */
+.dictation > * {
+  pointer-events: auto;
+}
+
+.dictate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  font-size: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--muted);
+}
+
+.dictate-toggle:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--gold-deep, var(--gold));
+  background: var(--panel-2);
+}
+
+/* Listening is the one state that must read from across the room. */
+.dictate-toggle.on,
+.dictate-toggle.on:hover {
+  color: var(--bg);
+  border-color: var(--gold);
+  background: var(--gold);
+}
+
+.dictate-toggle:disabled {
+  opacity: 0.7;
+  cursor: help;
 }
 
 .dictation .muted {
   font-size: 12px;
-}
-
-.dictation .listening {
-  color: var(--gold-bright);
-  border-color: var(--gold);
 }
 
 /* What the recogniser has not committed to yet, greyed the way the phone
@@ -2504,6 +2558,7 @@ input[type='color'].swatch {
   margin: 0 auto;
   width: fit-content;
 }
+
 
 .script-sheet .element-type,
 .writer-sheet .element-type,
@@ -2965,6 +3020,7 @@ dialog.writer-dialog::backdrop {
    paper. The zoom scales the whole page rather than the text alone, so what
    is on screen stays a page and never becomes a wider one. */
 .writer-sheet {
+  position: relative;
   --page-zoom: 1;
   width: calc(8.5in * var(--page-zoom));
   max-width: 100%;

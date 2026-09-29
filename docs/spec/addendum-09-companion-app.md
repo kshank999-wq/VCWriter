@@ -475,6 +475,71 @@ spoken in one breath arrived as four correctly typed, correctly indented
 elements, and a network failure flipped the same control to naming the system
 key.
 
+### 8a. A button in the corner, and the help in its tooltip
+
+From Ken, looking at a beat: *when you're in a beat, the dictate should be a
+button in the corner that you can turn on and off, with a little microphone that
+says dictate. And when you hold your cursor over it, a tooltip comes up with the
+instructions that are now shown on the screen. It would be too distracting for a
+writer.*
+
+He is right, and the reason is worth keeping. §8 put the five spoken styles in a
+sentence under the writing — **standing prose beneath somebody's manuscript, a
+permanent reminder of how to use a tool they may never press**. What a writer
+needs on the page is a way in and a light that says whether it is listening.
+Everything else is something you go and look for, once.
+
+So the control is a small pill with a microphone: *Dictate*, *Listening* while
+it runs, `aria-pressed` either way so the state is said as well as drawn, and
+the instructions in its `title`. The microphone **fills** while the recogniser
+is running, which is the one state that has to read from across the room.
+
+**It stands in the top corner of the paper, out of the flow entirely.** Two
+other arrangements were driven first and both were wrong in ways only the
+screen showed: sticky at the foot put it an inch under the first line on a
+short beat rather than in any corner, and giving the column a page's height to
+push it down **stretched the empty-state button into a block half the sheet
+tall**, the column being a grid whose single row then filled the track. The
+sheet's top inch is margin — blank paper above the first line — so the button
+stands there, always in the same place and never moving as the writing grows.
+
+**Absent rather than greyed where the app cannot hear for itself.** A disabled
+*Dictate* is a control that can only refuse, which this room forbids; where the
+system types into the field instead, one short line stands in the button's
+place, in the same corner, with the rest in its own tooltip. A test asserted
+this before the change and was right to: it caught the first draft, which had
+left a greyed button there.
+
+Which help is shown is still settled by trying rather than by guessing the
+platform (§8), because the two paths can offer different things: where the app
+hears for itself, naming a style aloud works and is worth listing; where the
+system types, it cannot, and implying otherwise would be worse than saying
+nothing.
+
+### 8b. The parenthetical that grew a bracket
+
+From Ken, with a screenshot: he dictated *parenthetical*, then *lifted the gun*,
+and the page read `() lifted the gun)`.
+
+**The brackets are the program's furniture and the words are the writer's**, and
+`insideParentheses` — the one function that separates them — could strand one.
+It stripped from the outside in a loop, and the loop could not clear a bracket
+that had become the **first** character: saying *parenthetical* makes an empty
+one, `()`; the next words are joined onto its text, giving `() lifted the gun`;
+taking the leading `(` off leaves `) lifted the gun`, which neither half of the
+condition matches. So it came back with the stray bracket still in it and was
+wrapped again.
+
+It takes **every** bracket off now, which is idempotent by construction — what
+`retype` needs when it is asked to turn a parenthetical into a parenthetical,
+and what a dictated phrase arriving in two utterances requires. Nothing is lost:
+a parenthetical is a wryly — *(beat)*, *(to Mara)*, *(quietly)* — and a bracket
+inside one is this program's own, never punctuation somebody meant.
+
+The lesson is small and general: **a function that normalises has to be safe to
+run twice**, because the thing that runs it twice is not the code that was being
+looked at when it was written.
+
 ## 9. What this addendum deliberately does not do
 
 - It does not restate §12's nine exclusions. They are Ken's, they are clear, and

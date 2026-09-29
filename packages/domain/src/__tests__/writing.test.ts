@@ -283,6 +283,22 @@ describe('a parenthetical wears its parentheses', () => {
     expect(retype('  ((whispering))  ', 'dialogue', 'parenthetical').text).toBe('(whispering)');
   });
 
+  it('takes a bracket off wherever it is, not only at the ends', () => {
+    // From Ken, dictating: he said *parenthetical*, which made an empty one,
+    // then *lifted the gun*, whose words were joined on after the brackets —
+    // and the page read `() lifted the gun)`. The old rule stripped from the
+    // outside in a loop that could not clear a bracket which had become the
+    // **first** character, so it came back with the stray one still in it and
+    // was wrapped again.
+    expect(retype('() lifted the gun', 'parenthetical', 'parenthetical').text).toBe('(lifted the gun)');
+    expect(retype('(to Mara) quietly', 'parenthetical', 'parenthetical').text).toBe('(to Mara quietly)');
+
+    // Idempotent by construction, which is what re-typing a parenthetical as a
+    // parenthetical needs: running it twice cannot grow a bracket.
+    const once = retype('() lifted the gun', 'parenthetical', 'parenthetical').text;
+    expect(retype(once, 'parenthetical', 'parenthetical').text).toBe(once);
+  });
+
   it('takes them off again when the line is re-typed as something else', () => {
     // What the writer wrote was the word, not the punctuation.
     expect(retype('(whispering)', 'parenthetical', 'dialogue').text).toBe('whispering');
