@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { scrollNudge, zoneFor, type OutlineZone } from '../drag';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
+import { usePhoneNotes } from '../phone-notes';
 import { PopOutButton } from './PopOutButton';
 import {
   isInstructional,
   addItem,
   addResearchRow,
+  approveCapture,
   bindRow,
   boardsOf,
   carryNodeToOutline,
@@ -219,6 +221,8 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
   const [dragging, setDragging] = useState<OutlineItemId | null>(null);
   /** True while anything at all is being carried, including off the shelf. */
   const [carryingAny, setCarryingAny] = useState(false);
+  /** What the phone has sent, so a note can be dragged into a place here (§15). */
+  const phone = usePhoneNotes(file.project.id as string);
   /** The research item a linked row points at, revealed on the shelf (§5). */
   const [reveal, setReveal] = useState<ResearchItemId | null>(null);
   const [over, setOver] = useState<{ id: OutlineItemId; zone: OutlineZone } | null>(null);
@@ -412,6 +416,35 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
         ...(zone === 'after' ? { afterId: target.id } : {}),
       };
       if (held.kind === 'research') return addResearchRow(current, id, held.id, where).file;
+      /**
+       * A note off the phone (addendum 09 §15).
+       *
+       * **Filed and placed in one act**: `approveCapture` makes the research
+       * note and then the row that reads it, and throws rather than leaving
+       * half of it — `captureFromScript`'s rule, since a note filed into a
+       * folder while the writer was watching the outline is the one confusing
+       * outcome.
+       */
+      if (held.kind === 'note') {
+        const note = phone.notes.find((one) => one.id === held.id);
+        if (!note) return current;
+        try {
+          const done = approveCapture(current, note, {
+            kind: 'outline',
+            outlineId: id,
+            parentId: where.parentId,
+            afterId: 'afterId' in where ? (where.afterId ?? null) : null,
+            beforeId: 'beforeId' in where ? (where.beforeId ?? null) : null,
+          });
+          // The project has changed, so the phone's copy is marked done
+          // whatever happens next; the note leaves the shelf either way.
+          void phone.resolve(done.capture).then((why) => phone.setError(why));
+          return done.file;
+        } catch (cause) {
+          phone.setError(cause instanceof Error ? cause.message : 'That note could not be placed');
+          return current;
+        }
+      }
       // A card off the board, carried across with everything under it (§2).
       if (held.kind === 'node') {
         const board = boardsOf(current)[0];
@@ -769,6 +802,8 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
           file={file}
           from="outline"
           reveal={reveal}
+          notes={phone.notes}
+          notesError={phone.error}
           onCarry={(held) => {
             carrying.current = held;
             setCarryingAny(held !== null);

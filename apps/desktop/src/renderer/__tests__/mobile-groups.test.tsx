@@ -50,6 +50,7 @@ const draw = (captures: CaptureItem[], onFileGroup = vi.fn()) => {
       onAcceptSuggestion={vi.fn()}
       onReject={vi.fn()}
       onRefresh={vi.fn()}
+      onPlace={vi.fn()}
       onFileGroup={onFileGroup}
     />,
   );

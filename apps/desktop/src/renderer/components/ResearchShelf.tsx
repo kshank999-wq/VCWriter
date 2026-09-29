@@ -18,6 +18,11 @@ import {
   type SculptorNode,
   type SculptorNodeId,
   type OutlineItemId,
+  type CaptureItem,
+  type CaptureItemId,
+  type ProjectFormat,
+  captureKeyName,
+  captureTitle,
 } from '@vcwriter/domain';
 
 /**
@@ -43,11 +48,23 @@ import {
  * the story.
  */
 
-/** What is being carried off the shelf: research, or a card from the other plan. */
+/**
+ * What is being carried off the shelf: research, a card from the other plan, or
+ * a note off the phone (addendum 09 §15).
+ *
+ * **The phone's notes are on the shelf for the shelf's own reason.** Ken asked
+ * to drag a note into a *specific place* in the Outliner or the Sculptor and
+ * then said why that is hard — you have to have the room up. This is the answer
+ * the shelf already gave to the same question about research and about the
+ * other plan: a drag cannot cross two windows that are not both on screen, so
+ * the thing you want to drag from lives *inside* the room you want to drop it
+ * in. A third source, no new gesture, and both rooms get it at once.
+ */
 export type ShelfCarry =
   | { kind: 'research'; id: ResearchItemId }
   | { kind: 'node'; id: SculptorNodeId }
-  | { kind: 'row'; id: OutlineItemId };
+  | { kind: 'row'; id: OutlineItemId }
+  | { kind: 'note'; id: CaptureItemId };
 
 interface ResearchShelfProps {
   file: ProjectFile;
@@ -55,16 +72,20 @@ interface ResearchShelfProps {
   from: 'outline' | 'board';
   /** An item to open the shelf at and mark, when a linked row asks for it. */
   reveal: ResearchItemId | null;
+  /** What the phone has sent and nobody has placed (§15). */
+  notes?: CaptureItem[];
+  /** Why the last note could not be read or placed, said where it happened. */
+  notesError?: string | null;
   /** Called with what is being carried, and with null when it is let go. */
   onCarry(carrying: ShelfCarry | null): void;
 }
 
-export function ResearchShelf({ file, from, reveal, onCarry }: ResearchShelfProps) {
+export function ResearchShelf({ file, from, reveal, notes = [], notesError = null, onCarry }: ResearchShelfProps) {
   const [query, setQuery] = useState('');
   const [shut, setShut] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(true);
-  /** Research, or the other plan. One shelf, two things to drag off it. */
-  const [showing, setShowing] = useState<'research' | 'other'>('research');
+  /** Research, the other plan, or the phone. One shelf, three things to drag off it. */
+  const [showing, setShowing] = useState<'research' | 'other' | 'phone'>('research');
   /** Whose an idea is, in a room; nothing at all outside one (§11). */
   const mark = useMark();
 
@@ -170,24 +191,30 @@ export function ResearchShelf({ file, from, reveal, onCarry }: ResearchShelfProp
 
       {/* Two things to drag off one shelf: the material, and the other plan
           (§2). Only offered when the other plan has something on it. */}
-      {other ? (
+      {/* **A tab per source, and only where there is something to drag off
+          it**: the other plan where it has cards, the phone where notes are
+          waiting. A tab over nothing is a tab that teaches somebody the shelf
+          is empty. */}
+      {other || notes.length > 0 ? (
         <div className="shelf-tabs" role="tablist">
-          {(['research', 'other'] as const).map((which) => (
-            <button
-              key={which}
-              type="button"
-              role="tab"
-              aria-selected={showing === which}
-              className={showing === which ? 'ghost small on' : 'ghost small'}
-              onClick={() => setShowing(which)}
-            >
-              {which === 'research' ? 'Research' : other.name}
-            </button>
-          ))}
+          {(['research', 'other', 'phone'] as const)
+            .filter((which) => (which === 'other' ? Boolean(other) : which === 'phone' ? notes.length > 0 : true))
+            .map((which) => (
+              <button
+                key={which}
+                type="button"
+                role="tab"
+                aria-selected={showing === which}
+                className={showing === which ? 'ghost small on' : 'ghost small'}
+                onClick={() => setShowing(which)}
+              >
+                {which === 'research' ? 'Research' : which === 'phone' ? `Phone ${notes.length}` : other?.name}
+              </button>
+            ))}
         </div>
       ) : null}
 
-      {showing === 'research' || !other ? (
+      {showing === 'research' || (showing === 'other' && !other) ? (
         <input
           className="shelf-search"
           type="search"
@@ -198,7 +225,35 @@ export function ResearchShelf({ file, from, reveal, onCarry }: ResearchShelfProp
         />
       ) : null}
 
-      {showing === 'other' && other ? (
+      {showing === 'phone' ? (
+        <div className="shelf-tree">
+          <p className="muted small shelf-note">
+            Caught on the phone. Drag one where it belongs — it is filed on the shelf as it lands, so it is
+            in the plan and in your research at once.
+          </p>
+          {notesError ? <p className="muted small shelf-note">{notesError}</p> : null}
+          {notes.map((note) => (
+            <div
+              key={note.id as string}
+              className="shelf-item shelf-note-item"
+              title={note.rawText.slice(0, 300)}
+              draggable
+              onDragStart={(event) => {
+                event.dataTransfer.setData('text/plain', captureTitle(note));
+                event.dataTransfer.effectAllowed = 'copy';
+                onCarry({ kind: 'note', id: note.id });
+              }}
+              onDragEnd={() => onCarry(null)}
+            >
+              <span className="shelf-note-kind muted">
+                {captureKeyName(note.category ?? 'idea', file.project.format as ProjectFormat)}
+              </span>
+              {note.subjectName ? <strong>{note.subjectName}</strong> : null}
+              {captureTitle(note)}
+            </div>
+          ))}
+        </div>
+      ) : showing === 'other' && other ? (
         <div className="shelf-tree">
           <p className="muted small shelf-note">
             Drag a card across to start with. It is copied, not moved, and what is under it comes too.

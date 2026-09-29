@@ -18,6 +18,17 @@ export type CaptureSource = z.infer<typeof captureSourceSchema>;
 export const captureStatusSchema = z.enum(['pending', 'needs_review', 'approved', 'rejected']);
 export type CaptureStatus = z.infer<typeof captureStatusSchema>;
 
+/**
+ * The two states that mean *nobody has placed this yet* (addendum 09 §15).
+ *
+ * **One list rather than one per host.** The desktop reads the queue from
+ * Supabase and the browser preview reads it through a route, and *what is
+ * waiting* is the question both have to answer identically — a desk that
+ * disagreed with itself about which notes are still on the phone's list is a
+ * note that disappears on one machine and not the other.
+ */
+export const WAITING_STATUSES: ReadonlyArray<CaptureStatus> = ['pending', 'needs_review'];
+
 export const captureInferenceSchema = z.object({
   categoryKey: systemCategoryKeySchema.nullable().default(null),
   /** e.g. the character named in "Character Marisol — she never trusts him". */

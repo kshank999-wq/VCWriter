@@ -74,6 +74,7 @@ import { CastPanel } from './CastPanel';
 import { CharacterCreator, type CreatorTab } from './CharacterCreator';
 import { CharacterMap } from './CharacterMap';
 import { MobileInbox } from './MobileInbox';
+import { usePhoneNotes } from '../phone-notes';
 import { CharacterReview, type ReviewMode } from './CharacterReview';
 import { useModal } from '../use-modal';
 
@@ -258,36 +259,16 @@ export function ResearchBody({
    * the side menu, on folders and on the cast — so the list and the thing that
    * removes from it have to be the same piece of state.
    */
-  const [captures, setCaptures] = useState<CaptureItem[]>([]);
-  const [capturesLoading, setCapturesLoading] = useState(false);
-  const [capturesError, setCapturesError] = useState<string | null>(null);
-
-  const loadCaptures = useCallback(async () => {
-    // The browser preview and the tests run this component without the
-    // Electron bridge behind it. No bridge means no phone, which is an empty
-    // inbox rather than an error a writer would have to read.
-    if (typeof window.vcwriter?.listCaptures !== 'function') return;
-
-    setCapturesLoading(true);
-    setCapturesError(null);
-    const result = await window.vcwriter.listCaptures(file.project.id);
-    setCapturesLoading(false);
-    if (!result.ok || !result.data) {
-      setCapturesError(result.error ?? 'The phone\u2019s notes could not be read');
-      return;
-    }
-    setCaptures(result.data);
-  }, [file.project.id]);
-
-  // Fetched once the window is open rather than when Mobile App is chosen, so
-  // the count beside it is true before anybody clicks it.
-  useEffect(() => {
-    void loadCaptures();
-  }, [loadCaptures]);
+  const phone = usePhoneNotes(file.project.id as string);
+  const captures = phone.notes;
 
   const waiting = useMemo(
-    () => inboxGroups(captures).reduce((total, group) => total + group.captures.length, 0),
-    [captures],
+    () =>
+      inboxGroups(captures, file.project.format as ProjectFormat).reduce(
+        (total, group) => total + group.captures.length,
+        0,
+      ),
+    [captures, file.project.format],
   );
 
   // How many are waiting in the graveyard, for the menu's count.
@@ -388,23 +369,19 @@ export function ResearchBody({
    * second copy of this would eventually do one without the other.
    */
   const placeCapture = async (capture: CaptureItem, decision: ApprovalDecision) => {
-    setCapturesError(null);
+    phone.setError(null);
     try {
       // Worked out before the updater runs: an updater can run twice in
       // StrictMode, and reading the result from inside it would double the note.
       const result = approveCapture(file, capture, decision);
       onUpdate(() => result.file);
 
-      const written = await window.vcwriter.resolveCapture(result.capture);
-      if (!written.ok) {
-        // The note is in the project; only the queue entry failed to update. Say
-        // that, rather than pretending nothing happened.
-        setCapturesError(written.error ?? 'The note was filed, but the phone\u2019s copy could not be marked done');
-        return;
-      }
-      setCaptures((current) => current.filter((one) => one.id !== capture.id));
+      // The note is in the project; only the queue entry can still fail, and
+      // saying so beats pretending nothing happened.
+      const why = await phone.resolve(result.capture);
+      if (why) phone.setError(why);
     } catch (cause) {
-      setCapturesError(cause instanceof Error ? cause.message : 'That note could not be filed');
+      phone.setError(cause instanceof Error ? cause.message : 'That note could not be filed');
     }
   };
 
@@ -422,17 +399,16 @@ export function ResearchBody({
    * run the update.
    */
   const placeGroup = async (category: string | null, group: string) => {
-    setCapturesError(null);
+    phone.setError(null);
     const offer = groupOffer(file, captures, category, group);
     if (!offer.parentId || offer.count === 0) {
-      setCapturesError(offer.why);
+      phone.setError(offer.why);
       return;
     }
 
     try {
       const opened = openGroupFolder(file, category, group);
       let next = opened.file;
-      const done: CaptureItem[] = [];
       const waiting = captures.filter(
         (one) =>
           (one.status === 'pending' || one.status === 'needs_review') &&
@@ -443,34 +419,25 @@ export function ResearchBody({
       for (const capture of waiting) {
         const result = approveCapture(next, capture, { kind: 'research', categoryId: opened.categoryId });
         next = result.file;
-        const written = await window.vcwriter.resolveCapture(result.capture);
-        if (!written.ok) {
+        const why = await phone.resolve(result.capture);
+        if (why) {
           // What has been filed is filed; say what stopped rather than
           // pretending the whole press failed or that all of it worked.
           onUpdate(() => next);
-          setCaptures((current) => current.filter((one) => !done.some((was) => was.id === one.id)));
-          setCapturesError(
-            written.error ?? 'Some of that group was filed; the phone’s copy could not be marked done',
-          );
+          phone.setError(why);
           return;
         }
-        done.push(capture);
       }
 
       onUpdate(() => next);
-      setCaptures((current) => current.filter((one) => !done.some((was) => was.id === one.id)));
     } catch (cause) {
-      setCapturesError(cause instanceof Error ? cause.message : 'That group could not be filed');
+      phone.setError(cause instanceof Error ? cause.message : 'That group could not be filed');
     }
   };
 
   const discardCapture = async (capture: CaptureItem) => {
-    const written = await window.vcwriter.resolveCapture(rejectCapture(capture));
-    if (!written.ok) {
-      setCapturesError(written.error ?? 'That note could not be set aside');
-      return;
-    }
-    setCaptures((current) => current.filter((one) => one.id !== capture.id));
+    const why = await phone.resolve(rejectCapture(capture));
+    if (why) phone.setError(why);
   };
 
   /** The note being dragged, when one is. */
@@ -1075,8 +1042,8 @@ export function ResearchBody({
             <MobileInbox
               file={file}
               captures={captures}
-              loading={capturesLoading}
-              error={capturesError}
+              loading={phone.loading}
+              error={phone.error}
               draggingId={dragging?.kind === 'capture' ? dragging.id : null}
               onDragStart={(capture) => setDragging({ kind: 'capture', id: capture.id as string })}
               onDragEnd={() => setDragging(null)}
@@ -1085,7 +1052,8 @@ export function ResearchBody({
                 if (decision) void placeCapture(capture, decision);
               }}
               onReject={(capture) => void discardCapture(capture)}
-              onRefresh={() => void loadCaptures()}
+              onPlace={(capture, decision) => void placeCapture(capture, decision)}
+              onRefresh={() => void phone.reload()}
               onFileGroup={(category, group) => void placeGroup(category, group)}
             />
           ) : selection.kind === 'review' ? (

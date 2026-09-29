@@ -11,6 +11,7 @@ import {
   serializeProjectFile,
   suggestedBookFileName,
   suggestedExportFileName,
+  type CaptureItem,
   type ProjectFile,
   type LearningSuggestion,
   type SceneVerdict,
@@ -458,8 +459,62 @@ export const createBrowserBridge = (): BrowserBridge => {
     roomStanding: async () => fail('This project is already in the room.'),
     contributeToRoom: async () => fail('Use Submit — this project is already in the room.'),
     fetchRoomMaster: async () => fail('This project is already in the room.'),
-    listCaptures: async () => ok([]),
-    resolveCapture: async () => fail(NOT_HERE),
+    /**
+     * The phone's notes, which the preview used to swear there were none of
+     * (addendum 09 §15, from Ken: *you need a sync function or it needs to
+     * automatically sync when you load the app*).
+     *
+     * **This answered `ok([])` — always.** The Research window loads the queue
+     * the moment it opens, so the sync Ken asked for was already there and was
+     * being handed an empty list, which is indistinguishable from a phone that
+     * had sent nothing. Every note he dictated was on the server and the one
+     * screen built to show them could not see them, on the one build he
+     * actually uses.
+     *
+     * It goes through the site's own route for `reviewScene`'s reason, said
+     * below: same origin, the gate's own cookie, nothing to ship.
+     */
+    async listCaptures(projectId) {
+      try {
+        const response = await fetch(
+          `/api/notes/inbox${projectId ? `?project=${encodeURIComponent(projectId)}` : ''}`,
+          { credentials: 'same-origin', cache: 'no-store' },
+        );
+        const body = (await response.json().catch(() => ({}))) as {
+          notes?: CaptureItem[];
+          error?: string;
+        };
+        if (!response.ok) return fail(body.error ?? 'The phone’s notes could not be read');
+        return ok(body.notes ?? []);
+      } catch (cause) {
+        return fail(cause instanceof Error ? cause.message : 'The phone’s notes could not be read');
+      }
+    },
+
+    /**
+     * Mark a note placed.
+     *
+     * The project change is made in the renderer with the domain functions;
+     * this writes back the outcome and never the words, so a wrong call can be
+     * read back and redone. Without it a note filed here would be filed again
+     * tomorrow, which is the half of the queue a read alone does not give.
+     */
+    async resolveCapture(capture) {
+      try {
+        const response = await fetch('/api/notes/inbox', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ capture }),
+        });
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        if (!response.ok) return fail(body.error ?? 'That note could not be marked done');
+        return ok(true as const);
+      } catch (cause) {
+        return fail(cause instanceof Error ? cause.message : 'That note could not be marked done');
+      }
+    },
+
     /**
      * The one cloud call the preview can honestly make.
      *

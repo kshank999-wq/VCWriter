@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { captureCategorySchema, mayStillEdit } from '@vcwriter/domain';
+import { captureKeySchema, mayStillEdit } from '@vcwriter/domain';
 import { currentUser, serverClient } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
@@ -23,7 +23,10 @@ export const dynamic = 'force-dynamic';
 
 const patch = z.object({
   rawText: z.string().min(1).max(20_000).optional(),
-  category: captureCategorySchema.nullable().optional(),
+  // The project's own vocabulary (§10, §13.2), not the older five: a phone
+  // correcting a note to `dialogue` was refused by a route that had never
+  // followed the widening — the fifth copy of that enum, and the last.
+  category: captureKeySchema.nullable().optional(),
   subjectName: z.string().max(200).nullable().optional(),
   projectId: z.string().uuid().nullable().optional(),
 });

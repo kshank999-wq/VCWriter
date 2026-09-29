@@ -8,6 +8,7 @@ import {
   SYNC_TABLES,
   captureFromRow,
   captureReviewToRow,
+  WAITING_STATUSES,
   bytesToHash,
   fromRows,
   gatherRows,
@@ -615,7 +616,9 @@ export const listCaptures = async (projectId: string | null): Promise<CaptureIte
     .from('capture_items')
     .select('*')
     .eq('user_id', userId)
-    .in('status', ['pending', 'needs_review'])
+    // What *waiting* means is the domain's, so this and the browser
+    // preview's route cannot disagree about which notes are still on the list.
+    .in('status', [...WAITING_STATUSES])
     .order('captured_at', { ascending: false })
     .limit(200);
 

@@ -1162,3 +1162,135 @@ One sentence is Supabase's fault and worth naming: it answers *Invalid login
 credentials* both for a wrong password and for an account that has never set
 one, which are different problems with different answers — so the refusal names
 both and points at the link.
+
+---
+
+## 15. The notes at the desk
+
+From Ken, in one message, after §13 put the notes on the server:
+
+> *in the main app, under mobile app, there needs to be the same categories
+> that are on the phone. And you need a sync function or it needs to
+> automatically sync when you load the app. So it populates the mobile app
+> section in the research. And there also needs to be to where you can go ahead
+> and move those notes or edit them into different categories in the research.
+> And also move them to outliners and Sculptor with a right click menu… Of
+> course, that may not work. Because you need to be able to have it organized.
+> So you'd have to have the sculptor or the outliner up and be able to drag it
+> into a specific place on those*
+
+### 15.1 The section that could not be populated
+
+**`listCaptures` in the browser bridge answered `ok([])` — always.** The
+Research window has loaded the queue the moment it opens since stage 1, so the
+sync Ken asked for was there and was being handed an empty list, which is
+indistinguishable from a phone that had sent nothing. Every note he dictated was
+on the server, and the one screen built to show them could not see them, on the
+one build he actually uses.
+
+The desktop application talks to Supabase directly and needed nothing. The
+preview cannot — no keychain, and a content security policy of `connect-src
+'self'` — so it goes through the site's own route, which is `reviewScene`'s
+argument: the preview is served from vc-writer.com behind the administrator
+gate, so the session cookie that fetched the page is already good there.
+
+`/api/notes/inbox` is **the desk's end of the queue**, where `/api/notes` is the
+phone's: a `GET` for what is still waiting, and a `POST` that records what was
+done with one. Two hosts ask the same question, and **what stops them drifting
+is that the part worth getting wrong is in the domain** — `WAITING_STATUSES` is
+what *waiting* means and `captureReviewToRow` is what a resolution writes, so
+neither host decides either for itself. The main process reads that list too
+now, where it had its own copy.
+
+The categories needed nothing: `inboxGroups` has grouped by what is actually in
+the notes since §12, so Dialogue and Scene arrive the day the phone sends them.
+What was wrong is only that no note arrived at all.
+
+### 15.2 Moving and correcting one
+
+Three reaches, and they are three reaches rather than three answers. **The
+suggestion** is one press for the ordinary case. **The right-click** names every
+destination the domain has a word for. **The drag** reaches the folders and the
+cast down the left, and — see below — a place in either plan.
+
+Correcting is **on the way past rather than a change to the note**: `raw_text`
+is the recovery record (§9), so the words typed here are what goes *into the
+project* and the testimony behind it is left alone. That is why the menu says
+*Correct it and choose a folder…* rather than *Edit*, and why a bad correction
+can always be redone from the note.
+
+Driving it caught a sentence that was not true. A `dialogue` note read **“No
+category identified — defaulting to Ideas”** — said to somebody who had just
+identified one out loud. `spokenSuggestion` returned null wherever the category's
+mapped folder was absent, and a screenplay has no General Notes shelf; `scene`
+has no folder **on purpose**, this module not being allowed to file into the
+manuscript. Both now say what was heard and that nobody has decided where it
+belongs. The same function had been asking `captureKeyName` for the format
+`null`, so a note said against a scene read back as *Scene or chapter* on a
+screenplay that has scenes — §13.2's fourth copy, one place further on.
+
+### 15.3 Into the Outliner and the Sculptor
+
+**`ApprovalDecision` gains two kinds and the pipeline needed nothing else**,
+which is the audit paying again: the renderer has done `approveCapture` then
+`resolveCapture` since stage 1, so a note lands in a plan through the same two
+calls that file it in a folder.
+
+Each is **two things in one act**. The note is filed first — it is a thought
+somebody had, and it belongs on the shelf whatever happens to the plan — and
+then it is placed; if the placing fails, **nothing is kept**, which is
+`captureFromScript`'s rule, a note filed into a folder while the writer was
+watching a board being the one confusing outcome. The outline gets a **row that
+references** the research item (addendum 06 §5, so renaming it renames both);
+the board gets a **card carrying the words**, the board holding no reference
+(addendum 03 §2) — not an inconsistency but each plan's own rule, and the note
+is on the shelf either way, so nothing is lost if the card goes.
+
+`filingFolder` is the one reading that says where a note goes when nobody said:
+what the writer chose, then what its category reads as, then the general shelf,
+then **Ideas**. Never simply *the first folder* — a screenplay's first folder is
+the cast, and *Characters* is the wrong place to lose a note.
+
+### 15.4 The shelf is the answer to Ken's own objection
+
+He asked for the right-click and then said why it might not be enough: *you'd
+have to have the sculptor or the outliner up and be able to drag it into a
+specific place*. He is right, and **the shelf answered this question twice
+before**. Addendum 06 §3 put Research *inside* the Outliner for exactly this
+reason — two full-window rooms cannot be side by side, and a drag cannot cross
+two windows that are not both on screen — and §2 put the other plan on it for
+the same reason.
+
+So the phone is a **third source on that shelf**: a tab beside Research and the
+other plan, in both rooms, with no new gesture and the rooms' existing drop
+targets. That is also his *or have its own place to where you can see both*,
+which is the half of the sentence this builds rather than a new room. (The
+Mobile App section could already go to a second monitor: Research is a room, and
+§8's rule is that every room does.)
+
+`usePhoneNotes` is **one reading of the queue for every room that shows it** —
+three components each loading it would be three answers to what is still
+waiting, which is addendum 24 §5j's rule pointed at a fetch rather than at a
+filter. The Research window was moved onto it in the same change, so there is
+one.
+
+### 15.5 Driven
+
+At 1500×1000 with the bridge answering as the route does. **Mobile App reads
+4** and divides into DIALOGUE, IDEA, THEME, SCENE. The right-click carries six
+items with their sentences; *To the Outliner* files the note under Ideas, puts
+the row, marks the phone's copy `approved` and takes it off the list. *Move…*
+opens the correction with every folder in it and files under Characters. The
+shelf inside the Outliner reads **RESEARCH · BOARD · PHONE 4** and inside the
+Sculptor **RESEARCH · OUTLINE · PHONE 4**, both listing the four notes with the
+format's own word above each. Dragging one onto WAREHOUSE takes the outline from
+1 row to 2 and the shelf from 4 notes to 3. It also caught the tab row: three
+tabs did not fit a 210px shelf, so *RESEARCH* drew as *RESEA…* — a tab
+truncated to the point of naming nothing — and it wraps now.
+
+### 15.6 Deliberately absent
+
+**A Mobile App room of its own.** With the notes on the shelf inside the two
+rooms that need them, a seventh `ROOM_PANES` entry would be a second place to
+read the same queue, and the section already travels to another monitor with
+Research.

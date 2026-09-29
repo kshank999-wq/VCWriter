@@ -8639,6 +8639,28 @@ dialog.preferences .field {
   color: var(--muted);
 }
 
+/* A note off the phone, on the shelf inside the Outliner and the Sculptor
+   (addendum 09 §15). It wraps where a research title does not: what a note is
+   about is its first sentence, and one truncated line of it names nothing. */
+.shelf-note-item {
+  white-space: normal;
+  overflow: visible;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  line-height: 1.35;
+}
+
+.shelf-note-kind {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.shelf-note-item strong {
+  margin-right: 5px;
+}
+
 /* What a linked row asked to be shown. */
 .shelf-item.revealed {
   background: var(--panel-2);
@@ -8736,21 +8758,26 @@ dialog.preferences .field {
 
 /* ---- the shelf's second source: the other plan (addendum 06 §2) ------- */
 
+/* **It wraps rather than clipping** (addendum 09 §15). Two tabs fitted a
+   210px shelf and three did not, so *RESEARCH* came back as *RESEA…* — a tab
+   truncated to the point of naming nothing, which is worse than a second row.
+   Measured with the phone's tab present, which is what added the third. */
 .shelf-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 2px;
   padding: 0 8px 6px 12px;
 }
 
 .shelf-tabs button {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
   padding: 2px 4px;
   border: 1px solid transparent;
   border-radius: 3px;
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -12097,6 +12124,18 @@ dialog.projects-dialog {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Correcting a note on the way into the project (addendum 09 §15). The words
+   here are what the research item gets; the note behind it is untouched. */
+.mobile-edit {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.mobile-edit textarea {
+  resize: vertical;
 }
 
 /* The proposal, said with its reason. It wraps rather than truncating, because

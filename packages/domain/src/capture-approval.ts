@@ -10,6 +10,8 @@ import {
   DomainError,
 } from './mutations.js';
 import { researchCategoriesInOrder } from './selectors.js';
+import { addResearchRow, outlinesOf } from './outline.js';
+import { addBlock, addChild, boardsOf } from './sculptor.js';
 import { knowsCharacter } from './characters.js';
 import {
   CAPTURE_CATEGORIES,
@@ -19,7 +21,15 @@ import {
 } from './entities/capture.js';
 import type { ProjectFile } from './project-file.js';
 import type { ProjectFormat } from './entities/project.js';
-import type { CharacterId, ResearchCategoryId, StructuralUnitId } from './ids.js';
+import type {
+  BoardId,
+  CharacterId,
+  OutlineId,
+  OutlineItemId,
+  ResearchCategoryId,
+  SculptorNodeId,
+  StructuralUnitId,
+} from './ids.js';
 
 /**
  * Turning captured material into project data (spec §9, §11).
@@ -31,7 +41,7 @@ import type { CharacterId, ResearchCategoryId, StructuralUnitId } from './ids.js
  */
 
 export type ApprovalDecision =
-  | { kind: 'research'; categoryId: ResearchCategoryId; title?: string }
+  | { kind: 'research'; categoryId: ResearchCategoryId; title?: string; body?: string }
   | { kind: 'beat'; unitId: StructuralUnitId; title?: string }
   /** A new person in the cast. */
   | { kind: 'character'; name?: string }
@@ -47,7 +57,47 @@ export type ApprovalDecision =
    * a thought about somebody *is* characterization is the Character Creator's
    * question and the writer's to answer (addendum 09 §3.2).
    */
-  | { kind: 'about_character'; characterId: CharacterId; title?: string };
+  | { kind: 'about_character'; characterId: CharacterId; title?: string; body?: string }
+  /**
+   * Into the Outliner, at a place the writer chose (addendum 09 §15, from Ken:
+   * *move them to outliners and Sculptor… you'd have to have the sculptor or
+   * the outliner up and be able to drag it into a specific place*).
+   *
+   * **It files the note and then puts a row that references it**, which is two
+   * things in one act for `captureFromScript`'s reason: something born on deck
+   * in the room the writer is looking at is the one confusing outcome. The row
+   * is a **reference** rather than a copy, which is `addResearchRow`'s own rule
+   * (addendum 06 §5) — so the note is on the shelf and in the plan, once, and
+   * editing it in either place is editing the note.
+   */
+  | {
+      kind: 'outline';
+      outlineId: OutlineId;
+      parentId?: OutlineItemId | null;
+      afterId?: OutlineItemId | null;
+      beforeId?: OutlineItemId | null;
+      /** Where the note is filed on the way past. Defaults to what it reads as. */
+      categoryId?: ResearchCategoryId;
+      title?: string;
+      body?: string;
+    }
+  /**
+   * Onto the Story Sculptor's board.
+   *
+   * **A card carries the words rather than a reference**, which is not an
+   * inconsistency with the outline above but the board's own rule (addendum 03
+   * §2): a board is a picture of possibilities, and a card is a claim somebody
+   * made on it. The note is still filed, so nothing is lost if the card goes.
+   */
+  | {
+      kind: 'board';
+      boardId: BoardId;
+      /** The card it hangs off, or null for a block of its own in the spine. */
+      parentId?: SculptorNodeId | null;
+      categoryId?: ResearchCategoryId;
+      title?: string;
+      body?: string;
+    };
 
 export interface RoutingSuggestion {
   decision: ApprovalDecision | null;
@@ -117,6 +167,32 @@ const childNamed = (file: ProjectFile, parentId: ResearchCategoryId, name: strin
   researchCategoriesInOrder(file).find(
     (one) => (one.parentId ?? null) === parentId && plainly(one.name) === plainly(name),
   );
+
+/**
+ * The folder a note is filed in when the writer named none.
+ *
+ * **One reading**, asked by every act that has to file a note on its way
+ * somewhere else — the two plans below, and anything built after them. It
+ * prefers what the writer chose, then what the note's own category reads as,
+ * then the general Notes shelf a book has, then **Ideas** — which is where a
+ * general thought goes, and is `arc`'s own answer below — and only then
+ * whatever folder there is. A note with nowhere to go is the one outcome that
+ * loses somebody's words, and *Characters* is the wrong place to lose it: a
+ * screenplay has no Notes shelf, so the first folder there is the cast.
+ */
+export const filingFolder = (
+  file: ProjectFile,
+  capture: CaptureItem,
+  chosen: ResearchCategoryId | null,
+): ResearchCategoryId | null => {
+  const folders = researchCategoriesInOrder(file);
+  if (chosen && folders.some((one) => one.id === chosen)) return chosen;
+  const key = capture.category ? FOLDER_FOR[capture.category] : undefined;
+  const byCategory = key ? folders.find((one) => one.systemKey === key) : undefined;
+  const general =
+    folders.find((one) => one.systemKey === 'notes') ?? folders.find((one) => one.systemKey === 'ideas');
+  return (byCategory ?? general ?? folders[0])?.id ?? null;
+};
 
 /** The folder a spoken category reads as, which is where a group nests. */
 const folderForCategory = (file: ProjectFile, category: string | null) => {
@@ -235,7 +311,7 @@ const spokenSuggestion = (file: ProjectFile, capture: CaptureItem): RoutingSugge
       return {
         decision: { kind: 'about_character', characterId: known.id },
         confidence: 1,
-        reason: `You said ${captureKeyName(category, null)} — ${known.name}, who is already in the cast${aside}`,
+        reason: `You said ${captureKeyName(category, file.project.format as ProjectFormat)} — ${known.name}, who is already in the cast${aside}`,
       };
     }
     if (category === 'character') {
@@ -247,11 +323,45 @@ const spokenSuggestion = (file: ProjectFile, capture: CaptureItem): RoutingSugge
     }
   }
 
+  /**
+   * **The format's own word**, which this function had been asking `null` for
+   * since §10 widened the vocabulary — so a note said as *scene* read back as
+   * *Scene or chapter* on a screenplay that has scenes. The project knows what
+   * it is; nothing here had asked it.
+   */
+  const words = (one: string): string => captureKeyName(one, file.project.format as ProjectFormat);
+
   const key = FOLDER_FOR[category];
   const folder = key
     ? researchCategoriesInOrder(file).find((candidate) => candidate.systemKey === key)
     : undefined;
-  if (!folder) return null;
+
+  /**
+   * A category with no folder of its own here, which is two cases and one
+   * answer.
+   *
+   * **The structural words and `scene` have none on purpose** — a note said
+   * against a scene is about the manuscript, and the one thing this module may
+   * never do is file into it — and **a mapped folder can simply be absent**,
+   * since a screenplay has no General Notes shelf for a line of dialogue to go
+   * on. Driving it found what falling through cost: the suggestion read *No
+   * category identified*, said to somebody who had just identified one out
+   * loud. It goes where a general thought goes, and the sentence says both that
+   * they were heard and that nobody has decided where it belongs.
+   */
+  if (!folder) {
+    const general = filingFolder(file, capture, null);
+    const where = researchCategoriesInOrder(file).find((one) => one.id === general);
+    return general && where
+      ? {
+          decision: { kind: 'research', categoryId: general },
+          // Deliberately short of certainty: this is where it waits rather than
+          // where it belongs, and `needsReview` reads this number.
+          confidence: 0.5,
+          reason: `You said ${words(category)} — no folder for that, so ${where.name} unless you place it yourself`,
+        }
+      : null;
+  }
 
   /**
    * A group the writer said on the phone (§12), which narrows the folder
@@ -268,12 +378,12 @@ const spokenSuggestion = (file: ProjectFile, capture: CaptureItem): RoutingSugge
       ? {
           decision: { kind: 'research', categoryId: under.id },
           confidence: 1,
-          reason: `You said ${captureKeyName(category, null)}, ${group} — which is already under ${folder.name}`,
+          reason: `You said ${words(category)}, ${group} — which is already under ${folder.name}`,
         }
       : {
           decision: { kind: 'research', categoryId: folder.id },
           confidence: 1,
-          reason: `You said ${captureKeyName(category, null)}, ${group} — no ${group} folder yet`,
+          reason: `You said ${words(category)}, ${group} — no ${group} folder yet`,
         };
   }
 
@@ -283,7 +393,7 @@ const spokenSuggestion = (file: ProjectFile, capture: CaptureItem): RoutingSugge
     reason:
       category === 'arc'
         ? 'An arc note with nobody named — Ideas until you say otherwise'
-        : `You said ${captureKeyName(category, null)}`,
+        : `You said ${words(category)}`,
   };
 };
 
@@ -389,7 +499,11 @@ export const approveCapture = (
     next = addResearchItem(file, {
       categoryId: decision.categoryId,
       title: decision.title ?? captureTitle(capture),
-      body: capture.rawText,
+      // **The writer's words where they changed them, the phone's where they
+      // did not.** The note itself is never rewritten — `raw_text` is the
+      // recovery record (§9) — so this is the difference between correcting
+      // what goes into the project and editing the testimony behind it.
+      body: decision.body ?? capture.rawText,
       origin: 'mobile_capture',
     });
     const created = next.researchItems[next.researchItems.length - 1];
@@ -417,13 +531,57 @@ export const approveCapture = (
     next = addResearchItem(file, {
       categoryId: folder.id,
       title: decision.title ?? captureTitle(capture),
-      body: capture.rawText,
+      body: decision.body ?? capture.rawText,
       origin: 'mobile_capture',
     });
     const created = next.researchItems[next.researchItems.length - 1];
     if (!created) throw new DomainError('The research note could not be created');
     next = linkEntities(next, { from: ref('research_item', created.id), to: ref('character', person.id) });
     resultRef = ref('research_item', created.id);
+  } else if (decision.kind === 'outline' || decision.kind === 'board') {
+    /**
+     * Into a plan, which is **two things in one act**.
+     *
+     * The note is filed first — it is a thought somebody had, and it belongs on
+     * the shelf whatever happens to the plan — and then it is placed. If the
+     * placing fails there is nothing to show for it, so **nothing is kept**:
+     * `captureFromScript`'s rule, since a note filed into a folder while the
+     * writer was watching a board is the one confusing outcome.
+     */
+    const folder = filingFolder(file, capture, decision.categoryId ?? null);
+    if (!folder) throw new DomainError('There is nowhere to file this note');
+
+    next = addResearchItem(file, {
+      categoryId: folder,
+      title: decision.title ?? captureTitle(capture),
+      body: decision.body ?? capture.rawText,
+      origin: 'mobile_capture',
+    });
+    const item = next.researchItems[next.researchItems.length - 1];
+    if (!item) throw new DomainError('The research note could not be created');
+
+    if (decision.kind === 'outline') {
+      // A **reference**, never a copy (addendum 06 §5): the row reads the note's
+      // name through to the shelf, so renaming it renames both.
+      const put = addResearchRow(next, decision.outlineId, item.id, {
+        parentId: decision.parentId ?? null,
+        afterId: decision.afterId ?? null,
+        beforeId: decision.beforeId ?? null,
+      });
+      if (!put.itemId) throw new DomainError('That note could not be placed in the outline');
+      next = put.file;
+    } else {
+      // The board holds no reference, so a card carries the words (addendum 03
+      // §2). The note is still on the shelf, so nothing is lost if the card is.
+      const made =
+        decision.parentId
+          ? addChild(next, decision.boardId, decision.parentId, { title: item.title })
+          : addBlock(next, decision.boardId, { title: item.title });
+      if (!made.nodeId) throw new DomainError('That note could not be placed on the board');
+      next = made.file;
+    }
+
+    resultRef = ref('research_item', item.id);
   } else {
     next = addCharacter(file, {
       name: decision.name ?? captureTitle(capture),
@@ -439,6 +597,54 @@ export const approveCapture = (
     capture: { ...capture, status: 'approved', reviewedAt, resultRef },
     resultRef,
   };
+};
+
+/**
+ * What dropping a note into a plan would do, said before it can be asked for.
+ *
+ * `trackRemoval`'s shape: the sentence or the refusal, in one place, so the
+ * shelf, the right-click menu and the drop cannot promise different things.
+ * The refusal is the useful half — a room with no board or no outline yet is
+ * the commonest reason a drag does nothing, and *nothing happened* is the one
+ * answer a writer cannot act on.
+ */
+export interface NoteOffer {
+  can: boolean;
+  /** What the control should be called. */
+  act: string;
+  /** What a press or a drop would do, or why it cannot. */
+  says: string;
+}
+
+export const noteOffer = (
+  file: ProjectFile,
+  capture: CaptureItem,
+  into: 'outline' | 'board',
+): NoteOffer => {
+  const name = captureTitle(capture);
+  const folder = filingFolder(file, capture, null);
+  if (!folder) {
+    return { can: false, act: 'File it', says: 'There is nowhere to file this note yet.' };
+  }
+  const where = researchCategoriesInOrder(file).find((one) => one.id === folder);
+  if (into === 'outline') {
+    const outline = outlinesOf(file)[0];
+    return outline
+      ? {
+          can: true,
+          act: 'To the Outliner',
+          says: `“${name}” is filed under ${where?.name ?? 'Notes'} and a row that reads it joins the outline.`,
+        }
+      : { can: false, act: 'To the Outliner', says: 'There is no outline yet to put it in.' };
+  }
+  const board = boardsOf(file)[0];
+  return board
+    ? {
+        can: true,
+        act: 'To the Story Sculptor',
+        says: `“${name}” is filed under ${where?.name ?? 'Notes'} and a card carrying its words joins the board.`,
+      }
+    : { can: false, act: 'To the Story Sculptor', says: 'There is no board yet to put it on.' };
 };
 
 /** Rejection keeps the capture and its raw text; only its status changes. */

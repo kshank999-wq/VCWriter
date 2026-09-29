@@ -1,14 +1,23 @@
+import { useState } from 'react';
 import {
   CAPTURE_CATEGORY_NAMES,
   captureTitle,
+  captureVocabulary,
+  filingFolder,
   groupOffer,
   inboxGroups,
+  noteOffer,
+  researchCategoriesInOrder,
   suggestRouting,
+  workingCast,
+  type ApprovalDecision,
   type CaptureItem,
   type InboxSubgroup,
   type ProjectFile,
   type ProjectFormat,
+  type ResearchCategoryId,
 } from '@vcwriter/domain';
+import { ContextMenu, type MenuEntry } from './ContextMenu';
 
 /**
  * The Mobile App inbox (addendum 09 §9, stage 1).
@@ -43,6 +52,17 @@ interface MobileInboxProps {
   onReject(capture: CaptureItem): void;
   onRefresh(): void;
   /**
+   * File a note wherever the writer said, with whatever words they corrected
+   * (addendum 09 §15, from Ken: *move those or edit them into different
+   * categories in the research*).
+   *
+   * One callback for every destination rather than one per kind, because the
+   * thing that differs is the `ApprovalDecision` and the domain already has a
+   * word for each: a second callback per destination would be a second place
+   * deciding what a destination is.
+   */
+  onPlace(capture: CaptureItem, decision: ApprovalDecision): void;
+  /**
    * File a whole spoken group at once (addendum 09 §12).
    *
    * **This is the one place the taxonomy grows**, and it grows here rather than
@@ -64,6 +84,7 @@ export function MobileInbox({
   onReject,
   onRefresh,
   onFileGroup,
+  onPlace,
 }: MobileInboxProps) {
   // The project's own words for the structural two (addendum 09 §10): the
   // desktop has always known the format and had never passed it, so a scene
@@ -74,8 +95,9 @@ export function MobileInbox({
     <div className="mobile-inbox">
       <header className="mobile-inbox-head">
         <p className="muted small">
-          Caught on the phone. Drag a note onto a folder or somebody in the cast — nothing here is in the
-          project yet.
+          Caught on the phone. Drag a note onto a folder or somebody in the cast, or right-click it —
+          nothing here is in the project yet. To drop one into a place in the Outliner or the Sculptor,
+          open that room: the phone&rsquo;s notes are on its shelf.
         </p>
         <button type="button" className="ghost small" onClick={onRefresh} disabled={loading}>
           {loading ? 'Looking…' : 'Refresh'}
@@ -102,6 +124,7 @@ export function MobileInbox({
                   onDragEnd={onDragEnd}
                   onAcceptSuggestion={onAcceptSuggestion}
                   onReject={onReject}
+                  onPlace={onPlace}
                 />
               ))}
             </ul>
@@ -190,7 +213,21 @@ function GroupHead({
   );
 }
 
-/** One waiting note, wherever it is drawn. */
+/**
+ * One waiting note, wherever it is drawn.
+ *
+ * Three ways to place it, and they are three reaches rather than three answers
+ * (addendum 09 §15). **The suggestion** is one press for the ordinary case.
+ * **The right-click** names every destination the domain has a word for — a
+ * folder, somebody in the cast, the Outliner, the board — which is Ken's *move
+ * those… into different categories* and *move it to the outline or move it to
+ * the sculptor*. **The drag** reaches the folders and the cast down the left,
+ * and, from the shelf inside those rooms, a place in either plan.
+ *
+ * Editing is on the way past rather than a change to the note: `raw_text` is
+ * the recovery record (§9), so correcting the words here corrects what goes
+ * **into the project** and leaves the testimony behind it alone.
+ */
 function Note({
   file,
   capture,
@@ -199,6 +236,7 @@ function Note({
   onDragEnd,
   onAcceptSuggestion,
   onReject,
+  onPlace,
 }: {
   file: ProjectFile;
   capture: CaptureItem;
@@ -207,12 +245,79 @@ function Note({
   onDragEnd(): void;
   onAcceptSuggestion(capture: CaptureItem): void;
   onReject(capture: CaptureItem): void;
+  onPlace(capture: CaptureItem, decision: ApprovalDecision): void;
 }) {
   const suggestion = suggestRouting(file, capture);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  /** Open while the writer is correcting the words or choosing a folder. */
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(() => captureTitle(capture));
+  const [body, setBody] = useState(capture.rawText);
+  const folders = researchCategoriesInOrder(file);
+  const [folderId, setFolderId] = useState<string>(
+    () => (filingFolder(file, capture, null) as string | null) ?? (folders[0]?.id as string) ?? '',
+  );
+
+  const words = () => ({ title: title.trim() || captureTitle(capture), body });
+  const toOutline = noteOffer(file, capture, 'outline');
+  const toBoard = noteOffer(file, capture, 'board');
+
+  const entries = (): MenuEntry[] => {
+    const cast = workingCast(file).slice(0, 8);
+    const items: MenuEntry[] = [
+      { label: 'Correct it and choose a folder…', onPick: () => setEditing(true) },
+    ];
+    if (suggestion.decision) {
+      items.push({
+        label: 'File it where suggested',
+        note: suggestion.reason,
+        onPick: () => onAcceptSuggestion(capture),
+      });
+    }
+    items.push('rule');
+    items.push({
+      label: toOutline.act,
+      disabled: toOutline.can ? null : toOutline.says,
+      note: toOutline.says,
+      onPick: () => {
+        const outlineId = outlineHere(file);
+        if (outlineId) onPlace(capture, { kind: 'outline', outlineId, ...words() });
+      },
+    });
+    items.push({
+      label: toBoard.act,
+      disabled: toBoard.can ? null : toBoard.says,
+      note: toBoard.says,
+      onPick: () => {
+        const boardId = boardHere(file);
+        if (boardId) onPlace(capture, { kind: 'board', boardId, parentId: null, ...words() });
+      },
+    });
+    if (cast.length > 0) {
+      items.push('rule');
+      for (const person of cast) {
+        items.push({
+          label: `About ${person.name}`,
+          note: 'Filed with the notes about them, and linked.',
+          onPick: () =>
+            onPlace(capture, { kind: 'about_character', characterId: person.id, ...words() }),
+        });
+      }
+    }
+    items.push('rule');
+    items.push({
+      label: 'Discard',
+      danger: true,
+      note: 'Keeps the note and its words; it just stops waiting here.',
+      onPick: () => onReject(capture),
+    });
+    return items;
+  };
+
   return (
     <li
       className={lifted ? 'mobile-note lifted' : 'mobile-note'}
-      draggable
+      draggable={!editing}
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = 'move';
         // Some drop targets refuse a drag carrying nothing.
@@ -220,6 +325,10 @@ function Note({
         onDragStart(capture);
       }}
       onDragEnd={onDragEnd}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        setMenu({ x: event.clientX, y: event.clientY });
+      }}
     >
       <div className="mobile-note-head">
         {/* The name they spoke, when they spoke one — it is what the note is
@@ -234,32 +343,102 @@ function Note({
         <span className="muted small">{when(capture.capturedAt)}</span>
       </div>
 
-      <p className="mobile-text">{capture.rawText}</p>
+      {editing ? (
+        <div className="mobile-edit">
+          {/* **Its words, on the way into the project.** The note behind it is
+              untouched, which is what lets a bad correction be redone. */}
+          <label className="field">
+            <span>Called</span>
+            <input value={title} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <label className="field">
+            <span>Words</span>
+            <textarea rows={4} value={body} onChange={(event) => setBody(event.target.value)} />
+          </label>
+          <label className="field">
+            <span>Folder</span>
+            <select value={folderId} onChange={(event) => setFolderId(event.target.value)}>
+              {folders.map((folder) => (
+                <option key={folder.id as string} value={folder.id as string}>
+                  {folder.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="mobile-note-foot">
+            <button
+              type="button"
+              className="ghost small"
+              disabled={folderId.length === 0}
+              onClick={() => {
+                onPlace(capture, {
+                  kind: 'research',
+                  categoryId: folderId as unknown as ResearchCategoryId,
+                  ...words(),
+                });
+                setEditing(false);
+              }}
+            >
+              File it there
+            </button>
+            <button type="button" className="ghost small" onClick={() => setEditing(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="mobile-text">{capture.rawText}</p>
 
-      <div className="mobile-note-foot">
-        <span className="muted small mobile-suggestion">{suggestion.reason}</span>
-        <button
-          type="button"
-          className="ghost small"
-          aria-label={`File ${label(capture)} where suggested`}
-          disabled={suggestion.decision === null}
-          onClick={() => onAcceptSuggestion(capture)}
-        >
-          File it there
-        </button>
-        <button
-          type="button"
-          className="ghost small"
-          aria-label={`Discard ${label(capture)}`}
-          title="Keeps the note and its text; it just stops waiting here."
-          onClick={() => onReject(capture)}
-        >
-          ×
-        </button>
-      </div>
+          <div className="mobile-note-foot">
+            <span className="muted small mobile-suggestion">{suggestion.reason}</span>
+            <button
+              type="button"
+              className="ghost small"
+              aria-label={`File ${label(capture)} where suggested`}
+              disabled={suggestion.decision === null}
+              onClick={() => onAcceptSuggestion(capture)}
+            >
+              File it there
+            </button>
+            <button
+              type="button"
+              className="ghost small"
+              aria-label={`Move ${label(capture)} somewhere else`}
+              title="Correct its words, or choose the folder yourself"
+              onClick={() => setEditing(true)}
+            >
+              Move…
+            </button>
+            <button
+              type="button"
+              className="ghost small"
+              aria-label={`Discard ${label(capture)}`}
+              title="Keeps the note and its text; it just stops waiting here."
+              onClick={() => onReject(capture)}
+            >
+              ×
+            </button>
+          </div>
+        </>
+      )}
+
+      {menu ? (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          label={`What to do with ${label(capture)}`}
+          entries={entries()}
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
     </li>
   );
 }
+
+/** The one outline and the one board this project has, or null. */
+const outlineHere = (file: ProjectFile) => file.outlines?.[0]?.id ?? null;
+const boardHere = (file: ProjectFile) => file.boards?.[0]?.id ?? null;
 
 /** What a note is called in an aria-label, which has to be readable aloud. */
 const label = (capture: CaptureItem): string =>

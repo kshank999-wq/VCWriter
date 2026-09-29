@@ -959,6 +959,51 @@ push live; the build takes a minute or two.
   none of the form that would fix it — **what they came to do goes first**.
   Supabase answers *Invalid login credentials* both for a wrong password and for
   an account that has never set one, so the refusal names both.
+  **§15 is the notes at the desk**, from Ken in one message, and it opens with
+  the fault that made the rest invisible: **`listCaptures` in the browser
+  bridge answered `ok([])` — always**. The Research window has loaded the queue
+  the moment it opens since stage 1, so the sync he asked for was there and was
+  being handed an empty list, which reads exactly like a phone that sent
+  nothing; every note he dictated was on the server and the one screen built to
+  show them could not see them, **on the one build he actually uses**. The
+  desktop talks to Supabase directly and needed nothing; the preview cannot (no
+  keychain, `connect-src 'self'`), so `/api/notes/inbox` is **the desk's end of
+  the queue** where `/api/notes` is the phone's — `reviewScene`'s argument, the
+  gate's own cookie, same origin — and **what stops the two hosts drifting is
+  that the part worth getting wrong is in the domain**: `WAITING_STATUSES` says
+  what *waiting* means and `captureReviewToRow` what a resolution writes, the
+  main process reading that list too where it had its own copy. The categories
+  needed nothing, `inboxGroups` having grouped by what is in the notes since
+  §12. **Moving and correcting** is three reaches rather than three answers (the
+  suggestion, the right-click, the drag), and correcting is **on the way past
+  rather than a change to the note** — `raw_text` is the recovery record (§9),
+  so the words typed here are what goes *into the project*. **Into the plans**,
+  `ApprovalDecision` gains `outline` and `board` and the pipeline needed nothing
+  else (the renderer has done `approveCapture` then `resolveCapture` since stage
+  1): each is **filed and placed in one act** and **keeps nothing at all** if
+  the placing fails (`captureFromScript`'s rule), the outline taking a **row
+  that references** the item (addendum 06 §5) and the board a **card carrying
+  the words** (addendum 03 §2) — each plan's own rule rather than an
+  inconsistency. `filingFolder` is the one reading for where a note goes when
+  nobody said, ending at **Ideas** rather than *the first folder*, a
+  screenplay's first folder being the cast. And **the shelf answers Ken's own
+  objection** (*you'd have to have the sculptor or the outliner up and be able
+  to drag it into a specific place*): addendum 06 §3 put Research *inside* the
+  Outliner for exactly that reason and §2 put the other plan there too, so the
+  phone is a **third source on that shelf** in both rooms — no new gesture, the
+  rooms' existing drop targets, and his *or have its own place to where you can
+  see both*; a Mobile App room of its own is **deliberately absent**, Research
+  being a room and §8's rule being that every room goes to a second monitor.
+  `usePhoneNotes` is one reading of the queue for every room that shows it
+  (addendum 24 §5j pointed at a fetch), the Research window moved onto it in
+  the same change. Driving it caught a sentence that was **not true** — a
+  `dialogue` note read *No category identified*, said to somebody who had just
+  said one out loud, because `spokenSuggestion` returned null wherever the
+  mapped folder was absent and a screenplay has no General Notes shelf — plus
+  §13.2's fourth copy one place further on (that function asked
+  `captureKeyName` for the format `null`, so a scene note read back as *Scene
+  or chapter* on a screenplay), and a tab row where three tabs did not fit a
+  210px shelf and *RESEARCH* drew as *RESEA…*.
   `addendum-10-book-index.md` is the back-of-book index, from Ken's ask for
   chapter pages that carry a graphic *"but it goes into an Index"* with the page
   numbers updating themselves. **Built.** Two of the three things he asked for

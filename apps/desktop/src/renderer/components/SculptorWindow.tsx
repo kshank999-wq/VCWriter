@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
+import { usePhoneNotes } from '../phone-notes';
 import { PopOutButton } from './PopOutButton';
 import { usePreference } from '../use-split';
 import {
@@ -14,6 +15,7 @@ import {
   addColumnField,
   addResearchRow,
   canCarryToBoard,
+  approveCapture,
   carryRowToBoard,
   castByCategory,
   castOnNode,
@@ -244,6 +246,8 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: Scul
    */
   const carrying = useRef<ShelfCarry | null>(null);
   const [carryingAny, setCarryingAny] = useState(false);
+  /** What the phone has sent, so a note can be dragged onto the board (§15). */
+  const phone = usePhoneNotes(file.project.id as string);
   const [overNode, setOverNode] = useState<SculptorNodeId | null>(null);
   const dragging = useRef<{ x: number; y: number } | null>(null);
 
@@ -698,6 +702,8 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: Scul
             file={file}
             from="board"
             reveal={null}
+            notes={phone.notes}
+            notesError={phone.error}
             onCarry={(held) => {
               carrying.current = held;
               setCarryingAny(held !== null);
@@ -870,6 +876,35 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: Scul
                       if (item) {
                         write((current, id) => addChild(current, id, laid.node.id, { title: item.title }).file);
                       }
+                      return;
+                    }
+                    /**
+                     * A note off the phone (addendum 09 §15).
+                     *
+                     * **Filed and placed in one act**, and the filing is not
+                     * optional: the board holds words rather than a reference,
+                     * so a card is all there would be of the thought if the
+                     * shelf did not also keep it.
+                     */
+                    if (held.kind === 'note') {
+                      const note = phone.notes.find((one) => one.id === held.id);
+                      if (!note) return;
+                      write((current, id) => {
+                        try {
+                          const done = approveCapture(current, note, {
+                            kind: 'board',
+                            boardId: id,
+                            parentId: laid.node.id,
+                          });
+                          void phone.resolve(done.capture).then((why) => phone.setError(why));
+                          return done.file;
+                        } catch (cause) {
+                          phone.setError(
+                            cause instanceof Error ? cause.message : 'That note could not be placed',
+                          );
+                          return current;
+                        }
+                      });
                       return;
                     }
                     if (held.kind === 'row') {
