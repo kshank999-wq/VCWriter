@@ -709,14 +709,10 @@ one. One function, read by both the single-utterance reader and the sitting.
 
 ### 10.5 What this stage deliberately does not do
 
-Ken asked for two more things and they are stages of their own rather than
-half-built here:
+Ken asked for two more things and they were stages of their own rather than
+half-built here. **The first is now §11**; the second is still ahead:
 
-- **Making a project by voice**, with its format chosen out loud. The phone has
-  made projects since stage 5 (`createProjectFile` + `toRows`, the desktop's own
-  pair), so this is a grammar and a confirmation rather than new machinery — but
-  a mis-heard *novel* would make a project of the wrong shape, and something
-  created by accident is the one thing this app has never done.
+- ~~**Making a project by voice**~~ — built, as §11.
 - **Subcategories within a project.** These are `research_categories`, which
   already nest; what is missing is what a spoken one means and where it shows on
   the desktop.
@@ -728,3 +724,119 @@ in it, *dictate done*, *dictate new setting*, a sentence, *dictate done*,
 *idea*, a sentence — files three notes with their categories and Tom's name,
 beeps on exactly the turns that open and close, and leaves both command words
 sitting in the middle of the first note where they were spoken.
+
+## 11. Making a project by voice
+
+From Ken, straight after the walk: *now add creating a project by voice with
+the format* — the first of the two things §10.5 had named as staged, and the
+one it gave a reason for staging. That reason is the whole of the design, so it
+is worth repeating before anything else: **a mis-heard *novel* makes a document
+whose chapters are scenes, found out about a fortnight later.** A note in the
+wrong group is a minute's work to move; a project of the wrong shape is not.
+
+### 11.1 Nothing is made until a word whose only job is to make it
+
+`hear` is pure and **never creates**. What a confirmation does is set
+`makes: { name, format }` on the sitting for exactly that turn, and the host
+goes and does it — which is what the domain half was for from the start: what
+the writer said is a fact worth testing, and a network call is not one. The
+route is the picker's own (`/api/notes/projects`, `createProjectFile` +
+`toRows`), so a project named into a phone in a pocket is the same document —
+the opening scene, the research folders, the cast headings — as one named with
+a keyboard.
+
+Three steps and each is said out loud:
+
+    dictate new project Blackout     → “Blackout. What kind? Screenplay, Series, …”
+    a novel                          → “Blackout, novel. Say ‘dictate yes’ to make it.”
+    dictate yes                      → “Making Blackout…” then “Blackout is ready.”
+
+The kind may arrive in the same breath (*dictate new project The Lamp, a
+novel*), or **before the name** — a writer who answers the second question first
+has still answered it — and `askAbout` is the **one place** that decides what is
+asked next, because three of them would eventually disagree about what is still
+wanted and the writer has nothing to check the answer against.
+
+While a plan is waiting the phone is **not taking notes**: what is said answers
+the question just asked. That is safe where a bare category word is not, because
+this state is short, explicit and says out loud what it wants next — and unsafe
+to skip, since *a novel* would otherwise become the first line of a note nobody
+meant to open, and *idea* would open one.
+
+### 11.2 Refused rather than guessed, at both ends
+
+**No word appears on two formats**, and the two that would — a bare *book*, a
+bare *story* — are deliberately absent, because *book* is a novel to one writer
+and a textbook to the next and there is no way to ask which from a pocket.
+Matching is longest-first, so *screenplay* is not read as *play*. A word that is
+not a kind is refused **with the list said again** rather than resolved to the
+nearest-sounding one.
+
+A command that is not one of the three this state answers is refused too:
+*dictate done* over a waiting plan might mean *make it* and might mean *I have
+finished talking*, and only `yes` is allowed to mean the first.
+
+`NEW_PROJECT` is checked **before** `PROJECT`, or the filler stripper (which
+holds *new*) turns *dictate new project Jinn* into *dictate project Jinn* —
+making one and moving to one being two acts that must not collapse into each
+other.
+
+### 11.3 A failure keeps the plan; a success is only let go of if it is still the one
+
+`projectMade` and `projectFailed` are in the domain rather than in the host for
+the usual reason: a component assembling a `Sitting` of its own is a second
+answer about what state the walk is in, and this one is read by a screen the
+writer cannot see.
+
+A failure **keeps the plan**, so saying *dictate yes* again is a retry rather
+than starting over — which is what somebody walking with a phone will do, and
+the only reason the name and the kind are worth gathering separately from the
+making. And the plan is let go of only if it is still the one that was
+confirmed: the network answers whenever it answers, and by then the writer may
+have scratched it and started another, so clearing blind would take a plan
+nobody had finished with (addendum 18 stage 7's lesson — a value caught on its
+way out depends on when the host runs it).
+
+Offline is **refused out loud rather than queued**. Every note on this screen is
+queued offline and sent later, and a project is the one thing that cannot be:
+the notes said into it would be addressed to an id that does not exist yet.
+
+### 11.4 The picker was two kinds short
+
+Building it found a plain gap beside the feature: `/notes`'s project picker
+offered **six** formats and the program has **eight** — so *an educational
+book*, the one Ken named by name, could not be made by hand at all, and a game
+made on the desktop drew its raw column value in the list. The route had always
+accepted any format; only the picker was short. It reads one table now, which
+the select and the list share, because two lists of formats is how one of them
+came to be missing two.
+
+### 11.5 What driving it found: a reply that is not a reply
+
+Two turns **said nothing at all**, and both are the same fault. `askAbout` said
+what was *missing*, so answering *a screenplay* before naming anything produced
+the identical sentence to the one before it — and `speakBack` suppresses a
+repeat, so the phone was silent and nothing on the screen moved. From a pocket
+that is indistinguishable from not having been heard, which is the one failure
+this feature must not have. The same thing hid the refusal of *dictate done*.
+
+So: **a reply has to differ from the question it answers or it is not a reply.**
+`askAbout` says what has landed and then what is missing (*Screenplay. What is
+it called?*), and the refusal comes first with the question after it (*Nothing
+made yet. Blackout, novel. Say “dictate yes” to make it.*). A test now walks a
+sequence and asserts every turn speaks — the assertion the earlier tests could
+not have made, because they checked what each sentence *was* rather than whether
+it was heard.
+
+### 11.6 Driven
+
+The phone screen itself, in Chromium at 420px, with Supabase's auth answered by
+the harness, the projects route stubbed and a recogniser of the same shape
+`dictation.ts` reads — so everything from the utterance to the pixels is the
+app's own code. Talking into a screenplay called *Jinn*: *character, Tom* and a
+sentence, then *dictate new project Blackout* (which files Tom's note first —
+making a project is not a reason to lose the thought that led to it), *a novel*,
+*dictate yes*. The route received `{ title: 'Blackout', format: 'novel' }`, the
+header changed to **Blackout**, five sentences were spoken in order, and the
+next *chapter* opened a **Chapter** — the new project's own word, which is what
+the live-project ref is for.

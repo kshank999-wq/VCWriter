@@ -136,3 +136,76 @@ export const captureKeyName = (key: string, format: ProjectFormat | null): strin
   };
   return loose[key] ?? key;
 };
+
+// ------------------------------------------------- what a format is called
+
+/**
+ * The formats a writer may name out loud (addendum 09 §11, from Ken: *you can
+ * say that it's a novel, a screenplay, an educational book*).
+ *
+ * **Generous in, one key out**, which is the vocabulary's own rule — somebody
+ * says *script*, *feature* or *movie* and means a screenplay. But §10.2's
+ * lesson is applied harder here than anywhere, because **making a project of
+ * the wrong shape is not a note in the wrong group**: it is a document whose
+ * chapters are scenes, found out about a fortnight later. So no word appears
+ * on two formats, and the words that would — a bare *book*, a bare *story* —
+ * are **deliberately absent**, because *book* is a novel to one writer and a
+ * textbook to the next and there is no way to ask which from a pocket.
+ *
+ * `stage_play` before `screenplay` would be wrong for the opposite reason, so
+ * matching is longest-first: *screenplay* is not read as *play*.
+ */
+const SPOKEN_FORMATS: ReadonlyArray<{ format: ProjectFormat; name: string; spoken: string[] }> = [
+  {
+    format: 'screenplay',
+    name: 'Screenplay',
+    spoken: ['screenplay', 'script', 'feature', 'feature film', 'film', 'movie'],
+  },
+  { format: 'series', name: 'Series', spoken: ['series', 'tv series', 'television series', 'tv show'] },
+  { format: 'novel', name: 'Novel', spoken: ['novel'] },
+  {
+    format: 'instructional',
+    name: 'Educational book',
+    spoken: ['educational book', 'textbook', 'text book', 'instructional book', 'non-fiction book', 'course'],
+  },
+  {
+    format: 'short_story',
+    name: 'Short stories and collections',
+    spoken: ['short stories', 'short story', 'collection'],
+  },
+  { format: 'stage_play', name: 'Stage play', spoken: ['stage play', 'play', 'theatre', 'theater'] },
+  { format: 'short_form', name: 'Short form', spoken: ['short form', 'commercial', 'music video'] },
+  { format: 'game', name: 'Game', spoken: ['game', 'video game', 'interactive'] },
+];
+
+/** What a format is called where a writer hears it read back. */
+export const formatSpokenName = (format: ProjectFormat): string =>
+  SPOKEN_FORMATS.find((one) => one.format === format)?.name ?? format;
+
+/** Every format a writer can name, for the sentence that lists the choices. */
+export const spokenFormatNames = (): string[] => SPOKEN_FORMATS.map((one) => one.name);
+
+/**
+ * The format somebody named, or null.
+ *
+ * **The whole utterance has to be the format**, give or take an article: *a
+ * novel* names one and *the novel is about her brother* does not. A looser
+ * match would read the first sentence of a description as a choice of format,
+ * and this is the one question where a wrong answer is expensive.
+ */
+export const formatNamed = (spoken: string): ProjectFormat | null => {
+  const said = spoken
+    .trim()
+    .toLowerCase()
+    // Both apostrophes: a recogniser writes whichever its host prefers, and a
+    // format refused for the shape of a punctuation mark is the kind of failure
+    // nobody can diagnose from a pocket.
+    .replace(/^(it['’]?s |it is |a |an |the )+/g, '')
+    .replace(/[.!?,]+$/g, '')
+    .trim();
+  if (said.length === 0) return null;
+  for (const one of SPOKEN_FORMATS) {
+    if (one.spoken.some((phrase) => phrase === said)) return one.format;
+  }
+  return null;
+};

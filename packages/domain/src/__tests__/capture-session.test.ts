@@ -4,10 +4,14 @@ import {
   captureKeyName,
   emptySitting,
   everything,
+  formatNamed,
   hear,
+  projectFailed,
+  projectMade,
   projectNamed,
   readTurn,
   speakBack,
+  spokenFormatNames,
   WAKE,
   type Sitting,
 } from '../index.js';
@@ -230,5 +234,219 @@ describe('what it says back', () => {
     expect(opened.opened).toBe(true);
     const writing = hear(opened, 'more words', 'screenplay');
     expect(writing.opened).toBe(false);
+  });
+});
+
+/**
+ * Making a project out loud (addendum 09 §11, from Ken: *maybe when you create
+ * the project, you can say that it's a novel, a screenplay, an educational
+ * book*).
+ *
+ * These are all about one thing: **nothing is made until a word whose only job
+ * is to make it.** A note in the wrong group is a minute's work to move; a
+ * project of the wrong shape is a document whose chapters are scenes, found out
+ * about a fortnight later. So the rule under every assertion here is that
+ * `hear` reports a confirmation and never performs one.
+ */
+describe('a format said out loud', () => {
+  it('takes the whole utterance, give or take an article', () => {
+    expect(formatNamed('a novel')).toBe('novel');
+    expect(formatNamed('novel')).toBe('novel');
+    // Either apostrophe: a recogniser writes whichever its host prefers, and a
+    // format refused over a punctuation mark is undiagnosable from a pocket.
+    expect(formatNamed('It’s a screenplay.')).toBe('screenplay');
+    expect(formatNamed("it's a screenplay")).toBe('screenplay');
+    expect(formatNamed('an educational book')).toBe('instructional');
+    expect(formatNamed('textbook')).toBe('instructional');
+    // A description is not a choice of format, which is what stops the first
+    // sentence of a synopsis being read as one.
+    expect(formatNamed('the novel is about her brother')).toBe(null);
+    expect(formatNamed('a book')).toBe(null);
+  });
+
+  it('reads screenplay as a screenplay rather than as a play', () => {
+    expect(formatNamed('screenplay')).toBe('screenplay');
+    expect(formatNamed('stage play')).toBe('stage_play');
+    expect(formatNamed('play')).toBe('stage_play');
+  });
+
+  it('offers every format a writer could be asked to choose between', () => {
+    // A list that is shorter than what the program can make is a question with
+    // missing answers, said to somebody who cannot see the screen.
+    expect(spokenFormatNames()).toContain('Educational book');
+    expect(spokenFormatNames()).toContain('Novel');
+    expect(spokenFormatNames().length).toBe(8);
+  });
+});
+
+describe('making a project by voice', () => {
+  const walk = (said: string[], format: 'screenplay' | 'novel' = 'screenplay'): Sitting =>
+    said.reduce((sitting, one) => hear(sitting, one, format), emptySitting());
+
+  it('gathers the name, then the kind, and makes nothing until yes', () => {
+    const named = walk([`${WAKE} new project Blackout`]);
+    expect(named.making).toMatchObject({ name: 'Blackout', format: null });
+    expect(named.makes).toBeNull();
+    expect(named.said).toContain('What kind?');
+
+    const kinded = hear(named, 'a novel', 'screenplay');
+    expect(kinded.making).toMatchObject({ name: 'Blackout', format: 'novel' });
+    // Still nothing made: the sentence says what the next word is.
+    expect(kinded.makes).toBeNull();
+    expect(kinded.said).toContain(`${WAKE} yes`);
+
+    const confirmed = hear(kinded, `${WAKE} yes`, 'screenplay');
+    expect(confirmed.makes).toEqual({ name: 'Blackout', format: 'novel' });
+  });
+
+  it('takes the kind in the same breath', () => {
+    const one = walk([`${WAKE} new project The Lamp, a novel`]);
+    expect(one.making).toMatchObject({ name: 'The Lamp', format: 'novel' });
+    expect(one.makes).toBeNull();
+  });
+
+  it('takes the kind first and the name after it', () => {
+    // A writer who answers the second question first has still answered it.
+    const kind = walk([`${WAKE} new project`, 'an educational book']);
+    expect(kind.making).toMatchObject({ name: '', format: 'instructional' });
+    // What landed, then what is missing. The bare question was what this said
+    // before it was driven, and it is the sentence the turn before it already
+    // said — so answering was silent, which from a pocket reads as unheard.
+    expect(kind.said).toBe('Educational book. What is it called?');
+
+    const named = hear(kind, 'Refraction', 'screenplay');
+    expect(named.making).toMatchObject({ name: 'Refraction', format: 'instructional' });
+    expect(named.said).toContain(`${WAKE} yes`);
+  });
+
+  it('refuses a kind it does not know rather than guessing the nearest', () => {
+    const asked = walk([`${WAKE} new project Blackout`, 'a graphic novella']);
+    expect(asked.making).toMatchObject({ name: 'Blackout', format: null });
+    expect(asked.said).toContain('Not a kind I know');
+    expect(asked.said).toContain('Educational book');
+  });
+
+  it('will not make one with a name and no kind, or a kind and no name', () => {
+    const noKind = hear(walk([`${WAKE} new project Blackout`]), `${WAKE} yes`, 'screenplay');
+    expect(noKind.makes).toBeNull();
+    expect(noKind.said).toContain('What kind first?');
+    // And the plan survives the refusal, so the answer carries on from here.
+    expect(noKind.making).toMatchObject({ name: 'Blackout' });
+
+    const noName = hear(walk([`${WAKE} new project`, 'a novel']), `${WAKE} yes`, 'screenplay');
+    expect(noName.makes).toBeNull();
+    expect(noName.said).toBe('What is it called first?');
+  });
+
+  it('does not open a note out of the answer to its own question', () => {
+    // *a novel* would otherwise be the first line of a note nobody meant to
+    // open, and *idea* would open one, which is why this state is not the
+    // ordinary between-notes one.
+    const asked = walk([`${WAKE} new project Blackout`]);
+    const answered = hear(asked, 'a novel', 'screenplay');
+    expect(answered.open).toBeNull();
+    expect(answered.filed).toEqual([]);
+
+    const bare = hear(asked, 'idea', 'screenplay');
+    expect(bare.open).toBeNull();
+  });
+
+  it('asks the question again rather than reading a command as a yes', () => {
+    // *dictate done* over a waiting plan might mean *make it*; only `yes` is
+    // allowed to mean that.
+    const asked = walk([`${WAKE} new project Blackout`, 'a novel']);
+    const done = hear(asked, `${WAKE} done`, 'screenplay');
+    expect(done.makes).toBeNull();
+    expect(done.making).toMatchObject({ name: 'Blackout', format: 'novel' });
+    expect(done.said).toContain(`${WAKE} yes`);
+    // And it is **refused out loud**: re-asking alone is the sentence already
+    // on the screen, so `speakBack` suppressed it as a repeat and the command
+    // made no sound at all — which a writer reads as having worked.
+    expect(done.said).toContain('Nothing made yet');
+    expect(speakBack(asked, done)).toBe(done.said);
+  });
+
+  it('never answers a turn that changed something with silence', () => {
+    // The two the tests missed and driving it found. A reply has to differ from
+    // the question it answers or there is no reply: on a phone in a pocket the
+    // read-back is the only thing there is.
+    const steps = [
+      `${WAKE} new project`,
+      'a screenplay',
+      'Jinn',
+      `${WAKE} done`,
+      `${WAKE} yes`,
+    ];
+    let sitting = emptySitting();
+    for (const said of steps) {
+      const before = sitting;
+      sitting = hear(before, said, 'screenplay');
+      expect(speakBack(before, sitting)).not.toBeNull();
+    }
+  });
+
+  it('lets a plan go when the writer says so, and keeps the note before it', () => {
+    const mid = walk(['character, Tom', 'he never looks anybody in the eye']);
+    const asked = hear(mid, `${WAKE} new project Blackout`, 'screenplay');
+    // Making a project is not a reason to lose the thought that led to it.
+    expect(asked.filed).toHaveLength(1);
+    expect(asked.open).toBeNull();
+
+    const gone = hear(asked, `${WAKE} scratch that`, 'screenplay');
+    expect(gone.making).toBeNull();
+    expect(gone.filed).toHaveLength(1);
+  });
+
+  it('says every word of it out loud', () => {
+    // The sentence is a question, and a question nobody hears is a phone
+    // waiting on an answer to something it never asked.
+    const before = emptySitting();
+    const asked = hear(before, `${WAKE} new project Blackout`, 'screenplay');
+    expect(speakBack(before, asked)).toContain('What kind?');
+
+    const kinded = hear(asked, 'a novel', 'screenplay');
+    expect(speakBack(asked, kinded)).toContain(`${WAKE} yes`);
+
+    const confirmed = hear(kinded, `${WAKE} yes`, 'screenplay');
+    expect(speakBack(kinded, confirmed)).toBe('Making Blackout…');
+  });
+
+  it('lets the plan go once the host has made it, and keeps it when it could not', () => {
+    const confirmed = walk([`${WAKE} new project Blackout`, 'a novel', `${WAKE} yes`]);
+    const plan = { name: 'Blackout', format: 'novel' as const };
+
+    const made = projectMade(confirmed, plan);
+    expect(made.making).toBeNull();
+    expect(made.makes).toBeNull();
+    expect(made.said).toBe('Blackout is ready.');
+
+    // A failure keeps it, so saying yes again is a retry rather than starting
+    // over — which is what somebody walking with a phone will do.
+    const failed = projectFailed(confirmed, plan, 'No signal. Say yes again when you have one.');
+    expect(failed.making).toMatchObject({ name: 'Blackout', format: 'novel' });
+    expect(failed.makes).toBeNull();
+    expect(failed.said).toContain('Say yes again');
+  });
+
+  it('will not clear a plan the writer has already replaced', () => {
+    // The network answers whenever it answers; by then this may be a different
+    // plan, and clearing blind would take one nobody had finished with.
+    const confirmed = walk([`${WAKE} new project Blackout`, 'a novel', `${WAKE} yes`]);
+    const moved = hear(confirmed, `${WAKE} new project The Lamp`, 'screenplay');
+    const late = projectMade(moved, { name: 'Blackout', format: 'novel' });
+    expect(late.making).toMatchObject({ name: 'The Lamp' });
+    expect(late.makes).toBeNull();
+  });
+
+  it('moves to a project by name without making anything', () => {
+    // *dictate project Jinn* and *dictate new project Jinn* are two acts, and
+    // the filler stripper must not turn the second into the first.
+    const moved = walk([`${WAKE} project Jinn`]);
+    expect(moved.wants).toBe('Jinn');
+    expect(moved.making).toBeNull();
+
+    const making = walk([`${WAKE} new project Jinn`]);
+    expect(making.wants).toBeNull();
+    expect(making.making).toMatchObject({ name: 'Jinn' });
   });
 });

@@ -26,7 +26,15 @@ export interface ProjectSummary {
   updated_at: string;
 }
 
-/** How a format reads to somebody who is not looking at a settings screen. */
+/**
+ * How a format reads to somebody who is not looking at a settings screen.
+ *
+ * **All eight of them**, which is the same list `SPOKEN_FORMATS` offers out
+ * loud (addendum 09 §11): this table had six, so an educational book — the one
+ * Ken named by name — could be made on the phone by voice and not by hand, and
+ * a game made on the desktop drew its raw column value in this list. A picker
+ * shorter than what the program can make is a question with answers missing.
+ */
 const FORMAT_WORDS: Record<string, string> = {
   screenplay: 'Screenplay',
   series: 'Series',
@@ -34,6 +42,8 @@ const FORMAT_WORDS: Record<string, string> = {
   stage_play: 'Stage play',
   novel: 'Novel',
   short_story: 'Short stories and collections',
+  instructional: 'Educational book',
+  game: 'Game',
 };
 
 export function ProjectPage({
@@ -147,13 +157,15 @@ export function ProjectPage({
               </label>
               <label className="field">
                 <span>Format</span>
+                {/* The same table the list reads, rather than a second copy of
+                    it: two lists of formats is how one of them came to be
+                    missing two. */}
                 <select value={format} onChange={(event) => setFormat(event.target.value)}>
-                  <option value="screenplay">Screenplay</option>
-                  <option value="series">Series</option>
-                  <option value="short_form">Short form</option>
-                  <option value="stage_play">Stage play</option>
-                  <option value="novel">Novel</option>
-                  <option value="short_story">Short stories and collections</option>
+                  {Object.entries(FORMAT_WORDS).map(([value, words]) => (
+                    <option key={value} value={value}>
+                      {words}
+                    </option>
+                  ))}
                 </select>
               </label>
               <div className="notes-item-actions">

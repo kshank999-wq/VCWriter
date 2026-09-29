@@ -29,11 +29,15 @@ import {
   captureVocabulary,
   emptySitting,
   everything,
+  formatSpokenName,
   hear,
+  projectFailed,
+  projectMade,
   projectNamed,
   readSpoken,
   sayBack,
   speakBack,
+  spokenFormatNames,
   WAKE,
   type CaptureCategory,
   type ProjectFormat,
@@ -321,6 +325,74 @@ export default function CaptureApp() {
   };
 
   /**
+   * A project the writer confirmed out loud (§11).
+   *
+   * **`hear` says it was confirmed and this is what does it**, which is the
+   * whole of why the domain half is pure: what the writer said is a fact worth
+   * testing, and a network call is not one.
+   *
+   * It goes through the same route the picker's *Start it* uses, so a project
+   * named into a phone in a pocket is the same document — the opening scene, the
+   * research folders, the cast headings — as one named with a keyboard.
+   */
+  const makeProject = async (plan: { name: string; format: ProjectFormat }) => {
+    /**
+     * **Refused out loud rather than queued.** Every note on this screen is
+     * queued offline and sent later, and a project is the one thing that cannot
+     * be: the notes said into it would be addressed to an id that does not
+     * exist yet, and the writer would find out a fortnight later.
+     */
+    if (!navigator.onLine) {
+      const why = `No signal, so ${plan.name} cannot be started yet. Say ${WAKE} yes again when you have one.`;
+      walk.current = projectFailed(walk.current, plan, why);
+      setSitting(walk.current);
+      readAloud(why, { onError: setStatus });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/notes/projects', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title: plan.name, format: plan.format }),
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        project?: ProjectSummary;
+        error?: string;
+      };
+      if (!response.ok || !body.project) {
+        const why = body.error ?? `${plan.name} could not be started.`;
+        walk.current = projectFailed(walk.current, plan, why);
+        setSitting(walk.current);
+        readAloud(why, { onError: setStatus });
+        return;
+      }
+
+      const made = body.project;
+      // Straight into it, which is what somebody who just named a project
+      // wants — and it is what makes the next spoken category the new
+      // format's: `format()` reads this ref.
+      chosen.current = made;
+      setProject(made);
+      setProjects((current) => [made, ...current.filter((one) => one.id !== made.id)]);
+      try {
+        localStorage.setItem(LAST_PROJECT, made.id);
+        setLastProjectId(made.id);
+      } catch {
+        // Remembering is a convenience; not remembering is not a failure.
+      }
+      walk.current = projectMade(walk.current, plan);
+      setSitting(walk.current);
+      readAloud(`${made.title} is ready. Talking into it now.`, { onError: setStatus });
+    } catch {
+      const why = `${plan.name} could not be started. Say ${WAKE} yes again to try.`;
+      walk.current = projectFailed(walk.current, plan, why);
+      setSitting(walk.current);
+      readAloud(why, { onError: setStatus });
+    }
+  };
+
+  /**
    * One utterance, folded into the walk.
    *
    * **Nothing here decides what was meant**: `hear` does, in the domain, where
@@ -360,6 +432,11 @@ export default function CaptureApp() {
 
     const spoken = speakBack(before, after);
     if (spoken) readAloud(spoken, { onError: setStatus });
+
+    // Said *after* the read-back, so *Making Blackout…* is heard before the
+    // answer to it: two sentences the other way round would have the second
+    // talking over the first.
+    if (after.makes) void makeProject(after.makes);
   };
 
   const toggleHandsFree = () => {
@@ -529,17 +606,31 @@ export default function CaptureApp() {
          */
         <section className="notes-handsfree">
           <p className="notes-spoken">
-            {sitting.open
-              ? `${captureKeyName(sitting.open.key ?? 'idea', formatNow)}${
-                  sitting.open.subjectName ? ` · ${sitting.open.subjectName}` : ''
-                }`
-              : 'Listening'}
+            {sitting.making
+              ? 'New project'
+              : sitting.open
+                ? `${captureKeyName(sitting.open.key ?? 'idea', formatNow)}${
+                    sitting.open.subjectName ? ` · ${sitting.open.subjectName}` : ''
+                  }`
+                : 'Listening'}
           </p>
           <p className="notes-heard muted small">{sitting.said || 'Say a category, or just start talking.'}</p>
 
-          <p className="notes-open-text">
-            {sitting.open?.text || interim || <span className="muted">…</span>}
-          </p>
+          {/* While a project is being described the phone is **not taking
+              notes** (§11), so the screen says what is being gathered rather
+              than drawing it as the words of a note. */}
+          {sitting.making ? (
+            <p className="notes-open-text">
+              {sitting.making.name || <span className="muted">Say what it is called…</span>}
+              {sitting.making.format ? (
+                <span className="muted"> · {formatSpokenName(sitting.making.format)}</span>
+              ) : null}
+            </p>
+          ) : (
+            <p className="notes-open-text">
+              {sitting.open?.text || interim || <span className="muted">…</span>}
+            </p>
+          )}
 
           <div className="notes-actions">
             <button type="button" className="button recording" onClick={toggleHandsFree}>
@@ -547,11 +638,23 @@ export default function CaptureApp() {
             </button>
           </div>
 
-          <p className="muted small">
-            Say <strong>{WAKE} done</strong> to save it, <strong>{WAKE} new {(captureVocabulary(formatNow)[0]?.name ?? 'idea').toLowerCase()}</strong> to
-            start the next, <strong>{WAKE} project</strong> and its name to move. Every command begins with
-            “{WAKE}”, so those words are still yours inside a note.
-          </p>
+          {/* What is being asked for, where it is being asked: the kinds are
+              read off the domain's own list, so a format added later is
+              offered here without this screen being edited (§11). */}
+          {sitting.making ? (
+            <p className="muted small">
+              Say the title, then the kind — {spokenFormatNames().join(', ')} — and{' '}
+              <strong>{WAKE} yes</strong> to make it. <strong>{WAKE} cancel</strong> lets it go. Nothing is
+              made until you say yes.
+            </p>
+          ) : (
+            <p className="muted small">
+              Say <strong>{WAKE} done</strong> to save it, <strong>{WAKE} new {(captureVocabulary(formatNow)[0]?.name ?? 'idea').toLowerCase()}</strong> to
+              start the next, <strong>{WAKE} project</strong> and its name to move,{' '}
+              <strong>{WAKE} new project</strong> and a title to start one. Every command begins with
+              “{WAKE}”, so those words are still yours inside a note.
+            </p>
+          )}
 
           {sitting.filed.length > 0 ? (
             <ul className="notes-filed">

@@ -808,6 +808,44 @@ push live; the build takes a minute or two.
   **fail silently**: a button that never arrives because the node was not passed
   down looks precisely like dictation not being there at all, which is addendum
   20 §15a's lesson.
+  **§11 is making a project by voice**, from Ken the moment the walk shipped,
+  and §10.5 had already written the reason it was staged: **a mis-heard *novel*
+  makes a document whose chapters are scenes, found out about a fortnight
+  later** — a note in the wrong group is a minute's work to move and a project
+  of the wrong shape is not. So **nothing is made until a word whose only job is
+  to make it**: `hear` stays pure and sets `makes` on the confirming turn, the
+  host runs the picker's own route (`createProjectFile` + `toRows`), and a
+  project named into a pocket is the same document as one named with a keyboard.
+  The name and the kind arrive in any order — in one breath, name first, or kind
+  first, a writer who answers the second question first having still answered it
+  — and `askAbout` is the **one place** that decides what is asked next. While a
+  plan waits the phone is **not taking notes**, or *a novel* would be the first
+  line of a note nobody meant to open. **No word is on two formats** and a bare
+  *book* and a bare *story* are absent, *book* being a novel to one writer and a
+  textbook to the next with no way to ask which from a pocket; a word that is
+  not a kind is refused with the list said again rather than resolved to the
+  nearest-sounding one, and *dictate done* over a waiting plan is refused too,
+  only `yes` being allowed to mean *make it*. `NEW_PROJECT` is read **before**
+  `PROJECT`, the filler stripper's *new* otherwise turning *make one* into *move
+  to one*. `projectMade`/`projectFailed` live in the domain (a component
+  assembling a `Sitting` is a second answer about the walk): a failure **keeps
+  the plan** so a retry is one word, a success lets it go **only if it is still
+  the one confirmed** (addendum 18 stage 7 — the network answers whenever it
+  answers), and offline is **refused out loud rather than queued**, notes said
+  into a queued project being addressed to an id that does not exist. Building
+  it found the picker **two kinds short** — six formats where the program has
+  eight, so *an educational book*, the one Ken named, could not be made by hand
+  at all — now one table the select and the list share. And driving it found the
+  fault worth keeping: two turns **said nothing**, because `askAbout` named only
+  what was *missing* and so repeated the sentence before it, which `speakBack`
+  suppresses — **a reply has to differ from the question it answers or it is not
+  a reply**, and from a pocket a silent reply is indistinguishable from not
+  being heard. It says what landed and then what is missing, the refusal comes
+  first with the question after it, and a test walks a sequence asserting every
+  turn speaks. Driven on the real screen at 420px with the recogniser and the
+  routes stubbed: Tom's note filed first, `{ title, format }` at the route, the
+  header changed, five sentences spoken in order, and the next *chapter*
+  opening a **Chapter**.
   `addendum-10-book-index.md` is the back-of-book index, from Ken's ask for
   chapter pages that carry a graphic *"but it goes into an Index"* with the page
   numbers updating themselves. **Built.** Two of the three things he asked for
