@@ -28,6 +28,7 @@ import {
   type NoteSessionId,
   type ProjectFile,
 } from '../index.js';
+import { withoutSeeds } from './sorter-fixture.js';
 
 /**
  * Auto-sort suggestions (addendum 26 §14).
@@ -54,8 +55,8 @@ const PAGE = PARAS.join('\n\n');
 const world = (names: readonly string[] = ['Character', 'Dialogue']) => {
   let file: ProjectFile = createProjectFile({ title: 'Villain’s Guide', format: 'novel' });
   const begun = beginSession(file, 'brainstorm');
-  file = begun.file;
   const session: NoteSessionId = begun.session.id;
+  file = withoutSeeds(begun.file, session);
 
   const added = addSource(file, { sessionId: session, name: 'Brainstorm', text: PAGE, kind: 'paste' });
   file = added.file;
@@ -166,7 +167,7 @@ describe('auto-sort suggestions', () => {
     // A sitting with no categories has been taught nothing, and says so.
     let bare: ProjectFile = createProjectFile({ title: 'Bare', format: 'novel' });
     const begun = beginSession(bare, 's');
-    bare = addSource(begun.file, {
+    bare = addSource(withoutSeeds(begun.file, begun.session.id), {
       sessionId: begun.session.id,
       name: 'Notes',
       text: PAGE,

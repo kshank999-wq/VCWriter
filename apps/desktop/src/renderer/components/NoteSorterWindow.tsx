@@ -45,6 +45,7 @@ import {
   updateResearchItem,
   whereFrom,
   nounsFor,
+  NOTE_SOURCE_WORDS,
   type NoteSession,
   type NoteSessionId,
   type NoteSource,
@@ -92,12 +93,65 @@ import { dictationKind, startDictation, systemDictationKey, type DictationSessio
 
 type Tab = 'gather' | 'sort' | 'refine' | 'send';
 
-const TABS: ReadonlyArray<{ key: Tab; label: string }> = [
-  { key: 'gather', label: '1 Gather' },
-  { key: 'sort', label: '2 Sort' },
-  { key: 'refine', label: '3 Refine' },
-  { key: 'send', label: '4 Send to Outliner' },
+/**
+ * The four steps, as the handoff draws them: a numeral in a ring and a name.
+ *
+ * The number and the label are **two elements rather than one string**, which
+ * is the whole of why the ring can be drawn — and it is what lets the current
+ * step fill its numeral and underline its label without either of them being
+ * spelled out in the markup twice.
+ */
+const TABS: ReadonlyArray<{ key: Tab; step: string; label: string }> = [
+  { key: 'gather', step: '1', label: 'Gather' },
+  { key: 'sort', step: '2', label: 'Sort' },
+  { key: 'refine', step: '3', label: 'Refine' },
+  { key: 'send', step: '4', label: 'Send to Outliner' },
 ];
+
+/** The handoff's four ways to put material in, plus the loud fifth. */
+type WayIn = 'file' | 'paste' | 'typed' | 'notes' | 'dictation';
+
+const WAYS_IN: ReadonlyArray<{ key: WayIn; glyph: string; label: string; said: string }> = [
+  { key: 'file', glyph: '⬓', label: 'Import a file', said: 'Word, text, Markdown or a PDF. Drop it here or browse.' },
+  { key: 'paste', glyph: '❐', label: 'Paste text', said: 'From an email, a web page, anywhere.' },
+  { key: 'typed', glyph: '✎', label: 'Type directly', said: 'A blank page that becomes a source.' },
+  { key: 'notes', glyph: '☰', label: 'VC Writer notes', said: 'Research notes, old outlines and scene notes, sorted again.' },
+];
+
+/** The mockup's type icon on a source row. */
+const SOURCE_GLYPHS: Record<string, string> = {
+  file: '⬓',
+  paste: '❐',
+  typed: '✎',
+  notes: '☰',
+  dictation: '●',
+};
+
+const countWords = (text: string): number => text.split(/\s+/).filter((one) => one.length > 0).length;
+
+const countParagraphs = (text: string): number =>
+  text.split(/\n\s*\n/).filter((one) => one.trim().length > 0).length;
+
+/**
+ * The outline's own numbers over the rows that are going (§16b).
+ *
+ * A **reading** rather than a stored figure, like everything else in this
+ * module: unticking a category renumbers what is left with nothing run. A card
+ * gets no number, because an attached note carries none in the Outliner and a
+ * number here would be a promise the other room does not keep.
+ */
+const numberRows = (rows: readonly SendRow[]): { row: SendRow; number: string }[] => {
+  const counters: number[] = [];
+  return rows.map((row) => {
+    if (row.kind === 'card') return { row, number: '' };
+    counters.length = row.depth + 1;
+    counters[row.depth] = (counters[row.depth] ?? 0) + 1;
+    return { row, number: counters.map((one) => one ?? 1).join('.') };
+  });
+};
+
+/** The bars of the handoff's waveform. Fixed heights: see the comment at it. */
+const WAVE = [8, 20, 32, 16, 26, 12, 36, 22, 10, 28, 18, 6, 24, 30, 14, 20, 34, 11];
 
 /** What is shown of a source (§7). A view setting, and never the text itself. */
 type Display = 'all' | 'grey' | 'hide' | 'unsorted';
@@ -154,6 +208,9 @@ export interface NoteSorterWindowProps {
   onPopOut?(): void;
   /** In a window of its own there is nothing to uncover, so there is no ✕. */
   standalone?: boolean;
+  /** The workspace's own undo, for the bar's button. Absent in a satellite. */
+  onUndo?(): void;
+  canUndo?: boolean;
 }
 
 export function NoteSorterWindow({
@@ -163,6 +220,8 @@ export function NoteSorterWindow({
   onUpdate,
   onPopOut,
   standalone = false,
+  onUndo,
+  canUndo,
 }: NoteSorterWindowProps) {
   const sessions = sortingSessions(file);
   const [tab, setTab] = useState<Tab>('gather');
@@ -226,8 +285,13 @@ export function NoteSorterWindow({
 
   return (
     <div className="ns-room" role="dialog" aria-label="Note Sorter">
-      <header className="sculptor-bar">
-        <h2>Note Sorter</h2>
+      <header className="ns-bar">
+        {/* The handoff's lockup is `VC WRITER · NOTE SORTER`, and the first
+            half is deliberately not repeated here: the application's own title
+            bar is an inch above this one and already carries it, so a second
+            copy inside a room would be branding the program to somebody who is
+            using it. */}
+        <span className="ns-brand">Note Sorter</span>
         {sessions.length > 1 ? (
           <select
             aria-label="Which sitting"
@@ -245,8 +309,26 @@ export function NoteSorterWindow({
             ))}
           </select>
         ) : (
-          <span className="muted small">{chosen ? chosen.name : 'Nothing put in yet'}</span>
+          <span className="ns-sitting">{chosen ? chosen.name : 'Nothing put in yet'}</span>
         )}
+
+        <nav className="ns-tabs" role="tablist" aria-label="The four steps">
+          {TABS.map((one) => (
+            <button
+              key={one.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === one.key}
+              className={tab === one.key ? 'ns-tab on' : 'ns-tab'}
+              onClick={() => setTab(one.key)}
+            >
+              <i aria-hidden="true">{one.step}</i>
+              {one.label}
+            </button>
+          ))}
+        </nav>
+
+        <span className="toolbar-spacer" />
 
         {chosen ? (
           <span className="ns-progress" title="How much of this sitting has been through your hands">
@@ -255,11 +337,9 @@ export function NoteSorterWindow({
             </span>
             {/* Progress, never a score (§11): what it answers is *have I been
                 through all of this*, and nothing follows from the figure. */}
-            <span className="muted small">{percent(progress.share)} dealt with</span>
+            <span className="small">{percent(progress.share)} dealt with</span>
           </span>
         ) : null}
-
-        <span className="toolbar-spacer" />
 
         <input
           type="search"
@@ -289,6 +369,22 @@ export function NoteSorterWindow({
         >
           + Sitting
         </button>
+        {/* Undo, which the handoff puts on this bar (spec §13).
+            **Absent rather than dead in a window of its own**: the history is
+            the workspace's, so over there the button would be a control that
+            can only refuse, and addendum 26 §15 already records that gap
+            rather than pretending it is closed. */}
+        {onUndo ? (
+          <button
+            type="button"
+            className="tool"
+            onClick={onUndo}
+            disabled={canUndo === false}
+            title={canUndo === false ? 'Nothing to take back yet' : 'Take back the last thing you did'}
+          >
+            ↶ Undo
+          </button>
+        ) : null}
         {onPopOut ? <PopOutButton onPopOut={onPopOut} what="the Note Sorter" /> : null}
         {standalone ? null : (
           <button type="button" className="ghost" onClick={onClose} aria-label="Close the Note Sorter">
@@ -296,21 +392,6 @@ export function NoteSorterWindow({
           </button>
         )}
       </header>
-
-      <nav className="ns-tabs" role="tablist" aria-label="The four steps">
-        {TABS.map((one) => (
-          <button
-            key={one.key}
-            type="button"
-            role="tab"
-            aria-selected={tab === one.key}
-            className={tab === one.key ? 'ns-tab on' : 'ns-tab'}
-            onClick={() => setTab(one.key)}
-          >
-            {one.label}
-          </button>
-        ))}
-      </nav>
 
       {hits.length > 0 ? (
         <div className="ns-hits">
@@ -436,6 +517,8 @@ function GatherTab({
   const [name, setName] = useState('');
   const [renaming, setRenaming] = useState<string | null>(null);
   const [showing, setShowing] = useState<string | null>(null);
+  const [way, setWay] = useState<WayIn>('paste');
+  const fileBox = useRef<HTMLInputElement | null>(null);
 
   const put = (text: string, kind: 'file' | 'paste' | 'typed' | 'notes' | 'dictation', named: string): void => {
     if (text.trim().length === 0) {
@@ -515,16 +598,23 @@ function GatherTab({
                         }}
                       />
                     ) : (
-                      <strong>{one.name}</strong>
+                      <>
+                        <span className="ns-src-ico" aria-hidden="true">
+                          {SOURCE_GLYPHS[one.kind]}
+                        </span>
+                        <strong>{one.name}</strong>
+                      </>
                     )}
-                    <span className="ns-src-bar" aria-hidden>
-                      <span className="ns-src-run" style={{ width: percent(done.share) }} />
-                    </span>
-                    <span className="muted small">{percent(done.share)}</span>
+                    <span className="ns-src-pc mono">{percent(done.share)}</span>
                   </div>
-                  <p className="muted small mono">
-                    {one.kind} · {one.text.length.toLocaleString()} characters ·{' '}
-                    {one.text.split(/\n\s*\n/).filter((part) => part.trim().length > 0).length} paragraphs
+                  <span className="ns-src-bar" aria-hidden>
+                    <span className="ns-src-run" style={{ width: percent(done.share) }} />
+                  </span>
+                  <p className="muted small">
+                    {NOTE_SOURCE_WORDS[one.kind]} ·{' '}
+                    {new Date(one.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ·{' '}
+                    {one.text.split(/\n\s*\n/).filter((part) => part.trim().length > 0).length} paragraphs ·{' '}
+                    {countWords(one.text).toLocaleString()} words
                   </p>
                   <div className="ns-source-acts">
                     <button type="button" className="tool" onClick={() => onSort(one.id)}>
@@ -553,54 +643,116 @@ function GatherTab({
             })}
           </ul>
         )}
-      </section>
-
-      <section className="ns-panel">
-        <h3>Add material</h3>
-        <label className="ns-add">
-          <span>Import a file</span>
-          <input
-            type="file"
-            multiple
-            accept={NOTE_SOURCE_ACCEPT}
-            aria-label="Import notes from a file"
-            onChange={(event) => void files(event.target.files)}
-          />
-          <span className="muted small">Word, text, Markdown or a PDF. You can drop files anywhere on this page.</span>
-        </label>
-
-        <label className="ns-add">
-          <span>Paste or type</span>
-          <textarea
-            rows={8}
-            value={typed}
-            placeholder="Paste a page of notes, or write straight in"
-            onChange={(event) => setTyped(event.target.value)}
-          />
-          <input
-            type="text"
-            value={name}
-            placeholder="What to call it"
-            aria-label="What to call it"
-            onChange={(event) => setName(event.target.value)}
-          />
-          <button
-            type="button"
-            className="tool"
-            onClick={() => {
-              put(typed, 'paste', name.trim() || 'Pasted notes');
-              setTyped('');
-              setName('');
-            }}
-          >
-            Add it
+        {/* §6's promise, said where somebody about to sort can read it. It is
+            the sentence that makes the whole room safe to use quickly. */}
+        <p className="ns-safe small">
+          Sorting never cuts or deletes. <strong>Show original</strong> always rebuilds a source exactly as it
+          came in.
+        </p>
+        {sources.length > 0 ? (
+          <button type="button" className="ns-go" onClick={() => onSort(sources[0]!.id)}>
+            Start sorting
           </button>
-        </label>
-
-        <NotesFromProject file={file} onPut={(text, named) => put(text, 'notes', named)} />
+        ) : null}
       </section>
 
-      <Dictation onPut={(text) => put(text, 'dictation', `Dictated ${new Date().toLocaleDateString()}`)} onSay={onSay} />
+      <section className="ns-panel ns-material">
+        <h3>Add material</h3>
+        {/* The handoff's four ways in, as tiles rather than as four boxes all
+            open at once (§16b). **Paste text and Type directly are one
+            control** — a box you put words in — reached through two doors,
+            which is addendum 20 §16d's rule rather than a shortcut: what
+            differs is what the writer means to do, and the box says which they
+            asked for. Two *boxes* would have been the second answer. */}
+        <div className="ns-opts">
+          {WAYS_IN.map((one) => (
+            <button
+              key={one.key}
+              type="button"
+              className={way === one.key ? 'ns-opt on' : 'ns-opt'}
+              aria-pressed={way === one.key}
+              onClick={() => {
+                if (one.key === 'file') {
+                  fileBox.current?.click();
+                  return;
+                }
+                setWay(one.key);
+              }}
+            >
+              <span className="ns-opt-ico" aria-hidden="true">
+                {one.glyph}
+              </span>
+              <b>{one.label}</b>
+              <span>{one.said}</span>
+            </button>
+          ))}
+        </div>
+        <input
+          ref={fileBox}
+          type="file"
+          multiple
+          className="ns-file"
+          accept={NOTE_SOURCE_ACCEPT}
+          aria-label="Import notes from a file"
+          onChange={(event) => void files(event.target.files)}
+        />
+
+        {way === 'paste' || way === 'typed' ? (
+          <label className="ns-add">
+            <span>{way === 'paste' ? 'Paste text' : 'Type directly'}</span>
+            <textarea
+              rows={7}
+              value={typed}
+              placeholder={way === 'paste' ? 'Paste a page of notes' : 'Write straight in'}
+              onChange={(event) => setTyped(event.target.value)}
+            />
+            <input
+              type="text"
+              value={name}
+              placeholder="What to call it"
+              aria-label="What to call it"
+              onChange={(event) => setName(event.target.value)}
+            />
+            <button
+              type="button"
+              className="tool"
+              onClick={() => {
+                put(typed, way, name.trim() || (way === 'paste' ? 'Pasted notes' : 'Typed notes'));
+                setTyped('');
+                setName('');
+              }}
+            >
+              Add it
+            </button>
+          </label>
+        ) : null}
+
+        {way === 'notes' ? (
+          <NotesFromProject file={file} onPut={(text, named) => put(text, 'notes', named)} />
+        ) : null}
+
+        {/* The one the handoff draws large, and it is right to: talking is the
+            cheapest way to get a page of notes and the easiest to put off. */}
+        <button type="button" className="ns-loud" onClick={() => setWay('dictation')}>
+          <span className="ns-opt-ico ns-red" aria-hidden="true">
+            ●
+          </span>
+          <span>
+            <b>Raw dictation session</b>
+            <span>Talk it out. No sorting while you speak. What you say becomes a source.</span>
+          </span>
+        </button>
+
+        <div className="ns-drop" aria-hidden="true">
+          Drop files anywhere on this page
+        </div>
+      </section>
+
+      <Dictation
+        armed={way === 'dictation'}
+        onPut={(text) => put(text, 'dictation', `Dictated ${new Date().toLocaleDateString()}`)}
+        onSay={onSay}
+      />
       {session === null ? (
         <p className="ns-foot muted small">
           A sitting starts itself the moment you put something in — nothing is made just by looking.
@@ -678,7 +830,16 @@ function NotesFromProject({
  * gets answered by trying, and where there is none the system's is named, which
  * is that module's own rule and its own wording.
  */
-function Dictation({ onPut, onSay }: { onPut(text: string): void; onSay(text: string): void }) {
+function Dictation({
+  onPut,
+  onSay,
+  armed = false,
+}: {
+  onPut(text: string): void;
+  onSay(text: string): void;
+  /** Pressed *Raw dictation session* over there — the panel says so here. */
+  armed?: boolean;
+}) {
   const [running, setRunning] = useState(false);
   const [text, setText] = useState('');
   const [guess, setGuess] = useState('');
@@ -716,14 +877,27 @@ function Dictation({ onPut, onSay }: { onPut(text: string): void; onSay(text: st
   const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
   return (
-    <section className="ns-panel ns-dictate">
-      <h3>Say it out loud</h3>
+    <section className={armed ? 'ns-panel ns-dictate armed' : 'ns-panel ns-dictate'}>
+      <div className="ns-dictate-head">
+        <span className={running ? 'ns-rec on' : 'ns-rec'} aria-hidden="true" />
+        <h3>{running ? 'Dictating' : 'Say it out loud'}</h3>
+        <span className={running ? 'ns-clock on mono' : 'ns-clock mono'}>{clock}</span>
+      </div>
+      {/* The waveform the handoff draws. It is **decoration and says so**: no
+          speech API here reports a level, so bars that rose and fell would be
+          an animation pretending to be a meter. It moves while the recogniser
+          is running and stands still when it is not, which is the one thing
+          about it that is true. */}
+      <div className={running ? 'ns-wave on' : 'ns-wave'} aria-hidden="true">
+        {WAVE.map((height, index) => (
+          <span key={index} style={{ height: `${height}px`, animationDelay: `${index * 0.08}s` }} />
+        ))}
+      </div>
       {/* The line the handoff asks for by name, and it is the point of the
           panel: capture is kept apart from organising. */}
       <p className="ns-just-talk">Just talk. You’ll sort it later.</p>
 
       <div className="ns-dictate-bar">
-        <span className={running ? 'ns-clock on mono' : 'ns-clock mono'}>{clock}</span>
         {running ? (
           <button
             type="button"
@@ -953,6 +1127,20 @@ function SortTab({
         </div>
 
         <p className="ns-foot muted small">
+          {/* The mockup's *p. 3 of 20*, said in the unit this room actually
+              has. A source is a string rather than a paginated document, so
+              *page* would be a number nobody could check; paragraphs are what
+              `piecesOf` and `whereFrom` already count, and a card's own
+              reference says ¶ too. */}
+          {/* Where you are, and **only once there is a where**: with nothing
+              highlighted the honest answer is how long the page is, not
+              paragraph zero of five. */}
+          <span className="mono">
+            {range
+              ? `¶ ${countParagraphs(source.text.slice(0, range.from)) || 1} of ${countParagraphs(source.text)}`
+              : `${countParagraphs(source.text)} paragraphs`}
+          </span>
+          <span className="ns-foot-rule" aria-hidden="true" />
           {range ? (
             <>
               {range.to - range.from} characters highlighted — drop them on a category, or press one.
@@ -976,6 +1164,13 @@ function SortTab({
           ) : (
             'Highlight a passage, then drag it across or press a category. Nothing is ever cut from this page.'
           )}
+          {/* The handoff puts this in the Sort footer as well as on Gather: a
+              writer looking at a greyed page is exactly who wants to see what
+              the page said before anybody touched it. It is the same read
+              (§6), reached from the other room. */}
+          <button type="button" className="ghost small ns-see-raw" onClick={onGather}>
+            Show original source
+          </button>
         </p>
       </section>
 
@@ -1053,8 +1248,12 @@ function SortTab({
                     >
                       <span className="ns-dot" />
                       {one.name}
+                      <span className="ns-chip-n mono">0</span>
                     </button>
                   ))}
+                <button type="button" className="ns-chip new" onClick={() => setNaming(true)}>
+                  + New
+                </button>
               </div>
             ) : null}
             <div className="ns-stack-row">
@@ -1096,6 +1295,11 @@ function SortTab({
                       <span key={held_.id as string} className="ns-card mini">
                         <span className="ns-card-title">{held_.title}</span>
                         <span className="ns-card-body">{held_.body}</span>
+                        {/* The lineage on the face of the card, which is what
+                            makes it an index card rather than a coloured box:
+                            *Brainstorm ¶3*, read by `whereFrom` and stored
+                            nowhere, so cutting the source says so here. */}
+                        <span className="ns-card-from mono">{whereFrom(file, held_)}</span>
                       </span>
                     ))}
                     {over === (one.id as string) ? <span className="ns-card slot">Drop to add a card</span> : null}
@@ -1658,21 +1862,14 @@ function RefineTab({
                 );
               })}
             </ol>
-            {picked.length > 1 ? (
-              <button
-                type="button"
-                className="tool"
-                onClick={() => {
-                  onUpdate((current) => mergeCards(current, picked as ResearchItemId[]).file);
-                  onSay(`${picked.length} cards are now one. The rest are in the graveyard if that was wrong.`);
-                  onPicked([]);
-                }}
-              >
-                Merge {picked.length} cards
-              </button>
-            ) : (
-              <p className="muted small">Shift-click two or more cards to join them.</p>
-            )}
+            {/* The hint alone, as the handoff draws it: **Merge lives once**,
+                on the card's own acts row, and a second button here would be a
+                second answer to *how do I join two cards*. */}
+            <p className="muted small">
+              {picked.length > 1
+                ? `${picked.length} marked — press Merge on the right.`
+                : 'Shift-click two or more cards to join them.'}
+            </p>
           </>
         )}
       </section>
@@ -1683,56 +1880,43 @@ function RefineTab({
         ) : (
           <>
             <h3>The card</h3>
-            <label className="ns-field">
-              <span>Working title</span>
-              <input
-                type="text"
-                value={card.title}
-                onChange={(event) =>
-                  onUpdate((current) => updateResearchItem(current, card.id, { title: event.target.value }))
-                }
-              />
-            </label>
-            <label className="ns-field">
-              <span>Working text</span>
-              <textarea
-                rows={8}
-                value={card.body}
-                onChange={(event) =>
-                  onUpdate((current) => updateResearchItem(current, card.id, { body: event.target.value }))
-                }
-              />
-              <span className="muted small">Editing this never changes the source.</span>
-            </label>
-            <label className="ns-field">
-              <span>Tags</span>
-              <input
-                type="text"
-                value={card.tags.join(', ')}
-                placeholder="craft, opening"
-                onChange={(event) =>
-                  onUpdate((current) =>
-                    updateResearchItem(current, card.id, {
-                      tags: event.target.value.split(',').map((one) => one.trim()).filter(Boolean),
-                    }),
-                  )
-                }
-              />
-            </label>
-
-            <div className="ns-quote">
-              <span className="muted small mono">{whereFrom(file, card)}</span>
-              <blockquote>{passageOf(file, card) || 'The source has gone.'}</blockquote>
-            </div>
-
+            {/* The handoff's four acts as one row at the top, which is where
+                it draws them and where they belong: they are what you *do* to
+                the card, and the fields under them are what it *is*. */}
             <div className="ns-card-acts">
               <button
                 type="button"
-                className={splitting ? 'tool on' : 'tool'}
+                className={splitting ? 'act on' : 'act'}
                 aria-pressed={splitting}
                 onClick={() => setSplitting(!splitting)}
               >
-                Split
+                ⑂ Split
+              </button>
+              {/* Merge is the same act the sequence's shift-click performs,
+                  reached from the card in hand — one act, two doors (addendum
+                  20 §16d), never a second way of joining cards. It refuses in
+                  a sentence rather than being greyed to silence, because
+                  *why can I not merge* is the question a greyed button leaves
+                  somebody holding. */}
+              <button
+                type="button"
+                className="act"
+                title={
+                  picked.length > 1
+                    ? `Join the ${picked.length} marked cards into one`
+                    : 'Shift-click a second card on the left first'
+                }
+                onClick={() => {
+                  if (picked.length < 2) {
+                    onSay('Shift-click two or more cards on the left, then press Merge.');
+                    return;
+                  }
+                  onUpdate((current) => mergeCards(current, picked as ResearchItemId[]).file);
+                  onSay(`${picked.length} cards are now one. The rest are in the graveyard if that was wrong.`);
+                  onPicked([]);
+                }}
+              >
+                ⋈ Merge{picked.length > 1 ? ` ${picked.length}` : ''}
               </button>
               <select
                 aria-label="Move this card to"
@@ -1775,6 +1959,12 @@ function RefineTab({
                     </option>
                   ))}
               </select>
+              <span className="ns-made small">
+                Made {new Date(card.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                {card.updatedAt !== card.createdAt
+                  ? ` · edited ${new Date(card.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+                  : null}
+              </span>
             </div>
 
             {splitting ? (
@@ -1787,8 +1977,87 @@ function RefineTab({
               />
             ) : null}
 
-            <div className="ns-appears">
-              <span className="muted small">Appears in</span>
+            {/* Title and tags read together — what it is called and how it is
+                filed — so they stand side by side as the handoff draws them. */}
+            <div className="ns-pair">
+              <label className="ns-field">
+                <span>Working title</span>
+                <input
+                  type="text"
+                  value={card.title}
+                  onChange={(event) =>
+                    onUpdate((current) => updateResearchItem(current, card.id, { title: event.target.value }))
+                  }
+                />
+              </label>
+              <div className="ns-field">
+                <span>Tags</span>
+                {/* Pills rather than a comma-separated line: the handoff draws
+                    them as chips because a tag is a thing you take off, and ✕
+                    on the tag is the only gesture that says so. The box below
+                    adds one; there is no second list to keep in step. */}
+                <div className="ns-tags">
+                  {card.tags.map((tag) => (
+                    <span key={tag} className="ns-tag">
+                      {tag}
+                      <button
+                        type="button"
+                        className="ghost"
+                        aria-label={`Take “${tag}” off`}
+                        onClick={() =>
+                          onUpdate((current) =>
+                            updateResearchItem(current, card.id, {
+                              tags: card.tags.filter((one) => one !== tag),
+                            }),
+                          )
+                        }
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    type="text"
+                    className="ns-tag-in"
+                    placeholder="+ tag"
+                    aria-label="Add a tag"
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter') return;
+                      const next = event.currentTarget.value.trim();
+                      event.currentTarget.value = '';
+                      if (next.length === 0 || card.tags.includes(next)) return;
+                      onUpdate((current) =>
+                        updateResearchItem(current, card.id, { tags: [...card.tags, next] }),
+                      );
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <label className="ns-field">
+              <span>Working text</span>
+              <textarea
+                rows={7}
+                className="ns-working"
+                value={card.body}
+                onChange={(event) =>
+                  onUpdate((current) => updateResearchItem(current, card.id, { body: event.target.value }))
+                }
+              />
+              <span className="muted small">Editing this never changes the source.</span>
+            </label>
+
+            <div className="ns-pair">
+              <div className="ns-field">
+                <span>Source</span>
+                <div className="ns-quote">
+                  <blockquote>{passageOf(file, card) || 'The source has gone.'}</blockquote>
+                  <span className="muted small mono">{whereFrom(file, card)}</span>
+                </div>
+              </div>
+              <div className="ns-appears ns-field">
+              <span>Appears in</span>
               <ul>
                 <li>
                   {all.find((one) => (one.id as string) === (card.categoryId as string))?.name ?? 'Nowhere'}{' '}
@@ -1808,7 +2077,24 @@ function RefineTab({
                   </li>
                 ))}
               </ul>
+              </div>
             </div>
+
+            {/* A note about the card, never in it (§16b). Three fields answer
+                three questions: the working text is what travels, the source
+                is where it came from, and this is *pair with the Hans Gruber
+                example?* — which belongs in neither. */}
+            <label className="ns-field">
+              <span>Comment</span>
+              <input
+                type="text"
+                value={card.comment}
+                placeholder="A note to yourself about this card"
+                onChange={(event) =>
+                  onUpdate((current) => updateResearchItem(current, card.id, { comment: event.target.value }))
+                }
+              />
+            </label>
 
             <ToTheShelf file={file} card={card} onUpdate={onUpdate} onSay={onSay} />
           </>
@@ -1953,19 +2239,45 @@ function SendTab({
   const rows = sendRows(file, session.id, format, { out, becomes });
   const count = sendCount(rows, nameOf);
   const kinds = ['chapter', 'scene', 'beat', 'note', 'idea'];
+  /** A category's colour, for the dot the mockup puts beside its name. */
+  const colourOf = (id: string): string | null =>
+    sortCategories(file, session.id).find((one) => (one.id as string) === id)?.color ?? null;
 
   return (
     <div className="ns-send">
       <section className="ns-panel ns-picker">
         <h3>What goes</h3>
-        {/* The mapping is read off the project's format, and there is nowhere
-            to choose a second one: this is a {work}, and a sitting that said
-            otherwise would be a second claim about one piece of work. */}
-        <p className="muted small">
-          This is a {nouns.work.toLowerCase()}, so a top category becomes a {nameOf(ladder.top, false)}, one
-          inside it a {nameOf(ladder.sub, false)}, and a card a {nameOf(ladder.card, false)}. Change any row
-          with its own control.
-        </p>
+        {/* The handoff's *Writing mode* block. There is **no mode to choose**:
+            the project has had a format since the first migration, so a
+            second claim about what is being written would be a second answer,
+            and the block says what the format decided rather than asking. */}
+        <dl className="ns-rules">
+          <div>
+            <dt>This is a</dt>
+            <dd>
+              <b>{nouns.work}</b>
+            </dd>
+          </div>
+          <div>
+            <dt>Top categories</dt>
+            <dd>
+              become <b>{nameOf(ladder.top, true)}</b>
+            </dd>
+          </div>
+          <div>
+            <dt>One inside it</dt>
+            <dd>
+              becomes a <b>{nameOf(ladder.sub, false)}</b>
+            </dd>
+          </div>
+          <div>
+            <dt>Cards</dt>
+            <dd>
+              become <b>{nameOf(ladder.card, true)}</b>
+              <span className="muted small"> — change any row with its own control</span>
+            </dd>
+          </div>
+        </dl>
 
         {rows.length === 0 ? (
           <p className="muted small">
@@ -1973,6 +2285,10 @@ function SendTab({
           </p>
         ) : (
           <ul className="ns-plan">
+            <li className="ns-plan-head">
+              <span className="lbl">In this order</span>
+              <span className="lbl">Becomes</span>
+            </li>
             {rows.map((row) => (
               <li key={row.id} style={{ paddingLeft: `${row.depth * 18}px` }}>
                 <label className={row.sent ? 'ns-plan-row' : 'ns-plan-row off'}>
@@ -1985,6 +2301,16 @@ function SendTab({
                       )
                     }
                   />
+                  {row.kind === 'category' ? (
+                    <span
+                      className="ns-dot"
+                      style={
+                        colourOf(row.id)
+                          ? ({ '--ns-tint': colourOf(row.id) } as React.CSSProperties)
+                          : undefined
+                      }
+                    />
+                  ) : null}
                   <span className="ns-plan-title">{row.title || 'Untitled'}</span>
                   {row.sent ? (
                     <select
@@ -2010,7 +2336,9 @@ function SendTab({
           </ul>
         )}
         <p className="muted small">
-          Unsorted cards are not sent — file them into a category first, and they come with it.
+          Unsorted cards are not sent — file them into a category first, and they come with it. A category with
+          nothing in it is not listed here: it is a shelf waiting for something, and an empty chapter is a
+          heading nobody wrote.
         </p>
       </section>
 
@@ -2018,14 +2346,27 @@ function SendTab({
         <h3>In the Outliner</h3>
         <p className="ns-tally">{count.says}</p>
         <ol className="ns-preview-rows">
-          {rows
-            .filter((one) => one.sent)
-            .map((row) => (
-              <li key={row.id} style={{ paddingLeft: `${row.depth * 18}px` }}>
-                <span className="ns-preview-kind">{nameOf(row.becomes, false)}</span>
-                <span>{row.title || 'Untitled'}</span>
-              </li>
-            ))}
+          {numberRows(rows.filter((one) => one.sent)).map(({ row, number }) => (
+            <li
+              key={row.id}
+              className={row.kind === 'card' ? 'ns-preview-note' : undefined}
+              style={{ paddingLeft: `${row.depth * 22}px` }}
+            >
+              {/* A number where the outline will carry one, and a card glyph
+                  where it will not: an attached note is not numbered, so a
+                  number beside one would be a claim the Outliner then fails to
+                  make. The numbers are a **reading of these rows**, so
+                  unticking a category renumbers what is left with nothing
+                  run — which is the whole reason they are worth drawing. */}
+              {number ? (
+                <span className="ns-preview-n mono">{number}</span>
+              ) : (
+                <span className="ns-preview-card" aria-hidden="true" />
+              )}
+              <span className="ns-preview-title">{row.title || 'Untitled'}</span>
+              <span className="ns-preview-kind">{nameOf(row.becomes, false)}</span>
+            </li>
+          ))}
         </ol>
         <div className="ns-send-acts">
           <button type="button" className="ghost" onClick={onRefine}>
@@ -2033,7 +2374,7 @@ function SendTab({
           </button>
           <button
             type="button"
-            className="tool"
+            className="ns-go"
             disabled={count.total === 0}
             onClick={() => {
               let made = 0;

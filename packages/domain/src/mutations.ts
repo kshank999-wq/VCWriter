@@ -1395,7 +1395,7 @@ export const setResearchCategoryArchived = (
 export const updateResearchItem = (
   file: ProjectFile,
   itemId: ResearchItemId,
-  patch: Partial<Pick<ResearchItem, 'title' | 'body' | 'tags' | 'source'>>,
+  patch: Partial<Pick<ResearchItem, 'title' | 'body' | 'tags' | 'source' | 'comment'>>,
 ): ProjectFile => {
   if (!file.researchItems.some((item) => item.id === itemId)) {
     throw new DomainError(`Research item ${itemId} does not exist`);

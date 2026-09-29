@@ -131,6 +131,19 @@ export const researchItemSchema = z.object({
    */
   source: z.string().default(''),
   /**
+   * A note to self about the card, never about the work (addendum 26 §16b).
+   *
+   * **Three fields, three questions**, which is why this is not `body` and not
+   * `source`: `body` is the working text — the words that will travel into the
+   * outline — `source` is where the fact came from, and this is *Pair with the
+   * Hans Gruber example?*, which belongs to neither. A writer who had only the
+   * working text to put it in would be typing an instruction into the words
+   * the book is going to print.
+   *
+   * Empty on everything, so no existing note moves.
+   */
+  comment: z.string().default(''),
+  /**
    * Where this card was pulled out of, and the exact stretch it took
    * (addendum 26 §3). Null on every research item that was not extracted,
    * which is all of them until somebody opens the Note Sorter.

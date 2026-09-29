@@ -500,3 +500,165 @@ preference is per machine and jsdom's storage persists. The suite clears it.
   one gesture here that crosses two panels. Writing this section is what caught
   the reorder: the panel said *Drag one to move it* and nothing took the drop,
   which is a promise the screen made and the code did not keep.
+
+## §16a The standard categories a sitting opens with
+
+From Ken: *I would like the note sorter to have categories set up and then you
+can add categories, but there needs to be a character setting dialogue. theme
+idea set up and payoff scene beat and other standard categories for
+storytelling.*
+
+Read as a **list** — character, setting, dialogue, theme, idea, setup and
+payoff, scene, beat, and the standard ones beyond them — rather than as an ask
+for a dialog that sets up characters. The sentence runs as a list and ends
+*other standard categories for storytelling*, which only the list reading
+finishes.
+
+`seedCategoriesFor` in `note-sorter.ts` is the list and `beginSession` hands it
+to every new sitting, beside the unsorted pile it already seeded and for the
+pile's own reason: **the thing that needs it is the writer's first drop**, and a
+screen that asks somebody to invent a taxonomy before they may sort anything is
+the screen this module exists to replace.
+
+Three rules decide what is in it.
+
+**Every seed names something the program already has somewhere to put.**
+Character is the Character Creator's, Setting is Locations', Theme is Themes &
+Motifs', Setup & payoff is that module's, Plot is a track, Idea is the Ideas
+shelf, Research is the shelf and its `source` — so a category here is the first
+half of a journey the rest of the program finishes, rather than a taxonomy
+invented for one room, and each carries a `description` saying where that kind
+of note ends up. **Dialogue is the one exception and it is Ken's**: writers keep
+notes about dialogue and there is no record for it, and it earns its place by
+being asked for.
+
+**Nothing names a unit itself** (addendum 16 §6c). The two structural seeds read
+`nounsFor`, so a screenplay is handed *Scene* and *Beat*, a novel *Chapter* and
+*Passage*, a textbook *Section* and *Subsection*.
+
+**Absent rather than renamed where a format has none.** A textbook has no cast,
+no locations, no cues and no setups, so it is handed none of them and gets
+Concept, Example and Figure instead — the research menu's own rule (addendum 16
+§6a), which is why the list is built per format rather than translated.
+
+They arrive **empty**, which costs nothing and buys two things: §8's rule draws a
+category with nothing in it as a **chip**, so a fresh sitting is a row of chips
+rather than ten empty stacks; and `scoreCategories` is taught by a category's own
+name, so §14's panel has something to say before a writer has filed anything by
+hand — the half of the suggestions that otherwise waits for somebody to do by
+hand the work they exist to save.
+
+Two things fell out of building it, both of them faults the seeds made visible
+rather than caused.
+
+**`addSortCategory` was making a rival by name.** Addendum 24 §5n settled where
+that check belongs — in the **act**, wherever a single act means *this one or a
+new one by this name*, so no caller can forget it — and §16a made it necessary
+rather than merely tidy: a sitting now opens with *Character* in it, so a writer
+typing the word would have got an empty Character beside the full one with
+nothing in the room able to tell them apart, the suggestion engine least of all
+since it is taught by the name. Case and surrounding space are ignored, a writer
+typing from memory not being promising to match capitals (§5m's rule).
+
+**Send offered every empty category as a chapter.** Measured on a sitting two
+passages old: *12 chapters · 5 notes*, eight of them headings nobody wrote. The
+rule is §16b's and it is stated on the screen — **a category with nothing
+anywhere under it is not a row of the book**; it is a shelf waiting for
+something, and one thing filed in it is all it takes to be offered.
+
+## §16b The handoff's own screens
+
+From Ken, after the three earlier stages shipped: *It doesn't look like you use
+the UI mockups.* He was right, and what was wrong is worth naming precisely
+rather than apologised for: **the mockups had been read for structure and not
+for surface.** The four steps, the two-panel split with its divider, stacks and
+chips, the four display modes, the cream index-card colours, the tick tree and
+the outline preview all came from the handoff — and the reading stopped there,
+so what a writer saw was a working room that did not look like the comps.
+
+The correction is a **visual restyle in place**, addendum 02 §4a's shape one room
+over: every binding, reading and promise is exactly what it was, and the whole
+domain suite passed through it untouched except where the seeds changed a count.
+What is worth keeping is the handful of places where a look turned out to be a
+statement about the work.
+
+**The bar is one row and a step is a numeral in a ring.** The steps were a
+second strip of tracked capitals reading *1 GATHER*; they are the handoff's
+circled numeral and a sentence-case name now, which needs the number and the
+label to be **two elements rather than one string** — and that is what makes the
+numeral `aria-hidden`, so a tab's accessible name is *Gather* and the tablist
+says which of four it is. Sixteen renderer assertions named the old spelling and
+were updated rather than worked around. The handoff's lockup is `VC WRITER ·
+NOTE SORTER` and the first half is deliberately not repeated: the application's
+own title bar is an inch above and already carries it, so a second copy would be
+branding the program to somebody using it. Measured at 1440 the row was one
+squeeze short — the last step ran under the progress rail and *+ Sitting* wrapped
+to two lines — so **the steps and the search never shrink** and what gives way as
+the window narrows is what is merely nice to have, in order: the room's name,
+then the sitting's, then the progress said in words.
+
+**Undo is on the bar, and absent rather than dead where it cannot work.** Spec
+§13 asks for it and §6c had it on the keys alone. In a window of its own the
+history is the workspace's, so the button is not there — §15's gap named rather
+than papered over with a control that can only refuse.
+
+**Gather is four tiles and a loud fifth.** It was three framed boxes, one of them
+a raw `<input type=file>` reading *Choose Files · No file chosen*, which is the
+browser's own control and looks like a screen nobody finished. **Paste text and
+Type directly are one control reached through two doors** (addendum 20 §16d's
+rule, not a shortcut): what differs is what the writer means to do and the box
+says which they asked for, where two *boxes* would have been the second answer.
+The dashed drop zone, the *Raw dictation session* strip, §6's promise at the foot
+of the sources and the gold **Start sorting** under it are all the handoff's, and
+the last two matter most — a writer about to sort twenty pages should be able to
+read *sorting never cuts or deletes* without being told.
+
+**A card carries its lineage on its face.** *Brainstorm ¶3*, in the mono the
+handoff reserves for a source reference, on every card in every stack. It is
+`whereFrom` and stored nowhere, so cutting the source says so there; and it is
+the single thing that makes a card an index card rather than a coloured box,
+because what a writer wants to know about a card at a glance is where it came
+from.
+
+**A tag is a thing you take off.** The card's tags were a comma-separated line,
+which is the shape of a field rather than of a set; they are pills with a ✕ and
+a `+ tag` box, which is the only shape that says a tag can be removed.
+
+**The card's acts are one row at the top.** Split · Merge · Move to… · Also show
+in…, with *made* and *edited* out at the right, then title and tags together,
+then the working text, then source and *appears in* together, then the comment —
+because the acts are what you *do* to a card and the fields are what it *is*, and
+the handoff is right that they should not be interleaved. **Merge lives once**,
+here rather than also under the sequence, one act with two doors having been the
+thing §16d warned about in the other direction.
+
+**A comment is a third field, and the record had nowhere for it** (migration
+0059). Three fields answer three questions: `body` is the working text — the
+words that travel into the outline — `source` is where the fact came from, and
+this is *pair with the Hans Gruber example?*, which belongs to neither. A writer
+with only the first would be typing an instruction into the words the book is
+going to print.
+
+**The outline preview is numbered, and the numbers are a reading.** `numberRows`
+counts over the rows that are going, so unticking a category renumbers what is
+left with nothing run — and **a card gets no number**, an attached note carrying
+none in the Outliner, so a number here would be a promise the other room does
+not keep.
+
+**The waveform is decoration and says so where it is written.** No speech API
+available here reports a level, so bars that rose and fell with the voice would
+be an animation pretending to be a meter. They move while the recogniser is
+running and stand still when it is not, which is the one thing about them that
+is true.
+
+Two things the handoff draws are deliberately still absent. The **category
+context menu** (Rename · Merge into… · Duplicate · Colour · Delete) is a strip of
+controls on the tree rather than a menu, every one of them reachable; and the
+suggestions panel stays **under the stacks in Sort** rather than in Refine, for
+§14's reason, which is recorded there rather than rediscovered here.
+
+The lesson, and it is this project's oldest one pointed at a picture: **a handoff
+is read twice — once for what the screen must do and once for what it must look
+like**, and doing the first alone produces a room that passes every test, keeps
+every promise, and reads to the person who asked for it as though the mockups
+were never opened.

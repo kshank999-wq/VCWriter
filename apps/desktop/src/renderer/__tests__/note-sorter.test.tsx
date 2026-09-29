@@ -69,7 +69,16 @@ const PAGE = [FIRST, '', 'Dialogue is two people not saying what they mean, at s
 const sorting = (): ProjectFile => {
   let file = createProjectFile({ title: 'Villain’s Guide', format: 'novel' });
   const begun = beginSession(file, 'Villain’s Guide · brainstorm');
-  file = begun.file;
+  // Without the format's standard categories (addendum 26 §16a). These tests
+  // are about the acts over a named pair, and counting ten more would make
+  // every assertion a statement about the seed list; the seeding is tested in
+  // the domain, where it lives.
+  file = {
+    ...begun.file,
+    researchCategories: begun.file.researchCategories.filter(
+      (one) => (one.sessionId as string) !== (begun.session.id as string) || one.systemKey !== null,
+    ),
+  };
   file = addSource(file, {
     sessionId: begun.session.id,
     name: 'Brainstorm',
@@ -98,7 +107,7 @@ describe('the Note Sorter room', () => {
     const bare = createProjectFile({ title: 'Nothing yet', format: 'novel' });
     render(<Harness initial={bare} />);
 
-    expect(screen.getByRole('tab', { name: '1 Gather' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Gather' }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByText(/Nothing put in yet/)).toBeTruthy();
     // `beginArc`'s rule (addendum 25 §4f): the record waits for an act.
     expect(sortingSessions(latest!)).toHaveLength(0);
@@ -125,7 +134,7 @@ describe('the Note Sorter room', () => {
 
   it('files the highlighted passage when a category is pressed, and never cuts the source', () => {
     render(<Harness initial={sorting()} />);
-    fireEvent.click(screen.getByRole('tab', { name: '2 Sort' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
 
     const page = document.querySelector('.ns-page') as HTMLElement;
     const piece = page.querySelector('[data-from]') as HTMLElement;
@@ -151,7 +160,7 @@ describe('the Note Sorter room', () => {
 
   it('says what a press would do before it is pressed, and refuses with nothing chosen', () => {
     render(<Harness initial={sorting()} />);
-    fireEvent.click(screen.getByRole('tab', { name: '2 Sort' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
 
     const stack = [...document.querySelectorAll('.ns-stack, .ns-chip')].find((one) =>
       one.textContent?.includes('Dialogue'),
@@ -165,7 +174,7 @@ describe('the Note Sorter room', () => {
 
   it('draws the four display modes, and greying is one of them rather than the text', () => {
     render(<Harness initial={sorting()} />);
-    fireEvent.click(screen.getByRole('tab', { name: '2 Sort' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
 
     const modes = screen.getByRole('group', { name: 'What to show of the source' });
     expect(
@@ -183,7 +192,7 @@ describe('the Note Sorter room', () => {
 
   it('shows the pile in Refine without a way to delete it', () => {
     render(<Harness initial={sorting()} />);
-    fireEvent.click(screen.getByRole('tab', { name: '3 Refine' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Refine' }));
 
     expect(screen.getByText('Unsorted')).toBeTruthy();
     expect(screen.getByText(/Where a deleted category’s cards land/)).toBeTruthy();
@@ -204,16 +213,25 @@ describe('the Note Sorter room', () => {
       to: FIRST.length,
       categoryId: character.id,
     }).file;
+    // One in each, because a category with nothing in it is not offered
+    // (addendum 26 §16b) and this test is about the words rather than that.
+    const dialogue = sortCategories(file, session.id).find((one) => one.name === 'Dialogue')!;
+    file = extractToCategory(file, {
+      sourceId: sourcesOf(file, session.id)[0]!.id,
+      from: FIRST.length + 2,
+      to: PAGE.length,
+      categoryId: dialogue.id,
+    }).file;
 
     render(<Harness initial={file} />);
-    fireEvent.click(screen.getByRole('tab', { name: '4 Send to Outliner' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Send to Outliner' }));
 
     // The words are the noun table's: a novel's rungs are Chapter and Passage.
-    expect(screen.getByText(/2 chapters · 1 note/)).toBeTruthy();
+    expect(screen.getByText(/2 chapters · 2 notes/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Send to Outliner' }));
 
     const outline = outlinesOf(latest!)[0]!;
-    expect(outline.items.map((one) => one.kind)).toEqual(['scene', 'note', 'scene']);
+    expect(outline.items.map((one) => one.kind)).toEqual(['scene', 'note', 'scene', 'note']);
     // A row references its card rather than copying it.
     expect(outline.items[1]!.source?.type).toBe('research_item');
     expect(cardsIn(latest!, character.id)).toHaveLength(1);
@@ -229,14 +247,21 @@ describe('the Note Sorter room', () => {
       to: FIRST.length,
       categoryId: character.id,
     }).file;
+    const dialogue = sortCategories(file, session.id).find((one) => one.name === 'Dialogue')!;
+    file = extractToCategory(file, {
+      sourceId: sourcesOf(file, session.id)[0]!.id,
+      from: FIRST.length + 2,
+      to: PAGE.length,
+      categoryId: dialogue.id,
+    }).file;
 
     render(<Harness initial={file} />);
-    fireEvent.click(screen.getByRole('tab', { name: '4 Send to Outliner' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Send to Outliner' }));
 
     // Switching off the category that holds the card takes the card with it.
     fireEvent.click(screen.getAllByRole('checkbox')[0]!);
     expect(screen.getAllByText('not sent')).toHaveLength(2);
-    expect(screen.getByText(/1 chapter$/)).toBeTruthy();
+    expect(screen.getByText(/1 chapter · 1 note/)).toBeTruthy();
 
     // With every row off, the screen says so rather than reading as ready.
     for (const tick of screen.getAllByRole('checkbox')) {
@@ -248,7 +273,7 @@ describe('the Note Sorter room', () => {
 
   it('suggests where the unsorted passages belong, and moves nothing until approved', () => {
     render(<Harness initial={sorting()} />);
-    fireEvent.click(screen.getByRole('tab', { name: '2 Sort' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
 
     // The categories are named Character and Dialogue, and the page has a
     // paragraph about each — so the panel has something to say from the names
@@ -278,7 +303,7 @@ describe('the Note Sorter room', () => {
 
   it('the panel switches off, and says what it would do rather than going blank', () => {
     render(<Harness initial={sorting()} />);
-    fireEvent.click(screen.getByRole('tab', { name: '2 Sort' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
 
     // Named for what it switches rather than for which way it is turned.
     const settings = screen.getByRole('checkbox', {
@@ -293,7 +318,7 @@ describe('the Note Sorter room', () => {
 
   it('putting one aside says so rather than claiming nothing matched', () => {
     render(<Harness initial={sorting()} />);
-    fireEvent.click(screen.getByRole('tab', { name: '2 Sort' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss all' }));
     expect(document.querySelectorAll('.ns-suggest-rows > li')).toHaveLength(0);
@@ -307,7 +332,7 @@ describe('the Note Sorter room', () => {
 
   it('proposes a new category, makes it empty, and stops proposing it', () => {
     render(<Harness initial={sorting()} />);
-    fireEvent.click(screen.getByRole('tab', { name: '2 Sort' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
     fireEvent.click(screen.getByRole('button', { name: 'Suggest new categories' }));
 
     // This page has nothing repeated often enough, and the panel says so
@@ -333,5 +358,64 @@ describe('the Note Sorter room', () => {
 
     expect(screen.getByText('raw')).toBeTruthy();
     expect(screen.getByText('card')).toBeTruthy();
+  });
+
+  /**
+   * The handoff's furniture (addendum 26 §16b).
+   *
+   * Ken's report was that the mockups had not been used, and he was right:
+   * every act worked and the screen did not look like the comps. So this pins
+   * the pieces a restyle is most likely to lose again — **things that carry
+   * information** rather than colours, because a colour test is a screenshot
+   * written badly and these are the parts a writer reads.
+   */
+  it('draws the handoff’s card, its source reference, and the four ways in', () => {
+    let file = sorting();
+    const session = sortingSessions(file)[0]!;
+    const character = sortCategories(file, session.id).find((one) => one.name === 'Character')!;
+    file = extractToCategory(file, {
+      sourceId: sourcesOf(file, session.id)[0]!.id,
+      from: 0,
+      to: FIRST.length,
+      categoryId: character.id,
+    }).file;
+
+    render(<Harness initial={file} />);
+
+    // Gather: the four tiles, and the loud fifth.
+    for (const way of ['Import a file', 'Paste text', 'Type directly', 'VC Writer notes']) {
+      expect(screen.getByRole('button', { name: new RegExp(way) })).toBeTruthy();
+    }
+    expect(screen.getByRole('button', { name: /Raw dictation session/ })).toBeTruthy();
+    // §6's promise, where somebody about to sort reads it, and the way in.
+    expect(screen.getByText(/Sorting never cuts or deletes/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Start sorting' })).toBeTruthy();
+
+    // Sort: the card carries its lineage on its face — *Brainstorm ¶1* — which
+    // is what makes it an index card rather than a coloured box.
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
+    expect(screen.getAllByText('Brainstorm ¶1').length).toBeGreaterThan(0);
+    // An untouched category is a chip with its count, and there is a way to
+    // make another beside them.
+    expect(screen.getByRole('button', { name: '+ New' })).toBeTruthy();
+
+    // Refine: the four acts on one row, and the card's own three fields.
+    fireEvent.click(screen.getByRole('tab', { name: 'Refine' }));
+    fireEvent.click(screen.getAllByText('Character')[0]!);
+    fireEvent.click(screen.getAllByText(FIRST)[0]!);
+    for (const act of [/Split/, /Merge/]) {
+      expect(screen.getByRole('button', { name: act })).toBeTruthy();
+    }
+    expect(screen.getByLabelText('Move this card to')).toBeTruthy();
+    expect(screen.getByLabelText('Also show this card in')).toBeTruthy();
+    // A tag is a thing you take off, so it is a pill rather than a comma.
+    expect(screen.getByLabelText('Add a tag')).toBeTruthy();
+    // And the comment: a note *about* the card, which the record had nowhere
+    // for until this. Typing in it never reaches the working text.
+    const comment = screen.getByPlaceholderText('A note to yourself about this card');
+    fireEvent.change(comment, { target: { value: 'Pair with the opening?' } });
+    const card = latest!.researchItems.find((one) => one.title.startsWith('Rule one'))!;
+    expect(card.comment).toBe('Pair with the opening?');
+    expect(card.body).toBe(FIRST);
   });
 });

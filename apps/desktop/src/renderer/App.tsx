@@ -1223,6 +1223,8 @@ export default function App() {
             open={sorterOpen && !away.has('sorter')}
             onClose={() => setSorterOpen(false)}
             onUpdate={project.update}
+            onUndo={project.undo}
+            canUndo={project.canUndo}
             onPopOut={() => {
               setSorterOpen(false);
               openPane('sorter');

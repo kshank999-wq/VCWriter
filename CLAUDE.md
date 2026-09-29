@@ -32,7 +32,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0058.
+  reads like it does. Applied through 0059.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
   the windowing, and the thing to know is that **every room goes to a second
@@ -3979,6 +3979,88 @@ push live; the build takes a minute or two.
   a preference being per machine and jsdom's storage persisting. §15 names what
   is still absent — undo in a popped-out room (every room's, and addendum 02
   §8's) and dragging a card across to another category.
+  **§16a is the standard categories a sitting opens with**, from Ken (*I would
+  like the note sorter to have categories set up… character setting dialogue.
+  theme idea set up and payoff scene beat and other standard categories for
+  storytelling*), read as a **list** rather than as an ask for a dialog that
+  sets up characters — the sentence runs as one and ends *other standard
+  categories for storytelling*, which only that reading finishes.
+  `seedCategoriesFor` is the list and `beginSession` hands it over beside the
+  unsorted pile, for the pile's own reason: the thing that needs it is the
+  writer's **first drop**, and a screen that asks somebody to invent a taxonomy
+  before they may sort anything is the screen this module exists to replace.
+  Three rules. **Every seed names something the program already has somewhere
+  to put** — Character is the Character Creator's, Setting is Locations',
+  Theme is Themes & Motifs', Setup & payoff is that module's, Plot is a track,
+  Idea is the Ideas shelf — so a category is the first half of a journey the
+  rest of the program finishes rather than a taxonomy invented for one room,
+  and each carries a `description` saying where that kind of note ends up;
+  **Dialogue is the one exception and it is Ken's**, writers keeping notes
+  about dialogue with no record for it. **Nothing names a unit itself**
+  (addendum 16 §6c): the two structural seeds read `nounsFor`, so a screenplay
+  gets *Scene* and *Beat*, a novel *Chapter* and *Passage*, a textbook
+  *Section* and *Subsection*. And **absent rather than renamed** where a format
+  has none — a textbook has no cast, no locations, no cues and no setups, so it
+  gets Concept, Example and Figure instead. They arrive **empty**, which buys
+  two things: §8 draws a category with nothing in it as a **chip**, so a fresh
+  sitting is a row of chips rather than ten empty stacks, and `scoreCategories`
+  is taught by a name, so §14's panel has something to say before anybody has
+  filed anything by hand. Two faults the seeds made visible rather than caused:
+  **`addSortCategory` was making a rival by name** (addendum 24 §5n's rule —
+  the check belongs in the **act** — which §16a turned from tidy to necessary,
+  a writer typing *Character* having got an empty one beside the full one with
+  the suggestion engine least able to tell them apart, since it is taught by
+  the name), and **Send offered every empty category as a chapter** (measured:
+  *12 chapters · 5 notes* on a sitting two passages old), so **a category with
+  nothing anywhere under it is not a row of the book** and the screen says so.
+  **§16b is the handoff's own screens**, from Ken (*It doesn't look like you
+  use the UI mockups*) — and he was right in a way worth naming precisely:
+  **the mockups had been read for structure and not for surface**. The four
+  steps, the two-panel split and its divider, stacks and chips, the four
+  display modes, the cream index-card colours, the tick tree and the outline
+  preview all came from the handoff, and the reading stopped there, so a
+  writer saw a working room that did not look like the comps. The correction is
+  a **visual restyle in place**, addendum 02 §4a's shape: every binding,
+  reading and promise unchanged, the whole domain suite through it untouched
+  but for the seeds' counts. **The bar is one row and a step is a numeral in a
+  ring** — which needs the number and the label to be *two elements rather than
+  one string*, and that is what makes the numeral `aria-hidden`, so a tab's
+  accessible name is *Gather* and the tablist says which of four it is;
+  sixteen assertions named the old spelling and were updated rather than worked
+  around. The handoff's `VC WRITER` half of the lockup is deliberately not
+  repeated, the application's own title bar being an inch above. Measured at
+  1440 the row was one squeeze short (the last step under the progress rail,
+  *+ Sitting* on two lines), so **the steps and the search never shrink** and
+  what gives way is what is merely nice to have, in order: the room's name, the
+  sitting's, the progress said in words. **Undo is on the bar and absent rather
+  than dead** in a window of its own, the history being the workspace's — §15's
+  gap named rather than papered over with a control that can only refuse.
+  **Gather is four tiles and a loud fifth**, where it had been three framed
+  boxes one of which was a raw `<input type=file>` reading *Choose Files · No
+  file chosen*; **Paste text and Type directly are one control through two
+  doors** (addendum 20 §16d), what differs being what the writer means to do,
+  where two *boxes* would have been the second answer — plus the dashed drop
+  zone, §6's promise at the foot of the sources and the gold **Start sorting**
+  under it. **A card carries its lineage on its face** (*Brainstorm ¶3*, in
+  mono, `whereFrom` and stored nowhere), which is the single thing that makes
+  it an index card rather than a coloured box. **A tag is a thing you take
+  off**, so pills with a ✕ rather than a comma-separated line. **The card's
+  acts are one row at the top** — Split · Merge · Move to… · Also show in…,
+  with *made* and *edited* at the right — because the acts are what you *do* to
+  a card and the fields are what it *is*; **Merge lives once**, there rather
+  than also under the sequence. **A comment is a third field and the record had
+  nowhere for it** (migration 0059): `body` is the words that travel, `source`
+  is where the fact came from, and this is *pair with the Hans Gruber
+  example?*, which belongs to neither. **The outline preview is numbered and
+  the numbers are a reading**, so unticking a category renumbers what is left
+  with nothing run — and a card gets none, an attached note carrying none in
+  the Outliner. **The waveform is decoration and says so where it is written**,
+  no speech API here reporting a level, so it moves while the recogniser runs
+  and stands still when it does not. The lesson is this project's oldest one
+  pointed at a picture: **a handoff is read twice — once for what the screen
+  must do and once for what it must look like** — and doing the first alone
+  produces a room that passes every test, keeps every promise, and reads to the
+  person who asked for it as though the mockups were never opened.
   `addendum-05-short-form.md` is the short-form module: the AV sheet in
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one

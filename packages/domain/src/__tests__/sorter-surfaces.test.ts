@@ -14,6 +14,7 @@ import {
   workingNotes,
   type ProjectFile,
 } from '../index.js';
+import { withoutSeeds } from './sorter-fixture.js';
 
 /**
  * `cast-surfaces` and `setups-surfaces`' third sibling (addendum 24 §5j, §5i).
@@ -35,8 +36,8 @@ const world = () => {
   const shelfBefore = researchCategoriesInOrder(file).length;
 
   const begun = beginSession(file, 'brainstorm');
-  file = begun.file;
   const session = begun.session;
+  file = withoutSeeds(begun.file, session.id);
 
   const added = addSource(file, {
     sessionId: session.id,

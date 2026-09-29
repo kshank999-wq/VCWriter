@@ -20,6 +20,7 @@ import {
   type ProjectFile,
   type ProjectFormat,
 } from '../index.js';
+import { withoutSeeds } from './sorter-fixture.js';
 
 /**
  * Send to Outliner (addendum 26 §11).
@@ -34,8 +35,8 @@ const PAGE = 'A villain who is right is the only one worth writing.\n\nDialogue 
 const world = (format: ProjectFormat = 'novel') => {
   let file: ProjectFile = createProjectFile({ title: 'Villain’s Guide', format });
   const begun = beginSession(file, 'brainstorm');
-  file = begun.file;
   const session = begun.session;
+  file = withoutSeeds(begun.file, session.id);
 
   const added = addSource(file, { sessionId: session.id, name: 'Brainstorm', text: PAGE, kind: 'paste' });
   file = added.file;
@@ -176,5 +177,21 @@ describe('send to outliner', () => {
     expect(moved.researchItems[0]!.sourceTo).toBe(52);
     // And it is off the sitting's rows, having left it.
     expect(sendRows(moved, session.id, 'novel').filter((one) => one.kind === 'card')).toHaveLength(0);
+  });
+
+  it('does not offer a category with nothing anywhere under it', () => {
+    // §16b. It mattered little while every category was one somebody made on
+    // purpose; §16a hands a sitting ten standard ones, so without this a
+    // writer who sorted two passages sent eight empty chapters.
+    const { file, session, top } = world();
+    const empty = addSortCategory(file, { sessionId: session.id, name: 'Wardrobe' });
+    const rows = sendRows(empty.file, session.id, 'novel');
+    expect(rows.some((one) => one.title === 'Wardrobe')).toBe(false);
+    // The one that holds something is still there…
+    expect(rows.some((one) => one.title === 'Character')).toBe(true);
+
+    // …and so is a parent whose own cards are nil but whose child has some:
+    // `top` is exactly that, its cards living in the nested Antagonists.
+    expect(rows.find((one) => one.id === (top.id as string))!.cards).toBe(0);
   });
 });

@@ -4,6 +4,7 @@ import { cardsIn, moveCard, sortCategories } from './note-sorter.js';
 import { onlyLiving } from './graveyard.js';
 import type { OutlineId, OutlineItemId, NoteSessionId, ResearchCategoryId, ResearchItemId } from './ids.js';
 import type { ProjectFile } from './project-file.js';
+import type { ResearchCategory } from './entities/research.js';
 import type { ProjectFormat } from './entities/project.js';
 
 /**
@@ -120,9 +121,28 @@ export const sendRows = (
   const categories = sortCategories(file, sessionId);
   const rows: SendRow[] = [];
 
+  /**
+   * Whether anything at all is filed under a category, its children included.
+   *
+   * **An empty category is not a row of the book** (§16b). It was harmless
+   * while every category was one a writer had made on purpose; §16a hands a
+   * sitting ten standard ones, so without this a fresh sitting with two things
+   * sorted sent eight empty chapters — a heading nobody wrote, arriving in the
+   * outline because the room had offered a shelf rather than because anybody
+   * asked for a chapter. The footer says so, and a shelf a writer does want as
+   * a heading is one thing filed away from being offered.
+   */
+  const holdsAnything = (category: ResearchCategory): boolean =>
+    cardsIn(file, category.id).length > 0 ||
+    categories
+      .filter((one) => ((one.parentId ?? null) as string | null) === (category.id as string))
+      .some(holdsAnything);
+
   const walk = (parentId: ResearchCategoryId | null, depth: number, parentSent: boolean): void => {
     for (const category of categories.filter(
-      (one) => ((one.parentId ?? null) as string | null) === ((parentId ?? null) as string | null),
+      (one) =>
+        ((one.parentId ?? null) as string | null) === ((parentId ?? null) as string | null) &&
+        holdsAnything(one),
     )) {
       const id = category.id as string;
       const cards = cardsIn(file, category.id);

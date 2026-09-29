@@ -19,13 +19,17 @@ import {
   researchCategoriesInOrder,
   searchSession,
   sessionCards,
+  sessionCategories,
   sessionProgress,
+  sortCategories,
+  suggestPlacements,
   unsortedOf,
   splitCard,
   titleFrom,
   whereFrom,
   type ProjectFile,
 } from '../index.js';
+import { withoutSeeds } from './sorter-fixture.js';
 
 /**
  * The Note Sorter (addendum 26).
@@ -47,8 +51,8 @@ const PAGE = [
 const world = () => {
   let file: ProjectFile = createProjectFile({ title: 'Villain’s Guide', format: 'novel' });
   const begun = beginSession(file, 'Villain’s Guide · brainstorm');
-  file = begun.file;
   const session = begun.session;
+  file = withoutSeeds(begun.file, session.id);
 
   const added = addSource(file, {
     sessionId: session.id,
@@ -263,5 +267,85 @@ describe('the note sorter', () => {
     const whole = sessionProgress(made.file, session.id);
     expect(whole.share).toBe(1);
     expect(whole.total).toBe(PAGE.length);
+  });
+
+  it('hands a new sitting the format’s standard categories, named from the noun table', () => {
+    const novel = beginSession(createProjectFile({ title: 'A', format: 'novel' }), 'notes');
+    const names = sortCategories(novel.file, novel.session.id).map((one) => one.name);
+    // Ken's list, and the two structural ones read `nounsFor` rather than
+    // being written out: a novel is handed Chapter and Passage.
+    for (const wanted of ['Character', 'Setting', 'Dialogue', 'Theme', 'Idea', 'Setup & payoff', 'Plot']) {
+      expect(names).toContain(wanted);
+    }
+    expect(names).toContain('Chapter');
+    expect(names).toContain('Passage');
+    expect(names).not.toContain('Scene');
+    // Every one of them says where a note of that kind ends up.
+    expect(
+      sortCategories(novel.file, novel.session.id).every((one) => one.description.trim().length > 0),
+    ).toBe(true);
+    // The pile is not one of them, and it still comes last.
+    expect(names).not.toContain('Unsorted');
+    expect(sessionCategories(novel.file, novel.session.id).at(-1)!.name).toBe('Unsorted');
+
+    // A screenplay is handed the script's own two.
+    const script = beginSession(createProjectFile({ title: 'B', format: 'screenplay' }), 'notes');
+    const scriptNames = sortCategories(script.file, script.session.id).map((one) => one.name);
+    expect(scriptNames).toContain('Scene');
+    expect(scriptNames).toContain('Beat');
+
+    // **Absent rather than renamed** where a format has none: a textbook has
+    // no cast, no locations, no cues and no setups, so it is handed none.
+    const book = beginSession(createProjectFile({ title: 'C', format: 'instructional' }), 'notes');
+    const bookNames = sortCategories(book.file, book.session.id).map((one) => one.name);
+    for (const absent of ['Character', 'Setting', 'Dialogue', 'Setup & payoff', 'Plot']) {
+      expect(bookNames).not.toContain(absent);
+    }
+    expect(bookNames).toContain('Concept');
+    expect(bookNames).toContain('Section');
+    expect(bookNames).toContain('Subsection');
+    // And what every format shares is shared.
+    expect(bookNames).toContain('Theme');
+    expect(bookNames).toContain('Idea');
+  });
+
+  it('gives back the category that has a name rather than making a rival', () => {
+    // §5n's rule, and §16a is what makes it matter: a sitting now opens with
+    // Character in it, so a writer typing *Character* would otherwise get an
+    // empty one beside the full one with nothing able to tell them apart.
+    const begun = beginSession(createProjectFile({ title: 'A', format: 'screenplay' }), 'notes');
+    const before = sortCategories(begun.file, begun.session.id).length;
+    const again = addSortCategory(begun.file, { sessionId: begun.session.id, name: '  character ' });
+    expect(sortCategories(again.file, begun.session.id)).toHaveLength(before);
+    expect(again.category!.name).toBe('Character');
+
+    // A name it does not have is still a new category.
+    const fresh = addSortCategory(begun.file, { sessionId: begun.session.id, name: 'Wardrobe' });
+    expect(sortCategories(fresh.file, begun.session.id)).toHaveLength(before + 1);
+
+    // And the same name under a different parent is a different shelf.
+    const nested = addSortCategory(fresh.file, {
+      sessionId: begun.session.id,
+      name: 'Character',
+      parentId: fresh.category!.id,
+    });
+    expect(sortCategories(nested.file, begun.session.id)).toHaveLength(before + 2);
+  });
+
+  it('teaches the suggestion panel before anything has been filed by hand', () => {
+    // The half of §14 that otherwise waits: a category is taught by its own
+    // name, so a sitting one paragraph old already has something to say.
+    const begun = beginSession(createProjectFile({ title: 'A', format: 'screenplay' }), 'notes');
+    const added = addSource(begun.file, {
+      sessionId: begun.session.id,
+      name: 'Notes',
+      text: 'The dialogue in the kitchen scene is two people not saying what they mean, at speed.',
+      kind: 'paste',
+    });
+    const offered = suggestPlacements(added.file, begun.session.id);
+    expect(offered.length).toBeGreaterThan(0);
+    const dialogue = sortCategories(added.file, begun.session.id).find((one) => one.name === 'Dialogue')!;
+    expect(offered.some((one) => (one.categoryId as string) === (dialogue.id as string))).toBe(true);
+    expect(offered[0]!.because).toContain('Dialogue is named for');
   });
 });

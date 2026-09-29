@@ -304,6 +304,8 @@ const researchItemToRow = (item: ResearchItem): Row => ({
   tags: item.tags,
   // Where the fact came from (addendum 16 §3). Empty on everything creative.
   source: item.source,
+  // A note about the card rather than in it (addendum 26 §16b).
+  comment: item.comment,
   // Where this card was pulled out of, and the stretch it took (addendum 26
   // §3). Null on every research item nobody extracted, which is most of them.
   source_id: item.sourceId,
@@ -1036,6 +1038,7 @@ const researchItemFromRow = (row: Row): ResearchItem =>
     body: text(row['body']),
     tags: list(row['tags']),
     source: text(row['source']),
+    comment: text(row['comment']),
     sourceId: nullableText(row['source_id']),
     sourceFrom: row['source_from'] === null || row['source_from'] === undefined ? null : Number(row['source_from']),
     sourceTo: row['source_to'] === null || row['source_to'] === undefined ? null : Number(row['source_to']),

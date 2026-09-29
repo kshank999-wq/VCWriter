@@ -1,10 +1,12 @@
 import { noteSessionSchema, noteSourceSchema, type NoteSession, type NoteSource, type NoteSourceKind } from './entities/note-sorter.js';
 import { researchCategorySchema, researchItemSchema, type ResearchCategory, type ResearchItem } from './entities/research.js';
 import { nowIso } from './entities/common.js';
+import { isInstructional, nounsFor } from './formats.js';
 import { onlyLiving } from './graveyard.js';
 import { newId } from './ids.js';
 import { orderKeyBetween, orderKeyForIndex } from './ordering.js';
 import type { NoteSessionId, NoteSourceId, ResearchCategoryId, ResearchItemId } from './ids.js';
+import type { ProjectFormat } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
 
 /** The key that puts something after everything already in a list. */
@@ -262,6 +264,80 @@ export const whereFrom = (file: ProjectFile, card: ResearchItem): string => {
   return `${source.name} ¶${paragraph}`;
 };
 
+// --------------------------------------------------- what a sitting opens with
+
+/** A category a sitting is handed, before the writer has made any (§16a). */
+export interface SeedCategory {
+  readonly name: string;
+  readonly color: string;
+  /** Where a note of this kind ends up, said on the screen. */
+  readonly description: string;
+}
+
+/**
+ * The standard categories a sitting opens with (§16a, from Ken: *I would like
+ * the note sorter to have categories set up and then you can add categories,
+ * but there needs to be a character setting dialogue. theme idea set up and
+ * payoff scene beat and other standard categories for storytelling*).
+ *
+ * Three rules decide the list, and the first is the one that makes it more
+ * than a guess at what writers write about.
+ *
+ * **Every seed names something the program already has somewhere to put.**
+ * Character is the Character Creator's, Setting is Locations', Theme is Themes
+ * & Motifs', Setup & payoff is that module's, Plot is a track, Idea is the
+ * Ideas shelf, Research is the shelf and its `source` — so a category here is
+ * the first half of a journey the rest of the program finishes, rather than a
+ * taxonomy invented for one room. **Dialogue is the one exception and it is
+ * Ken's**, dialogue being a thing writers keep notes about with no record of
+ * its own; it earns its place by being asked for.
+ *
+ * **Nothing names a unit itself** (addendum 16 §6c): the two structural seeds
+ * read `nounsFor`, so a screenplay is handed *Scene* and *Beat*, a novel
+ * *Chapter* and *Passage*, and a textbook *Section* and *Subsection*.
+ *
+ * And **absent rather than renamed where a format has none**. A textbook has
+ * no cast, no locations, no cues and no setups, so it is handed none of them —
+ * the research menu's own rule (addendum 16 §6a), which is why the list is
+ * built per format rather than translated.
+ *
+ * They arrive **empty**, which costs nothing: the room draws a category with
+ * nothing filed in it as a chip, so a fresh sitting is a row of chips rather
+ * than ten empty stacks, and `scoreCategories` is taught by a category's own
+ * name — so the suggestion panel has something to say before a writer has
+ * filed anything by hand, which is the half of §14 that otherwise waits.
+ */
+export const seedCategoriesFor = (format: ProjectFormat): readonly SeedCategory[] => {
+  const nouns = nounsFor(format);
+  const structure: readonly SeedCategory[] = [
+    { name: nouns.unit, color: '#8FA8C4', description: `A note about one ${nouns.unit.toLowerCase()}.` },
+    { name: nouns.sub, color: '#6CC4D6', description: `A note about one ${nouns.sub.toLowerCase()}.` },
+  ];
+  const everywhere: readonly SeedCategory[] = [
+    { name: 'Theme', color: '#9A7FC0', description: 'What the work is arguing. Themes & Motifs keeps these.' },
+    { name: 'Idea', color: '#C9A45C', description: 'Anything that is not yet anything else.' },
+    { name: 'Research', color: '#9C8F6D', description: 'Something looked up. The research shelf keeps these.' },
+  ];
+  if (isInstructional(format)) {
+    return [
+      { name: 'Concept', color: '#D9607A', description: 'Something the book teaches.' },
+      { name: 'Example', color: '#E08A5A', description: 'A worked case that shows a concept.' },
+      { name: 'Figure', color: '#6FAE5E', description: 'A picture, a diagram or a table. The graphics library keeps these.' },
+      ...structure,
+      ...everywhere,
+    ];
+  }
+  return [
+    { name: 'Character', color: '#D9607A', description: 'Somebody in the story. The Character Creator keeps these.' },
+    { name: 'Setting', color: '#4FA39A', description: 'Somewhere it happens. Locations keeps these.' },
+    { name: 'Dialogue', color: '#E08A5A', description: 'How somebody talks, or a line worth keeping.' },
+    { name: 'Plot', color: '#B98A4A', description: 'What happens, and in what order. A track carries one.' },
+    ...structure,
+    { name: 'Setup & payoff', color: '#6FAE5E', description: 'A promise and the keeping of it. Setups & Payoffs keeps these.' },
+    ...everywhere,
+  ];
+};
+
 // ------------------------------------------------------------------ the acts
 
 /**
@@ -297,11 +373,33 @@ export const beginSession = (
     createdAt: at,
     updatedAt: at,
   });
+  // The standard categories (§16a). They are seeded here for the pile's own
+  // reason: a writer opening the room wants somewhere to drop the first
+  // passage, and a screen that asks them to invent a taxonomy before they may
+  // sort anything is the one this module exists to replace.
+  const seeds: ResearchCategory[] = [];
+  for (const seed of seedCategoriesFor(file.project.format)) {
+    seeds.push(
+      researchCategorySchema.parse({
+        id: newId<ResearchCategoryId>(),
+        projectId: file.project.id,
+        name: seed.name,
+        description: seed.description,
+        color: seed.color,
+        systemKey: null,
+        parentId: null,
+        sessionId: session.id,
+        orderKey: afterAll(seeds),
+        createdAt: at,
+        updatedAt: at,
+      }),
+    );
+  }
   return {
     file: {
       ...file,
       noteSessions: [...file.noteSessions, session],
-      researchCategories: [...file.researchCategories, pile],
+      researchCategories: [...file.researchCategories, ...seeds, pile],
     },
     session,
   };
@@ -344,7 +442,22 @@ export const addSource = (
   return { file: { ...file, noteSources: [...file.noteSources, source] }, source };
 };
 
-/** Make a category in a sitting, optionally inside another (§8). */
+/**
+ * Make a category in a sitting, optionally inside another (§8).
+ *
+ * **It is *this one, or a new one by this name*** — a name the sitting already
+ * has under the same parent gives back the category that has it rather than a
+ * rival beside it. Addendum 24 §5n settled where that check belongs: in the
+ * **act**, wherever a single act means both, so no caller can forget it; and
+ * §16a made it necessary rather than merely tidy, because a sitting now opens
+ * with ten categories and *Character* is one of them, so a writer typing it
+ * would otherwise get an empty Character next to the full one and nothing in
+ * the room able to tell them apart — the suggestion engine least of all, since
+ * it is taught by the name.
+ *
+ * Case and surrounding space are ignored, a writer typing from memory not
+ * being promising to match capitals (§5m's rule).
+ */
 export const addSortCategory = (
   file: ProjectFile,
   input: {
@@ -356,6 +469,13 @@ export const addSortCategory = (
 ): { file: ProjectFile; category: ResearchCategory | null } => {
   const name = input.name.trim();
   if (name.length === 0) return { file, category: null };
+  const parentId = (input.parentId ?? null) as string | null;
+  const already = sessionCategories(file, input.sessionId).find(
+    (one) =>
+      one.name.trim().toLowerCase() === name.toLowerCase() &&
+      ((one.parentId ?? null) as string | null) === parentId,
+  );
+  if (already) return { file, category: already };
   const at = nowIso();
   const category = researchCategorySchema.parse({
     id: newId<ResearchCategoryId>(),
