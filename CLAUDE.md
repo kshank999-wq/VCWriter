@@ -28,6 +28,11 @@ push live; the build takes a minute or two.
 - `apps/desktop` — Electron and the renderer. `src/renderer/components`.
 - `apps/web` — the Next site, and the admin-gated browser preview built
   from the renderer into `public/preview`.
+- `apps/mobile` — **Notes on iOS and Android** (Expo), from Ken's *we need to
+  create notes as an app for the apple app store and android*. It has **never
+  been run on a device** — this container is Linux, an iOS build wants macOS or
+  a cloud builder — so it typechecks, its tests pass and its dependencies
+  resolve, and nothing more than that is claimed.
 - `packages/supabase/migrations` — apply new ones to the live project as
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
@@ -1004,6 +1009,45 @@ push live; the build takes a minute or two.
   `captureKeyName` for the format `null`, so a scene note read back as *Scene
   or chapter* on a screenplay), and a tab row where three tabs did not fit a
   210px shelf and *RESEARCH* drew as *RESEA…*.
+  `addendum-27-mobile-app.md` is **Notes on the App Store and Google Play**,
+  from Ken, and **the audit is most of the answer**: addendum 09 §5 chose the
+  web app and recorded why it could afford to — the build order was arranged so
+  everything before stage 4 was the same either way, with the consequence
+  written down that **a native app later inherits every other stage untouched**.
+  It held. The ~2,200 lines of `capture-*.ts` have no DOM in them, so `hear`,
+  `readSpoken`, `askAbout`, `speakBack`, `groupsSaid` and `captureVocabulary`
+  are **imported rather than rewritten** and every rule the phone follows is the
+  one the website follows, under the same 2,500 tests; the four `/api/notes`
+  routes exist for this by their own comment; and §14's password sign-in was
+  built two days earlier for the same reason one layer out. **What is new is
+  the screens and three things the browser was doing.** §2 is the door: **`currentUser()` read cookies and nothing else**, so
+  the routes written *so another developer's app should not need this project's
+  RLS in its head* could only ever be called by a browser — addendum 09 §15's
+  `ok([])` in another shape, **a door built for a caller that could not open
+  it**. `serverClient()` reads a **bearer token** now, in one place because
+  *who is calling* must have one answer, and the token is **that person's
+  session rather than a way past it** (it is forwarded, so RLS applies
+  unchanged); a browser sends no such header unless asked, so all fifty-two
+  cookie callers read as before. Driven against a stub that answers only for
+  the right token: no token 401, a wrong token 401, the app's token 200 — and
+  the stub refuses the **table** read without it too, which is what proves the
+  forwarding rather than the acceptance. §5 is **why native rather than a
+  wrapped page**: web speech inside an iOS web view needs the network, stops
+  when the screen locks and cannot be relied on, which is survivable for a page
+  somebody reads and fatal for a notebook used on a walk with the phone in a
+  pocket — `SFSpeechRecognizer` and Android's own do continuous recognition
+  **on the device**, which is also the only way a walk out of signal works.
+  `listen.ts` hears and decides nothing. §4 is the queue, **the same interface
+  on the storage a phone has** (SQLite for IndexedDB) with §13's lesson built
+  in rather than remembered — **`file` writes the note down and sends it**, one
+  function, so there is no way to do half of it — and a partial accept marks
+  **exactly what landed**. §8's Review says **what is still on the phone**,
+  which the website's does not and this must, a walk out of signal otherwise
+  ending at an empty list. §9 is what is honestly not done: **it has never been
+  run on a device**, the store accounts are Ken's to make (Apple $99/yr, Play
+  $25 plus twelve testers for fourteen days on a new personal account), **no
+  signing key belongs in the repository**, and a wake phrase, notifications and
+  the icon are named rather than half-built.
   `addendum-10-book-index.md` is the back-of-book index, from Ken's ask for
   chapter pages that carry a graphic *"but it goes into an Index"* with the page
   numbers updating themselves. **Built.** Two of the three things he asked for
@@ -4375,6 +4419,7 @@ push live; the build takes a minute or two.
     cd packages/domain && pnpm typecheck && pnpm test && pnpm build
     cd apps/desktop   && pnpm typecheck && pnpm test && pnpm build
     cd apps/web       && pnpm typecheck
+    cd apps/mobile    && pnpm typecheck && pnpm test
 
 Screenshot the real thing when the change is visual: build the renderer,
 serve `apps/desktop/out/renderer`, and drive it in Chromium with the preload

@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "VC Writer Notes",
+    "slug": "vcwriter-notes",
+    "scheme": "vcwriter",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.vcwriter.notes",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "VC Writer Notes listens so you can dictate a note without looking at your phone.",
+        "NSSpeechRecognitionUsageDescription": "Your speech is turned into the words of your note. On this device where it can be, so a walk without signal still works.",
+        "UIBackgroundModes": ["audio"]
+      }
+    },
+    "android": {
+      "package": "com.vcwriter.notes",
+      "permissions": ["android.permission.RECORD_AUDIO", "android.permission.INTERNET"],
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "VC Writer Notes listens so you can dictate a note without looking at your phone.",
+          "speechRecognitionPermission": "Your speech is turned into the words of your note.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
+      ]
+    ],
+    "extra": {
+      "site": "https://vc-writer.com"
+    }
+  }
+}
