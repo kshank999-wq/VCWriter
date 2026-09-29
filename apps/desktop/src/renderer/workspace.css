@@ -19098,10 +19098,21 @@ dialog.designed-page-dialog[open] {
   scrollbar-width: thin;
 }
 
+/* A button in a flex column stretches to the panel unless it is told not to,
+   which drew *Bring them back* as a 690px bar. */
 .ns-suggest-head,
 .ns-suggest-acts,
-.ns-bring-back {
+.ns-name-more {
   flex: 0 0 auto;
+}
+
+.ns-suggest > button {
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+.ns-bring-back {
+  color: var(--gold);
 }
 
 .ns-bring-back {
@@ -19205,4 +19216,27 @@ dialog.designed-page-dialog[open] {
 .ns-looks {
   color: var(--gold-bright);
   padding: 1px 6px;
+}
+
+/* A grouping the model named rather than the notes counted (addendum 26 §14a).
+   Marked because the two are not the same kind of claim: a counted one can be
+   checked, a named one can only be judged. */
+.ns-from-model {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.ns-name-more {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
 }

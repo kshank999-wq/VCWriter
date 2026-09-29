@@ -3904,10 +3904,42 @@ push live; the build takes a minute or two.
   (`coverageOf`'s rule one layer up); it is **testable rather than merely
   demonstrable** where the AI routes this program has have still never been run
   live; and it **costs nothing and needs no account**, so there is no cap to hit
-  and no network to be without. A model would be the better tool for exactly
-  one of the three — naming a grouping from unclustered prose — and that is the
-  seam to widen, `suggestCategories` returning names and where they come from
-  being its business alone. A category is taught by its **cards and by its own
+  and no network to be without. **§14a is a model for the one it is better
+  at**, from Ken after §14 shipped, and the case is one sentence: **the count
+  can only offer a word that repeats, and a grouping's name is very often a word
+  that appears in none of the passages** — the notes say *villain*,
+  *antagonist*, *the man burning the village*, and the category is called
+  **Antagonists**, which no count will ever produce. The other two stay the
+  reading's, *which of my six categories does this go in* having been answered
+  by the writer filing three things half an hour ago. **The shape is the
+  permission** a third time (addendum 07 §12, addendum 16 §10):
+  `suggestedCategoriesSchema` is **names with a sentence** and has no field for
+  a passage, a range, a card or a category id, so a model that decided to sort
+  the notes has nowhere to put the answer — spec §15's *should not silently
+  reorganize* kept by the type, with a test handing the schema a reply carrying
+  `categoryId`, `cardIds`, `from`, `to` and `apply` and watching all five fall
+  off. **What leaves the machine is said beside the press** (*Sends the unsorted
+  passages and your category names. Nothing is filed.*), it being the paragraphs
+  and the names with no ids and nothing read from the database. **The two halves
+  are one list, counted first** — `mergeIdeas` putting the read ideas before the
+  suggested ones so a writer meets what they can **check** before what they can
+  only **judge**, dropping a name a category already has or the reading already
+  offers (a model agreeing with the count is not a second idea), and marking
+  which half said it on the row for `found`'s reason (addendum 25 §2). The rest
+  is the learning aid's pattern: `ai-note-categories.ts`,
+  `/api/ai/note-categories` with a `GET` saying whether it can be had,
+  `resolveCaller`, **its own rate-limit bucket** so a morning of sorting does
+  not use up somebody's chapter summaries, and the three bridges. The button is
+  **absent rather than greyed** with the reason said once, and it may be absent
+  without leaving a hole because **the panel is complete without it** — offline,
+  unlicensed or in a build with no cloud, the sorter suggests exactly as §14
+  describes. **The model call has not been run live**, addendum 16 §6b's caveat
+  for its reason; what is proved is everything either side of it, driven with
+  the bridge answering as the route does — the button appearing only when the
+  status allows, `{ passages, categories }` and nothing else crossing the
+  boundary, a taken name dropped, a surviving one marked *suggested*, and the
+  press making a category with nothing in it, which the panel then draws as a
+  **chip**. A category is taught by its **cards and by its own
   name, kept apart** (without the name the panel is silent until somebody has
   done by hand the work it exists to save; without the separation it says *1
   card uses “dialogue”* about a category nothing is filed in). Whether a row is

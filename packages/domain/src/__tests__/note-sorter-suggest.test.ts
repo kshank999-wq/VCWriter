@@ -7,7 +7,9 @@ import {
   cardsIn,
   coverageOf,
   createProjectFile,
+  categoryIdeaSchema,
   describeSuggestions,
+  mergeIdeas,
   extractToCategory,
   passageOf,
   placementKey,
@@ -18,7 +20,9 @@ import {
   sourcesOf,
   suggestCategories,
   suggestPlacements,
+  suggestedCategoriesSchema,
   termsOf,
+  whatToRead,
   worthSaying,
   unsortedOf,
   type NoteSessionId,
@@ -261,6 +265,72 @@ describe('auto-sort suggestions', () => {
       .toBe(false);
     expect(profilesOf(file, session).some((one) => (one.categoryId as string) === (pile.id as string)))
       .toBe(false);
+  });
+
+  it('what a model may hand back is a name and a sentence, and nothing else', () => {
+    // The shape is the permission (§14a): there is no field for a passage, a
+    // range, a card or a category, so a model that decided to sort the notes
+    // itself has nowhere to put the answer.
+    const parsed = suggestedCategoriesSchema.parse({
+      ideas: [
+        {
+          name: 'Antagonists',
+          because: 'Several passages are about writing the villain.',
+          // Everything a model might add to reorganize something, and all of
+          // it is dropped on the way through.
+          categoryId: 'cat-1',
+          cardIds: ['a', 'b'],
+          from: 0,
+          to: 40,
+          sourceId: 's-1',
+          apply: true,
+        },
+      ],
+    });
+    expect(parsed.ideas).toEqual([
+      { name: 'Antagonists', because: 'Several passages are about writing the villain.' },
+    ]);
+    expect(Object.keys(categoryIdeaSchema.parse({ name: 'X' })).sort())
+      .toEqual(['because', 'found', 'name', 'passages']);
+  });
+
+  it('sends the unsorted passages and the category names, and nothing else', () => {
+    const { file, session, source } = world();
+    const character = sortCategories(file, session).find((one) => one.name === 'Character')!;
+    const taught = fileParagraph(file, source.id, 0, character.id);
+
+    const sending = whatToRead(taught, session);
+    expect(Object.keys(sending).sort()).toEqual(['categories', 'passages']);
+    expect(sending.categories).toEqual(['Character', 'Dialogue']);
+    // What is already filed does not go: what leaves the machine is what is
+    // still unsorted, which is what the press is about.
+    expect(sending.passages).not.toContain(PARAS[0]);
+    expect(sending.passages).toContain(PARAS[1]);
+    expect(sending.passages.every((one) => typeof one === 'string')).toBe(true);
+  });
+
+  it('puts the counted ideas first and drops a name already taken', () => {
+    const { file, session } = world(['Character']);
+    const read = suggestCategories(file, session);
+    expect(read.every((one) => one.found === 'read')).toBe(true);
+
+    const merged = mergeIdeas(file, session, read, [
+      // Agreeing with the count is not a second idea.
+      { name: 'revision', because: 'They are all about revising.' },
+      // A category the writer already has is a placement, not a grouping.
+      { name: 'Character', because: 'Several are about people.' },
+      // And one only a model would think of: no word repeats to find it.
+      { name: 'Antagonists', because: 'Several are about writing the villain.' },
+      { name: '   ', because: 'Nothing.' },
+    ]);
+
+    expect(merged.filter((one) => one.found === 'suggested').map((one) => one.name))
+      .toEqual(['Antagonists']);
+    // Counted first, so a writer meets what they can check before what they
+    // must judge.
+    expect(merged.slice(0, read.length).every((one) => one.found === 'read')).toBe(true);
+    expect(merged.at(-1)!.found).toBe('suggested');
+    expect(merged.at(-1)!.passages).toBe(0);
   });
 
   it('narrows to one source when asked, and stores nothing either way', () => {

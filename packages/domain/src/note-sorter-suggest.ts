@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { extractToCategory, piecesOf, sortCategories, sourcesOf, titleFrom, cardsIn } from './note-sorter.js';
 import type { NoteSessionId, NoteSourceId, ResearchCategoryId } from './ids.js';
 import type { ProjectFile } from './project-file.js';
@@ -367,15 +368,38 @@ export const approvePlacements = (
   return { file: next, made };
 };
 
-/** A grouping the notes suggest and the sitting has no category for. */
-export interface CategoryIdea {
+/**
+ * A grouping the sitting has no category for.
+ *
+ * **This shape is the permission** (§14a). It is what a model is allowed to
+ * hand back, and it is a **name and a sentence** — there is no field here for a
+ * card, a passage, a range or a category id, so a model that decided to sort
+ * the notes itself has nowhere to put the answer. Spec §15's *AI should not
+ * silently reorganize source material* is kept by the type rather than by care,
+ * which is the room AI's rule (addendum 07 §12) and the learning aid's
+ * (addendum 16 §10) for the third time.
+ */
+export const categoryIdeaSchema = z.object({
   /** What it would be called. */
-  name: string;
-  /** How many unsorted paragraphs it would take. */
-  passages: number;
+  name: z.string().trim().min(1).max(60),
   /** Why. */
-  because: string;
-}
+  because: z.string().trim().max(240).default(''),
+  /**
+   * How it was arrived at, and it is on the row because the two are not the
+   * same kind of claim: a counted one a writer can go and check, a suggested
+   * one they can only judge. `found`'s own argument (addendum 25 §2).
+   */
+  found: z.enum(['read', 'suggested']).default('read'),
+  /** How many unsorted paragraphs it would take. Counted only where it is read. */
+  passages: z.number().int().min(0).default(0),
+});
+export type CategoryIdea = z.infer<typeof categoryIdeaSchema>;
+
+/** What a model may hand back, and the whole of it. */
+export const suggestedCategoriesSchema = z.object({
+  ideas: z.array(categoryIdeaSchema.pick({ name: true, because: true })).max(12),
+});
+export type SuggestedCategories = z.infer<typeof suggestedCategoriesSchema>;
 
 /** How many paragraphs a word must run through before it is worth a category. */
 const ENOUGH_TO_BE_A_CATEGORY = 3;
@@ -432,7 +456,66 @@ export const suggestCategories = (
       name: term.charAt(0).toUpperCase() + term.slice(1),
       passages: count,
       because: `${count} unsorted paragraphs mention it, and no category does.`,
+      found: 'read' as const,
     }));
+};
+
+/**
+ * What a model is given to name groupings from (§14a).
+ *
+ * **The unsorted paragraphs and the category names, and nothing else** — no
+ * ids, no cards, no sources, no project. What leaves the writer's machine is
+ * what they pressed a button to have read, which is the learning aid's rule
+ * (addendum 16 §10) and is why the screen says so beside the press.
+ */
+export const whatToRead = (
+  file: ProjectFile,
+  sessionId: NoteSessionId,
+  options: { most?: number } = {},
+): { passages: string[]; categories: string[] } => {
+  const passages: string[] = [];
+  for (const source of sourcesOf(file, sessionId)) {
+    for (const piece of piecesOf(file, source)) {
+      if (piece.sorted) continue;
+      for (const part of piece.text.split(/\n\s*\n/)) {
+        const passage = part.trim();
+        if (passage.length >= 24) passages.push(passage);
+      }
+    }
+  }
+  return {
+    passages: passages.slice(0, options.most ?? 120),
+    categories: sortCategories(file, sessionId).map((one) => one.name),
+  };
+};
+
+/**
+ * The read ideas and the suggested ones as one list (§14a).
+ *
+ * **Counted first, then suggested**, because a writer scanning the list should
+ * meet what they can check before what they must judge. A name a category
+ * already has is dropped, and so is one the reading already offers — a model
+ * agreeing with the count is not a second idea, and showing it twice would make
+ * the panel look as though the two halves were arguing.
+ */
+export const mergeIdeas = (
+  file: ProjectFile,
+  sessionId: NoteSessionId,
+  read: readonly CategoryIdea[],
+  suggested: readonly { name: string; because: string }[],
+): CategoryIdea[] => {
+  const taken = new Set<string>();
+  for (const category of sortCategories(file, sessionId)) taken.add(category.name.trim().toLowerCase());
+  for (const idea of read) taken.add(idea.name.trim().toLowerCase());
+
+  const extra: CategoryIdea[] = [];
+  for (const one of suggested) {
+    const key = one.name.trim().toLowerCase();
+    if (key.length === 0 || taken.has(key)) continue;
+    taken.add(key);
+    extra.push(categoryIdeaSchema.parse({ ...one, found: 'suggested', passages: 0 }));
+  }
+  return [...read, ...extra];
 };
 
 /**

@@ -350,10 +350,9 @@ Four things follow, each one this project has paid for before.
 - **It costs nothing and needs no account**, so there is no cap to hit, no meter
   to read and no network to be without.
 
-A model would be the better tool for one of the three — naming a grouping from
-unclustered prose — and that is the seam to widen if it is ever wanted. Nothing
-about the panel would change shape: `suggestCategories` returns names, and where
-they come from is its business alone.
+A model **is** the better tool for one of the three — naming a grouping from
+unclustered prose — and §14a is that half, built at Ken's word. Nothing about
+the panel changed shape to take it.
 
 ### §14.2 The scorer, and the rule that keeps it quiet
 
@@ -397,12 +396,67 @@ suggestion; and nothing that is not `worthSaying`. Approving is
 `extractToCategory` and nothing else, so an approved suggestion is
 indistinguishable afterwards from a passage dragged across by hand.
 
-**Suggest Categories** is `suggestCategories`: words that run through three or
-more unsorted paragraphs and that **no category knows, by name or by card**. It
+**Suggest Categories** is `suggestCategories` and, from §14a, a model beside it:
+words that run through three or more unsorted paragraphs and that **no category
+knows, by name or by card**, plus names read out of the passages themselves. It
 **proposes a name and never makes one**, and pressing it makes the category
 **empty** — after which the passages suggest themselves into it, which is the
 writer's press. Making it *and* filling it would be the *silently reorganize*
 the spec forbids.
+
+## §14a A model, for the one it is better at
+
+From Ken after §14 shipped. **The count can only offer a word that repeats, and
+a grouping's name is very often a word that appears in none of the passages.**
+The notes say *villain*, *antagonist*, *the man burning the village*, and the
+category is called **Antagonists** — which no count will ever produce. That is
+the whole case, and it is the one of the three where it holds: *which of my six
+categories does this paragraph go in* is still the reading's, because the writer
+answered it by filing three things half an hour ago.
+
+**The shape is the permission**, the third time in this program (addendum 07
+§12, addendum 16 §10). `suggestedCategoriesSchema` is **names with a sentence**
+and nothing else: no field for a passage, a range, a card or a category id, so a
+model that decided to sort the notes itself has nowhere to put the answer. Spec
+§15's *AI should not silently reorganize source material* is kept by the type
+rather than by care, and a test hands the schema a reply carrying `categoryId`,
+`cardIds`, `from`, `to` and `apply`, and watches all five fall off.
+
+**What leaves the machine is said beside the press** — *Sends the unsorted
+passages and your category names. Nothing is filed.* — because a writer sending
+a page of private notes somewhere should be told that is what the button does.
+It is the unsorted paragraphs and the category names; no ids, no cards, no
+sources, no project, and nothing is read from the database.
+
+**The two halves are one list, counted first.** `mergeIdeas` puts the read ideas
+before the suggested ones, because a writer scanning down should meet what they
+can **check** before what they can only **judge**; a name a category already has
+is dropped, and so is one the reading already offers — a model agreeing with the
+count is not a second idea. Which half said it is **on the row**, marked
+`suggested`, for `found`'s own reason (addendum 25 §2): the two are not the same
+kind of claim.
+
+Everything else is the pattern the learning aid set: the generator in
+`apps/web/src/lib/ai-note-categories.ts`, the route at `/api/ai/note-categories`
+with a `GET` that says whether it can be had at all, `resolveCaller` for
+entitlement, **its own rate-limit bucket** so a morning of sorting does not use
+up somebody's chapter summaries, and the three bridges — preload, main, and the
+browser preview's same-origin fetch.
+
+The button is **absent rather than greyed** when it cannot be had, with the
+reason said once, and the reason it may be absent without leaving a hole is that
+**the panel is complete without it**: the read ideas are the feature and this is
+more of them. Offline, unlicensed, or in a build with no cloud at all, the
+sorter goes on suggesting exactly as §14 describes.
+
+**The model call has not been run live** — the same caveat addendum 16 §6b
+carries, and for the same reason: no key is configured here. What is proved is
+everything either side of it, driven in the real room with the bridge answering
+as the route does: the button appears only when the status allows, what crosses
+the boundary is `{ passages, categories }` and nothing else, a name already
+taken is dropped, a name that survives is marked `suggested`, and pressing it
+makes a category with nothing in it — which the panel then draws as a **chip**,
+the reading's own rule for a category nobody has filed anything in.
 
 ### §14.4 The panel
 

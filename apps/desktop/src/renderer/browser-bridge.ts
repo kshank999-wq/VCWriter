@@ -548,6 +548,49 @@ export const createBrowserBridge = (): BrowserBridge => {
       }
     },
 
+    /**
+     * Naming groupings for the Note Sorter (addendum 26 §14a): same origin,
+     * session cookie already good, no key to ship — the third cloud call the
+     * preview makes, for the first one's reason.
+     */
+    async suggestNoteCategories(input) {
+      try {
+        const response = await fetch('/api/ai/note-categories', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(input),
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | { ideas?: Array<{ name: string; because: string }>; error?: string }
+          | null;
+        if (!response.ok || !payload?.ideas) {
+          return fail(payload?.error ?? `The groupings could not be named (${response.status})`);
+        }
+        return ok(payload.ideas);
+      } catch {
+        return fail('The groupings could not be asked for. Check your connection.');
+      }
+    },
+
+    async noteCategoriesStatus() {
+      try {
+        const response = await fetch('/api/ai/note-categories', { credentials: 'same-origin' });
+        const payload = (await response.json().catch(() => null)) as
+          | { configured?: boolean; entitled?: boolean; reason?: string | null }
+          | null;
+        if (!response.ok || !payload) {
+          return ok({ available: false, reason: 'Naming groupings could not be reached.' });
+        }
+        return ok({
+          available: payload.configured === true && payload.entitled === true,
+          reason: payload.reason ?? null,
+        });
+      } catch {
+        return ok({ available: false, reason: 'Naming groupings could not be reached.' });
+      }
+    },
+
     async sendOneSheet(input) {
       try {
         const response = await fetch('/api/one-sheet', {

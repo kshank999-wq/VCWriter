@@ -27,6 +27,8 @@ import {
   requestSignInCode,
   resolveCapture,
   learningAidStatus,
+  noteCategoriesStatus,
+  requestNoteCategories,
   sceneReviewStatus,
   signOut,
   syncProject,
@@ -609,6 +611,28 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
   ipcMain.handle('cloud:learningAidStatus', async (): Promise<DesktopApiResult<SceneReviewAvailability>> => {
     try {
       return ok(await learningAidStatus());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle(
+    'cloud:suggestNoteCategories',
+    async (
+      _event,
+      input: { passages: string[]; categories: string[] },
+    ): Promise<DesktopApiResult<Array<{ name: string; because: string }>>> => {
+      try {
+        return ok(await requestNoteCategories(input));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  ipcMain.handle('cloud:noteCategoriesStatus', async (): Promise<DesktopApiResult<SceneReviewAvailability>> => {
+    try {
+      return ok(await noteCategoriesStatus());
     } catch (cause) {
       return fail(cause);
     }

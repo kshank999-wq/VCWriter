@@ -33,8 +33,10 @@ import {
   sortCategories,
   sortingSessions,
   sourcesOf,
+  mergeIdeas,
   suggestCategories,
   suggestPlacements,
+  whatToRead,
   worthSaying,
   splitCard,
   unreferenceCard,
@@ -52,6 +54,7 @@ import {
   type ResearchCategoryId,
   type ResearchItem,
   type ResearchItemId,
+  type CategoryIdea,
   type Placement,
   type SendRow,
 } from '@vcwriter/domain';
@@ -1159,6 +1162,17 @@ function Suggestions({
   const [dismissed, setDismissed] = useState<readonly string[]>([]);
   const [ticked, setTicked] = useState<readonly string[]>([]);
   const [ideasOpen, setIdeasOpen] = useState(false);
+  /**
+   * The model's half of *Suggest new categories* (§14a).
+   *
+   * **Held in the screen and never stored**: names asked for once are about
+   * this pile as it stands, and filing anything changes what the answer would
+   * be. They are cleared whenever the reading's own ideas change beneath them,
+   * which is the same argument said in code.
+   */
+  const [named, setNamed] = useState<readonly { name: string; because: string }[]>([]);
+  const [naming, setNaming] = useState(false);
+  const [canName, setCanName] = useState<{ available: boolean; reason: string | null } | null>(null);
 
   const all = useMemo(
     () => (on ? suggestPlacements(file, session.id, { sourceId, limit: 24 }) : []),
@@ -1167,7 +1181,34 @@ function Suggestions({
   const rows = all.filter((one) => !dismissed.includes(placementKey(one)));
   const putAside = all.length - rows.length;
   const chosen = rows.filter((one) => ticked.includes(placementKey(one)));
-  const ideas = ideasOpen ? suggestCategories(file, session.id) : [];
+  const read = ideasOpen ? suggestCategories(file, session.id) : [];
+  const ideas: CategoryIdea[] = ideasOpen ? mergeIdeas(file, session.id, read, named) : [];
+
+  // Whether names can be asked for at all, so the button is **absent rather
+  // than greyed**: the panel is complete without it — the read ideas are the
+  // feature and this is more of them — so its absence is not a hole.
+  useEffect(() => {
+    if (!ideasOpen || canName !== null) return;
+    const bridge = window.vcwriter;
+    if (!bridge?.noteCategoriesStatus) {
+      // No bridge at all: the read ideas are the whole panel, and it says
+      // nothing about a button that was never going to be there.
+      setCanName({ available: false, reason: null });
+      return;
+    }
+    let alive = true;
+    void bridge.noteCategoriesStatus().then((answer) => {
+      if (!alive) return;
+      setCanName(
+        answer.ok && answer.data
+          ? answer.data
+          : { available: false, reason: answer.error ?? 'Naming groupings is unavailable.' },
+      );
+    });
+    return () => {
+      alive = false;
+    };
+  }, [ideasOpen, canName]);
 
   return (
     <div className="ns-suggest">
@@ -1286,34 +1327,84 @@ function Suggestions({
           </div>
 
           {ideasOpen ? (
-            ideas.length === 0 ? (
-              <p className="muted small">
-                Nothing repeats often enough in what is left to be worth a category of its own.
-              </p>
-            ) : (
-              <ul className="ns-ideas">
-                {ideas.map((idea) => (
-                  <li key={idea.name}>
-                    <button
-                      type="button"
-                      className="tool"
-                      title={idea.because}
-                      onClick={() => {
-                        onUpdate((current) =>
-                          addSortCategory(current, { sessionId: session.id, name: idea.name }).file,
-                        );
-                        // Made empty, never filled: the passages then suggest
-                        // themselves into it, which is the writer's press.
-                        onSay(`${idea.name} is a category now. Nothing has been filed in it.`);
-                      }}
-                    >
-                      + {idea.name}
-                    </button>
-                    <span className="muted small">{idea.because}</span>
-                  </li>
-                ))}
-              </ul>
-            )
+            <>
+              {ideas.length === 0 ? (
+                <p className="muted small">
+                  Nothing repeats often enough in what is left to be worth a category of its own.
+                </p>
+              ) : (
+                <ul className="ns-ideas">
+                  {ideas.map((idea) => (
+                    <li key={idea.name}>
+                      <button
+                        type="button"
+                        className="tool"
+                        title={idea.because}
+                        onClick={() => {
+                          onUpdate((current) =>
+                            addSortCategory(current, { sessionId: session.id, name: idea.name }).file,
+                          );
+                          // Made empty, never filled — whichever half proposed
+                          // it. The passages then suggest themselves into it,
+                          // which is the writer's press (spec §15's caveat).
+                          onSay(`${idea.name} is a category now. Nothing has been filed in it.`);
+                        }}
+                      >
+                        + {idea.name}
+                      </button>
+                      {/* **Which half said it, on the row**: a counted idea is
+                          something a writer can go and check, a named one is
+                          something they can only judge, and the two are not the
+                          same kind of claim (`found`, addendum 25 §2). */}
+                      {idea.found === 'suggested' ? (
+                        <span className="ns-from-model" title="Named by reading the unsorted notes">
+                          suggested
+                        </span>
+                      ) : null}
+                      <span className="muted small">{idea.because}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {canName?.available ? (
+                <div className="ns-name-more">
+                  <button
+                    type="button"
+                    className="tool"
+                    disabled={naming}
+                    onClick={() => {
+                      const read_ = whatToRead(file, session.id);
+                      if (read_.passages.length === 0) {
+                        onSay('There is nothing unsorted left to read.');
+                        return;
+                      }
+                      const bridge = window.vcwriter;
+                      if (!bridge?.suggestNoteCategories) return;
+                      setNaming(true);
+                      void bridge
+                        .suggestNoteCategories(read_)
+                        .then((answer) => {
+                          if (answer.ok && answer.data) setNamed(answer.data);
+                          else onSay(answer.error ?? 'The groupings could not be named.');
+                        })
+                        .finally(() => setNaming(false));
+                    }}
+                  >
+                    {naming ? 'Reading the notes…' : 'Name more from the notes'}
+                  </button>
+                  {/* Said beside the press, because a writer sending a page of
+                      private notes somewhere should be told that is what it
+                      does (addendum 16 §10's rule about what leaves). */}
+                  <span className="muted small">
+                    Sends the unsorted passages and your category names. Nothing is filed.
+                  </span>
+                </div>
+              ) : canName ? (
+                // Absent rather than greyed, with the reason said once.
+                <p className="muted small">{canName.reason}</p>
+              ) : null}
+            </>
           ) : null}
         </>
       )}

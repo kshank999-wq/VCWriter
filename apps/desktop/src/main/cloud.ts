@@ -423,6 +423,72 @@ export const requestLearningAid = async (input: {
 };
 
 /**
+ * Name the groupings in a sitting's unsorted notes (addendum 26 §14a).
+ *
+ * **The shape is the permission on both sides**: what goes up is passages and
+ * category names — no ids, no cards, no sources — and what comes back is names
+ * with a sentence, which has nowhere to put a placement. Spec §15's *AI should
+ * not silently reorganize source material* is kept by the type.
+ */
+export const requestNoteCategories = async (input: {
+  passages: string[];
+  categories: string[];
+}): Promise<Array<{ name: string; because: string }>> => {
+  const { data, error } = await supabase().auth.getSession();
+  if (error || !data.session) throw new CloudError('Sign in to have groupings named.');
+
+  const response = await fetch(`${SITE_URL}/api/ai/note-categories`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${data.session.access_token}`,
+    },
+    body: JSON.stringify(input),
+  }).catch(() => {
+    throw new CloudError('vc-writer.com could not be reached. Check your connection and try again.');
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | { ideas?: Array<{ name: string; because: string }>; error?: string }
+    | null;
+
+  if (!response.ok || !payload?.ideas) {
+    throw new CloudError(payload?.error ?? `The groupings could not be named (${response.status})`);
+  }
+  return payload.ideas;
+};
+
+/** Whether they can be asked for, so the button is absent rather than broken. */
+export const noteCategoriesStatus = async (): Promise<SceneReviewAvailability> => {
+  if (!isCloudConfigured()) {
+    return { available: false, reason: 'This build has no connection to vc-writer.com.' };
+  }
+  const { data, error } = await supabase().auth.getSession();
+  if (error || !data.session) {
+    return { available: false, reason: 'Sign in to have groupings named.' };
+  }
+  try {
+    const response = await fetch(`${SITE_URL}/api/ai/note-categories`, {
+      headers: { authorization: `Bearer ${data.session.access_token}` },
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | { configured?: boolean; entitled?: boolean; reason?: string | null }
+      | null;
+    if (!response.ok || !payload) {
+      return { available: false, reason: 'Naming groupings could not be reached just now.' };
+    }
+    return {
+      available: payload.configured === true && payload.entitled === true,
+      reason: payload.reason ?? null,
+    };
+  } catch {
+    // Offline is not an error worth a dialog; the button simply is not there,
+    // and the read ideas go on working.
+    return { available: false, reason: 'vc-writer.com could not be reached.' };
+  }
+};
+
+/**
  * Send the project's one-sheet to somebody (master spec §4).
  *
  * The **fields** go up, never the rendered page: the server builds and escapes

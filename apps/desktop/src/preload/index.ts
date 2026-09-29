@@ -284,6 +284,18 @@ export interface VcWriterApi {
   /** Whether one can be asked for, so the button is absent rather than broken. */
   learningAidStatus(): Promise<DesktopApiResult<{ available: boolean; reason: string | null }>>;
   /**
+   * Name the groupings in a sitting's unsorted notes (addendum 26 §14a).
+   *
+   * **The shape is the permission**: passages and category names go up, names
+   * and sentences come back. There is no field here for a card, a range or a
+   * category id, so nothing that crosses this boundary can file anything.
+   */
+  suggestNoteCategories(input: {
+    passages: string[];
+    categories: string[];
+  }): Promise<DesktopApiResult<Array<{ name: string; because: string }>>>;
+  noteCategoriesStatus(): Promise<DesktopApiResult<{ available: boolean; reason: string | null }>>;
+  /**
    * Send the project's one-sheet to somebody (master spec §4).
    *
    * Carries the **fields**, never the rendered page: the server builds the
@@ -406,6 +418,8 @@ const api: VcWriterApi = {
   sceneReviewStatus: () => ipcRenderer.invoke('cloud:sceneReviewStatus'),
   suggestLearningAid: (input) => ipcRenderer.invoke('cloud:suggestLearningAid', input),
   learningAidStatus: () => ipcRenderer.invoke('cloud:learningAidStatus'),
+  suggestNoteCategories: (input) => ipcRenderer.invoke('cloud:suggestNoteCategories', input),
+  noteCategoriesStatus: () => ipcRenderer.invoke('cloud:noteCategoriesStatus'),
   sendOneSheet: (input) => ipcRenderer.invoke('cloud:sendOneSheet', input),
   activateLicense: (serial) => ipcRenderer.invoke('license:activate', serial),
   checkForUpdate: () => ipcRenderer.invoke('update:check'),

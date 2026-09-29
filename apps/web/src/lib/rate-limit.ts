@@ -57,6 +57,14 @@ export const RULES = {
    */
   learningAid: { name: 'learning-aid', limit: 40, windowSeconds: 3600 },
   /**
+   * Naming groupings in a sitting's notes (addendum 26 §14a), in a bucket of
+   * its own for the learning aid's reason. A writer presses this a handful of
+   * times per sitting — once when the categories are thin and again when the
+   * shape of the pile has changed — so twenty an hour is more than anybody does
+   * on purpose and nowhere near a bill worth noticing.
+   */
+  noteCategories: { name: 'note-categories', limit: 20, windowSeconds: 3600 },
+  /**
    * Sending a one-sheet costs nothing but a message, so this is a spam limit
    * rather than a spending one — and it is tighter than the others for exactly
    * that reason: nobody sends their own one-sheet to twenty people in an hour,
