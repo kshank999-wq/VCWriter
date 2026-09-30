@@ -56,6 +56,46 @@ organization route and start the D-U-N-S request today, because it is the
 longest pole here. If it is you, individual is fine and you can carry on
 within a day.
 
+### 1.1a Enrolling as an organization — what it actually asks for
+
+Both stores want the same underlying thing: proof that a **legal entity**
+exists and that you may act for it.
+
+- **A D-U-N-S number for the entity.** Free from Dun & Bradstreet. Apple has
+  its own lookup-and-request form at
+  <https://developer.apple.com/enroll/duns-lookup/> — use that one rather than
+  going to D&B directly, because it checks whether the entity already has a
+  number (many do, without knowing it) and because a number requested through
+  Apple's form comes back to Apple's own checks. Allow **up to five business
+  days**, sometimes longer.
+- **The legal entity name, exactly as registered.** Not a trading name, not
+  what is on the website. If the registration says *VC Writer LLC*, that is
+  the string, punctuation and all.
+- **A website on a domain that belongs to the entity.** vc-writer.com is
+  already this.
+- **Signing authority.** You are declaring that you can bind the company. If
+  you are not the owner or an officer, Apple asks for a letter from somebody
+  who is.
+
+**One D-U-N-S number covers both stores.** It identifies the legal entity, not
+the account, so request it once and give the same number to Apple and to
+Google. That is the main reason to do this step before either enrolment.
+
+**The question to settle first:** organization enrolment needs a real legal
+entity — an LLC, a corporation, a partnership. A sole proprietorship trading
+under a name, with no registration behind it, will generally be rejected by
+both stores, and the rejection comes after the wait rather than before it. So:
+
+- If **VC Writer is incorporated**, start the D-U-N-S request today and carry
+  on down this document.
+- If it is **not**, there are two honest options and no third: incorporate
+  first (days to weeks, and a decision with tax consequences that belongs with
+  an accountant rather than with this document), or enrol as an **Individual**
+  and sell under your own legal name. Individual is not a lesser account —
+  everything in this document works identically — it only changes the seller
+  name shown on the store page and the receipt, and on Google it brings back
+  the fourteen-day testing requirement described in §2.2.
+
 ### 1.2 Agree to sell — the step that actually blocks money
 
 App Store Connect → **Business** (older wording: *Agreements, Tax, and
@@ -133,11 +173,32 @@ Purchase** → **+**.
 
 From that same page write down:
 
-- **Key ID** — the short code beside the key, e.g. `2X9ABC3DEF`
-- **Issuer ID** — a UUID at the top of the page, the same for every key
+- **Key ID** — the short code in the row of the key you just made, e.g.
+  `2X9ABC3DEF`. It is the key's own name and every key has a different one.
+- **Issuer ID** — a UUID like `57246542-96fe-1a63-e053-0824d011072a`, shown
+  **above the list of keys**, usually beside the words *Issuer ID* with a
+  **Copy** link next to it.
 
-Note it must be an **In-App Purchase** key. A plain App Store Connect API key
-is a different thing and the server will get a 401 with it.
+**If you cannot find the Issuer ID, it is almost certainly because no key
+exists yet.** Apple does not show it on an empty page — the ID belongs to the
+team's API access, and the page only starts displaying it once the first key
+has been generated. Generate the key, and it appears at the top. This is the
+single commonest reason for hunting through documentation for a UUID that is
+not on the screen.
+
+Two further things about it, both of which save a search:
+
+- It is **one per team**, not one per key. Every API key your account ever
+  makes shares it. So if you had already generated an App Store Connect API
+  key at some point, the Issuer ID is already displayed and is the same value.
+- It is **not a secret in the way the `.p8` is**. It identifies the team; it
+  grants nothing on its own. Losing the `.p8` means revoking and regenerating;
+  the Issuer ID never changes.
+
+Note the key must be an **In-App Purchase** key. A plain App Store Connect API
+key is a different thing and the server gets a 401 with it — but note that
+both kinds sit under *Integrations*, on neighbouring tabs, and both show the
+same Issuer ID. It is the **key** that has to be the right kind, not the ID.
 
 ### 1.7 The four Apple values for Vercel
 
@@ -166,9 +227,16 @@ server accepts both spellings.
    an organization shows the company as developer and needs a **D-U-N-S
    number**.
 3. Pay the **$25 one-off** registration fee. Unlike Apple it is not annual.
-4. **Verify your identity.** Google asks for a government ID (personal) or
-   entity documents (organization), plus an address and phone. This takes
-   anywhere from a day to a couple of weeks and everything else waits on it.
+4. **Verify.** For an organization Google asks for the **same D-U-N-S number**
+   you gave Apple, the legal entity name and address exactly as registered
+   against it, a website on the entity's domain, and a contact who can be
+   reached. It then checks the details against D&B's record, so anything that
+   does not match — an old address, a trading name — comes back as a rejection
+   days later rather than as a form error now. Get the D&B record right first
+   and copy from it.
+
+   For a personal account it is a government ID instead. Either way it takes
+   anywhere from a day to a couple of weeks, and everything else waits on it.
 
 ### 2.2 The closed-testing rule — read this before planning dates
 
@@ -297,25 +365,32 @@ reading `sandbox`, which is how support can tell a test purchase from a sale.
 
 ## 4. The order to do it in
 
-Roughly longest-lead-time first, because two of these are waits rather than
-work.
+Longest-lead-time first, because three of these are waits rather than work.
 
-1. **Today.** Apple Developer Program enrolment ($99). If you are going the
-   organization route on either store, request the **D-U-N-S number** now — it
-   is the longest wait of all.
-2. **Today.** Google Play registration ($25) and identity verification.
-3. **As soon as Play lets you.** If it is a personal account, get the closed
-   test started — the **14 days with 12 testers** runs in the background while
-   everything else happens.
-4. **Both shops, before anything else can be sold.** Apple's Paid Applications
-   agreement + bank + tax; Google's payments profile.
-5. Create the app records and the four subscription products.
-6. Generate the Apple key and the Google service account; put the four secrets
-   in Vercel and redeploy.
-7. Build and upload with EAS (`apps/mobile/README.md` has the commands), take
-   the five screenshots `docs/store-listing.md` names, and submit.
-8. When both apps are live, set the two store URLs in Vercel and redeploy. The
+1. **Today, before either enrolment.** Request the **D-U-N-S number** for the
+   legal entity, through Apple's own lookup form. One number serves both
+   stores and both ask for it, so everything else waits on this. Up to five
+   business days.
+2. **When it arrives.** Apple Developer Program enrolment ($99/yr) as an
+   organization, and Google Play registration ($25 once) as an organization,
+   with the same number. Both then verify, which takes days.
+3. **The moment each console opens.** Apple's **Paid Applications** agreement
+   with bank and tax details; Google's **payments profile**. Nothing can be
+   sold until both are complete, and they are independent of everything below,
+   so do them while waiting for anything else.
+4. Create the app records, then the subscription group and the four products.
+5. Generate the Apple **In-App Purchase** key and the Google **service
+   account**; put the four secrets in Vercel and redeploy.
+6. Build and upload with EAS (`apps/mobile/README.md` has the commands), take
+   the five screenshots `docs/store-listing.md` names, and submit. Apple
+   reviews the first subscription alongside the first build.
+7. When both apps are live, set the two store URLs in Vercel and redeploy. The
    badges appear on <https://vc-writer.com/notes> by themselves.
+
+If the organization route falls through and you end up on a **personal** Play
+account, insert one more step as early as possible: start the closed test, so
+the **14 days with 12 testers** of §2.2 runs in the background rather than
+after everything else is ready.
 
 ## 5. What this costs to run
 
