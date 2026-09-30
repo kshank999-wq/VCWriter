@@ -2010,3 +2010,16 @@ p.room-stamp {
   margin: 0 0 16px;
   padding-left: 20px;
 }
+
+/* A note about the field above it (addendum 09 §14a).
+   `.muted small` was what this reached for first, and `.muted` has never had
+   a rule on this site — so the hint drew at full body colour between two
+   inputs and read as a heading for the pair below rather than a note about
+   the box above. Named for what it is, and pulled up tight against its own
+   field, because which control a note belongs to is said by the gap. */
+.field-note {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  margin: -2px 0 0;
+}

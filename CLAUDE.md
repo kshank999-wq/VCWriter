@@ -968,6 +968,34 @@ push live; the build takes a minute or two.
   none of the form that would fix it — **what they came to do goes first**.
   Supabase answers *Invalid login credentials* both for a wrong password and for
   an account that has never set one, so the refusal names both.
+  **§14a is proving the one you have**, from Ken after turning on the
+  project's leaked-password protection and its eight-character floor. It is
+  worth building rather than merely switching on because Supabase's *Require
+  current password when updating* is a **server rule the screen could not
+  satisfy** — `SetPassword` sent `updateUser({ password })` and nothing else,
+  so flipping that switch would have made *Save it* fail for everybody in the
+  server's own wording: **a setting the screen cannot meet is not a setting,
+  it is an outage waiting for somebody to find the toggle**. **The field is
+  asked for and not required**, which is §14's own finding on a second
+  control — nothing on an account says whether a password was ever set (the
+  reason the heading is *Password* for everybody), so demanding the old one
+  locks a link-only writer out of ever having a first — and
+  `current_password` is sent **only when it was typed**, an empty string being
+  a different request from one never made and the account with nothing to
+  prove being exactly the one that cannot fill the box; the server is left to
+  be the thing that refuses. `refusalFor` names the three a writer can act on
+  (the password they already have, a wrong current one — naming the empty box,
+  §14's *Invalid login credentials* problem again — and the reauthentication
+  the other switch would demand) and **passes anything else through
+  unparaphrased**, a guess at an unknown code being worse than the server's
+  own words. *Secure password change* is **named rather than half-built**: its
+  nonce arrives by email, which is the round trip §14 exists to avoid on a
+  phone, and the current password already carries what it is for. Driving it
+  caught this project's oldest fault in a new place — the hint reached for
+  `.muted small` and **`.muted` has never had a rule on this site**, so it drew
+  at full body colour between two inputs and read as a heading for the pair
+  below; `.field-note` is named for what it is and tucked against its own
+  field, because **which control a note belongs to is said by the gap**.
   **§15 is the notes at the desk**, from Ken in one message, and it opens with
   the fault that made the rest invisible: **`listCaptures` in the browser
   bridge answered `ok([])` — always**. The Research window has loaded the queue

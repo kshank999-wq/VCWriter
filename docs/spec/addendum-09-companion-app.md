@@ -1163,6 +1163,54 @@ credentials* both for a wrong password and for an account that has never set
 one, which are different problems with different answers — so the refusal names
 both and points at the link.
 
+### 14a. Proving the one you have
+
+From Ken, after turning on the project's leaked-password protection and its
+eight-character floor: *add the current password field to the account page.*
+
+The reason it is worth building rather than merely switching on is that
+Supabase's **Require current password when updating** is a server rule the
+account page could not satisfy. `SetPassword` called `updateUser({ password })`
+and nothing else, so flipping that switch would have made *Save it* fail for
+everybody, with the server's own wording and no explanation. **A setting the
+screen cannot meet is not a setting, it is an outage waiting for somebody to
+find the toggle.**
+
+**The field is asked for and not required**, which is §14's own finding
+arriving on a second control. Nothing on an account says whether a password
+was ever set — an `email` identity exists for a link-only account too, which is
+why the heading is *Password* for everybody — so a form that demanded the old
+one would lock a link-only writer out of ever having a first, and one that
+never asked cannot satisfy the rule. It asks, says **leave this empty if you
+have never set one**, and sends `current_password` **only when it was typed**:
+an empty string is a different request from one that was never made, and the
+account with nothing to prove is exactly the one that cannot fill the box. The
+server is left to be the thing that refuses, which is the same division of
+labour the heading rests on.
+
+`refusalFor` names the three failures a writer can act on — the password they
+already have, a wrong current one (naming the empty box as the other
+possibility, §14's *Invalid login credentials* problem a second time), and the
+reauthentication the project's **Secure password change** switch would demand —
+and **passes anything else through unparaphrased**, a guess at an unknown code
+being worse than the server's own words. The reauthentication sentence is there
+although nothing here runs the nonce flow: it is the honest answer to that
+state (sign out, sign in, try again) rather than a control that would have to
+be built to say anything at all.
+
+**The other switch is deliberately not answered.** *Secure password change*
+sends a nonce by email for sessions older than a day, which is exactly the
+email round trip §14 exists to avoid on a phone, and requiring the current
+password already carries the security it is for. It is named here rather than
+half-built.
+
+Driving the page caught the fault of the day, and it is this project's oldest
+one: the hint reached for `.muted small`, and **`.muted` has never had a rule
+on this site** — so it drew at full body colour between two inputs and read as
+a heading for the pair below rather than as a note about the box above.
+`.field-note` is named for what it is and pulled up tight against its own
+field, because **which control a note belongs to is said by the gap**.
+
 ---
 
 ## 15. The notes at the desk
