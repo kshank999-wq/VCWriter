@@ -392,6 +392,45 @@ account, insert one more step as early as possible: start the closed test, so
 the **14 days with 12 testers** of §2.2 runs in the background rather than
 after everything else is ready.
 
+## 4a. If the legal entity is not settled yet
+
+Organization enrolment needs the entity to exist, so a company still being
+formed does block **enrolling**. It blocks almost nothing else, and the order
+in §4 is deliberately arranged so the wait costs nothing.
+
+**What needs no store account at all:**
+
+- Every line of the app. It is a pnpm workspace and it builds here.
+- An **Android build on a real phone**: `eas build --profile preview
+  --platform android` produces an installable APK. No Play account, no $25, no
+  verification. This is the cheapest way to find out whether the walk, the
+  beeps and the queue behave on hardware — which is the one thing addendum 27
+  §9 says has never been tested.
+- An **iOS simulator build**: `eas build --profile development --platform ios`
+  with the simulator profile. Needs a Mac to run it, not an Apple developer
+  account.
+- The listing copy, which is already written (`docs/store-listing.md`).
+
+**What needs the $99 Apple account but not the entity decision:** a build on a
+real iPhone, and TestFlight. If the entity is months away and iPhone testing
+is wanted now, an individual enrolment is a legitimate way to get there —
+Apple has a process for converting an individual account to an organization
+later, through support rather than self-serve.
+
+**What genuinely waits for the entity:** the store listings, the subscription
+products, and therefore selling.
+
+### The one thing not to do
+
+Do not take **paying subscribers** under an entity you intend to move away
+from. Apple and Google both have app-transfer processes, and transferring an
+app that has never sold anything is routine; transferring one with live
+auto-renewing subscriptions is the case with conditions, and the conditions
+are the sort that are discovered at the worst moment. The clean line is
+therefore: build, test on hardware, and even enrol, under whatever exists
+today — but have the final entity in place before the first subscription is
+sold.
+
 ## 5. What this costs to run
 
 - Apple: **$99 a year**, and **15%** of each subscription for the first year of
