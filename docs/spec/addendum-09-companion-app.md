@@ -1211,6 +1211,46 @@ a heading for the pair below rather than as a note about the box above.
 `.field-note` is named for what it is and pulled up tight against its own
 field, because **which control a note belongs to is said by the gap**.
 
+### 14b. Forgetting it
+
+From Ken, reading §14a back: *if they go to reset it, in their account, with
+the proper email, and link, then you shouldn't have to put in your current
+password. You should just set a new one.*
+
+He is right, and the sentence is the design: **the link is the proof**. Asking
+somebody who has forgotten their password to confirm it is asking for the one
+thing they have not got — §14a's field pointed at exactly the person it cannot
+serve. So `/reset` sends `updateUser({ password })` and **no
+`current_password`, ever**.
+
+The audit paid again: **it needs no token of its own.** `/auth/callback` has
+exchanged an emailed code for the session cookie since the magic link was
+built, so `resetPasswordForEmail` redirects there with `next=/reset` and by the
+time the page draws the recovery session is simply the session. That also
+settles what the page's states are — there are two, and the second is the
+ordinary one: **a reader who opened the link somewhere else arrives signed
+out**, because a reset link inherits the magic link's browser binding exactly,
+and that is a failure to explain rather than a form to draw.
+
+Two things kept it from being a third copy of anything. **The refusal wording
+moved to `lib/password-words.ts`** — two screens set a password and they must
+agree about what Supabase's answers mean, so the mapping is asked rather than
+translated twice, with `SHORTEST` and `checkNewPassword` beside it. What
+deliberately did *not* move is the one sentence that is **about the screen**:
+the account page can be told its current password is wrong and the reset page
+cannot, having sent none, so each supplies its own for that case and the reset
+page's says the honest thing — that the link could not do it alone and a person
+should be written to, since there is nothing left for the reader to type.
+
+**Forgetting is not a third way in**, so it is not a third tab: it is a repair
+reached from the password form with its own way back. Driving it caught what
+that costs if it is done carelessly — on the forgot path **neither tab read as
+selected**, a tablist with nothing lit standing over a form belonging to
+neither, so the password tab stays lit while its own repair is showing. And
+the sent notice **says the same thing whether or not the address has an
+account**, since answering differently would turn the form into a way of
+asking the site who its customers are.
+
 ---
 
 ## 15. The notes at the desk

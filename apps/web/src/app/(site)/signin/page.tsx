@@ -28,8 +28,12 @@ export default function SignInPage() {
   );
 }
 
-/** Which way in is showing. The password is first, being the one that always works. */
-type Way = 'password' | 'link';
+/**
+ * Which way in is showing. The password is first, being the one that always
+ * works. **Forgetting is not a third way in**, so it is not a third tab: it is
+ * a repair reached from the password form, with its own way back.
+ */
+type Way = 'password' | 'link' | 'forgot';
 
 function SignInForm() {
   // Where to land after: the page that sent the customer here (the admin
@@ -47,7 +51,7 @@ function SignInForm() {
   const [way, setWay] = useState<Way>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [status, setStatus] = useState<'idle' | 'working' | 'sent'>('idle');
+  const [status, setStatus] = useState<'idle' | 'working' | 'sent' | 'reset-sent'>('idle');
   const [error, setError] = useState<string | null>(null);
 
   const signIn = async (event: React.FormEvent) => {
@@ -88,6 +92,52 @@ function SignInForm() {
     setStatus('sent');
   };
 
+  /**
+   * The reset link (addendum 09 §14b). It lands on `/auth/callback` exactly as
+   * the sign-in link does, so the code becomes the session cookie before
+   * `/reset` draws — which is why that page needs no token of its own.
+   */
+  const sendReset = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setStatus('working');
+    setError(null);
+    const { error: failure } = await browserClient().auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/reset')}`,
+    });
+    if (failure) {
+      setError(failure.message);
+      setStatus('idle');
+      return;
+    }
+    setStatus('reset-sent');
+  };
+
+  if (status === 'reset-sent') {
+    return (
+      <>
+        <div className="hero hero-compact">
+          <h1>Check your email</h1>
+        </div>
+        <section>
+          {/* **Said the same way whether or not the address has an account.**
+              Answering differently would turn this form into a way of asking
+              the site who its customers are. */}
+          <p className="notice">
+            If {email} has an account, a link to set a new password is on its way.{' '}
+            <strong>Open it in this browser</strong> — the link only works where it was asked for, and it works
+            once.
+          </p>
+          <p className="muted small">
+            You will not be asked for your old password: the link is what proves it is you.
+          </p>
+          <button type="button" className="button secondary" onClick={() => setStatus('idle')}>
+            Back
+          </button>
+        </section>
+      </>
+    );
+  }
+
   if (status === 'sent') {
     return (
       <>
@@ -122,11 +172,14 @@ function SignInForm() {
             a *send me a link instead* button is three things to decide
             between where there are two. */}
         <div className="signin-ways" role="tablist" aria-label="How to sign in">
+          {/* **Lit on the forgot path too**: forgetting is a repair of this
+              way in rather than a third one, and a tablist with nothing
+              selected over a form reads as broken. */}
           <button
             type="button"
             role="tab"
-            aria-selected={way === 'password'}
-            className={way === 'password' ? 'button' : 'button secondary'}
+            aria-selected={way !== 'link'}
+            className={way !== 'link' ? 'button' : 'button secondary'}
             onClick={() => {
               setWay('password');
               setError(null);
@@ -175,6 +228,45 @@ function SignInForm() {
               No password yet? Ask for a link, then set one on your account page — after that this is all you
               need, on any device.
             </p>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => {
+                setWay('forgot');
+                setError(null);
+              }}
+            >
+              Forgotten it?
+            </button>
+          </form>
+        ) : way === 'forgot' ? (
+          <form onSubmit={sendReset} style={{ display: 'grid', gap: 16, maxWidth: 340 }}>
+            <input
+              type="email"
+              required
+              autoComplete="username"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              aria-label="Email address"
+            />
+            <button type="submit" className="button" disabled={status === 'working'}>
+              {status === 'working' ? 'Sending…' : 'Email me a reset link'}
+            </button>
+            <p className="muted small">
+              You will set a new one straight from the link. Your old password is not needed — that is the
+              point.
+            </p>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => {
+                setWay('password');
+                setError(null);
+              }}
+            >
+              Back to signing in
+            </button>
           </form>
         ) : (
           <form onSubmit={sendLink} style={{ display: 'grid', gap: 16, maxWidth: 340 }}>

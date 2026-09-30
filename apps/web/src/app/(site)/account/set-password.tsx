@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { AuthError } from '@supabase/supabase-js';
 import { browserClient } from '@/lib/supabase-browser';
+import { SHORTEST, checkNewPassword, refusalFor } from '@/lib/password-words';
 
 /**
  * Setting a password on an account that has only ever used a link (addendum 09
@@ -28,33 +28,6 @@ import { browserClient } from '@/lib/supabase-browser';
  * refuses — the same division that made the heading *Password* for everybody.
  */
 
-/** Supabase's own floor is six; this says so rather than letting the server refuse. */
-const SHORTEST = 8;
-
-/**
- * What to say about a refusal.
- *
- * Supabase's wording is written for a developer reading a stack trace, and the
- * three failures worth naming are the three a writer can do something about.
- * Anything else is passed through rather than paraphrased: a guess at what an
- * unknown code meant would be worse than the server's own words.
- */
-const refusalFor = (failure: AuthError): string => {
-  const code = failure.code ?? '';
-  const said = failure.message.toLowerCase();
-
-  if (code === 'same_password') return 'That is the password you already have.';
-  if (code.startsWith('reauthentication')) {
-    // The project's *Secure password change* switch. Nothing here runs the
-    // nonce flow, so the honest answer is the one that works: sign in again.
-    return 'For safety this account needs a fresh sign-in before the password changes. Sign out, sign back in, and try again.';
-  }
-  if (said.includes('current password') || said.includes('invalid login credentials')) {
-    return 'That is not your current password. If you have never set one, leave that box empty.';
-  }
-  return failure.message;
-};
-
 export function SetPassword() {
   const [current, setCurrent] = useState('');
   const [password, setPassword] = useState('');
@@ -66,14 +39,9 @@ export function SetPassword() {
     event.preventDefault();
     setError(null);
 
-    // Both refusals are said here rather than after a round trip, because the
-    // answer to each is a keystroke away.
-    if (password.length < SHORTEST) {
-      setError(`Use at least ${SHORTEST} characters.`);
-      return;
-    }
-    if (password !== again) {
-      setError('Those two do not match.');
+    const said = checkNewPassword(password, again);
+    if (said) {
+      setError(said);
       return;
     }
 
@@ -85,7 +53,12 @@ export function SetPassword() {
       current.length > 0 ? { password, current_password: current } : { password },
     );
     if (failure) {
-      setError(refusalFor(failure));
+      setError(
+        refusalFor(
+          failure,
+          'That is not your current password. If you have never set one, leave that box empty — and if you have forgotten it, ask for a reset link on the sign-in page.',
+        ),
+      );
       setStatus('idle');
       return;
     }
@@ -128,7 +101,8 @@ export function SetPassword() {
           {/* Said under the box rather than in a placeholder that vanishes the
               moment somebody starts typing in it. */}
           <span id="current-password-note" className="field-note">
-            Leave this empty if you have never set one.
+            Leave this empty if you have never set one. Forgotten it?{' '}
+            <a href="/signin">Ask for a reset link</a>.
           </span>
         </div>
         <input
@@ -137,7 +111,7 @@ export function SetPassword() {
           autoComplete="new-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          placeholder="New password"
+          placeholder={`New password (${SHORTEST} characters or more)`}
           aria-label="New password"
         />
         <input

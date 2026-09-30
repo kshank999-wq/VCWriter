@@ -996,6 +996,29 @@ push live; the build takes a minute or two.
   at full body colour between two inputs and read as a heading for the pair
   below; `.field-note` is named for what it is and tucked against its own
   field, because **which control a note belongs to is said by the gap**.
+  **§14b is forgetting it**, from Ken reading §14a back (*if they go to reset
+  it… you shouldn't have to put in your current password*). He is right and the
+  sentence is the design: **the link is the proof**, so asking somebody who has
+  forgotten their password to confirm it is asking for the one thing they have
+  not got — §14a's field pointed at exactly the person it cannot serve — and
+  `/reset` sends `updateUser({ password })` and **no `current_password`,
+  ever**. The audit paid again: **it needs no token of its own**, `/auth/callback`
+  having exchanged an emailed code for the session cookie since the magic link
+  was built, so `resetPasswordForEmail` redirects there with `next=/reset` and
+  the recovery session is simply the session — which also settles the page's
+  two states, the second being the ordinary one: **a reader who opened the link
+  somewhere else arrives signed out**, a reset link inheriting the magic link's
+  browser binding exactly. The refusal wording moved to
+  `lib/password-words.ts` (two screens set a password and must agree about what
+  Supabase's answers mean), while the one sentence **about the screen** stayed
+  put — the account page can be told its current password is wrong and the
+  reset page cannot, having sent none. **Forgetting is not a third way in**, so
+  it is a repair reached from the password form rather than a third tab, and
+  driving it caught what that costs done carelessly: on the forgot path
+  **neither tab read as selected**, a tablist with nothing lit over a form
+  belonging to neither. The sent notice **says the same thing whether or not
+  the address has an account**, answering differently being a way of asking the
+  site who its customers are.
   **§15 is the notes at the desk**, from Ken in one message, and it opens with
   the fault that made the rest invisible: **`listCaptures` in the browser
   bridge answered `ok([])` — always**. The Research window has loaded the queue
