@@ -8,6 +8,7 @@ import {
   type Row,
 } from '@vcwriter/domain';
 import { currentUser, serverClient } from '@/lib/supabase';
+import { requireNotesCapture } from '@/lib/notes-subscription';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,8 +49,13 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const user = await currentUser();
-  if (!user) return NextResponse.json({ error: 'Sign in first.' }, { status: 401 });
+  // Making a project from the phone is a write to somebody's work, so it is
+  // behind the subscription with sending (addendum 27 §14). **Listing them is
+  // not**: a lapsed subscriber still sees their projects, because the list is
+  // the account's rather than the app's.
+  const gate = await requireNotesCapture();
+  if (!gate.ok) return gate.response;
+  const { user } = gate;
 
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {

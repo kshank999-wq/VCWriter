@@ -14,7 +14,7 @@ export function ServiceWorker() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     const register = () => {
-      void navigator.serviceWorker.register('/notes-sw.js', { scope: '/notes' }).catch(() => {
+      void navigator.serviceWorker.register('/notes-sw.js', { scope: '/notes/app' }).catch(() => {
         // A failed registration costs offline shell caching and nothing else.
       });
     };

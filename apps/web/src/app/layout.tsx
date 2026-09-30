@@ -34,7 +34,7 @@ export const dynamic = 'force-dynamic';
  * The document, and nothing else.
  *
  * The header and the footer moved to `(site)/layout.tsx`, because the phone
- * app at `/notes` is not a page of the site — installed to a home screen it is
+ * app at `/notes/app` is not a page of the site — installed to a home screen it is
  * the only thing on the screen, and a marketing nav there pushed the
  * microphone below the fold on an iPhone. What each page wears is now decided
  * by where it sits in the tree.

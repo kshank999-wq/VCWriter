@@ -87,7 +87,7 @@ export default function ResetPage() {
         <section>
           <p className="notice" role="status">
             You are signed in, and that password works everywhere now — including{' '}
-            <a href="/notes">Notes on your phone</a>, where an emailed link often cannot.
+            <a href="/notes/app">Notes on your phone</a>, where an emailed link often cannot.
           </p>
           <Link href="/account" className="button">
             My account

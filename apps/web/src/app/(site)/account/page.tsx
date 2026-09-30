@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { describeNotesPlan, mayCaptureNotes } from '@vcwriter/domain';
 import { adminClient, currentUser } from '@/lib/supabase';
+import { notesPlanFor } from '@/lib/notes-subscription';
 import { DownloadButton } from './download-button';
 import { ResendLicense } from './resend-license';
 import { Devices } from './devices';
@@ -57,6 +59,8 @@ export default async function AccountPage() {
       .limit(20),
     client.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
   ]);
+
+  const { plan: notes } = await notesPlanFor(user.id);
 
   const activeLicenses = (licenses ?? []).filter((license) => license.status === 'active');
 
@@ -145,6 +149,24 @@ export default async function AccountPage() {
           </ul>
         </section>
       ) : null}
+
+      {/* Notes (addendum 27 §14). **The line is read and the managing is the
+          shop's**: this says where the subscription stands and points at the
+          store that sells it, because cancelling, changing the card and moving
+          between the two plans all happen in an Apple or Google account and a
+          button here could only pretend to. Said for everybody, including
+          somebody who has never bought it, so the feature is findable from the
+          account rather than only from the app that needs it. */}
+      <section>
+        <h2>Notes</h2>
+        <p className="lede">{describeNotesPlan(notes)}</p>
+        <p className="muted small">
+          {mayCaptureNotes(notes)
+            ? 'Managed in your App Store or Google Play account, where you bought it.'
+            : 'The voice notebook for iPhone and Android, with syncing to your desktop.'}{' '}
+          <Link href="/notes">What Notes does</Link>
+        </p>
+      </section>
 
       {/* **Whether they have one is not asked**, because nothing on the user
           honestly answers it: an `email` identity exists for a link-only

@@ -9,8 +9,8 @@
  * falling back to the cached shell when the network is gone.
  */
 
-const CACHE = 'vcwriter-notes-v1';
-const SHELL = ['/notes'];
+const CACHE = 'vcwriter-notes-v2';
+const SHELL = ['/notes/app'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -44,10 +44,10 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((response) => {
           const copy = response.clone();
-          void caches.open(CACHE).then((cache) => cache.put('/notes', copy));
+          void caches.open(CACHE).then((cache) => cache.put('/notes/app', copy));
           return response;
         })
-        .catch(() => caches.match('/notes').then((cached) => cached ?? Response.error())),
+        .catch(() => caches.match('/notes/app').then((cached) => cached ?? Response.error())),
     );
     return;
   }

@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import { supabase } from './session';
-import type { CaptureItem } from '@vcwriter/domain';
+import type { CaptureItem, NotesPlan } from '@vcwriter/domain';
 
 /**
  * The site, from the app (addendum 27 §2).
@@ -124,3 +124,36 @@ export const forgetNote = async (noteId: string): Promise<Answer<{ deleted: bool
  */
 export const deleteAccount = async (confirm: string): Promise<Answer<{ deleted: boolean }>> =>
   ask('/api/account/delete', { method: 'POST', body: JSON.stringify({ confirm }) });
+
+/**
+ * Where this account stands with the subscription (addendum 27 §14).
+ *
+ * Every field on it is a reading of `notesPlan` on the server, so the app holds
+ * no copy of the rule: what the line says, whether to offer the purchase and
+ * whether a note may be sent are one answer, and a screen cannot disagree with
+ * the route that refuses it.
+ */
+export interface NotesStanding {
+  plan: NotesPlan;
+  said: string;
+  mayCapture: boolean;
+  mayOffer: boolean;
+  refusal: string | null;
+}
+
+export const notesStanding = async (): Promise<Answer<NotesStanding>> =>
+  ask<NotesStanding>('/api/notes/plan');
+
+/**
+ * Hand a receipt to the server and be told what it was.
+ *
+ * **One route for a purchase, a restore and a renewal**, because they are one
+ * act: a receipt identifier the server takes to the shop. The payload carries
+ * nothing else — no state, no expiry, no plan — so this app cannot claim an
+ * entitlement it has not been granted.
+ */
+export const recordPurchase = async (input: {
+  store: 'app_store' | 'play_store';
+  receiptId: string;
+}): Promise<Answer<{ said: string; mayCapture: boolean }>> =>
+  ask('/api/notes/purchase', { method: 'POST', body: JSON.stringify(input) });

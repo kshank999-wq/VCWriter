@@ -44,11 +44,19 @@ export function Capture({
   onProjects,
   onReview,
   onProjectMade,
+  onSubscribe,
 }: {
   project: ProjectSummary;
   onProjects(): void;
   onReview(): void;
   onProjectMade(made: ProjectSummary): void;
+  /**
+   * Offered only where the subscription will not let a note be sent (addendum
+   * 27 §14.6). **Capture is never blocked**: the note is written to this phone
+   * whatever the subscription says, because a notebook that refuses a thought
+   * loses it. What is said is that it is waiting rather than gone.
+   */
+  onSubscribe?: (() => void) | undefined;
 }) {
   const format = (project.format as ProjectFormat) ?? 'screenplay';
   const vocabulary = captureVocabulary(format);
@@ -355,6 +363,13 @@ export function Capture({
       </View>
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        {onSubscribe ? (
+          <Pressable onPress={onSubscribe} style={styles.row}>
+            <Text style={[styles.muted, { flex: 1 }]}>
+              Notes are being kept on this phone and not sent. Subscribe and they all go at once.
+            </Text>
+          </Pressable>
+        ) : null}
         <Text style={[styles.heading, { fontSize: 22 }]}>
           {captureKeyName(chosenKey, format)}
           {subjectName.trim() ? ` · ${subjectName.trim()}` : ''}

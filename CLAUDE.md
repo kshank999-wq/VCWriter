@@ -41,7 +41,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0062.
+  reads like it does. Applied through 0063.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
   the windowing, and the thing to know is that **every room goes to a second
@@ -1156,6 +1156,67 @@ push live; the build takes a minute or two.
   `eas submit` asks at the prompt and stores nothing, which is the only
   arrangement where *no credential belongs in any repository* is enforced by
   the file rather than remembered.
+  **§14 is Notes as a paid app**, from Ken (*notes is a feature on the website
+  but it's going to be notes app… refer the person to the app store… $49.99 a
+  year or $4.99 per month*), sold by **in-app purchase** and covering **Notes
+  and its sync**. The decision the rest hangs off is that **the subscription
+  adds and never takes**: a desktop licence has carried cloud sync for its own
+  project since 0002 and goes on carrying it, so nobody who has already bought
+  VC Writer loses anything on the day this ships — addendum 07 §1 pointed at a
+  new product, and the thing a subscription bolted onto something people were
+  already using would teach them. **Nobody already using it loses it**: `NOTES_FREE_FROM` and a reading over
+  `capture_items` — an account whose first note came before the day it became
+  paid reads `included`, with nothing to buy and no offer made, asked only where
+  nothing is being paid for, **after** a live subscription and **before** a
+  lapse; without it the day this shipped is the day the phone stopped sending
+  for everyone using it, which is §14.1's rule broken by §14.1's own change.
+  **A lapse never reaches what somebody wrote**
+  (`NOTES_PROMISE`; there is deliberately no `mayReadNotes`, reading being
+  refused in no state — `LAPSE_PROMISE`'s shape), so what it decides is
+  **sending, and nothing else**. **Two shops become one vocabulary in the
+  domain** — `appleState` takes a number, `playState` a name, and an unknown
+  status reads as **expired rather than active**, an answer this build has
+  never heard of not being a reason to let somebody in. **The store is the till
+  and the website is the advertisement**: the app shows what StoreKit or Play
+  Billing charges in the reader's own currency (a plan the shop has never heard
+  of **absent rather than offered at the website's figure**), and
+  `NOTES_PRICE_WORDS` is one copy of the advertised price for the page that
+  cannot ask. Migration 0063 is **a row of its own rather than a licence** (the
+  fields differ, addendum 12 §2; and a licence is `not null unique` on an
+  `orders` row a store purchase has not got), one row per person, `store` and
+  `state` **text** (0060), cascading from the account (0062), with a read policy
+  and **no write policy at all** — `room_ai_usage`'s rule pointed at an
+  entitlement. `notes-store.ts` asks the shops: **the client sends an
+  identifier and never a state** (the shape is the permission a fourth time),
+  **not configured refuses out loud** rather than trusting the phone because
+  the server has no key, Apple is asked production-first and sandbox only on a
+  404, and **no credential is in the repository** — four environment variables,
+  named in one file. **One route for a purchase, a restore and a renewal**,
+  they being one act; on the client **a transaction is finished only after the
+  server has written it down**, both shops replaying an unfinished one, where
+  finishing first would take somebody's money and leave them unsubscribed.
+  There are **no store notifications yet**, so `worthReVerifying` asks the shop
+  **only where the row says it has run out and has not been checked since** — a
+  paid-up subscription costs no network and a renewal costs one question.
+  `requireNotesCapture` is the **one gate**, §2's argument about `currentUser`
+  applied to *may they*, and it forced the change with teeth: **the browser
+  capture screen goes through the route now**, a subscription enforced on
+  `/api/notes` and bypassed by the page an inch away not being a subscription —
+  which also drops `requested_routing` from the send, the desk placing (§1) and
+  the route never having had a field for it. A refusal is **kept rather than
+  thrown away**, said once at the top rather than on every note. `/notes` is
+  the **referral page** in the site's own chrome (the nav has linked it since
+  the app was built and dropped a visitor into a chrome-less screen) with the
+  app at `/notes/app`; a store link that does not exist is **absent rather than
+  dead**, and which button is filled is read from the same fact. In the app,
+  **the promise comes before the price**, **Restore is first-class**, **capture
+  is never blocked** (a notebook that refuses a thought loses it) and **not
+  asked is never a refusal**, offline being the case the whole app is arranged
+  around. **The purchase has never been run** — no device, no store products,
+  and IAP cannot be exercised from this container; what is proved is everything
+  either side of it. Store notifications, offers and family sharing are
+  **named rather than half-built**, and the products, keys and store URLs are
+  Ken's to make.
   `addendum-10-book-index.md` is the back-of-book index, from Ken's ask for
   chapter pages that carry a graphic *"but it goes into an Index"* with the page
   numbers updating themselves. **Built.** Two of the three things he asked for

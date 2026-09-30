@@ -79,7 +79,7 @@ export function SetPassword() {
       {status === 'done' ? (
         <p className="notice" role="status">
           Saved. You can sign in with it anywhere now — including{' '}
-          <a href="/notes">Notes on your phone</a>, where an emailed link often cannot work.
+          <a href="/notes/app">Notes on your phone</a>, where an emailed link often cannot work.
         </p>
       ) : null}
       <p className="muted small">

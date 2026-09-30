@@ -334,3 +334,197 @@ Supabase values are EAS environment variables, named in `apps/mobile/README.md`
 with the commands — the anon key is publishable by design, and is still read
 from the environment so that rotating it is a dashboard change rather than a
 release.
+
+## 14. Notes as a paid app
+
+From Ken: *notes is a feature on the website but it's going to be notes app,
+and it's going to need to refer the person to the app store to get the
+companion app. And we'll make it like $49.99 a year or $4.99 per month* —
+sold by **in-app purchase, App Store and Play**, covering **Notes and its
+cloud sync**, with `/notes` on the website becoming **an advertising and
+referral site where you can see the feature value**.
+
+### 14.1 The subscription adds and never takes
+
+The desktop licence is a purchase (spec §12.2) and a Writers Room seat is a
+Stripe subscription (addendum 07 §14). This is the third entitlement and the
+first whose till belongs to somebody else.
+
+**What it entitles is Notes** — the app, and the syncing that is the whole
+point of a capture app that is not where the writing happens. A desktop
+licence has carried cloud sync for the project it owns since migration 0002
+and goes on carrying it: **nobody who has already bought VC Writer loses
+anything on the day this ships**. That is addendum 07 §1's rule pointed at a
+new product, and it matters here because a subscription bolted onto something
+people were already using is how a customer learns the software can be turned
+against them. Ken's *Notes + cloud sync* is true without that, the phone's
+notes *being* the sync; and if the desktop's own project sync should ever go
+behind it, that is a separate decision about existing customers and it is
+named here rather than made quietly.
+
+**And nobody who was already using it loses it.** `NOTES_FREE_FROM` is the day
+Notes became a paid app, and an account whose first note was captured before it
+reads `included` — everything a subscription buys, with nothing to buy and no
+offer made, because somebody who already has it is not somebody to sell to. It
+is **a reading over `capture_items` rather than a flag** somebody has to
+remember to set on the right accounts, it is asked **only where nothing is
+being paid for** (so a subscriber costs no extra query), and it is read
+**after** a live subscription and **before** a lapse: a subscriber's line says
+what they pay for, and a subscription that ends or is refunded falls back to
+it, which is the generous answer and the right one. Without it, the day this
+shipped would have been the day the phone stopped sending for every person
+using it — §14.1's own rule broken by §14.1's own change, which is the shape of
+mistake this project makes when it does not check.
+
+**A lapse never reaches what somebody wrote.** `NOTES_PROMISE` says it
+wherever a refusal is: a subscription that ends stops the phone **sending**.
+Everything already sent stays readable on the phone and on the desk, and
+anything already filed into a project is part of the project. There is
+deliberately no `mayReadNotes` in `notes-plan.ts`, because there is no state
+in which reading is refused — `LAPSE_PROMISE`'s shape a second time.
+
+**Two shops become one vocabulary, in the domain.** Apple reports a
+subscription's status as a number and Google as a name, and neither's list is
+the other's, so `appleState` and `playState` map both into `NotesState` and
+nothing downstream knows which shop sold it. They are pure and tested for the
+plainest reason: they are the part that can be wrong in a way nobody notices
+until somebody who has paid is refused. A status this build has never heard of
+reads as **expired rather than active** — an unknown answer is not a reason to
+let somebody in.
+
+**The store is the till and the website is the advertisement.** The price
+lives in the shop, as it does in Stripe for everything else (`pricing.ts`):
+the app shows what StoreKit or Play Billing says it costs in the reader's own
+currency, which is both truer and what both shops require, and a plan the shop
+has never heard of is **absent rather than offered at the website's figure**.
+`NOTES_PRICE_WORDS` is the advertised price for the page that cannot ask a
+shop — one copy, named for what it is.
+
+### 14.2 The record, and asking the shop
+
+Migration 0063 is `notes_subscriptions`, **a row of its own rather than a
+licence**: `licenses` carries a serial, entitled platforms and an activation
+count, none of which mean anything for a phone, while a store subscription
+carries a period end, an auto-renew flag and a shop's own transaction id, none
+of which a licence has — the fields differ, so they are two records (addendum
+12 §2) — and a licence is `not null unique` on an `orders` row, which a store
+purchase does not have and must not be given a fake one of. **One row per
+person**, because two would be two answers to *is this account paid up*.
+`store` and `state` are **text rather than enums** (0060's reason, which cost a
+documented route a 400), it **cascades from the account** (0062's distinction:
+an entitlement goes with it), and it has a read policy and **no write policy at
+all** — `room_ai_usage`'s rule (addendum 07 stage 13) pointed at an
+entitlement, which a client may not write or it is not one.
+
+`notes-store.ts` asks Apple and Google. **The client sends an identifier and
+never a state**: what the phone posts is the shop's own receipt handle —
+Apple's original transaction id, Google's purchase token — and the server asks
+the shop. There is no field anywhere in the request for a period end, an
+auto-renew flag or the word *active*, which is **the shape being the
+permission** a fourth time (addendum 07 §12, addendum 16 §10, addendum 26
+§14a). **Not configured is said, never assumed**: a deployment without the
+store credentials refuses and says why rather than trusting the phone because
+the server has no way to check — the one failure that would quietly make a paid
+app free. **No credential is in this repository**; both shops' keys are
+environment variables (`APPLE_IAP_ISSUER_ID`, `APPLE_IAP_KEY_ID`,
+`APPLE_IAP_PRIVATE_KEY`, `GOOGLE_PLAY_SERVICE_ACCOUNT`), named in one file and
+nowhere else, exactly as `eas.json`'s `submit` block is deliberately empty.
+Apple is asked in **production first and sandbox only on a 404**, which is
+Apple's own advice and the only way one deployment serves both; which answered
+is recorded, a test purchase not being a sale.
+
+**One route for a purchase, a restore and a renewal**, because they are one
+act: `POST /api/notes/purchase` takes a receipt identifier and goes to the
+shop. Three routes would be three answers to *what is this account entitled
+to*. And on the client, **a transaction is finished only after the server has
+written it down** — both shops replay an unfinished transaction, which is
+exactly the behaviour wanted: if the verification call never reaches
+vc-writer.com the purchase comes back next time the app opens. Finishing first
+and failing to record would take somebody's money and leave them unsubscribed.
+
+There are **no store-to-server notifications yet** (§14.4), so a renewal
+reaches the row through `worthReVerifying`: **ask only where the row says it
+has run out and has not been checked since it did**. A paid-up subscription is
+never re-verified, so the ordinary case costs no network at all and a renewal
+costs exactly one question the first time anybody looks.
+
+### 14.3 One gate, in one place
+
+`requireNotesCapture` is what every door the phone pushes through asks — §2's
+argument about `currentUser` applied to *may they* as well as *who is calling*.
+It decides **sending, and nothing else**: reading notes back, correcting one
+that is still waiting, deleting one, listing the projects and everything the
+desk does with notes it already has never ask it.
+
+That forced the one change with teeth: **the browser capture screen now goes
+through the route**. It wrote its own rows from the day it was built, which was
+fine while the two doors agreed and stopped being fine the moment one grew a
+gate — *a subscription enforced on `/api/notes` and bypassed by the page an
+inch away is not a subscription*. So the browser is a client of its own route,
+`uploadToRow` writes the row in one place, and the gate covers both. It drops
+`requested_routing` from the send, which is the correction that comes with it:
+*where a note goes* is chosen at the desk (§1), the picker that set it here
+went in stage 2, and the route has deliberately never had a field for it.
+
+A refusal is **kept rather than thrown away** — the notes stay in the device's
+own storage with the reason on them, so fixing the subscription and pressing
+Sync again sends the lot. The sentence is said **once at the top** rather than
+nine times on nine notes: it is one fact about the account.
+
+### 14.4 The screens
+
+`/notes` is the referral page, in the `(site)` group with the header and the
+footer. The nav has linked *Notes* since the app was built and dropped a
+visitor into a chrome-less screen with no way back; it is a page **about** the
+app now, and the app is at `/notes/app`, where the manifest, the service worker
+and every home-screen copy point. **A store link that does not exist is absent
+rather than dead**: the badges appear when `NEXT_PUBLIC_APP_STORE_URL` and
+`NEXT_PUBLIC_PLAY_STORE_URL` are set, and until then the page says so — a link
+to a store page that 404s is worse than a sentence. Which button is filled is
+read from the same fact: until the app has shipped, opening it in a browser is
+the only thing a reader can act on, and a page whose every button is outlined
+offers nobody a way in.
+
+The account page carries the subscription in one line — `describeNotesPlan`,
+said for everybody including somebody who has never bought it, so the feature
+is findable from the account and not only from the app that needs it — and
+**the managing is the shop's**, cancelling and changing the card happening in
+an Apple or Google account where a button here could only pretend to.
+
+In the app, `Subscribe.tsx` is the screen: the shop's own prices, **the promise
+before the price** (what a writer wants to know before paying for a notebook is
+what happens to the notebook if they stop paying), and **Restore as a
+first-class button**, a reinstall, a new phone and a family-shared subscription
+all needing it and an app that sells a subscription and cannot hand one back
+being one Apple rejects. It is reached from the projects list and from the
+capture screen, one screen with two doors. **Capture is never blocked**: the
+note is written to the phone whatever the subscription says, because a notebook
+that refuses a thought loses it — what is said is that it is waiting rather
+than gone. And **not asked is never a refusal**: offline, which is the case
+this whole app is arranged around, the plan cannot be read, so a paywall drawn
+on a failed fetch would lock a paying writer out on a train.
+
+### 14.5 What is honestly not done
+
+**The purchase itself has never been run.** The app has never run on a device
+(§9), no store products exist yet, and in-app purchase cannot be exercised from
+this container at all — it needs a real device, a signed build and live store
+products. What is proved is everything either side of it: the reading and both
+shops' vocabularies under the domain suite, the gate on the routes, the referral
+page driven in a browser, and the app's screens typechecking against
+`expo-iap`'s own types.
+
+Named rather than half-built: **App Store Server Notifications V2 and Play
+RTDN**, which would keep the row fresh without anybody opening the app —
+`worthReVerifying` is what stands in for them and is bounded by design;
+**promotional and introductory offers**; **family sharing**, which arrives as
+an ordinary purchase and needs nothing, but has not been thought through;
+and **a grace of any kind on this side** — the grace here is the shops' own,
+read and honoured rather than invented.
+
+Ken's own next steps, which nobody else can take: create the two subscription
+products (`com.vcwriter.notes.yearly`, `com.vcwriter.notes.monthly`) in App
+Store Connect and Play Console at $49.99 and $4.99, generate an App Store
+Server API key and a Play service account, and set the four environment
+variables plus the two store URLs in Vercel. **No key belongs in this
+repository and none will be asked for in a message.**

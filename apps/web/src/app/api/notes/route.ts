@@ -6,6 +6,7 @@ import {
   type CaptureItem,
 } from '@vcwriter/domain';
 import { currentUser, serverClient } from '@/lib/supabase';
+import { requireNotesCapture } from '@/lib/notes-subscription';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,8 +33,12 @@ export const dynamic = 'force-dynamic';
  */
 
 export async function POST(request: Request): Promise<Response> {
-  const user = await currentUser();
-  if (!user) return NextResponse.json({ error: 'Sign in first.' }, { status: 401 });
+  // Sending is the one thing the subscription decides (addendum 27 §14).
+  // Reading, correcting and deleting are below and in `[noteId]`, and none of
+  // them asks: a lapse never reaches a note somebody has already made.
+  const gate = await requireNotesCapture();
+  if (!gate.ok) return gate.response;
+  const { user } = gate;
 
   const parsed = captureUploadBatchSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {

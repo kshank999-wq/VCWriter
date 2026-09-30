@@ -49,10 +49,16 @@ export function Projects({
   chosenId,
   onChoose,
   onAccount,
+  onSubscribe,
+  standing,
 }: {
   chosenId: string | null;
   onChoose(project: ProjectSummary): void;
   onAccount(): void;
+  /** Absent where the subscription is in order, so there is nothing to offer. */
+  onSubscribe?: (() => void) | undefined;
+  /** The subscription in one line, as the server reads it (addendum 27 §14). */
+  standing?: string | null | undefined;
 }) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [shelf, setShelf] = useState<PhoneShelf>(emptyShelf());
@@ -238,6 +244,18 @@ export function Projects({
       )}
 
       {off ? <Text style={styles.muted}>{off}</Text> : null}
+
+      {/* Notes (addendum 27 §14.6). **Absent rather than greyed** where the
+          subscription is in order: a Subscribe button in front of a subscriber
+          is a screen that does not know who it is talking to. The line above it
+          is said either way, because where a subscription stands is worth
+          knowing before it runs out rather than after. */}
+      {standing ? <Text style={styles.muted}>{standing}</Text> : null}
+      {onSubscribe ? (
+        <Pressable style={styles.button} onPress={onSubscribe}>
+          <Text style={styles.buttonText}>Subscribe to Notes</Text>
+        </Pressable>
+      ) : null}
 
       {/* The way to the account, from the one screen the app always opens on
           (addendum 27 §12). Signing out and deleting the account both live

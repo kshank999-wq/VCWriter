@@ -21,13 +21,31 @@ the one people read. Paste it.
 | Primary category | Productivity |
 | Secondary category (App Store) | Utilities |
 | Content rating | Everyone / 4+ |
-| Price | Free |
-| In-app purchases | None |
+| Price | Free to download |
+| In-app purchases | **Two auto-renewing subscriptions** (addendum 27 §14) |
+| — Yearly | `com.vcwriter.notes.yearly` · **$49.99 / year** · display name **Notes — a year** |
+| — Monthly | `com.vcwriter.notes.monthly` · **$4.99 / month** · display name **Notes — a month** |
+| Subscription group (App Store) | `VC Writer Notes` — both plans in one group, so a reader may move between them |
 | Support URL | `https://vc-writer.com` |
 | Support email | `support@vc-writer.com` |
 | Marketing URL | `https://vc-writer.com` |
 | Privacy policy URL | `https://vc-writer.com/privacy` |
 | Copyright | `© 2026 VC Writer` |
+
+Both product ids are `NOTES_PRODUCTS` in `packages/domain/src/notes-plan.ts`,
+which is the one list the app asks the shop for and the server maps a receipt
+back through — a third copy typed into a console under another spelling is a
+receipt the server will refuse. The **price a reader sees is the shop's own**,
+localised; the figures above are what the products are set to and what
+vc-writer.com advertises.
+
+Both stores ask what the subscription unlocks and what happens when it lapses.
+The answer, in the words the app and the website both use: it unlocks sending
+notes from the phone and syncing them to VC Writer on the desktop; when it
+lapses, **every note already sent stays readable and anything already filed
+into a project is part of the project** — what stops is sending new ones. VC
+Writer for Windows and macOS is a separate one-off purchase, made on
+vc-writer.com, and is not affected.
 
 ### Description (both stores)
 

@@ -7,7 +7,7 @@ import { Wordmark } from './wordmark';
  * The site's header and footer.
  *
  * Lives here rather than in the root layout because **not every page under
- * this domain is a page of the site**. `/notes` is the phone app: installed to
+ * this domain is a page of the site**. `/notes/app` is the phone app: installed to
  * a home screen it is the only thing on the screen, and wearing a marketing
  * nav there cost half an iPhone's height before the microphone — the first
  * thing a voice notebook is for was below the fold.

@@ -115,6 +115,13 @@ export default function CaptureApp() {
 
   const [queue, setQueue] = useState<QueuedCapture[]>([]);
   const [status, setStatus] = useState<string | null>(null);
+  /**
+   * Why notes are not being sent, where the reason is the subscription rather
+   * than the network (addendum 27 §14). Said at the top rather than only on each
+   * note in the queue: this is one fact about the account, and a writer reading
+   * it nine times on nine notes learns nothing the first one did not say.
+   */
+  const [refusal, setRefusal] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
@@ -153,7 +160,24 @@ export default function CaptureApp() {
     setQueue(await pendingCaptures());
   }, []);
 
-  /** Push everything still waiting. Safe to call repeatedly. */
+  /**
+   * Push everything still waiting. Safe to call repeatedly.
+   *
+   * **Through the route rather than straight into the database** (addendum 27
+   * §14.3). This screen wrote its rows itself from the day it was built, which
+   * was fine while the two doors agreed — and stopped being fine the moment one
+   * of them grew a gate: a subscription enforced on `/api/notes` and bypassed by
+   * the page an inch away is not a subscription. So the browser is a client of
+   * its own route now, `uploadToRow` writes the row in one place, and the one
+   * gate covers both. It also drops `requested_routing` from the send, which is
+   * the correction that comes with it: *where a note goes* is chosen at the desk
+   * (§1), the picker that set it here went in stage 2, and the route has
+   * deliberately never had a field for it.
+   *
+   * A refusal is kept rather than thrown away. The notes stay in this device's
+   * own storage with the reason on them, so fixing the subscription and pressing
+   * Sync again sends the lot.
+   */
   const flushQueue = useCallback(async () => {
     const {
       data: { user },
@@ -163,28 +187,41 @@ export default function CaptureApp() {
     const waiting = await pendingCaptures();
     if (waiting.length === 0) return;
 
-    for (const capture of waiting) {
-      const { error } = await supabase.from('capture_items').upsert(
-        {
-          user_id: user.id,
-          project_id: capture.projectId,
+    const response = await fetch('/api/notes', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        notes: waiting.map((capture) => ({
+          clientCaptureId: capture.clientCaptureId,
+          projectId: capture.projectId,
           source: capture.source,
-          captured_at: capture.capturedAt,
-          raw_text: capture.rawText,
-          requested_routing: capture.requestedRouting,
+          capturedAt: capture.capturedAt,
+          rawText: capture.rawText,
           category: capture.category,
-          subject_name: capture.subjectName,
+          subjectName: capture.subjectName,
           subcategory: capture.subcategory ?? null,
-          client_capture_id: capture.clientCaptureId,
-          synced_at: new Date().toISOString(),
-          status: 'pending',
-        },
-        // Retrying a send that actually worked must not duplicate the thought.
-        { onConflict: 'user_id,client_capture_id', ignoreDuplicates: false },
-      );
+        })),
+      }),
+    }).catch(() => null);
 
-      if (error) await markFailed(capture.clientCaptureId, error.message);
-      else await markSynced(capture.clientCaptureId);
+    const body = (await response?.json().catch(() => null)) as
+      | { accepted?: string[]; error?: string; subscription?: boolean }
+      | null;
+
+    if (!response || !response.ok) {
+      const why = body?.error ?? 'vc-writer.com could not be reached. Your notes are safe here.';
+      if (body?.subscription === false) setRefusal(why);
+      for (const capture of waiting) await markFailed(capture.clientCaptureId, why);
+      await refreshQueue();
+      return;
+    }
+
+    setRefusal(null);
+    // Exactly what landed, rather than assuming the whole batch went through.
+    const landed = new Set(body?.accepted ?? []);
+    for (const capture of waiting) {
+      if (landed.has(capture.clientCaptureId)) await markSynced(capture.clientCaptureId);
+      else await markFailed(capture.clientCaptureId, 'That one did not send. Try Sync again.');
     }
 
     await pruneSynced();
@@ -595,7 +632,7 @@ export default function CaptureApp() {
       <div className="notes">
         <h1>VC Writer Notes</h1>
         <p className="lede">Sign in with the address you use for VC Writer to capture notes to your projects.</p>
-        <Link href="/signin?next=/notes" className="button">
+        <Link href="/signin?next=/notes/app" className="button">
           Sign in
         </Link>
       </div>
@@ -869,6 +906,12 @@ export default function CaptureApp() {
           )}
 
           {status ? <p className="notice">{status}</p> : null}
+
+          {refusal ? (
+            <p className="error" role="alert">
+              {refusal} <a href="/notes">About Notes</a>
+            </p>
+          ) : null}
 
           <section className="notes-queue">
             <h2>

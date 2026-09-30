@@ -32,7 +32,7 @@ export const metadata: Metadata = {
  * rendered from the build, so redeploying the site does not silently claim
  * the policy changed today.
  */
-const UPDATED = '29 September 2026';
+const UPDATED = '30 September 2026';
 
 export default function PrivacyPage() {
   return (
@@ -81,6 +81,13 @@ export default function PrivacyPage() {
             <strong>Your purchase.</strong> What you bought, when, which platform you chose, and
             your licence key. <strong>We never see your card number.</strong> Payment details go
             straight to Stripe and are never sent to us or stored by us.
+          </li>
+          <li>
+            <strong>Your Notes subscription, if you have one.</strong> Which plan, which shop sold
+            it, when it next renews, and the receipt identifier that shop answers questions about it
+            by. It is bought inside the app, so <strong>the payment is Apple&rsquo;s or
+            Google&rsquo;s</strong> — we never see your card, and we ask them about the subscription
+            rather than being told anything about you.
           </li>
           <li>
             <strong>Your work, if you sync it.</strong> Projects, scenes, beats, manuscript text,
@@ -186,8 +193,9 @@ export default function PrivacyPage() {
             <strong>Anthropic</strong> — the AI features above, and only when you use one.
           </li>
           <li>
-            <strong>Apple</strong> and <strong>Google</strong> — app distribution, and their own
-            speech recognition where your phone falls back to it.
+            <strong>Apple</strong> and <strong>Google</strong> — app distribution, the Notes
+            subscription and its billing, and their own speech recognition where your phone falls
+            back to it.
           </li>
         </ul>
         <p>

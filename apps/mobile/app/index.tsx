@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../src/host/session';
@@ -7,7 +7,8 @@ import { Projects } from '../src/screens/Projects';
 import { Capture } from '../src/screens/Capture';
 import { Review } from '../src/screens/Review';
 import { Account } from '../src/screens/Account';
-import type { ProjectSummary } from '../src/host/api';
+import { Subscribe } from '../src/screens/Subscribe';
+import { notesStanding, type NotesStanding, type ProjectSummary } from '../src/host/api';
 import type { ProjectFormat } from '@vcwriter/domain';
 import { styles } from '../src/theme';
 
@@ -19,13 +20,23 @@ import { styles } from '../src/theme';
  * open last. The screens are one stack rather than routes because there are
  * four of them and a walk must never be more than one press from stopping.
  */
-type Where = 'projects' | 'capture' | 'review' | 'account';
+type Where = 'projects' | 'capture' | 'review' | 'account' | 'subscribe';
 
 export default function Index() {
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [project, setProject] = useState<ProjectSummary | null>(null);
   const [where, setWhere] = useState<Where>('projects');
+  /**
+   * Where the subscription stands (addendum 27 §14.6).
+   *
+   * **Null means not asked, and not asked is never a refusal.** Offline — which
+   * is the case this whole app is arranged around — the plan cannot be read, and
+   * a paywall drawn on a failed fetch would lock a paying writer out on a train.
+   * So capture is offered whatever this says, and the only thing it decides is
+   * whether the app *says* notes are waiting rather than going.
+   */
+  const [standing, setStanding] = useState<NotesStanding | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -44,6 +55,20 @@ export default function Index() {
     };
   }, []);
 
+  /** Asked on the way in, and again after a purchase, and at no other time. */
+  const askStanding = useCallback(async () => {
+    const said = await notesStanding();
+    setStanding(said.ok ? said.data : null);
+  }, []);
+
+  useEffect(() => {
+    if (!signedIn) {
+      setStanding(null);
+      return;
+    }
+    void askStanding();
+  }, [signedIn, askStanding]);
+
   if (!ready) {
     return (
       <SafeAreaView style={styles.screen}>
@@ -58,6 +83,20 @@ export default function Index() {
     return (
       <SafeAreaView style={styles.screen}>
         <SignIn onIn={() => setSignedIn(true)} />
+      </SafeAreaView>
+    );
+  }
+
+  if (where === 'subscribe') {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <Subscribe
+          onBack={() => setWhere(project ? 'capture' : 'projects')}
+          onSubscribed={() => {
+            void askStanding();
+            setWhere(project ? 'capture' : 'projects');
+          }}
+        />
       </SafeAreaView>
     );
   }
@@ -90,6 +129,7 @@ export default function Index() {
           onProjects={() => setWhere('projects')}
           onReview={() => setWhere('review')}
           onProjectMade={setProject}
+          onSubscribe={standing && !standing.mayCapture ? () => setWhere('subscribe') : undefined}
         />
       </SafeAreaView>
     );
@@ -104,6 +144,8 @@ export default function Index() {
           setWhere('capture');
         }}
         onAccount={() => setWhere('account')}
+        onSubscribe={standing?.mayOffer ? () => setWhere('subscribe') : undefined}
+        standing={standing?.said ?? null}
       />
     </SafeAreaView>
   );
