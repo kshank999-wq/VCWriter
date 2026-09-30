@@ -54,6 +54,23 @@ export const storyEntityTypeSchema = z.enum([
    */
   'theme',
   'motif',
+  /**
+   * A chapter — a `chapter` story marker (addendum 28 §2).
+   *
+   * **The sixth time this list has been the answer**, and the first time it is
+   * a *place in the book* rather than a thing in the story. A note filed under
+   * Chapter 3 is a reference to that chapter, and `unit` has been in this list
+   * since the beginning for the section under it, so filing at either level is
+   * one field naming one ref rather than two nullable ids that could both be
+   * set.
+   *
+   * It is deliberately **not** called `chapter`: the record is a story marker,
+   * which is an episode in a series and a story in a collection as well
+   * (addendum 22 §7a renamed `chapterSpan` to `divisionSpan` for exactly this),
+   * and a type named for one of its three uses is the drift that rename
+   * removed. `from_type` is text in Postgres, as it was for the five above.
+   */
+  'story_marker',
 ]);
 export type StoryEntityType = z.infer<typeof storyEntityTypeSchema>;
 

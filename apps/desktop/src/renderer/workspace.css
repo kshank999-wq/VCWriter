@@ -20045,3 +20045,168 @@ dialog.designed-page-dialog[open] {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
+/* ------------------- the table of contents in Research (addendum 28 §4) */
+/* Boxes rather than a list, which is Ken's word and the right shape: a box is
+   something you can aim a note at, and a row of them reads as places in a book
+   where a column of text reads as a menu. */
+.toc-panel {
+  padding: 14px 18px 32px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-content: start;
+  max-width: 900px;
+}
+
+.toc-head {
+  display: grid;
+  gap: 4px;
+}
+
+.toc-head h3,
+.toc-under h4 {
+  margin: 0;
+}
+
+/* They wrap rather than scrolling sideways, the Note Sorter's own rule
+   (addendum 26): you cannot drop a note onto a box that is off the screen. */
+.toc-boxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.toc-box {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 150px;
+  max-width: 260px;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+/* A chapter is the heading and a section is under it, so the two are told
+   apart by weight and by a step in rather than by a label saying which. */
+.toc-box.chapter {
+  font-weight: 600;
+}
+
+.toc-box.section {
+  margin-left: 18px;
+  font-weight: 400;
+}
+
+.toc-box.chosen {
+  border-color: var(--gold);
+}
+
+/* Lit while a note is over it, which is the whole of what tells a writer this
+   is somewhere a note can land. */
+.toc-box.over {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 14%, transparent);
+}
+
+.toc-number {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  min-width: 2.2em;
+}
+
+.toc-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toc-count {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.toc-done {
+  color: var(--ok, #6fae7a);
+}
+
+.toc-said {
+  margin: 0;
+  color: var(--gold);
+}
+
+.toc-under {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.toc-notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.toc-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  padding: 3px 0;
+  min-width: 0;
+}
+
+/* Red, amber, green — and actually those colours, the Character Creator's own
+   correction (addendum 08 stage 14): gold-for-done is this brand's colour for
+   everything and so says *done* to nobody. */
+.toc-light {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.toc-light.unfiled {
+  background: var(--danger, #d06a5a);
+}
+
+.toc-light.planned {
+  background: var(--warn, #d2a24c);
+}
+
+.toc-light.written {
+  background: var(--ok, #6fae7a);
+}
+
+.toc-note-name {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  color: var(--text);
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toc-note-name:hover,
+.toc-note-name:focus-visible {
+  color: var(--gold);
+}
+
+.toc-note-state {
+  white-space: nowrap;
+}

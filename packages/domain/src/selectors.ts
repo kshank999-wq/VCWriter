@@ -381,6 +381,23 @@ export const resolveRef = (file: ProjectFile, target: StoryEntityRef): ResolvedE
         thread ? `${thread.name || 'Untitled thread'} · thread` : 'thread',
       );
     }
+    // A chapter (addendum 28 §2). Resolved here for the same reason as the
+    // five above: a note filed under one then reads wherever a reference is
+    // drawn, without that surface being told the table of contents exists.
+    //
+    // The number is **not** in the label, because it is derived from where the
+    // chapter falls (addendum 02 §12a) and a resolved reference is a label
+    // rather than a rendering — `contentsShelf` is what numbers them, and a
+    // second answer here could disagree with it the moment a chapter moved.
+    //
+    // The detail is the marker's own `kind` rather than `markerNoun`, which
+    // reads better and cannot be had: `markers.ts` imports this file, so
+    // asking it here would be a cycle. It is also what `unit` above does.
+    case 'story_marker': {
+      const marker = file.markers.find((candidate) => candidate.id === target.id);
+      if (!marker) return missing();
+      return found(marker.title || 'Untitled', marker.kind);
+    }
     default:
       return missing();
   }

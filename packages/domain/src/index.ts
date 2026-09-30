@@ -110,6 +110,7 @@ export * from './sculptor.js';
 export * from './sculptor-binding.js';
 export * from './sculptor-map.js';
 export * from './book-index.js';
+export * from './chapter-notes.js';
 export * from './index-build.js';
 export * from './notes-plan.js';
 export * from './note-sorter.js';

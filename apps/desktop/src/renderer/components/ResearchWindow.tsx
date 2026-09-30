@@ -38,6 +38,7 @@ import {
   updateTrack,
   updateResearchCategory,
   updateResearchItem,
+  contentsShelf,
   isInstructional,
   isProseFormat,
   living,
@@ -65,6 +66,7 @@ import { InlineText } from './InlineText';
 import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
 import { GraphicsPanel } from './GraphicsPanel';
+import { ContentsPanel } from './ContentsPanel';
 import { GraveyardPanel } from './GraveyardPanel';
 import { ImportNotesPanel } from './ImportNotesPanel';
 import { LinksTimeline } from './LinksTimeline';
@@ -120,6 +122,12 @@ type Selection =
   | { kind: 'mobile' }
   /** What has been deleted and can still be put back (addendum 24). */
   | { kind: 'graveyard' }
+  /**
+   * The book's chapters and sections, and what is filed under each
+   * (addendum 28 §4). Instructional books only, and it **defines nothing** —
+   * the chapters are the Outliner's and this is a reading of them.
+   */
+  | { kind: 'contents' }
   /**
    * Somebody open in the Character Creator (addendum 08 §5).
    *
@@ -511,6 +519,8 @@ export function ResearchBody({
       ? 'Mobile App'
       : selection.kind === 'graveyard'
       ? 'Graveyard'
+      : selection.kind === 'contents'
+      ? 'Table of contents'
       : selection.kind === 'charmap'
         ? 'Character map'
         : selection.kind === 'review'
@@ -565,6 +575,7 @@ export function ResearchBody({
           selection.kind === 'graphics' ||
           selection.kind === 'importer' ||
           selection.kind === 'charmap' ||
+          selection.kind === 'contents' ||
           selection.kind === 'review' ||
           selection.kind === 'mobile'
             ? 'research-body creating'
@@ -573,6 +584,29 @@ export function ResearchBody({
       >
         {/* The side menu: what is not a place, then the folders. */}
         <nav className="research-side" aria-label="Research folders">
+          {/* The table of contents, at the top and on a book alone (addendum
+              28 §4, from Ken: *the research section on the top will have table
+              of contents*). It stands first because on an instructional book
+              it is the thing the room is organised around — where in the book
+              a note goes is the question, and which shelf it is on is the
+              filing. Absent rather than greyed elsewhere: a screenplay has no
+              chapters to file against. */}
+          {instructional ? (
+            <ul className="research-views">
+              <li>
+                <button
+                  type="button"
+                  className={selection.kind === 'contents' ? 'folder-row selected' : 'folder-row'}
+                  title="The chapters and sections of the book, and what is filed under each"
+                  onClick={() => setSelection({ kind: 'contents' })}
+                >
+                  <span className="folder-name">Table of contents</span>
+                  <span className="count muted">{contentsShelf(file).length}</span>
+                </button>
+              </li>
+            </ul>
+          ) : null}
+
           <h4>Everything</h4>
           <ul className="research-views">
             {views.map((entry) => (
@@ -972,6 +1006,10 @@ export function ResearchBody({
             selection.kind === 'charmap' ||
             selection.kind === 'review' ||
             selection.kind === 'mobile' ||
+            // The table of contents counts per chapter, on the boxes
+            // themselves; the room's own figure is the *folder's*, so beside
+            // boxes reading 1 note each it drew a contradictory 0.
+            selection.kind === 'contents' ||
             // A count of *notes* means nothing on a screen that is not notes.
             selection.kind === 'graveyard' ? null : (
               <span className="muted">
@@ -1068,6 +1106,19 @@ export function ResearchBody({
             />
           ) : selection.kind === 'plots' ? (
             <Plots file={file} onUpdate={onUpdate} />
+          ) : selection.kind === 'contents' ? (
+            <div className="research-embedded">
+              <ContentsPanel
+                file={file}
+                onUpdate={onUpdate}
+                dragging={dragging}
+                onDragEnd={() => setDragging(null)}
+                // A note opens where it lives, which is still its folder: the
+                // table of contents says where in the book it goes and never
+                // where it is kept.
+                onOpenNote={(item) => setSelection({ kind: 'folder', id: item.categoryId })}
+              />
+            </div>
           ) : selection.kind === 'graveyard' ? (
             <div className="research-embedded">
               <GraveyardPanel file={file} onUpdate={onUpdate} />

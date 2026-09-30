@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { id, isoDateTime, orderKey, timestamps } from './common.js';
+import { storyEntityRefSchema } from './links.js';
 import { originSchema } from './structure.js';
 import type {
   BeatId,
@@ -164,6 +165,30 @@ export const researchItemSchema = z.object({
    * so editing it anywhere is editing the one record.
    */
   alsoIn: z.array(id<ResearchCategoryId>()).default([]),
+  /**
+   * Where in the book this note belongs — a chapter or a section (addendum 28
+   * §2), from Ken: *you have a table of contents that you fill out that also
+   * populates the research section… you can just drop it in and it'll show up
+   * in the research section*.
+   *
+   * **A reference to the chapter, never a folder named after it.** A folder
+   * would be a second record of one fact: rename the chapter and the folder
+   * says the old name, move it and the folder does not follow, delete it and
+   * the folder is an orphan holding notes about nothing. It is addendum 09
+   * §12's rule in the other direction — there a spoken group is a word on the
+   * note and never a folder in the project, here a chapter is a place in the
+   * book and never a shelf beside it.
+   *
+   * It names **one** place rather than a chapter *and* a section, because
+   * which chapter a section belongs to is already a reading: `divisionSpan`
+   * answers it, and has been the answer three times in addendum 25 alone. So
+   * filing a note under section 1.2 puts it under chapter 1 by itself, and
+   * moving that section into chapter 3 moves the note with nothing run.
+   *
+   * Null on every note nobody has placed, which is all of them until somebody
+   * opens the table of contents — so no existing project moves.
+   */
+  place: storyEntityRefSchema.nullable().default(null),
   usage: researchUsageSchema.default('unused'),
   usedAt: isoDateTime().nullable().default(null),
   /** Where the material was incorporated, when known. */

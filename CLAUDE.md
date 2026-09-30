@@ -41,7 +41,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0063.
+  reads like it does. Applied through 0064.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
   the windowing, and the thing to know is that **every room goes to a second
@@ -1298,6 +1298,69 @@ push live; the build takes a minute or two.
   empty-index line said *Take a heading from above* on a book with nothing
   anchored anywhere, pointing at a box holding one sentence and no headings. No
   migration — a proposal is a reading over two tables that already exist.
+  `addendum-28-table-of-contents.md` is **the table of contents, and notes
+  filed under it**, from Ken for the instructional book (*there needs to be a
+  table of contents… you have a table of contents that you fill out that also
+  populates the research section… it'll tell you, like in a screenplay, if you
+  used that note or not*). **The audit paid a twenty-sixth time and paid most
+  of the structure**: a chapter **is** a `chapter` story marker (addendum 19
+  §1), the Outliner has had a Chapter row since then, and `structureNumbers`
+  has numbered a book 1 / 1.1 / 1.1.1 with nothing stored since addendum 16
+  §15 — so the table of contents is not a new record and not a new screen, it
+  is **the chapters the book already has, read in order**. His second message
+  (*chapter one Mathematics… subsection 1.1, 1.2, 1.3*) is therefore **already
+  built**, and the answer worth giving back is that there are **three** things
+  rather than two: the number (derived, nowhere to type it), the title
+  (*Mathematics*), and `page.summary`, which is *what that's about*. Where the
+  table of contents lives was the one real question and Ken chose the
+  Outliner — right for the room's own reason, a second screen defining
+  chapters being the fault addendum 20 removed twice (§15c, §9u) — so the
+  research room's table of contents **defines nothing and reads**. What was
+  missing is one field, one reading, and **one fault that is the more
+  important half**: `usage`, `usedAt`, `usedInBeatIds` and `usedConfirmed`
+  have been on a research item since 0001 and **nothing has ever computed
+  them**, `markResearchUsed` setting a flag by hand — so a note went on
+  reading *used* after the beat it fed was cut, which is exactly what addendum
+  08 §2 exists to prevent and which the screenplay side has had right since
+  the Character Creator. `place` on a research item is **one `StoryEntityRef`**
+  naming a chapter or a section, `story_marker` joining `storyEntityTypeSchema`
+  the **sixth** time that list has been the whole answer and the first time it
+  is a *place in the book* rather than a thing in the story (not called
+  `chapter`, a marker being an episode and a story too — addendum 22 §7a's
+  rename). Migration 0064 is two columns and no table (`story_links`' shape)
+  with **no foreign key**, a note pointing at a deleted chapter reading as
+  unplaced by itself where a cascade would rewrite the writer's filing. Three
+  rules: **a place is a reference and never a folder** (a folder named
+  *Chapter 3* is a second record of one fact — addendum 09 §12 in the other
+  direction); **one place, and the chapter above it is a reading**, so moving a
+  section moves its notes with nothing run (`divisionSpan` again); and **how
+  far along a note is, is read** — `noteProgress` gives **three** lights
+  (unfiled, planned, written), Ken's choice and the better one for a textbook,
+  where most notes sit in the middle for weeks and a red light that never
+  moves stops being read (addendum 18 stage 3's *not crying wolf* pointed at a
+  colour). `usedInBeatIds` survives as the **older spelling**, filtered through
+  the beats the project actually has, which is the whole fix and what a test
+  asserts: the stored flag still says `used` and the light no longer does. The
+  screen is **Table of contents**, first in the research menu and on an
+  instructional book alone, the chapters drawn as **boxes** (Ken's word and the
+  right shape — a box is something you can aim a note at) that **wrap** rather
+  than scroll, the Note Sorter's reason; a drop files, `filingOffer` says what
+  it would do before it can be asked for and `fileNoteUnder` refuses the same
+  things again, a second drop elsewhere is a **move** and says so, and the note
+  **keeps its folder**, where in the book and which shelf being two questions.
+  Driving it caught four, all of them this project's own lessons in a new
+  place: **the title was said twice** (the room's header already names the
+  selection), **the room's note count contradicted the boxes** (it counts the
+  *folder's* items, so beside boxes reading 1 note each it drew *0 notes*),
+  **`1.1. Division` has a stray dot** (books set a chapter with a full stop and
+  a multi-level number without one), and **a screen reader heard
+  `1Mathematics`**, the number and the title being two elements with only a CSS
+  gap between them and a gap not being a space — the box is named by
+  `describeContentsRow`, the one sentence that names a row. §5 names what is
+  **not** built and in what order: a chapter landing on the timeline as it is
+  made, the chapter row opening the chapter dialog, a filed note becoming a
+  beat under its own chapter and section, and filing in bulk from the Note
+  Sorter and the phone.
   `addendum-11-setups-and-payoffs.md` is Setups & Payoffs, from Ken's own dev
   spec. **Built.** Half of it already existed (the record, its setup points, its
   payoff, archiving — master spec §7.3); what was missing was **the rule the

@@ -312,6 +312,10 @@ const researchItemToRow = (item: ResearchItem): Row => ({
   source_from: item.sourceFrom,
   source_to: item.sourceTo,
   also_in: item.alsoIn,
+  // Where in the book it belongs (addendum 28 §2). Two columns for one
+  // reference, `story_links`' own shape; null on every note nobody placed.
+  place_type: item.place?.type ?? null,
+  place_id: item.place?.id ?? null,
   usage: item.usage,
   used_at: item.usedAt,
   used_in_beat_ids: item.usedInBeatIds,
@@ -1043,6 +1047,13 @@ const researchItemFromRow = (row: Row): ResearchItem =>
     sourceFrom: row['source_from'] === null || row['source_from'] === undefined ? null : Number(row['source_from']),
     sourceTo: row['source_to'] === null || row['source_to'] === undefined ? null : Number(row['source_to']),
     alsoIn: list(row['also_in']),
+    // Both columns or neither: half a reference is not one, and a row written
+    // by a build that has one and not the other reads as unplaced rather than
+    // throwing — 0060's argument about a value this build has not heard of.
+    place:
+      row['place_type'] && row['place_id']
+        ? { type: row['place_type'], id: row['place_id'] }
+        : null,
     usage: row['usage'],
     usedAt: nullableText(row['used_at']),
     usedInBeatIds: list(row['used_in_beat_ids']),
