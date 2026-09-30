@@ -7,6 +7,10 @@ The copy below is the **answer**, not a suggestion to be rewritten in the
 console: a listing typed twice is two listings, and the one in the console is
 the one people read. Paste it.
 
+For the accounts themselves — enrolling, the paid-app agreements, the two
+subscription products and the keys vc-writer.com needs to verify a purchase —
+see **`docs/store-setup.md`**.
+
 ---
 
 ## 1. The app, in the words both stores want

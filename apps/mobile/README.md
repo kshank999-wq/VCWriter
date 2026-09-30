@@ -3,6 +3,11 @@
 The phone app: a voice notebook that captures a thought while you walk. The
 desktop decides where it goes (addendum 09 §1, addendum 27).
 
+It is sold by in-app purchase — $49.99 a year or $4.99 a month (addendum 27
+§14). **`docs/store-setup.md`** is how the two store accounts, the two
+subscription products and the four server keys are set up; **`docs/store-listing.md`**
+is what goes in the listing fields.
+
 ```sh
 pnpm --filter @vcwriter/mobile start        # Expo dev server
 pnpm --filter @vcwriter/mobile typecheck
