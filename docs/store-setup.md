@@ -403,22 +403,54 @@ in §4 is deliberately arranged so the wait costs nothing.
 - Every line of the app. It is a pnpm workspace and it builds here.
 - An **Android build on a real phone**: `eas build --profile preview
   --platform android` produces an installable APK. No Play account, no $25, no
-  verification. This is the cheapest way to find out whether the walk, the
-  beeps and the queue behave on hardware — which is the one thing addendum 27
-  §9 says has never been tested.
-- An **iOS simulator build**: `eas build --profile development --platform ios`
-  with the simulator profile. Needs a Mac to run it, not an Apple developer
-  account.
+  verification.
 - The listing copy, which is already written (`docs/store-listing.md`).
 
-**What needs the $99 Apple account but not the entity decision:** a build on a
-real iPhone, and TestFlight. If the entity is months away and iPhone testing
-is wanted now, an individual enrolment is a legitimate way to get there —
-Apple has a process for converting an individual account to an organization
-later, through support rather than self-serve.
+**What the existing Apple Developer account already buys, with no entity and
+no App Store listing:** the app on a real iPhone. See §4b — this is the one
+thing addendum 27 §9 says has never been done, and nothing else is waiting on
+it.
 
 **What genuinely waits for the entity:** the store listings, the subscription
 products, and therefore selling.
+
+### 4b. Notes on an iPhone, today
+
+An Apple Developer Program membership and an iPhone are the whole of what this
+needs. **No Mac**: EAS builds on Apple hardware in the cloud and hands back a
+link, which is the entire reason this project can ship an iOS app from a Linux
+container. **No App Store listing, no subscription products, no agreements** —
+an internal build is not a store submission.
+
+```sh
+cd apps/mobile
+npx eas login
+npx eas init                                  # once: writes extra.eas.projectId into app.json
+npx eas device:create                         # once: registers the iPhone, by QR or link
+npx eas build --profile preview --platform ios
+```
+
+`device:create` walks you through installing a short profile on the phone so
+Apple knows that device may run builds signed by this account; the build then
+comes back as a QR code that installs it. The `preview` profile is the one for
+this — `development` is deliberately simulator-only, which needs a Mac and is
+no use here.
+
+Before the first build, the two Supabase values have to exist as EAS
+environment variables, or the app builds and then cannot sign in
+(`apps/mobile/README.md` has the two `eas env:create` commands).
+
+**What this build can and cannot show you.** It can show everything the app
+does: the project list, the hands-free walk, the two tones, the queue holding
+notes out of signal and sending them when the signal returns, review,
+corrections, the account screen. It **cannot** complete a purchase — a sandbox
+purchase needs the app record, the Paid Applications agreement and the two
+subscription products to exist first. That is fine and is the right order:
+the purchase is one screen, and everything it guards is what wants testing.
+
+While no subscription can be bought, the phone still sends notes: anyone whose
+first note predates the day Notes became paid reads `included` (§14.1 of
+addendum 27), which is every account that exists today.
 
 ### The one thing not to do
 

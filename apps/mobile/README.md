@@ -54,9 +54,25 @@ npx eas init          # writes extra.eas.projectId into app.json
 
 | Profile | What it is for |
 | --- | --- |
-| `development` | A dev client with the debugger attached; iOS simulator, Android APK |
+| `development` | A dev client with the debugger attached; **iOS simulator** (so: a Mac), Android APK |
 | `preview` | An installable build for a real device, not through a store |
 | `production` | App Store / Play Store; app bundle on Android, version auto-incremented |
+
+**To put it on an iPhone, use `preview`.** `development` is simulator-only on
+iOS and wants a Mac; `preview` builds for the device and installs from a link.
+EAS builds on Apple hardware in the cloud, so **no Mac is needed** — which is
+the whole reason an iOS app ships from this repository at all.
+
+```sh
+npx eas device:create                          # once, per phone
+npx eas build --profile preview --platform ios
+```
+
+`device:create` registers the handset against the developer account — a short
+profile to install, then the build comes back as a QR code. No App Store
+listing and no in-app-purchase products are involved: an internal build is not
+a submission. A purchase cannot be completed in one, for the same reason; see
+`docs/store-setup.md` §4b for what it can and cannot show.
 
 ```sh
 npx eas build --profile development --platform ios
