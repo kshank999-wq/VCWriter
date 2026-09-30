@@ -1248,6 +1248,56 @@ push live; the build takes a minute or two.
   and struck through rather than silently dropped), and renaming a heading
   everywhere at once. Absent rather than greyed on a screenplay, everywhere: a
   format with no index has no index, and a disabled control says *not yet*.
+  **§8 is building it from the book**, from Ken twice in the same words (*build
+  the real index*) — which in this project has meant one thing five times now
+  (addendum 20 §15c, §16b, §16c, addendum 25 §4f): the feature was there,
+  working, under test, and read from his chair as though it had never been
+  built. He was looking at a page headed **Index** with nothing under it, and
+  nothing was broken — `bookIndexOf` reads the marks and the page prints them,
+  there were simply **no marks**, because the only way to make one was to
+  right-click a passage and nobody does that four hundred times. **§2 is kept
+  and read properly**: *a mark is an anchor the writer places and never a
+  search* is right about what an index is and had been read as *and so the
+  program offers nothing to start from*, which does not follow — addendum 25
+  §4b's correction in another room, an argument about **where the work comes
+  from** dressed up as an argument about what an index is. The audit paid a
+  **twenty-fifth** time, on this module's own data: **the writer has already
+  placed the anchors, in other rooms**. Every characterization moment pinned to
+  a paragraph, every arc point, every theme and motif tagged in the manuscript,
+  every moment on a story thread is a `usage_link` carrying an owner, a beat, an
+  **element** and a quote — somebody deliberately pointing at a passage and
+  saying *this one*, which is precisely what an index mark is, made in a
+  different room for a different reason. The index was empty not because the
+  work had not been done but because **the work that had been done was invisible
+  to it**. So `index-build.ts` has **no search in it, no word counting and
+  nothing that reads the manuscript's text at all** — a concordance is still
+  refused — and offers a heading per record, the person with the trait under
+  them, which is how a two-level index reads and what the record already
+  carries; measured on a four-chapter fixture, thirteen pins give **ten
+  headings**. Four rules: **only an anchor that names a passage** (a beat-wide
+  pin means *somewhere in this scene* and filing it against the first paragraph
+  would invent a position, `passageMarks`' own refusal; a **location** is absent
+  for exactly this, `usedIn` reading scene headings); **it proposes and never
+  files**, storing nothing, so cutting the passage shrinks the offer with
+  nothing run; **it adds and never overwrites** *by construction* rather than by
+  a check written here, `markForIndex` having refused the same passage under the
+  same heading since the module was built — which is what keeps a mark the
+  writer made by hand exactly as they left it, **`principal` included**, the one
+  thing about a mark only they can know; and **the heading is the record's own
+  name and never a rearrangement of it**, inverting *Crane, Silas* out of a
+  string being a guess at where the surname is that goes wrong on the first name
+  that is not two plain words, with `renameHeading` one press away. The screen is
+  **Build it from the book** at the **top** of the Index tab, above the index
+  itself, because somebody who opens this page on an empty index has come to
+  fill it; a row is the heading, **which room the anchor was made in** (what
+  makes it checkable rather than a guess), what a press would do, and the press.
+  Driving it caught two. **The sentence must not name the heading** — written to
+  stand alone it read *Index 2 passages under Maeve Toller, Dutiful* on a row
+  beginning *Maeve Toller, Dutiful*, one answer said twice on one line, so it is
+  about the **passages**. And **a route is only a route where it exists**: the
+  empty-index line said *Take a heading from above* on a book with nothing
+  anchored anywhere, pointing at a box holding one sentence and no headings. No
+  migration — a proposal is a reading over two tables that already exist.
   `addendum-11-setups-and-payoffs.md` is Setups & Payoffs, from Ken's own dev
   spec. **Built.** Half of it already existed (the record, its setup points, its
   payoff, archiving — master spec §7.3); what was missing was **the rule the

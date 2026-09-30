@@ -4,9 +4,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import {
   addBeat,
+  addCharacter,
+  addCharacterization,
+  addTheme,
+  addTrait,
   addUnit,
   createProjectFile,
   markForIndex,
+  pinUsage,
   updateBeat,
   type ManuscriptElementId,
   type ProjectFile,
@@ -116,7 +121,6 @@ const indexed = () => {
     term: 'lamp, the',
     beatId: made.beatId,
     elementId: made.elements[0]!.id as ManuscriptElementId,
-    quote: 'The lamp turned all night.',
   }).file;
 };
 
@@ -191,6 +195,91 @@ describe('the screen that manages the index', () => {
 
     expect(screen.getByText(/Pointing at writing that has gone/)).toBeTruthy();
     expect(screen.getByText(/a passage that has gone/)).toBeTruthy();
+  });
+});
+
+/**
+ * Building it from the book (addendum 10 §8).
+ *
+ * The reading is the domain's and tested there. What these cover is the thing
+ * Ken reported: that a writer who opens this page on a book they have worked on
+ * is shown what the book already carries and can file it, rather than a page
+ * headed Index with nothing under it and one route they would have to take four
+ * hundred times.
+ */
+const withPinnedMoment = () => {
+  const made = book();
+  const cast = addCharacter(made.file, { name: 'Maeve Toller' });
+  const characterId = cast.characters[cast.characters.length - 1]!.id;
+  const trait = addTrait(cast, { characterId, name: 'Sleepless' });
+  const moment = addCharacterization(trait.file, {
+    characterId,
+    traitId: trait.trait!.id,
+    text: 'Keeps the lamp turning long after she needs to.',
+  });
+  const pinned = pinUsage(moment.file, {
+    ownerKind: 'characterization',
+    ownerId: moment.item!.id as string,
+    beatId: made.beatId,
+    elementId: made.elements[0]!.id as ManuscriptElementId,
+  });
+  return pinned.file;
+};
+
+describe('building the index from the book', () => {
+  it('offers a heading read off work pinned in another room, and says where it came from', () => {
+    render(<Screen start={withPinnedMoment()} />);
+
+    const row = screen.getByText('Maeve Toller').closest('li')!;
+    expect(row.textContent).toContain('Sleepless');
+    // Which room the anchor was made in, which is what makes the row checkable.
+    expect(row.textContent).toContain('Characters');
+    // The sentence is about the passages: the row already names the heading,
+    // and saying it twice on one line is one answer said twice.
+    expect(row.textContent).toContain('Index one passage.');
+    expect(row.textContent).not.toContain('under Maeve Toller');
+  });
+
+  /** The line the whole module is drawn on: no search, so no concordance. */
+  it('offers nothing on a book whose words are full of a name nobody has pinned', () => {
+    const made = book();
+    render(<Screen start={addCharacter(made.file, { name: 'Maeve Toller' })} />);
+
+    expect(screen.queryByText('Maeve Toller')).toBeNull();
+    expect(screen.getByText(/Nothing in this book is anchored to a passage yet/)).toBeTruthy();
+  });
+
+  it('files the heading, with a page number nobody typed', () => {
+    let seen: ProjectFile | null = null;
+    render(<Screen start={withPinnedMoment()} onFile={(file) => (seen = file)} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Index it' }));
+
+    const marks = (seen as unknown as ProjectFile).indexMarks;
+    expect(marks).toHaveLength(1);
+    expect(marks[0]!.term).toBe('Maeve Toller');
+    expect(marks[0]!.subTerm).toBe('Sleepless');
+    // Filed, so the row it came from has gone and the index carries it instead.
+    expect(screen.queryByRole('button', { name: 'Index it' })).toBeNull();
+    expect(screen.getByText('1 passage indexed, under 1 heading.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Maeve Toller/ })).toBeTruthy();
+  });
+
+  it('files every heading at once', () => {
+    let seen: ProjectFile | null = null;
+    const start = addTheme(withPinnedMoment(), { name: 'Vigil' });
+    const written = start.file.beats.find((one) => one.manuscript.elements.length > 1)!;
+    const themed = pinUsage(start.file, {
+      ownerKind: 'theme',
+      ownerId: start.theme!.id as string,
+      beatId: written.id,
+      elementId: written.manuscript.elements[1]!.id as ManuscriptElementId,
+    }).file;
+
+    render(<Screen start={themed} onFile={(file) => (seen = file)} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Index all 2 headings' }));
+
+    expect((seen as unknown as ProjectFile).indexMarks).toHaveLength(2);
+    expect(screen.getByText('2 passages indexed, under 2 headings.')).toBeTruthy();
   });
 });
 

@@ -12347,6 +12347,84 @@ dialog.projects-dialog {
   white-space: nowrap;
 }
 
+/* ------------------------- building it from the book (addendum 10 §8) */
+/* Boxed, because it is the one thing on this screen that proposes rather than
+   reports, and because on an empty index it is the whole page. */
+.index-build {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.index-build-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+/* Heading, which room it came from, what a press would do, the press. The
+   sentence takes the slack so the button stays at the right-hand edge where it
+   is in the same place on every row. */
+.index-build-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.index-build-list li:last-child {
+  border-bottom: none;
+}
+
+.index-build-term {
+  min-width: 0;
+}
+
+.index-build-sub {
+  color: var(--muted);
+}
+
+.index-build-source {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+.index-build-says {
+  flex: 1;
+  min-width: 12em;
+}
+
+.index-build-all {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.index-build-all span {
+  flex: 1;
+  min-width: 14em;
+}
+
+.index-build-done {
+  margin: 0;
+  color: var(--gold);
+}
+
 /* ------------------------------------- the chapter page (addendum 02 §12a) */
 /* Three columns: which chapter, what it says and how the book is set, and the
    sheet. The sheet is on the right because that is what everything else is in

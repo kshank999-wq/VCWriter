@@ -180,7 +180,113 @@ Three things it shows that the printed index cannot:
 Cross-references are made here and nowhere else, because they are about the
 index rather than about a passage.
 
-## 8. Where the code is
+## 8. Building it from the book
+
+From Ken, twice in the same words: **build the real index**. In this project
+that repetition has meant one thing four times over (addendum 20 §15c, §16b,
+§16c, addendum 25 §4f), and it meant it again — the feature was there, working,
+under test, and read from his chair as though it had never been built.
+
+What he was looking at was a page headed **Index** with nothing under it, on a
+book he had written, imported and laid out. Nothing was broken: `bookIndexOf`
+reads the marks, `layBook` hands them to the page, the page prints them. There
+were **no marks**, because the only way to make one was to right-click a
+passage, and nobody does that four hundred times. An index you have to build
+one keystroke at a time is not a feature a writer will ever finish using, which
+from the reader's chair is the same as a page with nothing on it.
+
+### 8.1 §2 is kept, and read properly
+
+*A mark is an anchor the writer places and never a search* is right about what
+an index is. It had been read as **and so the program offers nothing to start
+from**, and those are two different claims — the second does not follow from the
+first. It is addendum 25 §4b's correction in another room: an argument about
+**where the work comes from**, dressed up as an argument about what an index
+is. Indexing every occurrence of a word would still be a concordance, and is
+still refused: there is no search anywhere in `index-build.ts`, no word
+counting, and nothing that reads the manuscript's text at all.
+
+What it does instead is the audit paying a **twenty-fifth** time, on this
+module's own data:
+
+> **The writer has already placed the anchors, in other rooms.**
+
+Every characterization moment pinned to a paragraph, every arc point, every
+theme and motif tagged in the manuscript, every moment on a story thread is a
+`usage_link` carrying an owner, a beat, an **element** and a quote — somebody
+deliberately pointing at a passage and saying *this one*. That is precisely what
+an index mark is, made in a different room for a different reason. The index was
+empty not because the work had not been done but because **the work that had
+been done was invisible to it**.
+
+So `indexProposals` reads anchors, groups them under the record that owns them,
+and offers a heading per record: the person and, under them, the trait, which is
+how a two-level index reads and what the record already carries. Measured on a
+four-chapter fixture: thirteen pins made in the Character Creator, the Themes
+panel, the motif tagger and a story thread give **ten headings** with no
+searching of any kind.
+
+### 8.2 Three rules
+
+**Only an anchor that names a passage.** A pin made against the whole beat
+carries no `elementId` and means *somewhere in this scene*; filing it against
+the first paragraph would invent a position the writer never gave, which is what
+`passageMarks` refuses for the margin (addendum 25 §7) and is refused here for
+the same reason. A **location** is absent for exactly this: `usedIn` reads scene
+headings, so a place has scenes and not passages.
+
+**It proposes; it never files.** Nothing is written until `acceptProposal` is
+called on one heading, and nothing about a proposal is stored — cut the passage
+and the offer shrinks, take the pin off and it goes, with nothing run. The sixth
+time a fact about the work is a reading rather than a column.
+
+**It adds and never overwrites**, and this is true *by construction* rather than
+by a check written here: `markForIndex` has refused the same passage under the
+same heading since the module was built (*marking it again is not a second
+occurrence*), so a second press is a no-op and **a passage the writer marked by
+hand is left exactly as they left it — `principal` included**, which is the one
+thing about a mark only they can know. `back-matter-pull.ts`'s rule, at the
+other end of the book.
+
+**The heading is the record's own name and never a rearrangement of it.** Books
+invert a person — *Crane, Silas* — and working that out from a string is
+guessing where the surname is, which goes wrong on the first name that is not
+two plain words. It arrives as the writer wrote it and `renameHeading` is one
+press away: the program supplies the places and the writer supplies the words,
+which is the division the whole module rests on.
+
+### 8.3 The screen
+
+**Build it from the book** stands at the top of the Index tab, *above* the index
+itself, because a writer who opens this page on an empty index has come here to
+fill it and the way to do that is the only thing worth putting in front of them.
+It stays once the index is full, a book going on growing.
+
+A row is a heading, **which room the anchor was made in** (Characters, Themes,
+Motifs, Links — what makes a row checkable rather than a guess), what a press
+would do, and the press. *Index all N headings* is offered for the same reason
+the module exists: a book with forty headings is forty presses to do the thing
+that was asked for.
+
+Two things came out of driving the real room.
+
+**The sentence must not name the heading.** `describeProposal` was written to
+stand alone and read *Index 2 passages under Maeve Toller, Dutiful* on a row
+whose first words are *Maeve Toller, Dutiful* — one answer said twice on one
+line. A row is a heading and a sentence about it, so the sentence is about the
+**passages**: *Index 2 passages. The one already there is left alone.*
+
+**A route is only a route where it exists.** The empty-index line read *Take a
+heading from above, or right-click a passage…*, and on a book with nothing
+anchored anywhere *above* is a box holding one sentence and no headings —
+pointing a writer at something that is not there. It names the offers only when
+there are offers, which is `describeProposals`' own shape said one element
+further down.
+
+Measured at 1440 and 1100: ten rows, none running off the edge, no horizontal
+scroll, every row one line.
+
+## 9. Where the code is
 
 | | |
 | --- | --- |
@@ -191,10 +297,11 @@ index rather than about a passage.
 | The preview | `apps/desktop/src/renderer/components/Paper.tsx` |
 | Marking | `apps/desktop/src/renderer/components/BeatBody.tsx` — `FileInIndex` |
 | The screen | `apps/desktop/src/renderer/components/IndexPanel.tsx` |
+| Building it from the book | `packages/domain/src/index-build.ts` — §8 |
 | The table | `packages/supabase/migrations/0046_book_index.sql` |
 | Sync | `sync-mapping.ts` — `indexMarks`, `indexRefs` |
 
-## 9. What is deliberately not here
+## 10. What is deliberately not here
 
 - **Indexing every occurrence of a word.** §2. It would be a concordance.
 - **A third level of sub-heading.** Two is where an index stays readable.
@@ -205,3 +312,11 @@ index rather than about a passage.
 - **An automatic index of chapter titles.** That is the contents page, and it
   was already built. An index of the chapter names would be an alphabetical
   list of things the reader can already find at the front.
+- **Filing a proposal without being asked.** §8.2. The anchors are somebody
+  else's work made for another purpose, and a heading is an editorial
+  judgement; offering is the whole of what the program may do.
+- **A migration for §8.** There is nothing to store: a proposal is a reading
+  over `usage_links` and `index_marks`, both of which already exist.
+- **Inverting a name into *Crane, Silas*.** §8.2. Guessing where the surname
+  is goes wrong on the first name that is not two plain words, and renaming a
+  heading everywhere is one press.
