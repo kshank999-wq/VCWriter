@@ -57,6 +57,7 @@ import {
   type ResearchFolder,
   type ResearchItem,
   type ResearchItemId,
+  type StoryMarkerId,
   type ResearchView,
   WORK_STANDING_WORDS,
   reviewRows,
@@ -67,6 +68,7 @@ import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
 import { GraphicsPanel } from './GraphicsPanel';
 import { ContentsPanel } from './ContentsPanel';
+import { ChapterPageDialog } from './ChapterPageDialog';
 import { GraveyardPanel } from './GraveyardPanel';
 import { ImportNotesPanel } from './ImportNotesPanel';
 import { LinksTimeline } from './LinksTimeline';
@@ -260,6 +262,16 @@ export function ResearchBody({
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [dragging, setDragging] = useState<{ kind: 'item' | 'folder' | 'capture'; id: string } | null>(null);
+  /**
+   * The chapter whose own page is open (addendum 28 §4a).
+   *
+   * The room holds its own `ChapterPageDialog` for the reason the Layout room
+   * does (addendum 20 §9d): handing the chapter up to the workspace was fine
+   * while the screen was only ever reached from the File menu, and wrong the
+   * moment a room offers a way into it — a route that only works while the
+   * workspace is in front of it is not a route.
+   */
+  const [chapterPageFor, setChapterPageFor] = useState<StoryMarkerId | null>(null);
   /**
    * What the phone has sent and nobody has placed (addendum 09 §9).
    *
@@ -1117,6 +1129,9 @@ export function ResearchBody({
                 // table of contents says where in the book it goes and never
                 // where it is kept.
                 onOpenNote={(item) => setSelection({ kind: 'folder', id: item.categoryId })}
+                // The chapter's title and what it is about are set on the
+                // chapter page's own screen. A route, never a second copy.
+                onOpenChapter={(markerId) => setChapterPageFor(markerId)}
               />
             </div>
           ) : selection.kind === 'graveyard' ? (
@@ -1214,6 +1229,20 @@ export function ResearchBody({
           )}
         </aside>
       </div>
+
+      {/* The chapter's own page, opened from a box in the table of contents
+          (§4a). The room owns the dialog rather than asking the workspace to
+          open it, because a room in a window of its own has no workspace in
+          front of it — addendum 02 §8's rule that a room on the other monitor
+          must not be able to do less. There is no spread here, so no box is
+          drawn and no pages are laid. */}
+      <ChapterPageDialog
+        file={file}
+        open={chapterPageFor !== null}
+        initialMarkerId={chapterPageFor}
+        onClose={() => setChapterPageFor(null)}
+        onUpdate={onUpdate}
+      />
     </>
   );
 }

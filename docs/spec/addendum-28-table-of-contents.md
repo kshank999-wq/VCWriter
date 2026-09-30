@@ -158,6 +158,60 @@ said aloud and what is drawn under the boxes cannot disagree.
 | The way in | `ResearchWindow.tsx` — `selection.kind === 'contents'` |
 | The table | `packages/supabase/migrations/0064_note_place.sql` |
 | Sync | `sync-mapping.ts` — `place_type`, `place_id` |
+| The chapter's page | `ChapterPageDialog.tsx`, opened by the room (§4a) |
+
+## 4a. The way through to a chapter's own page
+
+Ken sent §1's second message **three times, word for word**, which in this
+project has meant one thing five times now (addendum 20 §15c, §16b, §16c,
+addendum 25 §4d, §4f). Driving it named which of those it was.
+
+**Everything he asked for was there and none of it was reachable from where he
+asked for it.** On a textbook `File ▸ Chapter page…` is present
+(`hasChapterPages` is `isProseFormat || series`, and `isProseFormat` takes
+`instructional`), and its dialog offers exactly the three things his sentence
+separates — measured on Ken's own example:
+
+| What he said | What the screen calls it | Where it comes from |
+| --- | --- | --- |
+| *chapter one* | **Show Chapter 1** | Derived. Nowhere to type it. |
+| *Mathematics* | **Its name** | The marker's title, typed. |
+| *a title of what that's about* | **What this chapter covers** | `page.summary`, typed. |
+
+So there was no missing feature and no broken mechanism: there was **no route
+from the table of contents**, which is the screen his sentence names. The panel
+that shipped an hour earlier had none, which is §15a's fault in an hour-old
+panel — *a route needs a test per gesture, not per screen*, and the chapter
+dialog's nine tests all open it directly.
+
+**A route, never a second copy.** The obvious build is a title box and a
+summary box on the panel, and it is wrong for the reason addendum 20 §15c
+removed from Layout twice: a second pair of controls that set a chapter's name
+is a second answer to what the chapter is called. So the panel has a press and
+a double-click, both opening the chapter page's own screen, and it is **absent
+on a section** — a section is not a chapter and has no page, which is this
+room's own idiom for *not here*.
+
+The **room owns the dialog** rather than asking the workspace to open it, for
+the Layout room's reason (addendum 20 §9d): a route that only works while the
+workspace is in front of it is not a route, and every room goes to a second
+monitor (addendum 02 §8). There is no spread here, so no box is drawn and no
+pages are laid.
+
+### What driving it caught
+
+**One row, two spellings of its own number.** The box drew `1 Mathematics` and
+the heading an inch under it read `1. Mathematics`, because the box wrote the
+number out and `describeContentsRow` wrote it out again — §3's *books set a
+chapter with a full stop* having reached the sentence and not the thing beside
+it. `contentsNumber` is the one reading both ask.
+
+**The route ran on mid-paragraph.** A control with padding inside a sentence
+that wraps around it reads as neither a button nor prose. It is on its own line
+with its note under it — *which control a note belongs to is said by the gap*
+(addendum 09 §14a) — and the note has **a rule of its own** rather than
+reaching for `.small`, which has never had one on its own in this stylesheet:
+that addendum's own finding, one stylesheet over.
 
 ## 5. What is not built yet
 
@@ -166,11 +220,8 @@ Named rather than half-built, in the order they should come:
 1. **A chapter made in the Outliner lands on the timeline as it is made**,
    rather than on a separate *Add to track*. Ken's *that will create chapters on
    the timeline as you create those*.
-2. **A chapter row opens the chapter dialog** for its title and what it is
-   about — a route to the screen that already exists (`File ▸ Chapter page…`),
-   never a second copy of it.
-3. **A filed note becomes a beat under its own chapter and section**, which is
+2. **A filed note becomes a beat under its own chapter and section**, which is
    `addResearchRow` + `promoteRow` pointed at the place the note already names,
    so the Outliner puts it in the right chapter without being told.
-4. **Notes filed in bulk** from the Note Sorter and the phone inbox, both of
+3. **Notes filed in bulk** from the Note Sorter and the phone inbox, both of
    which already produce research items and so need only the place.

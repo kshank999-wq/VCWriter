@@ -1,5 +1,6 @@
 import { useMemo, useState, type DragEvent } from 'react';
 import {
+  contentsNumber,
   contentsShelf,
   describeContents,
   describeContentsRow,
@@ -13,6 +14,7 @@ import {
   type ProjectFile,
   type ResearchItem,
   type ResearchItemId,
+  type StoryMarkerId,
 } from '@vcwriter/domain';
 
 /**
@@ -47,6 +49,18 @@ interface ContentsPanelProps {
   onDragEnd(): void;
   /** Opening a note where it lives, which is still its folder. */
   onOpenNote?(item: ResearchItem): void;
+  /**
+   * Setting a chapter's own page — its title, its number and what it covers
+   * (addendum 28 §4a, from Ken: *when you create a chapter in the table of
+   * contents you will need to eventually put a title of what that's about*).
+   *
+   * **A route, never a second copy**: the screen that sets those is the
+   * chapter page's own (`File ▸ Chapter page…`), and a second pair of boxes
+   * here would be a second answer to what a chapter is called — the fault
+   * addendum 20 §15c removed from Layout. Absent where the caller cannot
+   * open it, which is this room's own idiom for *not here*.
+   */
+  onOpenChapter?(markerId: StoryMarkerId): void;
 }
 
 const LIGHTS = {
@@ -55,7 +69,14 @@ const LIGHTS = {
   unfiled: 'Not placed',
 } as const;
 
-export function ContentsPanel({ file, onUpdate, dragging, onDragEnd, onOpenNote }: ContentsPanelProps) {
+export function ContentsPanel({
+  file,
+  onUpdate,
+  dragging,
+  onDragEnd,
+  onOpenNote,
+  onOpenChapter,
+}: ContentsPanelProps) {
   const rows = useMemo(() => contentsShelf(file), [file]);
   const said = useMemo(() => describeContents(file), [file]);
 
@@ -112,6 +133,9 @@ export function ContentsPanel({ file, onUpdate, dragging, onDragEnd, onOpenNote 
         }
         aria-pressed={chosen ? keyOf(chosen.place) === key : false}
         onClick={() => setOpen(chosen && keyOf(chosen.place) === key ? null : row.place)}
+        onDoubleClick={() => {
+          if (row.place.kind === 'chapter') onOpenChapter?.(row.place.markerId);
+        }}
         onDragOver={(event: DragEvent<HTMLElement>) => {
           if (dragging?.kind !== 'item') return;
           event.preventDefault();
@@ -123,7 +147,7 @@ export function ContentsPanel({ file, onUpdate, dragging, onDragEnd, onOpenNote 
           drop(row);
         }}
       >
-        <span className="toc-number">{row.number || '—'}</span>
+        <span className="toc-number">{contentsNumber(row) || '—'}</span>
         <span className="toc-title">{row.title || <em>Untitled</em>}</span>
         {/* The count is what the box is for: how much is waiting here. A box
             with nothing in it says nothing rather than drawing a 0, which on a
@@ -163,6 +187,30 @@ export function ContentsPanel({ file, onUpdate, dragging, onDragEnd, onOpenNote 
         <section className="toc-under">
           <h4>{describeContentsRow(chosen, file)}</h4>
           {chosen.summary ? <p className="muted small">{chosen.summary}</p> : null}
+
+          {onOpenChapter && chosen.place.kind === 'chapter' ? (
+            <div className="toc-route">
+              <button
+                type="button"
+                className="ghost small"
+                onClick={() =>
+                  chosen.place.kind === 'chapter' ? onOpenChapter(chosen.place.markerId) : undefined
+                }
+              >
+                Set this chapter's page…
+              </button>
+              {/* Under the control it belongs to rather than running on beside
+                  it: which control a note is about is said by the gap
+                  (addendum 09 §14a). It has a rule of its own rather than
+                  reaching for `.small`, which has never had one on its own in
+                  this stylesheet — that addendum's finding, and it would have
+                  drawn at full body colour between the button and the notes. */}
+              <p className="toc-route-note">
+                Its title, whether the number prints, and what it covers. A double-click on
+                the box above opens the same screen.
+              </p>
+            </div>
+          ) : null}
 
           {chosen.notes.length === 0 ? (
             <p className="muted small">

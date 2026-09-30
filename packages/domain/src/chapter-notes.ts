@@ -272,14 +272,25 @@ export const notesUnder = (file: ProjectFile, place: NotePlace): ResearchItem[] 
  * lay out ten chapters in a minute and name them afterwards — the number is
  * derived, so there is nothing to type for it and nothing to keep in step.
  */
+/**
+ * A row's number **as it is set** — the one place that decides its spelling.
+ *
+ * A chapter number takes a full stop and a multi-level one does not, which is
+ * how books set them: *1. Mathematics*, then *1.1 Division*. Driving the
+ * screen is what caught it twice: first as `1.1.`, reading as an unfinished
+ * third level, and then as a box drawn `1` standing an inch above a heading
+ * reading `1.`, which is **one row with two spellings of its own number** —
+ * so this is read by the box, by the heading and by `describeContentsRow`
+ * rather than each writing it out.
+ */
+export const contentsNumber = (row: ContentsRow): string =>
+  row.number ? (row.number.includes('.') ? row.number : `${row.number}.`) : '';
+
 export const describeContentsRow = (row: ContentsRow, file: ProjectFile): string => {
   const nouns = nounsFor(file.project.format);
   const noun = row.depth === 0 ? 'Chapter' : nouns.unit;
   const named = row.title.trim();
-  // A chapter number takes a full stop and a multi-level one does not, which
-  // is how books set them: *1. Mathematics*, then *1.1 Division*. Driving the
-  // screen is what caught it — `1.1.` reads as an unfinished third level.
-  const number = row.number ? (row.number.includes('.') ? row.number : `${row.number}.`) : '';
+  const number = contentsNumber(row);
   if (number && named) return `${number} ${named}`;
   if (number) return `${number} Untitled ${noun.toLocaleLowerCase()}`;
   return named || `Untitled ${noun.toLocaleLowerCase()}`;

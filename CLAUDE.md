@@ -1356,9 +1356,41 @@ push live; the build takes a minute or two.
   a multi-level number without one), and **a screen reader heard
   `1Mathematics`**, the number and the title being two elements with only a CSS
   gap between them and a gap not being a space — the box is named by
-  `describeContentsRow`, the one sentence that names a row. §5 names what is
+  `describeContentsRow`, the one sentence that names a row.
+  **§4a is the way through to a chapter's own page**, from Ken sending §1's
+  second message **three times word for word** — which in this project has
+  meant one thing five times (addendum 20 §15c, §16b, §16c, addendum 25 §4d,
+  §4f) and meant it again: **everything he asked for was there and none of it
+  was reachable from where he asked for it**. Driving it measured that on an
+  instructional book *File ▸ Chapter page…* is present (`hasChapterPages` is
+  `isProseFormat || series` and `isProseFormat` takes `instructional`) and its
+  dialog offers exactly the three things his sentence separates — **Show
+  Chapter 1** (derived, nowhere to type it), **Its name** (*Mathematics*) and
+  **What this chapter covers** (`page.summary`, the *title of what that's
+  about*) — so there was no missing feature and no broken mechanism, there was
+  **no route from the table of contents**, which is the screen his sentence
+  names, in a panel an hour old: §15a's *a route needs a test per gesture, not
+  per screen*, the chapter dialog's nine tests all opening it directly. The
+  build is **a route, never a second copy**: a title box and a summary box on
+  the panel is the obvious answer and is the fault addendum 20 §15c removed
+  from Layout twice, a second pair of controls that name a chapter being a
+  second answer to what it is called — so a press and a double-click open the
+  chapter page's own screen, **absent on a section**, which has no page. The
+  **room owns the dialog** rather than handing the chapter to the workspace
+  (addendum 20 §9d): a route that works only while the workspace is in front
+  of it is not a route, and every room goes to a second monitor. Driving it
+  caught two. **One row, two spellings of its own number** — the box drew
+  `1 Mathematics` over a heading reading `1. Mathematics`, §3's full stop
+  having reached the sentence and not the thing beside it, so `contentsNumber`
+  is the one reading both ask. And **the route ran on mid-paragraph**, a
+  control with padding inside a sentence that wraps round it reading as
+  neither button nor prose: it is on its own line with its note under it
+  (*which control a note belongs to is said by the gap*, addendum 09 §14a),
+  and the note has **a rule of its own** rather than reaching for `.small`,
+  which has never had one on its own in this stylesheet — that addendum's own
+  finding, one stylesheet over. §5 names what is
   **not** built and in what order: a chapter landing on the timeline as it is
-  made, the chapter row opening the chapter dialog, a filed note becoming a
+  made, a filed note becoming a
   beat under its own chapter and section, and filing in bulk from the Note
   Sorter and the phone.
   `addendum-11-setups-and-payoffs.md` is Setups & Payoffs, from Ken's own dev

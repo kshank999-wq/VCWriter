@@ -87,6 +87,19 @@ describe('the table of contents', () => {
     expect(screen.getByRole('button', { name: /2\. Numbers/ })).toBeTruthy();
   });
 
+  /**
+   * One row, one spelling of its number. Driving it caught the box drawn `1`
+   * standing an inch above a heading reading `1. Mathematics` — two answers to
+   * how this chapter is numbered, from two places that each wrote it out.
+   */
+  it('draws the number as the heading sets it', () => {
+    render(<Panel start={book().file} />);
+    const chapter = screen.getByRole('button', { name: /1\. Mathematics/ });
+    expect(chapter.querySelector('.toc-number')?.textContent).toBe('1.');
+    const section = screen.getByRole('button', { name: /1.1 Division/ });
+    expect(section.querySelector('.toc-number')?.textContent).toBe('1.1');
+  });
+
   /** It reads the chapters; it does not make them. */
   it('offers no way to add a chapter, and says where they come from', () => {
     render(<Panel start={book().file} />);
@@ -193,5 +206,40 @@ describe('the way in', () => {
   it('is absent on a screenplay', () => {
     render(<Room start={book('screenplay').file} />);
     expect(screen.queryByRole('button', { name: /Table of contents/ })).toBeNull();
+  });
+});
+
+describe("the way through to a chapter's own page", () => {
+  /**
+   * A route needs a test **per gesture**, not per screen (addendum 20 §15a).
+   * The chapter page's own dialog has nine tests of its own and every one of
+   * them opens it directly, so none of them can say whether a writer standing
+   * in the table of contents can reach it — which is the half that reads as
+   * the feature not being built.
+   */
+  const open = () => {
+    render(<Room start={book().file} />);
+    fireEvent.click(screen.getByRole('button', { name: /Table of contents/ }));
+    return screen.getByRole('button', { name: /1\. Mathematics/ });
+  };
+
+  it('opens from the button under a chosen chapter', () => {
+    const chapter = open();
+    fireEvent.click(chapter);
+    fireEvent.click(screen.getByRole('button', { name: /Set this chapter's page/ }));
+    expect(screen.getByText(/This chapter’s page/)).toBeTruthy();
+  });
+
+  it('opens from a double-click on the box', () => {
+    fireEvent.doubleClick(open());
+    expect(screen.getByText(/This chapter’s page/)).toBeTruthy();
+  });
+
+  /** A section is not a chapter: it has no page and so no way through. */
+  it('offers nothing on a section', () => {
+    render(<Room start={book().file} />);
+    fireEvent.click(screen.getByRole('button', { name: /Table of contents/ }));
+    fireEvent.click(screen.getByRole('button', { name: /1.1 Division/ }));
+    expect(screen.queryByRole('button', { name: /Set this chapter's page/ })).toBeNull();
   });
 });

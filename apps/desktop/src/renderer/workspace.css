@@ -20149,6 +20149,22 @@ dialog.designed-page-dialog[open] {
   padding-top: 12px;
 }
 
+/* The way through to the chapter's own page: the control on its own line with
+   its note tucked under it, because which control a note belongs to is said by
+   the gap (addendum 09 §14a). */
+.toc-route {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+}
+
+.toc-route-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
 .toc-notes {
   list-style: none;
   margin: 0;
