@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { ProjectFile, ResearchCategoryId, ResearchItem } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
+import { useMovedDialog } from '../use-moved-dialog';
 
 /**
  * The note's own screen, in the middle (addendum 28 §6).
@@ -29,6 +30,12 @@ import { useModal } from '../use-modal';
  * disagree, which is the fault §15c removed from Layout and §9m settled with
  * `ChapterStyleFields`. What differs is the size of the box and where the
  * cursor lands, which is the whole of Ken's complaint.
+ *
+ * **And its bar moves** (§6a, from Ken: *make the top bar draggable too*),
+ * which is the beat's own gesture and is now literally the beat's own code —
+ * `useMovedDialog`, lifted out of `BeatDialog` rather than written a second
+ * time here. *Like a beat in a script* turns out to be a claim about what the
+ * screen can do as well as where it stands.
  */
 export function NoteDialog({
   file,
@@ -56,6 +63,8 @@ export function NoteDialog({
   onClose(): void;
 }) {
   const dialog = useModal(item !== null);
+  // A different note is a fresh screen, so it opens centred like any dialog.
+  const { placed, grab } = useMovedDialog(dialog, item?.id);
   const titleRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
@@ -81,10 +90,13 @@ export function NoteDialog({
       ref={dialog}
       className="note-dialog"
       aria-label={item.title || 'Note'}
+      // Moved, it is placed rather than centred; untouched, the browser
+      // centres it and no style of ours says otherwise.
+      style={placed}
       onClose={onClose}
       onCancel={onClose}
     >
-      <header>
+      <header className="bar-grab" onPointerDown={grab}>
         <span className="note-dialog-where muted">
           {file.researchCategories.find((category) => category.id === item.categoryId)?.name ?? 'Research'}
         </span>

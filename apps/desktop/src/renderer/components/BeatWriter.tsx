@@ -147,15 +147,13 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
       <ManuscriptDataLists file={file} />
 
       <header
-        className={onGrab ? 'writer-bar writer-bar-grab' : 'writer-bar'}
+        className={onGrab ? 'writer-bar bar-grab' : 'writer-bar'}
         style={{ borderLeftColor: beat.color ?? track?.color }}
-        // The name, the draft and the switches are controls: a press on one
-        // is that control's, never the start of a drag.
-        onPointerDown={(event) => {
-          if (!onGrab) return;
-          if ((event.target as HTMLElement).closest('input, button, select, textarea, label')) return;
-          onGrab(event);
-        }}
+        // The bar is a handle only where it can be (absent in the beat's own
+        // window). That a press on the name, the draft or a switch is that
+        // control's and never a drag is `useMovedDialog`'s rule, said once
+        // for every bar rather than written out on each.
+        {...(onGrab ? { onPointerDown: onGrab } : {})}
       >
         <span className="writer-caption muted">{nouns.sub} name</span>
         <input

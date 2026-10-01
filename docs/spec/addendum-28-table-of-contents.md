@@ -639,3 +639,84 @@ name the card — which is the note read back, and the honest place to look.
 
 No migration and no domain change: a note is the record it always was, and this
 is where it is written.
+
+---
+
+## 6a. Its bar moves
+
+From Ken, straight after §6: *make the top bar draggable too*.
+
+**The comparison was load-bearing.** §6's ask was *like a beat in a script*,
+which was read as a statement about **where the screen stands** — the middle
+rather than the right-hand column — and it is also a statement about **what the
+screen can do**. A beat's writing screen has moved on the desk since addendum
+02 §6d, for Ken's own reason (*when you open a beat you should be able to grab
+the top bar and drag it around*), and a note's screen that looked like one and
+stood still was like it in every way but the one you find out about by
+reaching for it.
+
+### One gesture, one copy
+
+The obvious build is twenty lines in `NoteDialog`: a pointer-down, a
+pointer-move on the window, two numbers of state. That is the fault this
+project has removed from printing, from the face table, from the running heads
+and from the chapter templates — **a second hand-written drag is a second
+answer to how far the pointer moved and where a screen may stand**, free to
+disagree the first time either is touched.
+
+So `use-moved-dialog.ts` is `BeatDialog`'s own code lifted out and read by
+both. Three rules came with it, and they are now the hook's rather than each
+screen's:
+
+- **Where it stands is kept nowhere.** Not in the project, which is the
+  writing, and not on the machine either — a screen that opens where it was
+  left a fortnight ago is one you go looking for. A different note is a fresh
+  screen, which is what `opensFresh` says.
+- **Being moved is the one state that places it.** A `<dialog>` is centred by
+  the browser, so untouched it carries no style of ours at all — measured:
+  `style.left` is empty until the bar is grabbed, and `80px` after.
+- **A control is a control.** A press on the name, a picker, a switch or the ×
+  is that control's and never the start of a drag, or naming a note would
+  slide the screen out from under the pointer.
+
+That last one is the half worth recording, because **the guard already existed
+and was in the wrong place**: `BeatWriter` wrote out
+`closest('input, button, select, textarea, label')` by hand on its own bar, so
+the rule lived in one bar rather than in the gesture, and the note's header
+would have written it out a second time. It is in the hook now and `BeatWriter`
+just hands the handler over. `.writer-bar-grab` became **`.bar-grab`** for the
+same reason — a cursor rule named for the writing screen is one the next bar
+copies rather than wears.
+
+### Measured in the real browser
+
+jsdom gives every box a zero rect, so a drag is exactly the thing a test cannot
+see. Driven at 1440 × 900:
+
+| | |
+| --- | --- |
+| Opened | x = 340, no inline style — the browser centred it |
+| Dragged 260 left and 40 up | x = 80, `left: 80px`, `position: fixed` |
+| Dragged hard at the top-left corner | x = −31, y = 0 — it stops where the bar is still reachable |
+| Dragged **from the name box** | did not move at all |
+| The × | still closes, and the card holds the words |
+
+The bar's cursor reads `grab` where it is a handle, which is how a bar that
+moves is told from one that does not.
+
+### Where the code is
+
+- `apps/desktop/src/renderer/use-moved-dialog.ts` — the gesture, once.
+- `apps/desktop/src/renderer/components/BeatDialog.tsx` — reads it instead of
+  holding it.
+- `apps/desktop/src/renderer/components/BeatWriter.tsx` — its private copy of
+  the control guard removed; `.bar-grab`.
+- `apps/desktop/src/renderer/components/NoteDialog.tsx` — the header is the
+  handle.
+- `apps/desktop/src/renderer/__tests__/note-dialog.test.tsx` — that this screen
+  *has* the gesture and that the × is not a handle. How far the pointer moves
+  is the hook's business, so the beat's own assertions are not duplicated here.
+
+Deliberately **not** built: a ⧉ to send the note to a second monitor. That is
+§6d's other half and a different gesture — a page drawn inside a window cannot
+leave it, and what leaves is a window of its own. Ken asked for the bar.

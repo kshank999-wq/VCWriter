@@ -1586,6 +1586,35 @@ push live; the build takes a minute or two.
   caught one thing worth keeping: a note's title is also an `<option>` in the
   Related picker, which is the note being **linkable** rather than a second copy
   of it, so the assertions name the card. No migration and no domain change.
+  **§6a is the bar moving**, from Ken straight after (*make the top bar
+  draggable too*), and **the comparison in §6's ask was load-bearing**: *like a
+  beat in a script* was read as a statement about where the screen stands and
+  is also one about **what it can do** — a beat's screen has moved on the desk
+  since addendum 02 §6d, and a note's screen that looked like one and stood
+  still was like it in every way but the one you find out about by reaching for
+  it. The build is **one gesture and one copy**: twenty lines in `NoteDialog` is
+  the obvious answer and is the fault removed from printing, the face table, the
+  running heads and the chapter templates — **a second hand-written drag is a
+  second answer to how far the pointer moved and where a screen may stand** — so
+  `use-moved-dialog.ts` is `BeatDialog`'s own code lifted out and read by both,
+  carrying §6d's three rules as the *gesture's* rather than each screen's:
+  **where it stands is kept nowhere** (not the project, which is the writing,
+  and not the machine either), **being moved is the one state that places it**
+  (a `<dialog>` is centred by the browser, so untouched it carries no style of
+  ours at all), and **a control is a control**. That last is the half worth
+  keeping, because **the guard existed and was in the wrong place**:
+  `BeatWriter` wrote `closest('input, button, select, textarea, label')` out by
+  hand on its own bar, so the rule lived in one bar rather than in the gesture
+  and the note's header would have written it a second time; `.writer-bar-grab`
+  became **`.bar-grab`** for the same reason, a cursor rule named for the
+  writing screen being one the next bar copies rather than wears. **jsdom gives
+  every box a zero rect, so a drag is exactly what a test cannot see**: driven
+  at 1440×900 it opens centred with no inline style, a 260-left drag puts it at
+  `left: 80px`, a hard drag at the corner stops where the bar is still
+  reachable (x = −31), a drag **from the name box** moves it not at all, and the
+  × still closes with the card holding the words. The ⧉ is **deliberately
+  absent** — that is §6d's other half and a different gesture, and Ken asked for
+  the bar.
   `addendum-11-setups-and-payoffs.md` is Setups & Payoffs, from Ken's own dev
   spec. **Built.** Half of it already existed (the record, its setup points, its
   payoff, archiving — master spec §7.3); what was missing was **the rule the

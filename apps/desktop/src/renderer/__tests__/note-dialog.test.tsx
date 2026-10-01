@@ -118,6 +118,51 @@ describe('writing a note', () => {
   });
 
   /**
+   * **The bar moves it** (§6a). It is `BeatDialog`'s own gesture through
+   * `useMovedDialog`, so what is asserted here is that this screen *has* it —
+   * how far the pointer moved is the hook's business and the beat's tests are
+   * not duplicated.
+   *
+   * Untouched it carries no style at all, because a `<dialog>` is centred by
+   * the browser and **being moved is the one state that places it**.
+   */
+  it('moves on the desk when its bar is dragged', () => {
+    render(<Room start={project()} />);
+    fireEvent.click(screen.getByRole('button', { name: '+ Note' }));
+
+    const box = dialog() as HTMLDialogElement;
+    expect(box.style.left).toBe('');
+
+    fireEvent.pointerDown(box.querySelector('header')!, { clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(window, { clientX: 200, clientY: 150 });
+
+    expect(box.style.position).toBe('fixed');
+    expect(box.style.left).toBe('200px');
+    expect(box.style.top).toBe('150px');
+
+    // And it stays where it was let go.
+    fireEvent.pointerUp(window);
+    fireEvent.pointerMove(window, { clientX: 600, clientY: 600 });
+    expect(box.style.left).toBe('200px');
+  });
+
+  /**
+   * **A control is a control.** The × sits in the bar, and a press on it is
+   * that control's rather than the start of a drag — otherwise closing the
+   * note would slide the screen out from under the pointer first.
+   */
+  it('does not drag from the × in its bar', () => {
+    render(<Room start={project()} />);
+    fireEvent.click(screen.getByRole('button', { name: '+ Note' }));
+
+    const box = dialog() as HTMLDialogElement;
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Close the note' }), { clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(window, { clientX: 200, clientY: 150 });
+
+    expect(box.style.left).toBe('');
+  });
+
+  /**
    * **One component, two places** (addendum 20 §16d): the dialog and the aside
    * draw `NoteFields`, so there is one answer to what a note is. What this
    * asserts is the half that would be a *second* answer — that the words are

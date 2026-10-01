@@ -2959,11 +2959,15 @@ dialog.writer-dialog::backdrop {
 
 /* The bar is the handle where the screen can be moved (§6d): said by the
    pointer, since a bar that moves and one that does not look the same. */
-.writer-bar-grab {
+/* A bar that moves its screen says so, and one that does not says nothing —
+   a bar that moves and a bar that does not look alike otherwise (addendum 02
+   §6d). Named for what it does rather than for the writing screen, because
+   the note's own screen wears it too (addendum 28 §6a). */
+.bar-grab {
   cursor: grab;
 }
 
-.writer-bar-grab:active {
+.bar-grab:active {
   cursor: grabbing;
 }
 
