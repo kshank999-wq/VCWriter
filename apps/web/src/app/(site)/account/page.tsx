@@ -57,7 +57,7 @@ export default async function AccountPage() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20),
-    client.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
+    client.from('profiles').select('is_admin, password_set_at').eq('id', user.id).maybeSingle(),
   ]);
 
   const { plan: notes } = await notesPlanFor(user.id);
@@ -168,12 +168,13 @@ export default async function AccountPage() {
         </p>
       </section>
 
-      {/* **Whether they have one is not asked**, because nothing on the user
-          honestly answers it: an `email` identity exists for a link-only
-          account too, and there is no *has a password* flag. So the section
-          reads the same either way rather than guessing and labelling it
-          wrongly half the time. */}
-      <SetPassword />
+      {/* **Whether they have one is said now** (§14c). §14 refused to guess,
+          and was right about the evidence: `auth.users.encrypted_password`
+          carries a hash for a link-only account too, so reading it would have
+          told everybody their password was set. What was missing was the
+          program's own record of its own act, which migration 0065 writes from
+          a trigger on the row the password lives in. */}
+      <SetPassword setAt={profile?.password_set_at ?? null} />
 
       {profile?.is_admin ? (
         <section>

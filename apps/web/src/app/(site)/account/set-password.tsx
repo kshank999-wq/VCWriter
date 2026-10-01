@@ -1,6 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  PASSWORD_STANDING_WORDS,
+  describePasswordStanding,
+  passwordStanding,
+} from '@vcwriter/domain';
 import { browserClient } from '@/lib/supabase-browser';
 import { SHORTEST, checkNewPassword, refusalFor } from '@/lib/password-words';
 
@@ -20,15 +25,20 @@ import { SHORTEST, checkNewPassword, refusalFor } from '@/lib/password-words';
  * password to reach. Setting it once on the desktop is what the phone then
  * uses.
  *
- * **The current password is asked for and not required**, which is §14's own
- * finding arriving on a second control: nothing on an account says whether a
- * password was ever set, so a form that demanded the old one would lock a
- * link-only writer out of ever having a first. The page does not know, so it
- * asks, says when to leave it empty, and lets the server be the one that
- * refuses — the same division that made the heading *Password* for everybody.
+ * **The current password is asked for and not required** (§14a): a form that
+ * demanded the old one would lock a link-only writer out of ever having a
+ * first. That stands even now the standing is known, because the standing is a
+ * record of what this program did and not proof of what the account holds —
+ * so the box is still optional and the server is still the thing that refuses.
+ *
+ * **What it now says is whether there is one** (§14c), from the stamp
+ * migration 0065 writes. Ken asked for it by name, and the reason is the
+ * Writers Room: a collaborator signs in on whatever machine the work is on,
+ * and an emailed link only works in the browser that asked for it.
  */
 
-export function SetPassword() {
+export function SetPassword({ setAt }: { setAt: string | null }) {
+  const standing = passwordStanding(setAt);
   const [current, setCurrent] = useState('');
   const [password, setPassword] = useState('');
   const [again, setAgain] = useState('');
@@ -70,23 +80,35 @@ export function SetPassword() {
 
   return (
     <section>
-      {/* **One heading for both**: nothing on the account says whether a
-          password has ever been set — an `email` identity exists for a
-          link-only account too — so a screen that said *Set* or *Change*
-          would be wrong for somebody half the time, and *Password* is true
-          for everybody. */}
+      {/* **The heading stays *Password*** and the standing is said under it
+          rather than in it. A heading that read *Set a password* or *Change
+          your password* would make the section's name depend on a record that
+          began mid-life, where what a writer is looking for is the same thing
+          either way; the status is a statement beside it, which is what can
+          honestly change. */}
       <h2>Password</h2>
+      <p className={standing === 'set' ? 'password-standing set' : 'password-standing'} role="status">
+        <span aria-hidden="true">{standing === 'set' ? '●' : '○'}</span>{' '}
+        <strong>{PASSWORD_STANDING_WORDS[standing]}</strong>
+        {standing === 'set' && setAt ? (
+          /* A class of its own rather than `.muted`, which has never had a
+             rule on this site — addendum 09 §14a's finding, reintroduced by
+             this panel's first draft and caught by looking at it: the date
+             drew in the same gold as the words beside it. */
+          <span className="password-when">
+            {' '}
+            · {new Date(setAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+          </span>
+        ) : null}
+      </p>
+      <p className="password-standing-note">{describePasswordStanding(standing)}</p>
       {status === 'done' ? (
         <p className="notice" role="status">
           Saved. You can sign in with it anywhere now — including{' '}
-          <a href="/notes/app">Notes on your phone</a>, where an emailed link often cannot work.
+          <a href="/notes/app">Notes on your phone</a>, where an emailed link often cannot work. Reload
+          this page and it will say when.
         </p>
       ) : null}
-      <p className="muted small">
-        A password signs you in on any device without waiting for an email — which is what the phone needs,
-        because a link only works in the browser that asked for it and a mail app opens links in its own.
-        Setting one here replaces whatever you had.
-      </p>
       <form onSubmit={save} style={{ display: 'grid', gap: 16, maxWidth: 340 }}>
         <div style={{ display: 'grid', gap: 6 }}>
           <input
@@ -99,10 +121,15 @@ export function SetPassword() {
             aria-describedby="current-password-note"
           />
           {/* Said under the box rather than in a placeholder that vanishes the
-              moment somebody starts typing in it. */}
+              moment somebody starts typing in it — and **it reads the standing
+              above it**: telling somebody whose account says *Password set* to
+              leave the box empty if they never set one is the screen arguing
+              with itself two lines apart. */}
           <span id="current-password-note" className="field-note">
-            Leave this empty if you have never set one. Forgotten it?{' '}
-            <a href="/signin">Ask for a reset link</a>.
+            {standing === 'set'
+              ? 'The one you have now.'
+              : 'Leave this empty if you have never set one.'}{' '}
+            Forgotten it? <a href="/signin">Ask for a reset link</a>.
           </span>
         </div>
         <input

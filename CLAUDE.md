@@ -41,7 +41,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0064.
+  reads like it does. Applied through 0065.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
   the windowing, and the thing to know is that **every room goes to a second
@@ -1019,6 +1019,53 @@ push live; the build takes a minute or two.
   belonging to neither. The sent notice **says the same thing whether or not
   the address has an account**, answering differently being a way of asking the
   site who its customers are.
+  **§14c is saying so**, from Ken (*once you get your email login, that you set
+  a password, and that it says password set in your account settings… important
+  especially for doing teams in writer's room*), and everything but the middle
+  clause was built — §14 set one and §14b reset one, and the page could not say
+  **whether**. §14's stated reason (*nothing on an account says whether a
+  password was ever set*) is **right about the evidence and wrong in the
+  conclusion it drew**: the column that looks like the answer,
+  `auth.users.encrypted_password`, is written at **signup** for every account,
+  including one that has only ever used a link — measured here, **295 of 295
+  carry a `$2a$` hash and exactly one has ever signed in** — so reading it would
+  not be unreliable, it would be *Password set* said to every writer alive, the
+  one wording that sends them to the sign-in form to prove it. What was missing
+  is not a column in somebody else's table but **the program's record of its own
+  act**: setting a password is something a writer did and is derivable from
+  nothing, which is exactly what earns a stored field here (addendum 08's
+  `retired`, addendum 24's `deletedAt`) against the two dozen facts this project
+  refuses to store because they can be read. **The record is made where the
+  password is** — migration 0065 is one column on `profiles` and a trigger
+  `after update of encrypted_password` with a `when (old is distinct from new)`,
+  so a sign-in and a confirmation do not stamp and **signing up is an INSERT and
+  so is not a change**, which is the whole point; a trigger rather than a stamp
+  each screen writes, because no client can then claim a password it has not
+  got, no screen that sets one can forget, and **the reset page and anything
+  built later are covered the day they are written** — `on_auth_user_created`'s
+  shape, 0033's answer to a question RLS cannot ask. Proved in a rolled-back
+  block on the live project: null after signup, stamped on a set, **unchanged
+  after a sign-in**. The linter then caught what 0065 had left out and it is this
+  project's own idiom — a `security definer` function with the default grant is
+  callable at `/rest/v1/rpc/note_password_set` **by anybody at all**, which 0005
+  says of `handle_new_user`, the only other trigger function here, so execute is
+  revoked from `public`, `anon` and `authenticated`; the helpers 0005 leaves
+  executable are left so because an RLS policy calls them as the invoking role,
+  and **a trigger function has no caller but its trigger**. The one rule in
+  `account-password.ts` is that **no record is not proof of no password**: the
+  stamp began the day it shipped, so there are **two states and not three** and
+  no *definitely none*, nothing being able to tell somebody who never set one
+  from somebody who set one earlier, and the sentence says a password set before
+  this still works and saving it again will show the date — a page that told a
+  writer they had none while theirs worked being the one failure that makes them
+  distrust everything else on it. The `set` sentence names **where it works**,
+  which is Ken's point about teams. Driving it caught this addendum's own fault
+  two sections back: the date reached for **`.muted`**, which has never had a
+  bare rule on this site (§14a found exactly that and named `.field-note` for
+  it), so it drew at full gold — `.password-when` and `.password-standing-note`
+  now, measured back at `rgb(163, 148, 111)` — and **the screen argued with
+  itself**, the current-password note reading *Leave this empty if you have
+  never set one* two lines under *Password set*; it reads the standing.
   **§15 is the notes at the desk**, from Ken in one message, and it opens with
   the fault that made the rest invisible: **`listCaptures` in the browser
   bridge answered `ok([])` — always**. The Research window has loaded the queue

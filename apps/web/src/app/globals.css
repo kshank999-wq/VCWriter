@@ -2023,3 +2023,35 @@ p.room-stamp {
   line-height: 1.4;
   margin: -2px 0 0;
 }
+
+/* Whether an account has a password (addendum 09 §14c). A statement beside the
+   heading rather than in it: the heading is what a writer is looking for and is
+   the same either way, while this is the part that can honestly change. The
+   dot is `aria-hidden` and the words carry the state, colour never being the
+   only thing that says it. */
+.password-standing {
+  margin: 4px 0 2px;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.password-standing.set {
+  color: var(--gold);
+}
+
+/* Both of these are named rather than reaching for `.muted`, which has never
+   had a rule of its own on this site (addendum 09 §14a) — the first draft of
+   this panel used it twice and drew the date in the same gold as the words
+   beside it, and the sentence under them at full body colour. */
+.password-standing .password-when {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.password-standing-note {
+  margin: 0 0 20px;
+  max-width: 54ch;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}

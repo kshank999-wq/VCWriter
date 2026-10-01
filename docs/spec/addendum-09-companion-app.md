@@ -1251,6 +1251,106 @@ the sent notice **says the same thing whether or not the address has an
 account**, since answering differently would turn the form into a way of
 asking the site who its customers are.
 
+### 14c. Saying so
+
+From Ken: *VC Writer will need the same thing as VC Publishing, where you can
+have an account, and once you get your email login, that you set a password,
+and that it says password set in your account settings. And this is going to be
+important, especially for doing teams in Writers Room and things like that. So
+you can log into your account with your credentials.*
+
+Everything but the middle clause was built. §14 put the password form on the
+account page and §14b put the repair beside it, so a writer can set one and can
+reset one. What the page could not do is **say whether they had**.
+
+#### Why it said nothing, and why §14 was right to refuse
+
+§14 states the reason in its own words — *nothing on an account says whether a
+password was ever set* — and it is worth reading twice, because it is **right
+about the evidence and the conclusion it drew from it was wrong**.
+
+The evidence first, measured on this project rather than assumed. The column
+that looks like the answer is `auth.users.encrypted_password`, and Supabase
+writes a bcrypt hash into it at **signup**, for every account, including one
+that has only ever used a link: **295 of 295 accounts here carry a 60-character
+`$2a$` hash, and exactly one has ever signed in.** So the obvious
+implementation is not merely unreliable, it is a lie told to every writer
+alive — a page reading *Password set* to somebody who has never had one, which
+is the one wording that would send them to the sign-in form to prove it and
+leave them stuck there.
+
+That is what §14 saw, and the heading reading *Password* for everybody was the
+honest answer **given that column**. The conclusion that does not follow is
+*and therefore it cannot be known*. The missing thing was never a column in
+somebody else's table; it was **the program's record of its own act**. Setting
+a password is something a writer did. It is not derivable from the work, which
+is exactly what earns a stored field here — addendum 08 §2's `retired`,
+addendum 24's `deletedAt` — against the two dozen facts this project refuses to
+store because they can be read.
+
+#### The record is made where the password is
+
+Migration 0065 is one column on `profiles` and a trigger on `auth.users`:
+`after update of encrypted_password`, with a `when (old … is distinct from
+new …)` so it fires on a real change and never on a sign-in or a confirmation.
+Signing up is an INSERT, so the hash Supabase writes there is not a change and
+does not stamp, **which is the whole point**.
+
+It is a trigger rather than a stamp each screen remembers to write for three
+reasons that are one reason: no client can claim a password it has not got, no
+screen that sets one can forget to say so, and **the reset page and anything
+built later are covered the day they are written** — `on_auth_user_created`'s
+own shape, and migration 0033's answer to a question RLS cannot ask.
+
+Proved end to end inside a rolled-back block on the live project: a fresh
+account reads `null` after signup, `now()` after a password is set, and
+**unchanged after a sign-in** — the two things that must differ, differing.
+
+The linter then caught what the migration had left out, within the hour, and it
+is the project's own idiom: a `security definer` function with the default
+grant is callable at `/rest/v1/rpc/note_password_set` **by anybody at all**.
+Migration 0005 says precisely this of `handle_new_user`, the only other trigger
+function this project has written, and revokes execute from `public`, `anon` and
+`authenticated`; 0065 does the same. The helper functions 0005 leaves
+executable are left executable because an RLS policy calls them as the invoking
+role. **A trigger function has no caller but its trigger.**
+
+#### No record is not proof of no password
+
+The one rule in `account-password.ts`, and the only thing in it that could be
+wrong in a way nobody notices. The stamp began the day it shipped, so somebody
+who set a password before it **has one and is not recorded** — so there are two
+states and not three, `set` and `unrecorded`, and there is deliberately no
+*definitely none*: nothing can tell those two people apart, and inventing the
+difference is how the page starts lying.
+
+The wording carries the caveat rather than hiding it. *No password set* is the
+label, and the sentence under it says what to do and then that a password set
+earlier still works and saving it again will show the date. **A page that told
+a writer they had no password while their password worked would be the one
+failure that makes them distrust everything else on it**, which is §14's own
+argument about *Invalid login credentials* pointed at a status line.
+
+The `set` sentence names **where it works**, because that is the point Ken is
+making about teams: a collaborator in a Writers Room signs in on whatever
+machine the work is on, and an emailed link only ever works in the browser that
+asked for it (§14).
+
+#### Driven
+
+Two faults, and the first is this addendum's own, two sections back. The date
+and the sentence reached for **`className="muted"`** and `.muted` has never had
+a bare rule in this site's stylesheet — §14a found exactly that and named
+`.field-note` for it, and it was reintroduced within the week. The date drew at
+full gold beside the label. They are `.password-when` and
+`.password-standing-note` now, named for what they are, and measured back at
+`rgb(163, 148, 111)`.
+
+And **the screen argued with itself**: the current-password field's note read
+*Leave this empty if you have never set one* two lines under *Password set*. It
+reads the standing now — *The one you have now* where there is a record — which
+is the same rule as the label, said one control down.
+
 ---
 
 ## 15. The notes at the desk
