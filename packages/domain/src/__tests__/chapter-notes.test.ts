@@ -420,3 +420,101 @@ describe("the Outliner's chapters and sections, as boxes", () => {
     expect(describeContents(made.file)).toMatch(/^2 chapters/);
   });
 });
+
+/**
+ * The section the project is born with (addendum 28 §4d).
+ *
+ * From Ken, sending §4c's ask back word for word: *it has a section for the
+ * outliner that creates chapter one. We don't need that anymore.* §4c read that
+ * as the route it had just added. It is the **box**: `createProjectFile` seeds
+ * one unit called *Chapter One*, and on a fresh book it was the only thing this
+ * screen drew, under a sentence saying there were no chapters.
+ *
+ * What these pin is the pair: the phantom goes, and **the same rule catches
+ * nothing a writer made** — which is the half worth testing, a hide being far
+ * easier to get too wide than too narrow.
+ */
+describe('the seeded starting section', () => {
+  const fresh = () => createProjectFile({ title: 'Fresh', format: 'instructional' });
+
+  it('is not a box, and the sentence no longer has one to deny', () => {
+    const file = fresh();
+    expect(file.units).toHaveLength(1);
+    expect(file.units[0]!.title).toBe('Chapter One');
+
+    expect(contentsShelf(file)).toEqual([]);
+    expect(describeContents(file)).toMatch(/No chapters yet/);
+  });
+
+  it('comes back the moment a word is written in it', () => {
+    let file = fresh();
+    const beat = file.beats[0]!;
+    file = {
+      ...file,
+      beats: file.beats.map((one) =>
+        one.id === beat.id
+          ? {
+              ...one,
+              manuscript: {
+                ...one.manuscript,
+                elements: [{ ...(one.manuscript.elements[0] ?? {}), id: 'e1', type: 'action', text: 'A word.' }],
+              },
+            }
+          : one,
+      ),
+    } as ProjectFile;
+
+    expect(contentsShelf(file)).toHaveLength(1);
+  });
+
+  it('comes back the moment a chapter is put on it', () => {
+    const file = fresh();
+    const made = addMarker(file, { unitId: file.units[0]!.id, kind: 'chapter', title: 'Mathematics' });
+    // The chapter and the section it opens on: two rows, neither hidden.
+    expect(contentsShelf(made.file).map((row) => row.title)).toEqual(['Mathematics', 'Chapter One']);
+  });
+
+  it('comes back the moment an outline row is promoted into it', () => {
+    let file = fresh();
+    const outline = createOutline(file, { name: 'Outline' });
+    file = outline.file;
+    const row = addItem(file, outline.outline.id, { kind: 'scene', title: 'Division' });
+    file = row.file;
+    // Promotion binds the row to a unit; with one unit that unit is the seed.
+    file = promoteRow(file, outline.outline.id, row.itemId!).file;
+
+    const bound = (file.outlines ?? [])[0]!.items.some((one) => one.boundUnitId !== null);
+    expect(bound).toBe(true);
+    expect(contentsShelf(file).some((r) => r.place.kind === 'section' && !r.planned)).toBe(true);
+  });
+
+  /**
+   * **The rule may not reach a second section.** A book with two units has had
+   * somebody's hand in it, so neither is the seed however empty they are — this
+   * is the assertion that stops the hide widening into work a writer did.
+   */
+  it('never hides a section where the book has more than one', () => {
+    const file = fresh();
+    const second = addUnit(file, { trackId: file.tracks[0]!.id, title: 'Multiplication' });
+    expect(contentsShelf(second.file).map((row) => row.title)).toEqual(['Chapter One', 'Multiplication']);
+  });
+
+  /** And the planned chapters still stand on their own, which is the ask. */
+  it('leaves the Outliner plans as the only boxes on a fresh book', () => {
+    let file = fresh();
+    const outline = createOutline(file, { name: 'Outline' });
+    file = outline.file;
+    const chapter = addItem(file, outline.outline.id, { kind: 'chapter', title: 'Mathematics' });
+    file = chapter.file;
+    file = addItem(file, outline.outline.id, {
+      kind: 'scene',
+      parentId: chapter.itemId!,
+      title: 'Division',
+    }).file;
+
+    expect(contentsShelf(file).map((row) => `${row.title} ${row.planned ? '(plan)' : ''}`.trim())).toEqual([
+      'Mathematics (plan)',
+      'Division (plan)',
+    ]);
+  });
+});

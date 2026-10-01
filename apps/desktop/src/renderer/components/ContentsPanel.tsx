@@ -282,7 +282,7 @@ export function ContentsPanel({
               goes, so it carries the sentence that says nothing is reached by
               dropping on it. */}
           {plans.length > 0 ? (
-            <section className="toc-group toc-plans">
+            <section className={`toc-group toc-plans${inBook.length > 0 ? ' after' : ''}`}>
               <h5>
                 Planned in the Outliner
                 <span className="muted small"> · not in the book yet</span>

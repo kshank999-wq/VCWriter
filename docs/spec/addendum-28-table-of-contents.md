@@ -435,3 +435,95 @@ two groups, a heading over the only list on a screen saying nothing.
   manuscript half lists exactly those. A note hanging under a section in the
   Outliner is a thing the writer knows rather than a place in the book — the
   rail's *a note gets no dot* (addendum 16 §15) pointed at a box.
+
+---
+
+## 4d. The section the project is born with
+
+From Ken, sending §4c's ask back **word for word**.
+
+§4c had shipped minutes earlier, so the easy explanation was that he had not
+looked yet. That explanation is not available in this project, and checking it
+was the first thing done rather than the last: `apps/web`'s `prebuild` runs
+`scripts/build-preview.mjs`, which rebuilds the renderer from source on every
+deployment and copies it to `public/preview`, none of which is checked in — and
+running it here puts *Planned in the Outliner* in the shipped bundle with *Open
+the Outliner* gone from it. The deployment was not stale. So the repeat meant
+what it has meant every other time.
+
+### §4c removed the wrong thing
+
+His first sentence is:
+
+> it has a section for the outliner that creates chapter one. **We don't need
+> that anymore.**
+
+§4c read that as the *Open the Outliner* route §4b had just added, removed it,
+and was wrong. Driving a **fresh** instructional book straight to Research ▸
+Table of contents — without touching the Outliner, which is the state anybody
+is in when they first look — draws exactly one thing:
+
+| | |
+| --- | --- |
+| Sentence | *1 section, and no chapters yet. Add chapters in the Outliner…* |
+| Boxes | **1. Chapter One** |
+
+That box is `createProjectFile`'s seed (`project-file.ts`: every project is born
+with one unit, titled *Chapter One* on a prose format and *Opening Scene*
+otherwise). It is **a section** — `nounsFor('instructional').unit` is *Section* —
+**that is called Chapter One** and that the writer never made. His sentence
+describes it exactly, word for word, and reading it as a button was reading past
+the thing he was looking at.
+
+It is also §3's and §4b's fault a **third** time, in the one place it costs
+most: a sentence reading *no chapters yet* standing over a box that names a
+chapter — and here the box is not merely a label but **a thing a writer is
+invited to aim research at**.
+
+### The rule
+
+**A box is a place in the book, and the starting section nobody has touched is
+not one.**
+
+`seedOnly` in `contentsShelf` identifies it by **what has happened to it rather
+than by its name**: a title here is the *program's*, so a rule about the words
+would be a rule about one seed in one format, and would say nothing about the
+next. Four signals say a writer has been here, any one of which is enough —
+
+- a chapter marker on it,
+- writing in it (any beat with a manuscript element),
+- a note filed under it,
+- an outline row promoted into it (`boundUnitId`).
+
+— plus the clause that makes it unambiguous: it is **the project's only unit**.
+A book with a second section has had somebody's hand in it, so **nothing anybody
+made can be caught by this**, which is the half worth testing, a hide being far
+easier to get too wide than too narrow. Five of the six new tests are that half:
+the box returns the moment a word is written in it, a chapter is put on it, or a
+row is promoted into it, and a book with two sections keeps both however empty.
+
+It is a reading, so it stores nothing and it un-hides itself.
+
+### Driven
+
+Measured against the bundle `build-preview.mjs` actually ships.
+
+- **Fresh book**: no boxes, and *No chapters yet. Add them in the Outliner and
+  they turn up here, and on the timeline.* — the sentence and the screen
+  agreeing for the first time.
+- **Fresh book, two chapters and three sections planned in the Outliner**: six
+  dashed boxes, numbered 1, 1.1, 1.2, 1.3, 2, 2.1, and **nothing else on the
+  screen**. Which is the whole of what he asked for.
+
+One thing looking caught: with the phantom gone there is only one group on his
+screen, and `.toc-plans`' rule was then separating the plans from nothing. It is
+drawn only where there are two groups.
+
+### The lesson
+
+**When the same words come back, re-read the words before re-reading the code.**
+§4c went straight to the mechanism, found a real gap and fixed it, and never
+checked its reading of the one sentence that said what to remove — so it removed
+something he had not mentioned and left the thing he had. The sentence named a
+*section*, named *chapter one*, and said *we don't need that*; all three are
+facts about a box that was on the screen the whole time.

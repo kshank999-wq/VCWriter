@@ -20146,7 +20146,9 @@ dialog.designed-page-dialog[open] {
   gap: 8px;
 }
 
-.toc-plans {
+/* The rule separates the plans from the book's own chapters, so it is drawn
+   only where there are two groups: a line under nothing separates nothing. */
+.toc-plans.after {
   border-top: 1px solid var(--border);
   padding-top: 12px;
 }

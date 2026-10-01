@@ -315,6 +315,44 @@ export const contentsShelf = (file: ProjectFile): ContentsRow[] => {
       .map((marker) => [marker.unitId as string, marker]),
   );
 
+  /**
+   * The starting section the project is born with, which is not a place in the
+   * book (§4d).
+   *
+   * From Ken, sending §4c's ask back word for word: *it has a section for the
+   * outliner that creates chapter one. We don't need that anymore.* §4c read
+   * that as the route it had just added and removed the wrong thing. It is
+   * **this box**: `createProjectFile` seeds every project with one unit, named
+   * *Chapter One* on a prose format, and on a fresh book it was the only box
+   * the table of contents drew — standing under a sentence reading *no chapters
+   * yet*, which is §3's and §4b's contradiction a third time, and in the one
+   * place where the box is also a thing you are invited to aim research at.
+   *
+   * It is identified by **what has happened to it rather than by its name**: a
+   * title is the program's here, so a rule about the words would be a rule
+   * about one seed in one format. Four signals say a writer has been here, and
+   * any one of them is enough — a chapter marker on it, writing in it, a note
+   * filed under it, or an outline row promoted into it. The *lone* clause is
+   * what makes it unambiguously the seed: a book with a second section has had
+   * somebody's hand in it, so nothing anybody made can be caught by this.
+   *
+   * A reading, so it stores nothing and it un-hides itself: write one word in
+   * that section, or put a chapter on it, and the box is there.
+   */
+  const bound = new Set(
+    (file.outlines ?? []).flatMap((outline) =>
+      outline.items.flatMap((row) => (row.boundUnitId ? [row.boundUnitId as string] : [])),
+    ),
+  );
+  const seedOnly =
+    file.units.length === 1 &&
+    opens.size === 0 &&
+    !bound.has(file.units[0]!.id as string) &&
+    !filed.has(placeKey({ kind: 'section', unitId: file.units[0]!.id })) &&
+    file.beats
+      .filter((beat) => (beat.unitId as string) === (file.units[0]!.id as string))
+      .every((beat) => beat.manuscript.elements.length === 0);
+
   const rows: ContentsRow[] = [];
   const countWritten = (notes: ResearchItem[]) =>
     notes.filter((note) => noteProgress(file, note) === 'written').length;
@@ -330,7 +368,7 @@ export const contentsShelf = (file: ProjectFile): ContentsRow[] => {
     rows.push({ place, number, title, summary, depth, planned, notes, written: countWritten(notes) });
   };
 
-  unitsInStoryOrder(file).forEach((unit) => {
+  (seedOnly ? [] : unitsInStoryOrder(file)).forEach((unit) => {
     const marker = opens.get(unit.id as string);
     if (marker) {
       add(

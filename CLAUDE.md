@@ -1517,6 +1517,35 @@ push live; the build takes a minute or two.
   style, addendum 02 §4b's `.ghost` fault the other way round), and **the first
   group was unnamed while the second was named**, so the book's own chapters
   read as the screen's preamble.
+  **§4d is the section the project is born with**, from Ken sending §4c's ask
+  back **word for word** minutes after it shipped — and the stale-deploy
+  explanation was checked first rather than offered: `apps/web`'s `prebuild`
+  rebuilds the renderer on every deployment and nothing is checked in, and the
+  shipped bundle carried the new strings. So **§4c had removed the wrong
+  thing**. His sentence is *it has a section for the outliner that creates
+  chapter one, we don't need that anymore*, which §4c read as the *Open the
+  Outliner* route it had just added; driving a **fresh** instructional book
+  straight to the panel — the state anybody is in when they first look — draws
+  exactly one box, **1. Chapter One**, which is `createProjectFile`'s seeded
+  unit: literally **a section**, literally **called Chapter One**, that the
+  writer never made, under a sentence reading *no chapters yet*. §3's and §4b's
+  contradiction a **third** time and in the one place it costs most, the box
+  being something a writer is invited to aim research at. The rule is that **a
+  box is a place in the book and the untouched starting section is not one**,
+  and `seedOnly` identifies it **by what has happened to it rather than by its
+  name** — a title here is the program's, so a rule about the words would be a
+  rule about one seed in one format: a chapter marker on it, writing in it, a
+  note filed under it or an outline row promoted into it each make it a place,
+  plus the clause that makes it unambiguous, **it is the project's only unit**,
+  since a book with a second section has had somebody's hand in it. **Nothing
+  anybody made can be caught by it**, which is the half worth testing — five of
+  the six new tests are that half. A reading, so it stores nothing and un-hides
+  itself. Driven: a fresh book now draws no boxes and says so, and a fresh book
+  with two chapters planned in the Outliner draws six dashed boxes and nothing
+  else. The keeper: **when the same words come back, re-read the words before
+  re-reading the code** — §4c went straight to the mechanism, found a real gap
+  and fixed it, and never checked its reading of the one sentence saying what to
+  remove.
   `addendum-11-setups-and-payoffs.md` is Setups & Payoffs, from Ken's own dev
   spec. **Built.** Half of it already existed (the record, its setup points, its
   payoff, archiving — master spec §7.3); what was missing was **the rule the
