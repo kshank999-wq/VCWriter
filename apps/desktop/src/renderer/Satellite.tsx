@@ -66,6 +66,43 @@ export default function Satellite({ pane }: { pane: PaneKey }) {
     document.title = file ? `${paneTitle(pane, format)} — ${file.project.title}` : paneTitle(pane);
   }, [pane, file]);
 
+  /**
+   * Save as, and save a copy, from a room (addendum 29 §1, from Ken: *the
+   * ability in every single module*).
+   *
+   * **The keys rather than a bar**, which is §6c's own answer for undo: these
+   * are the program's acts and not a focused field's, and a room that exists
+   * to be pushed onto a second monitor should be the section and almost
+   * nothing else — a Save-as button in every room's chrome is the workspace's
+   * business arriving in seven places. So the shortcut the File menu
+   * documents works here too, and §8's rule holds: **a room on the other
+   * monitor must not be able to do less than the panel it came out of.**
+   *
+   * The ask is relayed and the workspace acts, so there is one answer to where
+   * the project lives (`askToSave`). Nothing is said here afterwards, the
+   * banner being the workspace's — a room cannot know whether the dialog was
+   * dismissed.
+   */
+  const askToSave = project.askToSave;
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 's') return;
+      // Shift is the save-as and Alt the copy, exactly as the File menu has
+      // them; a plain Ctrl+S is the workspace's autosave and is left alone.
+      if (event.shiftKey) {
+        event.preventDefault();
+        askToSave('saveAs');
+        return;
+      }
+      if (event.altKey) {
+        event.preventDefault();
+        askToSave('saveCopy');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [askToSave]);
+
   if (!file) {
     return (
       <div className="satellite workspace">

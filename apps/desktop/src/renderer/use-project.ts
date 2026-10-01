@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { isWritersAct, remember, type HistoryStep, type ProjectFile, type ProjectFormat } from '@vcwriter/domain';
+import {
+  isWritersAct,
+  remember,
+  suggestedFileName,
+  type HistoryStep,
+  type ProjectFile,
+  type ProjectFormat,
+  type SaveKind,
+  type SavedTo,
+} from '@vcwriter/domain';
 
 /**
  * Open project state plus autosave.
@@ -43,6 +52,19 @@ export interface UseProjectResult {
    */
   adoptLoaded(loaded: { path: string; file: ProjectFile; contentHash: string }): void;
   saveNow(): Promise<void>;
+  /**
+   * Write the whole document somewhere else (addendum 29 §1).
+   *
+   * **This is the one place the two acts differ, and it is one line**: a save
+   * as adopts what came back, so the writer carries on in the new file, and a
+   * copy does not, so they carry on where they were. Everything else — asking
+   * for the place, writing the bytes, remembering the location — is shared, by
+   * the host, which is why there is no second code path to drift.
+   *
+   * Answers what happened rather than nothing, because the only thing worth
+   * saying afterwards is *where it went* and only the host knows.
+   */
+  saveAs(kind: SaveKind): Promise<SavedTo | null>;
   closeProject(): void;
 }
 
@@ -122,6 +144,53 @@ export const useProject = (): UseProjectResult => {
     if (result.data.written) setLastSavedAt(new Date().toISOString());
     setSaveState('saved');
     setError(null);
+  }, []);
+
+  /**
+   * Save as, and save a copy (addendum 29 §1).
+   *
+   * **What is written is the document in hand**, not the one on disk, which is
+   * `printing.ts`'s rule arriving at the file: the writer presses this having
+   * just typed something, and a copy that silently predated their last
+   * sentence would be the one failure this feature exists to prevent. The
+   * pending flush is left alone rather than awaited — the host is handed the
+   * live document, so the two cannot disagree and there is nothing to wait for.
+   *
+   * **Adopting is the whole difference.** On a save-as the new file becomes the
+   * one being written to, so its hash and path replace what was held; on a copy
+   * nothing local changes at all, because the writer never left.
+   */
+  const saveAs = useCallback(async (kind: SaveKind): Promise<SavedTo | null> => {
+    const currentFile = fileRef.current;
+    if (!currentFile) return null;
+
+    const result = await window.vcwriter.saveProjectAs({
+      kind,
+      file: currentFile,
+      suggestedName: suggestedFileName(currentFile.project.title, kind),
+    });
+
+    // A dismissed dialog is not a failure and must not paint one: the writer
+    // changed their mind, and saying *could not save* would read as a fault.
+    if (!result.ok || !result.data) {
+      if (result.error && !/cancel/i.test(result.error)) setError(result.error);
+      return null;
+    }
+
+    if (kind === 'as') {
+      // The history is this document's and comes with it — unlike `adopt`,
+      // which is for arriving at a *different* document (§6c's dropped
+      // histories). The same book in a new file is the same book.
+      pathRef.current = result.data.path;
+      hashRef.current = result.data.contentHash;
+      dirtyRef.current = false;
+      setPath(result.data.path);
+      setSaveState('saved');
+      setLastSavedAt(new Date().toISOString());
+    }
+
+    setError(null);
+    return { kind, path: result.data.path, working: kind === 'as' };
   }, []);
 
   useEffect(() => {
@@ -293,6 +362,7 @@ export const useProject = (): UseProjectResult => {
     replace,
     adoptLoaded,
     saveNow: flush,
+    saveAs,
     closeProject,
   };
 };

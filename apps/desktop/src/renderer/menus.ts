@@ -25,7 +25,15 @@ export type CommandId =
   | 'file.importStories'
   | 'file.projects'
   | 'file.save'
+  /**
+   * Two acts rather than one that did neither (addendum 29 §1). `file.saveAs`
+   * has existed since the menus were built, labelled *Save a copy…* and
+   * running an ordinary save — so the name is kept for the act it always
+   * should have been and the copy gets its own, since the two differ in
+   * which file the writer is in afterwards.
+   */
   | 'file.saveAs'
+  | 'file.saveCopy'
   | 'file.titlePage'
   | 'file.chapterPage'
   | 'file.pageSetup'
@@ -125,7 +133,12 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       { command: 'file.projects', label: 'Delete a project…' },
       null,
       { command: 'file.save', label: 'Save', accelerator: 'CmdOrCtrl+S' },
-      { command: 'file.saveAs', label: 'Save a copy…', accelerator: 'CmdOrCtrl+Shift+S' },
+      // **Save as moves you; a copy leaves one behind.** Shift+S is the save
+      // as, which is what every other program puts it on, and the copy takes
+      // Alt — it is the rarer act, and the one whose accelerator being pressed
+      // by accident should not change where somebody is writing.
+      { command: 'file.saveAs', label: 'Save as…', accelerator: 'CmdOrCtrl+Shift+S' },
+      { command: 'file.saveCopy', label: 'Save a copy…', accelerator: 'CmdOrCtrl+Alt+S' },
       null,
       { command: 'file.titlePage', label: 'Title page…' },
       // The leaf a chapter opens with (addendum 02 §12a). Beside the title

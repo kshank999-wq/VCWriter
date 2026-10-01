@@ -1,4 +1,5 @@
 import {
+  copyTitle,
   createProjectFile,
   parseProjectFile,
   printedPageCount,
@@ -349,6 +350,42 @@ export const createBrowserBridge = (): BrowserBridge => {
         if (contentHash === input.previousHash) return ok({ contentHash, written: false });
         await write({ path: input.path, file: input.file, contentHash, savedAt: new Date().toISOString() });
         return ok({ contentHash, written: true });
+      } catch (error) {
+        return fail((error as Error).message);
+      }
+    },
+
+    /**
+     * Save as, and save a copy, in the preview (addendum 29 §1).
+     *
+     * **Present rather than refused, because this is the build Ken uses.** The
+     * temptation is to say a browser has no folders and leave the two items
+     * dead here — which is addendum 09 §15's `ok([])` exactly: a feature that
+     * is there, tested and working, and reads as unbuilt from the one chair it
+     * is looked at from.
+     *
+     * A browser has one place rather than many, so there is nothing to ask the
+     * writer: the document is written into the preview's own library under a
+     * name of its own, and the `browser://` the path carries is **worth
+     * saying rather than hiding** — it is the one thing somebody needs to know
+     * about a copy made here, that it is in this browser and not on their disk.
+     *
+     * `pathFor` already refuses to collide and `store` already writes and
+     * answers in the shape an open does, so this adds no storage rule of its
+     * own; a second one would be a second answer to what a project in a
+     * browser is keyed by.
+     */
+    async saveProjectAs(input) {
+      try {
+        // The copy says it is one; a save-as is the same book elsewhere. The
+        // one place either act touches the document, and never the one the
+        // writer stays in — the caller is handed this back and adopts it only
+        // where the kind says to.
+        const file: ProjectFile =
+          input.kind === 'copy'
+            ? { ...input.file, project: { ...input.file.project, title: copyTitle(input.file.project.title) } }
+            : input.file;
+        return ok(await store(await pathFor(file.project.title), file));
       } catch (error) {
         return fail((error as Error).message);
       }

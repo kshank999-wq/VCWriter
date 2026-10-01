@@ -10,6 +10,7 @@ import {
   projectStats,
   setActBreaks,
   isInstructional,
+  describeSavedTo,
   isProseFormat,
   isInteractive,
   setParagraphStyle,
@@ -24,6 +25,7 @@ import {
   type ProjectFile,
   type Episode,
   type ProjectFormat,
+  type SaveKind,
   type ResearchView,
   type StoryMarkerId,
   type StructuralUnitId,
@@ -132,6 +134,12 @@ export default function App() {
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  /**
+   * Where a save-as or a copy went (addendum 29 §1). Its own state rather than
+   * the sync banner's, because the two say different things and one of them
+   * replacing the other would lose a sentence the writer needs.
+   */
+  const [savedWhere, setSavedWhere] = useState<string | null>(null);
   const [dictationShortcut, setDictationShortcut] = useState<string | null>(null);
   // Conflicts persist until the writer has dealt with them. A sync that
   // overwrote a scene is not resolved by the writer clicking past a status
@@ -301,6 +309,12 @@ export default function App() {
   const hub = useRef<DocumentHub | null>(null);
   const latest = useRef<{ file: ProjectFile | null; path: string | null }>({ file: null, path: null });
   latest.current = { file: project.file, path: project.path };
+  /**
+   * What a room asked the workspace to do (addendum 29 §1). A ref for
+   * `latest`'s own reason — the hub must outlive every document, so it cannot
+   * close over a callback that is rebuilt as the project changes.
+   */
+  const fromRoom = useRef<(name: 'saveAs' | 'saveCopy') => void>(() => undefined);
 
   useEffect(() => {
     const made = createHub({
@@ -310,6 +324,7 @@ export default function App() {
       schedule: everyFew(60),
       onProposal: (next) => project.replace(next),
       current: () => latest.current,
+      onCommand: (name) => fromRoom.current(name),
     });
     hub.current = made;
     return () => {
@@ -549,6 +564,27 @@ export default function App() {
   useWritingClock(file !== null, project.update);
 
   /**
+   * Save as, and save a copy (addendum 29 §1). **One function for both**, so
+   * the two menu items cannot come to mean different things, with the kind the
+   * only argument — and it **says where it went**, since Ken's ask ends on
+   * re-finding the file and *Saved* answers nothing about that.
+   *
+   * A dismissed dialog says nothing at all: the writer changed their mind,
+   * and a banner reporting it would read as a fault.
+   */
+  const saveSomewhere = useCallback(
+    async (kind: SaveKind) => {
+      const saved = await project.saveAs(kind);
+      if (saved) setSavedWhere(describeSavedTo(saved));
+    },
+    [project],
+  );
+
+  // The one place a room's ask lands, assigned rather than passed because the
+  // hub is built once and this is rebuilt whenever the project is.
+  fromRoom.current = (name) => void saveSomewhere(name === 'saveAs' ? 'as' : 'copy');
+
+  /**
    * What every menu item does (addendum 02 §13). The menus themselves know
    * only a command's name and label; this is the one place that knows what
    * is open and can act on it, which is why it lives here and not there.
@@ -571,10 +607,17 @@ export default function App() {
           return setProjectsOpen(true);
         case 'file.save':
           return void project.saveNow();
+        // **Two acts, and until now one item that did neither** (addendum 29
+        // §1): `file.saveAs` was labelled *Save a copy…* and called
+        // `saveNow()`, an ordinary save to the same file — so the act was its
+        // own label's opposite, with the accelerator working and nothing
+        // erroring. Both go through the one `saveAs`, which differs only in
+        // whether what comes back is adopted, and both say where it landed,
+        // because *finding it again* is the whole of what was asked for.
         case 'file.saveAs':
-          // The desktop writes through the same channel a save does; the
-          // browser preview hands back a file to keep.
-          return void project.saveNow();
+          return void saveSomewhere('as');
+        case 'file.saveCopy':
+          return void saveSomewhere('copy');
         case 'file.titlePage':
           // **On a book the title page is the book's** (§16b, from Ken: *the
           // title page dialogue box not showing — probably same problem as
@@ -707,7 +750,7 @@ export default function App() {
           return setPreferencesOpen(true);
       }
     },
-    [project, print, exportPdf, selectedBeat, detached, view, openPane, closePane, resetWindows],
+    [project, print, exportPdf, saveSomewhere, selectedBeat, detached, view, openPane, closePane, resetWindows],
   );
 
   /** The items with a tick beside them right now. */
@@ -1049,6 +1092,19 @@ export default function App() {
         <p className="notice banner" role="status">
           {syncMessage}
           <button type="button" className="ghost" onClick={() => setSyncMessage(null)}>
+            Dismiss
+          </button>
+        </p>
+      ) : null}
+
+      {/* Where the last save-as or copy landed (addendum 29 §1). It carries the
+          path as the host gave it — a shortened one is a path you cannot search
+          your own disk for — and is dismissed rather than timed out, since it
+          is the only place the location is said. */}
+      {savedWhere ? (
+        <p className="notice banner" role="status">
+          {savedWhere}
+          <button type="button" className="ghost" onClick={() => setSavedWhere(null)}>
             Dismiss
           </button>
         </p>

@@ -2,10 +2,13 @@ import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import { join } from 'node:path';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import {
+  copyTitle,
   createProjectFile,
   parseProjectFile,
   projectsNewestFirst,
+  suggestedFileName,
   type CaptureItem,
+  type SaveKind,
   type LearningAidKind,
   type LearningSuggestion,
   type PrintOptions,
@@ -305,6 +308,54 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
           snapshot: input.snapshot ?? false,
         });
         return ok({ contentHash: result.contentHash, written: result.written });
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  /**
+   * Save as, and save a copy (addendum 29 §1). **One handler, because the two
+   * acts differ only in where the writer ends up** — which is the renderer's
+   * business and not this file's: here both ask for a place and write the whole
+   * document to it. A second handler would be a second answer to *how is a
+   * project written somewhere else*, free to drift the first time one of them
+   * learned something.
+   *
+   * The document is validated on the way in for `project:save`'s reason, and
+   * **the place is remembered** by the same `rememberRecent` an open and a
+   * create call, which is the whole of Ken's *save the location of that file so
+   * it can re-find it*: no new record, and the copy turns up on `File ▸ Open`
+   * and the Projects screen beside everything else.
+   */
+  ipcMain.handle(
+    'project:saveAs',
+    async (
+      _event,
+      input: { kind: SaveKind; file: unknown; suggestedName?: string },
+    ): Promise<DesktopApiResult<{ path: string; file: ProjectFile; contentHash: string }>> => {
+      try {
+        const incoming = parseProjectFile(input.file);
+        // **The copy says it is one and the original is untouched.** Only the
+        // copy's title is changed, and only here, so the document the writer
+        // goes on editing is byte-identical whichever act was asked for.
+        const file: ProjectFile =
+          input.kind === 'copy'
+            ? { ...incoming, project: { ...incoming.project, title: copyTitle(incoming.project.title) } }
+            : incoming;
+
+        const name = input.suggestedName || suggestedFileName(file.project.title, input.kind);
+        const suggested = join(app.getPath('documents'), 'VC Writer', `${name}.${PROJECT_EXTENSION}`);
+        const window = getWindow();
+        const options = { defaultPath: suggested, filters: FILE_FILTERS };
+        const choice = window
+          ? await dialog.showSaveDialog(window, options)
+          : await dialog.showSaveDialog(options);
+        if (choice.canceled || !choice.filePath) return fail(new Error('Cancelled'));
+
+        const saved = await saveProject(choice.filePath, file);
+        await rememberRecent(saved.path, file.project.title);
+        return ok({ path: saved.path, file, contentHash: saved.contentHash });
       } catch (cause) {
         return fail(cause);
       }

@@ -12,6 +12,7 @@ import type {
   ProjectFormat,
   RoomMaster,
   RoomRole,
+  SaveKind,
   SceneVerdict,
   Seat,
   Standing,
@@ -119,6 +120,26 @@ export interface VcWriterApi {
     previousHash?: string;
     snapshot?: boolean;
   }): Promise<DesktopApiResult<{ contentHash: string; written: boolean }>>;
+  /**
+   * Write the whole document somewhere else (addendum 29 §1).
+   *
+   * **One method for both acts**, because they differ only in which file the
+   * writer is in afterwards, and that is the renderer's to act on rather than
+   * the host's to decide — so the host is asked the same question either way
+   * and answers with where it landed. `kind` reaches the host only so a copy
+   * can be titled as one and the dialog can suggest the right name.
+   *
+   * What *where* means is the host's own: a folder and a file name on the
+   * desktop, the browser's own library in the preview. Neither is sniffed for
+   * (`window.vcwriter` is deliberately identical in both), which is why the
+   * result carries the `path` it used and the screen says it back rather than
+   * composing a sentence about a place it assumed.
+   */
+  saveProjectAs(input: {
+    kind: SaveKind;
+    file: ProjectFile;
+    suggestedName?: string;
+  }): Promise<DesktopApiResult<OpenResult>>;
   recentProjects(): Promise<DesktopApiResult<string[]>>;
   /**
    * Every project this machine has, with enough about each to choose between
@@ -393,6 +414,7 @@ const api: VcWriterApi = {
   openProject: () => ipcRenderer.invoke('project:open'),
   openProjectAtPath: (path) => ipcRenderer.invoke('project:openPath', path),
   saveProject: (input) => ipcRenderer.invoke('project:save', input),
+  saveProjectAs: (input) => ipcRenderer.invoke('project:saveAs', input),
   recentProjects: () => ipcRenderer.invoke('project:recents'),
   listProjects: () => ipcRenderer.invoke('project:list'),
   deleteProject: (path: string) => ipcRenderer.invoke('project:delete', path),

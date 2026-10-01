@@ -4820,6 +4820,69 @@ push live; the build takes a minute or two.
   place of the Script, the storyboard on the timeline, playback, and the two
   documents it prints. **All eight stages are built** — §9 says what each one
   does.
+  `addendum-29-saving.md` is **save as, and save a copy**, from Ken (*the
+  ability in every single module to be able to save as, where you can save it
+  as a location. Save a copy should give you the ability to save a copy that
+  gives a version in that location. And it should save the location of that
+  file so it can re-find it*). **Built.** It opens on a fault of the plainest
+  kind: `File ▸ Save a copy…` has existed since the menus were built, carried
+  `Ctrl+Shift+S`, was never greyed, never errored — and ran
+  `project.saveNow()`, an ordinary save to the same file with no dialog and
+  nothing copied, so **the act was its own label's opposite**. Addendum 20
+  §16b's lesson a second time (*a menu command is the most durable route in
+  the program and the least likely to be revisited*), and **worse than an
+  unbuilt feature**, an unbuilt one being absent where this one answered: a
+  writer pressed it, saw *Saved*, and could not find out there was no copy
+  until they went looking for a file that was never written. **The two acts
+  differ in exactly one thing and it is not the file they write** — both ask
+  for a place and write the whole document there, and what differs is *which
+  file you are working in afterwards*, which is why there is one domain module
+  (`saving.ts`), one handler, one bridge method and one `saveAs(kind)` with
+  **the difference a single branch**: a save-as adopts what comes back, a copy
+  does not. The sentences say what each act's fear is about — save as names
+  **what happens to the file left behind** (a writer expecting a *move* and
+  getting a copy has two files and believes they have one), a copy names **what
+  happens to the one in hand**. **A copy says it is one**: `copyTitle` is the
+  only thing either act changes about the document and never the file the
+  writer stays in, because Ken's word for what this makes is a *version* and a
+  version you cannot tell from the original is not one — the file name would
+  carry it on the desktop, but the Projects screen, the recents, the running
+  heads, the contents page and the eBook metadata all name the book by its
+  **title**; it does not stack, a copy of *Lamp copy* being *Lamp copy*.
+  **The location needed no new record** — both acts call the same
+  `rememberRecent` an open and a create already call, so Ken's third sentence
+  was answered by anything at all being written, and `describeSavedTo` **names
+  the place rather than only the act**, *Saved* answering nothing about finding
+  it again, with the path said exactly as the host gave it (a shortened path is
+  one you cannot search your own disk for). **What a place is, is the host's**:
+  `window.vcwriter` is deliberately identical in both so it may not be sniffed,
+  so the renderer asks one question and the host answers with where it landed —
+  a folder on the desktop, the preview's own library in the browser, where
+  `pathFor` has refused to collide since it was written. **The preview half is
+  not a nicety**: leaving the two items dead there because a browser has no
+  folders is addendum 09 §15's `ok([])` exactly, and the `browser://` in the
+  path is **said rather than hidden**, being the one thing somebody needs to
+  know about a copy made there. **What is written is the document in hand**,
+  `printing.ts`'s rule at the disk — proved by renaming a beat through the
+  Inspector and copying a second later, the copy holding *Renamed a moment ago*
+  while the original on disk still held *Opening beat*. **Every single module**
+  is the rooms: a popped-out room has **no menu bar at all**, and §8's rule is
+  that it must not do less than the panel it came out of — but **a room does not
+  write the file**, holding the document and owning no path, so a room that
+  wrote one would leave two windows disagreeing about where the project is and a
+  save-as would move the workspace's file without the workspace knowing. So the
+  room **asks**: a `command` message carrying a **name and never a document**,
+  which cannot become a second way to change the writing and does nothing at all
+  unrecognised; the new path reaches every room for free, the link's `doc`
+  having carried `path` since it was built. **The keys rather than a bar**
+  (addendum 02 §6c's answer for undo — the program's acts and not a focused
+  field's), nothing said in the room afterwards, a room not being able to know
+  whether the dialog was dismissed. Shift+S is the save-as and **Alt+S the
+  copy**, the rarer act and the one whose accelerator pressed by accident should
+  not change where somebody is writing. Driving it caught the one worth
+  keeping: **a dismissed dialog is not a failure and must not paint one** — the
+  writer changed their mind, and *could not save* would read as a fault in the
+  program. §10 names what is deliberately absent.
 
 ## Before pushing
 

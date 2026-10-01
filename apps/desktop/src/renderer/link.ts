@@ -30,6 +30,22 @@ export type LinkMessage =
   /** The document as the hub holds it. `acks` records each client's last accepted proposal. */
   | { kind: 'doc'; version: number; file: ProjectFile; path: string | null; acks: Record<string, number> }
   | { kind: 'propose'; from: string; seq: number; baseVersion: number; file: ProjectFile }
+  /**
+   * A room asking the workspace to do something only the workspace can
+   * (addendum 29 §1).
+   *
+   * **The file is the project's and not the room's.** A popped-out room holds
+   * the document but owns no path, so a room that wrote a file of its own
+   * would leave the two windows disagreeing about where the project is — and a
+   * *save as* done that way would move the workspace's file without the
+   * workspace knowing. So the room asks and the workspace acts, which is
+   * `printing.ts`'s rule (one place) pointed at the disk instead of the paper.
+   *
+   * It carries a name rather than a document, so this can never be a second
+   * way to change the writing: a `command` the workspace does not recognise
+   * does nothing at all.
+   */
+  | { kind: 'command'; name: 'saveAs' | 'saveCopy' }
   /** The hub is going away: its windows are on their own. */
   | { kind: 'closing' };
 
@@ -86,6 +102,12 @@ export interface HubOptions {
   /** What the hub currently holds, for answering a window that just opened. */
   current(): { file: ProjectFile | null; path: string | null };
   /**
+   * Do what a room asked for (addendum 29 §1). Optional, so a hub built
+   * without one simply ignores the asks — a window that cannot act on a
+   * command is better than one that half does.
+   */
+  onCommand?(name: 'saveAs' | 'saveCopy'): void;
+  /**
    * When to actually put a message on the wire. The default is at once, which
    * is what a test wants; the workspace coalesces, so that a held-down key
    * sends the document a few times a second rather than once per character.
@@ -115,7 +137,13 @@ export const everyFew = (ms: number): Scheduler => {
  * The workspace's side of the link. It answers `hello`, judges proposals
  * against the version it holds, and publishes whatever it ends up with.
  */
-export const createHub = ({ transport, onProposal, current, schedule = AT_ONCE }: HubOptions): DocumentHub => {
+export const createHub = ({
+  transport,
+  onProposal,
+  current,
+  onCommand,
+  schedule = AT_ONCE,
+}: HubOptions): DocumentHub => {
   let version = 0;
   let published: ProjectFile | null = null;
   let path: string | null = null;
@@ -147,6 +175,13 @@ export const createHub = ({ transport, onProposal, current, schedule = AT_ONCE }
         path = state.path;
         broadcast();
       }
+      return;
+    }
+
+    // A room asking for something only the workspace can do. It carries a
+    // name and never a document, so an unknown one does nothing.
+    if (message.kind === 'command') {
+      onCommand?.(message.name);
       return;
     }
 
@@ -184,6 +219,12 @@ export interface DocumentClient {
    * acknowledges it, so it can be replayed if the document moved underneath.
    */
   propose(file: ProjectFile, mutate: (current: ProjectFile) => ProjectFile): void;
+  /**
+   * Ask the workspace to do something only it can (addendum 29 §1). Nothing
+   * is sent back: the workspace acts, and whatever changes about the document
+   * or its path arrives as the ordinary `doc` that follows.
+   */
+  ask(name: 'saveAs' | 'saveCopy'): void;
   stop(): void;
 }
 
@@ -265,6 +306,7 @@ export const createClient = ({
       queued = file;
       schedule(flush);
     },
+    ask: (name) => transport.send({ kind: 'command', name }),
     stop: unsubscribe,
   };
 };

@@ -21,6 +21,17 @@ export interface LinkedProject {
   /** The workspace window closed; there is nothing left to edit. */
   hubGone: boolean;
   update(mutate: (current: ProjectFile) => ProjectFile): void;
+  /**
+   * Ask the workspace to save the project somewhere else (addendum 29 §1).
+   *
+   * **A room does not write the file.** It holds the document but owns no
+   * path, so writing one here would leave the two windows disagreeing about
+   * where the project is — and a save-as would move the workspace's file
+   * without the workspace knowing. The new path arrives as the ordinary `doc`
+   * message, which has carried it since the link was built, so nothing had to
+   * be added for a room to end up in the right place.
+   */
+  askToSave(kind: 'saveAs' | 'saveCopy'): void;
 }
 
 /** How often a window that is being typed in sends the document on. */
@@ -72,5 +83,9 @@ export const useLinkedProject = (): LinkedProject => {
     client.current?.propose(next, mutate);
   }, []);
 
-  return { file, path, connected: file !== null, hubGone, update };
+  const askToSave = useCallback((kind: 'saveAs' | 'saveCopy') => {
+    client.current?.ask(kind);
+  }, []);
+
+  return { file, path, connected: file !== null, hubGone, update, askToSave };
 };
