@@ -555,3 +555,105 @@ learning aids' has not.
 hosts, the availability check and the offer-accept-undo shape all existed on
 the learning aids, and the stage was one reading, four small functions and
 the dialog's use of them. §9's build order is complete, and §12 with it.
+
+## §10 — How the rows are named, and one row shape
+
+From Ken, in one message:
+
+> In the outliner, I want the sections and subsections along with the chapters
+> to be in title case, or sentence case, you can choose between in a setting.
+>
+> The outliner formatting is a bit strange. If you hit chapter, it should drop
+> a chapter in. And then when you drop a section, it'll drop a section under
+> that chapter. But sometimes it puts a box around it. Sometimes it forces
+> capitalization. Sometimes it does both. Please check to make sure it's
+> consistent.
+
+The placement he describes is right and was right: a Chapter goes to the top
+and a Section lands under the chapter the writer is in (§2). The *but* is
+about the look, and measuring it on a textbook of five rows gave four kinds
+with four treatments and no rule anybody could state:
+
+| row | box | case |
+| --- | --- | --- |
+| Chapter | **none** — a gold rule under it instead | **UPPERCASE** |
+| Section | box, gold border | **UPPERCASE** |
+| Subsection | box, grey border, filled | as typed |
+| Note, Idea | box, grey border, **unfilled** | as typed |
+
+So: capitals only, both, box only, box only drawn differently. He is right,
+and it is exactly *sometimes a box, sometimes capitals, sometimes both*.
+
+### The fault under it
+
+The capitals were `text-transform` in the stylesheet, and that is worse than
+untidy. **A row's name travels**: promoting a row carries its title into the
+marker, the unit or the beat, and nothing downstream shouts. Measured on a
+fixture, the project stored *Mathematics and its parts*, the Outliner drew
+MATHEMATICS AND ITS PARTS and the chapter page printed *Mathematics and its
+parts* — the outline, the timeline, the contents page and the printed page as
+four answers to one name.
+
+So the setting **casts the words rather than how they are drawn**, which is
+the opposite of addendum 02 §12a and for a reason that is stated there: the
+look belongs to the book and the letters are the writer's, *because a chapter
+page's type is not its words*. Here the row's name **is** what travels, so a
+case kept in a stylesheet is a case the book does not print.
+
+### One row shape
+
+**Every row is the same box and the type says what it is.** The box means
+*this is where you type*, which is true of every row alike; what differs is
+the face, the size and the colour — chapter 15px gold, section 13px gold,
+subsection plain, note and idea muted. The chapter's missing border and the
+supporting rows' third fill are both gone. Hierarchy by type, never by
+whether the thing you type in has an edge.
+
+### The setting
+
+`outlineCase` on the project (`as_typed` by default, so no outline made
+before this moves), `packages/domain/src/outline-case.ts`, and a select on
+the Outliner's bar beside the filter, where the names are.
+
+**Title case** capitalises every word but the small ones, with the first and
+the last always up. **Sentence case** capitalises the first word and lowers
+the rest. Two words are left exactly as typed, and both are the writer saying
+something no rule can: **a word in capitals** (*NASA*, *PDF*, *I* — nothing
+can tell an abbreviation from shouting, and shouting is theirs) and **a word
+with a capital after its first letter** (*iPhone*, *McDonald*). A hyphenated
+word is cast as a run of its own, so *state-of-the-art* reads the same rule
+one level down rather than a second copy of it. **A colon starts a new title
+and does not start a new sentence** — *Division: The Long Way* against
+*Division: the long way* — which is the one place the two cases part, and a
+chapter named with a colon is the commonest title there is.
+
+**Choosing the case names what is already written.** A setting that reached
+only rows typed afterwards would do nothing on the screen when it was
+pressed, which in this room reads exactly like a setting that does not work.
+It is one act, it says how many rows it would rename, and undo takes it back
+in a keystroke (addendum 02 §6c).
+
+### What driving it caught
+
+**Sentence case lowercased *Hans Gruber*** — and would have gone on doing it.
+The cast also ran when a writer left a row's box, so a surname put back by
+hand would have been taken off again the moment they clicked away, every
+time: a control that undoes you. No rule can tell a surname from an ordinary
+word, so the answer is not a better rule but a smaller reach. `Reach` is a
+pair: **choosing the case may lower, and leaving a box may only add**. A
+writer asking for sentence case has asked for the capitals to come off; a
+writer who merely left a row has not. Driven on the real screen — *Hans
+Gruber* put back survives the blur, and a row typed afterwards reads *Open
+with a worked page about Gauss*, first word up and the name untouched.
+
+**The bar ran off the window.** It was `overflow-x: auto`, so at 1440 the
+tally, *Print…*, *PDF…* and *Copy* sat past the right edge behind an overlay
+scrollbar that draws nothing until the pointer is already in the strip —
+addendum 25 §4g's fault on a toolbar, where what is hidden is a control
+rather than a picture. It wraps now: two rows, 83px, nothing unreachable.
+Adding a control to a bar that already overflowed is what made it worth
+fixing here rather than later.
+
+**What is not built**: a case per kind. One setting names every row, which is
+what *make it consistent* asks for; if chapters alone should be cast, that is
+one line to say and a small change.

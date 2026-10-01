@@ -119,6 +119,7 @@ export * from './note-sorter-suggest.js';
 export * from './entities/note-sorter.js';
 export * from './outline.js';
 export * from './outline-binding.js';
+export * from './outline-case.js';
 export * from './crossing.js';
 export * from './story-layout.js';
 export * from './story-threads.js';

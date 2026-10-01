@@ -1993,6 +1993,52 @@ push live; the build takes a minute or two.
   file. That rename fused `.lane-head` into `.track-head`, two classes into
   one of seventeen rules, which no test could see; `.row-head` is the generic
   sticky cell now, and the counts are back to eight and nine.
+  **§10 is how the rows are named, and one row shape**, from Ken (*I want the
+  sections and subsections along with the chapters to be in title case, or
+  sentence case, you can choose between in a setting… sometimes it puts a box
+  around it. Sometimes it forces capitalization. Sometimes it does both*). The
+  placement he describes was already right; the *but* is the look, and
+  measuring five rows on a textbook gave **four kinds with four treatments** —
+  a chapter with no box and capitals, a section with a box and capitals, a
+  subsection with a box and none, a note with a box of a third fill — which is
+  his sentence exactly and no rule anybody could state. **The fault under it is
+  that the capitals were `text-transform`**: a row's name *travels*, promotion
+  carrying it into the marker, the unit or the beat, so the project stored
+  *Mathematics and its parts*, the Outliner drew MATHEMATICS AND ITS PARTS and
+  the chapter page printed the stored one — the outline, the timeline, the
+  contents page and the printed page as **four answers to one name**. So the
+  setting **casts the words rather than how they are drawn**, which is the
+  opposite of addendum 02 §12a and for that section's own stated reason: there
+  the look belongs to the book and the letters are the writer's *because a
+  chapter page's type is not its words*, and here the name **is** what travels,
+  so a case kept in a stylesheet is a case the book does not print.
+  **Every row is the same box and the type says what it is** — the box means
+  *this is where you type*, true of every row alike, so what differs is the
+  face, the size and the colour. `outlineCase` on the project (`as_typed` by
+  default, so no outline moves), `outline-case.ts`, a select on the bar beside
+  the filter. Two words are left **exactly as typed** and both are the writer
+  saying what no rule can: **a word in capitals** (*NASA*, *I* — nothing tells
+  an abbreviation from shouting, and shouting is theirs) and **a word with a
+  capital after its first letter** (*iPhone*, *McDonald*); a hyphenated word is
+  the same rule one level down rather than a second copy; and **a colon starts
+  a new title and not a new sentence**, the one place the two cases part and
+  the commonest title there is. **Choosing it names what is already written**,
+  a setting reaching only rows typed afterwards reading as one that does not
+  work. Driving it caught the one that mattered: **sentence case lowercased
+  *Hans Gruber*** and, because the cast also ran on leaving a box, would have
+  taken the capitals off again every time the writer put them back — a control
+  that undoes you, and no rule can tell a surname from an ordinary word. The
+  answer is a **smaller reach rather than a better rule**: `Reach` is a pair,
+  **choosing the case may lower and leaving a box may only add**, since
+  somebody asking for sentence case has asked for the capitals off and somebody
+  who merely left a row has not. It also caught the bar running **off the
+  window** — `overflow-x: auto`, so at 1440 the tally, *Print…*, *PDF…* and
+  *Copy* sat past the right edge behind an overlay scrollbar that draws nothing
+  until the pointer is in it (addendum 25 §4g on a toolbar, where what is
+  hidden is a control rather than a picture); it wraps now, two rows and
+  nothing unreachable, which adding a control to it is what made worth fixing
+  here. **Not built and named**: a case per kind, one setting naming every row
+  being what *make it consistent* asks for.
   `addendum-20-layout.md` is **Layout**, the room where a book is set, from
   Ken's ask for something comparable to Vellum: *enter the trim size and it
   sets up margins, page numbers, headers, footers, spread balancing*, with

@@ -126,6 +126,17 @@ export const projectSettingsSchema = z.object({
    * falls, so moving one renumbers everything with nothing run.
    */
   sectionNumbering: z.enum(['decimal', 'none']).default('decimal'),
+  /**
+   * How the Outliner's rows are named (addendum 19 §10).
+   *
+   * **It casts the words rather than how they are drawn**, which is why it is
+   * here rather than in a stylesheet: a row's name travels into the marker,
+   * the unit or the beat when it is promoted, so a case the Outliner alone
+   * knew about would be a case the book does not print. `as_typed` is the
+   * default, so no outline made before this moves. `outline-case.ts` holds
+   * what each one means.
+   */
+  outlineCase: z.enum(['as_typed', 'title', 'sentence']).default('as_typed'),
   /** Whether a printing carries the chapter pages. */
   includeChapterPagesInExport: z.boolean().default(true),
   /**

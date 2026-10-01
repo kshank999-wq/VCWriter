@@ -18,6 +18,13 @@ import {
   findOutline,
   findOutlineItem,
   foldAll,
+  OUTLINE_CASES,
+  OUTLINE_CASE_WORDS,
+  castRowName,
+  describeOutlineCase,
+  outlineCaseOf,
+  setOutlineCase,
+  type OutlineCase,
   followOutline,
   indentItem,
   isPromoted,
@@ -681,6 +688,31 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
               ))}
             </select>
 
+            {/*
+              How the rows are named (addendum 19 §10). It stands beside the
+              filter because this is where a writer is looking at the names,
+              and it **casts the words** rather than drawing them differently
+              — so the sentence under it says how many rows a press would
+              rename, a setting that reaches work somebody did being one that
+              has to say so before it is pressed.
+            */}
+            <select
+              aria-label="How the rows are named"
+              className="outline-case"
+              title={describeOutlineCase(file, outlineCaseOf(file))}
+              value={outlineCaseOf(file)}
+              onChange={(event) => {
+                const how = event.target.value as OutlineCase;
+                onUpdate((current) => setOutlineCase(current, how));
+              }}
+            >
+              {OUTLINE_CASES.map((how) => (
+                <option key={how} value={how}>
+                  {OUTLINE_CASE_WORDS[how]}
+                </option>
+              ))}
+            </select>
+
             {tally ? (
               <span className="muted small">
                 {filtering ? `${found.hits.size} found · ` : ''}
@@ -845,7 +877,14 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
               hit={filtering && found.hits.has(row.item.id as string)}
               editing={editing === row.item.id}
               onSelect={(how) => choose(row.item.id, how)}
-              onEdit={(on) => setEditing(on ? row.item.id : null)}
+              onEdit={(on) => {
+                setEditing(on ? row.item.id : null);
+                // Cast the name when the writer leaves the box, never while
+                // they are in it: a transform run on every keystroke fights
+                // the caret, and the only honest moment to tidy somebody's
+                // typing is when they have finished it (§10).
+                if (!on) write((current, id) => castRowName(current, id, row.item.id));
+              }}
               onTitle={(title) => write((current, id) => updateItem(current, id, row.item.id, { title }))}
               onFold={() =>
                 write((current, id) => updateItem(current, id, row.item.id, { collapsed: !row.item.collapsed }))

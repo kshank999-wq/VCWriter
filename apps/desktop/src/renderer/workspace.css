@@ -8188,10 +8188,18 @@ dialog.preferences .field {
 .outliner-bar {
   display: flex;
   align-items: center;
+  /* It **wraps rather than scrolling sideways** (addendum 19 §10). The bar
+     ran past the right edge of a 1440 window with Print, PDF and Copy
+     entirely off it, behind an overlay scrollbar that draws nothing until the
+     pointer is already in the strip — the arc line's fault (addendum 25 §4g)
+     on a toolbar, where what is hidden is not a picture but a control. A
+     second row costs 34px and leaves nothing unreachable. */
+  flex-wrap: wrap;
+  row-gap: 4px;
   gap: 6px;
   flex: 0 0 auto;
-  height: 42px;
-  padding: 0 10px 0 14px;
+  min-height: 42px;
+  padding: 5px 10px 5px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
 }
@@ -8222,10 +8230,7 @@ dialog.preferences .field {
   white-space: nowrap;
 }
 
-.outliner-bar {
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
+/* The bar wraps, so there is nothing to scroll. */
 
 .outliner-body {
   flex: 1;
@@ -8397,22 +8402,26 @@ dialog.preferences .field {
 
 /* §9: scene rows strongest, beats lighter, supporting rows lighter still, so
    the hierarchy reads at a glance without being read. A chapter (addendum 19
-   §2) sits above the scenes: the same display face, larger, and a rule
-   under it, because it is the page that announces the subject. */
-.outline-row.kind-chapter .outline-box {
-  border-color: transparent;
-  border-bottom: 1px solid var(--gold-deep);
-  border-radius: 0;
-  background: transparent;
-}
+   §2) sits above the scenes: the same display face, larger, because it is the
+   page that announces the subject.
 
+   **Every row is the same box and the type says what it is** (addendum 19
+   §10). It was not: a chapter had no box and shouted, a section had a box and
+   shouted, a subsection had a box and did not, and a note had a box of a third
+   fill — four kinds, four treatments, and no rule a writer could state. The
+   box says *this is where you type*, which is true of every row alike, so what
+   differs is the face, the size and the colour.
+
+   **And nothing is transformed here.** A row's name travels into the marker,
+   the unit or the beat when it is promoted, so capitals laid on in a
+   stylesheet made the outline say one thing and the book print another.
+   `outlineCase` casts the words instead. */
 .outline-row.kind-chapter .outline-ink,
 .outline-row.kind-chapter .outline-title,
 .outline-row.kind-chapter .outline-read {
   font-family: var(--display);
   font-size: 15px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--gold);
 }
 
@@ -8420,6 +8429,7 @@ dialog.preferences .field {
   color: var(--gold);
 }
 
+.outline-row.kind-chapter .outline-box,
 .outline-row.kind-scene .outline-box {
   border-color: var(--gold-deep);
 }
@@ -8428,9 +8438,8 @@ dialog.preferences .field {
 .outline-row.kind-scene .outline-title,
 .outline-row.kind-scene .outline-read {
   font-family: var(--display);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 0.03em;
   color: var(--gold);
 }
 
@@ -8442,14 +8451,6 @@ dialog.preferences .field {
 .outline-row.kind-beat .outline-title,
 .outline-row.kind-beat .outline-read {
   color: var(--text);
-}
-
-.outline-row.kind-note .outline-box,
-.outline-row.kind-idea .outline-box,
-.outline-row.kind-character .outline-box,
-.outline-row.kind-setting .outline-box,
-.outline-row.kind-prop .outline-box {
-  background: transparent;
 }
 
 .outline-row.kind-note .outline-ink,
