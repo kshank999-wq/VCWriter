@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { RoomSave } from './RoomSave';
 import {
   addSortCategory,
   addSource,
@@ -58,6 +59,7 @@ import {
   type CategoryIdea,
   type Placement,
   type SendRow,
+  type SaveKind,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
 import { usePreference, useSplit } from '../use-split';
@@ -206,6 +208,13 @@ export interface NoteSorterWindowProps {
   onClose(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   onPopOut?(): void;
+  /**
+   * Save the project somewhere else, from in here (addendum 29 §2). A room
+   * covers the menu bar, so without this the two acts are reachable only by a
+   * shortcut nobody can see. Absent where a host hands nothing down.
+   */
+  onSaveAs?(kind: SaveKind): void;
+
   /** In a window of its own there is nothing to uncover, so there is no ✕. */
   standalone?: boolean;
   /** The workspace's own undo, for the bar's button. Absent in a satellite. */
@@ -219,6 +228,7 @@ export function NoteSorterWindow({
   onClose,
   onUpdate,
   onPopOut,
+  onSaveAs,
   standalone = false,
   onUndo,
   canUndo,
@@ -386,6 +396,7 @@ export function NoteSorterWindow({
           </button>
         ) : null}
         {onPopOut ? <PopOutButton onPopOut={onPopOut} what="the Note Sorter" /> : null}
+        {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}
         {standalone ? null : (
           <button type="button" className="ghost" onClick={onClose} aria-label="Close the Note Sorter">
             ✕

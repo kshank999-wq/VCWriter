@@ -165,6 +165,70 @@ One thing caught by looking: a dismissed dialog is **not** a failure and must
 not paint one — the writer changed their mind, and a banner reading *could not
 save* would read as a fault in the program.
 
+## 2. The rooms, measured — and the keys were not enough
+
+From Ken, sending §1's ask back **word for word** the day it shipped.
+
+In this project that has meant one thing six times (addendum 20 §15c, §16b,
+§16c, addendum 25 §4d, §4f): **everything asked for is there and none of it is
+reachable from where he is standing.** So it was measured before anything was
+written, in the real preview, in all five rooms:
+
+| Room | File menu | Covered by | Ctrl+Shift+S |
+| --- | --- | --- | --- |
+| Research | in the DOM | its search box | fired |
+| Layout | in the DOM | `sculptor-bar` | fired |
+| Note Sorter | in the DOM | its tabs | fired |
+| Sculptor | in the DOM | `sculptor-bar` | fired |
+| Outliner | in the DOM | its tools | fired |
+
+**A room covers the menu bar.** The File button is present and painted over by
+the room's own chrome in every one, so from inside any room the only way to
+save as was a shortcut with nothing on screen to suggest it existed.
+
+§1 argued the keys were enough — *the program's acts and not a focused field's*
+— which is addendum 02 §6c's reason for undo, and it is **right about where the
+act belongs and wrong about whether anybody can find it**. Undo's keys are the
+two every writer on earth already knows. Nothing about a room says a save-as is
+waiting behind one.
+
+The sharper lesson is about the asking. §1 ended by putting the question to
+Ken — *if you'd rather have a visible button in each room, say so* — and he
+answered by re-sending the whole ask. **A question about whether the feature is
+finished is not the writer's to answer**: he said what he wanted the first time
+(*in every single module*), and offering a choice between a built thing and a
+discoverable one is offering to leave it unfinished.
+
+### What was built
+
+`RoomSave.tsx` — **one component in five bars**, beside each room's `PopOutButton`.
+A `Save ▾` button that opens the program's own `ContextMenu`, with the two
+items read from `saveOffer`, so a room says exactly what the File menu says.
+
+Three things it does not do, each for a rule already written:
+
+- **It does not build its own menu** (`printing.ts`'s reason): a room with its
+  own popover would be a second answer to what these acts are.
+- **It does not write the file** (§7): the workspace does, and in a popped-out
+  room the ask is relayed.
+- **It is absent where a host hands nothing down** — `onPopOut`'s own idiom,
+  rather than a control that could only refuse.
+
+### Driven
+
+Rebuilt and measured again in all five rooms: the control is there, the menu
+carries both sentences, and *Save a copy…* really writes a second project from
+each one. `room-save-surfaces.test.tsx` pins it — **the test §1 did not have,
+and its absence is the whole story**: §1's tests proved the acts and not one of
+them asked whether a writer could reach them. A sixth room added without a
+Save control fails there now rather than shipping.
+
+### Named rather than fixed
+
+A room covers the **whole** menu bar, so Editor, Reports, Window and Help are
+unreachable from one too. Only the ask in hand is built here; that is a
+separate decision about what a room is, and worth making deliberately.
+
 ## 10. Deliberately not built, and named
 
 - **No *Save a copy* of a single room's view.** What is saved is the project;

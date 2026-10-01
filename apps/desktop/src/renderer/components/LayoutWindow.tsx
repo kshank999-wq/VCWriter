@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { RoomSave } from './RoomSave';
 import { ContextMenu, type MenuEntry } from './ContextMenu';
 import { EbookExportDialog } from './EbookExportDialog';
 import {
@@ -143,6 +144,7 @@ import {
   type BookFigure,
   type BookRow,
   type PagePlace,
+  type SaveKind,
 } from '@vcwriter/domain';
 import { readFont } from '../read-font';
 import { PopOutButton } from './PopOutButton';
@@ -181,6 +183,13 @@ interface LayoutWindowProps {
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   /** Take the room to a window of its own (addendum 02 §8). Absent in one. */
   onPopOut?(): void;
+  /**
+   * Save the project somewhere else, from in here (addendum 29 §2). A room
+   * covers the menu bar, so without this the two acts are reachable only by a
+   * shortcut nobody can see. Absent where a host hands nothing down.
+   */
+  onSaveAs?(kind: SaveKind): void;
+
   /** File ▸ Chapter page…, opened on the chapter asked for. Absent in a window of its own. */
   onOpenChapterPage?(markerId: string): void;
 }
@@ -273,7 +282,7 @@ const pageOf = (laying: Laying, id: string): BookPage | undefined => {
   );
 };
 
-export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate, onPopOut, onOpenChapterPage }: LayoutWindowProps) {
+export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate, onPopOut, onSaveAs, onOpenChapterPage }: LayoutWindowProps) {
   const { laying, box } = useBookLaying(file, open);
   /**
    * What is chosen (§9a): one selection for the whole room, because the rail
@@ -1307,6 +1316,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           Export as eBook…
         </button>
         {onPopOut ? <PopOutButton what="the Layout room" onPopOut={onPopOut} /> : null}
+        {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}
         <button type="button" className="ghost" onClick={onClose} aria-label="Close the Layout room">
           ×
         </button>

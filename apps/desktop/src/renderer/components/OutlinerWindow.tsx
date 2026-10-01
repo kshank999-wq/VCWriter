@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RoomSave } from './RoomSave';
 import { scrollNudge, zoneFor, type OutlineZone } from '../drag';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
 import { usePhoneNotes } from '../phone-notes';
@@ -70,6 +71,7 @@ import {
   type StructuralUnitId,
   nounsFor,
   type ProjectFormat,
+  type SaveKind,
 } from '@vcwriter/domain';
 
 /**
@@ -103,6 +105,13 @@ interface OutlinerWindowProps {
    * promoting rows into the manuscript wants to see the manuscript take them.
    */
   onPopOut?(): void;
+  /**
+   * Save the project somewhere else, from in here (addendum 29 §2). A room
+   * covers the menu bar, so without this the two acts are reachable only by a
+   * shortcut nobody can see. Absent where a host hands nothing down.
+   */
+  onSaveAs?(kind: SaveKind): void;
+
   /**
    * Mounted as a page of the workspace rather than laid over it (addendum 19
    * §5): on a book the Outliner is the *Outline* page on the bar, so it sits
@@ -192,7 +201,7 @@ const placeholderOf = (kind: string, format: ProjectFormat): string => {
 };
 const markOf = (kind: string): string => MARKS[kind] ?? '•';
 
-export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExport, onPopOut, page = false }: OutlinerWindowProps) {
+export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExport, onPopOut, onSaveAs, page = false }: OutlinerWindowProps) {
   const outlines = outlinesOf(file);
   const [outlineId, setOutlineId] = useState<string | null>(null);
   const [selected, setSelected] = useState<OutlineItemId | null>(null);
@@ -770,6 +779,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
         ) : null}
 
         {onPopOut ? <PopOutButton what="the Outliner" onPopOut={onPopOut} /> : null}
+        {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}
         <button
           type="button"
           className="ghost"

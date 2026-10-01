@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RoomSave } from './RoomSave';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
 import { usePhoneNotes } from '../phone-notes';
 import { PopOutButton } from './PopOutButton';
@@ -73,6 +74,7 @@ import {
   type SculptorNodeId,
   type StructuralUnitId,
   nounsFor,
+  type SaveKind,
 } from '@vcwriter/domain';
 
 /**
@@ -102,6 +104,13 @@ interface SculptorWindowProps {
    * whole, so a window of its own is the same component with nothing under it.
    */
   onPopOut?(): void;
+  /**
+   * Save the project somewhere else, from in here (addendum 29 §2). A room
+   * covers the menu bar, so without this the two acts are reachable only by a
+   * shortcut nobody can see. Absent where a host hands nothing down.
+   */
+  onSaveAs?(kind: SaveKind): void;
+
 }
 
 /** Pixels to a canvas unit at 100%. A row is this tall; a column four across. */
@@ -192,7 +201,7 @@ const spreadLabels = (points: { x: number; y: number }[]): number[] => {
   });
 };
 
-export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: SculptorWindowProps) {
+export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut, onSaveAs }: SculptorWindowProps) {
   const boards = boardsOf(file);
   // §14: the board talks about scenes and beats in half a dozen tooltips.
   const nouns = nounsFor(file.project.format);
@@ -556,6 +565,7 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut }: Scul
         ) : null}
 
         {onPopOut ? <PopOutButton what="the Story Sculptor" onPopOut={onPopOut} /> : null}
+        {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}
         <button type="button" className="ghost" onClick={onClose} aria-label="Close the Story Sculptor">
           ×
         </button>

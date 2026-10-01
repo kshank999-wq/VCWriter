@@ -15,6 +15,7 @@ import {
   type ProjectFile,
   type StoryMarkerId,
   type StructuralUnitId,
+  type SaveKind,
 } from '@vcwriter/domain';
 import { useLinkedProject } from './use-linked-project';
 import { usePreference } from './use-split';
@@ -84,6 +85,15 @@ export default function Satellite({ pane }: { pane: PaneKey }) {
    * dismissed.
    */
   const askToSave = project.askToSave;
+  /**
+   * The room's own Save control (addendum 29 §2). One translation here rather
+   * than in five renders, and it is the same relay the keys use — the room
+   * asks and the workspace writes.
+   */
+  const saveFromHere = useCallback(
+    (kind: SaveKind) => askToSave(kind === 'as' ? 'saveAs' : 'saveCopy'),
+    [askToSave],
+  );
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 's') return;
@@ -123,7 +133,7 @@ export default function Satellite({ pane }: { pane: PaneKey }) {
       {/* A room on the other monitor must not be able to do less than the
           panel it came out of (§8), so the hover is here too. */}
       <BeatPeekLayer file={file} />
-      <Section pane={pane} file={file} onUpdate={project.update} />
+      <Section pane={pane} file={file} onUpdate={project.update} onSaveAs={saveFromHere} />
     </div>
   );
 }
@@ -132,10 +142,17 @@ function Section({
   pane,
   file,
   onUpdate,
+  onSaveAs,
 }: {
   pane: PaneKey;
   file: ProjectFile;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  /**
+   * Save the project somewhere else, from the room's own bar (addendum 29 §2).
+   * It is handed down rather than built here because **a room does not write
+   * the file** (§7): this relays the ask and the workspace acts.
+   */
+  onSaveAs(kind: SaveKind): void;
 }) {
   const beats = useMemo(() => beatsInStoryOrder(file), [file]);
   const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
@@ -244,7 +261,13 @@ function Section({
   if (pane === 'research') {
     return (
       <div className="satellite-body research-window standalone">
-        <ResearchBody file={file} currentBeatId={selectedBeat?.id ?? null} onClose={closeSelf} onUpdate={onUpdate} />
+        <ResearchBody
+          file={file}
+          currentBeatId={selectedBeat?.id ?? null}
+          onClose={closeSelf}
+          onUpdate={onUpdate}
+          onSaveAs={onSaveAs}
+        />
       </div>
     );
   }
@@ -319,20 +342,20 @@ function Section({
   // is the same component with nothing under it, and closing is closing the
   // window rather than uncovering the script.
   if (pane === 'sculptor') {
-    return <SculptorWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} />;
+    return <SculptorWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} onSaveAs={onSaveAs} />;
   }
 
   // The book, set (addendum 20): the same shape again. There is no File menu
   // over here, so the chapter page is reached from the workspace.
   if (pane === 'layout') {
-    return <LayoutWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} />;
+    return <LayoutWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} onSaveAs={onSaveAs} />;
   }
 
   // The notes, sorted (addendum 26): the same shape again, and the room a
   // second monitor is most obviously for — the notes on one screen and the
   // writing on the other.
   if (pane === 'sorter') {
-    return <NoteSorterWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} standalone />;
+    return <NoteSorterWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} onSaveAs={onSaveAs} standalone />;
   }
 
   // The narrative canvas is the same shape: a room that already covers
@@ -348,6 +371,7 @@ function Section({
         open
         onClose={closeSelf}
         onUpdate={onUpdate}
+        onSaveAs={onSaveAs}
         // The outline prints from here too. What is printed is the document in
         // hand — the same one the workspace holds, over the link — so a room on
         // the other monitor is not a room that can do less.

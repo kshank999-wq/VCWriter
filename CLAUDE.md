@@ -4883,6 +4883,36 @@ push live; the build takes a minute or two.
   keeping: **a dismissed dialog is not a failure and must not paint one** — the
   writer changed their mind, and *could not save* would read as a fault in the
   program. §10 names what is deliberately absent.
+  **§2 is the rooms, and the keys not being enough**, from Ken sending §1's ask
+  back **word for word** the day it shipped — which in this project has meant one
+  thing six times (addendum 20 §15c, §16b, §16c, addendum 25 §4d, §4f) and meant
+  it again. Measured in the real preview before a line was written: **a room
+  covers the menu bar**, so in all five rooms the File button is in the DOM and
+  painted over by the room's own chrome (Research by its search box, Layout and
+  the Sculptor by `sculptor-bar`, the Note Sorter by its tabs, the Outliner by
+  its tools) while `Ctrl+Shift+S` fired in every one. **So the act worked, every
+  test passed, and there was no way to see it was there.** §1's argument that
+  the keys were enough — *the program's acts and not a focused field's*, addendum
+  02 §6c's reason for undo — is **right about where the act belongs and wrong
+  about whether anybody can find it**: undo's keys are the two every writer
+  already knows, and nothing about a room says a save-as is behind one. The
+  sharper half is about the asking: §1 ended by offering Ken the choice (*if
+  you'd rather have a visible button in each room, say so*) and he answered by
+  re-sending the ask — **a question about whether the feature is finished is not
+  the writer's to answer**, he said *in every single module* the first time, and
+  offering a choice between a built thing and a discoverable one is offering to
+  leave it unfinished. `RoomSave.tsx` is **one component in five bars** beside
+  each room's `PopOutButton`: a `Save ▾` opening the program's own
+  `ContextMenu` with both items read from `saveOffer`, so a room says exactly
+  what the File menu says. It **builds no menu of its own** (`printing.ts`'s
+  reason), **writes no file** (§7 — it relays and the workspace acts), and is
+  **absent where a host hands nothing down** (`onPopOut`'s idiom) rather than a
+  control that could only refuse. `room-save-surfaces.test.tsx` is **the test §1
+  did not have, and its absence is the whole story** — §1's tests proved the acts
+  and not one asked whether a writer could reach them, so a sixth room without a
+  Save control now fails there rather than shipping. **Named rather than fixed**:
+  a room covers the *whole* menu bar, so Editor, Reports, Window and Help are
+  unreachable from one too, which is a separate decision about what a room is.
 
 ## Before pushing
 

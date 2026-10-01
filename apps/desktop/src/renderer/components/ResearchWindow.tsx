@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
+import { RoomSave } from './RoomSave';
 import {
   deleteResearchItem,
   describeDeleting,
@@ -61,6 +62,7 @@ import {
   type ResearchView,
   WORK_STANDING_WORDS,
   reviewRows,
+  type SaveKind,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
 import { InlineText } from './InlineText';
@@ -93,6 +95,13 @@ interface ResearchWindowProps {
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   /** Move research into a window of its own, for a second monitor (§8). */
   onPopOut?(): void;
+  /**
+   * Save the project somewhere else, from in here (addendum 29 §2). A room
+   * covers the menu bar, so without this the two acts are reachable only by a
+   * shortcut nobody can see. Absent where a host hands nothing down.
+   */
+  onSaveAs?(kind: SaveKind): void;
+
   /**
    * Go and look at a passage. Given by the workspace, where there is a script
    * beside this to go to; absent in the popped-out window, which has none.
@@ -181,6 +190,7 @@ export function ResearchWindow({
   onClose,
   onUpdate,
   onPopOut,
+  onSaveAs,
   onGoToBeat,
 }: ResearchWindowProps) {
   const dialog = useModal(open);
@@ -194,6 +204,7 @@ export function ResearchWindow({
           onUpdate={onUpdate}
           {...(openOn ? { openOn } : {})}
           {...(onPopOut ? { onPopOut } : {})}
+          {...(onSaveAs ? { onSaveAs } : {})}
           {...(onGoToBeat ? { onGoToBeat } : {})}
         />
       ) : null}
@@ -212,6 +223,7 @@ export function ResearchBody({
   onClose,
   onUpdate,
   onPopOut,
+  onSaveAs,
   onGoToBeat,
 }: {
   file: ProjectFile;
@@ -222,6 +234,12 @@ export function ResearchBody({
   onClose(): void;
   onUpdate: ResearchWindowProps['onUpdate'];
   onPopOut?(): void;
+  /**
+   * Save the project somewhere else, from in here (addendum 29 §2). A room
+   * covers the menu bar, so without this the two acts are reachable only by a
+   * shortcut nobody can see. Absent where a host hands nothing down.
+   */
+  onSaveAs?(kind: SaveKind): void;
 }) {
   const [selection, setSelection] = useState<Selection>({ kind: 'view', view: openOn ?? 'all' });
 
@@ -572,6 +590,7 @@ export function ResearchBody({
           + Folder
         </button>
         {onPopOut ? <PopOutButton what="research" onPopOut={onPopOut} /> : null}
+        {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}
         <button type="button" className="ghost" aria-label="Close research" onClick={onClose}>
           ×
         </button>

@@ -1223,6 +1223,7 @@ export default function App() {
               setResearchView(undefined);
             }}
             onUpdate={project.update}
+            onSaveAs={saveSomewhere}
             onPopOut={() => {
               setResearchOpen(false);
               openPane('research');
@@ -1235,6 +1236,7 @@ export default function App() {
             open={sculptorOpen && !away.has('sculptor')}
             onClose={() => setSculptorOpen(false)}
             onUpdate={project.update}
+            onSaveAs={saveSomewhere}
             onPopOut={() => {
               setSculptorOpen(false);
               openPane('sculptor');
@@ -1265,6 +1267,7 @@ export default function App() {
                 setLayoutOpenOn(null);
               }}
               onUpdate={project.update}
+              onSaveAs={saveSomewhere}
               onOpenChapterPage={openChapterPage}
               onPopOut={() => {
                 setLayoutOpen(false);
@@ -1279,6 +1282,7 @@ export default function App() {
             open={sorterOpen && !away.has('sorter')}
             onClose={() => setSorterOpen(false)}
             onUpdate={project.update}
+            onSaveAs={saveSomewhere}
             onUndo={project.undo}
             canUndo={project.canUndo}
             onPopOut={() => {
@@ -1293,6 +1297,7 @@ export default function App() {
             open={outlinerOpen && !away.has('outliner')}
             onClose={() => setOutlinerOpen(false)}
             onUpdate={project.update}
+            onSaveAs={saveSomewhere}
             onPrint={(outlineId) => void print('outline', outlineId)}
             onExport={(outlineId) => void exportPdf('outline', outlineId)}
             onPopOut={() => {
@@ -1313,6 +1318,7 @@ export default function App() {
               page
               onClose={() => setView('write')}
               onUpdate={project.update}
+              onSaveAs={saveSomewhere}
               onPrint={(outlineId) => void print('outline', outlineId)}
               onExport={(outlineId) => void exportPdf('outline', outlineId)}
               onPopOut={() => {
