@@ -70,6 +70,7 @@ import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
 import { GraphicsPanel } from './GraphicsPanel';
 import { ContentsPanel } from './ContentsPanel';
+import { NoteDialog } from './NoteDialog';
 import { ChapterPageDialog } from './ChapterPageDialog';
 import { GraveyardPanel } from './GraveyardPanel';
 import { ImportNotesPanel } from './ImportNotesPanel';
@@ -249,6 +250,12 @@ export function ResearchBody({
   }, [openOn]);
   const [selectedItemId, setSelectedItemId] = useState<ResearchItemId | null>(null);
   /**
+   * The note open in the middle (addendum 28 §6), and where its cursor starts.
+   * About this minute, so it is remembered nowhere — a note that reopened by
+   * itself a fortnight later is one you go looking for (addendum 02 §6d).
+   */
+  const [writing, setWriting] = useState<{ id: ResearchItemId; on: 'title' | 'body' } | null>(null);
+  /**
    * Where opening somebody came from, so **Back** goes there rather than
    * somewhere plausible. Opening from the map should return to the map.
    */
@@ -386,7 +393,13 @@ export function ResearchBody({
     onUpdate((current) => {
       const next = addResearchItem(current, { categoryId, title: 'New note' });
       const made = next.researchItems[next.researchItems.length - 1];
-      if (made) setSelectedItemId(made.id);
+      if (made) {
+        setSelectedItemId(made.id);
+        // **The act opens the screen it made.** Ken's complaint is about this
+        // press: before it, + Note made a note and left focus on the button,
+        // so a writer had to go and find a 287px box in the right-hand column.
+        setWriting({ id: made.id, on: 'title' });
+      }
       return next;
     });
     if (selection.kind === 'view') setSelection({ kind: 'folder', id: categoryId });
@@ -1222,6 +1235,13 @@ export function ResearchBody({
                   folderName={folderOf(item)?.name ?? ''}
                   chosen={item.id === selectedItemId}
                   onChoose={() => setSelectedItemId(item.id)}
+                  // The gesture this program already uses for *open the thing*
+                  // — the beat, the part, the chapter page, a contents box. The
+                  // writing takes the cursor, the note being named already.
+                  onOpen={() => {
+                    setSelectedItemId(item.id);
+                    setWriting({ id: item.id, on: 'body' });
+                  }}
                   onDragStart={() => setDragging({ kind: 'item', id: item.id })}
                   onDragEnd={() => setDragging(null)}
                   onUpdate={onUpdate}
@@ -1260,6 +1280,32 @@ export function ResearchBody({
           front of it — addendum 02 §8's rule that a room on the other monitor
           must not be able to do less. There is no spread here, so no box is
           drawn and no pages are laid. */}
+      {/* The note's own screen (§6). The room owns it for `ChapterPageDialog`'s
+          reason: a room in a window of its own has no workspace in front of it,
+          and addendum 02 §8's rule is that it must not be able to do less. */}
+      <NoteDialog
+        file={file}
+        item={writing ? file.researchItems.find((one) => one.id === writing.id) ?? null : null}
+        startOn={writing?.on ?? 'title'}
+        onClose={() => setWriting(null)}
+      >
+        {({ titleRef, bodyRef }) => {
+          const open = writing ? file.researchItems.find((one) => one.id === writing.id) : null;
+          if (!open) return null;
+          return (
+            <NoteFields
+              file={file}
+              item={open}
+              rows={16}
+              titleRef={titleRef}
+              bodyRef={bodyRef}
+              onUpdate={onUpdate}
+              onGoToFolder={(id) => setSelection({ kind: 'folder', id })}
+            />
+          );
+        }}
+      </NoteDialog>
+
       <ChapterPageDialog
         file={file}
         open={chapterPageFor !== null}
@@ -1574,27 +1620,43 @@ function FolderNode({
   );
 }
 
-function Detail({
+/**
+ * What a note **is** — its name, its words, its tags and which shelf it is on
+ * (addendum 28 §6).
+ *
+ * **One component, two places**: the dialog a writer types into and the aside
+ * that describes the selection. They write the same fields through the same
+ * calls, so this is *a second control onto one field* (addendum 20 §16d) and
+ * never a second answer — `ChapterStyleFields`' own shape (§9m), which is the
+ * only arrangement where the two cannot come to disagree about what a note is.
+ *
+ * `rows` is the caller's because that is the whole of what differs: the aside
+ * has 287px of column and the dialog has the middle of the screen.
+ */
+function NoteFields({
   file,
   item,
-  currentBeatId,
+  rows,
+  titleRef,
+  bodyRef,
   onUpdate,
   onGoToFolder,
 }: {
   file: ProjectFile;
   item: ResearchItem;
-  currentBeatId: BeatId | null;
+  rows: number;
+  titleRef?: React.RefObject<HTMLInputElement>;
+  bodyRef?: React.RefObject<HTMLTextAreaElement>;
   onUpdate: ResearchWindowProps['onUpdate'];
   onGoToFolder(id: ResearchCategoryId): void;
 }) {
   const folders = useMemo(() => flatten(researchTree(file)), [file]);
-  const where = file.beats.filter((beat) => item.usedInBeatIds.includes(beat.id));
-
   return (
     <>
       <label className="field">
         Title
         <input
+          {...(titleRef ? { ref: titleRef } : {})}
           value={item.title}
           onChange={(event) => onUpdate((current) => updateResearchItem(current, item.id, { title: event.target.value }))}
         />
@@ -1602,7 +1664,8 @@ function Detail({
       <label className="field">
         Note
         <textarea
-          rows={10}
+          {...(bodyRef ? { ref: bodyRef } : {})}
+          rows={rows}
           value={item.body}
           onChange={(event) => onUpdate((current) => updateResearchItem(current, item.id, { body: event.target.value }))}
         />
@@ -1639,6 +1702,28 @@ function Detail({
           ))}
         </select>
       </label>
+    </>
+  );
+}
+
+function Detail({
+  file,
+  item,
+  currentBeatId,
+  onUpdate,
+  onGoToFolder,
+}: {
+  file: ProjectFile;
+  item: ResearchItem;
+  currentBeatId: BeatId | null;
+  onUpdate: ResearchWindowProps['onUpdate'];
+  onGoToFolder(id: ResearchCategoryId): void;
+}) {
+  const where = file.beats.filter((beat) => item.usedInBeatIds.includes(beat.id));
+
+  return (
+    <>
+      <NoteFields file={file} item={item} rows={10} onUpdate={onUpdate} onGoToFolder={onGoToFolder} />
 
       <div className="research-actions">
         {item.usage === 'used' ? (
@@ -1830,6 +1915,7 @@ function NoteCard({
   folderName,
   chosen,
   onChoose,
+  onOpen,
   onDragStart,
   onDragEnd,
   onUpdate,
@@ -1840,6 +1926,7 @@ function NoteCard({
   folderName: string;
   chosen: boolean;
   onChoose(): void;
+  onOpen(): void;
   onDragStart(): void;
   onDragEnd(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
@@ -1857,6 +1944,7 @@ function NoteCard({
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
           onClick={onChoose}
+          onDoubleClick={onOpen}
         >
           <span className="research-card-head">
             <span className="research-card-title">{item.title}</span>

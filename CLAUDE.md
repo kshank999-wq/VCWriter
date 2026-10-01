@@ -1546,6 +1546,46 @@ push live; the build takes a minute or two.
   re-reading the code** — §4c went straight to the mechanism, found a real gap
   and fixed it, and never checked its reading of the one sentence saying what to
   remove.
+  **§6 is the note's own screen, in the middle**, from Ken (*when you create a
+  note, I would like a dialog box in the center that you can type into, like a
+  beat in a script or something, because trying to type it into the sidebar, it
+  just doesn't feel right*), and **it is a feeling with a measurement under
+  it**: driven at 1440×900, *+ Note* put the writing box at **287 × 204** in a
+  320px column pinned to the right edge with **860px of the middle empty**, and
+  left focus **on the + Note button** — so the act made a note called *New note*
+  and then did nothing whatever to help anybody write it. **The room was
+  treating a research note as a property of a selection** when it is a thing
+  somebody composes; a beat, a scene, a chapter page and a part all open in the
+  middle with the cursor in them, and a note did not. It is the beat's own
+  chrome rather than a second idea of what a writing screen is —
+  `dialog.note-dialog` **joins `dialog.track-dialog`'s rule** and sets its width
+  and nothing else, a third copy of the padding, border, background and backdrop
+  being a third answer free to drift the first time a colour scheme changes —
+  with the folder's name across the top, **✓ Saved as you type** beside it (a
+  writing screen with no Save button has to say why it has none) and a ×.
+  Measured after: **760 × 707** with the writing at **726 × 414**, and it still
+  stands clear of the foot at 1024 × 700, the body scrolling. **It is not a
+  second copy of the aside**: `NoteFields` came out of `Detail` and is **one
+  component drawn in both**, writing the same fields through the same
+  `onUpdate` — *a second control onto one field* (addendum 20 §16d) rather than
+  the fault §15c removed from Layout and §9m settled with `ChapterStyleFields` —
+  and the aside was **considered for removal and kept**, being the room's panel
+  about the selection, with the actions, the figures and Related Elements beside
+  the fields; all it loses is being the only place to write. **Where the cursor
+  goes is the act's and not the route's** (addendum 25 §4e's `onOpenCharacter`):
+  *+ Note* focuses the title **and selects it**, so the first keystroke replaces
+  the name the program gave it rather than appending to it (addendum 20 §16e),
+  while a double-click opens a note already named and the **writing** takes the
+  cursor; the effect is keyed on the note's id too, opening a second note
+  without closing the first being one dialog and two notes. **What the tests pin
+  is the gesture rather than the dialog** — addendum 20 §15a, which this room has
+  now been taught twice: the screen can be perfect and the complaint stands if
+  *+ Note* still leaves a writer hunting for a box, so they assert the cursor is
+  *in the dialog* rather than merely focused somewhere, **a dialog nobody is put
+  inside reading exactly like the one that was there before**. Writing them
+  caught one thing worth keeping: a note's title is also an `<option>` in the
+  Related picker, which is the note being **linkable** rather than a second copy
+  of it, so the assertions name the card. No migration and no domain change.
   `addendum-11-setups-and-payoffs.md` is Setups & Payoffs, from Ken's own dev
   spec. **Built.** Half of it already existed (the record, its setup points, its
   payoff, archiving — master spec §7.3); what was missing was **the rule the

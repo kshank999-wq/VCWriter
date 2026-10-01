@@ -527,3 +527,115 @@ checked its reading of the one sentence that said what to remove — so it remov
 something he had not mentioned and left the thing he had. The sentence named a
 *section*, named *chapter one*, and said *we don't need that*; all three are
 facts about a box that was on the screen the whole time.
+
+---
+
+## 6. The note's own screen, in the middle
+
+From Ken:
+
+> In the research center, when you create a note, I would like a dialog box in
+> the center that you can type into, like a beat in a script or something,
+> because trying to type it into the sidebar, it just doesn't feel right.
+
+### It is a feeling with a measurement under it
+
+Driven in the real preview at 1440×900 before anything was designed. Pressing
+**+ Note**:
+
+| What | Measured |
+| --- | --- |
+| The writing box | **287 × 204** |
+| Where it stood | a 320px column pinned to the right edge, at x = 1120 |
+| The middle of the screen | **860px of it empty** |
+| Where the cursor was | **on the + Note button** |
+
+So the press made a note called *New note* and then did nothing whatever to help
+anybody write it — no box focused, no words selected, and the box it meant was a
+quarter the width of the screen, hard against the edge, under a Tags field and a
+Folder select and above a Related Elements panel.
+
+That is the whole complaint and it is exact: **this room was treating a research
+note as a property of a selection** when it is a thing somebody composes. A beat
+opens in the middle with the cursor in it; a scene does; a chapter page does; a
+part does. A note did not.
+
+### The screen
+
+`NoteDialog.tsx`, and it is the beat's own chrome rather than a second idea of
+what a writing screen looks like — `dialog.note-dialog` joins
+`dialog.track-dialog`'s rule for the padding, border, background, colour and
+backdrop and **sets its width and nothing else**. A third copy of the chrome
+would be a third answer to what a dialog looks like, free to drift the first time
+a colour scheme changes.
+
+What it carries: the folder's name across the top left, **✓ Saved as you type**
+beside it, and a ×. There is no *Save*, because the room has always saved as you
+type and a writing screen with no Save button has to say why it has none rather
+than leave a writer hunting for one.
+
+Measured after: **760 × 707** at x = 340 with the writing box at **726 × 414** —
+the same note, two and a half times the area, in the middle of the screen. At
+1280 × 800 it is 760 × 661 with the writing at 726 × 368; at 1024 × 700, 760 ×
+586, the body scrolling, the whole dialog still clear of the foot of the window.
+
+### It is not a second copy of the aside
+
+`NoteFields` was pulled out of `Detail` and is **one component drawn in both** —
+the dialog and the right-hand aside render the same four fields writing the same
+calls through the same `onUpdate`. That is *a second control onto one field*
+(addendum 20 §16d) rather than two screens that could come to disagree, which is
+the fault §15c removed from Layout and §9m settled with `ChapterStyleFields`.
+What differs between them is the size of the box and where the cursor lands,
+which is the whole of what Ken asked for.
+
+The aside was **considered for removal and kept**: it is the room's panel about
+the selection, holding the actions, the figures and Related Elements beside the
+fields, and taking it away would be removing a panel to fix a dialog. The only
+thing it loses is being the only place to write.
+
+### Where the cursor goes is the act's, not the route's
+
+`startOn` is `'title'` or `'body'`, and the two gestures answer differently:
+
+- **+ Note** makes a note called *New note*, so the title is focused **and
+  selected** — the first keystroke replaces the name the program gave it rather
+  than appending to it (addendum 20 §16e's rule that a field says what was
+  typed).
+- **A double-click on the card** opens a note that is already named, so the
+  **writing** takes the cursor.
+
+This is addendum 25 §4e's `onOpenCharacter` one room over: the act decides, not
+the screen. The effect is keyed on the note's id as well as `startOn`, because
+opening a second note without closing the first is one open dialog and two
+notes, and the cursor belongs in the one now in hand.
+
+### What is tested, and why it is the gesture
+
+`note-dialog.test.tsx`, six tests, and **what they pin is the gesture rather
+than the dialog** — addendum 20 §15a's rule, which this room has now been taught
+twice. The screen can be perfect and Ken's complaint still stands if *+ Note*
+leaves a writer hunting for a box: so what they assert is that the press opens
+it, that the cursor is *in it* (`document.activeElement.closest('dialog.note-dialog')`,
+not merely focused somewhere), that the name arrives selected, that what is typed
+reaches the card, that the × leaves the note behind, and that a double-click
+reopens it on the writing. **A dialog nobody is put inside reads exactly like the
+one that was there before.**
+
+Writing them caught one thing worth keeping: a note's title is also an
+`<option>` in the Related picker, so `getByText` found two of everything. That is
+the note being **linkable** rather than a second copy of it, so the assertions
+name the card — which is the note read back, and the honest place to look.
+
+### Where the code is
+
+- `apps/desktop/src/renderer/components/NoteDialog.tsx` — the screen.
+- `apps/desktop/src/renderer/components/ResearchWindow.tsx` — `NoteFields`
+  extracted from `Detail`, the `writing` state, `+ Note` opening on the title, a
+  card's double-click opening on the writing.
+- `apps/desktop/src/renderer/workspace.css` — `dialog.note-dialog` joined to the
+  shared chrome; the header, the 16px title, the deep writing box.
+- `apps/desktop/src/renderer/__tests__/note-dialog.test.tsx` — the six gestures.
+
+No migration and no domain change: a note is the record it always was, and this
+is where it is written.

@@ -699,7 +699,13 @@ main {
   display: inline-block;
 }
 
-dialog.track-dialog {
+/* The note's screen joins this rather than writing a third copy of the chrome
+   (addendum 28 §6): `.track-dialog` and `.writer-dialog` each hold one, and a
+   dialog that stated its own padding, border and background would be a third
+   answer to what a dialog looks like — free to drift the moment a colour
+   scheme changes. `.note-dialog` sets its width and nothing else. */
+dialog.track-dialog,
+dialog.note-dialog {
   width: min(640px, calc(100vw - 48px));
   padding: 0;
   border: 1px solid var(--border);
@@ -709,7 +715,8 @@ dialog.track-dialog {
   font-size: 12.5px;
 }
 
-dialog.track-dialog::backdrop {
+dialog.track-dialog::backdrop,
+dialog.note-dialog::backdrop {
   background: color-mix(in srgb, var(--ink) 65%, transparent);
 }
 
@@ -20327,4 +20334,76 @@ dialog.designed-page-dialog[open] {
 
 .toc-chip:active {
   cursor: grabbing;
+}
+
+/* The note's own screen, in the middle (addendum 28 §6). The beat dialog's
+   width, because Ken's sentence is *like a beat in a script* and two answers
+   to how wide a writing screen is would be two writing screens. */
+dialog.note-dialog {
+  width: min(760px, calc(100vw - 48px));
+}
+
+dialog.note-dialog > header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 8px 7px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  /* The gold edge the writing screen wears, so a note reads as a thing you
+     write rather than a thing you configure. */
+  border-left: 4px solid var(--gold-deep);
+}
+
+.note-dialog-where {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Said rather than implied: the room has always saved as you type, and a
+   writing screen with no Save button has to say why it has none. */
+.note-dialog-saved {
+  white-space: nowrap;
+}
+
+.note-dialog-body {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 14px 16px 18px;
+  overflow-y: auto;
+  max-height: calc(100vh - 160px);
+}
+
+/* The field labels are the aside's — one component, so one look (§6). */
+.note-dialog-body .field {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.note-dialog-body .field input,
+.note-dialog-body .field select,
+.note-dialog-body .field textarea {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* The name is the largest thing on it, the way a beat's is: this is the one
+   field a writer fills in first and the one the card is read by. */
+.note-dialog-body .field:first-child input {
+  font-size: 16px;
+}
+
+/* The writing takes whatever height the screen has rather than a fixed ten
+   rows, which is the 204px box this screen exists to replace. */
+.note-dialog-body textarea {
+  min-height: min(46vh, 420px);
+  resize: vertical;
 }
