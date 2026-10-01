@@ -2174,15 +2174,84 @@ A gear on the title bar opens Preferences. These are kept on the machine,
 not in the project file — a collaborator opening the file must not inherit
 anyone's colours — alongside the layout preferences of §3.
 
-- **Colour scheme.** Four: *Gold*, the brand as `docs/brand.md` defines it
+- **Colour scheme.** Six: *Gold*, the brand as `docs/brand.md` defines it
   and the default; *Graphite*, editing-room greys with a warm accent;
-  *Slate*, cool blue-grey with a sky accent; *Parchment*, a light interface.
-  A scheme is a set of values for the stylesheet's tokens and nothing more:
-  geometry, type and behaviour do not change between them.
+  *Slate*, cool blue-grey with a sky accent; *Parchment*, a light interface;
+  and §23a's two, *Green* and *Cobalt*. A scheme is a set of values for the
+  stylesheet's tokens and nothing more: geometry, type and behaviour do not
+  change between them.
 - **Script on paper.** On by default: the Script is drawn as a white sheet
   with black text under any scheme, because a page is what writers look at
   and a dark page is a strain over a long day. Off, the Script follows the
   scheme.
+
+## 23a. Two more schemes, from two screenshots
+
+From Ken, with a picture of each and one instruction: *add these two colour
+schemes to the preferences. One we'll call green and the other one name it
+whatever.* So **Green** and **Cobalt**.
+
+### Measured rather than matched by eye
+
+A scheme is eleven token values, so this is additive and the only question is
+what the eleven are. Both pictures were sampled:
+
+| | Green (his dashboard) | Cobalt (Causality) |
+| --- | --- | --- |
+| Page | `#f5f6f8` | `#1b1b1d` |
+| Panel | `#ffffff` | `#252527` |
+| Raised | `#eceef2` | `#3d3d3d` |
+| Rules | `#dfe2e8` | `#4a4a4e` |
+| The colour | `#3fb950` | `#0075f8`, `#2579b1` |
+| Type | `#1b1f27` | `#f0f1f2` |
+| Beside it | `#5f6877` | `#939393` |
+
+### The three accent tokens are a shape, not three shades
+
+The one thing a screenshot cannot say is **which** green goes in which token,
+and getting it wrong is invisible. The names are the brand's and the meaning
+is the stylesheet's: `--gold` is the accent as **type**, `--gold-bright` is
+the most **emphatic** against the surface, and `--gold-deep` is the accent as
+a **fill or an edge** (`background`, `border-color`). So on a dark scheme
+bright is lighter and deep is darker, and **on a light one that inverts** —
+Parchment's `goldBright` is its *darkest* bronze, because what is emphatic on
+cream is dark.
+
+Which decides the green. `#3fb950` is lovely as a pill and reads at **2.5:1**
+as text on white, so it is the **fill** — the pills and card edges his
+reference draws with it — and the darker greens carry the words: `#1a7f37` at
+5.1:1 and `#116329` at 7.4:1. A scheme that read the names literally would
+have printed its most important words at its lowest contrast and **nothing
+would have failed**, which is why the rule is now asserted over *every*
+scheme by luminance rather than left in a comment.
+
+### Two things the pictures asked for and did not get
+
+**Green's panel is lighter than its ink**, which is the only scheme where that
+is true — a white card on a grey page, which is what the reference draws and
+the opposite of Parchment's cream-on-cream. Kept, because it is his picture.
+
+**Cobalt's blue title bar is deliberately not reproduced.** A scheme is eleven
+tokens; the bar is `--panel` like every other surface, and painting one
+element to match a screenshot would be a twelfth token nothing else could
+read. Cobalt takes the charcoal and the saturated blue and leaves the chrome
+the program's own.
+
+### And it found a fault only looking could find
+
+Driving Green showed the preview strip at the foot still gold on a white
+page — because `preview.tsx` wrote `#a3946f`, `#c9a45c`, `#3a3018` and
+`#8a6f2f` into its own stylesheet, which are **literally Gold's `muted`,
+`gold`, `border` and `goldDeep`**. A surface keeping its own copy of a colour
+is this project's oldest fault, and this one is invisible under the scheme it
+was copied from. It reads the tokens now.
+
+Three nearby literals are **correct and were left**: the logo's gradient (a
+logo is a logo, and `docs/brand.md` owns it), the `:root` block in
+`styles.css` (that *is* Gold's definition, which `applyScheme` overrides
+inline), and the beat and folder colour pickers' `#c9a45c` default — a beat's
+colour is a **document** colour that travels in the project and is drawn for
+every reader, so it must not change because somebody switched scheme.
 
 ## 24. Later
 

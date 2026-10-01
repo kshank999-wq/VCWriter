@@ -42,10 +42,17 @@ if (!new URLSearchParams(window.location.search).get('pane')) {
 
 const style = document.createElement('style');
 style.textContent = `
+/* The tokens rather than the Gold scheme's values, which is what these were:
+   #a3946f, #c9a45c, #3a3018 and #8a6f2f are literally Gold's muted, gold,
+   border and gold-deep, so the strip read correctly under one scheme and
+   stayed gold under every other — grey-on-white once a light scheme was
+   chosen. A surface that keeps its own copy of a colour is this project's
+   oldest fault, and this one could only be seen by looking (addendum 02
+   §23a). */
 .preview-strip { position: fixed; left: 10px; bottom: 9px; z-index: 50; display: flex; align-items: center; gap: 8px;
-  font: 10.5px ui-sans-serif, system-ui, sans-serif; color: #a3946f; letter-spacing: 0.04em; }
-.preview-strip button { font: inherit; color: #c9a45c; background: transparent; border: 1px solid #3a3018; border-radius: 2px; padding: 2px 8px; cursor: pointer; }
-.preview-strip button:hover { border-color: #8a6f2f; }
+  font: 10.5px ui-sans-serif, system-ui, sans-serif; color: var(--muted); letter-spacing: 0.04em; }
+.preview-strip button { font: inherit; color: var(--gold); background: transparent; border: 1px solid var(--border); border-radius: 2px; padding: 2px 8px; cursor: pointer; }
+.preview-strip button:hover { border-color: var(--gold-deep); }
 `;
 document.head.append(style);
 

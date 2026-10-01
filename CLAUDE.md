@@ -293,6 +293,43 @@ push live; the build takes a minute or two.
   not one of them asked how a writer gets there; the new one presses the
   row and then double-clicks it and asserts the same dialog opens both
   times.
+  **§23a is two more colour schemes**, from Ken with a screenshot of each
+  (*add these two colour schemes to the preferences. One we'll call green and
+  the other one name it whatever*) — **Green** and **Cobalt**. A scheme is
+  eleven token values, so this is additive and the only question is what the
+  eleven are; both pictures were **sampled rather than matched by eye** (Green:
+  page `#f5f6f8`, white cards, rules `#dfe2e8`, `#3fb950`, type `#1b1f27`;
+  Cobalt: `#3d3d3d` over `#252527`, `#0075f8` and `#2579b1`, muted `#939393`).
+  **The one thing a screenshot cannot say is which green goes in which token,
+  and getting it wrong is invisible**: the names are the brand's and the
+  meaning is the stylesheet's — `--gold` is the accent as **type**,
+  `--gold-bright` the most **emphatic** against the surface, `--gold-deep` a
+  **fill or an edge** — so on a dark scheme bright is lighter and deep darker,
+  and **on a light one that inverts**, Parchment's `goldBright` being its
+  *darkest* bronze because what is emphatic on cream is dark. So `#3fb950`
+  reads at **2.5:1** as text on white and is the **fill** (his pills and card
+  edges), while `#1a7f37` at 5.1 and `#116329` at 7.4 carry the words; a scheme
+  that read the names literally would print its most important words at its
+  lowest contrast and **nothing would fail**, which is why the rule is now
+  asserted over **every** scheme by luminance rather than left in a comment —
+  the next one is covered the day it is written, and the panel's own test
+  counts `SCHEMES.length` rather than the literal 4 that made adding one an
+  edit to a test about something else. Two things the pictures asked for and
+  did not get: **Green's panel is lighter than its ink** (a white card on a
+  grey page, the only scheme where that holds, and his picture), and **Cobalt's
+  blue title bar is deliberately not reproduced** — the bar is `--panel` like
+  every surface, and painting one element from a screenshot would be a twelfth
+  token nothing else could read. **And driving it found a fault only looking
+  could find**: the preview strip stayed gold on a white page, `preview.tsx`
+  having written `#a3946f`, `#c9a45c`, `#3a3018` and `#8a6f2f` into its own
+  stylesheet — **literally Gold's `muted`, `gold`, `border` and `goldDeep`** —
+  a surface keeping its own copy of a colour, invisible under the scheme it was
+  copied from; it reads the tokens now. Three nearby literals are **correct and
+  left**: the logo's gradient (a logo is a logo), the `:root` block (that *is*
+  Gold's definition, overridden inline), and the beat and folder pickers'
+  `#c9a45c` default — a beat's colour is a **document** colour that travels in
+  the project and is drawn for every reader, so it must not move because
+  somebody switched scheme.
   `addendum-03-story-sculptor.md` is the Story Sculptor node canvas: stages
   1–7 (the board and its two nodes, the structure column, the layout rule
   with scenes, beats, the columns the writer defines, binding a node to a real
