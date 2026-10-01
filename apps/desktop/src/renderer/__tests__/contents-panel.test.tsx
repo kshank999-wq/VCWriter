@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import {
   addBeat,
@@ -59,10 +59,13 @@ function Panel({
   start,
   dragging = null,
   onFile,
+  onOpenOutliner,
 }: {
   start: ProjectFile;
   dragging?: { kind: 'item' | 'folder' | 'capture'; id: string } | null;
   onFile?(file: ProjectFile): void;
+  /** The way through to where chapters are made (addendum 28 §4b). */
+  onOpenOutliner?(): void;
 }) {
   const [file, setFile] = useState(start);
   onFile?.(file);
@@ -72,6 +75,7 @@ function Panel({
       onUpdate={(mutate) => setFile((current) => mutate(current))}
       dragging={dragging}
       onDragEnd={() => undefined}
+      {...(onOpenOutliner ? { onOpenOutliner } : {})}
     />
   );
 }
@@ -107,10 +111,22 @@ describe('the table of contents', () => {
     expect(screen.getByText(/The chapters are the Outliner's/)).toBeTruthy();
   });
 
-  it('says where to go when the book has no chapters yet', () => {
+  /**
+   * Updated rather than worked around (addendum 28 §4b): it spelled the old
+   * sentence out, and the sentence changed because it was **denying what the
+   * boxes showed** — *No chapters yet* over a box. What it must still do is
+   * say the book has no chapters and where they are made; what it may no
+   * longer do is pretend the screen is empty.
+   */
+  it('says there are no chapters yet, and where they are made', () => {
     const bare = createProjectFile({ title: 'Nothing yet', format: 'instructional' });
-    render(<Panel start={bare} />);
-    expect(screen.getByText(/No chapters yet/)).toBeTruthy();
+    const went = vi.fn();
+    render(<Panel start={bare} onOpenOutliner={went} />);
+    expect(screen.getByText(/no chapters yet/i)).toBeTruthy();
+    // And the way there is a control rather than a word in a sentence.
+    const door = screen.getByRole('button', { name: 'Open the Outliner' });
+    fireEvent.click(door);
+    expect(went).toHaveBeenCalled();
   });
 });
 

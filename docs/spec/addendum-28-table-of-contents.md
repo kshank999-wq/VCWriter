@@ -225,3 +225,67 @@ Named rather than half-built, in the order they should come:
    so the Outliner puts it in the right chapter without being told.
 3. **Notes filed in bulk** from the Note Sorter and the phone inbox, both of
    which already produce research items and so need only the place.
+
+---
+
+## 4b. Organising the rough information, before it is a chapter
+
+From Ken, narrowing §1:
+
+> I just wanna be able to create the chapters and sections and be able to take
+> research and organize it per the sections, not actually create beats of
+> everything. I just want a list of things so I can organize the rough
+> information before I start crafting it into an actual chapter section.
+
+**It was already built, in the Outliner**, and this was measured end to end
+before anything was written rather than assumed:
+
+- `+ Chapter`, `+ Section`, `+ Subsection`, `+ Note` and `+ Idea` on an
+  instructional book, numbering themselves 1 and 1.1 as they are made.
+- A research note filed **under a section** — `addResearchRow` takes a
+  `parentId`, and the Outliner's drop handler passes one.
+- The research shelf standing beside the rows to drag from (addendum 06 §3 put
+  it there for exactly this).
+- And **nothing reaching the manuscript**: after making a chapter, a section
+  and filing a note under it, the document holds no new units, no new beats and
+  no story markers at all. Promotion is `Add to track`, a separate press.
+
+So Ken's whole sentence is the Outliner's own empty state, which reads
+*everything here is a plan until you send it to the manuscript*.
+
+### What was actually missing
+
+**The door.** He keeps saying *in the research section*, and this panel — the
+one screen in Research about chapters — named the Outliner twice in prose and
+could not reach it:
+
+> The chapters are the Outliner's.
+> Nothing to list yet. Add chapters and sections in the Outliner…
+
+That is addendum 10 §8's rule exactly — **a route is only a route where it
+exists** — and addendum 20 §15c's one room over. So *Open the Outliner* is a
+button here, running the **same three-way the title bar's own Outliner button
+runs** (a popped-out pane, the Outline page on a book, the room elsewhere), so
+there is one answer to where the Outliner is rather than a second that could
+drift. Research closes behind it: this goes somewhere rather than opening a
+second thing over the first.
+
+**No second screen was built**, which §3 already decided and is worth keeping:
+a Research screen that made chapters would be a second answer to what this
+book's chapters are, and this room has removed that fault twice (addendum 20
+§15c, §9u).
+
+### Driven, and the fault it caught
+
+Pressing it closes Research and lands on the Outliner with all five row kinds
+offered. And looking at the panel caught a contradiction nobody had reported:
+the header read **No chapters yet** while a box reading **1. Chapter One** sat
+under it. The sentence counts **chapters** and the boxes are **rows**, so a
+book with sections and no chapter markers had two readings of one screen
+denying each other — §3's own note-count fault a second time. It names what is
+drawn now (*1 section, and no chapters yet*), in the format's own noun, and a
+test pins that the sentence may never deny what the boxes show.
+
+The route also read as prose rather than a control — a flat `ghost` button
+above its own note — which is §4a's finding on this very panel; it is a raised
+button now.

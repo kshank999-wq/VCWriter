@@ -1440,6 +1440,36 @@ push live; the build takes a minute or two.
   made, a filed note becoming a
   beat under its own chapter and section, and filing in bulk from the Note
   Sorter and the phone.
+  **§4b is organising the rough information before it is a chapter**, from Ken
+  narrowing §1 (*I just wanna be able to create the chapters and sections and be
+  able to take research and organize it per the sections, not actually create
+  beats of everything… a list of things… before I start crafting it*) — and
+  **it was already built, in the Outliner**, measured end to end before a line
+  was written: `+ Chapter`, `+ Section`, `+ Subsection`, `+ Note` and `+ Idea`
+  numbering themselves 1 and 1.1, a research note filed **under a section**
+  (`addResearchRow` takes a `parentId` and the drop handler passes one), the
+  research shelf beside the rows to drag from (addendum 06 §3 put it there for
+  exactly this), and **nothing reaching the manuscript** — after a chapter, a
+  section and a filed note the document holds no new units, no new beats and no
+  markers, promotion being `Add to track`, a separate press. His whole sentence
+  is the Outliner's own empty state: *everything here is a plan until you send
+  it to the manuscript*. **What was missing is the door**: he keeps saying *in
+  the research section*, and this panel named the Outliner twice in prose and
+  could not reach it — addendum 10 §8's *a route is only a route where it
+  exists*, addendum 20 §15c one room over. *Open the Outliner* is a button here
+  running **the same three-way the title bar's own Outliner button runs** (a
+  popped-out pane, the Outline page on a book, the room elsewhere), one answer
+  rather than a second that could drift, with Research closing behind it. **No
+  second screen was built**, §3's decision kept: a Research screen that made
+  chapters would be a second answer to what the book's chapters are, the fault
+  this room has removed twice. Driving it caught a contradiction nobody had
+  reported — the header read **No chapters yet** over a box reading **1. Chapter
+  One**, the sentence counting *chapters* and the boxes being *rows*, so a book
+  with sections and no markers had two readings of one screen denying each
+  other (§3's note-count fault again); it names what is drawn now, in the
+  format's own noun, with a test that the sentence may never deny the boxes —
+  and the route read as prose rather than a control (§4a's own finding on this
+  panel), so it is a raised button.
   `addendum-11-setups-and-payoffs.md` is Setups & Payoffs, from Ken's own dev
   spec. **Built.** Half of it already existed (the record, its setup points, its
   payoff, archiving — master spec §7.3); what was missing was **the rule the

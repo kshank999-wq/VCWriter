@@ -101,6 +101,13 @@ interface ResearchWindowProps {
    * shortcut nobody can see. Absent where a host hands nothing down.
    */
   onSaveAs?(kind: SaveKind): void;
+  /**
+   * Go to the Outliner, from the room a writer looks for chapters in
+   * (addendum 28 §4b). Absent in a window of its own, which cannot change
+   * which page the workspace is showing.
+   */
+  onOpenOutliner?(): void;
+
 
   /**
    * Go and look at a passage. Given by the workspace, where there is a script
@@ -191,6 +198,7 @@ export function ResearchWindow({
   onUpdate,
   onPopOut,
   onSaveAs,
+  onOpenOutliner,
   onGoToBeat,
 }: ResearchWindowProps) {
   const dialog = useModal(open);
@@ -205,6 +213,7 @@ export function ResearchWindow({
           {...(openOn ? { openOn } : {})}
           {...(onPopOut ? { onPopOut } : {})}
           {...(onSaveAs ? { onSaveAs } : {})}
+          {...(onOpenOutliner ? { onOpenOutliner } : {})}
           {...(onGoToBeat ? { onGoToBeat } : {})}
         />
       ) : null}
@@ -224,6 +233,7 @@ export function ResearchBody({
   onUpdate,
   onPopOut,
   onSaveAs,
+  onOpenOutliner,
   onGoToBeat,
 }: {
   file: ProjectFile;
@@ -240,6 +250,13 @@ export function ResearchBody({
    * shortcut nobody can see. Absent where a host hands nothing down.
    */
   onSaveAs?(kind: SaveKind): void;
+  /**
+   * Go to the Outliner, from the room a writer looks for chapters in
+   * (addendum 28 §4b). Absent in a window of its own, which cannot change
+   * which page the workspace is showing.
+   */
+  onOpenOutliner?(): void;
+
 }) {
   const [selection, setSelection] = useState<Selection>({ kind: 'view', view: openOn ?? 'all' });
 
@@ -1151,6 +1168,7 @@ export function ResearchBody({
                 // The chapter's title and what it is about are set on the
                 // chapter page's own screen. A route, never a second copy.
                 onOpenChapter={(markerId) => setChapterPageFor(markerId)}
+                {...(onOpenOutliner ? { onOpenOutliner } : {})}
               />
             </div>
           ) : selection.kind === 'graveyard' ? (

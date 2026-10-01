@@ -44,6 +44,20 @@ import {
 interface ContentsPanelProps {
   file: ProjectFile;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  /**
+   * Go to the Outliner (addendum 28 §4b, from Ken: *I just wanna be able to
+   * create the chapters and sections and be able to take research and organize
+   * it per the sections… a list of things… before I start crafting it*).
+   *
+   * **Both sentences on this panel named the Outliner and neither could reach
+   * it** — addendum 10 §8's *a route is only a route where it exists*, and
+   * addendum 20 §15c's lesson one room over. Everything Ken describes is built
+   * there: Chapter and Section rows that number themselves, notes and ideas
+   * nested under a section, the research shelf beside them to drag from, and
+   * nothing touching the manuscript until *Add to track* is pressed. What was
+   * missing was a door from the room he looks in.
+   */
+  onOpenOutliner?(): void;
   /** What is being dragged in the room, so a box can light up for it. */
   dragging: { kind: 'item' | 'folder' | 'capture'; id: string } | null;
   onDragEnd(): void;
@@ -76,7 +90,8 @@ export function ContentsPanel({
   onDragEnd,
   onOpenNote,
   onOpenChapter,
-}: ContentsPanelProps) {
+
+  onOpenOutliner,}: ContentsPanelProps) {
   const rows = useMemo(() => contentsShelf(file), [file]);
   const said = useMemo(() => describeContents(file), [file]);
 
@@ -170,12 +185,23 @@ export function ContentsPanel({
           The chapters are the Outliner's. Drop a note on one to say where in the book it
           belongs — the note keeps the folder it is in.
         </p>
+        {onOpenOutliner ? (
+          <p className="toc-route">
+            <button type="button" onClick={onOpenOutliner}>
+              Open the Outliner
+            </button>
+            <span className="toc-route-note">
+              Chapters and sections are made there, and research is dragged onto them. Nothing
+              reaches the manuscript until you press Add to track.
+            </span>
+          </p>
+        ) : null}
       </header>
 
       {rows.length === 0 ? (
         <p className="muted">
-          Nothing to list yet. Add chapters and sections in the Outliner and they turn up
-          here.
+          Nothing to list yet. Chapters and sections are made in the Outliner, and turn up here
+          once they are.
         </p>
       ) : (
         <div className="toc-boxes">{rows.map(box)}</div>

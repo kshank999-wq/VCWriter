@@ -252,3 +252,26 @@ describe('what the shelf says', () => {
     expect(notesUnder(buried, { kind: 'chapter', markerId: made.chapters[0]! })).toEqual([]);
   });
 });
+
+describe('the sentence says what the boxes show (addendum 28 §4b)', () => {
+  /**
+   * The boxes are **rows** and this sentence counted **chapters**, so a book
+   * with sections and no chapter markers drew *No chapters yet* standing over
+   * a box — two readings of one screen disagreeing, which is addendum 28 §3's
+   * own fault (the note count against the boxes) a second time.
+   */
+  it('names the sections where there are sections and no chapters', () => {
+    const file = createProjectFile({ title: 'Textbook', format: 'instructional' });
+    const rows = contentsShelf(file);
+    const said = describeContents(file);
+
+    // Whatever the seed holds, the sentence may not deny what is drawn.
+    if (rows.length > 0) {
+      expect(said).not.toBe(
+        'No chapters yet. Add them in the Outliner and they turn up here, and on the timeline.',
+      );
+      expect(said).toMatch(/section/i);
+    }
+    expect(said).toContain('Outliner');
+  });
+});

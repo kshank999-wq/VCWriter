@@ -396,6 +396,17 @@ export const describeContents = (file: ProjectFile): string => {
   // chapters* about a book that had none. A row knows which it is.
   const chapters = rows.filter((row) => row.place.kind === 'chapter').length;
   if (chapters === 0) {
+    // **It must say what is drawn under it.** The boxes are rows and this
+    // sentence counts chapters, so on a book that has sections and no chapter
+    // markers the two read as a contradiction — *No chapters yet* standing
+    // over a box. That is the room's own fault from addendum 28 §3 (the note
+    // count that disagreed with the boxes), and the fix is the same: name what
+    // is actually there.
+    const nouns = nounsFor(file.project.format);
+    if (rows.length > 0) {
+      const what = rows.length === 1 ? `1 ${nouns.unit.toLowerCase()}` : `${rows.length} ${nouns.unitPlural.toLowerCase()}`;
+      return `${what}, and no chapters yet. Add chapters in the Outliner and these fall under them.`;
+    }
     return 'No chapters yet. Add them in the Outliner and they turn up here, and on the timeline.';
   }
   const filed = rows.reduce((total, row) => total + row.notes.length, 0);

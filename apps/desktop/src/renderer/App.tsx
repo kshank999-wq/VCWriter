@@ -1224,6 +1224,17 @@ export default function App() {
             }}
             onUpdate={project.update}
             onSaveAs={saveSomewhere}
+            // Deliberately the same three-way the title bar's own Outliner
+            // button runs (addendum 28 §4b): one answer to *where is the
+            // Outliner*, and Research closes because this goes somewhere
+            // rather than opening a second thing over the first.
+            onOpenOutliner={() => {
+              setResearchOpen(false);
+              setResearchView(undefined);
+              if (away.has('outliner')) openPane('outliner');
+              else if (isBook) setView('outline');
+              else setOutlinerOpen(true);
+            }}
             onPopOut={() => {
               setResearchOpen(false);
               openPane('research');
