@@ -16,9 +16,15 @@ import {
   placeStillThere,
   deleteResearchItem,
   addMarker,
+  addItem,
+  createOutline,
+  findOutline,
+  promoteRow,
+  removeItem,
   unfileNote,
   updateBeat,
   type ProjectFile,
+  type OutlineItemId,
   type ResearchItemId,
   type StoryMarkerId,
   type StructuralUnitId,
@@ -273,5 +279,144 @@ describe('the sentence says what the boxes show (addendum 28 §4b)', () => {
       expect(said).toMatch(/section/i);
     }
     expect(said).toContain('Outliner');
+  });
+});
+
+/**
+ * The Outliner's chapters and sections, as boxes (addendum 28 §4c).
+ *
+ * From Ken, the third time: *just so the outliner chapters and sections show up
+ * under the table of contents in little boxes… so you can drag and drop your
+ * research and organize it under those names.*
+ *
+ * The fault was that `contentsShelf` read the **manuscript** and nothing else,
+ * so a writer who plans his chapters in the Outliner and has promoted none of
+ * them had nothing here to drop a note on. These are the assertions that would
+ * have failed before it: a plan appears, it takes a note, it is listed once
+ * after promotion, and the note it was given turns up under the chapter it
+ * became with nothing run.
+ */
+describe("the Outliner's chapters and sections, as boxes", () => {
+  /** A book planned and not promoted: two chapters, two sections each. */
+  const planned = () => {
+    let file = createProjectFile({ title: 'Planned', format: 'instructional' });
+    const made = createOutline(file, { name: 'Outline' });
+    file = made.file;
+    const outlineId = made.outline.id;
+    const rowIds: Record<string, OutlineItemId> = {};
+    for (const [key, title] of [
+      ['one', 'Mathematics'],
+      ['two', 'Numbers'],
+    ] as const) {
+      const row = addItem(file, outlineId, { kind: 'chapter', title });
+      file = row.file;
+      rowIds[key] = row.itemId!;
+    }
+    for (const [key, parent, title] of [
+      ['division', 'one', 'Division'],
+      ['times', 'one', 'Multiplication'],
+      ['fractions', 'two', 'Fractions'],
+    ] as const) {
+      const row = addItem(file, outlineId, { kind: 'scene', parentId: rowIds[parent]!, title });
+      file = row.file;
+      rowIds[key] = row.itemId!;
+    }
+    return { file, outlineId, rows: rowIds };
+  };
+
+  it('lists a chapter nobody has promoted, numbered, as a plan', () => {
+    const made = planned();
+    const rows = contentsShelf(made.file).filter((row) => row.planned);
+
+    expect(rows.map((row) => `${row.number} ${row.title}`)).toEqual([
+      '1 Mathematics',
+      '1.1 Division',
+      '1.2 Multiplication',
+      '2 Numbers',
+      '2.1 Fractions',
+    ]);
+    // A chapter stands at depth 0 and its sections under it, the manuscript
+    // half's own rule rather than a second one.
+    expect(rows.map((row) => row.depth)).toEqual([0, 1, 1, 0, 1]);
+  });
+
+  /** A note or an idea in the outline is not a place in the book. */
+  it('lists chapters and sections and nothing else', () => {
+    const made = planned();
+    const withNote = addItem(made.file, made.outlineId, {
+      kind: 'note',
+      parentId: made.rows['division']!,
+      title: 'Look up long division',
+    });
+    const titles = contentsShelf(withNote.file).map((row) => row.title);
+    expect(titles).not.toContain('Look up long division');
+  });
+
+  /** The ask itself: somewhere to drop rough material before it is a chapter. */
+  it('takes a note, and changes nothing in the Outliner', () => {
+    const made = planned();
+    const put = note(made.file, 'Two ways to divide');
+    const place = { kind: 'plan', itemId: made.rows['division']! } as const;
+
+    const offer = filingOffer(put.file, put.id, place);
+    expect(offer.may).toBe(true);
+    expect(offer.says).toContain('Division');
+
+    const filed = fileNoteUnder(put.file, put.id, place);
+    expect(notesUnder(filed, place).map((one) => one.title)).toEqual(['Two ways to divide']);
+    // It is placed, not written: nothing has reached the manuscript.
+    expect(noteProgress(filed, filed.researchItems.find((one) => one.id === put.id)!)).toBe('planned');
+    // **Nothing in the Outliner moved.** The same rows, the same titles, no
+    // new row referencing the note — which is Ken's *not necessarily a
+    // connection between the outliner and the research*.
+    const before = findOutline(made.file, made.outlineId)!;
+    const after = findOutline(filed, made.outlineId)!;
+    expect(after.items).toEqual(before.items);
+  });
+
+  /**
+   * **Listed once, and the notes follow the promotion.** This is the half that
+   * would have lost a morning's sorting: the plan row drops off the shelf when
+   * it is bound, so without `placeNow` the notes under it would be perfectly
+   * stored and drawn nowhere.
+   */
+  it('becomes the chapter it was promoted to, carrying its notes', () => {
+    const made = planned();
+    const put = note(made.file, 'Two ways to divide');
+    let file = fileNoteUnder(put.file, put.id, { kind: 'plan', itemId: made.rows['division']! });
+
+    file = promoteRow(file, made.outlineId, made.rows['one']!).file;
+
+    const rows = contentsShelf(file);
+    // The chapter is in the book now, so it is drawn once and not as a plan.
+    const chapters = rows.filter((row) => row.depth === 0 && row.title === 'Mathematics');
+    expect(chapters).toHaveLength(1);
+    expect(chapters[0]!.planned).toBe(false);
+
+    // And the note is under the section it was sorted into, which is now a
+    // section of the manuscript.
+    const carrying = rows.filter((row) => row.notes.length > 0);
+    expect(carrying).toHaveLength(1);
+    expect(carrying[0]!.place.kind).toBe('section');
+    expect(carrying[0]!.notes.map((one) => one.title)).toEqual(['Two ways to divide']);
+  });
+
+  /** A plan row deleted leaves its note unfiled, `placeStillThere`'s own rule. */
+  it('reads a note as unfiled where the plan row has gone', () => {
+    const made = planned();
+    const put = note(made.file, 'Stray');
+    const place = { kind: 'plan', itemId: made.rows['division']! } as const;
+    let file = fileNoteUnder(put.file, put.id, place);
+    expect(placeStillThere(file, place)).toBe(true);
+
+    file = removeItem(file, made.outlineId, made.rows['division']!);
+    expect(placeStillThere(file, place)).toBe(false);
+    expect(noteProgress(file, file.researchItems.find((one) => one.id === put.id)!)).toBe('unfiled');
+  });
+
+  /** The sentence may not deny the boxes — §4b's rule, now counting plans. */
+  it('counts a planned chapter as a chapter in the sentence', () => {
+    const made = planned();
+    expect(describeContents(made.file)).toMatch(/^2 chapters/);
   });
 });

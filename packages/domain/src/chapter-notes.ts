@@ -1,13 +1,14 @@
-import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
+import { unitsInStoryOrder } from './selectors.js';
 import { onlyLiving } from './graveyard.js';
-import { structureNumbers } from './numbering.js';
+import { outlineNumbers, structureNumbers } from './numbering.js';
+import { outlineRows, rowTitle } from './outline.js';
 import { nounsFor } from './formats.js';
 import { nowIso } from './entities/common.js';
 import { researchItemSchema } from './entities/research.js';
 import type { ProjectFile } from './project-file.js';
 import type { ResearchItem } from './entities/research.js';
 import type { StoryEntityRef } from './entities/links.js';
-import type { BeatId, ResearchItemId, StoryMarkerId, StructuralUnitId } from './ids.js';
+import type { BeatId, OutlineItemId, ResearchItemId, StoryMarkerId, StructuralUnitId } from './ids.js';
 
 /**
  * The table of contents, and the notes filed under it (addendum 28).
@@ -57,31 +58,80 @@ import type { BeatId, ResearchItemId, StoryMarkerId, StructuralUnitId } from './
 
 // ------------------------------------------------------------- where it goes
 
-/** A place in the book a note can be filed under: a chapter, or a section. */
+/**
+ * A place in the book a note can be filed under.
+ *
+ * Three kinds, and the third is §4c's whole data change: a chapter in the
+ * manuscript, a section in the manuscript, or a **row of the Outliner** that is
+ * still a plan. Which of the three it is, is never asked by the screen — it
+ * drops a note on a box and the box carries its place.
+ */
 export type NotePlace =
   | { kind: 'chapter'; markerId: StoryMarkerId }
-  | { kind: 'section'; unitId: StructuralUnitId };
+  | { kind: 'section'; unitId: StructuralUnitId }
+  | { kind: 'plan'; itemId: OutlineItemId };
 
 /** The same place as the reference the record stores. */
 export const placeRef = (place: NotePlace): StoryEntityRef =>
   place.kind === 'chapter'
     ? { type: 'story_marker', id: place.markerId as string }
-    : { type: 'unit', id: place.unitId as string };
+    : place.kind === 'section'
+      ? { type: 'unit', id: place.unitId as string }
+      : { type: 'outline_item', id: place.itemId as string };
 
-/** The place a stored reference names, or null where it names neither. */
+/** The place a stored reference names, or null where it names none of them. */
 export const placeOf = (ref: StoryEntityRef | null): NotePlace | null => {
   if (!ref) return null;
   if (ref.type === 'story_marker') return { kind: 'chapter', markerId: ref.id as StoryMarkerId };
   if (ref.type === 'unit') return { kind: 'section', unitId: ref.id as StructuralUnitId };
+  if (ref.type === 'outline_item') return { kind: 'plan', itemId: ref.id as OutlineItemId };
   return null;
 };
 
-const samePlace = (a: NotePlace, b: NotePlace): boolean =>
-  a.kind === 'chapter' && b.kind === 'chapter'
-    ? (a.markerId as string) === (b.markerId as string)
-    : a.kind === 'section' && b.kind === 'section'
-      ? (a.unitId as string) === (b.unitId as string)
-      : false;
+/** The one string that identifies a place, so nothing compares three pairs. */
+export const placeKey = (place: NotePlace): string =>
+  place.kind === 'chapter'
+    ? `c:${place.markerId}`
+    : place.kind === 'section'
+      ? `s:${place.unitId}`
+      : `p:${place.itemId}`;
+
+const samePlace = (a: NotePlace, b: NotePlace): boolean => placeKey(a) === placeKey(b);
+
+/**
+ * The place a stored place means **now** (§4c).
+ *
+ * The one rule that makes planning safe: a note filed under a plan row is
+ * filed under whatever that row **became**. Pressing *Add to track* in the
+ * Outliner binds the row to a chapter marker or a unit, and from that moment
+ * this answers with the chapter — so the notes a writer sorted while the book
+ * was still an outline turn up under the real chapter with nothing run, and
+ * nothing is rewritten on promotion.
+ *
+ * It is the module's own sentence (*one place, and the chapter above it is a
+ * reading*) pointed at the binding rather than at the story order, and it is
+ * what stops promotion losing the filing: without it the plan box drops out of
+ * the shelf, the chapter box has nothing under it, and a morning's sorting is
+ * invisible while still perfectly stored.
+ *
+ * Where the binding names a record that has gone it answers with the plan
+ * again, which is the same answer the shelf gives — the box comes back.
+ */
+export const placeNow = (file: ProjectFile, place: NotePlace | null): NotePlace | null => {
+  if (!place || place.kind !== 'plan') return place;
+  for (const outline of file.outlines ?? []) {
+    const row = outline.items.find((one) => (one.id as string) === (place.itemId as string));
+    if (!row) continue;
+    if (row.boundMarkerId && file.markers.some((m) => (m.id as string) === (row.boundMarkerId as string))) {
+      return { kind: 'chapter', markerId: row.boundMarkerId };
+    }
+    if (row.boundUnitId && file.units.some((u) => (u.id as string) === (row.boundUnitId as string))) {
+      return { kind: 'section', unitId: row.boundUnitId };
+    }
+    return place;
+  }
+  return place;
+};
 
 // -------------------------------------------------------------- how far along
 
@@ -150,14 +200,22 @@ const plannedInOutline = (file: ProjectFile, item: ResearchItem): boolean =>
  */
 export const placeStillThere = (file: ProjectFile, place: NotePlace | null): boolean => {
   if (!place) return false;
-  return place.kind === 'chapter'
-    ? file.markers.some((marker) => (marker.id as string) === (place.markerId as string))
-    : file.units.some((unit) => (unit.id as string) === (place.unitId as string));
+  if (place.kind === 'chapter') {
+    return file.markers.some((marker) => (marker.id as string) === (place.markerId as string));
+  }
+  if (place.kind === 'section') {
+    return file.units.some((unit) => (unit.id as string) === (place.unitId as string));
+  }
+  // A plan row deleted in the Outliner is the same answer: the note reads
+  // unfiled rather than filed nowhere, with nothing run.
+  return (file.outlines ?? []).some((outline) =>
+    outline.items.some((row) => (row.id as string) === (place.itemId as string)),
+  );
 };
 
 export const noteProgress = (file: ProjectFile, item: ResearchItem): NoteProgress => {
   if (noteInBeats(file, item).length > 0) return 'written';
-  if (placeStillThere(file, placeOf(item.place))) return 'planned';
+  if (placeStillThere(file, placeNow(file, placeOf(item.place)))) return 'planned';
   if (plannedInOutline(file, item)) return 'planned';
   return 'unfiled';
 };
@@ -183,6 +241,17 @@ export interface ContentsRow {
   summary: string;
   /** 0 for a chapter, 1 for a section under it. */
   depth: number;
+  /**
+   * True where this is still a **plan** — a row of the Outliner that has not
+   * been added to the track (§4c).
+   *
+   * Said rather than hidden, because a box for a chapter the book has and a box
+   * for one that is still a plan are two different things, and a writer sorting
+   * research wants to know which they are looking at. It is read off the row
+   * rather than stored: pressing *Add to track* moves the box from one group to
+   * the other with nothing run.
+   */
+  planned: boolean;
   /** The notes filed here, newest work last, in the order they were filed. */
   notes: ResearchItem[];
   /** How many of those notes are in the book already. */
@@ -190,7 +259,8 @@ export interface ContentsRow {
 }
 
 /**
- * The book's chapters and sections in order, with the notes filed under each.
+ * The book's chapters and sections in order, with the notes filed under each —
+ * **the ones in the manuscript, and then the ones that are still plans** (§4c).
  *
  * **It is a reading and nothing about it is stored** — the sixth time this
  * project has made a fact about the work a reading rather than a column. Add a
@@ -200,19 +270,43 @@ export interface ContentsRow {
  *
  * A section is listed under the chapter it falls in, which is
  * `structureNumbers`' own rule read back rather than a second walk.
+ *
+ * ## The Outliner's rows (§4c)
+ *
+ * From Ken: *just so the outliner chapters and sections show up under the table
+ * of contents in little boxes… so you can drag and drop your research and
+ * organize it under those names.*
+ *
+ * This read the **manuscript** and nothing else, which is why he asked three
+ * times: he plans his chapters in the Outliner, nothing is promoted until he
+ * presses *Add to track*, and so there was nothing here to drop a note on. A
+ * plan is exactly when sorting rough material is worth doing, so the plan rows
+ * are listed too.
+ *
+ * Two rules keep it honest.
+ *
+ * **A row that has become a chapter is listed once**, as the chapter it became
+ * — `boundMarkerId` and `boundUnitId` have said which since addendum 19 §2, so
+ * a promoted row drops out of this half by itself and no box is drawn twice.
+ *
+ * **The two groups are not mixed.** A plan has no place in the story order —
+ * that is what makes it a plan — so there is nothing to interleave it with, and
+ * a list that guessed would put a chapter a writer has not written between two
+ * they have. The manuscript's rows first, in the story order; the Outliner's
+ * after them, in the outline's own order.
  */
 export const contentsShelf = (file: ProjectFile): ContentsRow[] => {
   const numbers = structureNumbers(file);
   const living = onlyLiving(file.researchItems);
 
-  const byChapter = new Map<string, ResearchItem[]>();
-  const bySection = new Map<string, ResearchItem[]>();
+  const filed = new Map<string, ResearchItem[]>();
   for (const item of living) {
-    const place = placeOf(item.place);
+    // Read **through the binding** (`placeNow`), so a note sorted under a plan
+    // row turns up under the chapter that row became.
+    const place = placeNow(file, placeOf(item.place));
     if (!place) continue;
-    const key = place.kind === 'chapter' ? (place.markerId as string) : (place.unitId as string);
-    const into = place.kind === 'chapter' ? byChapter : bySection;
-    into.set(key, [...(into.get(key) ?? []), item]);
+    const key = placeKey(place);
+    filed.set(key, [...(filed.get(key) ?? []), item]);
   }
 
   const opens = new Map(
@@ -224,32 +318,75 @@ export const contentsShelf = (file: ProjectFile): ContentsRow[] => {
   const rows: ContentsRow[] = [];
   const countWritten = (notes: ResearchItem[]) =>
     notes.filter((note) => noteProgress(file, note) === 'written').length;
+  const add = (
+    place: NotePlace,
+    number: string,
+    title: string,
+    summary: string,
+    depth: number,
+    planned: boolean,
+  ): void => {
+    const notes = filed.get(placeKey(place)) ?? [];
+    rows.push({ place, number, title, summary, depth, planned, notes, written: countWritten(notes) });
+  };
 
   unitsInStoryOrder(file).forEach((unit) => {
     const marker = opens.get(unit.id as string);
     if (marker) {
-      const notes = byChapter.get(marker.id as string) ?? [];
-      rows.push({
-        place: { kind: 'chapter', markerId: marker.id },
-        number: numbers.chapters.get(marker.id as string) ?? '',
-        title: marker.title,
-        summary: marker.page?.summary ?? '',
-        depth: 0,
-        notes,
-        written: countWritten(notes),
-      });
+      add(
+        { kind: 'chapter', markerId: marker.id },
+        numbers.chapters.get(marker.id as string) ?? '',
+        marker.title,
+        marker.page?.summary ?? '',
+        0,
+        false,
+      );
     }
-    const notes = bySection.get(unit.id as string) ?? [];
-    rows.push({
-      place: { kind: 'section', unitId: unit.id },
-      number: numbers.units.get(unit.id as string) ?? '',
-      title: unit.title,
-      summary: unit.summary ?? '',
-      depth: opens.size > 0 ? 1 : 0,
-      notes,
-      written: countWritten(notes),
-    });
+    add(
+      { kind: 'section', unitId: unit.id },
+      numbers.units.get(unit.id as string) ?? '',
+      unit.title,
+      unit.summary ?? '',
+      opens.size > 0 ? 1 : 0,
+      false,
+    );
   });
+
+  const markerIds = new Set(file.markers.map((marker) => marker.id as string));
+  const unitIds = new Set(file.units.map((unit) => unit.id as string));
+
+  for (const outline of file.outlines ?? []) {
+    const planNumbers = outlineNumbers(file, outline);
+    const chapters = outline.items.some((item) => item.kind === 'chapter');
+    // In the outline's own reading order, and **folding is ignored** — a row
+    // folded away in the Outliner an hour ago is not a chapter that has gone,
+    // and `outlineRows` takes the whole set for exactly this (it honours a fold
+    // only when asked to show everything).
+    const everything = new Set(outline.items.map((item) => item.id as string));
+    for (const { item } of outlineRows(outline, everything)) {
+      // Chapters and sections, which is what Ken asked for and what the
+      // manuscript half lists. A note or an idea in the outline is a thing the
+      // writer knows rather than a place in the book — the rail's *a note gets
+      // no dot* (addendum 16 §15) pointed at a box.
+      if (item.kind !== 'chapter' && item.kind !== 'scene') continue;
+      // **Listed once.** It is in the manuscript now, so the row above is it —
+      // but only where the binding still resolves: a chapter deleted from the
+      // book leaves the row behind, and a row that drew no box at all would
+      // read as the plan having gone with it.
+      if (item.boundMarkerId && markerIds.has(item.boundMarkerId as string)) continue;
+      if (item.boundUnitId && unitIds.has(item.boundUnitId as string)) continue;
+      add(
+        { kind: 'plan', itemId: item.id },
+        planNumbers.get(item.id as string) ?? '',
+        rowTitle(file, item),
+        item.body,
+        // The manuscript half's own rule: a section stands under its chapter
+        // where there are chapters and at the top where there are none.
+        item.kind === 'chapter' ? 0 : chapters ? 1 : 0,
+        true,
+      );
+    }
+  }
 
   return rows;
 };
@@ -326,7 +463,9 @@ export const filingOffer = (
 
   const row = contentsRowAt(file, place);
   const where = row ? describeContentsRow(row, file) : 'the book';
-  const already = placeOf(item.place);
+  // Read through the binding too, or filing a note onto the chapter a plan row
+  // became would read as a move from somewhere it already is.
+  const already = placeNow(file, placeOf(item.place));
   if (already && samePlace(already, place)) {
     return { says: `“${item.title}” is already under ${where}.`, may: false };
   }
@@ -394,7 +533,9 @@ export const describeContents = (file: ProjectFile): string => {
   // Counted by what a row **is** rather than by its depth: on a book with no
   // chapters yet every section sits at depth 0, so counting depth said *4
   // chapters* about a book that had none. A row knows which it is.
-  const chapters = rows.filter((row) => row.place.kind === 'chapter').length;
+  const chapters = rows.filter(
+    (row) => row.place.kind === 'chapter' || (row.planned && row.depth === 0),
+  ).length;
   if (chapters === 0) {
     // **It must say what is drawn under it.** The boxes are rows and this
     // sentence counts chapters, so on a book that has sections and no chapter
@@ -420,3 +561,12 @@ export const describeContents = (file: ProjectFile): string => {
   const notes = loose === 1 ? '1 note is' : `${loose} notes are`;
   return `${said}. ${notes} not placed yet.`;
 };
+
+/**
+ * How many of the boxes are still plans (§4c), so the group can say what it is.
+ *
+ * A reading like everything else here: pressing *Add to track* in the Outliner
+ * takes a box out of this count with nothing run.
+ */
+export const plannedContents = (file: ProjectFile): ContentsRow[] =>
+  contentsShelf(file).filter((row) => row.planned);

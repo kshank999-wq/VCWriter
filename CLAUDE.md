@@ -1470,6 +1470,53 @@ push live; the build takes a minute or two.
   format's own noun, with a test that the sentence may never deny the boxes —
   and the route read as prose rather than a control (§4a's own finding on this
   panel), so it is a raised button.
+  **§4c is the Outliner's chapters as boxes, and the drag that had no source**,
+  from Ken a third time (*it has a section for the outliner that creates
+  chapter one. **We don't need that anymore*** … *just so the outliner chapters
+  and sections show up under the table of contents in little boxes… Nothing
+  complex*) — and the correction is that **§4b was right that the Outliner
+  already does the work and wrong to answer with a door**, a door taking him
+  out of the room he said *in the research section* three times about; it is
+  gone. The gap was that `contentsShelf` read the **manuscript** — `file.markers`
+  and `unitsInStoryOrder` — and a chapter planned in the Outliner reaches
+  neither until *Add to track*, which is the whole of what he is doing, so the
+  screen drew the one seeded unit and nothing else: **a reading right about the
+  manuscript and silent about the plan**, on the one screen whose purpose is
+  sorting material that is not written yet. `outline_item` joins
+  `storyEntityTypeSchema` — the **seventh** time that list has been the whole
+  answer — with **no migration**, 0064 having made `place_type` text for 0060's
+  reason, and `NotePlace` gains a `plan` kind with `placeKey` the one string
+  that identifies all three. The shelf is **two groups**: a row that has become
+  a chapter is **listed once** (`boundMarkerId`/`boundUnitId`, checked against
+  the records actually there, so a chapter deleted from the book brings its plan
+  box back rather than leaving the row drawing nothing), they are **never
+  interleaved** (a plan has no place in the story order, and a list that guessed
+  would stand an unwritten chapter between two written ones), and each is named
+  on the screen with the second heading appearing only where there is a first to
+  tell it from. **Filing against a plan changes nothing in the Outliner**,
+  Ken's own sentence, asserted by a test that the outline's items are what they
+  were. **`placeNow` is the half that would otherwise lose a morning's
+  sorting**: a plan row drops off the shelf the moment it is bound, so a note
+  filed under it reads as filed under whatever that row *became* — nothing
+  rewritten on promotion, nothing stored, and where the binding names a record
+  that has gone it answers with the plan again, which is this module's *one
+  place, and the chapter above it is a reading* pointed at the binding. Driving
+  the real room found the fault no test could: **there was nothing to drag** —
+  this panel takes the whole of the room's middle, so while it is showing the
+  note cards are drawn nowhere and the boxes were a drop target with no source
+  on the screen, which §4's own test (supplying `dragging` as a prop) is exactly
+  the shape of test that cannot see. So the panel carries a **shelf of what is
+  not placed yet**, addendum 06 §3's reason one room over, absent once
+  everything is placed; **what is in the air has one answer** (the shelf tells
+  the room rather than keeping a second piece of drag state), the chip is **one
+  control with two doors** (the drag Ken asked for, and a press into the chosen
+  box, which is the only path a keyboard can reach), and with no box chosen the
+  press **opens the note rather than refusing**. Two more things only looking
+  caught: **the dashed edge said nothing** (a dash pattern in `--border` against
+  a near-black panel is a solid line from a foot away — the colour goes with the
+  style, addendum 02 §4b's `.ghost` fault the other way round), and **the first
+  group was unnamed while the second was named**, so the book's own chapters
+  read as the screen's preamble.
   `addendum-11-setups-and-payoffs.md` is Setups & Payoffs, from Ken's own dev
   spec. **Built.** Half of it already existed (the record, its setup points, its
   payoff, archiving — master spec §7.3); what was missing was **the rule the

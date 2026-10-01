@@ -20114,6 +20114,71 @@ dialog.designed-page-dialog[open] {
   background: color-mix(in srgb, var(--gold) 14%, transparent);
 }
 
+/* A chapter that is still a plan (addendum 28 §4c): flat and dashed, which is
+   this stylesheet's own look for *not built yet* — the base `button` is raised
+   (addendum 20 §9) and a raised box with a dashed edge reads as neither. The
+   colour is left alone and only the style changes, because a border whose
+   colour goes transparent while its style takes is the fault addendum 02 §4b
+   found: the control then draws as a line of text. */
+.toc-box.planned {
+  /* Measured on the real screen: `border-style: dashed` alone was a dash
+     pattern in `--border` against a near-black panel, which from a foot away
+     is a solid line — the look said nothing the heading had not. The colour
+     goes with the style, which is the pair addendum 02 §4b found broken the
+     other way round (a dashed style with a transparent colour). */
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--gold) 40%, var(--border));
+  background: transparent;
+  box-shadow: none;
+}
+
+.toc-box.planned:hover {
+  border-color: var(--gold-deep);
+  background: color-mix(in srgb, var(--gold) 6%, transparent);
+}
+
+/* The two groups: the book's chapters, and the plans. Separate rather than
+   interleaved — a chapter the book has and a row in the Outliner are two
+   different things, and a plan has no place in the story order to be
+   interleaved at. */
+.toc-group {
+  display: grid;
+  gap: 8px;
+}
+
+.toc-plans {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.toc-group h5,
+.toc-shelf h5 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+/* The clause after the heading is a sentence rather than a label, so it is not
+   shouted with it — addendum 20 §9n's own finding, where a section heading's
+   tracked capitals were inherited by something that never asked for them. */
+.toc-group h5 span,
+.toc-shelf h5 span {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+/* A rule of its own rather than reaching for `.small`, which has never had one
+   on its own in this stylesheet (addendum 28 §4a). */
+.toc-plans-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
 .toc-number {
   color: var(--gold);
   font-variant-numeric: tabular-nums;
@@ -20226,4 +20291,38 @@ dialog.designed-page-dialog[open] {
 
 .toc-note-state {
   white-space: nowrap;
+}
+
+/* What there is to sort (addendum 28 §4c). The boxes had no source on the
+   screen to drag from, this panel taking the whole of the room's middle — the
+   Outliner's own arrangement (addendum 06 §3) one room over. */
+.toc-shelf {
+  display: grid;
+  gap: 6px;
+}
+
+.toc-loose {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Wrapping rather than scrolling, the Note Sorter's rule: you cannot pick up a
+   note that is off the screen. */
+.toc-chip {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: grab;
+}
+
+.toc-chip:active {
+  cursor: grabbing;
 }

@@ -102,14 +102,6 @@ interface ResearchWindowProps {
    */
   onSaveAs?(kind: SaveKind): void;
   /**
-   * Go to the Outliner, from the room a writer looks for chapters in
-   * (addendum 28 §4b). Absent in a window of its own, which cannot change
-   * which page the workspace is showing.
-   */
-  onOpenOutliner?(): void;
-
-
-  /**
    * Go and look at a passage. Given by the workspace, where there is a script
    * beside this to go to; absent in the popped-out window, which has none.
    */
@@ -198,7 +190,6 @@ export function ResearchWindow({
   onUpdate,
   onPopOut,
   onSaveAs,
-  onOpenOutliner,
   onGoToBeat,
 }: ResearchWindowProps) {
   const dialog = useModal(open);
@@ -213,7 +204,6 @@ export function ResearchWindow({
           {...(openOn ? { openOn } : {})}
           {...(onPopOut ? { onPopOut } : {})}
           {...(onSaveAs ? { onSaveAs } : {})}
-          {...(onOpenOutliner ? { onOpenOutliner } : {})}
           {...(onGoToBeat ? { onGoToBeat } : {})}
         />
       ) : null}
@@ -233,7 +223,6 @@ export function ResearchBody({
   onUpdate,
   onPopOut,
   onSaveAs,
-  onOpenOutliner,
   onGoToBeat,
 }: {
   file: ProjectFile;
@@ -250,13 +239,6 @@ export function ResearchBody({
    * shortcut nobody can see. Absent where a host hands nothing down.
    */
   onSaveAs?(kind: SaveKind): void;
-  /**
-   * Go to the Outliner, from the room a writer looks for chapters in
-   * (addendum 28 §4b). Absent in a window of its own, which cannot change
-   * which page the workspace is showing.
-   */
-  onOpenOutliner?(): void;
-
 }) {
   const [selection, setSelection] = useState<Selection>({ kind: 'view', view: openOn ?? 'all' });
 
@@ -1161,6 +1143,12 @@ export function ResearchBody({
                 onUpdate={onUpdate}
                 dragging={dragging}
                 onDragEnd={() => setDragging(null)}
+                // **What is in the air has one answer.** The shelf of unplaced
+                // notes lives inside the panel (addendum 28 §4c), so it has to
+                // say what it has picked up — and it says it here rather than
+                // keeping a second piece of drag state the boxes would then
+                // have to read beside this one.
+                onDragNote={(id) => setDragging(id ? { kind: 'item', id: id as string } : null)}
                 // A note opens where it lives, which is still its folder: the
                 // table of contents says where in the book it goes and never
                 // where it is kept.
@@ -1168,7 +1156,6 @@ export function ResearchBody({
                 // The chapter's title and what it is about are set on the
                 // chapter page's own screen. A route, never a second copy.
                 onOpenChapter={(markerId) => setChapterPageFor(markerId)}
-                {...(onOpenOutliner ? { onOpenOutliner } : {})}
               />
             </div>
           ) : selection.kind === 'graveyard' ? (

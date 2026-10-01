@@ -398,6 +398,18 @@ export const resolveRef = (file: ProjectFile, target: StoryEntityRef): ResolvedE
       if (!marker) return missing();
       return found(marker.title || 'Untitled', marker.kind);
     }
+    // A row of the Outliner (addendum 28 §4c): a chapter or a section that is
+    // still a plan. Resolved here for the six above's reason — a note filed
+    // under one reads wherever a reference is drawn, without that surface
+    // being told the Outliner exists. The number is left out for
+    // `story_marker`'s reason: `contentsShelf` numbers these.
+    case 'outline_item': {
+      for (const outline of file.outlines ?? []) {
+        const row = outline.items.find((candidate) => candidate.id === target.id);
+        if (row) return found(row.title || 'Untitled', `${row.kind} · planned`);
+      }
+      return missing();
+    }
     default:
       return missing();
   }

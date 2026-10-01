@@ -71,6 +71,22 @@ export const storyEntityTypeSchema = z.enum([
    * removed. `from_type` is text in Postgres, as it was for the five above.
    */
   'story_marker',
+  /**
+   * A row of the Outliner (addendum 28 §4c).
+   *
+   * **The seventh time this list has been the answer**, and the second time it
+   * is a *place in the book* — but a place the book does not have yet. Ken
+   * plans his chapters and sections in the Outliner and wants to sort research
+   * under them *before* any of it reaches the manuscript, which is the whole
+   * point of planning; until a row is promoted there is no marker and no unit
+   * for a note to name, so what it names is the row.
+   *
+   * It is deliberately **not** called `chapter` or `section`: a row's kind is a
+   * string the writer may add to (`OUTLINE_KINDS`), so a type per kind would be
+   * a list to keep in step with that one. One type, and which kind it is, is
+   * read off the row — `story_marker`'s own argument.
+   */
+  'outline_item',
 ]);
 export type StoryEntityType = z.infer<typeof storyEntityTypeSchema>;
 

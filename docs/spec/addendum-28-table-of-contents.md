@@ -289,3 +289,149 @@ test pins that the sentence may never deny what the boxes show.
 The route also read as prose rather than a control — a flat `ghost` button
 above its own note — which is §4a's finding on this very panel; it is a raised
 button now.
+
+---
+
+## 4c. The Outliner's chapters, as boxes — and the drag that had no source
+
+From Ken, after §4b shipped:
+
+> So in the research section, I'm doing an instructional book. Uh, it has a
+> section for the outliner that creates chapter one. **We don't need that
+> anymore.** But what I really want is **not necessarily a connection between
+> the outliner and the research**, but I wanted when you hit table of contents,
+> it gives you categories. Not that it affects the outliner, but it gives you
+> **automatic categories for you to drop things into**… **just so the outliner
+> chapters and sections show up under the table of contents in little boxes**
+> or whatever categories so you can drag and drop your um, whatever research
+> you have and organize it under those names. **Nothing complex.**
+
+This is the third time on one ask, and §4b's answer is now the thing he asked
+to remove — which is the correction worth keeping: **§4b was right that the
+Outliner already does the work, and wrong to answer with a door.** A door takes
+him out of the room he said he wanted the boxes in. He said *in the research
+section* three times.
+
+### Why there were no boxes
+
+`contentsShelf` read the **manuscript** and nothing else: `file.markers` for
+the chapters, `unitsInStoryOrder(file)` for the sections. A chapter planned in
+the Outliner is an **outline item** and reaches neither of those until *Add to
+track* is pressed — and the whole of what Ken is doing is planning, before
+anything is promoted. So on his book this screen drew the one seeded unit and
+nothing else, which is exactly what he reported each time.
+
+Not a missing feature and not a broken mechanism: **a reading that was right
+about the manuscript and silent about the plan**, on a screen whose whole
+purpose is sorting material that is not written yet.
+
+### What was built
+
+**`outline_item` joins `storyEntityTypeSchema`** — the **seventh** time that
+list has been the whole answer (after `arc_point`, `thread_node`, `theme`,
+`motif` and `story_marker`), and **no migration**: 0064 made `place_type`
+**text** for 0060's reason, so a note may name an outline row with nothing in
+the database changed. `NotePlace` gains a third kind, `plan`, and `placeKey` is
+the one string that identifies all three so nothing compares three pairs.
+
+`contentsShelf` then lists **two groups**, and three rules hold them.
+
+**A row that has become a chapter is listed once.** `boundMarkerId` and
+`boundUnitId` have said which outline rows are promoted since addendum 19 §2,
+so a promoted row drops out of the plan half by itself and no box is drawn
+twice. It is checked against the records actually there — a chapter deleted
+from the book leaves the row behind, and a row drawing no box at all would read
+as the plan having gone with it.
+
+**The two groups are not interleaved.** A plan has no place in the story order
+— that is what makes it a plan — so there is nothing to interleave it with, and
+a list that guessed would stand a chapter nobody has written between two that
+are. The manuscript's rows first in the story order, the Outliner's after them
+in the outline's own order, each group named on the screen (*In the book*,
+*Planned in the Outliner · not in the book yet*) and the second group named
+only when there is a first to tell it from.
+
+**Filing against a plan changes nothing in the Outliner**, which is Ken's own
+sentence. `fileNoteUnder` writes one field on the research item and touches
+nothing else — not the row, not its title, not a new row referencing the note —
+and a test asserts the outline's items are byte for byte what they were.
+
+### The half that would have lost a morning's sorting
+
+A plan row drops off the shelf the moment it is bound. So without something
+more, the notes sorted under it would be **perfectly stored and drawn nowhere**
+— the writer presses *Add to track*, the chapter appears in the book, and
+everything they filed under it vanishes.
+
+`placeNow` is that something: **the place a stored place means now**. A note
+filed under a plan row is filed under whatever that row *became*, read through
+`boundMarkerId`/`boundUnitId` every time. Nothing is rewritten on promotion,
+nothing is stored, and where the binding names a record that has gone it
+answers with the plan again — the same answer the shelf gives, so the box comes
+back. It is this module's own sentence (*one place, and the chapter above it is
+a reading*) pointed at the binding rather than at the story order.
+
+Driven: a note sorted under *1.2 Division* while nothing was promoted, then
+*Add to track* on the chapter — all three boxes move into **In the book**, the
+group heading disappears because there is only one group left, and the note is
+under the section it was sorted into, now a section of the manuscript.
+
+### The fault the screen found, which the tests could not
+
+**There was nothing to drag.** This panel takes the whole of the room's middle,
+so while the table of contents is showing, the note cards are drawn **nowhere**
+— the boxes were a drop target with no source on the screen. §4's own test
+supplied `dragging` as a prop, which is precisely the shape of test that cannot
+see this: it proves the drop and never asks where the writer picks anything up.
+
+That is addendum 06 §3's lesson one room over — the Outliner puts the research
+shelf *inside* itself for exactly this reason, and Ken's own objection quoted in
+addendum 09 §15 (*you'd have to have the sculptor or the outliner up and be able
+to drag it into a specific place*).
+
+So the panel carries a **shelf of what is not placed yet**: every living note
+`noteProgress` reads as `unfiled`, as draggable chips, under the header and
+above the boxes — what you are sorting, then where it goes. **Absent once
+everything is placed**, the header sentence already saying so.
+
+Three decisions on it. **What is in the air has one answer**: the shelf tells
+the room (`onDragNote`) rather than keeping a second piece of drag state the
+boxes would then have to read beside the room's. **One control, two doors**
+(addendum 20 §16d) — the chip is draggable, which is the gesture Ken asked for,
+and a press files it into the chosen box, which is the only path a keyboard can
+reach (addendum 26 §2's rule: *the press is the act and the drag is the
+browser's*); both read the same `filingOffer`. And with **no box chosen the
+press opens the note** rather than refusing, a control that can only refuse
+being one a writer stops trusting.
+
+### Driven
+
+Measured in Chromium against the real preview build, from an empty
+instructional project: a chapter and two sections made in the Outliner and
+nothing promoted, then Research ▸ Table of contents.
+
+- Five dashed boxes under *Planned in the Outliner*, numbered 1, 1.1, 1.2, 1.3,
+  2, 2.1 — `outlineNumbers`, derived, nowhere to type one.
+- A real HTML5 drag of a chip onto *1.2 Division*: the sentence reads *File
+  “New note” under 1.2 Division. The note itself does not change.*, the box
+  reads **1**, and the note stands under it with the **Placed** light.
+- *Open the Outliner* is gone.
+
+Two things only looking caught. **The dashed edge said nothing**:
+`border-style: dashed` alone is a dash pattern in `--border` against a
+near-black panel, which from a foot away is a solid line — the colour goes with
+the style now, which is addendum 02 §4b's `.ghost` fault the other way round (a
+dashed style with a transparent colour). And **the first group was unnamed
+while the second was named**, so the book's own chapters read as the screen's
+preamble; both carry a heading, and the heading appears only where there are
+two groups, a heading over the only list on a screen saying nothing.
+
+### Deliberately not built
+
+- **No chapter is made here**, §3's decision kept for the third time: a
+  Research screen that defined chapters would be a second answer to what this
+  book's chapters are.
+- **No subsections as boxes.** Ken said chapters and sections, and the
+  manuscript half lists exactly those. A note hanging under a section in the
+  Outliner is a thing the writer knows rather than a place in the book — the
+  rail's *a note gets no dot* (addendum 16 §15) pointed at a box.

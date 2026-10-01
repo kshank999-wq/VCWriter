@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import {
   addBeat,
   addMarker,
+  addItem,
   addResearchItem,
   addUnit,
+  createOutline,
   createProjectFile,
+  findOutline,
   fileNoteUnder,
   updateUnit,
   type ProjectFile,
@@ -59,13 +62,10 @@ function Panel({
   start,
   dragging = null,
   onFile,
-  onOpenOutliner,
 }: {
   start: ProjectFile;
   dragging?: { kind: 'item' | 'folder' | 'capture'; id: string } | null;
   onFile?(file: ProjectFile): void;
-  /** The way through to where chapters are made (addendum 28 §4b). */
-  onOpenOutliner?(): void;
 }) {
   const [file, setFile] = useState(start);
   onFile?.(file);
@@ -75,7 +75,6 @@ function Panel({
       onUpdate={(mutate) => setFile((current) => mutate(current))}
       dragging={dragging}
       onDragEnd={() => undefined}
-      {...(onOpenOutliner ? { onOpenOutliner } : {})}
     />
   );
 }
@@ -112,21 +111,126 @@ describe('the table of contents', () => {
   });
 
   /**
-   * Updated rather than worked around (addendum 28 §4b): it spelled the old
-   * sentence out, and the sentence changed because it was **denying what the
-   * boxes showed** — *No chapters yet* over a box. What it must still do is
-   * say the book has no chapters and where they are made; what it may no
-   * longer do is pretend the screen is empty.
+   * The sentence may not deny what the boxes show (addendum 28 §3, §4b) — *No
+   * chapters yet* standing over a box is two readings of one screen.
    */
   it('says there are no chapters yet, and where they are made', () => {
     const bare = createProjectFile({ title: 'Nothing yet', format: 'instructional' });
-    const went = vi.fn();
-    render(<Panel start={bare} onOpenOutliner={went} />);
+    render(<Panel start={bare} />);
     expect(screen.getByText(/no chapters yet/i)).toBeTruthy();
-    // And the way there is a control rather than a word in a sentence.
-    const door = screen.getByRole('button', { name: 'Open the Outliner' });
-    fireEvent.click(door);
-    expect(went).toHaveBeenCalled();
+    expect(screen.getAllByText(/Outliner/).length).toBeGreaterThan(0);
+  });
+
+  /**
+   * **§4b's route is gone** (Ken: *it has a section for the outliner that
+   * creates chapter one. We don't need that anymore*). §4c lists the Outliner's
+   * rows here instead, so a door out of the room is a worse answer than the
+   * boxes being on the screen — and this asserts the door really went, a dead
+   * control left beside a feature that replaces it being two answers.
+   */
+  it('has no door out to the Outliner', () => {
+    render(<Panel start={book().file} />);
+    expect(screen.queryByRole('button', { name: /Open the Outliner/ })).toBeNull();
+  });
+});
+
+/**
+ * The Outliner's chapters and sections, as boxes (addendum 28 §4c).
+ *
+ * Ken asked three times, and the reason is here rather than in the domain: the
+ * reading was right about the manuscript and the writer plans in the Outliner,
+ * so on his book the panel drew nothing he could drop a note on. What these
+ * cover is the screen — that a plan is drawn, that it says it is one, and that
+ * it takes a drop.
+ */
+describe('the planned chapters', () => {
+  /** A book whose chapters exist only as Outliner rows. */
+  const planned = () => {
+    let file: ProjectFile = createProjectFile({ title: 'Planned', format: 'instructional' });
+    const made = createOutline(file, { name: 'Outline' });
+    file = made.file;
+    const chapter = addItem(file, made.outline.id, { kind: 'chapter', title: 'Mathematics' });
+    file = chapter.file;
+    const section = addItem(file, made.outline.id, {
+      kind: 'scene',
+      parentId: chapter.itemId!,
+      title: 'Division',
+    });
+    return { file: section.file, outlineId: made.outline.id };
+  };
+
+  it('draws them in a group of their own, named as plans', () => {
+    render(<Panel start={planned().file} />);
+
+    expect(screen.getByText(/Planned in the Outliner/)).toBeTruthy();
+    const chapter = screen.getByRole('button', { name: /1\. Mathematics — planned/ });
+    expect(chapter.className).toContain('planned');
+    expect(screen.getByRole('button', { name: /1.1 Division — planned/ })).toBeTruthy();
+  });
+
+  /** The ask: somewhere to drop rough material before it is a chapter. */
+  it('takes a note dropped on one', () => {
+    const made = planned();
+    const put = withNote(made.file, 'Two ways to divide');
+    let seen: ProjectFile | null = null;
+    render(
+      <Panel
+        start={put.file}
+        dragging={{ kind: 'item', id: put.id as string }}
+        onFile={(file) => (seen = file)}
+      />,
+    );
+
+    fireEvent.drop(screen.getByRole('button', { name: /1.1 Division — planned/ }));
+
+    const filed = (seen as unknown as ProjectFile).researchItems[0]!;
+    expect(filed.place?.type).toBe('outline_item');
+    expect(screen.getByText(/File “Two ways to divide” under 1.1 Division/)).toBeTruthy();
+    // **Nothing in the Outliner moved** — Ken's *not necessarily a connection
+    // between the outliner and the research*.
+    const after = findOutline(seen as unknown as ProjectFile, made.outlineId)!;
+    expect(after.items).toEqual(findOutline(made.file, made.outlineId)!.items);
+  });
+
+  /** It says what a drop here does not do, where the material goes. */
+  it('says filing here changes nothing in the Outliner', () => {
+    render(<Panel start={planned().file} />);
+    expect(screen.getByText(/changes nothing in the Outliner/)).toBeTruthy();
+  });
+});
+
+/**
+ * The shelf of what is not placed yet (addendum 28 §4c).
+ *
+ * **The half that could fail silently.** This panel takes the whole of the
+ * room's middle, so while it is showing the note cards are drawn nowhere — the
+ * boxes were somewhere to drop with nothing on the screen to drop, which from
+ * the writer's chair is the drag not working. A test that supplies `dragging`
+ * as a prop cannot see that, which is why the first version had one and this is
+ * the one that matters.
+ */
+describe('what there is to sort', () => {
+  it('lists the notes nobody has placed, and files one by a press', () => {
+    const made = book();
+    const put = withNote(made.file, 'Long division worked example');
+    let seen: ProjectFile | null = null;
+    render(<Panel start={put.file} onFile={(file) => (seen = file)} />);
+
+    const chip = screen.getByRole('button', { name: 'Long division worked example' });
+    expect(chip.getAttribute('draggable')).toBe('true');
+
+    // The press is the only path a keyboard can reach, and it needs a box.
+    fireEvent.click(screen.getByRole('button', { name: /1.1 Division/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Long division worked example' }));
+
+    const filed = (seen as unknown as ProjectFile).researchItems[0]!;
+    expect(filed.place).toEqual({ type: 'unit', id: made.units[0] });
+  });
+
+  /** Absent once everything is placed: the header sentence already says so. */
+  it('is absent where there is nothing loose', () => {
+    render(<Panel start={book().file} />);
+    expect(screen.queryByText(/Not placed yet/)).toBeNull();
   });
 });
 

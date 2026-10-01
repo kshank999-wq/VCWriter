@@ -8,6 +8,8 @@ import {
   fileNoteUnder,
   filingOffer,
   noteProgress,
+  onlyLiving,
+  placeKey,
   unfileNote,
   type ContentsRow,
   type NotePlace,
@@ -44,23 +46,19 @@ import {
 interface ContentsPanelProps {
   file: ProjectFile;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
-  /**
-   * Go to the Outliner (addendum 28 §4b, from Ken: *I just wanna be able to
-   * create the chapters and sections and be able to take research and organize
-   * it per the sections… a list of things… before I start crafting it*).
-   *
-   * **Both sentences on this panel named the Outliner and neither could reach
-   * it** — addendum 10 §8's *a route is only a route where it exists*, and
-   * addendum 20 §15c's lesson one room over. Everything Ken describes is built
-   * there: Chapter and Section rows that number themselves, notes and ideas
-   * nested under a section, the research shelf beside them to drag from, and
-   * nothing touching the manuscript until *Add to track* is pressed. What was
-   * missing was a door from the room he looks in.
-   */
-  onOpenOutliner?(): void;
   /** What is being dragged in the room, so a box can light up for it. */
   dragging: { kind: 'item' | 'folder' | 'capture'; id: string } | null;
   onDragEnd(): void;
+  /**
+   * Picking a note up off this screen's own shelf (addendum 28 §4c).
+   *
+   * **Without it there was nothing to drag.** This panel takes the whole of the
+   * room's middle, so while it is showing, the note cards are not drawn
+   * anywhere — the boxes were a drop target with no source on the screen, which
+   * is the Outliner's own lesson (addendum 06 §3 put the research shelf *inside*
+   * that room for exactly this reason) arriving one room over.
+   */
+  onDragNote?(id: ResearchItemId | null): void;
   /** Opening a note where it lives, which is still its folder. */
   onOpenNote?(item: ResearchItem): void;
   /**
@@ -90,10 +88,15 @@ export function ContentsPanel({
   onDragEnd,
   onOpenNote,
   onOpenChapter,
-
-  onOpenOutliner,}: ContentsPanelProps) {
+  onDragNote,
+}: ContentsPanelProps) {
   const rows = useMemo(() => contentsShelf(file), [file]);
   const said = useMemo(() => describeContents(file), [file]);
+  /** Everything nobody has placed yet — what the shelf holds. */
+  const loose = useMemo(
+    () => onlyLiving(file.researchItems).filter((item) => noteProgress(file, item) === 'unfiled'),
+    [file],
+  );
 
   /** Which box is open. About this minute, so it is remembered nowhere. */
   const [open, setOpen] = useState<NotePlace | null>(null);
@@ -102,10 +105,19 @@ export function ContentsPanel({
   /** What the last drop did, said because a drop that does nothing must say so. */
   const [said_, setSaid] = useState<string | null>(null);
 
-  const keyOf = (place: NotePlace) =>
-    place.kind === 'chapter' ? `c:${place.markerId}` : `s:${place.unitId}`;
+  // `placeKey` is the domain's — three kinds of place since §4c, and a key
+  // written out here would be a second answer to which box is which.
+  const keyOf = placeKey;
 
   const chosen = open ? rows.find((row) => keyOf(row.place) === keyOf(open)) ?? null : null;
+
+  /**
+   * The two groups (§4c). The manuscript's chapters and sections first, then
+   * the Outliner's rows that are still plans — **never interleaved**, a plan
+   * having no place in the story order to be interleaved at.
+   */
+  const inBook = rows.filter((row) => !row.planned);
+  const plans = rows.filter((row) => row.planned);
 
   const drop = (row: ContentsRow) => {
     setOver(null);
@@ -121,6 +133,21 @@ export function ContentsPanel({
     setOpen(row.place);
   };
 
+  /**
+   * File by a press, into whichever box is chosen.
+   *
+   * **The press is the act and the drag is the browser's** (addendum 26 §2) —
+   * the drag is the gesture Ken asked for and a press is the only path a
+   * keyboard can reach, so the chip is one control with two doors rather than
+   * a second list beside it. It reads the same `filingOffer` the drop does.
+   */
+  const fileInto = (itemId: ResearchItemId, place: NotePlace) => {
+    const offer = filingOffer(file, itemId, place);
+    setSaid(offer.says);
+    if (!offer.may) return;
+    onUpdate((current) => fileNoteUnder(current, itemId, place));
+  };
+
   const box = (row: ContentsRow) => {
     const key = keyOf(row.place);
     const lit = dragging?.kind === 'item' && over === key;
@@ -130,7 +157,8 @@ export function ContentsPanel({
         key={key}
         className={[
           'toc-box',
-          row.place.kind === 'chapter' ? 'chapter' : 'section',
+          row.depth === 0 ? 'chapter' : 'section',
+          row.planned ? 'planned' : '',
           lit ? 'over' : '',
           chosen && keyOf(chosen.place) === key ? 'chosen' : '',
         ]
@@ -141,11 +169,17 @@ export function ContentsPanel({
         // markup a screen reader says *1Mathematics*. `describeContentsRow`
         // is the one sentence that names a row, so the name said aloud and
         // the heading drawn under the boxes cannot disagree.
-        aria-label={
+        aria-label={[
+          describeContentsRow(row, file),
+          // Said in the name as well as drawn, because *planned* is the one
+          // thing about a box that is not in its words (§4c).
+          row.planned ? 'planned' : '',
           row.notes.length > 0
-            ? `${describeContentsRow(row, file)} — ${row.notes.length} note${row.notes.length === 1 ? '' : 's'}`
-            : describeContentsRow(row, file)
-        }
+            ? `${row.notes.length} note${row.notes.length === 1 ? '' : 's'}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' — ')}
         aria-pressed={chosen ? keyOf(chosen.place) === key : false}
         onClick={() => setOpen(chosen && keyOf(chosen.place) === key ? null : row.place)}
         onDoubleClick={() => {
@@ -185,18 +219,47 @@ export function ContentsPanel({
           The chapters are the Outliner's. Drop a note on one to say where in the book it
           belongs — the note keeps the folder it is in.
         </p>
-        {onOpenOutliner ? (
-          <p className="toc-route">
-            <button type="button" onClick={onOpenOutliner}>
-              Open the Outliner
-            </button>
-            <span className="toc-route-note">
-              Chapters and sections are made there, and research is dragged onto them. Nothing
-              reaches the manuscript until you press Add to track.
-            </span>
-          </p>
-        ) : null}
       </header>
+
+      {/* **What there is to sort** (addendum 28 §4c). Without it the boxes were
+          a place to drop with nothing on the screen to drop: this panel takes
+          the whole of the room's middle, so while it is showing, the note cards
+          are drawn nowhere. Absent once everything is placed, the header
+          sentence already saying so. */}
+      {loose.length > 0 ? (
+        <section className="toc-shelf" aria-label="Notes not placed yet">
+          <h5>
+            Not placed yet
+            <span className="muted small">
+              {' · '}
+              {chosen
+                ? `drag one onto a box, or press it to file it under ${describeContentsRow(chosen, file)}`
+                : 'drag one onto a box, or choose a box and press one'}
+            </span>
+          </h5>
+          <ul className="toc-loose">
+            {loose.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  className="toc-chip"
+                  draggable
+                  onDragStart={() => onDragNote?.(item.id)}
+                  onDragEnd={() => onDragNote?.(null)}
+                  // One control, two doors: the drag Ken asked for, and the
+                  // press a keyboard can reach. With no box chosen it opens the
+                  // note where it lives rather than refusing — a control that
+                  // can only refuse is one a writer stops trusting.
+                  onClick={() => (chosen ? fileInto(item.id, chosen.place) : onOpenNote?.(item))}
+                  title={chosen ? filingOffer(file, item.id, chosen.place).says : item.title}
+                >
+                  {item.title || <em>Untitled</em>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {rows.length === 0 ? (
         <p className="muted">
@@ -204,7 +267,34 @@ export function ContentsPanel({
           once they are.
         </p>
       ) : (
-        <div className="toc-boxes">{rows.map(box)}</div>
+        <>
+          {inBook.length > 0 ? (
+            <section className="toc-group">
+              {/* Named only where there is a second group to tell it from:
+                  a heading over the only list on the screen says nothing. */}
+              {plans.length > 0 ? <h5>In the book</h5> : null}
+              <div className="toc-boxes">{inBook.map(box)}</div>
+            </section>
+          ) : null}
+          {/* The plans (§4c). A heading rather than a mixed list, because a
+              chapter the book has and one that is still a row in the Outliner
+              are two different things — and this is where Ken's rough material
+              goes, so it carries the sentence that says nothing is reached by
+              dropping on it. */}
+          {plans.length > 0 ? (
+            <section className="toc-group toc-plans">
+              <h5>
+                Planned in the Outliner
+                <span className="muted small"> · not in the book yet</span>
+              </h5>
+              <div className="toc-boxes">{plans.map(box)}</div>
+              <p className="toc-plans-note">
+                Filing a note here changes nothing in the Outliner. When you add the chapter to
+                the track its notes come with it.
+              </p>
+            </section>
+          ) : null}
+        </>
       )}
 
       {said_ ? <p className="small toc-said">{said_}</p> : null}
