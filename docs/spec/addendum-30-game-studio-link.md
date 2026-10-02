@@ -25,33 +25,57 @@ The site is **vc-gamestudio.com** (that repo's `apps/web`, and its
 *add a link somewhere*, it is that the one card which still claims a game is
 made here should stop claiming it.
 
-## 2. A route rather than a format
+## 2. The first answer: a route rather than a format
 
-The card **stays where it stands and stops being a choice.** Taking it off the
-grid is the plainer reading of *not a mode inside VC Writer* and is the wrong
-one: a writer who comes to VC Writer to write a game and finds nothing
-concludes the answer is nothing, which is the fault addendum 08 §8b names (a
-feature that vanishes when its list is empty is one nobody gets back into).
-What changes is what pressing it does.
-
-**A door says it is one**, three ways, because a control that leaves the
-program may not look or announce like one that selects:
-
-- it is an **anchor**, not a `button`;
-- it carries **no `aria-pressed`** — the grid is a set of toggles and this is
-  not one of them;
-- it is **flat where every other card is raised** (addendum 20 §9 made the base
-  `button` raised; the raise means *press me and something happens here*), in
-  the accent colour, with a **↗**;
-- and its line names **the program and the address** rather than the parts.
-  *Scenes and beats* would be the wrong answer about a format this program does
-  not start, and the address is said under the label rather than left in a
-  hover nobody sees (addendum 02 §6b).
+Built and shipped as `d92f83c`. The card **stayed where it stood and stopped
+being a choice**: an anchor rather than a `button`, no `aria-pressed`, flat
+where every other card is raised, a ↗, and a line naming the program and the
+address rather than the parts. Taking it off the grid looked like the wrong
+move — a writer who comes to VC Writer to write a game and finds nothing
+concludes the answer is nothing, which is the fault addendum 08 §8b names.
 
 `builtElsewhere` in `packages/domain/src/formats.ts` is the one place that
 knows it — the name and **one host**, with the URL read off the host so there
 is one address rather than four — and `startsHere` is the predicate every
-surface asks.
+surface asks. Both survive §2a unchanged; what changed is only what the project
+page draws.
+
+## 2a. Ken's answer: an advertisement, outside the grid
+
+> *Or we can create a separate button and advertisement on that screen saying,
+> need to write a narrative interaction script. See VC Game Studio.*
+
+He is right, and the reason is worth keeping because it reverses §2's own
+argument rather than merely preferring another look. §2 spent **three
+decisions** making one card announce that it was not like its seven
+neighbours — an anchor, no `aria-pressed`, flat rather than raised — and each
+of them is the cost of standing a door in a row of toggles. **Outside the grid
+it has to announce nothing**, because nothing about it claims to be a format.
+So the card is **gone rather than kept beside the advertisement**: two things
+on one screen pointing at VC Game Studio would be two answers to *where do I
+write a game*, and the one inside the grid is the one that has to lie about
+what it is.
+
+What §2 was right about is that the answer must still be **findable from the
+formats**, and that is why the advertisement is **at the foot of the New
+project panel**: a writer scanning the eight-card grid for *Video game*, and
+not finding it, looks around in the same glance. It is deliberately **not
+between the grid and `Create project`** — nothing may stand between choosing a
+format and pressing the button.
+
+Three smaller ones. **The words are Ken's** — *Need to write a narrative
+interaction script?* and *See VC Game Studio* — because an advertisement is
+copy rather than a reading, and copy typed twice is two advertisements
+(addendum 27 §13). **The program and the address are still the domain's**, read
+from `builtElsewhere`, so there is one host in the program and the whole
+advertisement goes with it if that ever answers null. And **the button is
+raised like every other act on this screen**: it is a control a writer presses
+on purpose, and what says it leaves is the ↗ beside its words and the address
+under it, not a different shape.
+
+The grid is now **seven cards and every one of them is a choice**, which a test
+asserts by walking them: there is no card on the format grid that does anything
+but choose a format.
 
 ## 3. It decides starting, and nothing else
 
@@ -92,21 +116,23 @@ each list being edited to agree.
 
 ## 5. Driven
 
-At 1440×900 in the real preview, after the change:
+In the real preview, at 1440×900 and again at 1100:
 
-- the card is `A`, `href="https://vc-gamestudio.com"`, `target="_blank"`, no
-  `aria-pressed`, `box-shadow: none` where its neighbours are raised, in
-  `rgb(201, 164, 92)` against a `rgb(58, 48, 24)` edge, **150×146 like every
-  other card** — the extra words do not grow the row;
-- pressing it **opens a tab** and leaves the chosen format on *Screenplay*;
-- under a light scheme the same card reads `rgb(26, 127, 55)` with a
-  `rgb(223, 226, 232)` edge, so it is the scheme's tokens rather than a copy of
-  Gold's values — addendum 02 §23a's fault one screen over, checked rather
-  than assumed.
+- **seven cards on the grid and no anchor among them** (`.format-options a` is
+  0), every one carrying `aria-pressed`;
+- the advertisement is 630×160 at the foot of the panel, below `Create
+  project`, its left edge in `rgb(201, 164, 92)` — the accent token, so it
+  follows the writer's scheme rather than carrying a colour of its own
+  (addendum 02 §23a's fault, checked rather than assumed);
+- the button is 187×38, `href="https://vc-gamestudio.com"`,
+  `target="_blank"`; pressing it **opens a tab** and leaves the chosen format
+  on *Screenplay*.
 
-Looking at it caught the one thing no test could: **the address broke at its own
-hyphen**, `vc-` over `gamestudio.com`, which is an address a reader cannot tell
-from `vcgamestudio.com`. An address is one word, so it is `nowrap`.
+Measured on §2's card before it was replaced, and worth keeping because the
+fault outlived it: **the address broke at its own hyphen**, `vc-` over
+`gamestudio.com`, which is an address a reader cannot tell from
+`vcgamestudio.com`. An address is one word, so it is `nowrap` — and the
+advertisement, which also prints the host, inherits the fix.
 
 In Electron the anchor needs no bridge: `setWindowOpenHandler` has sent every
 `target="_blank"` to `shell.openExternal` since the window was built, so the
@@ -126,3 +152,6 @@ was already there, identical in both hosts, which is why the renderer writes an
   format to VC Game Studio; it opens here, as §3 says it must.
 - **The website.** vc-writer.com says nothing about VC Game Studio. That is a
   page rather than a format picker, and Ken named the project page.
+- **Both.** §2's card and §2a's advertisement are not kept side by side, for
+  §2a's reason. Putting the card back is one branch in the grid's `map` and the
+  `.format-elsewhere` rules, if Ken wants a writer to meet the answer twice.

@@ -7,13 +7,13 @@ import { Welcome } from '../components/Welcome';
 afterEach(cleanup);
 
 /**
- * The project page's format cards (addendum 30).
+ * The project page's formats, and the advertisement beside them (addendum 30).
  *
  * **What is tested is the gesture rather than the card** — addendum 20 §15a,
- * which this program has been taught four times: the card can read perfectly
- * and the complaint stands if pressing *Video game* still makes a project
- * here. So every assertion is about what a press does, and the one that
- * matters most is the last: `onCreate` can never be handed a format this
+ * which this program has been taught four times: the screen can read perfectly
+ * and the complaint stands if a writer who wants to write a game still ends up
+ * making one here. So the assertions are about what a press does, and the one
+ * that matters most is the last: `onCreate` can never be handed a format this
  * program does not start.
  */
 const draw = (onCreate = vi.fn()) => {
@@ -35,23 +35,27 @@ const draw = (onCreate = vi.fn()) => {
 };
 
 describe('a format built in another program', () => {
-  it('stands in its place on the grid, as a door rather than a choice', () => {
+  it('is not among the formats, every one of which is a choice', () => {
+    draw();
+    // Seven cards, and all seven are toggles: there is no card on the grid
+    // that does something other than choose a format (§2a).
+    const cards = screen.getAllByRole('button').filter((one) => one.className.includes('format-option'));
+    expect(cards).toHaveLength(7);
+    for (const card of cards) expect(card.getAttribute('aria-pressed')).toBeTypeOf('string');
+    expect(screen.queryByRole('button', { name: /Video game/ })).toBe(null);
+  });
+
+  it('is advertised instead, in one sentence with one way out', () => {
     draw();
     const studio = builtElsewhere('game')!;
-    const card = screen.getByRole('link', { name: /Video game/ });
+    expect(screen.getByText(/Need to write a narrative interaction script\?/)).toBeTruthy();
 
-    // An anchor, with the address the domain gives and nothing typed here.
-    expect(card.getAttribute('href')).toBe(studio.url);
-    expect(card.getAttribute('target')).toBe('_blank');
-    // Never a toggle: a card that leaves the program may not announce itself
-    // as one that selects.
-    expect(card.getAttribute('aria-pressed')).toBe(null);
-    // It says where it goes rather than what its parts are called. "Scenes and
-    // beats" would be the wrong answer about a format this program does not
-    // start.
-    expect(card.textContent).toContain(studio.name);
-    expect(card.textContent).toContain(studio.host);
-    expect(card.textContent).not.toContain('Scenes and beats');
+    const go = screen.getByRole('link', { name: new RegExp(`See ${studio.name}`) });
+    expect(go.getAttribute('href')).toBe(studio.url);
+    expect(go.getAttribute('target')).toBe('_blank');
+    // The address is said on the screen rather than left in a hover nobody
+    // sees (addendum 02 §6b).
+    expect(screen.getByText(studio.host)).toBeTruthy();
   });
 
   it('leaves every other card a choice that still selects', () => {
@@ -65,7 +69,7 @@ describe('a format built in another program', () => {
   it('cannot be created here, however the page is pressed', () => {
     const onCreate = draw();
     fireEvent.change(screen.getByPlaceholderText('Untitled'), { target: { value: 'Ashfall' } });
-    fireEvent.click(screen.getByRole('link', { name: /Video game/ }));
+    fireEvent.click(screen.getByRole('link', { name: /See VC Game Studio/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Create project' }));
 
     expect(onCreate).toHaveBeenCalledTimes(1);

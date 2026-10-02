@@ -5165,7 +5165,28 @@ push live; the build takes a minute or two.
   **150×146 like every other card**, a press opens a tab and leaves the format
   on *Screenplay*, and under a light scheme it reads `rgb(26, 127, 55)` — the
   **scheme's tokens rather than a copy of Gold's values**, addendum 02 §23a's
-  fault one screen over, checked rather than assumed. Looking at it caught the
+  fault one screen over, checked rather than assumed. **§2a is Ken's own answer
+  and it reverses §2's argument** (*or we can create a separate button and
+  advertisement on that screen saying, need to write a narrative interaction
+  script. See VC Game Studio*): §2 spent **three decisions** making one card
+  announce that it was not like its seven neighbours — an anchor, no
+  `aria-pressed`, flat rather than raised — and every one of them is the price
+  of standing a door in a row of toggles, where **outside the grid it has to
+  announce nothing**, nothing about it claiming to be a format. So the card is
+  **gone rather than kept beside the advertisement**, two things on one screen
+  pointing at VC Game Studio being two answers to *where do I write a game* and
+  the one inside the grid being the one that has to lie about what it is; the
+  grid is **seven cards and every one of them is a choice**, which a test
+  asserts by walking them. What §2 was right about is that the answer must stay
+  **findable from the formats**, so it is at the **foot of the New project
+  panel** — a writer scanning for *Video game* and not finding it looks around
+  in the same glance — and deliberately **not between the grid and Create
+  project**, nothing standing between choosing a format and pressing the
+  button. **The words are Ken's** (copy is not a reading, and copy typed twice
+  is two advertisements), the program and the address are still
+  `builtElsewhere`'s, and the button is **raised like every other act on this
+  screen**, what says it leaves being the ↗ and the address under it rather
+  than a different shape. Looking at it caught the
   one thing no test could: **the address broke at its own hyphen**, `vc-` over
   `gamestudio.com`, which a reader cannot tell from `vcgamestudio.com`; an
   address is one word. In Electron it needs **no bridge** —

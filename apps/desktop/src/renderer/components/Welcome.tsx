@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { builtElsewhere, nounsFor, type ProjectFormat } from '@vcwriter/domain';
+import { builtElsewhere, nounsFor, startsHere, type ProjectFormat } from '@vcwriter/domain';
 // The stacked lockup (docs/brand.md), cut for this screen by
 // brand/logo/derive.mjs. Bundled by Vite, so it ships inside the app and the
 // renderer's `img-src 'self'` policy covers it.
@@ -79,6 +79,10 @@ export function Welcome({
   const [author, setAuthor] = useState('');
   const [format, setFormat] = useState<ProjectFormat>('screenplay');
   const [recents, setRecents] = useState<string[]>([]);
+  // The one format this program does not start, which is what the
+  // advertisement at the foot of the panel is about. Null would take it off
+  // the screen with nothing else to change.
+  const studio = builtElsewhere('game');
 
   useEffect(() => {
     void window.vcwriter.recentProjects().then((result) => {
@@ -112,52 +116,24 @@ export function Welcome({
         </label>
         <fieldset>
           <legend>Format</legend>
+          {/* Every card is a choice, and the one format that is not a choice
+              is not among them (§2a). A door standing in a row of toggles has
+              to announce three times over that it is not one of them; outside
+              the grid it needs to announce nothing, because nothing about it
+              claims to be a format. */}
           <div className="format-options">
-            {FORMATS.map((option) => {
-              const elsewhere = builtElsewhere(option.value);
-              // A door rather than a choice, and it says so three ways: it is
-              // an anchor, it carries no `aria-pressed`, and its line names
-              // the program instead of the parts (addendum 30 §2). The parts
-              // would be the wrong answer here — a format this program does
-              // not start has no scenes and beats *in this program*.
-              return elsewhere ? (
-                <a
-                  key={option.value}
-                  className="format-option format-elsewhere"
-                  href={elsewhere.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  title={`Opens ${elsewhere.host} in your browser`}
-                >
-                  <strong>
-                    {option.label} <span aria-hidden>↗</span>
-                  </strong>
-                  {/* The program and the address, because those are the two
-                      things somebody needs before they press — and the address
-                      is **said under the label rather than left in the hover**
-                      a writer never sees (addendum 02 §6b). */}
-                  <span>
-                    Built in {elsewhere.name}. Opens{' '}
-                    {/* The address is **one word**: left to wrap it broke at
-                        its own hyphen — `vc-` over `gamestudio.com` — which is
-                        an address a reader cannot tell from `vcgamestudio.com`,
-                        and only looking at the card showed it. */}
-                    <span className="format-host">{elsewhere.host}</span>.
-                  </span>
-                </a>
-              ) : (
-                <button
-                  key={option.value}
-                  type="button"
-                  className="format-option"
-                  aria-pressed={format === option.value}
-                  onClick={() => setFormat(option.value)}
-                >
-                  <strong>{option.label}</strong>
-                  <span>{detailFor(option)}</span>
-                </button>
-              );
-            })}
+            {FORMATS.filter((option) => startsHere(option.value)).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className="format-option"
+                aria-pressed={format === option.value}
+                onClick={() => setFormat(option.value)}
+              >
+                <strong>{option.label}</strong>
+                <span>{detailFor(option)}</span>
+              </button>
+            ))}
           </div>
         </fieldset>
         <button
@@ -168,6 +144,38 @@ export function Welcome({
         >
           Create project
         </button>
+
+        {/*
+          The advertisement (§2a, Ken's own sentence).
+
+          It is **at the foot of this panel rather than between the grid and
+          the button**: a writer scanning the formats for *video game* looks
+          around in the same glance, and nothing may stand between choosing a
+          format and pressing Create project.
+
+          `studio` is `builtElsewhere('game')`, so the program and the address
+          are the domain's; the **words are this screen's own and are Ken's**,
+          because an advertisement is copy rather than a reading, and this is
+          the only surface that carries it.
+        */}
+        {studio ? (
+          <aside className="elsewhere-ad">
+            <p className="elsewhere-ask">Need to write a narrative interaction script?</p>
+            <p className="elsewhere-note">
+              Branching choices, consequences and a map of how a player reaches a scene are {studio.name}’s — a
+              program of its own.
+            </p>
+            <a className="elsewhere-go" href={studio.url} target="_blank" rel="noreferrer">
+              See {studio.name} <span aria-hidden>↗</span>
+            </a>
+            {/* An address is one word, hyphens and all: left to wrap it broke
+                at its own hyphen, `vc-` over `gamestudio.com`, which a reader
+                cannot tell from `vcgamestudio.com`. */}
+            <p className="elsewhere-host">
+              <span className="format-host">{studio.host}</span>
+            </p>
+          </aside>
+        ) : null}
       </section>
 
       <section className="panel">

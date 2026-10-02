@@ -267,25 +267,59 @@ textarea {
   box-shadow: 0 0 0 1px var(--accent);
 }
 
-/* A format built in another program is a **door rather than a choice**
-   (addendum 30 §2). It keeps the card's box, so it stands in its own place on
-   the grid where somebody looks for it, and it loses the **raise**: every
-   other card is a raised button that presses and stays here, and a control
-   that leaves the program may not look identical to one that does not. The
-   accent and the ↗ say the rest. An anchor inherits none of the base
-   `button` rule, so the box is written out here rather than assumed. */
-.format-option.format-elsewhere {
+/* The advertisement for a format built in another program (addendum 30 §2a,
+   Ken's own). It is **outside the grid**, so it does not have to say three
+   times over that it is not one of the format cards — nothing about it claims
+   to be one. What marks it is the accent edge down one side, which is this
+   stylesheet's own way of saying *an aside about this panel* rather than a
+   second thing to fill in. */
+.elsewhere-ad {
+  margin-top: 4px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
   border-radius: 6px;
   background: var(--panel-2);
-  box-shadow: none;
+  display: grid;
+  gap: 6px;
+}
+
+.elsewhere-ask {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.elsewhere-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* The one control, raised like every other act on this screen — it leaves the
+   program, and the ↗ beside its words is what says so. */
+.elsewhere-go {
+  justify-self: start;
+  margin-top: 2px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.18)),
+    var(--panel-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.45);
   color: var(--accent);
   text-decoration: none;
 }
 
-.format-option.format-elsewhere:hover,
-.format-option.format-elsewhere:focus-visible {
+.elsewhere-go:hover,
+.elsewhere-go:focus-visible {
   border-color: var(--gold-deep);
+}
+
+.elsewhere-host {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 /* An address is one word, hyphens and all. */
