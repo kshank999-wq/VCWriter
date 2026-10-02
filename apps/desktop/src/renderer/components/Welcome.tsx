@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { nounsFor, type ProjectFormat } from '@vcwriter/domain';
+import { builtElsewhere, nounsFor, type ProjectFormat } from '@vcwriter/domain';
 // The stacked lockup (docs/brand.md), cut for this screen by
 // brand/logo/derive.mjs. Bundled by Vite, so it ships inside the app and the
 // renderer's `img-src 'self'` policy covers it.
@@ -45,8 +45,11 @@ const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string; about: strin
   { value: 'series', label: 'Series or episodic', about: 'episodes across a series' },
   { value: 'novel', label: 'Novel', about: 'manuscript formatting' },
   { value: 'instructional', label: 'Instructional book', about: 'academic, reference and nonfiction' },
-  // Written as a script; what it has that a screenplay does not is a graph
-  // over the scenes saying how they are reached (addendum 18 §3).
+  // **Kept, and no longer a choice** (addendum 30): a game is built in VC Game
+  // Studio, so this card is the door to it. It stays in its place rather than
+  // coming off the grid, because a writer who comes here to write a game and
+  // finds nothing concludes the answer is nothing — which is the fault
+  // addendum 08 §8b names. What it says is read from `builtElsewhere`.
   { value: 'game', label: 'Video game', about: 'branching, choices and consequences' },
   { value: 'stage_play', label: 'Stage play', about: '' },
   // One story or many: each is a marker over its sections, and the Layout
@@ -110,18 +113,51 @@ export function Welcome({
         <fieldset>
           <legend>Format</legend>
           <div className="format-options">
-            {FORMATS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className="format-option"
-                aria-pressed={format === option.value}
-                onClick={() => setFormat(option.value)}
-              >
-                <strong>{option.label}</strong>
-                <span>{detailFor(option)}</span>
-              </button>
-            ))}
+            {FORMATS.map((option) => {
+              const elsewhere = builtElsewhere(option.value);
+              // A door rather than a choice, and it says so three ways: it is
+              // an anchor, it carries no `aria-pressed`, and its line names
+              // the program instead of the parts (addendum 30 §2). The parts
+              // would be the wrong answer here — a format this program does
+              // not start has no scenes and beats *in this program*.
+              return elsewhere ? (
+                <a
+                  key={option.value}
+                  className="format-option format-elsewhere"
+                  href={elsewhere.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={`Opens ${elsewhere.host} in your browser`}
+                >
+                  <strong>
+                    {option.label} <span aria-hidden>↗</span>
+                  </strong>
+                  {/* The program and the address, because those are the two
+                      things somebody needs before they press — and the address
+                      is **said under the label rather than left in the hover**
+                      a writer never sees (addendum 02 §6b). */}
+                  <span>
+                    Built in {elsewhere.name}. Opens{' '}
+                    {/* The address is **one word**: left to wrap it broke at
+                        its own hyphen — `vc-` over `gamestudio.com` — which is
+                        an address a reader cannot tell from `vcgamestudio.com`,
+                        and only looking at the card showed it. */}
+                    <span className="format-host">{elsewhere.host}</span>.
+                  </span>
+                </a>
+              ) : (
+                <button
+                  key={option.value}
+                  type="button"
+                  className="format-option"
+                  aria-pressed={format === option.value}
+                  onClick={() => setFormat(option.value)}
+                >
+                  <strong>{option.label}</strong>
+                  <span>{detailFor(option)}</span>
+                </button>
+              );
+            })}
           </div>
         </fieldset>
         <button

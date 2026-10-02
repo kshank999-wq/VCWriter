@@ -5,6 +5,7 @@ import {
   emptySitting,
   everything,
   formatNamed,
+  formatSpokenName,
   groupsSaid,
   hear,
   projectFailed,
@@ -312,10 +313,25 @@ describe('a format said out loud', () => {
 
   it('offers every format a writer could be asked to choose between', () => {
     // A list that is shorter than what the program can make is a question with
-    // missing answers, said to somebody who cannot see the screen.
+    // missing answers, said to somebody who cannot see the screen — and what
+    // the program can **make** is what this list is of (addendum 30).
     expect(spokenFormatNames()).toContain('Educational book');
     expect(spokenFormatNames()).toContain('Novel');
-    expect(spokenFormatNames().length).toBe(8);
+    expect(spokenFormatNames().length).toBe(7);
+  });
+
+  /**
+   * A game is built in VC Game Studio (addendum 30), so it is not a kind that
+   * can be named from a pocket — and the refusal is the right answer out here,
+   * since the way to a game is a website and a walk is the worst moment to
+   * open one. The name is still **read back**, for a project made before this
+   * or on a desktop: a row saying `game` is the raw column showing through.
+   */
+  it('does not take a format that is built in another program', () => {
+    expect(formatNamed('video game')).toBe(null);
+    expect(formatNamed('a game')).toBe(null);
+    expect(spokenFormatNames()).not.toContain('Game');
+    expect(formatSpokenName('game')).toBe('Game');
   });
 });
 

@@ -10,6 +10,7 @@ import {
   setOnPhone,
   shelfRows,
   shownOnPhone,
+  startsHere,
   type PhoneShelf,
   type ProjectFormat,
 } from '@vcwriter/domain';
@@ -33,17 +34,20 @@ import { colour, styles } from '../theme';
 const SHELF = 'vcwriter-notes-shelf';
 const LAST = 'vcwriter-notes-project';
 
-/** Every kind a project can be, in the words a writer hears them said in. */
-const FORMATS: ProjectFormat[] = [
-  'screenplay',
-  'series',
-  'novel',
-  'short_story',
-  'instructional',
-  'stage_play',
-  'short_form',
-  'game',
-];
+/**
+ * Every kind a project can be **started as**, in the words a writer hears them
+ * said in.
+ *
+ * `startsHere` rather than the whole list (addendum 30): a game is built in VC
+ * Game Studio, and a phone is the one place where offering it would be worst —
+ * there is nothing here that could open it, and the project would be made in
+ * the wrong program. **Absent rather than a door**; the project page is where
+ * the way to VC Game Studio is. An existing game project is still listed and
+ * still named, `formatSpokenName` reading every format.
+ */
+const FORMATS: ProjectFormat[] = (
+  ['screenplay', 'series', 'novel', 'short_story', 'instructional', 'stage_play', 'short_form', 'game'] as const
+).filter((format) => startsHere(format));
 
 export function Projects({
   chosenId,

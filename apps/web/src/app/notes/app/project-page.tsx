@@ -10,7 +10,9 @@ import {
   setOnPhone,
   shelfRows,
   shownOnPhone,
+  startsHere,
   type PhoneShelf,
+  type ProjectFormat,
 } from '@vcwriter/domain';
 
 /**
@@ -242,11 +244,17 @@ export function ProjectPage({
                     it: two lists of formats is how one of them came to be
                     missing two. */}
                 <select value={format} onChange={(event) => setFormat(event.target.value)}>
-                  {Object.entries(FORMAT_WORDS).map(([value, words]) => (
-                    <option key={value} value={value}>
-                      {words}
-                    </option>
-                  ))}
+                  {Object.entries(FORMAT_WORDS)
+                    // What may be **started** here, which is not the same list
+                    // as what may be named: a game is built in VC Game Studio
+                    // (addendum 30), and the rows above still read *Game* off
+                    // this same table for a project made before that.
+                    .filter(([value]) => startsHere(value as ProjectFormat))
+                    .map(([value, words]) => (
+                      <option key={value} value={value}>
+                        {words}
+                      </option>
+                    ))}
                 </select>
               </label>
               <div className="notes-item-actions">

@@ -267,6 +267,32 @@ textarea {
   box-shadow: 0 0 0 1px var(--accent);
 }
 
+/* A format built in another program is a **door rather than a choice**
+   (addendum 30 §2). It keeps the card's box, so it stands in its own place on
+   the grid where somebody looks for it, and it loses the **raise**: every
+   other card is a raised button that presses and stays here, and a control
+   that leaves the program may not look identical to one that does not. The
+   accent and the ↗ say the rest. An anchor inherits none of the base
+   `button` rule, so the box is written out here rather than assumed. */
+.format-option.format-elsewhere {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-2);
+  box-shadow: none;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.format-option.format-elsewhere:hover,
+.format-option.format-elsewhere:focus-visible {
+  border-color: var(--gold-deep);
+}
+
+/* An address is one word, hyphens and all. */
+.format-host {
+  white-space: nowrap;
+}
+
 .format-option span {
   color: var(--muted);
   font-size: 12px;

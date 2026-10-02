@@ -60,6 +60,42 @@ export const isCollection = (format: ProjectFormat): boolean => format === 'shor
  */
 export const isInteractive = (format: ProjectFormat): boolean => format === 'game';
 
+/** A program of this family that is not this one. */
+export interface OtherProgram {
+  /** What it is called, which is what a card says. */
+  name: string;
+  /** The one fact written down. */
+  host: string;
+  /** Read from the host, so there is one address rather than four. */
+  url: string;
+}
+
+const other = (name: string, host: string): OtherProgram => ({ name, host, url: `https://${host}` });
+
+/**
+ * Where a format is built, when it is not built here (addendum 30).
+ *
+ * **A game is VC Game Studio's**, by Ken's own direction of 25 September 2026:
+ * *VC Game Studio is its own program, not a mode inside VC Writer; VC Writer
+ * carries only a link.* So this is the one place that knows it, and the four
+ * surfaces that let somebody **start** a project ask it rather than each
+ * keeping a list — the project page, the phone's project list, the website's
+ * and the spoken kinds, which had three private copies of the eight formats
+ * between them already.
+ *
+ * **It decides starting and nothing else.** `isInteractive` is untouched,
+ * `'game'` stays in the schema, and addendum 18's whole module goes on
+ * working: a project already in that format opens, writes, validates and plays
+ * exactly as before. What is withdrawn is a *way in*, never a feature — the
+ * distinction between a format this program cannot handle and one another
+ * program handles better.
+ */
+export const builtElsewhere = (format: ProjectFormat): OtherProgram | null =>
+  format === 'game' ? other('VC Game Studio', 'vc-gamestudio.com') : null;
+
+/** Whether a new project of this format is made in this program. */
+export const startsHere = (format: ProjectFormat): boolean => builtElsewhere(format) === null;
+
 /**
  * What a format calls its parts.
  *

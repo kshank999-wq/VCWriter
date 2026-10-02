@@ -5125,6 +5125,55 @@ push live; the build takes a minute or two.
   Save control now fails there rather than shipping. **Named rather than fixed**:
   a room covers the *whole* menu bar, so Editor, Reports, Window and Help are
   unreachable from one too, which is a separate decision about what a room is.
+  `addendum-30-game-studio-link.md` is **a game being built in VC Game
+  Studio**, from Ken (*on the project page, the video game tab needs to be a
+  link to VC Game Studio*), and the answer was **written down in another
+  repository rather than needing to be designed**: `kshank999-wq/vc_game_studio`
+  carries his own direction of 25 September 2026 — *VC Game Studio is its own
+  program, not a mode inside VC Writer; VC Writer carries only a link* — and
+  names the site, **vc-gamestudio.com**, which resolves today. Measured first:
+  the project page draws eight 150×146 cards, every one an `aria-pressed`
+  toggle, and pressing **Video game** made a VC Writer game project. **The card
+  stays where it stands and stops being a choice** — taking it off the grid is
+  the plainer reading and the wrong one, a writer who comes here to write a game
+  and finds nothing concluding the answer is nothing (addendum 08 §8b) — so it
+  is **a route rather than a format**, and **a door says it is one**: an anchor,
+  no `aria-pressed`, **flat where every other card is raised** (addendum 20 §9's
+  raise means *press me and something happens here*), a ↗, and a line naming the
+  program and the address rather than the parts, *Scenes and beats* being the
+  wrong answer about a format this program does not start and the address being
+  said under the label rather than left in a hover nobody sees. `builtElsewhere`
+  in `formats.ts` is the one place that knows it, **one host with the URL read
+  off it** so there is one address rather than four. **It decides starting and
+  nothing else**, which is the half easy to get wrong by doing too much:
+  `isInteractive` is untouched, `'game'` stays in the schema and addendum 18
+  goes on working, so what is withdrawn is a **way in** and never a feature —
+  the distinction between a format this program cannot handle and one another
+  program handles better. **Four surfaces start a project and all four ask**
+  `startsHere`: the card on the project page, **absent** on the phone (nothing
+  there could open VC Game Studio and the project would be made in the wrong
+  program) and in the website's picker, and *video game* no longer a kind that
+  can be **said** — it falls to §11's refusal, which says the list again, the
+  right answer from a pocket where the way to a game is a website. The
+  narrowing reaches **what may be made and not what may be named**, so
+  `formatSpokenName('game')` is still *Game*, a project made before this having
+  to be named on the phone's own list. Leaving the other three would have
+  shipped a page saying games are built elsewhere beside three screens still
+  making them, and three private copies of the eight formats already existed
+  between them. Driven at 1440×900: the card is an `A` with
+  `href="https://vc-gamestudio.com"`, no `aria-pressed`, `box-shadow: none`,
+  **150×146 like every other card**, a press opens a tab and leaves the format
+  on *Screenplay*, and under a light scheme it reads `rgb(26, 127, 55)` — the
+  **scheme's tokens rather than a copy of Gold's values**, addendum 02 §23a's
+  fault one screen over, checked rather than assumed. Looking at it caught the
+  one thing no test could: **the address broke at its own hyphen**, `vc-` over
+  `gamestudio.com`, which a reader cannot tell from `vcgamestudio.com`; an
+  address is one word. In Electron it needs **no bridge** —
+  `setWindowOpenHandler` has sent every `target="_blank"` to `shell.openExternal`
+  since the window was built, identically in both hosts, so the renderer writes
+  an `<a>` and nothing else. §6 names what is not built: the link goes to the
+  **home page** rather than to the no-save teaser, a route being only a route
+  where it exists and the home page being the one page certain to be there.
 
 ## Before pushing
 

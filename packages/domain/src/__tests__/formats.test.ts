@@ -8,8 +8,11 @@ import {
   elementTypesFor,
   hasBookIndex,
   hasChapterPages,
+  builtElsewhere,
   isInstructional,
+  isInteractive,
   isProseFormat,
+  startsHere,
   nounsFor,
   type ProjectFormat,
 } from '../index.js';
@@ -32,6 +35,9 @@ const EVERY_FORMAT: ProjectFormat[] = [
   'short_story',
   'short_form',
   'instructional',
+  // Added with addendum 30, and the omission was the kind this file exists to
+  // stop: a list called *every format* that was one short.
+  'game',
   'other',
 ];
 
@@ -123,5 +129,36 @@ describe('a new instructional project', () => {
     // has a contents page at all, which a screenplay is not.
     expect(contentsDivisions(file)).toEqual([]);
     expect(hasChapterPages('instructional')).toBe(true);
+  });
+});
+
+/**
+ * Where a format is built (addendum 30).
+ *
+ * The half worth testing is the half that is easy to get wrong by doing too
+ * much: a game is no longer **started** here, and everything else about the
+ * format is untouched. If `isInteractive` ever answered this question instead,
+ * every project already written in that format would lose its graph.
+ */
+describe('a format built in another program', () => {
+  it('names the program and reads its address off one host', () => {
+    const studio = builtElsewhere('game');
+    expect(studio?.name).toBe('VC Game Studio');
+    expect(studio?.host).toBe('vc-gamestudio.com');
+    expect(studio?.url).toBe('https://vc-gamestudio.com');
+  });
+
+  it('is the only one, and every other format starts here', () => {
+    expect(EVERY_FORMAT.filter((format) => !startsHere(format))).toEqual(['game']);
+  });
+
+  it('takes nothing away from a project already in that format', () => {
+    // The module, the schema and the manuscript are all where they were: what
+    // is withdrawn is a way in, never a feature.
+    expect(isInteractive('game')).toBe(true);
+    const file = createProjectFile({ title: 'Ashfall', format: 'game' });
+    expect(file.project.format).toBe('game');
+    expect(nounsFor('game').unit).toBe('Scene');
+    expect(file.units).toHaveLength(1);
   });
 });

@@ -1,4 +1,4 @@
-import { isInstructional, nounsFor } from './formats.js';
+import { isInstructional, nounsFor, startsHere } from './formats.js';
 import type { ProjectFormat } from './entities/project.js';
 
 /**
@@ -218,12 +218,20 @@ const SPOKEN_FORMATS: ReadonlyArray<{ format: ProjectFormat; name: string; spoke
   { format: 'game', name: 'Game', spoken: ['game', 'video game', 'interactive'] },
 ];
 
-/** What a format is called where a writer hears it read back. */
+/**
+ * What a format is called where a writer hears it read back.
+ *
+ * **Every format, including one that is not started here** (addendum 30): a
+ * project already in that format is on the phone's list and has to be named,
+ * and a row reading `game` is the raw column value showing through. What a
+ * narrowing reaches is the two readings under this one — what may be *made*.
+ */
 export const formatSpokenName = (format: ProjectFormat): string =>
   SPOKEN_FORMATS.find((one) => one.format === format)?.name ?? format;
 
 /** Every format a writer can name, for the sentence that lists the choices. */
-export const spokenFormatNames = (): string[] => SPOKEN_FORMATS.map((one) => one.name);
+export const spokenFormatNames = (): string[] =>
+  SPOKEN_FORMATS.filter((one) => startsHere(one.format)).map((one) => one.name);
 
 /**
  * The format somebody named, or null.
@@ -245,7 +253,11 @@ export const formatNamed = (spoken: string): ProjectFormat | null => {
     .trim();
   if (said.length === 0) return null;
   for (const one of SPOKEN_FORMATS) {
-    if (one.spoken.some((phrase) => phrase === said)) return one.format;
+    // A format built elsewhere is **not a kind from a pocket** (addendum 30).
+    // *Video game* now falls to the refusal, which says the list again — and
+    // that is the right answer out here: the way to a game is a website, and
+    // a notebook used on a walk has no business opening one.
+    if (startsHere(one.format) && one.spoken.some((phrase) => phrase === said)) return one.format;
   }
   return null;
 };
