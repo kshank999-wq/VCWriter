@@ -92,3 +92,31 @@ describe('an advertised link survives the site it points at', () => {
     expect(strayAuthRedirect(wrong)?.pathname).toBe('/auth/callback');
   });
 });
+
+/**
+ * The webhook's gate on a free purchase (addendum 31 §9).
+ *
+ * **The only way to pin this gate without a Stripe signature**, and it is worth
+ * pinning for exactly the reason the schema above is: `payment_status === 'paid'`
+ * was one plausible string comparison, it passed every test in the program, and
+ * it dropped every free purchase on the floor without raising anything. The
+ * reading itself is tested in the domain; what is tested here is that the route
+ * still asks it rather than having drifted back to a literal.
+ */
+const WEBHOOK = readFileSync(
+  fileURLToPath(new URL('../../app/api/stripe/webhook/route.ts', import.meta.url)),
+  'utf8',
+);
+
+describe('the webhook gates fulfilment on the domain reading', () => {
+  it('asks purchaseSettled', () => {
+    expect(WEBHOOK).toContain("import { purchaseSettled } from '@vcwriter/domain'");
+    expect(WEBHOOK).toContain('if (purchaseSettled(session.payment_status))');
+  });
+
+  it('no longer compares the status to a literal', () => {
+    // A zero-amount session answers `no_payment_required`, so any literal here
+    // is the bug coming back.
+    expect(WEBHOOK).not.toMatch(/payment_status\s*===/);
+  });
+});

@@ -12,6 +12,7 @@ import {
   newDiscountRefusal,
   normaliseCode,
   priceWith,
+  purchaseSettled,
 } from '../index.js';
 
 /**
@@ -169,5 +170,65 @@ describe('making one', () => {
       'An end date is in the future.',
     );
     expect(newDiscountRefusal(plan, NOW)).toBe(null);
+  });
+});
+
+/**
+ * The free purchase (addendum 31 §9).
+ *
+ * This is the one case a discount can produce that the rest of the shop had
+ * never seen, and it shipped broken: the webhook asked
+ * `payment_status === 'paid'`, Stripe answers `no_payment_required` where the
+ * total is zero, so a 100%-off checkout completed and fulfilled **nothing** —
+ * silently, with the event marked processed.
+ */
+describe('a purchase that cost nothing', () => {
+  it('is settled, and so is one that was paid for', () => {
+    expect(purchaseSettled('paid')).toBe(true);
+    expect(purchaseSettled('no_payment_required')).toBe(true);
+  });
+
+  it('does not settle what Stripe says is unpaid', () => {
+    expect(purchaseSettled('unpaid')).toBe(false);
+  });
+
+  it('does not settle a word this build has never heard of', () => {
+    // `appleState`'s rule on the other shop: an answer we do not know is not a
+    // reason to hand anything over.
+    expect(purchaseSettled('pending')).toBe(false);
+    expect(purchaseSettled('')).toBe(false);
+    expect(purchaseSettled('PAID')).toBe(false);
+  });
+
+  it('says what a code taking everything off will do', () => {
+    const everything = {
+      code: 'REVIEW',
+      off: { kind: 'percent' as const, percent: 100 },
+      maxRedemptions: 1,
+      expiresAt: null,
+    };
+    expect(describeNewDiscount(everything)).toBe(
+      'REVIEW takes 100% off, for the first 1. Nothing is charged and no card is asked for, and the licence is still issued.',
+    );
+    // Said only where it is certain: this module does not hold the price, so a
+    // fixed amount may or may not clear it and says nothing either way.
+    expect(
+      describeNewDiscount({ ...everything, off: { kind: 'amount', amountCents: 99900, currency: 'usd' } }),
+    ).toBe('REVIEW takes $999 off, for the first 1.');
+    expect(describeNewDiscount({ ...everything, off: { kind: 'percent', percent: 99 } })).toBe(
+      'REVIEW takes 99% off, for the first 1.',
+    );
+  });
+
+  it('is a plan the admin screen may make', () => {
+    // 100% is the ceiling rather than over it, which is what makes a review
+    // copy possible at all.
+    expect(
+      newDiscountRefusal(
+        { code: 'REVIEW', off: { kind: 'percent', percent: 100 }, maxRedemptions: 1, expiresAt: null },
+        NOW,
+      ),
+    ).toBe(null);
+    expect(priceWith(24900, 'usd', { kind: 'percent', percent: 100 })).toBe(0);
   });
 });

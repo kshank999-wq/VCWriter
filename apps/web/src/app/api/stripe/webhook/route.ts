@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
+import { purchaseSettled } from '@vcwriter/domain';
 import { env } from '@/lib/env';
 import { stripe } from '@/lib/stripe';
 import { adminClient } from '@/lib/supabase';
@@ -58,7 +59,12 @@ export async function POST(request: Request): Promise<Response> {
   try {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
-      if (session.payment_status === 'paid') {
+      // **Not `=== 'paid'`**, which it was and which lost every free purchase:
+      // Stripe answers `no_payment_required` where the total is zero, so a
+      // 100%-off code completed checkout and fulfilled nothing — and threw
+      // nothing either (addendum 31 §9). `purchaseSettled` is the one reading
+      // of Stripe's three words, and `unpaid` is still refused by it.
+      if (purchaseSettled(session.payment_status)) {
         const email = session.customer_details?.email ?? session.customer_email;
         if (!email) throw new Error(`Checkout session ${session.id} has no customer email`);
 

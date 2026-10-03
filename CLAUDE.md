@@ -5248,6 +5248,37 @@ push live; the build takes a minute or two.
   **the Stripe half has never been run live** (no keys here), nothing is deleted
   (switched off, the graveyard's reason), no per-customer codes, and a code is
   not carried through a mid-purchase sign-in.
+  **§9 is the free purchase**, from Ken (*make a test code and run it through
+  checkout*), which **cannot be run from here and found a shipped bug anyway**:
+  `STRIPE_SECRET_KEY` is a Vercel *sensitive* variable whose value the API
+  returns to nobody, there is no key in this container, none may enter this
+  repository and Ken must not be asked to paste one — so what could be done was
+  work out **what that test would meet**. A test that costs nothing is a
+  **100%-off code**, which is not a contrivance but a **review copy**, and
+  everything up to the till was already right (`newDiscountRefusal` allows
+  exactly 100, `priceWith` answers zero, the screen makes it). **The webhook
+  dropped it on the floor**: the gate was `payment_status === 'paid'` and
+  **Stripe answers `no_payment_required` where the total is zero**, so a
+  100%-off checkout completed, the buyer saw the success page, and the event was
+  claimed, skipped and marked processed — **no order, no licence, no email and
+  no error either**, which is what makes it the bad kind, nothing in the program
+  ever reporting it and the only person to find out being the buyer holding a
+  receipt for nothing; every test passed over it because every test used a paid
+  session. `purchaseSettled` is the one reading of Stripe's three words and
+  lives in `discounts.ts` because **a discount is the only way a purchase here
+  reaches nothing**; it is `appleState`'s rule on the other shop (addendum 09
+  §14) — **a word this build has never heard of is not a reason to hand anything
+  over** — so `unpaid` and everything unknown are refused. **Fulfilment needed
+  no change at all**, which is why the fix is one line: `amount_cents` is
+  `check (>= 0)`, the payment intent is nullable and `fulfillCheckout` already
+  took null — **the money path was built general and the gate in front of it was
+  not**. A code taking everything off now **says so before the press** (*Nothing
+  is charged and no card is asked for, and the licence is still issued*), said
+  only where it is certain — a percentage of 100 says it and a fixed amount does
+  not, this module not holding the price. And the gate is pinned by **reading
+  the route's own source**, §4's idiom pointed at a webhook, a Stripe signature
+  not being forgeable in a test. The test Ken asked for is now one minute and no
+  money: a code at **100% off, limit 1**, followed by its own Copy link.
 
 ## Before pushing
 

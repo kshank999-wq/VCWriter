@@ -136,7 +136,8 @@ second never does.
 - **The Stripe half has not been run live.** No code has been created against a
   real account from this container, and there are no test keys here. What is
   proved is everything either side of it: the rules, the refusals, the schema,
-  the three screens and the two routes, driven against a stubbed shop.
+  the three screens and the two routes, driven against a stubbed shop. §9 is
+  what asking for that test turned up anyway.
 - **Nothing is deleted.** Withdrawing a code switches it off, for the
   graveyard's reason (addendum 24 §1): the orders it was used on still refer to
   it, and *how did LAUNCH20 do* must still have an answer a month later.
@@ -146,3 +147,66 @@ second never does.
 - **The code is not carried through sign-in.** A reader who follows an
   advertised link and then signs in mid-purchase loses the code and has to
   apply it again. Named rather than half-built.
+
+## 9. The free purchase, and what asking for a test found
+
+> From Ken: *make a test code and run it through checkout.*
+
+**It cannot be run from here**, and that is the first half of the answer rather
+than an excuse: `STRIPE_SECRET_KEY` is stored in Vercel as a *sensitive* variable
+whose value the API will not return to anybody, including this container; there
+is no key in the environment, none may be put in this repository, and Ken must
+not be asked to paste one anywhere. The egress proxy blocks `vc-writer.com` too,
+so even the public half could not be driven. Nothing was created in Stripe.
+
+**What could be done is work out what that test would meet**, and it met
+something. A test that costs nothing is a **100%-off code** — which is also a
+review copy, a press copy and a giveaway, so it is not a testing contrivance but
+the thing the feature exists to give. Everything up to the till was already
+right: `newDiscountRefusal` allows exactly 100, `priceWith` answers zero, the
+admin screen makes it and Stripe would take it.
+
+**And the webhook would have dropped it on the floor.** `payment_status ===
+'paid'` was the gate, and **Stripe answers `no_payment_required` when the total
+is zero** — so a 100%-off checkout completed, the buyer saw the success page, and
+the webhook claimed the event, skipped fulfilment, marked itself processed and
+returned 200. **No order, no licence, no email, and no error either**, which is
+what makes it the bad kind: nothing in the program would ever have reported it,
+and the one person who would have found out is the buyer holding a receipt for
+nothing. Every test in the suite passed over it, because every test used a paid
+session.
+
+`purchaseSettled` in `discounts.ts` is the one reading of Stripe's three words,
+and it lives in this module for a plain reason: **a discount is the only way a
+purchase here reaches nothing**. It is `appleState`'s rule on the other shop
+(addendum 09 §14) — **a word this build has never heard of is not a reason to
+hand anything over** — so the two that settle are named and everything else,
+`unpaid` included, is refused.
+
+Three smaller things:
+
+- **Fulfilment itself needed no change at all**, which is worth saying because
+  it is why the fix is one line: `amount_cents` is `check (>= 0)`,
+  `stripe_payment_intent_id` is nullable, and `fulfillCheckout` already takes
+  `paymentIntentId: string | null`. The money path was built general and the
+  gate in front of it was not.
+- **A code taking everything off says so before the press.**
+  `describeNewDiscount` adds *Nothing is charged and no card is asked for, and
+  the licence is still issued*, because what happens next is not what somebody
+  setting a percentage would guess. It is said only where it is certain — a
+  *percentage* of 100 says it and a fixed amount does not, this module not
+  holding the price, and a sentence about a free purchase that merely might be
+  one being worse than none.
+- **The gate is pinned by reading the route's own source**, which is this
+  addendum's §4 idiom pointed at a webhook: a Stripe signature cannot be forged
+  in a test, so the reading is tested in the domain and what is tested here is
+  that the route still *asks* it rather than having drifted back to a literal.
+
+So the honest state is: the free purchase is fixed and proved either side of
+Stripe, and the one thing still unrun is the same one §8 names.
+
+**For the test Ken asked for**, the whole of it is now one minute in the admin
+screen and no money: make a code at **100% off with a limit of 1**, follow its
+own *Copy* link, and complete checkout — Stripe asks for no card, the limit
+burns the code so nobody else can use it, and the order, the licence and the
+email now arrive.

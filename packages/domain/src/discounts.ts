@@ -162,6 +162,29 @@ export const isRedeemable = (offer: DiscountOffer, now: Date): boolean => {
   return true;
 };
 
+/**
+ * Stripe's three words for a session's payment, and which of them mean the
+ * goods are owed.
+ *
+ * **A discount is the only way a purchase here reaches nothing**, which is why
+ * this reading lives in this module: Stripe sets `no_payment_required` when the
+ * total is zero, and a code taking everything off is exactly how that happens —
+ * a review copy, a press copy, a giveaway. Before this, the webhook asked
+ * `payment_status === 'paid'` and a 100%-off checkout **completed and fulfilled
+ * nothing**: no order, no licence, no email, and no error either, so the one
+ * person who would have found out was the buyer holding a receipt for nothing.
+ *
+ * It is `appleState`'s rule on the other shop (`notes-plan.ts`): **a word this
+ * build has never heard of is not a reason to hand anything over**, so the two
+ * that settle are named and everything else is refused, including Stripe's own
+ * `unpaid`.
+ */
+export type PaymentStanding = 'paid' | 'unpaid' | 'no_payment_required';
+
+/** Whether nothing is left to pay — Stripe's word, read for fulfilment. */
+export const purchaseSettled = (said: string): boolean =>
+  said === 'paid' || said === 'no_payment_required';
+
 /** What a new code is to be, as the admin screen asks for it. */
 export interface NewDiscount {
   code: string;
@@ -202,11 +225,26 @@ export const newDiscountRefusal = (plan: NewDiscount, now: Date): string | null 
   return null;
 };
 
-/** What making it would do, said before the press. */
+/**
+ * What making it would do, said before the press.
+ *
+ * **A code that takes everything off says what that means**, because what
+ * happens next is not what somebody setting a percentage would guess: Stripe
+ * asks for no card at all, so the figures are a receipt for nothing — and the
+ * licence is issued all the same, which is the whole point of a review copy. It
+ * is said only where it can be said for certain, so a *percentage* of 100 says
+ * it and a fixed amount does not, this module not holding the price and a
+ * sentence about a free purchase that merely might be one being worse than
+ * none.
+ */
 export const describeNewDiscount = (plan: NewDiscount): string => {
   const code = normaliseCode(plan.code);
   const bits = [`${code} takes ${describeOff(plan.off)}`];
   if (plan.maxRedemptions !== null) bits.push(`for the first ${plan.maxRedemptions}`);
   if (plan.expiresAt !== null) bits.push(`until ${plan.expiresAt}`);
-  return `${bits.join(', ')}.`;
+  const said = `${bits.join(', ')}.`;
+  if (plan.off.kind === 'percent' && plan.off.percent === 100) {
+    return `${said} Nothing is charged and no card is asked for, and the licence is still issued.`;
+  }
+  return said;
 };

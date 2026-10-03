@@ -141,3 +141,43 @@ describe('platform metadata', () => {
     expect(parsePlatform('')).toBeNull();
   });
 });
+
+/**
+ * The free purchase (addendum 31 §9).
+ *
+ * A 100%-off code makes a session with no payment intent and a total of
+ * nothing. The webhook's gate was the bug; this is the other half — that what
+ * it hands over goes through unchanged, so a review copy gets its licence.
+ */
+describe('fulfilling a purchase that cost nothing', () => {
+  it('records the order and issues the licence with no payment intent', async () => {
+    const fake = createFakeSupabase();
+
+    const result = await fulfillCheckout(
+      purchase({ checkoutSessionId: 'cs_test_free', paymentIntentId: null, amountCents: 0 }),
+      deps(fake),
+    );
+
+    expect(result.created).toBe(true);
+    expect(fake.state.orders).toHaveLength(1);
+    expect(fake.state.orders[0]?.['amount_cents']).toBe(0);
+    expect(fake.state.orders[0]?.['stripe_payment_intent_id']).toBe(null);
+    // The receipt is for nothing and the entitlement is the same entitlement.
+    expect(fake.state.orders[0]?.['status']).toBe('paid');
+    expect(fake.state.licenses).toHaveLength(1);
+    expect(fake.state.licenses[0]?.['status']).toBe('active');
+    expect(fake.state.licenses[0]?.['entitled_platforms']).toEqual(['windows', 'macos']);
+  });
+
+  it('is still only ever fulfilled once', async () => {
+    const fake = createFakeSupabase();
+    const free = purchase({ checkoutSessionId: 'cs_test_free2', paymentIntentId: null, amountCents: 0 });
+
+    const first = await fulfillCheckout(free, deps(fake));
+    const again = await fulfillCheckout(free, deps(fake));
+
+    expect(fake.state.licenses).toHaveLength(1);
+    expect(again.created).toBe(false);
+    expect(again.serial).toBe(first.serial);
+  });
+});
