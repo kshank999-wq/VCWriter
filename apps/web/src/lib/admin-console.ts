@@ -1,3 +1,4 @@
+import { formatMoney } from '@vcwriter/domain';
 import { adminClient } from './supabase';
 
 /**
@@ -232,9 +233,8 @@ export const customerSummaries = (
   });
 };
 
-/** `$249.95`, `€10.00` — minor units in, a display string out. */
-export const formatMoney = (cents: number, currency: string): string =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(cents / 100);
+/** The domain's, re-exported: there is one way to write a figure down. */
+export { formatMoney };
 
 /** The dashboard revenue tile: one line per currency, or "—" for none. */
 export const formatRevenue = (totals: Record<string, number>): string => {

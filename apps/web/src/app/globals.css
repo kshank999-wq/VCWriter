@@ -2055,3 +2055,144 @@ p.room-stamp {
   font-size: 14px;
   line-height: 1.5;
 }
+
+/* --------------------------------------------------------- discount codes */
+/* Addendum 31. Every class here is named for what it is rather than reaching
+   for `.panel`, `.table`, `.link` or a bare `.muted` — **none of which has a
+   rule on this site**, which is this project's oldest front-end fault
+   (addendum 09 §14a, §14c) and which the first draft of this screen committed
+   four times over. The admin console's own `.card` and `.data-table` carry the
+   boxes; what is left is the handful of things a discount screen has that
+   nothing else does. */
+
+/* The code box on the buying page, between the platform choice and the press.
+   Set apart by a rule above it rather than a box of its own: it is a step in
+   the same act, not a second panel to fill in. */
+.discount-box {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin-bottom: 24px;
+  max-width: 420px;
+}
+
+.discount-form label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.discount-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.discount-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 11px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  /* A code is read off an advertisement and typed character by character, so
+     it is set in the face that tells an I from a 1 and a 0 from an O. */
+  font: 15px ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.discount-row .button {
+  white-space: nowrap;
+}
+
+/* Applied: a statement rather than a field, because a box still asking for a
+   code beside a code that has been taken is two answers to whether it worked. */
+.discount-applied {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--gold-deep);
+  border-radius: 8px;
+  background: var(--bg-raised);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.discount-applied s {
+  color: var(--text-muted);
+}
+
+.discount-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px 16px;
+  margin-bottom: 4px;
+}
+
+/* The advertised link and its Copy, stacked and **bounded**.
+   Measured before this existed: the link ran the table to 1027px inside a
+   944px box, which put `Switch off` — the only control that withdraws a code —
+   82px past the right edge, behind a horizontal scrollbar that draws nothing
+   until the pointer is already in it (addendum 19 §10's own finding, where
+   what was hidden was a control rather than a picture). Copy also wrapped on
+   three rows out of four and sat inline on the fourth, which is one column
+   doing two things. */
+/* The advertised link needs a **cap and not a floor**, which is the measurement
+   that settled it: the table is `width: max-content`, so the column took the
+   whole un-wrapped URL (411px) and ran the table to 1018px inside a 944px box,
+   putting `Switch off` — the one control that withdraws a code — behind a
+   horizontal scrollbar that draws nothing until the pointer is already in it
+   (addendum 19 §10). Lowering `.wrap`'s floor changed nothing, because a floor
+   was never what was holding it open. */
+.discounts-table td.wrap {
+  min-width: 0;
+  width: 220px;
+  max-width: 220px;
+}
+
+.discount-cell {
+  display: grid;
+  /* The width is the table's own `td.wrap` (280–420px); this only stacks the
+     link and its Copy so the button lands in the same place on every row
+     rather than wrapping on three out of four. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  justify-items: start;
+}
+
+/* The advertised link, which is read and copied rather than clicked — so it
+   wraps at the characters a URL breaks at and never runs the table wide. */
+.discount-link {
+  font: 12px ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  color: var(--text-muted);
+  word-break: break-all;
+  max-width: 100%;
+}
+
+/* An action said in words rather than drawn as a button — Remove, Copy,
+   Switch off. Not `.link`, which has never had a rule on this site: the first
+   draft used it on the buying page and `Remove` came out as a **native grey
+   browser button** sitting inside a sentence, which looking at the page caught
+   and no test could. Named for what it is, so the table and the buying page
+   cannot drift apart. */
+.text-act {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--gold);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.text-act:hover,
+.text-act:focus-visible {
+  color: var(--gold-bright);
+}
+
+/* A code that can no longer be redeemed: still listed, because how a campaign
+   did is the thing most worth looking at after it has run. */
+.spent td {
+  color: var(--text-muted);
+}

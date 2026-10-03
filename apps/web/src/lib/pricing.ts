@@ -1,3 +1,4 @@
+import { formatPrice } from '@vcwriter/domain';
 import { env } from './env';
 import { stripe } from './stripe';
 
@@ -18,13 +19,12 @@ export interface DisplayPrice {
   recurring: boolean;
 }
 
-export const formatPrice = (amountCents: number, currency: string): string =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-    // Whole amounts read better without trailing zeros on a marketing page.
-    minimumFractionDigits: amountCents % 100 === 0 ? 0 : 2,
-  }).format(amountCents / 100);
+/**
+ * Re-exported rather than written here: the formatter is the domain's, so a
+ * screen that only wants to write `$10` can have it without this module's
+ * Stripe client coming with it into the browser.
+ */
+export { formatPrice };
 
 /**
  * Returns null rather than throwing when Stripe is not configured, so the

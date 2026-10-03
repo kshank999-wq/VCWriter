@@ -5195,6 +5195,59 @@ push live; the build takes a minute or two.
   an `<a>` and nothing else. §6 names what is not built: the link goes to the
   **home page** rather than to the no-save teaser, a route being only a route
   where it exists and the home page being the one page certain to be there.
+  `addendum-31-discount-codes.md` is **discount codes**, from Ken (*there needs
+  to be the ability to give discount codes, create discount codes in a checkout
+  screen and for advertising*), and the audit answers the first of the three
+  before a line is written: `allow_promotion_codes: true` has been on the
+  checkout session since it was written, so **Stripe's own page has always
+  shown an *Add promotion code* field** and a code made in the dashboard has
+  always worked. What was missing is **making one** and **advertising it**.
+  **Stripe is the till, so the discount lives there** — `pricing.ts`'s rule on
+  the other half of the transaction — which is why there is **no table and no
+  migration**: no stored percentage, no copied expiry, no redemption counter, so
+  a code withdrawn in Stripe stops working here with nothing run and the admin
+  screen is a window onto the one set rather than a second set to keep in step.
+  What the domain holds is the part that is not Stripe's (`discounts.ts`): the
+  one spelling of a code, what the offer says, what is owed, the advertised
+  link and the refusal. **A coupon is the discount and a promotion code is the
+  word you say**, Stripe's own split kept rather than flattened because one
+  coupon can carry several codes, which is how the podcast and the newsletter
+  are told apart. **One refusal for every way a code can fail** — unknown,
+  expired, used up, switched off — a customer doing the same thing about all of
+  them and the sentence that told them apart being the one that tells a stranger
+  which codes exist. **The shape is the permission** a fourth time: the checkout
+  body takes the **word** and has no field for a percentage, an amount, a coupon
+  or a promotion-code id, with a test that hands it six such fields and watches
+  them fall off — and whose first assertion **reads the route's own source**,
+  a test whose subject has drifted being worse than none. A code that is not
+  redeemable is **refused rather than quietly dropped**, somebody who followed
+  an advertisement and is charged in full without being told having been
+  overcharged as far as they are concerned. **The advertising half is the link**,
+  and building it found the fault of the day: `?code=` is **this site's own
+  sign-in parameter**, which `strayAuthRedirect` forwards to the auth callback,
+  so the first draft's advertised link took every reader to *your sign-in link
+  has expired* with the discount never mentioned — the page perfect and
+  unreachable, found only by driving the real site. `DISCOUNT_PARAM` is
+  `discount`, the **third** name this project has stepped around (`origin` taken
+  so a moment is `found`; `Standing` taken so a node's is a `Situation`), the
+  rule being that **the collision is with a word, so the fix is a word**, with
+  two tests pinning it. Driving also caught **four dead classes** — `.panel`,
+  `.table`, `.link` and a bare `.muted`, none of which has a rule on this site
+  (addendum 09 §14a's trap again), so *Remove* drew as a native grey browser
+  button inside a sentence — and **a control behind a scrollbar that draws
+  nothing**: the advertisement column took the whole un-wrapped URL, ran the
+  table to 1018px inside a 944px box and put *Switch off*, the one control that
+  withdraws a code, 82px past the edge (addendum 19 §10). Two wrong fixes before
+  the measurement settled it — the cell needed a **cap and not a floor**, a floor
+  never having been what held it open, and it needed the table's own `.wrap`,
+  its cells being `nowrap` by default. One tidy came with it: `formatPrice` and
+  `formatMoney` were two private copies in modules that reach Stripe or the
+  database, so a screen wanting to write `$10` dragged a server client into the
+  browser; they are `money.ts` now, **kept apart rather than merged** because a
+  price is advertised and a figure is accounted for. §8 names what is not done:
+  **the Stripe half has never been run live** (no keys here), nothing is deleted
+  (switched off, the graveyard's reason), no per-customer codes, and a code is
+  not carried through a mid-purchase sign-in.
 
 ## Before pushing
 

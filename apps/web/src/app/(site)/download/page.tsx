@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DISCOUNT_PARAM } from '@vcwriter/domain';
 import { fetchDisplayPrice } from '@/lib/pricing';
 import { PlatformChoice } from './platform-choice';
 
@@ -16,8 +17,17 @@ export const dynamic = 'force-dynamic';
  * Windows or Mac without contacting support, and the choice is recorded with
  * the order.
  */
-export default async function DownloadPage() {
+export default async function DownloadPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const price = await fetchDisplayPrice();
+  // A code carried in from an advertisement (addendum 31). The page hands it
+  // to the control, which asks the shop what it is worth; nothing is decided
+  // here, and a code that is no good simply does not change the price.
+  const asked = (await searchParams)?.[DISCOUNT_PARAM];
+  const code = (Array.isArray(asked) ? asked[0] : asked)?.trim() || null;
 
   return (
     <>
@@ -35,7 +45,7 @@ export default async function DownloadPage() {
           )}
         </p>
       </div>
-      <PlatformChoice />
+      <PlatformChoice advertisedCode={code} />
     </>
   );
 }

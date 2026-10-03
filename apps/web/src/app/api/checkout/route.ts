@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { platformSchema } from '@vcwriter/domain';
+import { DISCOUNT_REFUSAL, isRedeemable, platformSchema } from '@vcwriter/domain';
 import { env } from '@/lib/env';
+import { findDiscount } from '@/lib/discounts';
 import { stripe } from '@/lib/stripe';
 import { currentUser } from '@/lib/supabase';
 import { RULES, rateLimit } from '@/lib/rate-limit';
@@ -13,6 +14,14 @@ const bodySchema = z.object({
   /** Windows or Mac, chosen before payment (spec §3.2). */
   platform: platformSchema,
   email: z.string().email().optional(),
+  /**
+   * A discount code, typed or carried in from an advertisement's link
+   * (addendum 31). **The shape is the permission**: this is the *word*, and
+   * there is no field here for a percentage, an amount, a coupon or a
+   * promotion-code id, so a client that decided what its own discount was has
+   * nowhere to put it. The server asks Stripe what the word is worth.
+   */
+  code: z.string().max(64).optional(),
 });
 
 /**
@@ -34,6 +43,15 @@ export async function POST(request: Request): Promise<Response> {
   const user = await currentUser();
   const email = user?.email ?? parsed.data.email;
 
+  // Resolved here and never trusted from the client. A code that is not
+  // redeemable is refused rather than quietly dropped: somebody who followed
+  // an advertisement and is charged full price without being told has been
+  // overcharged as far as they are concerned.
+  const offer = parsed.data.code ? await findDiscount(parsed.data.code) : null;
+  if (parsed.data.code && (!offer || !isRedeemable(offer, new Date()))) {
+    return NextResponse.json({ error: DISCOUNT_REFUSAL }, { status: 400 });
+  }
+
   try {
     const session = await stripe().checkout.sessions.create({
       mode: 'payment',
@@ -46,7 +64,14 @@ export async function POST(request: Request): Promise<Response> {
         platform: parsed.data.platform,
         supabase_user_id: user?.id ?? '',
       },
-      allow_promotion_codes: true,
+      // **Stripe refuses both at once**, which is the API's own rule and not a
+      // choice made here: a session carrying `discounts` may not also offer the
+      // box. That is the right way round anyway — somebody who arrived with a
+      // code should not be shown an empty field asking for one — so the box is
+      // offered to everybody else.
+      ...(offer
+        ? { discounts: [{ promotion_code: offer.promotionCodeId }] }
+        : { allow_promotion_codes: true }),
       // Software sold internationally attracts VAT and sales tax. Stripe works
       // out what is owed where, which is not a calculation to reimplement —
       // enable Stripe Tax in the dashboard and it applies from here.

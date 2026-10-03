@@ -65,6 +65,14 @@ export const RULES = {
    */
   noteCategories: { name: 'note-categories', limit: 20, windowSeconds: 3600 },
   /**
+   * Checking what a discount code is worth (addendum 31). A spam limit rather
+   * than a spending one, and the thing it is actually for is **guessing**: a
+   * code is printed in advertisements and so is public by design, but a code
+   * nobody published is worth finding by trying, and thirty an hour is far
+   * more than anybody types off a page and far too few to search by.
+   */
+  discount: { name: 'discount', limit: 30, windowSeconds: 3600 },
+  /**
    * Sending a one-sheet costs nothing but a message, so this is a spam limit
    * rather than a spending one — and it is tighter than the others for exactly
    * that reason: nobody sends their own one-sheet to twenty people in an hour,
