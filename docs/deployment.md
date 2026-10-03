@@ -156,10 +156,21 @@ same two variables below. (The old JWT keys still exist under API Keys →
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API Keys → the `sb_publishable_…` key | Public; bound by RLS. Supabase renamed "anon" to "publishable"; same role, same variable |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API Keys → the `sb_secret_…` key (eye icon to reveal) | **Secret.** Bypasses RLS. Server only. Supabase renamed "service_role" to "secret"; same role, same variable |
 | `STRIPE_SECRET_KEY` | Stripe → Developers → API keys | **Secret** |
-| `STRIPE_WEBHOOK_SECRET` | Stripe → Webhooks → the vc-writer.com endpoint | **Secret**. Different per environment |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe → API keys | Public |
-| `STRIPE_PRICE_ID_DESKTOP` | Stripe → Products → VC Writer Desktop | The server-chosen price |
+| `STRIPE_WEBHOOK_SECRET` | Stripe → Webhooks → the vc-writer.com endpoint | **Secret**. Per endpoint, so per environment *and per mode* |
+| `STRIPE_PRICE_ID_DESKTOP` | Stripe → Products → VC Writer Desktop | The server-chosen price. **Absent means checkout 500s** — `env` throws, and the buyer is shown the message |
 | `STRIPE_PRICE_ID_SEAT` | Stripe → Products → Writers Room seat | A **recurring** monthly price. Absent means a room cannot take a billed seat; everything else is unaffected |
+
+**The four Stripe values must all come from the same mode.** Test and live are
+separate worlds in Stripe: a `sk_test_` key with a live `price_` id fails with
+*No such price*, and a signing secret belonging to the live endpoint rejects
+every test delivery as a bad signature. Switching mode therefore means a new
+key, a **new webhook endpoint** (and so a new secret), and prices created again
+in the other mode — the ids do not carry across.
+
+There is **no publishable key**, and nothing reads one. Checkout is Stripe's own
+hosted page, reached by a redirect the server builds, so the browser never holds
+a Stripe key at all; `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` was listed here and in
+`.env.example` for a long time and was read by no code in the repository.
 | `RESEND_API_KEY` | Resend → API keys | **Secret** |
 | `ANTHROPIC_API_KEY` | Anthropic Console | **Secret.** Absent means the Final Editor's AI read returns 503 and its deterministic pass still works |
 | `RESEND_FROM_ADDRESS` | `VC Writer <noreply@vc-writer.com>` | Needs a verified domain |
