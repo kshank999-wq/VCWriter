@@ -41,7 +41,7 @@ push live; the build takes a minute or two.
   part of the change, not afterwards. The Supabase connector can do it from
   here; afterwards run the advisors (`get_advisors`, security **and**
   performance) and fix what they raise, because they catch what the SQL
-  reads like it does. Applied through 0065.
+  reads like it does. Applied through 0066.
 - `docs/spec/` — the master spec and `addendum-02-workspace.md`, which
   describes the workspace as built. Keep it current with the code. Its **§8** is
   the windowing, and the thing to know is that **every room goes to a second
@@ -5279,6 +5279,67 @@ push live; the build takes a minute or two.
   the route's own source**, §4's idiom pointed at a webhook, a Stripe signature
   not being forgeable in a test. The test Ken asked for is now one minute and no
   money: a code at **100% off, limit 1**, followed by its own Copy link.
+  `addendum-32-desktop-subscription.md` is **the desktop subscription**, from
+  Ken (*we are switching to 19.99 mo subscription base and 199.99 yearly
+  subscription*), and **the audit paid a twenty-seventh time**: four of the
+  things a subscription needs were already standing — `license_status` has
+  carried **`expired`** since 0002 and nothing ever wrote it,
+  `licenses.expires_at` has been a column since 0002 and nothing ever wrote it,
+  the webhook has handled `customer.subscription.*` since the Writers Room
+  seat, and `DisplayPrice.recurring` has been read off Stripe since
+  `pricing.ts` was written. So **a subscription is not a second kind of
+  entitlement**: it is the licence this program already has, with its expiry
+  finally written down — and because `decideActivation`, `canDownloadPlatform`,
+  the download route, the account page and the admin console all ask
+  `license.status`, **pointing a lapse at that one field carries it everywhere
+  with nothing else told**, the whole enforcement change being that two callers
+  now ask `licenseLive`, which reads the status *and* the date. Migration 0066
+  is one column, `licenses.stripe_subscription_id`, because **a renewal extends
+  the licence it already has** — twelve invoices a year through the birth path
+  would give a writer twelve serials. **A plan is a word, never a price** (the
+  body takes `monthly` or `yearly` and has no field for a price id, an amount or
+  an interval — the shape is the permission a fifth time), and **no price
+  appears anywhere in the repository**, `pricing.ts`'s rule, with the yearly
+  saving a **reading** over the two figures rather than a badge somebody typed.
+  **`past_due` entitles, deliberately** — an expired card is not somebody
+  leaving and Stripe is still retrying, addendum 07 §23's refusal — while
+  `canceled`, `unpaid`, `paused` and **any word this build has never heard of**
+  do not, `appleState`'s rule on a third shop. **The date is read as well as the
+  status**, because a webhook is a message that may not arrive and a date in
+  hand beats one that never came; **a licence with no expiry never lapses**,
+  which is every row written before today. **A subscription says what it is
+  for**: desktop plans and room seats arrive as the same events, so the handler
+  routes on the metadata each checkout stamped and one that says neither is
+  **left alone rather than written somewhere**.
+  `STRIPE_PRICE_ID_DESKTOP` is **gone rather than kept as an older spelling**,
+  this project's usual move, because a one-off price in a subscription checkout
+  fails at Stripe with a message about modes that says nothing about what to
+  fix; it is `STRIPE_PRICE_ID_MONTHLY` and `STRIPE_PRICE_ID_YEARLY`, both
+  recurring, both on one product. **What a lapse reaches** is
+  `DESKTOP_LAPSE_PROMISE` and it **describes what the program already did**: an
+  activated copy goes on opening, printing and exporting, nothing local having
+  ever asked the server for permission to write a word, and what stops is taking
+  a **new** machine plus the parts that ask vc-writer.com for themselves — the
+  desktop going read-only at a lapse is a **separate and bigger decision, named
+  rather than half-built**. The name `LAPSE_PROMISE` was **taken** (the Writers
+  Room's), the fourth time here after `origin`→`found`, `Standing`→`Situation`
+  and `code`→`discount`, and the keeper is **how it was found**: a star
+  re-export conflict is a *runtime* fault, so the domain built, 2666 tests
+  stayed green and the buying page returned a 500 — only running it found it.
+  Driving caught three more the tests could not, two on one card: **the price
+  drew at 14px** (`.plan-option span` is two selectors and beats a single
+  `.plan-figure` wherever it sits — specificity rather than source order, and it
+  took measuring the computed size, both figures being legible), **`per
+  yearSave 17%`** ran together (an `inline-block` after an inline span, where a
+  `margin-top` does nothing), and the two cards' headings sat **15px apart**
+  because a `<button>` centres its own content and only one card has a saving
+  line. Plus the wording: *After payment* and *Continue to payment* had survived
+  from the purchase onto a page that now sells a subscription. §7 names what is
+  not done — **the Stripe half has never been run live**, **nobody is being
+  migrated because `orders`, `licenses` and `stripe_webhook_events` are
+  measurably empty**, no proration or plan switching in the app (Stripe's
+  Customer Portal does both and the account page should link to it), and no
+  trial.
 
 ## Before pushing
 

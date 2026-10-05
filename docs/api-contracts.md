@@ -22,7 +22,8 @@ Starts a Stripe Checkout session.
 { "error": "A platform of \"windows\" or \"macos\" is required" }
 ```
 
-The price is chosen server-side from `STRIPE_PRICE_ID_DESKTOP`. The platform
+The price is chosen server-side from the plan named in the body —
+`STRIPE_PRICE_ID_MONTHLY` or `STRIPE_PRICE_ID_YEARLY`. The platform
 and the signed-in user id ride in session metadata for the webhook to read.
 
 ### `POST /api/stripe/webhook`

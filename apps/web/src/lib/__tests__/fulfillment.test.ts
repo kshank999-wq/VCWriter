@@ -181,3 +181,58 @@ describe('fulfilling a purchase that cost nothing', () => {
     expect(again.serial).toBe(first.serial);
   });
 });
+
+/**
+ * The subscription (addendum 32).
+ *
+ * The licence is born exactly as it always was — what is new is that it now
+ * carries the subscription that renews it and the date it is paid to, so a
+ * renewal has something to find and `licenseLive` has something to read.
+ */
+describe('fulfilling a subscription', () => {
+  it('records the subscription and the period on the licence', async () => {
+    const fake = createFakeSupabase();
+
+    await fulfillCheckout(
+      purchase({
+        checkoutSessionId: 'cs_test_sub',
+        subscriptionId: 'sub_test_1',
+        expiresAt: '2026-07-01T00:00:00.000Z',
+        amountCents: 1999,
+      }),
+      deps(fake),
+    );
+
+    expect(fake.state.licenses).toHaveLength(1);
+    expect(fake.state.licenses[0]?.['stripe_subscription_id']).toBe('sub_test_1');
+    expect(fake.state.licenses[0]?.['expires_at']).toBe('2026-07-01T00:00:00.000Z');
+    expect(fake.state.licenses[0]?.['status']).toBe('active');
+  });
+
+  it('leaves a licence that does not renew with no expiry at all', async () => {
+    // Which `licenseLive` reads as *never lapses* — the shape of every row
+    // written before the subscription, and the safe way to be wrong.
+    const fake = createFakeSupabase();
+
+    await fulfillCheckout(purchase({ checkoutSessionId: 'cs_test_plain' }), deps(fake));
+
+    expect(fake.state.licenses[0]?.['stripe_subscription_id']).toBe(null);
+    expect(fake.state.licenses[0]?.['expires_at']).toBe(null);
+  });
+
+  it('still issues exactly one licence however many times the webhook arrives', async () => {
+    const fake = createFakeSupabase();
+    const sub = purchase({
+      checkoutSessionId: 'cs_test_sub2',
+      subscriptionId: 'sub_test_2',
+      expiresAt: '2026-07-01T00:00:00.000Z',
+    });
+
+    const first = await fulfillCheckout(sub, deps(fake));
+    const again = await fulfillCheckout(sub, deps(fake));
+
+    expect(fake.state.licenses).toHaveLength(1);
+    expect(again.created).toBe(false);
+    expect(again.serial).toBe(first.serial);
+  });
+});

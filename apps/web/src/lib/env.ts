@@ -78,8 +78,18 @@ export const env = {
   get stripeWebhookSecret(): string {
     return required('STRIPE_WEBHOOK_SECRET');
   },
-  get stripePriceId(): string {
-    return required('STRIPE_PRICE_ID_DESKTOP');
+  /**
+   * The two desktop plans (addendum 32). `STRIPE_PRICE_ID_DESKTOP` was a
+   * **one-off** price and is gone rather than kept as an older spelling: there
+   * is no sense in which a recurring price is the same object, and a variable
+   * holding a one-time price under a subscription checkout would fail at
+   * Stripe with a message about modes that says nothing about what to fix.
+   */
+  get stripeMonthlyPriceId(): string {
+    return required('STRIPE_PRICE_ID_MONTHLY');
+  },
+  get stripeYearlyPriceId(): string {
+    return required('STRIPE_PRICE_ID_YEARLY');
   },
   /**
    * The recurring price of one Writers Room seat (addendum 07 §14, stage 15).

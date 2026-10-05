@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { DISCOUNT_PARAM } from '@vcwriter/domain';
-import { fetchDisplayPrice } from '@/lib/pricing';
+import { fetchPlanPrices } from '@/lib/pricing';
 import { PlatformChoice } from './platform-choice';
 
 export const metadata: Metadata = {
@@ -22,7 +22,7 @@ export default async function DownloadPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const price = await fetchDisplayPrice();
+  const plans = await fetchPlanPrices();
   // A code carried in from an advertisement (addendum 31). The page hands it
   // to the control, which asks the shop what it is worth; nothing is decided
   // here, and a code that is no good simply does not change the price.
@@ -32,20 +32,13 @@ export default async function DownloadPage({
   return (
     <>
       <div className="hero">
-        <h1>Buy VC Writer</h1>
+        <h1>VC Writer</h1>
         <p>
-          {price ? (
-            <>
-              <strong>{price.formatted}</strong>
-              {price.recurring ? ' a year' : ' once'} — for Windows and macOS both. Pick the platform you want to
-              install on now; your license covers the other, so you can switch later.
-            </>
-          ) : (
-            'Pick the platform you want to install on. Your license covers both, so you can switch later.'
-          )}
+          A subscription, on Windows and macOS both. Pick the plan and the platform you want to install on now;
+          it covers the other, so you can switch later.
         </p>
       </div>
-      <PlatformChoice advertisedCode={code} />
+      <PlatformChoice advertisedCode={code} plans={plans} />
     </>
   );
 }

@@ -6,7 +6,26 @@ import { stripe } from '@/lib/stripe';
 import { adminClient } from '@/lib/supabase';
 import { fulfillCheckout, parsePlatform } from '@/lib/fulfillment';
 import { sendPurchaseEmail } from '@/lib/email';
-import { recordSubscription } from '@/lib/room-billing';
+import { recordSubscription, subscriptionKind } from '@/lib/room-billing';
+import { recordDesktopSubscription } from '@/lib/desktop-subscription';
+
+/**
+ * When the subscription is paid up to, asked of Stripe rather than guessed.
+ *
+ * The checkout session says which subscription was made and not when it ends,
+ * so this is one question at the moment a licence is born. A failure answers
+ * null: a licence with no expiry never lapses (`licenseLive`), which is the
+ * safe way to be wrong — somebody who has just paid keeps working, and the
+ * first renewal event writes the real date.
+ */
+const periodEnd = async (subscriptionId: string): Promise<string | null> => {
+  try {
+    const subscription = await stripe().subscriptions.retrieve(subscriptionId);
+    return new Date(subscription.current_period_end * 1000).toISOString();
+  } catch {
+    return null;
+  }
+};
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -68,8 +87,17 @@ export async function POST(request: Request): Promise<Response> {
         const email = session.customer_details?.email ?? session.customer_email;
         if (!email) throw new Error(`Checkout session ${session.id} has no customer email`);
 
+        // A subscription checkout (addendum 32) carries the subscription the
+        // licence will renew on. Read here rather than waited for, because the
+        // two events race and this one always knows who bought it.
+        const subscriptionId =
+          typeof session.subscription === 'string' ? session.subscription : session.subscription?.id ?? null;
+        const expiresAt = subscriptionId ? await periodEnd(subscriptionId) : null;
+
         const result = await fulfillCheckout({
           checkoutSessionId: session.id,
+          subscriptionId,
+          expiresAt,
           paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
           stripeCustomerId: typeof session.customer === 'string' ? session.customer : null,
           customerEmail: email,
@@ -107,7 +135,15 @@ export async function POST(request: Request): Promise<Response> {
       //
       // Nothing is taken away here. A lapsed subscription stops the room taking
       // another seat; everybody already in it keeps writing (`billing.ts`).
-      await recordSubscription(event.data.object as Stripe.Subscription);
+      //
+      // Two products now arrive down this one pipe, so it is routed rather
+      // than assumed (addendum 32): `subscriptionKind` reads the metadata each
+      // checkout stamped, and one that says neither — a subscription somebody
+      // made by hand in the dashboard — is left alone.
+      const subscription = event.data.object as Stripe.Subscription;
+      const kind = subscriptionKind(subscription);
+      if (kind === 'room') await recordSubscription(subscription);
+      else if (kind === 'desktop') await recordDesktopSubscription(subscription);
     } else if (event.type === 'charge.refunded' || event.type === 'charge.dispute.created') {
       // Entitlement state must be able to follow the money (§12.2).
       const charge = event.data.object as Stripe.Charge;

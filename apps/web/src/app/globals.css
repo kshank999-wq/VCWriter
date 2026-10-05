@@ -338,6 +338,80 @@ section > .lede {
   font-size: 14px;
 }
 
+/* The plan choice (addendum 32). It wears the platform cards' own shape
+   rather than a second one — two rows of cards on one page that look unalike
+   read as two different kinds of question — differing only in what a card
+   carries and in the state attribute, these being radios (one of two) where
+   the platforms are pressed buttons. */
+.plan-choice {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 24px 0 0;
+}
+
+.plan-option {
+  flex: 1 1 240px;
+  /* A `<button>` centres its own content, so the card with no saving line sat
+     15px lower than the one with it — two cards side by side whose headings do
+     not line up. The platform cards never showed this because both of theirs
+     are the same height. */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 20px;
+  background: var(--bg-raised);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.plan-option[aria-checked='true'] {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold-deep), 0 0 16px rgba(201, 164, 92, 0.18);
+}
+
+.plan-option strong {
+  display: block;
+  font-size: 17px;
+  margin-bottom: 4px;
+}
+
+.plan-option span {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* `.plan-option .plan-figure` rather than `.plan-figure`: the card's own
+   `.plan-option span` rule is two selectors and beats a single class however
+   far down the file it sits, so the first draft drew the price — the one thing
+   on the card a reader is looking for — at the 14px of the small print beside
+   it. Specificity rather than source order (addendum 26 §13), and it took
+   measuring the rendered size to see, both figures being legible. */
+.plan-option .plan-figure {
+  display: block;
+  font-size: 26px;
+  color: var(--text);
+  line-height: 1.2;
+  margin: 2px 0;
+}
+
+/* `block`, not `inline-block`: it follows an inline `span` holding *per
+   month*, so the first draft drew `per yearSave 17%` as one run of words with
+   no gap at all — a margin above does nothing to two things on one line. */
+.plan-saving {
+  display: block;
+  margin-top: 8px;
+  font-style: normal;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+}
+
 .serial {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 18px;

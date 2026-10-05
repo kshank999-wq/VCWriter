@@ -99,5 +99,29 @@ export type DeviceActivation = z.infer<typeof deviceActivationSchema>;
 export const isActivationSlotAvailable = (license: License, activations: readonly DeviceActivation[]): boolean =>
   activations.filter((activation) => activation.deactivatedAt === null).length < license.maxActivations;
 
-export const canDownloadPlatform = (license: License, platform: z.infer<typeof platformSchema>): boolean =>
-  license.status === 'active' && license.entitledPlatforms.includes(platform);
+/**
+ * Whether a licence is live **now** (addendum 32).
+ *
+ * It lives here beside the record's other predicates rather than in
+ * `subscription.ts`, because every gate in the program asks it and a second
+ * copy anywhere is a second answer to *is this person entitled*.
+ *
+ * Two things can end a licence and both are read: the status Stripe's last
+ * word set, and the period it is paid up to. The second matters because a
+ * webhook is a message that may not arrive — if Stripe's cancellation event is
+ * lost the stored status still says active while the paid period has plainly
+ * run out, and a date already in hand is a better answer than a message that
+ * never came. **A licence with no expiry never lapses**, which is what every
+ * row written before the subscription was.
+ */
+export const licenseLive = (license: Pick<License, 'status' | 'expiresAt'>, now: Date): boolean => {
+  if (license.status !== 'active') return false;
+  if (!license.expiresAt) return true;
+  return new Date(license.expiresAt).getTime() > now.getTime();
+};
+
+export const canDownloadPlatform = (
+  license: License,
+  platform: z.infer<typeof platformSchema>,
+  now: Date = new Date(),
+): boolean => licenseLive(license, now) && license.entitledPlatforms.includes(platform);

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { DISCOUNT_REFUSAL, describeOff, formatPrice, isRedeemable, priceWith } from '@vcwriter/domain';
+import { DISCOUNT_REFUSAL, describeOff, formatPrice, isPlan, isRedeemable, priceWith } from '@vcwriter/domain';
 import { findDiscount } from '@/lib/discounts';
-import { fetchDisplayPrice } from '@/lib/pricing';
+import { fetchPlanPrices } from '@/lib/pricing';
 import { RULES, rateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
@@ -36,7 +36,13 @@ export async function GET(request: Request): Promise<Response> {
     return NextResponse.json({ ok: false, error: DISCOUNT_REFUSAL });
   }
 
-  const price = await fetchDisplayPrice();
+  // **What is owed depends on which plan** (addendum 32), so the page says
+  // which one it is asking about and the answer is that plan's. Monthly where
+  // nothing is said, which is the plan the buying page opens on.
+  const wanted = new URL(request.url).searchParams.get('plan') ?? 'monthly';
+  const plan = isPlan(wanted) ? wanted : 'monthly';
+  const prices = await fetchPlanPrices();
+  const price = prices.find((one) => one.plan === plan) ?? null;
   const nowCents = price ? priceWith(price.amountCents, price.currency, offer.off) : null;
 
   return NextResponse.json({

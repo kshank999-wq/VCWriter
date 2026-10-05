@@ -157,7 +157,8 @@ same two variables below. (The old JWT keys still exist under API Keys →
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API Keys → the `sb_secret_…` key (eye icon to reveal) | **Secret.** Bypasses RLS. Server only. Supabase renamed "service_role" to "secret"; same role, same variable |
 | `STRIPE_SECRET_KEY` | Stripe → Developers → API keys | **Secret** |
 | `STRIPE_WEBHOOK_SECRET` | Stripe → Webhooks → the vc-writer.com endpoint | **Secret**. Per endpoint, so per environment *and per mode* |
-| `STRIPE_PRICE_ID_DESKTOP` | Stripe → Products → VC Writer Desktop | The server-chosen price. **Absent means checkout 500s** — `env` throws, and the buyer is shown the message |
+| `STRIPE_PRICE_ID_MONTHLY` | Stripe → Product catalog → VC Writer → the monthly price | **Recurring.** The server-chosen price. **Absent means checkout 500s** — `env` throws, and the buyer is shown the message |
+| `STRIPE_PRICE_ID_YEARLY` | Stripe → Product catalog → VC Writer → the yearly price | **Recurring**, on the same product as the monthly one |
 | `STRIPE_PRICE_ID_SEAT` | Stripe → Products → Writers Room seat | A **recurring** monthly price. Absent means a room cannot take a billed seat; everything else is unaffected |
 
 **The four Stripe values must all come from the same mode.** Test and live are
@@ -199,7 +200,11 @@ Add. Nothing else.
 
 ## Stripe
 
-1. Create the product and price; put the price id in `STRIPE_PRICE_ID_DESKTOP`.
+1. Create one product — *VC Writer* — with **two recurring prices** on it: one
+   monthly and one yearly (addendum 32). Put their price ids in
+   `STRIPE_PRICE_ID_MONTHLY` and `STRIPE_PRICE_ID_YEARLY`. Both must be
+   recurring: a one-off price in a `mode: 'subscription'` checkout fails at
+   Stripe with a message about modes that says nothing about what to fix.
 2. Create a **second** product — a Writers Room seat — with a **recurring
    monthly** price, and put that price id in `STRIPE_PRICE_ID_SEAT`. It is
    separate because §14 of addendum 07 makes the two separate entitlements: the

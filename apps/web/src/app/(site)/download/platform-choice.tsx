@@ -1,7 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { codeRefusal, normaliseCode, type Platform } from '@vcwriter/domain';
+import { codeRefusal, normaliseCode, type Platform, type SubscriptionPlan } from '@vcwriter/domain';
+
+/** What a plan costs, as the shop answered — never computed here. */
+export interface PlanOffer {
+  plan: SubscriptionPlan;
+  label: string;
+  per: string;
+  formatted: string;
+  savingPercent: number | null;
+}
 
 const OPTIONS: ReadonlyArray<{ platform: Platform; label: string; detail: string }> = [
   { platform: 'windows', label: 'Download for Windows', detail: 'Windows 10 and Windows 11, 64-bit' },
@@ -16,8 +25,18 @@ interface Checked {
   now: string | null;
 }
 
-export function PlatformChoice({ advertisedCode = null }: { advertisedCode?: string | null }) {
+export function PlatformChoice({
+  advertisedCode = null,
+  plans = [],
+}: {
+  advertisedCode?: string | null;
+  plans?: PlanOffer[];
+}) {
   const [platform, setPlatform] = useState<Platform>('windows');
+  // Monthly where the shop could answer for it, otherwise whatever it could —
+  // **a plan Stripe has never heard of is absent rather than offered**, so the
+  // chosen one is always one of the plans actually drawn.
+  const [plan, setPlan] = useState<SubscriptionPlan>(plans[0]?.plan ?? 'monthly');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +60,12 @@ export function PlatformChoice({ advertisedCode = null }: { advertisedCode?: str
     setChecking(true);
     setCodeError(null);
     try {
-      const response = await fetch(`/api/discount?code=${encodeURIComponent(normaliseCode(said))}`);
+      // The plan goes with it: what a code takes off is the same, but what is
+      // then owed is the chosen plan's, so asking without it would print a
+      // yearly code's saving against a monthly price.
+      const response = await fetch(
+        `/api/discount?code=${encodeURIComponent(normaliseCode(said))}&plan=${plan}`,
+      );
       const payload = (await response.json()) as Partial<Checked> & { ok?: boolean; error?: string };
       if (payload.ok && payload.code && payload.takes) {
         setApplied({
@@ -60,7 +84,7 @@ export function PlatformChoice({ advertisedCode = null }: { advertisedCode?: str
     } finally {
       setChecking(false);
     }
-  }, []);
+  }, [plan]);
 
   /**
    * **A code carried in from an advertisement applies itself.** That is the
@@ -75,6 +99,25 @@ export function PlatformChoice({ advertisedCode = null }: { advertisedCode?: str
     void check(advertisedCode);
   }, [advertisedCode, check]);
 
+  /**
+   * **An applied code is asked again when the plan changes.** It is the same
+   * code and the same discount, but `was` and `now` are the plan's — leaving
+   * them would print the monthly figures beside a chosen yearly plan, which is
+   * the one mistake on this page a reader would not find out about until the
+   * till. Keyed on the plan alone, so it does not re-ask on every render.
+   */
+  const appliedCode = applied?.code ?? null;
+  const pricedFor = useRef<SubscriptionPlan | null>(null);
+  useEffect(() => {
+    if (!appliedCode) {
+      pricedFor.current = null;
+      return;
+    }
+    if (pricedFor.current === plan) return;
+    pricedFor.current = plan;
+    void check(appliedCode);
+  }, [appliedCode, plan, check]);
+
   const startCheckout = async () => {
     setBusy(true);
     setError(null);
@@ -84,7 +127,7 @@ export function PlatformChoice({ advertisedCode = null }: { advertisedCode?: str
         headers: { 'content-type': 'application/json' },
         // The word, never the discount: the server asks the shop again for
         // itself, so nothing here can decide what anybody is charged.
-        body: JSON.stringify({ platform, ...(applied ? { code: applied.code } : {}) }),
+        body: JSON.stringify({ platform, plan, ...(applied ? { code: applied.code } : {}) }),
       });
       const payload = (await response.json()) as { url?: string; error?: string };
       if (!response.ok || !payload.url) {
@@ -99,6 +142,28 @@ export function PlatformChoice({ advertisedCode = null }: { advertisedCode?: str
 
   return (
     <section>
+      {plans.length > 0 ? (
+        <div className="plan-choice" role="radiogroup" aria-label="Plan">
+          {plans.map((offer) => (
+            <button
+              key={offer.plan}
+              type="button"
+              className="plan-option"
+              role="radio"
+              aria-checked={plan === offer.plan}
+              onClick={() => setPlan(offer.plan)}
+            >
+              <strong>{offer.label}</strong>
+              <span className="plan-figure">{offer.formatted}</span>
+              <span>{offer.per}</span>
+              {/* Read off the two prices rather than typed, so it cannot
+                  disagree with the till the day a price changes. */}
+              {offer.savingPercent ? <em className="plan-saving">Save {offer.savingPercent}%</em> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="platform-choice">
         {OPTIONS.map((option) => (
           <button
@@ -174,7 +239,7 @@ export function PlatformChoice({ advertisedCode = null }: { advertisedCode?: str
       </div>
 
       <button type="button" className="button" onClick={startCheckout} disabled={busy}>
-        {busy ? 'Opening checkout…' : 'Continue to payment'}
+        {busy ? 'Opening checkout…' : 'Continue to checkout'}
       </button>
 
       {error ? (
@@ -184,8 +249,8 @@ export function PlatformChoice({ advertisedCode = null }: { advertisedCode?: str
       ) : null}
 
       <p className="lede" style={{ marginTop: 24 }}>
-        After payment you get your download straight away, plus an email with your license and a link to
-        re-download either build at any time.
+        You get your download straight away, plus an email with your licence and a link to re-download either
+        build at any time. Cancel whenever you like in your account.
       </p>
     </section>
   );

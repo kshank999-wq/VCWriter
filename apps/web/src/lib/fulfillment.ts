@@ -28,6 +28,14 @@ export interface FulfillmentInput {
   selectedPlatform: Platform | null;
   /** Present when the buyer was signed in when they started checkout. */
   userId: string | null;
+  /**
+   * The subscription this licence renews on, and the period it is paid to
+   * (addendum 32). Both null for a licence that does not renew, which is what
+   * every row written before the subscription is — and `licenseLive` reads a
+   * null expiry as *never lapses*, so those rows are untouched by any of it.
+   */
+  subscriptionId?: string | null;
+  expiresAt?: string | null;
 }
 
 export interface FulfillmentResult {
@@ -124,6 +132,15 @@ export const fulfillCheckout = async (
 
   const existing = await client.from('licenses').select('id, serial').eq('order_id', order.id).maybeSingle();
   if (existing.data) {
+    // A replay, not a renewal — but if the first delivery landed before the
+    // subscription was known, this is where it catches up. Writing it again is
+    // harmless and writing it never is a licence that can only lapse.
+    if (input.subscriptionId) {
+      await client
+        .from('licenses')
+        .update({ stripe_subscription_id: input.subscriptionId, expires_at: input.expiresAt ?? null })
+        .eq('id', existing.data.id);
+    }
     return {
       userId,
       orderId: order.id,
@@ -142,6 +159,8 @@ export const fulfillCheckout = async (
       status: 'active',
       // §18 keeps this configurable; today one purchase covers both installers.
       entitled_platforms: ['windows', 'macos'],
+      stripe_subscription_id: input.subscriptionId ?? null,
+      expires_at: input.expiresAt ?? null,
     })
     .select('id, serial')
     .single();

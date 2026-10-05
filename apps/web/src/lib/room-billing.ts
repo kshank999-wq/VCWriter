@@ -187,6 +187,25 @@ export const setQuantity = async (input: {
  * already recorded is the room's whatever the metadata says, and the metadata
  * is what finds the room the very first time.
  */
+/**
+ * Which product a subscription is for (addendum 32).
+ *
+ * Desktop plans and Writers Room seats both arrive at one webhook as
+ * `customer.subscription.*`, and **the handler must never guess**: each
+ * checkout stamps its own `subscription_data.metadata`, so a seat says
+ * `room_id`, a desktop plan says `kind: 'desktop'`, and anything that says
+ * neither is left alone rather than written somewhere it does not belong. A
+ * subscription made by hand in the Stripe dashboard is exactly that case, and
+ * silently turning one into somebody's licence is the fault this prevents.
+ */
+export const subscriptionKind = (
+  subscription: Stripe.Subscription,
+): 'room' | 'desktop' | 'unknown' => {
+  if (subscription.metadata?.['room_id']) return 'room';
+  if (subscription.metadata?.['kind'] === 'desktop') return 'desktop';
+  return 'unknown';
+};
+
 export const recordSubscription = async (subscription: Stripe.Subscription): Promise<void> => {
   const roomId = subscription.metadata?.['room_id'];
   const db = adminClient();

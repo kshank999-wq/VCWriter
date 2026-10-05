@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { DISCOUNT_REFUSAL, isRedeemable, platformSchema } from '@vcwriter/domain';
+import { DISCOUNT_REFUSAL, isRedeemable, PLANS, platformSchema } from '@vcwriter/domain';
 import { env } from '@/lib/env';
 import { findDiscount } from '@/lib/discounts';
+import { priceIdFor } from '@/lib/pricing';
 import { stripe } from '@/lib/stripe';
 import { currentUser } from '@/lib/supabase';
 import { RULES, rateLimit } from '@/lib/rate-limit';
@@ -22,6 +23,13 @@ const bodySchema = z.object({
    * nowhere to put it. The server asks Stripe what the word is worth.
    */
   code: z.string().max(64).optional(),
+  /**
+   * Which plan (addendum 32). **The shape is the permission** a fifth time:
+   * this is the *word* `monthly` or `yearly`, and there is no field here for a
+   * price id, an amount or an interval, so a client that decided what it was
+   * going to pay has nowhere to put it. The server turns the word into a price.
+   */
+  plan: z.enum(PLANS).default('monthly'),
 });
 
 /**
@@ -54,8 +62,12 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const session = await stripe().checkout.sessions.create({
-      mode: 'payment',
-      line_items: [{ price: env.stripePriceId, quantity: 1 }],
+      // A subscription since addendum 32. The licence is still issued by the
+      // webhook on `checkout.session.completed` exactly as it was — what
+      // changed is that the same event now also carries a subscription id and
+      // a period end, and that renewals arrive afterwards as their own events.
+      mode: 'subscription',
+      line_items: [{ price: priceIdFor(parsed.data.plan), quantity: 1 }],
       success_url: `${env.siteUrl}/purchase/complete?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${env.siteUrl}/download?cancelled=1`,
       ...(email ? { customer_email: email } : {}),
@@ -63,6 +75,19 @@ export async function POST(request: Request): Promise<Response> {
       metadata: {
         platform: parsed.data.platform,
         supabase_user_id: user?.id ?? '',
+        plan: parsed.data.plan,
+      },
+      // **A subscription says what it is for.** Both the desktop plans and the
+      // Writers Room seats arrive at one webhook as `customer.subscription.*`,
+      // and the handler must never guess which: a seat carries `room_id` and a
+      // desktop subscription carries this, so one that says neither is left
+      // alone rather than written somewhere.
+      subscription_data: {
+        metadata: {
+          kind: 'desktop',
+          supabase_user_id: user?.id ?? '',
+          plan: parsed.data.plan,
+        },
       },
       // **Stripe refuses both at once**, which is the API's own rule and not a
       // choice made here: a session carrying `discounts` may not also offer the

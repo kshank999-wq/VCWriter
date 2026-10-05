@@ -1,4 +1,4 @@
-import { isActivationSlotAvailable } from './entities/commerce.js';
+import { isActivationSlotAvailable, licenseLive } from './entities/commerce.js';
 import type { DeviceActivation, License } from './entities/commerce.js';
 import type { Platform } from './entities/common.js';
 
@@ -27,6 +27,13 @@ export interface ActivationRequest {
   activations: readonly DeviceActivation[];
   deviceFingerprint: string;
   platform: Platform;
+  /**
+   * When this is being asked (addendum 32). Defaults to now, so no caller had
+   * to change; it is a parameter at all because a lapse is a fact about a
+   * *date* once the licence is a subscription, and a test about one cannot
+   * wait a month.
+   */
+  now?: Date;
 }
 
 /**
@@ -38,7 +45,12 @@ export interface ActivationRequest {
  * creating a duplicate, and a genuinely new device takes a free slot.
  */
 export const decideActivation = (request: ActivationRequest): ActivationOutcome => {
-  if (request.license.status !== 'active') {
+  // Not `status !== 'active'` any more (addendum 32): a subscription that has
+  // run out leaves a licence whose stored status may still say active if
+  // Stripe's cancellation never arrived, so `licenseLive` reads the paid
+  // period too. This is the gate a lapse actually reaches — it refuses a new
+  // machine and leaves every word already written exactly where it is.
+  if (!licenseLive(request.license, request.now ?? new Date())) {
     return { result: 'refused', reason: 'license_inactive' };
   }
 

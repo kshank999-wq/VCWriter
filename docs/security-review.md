@@ -93,7 +93,8 @@ after the signature verifies. Idempotency is a database constraint (unique on
 the checkout session id, unique on the order id), not application logic, so a
 retried delivery cannot mint a second license even if two deliveries race.
 
-`/api/checkout` chooses the price server-side from `STRIPE_PRICE_ID_DESKTOP`.
+`/api/checkout` chooses the price server-side from the plan word in the body,
+which resolves to `STRIPE_PRICE_ID_MONTHLY` or `STRIPE_PRICE_ID_YEARLY`.
 The client cannot name a price or an amount.
 
 ### Downloads
