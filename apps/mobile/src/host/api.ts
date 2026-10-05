@@ -18,7 +18,17 @@ import type { CaptureItem, NotesPlan } from '@vcwriter/domain';
  * than a way past it.
  */
 
-const site = (): string => {
+/**
+ * Where vc-writer.com is, for this build.
+ *
+ * **Exported, because three screens need it and a second copy would be the
+ * older one** — which is the reason `Account` gives for linking the privacy
+ * policy rather than repeating it, applied to the address the link is made
+ * from. It is here rather than in a module of its own because this file is
+ * already *the site, from the app*, and a `site.ts` beside it would be a
+ * second answer to where that is.
+ */
+export const site = (): string => {
   const said = (Constants.expoConfig?.extra as { site?: string } | undefined)?.site;
   return (process.env['EXPO_PUBLIC_SITE'] ?? said ?? 'https://vc-writer.com').replace(/\/$/, '');
 };

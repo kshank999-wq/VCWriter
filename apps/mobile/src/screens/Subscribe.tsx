@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { NOTES_PROMISE, type NotesPlanKind } from '@vcwriter/domain';
 import { buy, pricesFor, restore, type Priced } from '../host/purchase';
-import { notesStanding } from '../host/api';
+import { notesStanding, site } from '../host/api';
 import { styles } from '../theme';
 
 /**
@@ -29,6 +29,15 @@ import { styles } from '../theme';
  * **Restore is a first-class button.** A reinstall, a new phone and a
  * family-shared subscription all arrive needing it, and an app that sells a
  * subscription and cannot hand one back is one Apple rejects.
+ *
+ * **And the two documents are on this screen rather than in the account.**
+ * Apple's guideline 3.1.2 asks a purchase screen to carry the terms and the
+ * privacy policy, and it asks for the right thing: this is where the agreement
+ * is made, and a term somebody meets after paying is one they did not agree
+ * to. They are **links rather than text repeated here**, which is `Account`'s
+ * own reason — a second copy would be the older one, and nothing on the screen
+ * would say which — and they open in the phone's own browser, so a reader who
+ * stops to read one comes back to an app that never went anywhere.
  */
 
 const NAMES: Record<NotesPlanKind, string> = { yearly: 'A year', monthly: 'A month' };
@@ -138,9 +147,27 @@ export function Subscribe({ onBack, onSubscribed }: { onBack(): void; onSubscrib
       </Pressable>
 
       <Text style={styles.muted}>
-        Bought and managed in your store account, where it is also cancelled. VC Writer for Windows and macOS is a
-        separate, one-off purchase and works without this.
+        Bought and managed in your store account, where it is also cancelled. A subscription renews itself at the
+        end of each period unless it is cancelled at least a day before. VC Writer for Windows and macOS is a
+        separate purchase and works without this.
       </Text>
+
+      <View style={styles.linkRow}>
+        <Pressable
+          accessibilityRole="link"
+          style={styles.linkTap}
+          onPress={() => void Linking.openURL(`${site()}/terms`)}
+        >
+          <Text style={styles.link}>Terms of Use</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="link"
+          style={styles.linkTap}
+          onPress={() => void Linking.openURL(`${site()}/privacy`)}
+        >
+          <Text style={styles.link}>Privacy Policy</Text>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }

@@ -203,6 +203,49 @@
   </div>
 </section>
 
+<!-- =============================================== PLAY FEATURE GRAPHIC (1024x500)
+     Google Play's one required piece of artwork beyond the icon (addendum 27
+     §15). It is **a board here rather than a second cutter**, which is the
+     same argument §11 made about the launcher icons: `render.mjs` already
+     screenshots every board at its exact pixel size, so a feature graphic is
+     an entry and not a script.
+
+     Three things are the format's rather than anybody's taste.
+
+     **It is the Notes app and not VC Writer**, so NOTES is the headline with
+     the product's name small above it — which is also how the app brands
+     itself, every screen of it being headed NOTES. A banner reading VC WRITER
+     on a Play listing for VC Writer Notes is a graphic for the wrong product.
+
+     **The mark sits left of centre on purpose.** Play draws a play button over
+     the middle of this graphic wherever a promo video is set, and whether one
+     is set is a decision in a console rather than in this file — so nothing
+     that has to be read stands where the button lands. It happens to be the
+     1500x500 banner's own composition, which is the point: the constraint and
+     the house style agree.
+
+     **The words are the listing's.** *Dictate ideas while you walk* is the App
+     Store subtitle in `docs/store-listing.md` verbatim, for that document's own
+     stated reason — a listing typed twice is two listings. The address is left
+     off rather than set small: Play names the developer and links the site
+     itself, and this graphic is shown as small as 383px wide in a collection,
+     where a 17px line is four pixels of nothing. -->
+<section class="board" data-name="notes-feature-1024x500" style="width:1024px;height:500px">
+  <svg class="bg" viewBox="0 0 1024 500" data-deco="frame sunburst grain" data-burst="250 250 540" data-frame="22"></svg>
+  <div class="fg" style="grid-template-columns: 300px 1fr; align-items:center; padding: 40px 86px 40px 52px; gap: 40px;">
+    <div style="display:grid; justify-items:center; text-align:center;">
+      <div class="mono gold" style="font-size: 182px;">VC</div>
+    </div>
+    <div style="display:grid; gap: 15px; justify-items:start;">
+      <div class="tag" style="font-size: 16px;">VC Writer</div>
+      <div class="gold" style="font-size: 94px; font-weight: 700; letter-spacing: 0.26em; line-height: 1;">NOTES</div>
+      <div class="rule" style="width: 100%; background: linear-gradient(90deg, var(--gold), transparent);"></div>
+      <div class="body" style="font-size: 25px; letter-spacing: 0.09em; white-space: nowrap;">Dictate ideas while you walk</div>
+      <div class="tag" style="font-size: 16px;">iPhone &amp; Android</div>
+    </div>
+  </div>
+</section>
+
 <style>
   .features li {
     font-size: 27px; font-weight: 600; letter-spacing: 0.06em; color: var(--text);

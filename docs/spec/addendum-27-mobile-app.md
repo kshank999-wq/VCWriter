@@ -528,3 +528,132 @@ Store Connect and Play Console at $49.99 and $4.99, generate an App Store
 Server API key and a Play service account, and set the four environment
 variables plus the two store URLs in Vercel. **No key belongs in this
 repository and none will be asked for in a message.**
+
+---
+
+## 15. Four things between here and a submission
+
+From Ken, after the phone-to-desk sync turned out to be built already: *so
+really what's next is to get the app up and running, in the App Store*. An
+audit of what a submission actually meets found four, and the half worth
+keeping is that **two of them were about the gap between a feature being right
+and a reviewer being able to see it** — which is this project's own commonest
+finding, arriving at a store console for the first time.
+
+### 15.1 The terms, on the screen where the agreement is made
+
+Apple's guideline **3.1.2** asks a purchase screen to carry the subscription's
+title, its length, its price, **and functional links to the terms of use and
+the privacy policy**. `Subscribe.tsx` had four of the five and was going to be
+refused for the fifth — and the page the link would point at **did not exist**:
+there was a privacy policy and no terms, which is the plainer half of this.
+
+The guideline asks for the right thing, which is why it is worth more than
+compliance here. **This is where the agreement is made**, and a term somebody
+meets after paying is one they did not agree to; the account page is one screen
+too late and a help page is not a screen at all. They are **links rather than
+text repeated on the phone**, which is `Account`'s own stated reason for the
+privacy link it already had — a second copy would be the older one, and nothing
+on the screen would say which — and they open in the phone's own browser, so a
+reader who stops to read one comes back to an app that never went anywhere.
+
+Writing them found the copy that reason is about: **`site()` was written out
+twice**, in `host/api.ts` and again in `Account`, and a third was one keystroke
+away. It is exported from `host/api` now, which is already *the site, from the
+app*; a `site.ts` beside it would have been a second answer to where that is.
+
+`/terms` itself is written the way the privacy policy is and for the same
+reason: **every clause is checkable against the code**. What a licence covers,
+what a lapse reaches, what happens to notes already sent, who may read work in
+somebody else's room — each is a rule the program already enforces and a test
+already pins, so the page describes a mechanism rather than undertaking
+something a person has to remember. Three of its sentences are therefore
+**read rather than typed** — `DESKTOP_LAPSE_PROMISE`, `NOTES_PROMISE` and
+`NOTES_PRICE_WORDS` — because a terms page is the worst place in the product
+for a sentence that has stopped being true. And what it **does not** name is
+the same rule from the other end: the desktop price is Stripe's and appears
+nowhere in this repository, and how many computers a licence covers is stored
+on the licence, so both are pointed at rather than quoted.
+
+One clause is **deliberately absent and named rather than invented**: a
+governing-law line, which needs the legal entity and the jurisdiction Ken is
+operating from. Guessing one would be worse than having none.
+
+`store-requirements.test.ts` pins both halves by **reading the source**, which
+is the idiom addendum 31 §4 and addendum 32 §9 use wherever a thing cannot be
+exercised — the screens are React Native and need a simulator, and both of
+these fail by being *absent*, which looks exactly like nobody having added them
+yet.
+
+### 15.2 iPhone only, said rather than defaulted
+
+`ios.supportsTablet` was `true`, which is Expo's default and not a decision.
+It costs a real thing: Apple then expects **iPad screenshots**, and an iPad
+build nobody has laid out, tested or looked at is how an app is rejected for a
+screen that was never opened. This is a voice notebook used on a walk with the
+phone in a pocket; it is `false`, which costs nothing and can be turned on the
+day there is an iPad layout worth shipping. (An iPhone app still installs and
+runs on an iPad, scaled.)
+
+### 15.3 The feature graphic, as a board rather than a cutter
+
+Google Play requires a **1024 × 500 feature graphic** and there was none. It is
+**an entry in `brand/artboards.html`**, not a new script — the same argument
+§11 made about the launcher icons, since `render.mjs` already screenshots every
+board at its exact pixel size. Three things about it are the format's rather
+than anybody's taste. It says **NOTES** with the product's name small above it,
+this being a listing for VC Writer Notes and not for VC Writer — which is also
+how the app brands itself, every screen of it being headed NOTES. **The mark
+sits left of centre**, because Play draws a play button over the middle
+wherever a promo video is set, and whether one is set is a decision in a
+console rather than in this file; it happens to be the 1500 × 500 banner's own
+composition, which is the point. And **the words are the listing's** — *Dictate
+ideas while you walk* is the App Store subtitle verbatim, for `store-listing.md`'s
+own reason that a listing typed twice is two listings.
+
+Rendered, measured and looked at: a 24-bit PNG with **no alpha channel**, which
+is the format Play asks for, and legible scaled to the 383px a collection draws
+it at — which is the only honest test, and the one `icons.mjs` makes for itself.
+
+### 15.4 The reviewer should meet the paywall, not be routed round it
+
+The fourth item was offered as *arrange the demo account so the reviewer never
+meets the paywall*, and **reading the gate corrected it**. Two things it got
+wrong.
+
+`requireNotesCapture` is narrower than it sounds: it gates **sending** a note
+and **creating** a project, and `/api/notes/projects` says in its own comment
+that *listing them is not* — a lapsed subscriber still sees their projects,
+because the list is the account's rather than the app's. So an unsubscribed
+reviewer is not locked out of anything but the one act the subscription is for.
+
+And the goal was backwards. **A reviewer who cannot find the in-app purchase
+cannot verify it**, and *we were unable to locate the in-app purchase* is
+itself a rejection. What they need is a paywall that **works**, which it does,
+in Apple's sandbox, with their own sandbox Apple ID — so the demo account stays
+**unsubscribed on purpose** and the review notes say where the purchase screen
+is and what completing it does.
+
+The real need is one layer along, and it is the twelve closed testers §2.2 of
+`store-setup.md` describes: they cannot send a note without getting past the
+subscription, and a tester who meets a paywall they cannot pass is one who
+stops opening the app on day two of fourteen. **Both shops already solve this**
+— Apple's Sandbox test accounts and Play's **License testing** list — and
+nothing in this repository changes for it, which is the part worth writing
+down, because the tempting alternative is to write free subscription rows onto
+those accounts by hand. It should not be done: `notes_subscriptions` has a read
+policy and **no write policy at all**, `room_ai_usage`'s own shape, and every
+row in it is something a shop confirmed; a comped row would be a second way to
+be entitled that no receipt stands behind, carried forever, and would have to
+be undone by hand on twelve accounts afterwards. `store-setup.md` §2.2a is the
+arrangement, and it is two lists in two consoles.
+
+### 15.5 What is honestly not done
+
+**The purchase screen has not been looked at.** The app has never run on a
+device (§9) and React Native cannot be rendered in this container, which is
+`vitest.config.ts`'s own standing argument — so what is proved about the two
+links is that they are there, that they are built from the one site address
+rather than a typed URL, and that the app typechecks. **The screenshots still
+cannot be made here and must not be faked**, which leaves them and the store
+accounts as the submission's only remaining work that is nobody else's.

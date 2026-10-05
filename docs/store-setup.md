@@ -254,6 +254,44 @@ Two consequences worth acting on now:
   twelve testers can be anybody with a Google account (friends, other writers,
   a second account of your own does not count).
 
+### 2.2a Buying it without being charged — the reviewer and the twelve testers
+
+Everybody who has to get past the paywall before the app is on sale — Apple's
+reviewer, and the twelve closed testers of §2.2 — needs to complete a real
+purchase that costs nothing. **Both shops already do this, and nothing in this
+repository changes for it**, which is worth stating plainly because the obvious
+alternative is tempting and wrong.
+
+The tempting one is to write a free subscription row onto those accounts by
+hand. It should not be done. `notes_subscriptions` has a read policy and **no
+write policy at all** — the same shape `room_ai_usage` has, for the same
+reason: an entitlement a client may write is not an entitlement — and every
+row in it is something a shop confirmed. A comped row would be a second way to
+be entitled, carried forever, that no receipt stands behind; and it would have
+to be undone by hand afterwards on twelve accounts, which is twelve chances to
+leave one.
+
+What to set up instead, once each in a console:
+
+- **Apple — a Sandbox Apple ID.** App Store Connect → **Users and Access →
+  Sandbox → Test Accounts**. A build installed from TestFlight or Xcode buys
+  against the sandbox with that account and is never charged; renewals are
+  compressed (a year becomes an hour). The reviewer does this with their own
+  sandbox account — Apple always reviews in the sandbox, so the demo account in
+  the review notes stays **unsubscribed on purpose**.
+- **Google — License testing.** Play Console → **Setup → License testing**,
+  and list the twelve testers' Gmail addresses. Those accounts see a test card
+  on every purchase in the closed track, are never charged, and get the same
+  real `purchaseToken` the Play Developer API answers about. Add them before
+  the fourteen days start; a tester who hits the paywall on day one and has no
+  way past it is a tester who stops opening the app.
+
+Nothing on the server tells a test purchase from a sale apart from the record:
+Apple's lands with `environment` reading `sandbox`, and Google's is an ordinary
+subscription on a test order. `notesPlan` treats both exactly as it treats a
+sale, which is the point — a test that went down a different path would not be
+a test of what a customer meets.
+
 ### 2.3 Payments profile
 
 Play Console → **Setup → Payments profile**. Create or link a Google payments
@@ -390,7 +428,10 @@ Longest-lead-time first, because three of these are waits rather than work.
 If the organization route falls through and you end up on a **personal** Play
 account, insert one more step as early as possible: start the closed test, so
 the **14 days with 12 testers** of §2.2 runs in the background rather than
-after everything else is ready.
+after everything else is ready. Add those twelve to **License testing** (§2.2a)
+in the same sitting — they cannot send a note without getting past the
+subscription, and a tester who meets a paywall they cannot pass is one who
+stops opening the app on day two of fourteen.
 
 ## 4a. If the legal entity is not settled yet
 

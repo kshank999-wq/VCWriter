@@ -88,6 +88,20 @@ export const styles = StyleSheet.create({
   },
   chosen: { borderColor: colour.gold },
 
+  /**
+   * A link out to the website, and the thumb's worth of room round it.
+   *
+   * It is **a link rather than a button** because what it does is leave: the
+   * two on the purchase screen are documents to read, and drawing them as
+   * acts beside *Subscribe* would make three things that look alike where one
+   * of them takes somebody's money. The tap target is its own box, a 13pt
+   * word being well under the 44pt floor a phone needs — and under a walking
+   * thumb most of all.
+   */
+  linkRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 20 },
+  linkTap: { paddingVertical: 11 },
+  link: { color: colour.gold, fontSize: 13, lineHeight: 18, textDecorationLine: 'underline' },
+
   bar: {
     flexDirection: 'row',
     alignItems: 'center',

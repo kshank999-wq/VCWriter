@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import Constants from 'expo-constants';
-import { deleteAccount } from '../host/api';
+import { deleteAccount, site } from '../host/api';
 import { signOut, supabase } from '../host/session';
 import { styles } from '../theme';
 
@@ -22,13 +21,10 @@ import { styles } from '../theme';
  *
  * The privacy policy opens in the phone's browser rather than being repeated
  * here, for the reason a second copy is always wrong: one of them would be the
- * older one, and nothing on the screen would say which.
+ * older one, and nothing on the screen would say which. `site()` comes from
+ * `host/api` for that same reason — it had a copy here, which is the address
+ * the link is built from being written down twice.
  */
-const site = (): string => {
-  const said = (Constants.expoConfig?.extra as { site?: string } | undefined)?.site;
-  return (process.env['EXPO_PUBLIC_SITE'] ?? said ?? 'https://vc-writer.com').replace(/\/$/, '');
-};
-
 export function Account({ onBack }: { onBack(): void }) {
   const [email, setEmail] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);

@@ -12,7 +12,7 @@
     "ios": {
       "bundleIdentifier": "com.vcwriter.notes",
       "buildNumber": "1",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "VC Writer Notes listens so you can dictate a note without looking at your phone.",
         "NSSpeechRecognitionUsageDescription": "Your speech is turned into the words of your note. On this device where it can be, so a walk without signal still works.",

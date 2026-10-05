@@ -60,9 +60,12 @@ export async function SiteChrome({ children }: { children: React.ReactNode }) {
           <p>
             © {new Date().getFullYear()} {SITE_NAME}. Windows 10, Windows 11 and macOS.{' '}
             {/* In the footer rather than the nav: both app stores require a
-                privacy policy at a public URL, and a footer is where anybody
-                looking for one looks. */}
-            <Link href="/privacy">Privacy</Link>
+                privacy policy and a terms page at public URLs, and a footer is
+                where anybody looking for either looks. The purchase screen in
+                the phone app links straight to them (addendum 27 §15) — these
+                are the same two documents, reachable from the site as well,
+                because a page only the app can reach is one nobody finds. */}
+            <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link>
           </p>
         </div>
       </footer>

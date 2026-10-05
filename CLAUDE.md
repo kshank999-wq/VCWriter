@@ -1301,6 +1301,65 @@ push live; the build takes a minute or two.
   either side of it. Store notifications, offers and family sharing are
   **named rather than half-built**, and the products, keys and store URLs are
   Ken's to make.
+  **§15 is four things between here and a submission**, from Ken (*so really
+  what's next is to get the app up and running, in the App Store*), and two of
+  the four are about **the gap between a feature being right and a reviewer
+  being able to see it**, which is this project's commonest finding arriving at
+  a store console. **The terms go on the screen where the agreement is made**:
+  guideline 3.1.2 asks a purchase screen for the title, the length, the price
+  and **functional links to the terms and the privacy policy**, `Subscribe.tsx`
+  had four of the five, and the page the fifth would point at **did not exist**
+  — there was a privacy policy and no terms. The guideline asks for the right
+  thing, which is why it is worth more than compliance: **a term somebody meets
+  after paying is one they did not agree to**, so the account page is one screen
+  too late. They are **links rather than text repeated on the phone**,
+  `Account`'s own stated reason for the privacy link it already had, and writing
+  them found the copy that reason is about — **`site()` was written out twice**,
+  in `host/api.ts` and again in `Account`, with a third one keystroke away; it is
+  exported from `host/api` now, a `site.ts` beside it being a second answer to
+  where the site is. `/terms` is written the way the privacy policy is and for
+  its reason: **every clause is checkable against the code**, so three of its
+  sentences are **read rather than typed** (`DESKTOP_LAPSE_PROMISE`,
+  `NOTES_PROMISE`, `NOTES_PRICE_WORDS`), a terms page being the worst place in
+  the product for a sentence that has stopped being true — and what it does
+  **not** name is the same rule from the other end, the desktop price being
+  Stripe's and the machine count being stored on the licence, so both are
+  pointed at rather than quoted. A **governing-law clause is deliberately absent
+  and named**, needing the entity and the jurisdiction Ken operates from, where
+  guessing one would be worse than having none. Then **iPhone only, said rather
+  than defaulted**: `supportsTablet` was Expo's `true`, which is not a decision
+  and costs a real thing — Apple then expects **iPad screenshots**, and an iPad
+  build nobody has laid out is how an app is rejected for a screen never opened.
+  The **1024 × 500 Play feature graphic** is **a board in `brand/artboards.html`
+  rather than a new cutter**, §11's own argument, `render.mjs` already
+  screenshotting every board at its exact size; it says **NOTES** with the
+  product name small above it (a listing for VC Writer Notes is not one for VC
+  Writer, and every screen of the app is headed NOTES), the mark sits **left of
+  centre** because Play draws a play button over the middle wherever a promo
+  video is set, and the words are the listing's own subtitle verbatim — rendered
+  as a 24-bit PNG with no alpha, which is what Play asks for, and **looked at
+  scaled to the 383px a collection draws it at**, which is `icons.mjs`' own
+  only-honest-test. The fourth was offered as *arrange the demo account so the
+  reviewer never meets the paywall* and **reading the gate corrected it twice**:
+  `requireNotesCapture` gates **sending** a note and **creating** a project while
+  `/api/notes/projects` says in its own comment that *listing them is not*, so an
+  unsubscribed reviewer is locked out of nothing but the one act the subscription
+  is for — and the goal was backwards, **a reviewer who cannot find the in-app
+  purchase cannot verify it**, *we were unable to locate the in-app purchase*
+  being itself a rejection. So the demo account stays **unsubscribed on purpose**
+  and what they need is a paywall that **works**, which it does in Apple's
+  sandbox. The real need is the twelve closed testers, and **both shops already
+  solve it** (Apple's Sandbox accounts, Play's **License testing** list) with
+  nothing in this repository changing — worth writing down because the tempting
+  alternative is comping those rows by hand, and `notes_subscriptions` has a read
+  policy and **no write policy at all** (`room_ai_usage`'s shape): a comped row
+  would be a second way to be entitled that no receipt stands behind, carried
+  forever and undone by hand on twelve accounts afterwards. **The purchase screen
+  has not been looked at** — React Native cannot be rendered here, which is
+  `vitest.config.ts`'s own standing argument — so `store-requirements.test.ts`
+  pins it by **reading the source**, addendum 31 §4's and 32 §9's idiom, both of
+  these failing by being *absent*, which looks exactly like nobody having added
+  them. The **screenshots still cannot be made here and must not be faked**.
   `addendum-10-book-index.md` is the back-of-book index, from Ken's ask for
   chapter pages that carry a graphic *"but it goes into an Index"* with the page
   numbers updating themselves. **Built.** Two of the three things he asked for

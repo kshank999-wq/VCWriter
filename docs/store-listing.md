@@ -34,7 +34,15 @@ see **`docs/store-setup.md`**.
 | Support email | `support@vc-writer.com` |
 | Marketing URL | `https://vc-writer.com` |
 | Privacy policy URL | `https://vc-writer.com/privacy` |
+| Terms of Use / EULA URL | `https://vc-writer.com/terms` |
 | Copyright | `© 2026 VC Writer` |
+
+App Store Connect asks for the EULA under **App Information ▸ License
+Agreement**: choose *Custom* and paste the terms URL above, or leave Apple's
+standard EULA selected — the page says Apple's agreement also applies and
+governs where the two differ, so either answer is consistent. The purchase
+screen in the app links to both documents whichever is chosen, which is what
+guideline 3.1.2 actually asks for.
 
 Both product ids are `NOTES_PRODUCTS` in `packages/domain/src/notes-plan.ts`,
 which is the one list the app asks the shop for and the server maps a receipt
@@ -190,13 +198,28 @@ platforms, in this order, because it is the order somebody meets them:
 
 | Store | Sizes required |
 | --- | --- |
-| App Store | 6.9" iPhone (1320 × 2868 or 2868 × 1320) and 6.5" iPhone (1242 × 2688). iPad 13" only if the iPad build is submitted — `supportsTablet` is true, so either supply them or set it false. |
+| App Store | 6.9" iPhone (1320 × 2868 or 2868 × 1320) and 6.5" iPhone (1242 × 2688). **No iPad shots**: `ios.supportsTablet` is `false`, so the app is iPhone-only and Apple does not ask for them. |
 | Play | Phone: 2–8 shots, 16:9 or 9:16, each 320–3840 px on its shortest side. Plus a **feature graphic**, 1024 × 500, and a 512 × 512 app icon. |
 
-The 512 × 512 Play icon can be cut from the brand artwork now:
-`node brand/logo/icons.mjs` already writes `apps/web/public/notes-icon-512.png`
-at exactly that size. The feature graphic wants designing; the artboards in
-`brand/artboards.html` are the place for it.
+**iPhone only, and said rather than defaulted.** The app is a voice notebook
+used on a walk with the phone in a pocket; an iPad build would be a second
+layout to design, test and screenshot for a device nobody dictates into on the
+move, and submitting one untested is how an app gets rejected for a screen
+somebody never looked at. `supportsTablet: false` is the decision — it costs
+nothing and can be turned on the day there is an iPad layout worth shipping.
+(An iPhone app still installs and runs on an iPad, scaled.)
+
+Both pieces of artwork exist and are committed:
+
+- **The 512 × 512 Play icon** — `node brand/logo/icons.mjs` writes
+  `apps/web/public/notes-icon-512.png` at exactly that size.
+- **The 1024 × 500 feature graphic** — `brand/exports/notes-feature-1024x500.png`,
+  rendered by `node brand/render.mjs notes-feature` from the
+  `notes-feature-1024x500` board in `brand/artboards.html`. It is a 24-bit PNG
+  with no alpha channel, which is the format Play asks for. The board's own
+  comment says why it is composed as it is; the short version is that nothing
+  which has to be read stands in the middle, where Play draws a play button
+  over the graphic if a promo video is ever added.
 
 ---
 
@@ -220,8 +243,12 @@ None of this can be done from here, and none of it should be.
    commands). Nothing else, and no key of any kind in this repository.
 6. **Signing.** Let EAS hold the iOS certificate and the Android keystore.
    Never commit either.
-7. **The screenshots** above, from a device.
-8. **The feature graphic**, 1024 × 500, for Play.
+7. **The screenshots** above, from a device. They are the one piece of this
+   that cannot be made here.
+8. **A sandbox Apple ID** and, on Play, the **licence testers** — so the
+   reviewer and the twelve closed testers can buy the subscription without
+   being charged. `docs/store-setup.md` §2.2a is the whole arrangement; it is
+   two lists in two consoles and nothing in this repository.
 
 ---
 
@@ -236,10 +263,22 @@ A demo account is below. Sign in with the password, choose a project, and press
 Dictate — or use the hands-free walk, where every command is prefixed with the
 word "dictate" ("dictate idea", "dictate done").
 
+THE SUBSCRIPTION. Notes is free to download and needs a subscription to send
+notes from the phone to the account. The purchase screen is at Projects →
+Subscribe, and it carries both plans at the prices this store reports, the
+terms of use, the privacy policy and a Restore button. The demo account has no
+subscription on purpose, so the purchase can be tested; a sandbox purchase on
+it completes and the app then sends notes. Reading, correcting and deleting
+notes already captured are never gated, which is why the rest of the app works
+before anything is bought.
+
 Microphone and speech recognition are used only while dictating, on an explicit
 press. No audio is recorded, stored or transmitted.
 
 Account deletion is in the app: Projects → Account → Delete this account…
+
+Terms of use: https://vc-writer.com/terms
+Privacy policy: https://vc-writer.com/privacy
 
 Demo account: <email> / <password>
 ```
@@ -247,3 +286,10 @@ Demo account: <email> / <password>
 Fill the last line in the console, where the credential is stored by the store
 rather than written down anywhere. Make the demo account a real one with two or
 three projects on it, and nothing on it you would mind a reviewer reading.
+
+**Leave the demo account unsubscribed.** The instinct is to comp it so the
+reviewer never meets the paywall, and it is the wrong way round: a reviewer who
+cannot find the in-app purchase cannot verify it, and *we were unable to locate
+the in-app purchase* is itself a rejection. What they need is a paywall that
+**works** — which it does, on a sandbox Apple ID or as a Play licence tester,
+without being charged and without anything being granted by hand.
