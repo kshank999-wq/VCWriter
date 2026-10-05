@@ -300,7 +300,8 @@ export const syncProject = async (input: { file: unknown; path?: string }): Prom
 // AI structural read (spec §8.2)
 // ---------------------------------------------------------------------------
 
-const SITE_URL = process.env['MAIN_VITE_SITE_URL'] ?? 'https://vc-writer.com';
+/** Where this build's own site is. Exported so there is one answer to it. */
+export const SITE_URL = process.env['MAIN_VITE_SITE_URL'] ?? 'https://vc-writer.com';
 
 /**
  * Ask the Final Editor's AI pass to read one scene.

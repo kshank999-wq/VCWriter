@@ -8,6 +8,7 @@ import {
   projectsNewestFirst,
   suggestedFileName,
   type CaptureItem,
+  type DeskStanding,
   type SaveKind,
   type LearningAidKind,
   type LearningSuggestion,
@@ -45,6 +46,7 @@ import {
   type SyncOutcome,
 } from './cloud';
 import { deviceFingerprint, deviceName, devicePlatform } from './device';
+import { licenseStanding } from './license-check';
 import { checkForUpdate, downloadUpdate, runInstaller, type DownloadedUpdate, type UpdateStatus } from './updater';
 import { reportError, reportingSettings, setReportingEnabled } from './reporting';
 import { kindlePreviewerStatus, openInKindlePreviewer } from './kindle-previewer';
@@ -708,6 +710,24 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
       return fail(cause);
     }
   });
+
+  /**
+   * What this machine last heard about its licence (addendum 32 §8).
+   *
+   * It answers with the record rather than with a live reading: what follows
+   * from a status and a date is the domain's to decide, in one place, so this
+   * hands over the facts and nothing else.
+   */
+  ipcMain.handle(
+    'license:standing',
+    async (_event, recheck?: boolean): Promise<DesktopApiResult<DeskStanding | null>> => {
+      try {
+        return ok(await licenseStanding(recheck === true));
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
 
   ipcMain.handle('update:check', async (): Promise<DesktopApiResult<UpdateStatus>> => {
     try {

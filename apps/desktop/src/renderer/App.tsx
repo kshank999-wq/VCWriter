@@ -33,6 +33,7 @@ import {
   nounsFor,
 } from '@vcwriter/domain';
 import { useProject } from './use-project';
+import { useWritingAccess } from './use-writing-access';
 import { useRoom } from './room';
 import { usePreference, useSplit } from './use-split';
 import { createHub, createTransport, everyFew, type DocumentHub } from './link';
@@ -49,6 +50,7 @@ import {
 } from './panes';
 import { PaneFrame } from './components/PaneFrame';
 import { TitleBar } from './components/TitleBar';
+import { WritingNotice } from './components/WritingNotice';
 import { Welcome } from './components/Welcome';
 import { MasterTimeline, DEFAULT_BEATS_PER_COLUMN } from './components/MasterTimeline';
 import { MasterPanel } from './components/MasterPanel';
@@ -108,7 +110,13 @@ const binFor = (platform: string): { name: string; recoverable: boolean } =>
     : { name: platform === 'win32' ? 'Recycle Bin' : 'Trash', recoverable: true };
 
 export default function App() {
-  const project = useProject();
+  /**
+   * Whether this copy may be written in (addendum 32 §8). Asked once here and
+   * handed to the document: every change goes through `project.update`, so
+   * there is one place to refuse and no call site that has to know.
+   */
+  const access = useWritingAccess();
+  const project = useProject(access.writable);
   const [view, setView] = useState<View>('write');
   const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
   /**
@@ -817,6 +825,10 @@ export default function App() {
   if (!file || startingNew) {
     return (
       <>
+        {/* Said here too (addendum 32 §8). Somebody who starts a project on a
+            read-only copy and finds they cannot type a word has been trapped
+            by a screen that knew and did not say. */}
+        <WritingNotice access={access} />
         <Welcome
           onCreate={(input) => {
             setStartingNew(false);
@@ -1081,6 +1093,10 @@ export default function App() {
         beatsPerColumn={beatsPerColumn}
         onBeatsPerColumn={setBeatsPerColumn}
       />
+
+      {/* A lapsed subscription (addendum 32 §8). Above the project's own
+          errors, because it explains every one of them that follows. */}
+      <WritingNotice access={access} />
 
       {project.error ? (
         <p className="error banner" role="alert">

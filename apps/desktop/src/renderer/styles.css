@@ -1249,3 +1249,26 @@ select:focus {
 .beat-status.status-done {
   color: var(--gold);
 }
+
+/* ------------------------------------------ a lapsed subscription (a32 §8) */
+
+/**
+ * Read-only, said once at the top. The shape is `.notice.banner`'s — one bar
+ * for every message in this window — so only what it *means* differs, which is
+ * a modifier rather than a second kind of bar free to drift from the first.
+ */
+.writing-notice > span:first-child {
+  flex: 1 1 auto;
+}
+
+.writing-notice-acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.writing-notice.lapsed {
+  color: var(--danger);
+  border-left: 3px solid var(--danger);
+}

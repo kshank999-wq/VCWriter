@@ -103,17 +103,212 @@ export const licenseStatusForSubscription = (stripeStatus: string): LicenseStatu
  * would not render: a star re-export conflict is a runtime fault, so **only
  * driving it found this**.
  *
- * It is that promise's shape (addendum 27 §14) pointed at the desktop,
- * and it is a **description of what the program already does** rather than a
- * new rule: an activated copy keeps opening, reading, printing and exporting
- * every project on the disk, because nothing local has ever asked the server
- * for permission to write a word. What a lapse stops is taking a **new**
- * machine (`decideActivation` refuses a licence that is not active) and the
- * features that ask vc-writer.com for themselves — the installers, the Final
- * Editor's read, the Writers Room.
+ * It is that promise's shape (addendum 27 §14) pointed at the desktop.
+ *
+ * **It was a description of what the program did, and the program has
+ * changed** (§8, from Ken: *make the lapse read-only on the desktop*), so it
+ * is corrected here rather than left saying something that is no longer true —
+ * the fault this project has caught in a thread's own sentence (addendum 24
+ * §5e) and in a comment (§5m). What a lapse now stops is **changing** a
+ * project, taking a **new** machine (`decideActivation` refuses a licence that
+ * is not live) and the features that ask vc-writer.com for themselves. What it
+ * still does not reach is the work: every project on the disk goes on opening,
+ * printing, exporting and being copied somewhere else, which is the half the
+ * promise exists to make.
  */
 export const DESKTOP_LAPSE_PROMISE =
-  'Your projects stay on your machine and keep opening, printing and exporting. What stops is installing on a new computer, downloading the installers, and the parts that reach vc-writer.com.';
+  'Your projects stay on your machine and go on opening, printing and exporting. What stops is changing them, installing on another computer, and the parts that reach vc-writer.com.';
+
+// ---------------------------------------------------------------------------
+// What this machine may do (§8)
+// ---------------------------------------------------------------------------
+
+/**
+ * What this machine last heard about its licence (§8).
+ *
+ * The desktop has never held one of these: it activates once, and the features
+ * that reach vc-writer.com ask the server for themselves every time. Read-only
+ * cannot work that way — a writer on a train must not be refused their own
+ * manuscript because the machine could not ask — so what the server said is
+ * **written down with the day it said it**, and the reading below is over that
+ * record rather than over a live answer.
+ *
+ * It records a **measurement and not a fact**: what it measures is whether a
+ * subscription is paid, which changes without this machine being told, and
+ * that is why `checkedAt` is part of it rather than an aside.
+ */
+export interface DeskStanding {
+  /** The licence's status, as the server last said it. */
+  status: LicenseStatus;
+  /** What it is paid up to, or null for a licence that never ends. */
+  expiresAt: string | null;
+  /** When this machine was last told. */
+  checkedAt: string;
+  /**
+   * When this machine **first** saw it had lapsed, which is what the grace is
+   * measured from. Carried forward rather than written again, or every check
+   * would start the week over and it would never end.
+   */
+  seenLapsedAt: string | null;
+}
+
+/** A licence with no date ended whenever its status said so, which is now. */
+const endsAt = (license: Pick<License, 'expiresAt'>): number =>
+  license.expiresAt ? new Date(license.expiresAt).getTime() : Number.NEGATIVE_INFINITY;
+
+/**
+ * The account's liveliest licence, as a claim about this machine — or null
+ * where the account has none.
+ *
+ * **An account with two licences is as live as its liveliest**: a writer who
+ * bought once and subscribes later holds two rows and is plainly entitled, so
+ * answering with the first row found would refuse somebody who is paying.
+ * Where none is live, the one that ended last is the one to answer with, its
+ * date being what the writer is owed an explanation about.
+ *
+ * Null for an account with no licence at all, which is **not** a lapse: a copy
+ * that was never activated has always been able to write, and turning those
+ * read-only would be a far bigger change than the one asked for.
+ */
+export const deskStandingFrom = (
+  licenses: readonly Pick<License, 'status' | 'expiresAt'>[],
+  now: Date,
+): Pick<License, 'status' | 'expiresAt'> | null => {
+  if (licenses.length === 0) return null;
+  const live = licenses.find((one) => licenseLive(one, now));
+  if (live) return { status: live.status, expiresAt: live.expiresAt ?? null };
+  const ended = [...licenses].sort((a, b) => endsAt(b) - endsAt(a))[0]!;
+  return { status: ended.status, expiresAt: ended.expiresAt ?? null };
+};
+
+/**
+ * Write down what the server just said, keeping what only this machine knows.
+ *
+ * Pure, so the host stores and never decides. The one thing it carries forward
+ * is `seenLapsedAt`, and a live answer clears it — somebody who renews and
+ * lapses again next year gets the week again, because that is a new lapse.
+ */
+export const noteStanding = (
+  previous: DeskStanding | null,
+  claim: Pick<License, 'status' | 'expiresAt'>,
+  now: Date,
+): DeskStanding => {
+  const checkedAt = now.toISOString();
+  return {
+    status: claim.status,
+    expiresAt: claim.expiresAt ?? null,
+    checkedAt,
+    seenLapsedAt: licenseLive(claim, now) ? null : (previous?.seenLapsedAt ?? checkedAt),
+  };
+};
+
+/**
+ * How long a copy stays writable after this machine first sees the lapse.
+ *
+ * **A refusal is announced before it bites.** Stripe has already retried and
+ * emailed by the time a licence reads expired, but none of that happened
+ * *here*, and a program that goes read-only between one sentence and the next
+ * has taken something away without ever saying it would.
+ */
+export const WRITING_GRACE_DAYS = 7;
+
+/**
+ * How long a recorded answer is worth acting on.
+ *
+ * Past this the record is a month-old measurement of something that changes
+ * weekly, and **being unable to ask is not a lapse**: a writer whose network is
+ * blocked, or who renewed on their phone and cannot get the news to this
+ * machine, must not be locked out of their own book. So read-only is a **fresh
+ * refusal and never a remembered one**, which is the generosity this program
+ * owes the work; what the subscription still gates unconditionally is every
+ * part of the program that can actually ask.
+ */
+export const STANDING_GOOD_FOR_DAYS = 30;
+
+const DAY_MS = 86_400_000;
+const daysAfter = (iso: string, days: number): number => new Date(iso).getTime() + days * DAY_MS;
+const sayDay = (at: number): string => new Date(at).toISOString().slice(0, 10);
+
+export interface WritingStanding {
+  /** Whether the document may be changed at all. */
+  writable: boolean;
+  /** What to say about it, or null where there is nothing to say. */
+  notice: string | null;
+  /**
+   * Whether what is said is a warning of something coming rather than the
+   * explanation of a refusal. **A warning may be dismissed and a refusal may
+   * not**: an explanation of why the program will not take a keystroke is the
+   * one notice a writer must be able to find at any moment.
+   */
+  warning: boolean;
+}
+
+/**
+ * Why it ended, in the writer's terms.
+ *
+ * A subscription that ran out and a licence somebody revoked are not the same
+ * sentence, and *your subscription ended* said about a chargeback would send a
+ * writer to a renewal page that cannot help them.
+ */
+const lapseWords = (standing: DeskStanding): string => {
+  if (standing.status === 'expired' || standing.status === 'active') {
+    const on = standing.expiresAt ? ` on ${standing.expiresAt.slice(0, 10)}` : '';
+    return `Your VC Writer subscription ended${on}.`;
+  }
+  return 'This copy’s licence is no longer active.';
+};
+
+/**
+ * Whether this copy may be written in, and what to say (§8, from Ken).
+ *
+ * One reading for every window, because the standing is a fact about the
+ * **machine** rather than about the file: a popped-out room asks it for itself
+ * rather than asking the workspace, which is addendum 29 §2's rule from the
+ * other end — a room may not write the file because the workspace owns the
+ * path, while whether anybody may write at all is nobody's to own.
+ *
+ * It is generous wherever it is uncertain, in both directions, and the order of
+ * the clauses *is* the design.
+ */
+export const writingStanding = (standing: DeskStanding | null, now: Date): WritingStanding => {
+  // Nothing has ever been heard: a fresh install, a copy that has not signed
+  // in, an account with no licence, or a host that does not licence writing at
+  // all. Every one of those has always been writable and still is.
+  if (!standing) return { writable: true, notice: null, warning: false };
+
+  // Paid up. Nothing is said, deliberately: a renewal reminder is the shop's to
+  // send, and a banner counting down a subscription nobody has cancelled is the
+  // program nagging about its own bill while somebody is working.
+  if (licenseLive(standing, now)) return { writable: true, notice: null, warning: false };
+
+  const ended = lapseWords(standing);
+
+  // An answer too old to act on. It says the licence has ended, because that is
+  // the last thing known and the writer can act on it, and it says nothing
+  // about read-only, which this copy is no longer entitled to claim.
+  if (now.getTime() > daysAfter(standing.checkedAt, STANDING_GOOD_FOR_DAYS)) {
+    return {
+      writable: true,
+      notice: `${ended} Renew it to sync your work and to install on another computer.`,
+      warning: true,
+    };
+  }
+
+  const bitesAt = daysAfter(standing.seenLapsedAt ?? standing.checkedAt, WRITING_GRACE_DAYS);
+  if (now.getTime() < bitesAt) {
+    return {
+      writable: true,
+      notice: `${ended} This copy stays writable until ${sayDay(bitesAt)}. After that your work still opens, prints and exports, but cannot be changed.`,
+      warning: true,
+    };
+  }
+
+  return {
+    writable: false,
+    notice: `${ended} This copy is read-only. ${DESKTOP_LAPSE_PROMISE}`,
+    warning: false,
+  };
+};
 
 /** What the account page says about a subscription, in words. */
 export const describeSubscription = (

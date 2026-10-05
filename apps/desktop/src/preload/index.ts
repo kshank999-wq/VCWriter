@@ -3,6 +3,7 @@ import type {
   Assignment,
   CaptureItem,
   Comment,
+  DeskStanding,
   LearningAidKind,
   LearningSuggestion,
   MergeResult,
@@ -331,6 +332,20 @@ export interface VcWriterApi {
 
   // Licensing and updates (§3.3).
   activateLicense(serial: string): Promise<DesktopApiResult<ActivationResult>>;
+  /**
+   * What this machine last heard about its licence (addendum 32 §8).
+   *
+   * The **record** and not a live reading, and null where nothing has been
+   * heard — a fresh install, a copy that has not signed in, an account with no
+   * licence, or a host that does not licence writing at all. What follows from
+   * it is `writingStanding`'s in the domain, so the desktop and the browser
+   * cannot disagree about what a lapse means.
+   *
+   * `recheck` is the button's: it waits on vc-writer.com, where the ordinary
+   * call answers from the record and asks behind the answer. Either way a
+   * failure to reach the site changes nothing.
+   */
+  licenseStanding(recheck?: boolean): Promise<DesktopApiResult<DeskStanding | null>>;
   checkForUpdate(): Promise<DesktopApiResult<UpdateStatus>>;
   downloadUpdate(input: {
     expectedSha256: string;
@@ -444,6 +459,7 @@ const api: VcWriterApi = {
   noteCategoriesStatus: () => ipcRenderer.invoke('cloud:noteCategoriesStatus'),
   sendOneSheet: (input) => ipcRenderer.invoke('cloud:sendOneSheet', input),
   activateLicense: (serial) => ipcRenderer.invoke('license:activate', serial),
+  licenseStanding: (recheck) => ipcRenderer.invoke('license:standing', recheck === true),
   checkForUpdate: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: (input) => ipcRenderer.invoke('update:download', input),
   installUpdate: (path) => ipcRenderer.invoke('update:install', path),

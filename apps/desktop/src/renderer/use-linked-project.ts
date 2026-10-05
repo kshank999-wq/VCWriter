@@ -37,7 +37,16 @@ export interface LinkedProject {
 /** How often a window that is being typed in sends the document on. */
 const PROPOSE_EVERY_MS = 60;
 
-export const useLinkedProject = (): LinkedProject => {
+/**
+ * `writable` is addendum 32 §8's read-only lapse, asked here as well as in the
+ * workspace — and it has to be. A satellite applies a mutation **locally
+ * first**, because typing must never wait for another window, so a room that
+ * did not know would take a paragraph, draw it, and have it wiped by the next
+ * document the hub sent: a writer watching their words vanish, which is worse
+ * than being told they cannot type them. The standing is a fact about the
+ * machine, so the window asks the machine rather than the hub.
+ */
+export const useLinkedProject = (writable = true): LinkedProject => {
   const [file, setFile] = useState<ProjectFile | null>(null);
   const [path, setPath] = useState<string | null>(null);
   const [hubGone, setHubGone] = useState(false);
@@ -76,12 +85,13 @@ export const useLinkedProject = (): LinkedProject => {
   const update = useCallback((mutate: (current: ProjectFile) => ProjectFile) => {
     const current = fileRef.current;
     if (!current) return;
+    if (!writable) return;
     // Applied here first: typing must never wait for another window.
     const next = mutate(current);
     fileRef.current = next;
     setFile(next);
     client.current?.propose(next, mutate);
-  }, []);
+  }, [writable]);
 
   const askToSave = useCallback((kind: 'saveAs' | 'saveCopy') => {
     client.current?.ask(kind);

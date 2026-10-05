@@ -68,7 +68,18 @@ export interface UseProjectResult {
   closeProject(): void;
 }
 
-export const useProject = (): UseProjectResult => {
+/**
+ * Open project state plus autosave.
+ *
+ * `writable` is addendum 32 §8's read-only lapse, and it is **one argument
+ * rather than a check at every call site**: every change to the document in
+ * this program is a pure function of the document and every one goes through
+ * the `update` below, which is the same fact undo rests on (addendum 02 §6c) —
+ * so refusing there is total, and an act built tomorrow is refused the day it
+ * is written. There are some hundreds of `project.update(…)` in the renderer
+ * and not one of them needs to know this exists.
+ */
+export const useProject = (writable = true): UseProjectResult => {
   const [path, setPath] = useState<string | null>(null);
   const [file, setFile] = useState<ProjectFile | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
@@ -250,6 +261,12 @@ export const useProject = (): UseProjectResult => {
   const update = useCallback((mutate: (current: ProjectFile) => ProjectFile) => {
     const current = fileRef.current;
     if (!current) return;
+    // A read-only copy (addendum 32 §8). The mutation is not run at all, so
+    // nothing is computed and thrown away, and **what is already written stays
+    // pending**: the flush above is deliberately not guarded, because losing
+    // the last few seconds of somebody's writing to a webhook that arrived
+    // mid-sentence is the one thing this feature must never do.
+    if (!writable) return;
     // In a Writers Room the bridge puts this writer's name on whatever they
     // have just made (addendum 07 §6). Everywhere else there is no such method
     // and this line does nothing, which is the right answer for a script with
@@ -268,7 +285,7 @@ export const useProject = (): UseProjectResult => {
     dirtyRef.current = true;
     setFile(next);
     setSaveState('dirty');
-  }, [saySteps]);
+  }, [saySteps, writable]);
 
   /**
    * Back one step, and forward again (§6c).
@@ -283,6 +300,8 @@ export const useProject = (): UseProjectResult => {
     (from: 'past' | 'future') => {
       const current = fileRef.current;
       if (!current) return;
+      // Nothing can be changed, so there is nothing to take back (§8).
+      if (!writable) return;
       if (from === 'past') {
         const last = pastRef.current[pastRef.current.length - 1];
         if (!last) return;
@@ -302,7 +321,7 @@ export const useProject = (): UseProjectResult => {
       setSaveState('dirty');
       saySteps();
     },
-    [saySteps],
+    [saySteps, writable],
   );
   const undo = useCallback(() => step('past'), [step]);
   const redo = useCallback(() => step('future'), [step]);
@@ -357,8 +376,8 @@ export const useProject = (): UseProjectResult => {
     update,
     undo,
     redo,
-    canUndo: steps.past > 0,
-    canRedo: steps.future > 0,
+    canUndo: writable && steps.past > 0,
+    canRedo: writable && steps.future > 0,
     replace,
     adoptLoaded,
     saveNow: flush,

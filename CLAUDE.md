@@ -5340,6 +5340,73 @@ push live; the build takes a minute or two.
   measurably empty**, no proration or plan switching in the app (Stripe's
   Customer Portal does both and the account page should link to it), and no
   trial.
+  **§8 is read-only at a lapse**, from Ken (*make the lapse read-only on the
+  desktop*), which **overrules §4's own decision** to name it rather than build
+  it. The build is small and the design is the whole of it. **One place
+  refuses**: every change to the document is a pure function of the document and
+  every one goes through the same `update`, which is the fact addendum 02 §6c's
+  undo rests on, so `useProject` takes a `writable` and some hundreds of
+  `project.update(…)` calls **needed no change at all** — an act built next
+  month is refused the day it is written. The satellite needs its own and it is
+  not a duplicate: `useLinkedProject` applies a mutation **locally before
+  proposing it**, so a room that did not know would draw a paragraph and have
+  the hub wipe it, and **a writer watching their words vanish is worse than one
+  told they cannot type them**; the standing is a fact about the **machine**, so
+  every window asks the machine rather than the hub (addendum 29 §2's rule from
+  the other end). Two things are deliberately **not** guarded — the **flush**,
+  so writing already in hand still reaches the disk (losing the last few seconds
+  of a sentence to a webhook that arrived mid-paragraph is the one failure this
+  must never cause), and **`replace`**, a cloud merge having nowhere else to
+  land; undo and redo **are** refused, nothing being changeable so there being
+  nothing to take back. **It is a record and not a live answer**: the desktop has
+  never held a licence standing, which is exactly why §4 could say a lapse
+  touched nothing local, and *a writer on a train must not be refused their own
+  manuscript because the machine could not ask* — so `GET
+  /api/licenses/standing` gives a status and a date (no admin client and no new
+  policy: a customer has read their own licence rows since 0002, over cookie or
+  bearer alike), `license-check.ts` writes it down with the day it was given,
+  and the renderer reads it with the domain's `writingStanding`, the route
+  saying **nothing about what a lapse means** so the rule has one home; **a
+  failure to reach the server changes nothing at all**, none of offline, signed
+  out, a 500 or an unparseable body being evidence that anybody stopped paying.
+  The order of the clauses **is** the design and most of them exist to let
+  somebody write: **read-only is a lapse and never an absence** (an account with
+  no licence reads null, so a copy never activated writes as it always has),
+  **a refusal is announced before it bites** (`seenLapsedAt` is stamped once and
+  carried forward, or every check would start the week over, with
+  `WRITING_GRACE_DAYS` the week and a live answer clearing it so a second lapse
+  gets a second week), and **being unable to ask is not a lapse** — past
+  `STANDING_GOOD_FOR_DAYS` the record is a month-old measurement of something
+  that changes weekly, so read-only lifts and is a **fresh refusal rather than a
+  remembered one**, a writer whose network is blocked or who renewed on their
+  phone not being locked out of their own book; that notice says the licence
+  ended and **nothing about read-only**, which the copy can no longer claim. It
+  is the **inverse of `appleState`'s rule rather than a contradiction**: for a
+  shop an unknown word is no reason to hand anything over, for the writing
+  surface it is no reason to take anything away, granting an entitlement and
+  confiscating work in progress not being one act. `WritingNotice` is **one
+  component for the warning and the refusal**, the notice bar every other
+  message wears with the refusal a modifier, and **a warning may be dismissed
+  and a refusal may not** — the explanation of a program that will not take a
+  keystroke being the one notice a writer must be able to find at any moment; it
+  is on the **Welcome screen** too, somebody who starts a project and then
+  cannot type a word having been trapped by a screen that knew and did not say.
+  The **browser preview answers *no record*** rather than refusing, a browser
+  not being a licensed install and the one thing this must never do being to
+  make `/preview` read-only. Driven at 1440×900: the lapsed bar is a red
+  `alert` at 1440 × 57 with Renew, Check again and **no Dismiss**, and typing
+  ` XYZ` left the title reading *Opening beat*; within the week a muted
+  `status` bar at 47px **with** Dismiss and the typing landed; paid up, no bar
+  and the typing landed. Worth recording because it could have gone the other
+  way: every field here is a **controlled React input**, so an `onChange` that
+  does nothing makes React restore the value and the character never appears —
+  there is no `contentEditable` anywhere, which is what would have left typed
+  words sitting on screen unsaved, and that was **checked rather than assumed**.
+  §8.6 names what is deliberately absent: a read-only copy still creates
+  projects, opens, prints, exports and saves a copy elsewhere, and **nothing is
+  disabled or greyed** — the bar explains and the fields simply do not take,
+  disabling several hundred inputs being a second answer to one question in
+  every component in the renderer.
 
 ## Before pushing
 

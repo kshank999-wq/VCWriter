@@ -704,6 +704,17 @@ export const createBrowserBridge = (): BrowserBridge => {
     },
 
     activateLicense: async () => fail(NOT_HERE),
+    /**
+     * Nothing has been heard, and nothing ever will be here (addendum 32 §8).
+     *
+     * **A browser is not a licensed install**: the preview is reached through
+     * the gate it is behind, and a room's writers are there on their seats
+     * rather than on a desktop subscription — so this is a statement rather
+     * than a refusal, which `activateLicense` beside it correctly is. Answered
+     * as *no record*, which is the writable state, because the one thing this
+     * must never do is make the browser preview read-only.
+     */
+    licenseStanding: async () => ok(null),
     checkForUpdate: async () => fail(NOT_HERE),
     downloadUpdate: async () => fail(NOT_HERE),
     installUpdate: async () => fail(NOT_HERE),

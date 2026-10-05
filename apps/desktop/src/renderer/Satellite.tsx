@@ -18,6 +18,8 @@ import {
   type SaveKind,
 } from '@vcwriter/domain';
 import { useLinkedProject } from './use-linked-project';
+import { useWritingAccess } from './use-writing-access';
+import { WritingNotice } from './components/WritingNotice';
 import { usePreference } from './use-split';
 import { addBeatAfter, addSceneAfter } from './structure';
 import { beatIdOf, paneTitle, type PaneKey } from './panes';
@@ -56,7 +58,16 @@ import { TrackDialog } from './components/TrackDialog';
  * the section and almost nothing else.
  */
 export default function Satellite({ pane }: { pane: PaneKey }) {
-  const project = useLinkedProject();
+  /**
+   * Whether this machine may be written in (addendum 32 §8). Asked here as
+   * well as in the workspace, because a satellite applies a mutation locally
+   * before it proposes it — a room that did not know would draw a paragraph
+   * and have the hub wipe it, which is a writer watching their words vanish.
+   * **A room must not be able to do less than the panel it came out of** (§8),
+   * so it says the same sentence too.
+   */
+  const access = useWritingAccess();
+  const project = useLinkedProject(access.writable);
   const [scheme] = usePreference<SchemeId>('scheme', DEFAULT_SCHEME);
   const [paper] = usePreference('paper', true);
   useEffect(() => applyScheme(scheme), [scheme]);
@@ -130,6 +141,7 @@ export default function Satellite({ pane }: { pane: PaneKey }) {
           The workspace window closed, so this one can no longer save. Reopen the project and this window will follow.
         </p>
       ) : null}
+      <WritingNotice access={access} />
       {/* A room on the other monitor must not be able to do less than the
           panel it came out of (§8), so the hover is here too. */}
       <BeatPeekLayer file={file} />

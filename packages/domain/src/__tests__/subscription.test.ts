@@ -14,10 +14,15 @@ import type { DeviceActivation, License } from '../entities/commerce.js';
 /**
  * The desktop subscription (addendum 32).
  *
- * What is worth pinning is not that two plans exist but that **a lapse reaches
- * exactly one thing** — the gate that lets a new machine in — and reaches it
- * through the licence the program already had. Everything here is about that
- * sentence being true.
+ * What is worth pinning is not that two plans exist but that a lapse reaches
+ * what it reaches **through the licence the program already had**, rather than
+ * through a second kind of entitlement. Everything here is about that sentence
+ * being true.
+ *
+ * It said *a lapse reaches exactly one thing* — the gate that lets a new
+ * machine in — and §8 made that false by making the desktop read-only, so it is
+ * corrected rather than left standing. What read-only means is
+ * `writing-standing.test.ts`.
  */
 
 const NOW = new Date('2026-06-01T00:00:00.000Z');
