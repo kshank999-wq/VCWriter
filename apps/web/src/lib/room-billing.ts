@@ -106,8 +106,19 @@ export const startSubscription = async (input: {
     line_items: [{ price: env.stripeSeatPriceId, quantity }],
     success_url: `${env.siteUrl}/rooms/${input.room.id}?seats=1`,
     cancel_url: `${env.siteUrl}/rooms/${input.room.id}`,
+    // **`customer_update` goes with `customer` and only with it** — Stripe
+    // refuses a session carrying one without the other, which is why it is
+    // inside this branch rather than beside `automatic_tax` below.
+    //
+    // Without it, a session that names an existing Customer computes tax from
+    // **the address already on that Customer** and throws away the one the
+    // showrunner types at the checkout. A Customer made by an earlier purchase
+    // very often has none, and the failure is the quiet kind: the subscription
+    // goes on being active while every renewal invoice **sticks in draft** for
+    // want of a tax location, so nothing is charged, nothing errors, and the
+    // first person to find out is whoever eventually reconciles the account.
     ...(input.customerId
-      ? { customer: input.customerId }
+      ? { customer: input.customerId, customer_update: { address: 'auto' as const } }
       : input.ownerEmail
         ? { customer_email: input.ownerEmail }
         : {}),
@@ -115,7 +126,11 @@ export const startSubscription = async (input: {
     metadata: { room_id: input.room.id },
     subscription_data: { metadata: { room_id: input.room.id } },
     automatic_tax: { enabled: true },
-    billing_address_collection: 'auto',
+    // **Required rather than `auto`, because this is a subscription.** `auto`
+    // lets Checkout decide an address is unnecessary, which is survivable for
+    // a single charge priced off an IP address and is not for one that has to
+    // be re-rated every month from what was saved.
+    billing_address_collection: 'required',
   });
 
   return session.url ?? null;

@@ -292,3 +292,64 @@ than assumed.
   the bar explains, and the fields simply do not take. Disabling several
   hundred inputs would be a second answer to the same question in every
   component in the renderer.
+
+---
+
+## 9. Tax, per sale
+
+From Ken, settling a question put to him while this addendum was being built —
+`automatic_tax` was on unconditionally and nothing recorded whether that was a
+decision: *I will use the stripe tax service that is per sale*. So
+`automatic_tax: { enabled: true }` stays on both checkout sessions, which is
+what the code already did — and **reading the two call sites against that
+decision found something neither of them said**.
+
+### 9.1 A subscription is taxed again every month
+
+A single charge can be rated from wherever the buyer appears to be and nothing
+is lost afterwards. **A subscription is re-rated at every renewal**, and a
+renewal has no browser and no buyer in front of it: Stripe Tax computes it from
+the address saved on the **Customer**. With no valid location there, the
+renewal invoice **stays in draft** — which is the quiet failure this project
+keeps finding, and the quietest version of it yet: the subscription goes on
+reading active, the card is never charged, nothing errors, and the first person
+to learn of it is whoever eventually reconciles the account. Addendum 31 §9's
+webhook gate is the same shape one step earlier.
+
+Two things follow, both one line.
+
+**`billing_address_collection` is `required` rather than `auto`.** `auto` lets
+Checkout decide an address is unnecessary — a reasonable judgement about a
+single payment and the wrong one about a subscription, because what it decides
+not to collect is what every later invoice has to be computed from.
+
+**And a session that names an existing customer must write the address back.**
+This is the one that was actually broken. `room-billing.ts` passes `customer`
+where the room's owner already has one, and with `automatic_tax` on and no
+`customer_update`, Checkout computes from **the address already on that
+Customer** and discards the one the showrunner typed at the checkout. A
+Customer made by an earlier purchase very often carries none, so the seat
+subscription is exactly the case that would have gone to draft. `customer_update:
+{ address: 'auto' }` fixes it, **inside the same branch** — Stripe refuses the
+field without a `customer`, so moving it up beside `automatic_tax` would break
+every seat checkout for a room whose owner has no Stripe customer yet, which is
+why the test pins the pairing in both directions.
+
+The desktop route needs no `customer_update` and must not have one: it names an
+email, so Checkout makes the Customer itself and saves the collected address on
+it.
+
+### 9.2 What it is pinned by, and what it is not
+
+Read off the two sources, addendum 31 §4's and §9's idiom, for their reason: a
+Checkout Session cannot be created in a test and a Stripe signature cannot be
+forged in one, and **both of these fail silently and later** — the first charge
+is perfectly correct either way.
+
+**The Stripe half has still never been run live** (§7), so what is proved is
+that the sessions ask for what Stripe Tax needs. The rest is Ken's, in the
+dashboard, and is named rather than assumed: Stripe Tax needs an **origin
+address**, at least one **registration** for anywhere tax is to be collected,
+and a **tax code** on the product — without the last, software is rated as the
+default category, which is wrong in several of the places a registration would
+be taken out.

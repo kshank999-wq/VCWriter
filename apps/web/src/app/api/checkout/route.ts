@@ -99,9 +99,19 @@ export async function POST(request: Request): Promise<Response> {
         : { allow_promotion_codes: true }),
       // Software sold internationally attracts VAT and sales tax. Stripe works
       // out what is owed where, which is not a calculation to reimplement —
-      // enable Stripe Tax in the dashboard and it applies from here.
+      // Stripe Tax is on, and it applies from here.
       automatic_tax: { enabled: true },
-      billing_address_collection: 'auto',
+      // **Required rather than `auto`, because this is a subscription.** A
+      // single charge can be rated from the browser's own location and nothing
+      // is lost; a subscription is re-rated at every renewal from the address
+      // **saved on the Customer**, and one saved without an address leaves
+      // every renewal invoice stuck in draft — the subscription active, the
+      // card never charged, and nothing anywhere reporting it. No
+      // `customer_update` here on purpose: this session names an email rather
+      // than an existing customer, so Checkout makes the Customer and writes
+      // the collected address onto it, and Stripe refuses the field without a
+      // `customer`.
+      billing_address_collection: 'required',
     });
 
     if (!session.url) {

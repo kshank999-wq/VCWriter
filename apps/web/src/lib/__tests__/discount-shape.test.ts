@@ -120,3 +120,54 @@ describe('the webhook gates fulfilment on the domain reading', () => {
     expect(WEBHOOK).not.toMatch(/payment_status\s*===/);
   });
 });
+
+/**
+ * What a subscription needs before Stripe can tax it (addendum 32 §9).
+ *
+ * Read off the source for the webhook gate's own reason — a Checkout Session
+ * cannot be created in a test, and both of these fail **silently and later**:
+ * an address Checkout decided not to collect, or one typed and thrown away,
+ * leaves the first charge perfectly correct and every renewal invoice stuck in
+ * draft, so the subscription stays active and nothing is ever charged.
+ *
+ * The `customer_update` pairing is pinned too, in the other direction: Stripe
+ * refuses it without a `customer`, so a well-meaning move of it up beside
+ * `automatic_tax` would break every seat checkout for a room whose owner has
+ * no Stripe customer yet.
+ */
+const SEATS = readFileSync(
+  fileURLToPath(new URL('../room-billing.ts', import.meta.url)),
+  'utf8',
+);
+
+describe('what Stripe Tax is given to work from', () => {
+  it('collects an address on the desktop subscription', () => {
+    expect(ROUTE).toContain('automatic_tax: { enabled: true }');
+    expect(ROUTE).toContain("billing_address_collection: 'required'");
+  });
+
+  it('collects an address on a room seat subscription', () => {
+    expect(SEATS).toContain('automatic_tax: { enabled: true }');
+    expect(SEATS).toContain("billing_address_collection: 'required'");
+  });
+
+  it('writes that address back where the session names an existing customer', () => {
+    expect(SEATS).toContain("customer: input.customerId, customer_update: { address: 'auto' as const }");
+  });
+
+  it('never sends customer_update where there is no customer', () => {
+    // Comments are dropped first: this is about what is sent, and both files
+    // say `customer_update` in prose explaining exactly this rule.
+    const code = (source: string) =>
+      source.split('\n').filter((line) => !line.trim().startsWith('//'));
+
+    // The desktop route names an email, so Checkout makes the Customer itself
+    // and saves the address on it; the field would be refused outright.
+    expect(code(ROUTE).filter((line) => line.includes('customer_update'))).toEqual([]);
+
+    // On the seats route every line that sends it names a customer on it too.
+    const sends = code(SEATS).filter((line) => line.includes('customer_update'));
+    expect(sends).toHaveLength(1);
+    expect(sends[0]).toContain('customer: input.customerId');
+  });
+});
