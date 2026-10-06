@@ -5,6 +5,8 @@ import {
   defaultSplit,
   describeMarks,
   formatForKind,
+  buildProjectFromImport,
+  docxToProse,
   importChoices,
   landsInLayout,
   NO_CHAPTER_MARKS,
@@ -22,6 +24,24 @@ import {
  * invisible until a four-hundred-page manuscript arrives in four hundred
  * pieces.
  */
+
+/** A paragraph as the Word reader hands one over. */
+const PARA = {
+  text: '',
+  plain: '',
+  styleId: '',
+  styleName: '',
+  outline: null,
+  align: 'left' as const,
+  indentLeft: 0,
+  firstLine: 0,
+  face: null,
+  size: null,
+  caps: false,
+  pageBreakBefore: false,
+  list: false,
+  pictures: [],
+};
 
 const line = (over: Partial<Parameters<typeof opensChapter>[0]> = {}) => ({
   text: '',
@@ -187,5 +207,69 @@ describe('how much is in a beat', () => {
     expect(defaultSplit('instructional')).toBe('chapter');
     // Addendum 21 §10's own ask, which this does not take back.
     expect(defaultSplit('short_story')).toBe('paragraph');
+  });
+});
+
+describe('what a novel brings in', () => {
+  it('reads a byline a title page actually carries, so the front matter is not chapter one', () => {
+    // Driven on a realistic manuscript (addendum 33 §8): *a novel by K. Shank*
+    // was left standing, so it became an untitled first chapter and every
+    // chapter after it printed one too high.
+    for (const line of ['by K. Shank', 'written by K. Shank', 'a novel by K. Shank', 'A Novel by K. Shank', 'The story by K. Shank']) {
+      const read = docxToProse({
+        paragraphs: [
+          { ...PARA, plain: 'The Lamp', text: 'The Lamp', styleName: 'title', align: 'center' },
+          { ...PARA, plain: line, text: line, align: 'center' },
+          { ...PARA, plain: 'Chapter One', text: 'Chapter One', outline: 0 },
+          { ...PARA, plain: 'The lamp went out.', text: 'The lamp went out.' },
+        ],
+      } as never);
+      expect(read.author, line).toBe('K. Shank');
+      expect(read.scenes[0]?.heading, line).toBe('Chapter One');
+    }
+  });
+
+  it('never takes a sentence for a byline', () => {
+    const line = 'She had been working by the light of one lamp';
+    const read = docxToProse({
+      paragraphs: [{ ...PARA, plain: line, text: line }],
+    } as never);
+    expect(read.author).toBe('');
+    expect(read.scenes[0]?.elements[0]?.text).toBe(line);
+  });
+
+  it('stores no chapter number, the number being read off where the chapter falls', () => {
+    // Two answers on one screen: the markers row said CHAPTER 1 · THE ROAD
+    // and the row under it said Chapter 2, from this stored string.
+    const built = buildProjectFromImport(
+      {
+        title: 'The Lamp',
+        author: '',
+        source: 'docx',
+        warnings: [],
+        characters: [],
+        locations: [],
+        scenes: [
+          { heading: 'Chapter One: The Road', elements: [{ type: 'paragraph', text: 'The lamp went out.' }] },
+          { heading: 'Chapter Two', elements: [{ type: 'paragraph', text: 'Rain on the water.' }] },
+        ],
+      } as never,
+      { format: 'novel' },
+    );
+    expect(built.file.units.map((unit) => unit.sequenceLabel)).toEqual(['', '']);
+    // A screenplay's scene number is a convention nothing derives, so it stays.
+    const script = buildProjectFromImport(
+      {
+        title: 'The Lamp',
+        author: '',
+        source: 'fdx',
+        warnings: [],
+        characters: [],
+        locations: [],
+        scenes: [{ heading: 'INT. HOUSE - DAY', elements: [] }],
+      } as never,
+      { format: 'screenplay' },
+    );
+    expect(script.file.units[0]?.sequenceLabel).toBe('Sc. 1');
   });
 });

@@ -346,7 +346,12 @@ describe('building a project from a Word document', () => {
     expect(file.project.title).toBe('The Lighthouse');
     expect(file.project.author).toBe('K. Shank');
     expect(file.project.notes).toMatch(/Imported from a Word document/);
-    expect(file.units.map((unit) => unit.title)).toEqual(['Chapter One: The Road', 'Chapter Two']);
+    // **A chapter is named once** (addendum 33 §8): the marker carries the
+    // name and the unit is the same string, where the raw heading used to put
+    // *CHAPTER ONE: THE ROAD* on the timeline a row under *CHAPTER 1 · THE
+    // ROAD*. The number is derived, so nothing stores one either.
+    expect(file.units.map((unit) => unit.title)).toEqual(['The Road', '']);
+    expect(file.units.map((unit) => unit.sequenceLabel)).toEqual(['', '']);
 
     // A chapter heading is a marker, not a line of the manuscript.
     expect(file.markers.map((marker) => marker.title)).toEqual(['The Road', '']);

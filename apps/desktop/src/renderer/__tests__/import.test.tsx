@@ -164,7 +164,10 @@ describe('importing a script', () => {
     await waitFor(() => expect(made).toHaveLength(1));
     const file = made[0]!;
     expect(file.project.format).toBe('novel');
-    expect(file.units.map((unit) => unit.title)).toEqual(['Chapter One: The Road', 'Chapter Two']);
+    // A chapter is named once (addendum 33 §8): the unit and its marker carry
+    // the same string, and the number is derived rather than stored.
+    expect(file.units.map((unit) => unit.title)).toEqual(['The Road', '']);
+    expect(file.units.map((unit) => unit.sequenceLabel)).toEqual(['', '']);
     expect(file.markers.map((marker) => marker.title)).toEqual(['The Road', '']);
     // One long beat per chapter, to divide by hand (addendum 33): the
     // chapter's two paragraphs are one beat, and the formatting is kept.

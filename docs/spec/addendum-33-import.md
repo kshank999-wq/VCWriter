@@ -209,3 +209,53 @@ straight past, so a `.txt` offered as a script is refused in the reader.
 ask: those arrive as one document, and opening a room over a manuscript
 somebody has just imported, to rearrange an order there is nothing to
 rearrange, is a room nobody asked for.
+
+## 8. Driven on a novel
+
+From Ken, the day it shipped: *let's test the import with a novel.* A
+manuscript was built to be the thing a writer actually hands over — a title
+page, a byline, ten chapters divided four different ways (a styled heading,
+*Chapter Two* as plain centred text, a bare Roman numeral, a page break with
+a short line in capitals), a scene break, an illustration, a passage set in
+another face, and **a typed page number at the foot of every page**. It found
+three faults, and the first two were one fault counted twice.
+
+**A byline is rarely the bare word *by*.** The reader has dropped a byline
+near the top since the Word importer was built, and it matched `^by …` alone —
+so *a novel by K. Shank*, which is what a title page usually says, was left
+standing. On a novel the first thing in the document is a chapter, so the
+front matter **became chapter one**: *Chapter One: The Road* arrived as chapter
+two, and every chapter after it printed one too high. What may stand in front
+of *by* is now a short closed list of the words a title page carries, because
+*she had been working by the light of one lamp* is a sentence and not a
+byline — which a test says.
+
+**Nothing stored may claim a derived number.** The timeline drew the fault
+twice over on two rows an inch apart: the markers row said **CHAPTER 1 · THE
+ROAD** and the chapters row under it said **Chapter 2**. The second comes from
+`sequenceLabel`, a positional `Chapter ${index + 1}` the importer wrote on
+every unit — addendum 16 §15's own argument (*a writer could have typed 7
+against the fourth section and the book would print both answers*) arriving
+from the importer rather than from a box. A screenplay's scene number is a
+real convention that nothing derives, so `Sc. 4` is still written down; a
+chapter's is read off where the chapter falls, so none is. Only a **new**
+import changes; nothing is migrated.
+
+**And a chapter is named once.** The marker carried `chapterName`'s *The
+Road* while the unit kept the raw *Chapter One: The Road*, so the same two
+rows disagreed about the name as well as the number. The unit takes the
+marker's string now, and a chapter named only *Chapter Two* reads as
+**Untitled** — which it is, its number being the whole of its name.
+
+**And the list clipped.** `.import-list` carried `max-height: 168px` over a
+list the component already stops at twelve rows, so a novel of ten chapters
+drew eight and put the last two behind an overlay scrollbar that paints
+nothing until the pointer is inside the box — addendum 19 §10 and 25 §4g in
+the one place it costs most, the screen a writer uses to decide whether the
+reader found their chapters. **The cap is the limit, not a scrollbar.**
+
+What was right and is worth recording: each mark divides the document on its
+own (5, 7, 3 and 2 chapters for a heading, the word Chapter, a numeral and a
+page break; 10 with all four), the twenty typed page numbers are dropped and
+**said**, the illustration comes in, the face and size of the set-apart
+passage are kept, and each chapter arrives as one passage.

@@ -4899,6 +4899,17 @@ dialog.import-chooser {
   gap: 10px;
 }
 
+/*
+  **The cap is the limit, not a scrollbar.**
+
+  Every list here already stops at a dozen rows and says *and N more*, so a
+  168px box on top of that was a second limit — and the lower one: a novel of
+  ten chapters drew eight of them and put the last two behind an overlay
+  scrollbar that paints nothing until the pointer is already inside the box
+  (addendum 19 §10, 25 §4g, 31 §7). On the one screen a writer uses to decide
+  whether the reader found their chapters, the rows they cannot see are the
+  ones at the end. The dialog scrolls; the list inside it does not.
+*/
 .import-list {
   margin: 0;
   padding: 0;
@@ -4906,8 +4917,6 @@ dialog.import-chooser {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  max-height: 168px;
-  overflow-y: auto;
 }
 
 .import-list li {

@@ -230,6 +230,9 @@ export const materialiseScenes = (script: ImportedScript, options: MaterialiseOp
   const markers: StoryMarker[] = [];
   const assets: Asset[] = [];
   const prose = isProseFormat(format);
+  // Whether a heading here becomes a chapter marker rather than a line of the
+  // manuscript — which is also what decides who owns the chapter's name.
+  const markersHere = prose && options.headings !== 'sections';
   let words = 0;
 
   scenes.forEach((scene, index) => {
@@ -244,12 +247,23 @@ export const materialiseScenes = (script: ImportedScript, options: MaterialiseOp
         kind: defaultUnitKind(format),
         // The slugline is the scene's title as well as its first line: the
         // heading prints, the title is what the timeline shows.
-        title: scene.heading.trim(),
-        sequenceLabel: options.sequenceLabels
-          ? defaultUnitKind(format) === 'chapter'
-            ? `Chapter ${index + 1}`
-            : `Sc. ${index + 1}`
-          : '',
+        //
+        // **A chapter is named once.** Where a marker carries the name it is
+        // `chapterName`'s — *The Road* out of *Chapter One: The Road*, and
+        // nothing out of *Chapter Two*, the number being derived — so keeping
+        // the raw heading here put two spellings of one chapter on one
+        // screen, the markers row reading *CHAPTER 1 · THE ROAD* over a
+        // chapters row reading *CHAPTER ONE: THE ROAD*.
+        title: prose && markersHere ? chapterName(scene.heading) : scene.heading.trim(),
+        // **Nothing stored may claim a derived number** (addendum 02 §12a).
+        // A screenplay's scene number is a real convention and nothing works
+        // it out, so `Sc. 4` is written down; a chapter's number is read off
+        // where the chapter falls, and writing `Chapter 4` beside it is a
+        // second answer free to disagree — which it did the moment anything
+        // stood in front of chapter one, the timeline drawing *CHAPTER 1 ·
+        // THE ROAD* on its markers row and *Chapter 2* on the row under it.
+        sequenceLabel:
+          options.sequenceLabels && defaultUnitKind(format) !== 'chapter' ? `Sc. ${index + 1}` : '',
         status: 'draft_complete',
         orderKey,
         createdAt: timestamp,

@@ -5571,7 +5571,37 @@ push live; the build takes a minute or two.
   **Media shelf** — his *under media. And graphics* is one place said twice, and
   a second shelf for pictures would be a second answer to where a picture is —
   and **no route to Layout from a novel or a book**, those arriving as one
-  document whose order is the document's.
+  document whose order is the document's. **§8 is driving it on a novel**,
+  from Ken (*let's test the import with a novel*) on a manuscript built to be
+  what a writer hands over — a title page, a byline, ten chapters divided four
+  different ways, a scene break, an illustration, a passage in another face and
+  a typed page number at the foot of every page — and it found three faults,
+  the first two being one fault counted twice. **A byline is rarely the bare
+  word *by***: the reader matched `^by …` alone, so *a novel by K. Shank* was
+  left standing, and on a novel the first thing in the document is a chapter —
+  so the front matter **became chapter one** and *Chapter One: The Road*
+  arrived as chapter two, every chapter after it printing one too high; what
+  may precede *by* is now a short closed list of the words a title page
+  carries, *she had been working by the light of one lamp* being a sentence.
+  **Nothing stored may claim a derived number**: the timeline drew the fault on
+  two rows an inch apart, the markers row reading **CHAPTER 1 · THE ROAD** over
+  a chapters row reading **Chapter 2**, which is `sequenceLabel` — a positional
+  `Chapter ${index + 1}` the importer wrote on every unit, addendum 16 §15's
+  argument arriving from the importer rather than from a box — so a screenplay
+  keeps `Sc. 4` (a real convention nothing derives) and a chapter stores none;
+  only a new import changes. **And a chapter is named once**, the marker having
+  carried `chapterName`'s *The Road* while the unit kept the raw *Chapter One:
+  The Road*, so those two rows disagreed about the name as well, an untitled
+  chapter now reading **Untitled** because its number is the whole of its name.
+  **And the list clipped** — `.import-list` had `max-height: 168px` over a list
+  already capped at twelve rows, so ten chapters drew eight with the last two
+  behind an overlay scrollbar that paints nothing until the pointer is in the
+  box (addendum 19 §10, 25 §4g), on the one screen a writer uses to decide
+  whether the reader found their chapters: **the cap is the limit, not a
+  scrollbar**. What was right: each mark divides on its own (5, 7, 3 and 2;
+  10 with all four), the twenty page numbers are dropped and **said**, the
+  illustration comes in, the face and size of a set-apart passage are kept, and
+  each chapter arrives as one passage.
 
 ## Before pushing
 

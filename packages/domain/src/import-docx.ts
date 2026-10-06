@@ -306,6 +306,14 @@ const resolvedStyle = (styles: Styles, styleId: string, base: StyleProps = style
   return out;
 };
 
+/**
+ * A byline at the top of a manuscript: *by K. Shank*, *written by K. Shank*,
+ * *a novel by K. Shank*. What may precede *by* is one of a handful of words a
+ * title page actually carries, so an ordinary sentence cannot be mistaken for
+ * one.
+ */
+const BYLINE = /^(?:(?:a|an|the)\s+)?(?:novel|novella|story|memoir|play|book|collection)?\s*(?:written\s+)?by\s+(\S.*)$/i;
+
 // ----------------------------------------------------------- the pictures
 
 const relsOf = (xml: string | undefined): Map<string, string> => {
@@ -672,9 +680,19 @@ export const docxToProse = (
       title = paragraph.plain;
       return;
     }
-    if (index <= 2 && /^(written\s+)?by\s+\S/i.test(paragraph.plain) && paragraph.plain.length < 60) {
-      author = paragraph.plain.replace(/^(written\s+)?by\s+/i, '').trim();
-      return;
+    // **A byline is rarely the bare word *by***: manuscripts are headed *a
+    // novel by K. Shank* as often as *by K. Shank*, and the narrower rule
+    // left that line standing as the first thing in the book — which on a
+    // novel is a chapter, so the front matter became chapter one and every
+    // chapter after it printed one too high. What may stand in front of *by*
+    // is a short, closed list rather than any short phrase, because *she had
+    // been working by the light of one lamp* is a sentence and not a byline.
+    if (index <= 2 && paragraph.plain.length < 60) {
+      const byline = BYLINE.exec(paragraph.plain);
+      if (byline?.[1]) {
+        author = byline[1].trim();
+        return;
+      }
     }
     const attributes = kept(paragraph);
     const carry = Object.keys(attributes).length > 0 ? { attributes } : {};
