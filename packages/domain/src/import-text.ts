@@ -7,6 +7,7 @@ import {
   type ImportedScene,
   type ImportedScript,
 } from './importing.js';
+import { ALL_CHAPTER_MARKS, type ChapterMarks } from './import-plan.js';
 
 /**
  * A plain-text document read as prose (addendum 22 §6).
@@ -36,11 +37,14 @@ const HEADING_AT_MOST = 60;
  * taken out first, so a bare *3* here is a label rather than the foot of
  * page three — the same order `docxToProse` reads in.
  */
-export const opensDivision = (text: string): boolean => {
+export const opensDivision = (text: string, marks: ChapterMarks = ALL_CHAPTER_MARKS): boolean => {
   const line = text.trim();
   if (line.length === 0 || line.length > HEADING_AT_MOST) return false;
-  if (CHAPTER_HEAD.test(line)) return true;
-  return BARE_LABEL.test(line);
+  // Plain text carries no styles and no page breaks, so two of the four
+  // marks (addendum 33) are not things it can say. The other two are asked
+  // exactly as the Word reader asks them.
+  if (marks.chapterLine && CHAPTER_HEAD.test(line)) return true;
+  return marks.numeral && BARE_LABEL.test(line);
 };
 
 /** The paragraphs of a plain-text document: blank lines divide, single newlines do not. */
@@ -55,7 +59,10 @@ const paragraphsOf = (text: string): string[] =>
  * none the whole document is one, which is what an undivided short story
  * is and not a failure to read it.
  */
-export const textToProse = (text: string, options: { title?: string } = {}): ImportedScript => {
+export const textToProse = (
+  text: string,
+  options: { title?: string; marks?: ChapterMarks } = {},
+): ImportedScript => {
   const paragraphs = paragraphsOf(text);
   // A typed page number at the foot of every page is not a chapter (§10):
   // the same reading the Word importer makes, over the same rule.
@@ -69,7 +76,7 @@ export const textToProse = (text: string, options: { title?: string } = {}): Imp
 
   paragraphs.forEach((paragraph, index) => {
     if (numbers.has(index)) return;
-    if (opensDivision(paragraph)) {
+    if (opensDivision(paragraph, options.marks)) {
       close();
       open = { heading: paragraph, elements: [] };
       return;

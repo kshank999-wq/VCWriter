@@ -4,6 +4,7 @@ import {
   addMarker,
   beginStory,
   isCollection,
+  landsInLayout,
   defaultMarkerKind,
   beatsForUnit,
   beatsInStoryOrder,
@@ -26,6 +27,7 @@ import {
   type Episode,
   type ProjectFormat,
   type SaveKind,
+  type ImportKind,
   type ResearchView,
   type StoryMarkerId,
   type StructuralUnitId,
@@ -79,6 +81,7 @@ import { Reports, type ReportTab } from './components/Reports';
 import { EpisodeRail } from './components/EpisodeRail';
 import { StoryRail } from './components/StoryRail';
 import { ImportDialog } from './components/ImportDialog';
+import { ImportChooser } from './components/ImportChooser';
 import { AddStoriesDialog } from './components/AddStoriesDialog';
 import { ProjectsDialog } from './components/ProjectsDialog';
 import { NewEpisodeDialog } from './components/NewEpisodeDialog';
@@ -136,7 +139,11 @@ export default function App() {
   const [reportOpen, setReportOpen] = useState<ReportTab | null>(null);
   const [episodeRailOpen, setEpisodeRailOpen] = useState(false);
   const [newEpisodeOpen, setNewEpisodeOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
+  // **What are you importing?** (addendum 33.) The chooser asks, and the kind
+  // it answers with is what the import dialog opens knowing — so there is one
+  // menu item where there were two, and no screen titled for the wrong thing.
+  const [chooserOpen, setChooserOpen] = useState(false);
+  const [importKind, setImportKind] = useState<ImportKind | null>(null);
   const [importStoriesOpen, setImportStoriesOpen] = useState(false);
   const [editorTab, setEditorTab] = useState<'daily' | 'final' | 'grid' | 'index' | 'polarity'>('daily');
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
@@ -209,6 +216,8 @@ export default function App() {
   const [titlePageEpisode, setTitlePageEpisode] = useState<Episode | null>(null);
   /** Set when something sent the writer to research to look at one thing. */
   const [researchView, setResearchView] = useState<ResearchView | undefined>(undefined);
+  /** Which of Research's own screens to land on, where something sent us there. */
+  const [researchAt, setResearchAt] = useState<'importer' | 'graphics' | undefined>(undefined);
   // Where the four sections sit, and which of them are in windows of their
   // own right now (addendum 02 §8).
   /**
@@ -597,6 +606,44 @@ export default function App() {
    * only a command's name and label; this is the one place that knows what
    * is open and can act on it, which is why it lives here and not there.
    */
+  /**
+   * Where each kind goes (addendum 33). Four make a project and open the
+   * import dialog knowing which; two add to the collection or series that is
+   * open; two are Research's own, and go to the room that already does them
+   * rather than to a second copy built on this menu.
+   */
+  const chooseImport = useCallback(
+    (kind: ImportKind) => {
+      if (kind === 'stories' || kind === 'episodes') return setImportStoriesOpen(true);
+      if (kind === 'notes' || kind === 'graphics') {
+        setResearchAt(kind === 'notes' ? 'importer' : 'graphics');
+        return detached.includes('research') ? openPane('research') : setResearchOpen(true);
+      }
+      return setImportKind(kind);
+    },
+    [detached, openPane],
+  );
+
+  /**
+   * What is in front of the writer once the document is in.
+   *
+   * **A collection lands in Layout**, which is Ken's own sentence — *in
+   * between, it will create the layout where you can reorder how the stories
+   * are, and then you can insert chapter pages* — and is **a route rather
+   * than a feature**: the room has dragged the parts into order and made the
+   * chapter pages since addendum 20 §9a, and somebody who has just handed
+   * over nine documents has no way of knowing that is where the order is
+   * set. Every other kind lands where an import has always landed, the
+   * manuscript being the thing to look at.
+   */
+  const adoptImport = useCallback(
+    (imported: ProjectFile) => {
+      project.replace(imported);
+      if (landsInLayout(imported.project.format)) setLayoutOpen(true);
+    },
+    [project],
+  );
+
   const runCommand = useCallback(
     (command: CommandId) => {
       switch (command) {
@@ -607,10 +654,10 @@ export default function App() {
           return setStartingNew(true);
         case 'file.open':
           return void project.openProject();
+        // **The question before the file** (addendum 33): one menu item, a
+        // chooser, and each kind routed to the screen that knows it.
         case 'file.import':
-          return setImportOpen(true);
-        case 'file.importStories':
-          return setImportStoriesOpen(true);
+          return setChooserOpen(true);
         case 'file.projects':
           return setProjectsOpen(true);
         case 'file.save':
@@ -838,7 +885,7 @@ export default function App() {
             setStartingNew(false);
             void project.openProject();
           }}
-          onImport={() => setImportOpen(true)}
+          onImport={() => setChooserOpen(true)}
           onProjects={() => setProjectsOpen(true)}
           projectsChanged={projectsChanged}
           onOpenPath={(path) => {
@@ -849,12 +896,18 @@ export default function App() {
           {...(file ? { onCancel: () => setStartingNew(false), openTitle: file.project.title } : {})}
           error={project.error}
         />
-        {/* Importing is most useful from here: it is how a script arrives. */}
-        <ImportDialog
-          open={importOpen}
-          onClose={() => setImportOpen(false)}
-          onImported={(imported) => project.replace(imported)}
-        />
+        {/* Importing is most useful from here: it is how a manuscript
+            arrives. With nothing open the chooser offers the four kinds that
+            make a project and says why the other four are not there. */}
+        <ImportChooser open={chooserOpen} format={null} onClose={() => setChooserOpen(false)} onChoose={chooseImport} />
+        {importKind ? (
+          <ImportDialog
+            open
+            kind={importKind}
+            onClose={() => setImportKind(null)}
+            onImported={adoptImport}
+          />
+        ) : null}
 
         <ProjectsDialog
           open={projectsOpen}
@@ -1230,6 +1283,7 @@ export default function App() {
             open={researchOpen && !away.has('research')}
             currentBeatId={selectedBeat?.id ?? null}
             {...(researchView ? { openOn: researchView } : {})}
+            {...(researchAt ? { openAt: researchAt } : {})}
             onGoToBeat={(beatId) => {
               setSelectedBeatId(beatId);
               setResearchOpen(false);
@@ -1237,6 +1291,7 @@ export default function App() {
             onClose={() => {
               setResearchOpen(false);
               setResearchView(undefined);
+              setResearchAt(undefined);
             }}
             onUpdate={project.update}
             onSaveAs={saveSomewhere}
@@ -1525,11 +1580,20 @@ export default function App() {
         }}
       />
 
-      <ImportDialog
-        open={importOpen}
-        onClose={() => setImportOpen(false)}
-        onImported={(imported) => project.replace(imported)}
+      <ImportChooser
+        open={chooserOpen}
+        format={file?.project.format ?? null}
+        onClose={() => setChooserOpen(false)}
+        onChoose={chooseImport}
       />
+      {importKind ? (
+        <ImportDialog
+          open
+          kind={importKind}
+          onClose={() => setImportKind(null)}
+          onImported={adoptImport}
+        />
+      ) : null}
 
       {file && (isCollection(file.project.format) || file.project.format === 'series') ? (
         <AddStoriesDialog

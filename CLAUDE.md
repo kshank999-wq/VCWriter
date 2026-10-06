@@ -5500,6 +5500,74 @@ push live; the build takes a minute or two.
   **named rather than assumed**: an **origin address**, a **registration**
   wherever tax is to be collected, and a **tax code** on the product, without
   which software is rated as the default category.
+  `addendum-33-import.md` is **Import**, from Ken in one message (*remove those
+  two — import a script, add stories to a collection — from the files menu and
+  just put Import… This will open a center dialog box that asks you what you're
+  importing*), and the audit paid a **twenty-eighth** time and paid nearly all
+  of it: his Roman numerals are addendum 22 §6, the *options on how to divide
+  it up into chapters* are the four signals `opensChapter` has read since the
+  Word importer was built, *one long beat* is the other arm of an `if`
+  `materialiseScenes` already had, *reorder how the stories are and insert
+  chapter pages* is the Layout rail (addendum 20 §9a), and notes and graphics
+  are the Research importer and the library. So almost nothing here is a
+  mechanism. What is new is **the question, asked first** — and four places
+  where asking it first made a standing default wrong. **The question comes
+  before the file**: every importer this program has had asked for the document
+  first and the kind of thing afterwards, a dialog headed *Import a script*
+  with a *Format* select two thirds of the way down it, opened by somebody
+  bringing in a novel — backwards twice over, the title saying the wrong thing
+  before a word is read and the control that decides what is made being the one
+  nobody looks at. `import-plan.ts` is the list of answers and **names no
+  screen**, so a kind added to it is a row the day it is written; what falls out
+  is that **the format select is unnecessary on every kind that already
+  answered**, absent on a novel, a book and a collection and kept only for a
+  script, which is four formats. **Two headings, because a row cannot carry the
+  fact** (addendum 20 §9k): *is this going to replace what I am looking at* is
+  the one question a writer has here and saying it on all eight rows is saying
+  it eight times, so they stand under **A new project** and **Into this
+  project**, with the second group **absent rather than greyed** when nothing is
+  open and the reason said in its place. A row is offered **only where it can
+  land** — graphics on a prose format alone, Research ▸ Graphics being every
+  book's and no script's, so the row would otherwise route to a shelf the menu
+  does not draw. The four marks are **what the reader can actually see** rather
+  than options invented for a screen, and `ALL_CHAPTER_MARKS` is exactly what it
+  did before there was a choice, which is why the whole import suite passed
+  unedited; **what each combination costs is read off the document rather than
+  estimated**, turning one off re-reading the manuscript and moving the figure —
+  the only way to tell a book whose numerals are chapters from one whose
+  numerals are page numbers (driven: 3 → 2 → 1) — and with every mark off it
+  **comes in whole**, with the sentence naming the way out rather than leaving
+  somebody holding one undivided chapter. **One long beat** is a **per-format
+  default rather than a change of mind**: addendum 21 §10 made a beat of every
+  paragraph at Ken's own earlier ask, right for a short story worked over scene
+  by scene and wrong for four hundred pages arriving as four hundred beats, so
+  `defaultSplit` gives a novel and a book one beat per chapter and keeps the
+  collection's paragraph beats. **A collection lands in Layout**, his *in
+  between, it will create the layout*, and it is **a route rather than a
+  feature** — `landsInLayout` lives in the domain so the sentence said before
+  the press and the room that opens cannot disagree. Driving it found four
+  faults no test could. **A heading is not a place**: `summarise` reads
+  locations off the scene headings, which in a manuscript are the chapters, so a
+  novel drew *Where it happens* over CHAPTER ONE with *1 scene* beside it **and
+  filed all three under Research ▸ Locations** — an instructional book escaping
+  it only because its menu has no Locations folder, an absence doing a job
+  nobody asked it to do; prose files none now and the panel lists **The
+  chapters**, which is the list a writer wants there. **Nothing names a unit
+  itself** (addendum 16 §6c): three literal *chapter*s went in and all three
+  stood an inch from a figure reading the noun table, so a collection drew **3
+  Sections** over *3 chapters here*. **A mark is a sentence, not a switch on a
+  bar** — the marks borrowed `.check`, 10px tracked capitals and gold once
+  ticked, drawing A HEADING over A LINE THE DOCUMENT ITSELF STYLES AS A
+  TOP-LEVEL HEADING with all four on so the colour distinguished nothing. And
+  **a control was promised below that was not below**, the waiting screen
+  reading *you say where the chapters are below* over a fieldset that only
+  exists once a file has been read (addendum 10 §8, in a tense), plus
+  `describeMarks` lowercasing *the word Chapter* into *the word chapter* and
+  dropping the one thing the reader looks for. **Deliberately absent**: a
+  **Media shelf** — his *under media. And graphics* is one place said twice, and
+  a second shelf for pictures would be a second answer to where a picture is —
+  and **no route to Layout from a novel or a book**, those arriving as one
+  document whose order is the document's.
 
 ## Before pushing
 

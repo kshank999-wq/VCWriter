@@ -90,6 +90,12 @@ interface ResearchWindowProps {
   open: boolean;
   /** Which view to land on, when something sent the writer here to look. */
   openOn?: ResearchView;
+  /**
+   * Which of this room's own screens to land on (addendum 33). File ▸ Import
+   * routes notes and pictures here rather than building a second importer on
+   * a menu: this room already has the one that works.
+   */
+  openAt?: 'importer' | 'graphics';
   /** The beat being written, so material can be marked used where it landed. */
   currentBeatId: BeatId | null;
   onClose(): void;
@@ -186,6 +192,7 @@ export function ResearchWindow({
   file,
   open,
   openOn,
+  openAt,
   currentBeatId,
   onClose,
   onUpdate,
@@ -203,6 +210,7 @@ export function ResearchWindow({
           onClose={onClose}
           onUpdate={onUpdate}
           {...(openOn ? { openOn } : {})}
+          {...(openAt ? { openAt } : {})}
           {...(onPopOut ? { onPopOut } : {})}
           {...(onSaveAs ? { onSaveAs } : {})}
           {...(onGoToBeat ? { onGoToBeat } : {})}
@@ -220,6 +228,7 @@ export function ResearchBody({
   file,
   currentBeatId,
   openOn,
+  openAt,
   onClose,
   onUpdate,
   onPopOut,
@@ -230,6 +239,8 @@ export function ResearchBody({
   currentBeatId: BeatId | null;
   /** Which view to land on. The report's "research not used" arrives here. */
   openOn?: ResearchView;
+  /** Which of this room's own screens to land on — File ▸ Import arrives here. */
+  openAt?: 'importer' | 'graphics';
   onGoToBeat?(beatId: BeatId): void;
   onClose(): void;
   onUpdate: ResearchWindowProps['onUpdate'];
@@ -248,6 +259,13 @@ export function ResearchBody({
   useEffect(() => {
     if (openOn) setSelection({ kind: 'view', view: openOn });
   }, [openOn]);
+
+  // Sent here by File ▸ Import (addendum 33). Keyed on arriving rather than
+  // on the value, so closing the importer and staying in the room does not
+  // put it back in front — addendum 20 §16b's `openOnKind` rule.
+  useEffect(() => {
+    if (openAt) setSelection({ kind: openAt });
+  }, [openAt]);
   const [selectedItemId, setSelectedItemId] = useState<ResearchItemId | null>(null);
   /**
    * The note open in the middle (addendum 28 §6), and where its cursor starts.
@@ -790,18 +808,23 @@ export function ResearchBody({
 
           <h4>Also</h4>
           <ul className="research-views">
-            {instructional ? (
-              <li>
-                <button
-                  type="button"
-                  className={selection.kind === 'importer' ? 'folder-row selected' : 'folder-row'}
-                  title="Bring in notes, documents and pictures"
-                  onClick={() => setSelection({ kind: 'importer' })}
-                >
-                  <span className="folder-name">Import</span>
-                </button>
-              </li>
-            ) : null}
+            {/* **Every format's** (addendum 33). It was an instructional
+                book's alone, which is a fair reading of who has a folder of
+                lecture notes and a wrong one about who has research: a
+                screenwriter with a drawer of clippings and a novelist with a
+                folder of photographs both have exactly what this brings in,
+                and on their formats the one screen built for it was not
+                drawn. Nothing in `importFiles` asks the format. */}
+            <li>
+              <button
+                type="button"
+                className={selection.kind === 'importer' ? 'folder-row selected' : 'folder-row'}
+                title="Bring in notes, documents and pictures"
+                onClick={() => setSelection({ kind: 'importer' })}
+              >
+                <span className="folder-name">Import</span>
+              </button>
+            </li>
             {/* The graphics library is every book's (addendum 20 §9): a
                 novel's plates and chapter art live here too, so the Layout
                 room's *from the library* has somewhere a writer can find. */}

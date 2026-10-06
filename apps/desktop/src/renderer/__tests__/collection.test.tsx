@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beginStory, createProjectFile, episodes, storiesOf, type ProjectFile } from '@vcwriter/domain';
+import { beginStory, createProjectFile, episodes, importChoices, storiesOf, type ProjectFile } from '@vcwriter/domain';
 import { AddStoriesDialog } from '../components/AddStoriesDialog';
 import { menusFor } from '../menus';
 import { buildDocx, wordParagraph } from './zip-fixture';
@@ -72,12 +72,19 @@ describe('adding stories to a collection', () => {
     expect(storiesOf(made[0]!).map((story) => story.placed.marker.title)).toEqual(['the-lamp', 'The Harbour']);
   });
 
-  it('is on the File menu of a collection and a series, and nowhere else', () => {
+  it('is reached from the File menu’s one Import item, whatever the format', () => {
+    // Addendum 33: two items became one, and which kinds are offered is
+    // `importChoices`' answer rather than the menu's — so the menu says the
+    // same thing everywhere and the chooser says what applies here.
     const items = (format: 'short_story' | 'novel' | 'series') =>
       menusFor(format).flatMap((menu) => menu.items.filter(Boolean).map((item) => [item!.command, item!.label]));
-    expect(items('short_story')).toContainEqual(['file.importStories', 'Add stories to the collection…']);
-    expect(items('series')).toContainEqual(['file.importStories', 'Add episodes to the series…']);
-    expect(items('novel').map(([command]) => command)).not.toContain('file.importStories');
+    for (const format of ['short_story', 'novel', 'series'] as const) {
+      expect(items(format)).toContainEqual(['file.import', 'Import…']);
+      expect(items(format).map(([command]) => command)).not.toContain('file.importStories');
+    }
+    expect(importChoices('short_story').map((choice) => choice.kind)).toContain('stories');
+    expect(importChoices('series').map((choice) => choice.kind)).toContain('episodes');
+    expect(importChoices('novel').map((choice) => choice.kind)).not.toContain('stories');
   });
 });
 

@@ -1,4 +1,5 @@
 import { BARE_LABEL, CHAPTER_HEAD, pageNumberParagraphs, summarise, type ImportedElement, type ImportedScript } from './importing.js';
+import { ALL_CHAPTER_MARKS, type ChapterMarks } from './import-plan.js';
 import { scenesFrom, ImportError } from './import-fdx.js';
 import { readLaidOutLines, type LaidOutLine } from './import-lines.js';
 import { walkXml, type XmlTag } from './xml-walk.js';
@@ -614,13 +615,23 @@ const BREAK_MARK = /^[\s*#~_\-—–•·.]{1,12}$/;
  * line after it. A bare digit is asked about only once the page numbers
  * have been taken out, which `docxToProse` does first.
  */
-export const opensChapter = (paragraph: DocxParagraph): boolean => {
+export const opensChapter = (
+  paragraph: DocxParagraph,
+  /**
+   * Which of the four a writer has left on (addendum 33). Every one of them
+   * by default, which is exactly what this did before there was a choice —
+   * so nothing that called it reads a document differently.
+   */
+  marks: ChapterMarks = ALL_CHAPTER_MARKS,
+): boolean => {
   if (paragraph.pictures.length > 0) return false;
-  if (paragraph.outline === 0) return true;
+  if (marks.heading && paragraph.outline === 0) return true;
   const short = paragraph.plain.length > 0 && paragraph.plain.length <= 60;
-  if (short && CHAPTER_HEAD.test(paragraph.plain)) return true;
-  if (BARE_LABEL.test(paragraph.plain.trim())) return true;
-  if (paragraph.pageBreakBefore && short && (paragraph.caps || paragraph.align === 'center')) return true;
+  if (marks.chapterLine && short && CHAPTER_HEAD.test(paragraph.plain)) return true;
+  if (marks.numeral && BARE_LABEL.test(paragraph.plain.trim())) return true;
+  if (marks.pageBreak && paragraph.pageBreakBefore && short && (paragraph.caps || paragraph.align === 'center')) {
+    return true;
+  }
   return false;
 };
 
@@ -640,7 +651,10 @@ const kept = (paragraph: DocxParagraph): Record<string, string | number | boolea
  * Everything is kept: nothing in the document is dropped for being a kind
  * this could not place, it becomes a paragraph.
  */
-export const docxToProse = (doc: DocxDocument, options: { title?: string } = {}): ImportedScript => {
+export const docxToProse = (
+  doc: DocxDocument,
+  options: { title?: string; marks?: ChapterMarks } = {},
+): ImportedScript => {
   const elements: ImportedElement[] = [];
   const warnings: string[] = [];
   let title = options.title ?? '';
@@ -665,7 +679,7 @@ export const docxToProse = (doc: DocxDocument, options: { title?: string } = {})
     const attributes = kept(paragraph);
     const carry = Object.keys(attributes).length > 0 ? { attributes } : {};
 
-    if (opensChapter(paragraph)) {
+    if (opensChapter(paragraph, options.marks)) {
       elements.push({ type: 'scene_heading', text: paragraph.plain, ...carry });
       return;
     }
@@ -706,8 +720,11 @@ export const docxToProse = (doc: DocxDocument, options: { title?: string } = {})
 };
 
 /** Read a Word document for the format it is going into: by geometry for a script, by headings for a book. */
-export const docxToImport = (doc: DocxDocument, format: ProjectFormat, options: { title?: string } = {}): ImportedScript =>
-  isProseFormat(format) ? docxToProse(doc, options) : docxToScript(doc, options);
+export const docxToImport = (
+  doc: DocxDocument,
+  format: ProjectFormat,
+  options: { title?: string; marks?: ChapterMarks } = {},
+): ImportedScript => (isProseFormat(format) ? docxToProse(doc, options) : docxToScript(doc, options));
 
 /**
  * A Word document as markdown, for the note importer (§5): headings become

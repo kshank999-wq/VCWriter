@@ -1,17 +1,27 @@
 import { useMemo, useRef, useState } from 'react';
 import {
+  ALL_CHAPTER_MARKS,
   appendImportedEpisode,
   appendImportedStory,
   buildProjectFromImport,
+  CHAPTER_MARKS,
+  defaultSplit,
+  describeMarks,
   docxToImport,
   ensureFirstEpisode,
+  formatForKind,
   isCollection,
   isProseFormat,
+  landsInLayout,
   nounsFor,
   readDocx,
   readFinalDraft,
   readLaidOutLines,
+  textToProse,
+  type ChapterMarks,
   type DocxDocument,
+  type ImportKind,
+  type PassageSplit,
   type ImportedCharacter,
   type ImportedLocation,
   type ImportedScene,
@@ -50,13 +60,25 @@ import { bareName, countOf, shifted } from '../read-import';
 
 interface ImportDialogProps {
   open: boolean;
+  /**
+   * What is being imported, chosen before the file (addendum 33). It decides
+   * the title, which files are offered, which format is made and which
+   * controls there are — so a writer bringing in a novel never meets a screen
+   * about screenplays, and the format select that used to decide it is absent
+   * on every kind that already said.
+   */
+  kind: ImportKind;
   onClose(): void;
   /** Adopt the built project. It arrives unsaved: the writer says where. */
   onImported(file: ProjectFile): void;
 }
 
 /** A file as read: once, as a script; or a Word document, read for whichever format is chosen. */
-type Source = { kind: 'script'; script: ImportedScript } | { kind: 'word'; doc: DocxDocument; title: string };
+type Source =
+  | { kind: 'script'; script: ImportedScript }
+  | { kind: 'word'; doc: DocxDocument; title: string }
+  /** Plain text, kept as text so it can be read again when the marks change. */
+  | { kind: 'text'; text: string; title: string };
 
 interface Part {
   name: string;
@@ -83,11 +105,40 @@ const PROSE_FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string }> = [
   { value: 'instructional', label: 'Instructional or textbook' },
 ];
 
-/** What a part reads as, for the format it is going into. */
-const scriptOf = (part: Part, format: ProjectFormat): ImportedScript =>
-  part.source.kind === 'script' ? part.source.script : docxToImport(part.source.doc, format, { title: part.source.title });
+/**
+ * What a part reads as, for the format it is going into and the marks that
+ * are on. **Re-read rather than counted**: turning a mark off and watching
+ * the chapter figure move is the document answering, where an estimate would
+ * be this screen guessing about somebody else's manuscript.
+ */
+const scriptOf = (part: Part, format: ProjectFormat, marks: ChapterMarks): ImportedScript => {
+  if (part.source.kind === 'script') return part.source.script;
+  if (part.source.kind === 'text') return textToProse(part.source.text, { title: part.source.title, marks });
+  return docxToImport(part.source.doc, format, { title: part.source.title, marks });
+};
 
-const readPart = async (chosen: File): Promise<Part> => {
+/**
+ * A file read for the kind being imported.
+ *
+ * **The kind decides what may be read, and the reader says so rather than
+ * only the picker.** `accept` is a filter the file dialog applies and a
+ * renamed file walks straight past, so a plain-text file offered as a script
+ * has to be refused here — a `.txt` has no indents to read a screenplay's
+ * format out of, and reading one as prose because it is prose-shaped would be
+ * the dialog deciding what the writer came to import.
+ */
+const readPart = async (chosen: File, prose: boolean): Promise<Part> => {
+  if (prose) {
+    if (/\.(txt|md|markdown|text)$/i.test(chosen.name)) {
+      return { name: chosen.name, source: { kind: 'text', text: await chosen.text(), title: bareName(chosen.name) } };
+    }
+    if (/\.docx$/i.test(chosen.name)) {
+      const { readDocxParts } = await import('../read-docx');
+      const doc = readDocx(await readDocxParts(await chosen.arrayBuffer()));
+      return { name: chosen.name, source: { kind: 'word', doc, title: bareName(chosen.name) } };
+    }
+    throw new Error('That is not a Word document or a text file. Those are the two this reads.');
+  }
   if (/\.fdx$/i.test(chosen.name)) {
     return { name: chosen.name, source: { kind: 'script', script: readFinalDraft(await chosen.text()) } };
   }
@@ -109,11 +160,50 @@ const readPart = async (chosen: File): Promise<Part> => {
 /** A format that is made of parts, each of which may arrive as its own file. */
 const takesSeveral = (format: ProjectFormat): boolean => format === 'series' || isCollection(format);
 
-export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
+/** What the kind is called at the top, and which files it will read. */
+const WORDS: Record<string, { title: string; picker: string; accept: string; explain: string }> = {
+  script: {
+    picker: 'Script file',
+    title: 'Import a script',
+    accept: '.fdx,.docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    explain:
+      'A Final Draft document (.fdx), a Word document (.docx) or a PDF. Final Draft says what every line is, so nothing is guessed. A Word document is read by its indents and a PDF by where each line sits on the page — which is what a screenplay’s format actually is — and anything worked out that way is marked. Choose several to bring in a series one episode after another.',
+  },
+  novel: {
+    picker: 'Manuscript file',
+    title: 'Import a novel',
+    accept: '.docx,.txt,.md,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain',
+    explain:
+      'A Word document (.docx) or plain text, as one manuscript. A Word document keeps its formatting — the face and size each paragraph was set in. Once it is read you say where the chapters fall, before anything is made.',
+  },
+  instructional: {
+    picker: 'Book file',
+    title: 'Import an instructional book',
+    accept: '.docx,.txt,.md,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain',
+    explain:
+      'A Word document (.docx) or plain text. Its headings become sections, its pictures become figures, and the face and size each paragraph was set in are kept.',
+  },
+  collection: {
+    picker: 'Story files',
+    title: 'Import a collection of short stories',
+    accept: '.docx,.txt,.md,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain',
+    explain:
+      // Deliberately naming no unit: the figures and the sentence under the
+      // marks both read the noun table, and a third word here would be a
+      // third answer to what was found (addendum 16 §6c).
+      'One document per story, chosen all at once or added a file at a time. Once they are read you put them in order and say where each story divides. Every story opens on a page of its own.',
+  },
+};
+
+export function ImportDialog({ open, kind, onClose, onImported }: ImportDialogProps) {
   const dialog = useModal(open);
   const picker = useRef<HTMLInputElement>(null);
   const [stage, setStage] = useState<Stage>({ kind: 'waiting' });
-  const [format, setFormat] = useState<ProjectFormat>('screenplay');
+  const [format, setFormat] = useState<ProjectFormat>(formatForKind(kind) ?? 'screenplay');
+  // Which of the four signals divides the document (addendum 33), and how
+  // much of a chapter goes in a beat. Both start where the format says.
+  const [marks, setMarks] = useState<ChapterMarks>(ALL_CHAPTER_MARKS);
+  const [split, setSplit] = useState<PassageSplit>(() => defaultSplit(formatForKind(kind) ?? 'screenplay'));
   const [fileCast, setFileCast] = useState(true);
   const [keepLocations, setKeepLocations] = useState(true);
   // One story or many (addendum 22 §2): only the short-story format asks.
@@ -122,10 +212,26 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
   const parts = stage.kind === 'read' ? stage.parts : [];
   // What was read, as the format it is going into: the first file, which
   // is the one the project is made from.
-  const script = useMemo<ImportedScript | null>(() => (parts[0] ? scriptOf(parts[0], format) : null), [parts, format]);
-  // A book is offered only when every file is a Word document.
-  const allWord = parts.length > 0 && parts.every((part) => part.source.kind === 'word');
-  const formats = allWord ? [...FORMATS, ...PROSE_FORMATS] : FORMATS;
+  const script = useMemo<ImportedScript | null>(
+    () => (parts[0] ? scriptOf(parts[0], format, marks) : null),
+    [parts, format, marks],
+  );
+  const prose = isProseFormat(format);
+  // The kind already said what this is, so the only format question left is
+  // *which* script — and on a book there is none at all.
+  const formats = prose ? PROSE_FORMATS : FORMATS;
+  const words = WORDS[kind] ?? WORDS['script']!;
+  // **What will be made, rather than how many headings there are.** With
+  // every mark off a manuscript has no headed scene and is still one chapter,
+  // and the figure reading 0 over a document about to arrive whole is the
+  // screen disagreeing with the import an inch below it. This is
+  // `materialiseScenes`' own filter; a script keeps counting its sluglines,
+  // a slugline being a heading rather than a unit.
+  const chapters = script
+    ? prose
+      ? script.scenes.filter((scene) => scene.heading.trim().length > 0 || scene.elements.length > 0).length
+      : script.scenes.filter((scene) => scene.heading.trim().length > 0).length
+    : 0;
 
   const read = async (chosen: FileList) => {
     const files = Array.from(chosen);
@@ -134,7 +240,7 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
     const failed: string[] = [];
     for (const one of files) {
       try {
-        read.push(await readPart(one));
+        read.push(await readPart(one, prose));
       } catch (error) {
         const message = error instanceof Error ? error.message : `${one.name} could not be read.`;
         failed.push(files.length === 1 ? message : `${one.name}: ${message}`);
@@ -144,7 +250,6 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
       setStage({ kind: 'failed', message: failed[0] ?? 'That file could not be read.' });
       return;
     }
-    if (!read.every((part) => part.source.kind === 'word') && isProseFormat(format)) setFormat('screenplay');
     setStage({ kind: 'read', parts: read, failed });
   };
 
@@ -161,13 +266,13 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
 
   const finish = () => {
     if (!script || stage.kind !== 'read') return;
-    let built = buildProjectFromImport(script, { format, fileCast, keepLocations, stories }).file;
+    let built = buildProjectFromImport(script, { format, fileCast, keepLocations, stories, passages: split }).file;
     // A series' first script is its first episode, on a page of its own,
     // so that what follows is the second (addendum 22 §4a).
     if (format === 'series') built = ensureFirstEpisode(built, { title: script.title || bareName(stage.parts[0]!.name) });
     if (takesSeveral(format)) {
       for (const part of stage.parts.slice(1)) {
-        const next = scriptOf(part, format);
+        const next = scriptOf(part, format, marks);
         const title = next.title || bareName(part.name);
         const added = format === 'series' ? appendImportedEpisode(built, next, { title }) : appendImportedStory(built, next, { title });
         if (added) built = added.file;
@@ -190,11 +295,11 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
   const wholeNoun = format === 'series' ? 'series' : nouns.work.toLowerCase();
 
   return (
-    <dialog ref={dialog} className="track-dialog import-dialog" aria-label="Import a script" onClose={close}>
+    <dialog ref={dialog} className="track-dialog import-dialog" aria-label={words.title} onClose={close}>
       {open ? (
         <>
           <header className="track-dialog-title">
-            <span className="bar-title">Import a script</span>
+            <span className="bar-title">{words.title}</span>
             <button type="button" className="ghost" aria-label="Close" onClick={close}>
               ×
             </button>
@@ -205,24 +310,15 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
               ref={picker}
               type="file"
               multiple
-              accept=".fdx,.docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              aria-label="Script file"
+              accept={words.accept}
+              aria-label={words.picker}
               className="import-picker"
               onChange={(event) => {
                 if (event.target.files && event.target.files.length > 0) void read(event.target.files);
               }}
             />
 
-            {stage.kind === 'waiting' ? (
-              <p className="muted">
-                A Final Draft document (<code>.fdx</code>), a Word document (<code>.docx</code>) or a PDF. Final Draft
-                says what every line is, so nothing is guessed. A Word document keeps its formatting — the face and
-                size each paragraph was set in — and is read by its headings for a book and by its indents for a
-                script. A PDF is read from where each line sits on the page — which is what a screenplay&rsquo;s
-                format actually is — and anything worked out that way is marked. Choose several files to bring in a
-                series or a collection one part after another, each on a page of its own.
-              </p>
-            ) : null}
+            {stage.kind === 'waiting' ? <p className="muted">{words.explain}</p> : null}
 
             {stage.kind === 'reading' ? (
               <p className="muted">Reading {stage.count === 1 ? 'the document' : `${stage.count} documents`}…</p>
@@ -234,25 +330,90 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
               </p>
             ) : null}
 
-            {script ? <Found script={script} prose={isProseFormat(format)} /> : null}
+            {script ? (
+              <Found script={script} prose={prose} divisions={chapters} divisionWord={nouns.unitPlural} />
+            ) : null}
 
             {script ? (
               <>
                 <h4>What to make of it</h4>
-                <label className="field">
-                  Format
-                  <select
-                    aria-label="Format"
-                    value={format}
-                    onChange={(event) => setFormat(event.target.value as ProjectFormat)}
-                  >
-                    {formats.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {/* **Only where there is still a question.** The kind chosen
+                    at the door said a novel is a novel; what it did not say
+                    is which of the four kinds of script this is, so that is
+                    the one format control left (addendum 33). */}
+                {prose && kind !== 'collection' ? null : (
+                  <label className="field">
+                    Format
+                    <select
+                      aria-label="Format"
+                      value={format}
+                      onChange={(event) => {
+                        const next = event.target.value as ProjectFormat;
+                        setFormat(next);
+                        setSplit(defaultSplit(next));
+                      }}
+                    >
+                      {formats.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {/* Where the chapters fall, and how much of one is in a beat
+                    (addendum 33). Both are a book's alone: a script's scene
+                    is its own division and has been one beat since the
+                    importer was written. */}
+                {prose ? (
+                  <>
+                    <fieldset className="import-marks">
+                      <legend>Divide it at</legend>
+                      {CHAPTER_MARKS.map((mark) => (
+                        <label className="check" key={mark.id}>
+                          <input
+                            type="checkbox"
+                            aria-label={mark.label}
+                            checked={marks[mark.id]}
+                            onChange={(event) => setMarks({ ...marks, [mark.id]: event.target.checked })}
+                          />
+                          <span>
+                            {mark.label}
+                            <span className="import-mark-note">{mark.note}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </fieldset>
+                    {/* Said in words, and read off the document rather than
+                        estimated: turning one off moves the chapter figure
+                        above. */}
+                    <p className="muted small" role="status">
+                      {describeMarks(marks, chapters, format)}
+                    </p>
+
+                    {/* **Nothing names a unit itself** (addendum 16 §6c): a
+                        collection's are Sections and a textbook's too, and
+                        the label stands beside a figure that already reads
+                        the noun table. */}
+                    <label className="field">
+                      Each {nouns.unit.toLowerCase()} arrives as
+                      <select
+                        aria-label={`Each ${nouns.unit.toLowerCase()} arrives as`}
+                        value={split}
+                        onChange={(event) => setSplit(event.target.value as PassageSplit)}
+                      >
+                        <option value="chapter">One {nouns.sub.toLowerCase()}, to divide by hand</option>
+                        <option value="paragraph">A {nouns.sub.toLowerCase()} for every paragraph</option>
+                      </select>
+                    </label>
+                    <p className="muted small">
+                      {split === 'chapter'
+                        ? `The ${nouns.unit.toLowerCase()} comes in whole. The ${nouns.unit} and ${nouns.sub} tools on the manuscript bar divide it where you want.`
+                        : `Every paragraph is its own ${nouns.sub.toLowerCase()} on the timeline. Right for a short story; a long book arrives as hundreds of them.`}
+                    </p>
+                  </>
+                ) : null}
                 {/* The short-story format holds one story or many, and a
                     document cannot say which it is (addendum 22 §2): its
                     headings divide one story into sections, or begin a story
@@ -271,6 +432,15 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
                       File ▸ Add stories to the collection…
                     </label>
                   </fieldset>
+                ) : null}
+                {/* **Said before the press**, because the room that opens is
+                    not the one an import has always landed in (addendum 33,
+                    Ken: *in between, it will create the layout where you can
+                    reorder how the stories are*). */}
+                {landsInLayout(format) ? (
+                  <p className="muted small">
+                    The Layout room opens on them, where the order is dragged and the chapter pages are set.
+                  </p>
                 ) : null}
                 {/* A book has no cast list to file and no sluglines to write
                     up, so the two choices are absent rather than greyed. */}
@@ -307,7 +477,7 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
                         <h4>{parts.length} files, in order</h4>
                         <ol className="import-list import-order" aria-label="Files in order">
                           {parts.map((part, index) => {
-                            const one = scriptOf(part, format);
+                            const one = scriptOf(part, format, marks);
                             const counted = countOf(one);
                             const title = one.title || bareName(part.name);
                             return (
@@ -386,8 +556,18 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
 }
 
 /** What the reader found, before anything is made from it. */
-function Found({ script, prose }: { script: ImportedScript; prose: boolean }) {
-  const scenes = script.scenes.filter((scene: ImportedScene) => scene.heading.trim().length > 0).length;
+function Found({
+  script,
+  prose,
+  divisions,
+  divisionWord,
+}: {
+  script: ImportedScript;
+  prose: boolean;
+  divisions: number;
+  /** What this format calls them, from the noun table: never the literal word. */
+  divisionWord: string;
+}) {
   const speeches = script.characters.reduce(
     (total: number, person: ImportedCharacter) => total + person.speeches,
     0,
@@ -400,9 +580,10 @@ function Found({ script, prose }: { script: ImportedScript; prose: boolean }) {
     <div className="import-found">
       <div className="report-figures">
         {/* A script's divisions are scenes whatever format it is going into;
-            a Word document read as a book divides at its chapter headings, and
-            what is counted under them is what a book is made of. */}
-        <Figure label={prose ? 'Chapters' : 'Scenes'} value={String(scenes)} />
+            a book's are read off the noun table, so an instructional import
+            counts Sections and a novel Chapters rather than one literal word
+            for both (addendum 16 §6c). */}
+        <Figure label={prose ? divisionWord : 'Scenes'} value={String(divisions)} />
         {prose ? (
           <>
             <Figure label="Paragraphs" value={String(count('paragraph') + count('blockquote'))} />
@@ -423,6 +604,37 @@ function Found({ script, prose }: { script: ImportedScript; prose: boolean }) {
           {script.title}
           {script.author ? ` — ${script.author}` : ''}
         </p>
+      ) : null}
+
+      {/*
+        **A book's divisions are not its locations.** `script.locations` is
+        read off the headings, which in a screenplay are sluglines and in a
+        manuscript are the chapters — so a novel drew *Where it happens* over
+        CHAPTER ONE, CHAPTER THREE: THE ROAD, each with *1 scene* beside it:
+        addendum 16 §6c's vocabulary fault on the one screen a writer uses to
+        decide whether the reader found their chapters. What they want to see
+        there is exactly that list, said as what it is and in the format's own
+        noun, with how much is under each rather than a count of scenes a book
+        does not have.
+      */}
+      {prose ? (
+        <>
+          <h4>The {divisionWord.toLowerCase()}</h4>
+          <ul className="import-list">
+            {script.scenes
+              .filter((scene: ImportedScene) => scene.heading.trim().length > 0)
+              .slice(0, 12)
+              .map((scene: ImportedScene, index: number) => (
+                <li key={`${scene.heading}-${index}`}>
+                  <span>{scene.heading}</span>
+                  <span className="muted">
+                    {scene.elements.length} {scene.elements.length === 1 ? 'paragraph' : 'paragraphs'}
+                  </span>
+                </li>
+              ))}
+            {divisions > 12 ? <li className="muted">and {divisions - 12} more</li> : null}
+          </ul>
+        </>
       ) : null}
 
       {script.characters.length > 0 ? (
@@ -450,7 +662,7 @@ function Found({ script, prose }: { script: ImportedScript; prose: boolean }) {
         </>
       ) : null}
 
-      {script.locations.length > 0 ? (
+      {!prose && script.locations.length > 0 ? (
         <>
           <h4>Where it happens</h4>
           <ul className="import-list">

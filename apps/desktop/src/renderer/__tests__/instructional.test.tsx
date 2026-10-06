@@ -380,10 +380,13 @@ describe('the research menu on a book', () => {
     expect(screen.getByText('Used in the script')).toBeTruthy();
   });
 
-  it('offers the graphics library on a novel too, and the importer only on a book', () => {
+  it('offers the graphics library and the importer on a novel too', () => {
+    // Addendum 33: the note importer was an instructional book's alone, which
+    // is a fair reading of who has a folder of lecture notes and a wrong one
+    // about who has research — nothing in `importFiles` asks the format.
     research(createProjectFile({ title: 'A Novel', format: 'novel' }));
     expect(screen.getByText('Graphics')).toBeTruthy();
-    expect(screen.queryByText('Import')).toBeNull();
+    expect(screen.getByText('Import')).toBeTruthy();
   });
 
   it('leaves a screenplay’s menu exactly as it was', () => {
@@ -392,8 +395,11 @@ describe('the research menu on a book', () => {
       // getAll, because a screenplay also seeds a *folder* called Locations.
       expect(screen.getAllByText(kept).length).toBeGreaterThan(0);
     }
-    // And is offered neither of the instructional screens.
+    // The graphics library is a book's; the note importer is everybody's
+    // (addendum 33), a screenwriter's drawer of clippings being exactly what
+    // it brings in.
     expect(screen.queryByText('Graphics')).toBeNull();
+    expect(screen.getByText('Import')).toBeTruthy();
   });
 });
 

@@ -11,6 +11,7 @@ import { createProjectFile } from './project-file.js';
 import { CHARACTER_TYPES, characterCategoriesInOrder } from './characters.js';
 import { CHAPTER_HEAD, bareCue, type ImportedScript } from './importing.js';
 import { BARE_LABEL } from './import-docx.js';
+import { defaultSplit, type PassageSplit } from './import-plan.js';
 import type { ProjectFile } from './project-file.js';
 import { defaultUnitKind } from './project-file.js';
 import { defaultMarkerKind } from './markers.js';
@@ -66,6 +67,8 @@ export interface ImportOptions {
    * story of each chapter heading, a collection. Ignored elsewhere.
    */
   stories?: 'one' | 'many';
+  /** How much of a chapter goes in a beat (addendum 33); the format's own answer by default. */
+  passages?: PassageSplit;
 }
 
 export interface ImportResult {
@@ -141,6 +144,12 @@ export interface MaterialiseOptions {
    * lost to the choice.
    */
   headings?: 'markers' | 'sections';
+  /**
+   * How much of a chapter goes in a beat (addendum 33). Defaults to the
+   * format's own answer, so every caller that existed before the choice did
+   * reads as it did.
+   */
+  passages?: PassageSplit;
 }
 
 export interface Materialised {
@@ -337,10 +346,16 @@ export const materialiseScenes = (script: ImportedScript, options: MaterialiseOp
       );
     }
 
-    // A prose section arrives as a beat per paragraph (addendum 21 §10),
-    // so the timeline's unit is the writer's. A script's scene stays one
-    // beat, as it always has.
-    const passages = prose ? beatsFrom(elements) : [{ elements, title: '' }];
+    // **A chapter is one beat, or a beat per paragraph** (addendum 33).
+    // §10 made every paragraph a beat at Ken's ask, which is right for a
+    // short story worked over scene by scene and unreadable on a novel —
+    // four hundred pages arriving as four hundred beats. So the format
+    // answers unless the writer said otherwise, and a script's scene stays
+    // one beat as it always has.
+    const passages =
+      prose && (options.passages ?? defaultSplit(format)) === 'paragraph'
+        ? beatsFrom(elements)
+        : [{ elements, title: '' }];
     const keys = initialOrderKeys(Math.max(1, passages.length));
     passages.forEach((passage, at) => {
       beats.push(
@@ -427,6 +442,7 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
     after: null,
     sequenceLabels: true,
     ...(oneStory ? { headings: 'sections' as const } : {}),
+    ...(options.passages ? { passages: options.passages } : {}),
   });
   const { units, beats, assets, words } = made;
   // A single story is one marker over all its sections, named as the story
@@ -451,7 +467,19 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
       : made.markers;
 
   // ---------------------------------------------------------- the locations
-  const locationsFolder = base.researchCategories.find((category) => category.systemKey === 'locations');
+  //
+  // **A heading is not a place** (addendum 33). `summarise` reads the
+  // locations off the scene headings, which in a screenplay are sluglines and
+  // in a manuscript are the chapters — so importing a novel filed *Chapter
+  // One*, *II* and *Chapter Three: The Road* under Research ▸ Locations, three
+  // places that do not exist, each noted *1 scene* in a format that has none.
+  // An instructional book escaped it only because its menu has no Locations
+  // folder at all, which is the absence doing a job it was never asked to do.
+  // So prose files none, and the dialog's own checkbox stays absent for the
+  // same reason rather than defaulting to true over a gate that is not there.
+  const locationsFolder = isProseFormat(format)
+    ? undefined
+    : base.researchCategories.find((category) => category.systemKey === 'locations');
   const locationKeys = initialOrderKeys(Math.max(1, script.locations.length));
   const research: ResearchItem[] =
     options.keepLocations === false || !locationsFolder

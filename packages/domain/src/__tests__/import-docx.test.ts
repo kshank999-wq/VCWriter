@@ -512,12 +512,51 @@ describe('a manuscript with typed page numbers and bare labels (§10)', () => {
     expect(script.warnings.some((warning) => /page numbers/.test(warning))).toBe(false);
   });
 
-  it('builds a bare label into a chapter whose number is derived and whose title is empty, a beat per paragraph', () => {
-    const doc = document(
+  const bareLabelDoc = () =>
+    document(
       [para('One', { align: 'center' }), para(body(500, 'a')), para(body(500, 'b')), para('* * *', { align: 'center' }), para(body(100, 'c')), para('Two'), para(body(30, 'd'))].join(''),
     );
-    const built = buildProjectFromImport(docxToProse(readDocx({ document: doc })), { format: 'novel' });
+
+  it('builds a bare label into a chapter whose number is derived and whose title is empty', () => {
+    const built = buildProjectFromImport(docxToProse(readDocx({ document: bareLabelDoc() })), { format: 'novel' });
     expect(built.file.markers.map((marker) => marker.title)).toEqual(['', '']);
+  });
+
+  it('files no locations from a manuscript, a heading not being a place', () => {
+    // Addendum 33: `summarise` reads locations off the scene headings, which
+    // in a manuscript are the chapters — so a novel came in with *One* and
+    // *Two* filed under Research ▸ Locations, two places that do not exist.
+    const built = buildProjectFromImport(docxToProse(readDocx({ document: bareLabelDoc() })), { format: 'novel' });
+    expect(built.locations).toBe(0);
+    expect(built.file.researchItems).toHaveLength(0);
+    // The gate is the format and not the absence of a folder: a novel keeps
+    // its Locations shelf, which is why the bug was a novel's alone.
+    expect(built.file.researchCategories.some((one) => one.systemKey === 'locations')).toBe(true);
+  });
+
+  it('brings a novel’s chapter in as one beat, to be divided by hand', () => {
+    // Addendum 33, from Ken: *each chapter will go into one long beat. Then
+    // you'll have to divide it up manually.* Four hundred pages arriving as
+    // four hundred beats is a timeline nobody can read.
+    const built = buildProjectFromImport(docxToProse(readDocx({ document: bareLabelDoc() })), { format: 'novel' });
+    const first = built.file.units.find((unit) => unit.id === built.file.markers[0]!.unitId)!;
+    const beats = built.file.beats.filter((beat) => beat.unitId === first.id);
+    expect(beats).toHaveLength(1);
+    expect(beats[0]?.manuscript.elements.map((element) => element.type)).toEqual([
+      'paragraph',
+      'paragraph',
+      'scene_break',
+      'paragraph',
+    ]);
+  });
+
+  it('still makes a beat per paragraph where that is asked for', () => {
+    // Addendum 21 §10's own behaviour, which is a collection's default and a
+    // novel's on request — the choice rather than a change of mind.
+    const built = buildProjectFromImport(docxToProse(readDocx({ document: bareLabelDoc() })), {
+      format: 'novel',
+      passages: 'paragraph',
+    });
     const first = built.file.units.find((unit) => unit.id === built.file.markers[0]!.unitId)!;
     const beats = built.file.beats.filter((beat) => beat.unitId === first.id);
     // A beat per paragraph; the scene break rides at the end of the one before it.

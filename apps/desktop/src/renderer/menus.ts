@@ -121,15 +121,14 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       ...(format === 'series' ? [{ command: 'file.new.episode' as CommandId, label: 'New episode…' }] : []),
       null,
       { command: 'file.open', label: 'Open…', accelerator: 'CmdOrCtrl+O' },
-      { command: 'file.import', label: 'Import a script…' },
-      // A collection's and a series' (addendum 22 §4, §4a): each document
-      // chosen becomes a story, or an episode, after the last. Absent
-      // elsewhere, since a novel has no stories to add one to.
-      ...(format !== null && isCollection(format)
-        ? [{ command: 'file.importStories' as CommandId, label: 'Add stories to the collection…' }]
-        : format === 'series'
-          ? [{ command: 'file.importStories' as CommandId, label: 'Add episodes to the series…' }]
-          : []),
+      // **One item, and the question behind it** (addendum 33, from Ken).
+      // This was two — *Import a script…* and *Add stories to the
+      // collection…* — which between them covered four of the eight things
+      // there are to import and named the format in the label of one of
+      // them. What is being imported is asked in the dialog now, where the
+      // rows can say what each one does and whether it replaces what is
+      // open; `importChoices` decides which are offered.
+      { command: 'file.import', label: 'Import…' },
       { command: 'file.projects', label: 'Delete a project…' },
       null,
       { command: 'file.save', label: 'Save', accelerator: 'CmdOrCtrl+S' },

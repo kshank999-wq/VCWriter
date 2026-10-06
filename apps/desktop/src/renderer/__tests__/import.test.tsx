@@ -43,13 +43,14 @@ const fileNamed = (name: string, body: string | ArrayBuffer): File => {
   return made;
 };
 
-const chooseMany = (files: File[]) => {
-  const picker = screen.getByLabelText('Script file') as HTMLInputElement;
+const chooseMany = (files: File[], label = 'Script file') => {
+  const picker = screen.getByLabelText(label) as HTMLInputElement;
   Object.defineProperty(picker, 'files', { value: files, configurable: true });
   fireEvent.change(picker);
 };
 
-const choose = (name: string, body: string | ArrayBuffer) => chooseMany([fileNamed(name, body)]);
+const choose = (name: string, body: string | ArrayBuffer, label?: string) =>
+  chooseMany([fileNamed(name, body)], label);
 
 /** A second script, for a series brought in a file at a time. */
 const WRECK = `<?xml version="1.0" encoding="UTF-8"?>
@@ -87,7 +88,7 @@ const SCREENPLAY = () =>
 
 describe('importing a script', () => {
   it('shows what it found before it makes anything of it', async () => {
-    render(<ImportDialog open onClose={() => {}} onImported={() => {}} />);
+    render(<ImportDialog open kind="script" onClose={() => {}} onImported={() => {}} />);
     // Nothing to import until a file is chosen.
     expect((screen.getByRole('button', { name: 'Import' }) as HTMLButtonElement).disabled).toBe(true);
 
@@ -105,7 +106,7 @@ describe('importing a script', () => {
 
   it('makes a project broken into scenes with the cast filed', async () => {
     const made: ProjectFile[] = [];
-    render(<ImportDialog open onClose={() => {}} onImported={(file) => made.push(file)} />);
+    render(<ImportDialog open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
     choose('lighthouse.fdx', FDX);
     await screen.findByText('Who is in it');
 
@@ -130,7 +131,7 @@ describe('importing a script', () => {
   });
 
   it('says so plainly when the file is none of the kinds it reads', async () => {
-    render(<ImportDialog open onClose={() => {}} onImported={() => {}} />);
+    render(<ImportDialog open kind="script" onClose={() => {}} onImported={() => {}} />);
     choose('notes.txt', 'just some notes');
     await screen.findByRole('alert');
     expect(screen.getByRole('alert').textContent).toMatch(/not a Final Draft document, a Word document or a PDF/);
@@ -141,17 +142,23 @@ describe('importing a script', () => {
    * indents for a script, and the choice between them is the format.
    */
   it('reads a Word document as a novel, chapter by heading, with the face and size kept', async () => {
+    // Opened as a novel (addendum 33), so there is no format to choose: the
+    // kind was answered at the door and the document is read by its headings
+    // from the first.
     const made: ProjectFile[] = [];
-    render(<ImportDialog open onClose={() => {}} onImported={(file) => made.push(file)} />);
-    choose('lighthouse.docx', NOVEL());
-    await screen.findByLabelText('Format');
-
-    // A book is offered only for a Word document, and choosing it reads the
-    // document again, by its headings this time.
-    fireEvent.change(screen.getByLabelText('Format'), { target: { value: 'novel' } });
+    render(<ImportDialog open kind="novel" onClose={() => {}} onImported={(file) => made.push(file)} />);
+    choose('lighthouse.docx', NOVEL(), 'Manuscript file');
     await screen.findByText('The Lighthouse — K. Shank');
+    expect(screen.queryByLabelText('Format')).toBeNull();
     const figures = [...document.querySelectorAll('.report-figure')].map((node) => node.textContent);
     expect(figures[0]).toBe('2Chapters');
+    // **A heading is not a place.** The headings are the chapters, so they are
+    // listed as what they are: the panel read *Where it happens* over CHAPTER
+    // ONE with *1 scene* beside it, on the one screen a writer uses to decide
+    // whether the reader found their chapters.
+    expect(screen.getByText('The chapters')).toBeTruthy();
+    expect(screen.queryByText('Where it happens')).toBeNull();
+    expect(screen.getByText('Chapter One: The Road')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Import' }));
     await waitFor(() => expect(made).toHaveLength(1));
@@ -159,15 +166,60 @@ describe('importing a script', () => {
     expect(file.project.format).toBe('novel');
     expect(file.units.map((unit) => unit.title)).toEqual(['Chapter One: The Road', 'Chapter Two']);
     expect(file.markers.map((marker) => marker.title)).toEqual(['The Road', '']);
-    // A beat per paragraph (addendum 21 §10): the chapter's two paragraphs are two beats.
+    // One long beat per chapter, to divide by hand (addendum 33): the
+    // chapter's two paragraphs are one beat, and the formatting is kept.
     const chapter = file.beats.filter((beat) => beat.unitId === file.units[0]!.id);
-    expect(chapter.map((beat) => beat.manuscript.elements.map((element) => element.type))).toEqual([['paragraph'], ['paragraph']]);
-    expect(chapter[1]?.manuscript.elements[0]?.attributes).toEqual({ face: 'Garamond', size: 14 });
+    expect(chapter).toHaveLength(1);
+    expect(chapter[0]?.manuscript.elements.map((element) => element.type)).toEqual(['paragraph', 'paragraph']);
+    expect(chapter[0]?.manuscript.elements[1]?.attributes).toEqual({ face: 'Garamond', size: 14 });
+    // And nothing is filed under Locations, for the same reason one layer down.
+    expect(file.researchItems).toHaveLength(0);
+  });
+
+  it('divides where the writer says, and brings the manuscript in whole when nothing does', async () => {
+    // The options Ken asked for, and the half that matters: with every mark
+    // off the document does not divide at all, which is what a manuscript
+    // whose numerals are page numbers needs.
+    const made: ProjectFile[] = [];
+    render(<ImportDialog open kind="novel" onClose={() => {}} onImported={(file) => made.push(file)} />);
+    choose('lighthouse.docx', NOVEL(), 'Manuscript file');
+    await screen.findByText('The Lighthouse — K. Shank');
+
+    fireEvent.click(screen.getByLabelText('The word Chapter'));
+    fireEvent.click(screen.getByLabelText('A heading'));
+    fireEvent.click(screen.getByLabelText('A numeral on its own'));
+    fireEvent.click(screen.getByLabelText('A new page'));
+    await waitFor(() => {
+      const figures = [...document.querySelectorAll('.report-figure')].map((node) => node.textContent);
+      expect(figures[0]).toBe('1Chapters');
+    });
+    expect(screen.getByRole('status').textContent).toContain('Chapter tool');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(made).toHaveLength(1));
+    expect(made[0]!.units).toHaveLength(1);
+  });
+
+  it('says that a collection opens in Layout, before the press', async () => {
+    // Ken's *in between, it will create the layout where you can reorder how
+    // the stories are*: the room that opens is not the one an import has
+    // always landed in, so the screen says so first. The rule is
+    // `landsInLayout`'s and not this component's, or the sentence and the
+    // room could disagree.
+    render(<ImportDialog open kind="collection" onClose={() => {}} onImported={() => {}} />);
+    choose('lighthouse.docx', NOVEL(), 'Story files');
+    await screen.findByText(/The Layout room opens on them/);
+
+    cleanup();
+    render(<ImportDialog open kind="novel" onClose={() => {}} onImported={() => {}} />);
+    choose('lighthouse.docx', NOVEL(), 'Manuscript file');
+    await screen.findByText('The chapters');
+    expect(screen.queryByText(/The Layout room opens on them/)).toBeNull();
   });
 
   it('reads a Word screenplay by where its paragraphs sit', async () => {
     const made: ProjectFile[] = [];
-    render(<ImportDialog open onClose={() => {}} onImported={(file) => made.push(file)} />);
+    render(<ImportDialog open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
     choose('lighthouse.docx', SCREENPLAY());
     await screen.findByText('Who is in it');
     expect(screen.getByText('MAEVE')).toBeTruthy();
@@ -185,14 +237,14 @@ describe('importing a script', () => {
   });
 
   it('says so when a Word document is not one', async () => {
-    render(<ImportDialog open onClose={() => {}} onImported={() => {}} />);
+    render(<ImportDialog open kind="script" onClose={() => {}} onImported={() => {}} />);
     choose('broken.docx', '<html><body>not a document</body></html>');
     await screen.findByRole('alert');
     expect(screen.getByRole('alert').textContent).toMatch(/not a Word document/);
   });
 
   it('says so when the file claims to be Final Draft and is not', async () => {
-    render(<ImportDialog open onClose={() => {}} onImported={() => {}} />);
+    render(<ImportDialog open kind="script" onClose={() => {}} onImported={() => {}} />);
     choose('broken.fdx', '<html><body>not a script</body></html>');
     await screen.findByRole('alert');
     expect(screen.getByRole('alert').textContent).toMatch(/not a Final Draft document/);
@@ -204,7 +256,7 @@ describe('importing a script', () => {
    */
   it('brings a series in a file at a time, each episode on a page of its own, in the order listed', async () => {
     const made: ProjectFile[] = [];
-    render(<ImportDialog open onClose={() => {}} onImported={(file) => made.push(file)} />);
+    render(<ImportDialog open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
     chooseMany([fileNamed('lighthouse.fdx', FDX), fileNamed('wreck.fdx', WRECK), fileNamed('notes.txt', 'x')]);
     await screen.findByText('Who is in it');
     // A screenplay is one document: the rest are said to be left out.
@@ -235,7 +287,7 @@ describe('importing a script', () => {
 
   it('leaves a file out when asked, and imports one file as it always did', async () => {
     const made: ProjectFile[] = [];
-    render(<ImportDialog open onClose={() => {}} onImported={(file) => made.push(file)} />);
+    render(<ImportDialog open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
     chooseMany([fileNamed('lighthouse.fdx', FDX), fileNamed('wreck.fdx', WRECK)]);
     await screen.findByText('Who is in it');
     fireEvent.change(screen.getByLabelText('Format'), { target: { value: 'series' } });

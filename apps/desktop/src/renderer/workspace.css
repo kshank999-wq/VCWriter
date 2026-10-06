@@ -4787,6 +4787,104 @@ dialog.import-dialog {
   width: min(560px, calc(100vw - 40px));
 }
 
+/* The chooser (addendum 33): one row per thing there is to import, each
+   saying what it does under its label. It joins `.track-dialog`'s rule and
+   sets its width and nothing else — a second copy of the padding, border and
+   backdrop would be a third answer the first colour scheme could break. */
+dialog.import-chooser {
+  width: min(520px, calc(100vw - 40px));
+}
+
+.import-choices {
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* A row is the act, so it is a whole-width button rather than a label beside
+   one — the target is the thing you read. */
+.import-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+}
+
+.import-choice-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.import-choice-note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+  font-weight: 400;
+  white-space: normal;
+}
+
+/* Where the chapters fall. The note under each mark is the mark's own, so it
+   is tucked against it rather than reaching for a shared rule — addendum 09
+   §14a's `.field-note`: which control a note belongs to is said by the gap. */
+.import-marks {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.import-marks legend {
+  padding: 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.import-mark-note {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/*
+  A mark is a sentence, not a switch on a bar.
+
+  `.check` is the toolbar convention — 10px tracked capitals, `nowrap`, and
+  gold once ticked — which is right over a one-word label and shouts here: the
+  fieldset drew A HEADING over A LINE THE DOCUMENT ITSELF STYLES AS A
+  TOP-LEVEL HEADING, in gold, with all four on by default so nothing was
+  distinguished by the colour either. Narrowed rather than copied
+  (`.layout-section .check`'s shape): the label reads, the note under it
+  wraps and stays muted, and what is ticked is said by the box.
+*/
+.import-marks .check {
+  align-items: start;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+  white-space: normal;
+}
+
+.import-marks .check input {
+  margin-top: 2px;
+}
+
+.import-marks .check input:checked + span {
+  color: var(--text);
+}
+
 .import-picker {
   position: absolute;
   width: 1px;
