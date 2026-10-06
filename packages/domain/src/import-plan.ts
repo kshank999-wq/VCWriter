@@ -105,27 +105,34 @@ export const importChoices = (format: ProjectFormat | null): ImportChoice[] => {
     },
   ];
 
+  // **The heading says where these land, so the rows do not.** From Ken, of
+  // the graphics row: *just call it graphics.* He is right and the reason is
+  // the headings' own: *Into this project* is written once above all four, so
+  // *Graphics, into the library* says it a second time — and a label that
+  // repeats its heading is a label with nothing of its own to say. The same
+  // clause came off the other three, one screen having one rule; where each
+  // thing actually goes is in the note under it, which is what a note is for.
   if (format !== null && isCollection(format)) {
     choices.push({
       kind: 'stories',
-      label: 'More stories, into this collection',
-      note: 'Each document becomes a story after the last one here.',
+      label: 'More stories',
+      note: 'Each document becomes a story after the last one in this collection.',
       landing: 'here',
     });
   }
   if (format === 'series') {
     choices.push({
       kind: 'episodes',
-      label: 'More episodes, into this series',
-      note: 'Each document becomes the next episode, on a title page of its own.',
+      label: 'More episodes',
+      note: 'Each document becomes the next episode of this series, on a title page of its own.',
       landing: 'here',
     });
   }
   if (format !== null) {
     choices.push({
       kind: 'notes',
-      label: 'Notes, into Research',
-      note: 'Notes, documents and pictures to sort through. Nothing reaches the manuscript.',
+      label: 'Notes',
+      note: 'Documents and pictures onto the Research shelf, to sort through. Nothing reaches the manuscript.',
       landing: 'here',
     });
   }
@@ -137,7 +144,7 @@ export const importChoices = (format: ProjectFormat | null): ImportChoice[] => {
   if (format !== null && isProseFormat(format)) {
     choices.push({
       kind: 'graphics',
-      label: 'Graphics, into the library',
+      label: 'Graphics',
       note: 'Pictures into Research ▸ Graphics, ready to place in the book.',
       landing: 'here',
     });

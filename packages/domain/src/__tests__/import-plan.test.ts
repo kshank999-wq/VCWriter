@@ -89,6 +89,17 @@ describe('what the chooser offers', () => {
     }
   });
 
+  it('leaves where it lands to the heading, and says it in the note', () => {
+    // From Ken, of the graphics row: *just call it graphics*. The heading
+    // *Into this project* stands once above all four, so a label repeating it
+    // is the fact said twice; where each one actually goes is in its note.
+    for (const choice of importChoices('short_story').filter((one) => one.landing === 'here')) {
+      expect(choice.label).not.toMatch(/\binto\b/i);
+    }
+    expect(importChoices('novel').find((one) => one.kind === 'graphics')?.label).toBe('Graphics');
+    expect(importChoices('novel').find((one) => one.kind === 'notes')?.label).toBe('Notes');
+  });
+
   it('names the format each project-making kind makes, and none for the rest', () => {
     expect(formatForKind('novel')).toBe('novel');
     expect(formatForKind('instructional')).toBe('instructional');

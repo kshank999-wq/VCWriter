@@ -72,6 +72,15 @@ With nothing open the second group is **absent rather than greyed**, and the
 reason is said in its place: *Notes, pictures and more stories go into a
 project that is open. Open or start one first.*
 
+And because the heading says it, **the rows do not**. From Ken, of the
+graphics row: *just call it graphics.* He is right, and the reason is the
+headings' own — *Into this project* stands once above all four, so *Graphics,
+into the library* says it a second time, and **a label that repeats its
+heading has nothing of its own to say**. The clause came off the other three
+in the same change, one screen having one rule: **Notes**, **Graphics**,
+**More stories**, **More episodes**. Where each actually goes moved into the
+note under it, which is what a note is for.
+
 ### Only where it can land
 
 `importChoices` offers more stories in a collection, more episodes in a series,
@@ -187,7 +196,8 @@ sentence read *divided at the word chapter*, which is a different claim from
 **A Media shelf.** Ken said *stored in the research section under media. And
 graphics* — which is one place said twice. Pictures go to Research ▸ Graphics,
 the library the Layout room places from, and a second shelf for pictures would
-be a second answer to where a picture is.
+be a second answer to where a picture is. He settled it himself the next day:
+*just call it graphics.*
 
 **Nothing new reads a file.** Every kind goes through the readers that existed:
 Final Draft, Word, PDF, plain text, and `importFiles` for notes and pictures.

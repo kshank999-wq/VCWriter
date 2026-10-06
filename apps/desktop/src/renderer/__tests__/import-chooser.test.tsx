@@ -63,7 +63,8 @@ describe('the import chooser', () => {
   it('offers only the four that make a project with nothing open, and says why', () => {
     open(null);
     expect(screen.getByRole('button', { name: /A novel/i })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Notes, into Research/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Notes/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Graphics/i })).toBeNull();
     expect(screen.queryByText('Into this project')).toBeNull();
     // Absent rather than greyed, and said: somebody who came here for their
     // notes is told where the door is rather than left hunting for a row.

@@ -5526,10 +5526,14 @@ push live; the build takes a minute or two.
   the one question a writer has here and saying it on all eight rows is saying
   it eight times, so they stand under **A new project** and **Into this
   project**, with the second group **absent rather than greyed** when nothing is
-  open and the reason said in its place. A row is offered **only where it can
-  land** — graphics on a prose format alone, Research ▸ Graphics being every
-  book's and no script's, so the row would otherwise route to a shelf the menu
-  does not draw. The four marks are **what the reader can actually see** rather
+  open and the reason said in its place; **and because the heading says it the
+  rows do not**, from Ken (*just call it graphics*) — *Graphics, into the
+  library* under a heading reading *Into this project* is the fact said twice,
+  and a label that repeats its heading has nothing of its own to say, so the
+  clause came off all four and where each goes moved into its note. A row is
+  offered **only where it can land** — graphics on a prose format alone,
+  Research ▸ Graphics being every book's and no script's, so the row would
+  otherwise route to a shelf the menu does not draw. The four marks are **what the reader can actually see** rather
   than options invented for a screen, and `ALL_CHAPTER_MARKS` is exactly what it
   did before there was a choice, which is why the whole import suite passed
   unedited; **what each combination costs is read off the document rather than
