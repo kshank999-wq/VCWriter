@@ -5682,6 +5682,66 @@ push live; the build takes a minute or two.
   test is §9's missing one in addendum 29 §2's shape: **every window that
   carries the lapse bar must carry this one**, so a third window added later
   fails there rather than shipping silent.
+  `addendum-34-project-folder.md` is **where new projects go**, from Ken (*when
+  creating your project, there needs to be on that page the ability to set that
+  file location and it'll save it in a file or a cloud drive and remember where
+  it is. So when you open VC Writer, that it'll be able to find that
+  location*), and the audit paid a **twenty-ninth** time with the half that
+  makes the report worth reading properly: **the question was always asked** —
+  creating a project has opened a save dialog since the application was
+  written, written where the writer said and put the file on the recent list.
+  So what is new is not a mechanism but **three things wrong about where the
+  question is asked**: it is **not on the page** (the dialog opens after Create
+  is pressed, over a panel that never mentioned where anything goes, so the
+  folder could be set and never seen — §9's own shape in another room), it was
+  **never remembered** (the default was `Documents/VC Writer` every time, so
+  saving into Dropbox once left the next project still opening at Documents —
+  the clause of his sentence with nothing behind it), and **Open started
+  nowhere** (`project:open` passed no `defaultPath` at all, which is his last
+  sentence word for word). **A cloud drive is a folder**: iCloud Drive,
+  Dropbox, OneDrive and Google Drive each appear as an ordinary directory, so
+  this needs no account and no API, and saying so on the screen is both the
+  truth and the whole feature. **The folder is the machine's** — a fact about
+  this computer rather than the document, so it lives beside the recents in
+  `userData` and never in a project file — and **it is remembered by being
+  used**: creating a project somewhere and saving one somewhere both say where
+  this writer keeps their work, while *opening* one does not, a colleague's
+  file read out of Downloads not being a reason to move where your own books
+  are written. **One question asked once**, so the save dialog on Create is
+  **gone** (two controls for one act are two answers, and the one removed is
+  the one that appeared over a screen that had not mentioned it), the file
+  named through `suggestedFileName` which the create handler had been
+  duplicating with a private regular expression. **Nothing already in the
+  folder is replaced**, the one rule here a writer would not forgive being
+  wrong once, and the audit paid again inside it — the browser's library has
+  numbered its own keys that way since it was written, so `freeName` is **one
+  reading both hosts ask**. The row stands **between the format and the
+  button**, which is addendum 30 §2a read properly rather than broken: nothing
+  that is *not part of making the project* may stand there, and where it is
+  written is part of making it. **Three states and the third is the one that
+  matters** — the path with a *Change…* press; *This browser’s own storage*
+  with the reason and **no press**; and **no row at all** where the host cannot
+  answer, which is not defensive habit but a fault driving found: two existing
+  fixtures stub the bridge without the method and the first draft **blanked the
+  whole Welcome screen** on them (addendum 25 §4g — an effect that throws takes
+  the screen down), on the one screen that is somebody's only way into their
+  work, so they now pass by drawing nothing rather than by an edited test.
+  **`ProjectHome` was taken** by addendum 17's project home page — the fifth
+  name stepped around after `origin`→`found`, `Standing`→`Situation`,
+  `code`→`discount` and `LAPSE_PROMISE`, and **the first caught by the
+  compiler**: a clashing *type* is refused at the door where addendum 32 §7's
+  clashing *value* through a star export compiled, passed 2,666 tests and
+  returned a 500. Driven at 1440×900 on both hosts: the desktop row at 630×101
+  with the folder in full, *Change…* taking it to an iCloud Drive path; the
+  preview saying what it does with nothing to press; nothing past the panel
+  either side (row edge 1035 inside 1056) and a long path **breaking rather
+  than truncating**. Looking at it caught what no test did — the path drew in
+  `--muted` inherited from the recents list, where **here the path is the
+  value** rather than an annotation beside a file name, so `.path` is the
+  general rule now and the row reads it at the body colour. §8 names what is
+  deliberately absent: **no cloud account and no second kind of location**, the
+  day this program grows its own idea of a cloud drive being the day there are
+  two answers to where a book is.
 
 ## Before pushing
 

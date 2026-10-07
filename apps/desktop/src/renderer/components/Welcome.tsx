@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { builtElsewhere, nounsFor, startsHere, type ProjectFormat } from '@vcwriter/domain';
+import {
+  builtElsewhere,
+  describeProjectFolder,
+  nounsFor,
+  startsHere,
+  type ProjectFormat,
+  type ProjectFolder,
+} from '@vcwriter/domain';
 // The stacked lockup (docs/brand.md), cut for this screen by
 // brand/logo/derive.mjs. Bundled by Vite, so it ships inside the app and the
 // renderer's `img-src 'self'` policy covers it.
@@ -79,6 +86,20 @@ export function Welcome({
   const [author, setAuthor] = useState('');
   const [format, setFormat] = useState<ProjectFormat>('screenplay');
   const [recents, setRecents] = useState<string[]>([]);
+  /**
+   * Where this project will be written (addendum 34).
+   *
+   * Asked of the host rather than composed here — a row drawn with a guessed
+   * folder in it would be a second answer to the one question this is for.
+   * Three states, and the third is the one that matters: `'asking'` while the
+   * host is being asked, the answer once it comes, and **null where it cannot
+   * answer at all**, which draws no row. A host that does not know where
+   * projects go must not be made to say something about it, and **an effect
+   * that throws takes the whole screen down** (addendum 25 §4g), so the ask is
+   * guarded as well as the answer.
+   */
+  const [home, setHome] = useState<ProjectFolder | 'asking' | null>('asking');
+  const [choosing, setChoosing] = useState(false);
   // The one format this program does not start, which is what the
   // advertisement at the foot of the panel is about. Null would take it off
   // the screen with nothing else to change.
@@ -89,6 +110,25 @@ export function Welcome({
       if (result.ok && result.data) setRecents(result.data);
     });
   }, [projectsChanged]);
+
+  useEffect(() => {
+    const ask = window.vcwriter.projectsFolder?.();
+    if (!ask) {
+      setHome(null);
+      return;
+    }
+    void ask.then((result) => setHome(result.ok && result.data ? result.data : null)).catch(() => setHome(null));
+  }, []);
+
+  const chooseFolder = async () => {
+    setChoosing(true);
+    try {
+      const result = await window.vcwriter.chooseProjectsFolder();
+      if (result.ok && result.data) setHome(result.data);
+    } finally {
+      setChoosing(false);
+    }
+  };
 
   return (
     <div className="welcome">
@@ -136,6 +176,43 @@ export function Welcome({
             ))}
           </div>
         </fieldset>
+
+        {/*
+          Where the file goes (addendum 34, Ken's own sentence).
+
+          **Here rather than after the press.** The question was always asked —
+          by a save dialog that appeared once Create was pressed, over a screen
+          that had not mentioned it — so the folder could be set and never
+          seen, and the one the program had picked was the only one it ever
+          offered. This is §2a's rule read properly rather than broken: nothing
+          that is *not part of making the project* may stand between the format
+          and the button, and where the project is written is part of making
+          it.
+        */}
+        {home === null ? null : (
+        <fieldset className="project-home">
+          <legend>Where it goes</legend>
+          {home === 'asking' ? (
+            <p className="path">Asking this machine…</p>
+          ) : (
+            <>
+              <div className="project-home-row">
+                <span className="path">{home.path ?? 'This browser’s own storage'}</span>
+                {/* Absent rather than greyed where there is nowhere to choose:
+                    a button that can only refuse is one a writer never trusts
+                    again. */}
+                {home.canChoose ? (
+                  <button type="button" className="ghost" disabled={choosing} onClick={() => void chooseFolder()}>
+                    {choosing ? 'Choosing…' : 'Change…'}
+                  </button>
+                ) : null}
+              </div>
+              <p className="muted project-home-note">{describeProjectFolder(home)}</p>
+            </>
+          )}
+        </fieldset>
+        )}
+
         <button
           type="button"
           className="primary"

@@ -148,3 +148,69 @@ export const describeSavedTo = (saved: SavedTo): string =>
   saved.working
     ? `Saved. You are writing in ${saved.path} from now on, and it is on your recent list.`
     : `A copy is at ${saved.path}, and it is on your recent list. You are still writing in the one you were.`;
+
+/* --------------------------------------------- where new projects go (§34) */
+
+/**
+ * Where a new project is written, and whether this host can be asked for
+ * somewhere else (addendum 34, from Ken: *when creating your project, there
+ * needs to be on that page the ability to set that file location and it'll
+ * save it in a file or a cloud drive and remember where it is. So when you
+ * open VC Writer, that it'll be able to find that location.*).
+ *
+ * **A cloud drive is a folder.** iCloud Drive, Dropbox, OneDrive and Google
+ * Drive each appear on the machine as an ordinary directory, so saving into
+ * one needs no account, no API and no second kind of location — which is
+ * worth saying on the screen rather than implying the program integrates with
+ * them, because what a writer is owed here is the truth about where their
+ * book is.
+ *
+ * **`ProjectFolder` and not `ProjectHome`**, which addendum 17's project home
+ * page has owned since it was built — the fifth name this project has had to
+ * step around (`origin`→`found`, `Standing`→`Situation`, `code`→`discount`,
+ * `LAPSE_PROMISE`), and the first caught by the compiler rather than by
+ * running the thing: a clashing *type* is refused at the door where a clashing
+ * *value* re-exported through a star compiled, passed 2,666 tests and returned
+ * a 500 from one page.
+ *
+ * `path` is spelled exactly as the host spells it. The renderer composes no
+ * paths and prettifies none: a shortened path is one you cannot search your
+ * own disk for (`describeSavedTo`'s rule).
+ */
+export interface ProjectFolder {
+  /** Where new projects land, or null where this host keeps no folders. */
+  path: string | null;
+  /** Whether a different one can be asked for here. */
+  canChoose: boolean;
+}
+
+/**
+ * What the New project panel says under the folder.
+ *
+ * Two states and no third: a host that keeps folders, and one that does not.
+ * The browser's library is **said rather than hidden** — a panel that simply
+ * omitted the row there would read as the feature not being there, which is
+ * the fault this project keeps finding (addendum 09 §15).
+ */
+export const describeProjectFolder = (where: ProjectFolder): string =>
+  where.canChoose
+    ? 'Any folder will do, including one a cloud drive keeps in step — iCloud Drive, Dropbox, OneDrive. The file is named from the title, and nothing already in the folder is replaced.'
+    : 'This browser keeps projects in its own storage rather than in folders. Choosing where they go is the desktop application’s.';
+
+/**
+ * A name nothing already there answers to.
+ *
+ * **Nothing is ever replaced**, which is the one rule about this that a writer
+ * would not forgive being wrong once: the file in that folder is somebody's
+ * book. The browser's library has numbered its own keys this way since it was
+ * written, so this is that rule said once rather than a second copy on the
+ * desktop free to differ from it.
+ *
+ * `taken` is the host's — a set of keys in the browser, the directory on the
+ * desktop — because what already exists is a fact this cannot know.
+ */
+export const freeName = (stem: string, taken: (candidate: string) => boolean, suffix = ''): string => {
+  let candidate = `${stem}${suffix}`;
+  for (let n = 2; taken(candidate); n += 1) candidate = `${stem} ${n}${suffix}`;
+  return candidate;
+};

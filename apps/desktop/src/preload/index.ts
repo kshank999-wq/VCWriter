@@ -13,6 +13,7 @@ import type {
   ProjectFormat,
   RoomMaster,
   RoomRole,
+  ProjectFolder,
   SaveKind,
   SceneVerdict,
   Seat,
@@ -141,6 +142,23 @@ export interface VcWriterApi {
     file: ProjectFile;
     suggestedName?: string;
   }): Promise<DesktopApiResult<OpenResult>>;
+  /**
+   * Where new projects go, and whether this host can be asked for somewhere
+   * else (addendum 34).
+   *
+   * **What a place is, is the host's** (`saveProjectAs`'s own rule): a folder
+   * on the desktop, nothing at all in the browser, which keeps projects in its
+   * own storage. The renderer asks and says back what it is told rather than
+   * sniffing which host it is in — `window.vcwriter` is deliberately identical
+   * in both.
+   */
+  projectsFolder(): Promise<DesktopApiResult<ProjectFolder>>;
+  /**
+   * Ask for a different one. Dismissing the picker is not a failure: it comes
+   * back with the folder unchanged, because the writer changed their mind and
+   * nothing has moved.
+   */
+  chooseProjectsFolder(): Promise<DesktopApiResult<ProjectFolder>>;
   recentProjects(): Promise<DesktopApiResult<string[]>>;
   /**
    * Every project this machine has, with enough about each to choose between
@@ -430,6 +448,8 @@ const api: VcWriterApi = {
   openProjectAtPath: (path) => ipcRenderer.invoke('project:openPath', path),
   saveProject: (input) => ipcRenderer.invoke('project:save', input),
   saveProjectAs: (input) => ipcRenderer.invoke('project:saveAs', input),
+  projectsFolder: () => ipcRenderer.invoke('project:home'),
+  chooseProjectsFolder: () => ipcRenderer.invoke('project:chooseHome'),
   recentProjects: () => ipcRenderer.invoke('project:recents'),
   listProjects: () => ipcRenderer.invoke('project:list'),
   deleteProject: (path: string) => ipcRenderer.invoke('project:delete', path),

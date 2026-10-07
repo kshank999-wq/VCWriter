@@ -1,12 +1,14 @@
 import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
-import { join } from 'node:path';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import {
   copyTitle,
   createProjectFile,
+  freeName,
   parseProjectFile,
   projectsNewestFirst,
   suggestedFileName,
+  type ProjectFolder,
   type CaptureItem,
   type DeskStanding,
   type SaveKind,
@@ -83,6 +85,39 @@ export interface DesktopApiResult<T> {
 
 const RECENTS_LIMIT = 10;
 const recentsPath = () => join(app.getPath('userData'), 'recent-projects.json');
+const homePath = () => join(app.getPath('userData'), 'projects-folder.json');
+
+/**
+ * Where new projects go on this machine (addendum 34).
+ *
+ * **A fact about the computer rather than about the document**, so it lives
+ * beside the recents in `userData` and never in a project file: a book opened
+ * on a second machine must not drag the first machine's folders with it.
+ *
+ * The default is what the program used before anybody could choose, so a
+ * machine that has never been asked behaves exactly as it did.
+ */
+const defaultHome = () => join(app.getPath('documents'), 'VC Writer');
+
+const readHome = async (): Promise<string> => {
+  try {
+    const parsed: unknown = JSON.parse(await readFile(homePath(), 'utf8'));
+    const folder = (parsed as { folder?: unknown })?.folder;
+    return typeof folder === 'string' && folder.trim().length > 0 ? folder : defaultHome();
+  } catch {
+    return defaultHome();
+  }
+};
+
+/**
+ * **Remembered by being used.** Creating a project somewhere and saving one
+ * somewhere both say where this writer keeps their work; *opening* one does
+ * not, because a colleague's file read out of Downloads must not move where
+ * your own books are written.
+ */
+const rememberHome = async (folder: string): Promise<void> => {
+  await writeFile(homePath(), JSON.stringify({ folder }), 'utf8').catch(() => undefined);
+};
 
 /**
  * What the machine remembers about a project it has seen.
@@ -240,6 +275,39 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
     });
   }
 
+  /**
+   * Where new projects go, and changing it (addendum 34).
+   *
+   * Two methods rather than one that both reads and writes: the panel asks on
+   * every visit and only a press changes anything.
+   */
+  ipcMain.handle(
+    'project:home',
+    async (): Promise<DesktopApiResult<ProjectFolder>> => ok({ path: await readHome(), canChoose: true }),
+  );
+
+  ipcMain.handle('project:chooseHome', async (): Promise<DesktopApiResult<ProjectFolder>> => {
+    try {
+      const window = getWindow();
+      const options = {
+        properties: ['openDirectory' as const, 'createDirectory' as const],
+        defaultPath: await readHome(),
+        title: 'Where new projects go',
+      };
+      const choice = window
+        ? await dialog.showOpenDialog(window, options)
+        : await dialog.showOpenDialog(options);
+      const folder = choice.filePaths[0];
+      // Dismissing is not a failure and must not paint one (addendum 29 §1):
+      // the writer changed their mind, and nothing has moved.
+      if (choice.canceled || !folder) return ok({ path: await readHome(), canChoose: true });
+      await rememberHome(folder);
+      return ok({ path: folder, canChoose: true });
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
   ipcMain.handle(
     'project:create',
     async (
@@ -247,19 +315,21 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
       input: { title: string; format: ProjectFormat; author?: string; logline?: string },
     ): Promise<DesktopApiResult<OpenResult>> => {
       try {
-        const window = getWindow();
-        const suggested = join(
-          app.getPath('documents'),
-          'VC Writer',
-          `${input.title.replace(/[^\w\-. ]+/g, '_') || 'Untitled'}.${PROJECT_EXTENSION}`,
-        );
-        const choice = window
-          ? await dialog.showSaveDialog(window, { defaultPath: suggested, filters: FILE_FILTERS })
-          : await dialog.showSaveDialog({ defaultPath: suggested, filters: FILE_FILTERS });
-        if (choice.canceled || !choice.filePath) return fail(new Error('Project creation cancelled'));
+        /**
+         * **No second dialog.** The folder is set on the page the writer is
+         * standing on, so asking again on the press would be two controls for
+         * one act — and the save dialog it replaces was the question asked
+         * after the screen that never mentioned it.
+         */
+        const folder = await readHome();
+        await mkdir(folder, { recursive: true });
+        const here = new Set(await readdir(folder).catch(() => [] as string[]));
+        const stem = suggestedFileName(input.title, 'as');
+        const name = freeName(stem, (candidate) => here.has(candidate), `.${PROJECT_EXTENSION}`);
 
         const file = createProjectFile(input);
-        const saved = await saveProject(choice.filePath, file);
+        const saved = await saveProject(join(folder, name), file);
+        await rememberHome(folder);
         await rememberRecent(saved.path, file.project.title);
         return ok({ path: saved.path, file, contentHash: saved.contentHash });
       } catch (cause) {
@@ -271,9 +341,11 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
   ipcMain.handle('project:open', async (): Promise<DesktopApiResult<OpenResult>> => {
     try {
       const window = getWindow();
+      // *So when you open VC Writer, it'll be able to find that location.*
+      const options = { properties: ['openFile' as const], filters: FILE_FILTERS, defaultPath: await readHome() };
       const choice = window
-        ? await dialog.showOpenDialog(window, { properties: ['openFile'], filters: FILE_FILTERS })
-        : await dialog.showOpenDialog({ properties: ['openFile'], filters: FILE_FILTERS });
+        ? await dialog.showOpenDialog(window, options)
+        : await dialog.showOpenDialog(options);
       const path = choice.filePaths[0];
       if (choice.canceled || !path) return fail(new Error('Open cancelled'));
 
@@ -347,7 +419,9 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
             : incoming;
 
         const name = input.suggestedName || suggestedFileName(file.project.title, input.kind);
-        const suggested = join(app.getPath('documents'), 'VC Writer', `${name}.${PROJECT_EXTENSION}`);
+        // It opens where this writer keeps their work rather than at a folder
+        // the program picked once (addendum 34).
+        const suggested = join(await readHome(), `${name}.${PROJECT_EXTENSION}`);
         const window = getWindow();
         const options = { defaultPath: suggested, filters: FILE_FILTERS };
         const choice = window
@@ -356,6 +430,8 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
         if (choice.canceled || !choice.filePath) return fail(new Error('Cancelled'));
 
         const saved = await saveProject(choice.filePath, file);
+        // Putting a project somewhere says where this writer keeps them.
+        await rememberHome(dirname(saved.path));
         await rememberRecent(saved.path, file.project.title);
         return ok({ path: saved.path, file, contentHash: saved.contentHash });
       } catch (cause) {

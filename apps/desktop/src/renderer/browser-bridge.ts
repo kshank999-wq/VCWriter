@@ -1,6 +1,7 @@
 import {
   copyTitle,
   createProjectFile,
+  freeName,
   parseProjectFile,
   printedPageCount,
   projectsNewestFirst,
@@ -90,9 +91,9 @@ const hashOf = async (file: ProjectFile): Promise<string> => {
 const pathFor = async (title: string): Promise<string> => {
   const base = (title.trim() || 'Untitled').replace(/[\\/:*?"<>|]+/g, ' ').trim();
   const taken = new Set((await readAll()).map((record) => record.path));
-  let candidate = `browser://${base}.vcw`;
-  for (let n = 2; taken.has(candidate); n += 1) candidate = `browser://${base} ${n}.vcw`;
-  return candidate;
+  // Nothing is ever replaced, which is `freeName`'s one rule — the same one
+  // the desktop asks when it names a file in a folder (addendum 34).
+  return freeName(`browser://${base}`, (candidate) => taken.has(candidate), '.vcw');
 };
 
 const store = async (path: string, file: ProjectFile): Promise<OpenResult> => {
@@ -305,6 +306,19 @@ export const createBrowserBridge = (): BrowserBridge => {
       install: async () => ok(true as const),
       onCommand: () => () => undefined,
       native: () => false,
+    },
+
+    /**
+     * A browser has no folders, so there is nowhere to choose (addendum 34).
+     * It is **said rather than left out**: a panel that simply omitted the row
+     * here would read as the feature not being there.
+     */
+    async projectsFolder() {
+      return ok({ path: null, canChoose: false });
+    },
+
+    async chooseProjectsFolder() {
+      return ok({ path: null, canChoose: false });
     },
 
     async createProject(input) {
