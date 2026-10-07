@@ -320,3 +320,53 @@ Narrowing it means putting the label somewhere the application reads at runtime,
 which is a second fetch to save a reload; the refusal is the better answer, and
 a deployment that really does change the reader rotates its hash whatever is
 done about the label.
+
+## 9a. A page that has outlived its deployment says so
+
+Ken sent §9's report back **word for word**, which in this project has meant one
+thing seven times now. The audit was paid first and found nothing left to fix in
+the import: the deployed bundle was confirmed byte for byte the fixed one (its
+`read-pdf` chunk was rebuilt locally from the deployment's own label and fetched
+at that exact hash — 200, and it imports the fixed `main`), **no Word-reader
+chunk exists in it at all**, no dynamic import of that reader survives anywhere
+in the renderer, and the site's one service worker is scoped to `/notes/app` and
+cannot touch `/preview`, so a reload really does reach the new build.
+
+So §9 was right about the fault and **wrong about where it stopped**. It ended
+by telling Ken to reload — and that is an instruction rather than a fix, which
+is addendum 29 §2's lesson exactly: *a question about whether the feature is
+finished is not the writer's to answer*. The sentence `late` says is honest and
+arrives **after** a writer has chosen a file and been turned away. What was
+missing is the half that arrives before they press anything.
+
+`use-build-standing.ts` is that half. **It measures rather than guesses**: the
+page asks for its own entry script, the one file it is certain the deployment it
+came from had, and a flat refusal is the answer — no build id, no version
+endpoint, nothing stored, nothing on the server to keep in step. **It asks when
+the window is returned to**, which is the moment a writer is about to act and
+the one moment a request costs nothing anybody notices; a timer would ask while
+they type, and Ken's own case *is* coming back to the tab. Three refusals keep
+it from crying wolf, because a notice that is wrong once is one nobody reads on
+the day it is right: **only a 404 or a 410 counts** (a 500, a timeout or no
+network at all is the page failing to ask — addendum 32 §8's *being unable to
+ask is not a lapse*), **it says nothing where the page came off a disk** (the
+desktop's renderer is on the machine, and a file on the machine has no
+deployment to move on), and **it asks at most once a minute** however often the
+window is switched to.
+
+`StaleBuildNotice` wears `WritingNotice`'s bar for its reason — one bar for
+every message in the window, so only what it *means* differs — and **the button
+is the act**. Reloading needs nothing done first, the project having flushed on
+`beforeunload` since it was written. It may be dismissed, this being news rather
+than a refusal: nothing has stopped working. `.writing-notice-acts` became
+**`.notice-acts`**, a layout named for the lapse being one the next bar copies
+rather than wears.
+
+Driven across two deployments of the fixed source: a fresh page carries no bar;
+a deployment lands, the window is returned to, and a 47px `status` bar appears
+at the top of a 1440 window; Reload lands on the new entry chunk and the bar is
+gone; and the collection import that started all this reads the Word document on
+the page it landed on — 3 sections, 12 paragraphs, no alert. The surfaces test
+is §9's missing one in addendum 29 §2's shape: **every window that carries the
+lapse bar must carry this one**, so a third window added later fails there
+rather than shipping silent.

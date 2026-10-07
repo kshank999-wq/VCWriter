@@ -34,7 +34,7 @@ export function WritingNotice({ access }: { access: WritingAccess }) {
           where they are told about it is one they go hunting to fix. The link
           opens in their own browser, the host sending every `_blank` to the
           real one (addendum 30 §2a) identically in both builds. */}
-      <span className="writing-notice-acts">
+      <span className="notice-acts">
         <button
           type="button"
           className="ghost"

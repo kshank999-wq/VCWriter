@@ -35,6 +35,7 @@ import {
   nounsFor,
 } from '@vcwriter/domain';
 import { useProject } from './use-project';
+import { useBuildStanding } from './use-build-standing';
 import { useWritingAccess } from './use-writing-access';
 import { useRoom } from './room';
 import { usePreference, useSplit } from './use-split';
@@ -52,6 +53,7 @@ import {
 } from './panes';
 import { PaneFrame } from './components/PaneFrame';
 import { TitleBar } from './components/TitleBar';
+import { StaleBuildNotice } from './components/StaleBuildNotice';
 import { WritingNotice } from './components/WritingNotice';
 import { Welcome } from './components/Welcome';
 import { MasterTimeline, DEFAULT_BEATS_PER_COLUMN } from './components/MasterTimeline';
@@ -119,6 +121,7 @@ export default function App() {
    * there is one place to refuse and no call site that has to know.
    */
   const access = useWritingAccess();
+  const buildMovedOn = useBuildStanding();
   const project = useProject(access.writable);
   const [view, setView] = useState<View>('write');
   const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
@@ -876,6 +879,7 @@ export default function App() {
             read-only copy and finds they cannot type a word has been trapped
             by a screen that knew and did not say. */}
         <WritingNotice access={access} />
+        <StaleBuildNotice movedOn={buildMovedOn} />
         <Welcome
           onCreate={(input) => {
             setStartingNew(false);
@@ -1150,6 +1154,8 @@ export default function App() {
       {/* A lapsed subscription (addendum 32 §8). Above the project's own
           errors, because it explains every one of them that follows. */}
       <WritingNotice access={access} />
+      {/* And a page older than the deployment it is talking to (§9a). */}
+      <StaleBuildNotice movedOn={buildMovedOn} />
 
       {project.error ? (
         <p className="error banner" role="alert">

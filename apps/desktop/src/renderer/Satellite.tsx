@@ -18,7 +18,9 @@ import {
   type SaveKind,
 } from '@vcwriter/domain';
 import { useLinkedProject } from './use-linked-project';
+import { useBuildStanding } from './use-build-standing';
 import { useWritingAccess } from './use-writing-access';
+import { StaleBuildNotice } from './components/StaleBuildNotice';
 import { WritingNotice } from './components/WritingNotice';
 import { usePreference } from './use-split';
 import { addBeatAfter, addSceneAfter } from './structure';
@@ -67,6 +69,7 @@ export default function Satellite({ pane }: { pane: PaneKey }) {
    * so it says the same sentence too.
    */
   const access = useWritingAccess();
+  const buildMovedOn = useBuildStanding();
   const project = useLinkedProject(access.writable);
   const [scheme] = usePreference<SchemeId>('scheme', DEFAULT_SCHEME);
   const [paper] = usePreference('paper', true);
@@ -142,6 +145,7 @@ export default function Satellite({ pane }: { pane: PaneKey }) {
         </p>
       ) : null}
       <WritingNotice access={access} />
+      <StaleBuildNotice movedOn={buildMovedOn} />
       {/* A room on the other monitor must not be able to do less than the
           panel it came out of (§8), so the hover is here too. */}
       <BeatPeekLayer file={file} />
