@@ -5602,6 +5602,47 @@ push live; the build takes a minute or two.
   10 with all four), the twenty page numbers are dropped and **said**, the
   illustration comes in, the face and size of a set-apart passage are kept, and
   each chapter arrives as one passage.
+  **§9 is the part of the program that was no longer there**, from Ken on the
+  deployed site (*I go to import a collection of short stories, I get an error
+  that says failed to fetch dynamically imported module. I tried to import a
+  Word doc .docx*), and **nothing was wrong with the import**: the Word reader
+  was fetched when first needed, Vite names a chunk by a **hash of its
+  contents**, and a deployment replaces every chunk — so a tab open since
+  before the last one asks for a file that is no longer on the server, and
+  pressing Import was merely the first thing in that tab to need a part of the
+  program it had not already loaded. **It could not be seen from inside one
+  build**, which is why every test passed and why driving it found nothing:
+  there is no stale page until there is a *second* deployment. Reproduced by
+  serving two builds of the same source in turn as two deployments, opening the
+  page against the first and swapping — *Failed to fetch dynamically imported
+  module: /preview/assets/read-docx-BKO8tlPd.js*, word for word, a chunk name
+  said to somebody who has just chosen a file; the deployed chunk was checked
+  directly and is fine (200, right type, right bytes), so the build, the copy
+  and the gate are all innocent and **a thing that existed stopped existing**,
+  which is the one failure a content hash guarantees. Two halves, and the
+  second fixes his report. **A split has to buy something**: `read-docx` is
+  2.8 kB against a 1.2 MB bundle, so it is a plain import now in all four
+  places that read a Word document and a `.docx` needs no network at all; **pdf.js is a megabyte and a half** and stays
+  split, so there the failure is **said rather than thrown** —
+  `late-module.ts` is the one place and `STALE_PAGE_REFUSAL` the one sentence,
+  naming the usual cause and the whole of the fix (*VC Writer was most likely
+  updated after this page was opened. Reload the page and try again*), *most
+  likely* because a dropped connection reads the same from here and reloading
+  is right either way. `late` wraps the `import()` **and nothing else**, which
+  is what makes that reading honest: the modules behind it do no work at load,
+  so anything out of it is the fetch rather than the module, and the browser's
+  own wording goes to the console where a chunk name is of use. **A reader
+  loaded late again would look exactly like this never having been fixed**, so
+  it is asserted off the source — the test walks every renderer file and
+  refuses `import('…read-docx')` anywhere and a bare `await import(` outside
+  `late`, addendum 31 §4's and 32 §9's idiom, both failing by being *absent*.
+  Driven again across the same two deployments: the stories come in on a stale
+  page and a PDF chosen on that page says the sentence. **Named rather than
+  built**: the preview's build label carries a timestamp and rides in the main
+  chunk, so **every deployment rotates every hash even when nothing changed**,
+  which makes the window as wide as it can be — narrowing it means a second
+  fetch to save a reload, and a deployment that really does change the reader
+  rotates its hash whatever is done about the label.
 
 ## Before pushing
 

@@ -13,6 +13,7 @@ import {
   type ProjectFile,
   type ResearchCategoryId,
 } from '@vcwriter/domain';
+import { readDocxParts } from '../read-docx';
 
 /**
  * The research importer (addendum 16 §4).
@@ -42,7 +43,6 @@ const bareName = (name: string): string => name.replace(/\.[^.]+$/, '');
  */
 const readWord = async (one: File): Promise<ImportedFile[]> => {
   try {
-    const { readDocxParts } = await import('../read-docx');
     const doc = readDocx(await readDocxParts(await one.arrayBuffer()));
     const pictures = doc.paragraphs.flatMap((paragraph) => paragraph.pictures);
     return [

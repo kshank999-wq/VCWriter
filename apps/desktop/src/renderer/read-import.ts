@@ -1,4 +1,6 @@
 import { docxToProse, docxToScript, readDocx, readFinalDraft, readLaidOutLines, textToProse, type ImportedScript } from '@vcwriter/domain';
+import { late } from './late-module';
+import { readDocxParts } from './read-docx';
 
 /**
  * Reading a file for an import (addendum 21, addendum 22 §4): the host turns
@@ -21,7 +23,6 @@ export const plainStory = (name: string, text: string): ImportedScript =>
 /** A file read as prose: a Word document by its headings, or plain text. */
 export const readProseFile = async (chosen: File): Promise<ImportedScript> => {
   if (/\.docx$/i.test(chosen.name)) {
-    const { readDocxParts } = await import('./read-docx');
     const doc = readDocx(await readDocxParts(await chosen.arrayBuffer()));
     return docxToProse(doc, { title: bareName(chosen.name) });
   }
@@ -33,12 +34,11 @@ export const readProseFile = async (chosen: File): Promise<ImportedScript> => {
 export const readScriptFile = async (chosen: File): Promise<ImportedScript> => {
   if (/\.fdx$/i.test(chosen.name)) return readFinalDraft(await chosen.text());
   if (/\.docx$/i.test(chosen.name)) {
-    const { readDocxParts } = await import('./read-docx');
     const doc = readDocx(await readDocxParts(await chosen.arrayBuffer()));
     return docxToScript(doc, { title: bareName(chosen.name) });
   }
   if (/\.pdf$/i.test(chosen.name)) {
-    const { readPdfLines } = await import('./read-pdf');
+    const { readPdfLines } = await late(() => import('./read-pdf'));
     const { lines, title } = await readPdfLines(await chosen.arrayBuffer());
     return readLaidOutLines(lines, { title: title || bareName(chosen.name) });
   }

@@ -20,6 +20,7 @@
  * of fixes. It is installed only where it is missing, so a newer runtime
  * uses its own.
  */
+import { late } from './late-module';
 
 /**
  * https://tc39.es/proposal-upsert — get the value, or compute it, insert it
@@ -55,7 +56,7 @@ export const openPdfDocument = async (
   options: { disableFontFace?: boolean } = {},
 ): Promise<{ document: PDFDocumentProxy; done: () => Promise<void> }> => {
   upsert();
-  const pdfjs = await import('pdfjs-dist');
+  const pdfjs = await late(() => import('pdfjs-dist'));
   const worker = new Worker(new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url), { type: 'module' });
   (pdfjs.GlobalWorkerOptions as { workerPort: Worker | null }).workerPort = worker;
   const task = pdfjs.getDocument({

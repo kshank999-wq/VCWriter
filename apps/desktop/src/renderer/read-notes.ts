@@ -1,5 +1,7 @@
 import { readDocx, docxToMarkdown } from '@vcwriter/domain';
 import type { NoteSourceKind } from '@vcwriter/domain';
+import { late } from './late-module';
+import { readDocxParts } from './read-docx';
 
 /**
  * A file read as **a source for the Note Sorter** (addendum 26 §3).
@@ -51,13 +53,12 @@ export const readSourceText = async (chosen: File): Promise<ReadSource> => {
   if (refusal) throw new Error(refusal);
 
   if (/\.docx$/i.test(chosen.name)) {
-    const { readDocxParts } = await import('./read-docx');
     return { text: docxToMarkdown(readDocx(await readDocxParts(await chosen.arrayBuffer()))), kind: 'file' };
   }
   if (/\.pdf$/i.test(chosen.name)) {
     // A PDF has no paragraphs, only laid-out lines, so the paragraph is read
     // back from the vertical gaps the same way the script importer reads one.
-    const { readPdfLines } = await import('./read-pdf');
+    const { readPdfLines } = await late(() => import('./read-pdf'));
     const { lines } = await readPdfLines(await chosen.arrayBuffer());
     const out: string[] = [];
     let last: { y: number; page: number } | null = null;

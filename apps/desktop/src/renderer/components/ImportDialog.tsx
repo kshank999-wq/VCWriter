@@ -30,6 +30,8 @@ import {
   type ProjectFormat,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
+import { late } from '../late-module';
+import { readDocxParts } from '../read-docx';
 import { bareName, countOf, shifted } from '../read-import';
 
 /**
@@ -133,7 +135,6 @@ const readPart = async (chosen: File, prose: boolean): Promise<Part> => {
       return { name: chosen.name, source: { kind: 'text', text: await chosen.text(), title: bareName(chosen.name) } };
     }
     if (/\.docx$/i.test(chosen.name)) {
-      const { readDocxParts } = await import('../read-docx');
       const doc = readDocx(await readDocxParts(await chosen.arrayBuffer()));
       return { name: chosen.name, source: { kind: 'word', doc, title: bareName(chosen.name) } };
     }
@@ -144,13 +145,12 @@ const readPart = async (chosen: File, prose: boolean): Promise<Part> => {
   }
   if (/\.docx$/i.test(chosen.name)) {
     // Unzipped by the host, read by the domain (addendum 21 §2).
-    const { readDocxParts } = await import('../read-docx');
     const doc = readDocx(await readDocxParts(await chosen.arrayBuffer()));
     return { name: chosen.name, source: { kind: 'word', doc, title: bareName(chosen.name) } };
   }
   if (/\.pdf$/i.test(chosen.name)) {
-    // Loaded only when a PDF is actually chosen.
-    const { readPdfLines } = await import('../read-pdf');
+    // Loaded only when a PDF is actually chosen (addendum 33 §9).
+    const { readPdfLines } = await late(() => import('../read-pdf'));
     const { lines, title } = await readPdfLines(await chosen.arrayBuffer());
     return { name: chosen.name, source: { kind: 'script', script: readLaidOutLines(lines, { title: title || bareName(chosen.name) }) } };
   }

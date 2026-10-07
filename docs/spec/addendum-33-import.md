@@ -259,3 +259,64 @@ own (5, 7, 3 and 2 chapters for a heading, the word Chapter, a numeral and a
 page break; 10 with all four), the twenty typed page numbers are dropped and
 **said**, the illustration comes in, the face and size of the set-apart
 passage are kept, and each chapter arrives as one passage.
+
+## 9. The part of the program that was no longer there
+
+From Ken, on the deployed site: *when I go to VC Writer and import, and I go
+to import a collection of short stories, I get an error that says failed to
+fetch dynamically imported module. I tried to import a Word doc .docx.*
+
+Nothing was wrong with the import. The Word reader is fetched when it is first
+needed — `await import('../read-docx')`, which Vite emits as a chunk named by a
+**hash of its contents** — and a deployment replaces every chunk, so a page
+that has been open since before the last one asks for a file that is no longer
+on the server. Ken's tab had been open across a deployment, and pressing Import
+was simply the first thing in that tab that needed a part of the program it had
+not already loaded.
+
+**It could not be seen from inside one build**, which is why every test passed
+and why driving it found nothing: there is no stale page until there is a
+*second* deployment. So it was reproduced by serving two builds in turn —
+`out/preview` and a second build of the same source, as two production
+deployments — opening the page against the first, swapping, and then choosing a
+`.docx`. It answered, word for word, *Failed to fetch dynamically imported
+module: /preview/assets/read-docx-BKO8tlPd.js*, which is a chunk name said to
+somebody who has just chosen a file. The deployed chunk was then checked
+directly and is fine: 200, `application/javascript`, the right bytes. Nothing
+is broken in the build, the copy or the gate — a thing that existed stopped
+existing, which is the one failure a content hash guarantees.
+
+The answer is in two halves, and **the second is the one that fixes Ken's
+report**.
+
+**A split has to buy something.** `read-docx` is 2.8 kB against a 1.2 MB
+bundle, so splitting it bought nothing measurable and cost a failure a writer
+cannot act on — it is a plain import now, in all four places that read a Word
+document, and a Word document needs no network at all. **pdf.js is a megabyte
+and a half** and most sittings never want it, so that one stays split and the
+failure has to be **said rather than thrown**: `late-module.ts` is the one
+place, `STALE_PAGE_REFUSAL` the one sentence, and it names the usual cause and
+the whole of the fix — *Part of the program could not be loaded. VC Writer was
+most likely updated after this page was opened. Reload the page and try again.*
+It says *most likely* because a dropped connection reads the same from here and
+*reload* is the right move either way. `late` wraps the `import()` **and
+nothing else**, which is what makes that reading honest: the modules behind it
+do no work at load, so anything that comes out of it is the fetch rather than
+the module. The browser's own wording goes to the console, where a chunk name
+is of use to somebody.
+
+**A reader loaded late again would look exactly like this never having been
+fixed**, so it is asserted off the source rather than remembered: the test
+walks every renderer file and refuses `import('…read-docx')` anywhere, and
+refuses a bare `await import(` outside `late` — addendum 31 §4's and 32 §9's
+idiom, both of which fail by being *absent*. Driven again across the same two
+deployments: the two stories come in on a stale page (3 sections, 12
+paragraphs, in order) and a PDF chosen on that same page says the sentence.
+
+**Named rather than built**: the preview's build label carries a timestamp and
+rides in the main chunk, so **every deployment rotates every hash even when
+nothing changed**, which makes the window this happens in as wide as it can be.
+Narrowing it means putting the label somewhere the application reads at runtime,
+which is a second fetch to save a reload; the refusal is the better answer, and
+a deployment that really does change the reader rotates its hash whatever is
+done about the label.
