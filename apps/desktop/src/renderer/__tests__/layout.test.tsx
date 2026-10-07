@@ -8,6 +8,7 @@ import {
   addPart,
   addUnit,
   outOfContents,
+  setChapterBlank,
   bookNames,
   bookSettingsOf,
   bookFontsOf,
@@ -485,15 +486,24 @@ describe('the room', () => {
     // **Each row is its page** (§9l, from Ken: *it should say page two, page
     // three, page four, page five*), with what stands on it after the number
     // where that is anything but plain text.
-    expect(pages[0]!.textContent).toMatch(/^Page \w+/);
+    expect(pages[0]!.textContent).toMatch(/^(⠿)?Page \w+/);
     for (const page of pages) expect(page.textContent).not.toMatch(/^Text/);
+    /**
+     * The first page a chapter folds open on may be the **empty leaf in front
+     * of it** (§9w): a page under no row at all is one a writer cannot reach
+     * from the rail, which is §9m's *every page is accounted for* and the
+     * stray page Ken could not get rid of. What the rest of this is about is
+     * a page of the story, so it is the first that carries one.
+     */
+    const story = (Array.from(pages) as HTMLElement[]).find((page) => !/Blank/.test(page.textContent ?? ''))!;
+    expect(story).toBeTruthy();
 
     // Choosing one puts that page in hand and nothing else: the page's screen
     // is what a **double-click** opens (§9u), the column that used to answer a
     // single press being gone.
-    fireEvent.click(within(pages[0] as HTMLElement).getByRole('button'));
+    fireEvent.click(within(story).getByRole('button'));
     expect(document.querySelector('.layout-inspector')).toBeNull();
-    fireEvent.doubleClick(within(pages[0] as HTMLElement).getByRole('button'));
+    fireEvent.doubleClick(within(story).getByRole('button'));
     const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
     expect(panel.hasAttribute('open')).toBe(true);
     // What the panel used to say in prose is behind the ? (§9m, from Ken:
@@ -1180,6 +1190,112 @@ describe('the room', () => {
   it('has the one way to export the book', () => {
     render(<Harness initial={novel()} />);
     expect(screen.getByRole('button', { name: 'Export the book…' })).toBeDefined();
+  });
+
+  /**
+   * **A page is a row with a × on it** (§9w, from Ken: *there's numbered
+   * pages, page one, two, three. There's no way to delete those pages. There
+   * needs to be a little X in the left menu allowing you to delete them*).
+   *
+   * §9a put a × on every row of the rail and meant it; the page rows came
+   * afterwards (§9h) as a fold *under* a row rather than as rows, so they were
+   * the only thing in this room with neither a × nor a grip. What these hold
+   * down is the **gesture** rather than the act — the domain's own tests prove
+   * `pageRemoval` — because a page row drawn without a × reads exactly like
+   * the feature not being there, which is what he reported (addendum 20 §15a).
+   */
+  const openPages = (): HTMLElement[] => {
+    // Only the folds that are shut, or a second call would close them again.
+    for (let pass = 0; pass < 6; pass += 1) {
+      const shut = document.querySelector('.layout-rail-fold[aria-expanded="false"]');
+      if (!shut) break;
+      fireEvent.click(shut);
+    }
+    return Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[];
+  };
+
+  it('takes a blank page the writer put in away from its own row', () => {
+    // §9r's own act, asked for on the second chapter, so the leaf falls inside
+    // the first chapter's run and the rail lists it.
+    const file = novel();
+    const second = contentsDivisions(file)[1]!;
+    render(<Harness initial={setChapterBlank(file, second.marker.id as string, 'before', true)} />);
+
+    // The writer's leaf is the one with a ×: the cutter's gap before the
+    // story also reads *Blank* and carries none, which is the distinction.
+    const leaf = openPages().find((row) => within(row).queryByLabelText(/^Remove page /) !== null);
+    expect(leaf).toBeTruthy();
+    fireEvent.click(within(leaf as HTMLElement).getByLabelText(/^Remove page /));
+    // Asked once inline, with what would go said beside it — `RailRow`'s own
+    // shape, so a × means the same thing wherever it is pressed in this rail.
+    expect((leaf as HTMLElement).textContent).toMatch(/blank page goes/i);
+    fireEvent.click(within(leaf as HTMLElement).getByRole('button', { name: 'Remove' }));
+    // The writer's leaf has gone. A blank page may still stand there — the
+    // chapter opens on a right-hand page, so the cutter leaves its own — and
+    // that one carries no ×, which is the distinction the row draws.
+    for (const row of openPages()) expect(within(row).queryByLabelText(/^Remove page /)).toBeNull();
+  });
+
+  it('gives the leaf the cutter left no ×, and names which reason it is', () => {
+    // §9i's rule on the rail: a blank the recto convention produced is nobody's
+    // to remove, and the page that will not go has to say why — which is the
+    // half of Ken's report the × alone does not answer.
+    render(<Harness initial={novel()} />);
+    const leaf = openPages().find(
+      (row) => /Blank/.test(row.textContent ?? '') && within(row).queryByLabelText(/^Remove page /) === null,
+    );
+    expect(leaf).toBeTruthy();
+    fireEvent.doubleClick(within(leaf as HTMLElement).getByRole('button'));
+    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    expect(panel.textContent).toMatch(/Nothing here to take away: this page is blank because /);
+    // And nothing is offered on it: a leaf is where the cutter stopped, so
+    // there is nothing on it for a picture to stand before (§9w) — this
+    // offered *Add a vector graphic…* and put an art page at the back.
+    expect(within(panel).queryByRole('button', { name: 'Add a vector graphic…' })).toBeNull();
+    expect(panel.textContent).toMatch(/nothing on it for a picture to stand before/);
+  });
+
+  it('gives a page of the story no ×, and says on its own screen why', () => {
+    // **Absent rather than greyed**, with the reason where the control would
+    // be: a × that could only refuse is one a writer never trusts again, and
+    // a page that will not go with nothing saying so is Ken's *there's no way
+    // to get rid of this*.
+    render(<Harness initial={novel()} />);
+    const pages = openPages();
+    const words = pages.find((row) => !/Blank|Illustration/.test(row.textContent ?? ''));
+    expect(words).toBeTruthy();
+    expect(within(words as HTMLElement).queryByLabelText(/^Remove page /)).toBeNull();
+    fireEvent.doubleClick(within(words as HTMLElement).getByRole('button'));
+    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    expect(panel.textContent).toMatch(/own row above|Write page/);
+  });
+
+  it('refuses + Picture where there is nowhere, rather than acting anyway', () => {
+    /**
+     * The fault Ken reported (§9w): on a page with nothing of the book on it
+     * the Add menu refused and said *Choose a page first* while this button
+     * carried the same words **in its title and acted anyway** — putting an
+     * art page at the back of the book. One reading now, so the two agree.
+     */
+    render(<Harness initial={novel()} />);
+    const button = document.querySelector('button.layout-add') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.title).toMatch(/Choose a page first/);
+    // And it is live the moment a page of the story is in hand.
+    chooseStoryPage();
+    expect((document.querySelector('button.layout-add') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('gives a picture page a grip, and a page of words none', () => {
+    // *It should be draggable so you can move things around if you wanted to,
+    // the pages. Especially the pages that you import or pictures that you
+    // import* — the landing is `moveFigureBefore`, the act redrawing the
+    // box already ran, so this is a second door rather than a second answer.
+    render(<Harness initial={novel()} />);
+    for (const row of openPages()) {
+      const picture = /Illustration/.test(row.textContent ?? '');
+      expect(row.getAttribute('draggable')).toBe(String(picture));
+    }
   });
 });
 

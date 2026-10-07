@@ -15616,7 +15616,13 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
 .layout-ask-why { flex-basis: 100%; line-height: 1.35; }
 /* While the × is being asked about, the row stacks: the question needs a
    line of its own, and a chapter's answer is a sentence rather than a word. */
-.layout-rail-asking { flex-direction: column; align-items: stretch; background: var(--panel-2, rgba(255, 255, 255, 0.05)); border-radius: 4px; }
+/* **A rule about the state beats a rule about the kind** (§9w, addendum 02
+   §4a's lesson in this room): written as one class this was correct and
+   overruled by `.layout-rail-page`'s own `align-items: center` further down
+   the file, so a page row being asked about centred its name in the column
+   while every other row ranged it left. Two classes, and where it stands in
+   the file stops deciding whether it is obeyed. */
+.layout-rail-row.layout-rail-asking { flex-direction: column; align-items: stretch; background: var(--panel-2, rgba(255, 255, 255, 0.05)); border-radius: 4px; }
 
 /* The page in hand (§9a): outlined, so the buttons that act on it say which
    page they mean without a sentence saying so. */
@@ -15746,6 +15752,13 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
 .layout-rail-page .layout-rail-name {
   flex: 1;
   min-width: 0;
+  /* A row of parts rather than a run of text (§9w): the grip sat against the
+     word *Page* because this was a plain button, and a row without one began
+     a few pixels to the left of a row with one, so the list jittered down the
+     column. `.layout-part` is laid out this way for the same reason. */
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
   text-align: left;
   background: none;
   border: none;
@@ -15754,6 +15767,13 @@ dialog.layout-part-dialog { width: min(1080px, calc(100vw - 48px)); }
   padding: 3px 6px;
   border-radius: 4px;
   cursor: pointer;
+}
+
+/* The grip keeps its place whether or not the row has one, so every page
+   row's number starts at the same x. */
+.layout-rail-page .layout-grip {
+  flex: 0 0 auto;
+  min-width: 0.9em;
 }
 
 .layout-rail-page .layout-rail-name.on {
@@ -15832,6 +15852,15 @@ dialog.layout-page-dialog::backdrop {
   flex-wrap: wrap;
   gap: 6px;
   margin: 8px 0;
+}
+
+/* A section's rule separates it from the next one (§9w): the last has none,
+   or a page with only one section — a blank leaf, which now says what it is
+   and offers nothing — ends on a line promising something under it. */
+.layout-page-dialog-body > .layout-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
 }
 
 /* The floating help box (addendum 20 §9m, from Ken: *all this extra text

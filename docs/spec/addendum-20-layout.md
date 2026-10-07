@@ -3119,6 +3119,197 @@ the page it is checked against off the top. The preview is sticky now, so it
 stays in view while the fields scroll — which every long panel wanted and only
 this one made plain.
 
+## 9w. The page as a row of the rail
+
+From Ken on a collection he had just imported, four reports in one message:
+
+> there's numbered pages, page one, two, three. There's no way to delete those
+> pages. There needs to be a little X in the left menu allowing you to delete
+> them
+
+> when I put a picture of the chapter opening and then I put a blank page
+> behind it, then on page three, when I try to put a picture, it snaps it
+> before page one for some reason
+
+> everything in the outliner should be in order and it should be draggable so
+> you can move things around if you wanted to, the pages. Especially the pages
+> that you import or pictures that you import
+
+> there's a stray page that has a bunch of information on it that I want to
+> remove, but I can't remove it … it also gives a very small dialogue box …
+> And it says this page in front of one is already blank. Page says why. I
+> don't know what this means
+
+What the four have in common is one fact, and it was measured before a line
+was written: **a page of the book was the only thing in this room nothing
+could be done to.** §9a put a × on every row of the rail and meant it; the
+page rows came afterwards (§9h) as a fold *under* a row rather than as rows,
+so they carried neither a × nor a grip, and nothing said they would not.
+
+### A × on the page, and the two pages that refuse one
+
+A page is still **not a record** — the rail's own rule — so what a × takes is
+**what the writer put on that page**, and there are exactly two such things:
+a blank leaf they asked for, and a picture that *is* the page. Both acts were
+already built and both were reachable only from the page's own dialog.
+`pageRemoval` is the one reading, in `trackRemoval`'s shape, and
+`removeBookPage` the one act; the row asks once inline with what would go
+beside it, which is `RailRow`'s shape, so a × means the same thing wherever
+it is pressed in this rail.
+
+The **refusals are the more important half**, because a page nobody can work
+out how to be rid of is precisely what he reported. A leaf the cutter left is
+not the writer's to remove (§9i) and says which of the two reasons it is; a
+page a division opens on is not a page to remove but a **break**, which is a
+row with a × on it one line above, so that is where the sentence sends them;
+and a page of the story's own words goes by cutting the words on the Write
+page, which is the manuscript's business and not this room's. **Absent rather
+than greyed**, with the reason in the page's own screen: a × that could only
+refuse is one a writer never trusts again.
+
+### A picture lands on the page it was asked for, or is refused
+
+Three things were wrong and they had one cause: **three screens each decided
+for themselves whether a picture could be put here.** The Add menu refused on
+a page with nothing of the book on it and said *Choose a page first*; the
+rail's **+ Picture** carried the same words **in its title and acted anyway**;
+and what it did was `addPart('plate')` — an art page in the **back matter**.
+Measured: a picture asked for on page two arrived on page nine, with the
+control's own tooltip saying it would not. `pictureOffer` is the one reading
+now and the fallthrough that landed a picture somewhere else is gone with it.
+It also ends §8c's claim that a vector graphic is offered *on every page, a
+blank leaf included*, which the mechanism could not keep: a leaf is where the
+cutter stopped, so there is nothing on it for a picture to stand before, and
+the page says so and names the page that will work.
+
+Then the two facts about the cutter that make a picture land where it was not
+asked for, neither of which was said:
+
+**An empty leaf in front of a page is filled rather than added to.** A picture
+of its own takes the next page there is, so where the cutter has already left
+the verso empty the picture fills *that* and the book does not grow. Correct
+typography, and from the writer's chair the picture has jumped back a page for
+no reason they can see — *it snaps it before page one for some reason*. §9r
+found the same fact for blank leaves and answered it by **saying so before the
+press**; a picture is wanted on that page either way, so the note says it and
+names the page rather than refusing.
+
+**A division's own opening page is not the page its first element is on**,
+where the division opens twice — a collection's story opens with its own page
+and again with its first chapter's numeral (addendum 22 §6). §9t rightly
+stopped the hoist there so that a picture asked for on the *numeral's* page
+lands between the two; the cost, which nobody noticed, is that a picture asked
+for on the **story's own page** landed between them too, which is the next page
+along, with nothing said. Which of the two openings the writer meant is **not
+derivable from the manuscript** — they have just said it by pointing at a page
+— so `bookBeforeOpening` carries it on the figure, the hoist reads it instead
+of guessing, and `placeBookFigure` clears it when the picture stops being a
+page, for the back leaf's own reason. Nothing written before this carries the
+attribute, which is why no existing book moves and why the whole suite passed
+unedited.
+
+### The grip, and one act for every drop
+
+A picture row said *a figure stands where it stands in the writing; it is
+moved by drawing its box on another page*, which is true of the **box** and
+was taken to settle the drag as well. It does not: redrawing the box is how a
+picture's place *on a page* is set, and *which page* is a different question
+the rail is the natural place to answer. So a picture row and a page row
+carrying one both drag, and the landing is `moveFigureBefore` — the act the
+box's own redraw already ran, a second door rather than a second answer. A
+page of words does not drag and its title says why.
+
+Both drops go through `movePictureTo`, which is that move with
+`bookBeforeOpening` written on the way, so dragging a picture onto a page row
+and onto a chapter's row cannot put it in two places. And the drop asks the
+**offer** rather than the row's own `elementId`: a page row carries the first
+body block *on* the page, which on a division's opening page is nothing at
+all — so the drop refused on exactly the page a picture is dragged onto, and
+did it silently.
+
+### One sentence, and it says why
+
+*The page in front of this one is already blank. Its own page says why* is two
+sentences, the second of which says nothing: the page in front **is** a page,
+so *its own page* has no referent, and a writer told to go and look somewhere
+else has been refused twice. Ken read it back and said he did not know what it
+meant, and he was right.
+
+There are three reasons a page is blank, §9i settled them, and the **page's own
+help text kept the only copy** — three branches in a component, which is why
+the refusal could not reach them. `blankReason` is that reading, and the
+refusal names it in the same breath; `partBlankOffer` carried the same sentence
+and takes the same correction.
+
+Driving then showed the reading was **a guess**: it worked the reason out by
+looking at what stood on the page *before*, so a picture there was taken to
+mean *this is its back* — which is wrong exactly where a picture opens a
+division, the leaf after it being the recto gap the cutter left. The block says
+so now (`blankBack`), and that found a fault in code this section did not
+write: **the back leaf was emitted where the manuscript's own elements are and
+not on the hoist path**, so a picture standing in front of a chapter lost it.
+The book looked right — a picture on a recto followed by a chapter on a recto
+leaves the verso between them empty anyway — and what was wrong was what the
+page then said about itself. `backLeaf` is one helper read by all three paths.
+
+### Every page accounted for
+
+`pagesUnder` gives each page to the nearest division row at or before it (§9m),
+and a page standing **in front of** the first one belonged to nobody: it was
+listed under no row and could not be reached from the rail at all. That was
+invisible until the hoist put a picture there — and it is also the plainest
+reading of Ken's *stray page … in between the story and the front matter*,
+which on an imported collection is the leaf the recto rule leaves before the
+story opens. Pages with no row are held and given to the next division, which
+is where `bookRows` already puts the picture itself.
+
+### Driven
+
+On the real screen at 1440 × 900, on an imported collection with the front
+matter deleted, which is his state.
+
+- A picture asked for on the story's opening page **takes that page**; the
+  story's opening moves on, and the rail lists the picture's page and the leaf
+  beside it under the story.
+- A picture asked for where a leaf already stands in front says, before the
+  press, which page it will stand on.
+- The blank leaf's dialog reads *This page is blank, so there is nothing on it
+  for a picture to stand before. Put the picture on the page after it, and it
+  will come here.* and *Nothing here to take away: this page is blank because
+  it is the back of the picture in front of it, kept empty so nothing shows
+  through.*
+- The picture page's × asks inline — *The picture comes out of the writing; it
+  stays in the library. Any leaf behind it goes with it.* — and Remove takes it
+  out.
+- Dragging the picture's page row onto page one moves the picture there.
+
+Three faults only looking caught. The grip sat **against** the word *Page*,
+because the row's name was a plain button rather than a row of parts, and a row
+without a grip began a few pixels to the left of a row with one, so the list
+jittered down the column. The asking state was **correct and overruled by a
+later rule of equal specificity** — `.layout-rail-asking` sets `align-items:
+stretch` and `.layout-rail-page` sets `center` further down the file, so a page
+row being asked about centred its name while every other row ranged it left:
+addendum 02 §4a's lesson in this room, fixed by making the rule about the
+**state** beat the rule about the **kind** rather than by moving it. And a
+section's bottom rule separates it from the next one, so on a blank leaf —
+which now says what it is and offers nothing — the dialog ended on a line
+promising something underneath it.
+
+### What went with it
+
+`ArtTarget`'s `front`, `back` and `before` are **gone**. An art page in a half
+of the book stopped being a *part* the day §9i made a picture that is a page
+of its own a **figure**, and the last thing that still built one of those
+targets was the fallthrough above — so with it removed they were three members
+nothing could construct and a branch nothing could reach. The ref that holds
+the target starts at **nothing** rather than at `{ kind: 'back' }`, because a
+starting value that really places a picture is a picture placed by a call
+nobody made, which is the fault this section removed one step earlier.
+
+No migration: `bookBeforeOpening` is an attribute on a manuscript element,
+which has been a free record since 0001, and everything else here is a reading.
+
 ### Deliberately not built
 
 The **file importers** of §2 — BibTeX, RIS, CSL-JSON, CSV/TSV/XLSX, a

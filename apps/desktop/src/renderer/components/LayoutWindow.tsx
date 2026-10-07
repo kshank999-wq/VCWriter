@@ -128,12 +128,20 @@ import {
   rowHasUnder,
   visibleRows,
   blankOffer,
+  blankReason,
+  sayBlankReason,
+  pictureOffer,
+  pageRemoval,
+  removeBookPage,
+  movePictureTo,
   partBlankOffer,
   chapterPageSchema,
   setBlankPage,
   setChapterBlank,
   plateIntoStory,
   type BookPageRow,
+  type PictureOffer,
+  type PageRemoval,
   placeBookFigure,
   placeFigure,
   removeBookRow,
@@ -204,12 +212,27 @@ const OPENING_WORDS: Record<(typeof OPENINGS)[number], string> = {
 const spreadOfSheet = (sheet: number): number => (sheet <= 1 ? 0 : Math.floor(sheet / 2));
 
 /** Where a picture the writer is choosing will go, decided before the picker opens. */
+/**
+ * What the picture about to be chosen will become.
+ *
+ * `front`, `back` and `before` are **gone** (§9w): an art page in a half of
+ * the book stopped being a part the day §9i made a picture that is a page of
+ * its own a **figure**, and the last thing that still built one was
+ * `importPicture`'s fallthrough — the line that put a picture asked for on a
+ * blank page at the back of the book. With it gone they were three members
+ * nothing could construct and a branch nothing could reach, and leaving
+ * `{ kind: 'back' }` as the ref's own starting value would have kept the
+ * fault one missing call away.
+ */
 type ArtTarget =
-  | { kind: 'front' }
-  | { kind: 'back' }
-  | { kind: 'before'; markerId: string }
   /** Into the story, before this element: across the measure, or a page of its own. */
-  | { kind: 'story'; elementId: string; as: 'measure' | 'page' | 'free' }
+  | {
+      kind: 'story';
+      elementId: string;
+      as: 'measure' | 'page' | 'free';
+      /** Whether it stands in front of the division's opening (§9w). */
+      beforeOpening?: boolean;
+    }
   /** Into a part: cut into its words where it has them, a page of its own where it has not. */
   | { kind: 'part'; partId: string; as: 'measure' | 'page' | 'free' }
   /** A logotype in place of a designed page's title (§9n). */
@@ -243,6 +266,14 @@ const AREA_NAMES: Record<'front' | 'body' | 'back', string> = {
 
 /** A page that stands on nothing, before the book has been laid. */
 const EMPTY_PLACE: PagePlace = { elementId: null, partId: null, markerId: null };
+/** What a picture may do before any page is in hand (§9w): nothing, and it says so. */
+const NO_PICTURE: PictureOffer = {
+  spot: null,
+  of: null,
+  beforeOpening: false,
+  note: null,
+  refusal: 'Choose a page first: the picture goes at the top of it.',
+};
 
 /** i, ii, iii — the front matter's numbers, for the rail. */
 const roman = (value: number): string => {
@@ -416,8 +447,11 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
   const [message, setMessage] = useState<string | null>(null);
   /** The Add menu, open at the button (§9a). */
   const [addMenu, setAddMenu] = useState<{ x: number; y: number } | null>(null);
-  /** What the rail is dragging: a part within its half, or a chapter as a block. */
-  const [dragging, setDragging] = useState<{ kind: 'part' | 'chapter'; id: string } | null>(null);
+  /**
+   * What the rail is dragging: a part within its half, a chapter as a block,
+   * or a picture onto another page (§9w).
+   */
+  const [dragging, setDragging] = useState<{ kind: 'part' | 'chapter' | 'picture'; id: string } | null>(null);
   const [over, setOver] = useState<string | null>(null);
   /**
    * The one picker for every picture the room takes in (§9, §9a). What the
@@ -426,7 +460,9 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * dialog leaves no empty page behind.
    */
   const artPicker = useRef<HTMLInputElement>(null);
-  const artTarget = useRef<ArtTarget>({ kind: 'back' });
+  // Nothing until something asks (§9w): a starting target that really places
+  // a picture is a picture placed by a call nobody made.
+  const artTarget = useRef<ArtTarget | null>(null);
 
   const parts = useMemo(() => partsOf(file), [file]);
   /** The book as one list (§9a): the rail, and the room's one selection. */
@@ -630,6 +666,27 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * wherever it is pressed.
    */
   const place = laying && selectedSheet !== null ? pagePlace(laying.laid.pages, laying.blocks, selectedSheet) : EMPTY_PLACE;
+  /** Where anything asked for on a sheet would go (§9r), read from the laying. */
+  const pagePlaceFor = (sheet: number): PagePlace =>
+    laying ? pagePlace(laying.laid.pages, laying.blocks, sheet) : EMPTY_PLACE;
+  /**
+   * **What a picture may do on that sheet** (§9w), for the drops as well as
+   * the buttons. A page row carries the first body block **on** the page,
+   * which on a division's opening page is nothing at all — so the drop asked
+   * the row and refused there, and dragging a picture onto a chapter's
+   * opening page did nothing with nothing saying why. `pagePlace` walks
+   * forward for the chapter's first element (§9p), so asking the offer is
+   * asking the one reading every other surface takes.
+   */
+  const offerFor = (sheet: number): PictureOffer => pictureOffer(pagePlaceFor(sheet), pageRows, sheet);
+  /**
+   * **Whether a picture may be asked for on the page in hand, and where it
+   * will land** (§9w). The one reading the rail's button, the Add menu and the
+   * page's own dialog all take, where each used to decide for itself — which
+   * is how a button came to act while its own tooltip said to choose a page
+   * first.
+   */
+  const pageOffer = selectedSheet === null ? NO_PICTURE : offerFor(selectedSheet);
   /** What the page in hand is called in the book, for the buttons that act on it. */
   const chosen = pages.find((one) => one.sheet === selectedSheet);
   const chosenPage =
@@ -655,10 +712,26 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * choice the writer makes — it is what *here* means at each of those three
    * places.
    */
-  const importPicture = (as: 'measure' | 'page' | 'free') => {
-    if (place.elementId) importArt({ kind: 'story', elementId: place.elementId, as });
-    else if (place.partId) importArt({ kind: 'part', partId: place.partId, as });
-    else importArt({ kind: 'back' });
+  const importPicture = (as: 'measure' | 'page' | 'free', on?: PictureOffer) => {
+    const offer = on ?? pageOffer;
+    /**
+     * **A picture asked for on a page goes on that page, or is refused**
+     * (§9w). This ended `else importArt({ kind: 'back' })`, so on a page with
+     * nothing of the book on it — a blank leaf — a picture asked for here
+     * became an art page at the **back of the book**: the one way in this room
+     * a picture ever landed where nobody asked for it, and the thing Ken
+     * reported. Every control that calls this now reads `offer` first, so the
+     * fallthrough has nothing left to catch and is gone.
+     */
+    if (!offer.spot) {
+      setMessage(offer.refusal);
+      return;
+    }
+    if (offer.of === 'story') {
+      importArt({ kind: 'story', elementId: offer.spot, as, beforeOpening: as === 'page' && offer.beforeOpening });
+      return;
+    }
+    importArt({ kind: 'part', partId: offer.spot, as });
   };
 
   /**
@@ -678,6 +751,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       return;
     }
     const target = artTarget.current;
+    if (!target) return;
     try {
       const read = await readPicture(picked);
       onUpdate((current) => {
@@ -705,7 +779,13 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
             beforeElementId: target.elementId as never,
             attributes:
               target.as === 'page'
-                ? { bookPlace: 'page' }
+                ? // Which of a division's two openings it stands in front of
+                  // (§9w): only what differs from the ordinary answer is
+                  // written down, so nothing but a picture asked for on an
+                  // opening page carries it.
+                  target.beforeOpening
+                  ? { bookPlace: 'page', bookBeforeOpening: true }
+                  : { bookPlace: 'page' }
                 : // A vector graphic goes on **free** (§8c): over the page,
                   // taking no line, at a place the writer then drags. It
                   // lands a tenth in from the top-left rather than at the
@@ -762,16 +842,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           return made.file;
         }
 
-        const made = addPart(added.file, 'plate', {
-          assetId,
-          inFront: target.kind === 'front',
-          beforeMarkerId: target.kind === 'before' ? target.markerId : null,
-        });
-        if (made.partId) {
-          setSelectedRowId(made.partId);
-          turnTo.current = made.partId;
-        }
-        return made.file;
+        return added.file;
       });
       setMessage(null);
     } catch {
@@ -787,12 +858,14 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
   const addEntries: MenuEntry[] = [
     {
       label: 'Picture…',
-      disabled: place.elementId || place.partId ? null : 'Choose a page first',
+      disabled: pageOffer.refusal,
       onPick: () => importPicture('measure'),
     },
     {
       label: 'Picture on a page of its own…',
-      disabled: place.elementId || place.partId ? null : 'Choose a page first',
+      disabled: pageOffer.refusal,
+      // Where it will really land, where that is not the page in hand (§9w).
+      note: pageOffer.note,
       onPick: () => importPicture('page'),
     },
     {
@@ -921,9 +994,6 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * do to this page*, and the dialog exists precisely so the answer is the
    * same wherever a writer asks it.
    */
-  /** Where anything asked for on a sheet would go (§9r), read from the laying. */
-  const pagePlaceFor = (sheet: number): PagePlace =>
-    laying ? pagePlace(laying.laid.pages, laying.blocks, sheet) : EMPTY_PLACE;
 
   /** Whether that chapter's own page already leaves its back blank (§9r). */
   const chapterBackOf = (markerId: string | null): boolean => {
@@ -934,18 +1004,24 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
 
   const pageControls = (page: BookPageRow) => {
     const place = pagePlaceFor(page.sheet);
+    // The offer is **this page's** rather than the chosen sheet's (§9w): the
+    // dialog and the inspector both render this, and a section describing one
+    // page while its buttons acted on another would be the fault it fixes.
+    const on = offerFor(page.sheet);
     return (
     <StoryPageSection
       page={page}
       place={place}
+      offer={on}
+      remove={pageRemoval(pageRows, page.sheet)}
       chapterBack={chapterBackOf(place.opensMarkerId ?? null)}
-      // Why a blank leaf is blank is a reading of the page before it, and the
-      // two reasons are different acts: one the cutter's, one the writer's
-      // own (§9i).
-      behindPicture={pageRows.find((one) => one.sheet === page.sheet - 1)?.says === 'Illustration'}
-      leafBefore={pageRows.find((one) => one.sheet === page.sheet - 1) ?? null}
+      // Every reading this screen takes is over the rows, so the three reasons
+      // a page is blank, what a leaf asked for here would do and what a
+      // picture would do are all answered from one place (§9w). The component
+      // held its own copy of the first.
+      rows={pageRows}
       drawing={drawing === NEW_BOX}
-      onPut={() => importPicture('page')}
+      onPut={() => importPicture('page', on)}
       onDraw={() => {
         // The box is drawn on the spread, so the dialog covering it goes.
         setPageDialogSheet(null);
@@ -953,7 +1029,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       }}
       onVector={() => {
         setPageDialogSheet(null);
-        importPicture('free');
+        importPicture('free', on);
       }}
       onBlank={(id, blank) => onUpdate((current) => setBlankPage(current, id, blank))}
       onChapterBack={(markerId, blank) => onUpdate((current) => setChapterBlank(current, markerId, 'back', blank))}
@@ -1059,13 +1135,18 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     const moving = dragging;
     setDragging(null);
     setOver(null);
-    if (!moving || !page.elementId || moving.id === page.figureId) return;
+    const landing = offerFor(page.sheet);
+    if (!moving || !landing.spot || landing.of !== 'story' || moving.id === page.figureId) return;
     onUpdate((current) => {
       const figure = bookFigures(current).find((one) => one.elementId === moving.id);
-      if (figure) return moveFigureBefore(current, figure.elementId, page.elementId as string);
+      // **One act for both drops** (§9w): `movePictureTo` carries which of a
+      // division's two openings the page in hand is, which the move alone
+      // cannot say — so dragging a picture onto a page row and onto a
+      // chapter's row cannot put it in two places.
+      if (figure) return movePictureTo(current, figure.elementId, landing);
       const part = partsOf(current).find((one) => one.id === moving.id);
       if (part?.kind !== 'plate') return current;
-      const made = plateIntoStory(current, part.id, page.elementId as string);
+      const made = plateIntoStory(current, part.id, landing.spot as string);
       if (made.elementId) {
         setSelectedRowId(made.elementId);
         turnTo.current = made.elementId;
@@ -1087,6 +1168,18 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     onUpdate((current) => {
       if (moving.kind === 'chapter') {
         return row.kind === 'chapter' ? moveChapterBlock(current, moving.id as never, row.placed?.marker.id ?? null) : current;
+      }
+      /**
+       * **A picture dropped on a division comes to its opening page** (§9w):
+       * the analogue of *a picture page dropped on a chapter faces that
+       * chapter*, which this room has done for a plate since §9a, said of a
+       * figure. It is the same `movePictureTo` the page rows take, so the
+       * landing is `pictureOffer`'s answer rather than a second one.
+       */
+      if (moving.kind === 'picture') {
+        const at = laying ? pageOf(laying, row.id) : undefined;
+        if (!at) return current;
+        return movePictureTo(current, moving.id, offerFor(at.sheet));
       }
       const part = partsOf(current).find((one) => one.id === moving.id);
       if (!part) return current;
@@ -1331,12 +1424,16 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
             <button
               type="button"
               className="raised layout-add"
-              disabled={!laying}
-              title={
-                place.elementId || place.partId
-                  ? `A picture at the top of ${chosenPage}. The words move down.`
-                  : 'Choose a page first: the picture goes at the top of it.'
-              }
+              /**
+               * **Refused where there is nowhere** (§9w). It was disabled only
+               * while the book was being set, so on a blank leaf it carried
+               * *Choose a page first* in its title **and acted anyway**,
+               * putting an art page at the back of the book. The reading the
+               * menu's two items already took is this button's now, so the
+               * three cannot disagree.
+               */
+              disabled={!laying || !pageOffer.spot}
+              title={pageOffer.refusal ?? `A picture at the top of ${chosenPage}. The words move down.`}
               onClick={() => importPicture('measure')}
             >
               + Picture
@@ -1439,7 +1536,12 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                     if (selectedRowId === row.id) setSelectedRowId(null);
                     onUpdate((current) => removeBookRow(current, row));
                   }}
-                  onDragStart={() => setDragging({ kind: row.kind === 'chapter' ? 'chapter' : 'part', id: row.id })}
+                  onDragStart={() =>
+                    setDragging({
+                      kind: row.kind === 'chapter' ? 'chapter' : row.kind === 'picture' ? 'picture' : 'part',
+                      id: row.id,
+                    })
+                  }
                   onDragEnd={() => {
                     setDragging(null);
                     setOver(null);
@@ -1460,13 +1562,36 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                     in hand — which is what makes a picture land where it was
                     asked for rather than on the chapter. */}
                 {under.map((one) => (
-                  <li
+                  <PageRow
                     key={`page-${one.sheet}`}
-                    className={`layout-rail-row layout-rail-page${over === `page-${one.sheet}` ? ' drop-before' : ''}`}
-                    // A picture dragged onto a page lands there (§9i, from
-                    // Ken: *it doesn't allow me to drag it up and place it*).
+                    page={one}
+                    remove={pageRemoval(pageRows, one.sheet)}
+                    chosen={selectedSheet === one.sheet}
+                    over={over === `page-${one.sheet}`}
+                    onSelect={() => {
+                      setSelectedRowId(one.figureId);
+                      setSelectedSheet(one.sheet);
+                      setSpread(spreadOfSheet(one.sheet));
+                    }}
+                    onOpen={() => {
+                      setSpread(spreadOfSheet(one.sheet));
+                      const at = pages.find((sheet) => sheet.sheet === one.sheet);
+                      if (at) openPage(at);
+                    }}
+                    onRemove={() => {
+                      if (selectedSheet === one.sheet) setSelectedSheet(null);
+                      onUpdate((current) => removeBookPage(current, one));
+                    }}
+                    onDragStart={() => one.figureId && setDragging({ kind: 'picture', id: one.figureId })}
+                    onDragEnd={() => {
+                      setDragging(null);
+                      setOver(null);
+                    }}
                     onDragOver={(event) => {
-                      if (!dragging || !one.elementId) return;
+                      // The offer rather than the row's own element (§9w): a
+                      // division's opening page carries none, and that is
+                      // exactly the page a picture is dragged onto.
+                      if (!dragging || !offerFor(one.sheet).spot || dragging.id === one.figureId) return;
                       event.preventDefault();
                       setOver(`page-${one.sheet}`);
                     }}
@@ -1475,36 +1600,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                       event.preventDefault();
                       dropOnPage(one);
                     }}
-                  >
-                    <button
-                      type="button"
-                      className={`layout-rail-name${selectedSheet === one.sheet ? ' on' : ''}`}
-                      aria-current={selectedSheet === one.sheet}
-                      onClick={() => {
-                        setSelectedRowId(one.figureId);
-                        setSelectedSheet(one.sheet);
-                        setSpread(spreadOfSheet(one.sheet));
-                      }}
-                      // The rail and the spread are one gesture (§9j): a
-                      // double-click opens the page wherever it is pressed.
-                      onDoubleClick={() => {
-                        setSpread(spreadOfSheet(one.sheet));
-                        const at = pages.find((sheet) => sheet.sheet === one.sheet);
-                        if (at) openPage(at);
-                      }}
-                    >
-                      {/* **The row is the page** (§9l, from Ken: *it should
-                          say page two, page three, page four, page five*).
-                          The number is the page's own, printed or not — an
-                          illustration and a blank leaf are counted like any
-                          other page and merely print no folio, so a row that
-                          showed the folio left both of them nameless. What
-                          stands on the page follows, and a page of plain text
-                          needs no word: that is what a page of a book is. */}
-                      <span className="layout-rail-title">Page {one.counted}</span>
-                      {one.says === 'Text' ? null : <span className="muted small layout-rail-says">{one.says}</span>}
-                    </button>
-                  </li>
+                  />
                 ))}
                 </Fragment>
               );
@@ -1922,6 +2018,139 @@ function RailRow({
           ×
         </button>
       )}
+    </li>
+  );
+}
+
+/**
+ * **One page of the book, as a row of the rail** (§9w, from Ken: *there's
+ * numbered pages, page one, two, three. There's no way to delete those pages.
+ * There needs to be a little X in the left menu allowing you to delete
+ * them*, and *it should be draggable so you can move things around if you
+ * wanted to, the pages. Especially the pages that you import or pictures that
+ * you import*).
+ *
+ * §9h drew these inline, as a fold under a row rather than as rows, and they
+ * were the only thing in this rail with neither a × nor a grip — which is why
+ * every other row in the room could be taken out and a page could not.
+ * They are `RailRow`'s shape now, and the two controls say what they can do:
+ *
+ * **The × takes away what the writer put on the page**, which `pageRemoval`
+ * decides — a blank leaf they asked for, or the picture that *is* the page —
+ * and is **absent with the reason in its place** on the two pages that have
+ * nothing of theirs on them, a × that could only refuse being one a writer
+ * never trusts again.
+ *
+ * **The grip moves a picture**, which is `moveFigureBefore`, the act redrawing
+ * the box already ran. A page of text does not drag: its order is the
+ * writing's, and the title says so rather than leaving a grip that does
+ * nothing.
+ */
+function PageRow({
+  page,
+  remove,
+  chosen,
+  over,
+  onSelect,
+  onOpen,
+  onRemove,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+}: {
+  page: BookPageRow;
+  /** What a × here would take, or why there is none (§9w). */
+  remove: PageRemoval;
+  chosen: boolean;
+  over: boolean;
+  onSelect(): void;
+  onOpen(): void;
+  onRemove(): void;
+  onDragStart(): void;
+  onDragEnd(): void;
+  onDragOver(event: React.DragEvent): void;
+  onDragLeave(): void;
+  onDrop(event: React.DragEvent): void;
+}) {
+  const [asking, setAsking] = useState(false);
+  /** Only a picture moves: a page of words stands where the words stand. */
+  const draggable = page.figureId !== null;
+  return (
+    <li
+      className={`layout-rail-row layout-rail-page${over ? ' drop-before' : ''}${asking ? ' layout-rail-asking' : ''}`}
+      draggable={draggable}
+      onDragStart={(event) => {
+        if (!draggable) return;
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', page.figureId as string);
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      <button
+        type="button"
+        className={`layout-rail-name${chosen ? ' on' : ''}`}
+        aria-current={chosen}
+        title={
+          draggable
+            ? 'A picture on a page of its own. Drag it onto another page to move it; double-click to set it.'
+            : 'Double-click to open the page.'
+        }
+        onClick={onSelect}
+        // The rail and the spread are one gesture (§9j): a double-click opens
+        // the page wherever it is pressed.
+        onDoubleClick={onOpen}
+      >
+        <span className="layout-grip" aria-hidden="true">
+          {draggable ? '⠿' : ''}
+        </span>
+        {/* **The row is the page** (§9l, from Ken: *it should say page two,
+            page three, page four, page five*). The number is the page's own,
+            printed or not — an illustration and a blank leaf are counted like
+            any other page and merely print no folio, so a row that showed the
+            folio left both of them nameless. What stands on the page follows,
+            and a page of plain text needs no word: that is what a page of a
+            book is. */}
+        <span className="layout-rail-title">Page {page.counted}</span>
+        {page.says === 'Text' ? null : <span className="muted small layout-rail-says">{page.says}</span>}
+      </button>
+      {asking ? (
+        <span className="layout-ask">
+          <span className="muted small layout-ask-why">{remove.comfort}</span>
+          <button
+            type="button"
+            className="ghost small danger"
+            onClick={() => {
+              // **The ask closes with the act.** A row is keyed by its sheet
+              // and the sheet survives what stood on it, so leaving it open
+              // left *Remove · Keep* sitting on whatever page took that
+              // number next — a question about a page that had gone.
+              setAsking(false);
+              onRemove();
+            }}
+          >
+            Remove
+          </button>
+          <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+            Keep
+          </button>
+        </span>
+      ) : remove.act ? (
+        <button
+          type="button"
+          className="ghost small layout-part-remove"
+          aria-label={`Remove page ${page.counted}`}
+          title={remove.act}
+          onClick={() => setAsking(true)}
+        >
+          ×
+        </button>
+      ) : null}
     </li>
   );
 }
@@ -3086,7 +3315,6 @@ function PlacingHandle({
  */
 function StoryPageSection({
   page,
-  behindPicture,
   drawing,
   onPut,
   onDraw,
@@ -3095,7 +3323,9 @@ function StoryPageSection({
   onChapterBack,
   place,
   chapterBack,
-  leafBefore,
+  rows,
+  offer,
+  remove,
   onFormat,
   format,
   openings,
@@ -3105,10 +3335,17 @@ function StoryPageSection({
   place: PagePlace;
   /** Whether this chapter's page already leaves its back blank. */
   chapterBack: boolean;
-  /** The page in front of this one, so the offer can see a leaf already there (§9r). */
-  leafBefore: BookPageRow | null;
-  /** A blank leaf standing behind a picture page, asked for rather than left (§9i). */
-  behindPicture: boolean;
+  /**
+   * Every page of the book (§9w). The three reasons a page is blank, whether a
+   * leaf may be asked for here and what a picture would do are all readings
+   * over this list, so the screen holds no copy of any of them — it held one
+   * of the first, as three branches of its own help text.
+   */
+  rows: readonly BookPageRow[];
+  /** Whether a picture may be asked for here, and where it would land (§9w). */
+  offer: PictureOffer;
+  /** What a × on this page would take away, or why there is none (§9w). */
+  remove: PageRemoval;
   drawing: boolean;
   onPut(): void;
   onDraw(): void;
@@ -3143,7 +3380,9 @@ function StoryPageSection({
    * over the one case where a leaf already stands in front, so no screen holds
    * a second answer about either.
    */
-  const offer = blankOffer(place, page, leafBefore);
+  const blank = blankOffer(place, rows, page.sheet);
+  /** Which of the three reasons this page is blank (§9w), where it is. */
+  const why = blankReason(rows, page.sheet);
   /** What stands on the page, in the rail's own words rather than a sentence. */
   const what = page.figureId ? 'a picture' : page.blank ? 'blank' : page.says === 'Chapter opens' ? 'a chapter opens' : null;
   return (
@@ -3155,15 +3394,13 @@ function StoryPageSection({
           <span>
             {page.figureId
               ? 'A picture stands on it. How it sits is below.'
-              : page.blank
+              : why
                 ? // Three blank pages, three reasons, and only one of them the
                   // writer's — a page that says the wrong one is a page nobody
-                  // can work out how to be rid of.
-                  page.blankFor
-                  ? 'It is blank because you put it here. It counts as a page and prints no number.'
-                  : behindPicture
-                    ? 'It is blank — the back of the picture before it, kept empty so nothing shows through. It counts as a page and prints no number.'
-                    : 'It is blank — the page before a chapter that opens on a right-hand page.'
+                  // can work out how to be rid of. The three used to be
+                  // written out here; `blankReason` is the one place that
+                  // knows, so the refusals can say them too (§9w).
+                  `It is blank because ${sayBlankReason(why)}. It counts as a page and prints no number.`
                 : page.says === 'Chapter opens'
                   ? 'The chapter opens on it. A picture put here goes in before it, and the chapter moves down.'
                   : 'Story text. A picture put here goes in before the words on it, and they move down.'}{' '}
@@ -3173,7 +3410,7 @@ function StoryPageSection({
       </h3>
       {page.figureId ? null : (
         <div className="layout-page-acts">
-          {page.blank ? null : (
+          {offer.spot ? (
             <>
               <button type="button" className="small" onClick={onPut}>
                 Put a picture on this page…
@@ -3181,31 +3418,41 @@ function StoryPageSection({
               <button type="button" className={drawing ? 'small on' : 'small'} onClick={onDraw}>
                 {drawing ? 'Drawing the box…' : 'Draw a box for a picture…'}
               </button>
+              {/* A vector graphic (§8c, from Ken: *add a vector graphic …
+                  anywhere on the page, and then they can resize that also.
+                  But it has a transparent background*). */}
+              <button type="button" className="small" onClick={onVector}>
+                Add a vector graphic…
+              </button>
             </>
-          )}
-          {/* A vector graphic (§8c, from Ken: *add a vector graphic … anywhere
-              on the page, and then they can resize that also. But it has a
-              transparent background*). Offered on **every** page, a blank
-              leaf included: a flourish takes no room in the text, so there is
-              no writing for it to need. */}
-          <button type="button" className="small" onClick={onVector}>
-            Add a vector graphic…
-          </button>
+          ) : null}
+          {/* **Where a picture asked for here will really land** (§9w): said
+              before the press, because an empty leaf in front of the page is
+              filled rather than added to, so the picture stands a page
+              earlier — which from the writer's chair is the picture moving
+              on its own. */}
+          {offer.note ? <p className="muted small">{offer.note}</p> : null}
+          {/* **Why there is no picture button** (§9w). §8c offered the vector
+              graphic on every page, a blank leaf included, and the mechanism
+              could not keep it: a leaf is where the cutter stopped, so there
+              is nothing on it for a picture to stand before, and pressing
+              put an art page at the back of the book. */}
+          {offer.refusal ? <p className="muted small">{offer.refusal}</p> : null}
           {/* A blank page (§9i, from Ken: *insert a blank page… and it will
               slide what was on that page to the next page*). Offered where
               there is writing to stand before; on a leaf the writer put in,
               the same button takes it away, which is the only place it can
               be found again. */}
-          {offer.spot && offer.act ? (
+          {blank.spot && blank.act ? (
             <button
               type="button"
               className="small"
-              onClick={() => onBlank(offer.spot as string, !page.blankFor)}
+              onClick={() => onBlank(blank.spot as string, !page.blankFor)}
             >
-              {offer.act}
+              {blank.act}
             </button>
           ) : null}
-          {offer.refusal ? <p className="muted small">{offer.refusal}</p> : null}
+          {blank.refusal ? <p className="muted small">{blank.refusal}</p> : null}
           {/* **A blank on the chapter page's back** (§9r, Ken's own words).
               Absent where the chapter opens with its own first paragraph:
               there is no back to leave, the next page being the middle of the
@@ -3222,6 +3469,21 @@ function StoryPageSection({
           ) : null}
         </div>
       )}
+      {/*
+        **Why this page cannot be taken away** (§9w, from Ken: *there's a stray
+        page that has a bunch of information on it that I want to remove, but I
+        can't remove it… there's no way to get rid of this*).
+
+        The × is on the page's **row**, which is where he asked for it and
+        where every other × in this room is; what belongs here is the sentence
+        for the two pages that have none — a leaf the cutter left, and a page
+        of the story's own words, which go by cutting the words rather than by
+        pressing at the page. Where the page *can* be taken away the act is
+        already on this screen — *Take this blank page away* above, and
+        `FigureSection`'s **Delete** for a picture — so there is no second
+        button here for one act.
+      */}
+      {remove.refusal && !page.figureId ? <p className="muted small">{remove.refusal}</p> : null}
       {/* How the opening is set (§9l, §9m). A chapter with a page of its own
           keeps the **button**, because that page has a sheet to be set
           against and a dialog that draws it. A chapter inside a story has no

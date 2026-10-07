@@ -374,6 +374,18 @@ export interface BookBlock {
    */
   blankFor?: string;
   /**
+   * **This blank block is the back of the leaf in front of it** (§9w): the
+   * leaf a picture page or a chapter page was asked to leave empty.
+   *
+   * Said rather than inferred. The three reasons a page is blank used to be
+   * worked out by looking at what stood on the page *before* — a picture
+   * there was taken to mean *this is its back* — which is a guess, and it is
+   * wrong exactly where a picture happens to open a division: the leaf after
+   * it is then the recto gap the cutter left, and the screen told the writer
+   * it was a back page nobody had asked for.
+   */
+  blankBack?: boolean;
+  /**
    * **This block is not a manuscript element** (§9s): it stands in for a
    * section's missing heading (§9l), so its id names the *unit* rather than
    * anything a writer can point at.
@@ -531,6 +543,7 @@ const partBlocks = (
       // Which page put it here, so the room can offer to take it away again
       // — the one place a leaf the writer asked for can be found (§9i).
       blankFor: suffix === 'before' ? part.id : undefined,
+      blankBack: suffix === 'back',
     });
   // **A leaf in front of this page** (§9r): *wherever you want* includes the
   // front and back matter, which is where a book most often wants one.
@@ -1029,6 +1042,45 @@ export const setBlankBefore = (file: ProjectFile, elementId: string, blank: bool
 export const blankSpot = (place: PagePlace, page: Pick<BookPageRow, 'blankFor'>): string | null =>
   page.blankFor ?? place.opensMarkerId ?? place.elementId ?? place.partId ?? null;
 
+/**
+ * **Why a page is blank** (§9w, from Ken: *it says this page in front of one
+ * is already blank. Page says why. I don't know what this means*).
+ *
+ * There are three reasons and only one of them is the writer's, which §9i
+ * settled and the **page's own help text then kept a copy of**: three branches
+ * in a component, which is the fault this project removes everywhere else — a
+ * screen holding its own answer to a question the domain can be asked. It had
+ * already cost something, because `blankOffer`'s refusal could not reach them
+ * and said *its own page says why* instead: a sentence that sends a writer to
+ * another page to be told what this one could have told them, which is what
+ * Ken could not parse and was right not to.
+ *
+ * It is a **reading over the rows**, so the reason for any page is answerable
+ * from any screen without threading neighbours through it.
+ */
+export type BlankReason = 'writer' | 'back' | 'recto';
+
+export const blankReason = (rows: readonly BookPageRow[], sheet: number): BlankReason | null => {
+  const page = rows.find((one) => one.sheet === sheet);
+  if (!page || !page.blank) return null;
+  if (page.blankFor) return 'writer';
+  // **The block says so** (§9w). This read *the page in front is an
+  // illustration, so this is its back*, which is a guess — and wrong exactly
+  // where a picture opens a division, the leaf after it being the recto gap
+  // the cutter left; the screen then told the writer it was a back page
+  // nobody had asked for.
+  if (page.blankBack) return 'back';
+  return 'recto';
+};
+
+/** The reason in words, in one place, for the help text and both refusals. */
+export const sayBlankReason = (reason: BlankReason): string =>
+  reason === 'writer'
+    ? 'you put it here'
+    : reason === 'back'
+      ? 'it is the back of the picture in front of it, kept empty so nothing shows through'
+      : 'the page after it opens on a right-hand page';
+
 /** What a press would do, or why it may not be asked for (§9r). */
 export interface BlankOffer {
   /** Where the leaf would go. Null where the act may not be asked for here. */
@@ -1057,24 +1109,31 @@ export interface BlankOffer {
  * page, because the absorption is a fact about the cutter rather than about
  * chapters — chapters are merely where it happens on every one.
  */
-export const blankOffer = (
-  place: PagePlace,
-  page: Pick<BookPageRow, 'blankFor'>,
-  /** The row of the page in front of this one, where there is one. */
-  before: Pick<BookPageRow, 'blank' | 'blankFor'> | null,
-): BlankOffer => {
+export const blankOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet: number): BlankOffer => {
+  const page = rows.find((one) => one.sheet === sheet);
+  if (!page) return { spot: null, act: null, refusal: null };
   const spot = blankSpot(place, page);
   if (spot === null) return { spot: null, act: null, refusal: null };
   // Taking away the leaf a writer put in is never refused: it is the only
   // place that leaf can be found again (§9i).
   if (page.blankFor) return { spot, act: 'Take this blank page away', refusal: null };
-  if (before?.blank) {
+  const standing = blankReason(rows, sheet - 1);
+  if (standing) {
+    /**
+     * **One sentence, and it says why** (§9w). This read *The page in front of
+     * this one is already blank. Its own page says why* — two sentences, the
+     * second of which says nothing at all: the page in front *is* a page, so
+     * *its own page* has no referent, and a writer told to go and look
+     * somewhere else has been refused twice. `blankReason` is the one place
+     * that knows, so the refusal names it here.
+     */
     return {
       spot: null,
       act: null,
-      refusal: before.blankFor
-        ? 'There is already a blank page in front of this one. Its own page takes it away again.'
-        : 'The page in front of this one is already blank. Its own page says why.',
+      refusal:
+        standing === 'writer'
+          ? 'A blank page already stands in front of this one, because you put it there. Its own page takes it away again.'
+          : `A blank page already stands in front of this one, because ${sayBlankReason(standing)}.`,
     };
   }
   return { spot, act: 'Put a blank page here…', refusal: null };
@@ -1099,14 +1158,119 @@ export const partBlankOffer = (
   if (part.blankBefore) {
     return { spot: part.id, act: 'Take the blank page before this one away', refusal: null };
   }
-  if (opens && rows.find((row) => row.sheet === opens.sheet - 1)?.blank === true) {
+  const standing = opens ? blankReason(rows, opens.sheet - 1) : null;
+  if (standing) {
+    // One sentence, and it says why (§9w) — the same correction as
+    // `blankOffer`'s, because this was the same sentence.
     return {
       spot: null,
       act: null,
-      refusal: 'The page in front of this one is already blank. Its own page says why.',
+      refusal:
+        standing === 'writer'
+          ? 'A blank page already stands in front of this one, because you put it there. Its own page takes it away again.'
+          : `A blank page already stands in front of this one, because ${sayBlankReason(standing)}.`,
     };
   }
   return { spot: part.id, act: 'Put a blank page before this one', refusal: null };
+};
+
+/**
+ * **Whether a picture may be asked for on this page, and where it will land**
+ * (§9w, from Ken: *on page three, when I try to put a picture, it snaps it
+ * before page one for some reason*).
+ *
+ * Three screens add a picture to the page in hand — the rail's **+ Picture**,
+ * the Add menu's two items and the page's own dialog — and each decided for
+ * itself whether it could, which is how they came to disagree: the menu
+ * refused on a page with nothing of the manuscript on it and said *Choose a
+ * page first*, the button carried the same words **in its title and acted
+ * anyway**, and what it did was put an art page at the **back of the book**.
+ * A writer who asked for a picture on page two got one on page nine, with the
+ * control's own tooltip saying it would not. So this is one reading, in
+ * `trackRemoval`'s shape, and the fallthrough that landed a picture somewhere
+ * else is gone with it: a picture asked for on a page goes on that page or is
+ * refused in a sentence.
+ *
+ * The other half is the one Ken reported. Two true facts about the cutter make
+ * a picture land on a page the writer did not point at, and neither was said:
+ *
+ * **An empty leaf in front of the page is filled rather than added to.** A
+ * picture of its own takes the next page there is, so where the cutter has
+ * already left the verso empty the picture fills *that* and the book does not
+ * grow — correct typography, and from the writer's chair the picture has
+ * jumped back a page for no reason they can see. §9r found the same fact for
+ * blank leaves and answered it by saying so before the press; a picture is
+ * wanted on that page either way, so this says it and does not refuse.
+ *
+ * **A division's own opening page is not the page its first element is on**,
+ * where the division opens twice — a collection's story opens with its own
+ * page and again with its first chapter's numeral (addendum 22 §6). §9t
+ * rightly stopped the hoist there so a picture asked for on the numeral's page
+ * lands between the two; the cost, unnoticed, was that a picture asked for on
+ * the **story's own page** also landed between them, which is the next page
+ * along. `beforeOpening` is what the room cannot work out for itself and the
+ * writer has just said by pointing at a page, so it is carried on the figure
+ * and read by the hoist.
+ */
+export interface PictureOffer {
+  /** The element or part a picture asked for here goes before. Null where none can be. */
+  spot: string | null;
+  /** Which kind of thing `spot` names, so the caller builds the right target. */
+  of: 'story' | 'part' | null;
+  /**
+   * Whether a page of its own asked for here stands in front of the division's
+   * opening rather than after it (§9w).
+   */
+  beforeOpening: boolean;
+  /** Where a page of its own will really land, said only where it is not this page. */
+  note: string | null;
+  /** Why a picture may not be asked for here, in a sentence a writer can act on. */
+  refusal: string | null;
+}
+
+export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet: number): PictureOffer => {
+  const page = rows.find((one) => one.sheet === sheet);
+  const none = (refusal: string): PictureOffer => ({ spot: null, of: null, beforeOpening: false, note: null, refusal });
+  if (!page) return none('The book is still being set.');
+  if (!place.elementId && !place.partId) {
+    /**
+     * **A page with nothing of the book on it has nothing for a picture to go
+     * before.** A leaf is not a record — it is where the cutter stopped — so
+     * there is no paragraph, no part and no chapter on it to hang a picture
+     * from, and §8c's claim that a vector graphic is offered *on every page, a
+     * blank leaf included* was one the mechanism could not keep.
+     */
+    return none(
+      page.blank
+        ? 'This page is blank, so there is nothing on it for a picture to stand before. Put the picture on the page after it, and it will come here.'
+        : 'Nothing of the book stands on this page yet.',
+    );
+  }
+  const leaf = place.elementId !== null && blankReason(rows, sheet - 1) !== null
+    ? rows.find((one) => one.sheet === sheet - 1)
+    : undefined;
+  return {
+    spot: place.elementId ?? place.partId,
+    of: place.elementId ? 'story' : 'part',
+    /**
+     * **The page the division opens on**, which is the fact the writer has
+     * just stated by pointing at it. Where the opening and the first words
+     * share a page, *before the opening* and *before the first element* are
+     * the same page and this changes nothing; where they do not, it is the
+     * whole difference between the page asked for and the next one.
+     */
+    beforeOpening: place.opensMarkerId !== null,
+    /**
+     * **It names the page**, which is the whole use of saying it: *one page
+     * earlier* is arithmetic a writer has to do while looking at a rail that
+     * has already done it, and beside `blankOffer`'s own sentence about the
+     * same leaf the two read as one fact said twice.
+     */
+    note: leaf
+      ? `A picture of its own will stand on page ${leaf.counted}: the leaf in front of this page is empty, and it fills that rather than adding one.`
+      : null,
+    refusal: null,
+  };
 };
 
 /**
@@ -1170,6 +1334,28 @@ export const setBackBlank = (file: ProjectFile, elementId: string, blank: boolea
         const attributes = { ...element.attributes };
         if (blank) attributes.bookBackBlank = true;
         else delete attributes.bookBackBlank;
+        return { ...element, attributes };
+      }),
+    },
+  })),
+});
+
+/**
+ * **Which opening a page-figure stands in front of** (§9w). Written only where
+ * the writer pointed at a division's own opening page, and cleared otherwise,
+ * so the figure never carries a stale answer about a page it has left.
+ */
+export const setBeforeOpening = (file: ProjectFile, elementId: string, before: boolean): ProjectFile => ({
+  ...file,
+  beats: file.beats.map((beat) => ({
+    ...beat,
+    manuscript: {
+      ...beat.manuscript,
+      elements: beat.manuscript.elements.map((element) => {
+        if ((element.id as string) !== elementId) return element;
+        const attributes = { ...element.attributes };
+        if (before) attributes.bookBeforeOpening = true;
+        else delete attributes.bookBeforeOpening;
         return { ...element, attributes };
       }),
     },
@@ -1319,6 +1505,7 @@ export const placeBookFigure = (file: ProjectFile, elementId: string, placement:
                 bookSide: _side,
                 bookStandoff: _off,
                 bookBackBlank: _back,
+                bookBeforeOpening: _opening,
                 bookX: _x,
                 bookY: _y,
                 ...rest
@@ -1329,6 +1516,11 @@ export const placeBookFigure = (file: ProjectFile, elementId: string, placement:
                 // A page needs no width and no standoff: it is the page.
                 if (placement.side && placement.side !== 'either') attributes.bookSide = placement.side;
                 if (element.attributes.bookBackBlank === true) attributes.bookBackBlank = true;
+                // **Which opening it stands in front of goes with the page**
+                // (§9w), for the back leaf's own reason: a picture cut into
+                // the text is not in front of anything, so an answer left on
+                // it would come back the next time it was made a page.
+                if (element.attributes.bookBeforeOpening === true) attributes.bookBeforeOpening = true;
               } else if (placement.place === 'free') {
                 // Where it stands and how wide, and nothing else: a free
                 // graphic is out of the text's way, so it has no side to
@@ -1487,6 +1679,12 @@ export interface BookPageRow {
    * to remove.
    */
   blankFor: string | null;
+  /**
+   * Whether this blank page is the **back** of the leaf in front of it (§9w):
+   * a picture page's, or a chapter page's. Said by the block rather than
+   * guessed from what stands on the page before.
+   */
+  blankBack: boolean;
   blank: boolean;
 }
 
@@ -1547,6 +1745,7 @@ export const bookPageRows = (
       figureId: art?.id ?? null,
       elementId: on.find((block) => BODY_KINDS.has(block.kind))?.id ?? null,
       blankFor: leaf?.blankFor ?? null,
+      blankBack: leaf?.blankBack === true,
       blank: empty,
     };
   });
@@ -1595,6 +1794,42 @@ export const moveFigureBefore = (file: ProjectFile, elementId: string, beforeEle
   });
   return { ...file, beats };
 };
+
+/**
+ * **Move a picture onto the page an offer describes** (§9w): the act both of
+ * the rail's drops run, so dragging a picture onto a page row and dragging it
+ * onto a chapter's row cannot put it in two different places.
+ *
+ * It is `moveFigureBefore` with the one thing the move alone cannot say —
+ * which of a division's two openings the writer pointed at — written on the
+ * way, and cleared where they pointed at an ordinary page.
+ */
+export const movePictureTo = (file: ProjectFile, elementId: string, offer: PictureOffer): ProjectFile => {
+  if (!offer.spot || offer.of !== 'story') return file;
+  return setBeforeOpening(moveFigureBefore(file, elementId, offer.spot), elementId, offer.beforeOpening);
+};
+
+/**
+ * **The leaf behind a page that asked to leave its back empty** (§9i), in one
+ * place (§9w). It was written out where the manuscript's own elements are
+ * emitted and **not** on the hoist path, so a picture standing in front of a
+ * chapter's opening lost its back leaf — invisibly, because a picture on a
+ * recto followed by a chapter on a recto leaves the verso between them empty
+ * anyway. What was wrong was not the book but what the page then said about
+ * itself: the cutter's reason, for a leaf the writer had asked for.
+ */
+const backLeaf = (id: string, chapterTitle: string): BookBlock =>
+  block({
+    id: `${id}:back`,
+    kind: 'blank',
+    numbering: 'arabic',
+    starts: 'page',
+    display: true,
+    folio: false,
+    unbreakable: true,
+    chapterTitle,
+    blankBack: true,
+  });
 
 const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensChapter: boolean): BookBlock | null => {
   const id = element.id as string;
@@ -1745,7 +1980,18 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
        * in where the manuscript carries none — his book being the second.
        */
       const opensTwice = chapters && (next?.type === 'heading' || unit.title.trim().length > 0);
-      if (!opensTwice) leading.push(...run);
+      /**
+       * **Where it opens twice, the figure says which opening it stands in
+       * front of** (§9w). §9t's guard is right about the numeral's page and
+       * was silently wrong about the story's own: a picture asked for *there*
+       * also landed between the two, because *before the heading* is the only
+       * thing a `beforeElementId` can say and both openings are before it.
+       * Which of them the writer meant is not derivable from the manuscript —
+       * they said it by pointing at a page — so `bookBeforeOpening` carries
+       * it, and nothing written before this carries it, which is why no
+       * existing book moves.
+       */
+      leading.push(...(opensTwice ? run.filter((element) => element.attributes?.bookBeforeOpening === true) : run));
     }
     const beforeOpening = new Set(leading.map((element) => element.id as string));
     if (placed) {
@@ -1761,7 +2007,12 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
       // anyway, so it is the honest answer rather than a consequential one.
       for (const element of leading) {
         const made = elementBlock(element, chapterTitle, false);
-        if (made) out.push(made);
+        if (!made) continue;
+        out.push(made);
+        // The leaf behind it goes with it (§9w): the main element loop has
+        // always emitted one and this path did not, so the writer's own
+        // answer was lost on exactly the pictures §9w lets them ask for.
+        if (backBlank(element)) out.push(backLeaf(element.id as string, chapterTitle));
       }
       /**
        * **A blank leaf before the chapter opens** (§9r). It is the chapter's
@@ -1814,18 +2065,7 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
        * no back to leave, the next page being the middle of the chapter.
        */
       if (own.backBlank) {
-        out.push(
-          block({
-            id: `${placed.marker.id as string}:back`,
-            kind: 'blank',
-            numbering: 'arabic',
-            starts: 'page',
-            display: true,
-            folio: false,
-            unbreakable: true,
-            chapterTitle,
-          }),
-        );
+        out.push(backLeaf(placed.marker.id as string, chapterTitle));
       }
       opensChapter = true;
     }
@@ -1946,18 +2186,7 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
           // nothing — the same two facts as the picture itself.
           if (placement.place === 'page' && backBlank(element)) {
             out.push(made);
-            out.push(
-              block({
-                id: `${element.id as string}:back`,
-                kind: 'blank',
-                numbering: 'arabic',
-                starts: 'page',
-                display: true,
-                folio: false,
-                unbreakable: true,
-                chapterTitle,
-              }),
-            );
+            out.push(backLeaf(element.id as string, chapterTitle));
             continue;
           }
           // A page stands where it is; only an inset waits for a paragraph

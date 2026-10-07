@@ -3403,6 +3403,67 @@ push live; the build takes a minute or two.
   the part dialog's two columns being one scrolling box, so the list of entries
   carried the page it is checked against off the top; the preview is **sticky**
   now, which every long panel wanted and only this one made plain.
+  **§9w is the page as a row of the rail**, from Ken on an imported
+  collection in four reports with one fact under them: **a page of the book
+  was the only thing in this room nothing could be done to**. §9a put a × on
+  every row and meant it; the page rows came afterwards (§9h) as a fold
+  *under* a row rather than as rows, so they carried neither a × nor a grip
+  and nothing said they would not. A page is still **not a record**, so what
+  a × takes is **what the writer put on it** — a blank leaf they asked for,
+  or the picture that *is* the page, both acts already built and reachable
+  only from the page's own dialog — and `pageRemoval` is the one reading in
+  `trackRemoval`'s shape. **The refusals are the more important half**,
+  because a page nobody can work out how to be rid of is what he reported:
+  the cutter's leaf is not the writer's to remove (§9i) and says which reason
+  it is, a division's opening page is not a page to remove but a **break**
+  whose row is one line above, and a page of the story's words goes by
+  cutting the words on the Write page. Then the picture, where **three
+  screens each decided for themselves whether one could go here**: the Add
+  menu refused on a page with nothing of the book on it, **+ Picture**
+  carried the same words in its title and **acted anyway**, and what it did
+  was put an art page at the **back of the book** — measured, a picture asked
+  for on page two arrived on page nine. `pictureOffer` is the one reading and
+  the fallthrough is gone, which also ends §8c's claim that a vector graphic
+  is offered on every page, a leaf being where the cutter stopped and so
+  having nothing for a picture to stand before. Two true facts about the
+  cutter then make a picture land elsewhere and neither was said: **an empty
+  leaf in front of a page is filled rather than added to** (correct
+  typography, and from the writer's chair *it snaps it before page one for
+  some reason*, so it is **said before the press** and names the page, §9r's
+  own answer pointed at a picture), and **a division's own opening page is
+  not the page its first element is on** where it opens twice — §9t rightly
+  stopped the hoist for the numeral's page and the unnoticed cost was that a
+  picture asked for on the **story's** page landed between the two as well.
+  Which opening the writer meant is **not derivable**; they said it by
+  pointing at a page, so `bookBeforeOpening` carries it, the hoist reads it
+  instead of guessing, and nothing written before this carries it, which is
+  why no book moves and the suite passed unedited. **A picture drags**: the
+  row said *it is moved by drawing its box on another page*, true of the
+  **box** and taken to settle the drag as well — *which page* is a different
+  question and the rail is where it is asked, landing on `moveFigureBefore`,
+  the act the redraw already ran. Both drops go through `movePictureTo` and
+  ask the **offer** rather than the row's own `elementId`, which on a
+  division's opening page is nothing at all, so the drop refused on exactly
+  the page a picture is dragged onto. **One sentence, and it says why**: *The
+  page in front of this one is already blank. Its own page says why* is two
+  sentences whose second has no referent — the page in front *is* a page —
+  and the three reasons lived in the **page's own help text**, which is why
+  the refusal could not reach them; `blankReason` is that reading and both
+  refusals name it. Driving showed the reading was **a guess** (it asked what
+  stood on the page before, so a picture there meant *this is its back*,
+  wrong exactly where a picture opens a division), so the block says so —
+  and that found a fault in code §9w did not write: **the back leaf was
+  emitted on the element path and not on the hoist path**, so a picture in
+  front of a chapter lost it, invisibly, because a recto after a recto leaves
+  the verso empty anyway. And **every page is accounted for**: a page
+  standing *in front of* the first division belonged to nobody and could not
+  be reached from the rail at all — the plainest reading of his *stray page…
+  in between the story and the front matter* — so pages no row claims are
+  held and given to the next division. Driven at 1440×900 on his own state;
+  three faults only looking caught, the keeper being that the asking rule was
+  **correct and overruled by a later rule of equal specificity** (addendum 02
+  §4a in this room), fixed by making the rule about the **state** beat the
+  rule about the **kind** rather than by moving it. No migration.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

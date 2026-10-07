@@ -3,7 +3,19 @@ import { beatsInScript } from './selectors.js';
 import { removeFigure } from './instructional.js';
 import { divisionSpan, divisionRemoval, removeDivision } from './outline-binding.js';
 import { isCollection } from './formats.js';
-import { bookFigures, halfOf, partTitle, partsOf, removePart, type BookFigure, type BookPageRow } from './book-plan.js';
+import {
+  blankReason,
+  bookFigures,
+  halfOf,
+  partTitle,
+  partsOf,
+  removeBookFigure,
+  removePart,
+  sayBlankReason,
+  setBlankPage,
+  type BookFigure,
+  type BookPageRow,
+} from './book-plan.js';
 import type { BookPart } from './entities/book.js';
 import type { StructuralUnit } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
@@ -121,9 +133,22 @@ const figureRow = (figure: BookFigure, depth: number): BookRow => ({
   title: figure.caption.trim() || figure.assetName.trim() || 'Picture',
   label: '',
   depth,
-  // A figure stands where it stands in the writing. It is moved by drawing
-  // its box on another page, not by dragging a row.
-  draggable: false,
+  /**
+   * **A picture drags** (§9w, from Ken: *everything in the outliner should be
+   * in order and it should be draggable so you can move things around if you
+   * wanted to, the pages. Especially the pages that you import or pictures
+   * that you import*).
+   *
+   * This said *a figure stands where it stands in the writing; it is moved by
+   * drawing its box on another page*, which is true of the box and was taken
+   * to settle the drag as well. It does not: redrawing the box is how a
+   * picture's **place on a page** is set, and *which page* is a different
+   * question that the rail is the natural place to answer. The act is the one
+   * that already existed — `moveFigureBefore`, which the box's own redraw
+   * calls — so this is a second door rather than a second answer, and the
+   * landing is a page row.
+   */
+  draggable: true,
 });
 
 /**
@@ -231,10 +256,23 @@ export const pagesUnder = (
   };
   let current: string | null = null;
   let marker: string | null = null;
+  /**
+   * **Pages that stand in front of the division they belong to** (§9w).
+   *
+   * A picture asked for on a division's own opening page is emitted before the
+   * opening, so its page — and the leaf the recto rule leaves beside it —
+   * carry no marker and no unit, and the walk had nothing to give them to:
+   * they appeared under no row at all, which took the picture's page off the
+   * rail the moment the picture landed where it was asked for. They are held
+   * and given to the **next** division row, which is where `bookRows` already
+   * puts the picture itself.
+   */
+  let waiting: BookPageRow[] = [];
   for (const page of pages) {
     if (page.partId !== null) {
       current = null;
       marker = null;
+      waiting = [];
       continue;
     }
     // A new division starts its own run, so the last one cannot run on into
@@ -245,7 +283,13 @@ export const pagesUnder = (
       current = marker !== null && chapters.has(marker) ? marker : null;
     }
     if (page.unitId !== null && sections.has(page.unitId)) current = page.unitId;
-    if (current !== null) put(current, page);
+    if (current === null) {
+      waiting.push(page);
+      continue;
+    }
+    for (const held of waiting) put(current, held);
+    waiting = [];
+    put(current, page);
   }
   return under;
 };
@@ -355,6 +399,100 @@ export const removeBookRow = (file: ProjectFile, row: BookRow): ProjectFile => {
   const marker = row.placed?.marker;
   if (!marker) return file;
   return removeDivision(file, marker.id);
+};
+
+// ------------------------------------------------------------ a page's own ×
+
+/**
+ * **What a × on a page row would take away** (§9w, from Ken: *there's numbered
+ * pages, page one, two, three. There's no way to delete those pages. There
+ * needs to be a little X in the left menu allowing you to delete them*).
+ *
+ * §9a put a × on **every row of the rail** and meant it; the page rows came
+ * afterwards (§9h) as a fold *under* a row rather than as rows, so they never
+ * got one — which is why every other row in this room can be taken out and a
+ * page cannot. That is also the whole of his *there's a stray page … that I
+ * want to remove, but I can't remove it*: there was no control, and nothing
+ * saying there would not be.
+ *
+ * A page is still **not a record** — the rail's own rule — so what a × takes
+ * is **what the writer put on that page**, and there are only two such things:
+ * a blank leaf they asked for, and a picture that *is* the page. Both acts
+ * already existed and were reachable only from the page's own dialog.
+ *
+ * The other two pages are refused, and the refusal is the more important half,
+ * because a page nobody can work out how to be rid of is exactly what he
+ * reported:
+ *
+ * - **a leaf the cutter left** is not the writer's to remove (§9i), and
+ *   `blankReason` says which of the two reasons it is;
+ * - **a page of the story's words** goes by cutting the words, which is the
+ *   manuscript's and not this room's — so the sentence says where, rather
+ *   than leaving a writer pressing at a page that will not go.
+ */
+export interface PageRemoval {
+  /** What the act needs: the leaf's own spot, or the picture's element. */
+  id: string | null;
+  /** The ×'s label, where there is one. */
+  act: string | null;
+  /** What goes with it, said beside the ask. */
+  comfort: string;
+  /** Why there is none, in a sentence a writer can act on. */
+  refusal: string | null;
+}
+
+export const pageRemoval = (rows: readonly BookPageRow[], sheet: number): PageRemoval => {
+  const page = rows.find((one) => one.sheet === sheet);
+  const no = (refusal: string): PageRemoval => ({ id: null, act: null, comfort: '', refusal });
+  if (!page) return no('The book is still being set.');
+  // A part has a row of its own and a × on it already (§9a).
+  if (page.partId) return no('This page belongs to a page of the book, which has a row of its own above.');
+  if (page.blankFor) {
+    return {
+      id: page.blankFor,
+      act: 'Take this page away',
+      comfort: 'The blank page goes. Nothing else moves.',
+      refusal: null,
+    };
+  }
+  if (page.blank) {
+    const why = blankReason(rows, sheet);
+    return no(
+      why
+        ? `Nothing here to take away: this page is blank because ${sayBlankReason(why)}.`
+        : 'Nothing here to take away: this page is blank.',
+    );
+  }
+  if (page.figureId) {
+    return {
+      id: page.figureId,
+      act: 'Take this page away',
+      comfort: 'The picture comes out of the writing; it stays in the library. Any leaf behind it goes with it.',
+      refusal: null,
+    };
+  }
+  /**
+   * A page a division opens on is not the writer's to remove **as a page**,
+   * and the break on it is — which is the row above, where it already has a ×
+   * (§9a). So the refusal points at it rather than at the manuscript: the
+   * words stay either way, and this is the thing a writer who wants that page
+   * gone actually means.
+   */
+  if (page.says === 'Chapter opens') {
+    return no('This is where a chapter opens. Its own row above takes the break out, and the words stay.');
+  }
+  return no('These are the story’s own words. A page of them goes by cutting the words on the Write page, not here.');
+};
+
+/**
+ * Take a page out. **One act for every kind**, as the × on a row is, and it
+ * reads which of the two things it has been handed — the ids are distinct, so
+ * no screen holds a second answer about what a page's × does.
+ */
+export const removeBookPage = (file: ProjectFile, page: BookPageRow): ProjectFile => {
+  if (page.blankFor) return setBlankPage(file, page.blankFor, false);
+  if (page.figureId) return removeBookFigure(file, page.figureId);
+  return file;
 };
 
 /**

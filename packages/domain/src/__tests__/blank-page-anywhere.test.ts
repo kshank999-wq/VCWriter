@@ -99,11 +99,9 @@ const spotOn = (file: ProjectFile, sheet: number): string | null => {
 /** What the room would offer on this sheet — the act, or the reason there is none. */
 const offerOn = (file: ProjectFile, sheet: number) => {
   const { blocks, laid, rows } = lay(file);
-  return blankOffer(
-    pagePlace(laid.pages, blocks, sheet),
-    rows.find((one) => one.sheet === sheet)!,
-    rows.find((one) => one.sheet === sheet - 1) ?? null,
-  );
+  // Every reading is over the rows now (§9w), so a refusal can say *why* the
+  // page in front is blank rather than sending the writer to look.
+  return blankOffer(pagePlace(laid.pages, blocks, sheet), rows, sheet);
 };
 
 describe('where a blank page may be entered', () => {
@@ -242,7 +240,13 @@ describe('a page that already has a leaf in front of it', () => {
     const offer = offerOn(file, sheet);
     expect(offer.spot).toBeNull();
     expect(offer.act).toBeNull();
-    expect(offer.refusal).toMatch(/already blank/);
+    expect(offer.refusal).toMatch(/A blank page already stands in front of this one/);
+    // **And it says why, here** (§9w, from Ken: *it says this page in front of
+    // one is already blank. Page says why. I don't know what this means*). It
+    // read *Its own page says why*, which has no referent — the page in front
+    // *is* a page — so the reason is named in the same sentence.
+    expect(offer.refusal).not.toMatch(/says why/);
+    expect(offer.refusal).toMatch(/because/);
   });
 
   it('would have grown the book by nothing, which is why it is refused', () => {
@@ -276,7 +280,9 @@ describe('a page that already has a leaf in front of it', () => {
     expect(rows.find((row) => row.sheet === opens.sheet - 1)?.blank).toBe(true);
     const offer = partBlankOffer(rows, title);
     expect(offer.act).toBeNull();
-    expect(offer.refusal).toMatch(/already blank/);
+    // The same sentence, so the same correction (§9w).
+    expect(offer.refusal).toMatch(/A blank page already stands in front of this one, because/);
+    expect(offer.refusal).not.toMatch(/says why/);
   });
 
   it('offers a part its leaf where nothing stands in front of it', () => {
