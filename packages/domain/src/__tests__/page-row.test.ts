@@ -122,84 +122,135 @@ const rowOf = (file: ProjectFile, is: (row: ReturnType<typeof lay>['rows'][numbe
   lay(file).rows.find(is);
 
 describe('what a × on a page row takes away', () => {
+  /**
+   * §9w built this and made it **absent** on a chapter opening and on a page
+   * of prose — which between them are every page of Ken's book, so he sent
+   * the report back word for word. What these pin is the correction: **no
+   * page row is without a ×**, and each kind says what its own press does.
+   */
+  const removalOn = (file: ProjectFile, pick: (row: ReturnType<typeof lay>['rows'][number]) => boolean) => {
+    const rows = lay(file).rows;
+    const row = rows.find(pick)!;
+    expect(row).toBeTruthy();
+    return { rows, row, removal: pageRemoval(file, rows, row.sheet) };
+  };
+
+  it('gives every page of the story a ×, which is the whole of the report', () => {
+    // Pages one, two, three — the ones he named. Not one of them carried a ×
+    // after §9w, because every page of his book is a chapter opening or a
+    // page of prose and §9w made it absent on both.
+    const file = collection();
+    const rows = lay(file).rows;
+    const opens = rows.findIndex((row) => row.says === 'Chapter opens');
+    const story = rows.slice(opens).filter((row) => row.partId === null);
+    expect(story.length).toBeGreaterThan(4);
+    for (const row of story) {
+      expect(pageRemoval(file, rows, row.sheet).act, `page ${row.counted} (${row.says})`).toBe('Take this page away');
+    }
+  });
+
   it('takes away the blank leaf the writer put in, and says nothing else moves', () => {
     const file = collection();
-    const { rows } = lay(file);
-    const text = rows.find((row) => row.says === 'Text')!;
-    const spot = text.elementId!;
-    const with_ = setBlankPage(file, spot, true);
-    const leaf = rowOf(with_, (row) => row.blankFor !== null)!;
-    const removal = pageRemoval(lay(with_).rows, leaf.sheet);
-    expect(removal.act).toBe('Take this page away');
+    const text = lay(file).rows.find((row) => row.says === 'Text')!;
+    const with_ = setBlankPage(file, text.elementId!, true);
+    const { row, removal } = removalOn(with_, (one) => one.blankFor !== null);
+    expect(removal.what).toBe('leaf');
     expect(removal.comfort).toMatch(/blank page goes/i);
-    expect(removal.refusal).toBeNull();
-    // And it really goes: the book is a page shorter and the leaf is gone.
-    const after = removeBookPage(with_, leaf);
+    const after = removeBookPage(with_, row, removal);
     expect(lay(after).rows).toHaveLength(lay(file).rows.length);
-    expect(lay(after).rows.some((row) => row.blankFor !== null)).toBe(false);
+    expect(lay(after).rows.some((one) => one.blankFor !== null)).toBe(false);
   });
 
   it('takes the picture out of the writing and leaves it in the library', () => {
     const made = withPicture(collection(), 'element');
-    const art = rowOf(made.file, (row) => row.says === 'Illustration')!;
-    const removal = pageRemoval(lay(made.file).rows, art.sheet);
-    expect(removal.act).toBe('Take this page away');
+    const { row, removal } = removalOn(made.file, (one) => one.says === 'Illustration');
+    expect(removal.what).toBe('picture');
     expect(removal.comfort).toMatch(/stays in the library/);
-    const after = removeBookPage(made.file, art);
-    expect(lay(after).rows.some((row) => row.says === 'Illustration')).toBe(false);
-    // The picture is the library's and is not touched (addendum 16 §9).
+    const after = removeBookPage(made.file, row, removal);
+    expect(lay(after).rows.some((one) => one.says === 'Illustration')).toBe(false);
     expect(after.assets.some((one) => one.name === 'plate.png')).toBe(true);
   });
 
-  it('refuses a leaf the cutter left, and names which of the two reasons it is', () => {
-    // §9i's rule: a blank the recto convention produced is nobody's to remove,
-    // and a page that will not go is exactly what Ken could not work out.
+  it('cuts the words on a page of the story, which is the stray page', () => {
+    /**
+     * Ken's *a stray page that has a bunch of information on it that I want
+     * to remove, but I can't remove it*: a submission header that came in
+     * with the `.docx` is writing as far as the manuscript is concerned, and
+     * no other screen in the room will take it out.
+     */
+    const file = collection();
+    const { row, removal } = removalOn(file, (one) => one.says === 'Text');
+    expect(removal.what).toBe('words');
+    expect(removal.comfort).toMatch(/cut from the manuscript/);
+    expect(removal.comfort).toMatch(/^\d+ paragraphs? go/);
+    const before = file.beats.flatMap((beat) => beat.manuscript.elements).length;
+    const after = removeBookPage(file, row, removal);
+    expect(after.beats.flatMap((beat) => beat.manuscript.elements)).toHaveLength(before - row.elementIds.length);
+    // Every word that stood on it has gone from the manuscript.
+    const left = new Set(after.beats.flatMap((beat) => beat.manuscript.elements).map((one) => one.id as string));
+    for (const id of row.elementIds) expect(left.has(id)).toBe(false);
+    /**
+     * The book need not be a page shorter: the recto rule may take the page
+     * back as a leaf in front of the next chapter, which is `blankOffer`'s
+     * own absorption (§9r) seen from the other end. What is certain is that
+     * the words have gone, so that is what this asserts.
+     */
+  });
+
+  it('counts only the words that stand whole on the page', () => {
+    // A paragraph that runs on to the next page is not this page's to take:
+    // *the words on this page go* has to mean the words on this page.
+    const file = collection();
+    const { blocks, laid } = lay(file);
+    const ids = new Set(blocks.map((block) => block.id));
+    for (const page of laid.pages) {
+      const row = bookPageRows(laid.pages, blocks).find((one) => one.sheet === page.sheet)!;
+      for (const id of row.elementIds) {
+        expect(ids.has(id)).toBe(true);
+        expect(page.pieces.find((piece) => piece.blockId === id)?.cut).not.toBe(true);
+      }
+    }
+  });
+
+  it('takes the leaf behind a picture by stopping the picture leaving one', () => {
+    // §9w refused here and named the reason, which leaves the writer holding
+    // a page they cannot be rid of (§9x): the leaf is not the thing to
+    // remove, the reason for it is.
     const made = withPicture(collection(), 'element');
-    const art = rowOf(made.file, (row) => row.says === 'Illustration')!;
-    const rows = lay(made.file).rows;
-    const left = rows.find((row) => row.blank && row.blankFor === null)!;
-    expect(left).toBeTruthy();
-    const removal = pageRemoval(rows, left.sheet);
-    expect(removal.act).toBeNull();
-    expect(removal.refusal).toMatch(/Nothing here to take away/);
-    expect(removal.refusal).toMatch(/because/);
-    expect(art.sheet).toBeGreaterThan(0);
+    const asked = setBackBlank(made.file, made.elementId, true);
+    const { row, removal } = removalOn(asked, (one) => one.blankBack);
+    expect(removal.what).toBe('back');
+    expect(removal.comfort).toMatch(/stops leaving its back blank/);
+    const after = removeBookPage(asked, row, removal);
+    expect(lay(after).rows.some((one) => one.blankBack)).toBe(false);
+    // The picture is where it was.
+    expect(lay(after).rows.some((one) => one.says === 'Illustration')).toBe(true);
   });
 
-  it('refuses a page of the story’s words, and says where they are cut', () => {
-    // Ken's stray page: the answer is not a × that silently does nothing but a
-    // sentence saying the words are the manuscript's.
+  it('takes the recto leaf by letting that chapter open on either page', () => {
     const file = collection();
-    const rows = lay(file).rows;
-    const text = rows.find((row) => row.says === 'Text')!;
-    expect(text).toBeTruthy();
-    const removal = pageRemoval(rows, text.sheet);
-    expect(removal.act).toBeNull();
-    expect(removal.id).toBeNull();
-    expect(removal.refusal).toMatch(/story’s own words/);
-    expect(removal.refusal).toMatch(/Write page/);
-    // And asking anyway changes not one page.
-    expect(lay(removeBookPage(file, text)).rows).toEqual(rows);
-  });
-
-  it('points a chapter’s opening page at the row that takes the break out', () => {
-    // It is not the writer's to remove as a *page*, and the break on it is —
-    // which is a row with a × on it already, so that is where the sentence
-    // sends them rather than to the manuscript.
-    const file = collection();
-    const rows = lay(file).rows;
-    const opens = rows.find((row) => row.says === 'Chapter opens')!;
-    const removal = pageRemoval(rows, opens.sheet);
-    expect(removal.act).toBeNull();
-    expect(removal.refusal).toMatch(/own row above/);
+    const { rows } = lay(file);
+    const gap = rows.find(
+      (row) => row.blank && !row.blankBack && row.partId === null && rows.find((one) => one.sheet === row.sheet + 1)?.says === 'Chapter opens',
+    );
+    expect(gap).toBeTruthy();
+    const removal = pageRemoval(file, rows, gap!.sheet);
+    expect(removal.what).toBe('recto');
+    expect(removal.comfort).toMatch(/whichever page comes next/);
+    const after = removeBookPage(file, gap!, removal);
+    // That leaf has gone and the book is shorter. It may lose more than one
+    // page: a chapter that moves up by a leaf can close a later gap too.
+    const was = lay(file).rows.length;
+    expect(lay(after).rows.length).toBeLessThan(was);
+    expect(lay(after).rows.some((one) => one.sheet === gap!.sheet && one.blank)).toBe(false);
   });
 
   it('sends a part’s page to the row it already has', () => {
     const file = collection();
     const rows = lay(file).rows;
     const part = rows.find((row) => row.partId !== null)!;
-    expect(pageRemoval(rows, part.sheet).act).toBeNull();
-    expect(pageRemoval(rows, part.sheet).refusal).toMatch(/row of its own/);
+    expect(pageRemoval(file, rows, part.sheet).act).toBeNull();
+    expect(pageRemoval(file, rows, part.sheet).refusal).toMatch(/row of its own/);
   });
 });
 
@@ -487,6 +538,6 @@ describe('the leaf behind a picture that stands in front of a chapter', () => {
     expect(back.blank).toBe(true);
     expect(back.blankBack).toBe(true);
     expect(blankReason(rows, back.sheet)).toBe('back');
-    expect(pageRemoval(rows, back.sheet).refusal).toMatch(/back of the picture in front of it/);
+    expect(pageRemoval(asked, rows, back.sheet).comfort).toMatch(/stops leaving its back blank/);
   });
 });

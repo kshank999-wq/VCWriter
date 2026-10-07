@@ -3464,6 +3464,48 @@ push live; the build takes a minute or two.
   **correct and overruled by a later rule of equal specificity** (addendum 02
   §4a in this room), fixed by making the rule about the **state** beat the
   rule about the **kind** rather than by moving it. No migration.
+  **§9x is that × being absent on every page of his book**, from Ken sending
+  §9w's report back **word for word** — one thing eight times now. **The
+  deploy was innocent** (checked rather than offered: the bundle on the site
+  is the one §9w built, and §9a's stale-page notice would have said so
+  otherwise), so it was **the reading**. §9w built `pageRemoval` with four
+  answers and made the × **absent** on two of them — a page of the story's
+  words and a page a division opens on — which between them are **every page
+  a story has**: measured on his own state, pages one to five each carried
+  none. *Absent rather than greyed* is right about a control that can only
+  refuse and §9w read it as *and so there is no control*, never asking the
+  question underneath — **what can a × on a page honestly do?** Every page has
+  an answer: a writer's blank leaf, a picture, **the words on the page cut
+  from the manuscript**, the back-blank taken off the picture in front, that
+  chapter no longer opening on a right-hand page, or the break itself
+  (`removeDivision`, the row's own act — **two controls onto one act are not
+  two answers**, §16d). The one page that really has none is a part's, which
+  has a row with a × above it, and that is **disabled with the reason in its
+  title rather than absent**, because absence is what read as *there's no way
+  to delete those pages*. **The stray page is the submission header**: driven
+  on a story as a writer hands one over, the first sheet printed *The Harbour ·
+  K. Shank · 114 Harbour Road · … · about 4,200 words* — writing as far as the
+  manuscript is concerned, so nobody's to remove in Research, the Outliner or
+  the rail, and not the story, so nothing in the room would take it out; the
+  ask counts it (*6 paragraphs go…*) and afterwards the sheet reads *The
+  Harbour* and nothing else. **Only what stands whole on the page** (a split
+  paragraph runs on, and *the words on this page* has to mean this page), and
+  **a leaf the cutter left is removed by removing its reason** — which needed
+  the only new field, `opensRecto` on the chapter page, **nullable,
+  null-means-the-book's** (`dropInches`' shape, no migration, nothing moves),
+  and can shorten the book by **more than one page**, `blankOffer`'s
+  absorption from the other end. His *very small dialogue box… put a picture,
+  draw a box for a picture, add a vector graphic* is the page's own screen,
+  which offered pictures and nothing else (§9h, written before a page could be
+  taken away): it carries the act now, off the same reading, asked inline.
+  Looking at it caught this project's oldest fault a fourth time — **`.danger`
+  has no bare rule on this stylesheet**, so the act drew exactly like the five
+  constructive buttons above it (`.muted`'s trap, addendum 09 §14a). Six of
+  §9w's assertions were **rewritten rather than worked around**, all six
+  asserting the absence this corrects, and the reason the first report came
+  back unanswered is that **not one of them asked whether a writer could reach
+  the act** — the new one walks every page of the book and fails if any row
+  lacks a ×.
   **§8b of addendum 08 is getting a deleted cast back**, from Ken (*I
   accidentally deleted all the characters and I don't know how to get those
   back… we need to have something that defines and organizes in that

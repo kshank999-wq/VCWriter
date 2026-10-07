@@ -3310,6 +3310,138 @@ nobody made, which is the fault this section removed one step earlier.
 No migration: `bookBeforeOpening` is an attribute on a manuscript element,
 which has been a free record since 0001, and everything else here is a reading.
 
+## 9x. The × that was absent on every page of his book
+
+From Ken, sending §9w's report back **word for word**. In this project that has
+meant one thing eight times now (§15c, §16b, §16c, addendum 25 §4d, §4f, §4g,
+addendum 28 §4d, addendum 33 §9a), and the first thing it asks for is the
+audit, not the code.
+
+**The deploy was innocent.** The bundle on vc-writer.com is the one §9w built —
+checked, rather than offered as an explanation — and the stale-page notice
+addendum 33 §9a added would have said so if it were not. So §9w shipped, every
+test passed, and nothing had changed for him.
+
+**It was the reading.** §9w built `pageRemoval` with four answers and made the
+× **absent** on two of them — a page of the story's words, and a page a
+division opens on. Measured on an imported story with the front matter deleted,
+which is his own state:
+
+```
+  [page] Page 1 Chapter opens        ← no ×
+  [page] Page 2 Chapter opens        ← no ×
+  [page] Page 3 Chapter opens        ← no ×
+  [page] Page 4 Chapter opens        ← no ×
+  [page] Page 5 Chapter opens        ← no ×
+```
+
+*Page one, two, three* — the pages he named, and between those two kinds they
+are **every page a story has**. §9w built the control he asked for and then
+withheld it from the whole of his book.
+
+### The rule that was misapplied
+
+*Absent rather than greyed* is this project's own and it is right: a control
+that can only refuse is one a writer never trusts again. §9w read it as *and so
+there is no control*, which does not follow, and never asked the question
+underneath — **what can a × on a page honestly do?** Every page has an answer:
+
+| The page | What its × takes |
+| --- | --- |
+| a blank leaf the writer put in | the leaf |
+| a picture that is the page | the picture, out of the writing |
+| **a page of the story's words** | **those words, cut from the manuscript** |
+| a leaf behind a picture | the picture stops leaving its back blank |
+| a leaf the recto rule left | that chapter stops opening on a right-hand page |
+| a division's own leaf page | the break — `removeDivision`, the row's own act |
+
+So the × is on every page row, and the one page that really has none — a page
+of the book's front or back matter, which has a row of its own above with a ×
+on it — is **disabled with the reason in its title** rather than absent,
+because the writer has to be able to find out *why* and absence told them
+nothing. That last is the whole correction stated once: §9w's absence was not
+read as *this does not apply here*, it was read as *there's no way to delete
+those pages*.
+
+### The stray page
+
+> there's a stray page that has a bunch of information on it that I want to
+> remove, but I can't remove it … it's a page that's in between the story and
+> the front matter
+
+Driven on a story as a writer actually hands one over, it printed:
+
+> *The Harbour · K. Shank · 114 Harbour Road · Astoria, OR 97103 ·
+> (503) 555-0142 · kshank@example.com · about 4,200 words*
+
+The **submission header** out of the `.docx`. It is writing as far as the
+manuscript is concerned, so it is nobody's to remove in Research, in the
+Outliner or on the rail; it is not the story, so nothing in the room would take
+it out. That is the page the words act is for. The ask counts them —
+*6 paragraphs go — the words on this page are cut from the manuscript, and what
+follows moves up* — and afterwards the first sheet reads **The Harbour** and
+nothing else. Undo takes it back like any other act (addendum 02 §6c).
+
+**Only what stands whole on the page.** A paragraph the cutter split runs on to
+the next page, and *the words on this page go* has to mean the words on this
+page — so `BookPageRow.elementIds` skips a piece marked `cut`, and a test walks
+every page of a laid book asserting it.
+
+### Removing a leaf by removing its reason
+
+§9w refused on a leaf the cutter left and named which of the two reasons it
+was, which is honest and leaves the writer holding a page they cannot be rid
+of. The reason is a setting one press away, so the × reaches it: the picture
+stops leaving its back blank (`setBackBlank`, which has existed since §9i), or
+the chapter after it stops opening on a right-hand page.
+
+That second one needed the only new field here — `opensRecto` on the chapter
+page record, **nullable, null meaning the book's**, which is `rule`,
+`dropInches` and `openingLines`' own shape, so an untouched chapter goes on
+following the book when the book changes and nothing existing moves. No
+migration: the chapter page is one JSON column.
+
+Taking that leaf away can shorten the book by **more than one page** — a
+chapter that moves up by a leaf can close a later gap too — which is
+`blankOffer`'s absorption (§9r) seen from the other end, and is what the test
+asserts rather than a figure that only holds on one fixture.
+
+### The small dialogue box
+
+> it also gives a very small dialogue box, like the old style dialogue box,
+> like put a picture, draw a box for a picture, add a vector graphic
+
+He is describing the page's own screen, which is the other place a writer
+stands when they want the page gone, and it offered **pictures and nothing
+else** — §9h's *a page of the story does pictures and nothing else*, written
+before a page could be taken away at all. It carries the act now, read from the
+same `pageRemoval` the row's × reads, so the two cannot promise different
+things, and asked inline in the row's own shape.
+
+Looking at it caught the fault of the day, and it is this project's oldest one:
+**`.danger` has no bare rule on this stylesheet** — only rules scoped to other
+screens — so *Take this page away* drew exactly like the five constructive
+buttons above it. That is `.muted`'s trap (addendum 09 §14a) a fourth time, and
+`.layout-page-remove` is named for what it is: a rule above it, the act in red,
+and the route *Set this chapter's page…* moved back above the line, a door and
+a destructive act not belonging in one row.
+
+### Driven
+
+At 1440 × 900 on the imported story, front matter deleted, which is his state.
+Every page row carries a ×; the stray page's ask counts six paragraphs; Remove
+leaves the first sheet reading *The Harbour*; the page dialog carries the same
+act. §9w's own battery re-run with nothing moved: the picture still takes the
+page it was asked for, the note still names where one will land, and the
+picture page still drags.
+
+Six of §9w's assertions had to be **rewritten rather than worked around**, all
+six of them asserting the absence this corrects — which is the honest signal
+that the rule changed, and the reason the first report came back unanswered is
+that none of them asked whether a writer could reach the act at all. The new
+one does: **every page row must carry a ×**, walked over every page of the
+book.
+
 ### Deliberately not built
 
 The **file importers** of §2 — BibTeX, RIS, CSL-JSON, CSV/TSV/XLSX, a

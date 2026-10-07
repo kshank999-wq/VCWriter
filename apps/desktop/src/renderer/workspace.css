@@ -15854,6 +15854,33 @@ dialog.layout-page-dialog::backdrop {
   margin: 8px 0;
 }
 
+/* **Taking the page away is not another way to add something** (§9x). It sat
+   among the five picture buttons drawing exactly like them, because `.danger`
+   has **no bare rule on this stylesheet** — only rules scoped to other
+   screens — which is `.muted`'s own trap (addendum 09 §14a) a fourth time. So
+   it has a rule of its own here, set apart by a line, and the ask that
+   follows takes the whole width. */
+.layout-page-remove {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.layout-page-remove > button {
+  color: #e08a8a;
+  border-color: rgba(224, 138, 138, 0.4);
+}
+
+.layout-page-remove > button:hover:not(:disabled) {
+  color: #f0a0a0;
+  border-color: rgba(240, 160, 160, 0.7);
+}
+
+.layout-page-remove .layout-ask {
+  flex-basis: 100%;
+  padding: 0;
+}
+
 /* A section's rule separates it from the next one (§9w): the last has none,
    or a page with only one section — a blank leaf, which now says what it is
    and offers nothing — ends on a line promising something under it. */

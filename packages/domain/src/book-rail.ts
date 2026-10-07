@@ -10,6 +10,8 @@ import {
   partTitle,
   partsOf,
   removeBookFigure,
+  setBackBlank,
+  setChapterRecto,
   removePart,
   sayBlankReason,
   setBlankPage,
@@ -404,35 +406,39 @@ export const removeBookRow = (file: ProjectFile, row: BookRow): ProjectFile => {
 // ------------------------------------------------------------ a page's own ×
 
 /**
- * **What a × on a page row would take away** (§9w, from Ken: *there's numbered
- * pages, page one, two, three. There's no way to delete those pages. There
- * needs to be a little X in the left menu allowing you to delete them*).
+ * **What a × on a page row takes away** (§9w, and corrected by §9x).
  *
- * §9a put a × on **every row of the rail** and meant it; the page rows came
- * afterwards (§9h) as a fold *under* a row rather than as rows, so they never
- * got one — which is why every other row in this room can be taken out and a
- * page cannot. That is also the whole of his *there's a stray page … that I
- * want to remove, but I can't remove it*: there was no control, and nothing
- * saying there would not be.
+ * Ken asked for this twice in the same words — *there's numbered pages, page
+ * one, two, three. There's no way to delete those pages. There needs to be a
+ * little X in the left menu allowing you to delete them*, and *there's a stray
+ * page that has a bunch of information on it that I want to remove, but I
+ * can't remove it* — and the second time nothing had changed for him, because
+ * §9w built the × and then made it **absent on every kind of page his book
+ * is made of**. Measured on an imported story: pages one to five, each one a
+ * chapter opening or a page of prose, and not one of them carried a ×.
  *
- * A page is still **not a record** — the rail's own rule — so what a × takes
- * is **what the writer put on that page**, and there are only two such things:
- * a blank leaf they asked for, and a picture that *is* the page. Both acts
- * already existed and were reachable only from the page's own dialog.
+ * The mistake was a rule misapplied. *Absent rather than greyed* is right
+ * about a control that can only refuse, and §9w read it as *so there is no
+ * control*, when the question it should have asked is **what a × on a page
+ * can honestly do**. Every page has an answer:
  *
- * The other two pages are refused, and the refusal is the more important half,
- * because a page nobody can work out how to be rid of is exactly what he
- * reported:
+ * - **a blank leaf the writer put in** — the leaf goes;
+ * - **a picture that is the page** — the picture comes out of the writing;
+ * - **a page of the story's words** — those words are cut. That is the act
+ *   the stray page needs: a submission header that came in with a `.docx` is
+ *   writing as far as the manuscript is concerned and is not the writer's
+ *   story, and no other screen in the room will take it out;
+ * - **a leaf the cutter left** — the leaf is not the thing to remove, the
+ *   **reason for it** is, so the × takes that: the picture stops leaving its
+ *   back blank, or the chapter after it stops opening on a right-hand page.
  *
- * - **a leaf the cutter left** is not the writer's to remove (§9i), and
- *   `blankReason` says which of the two reasons it is;
- * - **a page of the story's words** goes by cutting the words, which is the
- *   manuscript's and not this room's — so the sentence says where, rather
- *   than leaving a writer pressing at a page that will not go.
+ * So a page row's × is never absent, which is the whole of the report.
  */
 export interface PageRemoval {
-  /** What the act needs: the leaf's own spot, or the picture's element. */
+  /** What the act needs: the leaf's own spot, the picture, or the chapter. */
   id: string | null;
+  /** Which act it is, so one × can serve six kinds of page. */
+  what: 'leaf' | 'picture' | 'words' | 'back' | 'recto' | 'division' | null;
   /** The ×'s label, where there is one. */
   act: string | null;
   /** What goes with it, said beside the ask. */
@@ -441,58 +447,151 @@ export interface PageRemoval {
   refusal: string | null;
 }
 
-export const pageRemoval = (rows: readonly BookPageRow[], sheet: number): PageRemoval => {
+export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], sheet: number): PageRemoval => {
   const page = rows.find((one) => one.sheet === sheet);
-  const no = (refusal: string): PageRemoval => ({ id: null, act: null, comfort: '', refusal });
+  const no = (refusal: string): PageRemoval => ({ id: null, what: null, act: null, comfort: '', refusal });
   if (!page) return no('The book is still being set.');
-  // A part has a row of its own and a × on it already (§9a).
-  if (page.partId) return no('This page belongs to a page of the book, which has a row of its own above.');
+
+  // The leaf a writer asked for: the only place it can be found again (§9i).
   if (page.blankFor) {
     return {
       id: page.blankFor,
+      what: 'leaf',
       act: 'Take this page away',
       comfort: 'The blank page goes. Nothing else moves.',
       refusal: null,
     };
   }
+
+  /**
+   * **A leaf the cutter left is removed by removing its reason** (§9x). §9w
+   * refused here and named the reason, which is honest and leaves the writer
+   * holding a page they cannot be rid of — and the reason is a setting one
+   * press away, so the × reaches it.
+   */
   if (page.blank) {
-    const why = blankReason(rows, sheet);
+    if (page.blankBack) {
+      const picture = rows.find((one) => one.sheet === sheet - 1)?.figureId;
+      if (picture) {
+        return {
+          id: picture,
+          what: 'back',
+          act: 'Take this page away',
+          comfort: 'The picture before it stops leaving its back blank. The picture stays where it is.',
+          refusal: null,
+        };
+      }
+    }
+    // The verso the recto rule leaves in front of an opening.
+    const opens = rows.find((one) => one.sheet === sheet + 1);
+    if (opens?.markerId && opens.says === 'Chapter opens') {
+      return {
+        id: opens.markerId,
+        what: 'recto',
+        act: 'Take this page away',
+        comfort: 'The chapter after it opens on whichever page comes next, rather than on a right-hand one. Only that chapter changes.',
+        refusal: null,
+      };
+    }
+    /**
+     * The one leaf with no act: the recto a page of the **book** takes — a
+     * title page, a copyright page — which is a convention about that page
+     * rather than a setting, so the sentence names it and sends the writer
+     * to its own screen rather than offering a press that would have to
+     * invent a rule.
+     */
     return no(
-      why
-        ? `Nothing here to take away: this page is blank because ${sayBlankReason(why)}.`
-        : 'Nothing here to take away: this page is blank.',
+      'This page is blank because the page after it opens on a right-hand page. That is the page to set, and it has a row of its own below.',
     );
   }
+
   if (page.figureId) {
     return {
       id: page.figureId,
+      what: 'picture',
       act: 'Take this page away',
       comfort: 'The picture comes out of the writing; it stays in the library. Any leaf behind it goes with it.',
       refusal: null,
     };
   }
+
+  // A page of the book's own front or back matter has a row of its own
+  // above, with a × on it since §9a.
+  if (page.partId) return no('This page belongs to a page of the book, which has a row of its own above.');
+
   /**
-   * A page a division opens on is not the writer's to remove **as a page**,
-   * and the break on it is — which is the row above, where it already has a ×
-   * (§9a). So the refusal points at it rather than at the manuscript: the
-   * words stay either way, and this is the thing a writer who wants that page
-   * gone actually means.
+   * **The words on the page** (§9x). It is the biggest thing a × does in this
+   * room, so the sentence counts them and names where they go; undo takes it
+   * back like any other act (addendum 02 §6c).
    */
-  if (page.says === 'Chapter opens') {
-    return no('This is where a chapter opens. Its own row above takes the break out, and the words stay.');
+  if (page.elementIds.length > 0) {
+    const count = page.elementIds.length;
+    return {
+      id: page.sheet.toString(),
+      what: 'words',
+      act: 'Take this page away',
+      comfort: `${count} ${count === 1 ? 'paragraph goes' : 'paragraphs go'} — the words on this page are cut from the manuscript, and what follows moves up.`,
+      refusal: null,
+    };
   }
-  return no('These are the story’s own words. A page of them goes by cutting the words on the Write page, not here.');
+
+  /**
+   * **A page carrying only a division's own leaf** — a story's title page in
+   * a collection, a chapter page with a picture on it. Nothing of the
+   * manuscript stands on it, so the only thing there is the break, and taking
+   * the page away is taking the break out.
+   *
+   * §9w sent the writer to the row one line above instead, which is true and
+   * is still a page with no ×. **Two controls onto one act are not two
+   * answers** (§16d): this runs `removeDivision`, the row's own act, and says
+   * the row's own sentence, so they cannot drift.
+   */
+  if (page.markerId) {
+    return {
+      id: page.markerId,
+      what: 'division',
+      act: 'Take this page away',
+      comfort: divisionRemoval(file, page.markerId as never),
+      refusal: null,
+    };
+  }
+  return no('Nothing of the book stands on this page.');
 };
 
 /**
- * Take a page out. **One act for every kind**, as the × on a row is, and it
- * reads which of the two things it has been handed — the ids are distinct, so
- * no screen holds a second answer about what a page's × does.
+ * Take a page out. **One act for every kind** (§9x), read off what
+ * `pageRemoval` said it was, so no screen holds a second answer about what a
+ * page's × does.
  */
-export const removeBookPage = (file: ProjectFile, page: BookPageRow): ProjectFile => {
-  if (page.blankFor) return setBlankPage(file, page.blankFor, false);
-  if (page.figureId) return removeBookFigure(file, page.figureId);
+export const removeBookPage = (file: ProjectFile, page: BookPageRow, what: PageRemoval): ProjectFile => {
+  if (!what.id) return file;
+  if (what.what === 'leaf') return setBlankPage(file, what.id, false);
+  if (what.what === 'picture') return removeBookFigure(file, what.id);
+  if (what.what === 'back') return setBackBlank(file, what.id, false);
+  if (what.what === 'recto') return setChapterRecto(file, what.id, false);
+  if (what.what === 'words') return cutElements(file, page.elementIds);
+  if (what.what === 'division') return removeDivision(file, what.id as never);
   return file;
+};
+
+/**
+ * Cut a run of manuscript elements, wherever in the writing they are (§9x).
+ * Nothing else about the beat changes, so the words that follow move up and
+ * the book is set again — which is the whole of *what follows moves up*.
+ */
+const cutElements = (file: ProjectFile, ids: readonly string[]): ProjectFile => {
+  const going = new Set(ids);
+  if (going.size === 0) return file;
+  return {
+    ...file,
+    beats: file.beats.map((beat) => ({
+      ...beat,
+      manuscript: {
+        ...beat.manuscript,
+        elements: beat.manuscript.elements.filter((element) => !going.has(element.id as string)),
+      },
+    })),
+  };
 };
 
 /**

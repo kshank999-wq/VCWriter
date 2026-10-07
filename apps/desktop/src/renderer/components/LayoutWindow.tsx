@@ -1013,7 +1013,11 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       page={page}
       place={place}
       offer={on}
-      remove={pageRemoval(pageRows, page.sheet)}
+      remove={pageRemoval(file, pageRows, page.sheet)}
+      onRemovePage={() => {
+        setPageDialogSheet(null);
+        onUpdate((current) => removeBookPage(current, page, pageRemoval(current, pageRows, page.sheet)));
+      }}
       chapterBack={chapterBackOf(place.opensMarkerId ?? null)}
       // Every reading this screen takes is over the rows, so the three reasons
       // a page is blank, what a leaf asked for here would do and what a
@@ -1565,7 +1569,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                   <PageRow
                     key={`page-${one.sheet}`}
                     page={one}
-                    remove={pageRemoval(pageRows, one.sheet)}
+                    remove={pageRemoval(file, pageRows, one.sheet)}
                     chosen={selectedSheet === one.sheet}
                     over={over === `page-${one.sheet}`}
                     onSelect={() => {
@@ -1580,7 +1584,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                     }}
                     onRemove={() => {
                       if (selectedSheet === one.sheet) setSelectedSheet(null);
-                      onUpdate((current) => removeBookPage(current, one));
+                      onUpdate((current) => removeBookPage(current, one, pageRemoval(current, pageRows, one.sheet)));
                     }}
                     onDragStart={() => one.figureId && setDragging({ kind: 'picture', id: one.figureId })}
                     onDragEnd={() => {
@@ -2140,17 +2144,27 @@ function PageRow({
             Keep
           </button>
         </span>
-      ) : remove.act ? (
+      ) : (
+        /**
+         * **Never absent** (§9x). §9w drew this only where it had an act, and
+         * on a collection that is no page at all: *page one, two, three* each
+         * carried none, which is the report coming back word for word. Where
+         * a page really cannot be taken away — a part's, which has a row of
+         * its own — it is **disabled with the reason in its title**, because
+         * the writer has to be able to find out *why*, and absence told them
+         * nothing.
+         */
         <button
           type="button"
           className="ghost small layout-part-remove"
           aria-label={`Remove page ${page.counted}`}
-          title={remove.act}
+          title={remove.act ?? remove.refusal ?? ''}
+          disabled={!remove.act}
           onClick={() => setAsking(true)}
         >
           ×
         </button>
-      ) : null}
+      )}
     </li>
   );
 }
@@ -3321,6 +3335,7 @@ function StoryPageSection({
   onVector,
   onBlank,
   onChapterBack,
+  onRemovePage,
   place,
   chapterBack,
   rows,
@@ -3344,8 +3359,10 @@ function StoryPageSection({
   rows: readonly BookPageRow[];
   /** Whether a picture may be asked for here, and where it would land (§9w). */
   offer: PictureOffer;
-  /** What a × on this page would take away, or why there is none (§9w). */
+  /** What a × on this page would take away, or why there is none (§9w, §9x). */
   remove: PageRemoval;
+  /** Take the page away — the same act the row's × runs (§9x). */
+  onRemovePage(): void;
   drawing: boolean;
   onPut(): void;
   onDraw(): void;
@@ -3381,6 +3398,8 @@ function StoryPageSection({
    * a second answer about either.
    */
   const blank = blankOffer(place, rows, page.sheet);
+  /** The × asks once, inline, exactly as the row's does (§9x). */
+  const [asking, setAsking] = useState(false);
   /** Which of the three reasons this page is blank (§9w), where it is. */
   const why = blankReason(rows, page.sheet);
   /** What stands on the page, in the rail's own words rather than a sentence. */
@@ -3469,21 +3488,6 @@ function StoryPageSection({
           ) : null}
         </div>
       )}
-      {/*
-        **Why this page cannot be taken away** (§9w, from Ken: *there's a stray
-        page that has a bunch of information on it that I want to remove, but I
-        can't remove it… there's no way to get rid of this*).
-
-        The × is on the page's **row**, which is where he asked for it and
-        where every other × in this room is; what belongs here is the sentence
-        for the two pages that have none — a leaf the cutter left, and a page
-        of the story's own words, which go by cutting the words rather than by
-        pressing at the page. Where the page *can* be taken away the act is
-        already on this screen — *Take this blank page away* above, and
-        `FigureSection`'s **Delete** for a picture — so there is no second
-        button here for one act.
-      */}
-      {remove.refusal && !page.figureId ? <p className="muted small">{remove.refusal}</p> : null}
       {/* How the opening is set (§9l, §9m). A chapter with a page of its own
           keeps the **button**, because that page has a sheet to be set
           against and a dialog that draws it. A chapter inside a story has no
@@ -3497,6 +3501,42 @@ function StoryPageSection({
           </button>
         </div>
       ) : null}
+      {/*
+        **Taking the page away** (§9x, from Ken twice: *there's no way to
+        delete those pages* and *there's a stray page that has a bunch of
+        information on it that I want to remove, but I can't remove it*).
+
+        §9w put the × on the row alone and said the sentence here. That was
+        half an answer: this dialog is the other place a writer stands when
+        they want the page gone — he described it as *a very small dialogue
+        box… put a picture, draw a box for a picture, add a vector graphic* —
+        and it offered pictures and nothing else. It is the **same act** the
+        row's × runs, read from the same `pageRemoval`, so the two cannot
+        promise different things.
+      */}
+      {page.figureId ? null : (
+        <div className="layout-page-acts layout-page-remove">
+          {remove.act ? (
+            asking ? (
+              <span className="layout-ask">
+                <span className="muted small layout-ask-why">{remove.comfort}</span>
+                <button type="button" className="ghost small danger" onClick={onRemovePage}>
+                  Remove
+                </button>
+                <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+                  Keep
+                </button>
+              </span>
+            ) : (
+              <button type="button" className="small danger" onClick={() => setAsking(true)}>
+                {remove.act}
+              </button>
+            )
+          ) : (
+            <p className="muted small">{remove.refusal}</p>
+          )}
+        </div>
+      )}
       {openings}
     </section>
   );

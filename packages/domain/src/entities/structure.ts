@@ -410,6 +410,18 @@ export type FirstLine = z.infer<typeof firstLineSchema>;
 export const chapterPageSchema = z.object({
   /** Off: the chapter still exists, it just has no page of its own. */
   include: z.boolean().default(false),
+  /**
+   * **Whether this chapter opens on a right-hand page** (addendum 20 §9x),
+   * null meaning *use the book's* — `rule`, `dropInches` and `openingLines`'
+   * own shape, so an untouched chapter goes on following the book when the
+   * book changes.
+   *
+   * It exists because the empty leaf in front of a chapter is the *recto
+   * rule's* and nobody could reach the rule from the page it made: the leaf
+   * had a × that could only refuse, and a page a writer cannot get rid of is
+   * what §9x is about. Removing the leaf is removing the reason for it.
+   */
+  opensRecto: z.boolean().nullable().default(null),
   showNumber: z.boolean().default(true),
   showTitle: z.boolean().default(true),
   /** A few lines under the title: a dedication, an epigraph, a date. */

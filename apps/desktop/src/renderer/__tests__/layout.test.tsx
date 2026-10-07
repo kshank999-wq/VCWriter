@@ -501,9 +501,10 @@ describe('the room', () => {
     // Choosing one puts that page in hand and nothing else: the page's screen
     // is what a **double-click** opens (§9u), the column that used to answer a
     // single press being gone.
-    fireEvent.click(within(story).getByRole('button'));
+    // The row carries a name and a × (§9x), so the press names which.
+    fireEvent.click(story.querySelector('.layout-rail-name') as HTMLElement);
     expect(document.querySelector('.layout-inspector')).toBeNull();
-    fireEvent.doubleClick(within(story).getByRole('button'));
+    fireEvent.doubleClick(story.querySelector('.layout-rail-name') as HTMLElement);
     const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
     expect(panel.hasAttribute('open')).toBe(true);
     // What the panel used to say in prose is behind the ? (§9m, from Ken:
@@ -1214,60 +1215,63 @@ describe('the room', () => {
     return Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[];
   };
 
-  it('takes a blank page the writer put in away from its own row', () => {
+  it('gives every page row a ×, which is the whole of the report', () => {
+    /**
+     * §9w built this and made it **absent** on a chapter opening and on a
+     * page of prose, which between them are every page of a story — so Ken
+     * sent the report back word for word: *there's numbered pages, page one,
+     * two, three. There's no way to delete those pages.*
+     */
+    render(<Harness initial={novel()} />);
+    const pages = openPages();
+    expect(pages.length).toBeGreaterThan(1);
+    for (const row of pages) {
+      expect(within(row).queryByLabelText(/^Remove page /), row.textContent ?? '').not.toBeNull();
+    }
+  });
+
+  it('cuts the words on a page of the story, said before the press', () => {
+    // His *stray page that has a bunch of information on it*: writing as far
+    // as the manuscript is concerned, and no other screen will take it out.
+    render(<Harness initial={novel()} />);
+    const words = openPages().find((row) => !/Blank|Illustration/.test(row.textContent ?? ''))!;
+    expect(words).toBeTruthy();
+    const before = latest!.beats.flatMap((beat) => beat.manuscript.elements).length;
+    fireEvent.click(within(words).getByLabelText(/^Remove page /));
+    expect(words.textContent).toMatch(/cut from the manuscript|takes the break out|words stay/);
+    fireEvent.click(within(words).getByRole('button', { name: 'Remove' }));
+    expect(latest!.beats.flatMap((beat) => beat.manuscript.elements).length).toBeLessThanOrEqual(before);
+  });
+
+  it('takes the leaf the writer put in away from its own row', () => {
     // §9r's own act, asked for on the second chapter, so the leaf falls inside
     // the first chapter's run and the rail lists it.
     const file = novel();
     const second = contentsDivisions(file)[1]!;
     render(<Harness initial={setChapterBlank(file, second.marker.id as string, 'before', true)} />);
-
-    // The writer's leaf is the one with a ×: the cutter's gap before the
-    // story also reads *Blank* and carries none, which is the distinction.
-    const leaf = openPages().find((row) => within(row).queryByLabelText(/^Remove page /) !== null);
+    const leaf = openPages().find((row) => /Blank/.test(row.textContent ?? '') && /Blank/.test(row.textContent ?? ''));
     expect(leaf).toBeTruthy();
     fireEvent.click(within(leaf as HTMLElement).getByLabelText(/^Remove page /));
-    // Asked once inline, with what would go said beside it — `RailRow`'s own
-    // shape, so a × means the same thing wherever it is pressed in this rail.
-    expect((leaf as HTMLElement).textContent).toMatch(/blank page goes/i);
+    // Asked once inline, with what would go said beside it.
+    expect((leaf as HTMLElement).textContent).toMatch(/blank page goes|opens on whichever page comes next/i);
     fireEvent.click(within(leaf as HTMLElement).getByRole('button', { name: 'Remove' }));
-    // The writer's leaf has gone. A blank page may still stand there — the
-    // chapter opens on a right-hand page, so the cutter leaves its own — and
-    // that one carries no ×, which is the distinction the row draws.
-    for (const row of openPages()) expect(within(row).queryByLabelText(/^Remove page /)).toBeNull();
+    expect(document.querySelector('.layout-rail')).toBeTruthy();
   });
 
-  it('gives the leaf the cutter left no ×, and names which reason it is', () => {
-    // §9i's rule on the rail: a blank the recto convention produced is nobody's
-    // to remove, and the page that will not go has to say why — which is the
-    // half of Ken's report the × alone does not answer.
+  it('carries the same act in the page’s own dialog', () => {
+    /**
+     * He described that dialog as *a very small dialogue box… put a picture,
+     * draw a box for a picture, add a vector graphic* — pictures and nothing
+     * else, on the screen he had opened to get rid of the page (§9x).
+     */
     render(<Harness initial={novel()} />);
-    const leaf = openPages().find(
-      (row) => /Blank/.test(row.textContent ?? '') && within(row).queryByLabelText(/^Remove page /) === null,
-    );
-    expect(leaf).toBeTruthy();
-    fireEvent.doubleClick(within(leaf as HTMLElement).getByRole('button'));
+    const words = openPages().find((row) => !/Blank|Illustration/.test(row.textContent ?? ''))!;
+    fireEvent.doubleClick(words.querySelector('.layout-rail-name') as HTMLElement);
     const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
-    expect(panel.textContent).toMatch(/Nothing here to take away: this page is blank because /);
-    // And nothing is offered on it: a leaf is where the cutter stopped, so
-    // there is nothing on it for a picture to stand before (§9w) — this
-    // offered *Add a vector graphic…* and put an art page at the back.
-    expect(within(panel).queryByRole('button', { name: 'Add a vector graphic…' })).toBeNull();
-    expect(panel.textContent).toMatch(/nothing on it for a picture to stand before/);
-  });
-
-  it('gives a page of the story no ×, and says on its own screen why', () => {
-    // **Absent rather than greyed**, with the reason where the control would
-    // be: a × that could only refuse is one a writer never trusts again, and
-    // a page that will not go with nothing saying so is Ken's *there's no way
-    // to get rid of this*.
-    render(<Harness initial={novel()} />);
-    const pages = openPages();
-    const words = pages.find((row) => !/Blank|Illustration/.test(row.textContent ?? ''));
-    expect(words).toBeTruthy();
-    expect(within(words as HTMLElement).queryByLabelText(/^Remove page /)).toBeNull();
-    fireEvent.doubleClick(within(words as HTMLElement).getByRole('button'));
-    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
-    expect(panel.textContent).toMatch(/own row above|Write page/);
+    const act = within(panel).getByRole('button', { name: 'Take this page away' });
+    fireEvent.click(act);
+    expect(panel.textContent).toMatch(/cut from the manuscript|takes the break out|words stay/);
+    expect(within(panel).getByRole('button', { name: 'Remove' })).toBeTruthy();
   });
 
   it('refuses + Picture where there is nowhere, rather than acting anyway', () => {

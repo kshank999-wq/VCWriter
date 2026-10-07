@@ -1322,6 +1322,21 @@ export const setChapterBlank = (
   }),
 });
 
+/**
+ * **Whether this chapter opens on a right-hand page** (§9x), or back to the
+ * book's answer. It is the act behind the × on the empty leaf the recto rule
+ * leaves in front of a chapter: the leaf is not the thing to remove, the rule
+ * that made it is.
+ */
+export const setChapterRecto = (file: ProjectFile, markerId: string, recto: boolean | null): ProjectFile => ({
+  ...file,
+  markers: file.markers.map((marker) => {
+    if ((marker.id as string) !== markerId) return marker;
+    const page = chapterPageSchema.parse(marker.page ?? {});
+    return { ...marker, page: { ...page, opensRecto: recto } };
+  }),
+});
+
 /** Ask for that leaf, or stop asking. Only what differs from the default is stored. */
 export const setBackBlank = (file: ProjectFile, elementId: string, blank: boolean): ProjectFile => ({
   ...file,
@@ -1686,6 +1701,15 @@ export interface BookPageRow {
    */
   blankBack: boolean;
   blank: boolean;
+  /**
+   * **The manuscript elements that stand whole on this page** (§9x): what a ×
+   * on the page's row cuts, and what the sentence counts before the press.
+   *
+   * Only the blocks the cutter did **not** split, because a paragraph that
+   * runs on to the next page is not this page's to take — *the words on this
+   * page go* has to mean the words on this page.
+   */
+  elementIds: string[];
 }
 
 export const bookPageRows = (
@@ -1747,6 +1771,11 @@ export const bookPageRows = (
       blankFor: leaf?.blankFor ?? null,
       blankBack: leaf?.blankBack === true,
       blank: empty,
+      elementIds: page.pieces
+        .filter((piece) => piece.cut !== true)
+        .map((piece) => index.get(piece.blockId))
+        .filter((block): block is BookBlock => block !== undefined && BODY_KINDS.has(block.kind) && !block.standsIn)
+        .map((block) => block.id),
     };
   });
 };
@@ -2044,7 +2073,9 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
           id: placed.marker.id as string,
           kind: 'chapter_opening',
           numbering: 'arabic',
-          starts: settings.chaptersOpenRecto ? 'recto' : 'page',
+          // The chapter's own answer where it has one (§9x), the book's
+          // otherwise — null-means-the-book's, so nothing existing moves.
+          starts: (own.opensRecto ?? settings.chaptersOpenRecto) ? 'recto' : 'page',
           display: onLeaf,
           folio: settings.folioOnOpening,
           keepWithNext: !onLeaf,
