@@ -776,6 +776,60 @@ describe('the room', () => {
     expect(dialog.textContent).not.toMatch(/chapter/i);
   });
 
+  /**
+   * **Along the top of the pages** (§7b, from Ken: *there needs to be another
+   * category called chapter or story title… right now, if you add a book
+   * title, it adds it to both sides of the page for some reason*).
+   *
+   * What this pins is the **gesture** rather than the control (§15a): the pair
+   * that decides the two tops has existed since §7a, 1,300px further down this
+   * dialog under a printer's word for the top of a page, and a writer who had
+   * just typed the book title could not reach it. So the assertion that
+   * matters is that the row is in **the same fold as the title** — a test
+   * asserting only that the control exists would have passed before this.
+   */
+  it('says which top each title goes on, in the fold where the titles are typed', () => {
+    let file = createProjectFile({ title: 'Tales', format: 'short_story' });
+    file = beginStory(file, { title: 'The Road' }).file;
+    render(<Harness initial={file} onOpenChapterPage={() => undefined} />);
+    openBookSettings();
+    const dialog = screen.getByRole('dialog', { name: 'Book settings' });
+    const title = within(dialog).getByLabelText('Book title');
+    const tops = within(dialog).getByLabelText('Along the top of the pages');
+    expect(title.closest('.layout-fold')).toBe(tops.closest('.layout-fold'));
+
+    // Each arrangement names both tops at once, in the format's own noun.
+    const options = within(tops as HTMLElement).getAllByRole('option').map((one) => one.textContent);
+    expect(options).toContain('The book’s title on the left, the story’s title on the right');
+    expect(options).toContain('The story’s title on both');
+    // Nothing is *set on their own* until the sides are, so the option that
+    // cannot be chosen is absent rather than offered.
+    expect(options).not.toContain('Set on their own');
+
+    // It writes the same two fields the pair writes — a second control onto
+    // one field (§16d), so the furniture fold reads back what was chosen.
+    fireEvent.change(tops, { target: { value: 'title_division' } });
+    expect((latest as ProjectFile).settings.book?.runningHeads).toMatchObject({ verso: 'title', recto: 'chapter' });
+    expect((within(dialog).getByLabelText('Verso running head') as HTMLSelectElement).value).toBe('title');
+    expect((within(dialog).getByLabelText('Recto running head') as HTMLSelectElement).value).toBe('chapter');
+
+    // And what the two tops will actually print, in the book's own words —
+    // said in both places off one reading rather than twice.
+    fireEvent.change(title, { target: { value: 'Harbour Tales' } });
+    const notes = dialog.querySelectorAll('.field-note');
+    expect(notes.length).toBeGreaterThanOrEqual(2);
+    for (const note of notes) expect(note.textContent).toBe('“Harbour Tales” on the left, “The Road” on the right.');
+
+    // A side set by hand reads as set on their own, never as the nearest one.
+    fireEvent.change(within(dialog).getByLabelText('Verso running head'), { target: { value: 'custom' } });
+    expect((within(dialog).getByLabelText('Along the top of the pages') as HTMLSelectElement).value).toBe('own');
+    expect(
+      within(within(dialog).getByLabelText('Along the top of the pages') as HTMLElement)
+        .getAllByRole('option')
+        .map((one) => one.textContent),
+    ).toContain('Set on their own');
+  });
+
   it('draws a box with nothing in it, and fills it afterwards', async () => {
     render(<Harness initial={novel()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));

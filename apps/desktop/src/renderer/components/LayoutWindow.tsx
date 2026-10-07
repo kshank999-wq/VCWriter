@@ -10,10 +10,14 @@ import {
   FACE_NOTES,
   FOLIO_PLACES,
   FOLIO_PLACE_WORDS,
+  HEAD_ARRANGEMENTS,
   HEAD_CONTENTS,
   HEAD_CONTENT_WORDS,
   HEAD_PLACES,
   HEAD_PLACE_WORDS,
+  describeHeadTops,
+  headArrangementOf,
+  sayArrangement,
   runningHeadStyleOf,
   OPENINGS,
   PART_INFO,
@@ -2607,6 +2611,12 @@ function BookSettingsDialog({
 }) {
   const dialog = useModal(open);
   const settings = laying.settings;
+  /**
+   * What the two tops will print, worked out **once** and read by both the row
+   * in *The book* and the pair in *Running heads*: one sentence in two places
+   * rather than two sentences that could disagree about one page.
+   */
+  const tops = describeHeadTops(settings, bookNames(file), firstDivisionTitle(divisions), file.project.format);
   return (
     <dialog ref={dialog} className="track-dialog layout-book-dialog" aria-label="Book settings" onClose={onClose}>
       <header>
@@ -2655,9 +2665,22 @@ function BookSettingsDialog({
                 onChange={(event) => write({ imprint: event.target.value })}
               />
             </label>
+            {/* What stands along the top of each page (§7b, from Ken: *there
+                needs to be another category called chapter or story title…
+                right now, if you add a book title, it adds it to both sides
+                of the page for some reason*).
+
+                The pair that decides it has existed since §7a and is 1,300px
+                further down this dialog, under a printer's word for the top
+                of a page — so a writer who had just been told the title goes
+                on the running heads could not reach it. It is said once more
+                here, where the titles are typed: the same two fields through
+                a second control (§16d), named for both tops at once, with
+                what they will actually print under it. */}
+            <HeadTopsRow format={file.project.format} settings={settings} write={write} tops={tops} />
             <p className="muted small">
-              The title is on the running heads, the contents page, the title page, the eBook and the exported file. Empty means the
-              project’s own name, <em>{file.project.title}</em>, which an imported book took from its file.
+              The title is on the contents page, the title page, the eBook and the exported file. Empty means the project’s own name,{' '}
+              <em>{file.project.title}</em>, which an imported book took from its file.
             </p>
           </Fold>
           <Fold id="trim" title="Trim, margins & spine">
@@ -2673,7 +2696,7 @@ function BookSettingsDialog({
             <FontsSection file={file} onUpdate={onUpdate} />
           </Fold>
           <Fold id="furniture" title="Running heads & page numbers">
-            <FurnitureSection settings={settings} write={write} noun={noun} nounPlural={nounPlural} />
+            <FurnitureSection settings={settings} write={write} noun={noun} nounPlural={nounPlural} tops={tops} />
           </Fold>
           {/* How a division's heading is set (§6a, from Ken: *the story titles
               should be adjustable with a setting*). It used to be a sentence
@@ -3961,13 +3984,84 @@ function TypeSection({ settings, write, noun }: { settings: BookSettings; write(
 }
 
 /**
+ * The title of the first division the book has, for the sentence below — the
+ * words a right-hand top will actually print. Empty where the book has no
+ * division yet, which the sentence says in words rather than inventing one.
+ */
+const firstDivisionTitle = (divisions: ReturnType<typeof contentsDivisions>): string => {
+  const first = divisions[0];
+  return first ? first.marker.title.trim() || first.label : '';
+};
+
+/**
+ * **Along the top of the pages** (§7b): the verso and the recto as one named
+ * arrangement, in the fold where the book's title is typed.
+ *
+ * It writes `runningHeads.verso` and `.recto` — the same two fields the
+ * furniture fold's pair writes, which is a second control onto one field
+ * (§16d) rather than a second answer. Which arrangement is in force is a
+ * **reading**, so setting the sides by hand to a pair that is not on the list
+ * reads as *Set on their own* rather than as the nearest one.
+ */
+function HeadTopsRow({
+  format,
+  settings,
+  write,
+  tops,
+}: {
+  format: ProjectFile['project']['format'];
+  settings: BookSettings;
+  write(patch: Partial<BookSettings>): void;
+  tops: string;
+}) {
+  const current = headArrangementOf(settings);
+  return (
+    <>
+      <label className="field">
+        <span>Along the top of the pages</span>
+        <select
+          aria-label="Along the top of the pages"
+          value={current ? current.id : 'own'}
+          onChange={(event) => {
+            const one = HEAD_ARRANGEMENTS.find((entry) => entry.id === event.target.value);
+            if (one) write({ runningHeads: { ...settings.runningHeads, verso: one.verso, recto: one.recto } });
+          }}
+        >
+          {HEAD_ARRANGEMENTS.map((one) => (
+            <option key={one.id} value={one.id}>
+              {sayArrangement(one, format)}
+            </option>
+          ))}
+          {/* Only where the pair matches none of them: an option that cannot
+              be chosen is one that lies about being a choice. */}
+          {current ? null : <option value="own">Set on their own</option>}
+        </select>
+      </label>
+      <p className="field-note">{tops}</p>
+    </>
+  );
+}
+
+/**
  * The running heads and the folios (§7a, from Ken: *the running headers and
  * footers need to be adjustable*). There used to be four dropdowns and a
  * sentence saying nothing about them could be typed. Now each side says what
  * it likes — the writer's own words among the choices — and all three lines
  * are set here, the same `Line` control the chapter page uses.
  */
-function FurnitureSection({ settings, write, noun, nounPlural }: { settings: BookSettings; write(patch: Partial<BookSettings>): void; noun: string; nounPlural: string }) {
+function FurnitureSection({
+  settings,
+  write,
+  noun,
+  nounPlural,
+  tops,
+}: {
+  settings: BookSettings;
+  write(patch: Partial<BookSettings>): void;
+  noun: string;
+  nounPlural: string;
+  tops: string;
+}) {
   const heads = settings.runningHeads;
   const style = runningHeadStyleOf(settings);
   const setHeads = (patch: Partial<BookSettings['runningHeads']>) => write({ runningHeads: { ...heads, ...patch } });
@@ -4019,6 +4113,10 @@ function FurnitureSection({ settings, write, noun, nounPlural }: { settings: Boo
         {sideFields('verso')}
         {sideFields('recto')}
       </div>
+      {/* The one reading of what the two tops will print (§7b), the same
+          sentence *The book*'s row carries: the fold that sets them must not
+          be the one place that cannot show its own effect. */}
+      <p className="field-note">{tops}</p>
       <div className="layout-two">
         <label className="field">
           <span>Running heads sit</span>

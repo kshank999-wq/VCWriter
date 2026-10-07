@@ -669,6 +669,19 @@ button.item.selected {
   color: var(--muted);
 }
 
+/* A note about the control above it (addendum 20 §7b). `.field-note` had a
+   rule on the website and **none here**, which is `.muted`'s and `.danger`'s
+   trap a fifth time: it drew at the body colour and read as a heading for the
+   control below rather than as a note about the one above. Named for what it
+   is and pulled up tight against its own field, because which control a note
+   belongs to is said by the gap (addendum 09 §14a). */
+.field-note {
+  margin: -1px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
 /* A field whose control is a box: the label stands beside it rather than over it. */
 .field-check {
   grid-template-columns: auto 1fr;

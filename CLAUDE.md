@@ -2572,7 +2572,54 @@ push live; the build takes a minute or two.
   and merely prints none. Deliberately **not** adjustable: how far into the
   margin they sit, which stays `margin / 2` clamped to §3b's quarter inch,
   because a control there can only put a running head under the printer's
-  blade. **The chapter openings got the same treatment**, from Ken
+  blade.
+  **§7b is which title goes on which top**, from Ken on a collection (*there
+  needs to be another category called chapter or story title… right now, if
+  you add a book title, it adds it to both sides of the page for some reason.
+  There's no way to determine the title on one side or the other*), and the
+  audit paid a **thirtieth** time by paying his first sentence outright: §7a's
+  whole argument was **one list for both sides**, `chapter` is one of its five
+  and `contentWords` names it in the format's own noun, so the select has read
+  **The story's title** since the day it shipped and both sides have been set
+  separately for just as long. **What is wrong is where that pair stands and
+  what it is called.** Measured: Book settings is **2,662px of dialog in a
+  760px window**, the title is typed at y=107 under a sentence reading *the
+  title is on the **running heads***, and the pair that decides which top is
+  at **y=1,409** — 1,300px down, behind a scroll nothing announces, under a
+  printer's word for the thing a writer calls the top of the page; §15c's
+  fault in a bigger box and §9u's from the other end, the fifth time this room
+  has found the feature built and the route missing. **And *for some reason* is
+  real**: a collection of one story imported from a file is named after that
+  file and so is its story, so pointing either side at the book's title prints
+  **the same words on both tops** with nothing saying the right-hand one is the
+  story's. So the pair is said once more **where the titles are typed**, as one
+  row — *Along the top of the pages* — naming **both tops at once** in five
+  arrangements. Four decisions: it is **a second control onto one field**
+  (§16d), writing the same `verso` and `recto` the furniture fold writes;
+  **which arrangement is in force is read back, never stored**
+  (`bookPresetOf`'s rule a fifth time), so a hand-set side reads *Set on their
+  own* rather than the nearest one, that option **absent until the sides are**;
+  **nothing names a unit itself**, `sayArrangement` reading `nounsFor`, so the
+  same five rows are the story's, the chapter's or the episode's title; and
+  **the sentence under it says what the two tops will actually print, in the
+  book's own words** — *“Harbour Tales” on the left, “The Harbour” on the
+  right*, or *Both tops read the same words*, which is the half that answers
+  *for some reason*, a **category** never being able to show it where the
+  **words** can. It is **one reading in both places**, the furniture fold
+  carrying the same sentence, the fold that sets the two tops not being allowed
+  to be the one place that cannot show its own effect; where there is no
+  division yet it names the category (*each story's own title*) rather than
+  inventing one. Driven at 1440×900: the row lands at **y=357** inside *The
+  book*, choosing an arrangement moves both selects, versos read *Harbour
+  Tales* and rectos *The Harbour* then *In For A Pound*. Looking at it caught
+  this project's oldest fault a **fifth** time — **`.field-note` has a rule on
+  the website and none in the renderer's stylesheet**, so the sentence would
+  have drawn at the body colour and read as a heading for the paragraph below
+  (addendum 09 §14a); it has one now, measured back at `rgb(163, 148, 111)`.
+  The test pins the **gesture** rather than the control (§15a) — that the row
+  is in the **same fold as the Book title** — because one asking only whether
+  the control exists would have passed before this.
+  **The chapter openings got the same treatment**, from Ken
   straight after: two gaps, both §7a's shape pointed at the next fold down.
   **The face was three generic names and one of them lied** — *manuscript*,
   *serif*, *sans*, so an opening could not be set in the book's own face by

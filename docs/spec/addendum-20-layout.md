@@ -718,6 +718,139 @@ book and the story has no business being reachable from a back-matter control;
 a test asserts that setting the biography leaves every other paragraph in the
 book without so much as a `font-size`.
 
+## 7b. Which title goes on which top
+
+From Ken, on a collection:
+
+> In the book settings, when you want to add the book title, there needs to be
+> another category called chapter or story title. So if you have a series of
+> short stories in the layout tab, you can add that to the other top of the
+> page. Right now, if you add a book title, it adds it to both sides of the
+> page for some reason. There's no way to determine the title on one side or
+> the other. So we need a way to be able to do those in a simple way.
+
+**The audit paid a thirtieth time, and paid the first sentence
+outright.** §7a's whole argument was *one list of contents for both
+sides*, and `chapter` is one of its five — named in the format's own noun by
+`contentWords`, so on a collection the select has literally read **The story's
+title** since the day it shipped. Both sides have been set separately for just
+as long. Measured on an imported two-story collection: setting the left to the
+book's title and leaving the right alone prints *Harbour Tales* on every verso
+and *The Harbour* / *In For A Pound* on the rectos, each story's own.
+
+So the category he asks for exists under exactly the name he asks for, and the
+thing he says there is no way to do is the thing the pair does. **What is
+wrong is where that pair stands and what it is called.**
+
+### The measurement
+
+Book settings on a fresh collection, driven at 1440 × 900:
+
+```
+  dialog 720 × 808                 body 2,662px tall in a 760px window
+  The book                   y=107     ← Book title is typed here
+  Trim, margins & spine      y=408
+  Type                       y=768
+  Your fonts                 y=1197
+  Running heads & page numbers y=1409  ← the pair that decides the two tops
+  Story openings             y=2061
+```
+
+The title is at the top. The sentence under it read *The title is on the
+**running heads**, the contents page, the title page, the eBook and the
+exported file* — so the room told him the title goes along the top of the
+pages and then put the control that says **which** top 1,300px below the fold
+he was in, behind a scroll nothing announces, under a printer's word for the
+thing a writer calls *the top of the page*. That is §15c's fault in a bigger
+box and §9u's from the other end: **a control the writer has just been told
+about and cannot reach is one that does not exist**, and it is the fifth time
+this room has found the feature built and the route missing.
+
+### And *for some reason* is real
+
+The second half of his sentence reproduces, on exactly his state. A collection
+of **one** story, imported from a file, is named after that file — so
+`bookNames(file).title` is *The Harbour* and the story marker's title is *The
+Harbour* too. Point either side at the book's title and **both tops print the
+same words**, with nothing on the screen saying that the right-hand one is the
+story's. It is not a fault; it is unreadable as anything else until it is
+said.
+
+### The build
+
+The pair is said **once more, where the titles are typed**, as one row —
+**Along the top of the pages** — naming **both tops at once**:
+
+| | |
+| --- | --- |
+| `author_division` | The author on the left, the story's title on the right |
+| `title_division` | The book's title on the left, the story's title on the right |
+| `division_both` | The story's title on both |
+| `title_both` | The book's title on both |
+| `none` | Nothing along the top |
+
+Four decisions.
+
+**A second control onto one field, never a second answer** (§16d). It writes
+`runningHeads.verso` and `.recto` — the same two fields the furniture fold's
+pair writes — so the two controls cannot disagree, and the pair stays where it
+is for anybody setting a side on its own.
+
+**Which arrangement is in force is read back, never stored.**
+`headArrangementOf` compares the pair against the list and answers null for
+anything else, so a hand-set side reads as **Set on their own** rather than as
+the nearest one — `bookPresetOf`'s rule, this room's fifth time. That option
+is **absent until the sides are set on their own**, an option that cannot be
+chosen being one that lies about being a choice.
+
+**Nothing names a unit itself.** `sayArrangement` reads `nounsFor(format)
+.division`, so the same five rows are *the story's title* on a collection,
+*the chapter's title* in a novel, *the episode's title* in a series.
+
+**And the sentence under it says what the two tops will actually print, in the
+book's own words** — `describeHeadTops`, which is the half that answers *for
+some reason*:
+
+```
+  “Harbour Tales” on the left, “The Harbour” on the right.
+  “The Harbour” on the left, “The Harbour” on the right. Both tops read the same words.
+  Nothing on the left, “The Harbour” on the right.
+  Nothing is printed along the top of either page.
+```
+
+Naming the **category** could never have shown him why both tops said the same
+thing; the **words** can. Where a side carries the division's title and the
+book has no division yet, the phrase names the category — *each story's own
+title* — rather than inventing one. It is **one reading rendered in both
+places**, the furniture fold's pair carrying the same sentence, because the
+fold that sets the two tops must not be the one place that cannot show its own
+effect.
+
+The old sentence under Book title stops claiming the running heads, the row
+above it now being the answer.
+
+### Driven
+
+At 1440 × 900 on an imported collection. The row lands at **y=357**, inside
+*The book*, two fields under the title; the five arrangements read in the
+format's own noun; choosing one moves both selects in the furniture fold;
+typing a book title re-reads the sentence at once; and setting the verso by
+hand turns the row to *Set on their own* and grows that option. On the page:
+versos read **Harbour Tales**, rectos **The Harbour** and then **In For A
+Pound**.
+
+Looking at it caught this project's oldest fault a **fifth** time:
+**`.field-note` has a rule on the website and none in the renderer's own
+stylesheet**, so the sentence would have drawn at the body colour and read as
+a heading for the paragraph below rather than as a note about the control
+above. It has one now, named for what it is and tucked against its own field
+(addendum 09 §14a) — measured back at `11.5px rgb(163, 148, 111)`.
+
+What the renderer test pins is the **gesture** rather than the control (§15a),
+which is the whole of why the first build was invisible: it asserts the row is
+in the **same fold as the Book title**, and a test that only asked whether the
+control existed would have passed before this change.
+
 ## 8. Graphics
 
 Three kinds, and two of them exist:
