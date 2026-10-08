@@ -2630,6 +2630,69 @@ push live; the build takes a minute or two.
   control, both stand in the **same fold as the Book title**, and there is **no
   second place** to choose — assertions that fail before §7b and after it
   alike.
+  **§9y is three complaints of three different shapes**, from Ken the same
+  morning. **A page of art replaces the page, not the kind**: *Import full
+  page art…* is offered wherever a page prints type of its own
+  (`partHasStyle`, every kind but a plate) and only the four whose placement
+  is a `block` ever **read** `part.assetId` — so on a contents page the
+  import was taken, the button changed its words to *Import other full page
+  art…*, and the page went on printing its entries. §16a's lesson pointed the
+  other way and it is the worse half: **a gate that accepts what the printer
+  never learned to draw**, where a refusal at least says something. One guard
+  in `partOwnBlocks` asks `partPlacement(kind) !== 'block'` — **a predicate
+  rather than a second list of kinds** — the four that already work are left
+  byte for byte as they were, the rest take **the plate**, the one art markup
+  since §8, and **the page keeps the side it would have taken** (a contents
+  page a recto, a copyright page a verso), the art replacing the page and not
+  its place; it is a **mode rather than a deletion**, `partModeOf` reading the
+  asset back and *Set the words instead* putting the entries back. **The
+  division in force is a fact about the story**: measured before a line was
+  written, the recto set to *The story’s title* printed **Contents**, because
+  the part's own name sat in the slot `headTextFor` reads the division from —
+  one field carrying two facts, with the story's own pages right throughout,
+  which is why it showed on one page and read as the setting not working.
+  `divisionOf` reads **`partId`**, which `bookPageRows` has read for exactly
+  this since §9h, so a part's page carries **no** division title and a side
+  set to it prints nothing rather than something else under its name
+  (`describeHeadTops`' refusal to invent a title, one layer down) — which also
+  stops the leak that let *Contents* reach a page of the story at all, a block
+  with no title of its own leaving the last one standing. The **cost is named
+  rather than hidden**: a foreword's second page and an index's pages lose a
+  running head nobody asked for, it having been the default recto content
+  finding the part's name in the division's slot; *Words of your own* is
+  untouched, being the one content a part's page still carries because the
+  writer said exactly what to print. **Both titles are typed where the choice
+  is made**, which is §7c's own argument finished — the tops choose between
+  two titles and only one could be typed there, and an imported book is named
+  after its file **and so is each story in it**, so the right-hand top printed
+  `ken-harbour` with nowhere on that screen to say otherwise.
+  `DivisionTitleRow` writes `updateMarker`, **one field with two doors**
+  (§16d) rather than a second string for the running head, and **it says which
+  division it names** — the one the **page in hand** is in, a box that
+  silently renamed whatever story happened to be first being a control acting
+  on something nobody is looking at. **And a blank page from the button a
+  writer presses to put a page in**: the act is §9r's and unchanged, and what
+  was missing is the **route** — it stood on the page's own dialog and a
+  part's panel, so a writer at **+ Add** correctly concluded it was not there,
+  §15c and §16b's lesson a fifth time. It is **one act read where it lands**
+  like the picture above it in the same menu, so on a page a chapter opens on
+  the leaf goes in front of the **opening** and the numeral, the name and the
+  first words move on together, which is Ken's *so the chapter opening moves a
+  page*; it reads the one `blankOffer` the panel reads and so cannot offer
+  what the panel refuses, §9r's absorption included — which needed
+  `blankOffer` to **say why** in the two cases it answered with silence, a
+  greyed menu item with no reason in its title being the fault `pictureOffer`
+  was written to remove, with the panel leaving that sentence off where the
+  picture above it has just said the same thing (the fact said twice being its
+  own fault). Driving it caught the sentence that **claimed a page in hand
+  when there was none** — where a writer opening Book settings after an import
+  stands — and one this change made: *The title is on the contents page…* was
+  unambiguous with one title box and a question with two, so it says *the
+  book’s title*. Deliberately absent and named: a **sixth head content for the
+  page's own name** (nobody's ask; the division's slot now means the division)
+  and a **blank page as a part of its own**, a part having nowhere to stand
+  between two pages of the story (§9i) and so being a second idea of what a
+  blank page is.
   **The chapter openings got the same treatment**, from Ken
   straight after: two gaps, both §7a's shape pointed at the next fold down.
   **The face was three generic names and one of them lied** — *manuscript*,

@@ -569,6 +569,56 @@ const partOwnBlocks = (
   plan: readonly BookPart[] = [],
 ): BookBlock[] => {
   const title = partTitle(part);
+  /**
+   * **A page of art replaces the page, not the kind** (§9y, from Ken: *instead
+   * of the table of contents, I want a contents page that is a full page piece
+   * of artwork. But when I go to import it, it doesn't change*).
+   *
+   * It did not. *Import full page art…* is offered wherever a page prints type
+   * of its own — `partHasStyle`, which is every kind but a plate — while only
+   * the four whose placement is a `block` ever **read** `part.assetId`: the
+   * half title, the title page, a dedication and an epigraph. On a contents
+   * page, an index, a copyright page or a foreword the import was accepted,
+   * the button changed its words to *Import other full page art…* and the page
+   * went on printing its entries. §16a's lesson pointed the other way — *a
+   * gate beside the reader goes on refusing what the reader has learned to
+   * draw* — and this is a gate that **accepted what the printer never learned
+   * to draw**, which is the worse half: a refusal says so and this said
+   * nothing at all.
+   *
+   * The four that already work are **left exactly as they are**, each drawing
+   * its own art inside its own block, so no existing book's markup moves. The
+   * rest take the plate the book has drawn pictures as pages with since §8 —
+   * one art markup, whatever the page was going to be — and the page **keeps
+   * the side it would have taken**, a contents page being a recto and a
+   * copyright page a verso whether it carries entries or a picture.
+   *
+   * It is a **mode and not a deletion**: `partModeOf` reads the asset back, so
+   * the entries, the words and the type are all still there and *Set the words
+   * instead* puts the page back.
+   */
+  if (part.assetId && partHasStyle(part.kind) && partPlacement(part.kind) !== 'block') {
+    return [
+      block({
+        id: part.id,
+        kind: 'plate',
+        numbering,
+        starts:
+          part.kind === 'copyright'
+            ? 'verso'
+            : partPlacement(part.kind) === 'prose'
+              ? (partStyleOf(part, prose).recto ? 'recto' : 'page')
+              : 'recto',
+        display: true,
+        folio: false,
+        unbreakable: true,
+        partId: part.id,
+        assetId: part.assetId,
+        title,
+        chapterTitle: title,
+      }),
+    ];
+  }
   switch (part.kind) {
     // Either may be a piece of art brought in whole (§8, from Ken): the
     // asset on the part is the page, and the printer draws it edge to edge
@@ -1111,9 +1161,25 @@ export interface BlankOffer {
  */
 export const blankOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet: number): BlankOffer => {
   const page = rows.find((one) => one.sheet === sheet);
-  if (!page) return { spot: null, act: null, refusal: null };
+  if (!page) return { spot: null, act: null, refusal: 'The book is still being set.' };
   const spot = blankSpot(place, page);
-  if (spot === null) return { spot: null, act: null, refusal: null };
+  /**
+   * **Why there is no leaf to be had here** (§9y). These two answered with
+   * silence, which was enough while the only caller was a panel that simply
+   * drew no button — and is not enough for the Add menu, where an item with
+   * no reason in its title is `pictureOffer`'s own fault before it was one
+   * reading. A leaf hangs on a record, so a page with nothing of the book on
+   * it has nothing for one to stand before.
+   */
+  if (spot === null) {
+    return {
+      spot: null,
+      act: null,
+      refusal: page.blank
+        ? 'This page is blank already. A leaf goes in front of a page with something on it.'
+        : 'Nothing of the book stands on this page for a leaf to go in front of.',
+    };
+  }
   // Taking away the leaf a writer put in is never refused: it is the only
   // place that leaf can be found again (§9i).
   if (page.blankFor) return { spot, act: 'Take this blank page away', refusal: null };

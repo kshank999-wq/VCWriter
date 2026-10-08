@@ -3610,6 +3610,181 @@ the lines per page both halve) rather than a declaration: `columns` was
 built as a field, found to be read by nothing, and taken out rather than
 left as a control that lies.
 
+## 9y. A page of artwork, the story's own title, and a leaf from the Add button
+
+From Ken in three messages the same morning: *so I add a table of contents.
+And instead of the table of contents, I want a contents page that is a full
+page piece of artwork. But when I go to import it, it doesn't change*; *also,
+I want the ability to put a blank page anywhere. So in the plus add button, I
+want to be able to put a blank page* — then, a minute later, *I'm trying to
+enter a blank page so the chapter opening moves a page*; and *at the top
+right-hand pages, it's supposed to be story title, and it says contents. And
+in the book settings, the book title is now correct, but just underneath
+that, we need to have the story title or chapter. And you should be able to
+type that in instead of trying to take it from the actual file name.*
+
+Three complaints, three different shapes: one is a gate that takes what the
+printer cannot draw, one is a route that does not exist, and one is a field
+carrying two facts.
+
+### A page of art replaces the page, not the kind
+
+*Import full page art…* is offered wherever a page prints type of its own —
+`partHasStyle`, which is every kind but a plate — and only the four whose
+placement is a `block` ever **read** `part.assetId`: the half title, the
+title page, a dedication and an epigraph. So on a contents page, an index, a
+copyright page or a foreword the import was **accepted**, the button changed
+its words to *Import other full page art…*, and the page went on printing its
+entries.
+
+§16a's lesson was *a gate beside the reader goes on refusing what the reader
+has learned to draw*. This is that lesson pointed the other way and it is the
+worse half: **a gate that accepts what the printer never learned to draw**.
+A refusal at least says something; this said nothing at all, which is why Ken
+could only report that it *doesn't change*.
+
+The fix is one guard in `partOwnBlocks`, before the switch, and three rules
+hold it.
+
+**The four that already work are left exactly as they are.** Each draws its
+own art inside its own block and has since §8, so moving them onto a plate
+would have changed the markup of every book already set that way. The guard
+asks `partPlacement(kind) !== 'block'`, which is those four and the plate
+itself — **a predicate rather than a second list of kinds**, so the printer
+and the plan cannot come to disagree about which page draws its own picture.
+
+**The rest take the plate**, which is the one art markup the book has drawn
+pictures as pages with since §8: edge to edge to the trim, nothing set over
+it, no page number. *A title page or an index made as a piece of art carries
+its own words* is `displayInner`'s own comment, written before anything could
+make one.
+
+**The page keeps the side it would have taken** — a contents page is a recto
+and a copyright page a verso whether it carries entries or a picture, and a
+prose part keeps whatever its own *Opens on* says. The art replaces the page,
+not its place in the book.
+
+And it is a **mode rather than a deletion**: `partModeOf` reads the asset
+back, so the entries, the words and the type are all still there and *Set the
+words instead* puts the page back exactly as it was.
+
+### The division in force is a fact about the story
+
+Measured on Ken's own collection before a line was written: the recto is set
+to *The story’s title* and the contents page prints **Contents**. The story's
+pages were right throughout — *The Harbour* and *In For A Pound* on their own
+rectos — which is why it showed on one page and read as the setting not
+working.
+
+The cause is one field carrying two facts. `partOwnBlocks` put the part's own
+name in `chapterTitle`, which is the slot `headTextFor` reads the division's
+title from, so a side asked for the story's title was answered with the
+page's name.
+
+**A part's page is not in a division, so it carries none.** `divisionOf` in
+`book-pages.ts` reads `partId` — which `bookPageRows` has read for exactly
+this since §9h, a part page being credited to no marker and no unit — so a
+side set to the division prints nothing on a part's page rather than
+something else under its name. That is `describeHeadTops`' own refusal to
+invent a title where there is no division to read, said one layer down.
+
+It also stops the leak the other way. A block with no title of its own leaves
+the last one standing, so without this a part's name — or the last story's —
+is the title in force on everything after it, which is how *Contents* could
+reach a page of the story at all.
+
+**The cost is named rather than hidden**: the second page of a foreword and
+the pages of an index no longer carry their own name along the top. That was
+never asked for — it was the default recto content finding the part's name in
+the division's slot — and a book that prints it is a book whose control says
+one thing and does another. *Words of your own* is untouched, and is the one
+content a part's page still carries, because there the writer said exactly
+what to print.
+
+### Both titles are typed where the choice is made
+
+§7c put the two tops beside the book's title because a choice has to stand
+next to what it chooses between. Ken's *just underneath that, we need to have
+the story title* is the other half of that argument: the tops choose between
+**two** titles and only one of them could be typed there.
+
+He is right about why, too. An imported book is named after its file **and so
+is each story in it**, so the right-hand top printed `ken-harbour` with
+nowhere on that screen to say otherwise.
+
+`DivisionTitleRow` writes `updateMarker` — the division's own title, which
+its page prints, the contents page lists and the rail shows. It is **one
+field with two doors** (§16d), never a second string for the running head to
+read, which would be two answers to what a story is called the moment either
+was edited.
+
+**It says which division it names.** A collection has a title per story and
+the top carries whichever story the page is in, so one box has to be about
+one of them: it is the one the **page in hand** is in. A box that silently
+renamed whatever story happened to be first would be a control acting on
+something the writer is not looking at.
+
+And **it only claims the page in hand where there is one** — driving it
+caught the first draft saying *the story the page in hand is in* with nothing
+chosen at all, which is exactly where a writer opening Book settings after an
+import stands. With none it names the first story and says so, which is true
+and is still enough to act on.
+
+### A blank page, from the button a writer presses to put a page in
+
+The act is §9r's and is unchanged. What was missing is the **route**: it
+stood on the page's own dialog and on a part's panel, so a writer looking at
+**+ Add** — which is where everything else that puts a page in is asked for —
+correctly concluded it was not there. §15c and §16b's lesson a fifth time.
+
+It is **one act read where it lands**, exactly as the picture above it in the
+same menu is: the leaf goes in front of the page in hand, and on a page a
+chapter opens on it goes in front of the **opening**, so the numeral, the
+name and the first words all move on together — which is what Ken was trying
+to do. On a leaf he put in himself the same item takes it away again, in the
+offer's own words either way.
+
+The menu reads the one `blankOffer` the panel reads, so it cannot offer what
+the panel refuses — including §9r's absorption, where a leaf already stands
+in front and the book would not grow. That needed `blankOffer` to **say why**
+in the two cases where it answered with silence: a page with nothing of the
+book on it has nothing for a leaf to stand before, and a greyed menu item
+with no reason in its title is the fault `pictureOffer` was written to
+remove. The page's own panel then leaves that sentence off where the picture
+above it has just said the same thing about the same page — the fact said
+twice being its own fault.
+
+### Driven
+
+At 1440×900 on an imported collection of two stories. *The story’s title*
+stands at y=231, 62px under *Book title* in the same fold, reading *The
+Harbour*; choosing a page in the second story makes it read *In For A Pound*
+and the sentence names that story. Every page of the front and back matter
+now prints no division title where before the contents page printed
+*Contents*, and the story's rectos still read *The Harbour* and *In For A
+Pound*. A picture imported on the Contents row draws as the page, 448 × 694
+at the trim with no number on it and no entries anywhere in the book. The Add
+menu's item reads *Put a blank page here…* on the page in hand, and pressing
+it moved the back matter from page 10 to page 11.
+
+Looking at it caught the sentence that claimed a page in hand when there was
+none, and one this change made: *The title is on the contents page, the title
+page…* had been unambiguous while there was one title box and became a
+question with two, so it says *the book’s title*.
+
+### Deliberately not built
+
+**A sixth running-head content for the page's own name.** It would give back
+what the front and back matter lost and is nobody's ask; the division's slot
+now means the division, and a book that wants *INDEX* along the top is a
+reason to hear it asked for rather than to invent a control.
+
+**A blank page as a part of its own.** A part has nowhere to stand between
+two pages of the story (§9i), so a `blank` kind would be a second idea of
+what a blank page is beside the leaf that already moves with the writing —
+and the one place it would reach that the leaf does not is a leaf after the
+last page of the book, which nobody has asked for.
+
 ## 10. What it must never do
 
 - Edit a word of the manuscript.

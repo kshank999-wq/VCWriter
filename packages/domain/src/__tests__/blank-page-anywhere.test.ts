@@ -132,6 +132,24 @@ describe('where a blank page may be entered', () => {
     expect(left).toBeTruthy();
     expect(spotOn(file, left!.sheet)).toBeNull();
   });
+
+  it('says why where it is not offered, which was silence (§9y)', () => {
+    /**
+     * The two no-spot answers carried no sentence at all, which was enough
+     * while the only caller drew no button — and not enough for the Add menu,
+     * where an item greyed with nothing in its title is the fault
+     * `pictureOffer` was written to remove.
+     */
+    const file = collection();
+    const { rows } = lay(file);
+    const left = rows.find((row) => row.says === 'Blank' && !row.blankFor)!;
+    const offer = offerOn(file, left.sheet);
+    expect(offer.spot).toBeNull();
+    expect(offer.act).toBeNull();
+    expect(offer.refusal).toMatch(/blank already/i);
+    // And a sheet the book does not have is the book still being set.
+    expect(offerOn(file, 9999).refusal).toMatch(/still being set/i);
+  });
 });
 
 describe('a blank page in the front matter', () => {

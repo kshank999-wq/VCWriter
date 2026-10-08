@@ -7,6 +7,7 @@ import {
   addMarker,
   addPart,
   addUnit,
+  bookBlocks,
   outOfContents,
   setChapterBlank,
   bookNames,
@@ -848,6 +849,80 @@ describe('the room', () => {
     // And it keeps what it is for — how they are set, and where they sit.
     expect(within(furniture as HTMLElement).getByLabelText('Running head place')).toBeDefined();
     expect(within(furniture as HTMLElement).getByLabelText('Running head face')).toBeDefined();
+  });
+
+  it('names the division beside the book, so a top can carry something typed', () => {
+    /**
+     * §9y, from Ken: *the book title is now correct, but just underneath that,
+     * we need to have the story title or chapter. And you should be able to
+     * type that in instead of trying to take it from the actual file name.*
+     *
+     * The two tops choose between two titles, so both titles are typed where
+     * the choice is made — and it is the **division's own title** through
+     * `updateMarker`, one field with two doors, never a second string for the
+     * running head alone.
+     */
+    let file = createProjectFile({ title: 'Tales', format: 'short_story' });
+    file = beginStory(file, { title: 'ken-harbour' }).file;
+    render(<Harness initial={file} onOpenChapterPage={() => undefined} />);
+    openBookSettings();
+    const dialog = screen.getByRole('dialog', { name: 'Book settings' });
+    const box = within(dialog).getByLabelText('Story title') as HTMLInputElement;
+    // It stands in the same fold as the book's title, beside the two tops.
+    expect(box.closest('.layout-fold')).toBe(within(dialog).getByLabelText('Book title').closest('.layout-fold'));
+    expect(box.value).toBe('ken-harbour');
+    fireEvent.change(box, { target: { value: 'The Harbour' } });
+    expect(contentsDivisions(latest!)[0]!.marker.title).toBe('The Harbour');
+    // And it is the format's own noun rather than the word *chapter*.
+    expect(within(dialog).queryByLabelText('Chapter title')).toBeNull();
+  });
+
+  it('puts a blank page in from the Add button, in front of the page in hand', () => {
+    /**
+     * §9y, from Ken: *I want the ability to put a blank page anywhere. So in
+     * the plus add button, I want to be able to put a blank page* — and then
+     * *I'm trying to enter a blank page so the chapter opening moves a page.*
+     *
+     * The act is §9r's; what was missing is the route. It stood on the page's
+     * own dialog and on a part's panel, so the button a writer presses to put
+     * a page in did not offer one.
+     */
+    render(<Harness initial={novel()} />);
+    // The menu stays up while a page is chosen, and its item is read again
+    // for whatever is in hand — so the walk is a writer turning the pages.
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    const blankItem = () => screen.getByRole('menuitem', { name: /blank page/i }) as HTMLButtonElement;
+    const next = screen.getByRole('button', { name: 'Next spread' });
+    for (let turn = 0; turn < 14; turn += 1) {
+      for (const sheet of Array.from(document.querySelectorAll('.layout-sheet:not(.layout-no-sheet)')) as HTMLElement[]) {
+        fireEvent.click(sheet);
+        const item = blankItem();
+        if (item.disabled) {
+          // Greyed with the reason in its title, never silently dead.
+          expect(item.title).toBeTruthy();
+          continue;
+        }
+        const before = latest!;
+        fireEvent.click(item);
+        expect(latest).not.toBe(before);
+        // A leaf the **writer** put in — `blankFor` is what says so, and what
+        // lets its own page take it away again (§9i).
+        expect(bookBlocks(latest!).some((block) => block.kind === 'blank' && Boolean(block.blankFor))).toBe(true);
+        return;
+      }
+      fireEvent.click(next);
+    }
+    throw new Error('No page of the book offered a blank leaf');
+  });
+
+  it('says why rather than offering a leaf where none can go', () => {
+    // A control that can only refuse is one a writer stops trusting, so the
+    // item is greyed with the reason in its title — `pictureOffer`'s shape.
+    render(<Harness initial={novel()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    const item = screen.getByRole('menuitem', { name: /blank page/i }) as HTMLButtonElement;
+    expect(item.disabled).toBe(true);
+    expect(item.title).toMatch(/Choose a page first/i);
   });
 
   it('draws a box with nothing in it, and fills it afterwards', async () => {

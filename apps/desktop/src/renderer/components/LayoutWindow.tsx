@@ -154,6 +154,8 @@ import {
   type BookRow,
   type PagePlace,
   type SaveKind,
+  updateMarker,
+  type BlankOffer,
 } from '@vcwriter/domain';
 import { readFont } from '../read-font';
 import { PopOutButton } from './PopOutButton';
@@ -274,6 +276,16 @@ const NO_PICTURE: PictureOffer = {
   beforeOpening: false,
   note: null,
   refusal: 'Choose a page first: the picture goes at the top of it.',
+};
+
+/**
+ * Where a blank leaf may go, with no page in hand (§9y) — `NO_PICTURE`'s
+ * shape, for the Add menu's own item.
+ */
+const NO_BLANK: BlankOffer = {
+  spot: null,
+  act: null,
+  refusal: 'Choose a page first: the blank leaf goes in front of it.',
 };
 
 /** i, ii, iii — the front matter's numbers, for the rail. */
@@ -518,6 +530,14 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
   /** What each division folds open on: a range of pages, so none is lost (§9m). */
   const folds = useMemo(() => pagesUnder(rows, pageRows), [rows, pageRows]);
   /**
+   * **Which division the page in hand is in** (§9y), for the title box beside
+   * the book's. `markerId` is the rail's own reading — null on a part's page,
+   * which is why the first division stands in there rather than the box going
+   * absent on the one page a writer is most likely to be looking at when they
+   * open Book settings.
+   */
+  const divisionInHand = pageRows.find((row) => row.sheet === selectedSheet)?.markerId ?? null;
+  /**
    * The rows a closed fold leaves standing (§9o). Containment is depth, so a
    * closed story hides every row under it — its chapters and their pages —
    * until the next row at its own level.
@@ -688,6 +708,22 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * first.
    */
   const pageOffer = selectedSheet === null ? NO_PICTURE : offerFor(selectedSheet);
+  /**
+   * **Whether a blank leaf may be asked for on the page in hand** (§9y, from
+   * Ken: *I want the ability to put a blank page anywhere. So in the plus add
+   * button, I want to be able to put a blank page* — and, a minute later,
+   * *I'm trying to enter a blank page so the chapter opening moves a page*).
+   *
+   * The act is §9r's and is unchanged; what was missing is the **route**. It
+   * stood on the page's own dialog and on the part's panel, so a writer
+   * looking at the + Add button — which is where anything else that puts a
+   * page in is asked for — correctly concluded it was not there. §15c and
+   * §16b's lesson a fifth time, and the same reading rather than a second
+   * answer: the one `blankOffer` the panel takes, so the menu cannot offer
+   * what the panel refuses.
+   */
+  const chosenRow = selectedSheet === null ? undefined : pageRows.find((row) => row.sheet === selectedSheet);
+  const pageBlank = selectedSheet === null ? NO_BLANK : blankOffer(place, pageRows, selectedSheet);
   /** What the page in hand is called in the book, for the buttons that act on it. */
   const chosen = pages.find((one) => one.sheet === selectedSheet);
   const chosenPage =
@@ -873,6 +909,25 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       label: 'Draw a box for a picture…',
       disabled: laying ? null : 'The book is still being set',
       onPick: () => setDrawing(NEW_BOX),
+    },
+    /**
+     * **A blank page, from the button a writer presses to put a page in**
+     * (§9y, Ken's own words). It is read where it lands, exactly as the
+     * picture above it is: the leaf goes in front of the page in hand, and on
+     * a page a chapter opens on it goes in front of the **opening** — so the
+     * numeral, its name and its first words all move on together, which is
+     * what he was trying to do. On a leaf he put in himself the same item
+     * takes it away again, the offer's own words either way.
+     */
+    {
+      label: pageBlank.act ?? 'Put a blank page in',
+      disabled: pageBlank.refusal,
+      onPick: () => {
+        if (!pageBlank.spot) return;
+        const spot = pageBlank.spot;
+        const taking = chosenRow?.blankFor !== null && chosenRow?.blankFor !== undefined;
+        onUpdate((current) => setBlankPage(current, spot, !taking));
+      },
     },
     'rule',
     ...(isCollection(file.project.format)
@@ -1235,6 +1290,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           noun={noun}
           nounPlural={nounPlural}
           divisions={divisions}
+          divisionInHand={divisionInHand}
           onUpdate={onUpdate}
           onOpenChapterPage={openChapterPage}
           onClose={() => setBookSettingsOpen(false)}
@@ -2591,6 +2647,7 @@ function BookSettingsDialog({
   noun,
   nounPlural,
   divisions,
+  divisionInHand,
   onUpdate,
   onOpenChapterPage,
   onClose,
@@ -2603,6 +2660,8 @@ function BookSettingsDialog({
   noun: string;
   nounPlural: string;
   divisions: ReturnType<typeof contentsDivisions>;
+  /** The division the page in hand is in, whose title the right-hand top may carry. */
+  divisionInHand: string | null;
   onOpenChapterPage?(markerId: string): void;
   onClose(): void;
 }) {
@@ -2644,6 +2703,30 @@ function BookSettingsDialog({
                 onChange={(event) => onUpdate((current) => setTitlePage(current, { title: event.target.value }))}
               />
             </label>
+            {/* **The other title the tops choose between** (§9y, from Ken: *the
+                book title is now correct, but just underneath that, we need to
+                have the story title or chapter. And you should be able to type
+                that in instead of trying to take it from the actual file
+                name*).
+
+                The two tops choose between two titles, so **both titles are
+                typed where the choice is made**. It is `updateMarker` — the
+                division's own title, which the chapter page prints and the
+                contents page lists — so this is a *second control onto one
+                field* (§16d) rather than a second answer: naming the story
+                here renames it everywhere.
+
+                It names the division the **page in hand** is in and says
+                which, because a collection has a title per story and the top
+                carries whichever story the page is in: one box that silently
+                renamed a story a writer was not looking at would be worse
+                than none. */}
+            <DivisionTitleRow
+              divisions={divisions}
+              divisionInHand={divisionInHand}
+              noun={noun}
+              onUpdate={onUpdate}
+            />
             <label className="field">
               <span>Author</span>
               <input
@@ -2672,7 +2755,8 @@ function BookSettingsDialog({
                 furniture fold rather than copied into a second place. */}
             <HeadTopsRow settings={settings} write={write} noun={noun} tops={tops} />
             <p className="muted small">
-              The title is on the contents page, the title page, the eBook and the exported file. Empty means the project’s own name,{' '}
+              The <em>book’s</em> title is on the contents page, the title page, the eBook and the exported file. Empty means the
+              project’s own name,{' '}
               <em>{file.project.title}</em>, which an imported book took from its file.
             </p>
           </Fold>
@@ -3487,7 +3571,14 @@ function StoryPageSection({
               {blank.act}
             </button>
           ) : null}
-          {blank.refusal ? <p className="muted small">{blank.refusal}</p> : null}
+          {/* **Not the fact said twice** (§9y). The refusal now carries a
+              sentence where there is no leaf to be had, so the Add menu can
+              grey its item with a reason in its title — and on a page with
+              nothing of the book on it the picture above has just said the
+              same thing about the same page. Where it has, this one is left
+              off; where the refusal is the one about the leaf already in
+              front, there is nothing above it and it stands. */}
+          {blank.refusal && !offer.refusal ? <p className="muted small">{blank.refusal}</p> : null}
           {/* **A blank on the chapter page's back** (§9r, Ken's own words).
               Absent where the chapter opens with its own first paragraph:
               there is no back to leave, the next page being the middle of the
@@ -3985,6 +4076,81 @@ const firstDivisionTitle = (divisions: ReturnType<typeof contentsDivisions>): st
   const first = divisions[0];
   return first ? first.marker.title.trim() || first.label : '';
 };
+
+/**
+ * **The division's own title, typed beside the book's** (§9y, from Ken: *just
+ * underneath that, we need to have the story title or chapter. And you should
+ * be able to type that in instead of trying to take it from the actual file
+ * name*).
+ *
+ * He is right about where it belongs and right about why: an imported book is
+ * named after its file **and so is each story in it**, so the right-hand top
+ * printed `ken-harbour` with no way to say otherwise from the screen where the
+ * top was chosen. §7c put the two tops beside the book's title because the
+ * choice has to stand next to what it chooses between; the other title is the
+ * other half of the same argument.
+ *
+ * It writes `updateMarker`, which is the title the chapter page prints, the
+ * contents page lists and the rail shows — **one field with two doors**
+ * (§16d), never a second string for the running head to read, which would be
+ * two answers to what a story is called the moment either was edited.
+ *
+ * **It says which division it names.** A collection has a title per story and
+ * the top carries whichever story the page is in, so a single box has to be
+ * about one of them: it is the one the page in hand is in, named in the
+ * sentence under it, with the others reached by turning to them. A box that
+ * renamed whatever story happened to be first would be a control that acts on
+ * something the writer is not looking at.
+ *
+ * And **it only claims the page in hand where there is one** — driving it
+ * caught the first draft saying *the story the page in hand is in* with
+ * nothing chosen at all, which is where a writer opening Book settings
+ * straight after an import stands. With none it names the first story and
+ * says so, which is true and is still enough to act on.
+ *
+ * Absent where the book has no division at all — there is no title to type
+ * and nothing a top could carry, which `describeHeadTops` says in words one
+ * row below.
+ */
+function DivisionTitleRow({
+  divisions,
+  divisionInHand,
+  noun,
+  onUpdate,
+}: {
+  divisions: ReturnType<typeof contentsDivisions>;
+  divisionInHand: string | null;
+  noun: string;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+}) {
+  const placed = divisions.find((one) => one.marker.id === divisionInHand) ?? divisions[0];
+  if (!placed) return null;
+  const marker = placed.marker;
+  /** Whether this is the division the page in hand is in, or the first by default. */
+  const inHand = marker.id === divisionInHand;
+  const named = marker.title.trim() || placed.label || 'Untitled';
+  const word = noun.toLowerCase();
+  return (
+    <>
+      <label className="field">
+        <span>{`The ${word}’s title`}</span>
+        <input
+          aria-label={`${noun} title`}
+          placeholder="Untitled"
+          value={marker.title}
+          onChange={(event) => onUpdate((current) => updateMarker(current, marker.id, { title: event.target.value }))}
+        />
+      </label>
+      <p className="field-note">
+        {divisions.length < 2
+          ? `The title this ${word} prints on its own page, lists on the contents page and carries along the top.`
+          : inHand
+            ? `Names “${named}”, the ${word} the page in hand is in. Each ${word} carries its own title — turn to another and this names that one.`
+            : `Names “${named}”, the first ${word}. Each ${word} carries its own title — choose a page in another and this names that one.`}
+      </p>
+    </>
+  );
+}
 
 /**
  * **The two tops, one control each** (§7c, from Ken: *there's no way to

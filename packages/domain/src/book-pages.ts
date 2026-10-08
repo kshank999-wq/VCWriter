@@ -151,6 +151,37 @@ const linesOf = (measured: Measured, block: BookBlock): number => Math.max(1, me
 const isFlow = (block: BookBlock): boolean => !block.display;
 
 /**
+ * **The division in force on a page** (§9y, from Ken: *at the top right-hand
+ * pages, it's supposed to be story title, and it says contents*).
+ *
+ * Measured on his own collection: the recto top is set to *The story’s title*
+ * and the contents page prints **Contents**, because `partOwnBlocks` put the
+ * part's own name in the slot the division's title is read from — one field
+ * carrying two facts, so a side asked for the story's title was answered with
+ * the page's name. The story's pages were right throughout, which is why it
+ * showed on one page and read as the setting not working.
+ *
+ * **A part's page is not in a division**, so it carries no division title: a
+ * side set to it prints nothing there rather than something else under its
+ * name, which is `describeHeadTops`' own refusal to invent a title where there
+ * is no division to read. It also stops the leak the other way — without it a
+ * part's name, or the last story's, is the title in force on everything after
+ * it, which is how *Contents* could reach a page of the story at all.
+ *
+ * `bookPageRows` has read `partId` for exactly this since §9h (*a part page
+ * is credited to no marker and no unit*); this is that one rule said of the
+ * running head.
+ *
+ * The cost is named rather than hidden: the second page of a foreword and the
+ * pages of an index no longer carry their own name along the top. That was
+ * never asked for — it was the default recto content finding the part's name
+ * in the division's slot — and a book that prints it is a book whose control
+ * says one thing and does another.
+ */
+const divisionOf = (block: BookBlock, inForce: string): string =>
+  block.partId !== undefined ? '' : block.chapterTitle || inForce;
+
+/**
  * Fill one page from the cursor to at most `target` lines, and say where
  * the cursor stands afterwards. The rules of §4 are all here.
  */
@@ -195,7 +226,7 @@ const fillPage = (
       display: true,
       blank: false,
       folio: held.folio,
-      chapterTitle: held.chapterTitle || chapterInForce,
+      chapterTitle: divisionOf(held, chapterInForce),
       numbering: held.numbering,
       continued: false,
     };
@@ -215,7 +246,7 @@ const fillPage = (
       display: true,
       blank: false,
       folio: first.folio,
-      chapterTitle: first.chapterTitle || chapterInForce,
+      chapterTitle: divisionOf(first, chapterInForce),
       numbering: first.numbering,
       continued: false,
     };
@@ -261,7 +292,7 @@ const fillPage = (
     if (available <= 0) break;
 
     numbering ??= block.numbering;
-    if (block.chapterTitle) chapterTitle = block.chapterTitle;
+    chapterTitle = divisionOf(block, chapterTitle);
 
     const next = blocks[cursor.index + 1];
     const keepsNext = block.keepWithNext && next !== undefined && isFlow(next) && next.starts === 'none';
