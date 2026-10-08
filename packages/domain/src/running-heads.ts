@@ -132,84 +132,31 @@ export const showsFolio = (place: FolioPlace): boolean => place !== 'none';
 // ------------------------------------------------------- the two tops at once
 
 /**
- * **What stands along the top of each page, as one named arrangement** (§7b,
- * from Ken: *in the book settings, when you want to add the book title, there
- * needs to be another category called chapter or story title… right now, if
- * you add a book title, it adds it to both sides of the page for some reason.
- * There's no way to determine the title on one side or the other*).
+ * **What the two tops will print, in the book's own words** (§7c, from Ken:
+ * *in the book settings, when you want to add the book title, there needs to
+ * be another category called chapter or story title… right now, if you add a
+ * book title, it adds it to both sides of the page for some reason. There's
+ * no way to determine the title on one side or the other*).
  *
- * The audit paid first and it paid most of the ask: §7a built **one list for
- * both sides** with five values among them `chapter`, which the room already
- * names in the format's own noun — on a collection the select literally reads
- * *The story's title*. So the category he asks for exists under exactly the
- * name he asks for, and both sides have been set separately since §7a.
+ * The audit paid his first sentence outright: §7a built **one list for both
+ * sides** with `chapter` among its five, named in the format's own noun — on
+ * a collection the select has read *The story's title* since the day it
+ * shipped. What was wrong is **where that pair stood**: measured in the real
+ * room, the book's title is typed at the top of a 2,662px dialog in a 760px
+ * window and the pair that decides which top sat at y≈1,409, two screens
+ * down, under a printer's word for the top of a page.
  *
- * What is wrong is **where that pair stands and what it is called**. Measured
- * in the real room, Book settings is 2,662px of dialog in a 760px window: the
- * book's title is at the top, the sentence under it says the title goes *on
- * the running heads*, and the pair that decides which top is at **y≈1,409** —
- * two screens down, behind a scroll, under a printer's word for the thing a
- * writer calls *the top of the page*. That is §15c's fault in a smaller box
- * and §9u's from the other end: the control exists and the writer who was
- * told it exists cannot reach it.
+ * §7b answered that with **one select naming both tops at once**, which is the
+ * same shape as the thing he reported — a single control deciding both sides —
+ * so it could not be *determining the title on one side or the other*. **Two
+ * sides are two controls**, and they are the pair itself, moved up beside the
+ * titles rather than copied.
  *
- * So the pair is said **once more, where the titles are typed**, as one row
- * naming **both tops at once** — a second control onto one field (§16d) and
- * never a second answer, since it writes the same `verso` and `recto` the
- * furniture fold writes. **Which arrangement is in force is read back, never
- * stored** (`bookPresetOf`'s rule, this room's fifth time), so setting the two
- * sides by hand to a pair that is not on the list reads as *set on their own*
- * rather than as the nearest one.
- */
-export interface HeadArrangement {
-  id: string;
-  verso: HeadContent;
-  recto: HeadContent;
-}
-
-/**
- * The arrangements a book actually uses. Few on purpose: the fine control is
- * the pair in the furniture fold, and a list long enough to need reading is
- * not the *simple way* that was asked for.
- */
-export const HEAD_ARRANGEMENTS: readonly HeadArrangement[] = [
-  { id: 'author_division', verso: 'author', recto: 'chapter' },
-  { id: 'title_division', verso: 'title', recto: 'chapter' },
-  { id: 'division_both', verso: 'chapter', recto: 'chapter' },
-  { id: 'title_both', verso: 'title', recto: 'title' },
-  { id: 'none', verso: 'none', recto: 'none' },
-];
-
-/** Which of them the book is set to, or null — *set on their own*. */
-export const headArrangementOf = (settings: BookSettings): HeadArrangement | null =>
-  HEAD_ARRANGEMENTS.find((one) => one.verso === settings.runningHeads.verso && one.recto === settings.runningHeads.recto) ?? null;
-
-/** One side of an arrangement in words, in the format's own noun. */
-const sideWords = (what: HeadContent, noun: string): string => {
-  if (what === 'author') return 'the author';
-  if (what === 'title') return 'the book’s title';
-  if (what === 'chapter') return `the ${noun.toLowerCase()}’s title`;
-  if (what === 'custom') return 'words of your own';
-  return 'nothing';
-};
-
-/** An arrangement named for what it puts on each top. */
-export const sayArrangement = (one: HeadArrangement, format: ProjectFormat): string => {
-  const noun = nounsFor(format).division;
-  if (one.verso === 'none' && one.recto === 'none') return 'Nothing along the top';
-  const left = sideWords(one.verso, noun);
-  const right = sideWords(one.recto, noun);
-  if (left === right) return `${left[0]!.toUpperCase()}${left.slice(1)} on both`;
-  return `${left[0]!.toUpperCase()}${left.slice(1)} on the left, ${right} on the right`;
-};
-
-/**
- * **What the two tops will actually say, in the book's own words.** This is
- * the half that answers *for some reason*: on a collection of one story,
- * imported from a file, the book's name and the story's name are the same
- * string — so both tops print the same words and nothing on the screen says
- * which of them is the story's. Naming the category alone cannot show that;
- * the words can.
+ * What stays here is the sentence, which is the half that answers *for some
+ * reason*: on a collection of one story, imported from a file, the book's name
+ * and the story's name are the same string — so both tops print the same words
+ * and nothing on the screen says which of them is the story's. Naming the
+ * category cannot show that; the words can.
  *
  * Where a side carries the division's title and the book has no division to
  * read yet, the phrase names the category rather than inventing a title.

@@ -777,57 +777,77 @@ describe('the room', () => {
   });
 
   /**
-   * **Along the top of the pages** (§7b, from Ken: *there needs to be another
-   * category called chapter or story title… right now, if you add a book
-   * title, it adds it to both sides of the page for some reason*).
+   * **Which title goes on which top** (§7c, from Ken: *there's no way to
+   * determine the title on one side or the other*).
    *
    * What this pins is the **gesture** rather than the control (§15a): the pair
    * that decides the two tops has existed since §7a, 1,300px further down this
    * dialog under a printer's word for the top of a page, and a writer who had
-   * just typed the book title could not reach it. So the assertion that
-   * matters is that the row is in **the same fold as the title** — a test
-   * asserting only that the control exists would have passed before this.
+   * just typed the book title could not reach it. So the assertions that
+   * matter are that each side has **its own** control and that both stand in
+   * **the same fold as the title** — a test asking only whether a control
+   * exists would have passed before this and after §7b alike.
    */
-  it('says which top each title goes on, in the fold where the titles are typed', () => {
+  it('gives each top its own control, in the fold where the titles are typed', () => {
     let file = createProjectFile({ title: 'Tales', format: 'short_story' });
     file = beginStory(file, { title: 'The Road' }).file;
     render(<Harness initial={file} onOpenChapterPage={() => undefined} />);
     openBookSettings();
     const dialog = screen.getByRole('dialog', { name: 'Book settings' });
     const title = within(dialog).getByLabelText('Book title');
-    const tops = within(dialog).getByLabelText('Along the top of the pages');
-    expect(title.closest('.layout-fold')).toBe(tops.closest('.layout-fold'));
+    const left = within(dialog).getByLabelText('Verso running head');
+    const right = within(dialog).getByLabelText('Recto running head');
+    // Two sides, two controls, both beside the titles they choose between.
+    expect(left).not.toBe(right);
+    expect(title.closest('.layout-fold')).toBe(left.closest('.layout-fold'));
+    expect(title.closest('.layout-fold')).toBe(right.closest('.layout-fold'));
+    expect(within(dialog).getByText('Top of left-hand pages')).toBeDefined();
+    expect(within(dialog).getByText('Top of right-hand pages')).toBeDefined();
 
-    // Each arrangement names both tops at once, in the format's own noun.
-    const options = within(tops as HTMLElement).getAllByRole('option').map((one) => one.textContent);
-    expect(options).toContain('The book’s title on the left, the story’s title on the right');
-    expect(options).toContain('The story’s title on both');
-    // Nothing is *set on their own* until the sides are, so the option that
-    // cannot be chosen is absent rather than offered.
-    expect(options).not.toContain('Set on their own');
+    // Each offers the same five, the division's title in the format's own noun.
+    const options = within(right as HTMLElement).getAllByRole('option').map((one) => one.textContent);
+    expect(options).toEqual(['The author', 'The book’s title', 'The story’s title', 'Words of your own', 'Nothing']);
 
-    // It writes the same two fields the pair writes — a second control onto
-    // one field (§16d), so the furniture fold reads back what was chosen.
-    fireEvent.change(tops, { target: { value: 'title_division' } });
+    // The sides are set apart: one the book, the other the story.
+    fireEvent.change(left, { target: { value: 'title' } });
+    fireEvent.change(right, { target: { value: 'chapter' } });
     expect((latest as ProjectFile).settings.book?.runningHeads).toMatchObject({ verso: 'title', recto: 'chapter' });
-    expect((within(dialog).getByLabelText('Verso running head') as HTMLSelectElement).value).toBe('title');
-    expect((within(dialog).getByLabelText('Recto running head') as HTMLSelectElement).value).toBe('chapter');
 
-    // And what the two tops will actually print, in the book's own words —
-    // said in both places off one reading rather than twice.
+    // And the sentence says what the two tops will print, in the book's words.
     fireEvent.change(title, { target: { value: 'Harbour Tales' } });
-    const notes = dialog.querySelectorAll('.field-note');
-    expect(notes.length).toBeGreaterThanOrEqual(2);
-    for (const note of notes) expect(note.textContent).toBe('“Harbour Tales” on the left, “The Road” on the right.');
+    expect(within(dialog).getByText('“Harbour Tales” on the left, “The Road” on the right.')).toBeDefined();
 
-    // A side set by hand reads as set on their own, never as the nearest one.
+    // A side's own words are its own, and the box is absent until it is asked for.
+    expect(within(dialog).queryByLabelText('Verso running head words')).toBeNull();
     fireEvent.change(within(dialog).getByLabelText('Verso running head'), { target: { value: 'custom' } });
-    expect((within(dialog).getByLabelText('Along the top of the pages') as HTMLSelectElement).value).toBe('own');
-    expect(
-      within(within(dialog).getByLabelText('Along the top of the pages') as HTMLElement)
-        .getAllByRole('option')
-        .map((one) => one.textContent),
-    ).toContain('Set on their own');
+    fireEvent.change(within(dialog).getByLabelText('Verso running head words'), { target: { value: 'A Harbour Reader' } });
+    expect((latest as ProjectFile).settings.book?.runningHeads).toMatchObject({ versoText: 'A Harbour Reader', recto: 'chapter' });
+    expect(within(dialog).queryByLabelText('Recto running head words')).toBeNull();
+  });
+
+  /**
+   * **One place, not two.** §7b left the pair in the furniture fold and put a
+   * second control over the same two fields in *The book*, which is two folds
+   * offering one choice — the confusion this was meant to end. The fold that
+   * styles the heads now says what they will print and points at where the
+   * choice is made.
+   */
+  it('leaves no second place to choose what the tops carry', () => {
+    let file = createProjectFile({ title: 'Tales', format: 'short_story' });
+    file = beginStory(file, { title: 'The Road' }).file;
+    render(<Harness initial={file} onOpenChapterPage={() => undefined} />);
+    openBookSettings();
+    const dialog = screen.getByRole('dialog', { name: 'Book settings' });
+    expect(within(dialog).getAllByLabelText('Verso running head')).toHaveLength(1);
+    expect(within(dialog).getAllByLabelText('Recto running head')).toHaveLength(1);
+    const furniture = within(dialog).getByRole('button', { name: 'Running heads & page numbers' }).closest('.layout-fold')!;
+    expect(within(furniture as HTMLElement).queryByLabelText('Verso running head')).toBeNull();
+    // It is not blind to them: it says what they will print and where to choose.
+    expect(furniture.textContent).toMatch(/on the left, .+ on the right/);
+    expect(furniture.textContent).toMatch(/chosen in/);
+    // And it keeps what it is for — how they are set, and where they sit.
+    expect(within(furniture as HTMLElement).getByLabelText('Running head place')).toBeDefined();
+    expect(within(furniture as HTMLElement).getByLabelText('Running head face')).toBeDefined();
   });
 
   it('draws a box with nothing in it, and fills it afterwards', async () => {

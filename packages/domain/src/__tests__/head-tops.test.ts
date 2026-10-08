@@ -1,29 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import {
-  HEAD_ARRANGEMENTS,
+  HEAD_CONTENTS,
   bookSettingsOf,
   createProjectFile,
   describeHeadTops,
-  headArrangementOf,
   headTextFor,
-  sayArrangement,
   setBookSettings,
   type BookSettings,
   type ProjectFile,
 } from '../index.js';
 
 /**
- * **Along the top of the pages** (addendum 20 §7b, from Ken: *there needs to
- * be another category called chapter or story title… right now, if you add a
- * book title, it adds it to both sides of the page for some reason. There's
+ * **Which title goes on which top** (addendum 20 §7c, from Ken: *there needs
+ * to be another category called chapter or story title… right now, if you add
+ * a book title, it adds it to both sides of the page for some reason. There's
  * no way to determine the title on one side or the other*).
  *
- * The pair that decides the two tops has existed since §7a and the category he
- * asks for is one of its five values, named in the format's own noun. What is
- * tested here is the half that was missing: the pair said **once** as a named
- * arrangement, which arrangement is in force **read back rather than stored**,
- * and the sentence that says what the two tops will actually print — the one
- * thing that can show a writer why both of them read the same words.
+ * The category he asks for has been one of §7a's five since the running heads
+ * were made adjustable, and the two sides have been separate just as long —
+ * what this pins is the half that was missing. The sides are **two controls**
+ * (§7b's single select naming both at once was the same shape as the
+ * complaint), and the sentence says **what the two tops will actually print**,
+ * which is the only thing that can show a writer why both of them read the
+ * same words.
  */
 
 const settingsOf = (patch: Partial<BookSettings>, format: ProjectFile['project']['format'] = 'short_story'): BookSettings =>
@@ -35,37 +34,23 @@ const heads = (verso: string, recto: string): Partial<BookSettings> => ({
 
 const NAMES = { title: 'Harbour Tales', author: 'K. Shank' };
 
-describe('the two tops as one named arrangement', () => {
-  it('is read back off the pair, never stored', () => {
-    // The book's own default is the classic novel convention.
-    expect(headArrangementOf(settingsOf({}))?.id).toBe('author_division');
-    expect(headArrangementOf(settingsOf(heads('title', 'chapter')))?.id).toBe('title_division');
-    expect(headArrangementOf(settingsOf(heads('chapter', 'chapter')))?.id).toBe('division_both');
-    expect(headArrangementOf(settingsOf(heads('none', 'none')))?.id).toBe('none');
+describe('the two sides are set apart', () => {
+  it('offers the same five to each side, the division’s title among them', () => {
+    expect([...HEAD_CONTENTS]).toEqual(['author', 'title', 'chapter', 'custom', 'none']);
   });
 
-  it('answers with nothing where the sides were set on their own', () => {
-    // `bookPresetOf`'s rule: the nearest one would be a claim about a book
-    // nobody set, and a writer who set a side by hand has not chosen a list.
-    expect(headArrangementOf(settingsOf(heads('custom', 'chapter')))).toBeNull();
-    expect(headArrangementOf(settingsOf(heads('author', 'author')))).toBeNull();
-  });
-
-  it('writes the same two fields the pair writes, so there is one answer', () => {
-    const one = HEAD_ARRANGEMENTS.find((entry) => entry.id === 'title_division')!;
-    const settings = settingsOf(heads(one.verso, one.recto));
+  it('lets one side carry the book and the other the story', () => {
+    const settings = settingsOf(heads('title', 'chapter'));
     expect(headTextFor('verso', settings, NAMES, 'The Harbour')).toBe('Harbour Tales');
     expect(headTextFor('recto', settings, NAMES, 'The Harbour')).toBe('The Harbour');
   });
 
-  it('names each arrangement in the format’s own noun, naming nothing itself', () => {
-    const one = HEAD_ARRANGEMENTS.find((entry) => entry.id === 'title_division')!;
-    expect(sayArrangement(one, 'short_story')).toBe('The book’s title on the left, the story’s title on the right');
-    expect(sayArrangement(one, 'novel')).toBe('The book’s title on the left, the chapter’s title on the right');
-    expect(sayArrangement(one, 'series')).toBe('The book’s title on the left, the episode’s title on the right');
-    // A pair that is the same on both sides is said once rather than twice.
-    expect(sayArrangement(HEAD_ARRANGEMENTS.find((entry) => entry.id === 'division_both')!, 'short_story')).toBe('The story’s title on both');
-    expect(sayArrangement(HEAD_ARRANGEMENTS.find((entry) => entry.id === 'none')!, 'novel')).toBe('Nothing along the top');
+  it('keeps each side’s own words apart', () => {
+    const settings = settingsOf({
+      runningHeads: { verso: 'custom', recto: 'custom', versoText: 'A Harbour Reader', rectoText: 'Stories', place: 'centre' },
+    });
+    expect(headTextFor('verso', settings, NAMES, '')).toBe('A Harbour Reader');
+    expect(headTextFor('recto', settings, NAMES, '')).toBe('Stories');
   });
 });
 
@@ -103,10 +88,11 @@ describe('what the two tops will actually print', () => {
     );
   });
 
-  it('names the category where the book has no division to read yet', () => {
+  it('names the category in the format’s own noun where there is no division to read yet', () => {
     // Inventing a title would be worse than saying which title it will be.
     const settings = settingsOf(heads('title', 'chapter'));
     expect(describeHeadTops(settings, NAMES, '', 'short_story')).toBe('“Harbour Tales” on the left, each story’s own title on the right.');
     expect(describeHeadTops(settings, NAMES, '', 'instructional')).toBe('“Harbour Tales” on the left, each chapter’s own title on the right.');
+    expect(describeHeadTops(settings, NAMES, '', 'series')).toBe('“Harbour Tales” on the left, each episode’s own title on the right.');
   });
 });

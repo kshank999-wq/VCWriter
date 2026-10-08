@@ -779,37 +779,9 @@ said.
 ### The build
 
 The pair is said **once more, where the titles are typed**, as one row —
-**Along the top of the pages** — naming **both tops at once**:
-
-| | |
-| --- | --- |
-| `author_division` | The author on the left, the story's title on the right |
-| `title_division` | The book's title on the left, the story's title on the right |
-| `division_both` | The story's title on both |
-| `title_both` | The book's title on both |
-| `none` | Nothing along the top |
-
-Four decisions.
-
-**A second control onto one field, never a second answer** (§16d). It writes
-`runningHeads.verso` and `.recto` — the same two fields the furniture fold's
-pair writes — so the two controls cannot disagree, and the pair stays where it
-is for anybody setting a side on its own.
-
-**Which arrangement is in force is read back, never stored.**
-`headArrangementOf` compares the pair against the list and answers null for
-anything else, so a hand-set side reads as **Set on their own** rather than as
-the nearest one — `bookPresetOf`'s rule, this room's fifth time. That option
-is **absent until the sides are set on their own**, an option that cannot be
-chosen being one that lies about being a choice.
-
-**Nothing names a unit itself.** `sayArrangement` reads `nounsFor(format)
-.division`, so the same five rows are *the story's title* on a collection,
-*the chapter's title* in a novel, *the episode's title* in a series.
-
-**And the sentence under it says what the two tops will actually print, in the
-book's own words** — `describeHeadTops`, which is the half that answers *for
-some reason*:
+**Along the top of the pages** — naming **both tops at once**, one of five
+arrangements, with the sentence under it saying what the two tops will
+actually print in the book's own words (`describeHeadTops`):
 
 ```
   “Harbour Tales” on the left, “The Harbour” on the right.
@@ -819,37 +791,89 @@ some reason*:
 ```
 
 Naming the **category** could never have shown him why both tops said the same
-thing; the **words** can. Where a side carries the division's title and the
-book has no division yet, the phrase names the category — *each story's own
-title* — rather than inventing one. It is **one reading rendered in both
-places**, the furniture fold's pair carrying the same sentence, because the
-fold that sets the two tops must not be the one place that cannot show its own
-effect.
+thing; the **words** can. The old sentence under Book title stops claiming the
+running heads, the row above it now being the answer.
 
-The old sentence under Book title stops claiming the running heads, the row
-above it now being the answer.
+**§7c corrects the row itself.** What is kept from this section is the
+measurement, the diagnosis and the sentence; what it got wrong is below.
+
+## 7c. Two sides are two controls
+
+From Ken, sending §7b's ask back **word for word**. In this project that has
+meant one thing nine times now, and the first thing it asks for is the audit,
+not the code.
+
+**The deploy was innocent** — production is the commit §7b built, and addendum
+33 §9a's stale-page notice would have said otherwise. So it was the reading,
+a second time.
+
+### What §7b got wrong
+
+§7b was right that the category exists, right about the measurement, and right
+that the choice had to come up beside the titles. Then it built **one select
+naming both tops at once** — *The book's title on the left, the story's title
+on the right* — which is **the same shape as the thing he reported**: a single
+control that decides both sides. His sentence is *there's no way to determine
+the title on one side or the other*, and a combined row cannot be that however
+well it reads, because there is still only one thing to point at.
+
+**Two sides are two controls.** So *The book* now holds the pair itself:
+
+| | |
+| --- | --- |
+| **Top of left-hand pages** | The author · The book's title · The story's title · Words of your own · Nothing |
+| **Top of right-hand pages** | the same five |
+
+with the words box appearing under whichever side carries the writer's own,
+and `describeHeadTops` under both.
+
+Three decisions.
+
+**It is the pair moved, not copied.** §7b left the originals in *Running heads
+& page numbers* and added a second control over the same two fields — which is
+two folds offering one choice, the confusion this exists to end. The furniture
+fold keeps what it is for (where the heads sit, the folio, the face and the
+three `LineStyle`s) and carries the sentence plus a line saying the choice is
+made in *The book*: **said rather than set**, so it is not blind to what it
+styles and not a rival to it. The `HEAD_ARRANGEMENTS` list, `headArrangementOf`
+and `sayArrangement` are **deleted rather than kept as a second way in**.
+
+**The labels carry the fact, so no heading does.** *Top of left-hand pages* and
+*Top of right-hand pages* say both which side and which edge — his own *the
+other top of the page* — so a heading over them would be the fact said twice
+(addendum 33 §1), and the room's `h3` is a tracked-capitals shout under a fold
+head that is already one (§9n).
+
+**Nothing names a unit itself.** Each select reads `nounsFor(format).division`,
+so the third option is *The story's title* on a collection, *The chapter's
+title* in a novel, *The episode's title* in a series.
 
 ### Driven
 
-At 1440 × 900 on an imported collection. The row lands at **y=357**, inside
-*The book*, two fields under the title; the five arrangements read in the
-format's own noun; choosing one moves both selects in the furniture fold;
-typing a book title re-reads the sentence at once; and setting the verso by
-hand turns the row to *Set on their own* and grows that option. On the page:
-versos read **Harbour Tales**, rectos **The Harbour** and then **In For A
-Pound**.
+At 1440 × 900 on an imported collection. The two selects stand **side by side
+at y=365**, inside *The book*, two fields under Book title; each offers the
+same five with the division named in the format's own noun; setting the left
+to the book's title and leaving the right alone re-reads the sentence at once
+(*“Harbour Tales” on the left, “The Harbour” on the right*); the words box is
+absent until a side asks for it and belongs to that side alone. The furniture
+fold holds **no second pair** — its selects are the place, the folio, the face
+and the three cases — and opens on the sentence and where the choice is made.
+On the page: versos **Harbour Tales**, rectos **The Harbour** and then **In
+For A Pound**.
 
-Looking at it caught this project's oldest fault a **fifth** time:
-**`.field-note` has a rule on the website and none in the renderer's own
-stylesheet**, so the sentence would have drawn at the body colour and read as
-a heading for the paragraph below rather than as a note about the control
-above. It has one now, named for what it is and tucked against its own field
-(addendum 09 §14a) — measured back at `11.5px rgb(163, 148, 111)`.
+Looking at it caught the fault of the day twice over, both of them this
+project's oldest. The first draft wrote a heading with
+**`.layout-subhead`, which has no rule in this stylesheet** — the same trap
+§7b had just caught with `.field-note` — and the heading was then deleted
+rather than given one, being the fact said twice. And the furniture fold's
+sentence had taken `.field-note`, which is *tucked against the field above
+it*; it opens a fold and annotates nothing, so it wears the lead-in's class
+like every other fold's first line.
 
-What the renderer test pins is the **gesture** rather than the control (§15a),
-which is the whole of why the first build was invisible: it asserts the row is
-in the **same fold as the Book title**, and a test that only asked whether the
-control existed would have passed before this change.
+What the renderer tests pin is the **gesture** (§15a): that each side has
+**its own** control and that both stand in **the same fold as the Book
+title** — assertions that would have failed before §7b *and* after it — plus
+a second test that there is **no second place** to make the choice.
 
 ## 8. Graphics
 

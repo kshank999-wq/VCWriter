@@ -10,14 +10,11 @@ import {
   FACE_NOTES,
   FOLIO_PLACES,
   FOLIO_PLACE_WORDS,
-  HEAD_ARRANGEMENTS,
   HEAD_CONTENTS,
   HEAD_CONTENT_WORDS,
   HEAD_PLACES,
   HEAD_PLACE_WORDS,
   describeHeadTops,
-  headArrangementOf,
-  sayArrangement,
   runningHeadStyleOf,
   OPENINGS,
   PART_INFO,
@@ -2665,19 +2662,15 @@ function BookSettingsDialog({
                 onChange={(event) => write({ imprint: event.target.value })}
               />
             </label>
-            {/* What stands along the top of each page (§7b, from Ken: *there
-                needs to be another category called chapter or story title…
-                right now, if you add a book title, it adds it to both sides
-                of the page for some reason*).
+            {/* Which title goes on which top (§7c, from Ken: *there's no way
+                to determine the title on one side or the other*).
 
-                The pair that decides it has existed since §7a and is 1,300px
-                further down this dialog, under a printer's word for the top
-                of a page — so a writer who had just been told the title goes
-                on the running heads could not reach it. It is said once more
-                here, where the titles are typed: the same two fields through
-                a second control (§16d), named for both tops at once, with
-                what they will actually print under it. */}
-            <HeadTopsRow format={file.project.format} settings={settings} write={write} tops={tops} />
+                One control per side, standing where the titles are typed.
+                §7b put a single select here naming both tops at once, which
+                is the same shape as the complaint — one control deciding both
+                sides — so this is the pair itself, moved up out of the
+                furniture fold rather than copied into a second place. */}
+            <HeadTopsRow settings={settings} write={write} noun={noun} tops={tops} />
             <p className="muted small">
               The title is on the contents page, the title page, the eBook and the exported file. Empty means the project’s own name,{' '}
               <em>{file.project.title}</em>, which an imported book took from its file.
@@ -3994,49 +3987,82 @@ const firstDivisionTitle = (divisions: ReturnType<typeof contentsDivisions>): st
 };
 
 /**
- * **Along the top of the pages** (§7b): the verso and the recto as one named
- * arrangement, in the fold where the book's title is typed.
+ * **The two tops, one control each** (§7c, from Ken: *there's no way to
+ * determine the title on one side or the other*).
  *
- * It writes `runningHeads.verso` and `.recto` — the same two fields the
- * furniture fold's pair writes, which is a second control onto one field
- * (§16d) rather than a second answer. Which arrangement is in force is a
- * **reading**, so setting the sides by hand to a pair that is not on the list
- * reads as *Set on their own* rather than as the nearest one.
+ * §7b read *another category* as a value in a list and answered with one
+ * select naming both tops at once — which is the same shape as the thing he
+ * reported, a single control that decides both sides. **Two sides are two
+ * controls**: a left and a right, standing where the book's title is typed,
+ * each naming the titles the book has in the format's own noun, with the
+ * words box under whichever side carries the writer's own.
+ *
+ * It is **the pair itself**, moved rather than copied — the furniture fold no
+ * longer holds a second one, because two folds offering the same choice is
+ * exactly the confusion this is fixing.
  */
 function HeadTopsRow({
-  format,
   settings,
   write,
+  noun,
   tops,
 }: {
-  format: ProjectFile['project']['format'];
   settings: BookSettings;
   write(patch: Partial<BookSettings>): void;
+  noun: string;
   tops: string;
 }) {
-  const current = headArrangementOf(settings);
+  const setHeads = (patch: Partial<BookSettings['runningHeads']>) => write({ runningHeads: { ...settings.runningHeads, ...patch } });
+  /** The words a side carries, named for the format rather than for a novel. */
+  const contentWords = (one: (typeof HEAD_CONTENTS)[number]) =>
+    one === 'chapter' ? `The ${noun.toLowerCase()}’s title` : HEAD_CONTENT_WORDS[one];
+  const side = (which: 'verso' | 'recto') => {
+    const carries = which === 'verso' ? settings.runningHeads.verso : settings.runningHeads.recto;
+    const typed = which === 'verso' ? settings.runningHeads.versoText : settings.runningHeads.rectoText;
+    const name = which === 'verso' ? 'Verso' : 'Recto';
+    return (
+      <div className="layout-head-side">
+        <label className="field">
+          <span>{which === 'verso' ? 'Top of left-hand pages' : 'Top of right-hand pages'}</span>
+          <select
+            aria-label={`${name} running head`}
+            value={carries}
+            onChange={(event) => setHeads({ [which]: event.target.value } as Partial<BookSettings['runningHeads']>)}
+          >
+            {HEAD_CONTENTS.map((one) => (
+              <option key={one} value={one}>
+                {contentWords(one)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {/* Absent rather than greyed: a box for words the page will not print
+            is a control that lies about what it does. */}
+        {carries === 'custom' ? (
+          <label className="field">
+            <span className="muted small">The words</span>
+            <input
+              type="text"
+              aria-label={`${name} running head words`}
+              value={typed}
+              placeholder="What these pages should say"
+              onChange={(event) => setHeads({ [`${which}Text`]: event.target.value } as Partial<BookSettings['runningHeads']>)}
+            />
+          </label>
+        ) : null}
+      </div>
+    );
+  };
   return (
     <>
-      <label className="field">
-        <span>Along the top of the pages</span>
-        <select
-          aria-label="Along the top of the pages"
-          value={current ? current.id : 'own'}
-          onChange={(event) => {
-            const one = HEAD_ARRANGEMENTS.find((entry) => entry.id === event.target.value);
-            if (one) write({ runningHeads: { ...settings.runningHeads, verso: one.verso, recto: one.recto } });
-          }}
-        >
-          {HEAD_ARRANGEMENTS.map((one) => (
-            <option key={one.id} value={one.id}>
-              {sayArrangement(one, format)}
-            </option>
-          ))}
-          {/* Only where the pair matches none of them: an option that cannot
-              be chosen is one that lies about being a choice. */}
-          {current ? null : <option value="own">Set on their own</option>}
-        </select>
-      </label>
+      {/* No heading over them: the labels say *top* and *which side*, so one
+          would be the fact said twice (addendum 33 §1's own finding), and the
+          room's `h3` is a tracked-capitals shout under a fold head that is
+          already one (§9n). */}
+      <div className="layout-two">
+        {side('verso')}
+        {side('recto')}
+      </div>
       <p className="field-note">{tops}</p>
     </>
   );
@@ -4045,9 +4071,15 @@ function HeadTopsRow({
 /**
  * The running heads and the folios (§7a, from Ken: *the running headers and
  * footers need to be adjustable*). There used to be four dropdowns and a
- * sentence saying nothing about them could be typed. Now each side says what
- * it likes — the writer's own words among the choices — and all three lines
- * are set here, the same `Line` control the chapter page uses.
+ * sentence saying nothing about them could be typed; all three lines are set
+ * here now, the same `Line` control the chapter page uses.
+ *
+ * **Which title each side carries is no longer here** (§7c): it is a question
+ * about the book's titles rather than about type, so it stands beside them in
+ * *The book*, and a second copy in this fold would be a second place to make
+ * one choice. What is left is how they are set and where they sit, with one
+ * sentence saying what they will print so the fold that styles them is not
+ * blind to them.
  */
 function FurnitureSection({
   settings,
@@ -4067,56 +4099,16 @@ function FurnitureSection({
   const setHeads = (patch: Partial<BookSettings['runningHeads']>) => write({ runningHeads: { ...heads, ...patch } });
   const setLine = (which: 'verso' | 'recto' | 'folio', patch: Partial<LineStyle>) =>
     write({ runningHeadStyle: { ...style, [which]: { ...style[which], ...patch } } });
-  /** The words a side carries, named for the format rather than for a novel. */
-  const contentWords = (one: (typeof HEAD_CONTENTS)[number]) =>
-    one === 'chapter' ? `The ${noun.toLowerCase()}’s title` : HEAD_CONTENT_WORDS[one];
-  const sideFields = (side: 'verso' | 'recto') => {
-    const carries = side === 'verso' ? heads.verso : heads.recto;
-    const typed = side === 'verso' ? heads.versoText : heads.rectoText;
-    const label = side === 'verso' ? 'Left-hand pages carry' : 'Right-hand pages carry';
-    return (
-      <div className="layout-head-side">
-        <label className="field">
-          <span>{label}</span>
-          <select
-            aria-label={`${side === 'verso' ? 'Verso' : 'Recto'} running head`}
-            value={carries}
-            onChange={(event) => setHeads({ [side]: event.target.value } as Partial<BookSettings['runningHeads']>)}
-          >
-            {HEAD_CONTENTS.map((one) => (
-              <option key={one} value={one}>
-                {contentWords(one)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {/* Absent rather than greyed: a box for words the page will not print
-            is a control that lies about what it does. */}
-        {carries === 'custom' ? (
-          <label className="field">
-            <span className="muted small">The words</span>
-            <input
-              type="text"
-              aria-label={`${side === 'verso' ? 'Verso' : 'Recto'} running head words`}
-              value={typed}
-              placeholder="What these pages should say"
-              onChange={(event) => setHeads({ [`${side}Text`]: event.target.value } as Partial<BookSettings['runningHeads']>)}
-            />
-          </label>
-        ) : null}
-      </div>
-    );
-  };
   return (
     <>
-      <div className="layout-two">
-        {sideFields('verso')}
-        {sideFields('recto')}
-      </div>
-      {/* The one reading of what the two tops will print (§7b), the same
-          sentence *The book*'s row carries: the fold that sets them must not
-          be the one place that cannot show its own effect. */}
-      <p className="field-note">{tops}</p>
+      {/* The one reading of what the two tops will print, the same sentence
+          *The book*'s pair carries — said rather than set, because the choice
+          itself belongs where the titles are. It opens the fold rather than
+          annotating a control, so it wears the lead-in's class and not
+          `.field-note`, which is tucked against the field above it. */}
+      <p className="muted small">
+        {tops} Which title each side carries is chosen in <em>The book</em>, above.
+      </p>
       <div className="layout-two">
         <label className="field">
           <span>Running heads sit</span>
