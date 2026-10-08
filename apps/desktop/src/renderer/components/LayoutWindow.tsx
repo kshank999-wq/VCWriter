@@ -141,7 +141,7 @@ import {
   divisionStart,
   startDivision,
   chapterPageSchema,
-  setBlankPage,
+  setBlankPages,
   setChapterBlank,
   plateIntoStory,
   type BookPageRow,
@@ -309,6 +309,9 @@ const NO_PICTURE: PictureOffer = {
 const NO_BLANK: BlankOffer = {
   spot: null,
   act: null,
+  fewer: null,
+  leaves: 0,
+  note: null,
   refusal: 'Choose a page first: the blank leaf goes in front of it.',
 };
 
@@ -755,7 +758,15 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * it is the section that **opens** here rather than the one in force — the
    * row says which, and `divisionStart` refuses the rest in a sentence.
    */
-  const pageDivision = divisionStart(file, (chosenRow?.opensUnitId ?? null) as never);
+  /**
+   * **Read off the place rather than the row** (§9ac, from Ken: *then you can
+   * be able to turn a blank page into a chapter page with a blank back or
+   * not*). A row's `opensUnitId` is a fact about the row, and on a blank leaf
+   * it is nothing at all — so the act was absent on the one page a writer is
+   * most likely standing on when they want a story to begin there. §9aa's walk
+   * forward answers the same question of the place.
+   */
+  const pageDivision = divisionStart(file, ((place.opensUnitId ?? chosenRow?.opensUnitId) ?? null) as never);
   /** What the page in hand is called in the book, for the buttons that act on it. */
   const chosen = pages.find((one) => one.sheet === selectedSheet);
   const chosenPage =
@@ -901,7 +912,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
            * in, the leaf would slide to the back of the picture and read as
            * the picture having landed a page early.
            */
-          return target.takesLeaf ? setBlankPage(made.file, target.takesLeaf, false) : made.file;
+          return target.takesLeaf ? setBlankPages(made.file, target.takesLeaf, 0) : made.file;
         }
 
         // A logotype and a page of art are **the part's own pictures**
@@ -949,7 +960,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
             turnTo.current = made.partId;
           }
           // The leaf becomes the page of art, as it does in the story (§9aa).
-          return target.takesLeaf ? setBlankPage(made.file, target.takesLeaf, false) : made.file;
+          return target.takesLeaf ? setBlankPages(made.file, target.takesLeaf, 0) : made.file;
         }
 
         return added.file;
@@ -1008,14 +1019,26 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
      * what he was trying to do. On a leaf he put in himself the same item
      * takes it away again, the offer's own words either way.
      */
+    /**
+     * **And as many of them as the writer wants** (§9ac, from Ken: *you
+     * should be able to just put as many pages in between as you want*).
+     *
+     * §9y's item flipped its words on a leaf the writer had put in and took
+     * that leaf away again, which was §9i's *the only place it can be found*
+     * said in a menu — and while that was the act, there was no second leaf to
+     * be had anywhere. It only ever adds now, the page's own × being where one
+     * is taken away (§9x), and the note says what the press really costs where
+     * that is not one more page.
+     */
     {
       label: pageBlank.act ?? 'Put a blank page in',
       disabled: pageBlank.refusal,
+      note: pageBlank.note,
       onPick: () => {
         if (!pageBlank.spot) return;
         const spot = pageBlank.spot;
-        const taking = chosenRow?.blankFor !== null && chosenRow?.blankFor !== undefined;
-        onUpdate((current) => setBlankPage(current, spot, !taking));
+        const want = pageBlank.leaves + 1;
+        onUpdate((current) => setBlankPages(current, spot, want));
       },
     },
     /**
@@ -1226,7 +1249,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         setPageDialogSheet(null);
         importPicture('free', on);
       }}
-      onBlank={(id, blank) => onUpdate((current) => setBlankPage(current, id, blank))}
+      onBlank={(id, leaves) => onUpdate((current) => setBlankPages(current, id, leaves))}
       onChapterBack={(markerId, blank) => onUpdate((current) => setChapterBlank(current, markerId, 'back', blank))}
       format={pageFormat(page).markerId ? pageFormat(page).label : null}
       onFormat={() => {
@@ -1654,6 +1677,18 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
               className="raised layout-add"
               aria-label="Add to the book"
               aria-haspopup="menu"
+              /**
+               * **And the rail keeps its place** (§9ac). This button stands at
+               * the top of the rail, which scrolls, so the focus a press gives
+               * it is a reason for the browser to scroll the rail back to the
+               * top — away from the page the writer had just chosen, and into
+               * the scroll that used to shut the menu. The menu takes focus
+               * itself and the keyboard still reaches this button by tabbing
+               * to it, so declining the focus a *mouse* press gives it costs
+               * nothing: measured, the rail stays where it was and no scroll
+               * is fired at all.
+               */
+              onMouseDown={(event) => event.preventDefault()}
               onClick={(event) => {
                 const box = event.currentTarget.getBoundingClientRect();
                 setAddMenu({ x: box.left, y: box.bottom + 4 });
@@ -1740,7 +1775,8 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                   page={!at || at.numbering === 'none' ? '' : at.numbering === 'roman' ? roman(at.number) : String(at.number)}
                   selected={row.id === selectedRowId}
                   over={over === row.id}
-                  comfort={whatGoesWithRow(file, row)}
+                  comfort={whatGoesWithRow(file, row).comfort}
+                  refusal={whatGoesWithRow(file, row).refusal}
                   onSelect={() => selectRow(row)}
                   onOpen={() => openRow(row)}
                   onRemove={() => {
@@ -2155,6 +2191,7 @@ function RailRow({
   selected,
   over,
   comfort,
+  refusal,
   open,
   onToggle,
   onSelect,
@@ -2173,6 +2210,13 @@ function RailRow({
   over: boolean;
   /** What goes with it, said once, while the × is being asked about. */
   comfort: string;
+  /**
+   * Why there is nothing to take, where there is nothing (§9ac): a story with
+   * writing in it is never run together with the one before it, so its × is
+   * **disabled with the reason in its title** rather than absent — absence is
+   * what read as *there's no way to delete those pages* (§9x).
+   */
+  refusal: string | null;
   /** A chapter's pages, showing or not (§9h). Absent on everything else. */
   open?: boolean;
   onToggle?(): void;
@@ -2251,7 +2295,7 @@ function RailRow({
           accident, and there's no way to get rid of it*). Asked once inline,
           with what would go said beside it, because a chapter's words are
           not the chapter's to take. */}
-      {asking ? (
+      {asking && !refusal ? (
         <span className="layout-ask">
           <span className="muted small layout-ask-why">{comfort}</span>
           <button type="button" className="ghost small danger" onClick={onRemove}>
@@ -2262,11 +2306,16 @@ function RailRow({
           </button>
         </span>
       ) : (
+        /* **Disabled with the reason in its title, never absent** (§9ac):
+           a story with writing in it is never run together with the one
+           before it, and §9x's own finding is that absence read as *there's
+           no way to delete those pages*. */
         <button
           type="button"
           className="ghost small layout-part-remove"
           aria-label={`Remove ${row.title}`}
-          title="Take it out of the book"
+          disabled={refusal !== null}
+          title={refusal ?? 'Take it out of the book'}
           onClick={() => setAsking(true)}
         >
           ×
@@ -3716,7 +3765,8 @@ function StoryPageSection({
   onDraw(): void;
   onVector(): void;
   /** A blank leaf before this page, wherever it lands (§9r): an element, a part or a chapter. */
-  onBlank(id: string, blank: boolean): void;
+  /** How many of the writer's own leaves should stand there (§9ac). */
+  onBlank(id: string, leaves: number): void;
   /** A blank on the back of a chapter's own leaf (§9r). */
   onChapterBack(markerId: string, blank: boolean): void;
   /**
@@ -3834,15 +3884,22 @@ function StoryPageSection({
               there is writing to stand before; on a leaf the writer put in,
               the same button takes it away, which is the only place it can
               be found again. */}
+          {/* **And as many as the writer wants** (§9ac): the button only ever
+              adds, so *put another one in* and *take one away* are two
+              controls doing two things rather than one whose words flip — and
+              the note says what the press really costs where the cutter has
+              already left a leaf there, which §9r answered by refusing. */}
           {blank.spot && blank.act ? (
-            <button
-              type="button"
-              className="small"
-              onClick={() => onBlank(blank.spot as string, !page.blankFor)}
-            >
+            <button type="button" className="small" onClick={() => onBlank(blank.spot as string, blank.leaves + 1)}>
               {blank.act}
             </button>
           ) : null}
+          {blank.spot && blank.fewer ? (
+            <button type="button" className="small" onClick={() => onBlank(blank.spot as string, blank.leaves - 1)}>
+              {blank.fewer}
+            </button>
+          ) : null}
+          {blank.note ? <p className="muted small">{blank.note}</p> : null}
           {/* **Not the fact said twice** (§9y). The refusal now carries a
               sentence where there is no leaf to be had, so the Add menu can
               grey its item with a reason in its title — and on a page with
@@ -4695,12 +4752,24 @@ function PartFields({
         <button
           type="button"
           className="ghost small layout-part-blank"
-          aria-pressed={part.blankBefore}
-          onClick={() => patch({ blankBefore: !part.blankBefore })}
+          onClick={() => patch({ blankBefore: blank.leaves + 1 })}
         >
           {blank.act}
         </button>
       ) : null}
+      {/* **And one fewer** (§9ac): it is a count rather than a switch, so the
+          `aria-pressed` went with it — a control that adds one more is not in
+          a state, and the number standing there is said by the two buttons. */}
+      {blank.fewer ? (
+        <button
+          type="button"
+          className="ghost small layout-part-blank"
+          onClick={() => patch({ blankBefore: blank.leaves - 1 })}
+        >
+          {blank.fewer}
+        </button>
+      ) : null}
+      {blank.note ? <p className="muted small">{blank.note}</p> : null}
       {blank.refusal ? <p className="muted small">{blank.refusal}</p> : null}
       {/* **The half title and the title page never arrive here either**
           (§9u). `partPlacement` calls both a block, so both have gone to the

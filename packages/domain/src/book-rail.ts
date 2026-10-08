@@ -1,7 +1,7 @@
 import { contentsDivisions, type PlacedMarker } from './markers.js';
 import { beatsInScript } from './selectors.js';
 import { removeFigure } from './instructional.js';
-import { divisionSpan, divisionRemoval, removeDivision, unclaimedUnits } from './outline-binding.js';
+import { divisionSpan, divisionRemoval, removeDivision, unclaimedUnits, type DivisionRemoval } from './outline-binding.js';
 import { isCollection } from './formats.js';
 import {
   blankReason,
@@ -14,7 +14,8 @@ import {
   setChapterRecto,
   removePart,
   sayBlankReason,
-  setBlankPage,
+  blankPagesAt,
+  setBlankPages,
   type BookFigure,
   type BookPageRow,
 } from './book-plan.js';
@@ -415,16 +416,23 @@ export const rowHasUnder = (
  * except where it holds nothing, which is the chapter somebody added by
  * accident and the whole reason this exists.
  */
-export const whatGoesWithRow = (file: ProjectFile, row: BookRow): string => {
-  if (row.kind === 'part') return row.part?.kind === 'plate' ? 'The page goes; the picture stays in the library.' : 'The page goes.';
-  if (row.kind === 'picture') return 'The picture comes out of the writing; it stays in the library.';
-  if (row.kind === 'section') return 'The chapter break goes. Its words join the chapter before; not a word is cut.';
+export const whatGoesWithRow = (file: ProjectFile, row: BookRow): DivisionRemoval => {
+  const goes = (comfort: string): DivisionRemoval => ({ comfort, refusal: null });
+  if (row.kind === 'part') {
+    return goes(row.part?.kind === 'plate' ? 'The page goes; the picture stays in the library.' : 'The page goes.');
+  }
+  if (row.kind === 'picture') return goes('The picture comes out of the writing; it stays in the library.');
+  if (row.kind === 'section') return goes('The chapter break goes. Its words join the chapter before; not a word is cut.');
   const marker = row.placed?.marker;
-  if (!marker) return '';
+  if (!marker) return goes('');
   // One answer, wherever a division is removed from (addendum 22 §7): the
   // Stories rail in the workspace asks the same function, so a × here and a ×
   // there cannot promise different things. It also reads the noun off the
   // format table, where this held a private *story or chapter?* of its own.
+  //
+  // **Including the refusal** (§9ac): a story with writing in it is never run
+  // together with the one before, so the row carries the reason rather than a
+  // × that would do it.
   return divisionRemoval(file, marker.id);
 };
 
@@ -617,11 +625,25 @@ export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], she
    * the row's own sentence, so they cannot drift.
    */
   if (page.markerId) {
+    /**
+     * **And where the division is a whole work, there is nothing to take**
+     * (§9ac, from Ken: *when I deleted the page, it removed the chapter page
+     * completely… it also merged story two and three together into one story
+     * for some reason*).
+     *
+     * This is the route he pressed. The page is the story's own, so the only
+     * thing on it is the break — and taking that out ran two stories together,
+     * which `divisionRemoval` now refuses outright. The refusal is carried
+     * rather than paraphrased, so the page's own screen says exactly what the
+     * rail's × says.
+     */
+    const division = divisionRemoval(file, page.markerId as never);
+    if (division.refusal) return no(division.refusal);
     return {
       id: page.markerId,
       what: 'division',
       act: 'Take this page away',
-      comfort: divisionRemoval(file, page.markerId as never),
+      comfort: division.comfort,
       refusal: null,
     };
   }
@@ -635,7 +657,10 @@ export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], she
  */
 export const removeBookPage = (file: ProjectFile, page: BookPageRow, what: PageRemoval): ProjectFile => {
   if (!what.id) return file;
-  if (what.what === 'leaf') return setBlankPage(file, what.id, false);
+  // **One leaf, not all of them** (§9ac): a writer may ask for several in one
+  // place now, so a × on one of them takes that one — clearing the count
+  // would take a run of pages away for a press on one row.
+  if (what.what === 'leaf') return setBlankPages(file, what.id, blankPagesAt(file, what.id) - 1);
   if (what.what === 'picture') return removeBookFigure(file, what.id);
   if (what.what === 'back') return setBackBlank(file, what.id, false);
   if (what.what === 'recto') return setChapterRecto(file, what.id, false);

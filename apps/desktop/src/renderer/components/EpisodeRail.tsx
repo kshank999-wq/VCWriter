@@ -75,7 +75,8 @@ export function EpisodeRail({ file, open, onOpen, currentUnitId, onGo, onOpenTit
                     episode={episode}
                     cast={cast.map((person) => person.name)}
                     current={here?.marker.id === episode.marker.id}
-                    comfort={divisionRemoval(file, episode.marker.id)}
+                    comfort={divisionRemoval(file, episode.marker.id).comfort}
+                    refusal={divisionRemoval(file, episode.marker.id).refusal}
                     onGo={() => onGo(episode)}
                     onOpenTitlePage={() => onOpenTitlePage(episode)}
                     onRemove={() => onRemove(episode)}
@@ -104,6 +105,7 @@ function EpisodeRow({
   cast,
   current,
   comfort,
+  refusal,
   onGo,
   onOpenTitlePage,
   onRemove,
@@ -112,6 +114,8 @@ function EpisodeRow({
   cast: string[];
   current: boolean;
   comfort: string;
+  /** Why there is nothing to take, where there is nothing (§9ac). */
+  refusal: string | null;
   onGo(): void;
   onOpenTitlePage(): void;
   onRemove(): void;
@@ -141,7 +145,7 @@ function EpisodeRow({
           </span>
         ) : null}
       </button>
-      {asking ? (
+      {asking && !refusal ? (
         <div className="episode-ask">
           <p className="muted small">{comfort}</p>
           <div className="episode-ask-buttons">
@@ -154,11 +158,16 @@ function EpisodeRow({
           </div>
         </div>
       ) : (
+        /* **Disabled with the reason in its title, never absent** (addendum
+           20 §9ac): a episode with writing in it is never run together with
+           the one before it, and §9x's own finding is that absence reads as
+           the act not being there at all. */
         <button
           type="button"
           className="ghost small episode-remove"
           aria-label={`Remove ${episode.label}`}
-          title="Take this episode out of the series"
+          disabled={refusal !== null}
+          title={refusal ?? 'Take this episode out of the series'}
           onClick={() => setAsking(true)}
         >
           ×

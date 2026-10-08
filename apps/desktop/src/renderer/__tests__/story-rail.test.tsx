@@ -96,7 +96,18 @@ describe('the story rail', () => {
     expect(removed).toEqual(['By Accident']);
   });
 
-  it('promises the words are safe where a story has been written in', () => {
+  /**
+   * **A written story has no × at all** (addendum 20 §9ac, from Ken: *it also
+   * merged story two and three together into one story for some reason… It
+   * shouldn't merge these stories ever*).
+   *
+   * This test asked for the promise *not a word is cut*, which was true and
+   * was still the sentence beside the act that ran two of his stories
+   * together. It is **rewritten rather than worked around**: the × is disabled
+   * with the reason in its title, which is §9x's own answer for the one
+   * control with nothing honest to do.
+   */
+  it('has no × where a story has been written in, with the reason in its title', () => {
     let file = beginStory(createProjectFile({ title: 'Tales', format: 'short_story' }), { title: 'The Road' }).file;
     const made = beginStory(file, { title: 'The Harbour' });
     file = made.file;
@@ -113,8 +124,23 @@ describe('the story rail', () => {
     render(
       <StoryRail file={file} open onOpen={() => {}} currentUnitId={null} onGo={() => {}} onOpenPage={() => {}} onNew={() => {}} onRemove={() => {}} onClaim={() => {}} />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Remove The Harbour' }));
-    expect(screen.getByText(/not a word is cut/)).toBeTruthy();
+    const remove = screen.getByRole('button', { name: 'Remove The Harbour' }) as HTMLButtonElement;
+    expect(remove.disabled).toBe(true);
+    expect(remove.title).toMatch(/never run together with the one before/);
+    fireEvent.click(remove);
+    expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
+  });
+
+  it('still offers the × on a story nobody has written in', () => {
+    let file = beginStory(createProjectFile({ title: 'Tales', format: 'short_story' }), { title: 'The Road' }).file;
+    file = beginStory(file, { title: 'By Accident' }).file;
+    render(
+      <StoryRail file={file} open onOpen={() => {}} currentUnitId={null} onGo={() => {}} onOpenPage={() => {}} onNew={() => {}} onRemove={() => {}} onClaim={() => {}} />,
+    );
+    const remove = screen.getByRole('button', { name: 'Remove By Accident' }) as HTMLButtonElement;
+    expect(remove.disabled).toBe(false);
+    fireEvent.click(remove);
+    expect(screen.getByText(/Nothing is written in it/)).toBeTruthy();
   });
 });
 

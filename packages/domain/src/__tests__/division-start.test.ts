@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addBeat,
   addMarker,
+  removeMarker,
   addPart,
   addUnit,
   bookBlocks,
@@ -101,16 +102,45 @@ const lay = (file: ProjectFile) => {
   return { blocks, laid, rows: bookPageRows(laid.pages, blocks) };
 };
 
-/** The press he made: the × on the first story's own page. */
-const brokenByThatPress = (file: ProjectFile): ProjectFile => {
+/**
+ * Writing ahead of the first break, which no story claims.
+ *
+ * §9ab reached this state through the press Ken made — the × on the first
+ * story's own page — and **§9ac refuses that press**: a story with writing in
+ * it is never run together with the one before it. The state is still real
+ * and still worth listing, addendum 22 §8 having found an import producing it,
+ * which is where this complaint came from in the first place. So it is reached
+ * here the way an import reaches it, with the marker simply not there, and the
+ * press that used to produce it is asserted to be refused instead.
+ */
+const unclaimed = (file: ProjectFile): ProjectFile => {
+  const first = storiesOf(file)[0]!;
+  return removeMarker(file, first.placed.marker.id);
+};
+
+/** The press he made, which no longer takes a story out (§9ac). */
+const thatPress = (file: ProjectFile): ProjectFile => {
   const rows = lay(file).rows;
   const open = rows.find((row) => row.says === 'Chapter opens')!;
   return removeBookPage(file, open, pageRemoval(file, rows, open.sheet));
 };
 
+describe('the press that made it', () => {
+  it('is refused outright, so the stories are never run together (§9ac)', () => {
+    const file = collection();
+    const rows = lay(file).rows;
+    const open = rows.find((row) => row.says === 'Chapter opens')!;
+    const removal = pageRemoval(file, rows, open.sheet);
+    expect(removal.act).toBeNull();
+    expect(removal.refusal).toContain('never run together with the one before');
+    expect(storiesOf(thatPress(file))).toHaveLength(storiesOf(file).length);
+    expect(unclaimedUnits(thatPress(file))).toHaveLength(unclaimedUnits(file).length);
+  });
+});
+
 describe('the writing a division no longer claims', () => {
   it('is listed, rather than filed under the story that follows it', () => {
-    const file = brokenByThatPress(collection());
+    const file = unclaimed(collection());
     const rail = bookRows(file);
     const orphans = unclaimedUnits(file);
     expect(orphans.map((unit) => unit.title)).toContain('I.');
@@ -125,7 +155,7 @@ describe('the writing a division no longer claims', () => {
   });
 
   it('keeps its own pages rather than lending them to the next story', () => {
-    const file = brokenByThatPress(collection());
+    const file = unclaimed(collection());
     const { rows } = lay(file);
     const rail = bookRows(file);
     const under = pagesUnder(rail, rows);
@@ -151,7 +181,7 @@ describe('the writing a division no longer claims', () => {
 
 describe('starting a division', () => {
   it('is offered on the page that writing opens on, and says what it would gather', () => {
-    const file = brokenByThatPress(collection());
+    const file = unclaimed(collection());
     const orphan = unclaimedUnits(file).find((unit) => unit.title === 'I.')!;
     const offer = divisionStart(file, orphan.id);
     expect(offer.refusal).toBeNull();
@@ -164,7 +194,7 @@ describe('starting a division', () => {
   });
 
   it('puts the story back, with its sections under it', () => {
-    const file = brokenByThatPress(collection());
+    const file = unclaimed(collection());
     const orphan = unclaimedUnits(file).find((unit) => unit.title === 'I.')!;
     expect(storiesOf(file)).toHaveLength(1);
     const back = startDivision(file, orphan.id, 'In For A Pound');
@@ -185,7 +215,7 @@ describe('starting a division', () => {
     const file = collection();
     const words = () => (one: ProjectFile) => one.beats.flatMap((beat) => beat.manuscript.elements).length;
     const before = words()(file);
-    const broken = brokenByThatPress(file);
+    const broken = unclaimed(file);
     expect(words()(broken)).toBe(before);
     const orphan = unclaimedUnits(broken).find((unit) => unit.title === 'I.')!;
     const back = startDivision(broken, orphan.id, 'In For A Pound');
@@ -194,14 +224,14 @@ describe('starting a division', () => {
   });
 
   it('refuses where a page opens no section, and where one already begins', () => {
-    const file = brokenByThatPress(collection());
+    const file = unclaimed(collection());
     expect(divisionStart(file, null).refusal).toMatch(/begins where a section begins/);
     const standing = storiesOf(file)[0]!;
     expect(divisionStart(file, standing.placed.marker.unitId as never).refusal).toMatch(/already begins/);
   });
 
   it('refuses the same things again in the act, so a caller cannot skip the reading', () => {
-    const file = brokenByThatPress(collection());
+    const file = unclaimed(collection());
     const standing = storiesOf(file)[0]!;
     expect(startDivision(file, standing.placed.marker.unitId as never)).toBe(file);
   });

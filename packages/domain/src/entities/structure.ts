@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { id, orderKey, timestamps } from './common.js';
 import { manuscriptSegmentSchema } from './manuscript.js';
+import { MAX_BLANK_LEAVES } from './book.js';
 import { titlePageSchema } from './title-page.js';
 import type {
   AssetId,
@@ -489,7 +490,12 @@ export const chapterPageSchema = z.object({
    * leave, the next page being the middle of the chapter, so the control is
    * absent rather than doing something nobody could predict.
    */
-  blankBefore: z.boolean().default(false),
+  /**
+   * **A count, with `true` its older spelling** (§9ac, from Ken: *you should
+   * be able to just put as many pages in between as you want*) — `true` reads
+   * as one leaf, so nothing is migrated and no chapter moves.
+   */
+  blankBefore: z.union([z.boolean(), z.number().int().min(0).max(MAX_BLANK_LEAVES)]).default(false),
   backBlank: z.boolean().default(false),
   /**
    * A picture from the book's graphics library (addendum 19 §7), by id, so

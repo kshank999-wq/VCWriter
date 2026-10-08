@@ -3330,6 +3330,64 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9ac is the pages in between**, from Ken in one message about one
+  afternoon (*I tried to add a page and then it added it on the wrong page… It
+  erased the in-between page* … *there's no pages in between and no way to put
+  pages in between. It also merged story two and three together into one story
+  for some reason… It shouldn't merge these stories ever. When you add a blank
+  page, it should just shift everything down. So it's adding a front and back
+  page… And you should be able to just put as many pages in between as you
+  want. Then you can be able to turn a blank page into a chapter page*), and
+  **both of his readings are one fault measured from either side**: on a
+  faithful collection, asking for one blank leaf in front of a story that opens
+  on a right-hand page grew the book by **two** pages in five of fifteen
+  arrangements and by **nothing** in the other ten — the same press, two
+  results, and which one a writer got decided by where the words happened to
+  fall. **A story is never run together with the one before it**:
+  `divisionRemoval` is a reading now (`trackRemoval`'s shape) and
+  `removeDivision` refuses the same thing again, with `holdsWholeWorks` the one
+  place that knows the difference — a chapter is a division *of* a novel, so
+  merging two is an editorial act and is untouched, while a story in a
+  collection and an episode of a series are **whole works that happen to be
+  bound beside others**; an **empty** one still goes, which was §7's whole ask,
+  and the × is **disabled with the reason in its title rather than absent**,
+  absence being what read as *there's no way to delete those pages*. **A leaf
+  the writer puts in stands the automatic recto rule down**, so each one is
+  exactly a page and what follows moves down by one — kept where the page
+  leaves its own **back** blank, a back having to be the other side of the same
+  sheet (§9j) — and the one case that is not uniform is **said before the
+  press**, the first leaf where a gap already stands taking that gap's place
+  and making it the writer's, after which it has a ×, takes a picture and can
+  be added to. §9r **refused** wherever a leaf already stood, which was right
+  about the fact and wrong about the answer: it left the one gap in a book
+  where a writer most wants a page of their own with nothing on offer at all.
+  **`blankBefore` is a count** on all three records that carry it with `true`
+  its older spelling (nothing migrated, no book moved), `leavesBefore` the one
+  reading and `MAX_BLANK_LEAVES` the ceiling; the offer carries `leaves`,
+  `fewer` and `note`, the Add menu **only ever adds**, and one leaf is taken
+  away by the page's own × (§9x). **A blank page becomes a chapter page**
+  through a break started on the section it stands in front of: §9ab read the
+  *row's* `opensUnitId`, which on a leaf is nothing at all, so `PagePlace`
+  carries it and §9aa's walk forward answers — which also fills it in on a page
+  carrying a chapter opening and nothing else. And driving found a fault in
+  shipped code with nothing to do with blank pages: **`ContextMenu` closed
+  itself.** A press on a button inside a scrolling panel scrolls that panel —
+  the browser bringing the focused thing into view, in the **next frame**,
+  after the menu has opened and its effect has run — so on a rail anybody had
+  scrolled the *+ Add* menu shut a frame after it opened: **twenty-one items
+  with the rail at the top and nought with a page halfway down it chosen**, the
+  rail going 206 → 0 in the same breath. From the writer's chair a menu that
+  flashes and goes is a menu with nothing in it, which is §9ab's *in the menu,
+  there's no way to add a chapter page* said about a menu that had the item all
+  along — and it was true of **every** menu opened from a scrolled panel, so
+  the guard is the menu's rather than each opener's (a scroll closes it from
+  the frame after it has settled), with *+ Add* declining the focus a mouse
+  press gives it so the rail keeps its place. Driven at 1440×900: three presses
+  take the book 14 → 14 → 15 → 16 with the rail reading **Page 8 Blank, Page 9
+  Blank, Page 10 Blank** and *Falling* opening on 11, taking one away gives 15,
+  and the × on that story refuses in both places with the three stories
+  standing. Six assertions spelling out the old behaviour were **rewritten
+  rather than worked around**, each having pinned the fault as a requirement.
   **§9ab is a break you can make, and a page you can put in anywhere**, from
   Ken in four messages about one afternoon (*I should be able to insert a page
   at any point. That page can be anything. It can be a chapter page. It can be

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useId } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * The right-click menu, one component for the whole program (from Ken:
@@ -56,19 +57,60 @@ export function ContextMenu({ x, y, label, entries, onClose }: ContextMenuProps)
   const id = useId();
 
   useEffect(() => {
-    panel.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+    panel.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });
     const away = () => onClose();
     window.addEventListener('pointerdown', away);
-    window.addEventListener('scroll', away, true);
     window.addEventListener('resize', away);
+    /**
+     * **The menu must not be shut by the scroll that opened it** (addendum 20
+     * §9ac, found by driving the Layout room and by no test at all).
+     *
+     * A press on a button inside a scrolling panel can scroll that panel —
+     * the browser does it to bring what has just taken focus into view, and it
+     * does it **in the next frame**, after the click has opened the menu and
+     * after this effect has run. In Layout the *+ Add* button stands at the
+     * top of the rail, so on a rail somebody had scrolled the press queued a
+     * jump back to the top, the jump fired this listener, and the menu shut
+     * about a frame after it opened. Measured on Ken's own collection:
+     * twenty-one items with the rail at the top and **nought** with a page
+     * halfway down it chosen, the rail going from 206 to 0 in the same breath.
+     *
+     * From the writer's chair a menu that flashes and goes is a menu with
+     * nothing in it, which is Ken's *in the menu, there's no way to add a
+     * chapter page* — and it was true of every menu in the program opened
+     * from a panel anybody had scrolled, not only this one. So the guard is
+     * the **menu's** rather than each opener's: a scroll still closes it, from
+     * the frame after it has settled.
+     */
+    let watching = false;
+    const settle = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        watching = true;
+      }),
+    );
+    const scrolled = () => {
+      if (watching) onClose();
+    };
+    window.addEventListener('scroll', scrolled, true);
     return () => {
+      cancelAnimationFrame(settle);
       window.removeEventListener('pointerdown', away);
-      window.removeEventListener('scroll', away, true);
+      window.removeEventListener('scroll', scrolled, true);
       window.removeEventListener('resize', away);
     };
   }, [onClose]);
 
-  return (
+  /**
+   * **The menu belongs to the window, not to the panel it came out of**
+   * (§9ac). It is `position: fixed` and stands where the pointer was, so
+   * nothing about it is the rail's — and while it was *drawn inside* the
+   * rail, opening it moved that rail's scroll, which fired the listener
+   * above and shut the menu about a frame after it opened. Measured: *+ Add*
+   * gave twenty-one items with the rail at the top and **nought** with a page
+   * halfway down it chosen, which from the writer's chair is the item not
+   * being there.
+   */
+  return createPortal(
     <div
       ref={panel}
       className="context-menu"
@@ -122,6 +164,7 @@ export function ContextMenu({ x, y, label, entries, onClose }: ContextMenuProps)
           </button>
         ),
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }

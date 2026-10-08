@@ -17,6 +17,7 @@ import {
   partBlankOffer,
   partsOf,
   setBlankPage,
+  setBlankPages,
   setChapterBlank,
   unitsInStoryOrder,
   updateBeat,
@@ -146,7 +147,7 @@ describe('where a blank page may be entered', () => {
     const offer = offerOn(file, left.sheet);
     expect(offer.spot).toBeNull();
     expect(offer.act).toBeNull();
-    expect(offer.refusal).toMatch(/blank already/i);
+    expect(offer.refusal).toMatch(/Nothing of the book stands on this page/i);
     // And a sheet the book does not have is the book still being set.
     expect(offerOn(file, 9999).refusal).toMatch(/still being set/i);
   });
@@ -251,28 +252,51 @@ describe('a page that already has a leaf in front of it', () => {
     return { file, sheet: (after ?? opens[0]!).sheet };
   };
 
-  it('refuses in a sentence rather than filling the gap invisibly', () => {
+  /**
+   * **Offered, with what it costs said before the press** (§9ac, from Ken:
+   * *when I did that, I tried to add a page and then it added it on the wrong
+   * page… It erased the in-between page* … *there's no pages in between and no
+   * way to put pages in between*).
+   *
+   * §9r refused here, on the ground that the press would be absorbed and so
+   * would look like the fault it was fixing. That was right about the fact and
+   * wrong about the answer: the one gap in the book where a writer most wants
+   * a page of their own — between the end of one story and the opening of the
+   * next — then had no act at all. Both of these assertions pinned that
+   * refusal and are **rewritten rather than worked around**.
+   */
+  it('offers the leaf and says that the first one takes the gap’s place', () => {
     const { file, sheet } = withLeaf();
     const before = lay(file).rows.find((one) => one.sheet === sheet - 1);
     expect(before?.blank).toBe(true);
     const offer = offerOn(file, sheet);
-    expect(offer.spot).toBeNull();
-    expect(offer.act).toBeNull();
-    expect(offer.refusal).toMatch(/A blank page already stands in front of this one/);
-    // **And it says why, here** (§9w, from Ken: *it says this page in front of
-    // one is already blank. Page says why. I don't know what this means*). It
-    // read *Its own page says why*, which has no referent — the page in front
-    // *is* a page — so the reason is named in the same sentence.
-    expect(offer.refusal).not.toMatch(/says why/);
-    expect(offer.refusal).toMatch(/because/);
+    expect(offer.spot).not.toBeNull();
+    expect(offer.act).toBe('Put a blank page here…');
+    expect(offer.refusal).toBeNull();
+    expect(offer.note).toMatch(/already stands in front of this page/);
+    expect(offer.note).toMatch(/takes its place/);
   });
 
-  it('would have grown the book by nothing, which is why it is refused', () => {
-    // Pinned so the refusal is not later "fixed" by removing it: the act
-    // really does change no page, and the sentence is the whole of the answer.
+  it('makes the gap the writer’s own, so it has a × and takes a picture', () => {
     const { file, sheet } = withLeaf();
     const spot = spotOn(file, sheet)!;
-    expect(shape(setBlankPage(file, spot, true))).toHaveLength(shape(file).length);
+    const asked = setBlankPage(file, spot, true);
+    // The book keeps its length, which is the note's own sentence — and the
+    // leaf standing there is now the writer's rather than the cutter's.
+    expect(shape(asked)).toHaveLength(shape(file).length);
+    expect(lay(asked).rows.filter((row) => row.blankFor === spot)).toHaveLength(1);
+  });
+
+  it('gives a second leaf its own page, which the first could not (§9ac)', () => {
+    const { file, sheet } = withLeaf();
+    const spot = spotOn(file, sheet)!;
+    const two = setBlankPages(file, spot, 2);
+    expect(lay(two).rows.filter((row) => row.blankFor === spot)).toHaveLength(2);
+    const opensAt = (one: ProjectFile) =>
+      lay(one).rows.find((row) => row.sheet >= sheet - 2 && row.markerId === spot && row.says === 'Chapter opens')?.sheet;
+    // The opening moves down one page per leaf after the first, which is
+    // *shift everything down* said of the pages that follow it.
+    expect(opensAt(two)).toBe((opensAt(setBlankPages(file, spot, 1)) as number) + 1);
   });
 
   it('still offers it where the page in front carries writing', () => {
@@ -288,29 +312,18 @@ describe('a page that already has a leaf in front of it', () => {
 
   it('says the same of a part, where the two other screens reach the field', () => {
     // The inspector's panel and the designed page's dialog set `blankBefore`
-    // on the part rather than through a page, and a screen that toggled it
-    // blind would absorb the cutter's leaf silently — which is what this was
-    // written to stop. Three surfaces, one answer.
+    // on the part rather than through a page, so this must say exactly what
+    // `blankOffer` says: three surfaces, one answer (§9r), and one correction
+    // when the answer changed (§9ac).
     const file = collection();
     const { rows } = lay(file);
     const title = partsOf(file).find((part) => part.kind === 'title_page')!;
     const opens = rows.find((row) => row.partId === title.id)!;
     expect(rows.find((row) => row.sheet === opens.sheet - 1)?.blank).toBe(true);
     const offer = partBlankOffer(rows, title);
-    expect(offer.act).toBeNull();
-    // The same sentence, so the same correction (§9w).
-    expect(offer.refusal).toMatch(/A blank page already stands in front of this one, because/);
-    expect(offer.refusal).not.toMatch(/says why/);
-    /**
-     * **And it names the page in hand** (§17e). The reason is said in the
-     * leaf's voice on the leaf's own screen and in this page's voice here: in
-     * the leaf's voice the sentence read *because the page after it opens on a
-     * right-hand page*, where *it* is now this page, so it named the copyright
-     * page as the reason for a blank two leaves away — §9w's own missing
-     * referent one clause in.
-     */
-    expect(offer.refusal).toMatch(/because this page opens on a right-hand page/);
-    expect(offer.refusal).not.toMatch(/the page after it/);
+    expect(offer.act).toBe('Put a blank page before this one');
+    expect(offer.refusal).toBeNull();
+    expect(offer.note).toMatch(/takes its place/);
   });
 
   it('offers a part its leaf where nothing stands in front of it', () => {
@@ -323,23 +336,28 @@ describe('a page that already has a leaf in front of it', () => {
     expect(partBlankOffer(rows, free).act).toBe('Put a blank page before this one');
   });
 
-  it('never refuses a part taking its own leaf away again', () => {
+  it('offers a part another, and taking one away, once one stands there', () => {
     const file = collection();
     const part = partsOf(file)[0]!;
-    expect(partBlankOffer(lay(file).rows, { ...part, blankBefore: true }).act).toBe(
-      'Take the blank page before this one away',
-    );
+    const offer = partBlankOffer(lay(file).rows, { ...part, blankBefore: true });
+    expect(offer.act).toBe('Put another blank page before this one');
+    expect(offer.fewer).toBe('Take the blank page away');
+    expect(offer.leaves).toBe(1);
   });
 
-  it('never refuses taking away the leaf a writer put in', () => {
-    // It is the only place that leaf can be found again (§9i), and the page
-    // in front of a blank may itself be blank.
+  it('offers another on the leaf the writer put in, and says how many there are', () => {
+    // §9i's *the only place that leaf can be found again* is no longer the
+    // argument for putting the removal here: every page has a × of its own
+    // since §9x, so this offer is the one act — putting another one in.
     const file = collection();
     const { rows } = lay(file);
     const part = rows.find((row) => row.partId !== null && row.sheet > 3)!;
     const with_ = setBlankPage(file, spotOn(file, part.sheet)!, true);
     const made = lay(with_).rows.find((row) => row.blankFor !== null)!;
-    expect(offerOn(with_, made.sheet).act).toBe('Take this blank page away');
+    const offer = offerOn(with_, made.sheet);
+    expect(offer.act).toBe('Put another blank page here…');
+    expect(offer.leaves).toBe(1);
+    expect(offer.fewer).toBe('Take the blank page away');
   });
 });
 

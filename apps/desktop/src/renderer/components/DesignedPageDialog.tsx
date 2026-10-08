@@ -1036,25 +1036,38 @@ function Body({
             <h3>
               <span className="dp-num">{isTitle ? 4 : 3}</span> The leaves around this page
             </h3>
-            {/* It reads the **offer** rather than toggling the field: a leaf
-                asked for where the cutter has already left one is absorbed by
-                the gap, so a switch that turned on and moved nothing would be
-                doing the invisible thing §9r was written to stop. */}
+            {/* **A count rather than a switch** (§9ac, from Ken: *you should
+                be able to just put as many pages in between as you want*).
+                It was a switch, so there was one leaf per place and no
+                second — and a switch over a count can only lie about what is
+                there. It reads the **offer**, which says how many stand there
+                now and what one more really costs. */}
             {blankLeaf.act ? (
               <button
                 type="button"
-                className="dp-switch"
-                role="switch"
-                aria-checked={part.blankBefore}
-                aria-label="Put a blank page before this one"
-                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: !part.blankBefore }))}
+                className="small"
+                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.leaves + 1 }))}
               >
-                <span className={part.blankBefore ? 'dp-switch-track on' : 'dp-switch-track'} aria-hidden="true">
-                  <span />
-                </span>
-                A blank page before this one
+                {blankLeaf.act}
               </button>
             ) : null}
+            {blankLeaf.fewer ? (
+              <button
+                type="button"
+                className="small"
+                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.leaves - 1 }))}
+              >
+                {blankLeaf.fewer}
+              </button>
+            ) : null}
+            <p className="muted small">
+              {blankLeaf.leaves === 0
+                ? 'No blank page stands in front of this one.'
+                : blankLeaf.leaves === 1
+                  ? 'One blank page stands in front of this one.'
+                  : `${blankLeaf.leaves} blank pages stand in front of this one.`}
+            </p>
+            {blankLeaf.note ? <p className="muted small">{blankLeaf.note}</p> : null}
             {blankLeaf.refusal ? <p className="muted small">{blankLeaf.refusal}</p> : null}
             {partTakesBlankBack(part.kind) ? (
               <>

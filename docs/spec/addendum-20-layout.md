@@ -2952,6 +2952,171 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9ac. The pages in between
+
+From Ken in one message about one afternoon: *So in the layout screen, at the
+end of the chapter, I wanted to put the final picture and have a blank page. I
+couldn't put the picture on that page. And then I wanted to put the title page
+for the next story. When I did that, I tried to add a page and then it added it
+on the wrong page, on the facing page of the new story. It erased the in-between
+page… But then when I flipped it, I'm now at the beginning of another story, but
+there's no pages in between and no way to put pages in between. It also merged
+story two and three together into one story for some reason… It shouldn't merge
+these stories ever. When you add a blank page, it should just shift everything
+down. So it's adding a front and back page… It's not just adding one side or the
+other. And you should be able to just put as many pages in between as you want.
+Then you can be able to turn a blank page into a chapter page with a blank back
+or not… Please check everything because the layout tool is not going to work
+unless it has this functionality.*
+
+### What was measured, before a line was written
+
+On a faithful collection — three stories of three chapters each — with the
+length of a section as a parameter, because the fault turned out to be parity.
+
+**Asking for one blank leaf in front of a story that opens on a right-hand page
+grew the book by two pages in five of fifteen measured arrangements and by
+nothing in the other ten.** The same press, two different results, and which one
+a writer got was decided by where the words happened to fall. Both of his
+readings are that one fault seen from either side: *it's adding a front and back
+page* is the +2, *it erased the in-between page* is the +0.
+
+And the ×: on a story's own opening page, `pageRemoval` answered *the story
+break goes, its sections join the one before, not a word is cut*. That is honest
+about the words and is still the press that **ran story two and story three
+together**, which is how he reached the state he reported.
+
+### A story is never run together with the one before it
+
+`divisionRemoval` is a reading now rather than a sentence (`trackRemoval`'s
+shape), and `removeDivision` refuses the same thing again, so a caller cannot
+merge two stories by not reading it.
+
+**The rule is the format's and nothing else's.** A chapter is a division *of* a
+novel, so taking its break off and letting its words run on into the chapter
+before is an ordinary editorial act — it is what a novelist does when two short
+chapters should be one, and it is untouched. A story in a collection and an
+episode of a series are not that: each is a whole work that happens to be bound
+beside others. `holdsWholeWorks` in `formats.ts` is the one place that knows,
+named for the property rather than for the formats (`isInteractive`'s reason),
+and **an empty one still goes**, which was §7's whole ask — *I added a story by
+accident*.
+
+The × on such a row is **disabled with the reason in its title, never absent**:
+absence is what read as *there's no way to delete those pages* (§9x). The page's
+own screen carries the whole sentence, where a writer who has just pressed it is
+standing.
+
+### A blank page is exactly one page
+
+**A leaf the writer put in by hand stands the automatic recto rule down.** The
+cutter's gap in front of a story exists *because* the story opens on a right-hand
+page; the moment somebody arranges the pages themselves, that rule has nothing to
+say, so each leaf is one page and what follows moves down by one. It is kept
+where the page leaves its own **back** blank, which is a different kind of rule: a
+back has to be the other side of the same sheet (§9j, Ken's own correction), so
+that page must open on a recto or the leaf behind it is the next sheet's front.
+
+The one thing left that is not uniform is **the first leaf where a gap already
+stands**, which takes the gap's place rather than adding to it — and that is
+said before the press rather than found afterwards: *An empty leaf already
+stands in front of this page because it opens on a right-hand page. The first
+blank page you ask for takes its place; each one after that moves what follows
+it down a page.* The leaf is then the **writer's**: it has a × of its own, it
+can be given a picture, and another can be asked for on top of it.
+
+§9r **refused** wherever a leaf already stood in front, on the ground that the
+press would be absorbed and look like the fault it was fixing. That was right
+about the fact and wrong about the answer: it left the one gap in a book where a
+writer most wants a page of their own — between the end of one story and the
+opening of the next — with nothing on offer at all, which is his *there's no
+pages in between and no way to put pages in between*.
+
+### As many as you want
+
+`blankBefore` is a **count** on all three records that carry it — a manuscript
+element, a part and a chapter page — with `true` its **older spelling**, read as
+one leaf, so nothing is migrated and no book moves. `leavesBefore` is the one
+place that resolves it and `MAX_BLANK_LEAVES` the ceiling, which lives beside
+the schema because a number with no top can be written into a document by
+anything.
+
+The offer carries `leaves`, `fewer` and `note`, so a screen says how many stand
+there, offers one more and one fewer, and never flips a button's words. **The
+Add menu only ever adds**; one leaf is taken away by the page's own × (§9x),
+which is one act in one place.
+
+### A blank page can become a chapter page
+
+What makes a leaf into a chapter page is a break started on the section it
+stands **in front of**. §9ab put that act on the Add menu and read the *row's*
+`opensUnitId`, which on a blank page is nothing at all — so the act was absent
+on the one page a writer is most likely standing on when they want a story to
+begin there. `PagePlace` carries `opensUnitId` now and §9aa's walk forward
+answers it, which also fills it in on a page that carries a chapter opening and
+nothing else: the opening's own unit is read the way its first element already
+was.
+
+### And the menu that opened and shut
+
+Driving the room found a fault in shipped code that no test could see and that
+has nothing to do with blank pages. **`ContextMenu` closed itself.**
+
+A press on a button inside a scrolling panel can scroll that panel — the browser
+does it to bring what has taken focus into view, in the **next frame**, after the
+click has opened the menu and after the menu's effect has run. The *+ Add* button
+stands at the top of the Layout rail, so on a rail somebody had scrolled the
+press queued a jump back to the top, the jump fired the menu's own `scroll`
+listener, and the menu shut about a frame after it opened. Measured on Ken's own
+collection: **twenty-one items with the rail at the top and nought with a page
+halfway down it chosen**, the rail going from 206 to 0 in the same breath.
+
+From the writer's chair a menu that flashes and goes is a menu with nothing in
+it — which is §9ab's *in the menu, there's no way to add a chapter page* said
+about a menu that had the item in it all along. And it was true of **every** menu
+in the program opened from a panel anybody had scrolled, not only this one. So
+the guard is the menu's rather than each opener's: a scroll still closes it, from
+the frame after it has settled. The *+ Add* button also declines the focus a
+mouse press would give it, so the rail keeps its place; the keyboard still
+reaches it by tabbing, and the menu takes focus itself.
+
+### Driven at 1440×900, on three imported stories
+
+- The Add menu on the page *Falling* opens on: **Put a blank page here…** with
+  the note, and *Start a story here…* greyed reading *A story already begins on
+  this page* — which is the `opensUnitId` fix answering, where it used to give
+  the generic refusal.
+- Three presses: 14 pages → 14 → 15 → 16, the rail reading **Page 8 Blank, Page
+  9 Blank, Page 10 Blank** with *Falling* opening on 11.
+- The leaf's own screen offers *Put a picture on this page…*, *Put another blank
+  page here…*, *Take one of them away*, *Set the next story's page…* and *Take
+  this page away*; taking one away took the book from 16 pages to 15.
+- The × on *Falling*'s own page and on its row both refuse with *This story has
+  writing in it, and a story is never run together with the one before it. Cut
+  the writing on the Write page if the story is to go*, and the rail still reads
+  The Harbour · In For A Pound · Falling.
+
+### What the tests pin
+
+Assertions that spelled out the old behaviour were **rewritten rather than
+worked around** — §9r's refusals in `blank-page-anywhere` and
+`blank-leaf-pages`, §7's *joins the one before* in `collection`, §9x's *every
+page has a ×* in `page-row`, and the Stories rail's promise — because each of
+them was the fault said as a requirement. `pages-in-between.test.ts` is the
+section's own: both parities give one sentence, the ceiling refuses in words,
+the older spelling reads as one leaf, and the merge is refused by the reading
+and by the act alike. The renderer's are **gestures** (§15a): the Add menu
+really offers another leaf and the words change on the second press, and the ×
+on a written story's row is disabled with the reason in its title.
+
+### Not changed, and said
+
+A leaf asked for in front of a story is listed under the story **before** it,
+which is `pagesUnder`'s range rule (§9m) and not this section's to change. And
+the picture Ken could not put on the last page of a chapter was offered
+throughout: every page of the story answers `pictureOffer` with a spot, which is
+§9aa, and what he met was the Add menu closing itself.
+
 ## 9ab. A break you can make, and a page you can put in anywhere
 
 From Ken in four messages about one afternoon: *I should be able to insert a

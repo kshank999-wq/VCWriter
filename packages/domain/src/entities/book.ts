@@ -17,6 +17,20 @@ import { z } from 'zod';
  * out*, `minimumSetups`' shape.
  */
 
+/**
+ * **How many blank leaves a writer may ask for in one place** (addendum 20
+ * §9ac, from Ken: *you should be able to just put as many pages in between as
+ * you want*).
+ *
+ * *As many as you want* is a count rather than a switch, which is what the
+ * flag was — one leaf per place, so a writer who wanted a picture page and a
+ * blank between two stories could ask for the first of the two and stop. The
+ * ceiling is here because both records that carry the count read it, and a
+ * number with no top can be typed into a document by anything and lay a
+ * thousand pages nobody asked for.
+ */
+export const MAX_BLANK_LEAVES = 12;
+
 /** A trim size, in inches. `0 × 0` means the format's own (§3). */
 export const trimSchema = z.object({
   width: z.number().min(0).max(14).default(0),
@@ -222,8 +236,13 @@ export const bookPartSchema = z.object({
    * and **absent on every page of the front and back matter** — a writer
    * could not put a leaf between the title page and the copyright page, or
    * before an appendix, which is where a book most often wants one.
+   *
+   * **A count, with `true` its older spelling** (§9ac): *as many pages in
+   * between as you want* is a number, and every page made before this carries
+   * a boolean — so `true` reads as one leaf, nothing is migrated and no book
+   * moves. `leavesBefore` is the one place that resolves it.
    */
-  blankBefore: z.boolean().default(false),
+  blankBefore: z.union([z.boolean(), z.number().int().min(0).max(MAX_BLANK_LEAVES)]).default(false),
   /**
    * A **logotype** in place of the typed title, on a designed page (§9n): an
    * id in the graphics library, like every other picture the book uses.

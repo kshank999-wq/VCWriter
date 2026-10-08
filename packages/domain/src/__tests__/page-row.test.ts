@@ -145,8 +145,45 @@ describe('what a × on a page row takes away', () => {
     const story = rows.slice(opens).filter((row) => row.partId === null);
     expect(story.length).toBeGreaterThan(4);
     for (const row of story) {
-      expect(pageRemoval(file, rows, row.sheet).act, `page ${row.counted} (${row.says})`).toBe('Take this page away');
+      const removal = pageRemoval(file, rows, row.sheet);
+      /**
+       * **Every page answers**, which is the report — and on a collection one
+       * kind of page answers with a sentence rather than an act (§9ac): a
+       * story's own opening page carries nothing but the break, and a story
+       * with writing in it is never run together with the one before it. That
+       * is a page with nothing a × could honestly do, so the screen greys it
+       * with the reason in its title rather than leaving a writer pressing.
+       */
+      if (row.says === 'Chapter opens' && row.markerId !== null && !row.blank) {
+        if (removal.act === null) {
+          expect(removal.refusal, `page ${row.counted} (${row.says})`).toContain('never run together');
+          continue;
+        }
+      }
+      expect(removal.act, `page ${row.counted} (${row.says})`).toBe('Take this page away');
     }
+  });
+
+  /**
+   * **A story's own page says why there is nothing to take** (§9ac, from Ken:
+   * *when I deleted the page, it removed the chapter page completely… it also
+   * merged story two and three together into one story for some reason*).
+   *
+   * This is the press he made. §9x answered it with *the break goes and the
+   * words stay*, which is honest about the words and is still the act that ran
+   * two of his stories together.
+   */
+  it('refuses on a story’s own page rather than running two stories together', () => {
+    const file = collection();
+    const { rows, row, removal } = removalOn(file, (one) => one.says === 'Chapter opens' && !one.blank);
+    expect(removal.act).toBeNull();
+    expect(removal.what).toBeNull();
+    expect(removal.refusal).toContain('never run together with the one before');
+    expect(removal.refusal).toContain('Write page');
+    // And the act refuses the same thing again.
+    const after = removeBookPage(file, row, removal);
+    expect(after.markers).toHaveLength(file.markers.length);
+    expect(lay(after).rows).toHaveLength(rows.length);
   });
 
   it('takes away the blank leaf the writer put in, and says nothing else moves', () => {

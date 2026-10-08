@@ -45,6 +45,24 @@ export const isInstructional = (format: ProjectFormat): boolean => format === 'i
 export const isCollection = (format: ProjectFormat): boolean => format === 'short_story';
 
 /**
+ * **Whether this format's divisions are whole works** (addendum 20 §9ac, from
+ * Ken: *it also merged story two and three together into one story for some
+ * reason… it shouldn't merge these stories ever*).
+ *
+ * A chapter is a division **of** a novel, so taking its break off and letting
+ * its words run on into the chapter before is an ordinary editorial act — it
+ * is what a novelist does when two short chapters should be one. A story in a
+ * collection and an episode of a series are not that: each is a whole work
+ * that happens to be bound beside others, and running two of them together is
+ * not an act anybody performs on purpose. It is the difference the format
+ * knows and nothing else does.
+ *
+ * Named for the **property** rather than for the formats, `isInteractive`'s
+ * reason: what every caller wants to know is *may these be run together*.
+ */
+export const holdsWholeWorks = (format: ProjectFormat): boolean => format === 'short_story' || format === 'series';
+
+/**
  * Whether the work is played rather than read or watched (addendum 18).
  *
  * The one question the Interactive Narrative module asks, and it is named for

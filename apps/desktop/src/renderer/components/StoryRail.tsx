@@ -79,7 +79,8 @@ export function StoryRail({ file, open, onOpen, currentUnitId, onGo, onOpenPage,
                     key={id}
                     story={story}
                     current={current}
-                    comfort={divisionRemoval(file, story.placed.marker.id)}
+                    comfort={divisionRemoval(file, story.placed.marker.id).comfort}
+                    refusal={divisionRemoval(file, story.placed.marker.id).refusal}
                     onGo={() => onGo(story)}
                     onOpenPage={() => onOpenPage(story)}
                     onRemove={() => onRemove(story)}
@@ -136,6 +137,7 @@ function StoryRow({
   story,
   current,
   comfort,
+  refusal,
   onGo,
   onOpenPage,
   onRemove,
@@ -143,6 +145,8 @@ function StoryRow({
   story: Story;
   current: boolean;
   comfort: string;
+  /** Why there is nothing to take, where there is nothing (§9ac). */
+  refusal: string | null;
   onGo(): void;
   onOpenPage(): void;
   onRemove(): void;
@@ -166,7 +170,7 @@ function StoryRow({
           {story.words === 1 ? 'word' : 'words'}
         </span>
       </button>
-      {asking ? (
+      {asking && !refusal ? (
         <div className="episode-ask">
           <p className="muted small">{comfort}</p>
           <div className="episode-ask-buttons">
@@ -179,11 +183,16 @@ function StoryRow({
           </div>
         </div>
       ) : (
+        /* **Disabled with the reason in its title, never absent** (addendum
+           20 §9ac): a story with writing in it is never run together with
+           the one before it, and §9x's own finding is that absence reads as
+           the act not being there at all. */
         <button
           type="button"
           className="ghost small episode-remove"
           aria-label={`Remove ${name}`}
-          title="Take this story out of the collection"
+          disabled={refusal !== null}
+          title={refusal ?? 'Take this story out of the collection'}
           onClick={() => setAsking(true)}
         >
           ×

@@ -7,6 +7,7 @@ import {
   addMarker,
   addPart,
   addUnit,
+  blankPagesAt,
   bookBlocks,
   outOfContents,
   setChapterBlank,
@@ -723,6 +724,64 @@ describe('the room', () => {
     expect((item as HTMLButtonElement).disabled).toBe(true);
     expect(item!.getAttribute('title') ?? '').toMatch(/already begins/);
     expect(rail).toBeDefined();
+  });
+
+  /**
+   * **As many pages in between as the writer wants** (§9ac, from Ken: *and you
+   * should be able to just put as many pages in between as you want*).
+   *
+   * What this has to pin is the **gesture**, §15a: the count can be perfect
+   * and the complaint stands if the Add menu still refuses on the page the
+   * writer is standing on — which is what §9r's refusal did, on exactly the
+   * page a writer most wants a leaf. So it presses twice and asserts the words
+   * change and a second leaf lands.
+   */
+  it('offers another blank page from the Add menu, and says what the first one costs', () => {
+    render(<Harness initial={novel()} />);
+    const chapter = document.querySelector('.layout-rail-chapter') as HTMLElement;
+    fireEvent.click(within(chapter).getByLabelText(/^Show what is under /));
+    const page = (Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[]).find((one) =>
+      /Chapter opens/.test(one.textContent ?? ''),
+    )!;
+    fireEvent.click(page.querySelector('.layout-rail-name') as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    const first = screen.getAllByRole('menuitem').find((one) => /blank page/.test(one.textContent ?? ''))!;
+    expect((first as HTMLButtonElement).disabled).toBe(false);
+    expect(first.textContent).toMatch(/^Put a blank page here/);
+    fireEvent.click(first);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    const again = screen.getAllByRole('menuitem').find((one) => /blank page/.test(one.textContent ?? ''))!;
+    expect(again.textContent).toMatch(/^Put another blank page here/);
+    fireEvent.click(again);
+    const marker = (latest as ProjectFile).markers[0]!.id as string;
+    expect(blankPagesAt(latest as ProjectFile, marker)).toBe(2);
+  });
+
+  /**
+   * **A story with writing in it is never run together with the one before**
+   * (§9ac, from Ken: *it also merged story two and three together into one
+   * story for some reason… It shouldn't merge these stories ever*). The × on a
+   * division's row is disabled with the reason in its title, which is §9x's
+   * answer for a control with nothing honest to do.
+   */
+  it('has no × on a written story’s row in a collection, with the reason said', () => {
+    let file = createProjectFile({ title: 'Tales', format: 'short_story' });
+    file = beginStory(file, { title: 'The Road' }).file;
+    const made = beginStory(file, { title: 'The Harbour' });
+    const beat = addBeat(made.file, { unitId: made.unitId as never, title: 'One' });
+    file = updateBeat(beat.file, beat.beat.id, {
+      manuscript: {
+        elements: [{ id: 'h1' as never, type: 'paragraph', text: 'The harbour was empty.', characterId: null, attributes: {} }],
+      },
+    });
+    render(<Harness initial={file} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    const remove = rail.getByRole('button', { name: 'Remove The Harbour' }) as HTMLButtonElement;
+    expect(remove.disabled).toBe(true);
+    expect(remove.title).toMatch(/never run together with the one before/);
+    // And a story nobody has written in still has one, which is §7's own ask.
+    const accident = rail.getByRole('button', { name: 'Remove The Road' }) as HTMLButtonElement;
+    expect(accident.disabled).toBe(false);
   });
 
   it('offers a once-only part only once', () => {

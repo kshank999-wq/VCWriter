@@ -1,7 +1,7 @@
 import { addBeat, addMarker, addUnit, moveBeat, moveUnit, removeMarker, removeUnit } from './mutations.js';
 import { beatsForUnit, tracksInOrder, unitsInStoryOrder } from './selectors.js';
 import { orderKeyBetween } from './ordering.js';
-import { isCollection, nounsFor } from './formats.js';
+import { holdsWholeWorks, isCollection, nounsFor } from './formats.js';
 import { defaultMarkerKind } from './markers.js';
 import { nowIso } from './entities/common.js';
 import { findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf } from './outline.js';
@@ -384,20 +384,50 @@ const isFirstDivision = (file: ProjectFile, markerId: StoryMarkerId): boolean =>
     });
 };
 
+/** What goes if a division is removed, or why it may not be (§7, §9ac). */
+export interface DivisionRemoval {
+  /** What a press would do, in the format's own nouns. Empty where refused. */
+  comfort: string;
+  /** Why there is no press, in a sentence a writer can act on. */
+  refusal: string | null;
+}
+
 /**
- * What goes if this division is removed, in the writer's own nouns (§7).
+ * What goes if this division is removed, in the writer's own nouns (§7), and
+ * **where a division is never removed at all** (addendum 20 §9ac).
  *
- * The honest answer has two halves and neither is *delete the story*: where
+ * §7's answer had two halves and neither was *delete the story*: where
  * something is written, **the break goes and the words stay**, joining the
  * division before, because a heading is not the writing under it; where
  * nothing is written, the division and its empty sections go, which is the
- * one Ken hit. Which of the two it is is read every time rather than asked.
+ * one Ken first hit. Which of the two it is is read every time rather than
+ * asked.
+ *
+ * **The first half is right about a chapter and wrong about a story** (§9ac,
+ * from Ken: *it also merged story two and three together into one story for
+ * some reason… it shouldn't merge these stories ever*). Letting a chapter's
+ * words run on into the chapter before is an editorial act a novelist
+ * performs; running two stories of a collection together is not an act
+ * anybody performs on purpose, and `holdsWholeWorks` is the one place that
+ * knows the difference. So where the division is a whole work and has writing
+ * in it, there is no removal to offer and the sentence says what to do
+ * instead — an **empty** one still goes, which was §7's whole ask.
  */
-export const divisionRemoval = (file: ProjectFile, markerId: StoryMarkerId): string => {
-  const noun = nounsFor(file.project.format).division.toLowerCase();
+export const divisionRemoval = (file: ProjectFile, markerId: StoryMarkerId): DivisionRemoval => {
+  const nouns = nounsFor(file.project.format);
+  const noun = nouns.division.toLowerCase();
   const sections = divisionSpan(file, markerId);
   if (emptyDivision(file, markerId)) {
-    return `Nothing is written in it, so the ${noun} and its empty ${sections.length === 1 ? 'section' : 'sections'} go.`;
+    return {
+      comfort: `Nothing is written in it, so the ${noun} and its empty ${sections.length === 1 ? 'section' : 'sections'} go.`,
+      refusal: null,
+    };
+  }
+  if (holdsWholeWorks(file.project.format)) {
+    return {
+      comfort: '',
+      refusal: `This ${noun} has writing in it, and a ${noun} is never run together with the one before it. Cut the writing on the Write page if the ${noun} is to go.`,
+    };
   }
   const one = sections.length === 1;
   // There is nothing before the first one to join, so the words simply stay
@@ -406,9 +436,15 @@ export const divisionRemoval = (file: ProjectFile, markerId: StoryMarkerId): str
   // exist — the words survive either way, but only one of the two sentences
   // is true.
   if (isFirstDivision(file, markerId)) {
-    return `The ${noun} break goes. ${one ? 'Its section stays' : 'Its sections stay'} where ${one ? 'it is' : 'they are'}, ahead of the first ${noun}; not a word is cut.`;
+    return {
+      comfort: `The ${noun} break goes. ${one ? 'Its section stays' : 'Its sections stay'} where ${one ? 'it is' : 'they are'}, ahead of the first ${noun}; not a word is cut.`,
+      refusal: null,
+    };
   }
-  return `The ${noun} break goes. ${one ? 'Its section joins' : 'Its sections join'} the one before; not a word is cut.`;
+  return {
+    comfort: `The ${noun} break goes. ${one ? 'Its section joins' : 'Its sections join'} the one before; not a word is cut.`,
+    refusal: null,
+  };
 };
 
 /**
@@ -529,6 +565,10 @@ export const startDivision = (file: ProjectFile, unitId: StructuralUnitId, title
 export const removeDivision = (file: ProjectFile, markerId: StoryMarkerId): ProjectFile => {
   const marker = file.markers.find((candidate) => candidate.id === markerId);
   if (!marker) return file;
+  // **It refuses the same thing again** (`trackRemoval`'s shape, §9ac): a
+  // caller cannot run two stories together by not reading the sentence that
+  // says it is never done, and three screens press this.
+  if (divisionRemoval(file, markerId).refusal) return file;
   const sections = emptyDivision(file, markerId) ? divisionSpan(file, markerId) : [];
   let next = removeMarker(file, markerId);
   for (const unit of sections) next = removeUnit(next, unit.id);

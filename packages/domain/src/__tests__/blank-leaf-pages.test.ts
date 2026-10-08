@@ -13,12 +13,15 @@ import {
   createProjectFile,
   geometryOf,
   layPages,
+  pageRemoval,
   pagePlace,
   partsOf,
   pictureOffer,
   placeFigure,
+  removeBookPage,
   setBackBlank,
   setBlankPage,
+  setBlankPages,
   updateBeat,
   type BeatId,
   type ProjectFile,
@@ -269,35 +272,81 @@ describe('the leaf the writer put in', () => {
     // Taking it is what they asked for: one page, with the picture on it.
     expect(taken.some((row) => row.says === 'Illustration')).toBe(true);
     expect(taken.some((row) => row.blankFor !== null)).toBe(false);
-    expect(taken.length).toBeLessThan(kept.length);
+    /**
+     * **And the lengths are now the same** (§9ac). A leaf the writer asks for
+     * stands the recto rule down, so the leaf and the picture occupy the same
+     * sheet the gap did; before §9ac the leaf cost a page on top of the
+     * picture's and the book was one longer for it. What the test is about is
+     * which pages are there, which is asserted above — this was the arithmetic
+     * of the fault it was measuring, and it is **rewritten rather than worked
+     * around**.
+     */
+    expect(taken.length).toBe(kept.length);
   });
 });
 
-describe('a blank page asked for a blank page', () => {
-  it('is refused with the reason, rather than hanging a second leaf on the page ahead', () => {
-    /**
-     * §9aa makes a leaf answer with a **record**, which this act would hang
-     * another leaf on — and two blanks in front of one page is not what
-     * anybody means by *put a blank page here* while standing on a blank page.
-     */
+describe('a blank page asked for on a blank page', () => {
+  /**
+   * **Another leaf, rather than a refusal** (§9ac, from Ken: *you should be
+   * able to just put as many pages in between as you want*).
+   *
+   * §9aa made a leaf answer with a **record**, and §9r refused a second leaf
+   * on the ground that two blanks in front of one page is not what anybody
+   * means. Ken means it: between the end of one story and the next he wants a
+   * picture page, a blank behind it and the story's own page, which is three
+   * sheets where the room would give one. So the flag is a count and the act
+   * is *put another one in*; taking one away is the page's own × (§9x), which
+   * is one act in one place rather than a button whose words flip.
+   */
+  it('offers another, and each one is exactly one more page', () => {
     const file = novel();
     const { blocks, laid, rows } = lay(file);
     const leaf = leafInStory(file);
     const offer = blankOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
-    expect(offer.act).toBeNull();
-    expect(offer.spot).toBeNull();
-    expect(offer.refusal).toMatch(/blank already/);
-    expect(offer.refusal).toMatch(/right-hand page/);
+    expect(offer.refusal).toBeNull();
+    expect(offer.spot).not.toBeNull();
+    expect(offer.leaves).toBe(0);
+    // The cutter's gap is already there, so the first one takes its place —
+    // said before the press rather than found afterwards.
+    expect(offer.note).toMatch(/takes its place/);
+    /**
+     * **Each leaf is exactly one page, and what follows moves down by one.**
+     *
+     * The count is read off the laid pages and the opening's own sheet is
+     * where *shifted down* is measured: the **book's** length is not the thing
+     * to assert, because every later chapter still opens on a right-hand page
+     * and so absorbs the parity — which is correct typography and is why §9r's
+     * old +2/+0 could not be fixed by arithmetic on the total.
+     */
+    const opens = (one: ProjectFile) => lay(one).rows.find((row) => row.markerId === offer.spot && row.says === 'Chapter opens')!.sheet;
+    const at = opens(file);
+    for (const want of [1, 2, 3]) {
+      const asked = setBlankPages(file, offer.spot as string, want);
+      expect(lay(asked).rows.filter((row) => row.blankFor === offer.spot)).toHaveLength(want);
+      expect(opens(asked)).toBe(at + want - 1);
+    }
   });
 
-  it('still takes away the leaf the writer put in', () => {
+  it('says how many stand there, and offers to take one away', () => {
     const file = novel();
     const text = lay(file).rows.find((row) => row.says === 'Chapter opens' && row.sheet > 4)!;
-    const asked = setBlankPage(file, placeOn(file, text.sheet).opensMarkerId as string, true);
+    const asked = setBlankPages(file, placeOn(file, text.sheet).opensMarkerId as string, 2);
     const { blocks, laid, rows } = lay(asked);
     const leaf = rows.find((row) => row.blankFor !== null)!;
     const offer = blankOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
-    expect(offer.act).toBe('Take this blank page away');
+    expect(offer.act).toBe('Put another blank page here…');
+    expect(offer.leaves).toBe(2);
+    expect(offer.fewer).toBe('Take one of them away');
+  });
+
+  it('takes one leaf and not the run, when a × is pressed on one of them', () => {
+    const file = novel();
+    const text = lay(file).rows.find((row) => row.says === 'Chapter opens' && row.sheet > 4)!;
+    const asked = setBlankPages(file, placeOn(file, text.sheet).opensMarkerId as string, 3);
+    const rows = lay(asked).rows;
+    const leaf = rows.find((row) => row.blankFor !== null)!;
+    const after = removeBookPage(asked, leaf, pageRemoval(asked, rows, leaf.sheet));
+    expect(lay(after).rows.filter((row) => row.blankFor !== null)).toHaveLength(2);
   });
 });
 

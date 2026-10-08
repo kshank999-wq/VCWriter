@@ -249,24 +249,41 @@ describe('removing a story', () => {
     let file = beginStory(createProjectFile({ title: 'Tales', format: 'short_story' }), { title: 'The Road' }).file;
     const made = beginStory(file, { title: 'By Accident' });
     file = made.file;
-    expect(divisionRemoval(file, made.markerId)).toContain('Nothing is written in it');
+    expect(divisionRemoval(file, made.markerId).comfort).toContain('Nothing is written in it');
+    expect(divisionRemoval(file, made.markerId).refusal).toBeNull();
     const after = removeDivision(file, made.markerId);
     expect(storiesOf(after).map((story) => story.placed.marker.title)).toEqual(['The Road']);
     // Its empty section went with it rather than being left behind.
     expect(after.units.length).toBe(file.units.length - 1);
   });
 
-  it('takes only the break where a story has words, and never a word', () => {
+  /**
+   * **A story with writing in it is never run together with the one before**
+   * (addendum 20 §9ac, from Ken: *it also merged story two and three together
+   * into one story for some reason… It shouldn't merge these stories ever*).
+   *
+   * §7 answered a × on a written story with *the break goes and the words
+   * stay*, which is right about a chapter of a novel and wrong about a story:
+   * the words then read as the end of the story before it, which is not an act
+   * anybody performs on purpose. These two assertions pinned that behaviour
+   * and are **rewritten rather than worked around**, which is the honest
+   * signal that the rule changed.
+   */
+  it('never runs a written story together with the one before it', () => {
     const file = written('The harbour was empty.');
     const harbour = storiesOf(file).find((story) => story.placed.marker.title === 'The Harbour')!;
-    expect(divisionRemoval(file, harbour.placed.marker.id)).toContain('joins the one before');
+    const reading = divisionRemoval(file, harbour.placed.marker.id);
+    expect(reading.comfort).toBe('');
+    expect(reading.refusal).toContain('never run together with the one before');
+    // And it refuses the same thing again, so a caller cannot get past the
+    // reading by not reading it (`trackRemoval`'s shape).
     const after = removeDivision(file, harbour.placed.marker.id);
-    expect(storiesOf(after).map((story) => story.placed.marker.title)).toEqual(['The Road']);
+    expect(storiesOf(after).map((story) => story.placed.marker.title)).toEqual(['The Road', 'The Harbour']);
     expect(after.beats.flatMap((beat) => beat.manuscript.elements).some((element) => element.text === 'The harbour was empty.')).toBe(true);
     expect(after.units.length).toBe(file.units.length);
   });
 
-  it('does not promise the first story joins one before it, there being none', () => {
+  it('refuses the first story too, there being no sentence that makes it safe', () => {
     // The words have to be in the *first* story for this to be the question.
     const road = beginStory(createProjectFile({ title: 'Tales', format: 'short_story' }), { title: 'The Road' });
     const withSecond = beginStory(road.file, { title: 'The Harbour' }).file;
@@ -280,19 +297,43 @@ describe('removing a story', () => {
       ),
     } as ProjectFile;
     const first = storiesOf(file)[0]!;
-    const sentence = divisionRemoval(file, first.placed.marker.id);
-    expect(sentence).not.toContain('the one before');
-    expect(sentence).toContain('ahead of the first story');
-    // The words survive either way; only one of the two sentences is true.
+    const reading = divisionRemoval(file, first.placed.marker.id);
+    expect(reading.refusal).toContain('Cut the writing on the Write page');
     const after = removeDivision(file, first.placed.marker.id);
+    expect(storiesOf(after)).toHaveLength(2);
     expect(after.beats.flatMap((beat) => beat.manuscript.elements).length).toBe(
       file.beats.flatMap((beat) => beat.manuscript.elements).length,
     );
   });
 
+  /**
+   * **A chapter of a novel is still merged** (§9ac): it is a division *of* one
+   * work, so letting its words run on into the chapter before is an ordinary
+   * editorial act. The distinction is `holdsWholeWorks`' and nothing else's.
+   */
+  it('still takes a novel’s chapter break off and lets the words run on', () => {
+    const novel = createProjectFile({ title: 'A novel', format: 'novel' });
+    const road = beginStory(novel, { title: 'One' });
+    const withSecond = beginStory(road.file, { title: 'Two' });
+    const beat = addBeat(withSecond.file, { unitId: withSecond.unitId, title: 'One' });
+    const file = {
+      ...beat.file,
+      beats: beat.file.beats.map((one) =>
+        one.id === beat.beat.id
+          ? { ...one, manuscript: { elements: [{ id: 'e1', type: 'action' as const, text: 'It rained.', attributes: {} }] } }
+          : one,
+      ),
+    } as ProjectFile;
+    const reading = divisionRemoval(file, withSecond.markerId);
+    expect(reading.refusal).toBeNull();
+    expect(reading.comfort).toContain('chapter');
+    expect(reading.comfort).toContain('not a word is cut');
+    expect(removeDivision(file, withSecond.markerId).markers).toHaveLength(1);
+  });
+
   it('says it in the format’s own word, rather than a private story-or-chapter', () => {
     const novel = createProjectFile({ title: 'A novel', format: 'novel' });
     const made = beginStory(novel, { title: 'One' });
-    expect(divisionRemoval(made.file, made.markerId)).toContain('chapter');
+    expect(divisionRemoval(made.file, made.markerId).comfort).toContain('chapter');
   });
 });

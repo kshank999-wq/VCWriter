@@ -110,7 +110,7 @@ describe('taking a row out', () => {
     expect(file.units.length).toBe(units + 1);
 
     const row = bookRows(file).find((one) => one.title === 'New story')!;
-    expect(whatGoesWithRow(file, row)).toContain('Nothing is written in it');
+    expect(whatGoesWithRow(file, row).comfort).toContain('Nothing is written in it');
     const after = removeBookRow(file, row);
     expect(after.units.length).toBe(units);
     expect(after.markers.some((marker) => marker.title === 'New story')).toBe(false);
@@ -120,7 +120,7 @@ describe('taking a row out', () => {
   it('keeps every word when a chapter that holds writing is taken out', () => {
     const file = novel();
     const row = bookRows(file).find((one) => one.title === 'The Lane')!;
-    expect(whatGoesWithRow(file, row)).toContain('not a word is cut');
+    expect(whatGoesWithRow(file, row).comfort).toContain('not a word is cut');
     const after = removeBookRow(file, row);
     expect(after.beats.flatMap((beat) => beat.manuscript.elements.map((element) => element.text))).toContain('Three.');
     expect(after.units.length).toBe(file.units.length);
@@ -186,6 +186,9 @@ describe('a picture on the page it was added to', () => {
       partId: null,
       markerId: 'm1',
       opensMarkerId: null,
+      // No section opens on it either (§9ac): a page in the middle of one is
+      // not where a division may begin.
+      opensUnitId: null,
       opensAlone: false,
       // Null because this page answers for itself: a place read off the page
       // ahead says so, which is what lets a caller tell what a page *is* from

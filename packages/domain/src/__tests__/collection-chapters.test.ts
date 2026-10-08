@@ -175,7 +175,7 @@ describe('the chapters on the Layout rail', () => {
   it('takes a chapter break off without cutting a word', () => {
     const file = collection();
     const row = bookRows(file).find((one) => one.title === 'II')!;
-    expect(whatGoesWithRow(file, row)).toContain('not a word is cut');
+    expect(whatGoesWithRow(file, row).comfort).toContain('not a word is cut');
     const after = removeBookRow(file, row);
     expect(bookRows(after).some((one) => one.title === 'II')).toBe(false);
     expect(after.beats.flatMap((beat) => beat.manuscript.elements.map((element) => element.text)).join(' ')).toContain('By the second winter');
