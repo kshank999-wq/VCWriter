@@ -176,13 +176,20 @@ describe('a blank page the writer puts in', () => {
     const now = bookPageRows(after.pages, after.blocks);
     const leaf = now.find((row) => row.sheet === words.sheet)!;
 
-    // The blank stands where the words stood, and they are a page further on.
+    /**
+     * The blank stands where the words stood, and they are a **sheet** further
+     * on (addendum 20 §9ad, from Ken: *if you insert a blank page, it's blank
+     * on front and back, like a separating page*). This asserted one page,
+     * which is the half-leaf he is correcting, so it is **rewritten rather
+     * than worked around**.
+     */
     expect(leaf.says).toBe('Blank');
     expect(leaf.folio).toBe('');
     expect(leaf.blankFor).toBe(words.elementId);
+    expect(now.find((row) => row.sheet === words.sheet + 1)!.says).toBe('Blank');
     const moved = now.find((row) => row.elementId === words.elementId)!;
-    expect(moved.sheet).toBe(words.sheet + 1);
-    expect(Number(moved.folio)).toBe(Number(before) + 1);
+    expect(moved.sheet).toBe(words.sheet + 2);
+    expect(Number(moved.folio)).toBe(Number(before) + 2);
 
     // …and it goes away again by the same field, leaving the book as it was.
     expect(bookBlocks(setBlankBefore(asked, words.elementId!, false)).some((block) => block.kind === 'blank')).toBe(false);

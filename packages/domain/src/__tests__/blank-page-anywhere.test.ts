@@ -188,7 +188,16 @@ describe('a blank page on a chapter’s page', () => {
     const opens = rows.find((row) => row.says === 'Chapter opens')!;
     const after = shape(setBlankPage(file, spotOn(file, opens.sheet)!, true));
     const at = after.findIndex((one) => one.startsWith('chapter_opening'));
-    expect(after[at - 1]).toBe('blank');
+    /**
+     * **Two pages, because a blank page is a sheet** (§9ad) — and they stand
+     * together in front of the opening, with the cutter free to leave its own
+     * gap between them and it where the chapter insists on a right-hand page.
+     * That gap was there before the sheet was asked for and is there after:
+     * two pages is even, so nothing changed side.
+     */
+    const mine = after.slice(0, at).filter((one) => one === 'blank');
+    expect(mine).toHaveLength(2);
+    expect(after.slice(0, at).join(' ')).toContain('blank blank');
   });
 
   it('is the chapter’s own answer, not its first paragraph’s', () => {
@@ -271,32 +280,41 @@ describe('a page that already has a leaf in front of it', () => {
     expect(before?.blank).toBe(true);
     const offer = offerOn(file, sheet);
     expect(offer.spot).not.toBeNull();
-    expect(offer.act).toBe('Put a blank page here…');
+    expect(offer.act).toBe('Put a blank sheet here…');
     expect(offer.refusal).toBeNull();
-    expect(offer.note).toMatch(/already stands in front of this page/);
-    expect(offer.note).toMatch(/takes its place/);
+    expect(offer.note).toMatch(/two pages/);
   });
 
-  it('makes the gap the writer’s own, so it has a × and takes a picture', () => {
+  /**
+   * **A sheet, and the same sheet every time** (§9ad, from Ken: *when you
+   * enter a blank page, it's entering a blank half page*). §9ac asked for one
+   * page per leaf and made the arithmetic depend on the parity; two pages is
+   * even, so the press costs the same wherever the words happen to fall and
+   * the opening keeps the side of the paper it was on. Both of these
+   * assertions spelled the half-leaf out and are **rewritten rather than
+   * worked around**.
+   */
+  it('adds two pages, and the opening keeps its side of the paper', () => {
     const { file, sheet } = withLeaf();
     const spot = spotOn(file, sheet)!;
     const asked = setBlankPage(file, spot, true);
-    // The book keeps its length, which is the note's own sentence — and the
-    // leaf standing there is now the writer's rather than the cutter's.
-    expect(shape(asked)).toHaveLength(shape(file).length);
-    expect(lay(asked).rows.filter((row) => row.blankFor === spot)).toHaveLength(1);
+    expect(shape(asked)).toHaveLength(shape(file).length + 2);
+    expect(lay(asked).rows.filter((row) => row.blankFor === spot)).toHaveLength(2);
+    const opensAt = (one: ProjectFile) =>
+      lay(one).rows.find((row) => row.markerId === spot && row.says === 'Chapter opens')!.sheet;
+    expect(opensAt(asked)).toBe(opensAt(file) + 2);
+    expect(opensAt(asked) % 2).toBe(opensAt(file) % 2);
   });
 
-  it('gives a second leaf its own page, which the first could not (§9ac)', () => {
+  it('costs the same for every sheet after the first', () => {
     const { file, sheet } = withLeaf();
     const spot = spotOn(file, sheet)!;
-    const two = setBlankPages(file, spot, 2);
-    expect(lay(two).rows.filter((row) => row.blankFor === spot)).toHaveLength(2);
-    const opensAt = (one: ProjectFile) =>
-      lay(one).rows.find((row) => row.sheet >= sheet - 2 && row.markerId === spot && row.says === 'Chapter opens')?.sheet;
-    // The opening moves down one page per leaf after the first, which is
-    // *shift everything down* said of the pages that follow it.
-    expect(opensAt(two)).toBe((opensAt(setBlankPages(file, spot, 1)) as number) + 1);
+    const pages = shape(file).length;
+    for (const want of [1, 2, 3]) {
+      const asked = setBlankPages(file, spot, want);
+      expect(lay(asked).rows.filter((row) => row.blankFor === spot)).toHaveLength(want * 2);
+      expect(shape(asked)).toHaveLength(pages + want * 2);
+    }
   });
 
   it('still offers it where the page in front carries writing', () => {
@@ -306,7 +324,7 @@ describe('a page that already has a leaf in front of it', () => {
       (row) => row.partId !== null && rows.find((one) => one.sheet === row.sheet - 1)?.blank === false,
     )!;
     const offer = offerOn(file, plain.sheet);
-    expect(offer.act).toBe('Put a blank page here…');
+    expect(offer.act).toBe('Put a blank sheet here…');
     expect(offer.refusal).toBeNull();
   });
 
@@ -321,9 +339,9 @@ describe('a page that already has a leaf in front of it', () => {
     const opens = rows.find((row) => row.partId === title.id)!;
     expect(rows.find((row) => row.sheet === opens.sheet - 1)?.blank).toBe(true);
     const offer = partBlankOffer(rows, title);
-    expect(offer.act).toBe('Put a blank page before this one');
+    expect(offer.act).toBe('Put a blank sheet before this one');
     expect(offer.refusal).toBeNull();
-    expect(offer.note).toMatch(/takes its place/);
+    expect(offer.note).toMatch(/two pages/);
   });
 
   it('offers a part its leaf where nothing stands in front of it', () => {
@@ -333,15 +351,15 @@ describe('a page that already has a leaf in front of it', () => {
       const opens = rows.find((row) => row.partId === part.id);
       return opens !== undefined && rows.find((row) => row.sheet === opens.sheet - 1)?.blank === false;
     })!;
-    expect(partBlankOffer(rows, free).act).toBe('Put a blank page before this one');
+    expect(partBlankOffer(rows, free).act).toBe('Put a blank sheet before this one');
   });
 
   it('offers a part another, and taking one away, once one stands there', () => {
     const file = collection();
     const part = partsOf(file)[0]!;
     const offer = partBlankOffer(lay(file).rows, { ...part, blankBefore: true });
-    expect(offer.act).toBe('Put another blank page before this one');
-    expect(offer.fewer).toBe('Take the blank page away');
+    expect(offer.act).toBe('Put another blank sheet before this one');
+    expect(offer.fewer).toBe('Take the blank sheet away');
     expect(offer.leaves).toBe(1);
   });
 
@@ -355,9 +373,9 @@ describe('a page that already has a leaf in front of it', () => {
     const with_ = setBlankPage(file, spotOn(file, part.sheet)!, true);
     const made = lay(with_).rows.find((row) => row.blankFor !== null)!;
     const offer = offerOn(with_, made.sheet);
-    expect(offer.act).toBe('Put another blank page here…');
+    expect(offer.act).toBe('Put another blank sheet here…');
     expect(offer.leaves).toBe(1);
-    expect(offer.fewer).toBe('Take the blank page away');
+    expect(offer.fewer).toBe('Take the blank sheet away');
   });
 });
 

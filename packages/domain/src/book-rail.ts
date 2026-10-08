@@ -513,7 +513,10 @@ export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], she
       id: page.blankFor,
       what: 'leaf',
       act: 'Take this page away',
-      comfort: 'The blank page goes. Nothing else moves.',
+      // **A sheet, so both of its pages** (§9ad): the writer put a leaf in and
+      // a leaf is two sides, so a × on either of them takes the whole sheet.
+      // Nothing after it changes side, two pages being an even number.
+      comfort: 'The blank sheet goes — both its pages. Nothing else changes which side of the paper it is on.',
       refusal: null,
     };
   }

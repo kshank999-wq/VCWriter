@@ -6,6 +6,7 @@ import {
   addPart,
   addUnit,
   blankOffer,
+  blankPagesAt,
   bookBlocks,
   bookNames,
   bookPageRows,
@@ -249,7 +250,7 @@ describe('the leaf the writer put in', () => {
     expect(offerOn(file, leafInStory(file).sheet).takesLeaf).toBeNull();
   });
 
-  it('gives one page rather than two once the picture is in', () => {
+  it('keeps the sheet when the picture goes on it: art in front, blank behind', () => {
     const { file, spot } = withLeaf();
     const leaf = lay(file).rows.find((row) => row.blankFor !== null)!;
     const offer = offerOn(file, leaf.sheet);
@@ -264,24 +265,41 @@ describe('the leaf the writer put in', () => {
       attributes: { bookPlace: 'page' },
     });
     const kept = lay(made.file).rows;
-    const taken = lay(setBlankPage(made.file, offer.takesLeaf as string, false)).rows;
-    // Keeping the leaf leaves the book with **both** — the picture and the
-    // leaf the writer asked for, which is the picture reading as a page early.
+    /**
+     * **The picture takes the sheet's front, and the back it already had
+     * stays blank** (§9ad, from Ken: *if you insert a blank page, it's blank
+     * on front and back… and then you can place information or whatever*).
+     *
+     * This is the act the room runs: one sheet fewer and the figure's own back
+     * left blank — two pages out and two back in, so the book is exactly the
+     * length it was with the blank sheet, and the writer has a separating leaf
+     * with art on it. It asserted *one page rather than two*, which is the
+     * half-leaf he is correcting, so it is **rewritten rather than worked
+     * around**.
+     */
+    const front = setBackBlank(
+      setBlankPages(made.file, offer.takesLeaf as string, blankPagesAt(made.file, offer.takesLeaf as string) - 1),
+      made.elementId as string,
+      true,
+    );
+    const taken = lay(front).rows;
+    // Keeping the sheet leaves the book with **both** — the picture and the
+    // sheet the writer asked for, which is the picture reading a page early.
     expect(kept.some((row) => row.says === 'Illustration')).toBe(true);
     expect(kept.some((row) => row.blankFor !== null)).toBe(true);
-    // Taking it is what they asked for: one page, with the picture on it.
+    // Taking it is what they asked for: the picture where the sheet was.
     expect(taken.some((row) => row.says === 'Illustration')).toBe(true);
     expect(taken.some((row) => row.blankFor !== null)).toBe(false);
     /**
-     * **And the lengths are now the same** (§9ac). A leaf the writer asks for
-     * stands the recto rule down, so the leaf and the picture occupy the same
-     * sheet the gap did; before §9ac the leaf cost a page on top of the
-     * picture's and the book was one longer for it. What the test is about is
-     * which pages are there, which is asserted above — this was the arithmetic
-     * of the fault it was measuring, and it is **rewritten rather than worked
-     * around**.
+     * **And the page behind the picture is still blank**, so what the writer
+     * is left with is the separating sheet they asked for with art on it —
+     * two pages out and two pages back in. Where exactly it lands is
+     * `pictureOffer`'s and is pinned above; the *total* is left unasserted on
+     * §9ac's own lesson, a later chapter's recto rule being free to take up
+     * the parity.
      */
-    expect(taken.length).toBe(kept.length);
+    const art = taken.findIndex((row) => row.says === 'Illustration');
+    expect(taken[art + 1]!.blank).toBe(true);
   });
 });
 
@@ -306,24 +324,26 @@ describe('a blank page asked for on a blank page', () => {
     expect(offer.refusal).toBeNull();
     expect(offer.spot).not.toBeNull();
     expect(offer.leaves).toBe(0);
-    // The cutter's gap is already there, so the first one takes its place —
-    // said before the press rather than found afterwards.
-    expect(offer.note).toMatch(/takes its place/);
+    // What a press puts in is a sheet, said before it is pressed (§9ad).
+    expect(offer.note).toMatch(/two pages/);
     /**
-     * **Each leaf is exactly one page, and what follows moves down by one.**
-     *
-     * The count is read off the laid pages and the opening's own sheet is
-     * where *shifted down* is measured: the **book's** length is not the thing
-     * to assert, because every later chapter still opens on a right-hand page
-     * and so absorbs the parity — which is correct typography and is why §9r's
-     * old +2/+0 could not be fixed by arithmetic on the total.
+     * **Each sheet is exactly two pages, and the side nothing is on changes**
+     * (§9ad). §9ac asserted one page per leaf and had to measure the opening's
+     * sheet rather than the book's length, because standing the recto rule
+     * down made the total depend on the parity; two pages is an even number,
+     * so the book's length, the opening's page **and the side it opens on**
+     * are all answerable here.
      */
     const opens = (one: ProjectFile) => lay(one).rows.find((row) => row.markerId === offer.spot && row.says === 'Chapter opens')!.sheet;
     const at = opens(file);
+    const pages = lay(file).rows.length;
     for (const want of [1, 2, 3]) {
       const asked = setBlankPages(file, offer.spot as string, want);
-      expect(lay(asked).rows.filter((row) => row.blankFor === offer.spot)).toHaveLength(want);
-      expect(opens(asked)).toBe(at + want - 1);
+      expect(lay(asked).rows.filter((row) => row.blankFor === offer.spot)).toHaveLength(want * 2);
+      expect(opens(asked)).toBe(at + want * 2);
+      expect(lay(asked).rows.length).toBe(pages + want * 2);
+      // The opening keeps the side of the paper it was on.
+      expect(opens(asked) % 2).toBe(at % 2);
     }
   });
 
@@ -334,9 +354,9 @@ describe('a blank page asked for on a blank page', () => {
     const { blocks, laid, rows } = lay(asked);
     const leaf = rows.find((row) => row.blankFor !== null)!;
     const offer = blankOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
-    expect(offer.act).toBe('Put another blank page here…');
+    expect(offer.act).toBe('Put another blank sheet here…');
     expect(offer.leaves).toBe(2);
-    expect(offer.fewer).toBe('Take one of them away');
+    expect(offer.fewer).toBe('Take one away');
   });
 
   it('takes one leaf and not the run, when a × is pressed on one of them', () => {
@@ -346,7 +366,8 @@ describe('a blank page asked for on a blank page', () => {
     const rows = lay(asked).rows;
     const leaf = rows.find((row) => row.blankFor !== null)!;
     const after = removeBookPage(asked, leaf, pageRemoval(asked, rows, leaf.sheet));
-    expect(lay(after).rows.filter((row) => row.blankFor !== null)).toHaveLength(2);
+    // Two sheets left, which is four pages (§9ad).
+    expect(lay(after).rows.filter((row) => row.blankFor !== null)).toHaveLength(4);
   });
 });
 

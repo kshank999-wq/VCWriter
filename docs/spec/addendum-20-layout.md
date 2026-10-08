@@ -2952,6 +2952,95 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9ad. A blank page is a sheet
+
+From Ken, looking at §9ac in his own book: *The functionality should be no
+matter what page, I can select a chapter page or any page and insert a blank
+page that is blank on front and back. And that page should be inserted before
+the page I have selected… I think the problem is, when you enter a blank page,
+it's entering a blank half page. So if we want to put a new function, insert
+blank on this page. But if you insert a blank page, it's blank on front and
+back, like a separating page — and then you can place information or whatever,
+or change that page into a chapter page or a story page.*
+
+### §9ac read a specification as a complaint
+
+His earlier sentence was *when you add a blank page, it should just shift
+everything down. So it's adding a front and back page… like a blank, full blank
+page on both sides. It's not just adding one side or the other.*
+
+§9ac read that as a report of a press that sometimes cost two pages, measured
+the +2/+0 it really did cost, and spent its whole design making **one leaf one
+page** — standing the chapter's recto rule down to do it. It was a
+**specification**: a blank page *should* be a front and a back. He is saying it
+again here in words that cannot be read the other way, and the keeper is the
+rule: **when a report and a requirement are the same sentence, the measurement
+tells you what is happening and not what was asked for.** The +2/+0 was real
+and was never the complaint.
+
+### A reader holds a sheet, not a side
+
+So a blank page a writer asks for is **two pages**, and what they then put on it
+goes on the front with the back left blank — which is what *a separating page*
+is, and why *you can place information on it* follows naturally rather than
+needing anything new.
+
+Two pages is also what makes the press predictable, which is the half §9ac was
+reaching for and missed: **an even number of pages cannot change which side
+anything after it is on.** So the chapter's own recto rule is left exactly
+where it was — §9ac's suppression is taken back — and the arithmetic is the
+same on every parity. Measured over fifteen arrangements, every count: **+2 per
+sheet, the story's opening moves down by exactly two, and it opens on the same
+side of the paper it opened on before.** §9ac could assert none of those three;
+it had to measure the opening's sheet and leave the book's length alone,
+because standing the rule down made the total depend on where the words fell.
+
+Nothing here forces the first blank onto a right-hand page. Forcing it would
+take the recto the page after it wanted and cost a **third** page on half the
+parities — §9ac's own fault wearing the opposite sign — and it buys a reader
+nothing: the blanks fall in the same places either way, only their ownership
+changes.
+
+### What the screen says, and what a × takes
+
+`blankOffer` and `partBlankOffer` say **sheet** rather than page, and the note
+is said before the press: *A blank sheet goes in: two pages, so there is
+nothing on either side of the paper here. Nothing after it changes which side
+it is on, and a picture put on it later takes the first of the two.* The count
+on the offer is sheets rather than sides — two rows carry the mark and
+`blankOffer` halves them — so *Put another blank sheet here…* and *Take the
+blank sheet away* mean what they say.
+
+A × on **either** page of a sheet takes the whole sheet: *The blank sheet goes
+— both its pages. Nothing else changes which side of the paper it is on.*
+
+### A picture put on a sheet keeps the sheet
+
+§9aa settled that a leaf and a page of its own are the same page said two ways,
+so a picture asked for on a blank leaf consumes it. With a sheet that is two
+pages, so the act takes **one sheet off and leaves the figure's own back
+blank** — two pages out, two back in, and the writer is left with the
+separating sheet they asked for with art on its front. It is the same act in
+the story and in the front matter (`setBackBlank` on the figure, `setPartBlank`
+on an art page).
+
+### Driven at 1440×900, on three imported stories
+
+The Add menu on the page *Falling* opens on offers **Put a blank sheet here…**
+with the note; one press takes the book from 12 pages to 14, the rail reads
+**Page 8 Blank · Page 9 Blank · Page 10 Blank** — the cutter's own gap and then
+the writer's sheet — and *Falling* still opens on a right-hand page, moved from
+9 to 11.
+
+### What the tests pin
+
+Every assertion that spelled the half-leaf out was **rewritten rather than
+worked around**, in six files: §9i's *the words are a page further on*, §9s's
+stand-in opening, §9r's chapter leaf, §9ac's own parity table and its
+offer wording, and the renderer's menu items. `pages-in-between.test.ts` now
+asserts the three things §9ac could not: the book's length, the opening's page,
+**and the side it opens on**.
+
 ## 9ac. The pages in between
 
 From Ken in one message about one afternoon: *So in the layout screen, at the

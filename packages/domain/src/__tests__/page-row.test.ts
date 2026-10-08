@@ -192,7 +192,7 @@ describe('what a × on a page row takes away', () => {
     const with_ = setBlankPage(file, text.elementId!, true);
     const { row, removal } = removalOn(with_, (one) => one.blankFor !== null);
     expect(removal.what).toBe('leaf');
-    expect(removal.comfort).toMatch(/blank page goes/i);
+    expect(removal.comfort).toMatch(/blank sheet goes — both its pages/i);
     const after = removeBookPage(with_, row, removal);
     expect(lay(after).rows).toHaveLength(lay(file).rows.length);
     expect(lay(after).rows.some((one) => one.blankFor !== null)).toBe(false);

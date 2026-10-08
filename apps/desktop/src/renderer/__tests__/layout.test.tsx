@@ -736,7 +736,7 @@ describe('the room', () => {
    * page a writer most wants a leaf. So it presses twice and asserts the words
    * change and a second leaf lands.
    */
-  it('offers another blank page from the Add menu, and says what the first one costs', () => {
+  it('offers another blank sheet from the Add menu, and says what one costs', () => {
     render(<Harness initial={novel()} />);
     const chapter = document.querySelector('.layout-rail-chapter') as HTMLElement;
     fireEvent.click(within(chapter).getByLabelText(/^Show what is under /));
@@ -745,13 +745,13 @@ describe('the room', () => {
     )!;
     fireEvent.click(page.querySelector('.layout-rail-name') as HTMLElement);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
-    const first = screen.getAllByRole('menuitem').find((one) => /blank page/.test(one.textContent ?? ''))!;
+    const first = screen.getAllByRole('menuitem').find((one) => /blank sheet/.test(one.textContent ?? ''))!;
     expect((first as HTMLButtonElement).disabled).toBe(false);
-    expect(first.textContent).toMatch(/^Put a blank page here/);
+    expect(first.textContent).toMatch(/^Put a blank sheet here/);
     fireEvent.click(first);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
-    const again = screen.getAllByRole('menuitem').find((one) => /blank page/.test(one.textContent ?? ''))!;
-    expect(again.textContent).toMatch(/^Put another blank page here/);
+    const again = screen.getAllByRole('menuitem').find((one) => /blank sheet/.test(one.textContent ?? ''))!;
+    expect(again.textContent).toMatch(/^Put another blank sheet here/);
     fireEvent.click(again);
     const marker = (latest as ProjectFile).markers[0]!.id as string;
     expect(blankPagesAt(latest as ProjectFile, marker)).toBe(2);
@@ -1080,7 +1080,7 @@ describe('the room', () => {
     expect(within(dialog).queryByLabelText('Chapter title')).toBeNull();
   });
 
-  it('puts a blank page in from the Add button, in front of the page in hand', () => {
+  it('puts a blank sheet in from the Add button, in front of the page in hand', () => {
     /**
      * §9y, from Ken: *I want the ability to put a blank page anywhere. So in
      * the plus add button, I want to be able to put a blank page* — and then
@@ -1094,7 +1094,7 @@ describe('the room', () => {
     // The menu stays up while a page is chosen, and its item is read again
     // for whatever is in hand — so the walk is a writer turning the pages.
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
-    const blankItem = () => screen.getByRole('menuitem', { name: /blank page/i }) as HTMLButtonElement;
+    const blankItem = () => screen.getByRole('menuitem', { name: /blank sheet/i }) as HTMLButtonElement;
     const next = screen.getByRole('button', { name: 'Next spread' });
     for (let turn = 0; turn < 14; turn += 1) {
       for (const sheet of Array.from(document.querySelectorAll('.layout-sheet:not(.layout-no-sheet)')) as HTMLElement[]) {
@@ -1123,7 +1123,7 @@ describe('the room', () => {
     // item is greyed with the reason in its title — `pictureOffer`'s shape.
     render(<Harness initial={novel()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
-    const item = screen.getByRole('menuitem', { name: /blank page/i }) as HTMLButtonElement;
+    const item = screen.getByRole('menuitem', { name: /blank sheet/i }) as HTMLButtonElement;
     expect(item.disabled).toBe(true);
     expect(item.title).toMatch(/Choose a page first/i);
   });
@@ -1613,7 +1613,7 @@ describe('the room', () => {
     expect(leaf).toBeTruthy();
     fireEvent.click(within(leaf as HTMLElement).getByLabelText(/^Remove page /));
     // Asked once inline, with what would go said beside it.
-    expect((leaf as HTMLElement).textContent).toMatch(/blank page goes|opens on whichever page comes next/i);
+    expect((leaf as HTMLElement).textContent).toMatch(/blank sheet goes|opens on whichever page comes next/i);
     fireEvent.click(within(leaf as HTMLElement).getByRole('button', { name: 'Remove' }));
     expect(document.querySelector('.layout-rail')).toBeTruthy();
   });

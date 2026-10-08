@@ -141,6 +141,8 @@ import {
   divisionStart,
   startDivision,
   chapterPageSchema,
+  blankPagesAt,
+  setPartBlank,
   setBlankPages,
   setChapterBlank,
   plateIntoStory,
@@ -312,7 +314,7 @@ const NO_BLANK: BlankOffer = {
   fewer: null,
   leaves: 0,
   note: null,
-  refusal: 'Choose a page first: the blank leaf goes in front of it.',
+  refusal: 'Choose a page first: the blank sheet goes in front of it.',
 };
 
 /** i, ii, iii — the front matter's numbers, for the rail. */
@@ -902,17 +904,26 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
             turnTo.current = made.elementId as string;
           }
           /**
-           * **The leaf becomes the picture** (§9aa, from Ken: *I put a picture
-           * in, and then put a blank page… it should be on the page that I
-           * set*).
+           * **The picture takes the sheet's front** (§9aa, from Ken: *I put a
+           * picture in, and then put a blank page… it should be on the page
+           * that I set*; and §9ad, *then you can place information or whatever
+           * on it*).
            *
            * A blank leaf and a page of its own are the same mechanism pointed
-           * two ways (§9i), so they are the same page: a writer who asked for
-           * a leaf here and now says what stands on it meant one page. Left
-           * in, the leaf would slide to the back of the picture and read as
-           * the picture having landed a page early.
+           * two ways (§9i), so a writer who asked for a sheet here and now
+           * says what stands on it meant **that** sheet. Since §9ad a leaf is
+           * two pages, so one of them goes and the picture stands where its
+           * front was, with the back it already had left blank — which is a
+           * separating sheet with art on it, and the same number of pages
+           * either way.
            */
-          return target.takesLeaf ? setBlankPages(made.file, target.takesLeaf, 0) : made.file;
+          return target.takesLeaf
+            ? setBackBlank(
+                setBlankPages(made.file, target.takesLeaf, blankPagesAt(made.file, target.takesLeaf) - 1),
+                made.elementId as string,
+                true,
+              )
+            : made.file;
         }
 
         // A logotype and a page of art are **the part's own pictures**
@@ -959,8 +970,11 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
             setSelectedRowId(made.partId);
             turnTo.current = made.partId;
           }
-          // The leaf becomes the page of art, as it does in the story (§9aa).
-          return target.takesLeaf ? setBlankPages(made.file, target.takesLeaf, 0) : made.file;
+          // The art page takes the sheet's front, as it does in the story
+          // (§9aa, §9ad), and keeps the back it already had.
+          if (!target.takesLeaf || !made.partId) return made.file;
+          const less = setBlankPages(made.file, target.takesLeaf, blankPagesAt(made.file, target.takesLeaf) - 1);
+          return setPartBlank(less, made.partId, 'back', true);
         }
 
         return added.file;
@@ -1031,7 +1045,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
      * that is not one more page.
      */
     {
-      label: pageBlank.act ?? 'Put a blank page in',
+      label: pageBlank.act ?? 'Put a blank sheet in',
       disabled: pageBlank.refusal,
       note: pageBlank.note,
       onPick: () => {

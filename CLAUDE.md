@@ -3330,6 +3330,42 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9ad is that a blank page is a sheet**, from Ken looking at §9ac in his
+  own book (*I think the problem is, when you enter a blank page, it's entering
+  a blank half page… if you insert a blank page, it's blank on front and back,
+  like a separating page, and then you can place information or whatever, or
+  change that page into a chapter page or a story page*), and **the keeper is
+  that §9ac read a specification as a complaint**: *it's adding a front and
+  back page… it's not just adding one side or the other* was him saying what a
+  blank page **should** be, and §9ac measured the +2/+0 that press really cost
+  and spent its whole design making one leaf **one page**, standing the
+  chapter's recto rule down to do it. **When a report and a requirement are the
+  same sentence, the measurement tells you what is happening and not what was
+  asked for.** So a blank page is **two pages** and what the writer then puts
+  on it goes on the front with the back left blank, which is what a separating
+  sheet is and why *you can place information on it* needed nothing new. Two
+  pages is also the half §9ac was reaching for: **an even number cannot change
+  which side anything after it is on**, so the recto rule is left exactly where
+  it was (§9ac's suppression taken back) and the arithmetic is the same on
+  every parity — measured over fifteen arrangements at every count, **+2 a
+  sheet, the opening down by exactly two, and the same side of the paper**,
+  three things §9ac could assert none of. **Nothing forces the first blank onto
+  a recto**: it would take the recto the page after it wanted and cost a
+  **third** page on half the parities (§9ac's own fault with the opposite sign)
+  and buys a reader nothing, the blanks falling in the same places either way.
+  The offer counts **sheets** (two rows carry the mark, so `blankOffer` halves
+  them) and says so before the press, a × on **either** page takes the whole
+  sheet, and **a picture put on a sheet keeps the sheet** — one sheet off and
+  the figure's own back left blank, two pages out and two back in, the same act
+  in the story and in the front matter. §9w's *a picture will stand a page
+  earlier* is **silenced on the writer's own sheet**, where the picture lands
+  exactly where they pointed and the sentence named the cutter's gap the act
+  never touches. Driven at 1440×900 on three imported stories: one press takes
+  the rail to **Page 8 Blank · Page 9 Blank · Page 10 Blank** with *Falling*
+  still opening on a right-hand page, moved 9 → 11; a picture on the sheet puts
+  the art on 9 with 10 still blank and the book no longer. Every assertion that
+  spelled the half-leaf out was **rewritten rather than worked around**, in six
+  files.
   **§9ac is the pages in between**, from Ken in one message about one
   afternoon (*I tried to add a page and then it added it on the wrong page… It
   erased the in-between page* … *there's no pages in between and no way to put

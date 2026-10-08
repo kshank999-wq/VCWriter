@@ -592,39 +592,42 @@ const partBlocks = (
       blankBack: suffix === 'back',
     });
   /**
-   * **As many leaves in front of this page as the writer asked for** (§9ac).
-   * *Wherever you want* includes the front and back matter (§9r), and *as
-   * many as you want* is a count rather than a switch.
+   * **As many leaves in front of this page as the writer asked for** (§9ac),
+   * each of them a **sheet** rather than a side (§9ad).
    */
-  const leaves = leavesBefore(part.blankBefore);
-  const front = Array.from({ length: leaves }, (_, at) => leaf(at === 0 ? 'before' : `before:${at + 1}`));
-  if (!part.backBlank || !partTakesBlankBack(part.kind)) {
-    /**
-     * **A leaf the writer put in beats the side the page would have taken**
-     * (§9ac, from Ken: *when you add a blank page, it should just shift
-     * everything down. So it's adding a front and back page… It's not just
-     * adding one side or the other*).
-     *
-     * Measured over every parity before it was changed: asking for one leaf
-     * in front of a page that opens on a right-hand one grew the book by
-     * **two** where the text happened to end on a verso and by **nothing**
-     * where the cutter had already left the gap — the same press doing two
-     * different things, neither of them *put a page in*, and which one you
-     * got decided by where the words fell. So where the writer has arranged
-     * the pages by hand the automatic rule stands down and each leaf is
-     * exactly one page.
-     *
-     * It is kept where the page leaves its **back** blank, which is not the
-     * same kind of rule: a back has to be the other side of the same sheet
-     * (§9j, Ken's own correction), so that page must open on a recto or the
-     * leaf behind it is the next sheet's front.
-     */
-    const first = own[0] as BookBlock;
-    const body = leaves > 0 && first.starts === 'recto' ? [{ ...first, starts: 'page' as BlockStart }, ...own.slice(1)] : own;
-    return [...front, ...body];
-  }
+  const front = blankLeaves(leavesBefore(part.blankBefore), (suffix) => leaf(suffix));
+  if (!part.backBlank || !partTakesBlankBack(part.kind)) return [...front, ...own];
   const first = own[0] as BookBlock;
   return [...front, { ...first, starts: 'recto' }, ...own.slice(1), leaf('back')];
+};
+
+/**
+ * **A blank page a writer asks for is a leaf, not a side** (§9ad, from Ken:
+ * *when you enter a blank page, it's entering a blank half page… if you insert
+ * a blank page, it's blank on front and back, like a separating page*).
+ *
+ * §9ac read the same sentence as a complaint about a press that sometimes cost
+ * two pages, and spent its whole design making one leaf one page. It was a
+ * **specification**: *it's adding a front and back page… it's not just adding
+ * one side or the other* is what a blank page **should** be. A reader does not
+ * hold a side, they hold a sheet — so a separating leaf is two pages, blank on
+ * both, and what the writer then puts on it goes on its front.
+ *
+ * Two pages rather than one is also what makes the press predictable, which is
+ * the half §9ac was reaching for and missed: **an even number of pages cannot
+ * change which side anything else is on**, so every leaf is exactly two pages
+ * and nothing after it moves from a right-hand page to a left-hand one. That
+ * is why no rule here forces the first blank onto a recto — forcing it would
+ * take the recto the page after it wanted and cost a third page on half the
+ * parities, which is §9ac's own fault wearing the opposite sign.
+ */
+const blankLeaves = (leaves: number, make: (suffix: string) => BookBlock): BookBlock[] => {
+  const out: BookBlock[] = [];
+  for (let at = 0; at < leaves; at += 1) {
+    const stem = at === 0 ? 'before' : `before:${at + 1}`;
+    out.push(make(stem), make(`${stem}:back`));
+  }
+  return out;
 };
 
 const partOwnBlocks = (
@@ -1360,53 +1363,41 @@ export const blankOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet
    * the writer, and asking the document would need the document, which two of
    * the three screens that take this offer do not have in hand.
    */
-  const leaves = rows.filter((one) => one.blankFor === spot).length;
+  /**
+   * **A leaf is two rows** (§9ad): every sheet the writer asks for lays a
+   * front and a back, both carrying the same `blankFor`, so what is counted
+   * here is sheets rather than sides. The back of a *page* (§17d) carries no
+   * `blankFor` and so is not counted.
+   */
+  const leaves = Math.floor(rows.filter((one) => one.blankFor === spot).length / 2);
   if (leaves >= MAX_BLANK_LEAVES) {
     return {
       spot,
       act: null,
-      fewer: 'Take one of them away',
+      fewer: 'Take one away',
       leaves,
       note: null,
-      refusal: `${leaves} blank pages already stand here, which is as many as one place takes.`,
+      refusal: `${leaves} blank sheets already stand here, which is as many as one place takes.`,
     };
   }
   /**
-   * **What a press really costs** (§9ac, from Ken: *when you add a blank page,
-   * it should just shift everything down. So it's adding a front and back
-   * page… It's not just adding one side or the other*).
+   * **What a press really costs** (§9ad, from Ken: *when you enter a blank
+   * page, it's entering a blank half page… if you insert a blank page, it's
+   * blank on front and back, like a separating page*).
    *
-   * §9r **refused** wherever a leaf already stood in front, because asking for
-   * one there was absorbed and the press did nothing a writer could see. That
-   * was right about the fact and wrong about the answer: it left the one gap
-   * in the book where a writer most wants a page of their own — between the
-   * end of one story and the opening of the next — with nothing on offer at
-   * all, which is Ken's *there's no pages in between and no way to put pages
-   * in between*.
-   *
-   * It is offered now, and the fact is **said before the press** instead. The
-   * cutter's gap is there because the page after it opens on a right-hand one,
-   * and a leaf the writer asks for stands that rule down (`bookBlocks`), so
-   * the first leaf takes the gap's place and the book keeps its length; every
-   * one after it is exactly one more page.
+   * It is two pages and it is always two pages, which is what makes it safe to
+   * say in one sentence: an even number cannot change which side anything
+   * after it is on, so a chapter that opened on a right-hand page still does.
    */
-  /**
-   * Which page the leaf in front of the record's own page is: this one where
-   * the writer is standing on it (§9aa makes a leaf answer for the page ahead,
-   * so the gap and the page it precedes give the same `spot`), the page before
-   * otherwise.
-   */
-  const standing = page.blank ? blankReason(rows, sheet) : blankReason(rows, sheet - 1);
-  const note =
-    leaves === 0 && standing === 'recto'
-      ? 'An empty leaf already stands in front of this page because it opens on a right-hand page. The first blank page you ask for takes its place; each one after that moves what follows it down a page.'
-      : null;
   return {
     spot,
-    act: leaves === 0 ? 'Put a blank page here…' : 'Put another blank page here…',
-    fewer: leaves > 0 ? (leaves === 1 ? 'Take the blank page away' : 'Take one of them away') : null,
+    act: leaves === 0 ? 'Put a blank sheet here…' : 'Put another blank sheet here…',
+    fewer: leaves > 0 ? (leaves === 1 ? 'Take the blank sheet away' : 'Take one away') : null,
     leaves,
-    note,
+    note:
+      leaves === 0
+        ? 'A blank sheet goes in: two pages, so there is nothing on either side of the paper here. Nothing after it changes which side it is on, and a picture put on it later takes the first of the two.'
+        : null,
     refusal: null,
   };
 };
@@ -1431,10 +1422,10 @@ export const partBlankOffer = (
     return {
       spot: part.id,
       act: null,
-      fewer: 'Take one of them away',
+      fewer: 'Take one away',
       leaves,
       note: null,
-      refusal: `${leaves} blank pages already stand here, which is as many as one place takes.`,
+      refusal: `${leaves} blank sheets already stand here, which is as many as one place takes.`,
     };
   }
   /**
@@ -1442,18 +1433,18 @@ export const partBlankOffer = (
    * (§9ac) — `blankOffer`'s own correction, because this was the same
    * sentence: §9r refused wherever a leaf already stood in front, which left
    * the writer holding no act at all in the one place a page is most often
-   * wanted.
+   * wanted. **And what it offers is a sheet** (§9ad), said in the same words
+   * the page's own screen says, three surfaces having to agree about what a
+   * press puts in.
    */
-  const opens = rows.find((row) => row.partId === part.id);
-  const standing = opens ? blankReason(rows, opens.sheet - 1) : null;
   return {
     spot: part.id,
-    act: leaves === 0 ? 'Put a blank page before this one' : 'Put another blank page before this one',
-    fewer: leaves > 0 ? (leaves === 1 ? 'Take the blank page away' : 'Take one of them away') : null,
+    act: leaves === 0 ? 'Put a blank sheet before this one' : 'Put another blank sheet before this one',
+    fewer: leaves > 0 ? (leaves === 1 ? 'Take the blank sheet away' : 'Take one away') : null,
     leaves,
     note:
-      leaves === 0 && standing === 'recto'
-        ? 'An empty leaf already stands in front of this page because it opens on a right-hand page. The first blank page you ask for takes its place; each one after that moves what follows it down a page.'
+      leaves === 0
+        ? 'A blank sheet goes in: two pages, so there is nothing on either side of the paper here. Nothing after it changes which side it is on.'
         : null,
     refusal: null,
   };
@@ -1609,7 +1600,14 @@ export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], she
         : 'Nothing of the book stands on this page yet.',
     );
   }
-  const leaf = place.elementId !== null && blankReason(rows, sheet - 1) !== null
+  /**
+   * **A sheet the writer put in takes the picture itself** (§9ad): standing on
+   * one, `takesLeaf` names it and the picture lands on this very page, so the
+   * sentence about a picture standing a page earlier is not about this press
+   * at all — it named the cutter's gap in front of the writer's own sheet,
+   * which is a page they did not point at and the act never touches.
+   */
+  const leaf = place.elementId !== null && page.blankFor === null && blankReason(rows, sheet - 1) !== null
     ? rows.find((one) => one.sheet === sheet - 1)
     : undefined;
   return {
@@ -2649,12 +2647,14 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
        * the chapter in two, which is the very fault §9p fixed for pictures.
        */
       const own = chapterPageSchema.parse(placed.marker.page ?? {});
-      /** **As many as the writer asked for** (§9ac), one leaf being a count. */
-      const leaves = leavesBefore(own.blankBefore);
-      for (let at = 0; at < leaves; at += 1) {
-        out.push(
+      /**
+       * **As many as the writer asked for** (§9ac), each one a **sheet** and
+       * not a side (§9ad).
+       */
+      out.push(
+        ...blankLeaves(leavesBefore(own.blankBefore), (suffix) =>
           block({
-            id: at === 0 ? `${placed.marker.id as string}:before` : `${placed.marker.id as string}:before:${at + 1}`,
+            id: `${placed.marker.id as string}:${suffix}`,
             kind: 'blank',
             numbering: 'arabic',
             starts: 'page',
@@ -2664,8 +2664,8 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
             chapterTitle,
             blankFor: placed.marker.id as string,
           }),
-        );
-      }
+        ),
+      );
       const leaf = chapterLeafContent(file, placed);
       chapterTitle = leaf.title.trim() || leaf.label;
       const onLeaf = opensOnLeaf(leaf);
@@ -2678,14 +2678,13 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
            * The chapter's own answer where it has one (§9x), the book's
            * otherwise — null-means-the-book's, so nothing existing moves.
            *
-           * **And a leaf the writer put in front of it beats both** (§9ac):
-           * each leaf is then exactly one page, where the recto rule made the
-           * same press cost two pages or none depending on where the words
-           * happened to fall. Kept where the opening leaves its own back
-           * blank, a back having to be the other side of the same sheet (§9j).
+           * §9ac stood this rule down wherever a writer had put a leaf in
+           * front, so that one leaf could be one page. **§9ad takes that
+           * back**: a leaf is a sheet and two pages cannot change which side
+           * anything is on, so the chapter opens exactly where it always did
+           * and the writer's sheets go in front of it.
            */
-          starts:
-            leaves > 0 && !own.backBlank ? 'page' : (own.opensRecto ?? settings.chaptersOpenRecto) ? 'recto' : 'page',
+          starts: (own.opensRecto ?? settings.chaptersOpenRecto) ? 'recto' : 'page',
           display: onLeaf,
           folio: settings.folioOnOpening,
           keepWithNext: !onLeaf,
@@ -2752,11 +2751,12 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
             out.push(pending);
             pending = null;
           }
-          // **As many as the writer asked for** (§9ac).
-          for (let at = 0; at < leaves; at += 1) {
-            out.push(
+          // **As many as the writer asked for** (§9ac), each one a **sheet**
+          // and not a side (§9ad).
+          out.push(
+            ...blankLeaves(leaves, (suffix) =>
               block({
-                id: at === 0 ? `${element.id as string}:before` : `${element.id as string}:before:${at + 1}`,
+                id: `${element.id as string}:${suffix}`,
                 kind: 'blank',
                 numbering: 'arabic',
                 starts: 'page',
@@ -2766,8 +2766,8 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
                 chapterTitle,
                 blankFor: element.id as string,
               }),
-            );
-          }
+            ),
+          );
         }
         if (atUnitHead) {
           atUnitHead = false;

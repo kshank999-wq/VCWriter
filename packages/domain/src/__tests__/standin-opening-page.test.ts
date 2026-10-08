@@ -136,9 +136,11 @@ describe('a page whose heading stands in', () => {
     const after = setBlankPage(file, spot, true);
     expect(after).not.toBe(file);
     expect(shape(after)[sheet - 1]).toBe('blank');
-    // The numeral and its words travel together, one page on.
-    expect(shape(after)[sheet]).toBe(shape(file)[sheet - 1]);
-    expect(shape(after).length).toBe(shape(file).length + 1);
+    // A blank page is a **sheet** (§9ad), so the numeral and its words travel
+    // together two pages on rather than one.
+    expect(shape(after)[sheet]).toBe('blank');
+    expect(shape(after)[sheet + 1]).toBe(shape(file)[sheet - 1]);
+    expect(shape(after).length).toBe(shape(file).length + 2);
   });
 
   it('opens with a picture, which stands in front of the numeral', () => {

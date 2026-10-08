@@ -16,6 +16,7 @@ import {
   holdsWholeWorks,
   layPages,
   pagePlace,
+  pictureOffer,
   removeDivision,
   setBlankPages,
   storiesOf,
@@ -120,82 +121,78 @@ const thirdOpens = (file: ProjectFile) => {
   return { blocks, laid, rows, row, place: pagePlace(laid.pages, blocks, row.sheet), marker: third.placed.marker.id as string };
 };
 
-describe('a blank page is exactly one page', () => {
+describe('a blank page is a sheet', () => {
   /**
-   * **Both parities, one answer** — which is the whole of the fix. The rule is
-   * not *add a page*; it is that a leaf the writer put in by hand **stands the
-   * automatic recto rule down**, so the pages they arranged are the pages they
-   * get.
+   * **Both parities, one answer** (addendum 20 §9ad, from Ken: *I think the
+   * problem is, when you enter a blank page, it's entering a blank half page…
+   * if you insert a blank page, it's blank on front and back, like a
+   * separating page*).
+   *
+   * §9ac read the same sentence as a complaint about a press that sometimes
+   * cost two pages and spent its design making one leaf one page, standing the
+   * recto rule down to do it. It was a **specification**: a reader holds a
+   * sheet rather than a side. Two pages is also what makes the press
+   * predictable, which is what §9ac was reaching for — an even number cannot
+   * change which side anything after it is on — so the book's length, the
+   * opening's page and the side it opens on are all answerable, which they
+   * were not before. Every one of these assertions spelled the half-leaf out
+   * and is **rewritten rather than worked around**.
    */
   for (const paragraphs of [2, 3, 4, 5, 6]) {
-    it(`moves the story's opening down exactly one page per leaf (${paragraphs} paragraphs a section)`, () => {
+    it(`puts in two pages and moves nothing across the spine (${paragraphs} paragraphs a section)`, () => {
       const file = collection(paragraphs);
       const { marker } = thirdOpens(file);
       const opensAt = (one: ProjectFile) => thirdOpens(one).row.sheet;
       const at = opensAt(file);
-      /**
-       * **The one state the count is read against** is whether the cutter has
-       * already left an empty leaf there, which is a page the writer can see.
-       * Where it has, the first leaf asked for takes its place — the gap being
-       * there *because* the page opens on a right-hand one, and that rule
-       * standing down the moment the writer arranges the pages by hand — and
-       * every leaf after it is one page. Where it has not, every leaf
-       * including the first is one page.
-       *
-       * Both parities now give the same sentence; before this the first leaf
-       * gave two pages in one of them and none in the other.
-       */
-      const gap = lay(file).rows.find((row) => row.sheet === at - 1)?.blank === true ? 1 : 0;
+      const pages = lay(file).rows.length;
       for (const want of [1, 2, 3]) {
         const asked = setBlankPages(file, marker, want);
-        expect(lay(asked).rows.filter((row) => row.blankFor === marker)).toHaveLength(want);
-        expect(opensAt(asked)).toBe(at + want - gap);
+        expect(lay(asked).rows.filter((row) => row.blankFor === marker)).toHaveLength(want * 2);
+        expect(lay(asked).rows.length).toBe(pages + want * 2);
+        expect(opensAt(asked)).toBe(at + want * 2);
+        // The story still opens on the side of the paper it opened on.
+        expect(opensAt(asked) % 2).toBe(at % 2);
       }
     });
   }
 
-  it('says before the press that the first leaf takes the gap’s place', () => {
+  it('says before the press that a sheet is two pages', () => {
     const file = collection(5);
     const { place, rows, row } = thirdOpens(file);
-    // The cutter's gap really is there: this is the parity §9r refused on.
-    expect(rows.find((one) => one.sheet === row.sheet - 1)?.blank).toBe(true);
     const offer = blankOffer(place, rows, row.sheet);
     expect(offer.refusal).toBeNull();
-    expect(offer.act).toBe('Put a blank page here…');
-    expect(offer.note).toMatch(/takes its place/);
+    expect(offer.act).toBe('Put a blank sheet here…');
+    expect(offer.note).toMatch(/two pages/);
+    expect(offer.note).toMatch(/changes which side/);
   });
 
-  it('asks for another from the leaf itself, which is where a writer stands', () => {
+  it('asks for another from the sheet itself, which is where a writer stands', () => {
     const file = collection(5);
     const { marker } = thirdOpens(file);
     const asked = setBlankPages(file, marker, 1);
     const { blocks, laid, rows } = lay(asked);
     const leaf = rows.find((one) => one.blankFor === marker)!;
     const offer = blankOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
-    expect(offer.act).toBe('Put another blank page here…');
+    expect(offer.act).toBe('Put another blank sheet here…');
     expect(offer.spot).toBe(marker);
+    // Sheets rather than sides, though two rows carry the mark.
     expect(offer.leaves).toBe(1);
-    expect(offer.fewer).toBe('Take the blank page away');
+    expect(offer.fewer).toBe('Take the blank sheet away');
   });
 
-  it('keeps the recto where the page leaves its own back blank, a back being a back', () => {
+  it('leaves the chapter’s own recto rule exactly as it found it', () => {
     /**
-     * The one place the automatic rule is **not** stood down. A back has to be
-     * the other side of the same sheet (§9j, Ken's own correction), so a page
-     * whose back is left blank must open on a recto or the leaf behind it is
-     * the next sheet's front.
+     * §9ac stood the rule down so that one leaf could be one page; §9ad takes
+     * that back, two pages being unable to change a side. The opening's
+     * `starts` is therefore the book's answer whether or not sheets stand in
+     * front of it, which is what makes the arithmetic above hold.
      */
     const file = collection(5);
     const { marker } = thirdOpens(file);
-    const asked = setBlankPages(file, marker, 1);
-    const both = {
-      ...asked,
-      markers: asked.markers.map((one) =>
-        (one.id as string) === marker ? { ...one, page: { ...(one.page ?? {}), blankBefore: 1, backBlank: true } } : one,
-      ),
-    } as ProjectFile;
-    const opening = bookBlocks(both).find((block) => block.id === marker)!;
-    expect(opening.starts).toBe('recto');
+    const plain = bookBlocks(file).find((block) => block.id === marker)!;
+    const asked = bookBlocks(setBlankPages(file, marker, 2)).find((block) => block.id === marker)!;
+    expect(plain.starts).toBe('recto');
+    expect(asked.starts).toBe('recto');
   });
 
   it('refuses past the ceiling, saying how many a place takes', () => {
@@ -207,10 +204,11 @@ describe('a blank page is exactly one page', () => {
     const offer = blankOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
     expect(offer.act).toBeNull();
     expect(offer.refusal).toMatch(/as many as one place takes/);
+    expect(offer.refusal).toMatch(/sheets/);
     expect(offer.fewer).not.toBeNull();
   });
 
-  it('reads the older spelling as one leaf, so no book moves', () => {
+  it('reads the older spelling as one sheet, so no book moves', () => {
     const file = collection(5);
     const { marker } = thirdOpens(file);
     const older = {
@@ -219,7 +217,7 @@ describe('a blank page is exactly one page', () => {
         (one.id as string) === marker ? { ...one, page: { ...(one.page ?? {}), blankBefore: true } } : one,
       ),
     } as ProjectFile;
-    expect(lay(older).rows.filter((row) => row.blankFor === marker)).toHaveLength(1);
+    expect(lay(older).rows.filter((row) => row.blankFor === marker)).toHaveLength(2);
   });
 });
 
@@ -285,5 +283,29 @@ describe('a blank page can become a chapter page', () => {
     const offer = divisionStart(asked, second.id);
     expect(offer.refusal).toBeNull();
     expect(offer.act).toBe('Start a story here…');
+  });
+});
+
+describe('a picture on a blank sheet', () => {
+  /**
+   * **The sentence about a picture landing a page earlier is not about this
+   * press** (§9ad). §9w says it where the cutter has left a gap in front of
+   * the page in hand; standing on a sheet the **writer** put in, the picture
+   * takes that sheet and lands exactly where they pointed, so naming the gap
+   * in front of it would name a page the act never touches.
+   */
+  it('says nothing about the gap in front of the writer’s own sheet', () => {
+    const file = collection(5);
+    const { marker } = thirdOpens(file);
+    const asked = setBlankPages(file, marker, 1);
+    const { blocks, laid, rows } = lay(asked);
+    const leaf = rows.find((one) => one.blankFor === marker)!;
+    const offer = pictureOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
+    expect(offer.takesLeaf).toBe(marker);
+    expect(offer.note).toBeNull();
+    // And where the leaf really is the cutter's, it still says so.
+    const plain = thirdOpens(file);
+    const cutters = pictureOffer(plain.place, plain.rows, plain.row.sheet);
+    expect(cutters.note).toMatch(/fills that rather than adding one/);
   });
 });
