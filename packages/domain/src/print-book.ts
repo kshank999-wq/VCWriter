@@ -167,14 +167,30 @@ export const bookVarsAttr = (context: BookRenderContext): string =>
 /** Whole lines, never a fraction: the page is a grid and every block sits on it. */
 const wholeLines = (px: number, leadPx: number): number => Math.max(1, Math.ceil(px / leadPx - 0.001));
 
-/** How many lines a picture takes at a width, from its own shape; a third of a page where the shape is unknown. */
+/**
+ * How many lines a picture takes at a width, from its own shape.
+ *
+ * **With no picture it is the box as it was drawn** (§9z, from Ken: *it
+ * places it and then it's just stuck there*). This answered *a third of a
+ * page* for every empty box, which is the whole of why one drawn to fill the
+ * white under a section's last words did not fit there: the markup drew it at
+ * the size of the drag and the **measurement** — which is what the cutter
+ * reads — had never heard of it, so the box on the screen and the hole the
+ * page kept for it were two different sizes. `boxHeight` is a share of the
+ * measure, exactly as the markup's aspect ratio is, so the two cannot
+ * disagree. A third of a page is still the answer where nothing was drawn,
+ * which is every box made before this.
+ */
 export const pictureLines = (
   picture: BookPicture | undefined,
   widthPx: number,
   leadPx: number,
   linesPerPage: number,
+  boxHeight = 0,
 ): number => {
-  if (!picture || picture.width <= 0 || picture.height <= 0) return Math.max(1, Math.round(linesPerPage / 3));
+  if (!picture || picture.width <= 0 || picture.height <= 0) {
+    return boxHeight > 0 ? wholeLines(widthPx * boxHeight, leadPx) : Math.max(1, Math.round(linesPerPage / 3));
+  }
   return wholeLines((widthPx * picture.height) / picture.width, leadPx);
 };
 
@@ -678,9 +694,11 @@ const blockInner = (block: BookBlock, context: BookRenderContext): string => {
         if (picture) return `<div class="bk-display bk-plate bk-plate-art" data-figure="${escapeHtml(block.id)}"><img class="bk-plate-image" alt="${escapeHtml(picture.altText || block.caption || '')}" src="${escapeHtml(picture.data)}" /></div>`;
         return `<div class="bk-display bk-plate" data-figure="${escapeHtml(block.id)}"><div class="bk-plate-missing">Picture goes here</div></div>`;
       }
+      // Across the measure, so the box is the measure wide and its drawn
+      // height is read against that (§9z).
       const image = picture
         ? `<img class="bk-figure-image" alt="${escapeHtml(picture.altText || block.caption || '')}" src="${escapeHtml(picture.data)}" />`
-        : '<div class="bk-figure-missing">Picture goes here</div>';
+        : `<div class="bk-figure-missing"${drawnBox(1, block.boxHeight ?? 0)}>Picture goes here</div>`;
       const caption = (block.caption ?? '').trim() ? `<p class="bk-caption">${escapeHtml(block.caption ?? '')}</p>` : '';
       // The author's photograph above the biography (§17): the same figure
       // every other picture across the measure is, shaped and held to a
@@ -744,12 +762,23 @@ const blockInner = (block: BookBlock, context: BookRenderContext): string => {
  * right height before the picture has decoded — the paragraph is measured
  * the moment it is set, and a float of no height would be measured as none.
  */
+/**
+ * **The empty box at the size it was drawn** (§9z). It is an aspect ratio
+ * rather than a length so it needs no unit and follows the trim: the box's
+ * own width is `wide` of the measure and its height is `tall` of the measure,
+ * so the ratio between them is the whole of it. With nothing drawn it is
+ * empty and the stylesheet's eight lines of leading stand, which is what
+ * every box printed before this.
+ */
+const drawnBox = (wide: number, tall: number): string =>
+  tall > 0 && wide > 0 ? ` style="aspect-ratio:${wide.toFixed(4)} / ${tall.toFixed(4)};height:auto"` : '';
+
 const insetMarkup = (inset: FigureInset, context: BookRenderContext, photoShape?: AuthorPhotoShape): string => {
   const picture = inset.assetId ? context.pictures.get(inset.assetId) : undefined;
   const ratio = picture && picture.width > 0 && picture.height > 0 ? `aspect-ratio:${picture.width} / ${picture.height};` : '';
   const image = picture
     ? `<img class="bk-inset-image" alt="${escapeHtml(picture.altText || inset.caption || '')}" style="${ratio}" src="${escapeHtml(picture.data)}" />`
-    : '<span class="bk-figure-missing">Picture goes here</span>';
+    : `<span class="bk-figure-missing"${drawnBox(inset.span, inset.boxHeight)}>Picture goes here</span>`;
   const caption = inset.caption.trim() ? `<span class="bk-inset-caption">${escapeHtml(inset.caption)}</span>` : '';
   // The border the text keeps around it (§8a, from Ken: *gives a little bit
   // of a border*): the writer's, in ems of the body size, so it holds at any

@@ -3330,6 +3330,74 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9z is a picture landing where it is drawn**, from Ken (*I was trying to
+  fill the bottom of a last page of a section with a picture but it doesn't
+  allow me to move the picture around or place it somewhere, it places it and
+  then it's just stuck there… I need the ability to move the picture around
+  drop it the text will adjust or if there's no text on that page then it can
+  just fill that portion of the page*) — **one gesture with three faults under
+  it, and none of them about the picture**. **Where it goes**: a figure has
+  always been anchored **before** an element, which is every position in the
+  writing but one — **after the last words on the page**, which is exactly the
+  foot of a page whose text runs short and exactly what he was reaching for, so
+  the position he wanted was the only one the module could not express;
+  `blockUnder` had the same hole from the other end, falling through to the
+  last piece and so meaning *before the last paragraph*, a line higher up. A
+  `FigureAnchor` says which end and `moveFigureTo` is **one act** (*before* and
+  *after* are the same insertion with the index one apart, and two functions
+  would be two answers to where a picture goes), with `moveFigureBefore` that
+  act with `after` false. **And `onDrawn` never asked at all** — it anchored
+  every box at the element the page *opens with*, so the whole vertical half of
+  the drag was thrown away and a box drawn at the foot appeared at the top,
+  which is the whole of *it places it and then it's just stuck there*; it reads
+  the same `blockUnder` the handle slides by, so drawing a box and dragging one
+  cannot disagree about what a height means, with `pagePlace`'s walk forward
+  still the answer where the block under the pointer is not a manuscript
+  element (§9s's stood-in title, a chapter opening). **What it is**: a drawn
+  box was **always cut into the text** whatever its width — its own comment
+  said so — so a box drawn right across the measure was clamped to
+  `INSET_SPAN.max` and called *cut in at the left*, a picture that cannot be
+  what it was drawn as; `drawnFigurePlace` reads the share and **the band
+  already says where the line is**, past the widest an inset may be there
+  being no text to cut into, so the number is the band's own and nothing new
+  decides it. **How big it is** is the half that made the first two invisible:
+  an empty box is measured by `pictureLines`, which answered **a third of a
+  page** for every box with no picture yet, so one drawn to fill the white
+  under a section's closing words did not fit there and the cutter moved it on
+  — the markup drew it at the size of the drag and **the measurement, which is
+  what the cutter reads, had never heard of the drag**, so the box on the
+  screen and the hole the page kept for it were two different sizes.
+  `boxHeight` is the drawn height as a share of the measure, so the aspect
+  ratio and the measurement are **one number read twice**; it is read **only
+  while the box is empty** (the moment a picture arrives its proportions
+  decide, §9m unchanged) and kept through every place a picture can take, being
+  the size the box was dragged to rather than anything about the arrangement,
+  with nothing drawn still reading as a third of a page — every box made before
+  this, which is why the suite passed with three assertions edited and those
+  only because the placement gained a field. **Driving it found two more no
+  test could.** `finish()` **mixed zoomed and unzoomed pixels** — the box is
+  measured unzoomed two lines above and the text block was read straight off
+  its client rect, so every figure taken from the two was out by the zoom,
+  which is 1 only when a writer has typed a number in: at *Fit* a modest box
+  read as full width and the side it cut in at was decided against a midpoint
+  in the wrong units, `measureOn` having divided by the zoom since it was
+  written and this being the one place that did not. And **`moveFigureTo` put
+  the picture down more than once**, inserting wherever the anchor was found,
+  so a document holding one id in two beats came back with **two pictures** —
+  one act making a second copy, the one failure a move may never have; the
+  first match is the move now, nothing refusing a repeated id so the act does
+  not depend on one. Driven at 1440×900 on an imported novel: a box drawn in
+  the white under chapter one's last line lands at the foot of page 1 at the
+  size it was drawn (4.19 × 0.89 in, across the measure) and a picture put in
+  sets across the measure under the last line; a narrow box drawn beside the
+  third paragraph cuts in at the right with the text running round it, and
+  dragging that one down to the foot takes it out of the text, stands it
+  across the measure and the text closes up. **Deliberately not changed**: an
+  inset with nothing left to cut into stands **across the measure** and so
+  draws full width rather than at its own span, which is §8's own rule since
+  the inset was built — a picture at the very end has no words to run beside
+  it — and is not written back onto the record, which would be storing what
+  `bookBlocks` already answers.
   **§17e is every page accounted for, and the words on a dedication**, from Ken
   in one message (*I added the title page and said, leave the back of it blank,
   but it left an additional page blank*; *all pages need to be accounted for

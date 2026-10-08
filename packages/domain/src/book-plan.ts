@@ -432,6 +432,12 @@ export interface BookBlock {
    * in the book is read off its element and honoured here alone.
    */
   inset?: FigureInset;
+  /**
+   * How tall an **empty** box was drawn, as a share of the measure (§9z).
+   * Read only where the figure has no picture; once there is one its own
+   * proportions decide, which is §9m unchanged.
+   */
+  boxHeight?: number;
   /** A logotype in place of the title, on a designed page (§9n). */
   logo?: { assetId: string | null; data: string | null };
   /**
@@ -898,6 +904,9 @@ const partOwnBlocks = (
             assetId: author.photoAssetId,
             caption: '',
             decorative: false,
+            // A part's picture is chosen rather than drawn, so there is no
+            // box to keep the height of (§9z).
+            boxHeight: 0,
           };
           paragraphs[0].unbreakable = true;
           paragraphs[0].photoShape = author.shape;
@@ -960,6 +969,7 @@ const partOwnBlocks = (
           assetId: inset.assetId,
           caption: inset.caption,
           decorative: false,
+          boxHeight: 0,
         };
         target.unbreakable = true;
       }
@@ -1019,6 +1029,25 @@ export interface BookFigurePlacement {
    */
   x: number;
   y: number;
+  /**
+   * **How tall the box was drawn**, as a share of the measure, or 0 for none
+   * (§9z, from Ken: *I was trying to fill the bottom of a last page of a
+   * section with a picture*).
+   *
+   * §9m's rule is that **only the width is dragged and the height follows
+   * from the picture's proportions** — true of a box that *has* a picture,
+   * and the one case it says nothing about is the box drawn before there is
+   * one. That box had no proportions to follow, so it was given eight lines
+   * of leading whatever the drag said: a box drawn to fill the white under a
+   * section's last words came back too tall to fit there, and the cutter
+   * moved it to the next page, which from the writer's chair is the picture
+   * refusing to go where it was put.
+   *
+   * It is read **only while the box is empty**. The moment a picture arrives
+   * its proportions decide, which is §9m unchanged, and the number is kept
+   * rather than cleared so redrawing the box is not the only way back.
+   */
+  boxHeight: number;
 }
 
 /**
@@ -1543,6 +1572,7 @@ export const figurePlacement = (element: ManuscriptElement): BookFigurePlacement
       typeof standoff === 'number' && Number.isFinite(standoff)
         ? Math.min(INSET_STANDOFF.max, Math.max(INSET_STANDOFF.min, standoff))
         : INSET_STANDOFF.default,
+    boxHeight: place01(element.attributes.bookBoxHeight, 0),
     x: place01(element.attributes.bookX, 0.1),
     y: place01(element.attributes.bookY, 0.1),
   };
@@ -1669,6 +1699,13 @@ export const placeBookFigure = (file: ProjectFile, elementId: string, placement:
                 bookY: _y,
                 ...rest
               } = element.attributes;
+              // **The drawn height is not stripped** (§9z): it is the size
+              // the box was dragged to rather than anything about the
+              // arrangement, so it survives being made an inset and made a
+              // measure figure again, and only a picture overrides it.
+              const tall = placement.boxHeight ?? figurePlacement(element).boxHeight;
+              if (tall > 0) rest.bookBoxHeight = tall;
+              else delete rest.bookBoxHeight;
               if (placement.place === 'measure') return { ...element, attributes: rest };
               const attributes: Record<string, string | number | boolean> = { ...rest, bookPlace: placement.place };
               if (placement.place === 'page') {
@@ -1954,19 +1991,67 @@ export const removeBookFigure = (file: ProjectFile, elementId: string): ProjectF
   })),
 });
 
-export const moveFigureBefore = (file: ProjectFile, elementId: string, beforeElementId: string): ProjectFile => {
-  if (elementId === beforeElementId) return file;
+export const moveFigureBefore = (file: ProjectFile, elementId: string, beforeElementId: string): ProjectFile =>
+  moveFigureTo(file, elementId, { elementId: beforeElementId, after: false });
+
+/**
+ * **Where a picture stands, said of an element** (§9z, from Ken: *I was trying
+ * to fill the bottom of a last page of a section with a picture but it doesn't
+ * allow me to move the picture around or place it somewhere*).
+ *
+ * A figure has always been anchored **before** an element, which is every
+ * position in the writing but one — **after the last words on the page**,
+ * which is exactly the foot of a page whose text runs short, and so exactly
+ * what he was reaching for. The handle could not express it either: sliding
+ * below the last line asked for *before the last paragraph*, which is a line
+ * higher up, so the picture could be put anywhere except where he wanted it.
+ *
+ * So the anchor says which end, and the two acts are one act: *before* and
+ * *after* are the same insertion with the index one apart, and writing them
+ * separately would be two answers to where a picture goes.
+ */
+export interface FigureAnchor {
+  elementId: string;
+  /** True to stand after that element rather than in front of it. */
+  after: boolean;
+}
+
+export const moveFigureTo = (file: ProjectFile, elementId: string, anchor: FigureAnchor): ProjectFile => {
+  if (elementId === anchor.elementId) return file;
   const from = file.beats.find((beat) => beat.manuscript.elements.some((element) => (element.id as string) === elementId));
   const moving = from?.manuscript.elements.find((element) => (element.id as string) === elementId);
   if (!from || !moving) return file;
+  // **Put down once** (§9z). It inserted wherever the anchor was found, so a
+  // document with the same id in two beats — which a fixture is more likely
+  // to hold than a manuscript, but nothing refuses — came back with the
+  // picture in both: one act making two pictures. The first match is the
+  // move, and every beat after it only has the picture taken out of it.
+  let put = false;
   const beats = file.beats.map((beat) => {
     const elements = beat.manuscript.elements.filter((element) => (element.id as string) !== elementId);
-    const at = elements.findIndex((element) => (element.id as string) === beforeElementId);
-    if (at === -1) return beat.id === from.id ? { ...beat, manuscript: { ...beat.manuscript, elements } } : beat;
-    return { ...beat, manuscript: { ...beat.manuscript, elements: [...elements.slice(0, at), moving, ...elements.slice(at)] } };
+    const at = put ? -1 : elements.findIndex((element) => (element.id as string) === anchor.elementId);
+    if (at === -1) return beat.id === from.id || elements.length !== beat.manuscript.elements.length ? { ...beat, manuscript: { ...beat.manuscript, elements } } : beat;
+    put = true;
+    const where = anchor.after ? at + 1 : at;
+    return { ...beat, manuscript: { ...beat.manuscript, elements: [...elements.slice(0, where), moving, ...elements.slice(where)] } };
   });
   return { ...file, beats };
 };
+
+/**
+ * **What a box drawn on the page means** (§9z). The browser measures and the
+ * domain decides (§4), so the share of the measure comes in and what the
+ * picture *is* comes back.
+ *
+ * A box wider than an inset may ever be is **across the measure**: an inset
+ * is a picture text runs round, and `INSET_SPAN.max` is already the widest
+ * one where words still fit beside it — so past it there is no text to cut
+ * into, and the drawing tool silently clamping a full-width box to 60% and
+ * calling it *cut in at the left* was a picture that could not be what it
+ * was drawn as. The number is the band's own; nothing new decides it.
+ */
+export const drawnFigurePlace = (share: number, side: 'left' | 'right'): FigurePlace =>
+  share > INSET_SPAN.max ? 'measure' : side;
 
 /**
  * **Move a picture onto the page an offer describes** (§9w): the act both of
@@ -2049,6 +2134,7 @@ const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensCha
         assetId: typeof element.attributes.assetId === 'string' ? element.attributes.assetId : null,
         caption: element.text,
         decorative: element.attributes.decorative === true,
+        ...(placed.boxHeight > 0 ? { boxHeight: placed.boxHeight } : {}),
       });
     }
     default:
@@ -2400,6 +2486,7 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
               assetId: pending.assetId ?? null,
               caption: pending.caption ?? '',
               decorative: pending.decorative === true,
+              boxHeight: placement.boxHeight,
             };
             made.unbreakable = true;
           } else {

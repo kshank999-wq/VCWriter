@@ -89,7 +89,7 @@ describe('a figure cut into the text (stage 6)', () => {
     // `x`/`y` are read for every figure and mean something to a **free** one
 // alone (§8c): the reading is one shape, and which fields matter is the
 // place's business.
-expect(figurePlacement(figure)).toEqual({ place: 'measure', span: 0.4, side: 'either', standoff: 1, x: 0.1, y: 0.1 });
+expect(figurePlacement(figure)).toEqual({ place: 'measure', span: 0.4, side: 'either', standoff: 1, boxHeight: 0, x: 0.1, y: 0.1 });
     const kinds = bookBlocks(file).map((block) => `${block.kind}${block.inset ? '+inset' : ''}`);
     expect(kinds.filter((kind) => kind.startsWith('paragraph') || kind === 'figure')).toEqual(['paragraph', 'figure', 'paragraph', 'paragraph']);
   });
@@ -112,7 +112,7 @@ expect(figurePlacement(figure)).toEqual({ place: 'measure', span: 0.4, side: 'ei
 
   it('clamps the span, and across the measure clears what was written', () => {
     let file = placeBookFigure(novel(), 'f1', { place: 'right', span: 0.9 });
-    expect(figurePlacement(file.beats[0]!.manuscript.elements[1]!)).toEqual({ place: 'right', span: 0.6, side: 'either', standoff: 1, x: 0.1, y: 0.1 });
+    expect(figurePlacement(file.beats[0]!.manuscript.elements[1]!)).toEqual({ place: 'right', span: 0.6, side: 'either', standoff: 1, boxHeight: 0, x: 0.1, y: 0.1 });
     file = placeBookFigure(file, 'f1', { place: 'measure', span: 0.4 });
     expect(file.beats[0]!.manuscript.elements[1]!.attributes).toEqual({ assetId: '22222222-2222-4222-8222-222222222222' });
   });
@@ -243,7 +243,7 @@ expect(figurePlacement(figure)).toEqual({ place: 'measure', span: 0.4, side: 'ei
         caption: 'The harbour at dusk',
         assetId: '22222222-2222-4222-8222-222222222222',
         assetName: 'harbour.png',
-        placement: { place: 'left', span: 0.4, side: 'either', standoff: 1, x: 0.1, y: 0.1 },
+        placement: { place: 'left', span: 0.4, side: 'either', standoff: 1, boxHeight: 0, x: 0.1, y: 0.1 },
         chapterTitle: 'The Road',
         markerId: file.markers[0]!.id,
         unitId: file.units[0]!.id,

@@ -376,6 +376,64 @@ describe('the room', () => {
   });
 
   /**
+   * **The box lands where it is drawn** (§9z, from Ken: *I was trying to fill
+   * the bottom of a last page of a section with a picture… it places it and
+   * then it's just stuck there*).
+   *
+   * `onDrawn` anchored every box at the element the page **opens with**, so
+   * the whole vertical half of the drag was thrown away: a box drawn in the
+   * white under a section's last words came back at the top of the page. What
+   * the room now asks is the same reading the handle slides by, so drawing a
+   * box and dragging one cannot disagree about what a height means.
+   *
+   * jsdom gives every box a zero rect, so a pointer anywhere is below every
+   * line — which is exactly the case this is about, and the one the old code
+   * could not express at all.
+   */
+  it('puts a drawn box where it was drawn rather than at the head of the page', () => {
+    let start = novel();
+    start = updateBeat(start, start.beats[1]!.id, {
+      manuscript: {
+        elements: [
+          { id: 'q-1' as never, type: 'paragraph', text: 'The lamp had been in the family.', characterId: null, attributes: {} },
+          { id: 'q-2' as never, type: 'paragraph', text: 'Rain moved across the harbour.', characterId: null, attributes: {} },
+        ],
+      },
+    });
+    render(<Harness initial={start} />);
+    const where = (file: ProjectFile): string[] =>
+      file.beats.flatMap((beat) => beat.manuscript.elements.map((one) => one.id as string));
+    expect(where(start)).not.toContain('drawn');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    const sheet = chooseStoryPage();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Draw a box for a picture…' }));
+    const rect = { left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    sheet.getBoundingClientRect = () => rect;
+    sheet.setPointerCapture = () => undefined;
+    fireEvent.pointerDown(sheet, { clientX: 40, clientY: 480, pointerId: 1 });
+    fireEvent.pointerMove(sheet, { clientX: 360, clientY: 560, pointerId: 1 });
+    fireEvent.pointerUp(sheet, { clientX: 360, clientY: 560, pointerId: 1 });
+
+    const after = latest as ProjectFile;
+    const made = where(after).find((id) => !where(start).includes(id));
+    expect(made).toBeTruthy();
+    const beat = after.beats.find((one) => one.manuscript.elements.some((element) => (element.id as string) === made))!;
+    const ids = beat.manuscript.elements.map((one) => one.id as string);
+    // Not in front of what the page opens with — which is the whole report —
+    // and past the last line, which is where a zero-rect pointer always is
+    // and the position the module could not express at all.
+    expect(ids[0]).not.toBe(made);
+    expect(ids[ids.length - 1]).toBe(made);
+    // A box drawn right across the measure is **across the measure**: wider
+    // than an inset may ever be, so there is no text to cut into.
+    expect(figurePlacement(beat.manuscript.elements.find((one) => (one.id as string) === made)!).place).toBe('measure');
+    // And it is the height it was drawn to, so it fits where it was put
+    // rather than being measured as a third of a page.
+    expect(figurePlacement(beat.manuscript.elements.find((one) => (one.id as string) === made)!).boxHeight).toBeGreaterThan(0);
+  });
+
+  /**
    * How big the spread is drawn (§9e). The room opened at a stored 0.55
    * whatever window it was opened in — a third of a wide screen, and more than
    * a laptop could hold. It fits now, and *Fit* is a state the foot says out

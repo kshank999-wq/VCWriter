@@ -80,6 +80,7 @@ import {
   titlePageFieldsOf,
   updatePartInset,
   type BookFigurePlacement,
+  type FigureAnchor,
   type LineStyle,
   type PartInset,
   type PartStyle,
@@ -108,7 +109,8 @@ import {
   bookFigures,
   bookPresetOf,
   bookRows,
-  moveFigureBefore,
+  drawnFigurePlace,
+  moveFigureTo,
   addBookFont,
   bookFontsOf,
   fontBytes,
@@ -1735,7 +1737,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                 const what = placing;
                 if (what) importArt({ kind: 'fill', elementId: what });
               }}
-              onSlide={(place, beforeElementId, at) => {
+              onSlide={(place, anchor, at) => {
                 const what = placing;
                 if (!what) return;
                 onUpdate((current) => {
@@ -1747,7 +1749,15 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                   if (held?.placement.place === 'free') {
                     return placeBookFigure(current, what, { ...held.placement, x: at.x, y: at.y });
                   }
-                  const moved = beforeElementId && beforeElementId !== what ? moveFigureBefore(current, what, beforeElementId) : current;
+                  // **Which end of the block** (§9z): dragged below the last
+                  // line the anchor says *after*, which is the foot of the
+                  // page and the one position the slide could not reach.
+                  const moved = anchor && anchor.elementId !== what ? moveFigureTo(current, what, anchor) : current;
+                  // The side it cuts in at is the writer's; what the book does
+                  // with an inset that has no paragraph left to cut into is
+                  // §8's own rule — it stands across the measure — and is not
+                  // written back onto the record, which would be storing what
+                  // `bookBlocks` already answers.
                   return placeBookFigure(moved, what, { place });
                 });
               }}
@@ -1768,12 +1778,24 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
               }}
               drawing={drawing}
               onGaveUp={() => setDrawing(null)}
-              onDrawn={(placement, sheet) => {
+              onDrawn={(placement, sheet, anchor) => {
                 const what = drawing;
                 if (!what || !laying) return;
                 setDrawing(null);
                 setSelectedSheet(sheet);
                 const at = pagePlace(laying.laid.pages, laying.blocks, sheet);
+                /**
+                 * **Where the box was drawn** (§9z). The anchor is the block
+                 * the drag began over, which is a *block* id — a chapter
+                 * opening and §9s's stood-in title are blocks and not
+                 * elements of the manuscript — so it is used only where it
+                 * names one, and `pagePlace`'s walk forward stays the answer
+                 * everywhere else, which is what it was written for.
+                 */
+                const anchorOf = (current: ProjectFile): FigureAnchor | null =>
+                  anchor && current.beats.some((beat) => beat.manuscript.elements.some((one) => (one.id as string) === anchor.elementId))
+                    ? anchor
+                    : null;
                 // A box drawn where the story is not cannot hold a figure:
                 // the parts carry their pictures themselves.
                 if (!at.elementId) {
@@ -1786,6 +1808,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                   // stays in hand with a ✗ and a ✓ on it until the writer
                   // says it is where they want it.
                   onUpdate((current) => {
+                    const spot = anchorOf(current);
                     const beat = current.beats.find((one) => one.manuscript.elements.some((element) => (element.id as string) === at.elementId));
                     if (!beat) return current;
                     const made = placeFigure(current, {
@@ -1794,6 +1817,9 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                       attributes: {
                         bookPlace: placement.place,
                         bookSpan: placement.span ?? INSET_SPAN.default,
+                        // The box's drawn height (§9z), so it fits where it
+                        // was drawn rather than taking a height nobody chose.
+                        ...(placement.boxHeight ? { bookBoxHeight: placement.boxHeight } : {}),
                         ...(placement.standoff !== undefined && placement.standoff !== INSET_STANDOFF.default ? { bookStandoff: placement.standoff } : {}),
                       },
                     });
@@ -1801,7 +1827,11 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                       setSelectedRowId(made.elementId as string);
                       setPlacing(made.elementId as string);
                     }
-                    return made.file;
+                    // Made at the head of the page, then taken to where the
+                    // box was drawn — the one act that can say *after*.
+                    return spot && made.elementId && spot.elementId !== made.elementId
+                      ? moveFigureTo(made.file, made.elementId as string, spot)
+                      : made.file;
                   });
                   return;
                 }
@@ -1810,7 +1840,11 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                 // rather than leaving it where it was and lying about it.
                 const alreadyHere = pageOf(laying, what)?.sheet === sheet;
                 onUpdate((current) => {
-                  const moved = alreadyHere || at.elementId === what ? current : moveFigureBefore(current, what, at.elementId as string);
+                  // Re-drawn on this page it goes where the box was drawn;
+                  // re-drawn on another it goes to that page's own spot.
+                  const spot = anchorOf(current);
+                  const to = spot ?? (alreadyHere || at.elementId === what ? null : { elementId: at.elementId as string, after: false });
+                  const moved = to && to.elementId !== what ? moveFigureTo(current, what, to) : current;
                   return placeBookFigure(moved, what, placement);
                 });
               }}
@@ -2261,7 +2295,7 @@ function Spreads({
   onOpenPage(page: BookPage): void;
   /** The figure whose box is being drawn (§8a), `'new'` for one not yet made (§9a), or null. */
   drawing: string | null;
-  onDrawn(placement: BookFigurePlacement, sheet: number): void;
+  onDrawn(placement: BookFigurePlacement, sheet: number, anchor: FigureAnchor | null): void;
   /** A press that drew nothing: the tool goes down rather than staying armed (§9p). */
   onGaveUp(): void;
   /** The box being placed (§9d), which wears a ✗ and a ✓ and can be slid. */
@@ -2271,7 +2305,7 @@ function Spreads({
   /** The figure in hand is set over the page, so its width is a share of it. */
   placingFree: boolean;
   /** Slid to a side, and before the element it was let go over. */
-  onSlide(place: 'left' | 'right', beforeElementId: string | null, at: { x: number; y: number }): void;
+  onSlide(place: 'left' | 'right', anchor: FigureAnchor | null, at: { x: number; y: number }): void;
   /** A corner dragged: the new width as a share of the measure (§9m). */
   onSpan(span: number, ofPage: number): void;
   /** A picture for the box being placed (§9m). */
@@ -2328,13 +2362,55 @@ function Spreads({
     const text = from.sheet.querySelector('.bk-text') as HTMLElement | null;
     const sheetRect = from.sheet.getBoundingClientRect();
     const textRect = (text ?? from.sheet).getBoundingClientRect();
-    const inset = textRect.left - sheetRect.left;
-    const width = textRect.width || sheetRect.width;
-    const span = Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, drawn.w / width));
-    const place = drawn.x + drawn.w / 2 < inset + width / 2 ? 'left' : 'right';
-    // A drawn box is always cut into the text, so its free position is
-    // whatever `figurePlacement` falls back to and is never read.
-    onDrawn({ place, span, side: 'either', standoff: INSET_STANDOFF.default, x: 0, y: 0 }, from.page.sheet);
+    /**
+     * **In the sheet's own pixels, like the drag** (§9z). The box is measured
+     * unzoomed (`(client − left) / zoom`, above) and the text block was read
+     * straight off its client rect — so every figure taken from the two
+     * together was out by the zoom, which is 1 only when a writer has typed a
+     * number in. At *Fit* that made the share of the measure too big, so a
+     * modest box read as full width and the side it cut in at was decided
+     * against a midpoint in the wrong units; `measureOn` has divided by the
+     * zoom since it was written, and this is the one place that did not.
+     */
+    const inset = (textRect.left - sheetRect.left) / zoom;
+    const width = (textRect.width || sheetRect.width) / zoom;
+    const share = drawn.w / width;
+    const span = Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, share));
+    const side = drawn.x + drawn.w / 2 < inset + width / 2 ? 'left' : 'right';
+    /**
+     * **The box is what it was drawn as** (§9z). It used to be cut into the
+     * text whatever its width, so a box drawn right across the measure came
+     * back at 60% with words squeezed beside it; `drawnFigurePlace` reads the
+     * share and the band already says where the line is. Its free position is
+     * whatever `figurePlacement` falls back to and is never read.
+     */
+    const place = drawnFigurePlace(share, side);
+    /**
+     * **And the height it was drawn to** (§9z), as a share of the measure so
+     * it holds at any trim and any zoom. Without it an empty box took eight
+     * lines of leading whatever the drag said, so a box drawn to fill the
+     * white under a section's last words did not fit there and the cutter
+     * moved it to the next page.
+     */
+    const boxHeight = Math.min(4, Math.max(0, drawn.h / width));
+    /**
+     * **And where it was drawn.** `onDrawn` used to anchor every box at the
+     * element the page *opens with*, so the whole vertical half of the drag
+     * was thrown away and a picture drawn at the foot of the page appeared at
+     * the top of it — which is the whole of *it places it and then it's just
+     * stuck there*. It is the same reading the handle slides by, so drawing a
+     * box and dragging one cannot disagree about what a height means.
+     */
+    // Read off the box's **top**: a box drawn over a paragraph stands in
+    // front of it and pushes it down, and one drawn in the white under the
+    // last line stands after it. The foot would put a box drawn across two
+    // paragraphs under the second, which is not where it was begun.
+    const topY = from.sheet.getBoundingClientRect().top + drawn.y * zoom;
+    onDrawn(
+      { place, span, side: 'either', standoff: INSET_STANDOFF.default, x: 0, y: 0, boxHeight },
+      from.page.sheet,
+      blockUnder(from.page, from.sheet, topY),
+    );
   };
 
   /** The text block's width on a sheet, in the sheet's own pixels. */
@@ -2385,14 +2461,27 @@ function Spreads({
    * `data-` attribute on every paragraph would change what the print and the
    * eBook emit, to answer a question only this room asks.
    */
-  const blockUnder = (page: BookPage, sheetEl: HTMLElement, clientY: number): string | null => {
+  const blockUnder = (page: BookPage, sheetEl: HTMLElement, clientY: number): FigureAnchor | null => {
     const text = sheetEl.querySelector('.bk-text');
     if (!text) return null;
     const kids = Array.from(text.children) as HTMLElement[];
     for (let at = 0; at < kids.length; at += 1) {
-      if (clientY < kids[at]!.getBoundingClientRect().bottom) return page.pieces[at]?.blockId ?? null;
+      const id = page.pieces[at]?.blockId;
+      if (clientY < kids[at]!.getBoundingClientRect().bottom) return id ? { elementId: id, after: false } : null;
     }
-    return page.pieces[page.pieces.length - 1]?.blockId ?? null;
+    /**
+     * **Below the last line is after it** (§9z, from Ken: *I was trying to
+     * fill the bottom of a last page of a section with a picture*).
+     *
+     * This answered with the last piece and so meant *before the last
+     * paragraph*, a line higher up — so the one place on a page a writer most
+     * wants a picture, the white under a section's closing words, was the one
+     * place the gesture could not reach, and a box drawn there came back
+     * somewhere else. The pointer is past every block, so the anchor is the
+     * far end of the last one.
+     */
+    const last = page.pieces[page.pieces.length - 1]?.blockId;
+    return last ? { elementId: last, after: true } : null;
   };
 
   /**

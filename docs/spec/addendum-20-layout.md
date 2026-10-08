@@ -2952,6 +2952,111 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9z. A picture lands where it is drawn
+
+From Ken: *I was trying to fill the bottom of a last page of a section with a
+picture but it doesn't allow me to move the picture around or place it
+somewhere — it places it and then it's just stuck there. I need the ability to
+move the picture around, drop it, the text will adjust; or if there's no text
+on that page then it can just fill that portion of the page.*
+
+**He is describing one gesture and there were three faults under it**, and
+none of them is about the picture.
+
+### 1. Where it goes
+
+A figure has always been anchored **before** an element, which is every
+position in the writing but one: **after the last words on the page**. That
+one is exactly the foot of a page whose text runs short, which is exactly what
+he was reaching for — so the position he wanted was the only position the
+module could not express.
+
+`blockUnder` had the same hole from the other end. It walks the page's
+children and answers with the block the pointer is inside, falling through to
+the last piece — which means *before the last paragraph*, a line higher up.
+So dragging the handle below the last line asked for somewhere it had just
+come from.
+
+`FigureAnchor` says which end, and `moveFigureTo` is the one act: *before* and
+*after* are the same insertion with the index one apart, and writing them
+separately would be two answers to where a picture goes. `moveFigureBefore`
+survives as that act with `after` false.
+
+**And `onDrawn` never asked at all.** It anchored every box at the element the
+page *opens with*, so the whole vertical half of the drag was thrown away and
+a box drawn at the foot of a page appeared at the top of it — the whole of
+*it places it and then it's just stuck there*. It reads the same `blockUnder`
+the handle slides by, so drawing a box and dragging one cannot disagree about
+what a height means; `pagePlace`'s walk forward stays the answer where the
+block under the pointer is not a manuscript element (a chapter opening, §9s's
+stood-in title), which is what it was written for.
+
+### 2. What it is
+
+A drawn box was **always cut into the text**, whatever its width — its own
+comment said so. `INSET_SPAN.max` is 0.6, so a box drawn right across the
+measure was clamped to 60% and called *cut in at the left*: a picture that
+cannot be what it was drawn as, with words squeezed beside it that the writer
+never asked for.
+
+`drawnFigurePlace` reads the share and the band already says where the line
+is: past the widest an inset may be there is no text to cut into, so it is
+**across the measure**. The number is the band's own; nothing new decides it.
+
+### 3. How big it is
+
+The half that made the first two invisible. An empty box is measured by
+`pictureLines`, which answered **a third of a page** for every box that had no
+picture yet — so a box drawn to fill the white under a section's closing words
+did not fit there and the cutter moved it to the next page. The markup drew it
+at the size of the drag and the measurement, which is what the cutter reads,
+had never heard of the drag: the box on the screen and the hole the page kept
+for it were two different sizes.
+
+`boxHeight` on the placement is the drawn height as a share of the measure, so
+the markup's aspect ratio and the measurement are **one number read twice**.
+It is read **only while the box is empty** — the moment a picture arrives its
+proportions decide, which is §9m unchanged — and it is kept through every
+place a picture can take, being the size the box was dragged to rather than
+anything about the arrangement. A box with nothing drawn still reads as a
+third of a page, which is every box made before this, and is why the whole
+suite passed with three assertions edited and those three only because the
+placement gained a field.
+
+### What driving it found that no test could
+
+**`finish()` mixed zoomed and unzoomed pixels.** The box is measured
+unzoomed — `(client − left) / zoom`, two lines above — and the text block was
+read straight off its client rect, so every figure taken from the two together
+was out by the zoom, which is 1 only when a writer has typed a number in. At
+*Fit* that made the share of the measure too big (a modest box read as full
+width) and decided the side it cut in at against a midpoint in the wrong
+units. `measureOn` has divided by the zoom since it was written; this was the
+one place that did not.
+
+**And `moveFigureTo` put the picture down more than once.** It inserted
+wherever the anchor was found, so a document holding one id in two beats came
+back with two pictures — one act making a second copy, which is the one
+failure a move may never have. The first match is the move now; nothing
+refuses a repeated id, so the act does not depend on one.
+
+Driven at 1440×900 on an imported novel. A box drawn in the white under
+chapter one's last line lands at the foot of page 1 at the size it was drawn
+(4.19 × 0.89 in, across the measure) with the ✗ ＋ ✓ on it; a picture put in
+sets across the measure under the last line. A narrow box drawn beside the
+third paragraph cuts in at the right and the text runs round it; dragging that
+one down to the foot takes it out of the text, stands it across the measure
+and the text closes up — which is his *drop it, the text will adjust; or if
+there's no text on that page then it can just fill that portion of the page*.
+
+### Deliberately not changed
+
+**An inset that has nothing left to cut into stands across the measure**, and
+so draws full width rather than at its own span. That is §8's own rule and has
+been true since the inset was built — a picture at the very end has no words
+to run beside it — and it is not written back onto the record, which would be
+storing what `bookBlocks` already answers.
+
 ## 17e. Every page accounted for, and the words on a dedication
 
 From Ken in one message, three reports: *in the layout page, I added the title
